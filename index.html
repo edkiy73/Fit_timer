@@ -527,9 +527,14 @@
   .pm-copyico{flex:none;color:var(--work)}
   .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
   .pm-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:8px}
-  .data-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:36px 0 24px;opacity:.7}
-  .data-link{background:none;border:none;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;padding:6px;text-decoration:underline;text-underline-offset:2px}
-  .data-sep{color:var(--line)}
+  .data-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:34px 0 20px}
+  .dc-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .dc-ico{flex:none;width:40px;height:40px;border-radius:12px;background:var(--bg);color:var(--work);display:flex;align-items:center;justify-content:center}
+  .dc-ico svg{width:20px;height:20px}
+  .dc-head b{display:block;font-size:14.5px;margin-bottom:4px}
+  .dc-head small{display:block;font-size:12px;line-height:1.5;color:var(--muted)}
+  .dc-actions{display:flex;gap:10px}
+  .dc-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Rubik';font-size:13px;cursor:pointer}
   .quick-stats{display:flex;gap:10px;margin-bottom:20px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:'Rubik';font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--work)}
@@ -705,6 +710,7 @@
       <span class="ts-label">Сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
+    <div class="section-title" style="margin-top:0">Статистика</div>
     <div class="quick-stats">
       <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><span>Тренировки</span></button>
       <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><span>Вес и объёмы</span></button>
@@ -713,10 +719,18 @@
     <div class="section-title st-row" style="margin-top:0"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
     <div id="mineList"></div>
 
-    <div class="data-row">
-      <button class="data-link" id="btnExportAll"></button>
-      <span class="data-sep">·</span>
-      <button class="data-link" id="btnImportAll"></button>
+    <div class="data-card">
+      <div class="dc-head">
+        <span class="dc-ico" id="dcIco"></span>
+        <div>
+          <b>Резервная копия</b>
+          <small>Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси на новый телефон или сохрани на всякий случай.</small>
+        </div>
+      </div>
+      <div class="dc-actions">
+        <button class="dc-btn" id="btnExportAll"></button>
+        <button class="dc-btn" id="btnImportAll"></button>
+      </div>
       <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
     </div>
   </section>
@@ -4057,8 +4071,9 @@ $('pmCopy').onclick = async ()=>{
   setTimeout(()=>{ $('pmHint').textContent = 'Нажми, чтобы скопировать адрес'; $('pmHint').style.color = ''; }, 2500);
 };
 
-$('btnExportAll').textContent = 'Сохранить копию данных';
-$('btnImportAll').textContent = 'Восстановить из файла';
+$('btnExportAll').textContent = 'Сохранить в файл';
+$('btnImportAll').textContent = 'Восстановить';
+$('dcIco').innerHTML = icon('download');
 $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
