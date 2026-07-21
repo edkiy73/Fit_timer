@@ -432,6 +432,30 @@
 
   /* ---------- трекер веса ---------- */
   .weight-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px}
+  .metric-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:20px}
+  .mc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .mc-now{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .mc-now b{font-family:'Oswald';font-weight:700;font-size:34px;line-height:1;color:var(--ink)}
+  .mc-now .w-delta{font-size:14px;font-weight:500}
+  .add-btn{flex:none;width:44px;height:44px;border-radius:14px;border:none;background:var(--work);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .add-btn svg{width:20px;height:20px}
+  .mc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .mc-meta .chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12.5px;color:var(--muted)}
+  .mc-meta .chip b{color:var(--ink);font-weight:600}
+  .mc-empty{color:var(--muted);font-size:14px;line-height:1.5;margin-top:16px;padding:22px 16px;text-align:center;background:var(--bg);border-radius:14px;border:1px dashed var(--line)}
+  .mc-charts{margin-top:18px;display:flex;flex-direction:column;gap:16px}
+  .metric-graph{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px}
+  .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .mg-name{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);font-weight:500}
+  .mg-name i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .mg-delta{font-size:13px;font-weight:600;font-family:'Oswald'}
+  .mg-delta.down{color:var(--rest)}
+  .mg-delta.up{color:var(--work)}
+  .mg-delta.flat{color:var(--muted)}
+  .metric-graph svg{width:100%;height:auto;display:block;font-family:'Oswald'}
+  .mc-actions{display:flex;gap:10px;margin-top:16px}
+  .mc-act{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+  .mc-act svg{width:16px;height:16px;color:var(--muted)}
   .wc-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
   #weightNow{font-family:'Oswald';font-weight:700;font-size:24px;letter-spacing:.02em}
   .w-delta{font-size:13px;color:var(--muted);margin-left:8px}
@@ -439,7 +463,6 @@
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
   .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
-  #weightChart{width:100%;height:auto;margin-top:12px;display:block;font-family:'Oswald'}
 
   /* ---------- оценка нагрузки на финише ---------- */
   .fb-block{margin:4px 0 18px;text-align:left}
@@ -617,18 +640,6 @@
     <div class="weight-card today-card" id="todayBox" style="display:none">
       <span class="ts-label">Сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
-    </div>
-    <div class="weight-card">
-      <div class="wc-top">
-        <div><span class="ts-label">Вес и объёмы</span><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
-        <button class="icon-btn" id="btnAddWeight" title="Записать вес">＋</button>
-      </div>
-      <p class="w-meta" id="weightMeta" style="display:none"></p>
-      <svg id="weightChart" viewBox="0 0 300 130" style="display:none"></svg>
-      <div class="legend" id="weightLegend" style="display:none"></div>
-      <button class="link-btn" id="btnShareWeight" style="display:none;padding:8px;margin:2px 0 0">Поделиться графиком</button>
-      <p class="mine-empty" id="weightEmpty" style="margin:8px 0 0">Записывай вес — через пару дней появится график.</p>
-      <button class="link-btn" id="btnWeightHist" style="display:none;padding:8px;margin:4px 0 0">Изменить историю</button>
     </div>
     <div class="weight-card" id="photoCard">
       <div class="wc-top">
@@ -894,6 +905,22 @@
     <div id="usersList"></div>
     <button class="btn-ghost" id="btnAddUser">＋ Добавить профиль</button>
     <div class="pref-row" style="border-top:none;margin-top:18px"><span>Тёмная тема</span><button class="switch" id="tglTheme"></button></div>
+    <div class="metric-card">
+      <div class="mc-head">
+        <div>
+          <span class="ts-label">Вес и объёмы</span>
+          <div class="mc-now"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
+        </div>
+        <button class="add-btn" id="btnAddWeight" title="Записать"></button>
+      </div>
+      <div class="mc-meta" id="weightMeta" style="display:none"></div>
+      <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
+      <div class="mc-charts" id="weightCharts" style="display:none"></div>
+      <div class="mc-actions" id="weightActions" style="display:none">
+        <button class="mc-act" id="btnWeightHist"></button>
+        <button class="mc-act" id="btnShareWeight"></button>
+      </div>
+    </div>
     <div class="section-title" style="margin-top:10px">Статистика · <span id="statsUserName"></span></div>
     <div class="weight-card">
       <div class="wc-top">
@@ -1492,107 +1519,125 @@ function renderUsers(){
 
 function renderWeight(){
   const ws = stats.weights;
-  const chart = $('weightChart'), empty = $('weightEmpty');
-  $('weightLegend').style.display = 'none';
+  const btnH = $('btnWeightHist'), btnS = $('btnShareWeight');
+  btnH.innerHTML = icon('pencil') + 'История';
+  btnS.innerHTML = icon('share') + 'Поделиться';
+
   if(!ws.length){
     $('weightNow').textContent = '—';
     $('weightDelta').textContent = '';
     $('weightMeta').style.display = 'none';
-    chart.style.display = 'none';
-    empty.style.display = 'block';
-    $('btnWeightHist').style.display = 'none';
-    $('btnShareWeight').style.display = 'none';
+    $('weightCharts').style.display = 'none';
+    $('weightActions').style.display = 'none';
+    $('weightEmpty').style.display = 'block';
     return;
   }
-  const meta0 = [];
-  if(stats.height) meta0.push(`Рост ${stats.height} см`);
-  const lastW = ws.length ? ws[ws.length - 1].w : null;
-  if(stats.height && lastW){
-    const bmi = Math.round(lastW / Math.pow(stats.height / 100, 2) * 10) / 10;
-    meta0.push(`ИМТ ${String(bmi).replace('.', ',')}`);
-  }
-  const lastM = k => { for(let i = ws.length - 1; i >= 0; i--) if(ws[i][k]) return ws[i][k]; return null; };
-  const wst = lastM('waist'), hps = lastM('hips'), cht = lastM('chest');
-  if(wst) meta0.push(`Талия ${wst}`);
-  if(hps) meta0.push(`Бёдра ${hps}`);
-  if(cht) meta0.push(`Грудь ${cht}`);
-  $('weightMeta').textContent = meta0.join(' · ');
-  $('weightMeta').style.display = meta0.length ? 'block' : 'none';
-  if(!ws.length){
-    $('weightNow').textContent = '—';
-    $('weightDelta').textContent = '';
-    chart.style.display = 'none';
-    empty.style.display = 'block';
-    return;
-  }
-  const last = ws[ws.length - 1];
+  $('weightEmpty').style.display = 'none';
+  $('weightActions').style.display = 'flex';
+
+  const last = ws[ws.length - 1], prev = ws[ws.length - 2];
   $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
-  const prev = ws[ws.length - 2];
   if(prev){
     const d = Math.round((last.w - prev.w) * 10) / 10;
     $('weightDelta').textContent = d === 0 ? 'без изменений' : (d > 0 ? '+' : '−') + String(Math.abs(d)).replace('.', ',') + ' кг';
-  } else {
-    $('weightDelta').textContent = '';
-  }
-  $('btnWeightHist').style.display = ws.length ? 'block' : 'none';
-  if(ws.length < 2){
-    chart.style.display = 'none';
-    empty.style.display = 'block';
-    $('btnShareWeight').style.display = 'none';
-    return;
-  }
-  empty.style.display = 'none';
-  chart.style.display = 'block';
-  // график: каждая метрика в своей горизонтальной полосе (не накладываются друг на друга)
-  const pts = ws.slice(-30);
-  const W = 300, padX = 22;
-  const xAt = i => padX + (W - padX * 2) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
+    $('weightDelta').style.color = d > 0 ? 'var(--work)' : (d < 0 ? 'var(--rest)' : 'var(--muted)');
+  } else $('weightDelta').textContent = '';
+
+  // мета-чипы
+  const lastM = k => { for(let i = ws.length - 1; i >= 0; i--) if(ws[i][k] != null) return ws[i][k]; return null; };
+  const meta = [];
+  if(stats.height) meta.push(`<span class="chip">Рост <b>${stats.height}</b> см</span>`);
+  if(stats.height) meta.push(`<span class="chip">ИМТ <b>${(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10).toString().replace('.',',')}</b></span>`);
+  const wst = lastM('waist'), hps = lastM('hips'), cht = lastM('chest');
+  if(wst) meta.push(`<span class="chip">Талия <b>${wst}</b> см</span>`);
+  if(hps) meta.push(`<span class="chip">Бёдра <b>${hps}</b> см</span>`);
+  if(cht) meta.push(`<span class="chip">Грудь <b>${cht}</b> см</span>`);
+  $('weightMeta').innerHTML = meta.join('');
+  $('weightMeta').style.display = meta.length ? 'flex' : 'none';
+
+  // отдельный аккуратный график на каждую метрику
   const SERIES = [
     {k: 'w', color: 'var(--work)', label: 'Вес', unit: 'кг'},
     {k: 'waist', color: '#7C6FD9', label: 'Талия', unit: 'см'},
     {k: 'hips', color: '#3AA893', label: 'Бёдра', unit: 'см'},
     {k: 'chest', color: '#F0B429', label: 'Грудь', unit: 'см'}
   ];
-  const active = SERIES.filter(s => pts.some(p => p[s.k] != null));
-  const laneH = 46, laneGap = 10, padTop = 6;
-  const H = padTop + active.length * laneH + (active.length - 1) * laneGap + 4;
-  chart.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-  let svg = '', legend = '';
-  active.forEach((s, li) => {
-    const top = padTop + li * (laneH + laneGap);
-    const yBase = top + laneH, yTopIn = top + 16; // место под подпись сверху полосы
-    const have = pts.map((p, i) => (p[s.k] != null) ? [i, p[s.k]] : null).filter(Boolean);
-    const vals = have.map(h => h[1]);
-    const min = Math.min(...vals), max = Math.max(...vals);
-    const span = Math.max(max - min, 1);
-    const yAt = v => yBase - (yBase - yTopIn) * ((v - min) / span);
-    const xy = have.map(([i, v]) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(v) * 10) / 10]);
-    // фон полосы
-    svg += `<rect x="0" y="${top}" width="${W}" height="${laneH}" rx="10" fill="var(--line)" opacity="0.35"/>`;
-    // название метрики в углу полосы
-    svg += `<text x="8" y="${top + 13}" font-size="9" font-weight="600" fill="${s.color}">${s.label}</text>`;
-    // линия
-    if(xy.length > 1){
-      svg += `<polyline points="${xy.map(p => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-    }
-    // точки на концах + подписи первого и последнего значения
-    const p0 = xy[0], pN = xy[xy.length - 1];
-    svg += `<circle cx="${p0[0]}" cy="${p0[1]}" r="3.5" fill="${s.color}"/>`;
-    svg += `<circle cx="${pN[0]}" cy="${pN[1]}" r="3.5" fill="${s.color}"/>`;
-    const lbl = (p, v, anchor) => {
-      const ty = p[1] < top + 20 ? p[1] + 13 : p[1] - 7;
-      return `<text x="${p[0]}" y="${ty}" text-anchor="${anchor}" font-size="10" font-weight="700" fill="var(--ink)">${String(v).replace('.', ',')}</text>`;
-    };
-    svg += lbl(p0, have[0][1], have.length > 1 ? 'start' : 'middle');
-    if(have.length > 1) svg += lbl(pN, have[have.length - 1][1], 'end');
-    legend += `<span><i style="background:${s.color}"></i>${s.label}</span>`;
+  const box = $('weightCharts');
+  box.innerHTML = '';
+  SERIES.forEach(s => {
+    const have = ws.map(p => (p[s.k] != null) ? [p.d, p[s.k]] : null).filter(Boolean).slice(-30);
+    if(have.length < 1) return;
+    box.insertAdjacentHTML('beforeend', metricGraph(s, have));
   });
-  chart.innerHTML = svg;
-  const lg = $('weightLegend');
-  lg.innerHTML = legend;
-  lg.style.display = (active.length > 1) ? 'flex' : 'none';
-  $('btnShareWeight').style.display = ws.length >= 2 ? 'block' : 'none';
+  box.style.display = box.innerHTML ? 'flex' : 'none';
+}
+
+// один график метрики: сетка, плавная линия, заливка, подписи осей
+function metricGraph(s, have){
+  const W = 320, H = 120, padL = 8, padR = 8, padT = 22, padB = 18;
+  const vals = have.map(h => h[1]);
+  const first = vals[0], lastv = vals[vals.length - 1];
+  const d = Math.round((lastv - first) * 10) / 10;
+  const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
+  const dTxt = d === 0 ? '—' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`;
+
+  let min = Math.min(...vals), max = Math.max(...vals);
+  const pad = Math.max((max - min) * 0.15, 0.5);
+  min -= pad; max += pad;
+  const span = Math.max(max - min, 1);
+  const xAt = i => padL + (W - padL - padR) * (have.length === 1 ? 0.5 : i / (have.length - 1));
+  const yAt = v => padT + (H - padT - padB) * (1 - (v - min) / span);
+  const xy = have.map((h, i) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(h[1]) * 10) / 10]);
+
+  // сглаженная линия (Catmull-Rom → Bezier)
+  let path = `M ${xy[0][0]} ${xy[0][1]}`;
+  for(let i = 0; i < xy.length - 1; i++){
+    const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    path += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0]} ${p2[1]}`;
+  }
+  const gid = 'g_' + s.k;
+  const area = path + ` L ${xy[xy.length-1][0]} ${H-padB} L ${xy[0][0]} ${H-padB} Z`;
+
+  // горизонтальные линии сетки
+  let grid = '';
+  for(let g = 0; g <= 2; g++){
+    const y = padT + (H - padT - padB) * g / 2;
+    grid += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="var(--line)" stroke-width="1" opacity="0.5"/>`;
+  }
+
+  const dots = xy.length === 1
+    ? `<circle cx="${xy[0][0]}" cy="${xy[0][1]}" r="4" fill="${s.color}"/>`
+    : `<circle cx="${xy[0][0]}" cy="${xy[0][1]}" r="3.5" fill="${s.color}"/><circle cx="${xy[xy.length-1][0]}" cy="${xy[xy.length-1][1]}" r="4.5" fill="${s.color}"/>`;
+
+  // подписи значений у концов
+  let labels = '';
+  const ly0 = xy[0][1] < padT + 12 ? xy[0][1] + 14 : xy[0][1] - 7;
+  labels += `<text x="${xy[0][0]}" y="${ly0}" text-anchor="start" font-size="11" font-weight="700" fill="var(--ink)">${String(first).replace('.', ',')}</text>`;
+  if(xy.length > 1){
+    const lp = xy[xy.length - 1];
+    const lyN = lp[1] < padT + 12 ? lp[1] + 14 : lp[1] - 7;
+    labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="11" font-weight="700" fill="var(--ink)">${String(lastv).replace('.', ',')}</text>`;
+  }
+
+  return `<div class="metric-graph">
+    <div class="mg-head">
+      <span class="mg-name"><i style="background:${s.color}"></i>${s.label}</span>
+      <span class="mg-delta ${dCls}">${dTxt}</span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}">
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${s.color}" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="${s.color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      ${grid}
+      ${xy.length > 1 ? `<path d="${area}" fill="url(#${gid})"/>` : ''}
+      ${xy.length > 1 ? `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${dots}
+      ${labels}
+    </svg>
+  </div>`;
 }
 async function savePrograms(){ await kvSet(pk('customPrograms'), JSON.stringify(customPrograms)); }
 async function saveStats(){ await kvSet(pk('stats'), JSON.stringify(stats)); }
@@ -2090,72 +2135,98 @@ async function importAllData(file){
 /* ================= ШЕРИНГ ГРАФИКА ВЕСА ================= */
 async function shareWeightChart(){
   const ws = stats.weights;
-  if(ws.length < 2){ appAlert('Нужно минимум две записи.'); return; }
+  if(ws.length < 1){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
   const cs = getComputedStyle(document.body);
   const col = n => cs.getPropertyValue(n).trim();
   const W = 1080, H = 1350, c = document.createElement('canvas');
   c.width = W; c.height = H; const x = c.getContext('2d');
-  try{ await document.fonts.load('700 60px Oswald'); await document.fonts.load('500 40px Rubik'); await document.fonts.load('600 34px Oswald'); }catch(e){}
+  try{
+    await document.fonts.load('700 60px Oswald');
+    await document.fonts.load('600 34px Oswald');
+    await document.fonts.load('500 40px Rubik');
+  }catch(e){}
   x.fillStyle = col('--bg'); x.fillRect(0, 0, W, H);
   x.textAlign = 'center';
-  x.fillStyle = col('--muted'); x.font = '600 44px Oswald';
-  x.fillText('F I T   T I M E R', W / 2, 108);
-  x.fillStyle = col('--ink'); x.font = '500 52px Rubik';
-  x.fillText('Мои изменения', W / 2, 188);
+  x.fillStyle = col('--muted'); x.font = '600 42px Oswald';
+  x.fillText('F I T   T I M E R', W / 2, 100);
+  x.fillStyle = col('--ink'); x.font = '500 54px Rubik';
+  x.fillText('Мои изменения', W / 2, 178);
 
-  const pts = ws.slice(-30);
   const SERIES = [
-    {k: 'w', color: col('--work'), label: 'Вес', unit: 'кг'},
-    {k: 'waist', color: '#7C6FD9', label: 'Талия', unit: 'см'},
-    {k: 'hips', color: '#3AA893', label: 'Бёдра', unit: 'см'},
-    {k: 'chest', color: '#F0B429', label: 'Грудь', unit: 'см'}
+    {k: 'w', color: col('--work'), label: 'ВЕС', unit: 'кг'},
+    {k: 'waist', color: '#7C6FD9', label: 'ТАЛИЯ', unit: 'см'},
+    {k: 'hips', color: '#3AA893', label: 'БЁДРА', unit: 'см'},
+    {k: 'chest', color: '#F0B429', label: 'ГРУДЬ', unit: 'см'}
   ];
-  const active = SERIES.filter(s => pts.some(p => p[s.k] != null));
-  const gx = 80, gw = W - 160;
-  const laneH = 190, gap = 30;
-  let gy = 260;
-  active.forEach(s => {
-    const have = pts.map((p, i) => (p[s.k] != null) ? [i, p[s.k]] : null).filter(Boolean);
-    const vals = have.map(h => h[1]);
-    const min = Math.min(...vals), max = Math.max(...vals), span = Math.max(max - min, 1);
+  const active = SERIES.map(s => ({s, have: ws.map(p => p[s.k] != null ? p[s.k] : null).filter(v => v != null).slice(-30)}))
+                       .filter(o => o.have.length);
+
+  const gx = 70, gw = W - 140;
+  const laneH = active.length <= 2 ? 300 : (active.length === 3 ? 250 : 205);
+  const gap = 26;
+  let gy = 250;
+
+  active.forEach(({s, have}) => {
+    const first = have[0], last = have[have.length - 1];
+    const d = Math.round((last - first) * 10) / 10;
     // подложка
     x.fillStyle = col('--card'); x.strokeStyle = col('--line'); x.lineWidth = 2;
-    roundRect(x, gx, gy, gw, laneH, 20); x.fill(); x.stroke();
-    // название и дельта
-    const first = have[0][1], last = have[have.length - 1][1];
-    const d = Math.round((last - first) * 10) / 10;
+    roundRect(x, gx, gy, gw, laneH, 24); x.fill(); x.stroke();
+    // шапка полосы
     x.textAlign = 'left'; x.fillStyle = s.color; x.font = '600 34px Oswald';
-    x.fillText(s.label.toUpperCase(), gx + 24, gy + 44);
-    x.textAlign = 'right'; x.fillStyle = d <= 0 ? col('--rest') : col('--work'); x.font = '600 34px Oswald';
-    x.fillText(`${d > 0 ? '+' : ''}${String(d).replace('.', ',')} ${s.unit}`, gx + gw - 24, gy + 44);
-    // линия
-    const lx = i => gx + 40 + (gw - 80) * (have.length === 1 ? .5 : i / (have.length - 1));
-    const ly = v => gy + laneH - 30 - (laneH - 80) * ((v - min) / span);
-    x.strokeStyle = s.color; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round';
-    x.beginPath();
-    have.forEach(([i, v], j) => { const px = lx(j), py = ly(v); j ? x.lineTo(px, py) : x.moveTo(px, py); });
-    x.stroke();
+    // цветной кружок
+    x.beginPath(); x.arc(gx + 34, gy + 40, 11, 0, 7); x.fill();
+    x.fillStyle = col('--ink'); x.fillText(s.label, gx + 58, gy + 51);
+    x.textAlign = 'right';
+    x.fillStyle = d < 0 ? col('--rest') : (d > 0 ? col('--work') : col('--muted'));
+    x.font = '700 36px Oswald';
+    x.fillText(d === 0 ? `${last} ${s.unit}` : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`, gx + gw - 34, gy + 51);
+
+    // график
+    const plotX = gx + 40, plotW = gw - 80, plotY = gy + 80, plotH = laneH - 120;
+    let min = Math.min(...have), max = Math.max(...have);
+    const pd = Math.max((max - min) * 0.15, 0.5); min -= pd; max += pd;
+    const span = Math.max(max - min, 1);
+    const lx = i => plotX + plotW * (have.length === 1 ? .5 : i / (have.length - 1));
+    const ly = v => plotY + plotH * (1 - (v - min) / span);
+    // сетка
+    x.strokeStyle = col('--line'); x.lineWidth = 1.5;
+    for(let g = 0; g <= 2; g++){ const yy = plotY + plotH * g / 2; x.beginPath(); x.moveTo(plotX, yy); x.lineTo(plotX + plotW, yy); x.stroke(); }
+    if(have.length > 1){
+      // заливка
+      const grad = x.createLinearGradient(0, plotY, 0, plotY + plotH);
+      grad.addColorStop(0, s.color + '44'); grad.addColorStop(1, s.color + '00');
+      x.beginPath(); x.moveTo(lx(0), ly(have[0]));
+      have.forEach((v, i) => x.lineTo(lx(i), ly(v)));
+      x.lineTo(lx(have.length - 1), plotY + plotH); x.lineTo(lx(0), plotY + plotH); x.closePath();
+      x.fillStyle = grad; x.fill();
+      // линия
+      x.strokeStyle = s.color; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round';
+      x.beginPath(); have.forEach((v, i) => i ? x.lineTo(lx(i), ly(v)) : x.moveTo(lx(i), ly(v))); x.stroke();
+    }
     x.fillStyle = s.color;
-    [0, have.length - 1].forEach(j => { x.beginPath(); x.arc(lx(j), ly(have[j][1]), 9, 0, 7); x.fill(); });
+    x.beginPath(); x.arc(lx(0), ly(first), 9, 0, 7); x.fill();
+    x.beginPath(); x.arc(lx(have.length - 1), ly(last), 11, 0, 7); x.fill();
     // подписи концов
     x.fillStyle = col('--ink'); x.font = '600 30px Oswald';
-    x.textAlign = 'left'; x.fillText(String(first).replace('.', ','), lx(0) - 4, ly(first) - 16);
-    x.textAlign = 'right'; x.fillText(String(last).replace('.', ','), lx(have.length - 1) + 4, ly(last) - 16);
+    x.textAlign = 'left'; x.fillText(String(first).replace('.', ','), lx(0), ly(first) - 20);
+    if(have.length > 1){ x.textAlign = 'right'; x.fillText(String(last).replace('.', ','), lx(have.length - 1), ly(last) - 20); }
+
     gy += laneH + gap;
   });
 
   x.textAlign = 'center';
-  x.fillStyle = col('--muted'); x.font = '600 32px Oswald';
-  x.fillText('F I T   T I M E R', W / 2, H - 46);
+  x.fillStyle = col('--muted'); x.font = '600 30px Oswald';
+  x.fillText('F I T   T I M E R', W / 2, H - 44);
 
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    const file = new File([blob], 'fittimer-weight.png', {type: 'image/png'});
+    const file = new File([blob], 'fittimer-progress.png', {type: 'image/png'});
     if(navigator.canShare && navigator.canShare({files: [file]})){
       try{ await navigator.share({files: [file]}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'fittimer-weight.png'; a.click();
+    a.download = 'fittimer-progress.png'; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     appAlert('Картинка сохранена в загрузки.');
   }, 'image/png');
