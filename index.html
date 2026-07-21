@@ -28,6 +28,9 @@
     --radius:18px;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn,.btn-mini{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
+  button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active,.btn-mini:active{transform:scale(.96)}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
   html,body{height:100%}
   body{
     font-family:'Rubik',system-ui,sans-serif;
@@ -108,7 +111,8 @@
 
   /* ---------- screens ---------- */
   .screen{display:none;flex:1;flex-direction:column}
-  .screen.on{display:flex}
+  .screen.on{display:flex;animation:screenIn .26s ease}
+  @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   /* ---------- menu ---------- */
   .hero{margin:22px 0 18px}
@@ -142,9 +146,9 @@
   /* ---------- мои программы ---------- */
   .section-title{font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px}
   .mine-card{position:relative;margin-bottom:12px}
-  .mine-card .month-card{margin-bottom:0;padding-right:82px}
+  .mine-card .month-card{margin-bottom:0;padding-right:66px}
   .more-btn{
-    position:absolute;top:8px;right:8px;z-index:5;
+    position:absolute;top:8px;right:6px;z-index:5;
     width:34px;height:34px;border-radius:10px;border:none;background:none;
     color:var(--muted);font-size:18px;cursor:pointer;line-height:1;
   }
@@ -246,49 +250,50 @@
   .stage{flex:1;display:flex;flex-direction:column;justify-content:flex-start;text-align:center;padding:8px 0;min-height:0}
   .phase-tag{font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--work)}
   body.phase-rest .phase-tag{color:var(--rest)}
-  .stage h2{font-size:clamp(26px,7.5vw,36px);line-height:1.08;margin:8px 0 4px}
-  .reps{font-family:'Oswald';font-weight:700;font-size:clamp(40px,13vw,64px);color:var(--work);line-height:1;margin:10px 0 2px}
+  .stage-head{flex:none}
+  .stage h2{font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:6px 0 2px;min-height:1.1em}
+  .reps{font-family:'Oswald';font-weight:700;font-size:clamp(38px,11vw,56px);color:var(--work);line-height:1;margin:6px 0 2px;min-height:.9em}
   .reps small{font-size:.38em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
+  body.phase-rest .reps{color:var(--rest)}
 
-  .illo{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    margin:16px auto;padding:14px;width:min(320px,86%);
+  .details{
+    flex:1 1 0;min-height:56px;width:100%;max-width:420px;margin:12px auto 0;
+    overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:left;
   }
-  body.phase-rest .illo{display:none}
-  .illo svg{width:100%;height:auto;max-height:26vh;display:block}
+  .details::-webkit-scrollbar{width:5px}
+  .details::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  .illo-wrap{position:relative;margin:0 auto 14px;width:min(300px,90%)}
+  body.phase-rest .illo-wrap{display:none}
+  .illo{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .illo svg{width:100%;height:auto;max-height:24vh;display:block}
+  .illo img{width:100%;height:auto;max-height:24vh;object-fit:contain;display:block;border-radius:10px}
   .illo .stick{stroke:var(--ink);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
   .illo .prop{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .head{fill:var(--ink)}
-
-  .title-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 4px}
-  .title-row h2{margin:0}
-  .video-btn{
-    flex:none;width:38px;height:38px;border-radius:50%;
-    border:1px solid var(--line);background:var(--card);
-    color:var(--work);text-decoration:none;
-    display:none;align-items:center;justify-content:center;
-    font-size:13px;padding-left:2px;
+  .yt-badge{
+    position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:9px;
+    background:var(--card);border:1px solid var(--line);color:#FF0000;
+    display:none;align-items:center;justify-content:center;text-decoration:none;
   }
-  .video-btn.on{display:inline-flex}
-  body.phase-rest .video-btn{display:none}
-
-  .details{
-    flex:1 1 0;min-height:56px;width:100%;max-width:420px;margin:6px auto 0;
-    overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;
+  .yt-badge.on{display:flex}
+  .yt-badge svg{width:17px;height:17px}
+  .video-cta{
+    display:none;align-items:center;justify-content:center;gap:8px;
+    text-decoration:none;color:var(--ink);margin:0 auto 14px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;font-size:14px;
   }
-  .details::-webkit-scrollbar{width:4px}
-  .details::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
-  .instruction{color:var(--muted);font-size:15px;line-height:1.5}
-  .muscle-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px auto 0;max-width:420px}
-  .m-chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:250px}
-  .m-chip{border:1px solid var(--work);color:var(--work);border-radius:999px;padding:3px 10px;font-size:11.5px}
-  .body-map{width:78px;height:auto;flex:none}
+  .video-cta.on{display:flex}
+  .video-cta svg{width:20px;height:20px;color:#FF0000}
+  body.phase-rest .video-cta{display:none}
+  .instruction{color:var(--muted);font-size:15px;line-height:1.55}
+  .muscle-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+  .mr-label{font-size:12px;color:var(--muted);flex:none}
+  .m-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+  .m-chip{border:1px solid var(--work);color:var(--work);border-radius:999px;padding:2px 9px;font-size:10.5px}
   body.phase-rest .muscle-row{display:none !important}
-  .body-map .bz{fill:var(--line)}
-  .body-map .z.on{fill:var(--work)}
   .mistakes{
-    color:#C9920F;font-size:13.5px;line-height:1.45;margin-top:12px;text-align:left;
+    color:#C9920F;font-size:13.5px;line-height:1.5;margin-top:12px;text-align:left;
     background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.4);border-radius:12px;padding:10px 12px;
   }
   body:not(.light) .mistakes{color:#F0B429}
@@ -360,12 +365,24 @@
   /* ---------- finish ---------- */
   .finish{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}
   .finish .medal{font-size:56px;margin-bottom:10px}
-  .finish h2{font-size:clamp(30px,8vw,40px);line-height:1.05}
+  .finish h2{font-size:26px;margin:8px 0 18px}
   .finish p{color:var(--muted);margin-top:12px;font-size:15px;line-height:1.55}
-  .finish .time{
-    font-family:'Oswald';font-weight:700;font-size:clamp(52px,17vw,80px);
-    color:var(--work);margin:22px 0;font-variant-numeric:tabular-nums;line-height:1;
+  .result-card{
+    display:flex;align-items:stretch;gap:14px;margin:6px 0 4px;text-align:left;
   }
+  .rc-main{
+    flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px 18px;display:flex;flex-direction:column;justify-content:center;
+  }
+  .rc-time{font-family:'Oswald';font-weight:700;font-size:46px;line-height:1;color:var(--work)}
+  .rc-sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .rc-stats{display:flex;flex-direction:column;gap:10px}
+  .rc-stat{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:10px 16px;min-width:96px;display:flex;flex-direction:column;justify-content:center;flex:1;
+  }
+  .rc-stat b{font-family:'Oswald';font-weight:700;font-size:22px;color:var(--ink);line-height:1}
+  .rc-stat small{color:var(--muted);font-size:12px;margin-top:3px}
   .finish .time small{display:block;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.2em;margin-top:8px}
 
   /* ---------- светлая тема ---------- */
@@ -420,7 +437,7 @@
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
   .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
-  #weightChart{width:100%;height:70px;margin-top:12px;display:block}
+  #weightChart{width:100%;height:130px;margin-top:12px;display:block;font-family:'Oswald'}
 
   /* ---------- оценка нагрузки на финише ---------- */
   .fb-block{margin:4px 0 18px;text-align:left}
@@ -438,7 +455,11 @@
   .st-row{display:flex;align-items:center;justify-content:space-between}
   .st-row .icon-btn{width:38px;height:38px;font-size:18px;color:var(--work);border-color:var(--work)}
   .modal{position:fixed;inset:0;z-index:60;background:rgba(10,12,18,.5);display:none;align-items:flex-end;justify-content:center;padding:14px}
-  .modal.open{display:flex}
+  .modal.open{display:flex;animation:modalFade .2s ease}
+  .modal.open .modal-card{animation:sheetUp .28s cubic-bezier(.2,.8,.2,1)}
+  @keyframes modalFade{from{opacity:0}to{opacity:1}}
+  @keyframes sheetUp{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  #dlg{z-index:90}
   .modal-card{width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
   .choice{width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;color:var(--ink);font-family:'Rubik'}
   .choice:active{transform:scale(.99)}
@@ -464,9 +485,11 @@
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
   .modal-card .field textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:14px;padding:12px;outline:none;resize:vertical}
-  .week-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:13.5px;color:var(--muted)}
-  .week-line .streak{color:var(--work);font-weight:500;flex:none}
-  #weekBars{width:100%;height:46px;margin-top:8px;display:block}
+  .week-line{display:flex;flex-direction:column;gap:3px;margin-top:12px;font-size:13.5px;color:var(--muted)}
+  .week-line .streak{color:var(--work);font-weight:500}
+  .bars-title{font-size:12.5px;color:var(--muted);margin-top:14px}
+  .bars-hint{opacity:.7}
+  #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:'Oswald'}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
   .cal-head b{font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
   .cal-nav{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer;line-height:1}
@@ -476,13 +499,17 @@
   .cal-cell.today{box-shadow:inset 0 0 0 1.5px var(--work)}
   .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em;aspect-ratio:auto;padding:2px 0}
   .w-meta{color:var(--muted);font-size:13px;margin:6px 0 0}
-  .w-add input{min-width:64px}
-  .w-add{flex-wrap:wrap}
+  .w-add{flex-wrap:wrap;gap:10px}
+  .w-add.on{display:flex}
+  .wf{display:flex;flex-direction:column;gap:4px;flex:1 1 44%;min-width:0}
+  .wf label{font-size:11px;color:var(--muted);font-family:'Oswald';letter-spacing:.08em;text-transform:uppercase}
+  .wf input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
+  .w-add .btn-mini{flex:1 1 100%;height:46px}
   .mine-card{-webkit-touch-callout:none;user-select:none}
   .mine-card.dragging{z-index:25;position:relative}
   .mine-card.dragging .month-card{border-color:var(--work);box-shadow:0 14px 32px rgba(0,0,0,.28)}
   .drag-handle{
-    position:absolute;bottom:8px;right:8px;z-index:5;
+    position:absolute;bottom:6px;right:6px;z-index:5;
     width:34px;height:34px;border:none;background:none;border-radius:10px;
     color:var(--muted);cursor:grab;line-height:1;
     touch-action:none;display:flex;align-items:center;justify-content:center;
@@ -507,11 +534,19 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M13 5 5 13M13 9.5 9.5 13' stroke='%239C8FA0' stroke-width='1.8' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 6px bottom 6px;
   }
-  .voice-sel{max-width:56%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:9px 10px;font-family:'Rubik';font-size:13px;outline:none}
+  .voice-sel{max-width:56%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:9px 30px 9px 12px;font-family:'Rubik';font-size:13px;outline:none;
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%239C8FA0' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center}
   .fin-streak{color:var(--work);font-weight:500;font-size:15px;margin-top:-8px}
-  .badge-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
-  .badge{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--muted)}
-  .badge.new{border-color:var(--work);color:var(--work);font-weight:500}
+  .badge-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+  .badge{display:flex;align-items:center;gap:11px;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:11px 16px;text-align:left;animation:badgePop .4s ease both}
+  .badge .b-emoji{font-size:26px;line-height:1}
+  .badge .b-txt b{display:block;font-size:14px;color:var(--ink)}
+  .badge .b-txt small{color:var(--muted);font-size:12px}
+  .badge.new{border-color:var(--work);background:rgba(228,113,143,.08)}
+  .badge.new .b-txt small{color:var(--work)}
+  @keyframes badgePop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
   .confetti{position:fixed;top:-14px;z-index:70;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:confFall linear forwards}
   @keyframes confFall{to{transform:translateY(110vh) rotate(720deg);opacity:.7}}
   .cal-cell.done{cursor:pointer}
@@ -527,19 +562,26 @@
   .today-row .ti{flex:1;min-width:0}
   .today-row .ti b{display:block;font-size:15px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .today-row .ti small{color:var(--muted);font-size:13px}
-  .today-row .btn-mini{height:40px;flex:none}
-  .done-chip{flex:none;color:var(--rest);font-size:13px;font-weight:500}
+  .today-row .ti small:first-letter{text-transform:none}
+  .today-row .btn-mini{height:40px;flex:none;padding:0 16px}
+  .today-row .btn-mini.ghost{background:var(--card);border:1px solid var(--line);color:var(--muted)}
+  .today-row .ti b{color:var(--ink)}
   .today-rest{color:var(--muted);font-size:14px;line-height:1.5;padding:10px 0 2px}
   .today-rest b{color:var(--ink);font-weight:500}
   .builder-actions{position:sticky;bottom:0;z-index:10;padding:14px 0 8px;margin-top:6px;background:linear-gradient(to top, var(--bg) 72%, transparent)}
-  .wh-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .wh-row{padding:12px 0;border-bottom:1px solid var(--line)}
   .wh-row:last-child{border-bottom:none}
-  .wh-row span{flex:none;width:92px;color:var(--muted);font-size:13px}
-  .wh-row input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:'Rubik';font-size:14px;padding:9px 12px;outline:none}
-  .wh-row.del input{text-decoration:line-through;opacity:.4}
-  .wh-row .wh-del{flex:none;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .wh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .wh-top b{font-size:14px}
+  .wh-cells{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .whc{display:flex;flex-direction:column;gap:3px}
+  .whc label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .whc input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:'Rubik';font-size:14px;padding:8px 6px;outline:none;text-align:center}
+  .wh-row.del{opacity:.4}
+  .wh-row.del input{text-decoration:line-through}
+  .wh-del{flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .wh-row.del .wh-del{color:var(--work);border-color:var(--work)}
-  .wh-row .wh-del svg{width:15px;height:15px}
+  .wh-del svg{width:15px;height:15px}
   .btn-share-res{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;color:var(--ink)}
   .btn-share-res svg{width:18px;height:18px;color:var(--work)}
   .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 16px;color:var(--ink)}
@@ -568,8 +610,6 @@
   <!-- ШАГ 1: главный экран -->
   <section class="screen on" id="scrMenu">
     <div class="hero">
-      <div class="eyebrow">Домашние тренировки</div>
-      <h1>Твои <span>программы</span></h1>
       <button class="hero-help" id="btnHelp">Как пользоваться приложением?</button>
     </div>
     <div class="weight-card today-card" id="todayBox" style="display:none">
@@ -583,15 +623,16 @@
       </div>
       <p class="w-meta" id="weightMeta" style="display:none"></p>
       <div class="w-add" id="weightAdd">
-        <input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal" placeholder="Вес, кг">
-        <input type="number" id="heightInput" min="100" max="250" inputmode="numeric" placeholder="Рост, см">
-        <input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal" placeholder="Талия, см">
-        <input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal" placeholder="Бёдра, см">
-        <input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal" placeholder="Грудь, см">
-        <button class="btn-mini" id="btnSaveWeight">ОК</button>
+        <div class="wf"><label>Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
+        <div class="wf"><label>Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
+        <div class="wf"><label>Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+        <div class="wf"><label>Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+        <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+        <button class="btn-mini" id="btnSaveWeight">Сохранить</button>
       </div>
-      <svg id="weightChart" viewBox="0 0 300 70" preserveAspectRatio="none" style="display:none"></svg>
+      <svg id="weightChart" viewBox="0 0 300 130" style="display:none"></svg>
       <div class="legend" id="weightLegend" style="display:none"></div>
+      <button class="link-btn" id="btnShareWeight" style="display:none;padding:8px;margin:2px 0 0">Поделиться графиком</button>
       <p class="mine-empty" id="weightEmpty" style="margin:8px 0 0">Записывай вес — через пару дней появится график.</p>
       <button class="link-btn" id="btnWeightHist" style="display:none;padding:8px;margin:4px 0 0">Изменить историю</button>
     </div>
@@ -614,7 +655,7 @@
 
   <!-- ШАГ 2: экран старта -->
   <section class="screen" id="scrStart">
-    <div class="screen-head" style="margin-bottom:0"><button class="back-chip" id="startBackTop"></button></div>
+    <div class="screen-head" style="margin-bottom:8px"><button class="back-chip" id="startBackTop"></button></div>
     <div class="start-wrap">
       <div class="num" id="startNum"></div>
       <h2 id="startTitle"></h2>
@@ -702,8 +743,14 @@
       <p class="field-hint">Не выберешь — ИИ предложит сам.</p>
     </div>
     <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
+    <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div>
+      <p class="field-hint">Что особенно хочешь прокачать (можно несколько или пропустить).</p>
+    </div>
     <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
     <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
+    <div class="field"><label>Свой запрос (необязательно)</label>
+      <textarea id="qNote" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
+    </div>
     <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
 
     <button class="btn-primary" id="btnSendAI" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
@@ -742,16 +789,19 @@
       <div class="bar"><div class="fill" id="progressFill"></div></div>
     </div>
     <div class="stage">
-      <div class="phase-tag" id="phaseTag"></div>
-      <div class="title-row">
+      <div class="stage-head">
+        <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
-        <a class="video-btn" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео">▶</a>
+        <div class="reps" id="stepReps"></div>
+        <div class="count" id="countdown"></div>
       </div>
-      <div class="muscle-row" id="stepMuscles" style="display:none"></div>
-      <div class="reps" id="stepReps"></div>
-      <div class="illo" id="illoBox"></div>
-      <div class="count" id="countdown"></div>
       <div class="details" id="stepDetails">
+        <div class="illo-wrap" id="illoWrap">
+          <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
+          <div class="illo" id="illoBox"></div>
+        </div>
+        <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
+        <div class="muscle-row" id="stepMuscles" style="display:none"></div>
         <p class="instruction" id="stepInstruction"></p>
         <p class="mistakes" id="stepMistakes" style="display:none"></p>
       </div>
@@ -768,10 +818,16 @@
     <div class="finish">
       <div class="medal">🏅</div>
       <h2>Отличная работа!</h2>
-      <p>Тренировка завершена. Вы на шаг ближе к совершенству.</p>
-      <div class="time" id="finalTime">00:00<small>Время тренировки</small></div>
-      <p class="fin-kcal" id="finKcal"></p>
-      <p class="fin-streak" id="finStreak"></p>
+      <div class="result-card">
+        <div class="rc-main">
+          <div class="rc-time" id="finalTime">0:00</div>
+          <div class="rc-sub">минут тренировки</div>
+        </div>
+        <div class="rc-stats">
+          <div class="rc-stat" id="finKcalBox"><b id="finKcal">—</b><small>ккал</small></div>
+          <div class="rc-stat" id="finStreakBox" style="display:none"><b id="finStreak">—</b><small>дней подряд</small></div>
+        </div>
+      </div>
       <div class="badge-row" id="badgeRow"></div>
       <div class="field" style="text-align:left;margin-top:14px">
         <label>Заметка о тренировке</label>
@@ -847,7 +903,8 @@
         <button class="icon-btn" id="btnResetTotal" title="Сбросить">⟲</button>
       </div>
       <div class="week-line"><span id="weekStat"></span><span class="streak" id="streakStat"></span></div>
-      <svg id="weekBars" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+      <div class="bars-title">Тренировок по неделям <span class="bars-hint">(последние 8)</span></div>
+      <svg id="weekBars" viewBox="0 0 300 58"></svg>
       <div class="cal-head">
         <button class="cal-nav" id="calPrev">‹</button>
         <b id="calTitle"></b>
@@ -1160,6 +1217,13 @@ let state = {
 
 const $ = id => document.getElementById(id);
 
+// лёгкая тактильная отдача на нажатия (где поддерживается)
+function haptic(ms){ try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){} }
+document.addEventListener('pointerdown', e => {
+  const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, .ph-thumb, a.btn-exit, .back-chip, .switch, .icon-btn');
+  if(t && !t.disabled) haptic(8);
+}, {passive: true});
+
 /* ================= ИКОНКИ (единый стиль, stroke 2) ================= */
 const ICONS = {
   pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
@@ -1183,38 +1247,12 @@ function icon(name){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
 }
 
-/* ================= МЫШЕЧНЫЕ ГРУППЫ И КАРТА ТЕЛА ================= */
+/* ================= МЫШЕЧНЫЕ ГРУППЫ ================= */
 const MUSCLES = [
-  ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
+  ['ne','Шея'], ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
   ['ba','Спина'], ['gl','Ягодицы'], ['le','Бёдра'], ['ca','Икры']
 ];
 const M_LABEL = Object.fromEntries(MUSCLES);
-// две схемы: спереди и сзади; активные зоны подсвечиваются
-function bodyMap(active){
-  const on = id => active.includes(id) ? ' on' : '';
-  return `<svg class="body-map" viewBox="0 0 130 96" aria-hidden="true">
-    <circle cx="30" cy="7" r="5" class="bz"/>
-    <rect x="14" y="14" width="9" height="6" rx="3" class="bz z${on('sh')}"/>
-    <rect x="37" y="14" width="9" height="6" rx="3" class="bz z${on('sh')}"/>
-    <rect x="21" y="14" width="18" height="12" rx="3" class="bz z${on('ch')}"/>
-    <rect x="12" y="21" width="6" height="22" rx="3" class="bz z${on('ar')}"/>
-    <rect x="42" y="21" width="6" height="22" rx="3" class="bz z${on('ar')}"/>
-    <rect x="21" y="27" width="18" height="13" rx="3" class="bz z${on('co')}"/>
-    <rect x="20" y="42" width="9" height="22" rx="3.5" class="bz z${on('le')}"/>
-    <rect x="31" y="42" width="9" height="22" rx="3.5" class="bz z${on('le')}"/>
-    <rect x="21" y="66" width="7" height="18" rx="3" class="bz z${on('ca')}"/>
-    <rect x="32" y="66" width="7" height="18" rx="3" class="bz z${on('ca')}"/>
-    <circle cx="100" cy="7" r="5" class="bz"/>
-    <rect x="91" y="14" width="18" height="15" rx="3" class="bz z${on('ba')}"/>
-    <rect x="82" y="21" width="6" height="22" rx="3" class="bz z${on('ar')}"/>
-    <rect x="112" y="21" width="6" height="22" rx="3" class="bz z${on('ar')}"/>
-    <rect x="91" y="31" width="18" height="10" rx="3" class="bz z${on('gl')}"/>
-    <rect x="90" y="43" width="9" height="21" rx="3.5" class="bz z${on('le')}"/>
-    <rect x="101" y="43" width="9" height="21" rx="3.5" class="bz z${on('le')}"/>
-    <rect x="91" y="66" width="7" height="18" rx="3" class="bz z${on('ca')}"/>
-    <rect x="102" y="66" width="7" height="18" rx="3" class="bz z${on('ca')}"/>
-  </svg>`;
-}
 
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
 function appDialog(msg, opts = {}){
@@ -1272,7 +1310,7 @@ function openStart(raw){
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans);
   state.load = LOADS.includes(raw.load) ? raw.load : 100;
-  $('startNum').textContent = 'Моя программа';
+  $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
   renderStartInfo();
@@ -1314,7 +1352,7 @@ function renderPlanRow(){
 function renderStartInfo(){
   const pl = normPlans(state.raw)[state.planIdx];
   const schedule = [state.raw.time, (pl.days && pl.days.length) ? pl.days.join(', ') : ''].filter(Boolean).join(' · ');
-  $('startDesc').textContent = `Упражнений: ${pl.exercises.length}` + (schedule ? `. Расписание: ${schedule}.` : '');
+  $('startDesc').textContent = schedule ? `Расписание: ${schedule}` : '';
   $('startRounds').textContent = pl.rounds;
   $('startExCount').textContent = pl.exercises.length;
 }
@@ -1473,19 +1511,21 @@ function renderWeight(){
   if(ws.length < 2){
     chart.style.display = 'none';
     empty.style.display = 'block';
+    $('btnShareWeight').style.display = 'none';
     return;
   }
   empty.style.display = 'none';
   chart.style.display = 'block';
   // график по последним 30 записям: вес + объёмы, каждая линия в своей шкале
   const pts = ws.slice(-30);
-  const W = 300, H = 70, pad = 8;
-  const xAt = i => pad + (W - pad * 2) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
+  const W = 300, H = 130, padX = 10, padTop = 16, padBot = 16;
+  const xAt = i => padX + (W - padX * 2) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
+  const yAt = (v, min, span) => H - padBot - (H - padTop - padBot) * ((v - min) / span);
   const SERIES = [
-    {k: 'w', color: 'var(--work)', label: 'Вес'},
-    {k: 'waist', color: '#7C6FD9', label: 'Талия'},
-    {k: 'hips', color: '#3AA893', label: 'Бёдра'},
-    {k: 'chest', color: '#F0B429', label: 'Грудь'}
+    {k: 'w', color: 'var(--work)', label: 'Вес', unit: 'кг'},
+    {k: 'waist', color: '#7C6FD9', label: 'Талия', unit: 'см'},
+    {k: 'hips', color: '#3AA893', label: 'Бёдра', unit: 'см'},
+    {k: 'chest', color: '#F0B429', label: 'Грудь', unit: 'см'}
   ];
   let svg = '', legend = '';
   SERIES.forEach(s => {
@@ -1494,22 +1534,32 @@ function renderWeight(){
     const vals = have.map(h => h[1]);
     const min = Math.min(...vals), max = Math.max(...vals);
     const span = Math.max(max - min, 0.5);
-    const xy = have.map(([i, v]) => [
-      Math.round(xAt(i) * 10) / 10,
-      Math.round((H - pad - (H - pad * 2) * ((v - min) / span)) * 10) / 10
-    ]);
+    const xy = have.map(([i, v]) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(v, min, span) * 10) / 10]);
     if(xy.length > 1){
-      svg += `<polyline points="${xy.map(p => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${s.k === 'w' ? 2.5 : 1.8}" stroke-linecap="round" stroke-linejoin="round" opacity="${s.k === 'w' ? 1 : .85}"/>`;
+      svg += `<polyline points="${xy.map(p => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${s.k === 'w' ? 2.5 : 1.8}" stroke-linecap="round" stroke-linejoin="round" opacity="${s.k === 'w' ? 1 : .8}"/>`;
     }
-    const lp = xy[xy.length - 1];
-    svg += `<circle cx="${lp[0]}" cy="${lp[1]}" r="${s.k === 'w' ? 4 : 3}" fill="${s.color}"/>`;
+    // подписи значений только для веса (иначе каша)
+    if(s.k === 'w'){
+      have.forEach(([i, v], j) => {
+        const p = xy[j];
+        svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}"/>`;
+        // первое, последнее и экстремумы
+        if(j === 0 || j === have.length - 1 || v === max || v === min){
+          const ty = p[1] < padTop + 14 ? p[1] + 14 : p[1] - 7;
+          svg += `<text x="${p[0]}" y="${ty}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink)">${String(v).replace('.', ',')}</text>`;
+        }
+      });
+    } else {
+      const lp = xy[xy.length - 1];
+      svg += `<circle cx="${lp[0]}" cy="${lp[1]}" r="2.5" fill="${s.color}"/>`;
+    }
     legend += `<span><i style="background:${s.color}"></i>${s.label}</span>`;
   });
   chart.innerHTML = svg;
   const lg = $('weightLegend');
-  const multi = legend.split('</span>').length > 2;
   lg.innerHTML = legend;
-  lg.style.display = multi ? 'flex' : 'none';
+  lg.style.display = (legend.split('</span>').length > 2) ? 'flex' : 'none';
+  $('btnShareWeight').style.display = ws.length >= 2 ? 'block' : 'none';
 }
 async function savePrograms(){ await kvSet(pk('customPrograms'), JSON.stringify(customPrograms)); }
 async function saveStats(){ await kvSet(pk('stats'), JSON.stringify(stats)); }
@@ -1578,19 +1628,25 @@ function renderStatsBlock(){
     ? `🔥 ${si.n} ${plural(si.n, 'день', 'дня', 'дней')} подряд${si.freezes ? ' · ❄ пропуск прощён' : ''}`
     : '';
 
-  // мини-график: 8 последних недель
-  const counts = [];
+  // мини-график: сколько тренировок в каждую из 8 последних недель
+  const counts = [], labels = [];
   for(let w = 7; w >= 0; w--){
     const s = new Date(monday); s.setDate(monday.getDate() - w * 7);
-    const ds = weekOf(s);
-    counts.push(stats.history.filter(h => ds.includes(h.d)).length);
+    counts.push(stats.history.filter(h => weekOf(s).includes(h.d)).length);
+    labels.push(w === 0 ? 'сейчас' : (`${s.getDate()}.${s.getMonth() + 1}`));
   }
   const maxC = Math.max(1, ...counts);
-  const bw = 300 / 8;
+  const bw = 300 / 8, top = 14, base = 44;
   $('weekBars').innerHTML = counts.map((c, i) => {
-    const h = c ? 8 + 34 * (c / maxC) : 3;
-    const fill = c ? (i === 7 ? 'var(--work)' : 'var(--muted)') : 'var(--line)';
-    return `<rect x="${(i * bw + 5).toFixed(1)}" y="${(46 - h).toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}" opacity="${c && i !== 7 ? .55 : 1}"/>`;
+    const h = c ? 5 + (base - top) * (c / maxC) : 2;
+    const x = i * bw + bw / 2;
+    const y = base - h;
+    const fill = i === 7 ? 'var(--work)' : 'var(--muted)';
+    const op = c ? (i === 7 ? 1 : .5) : .3;
+    let s = `<rect x="${(i * bw + 6).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 12).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}" opacity="${op}"/>`;
+    if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="600" fill="var(--muted)">${c}</text>`;
+    s += `<text x="${x.toFixed(1)}" y="55" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="${i === 7 ? 1 : .7}">${labels[i]}</text>`;
+    return s;
   }).join('');
 
   renderCalendar();
@@ -1628,7 +1684,13 @@ $('calGrid').addEventListener('click', e => {
   const lines = entries.map(en => {
     const p = customPrograms.find(x => x.id === en.pid);
     const name = p ? p.name : 'Тренировка';
-    return '• ' + name + (en.note ? `\n«${en.note}»` : '');
+    const meta = [];
+    if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
+    if(en.kcal) meta.push(`≈${en.kcal} ккал`);
+    let s = '🏋 ' + name;
+    if(meta.length) s += `\n   ${meta.join(' · ')}`;
+    if(en.note) s += `\n   💬 «${en.note}»`;
+    return s;
   });
   appAlert(`${+d} ${MONTH_NAMES[+m - 1].toLowerCase()} ${y}\n\n` + lines.join('\n\n'));
 });
@@ -1921,7 +1983,7 @@ async function shareCompare(){
   x.fillStyle = col('--work'); x.font = '600 52px Oswald';
   x.fillText(days ? `${days} ${plural(days, 'ДЕНЬ', 'ДНЯ', 'ДНЕЙ')} РАБОТЫ НАД СОБОЙ` : 'НАЧАЛО ПУТИ', W / 2, 1180);
   x.fillStyle = col('--muted'); x.font = '600 32px Oswald';
-  x.fillText('ДОМАШНИЕ ТРЕНИРОВКИ', W / 2, 1256);
+  x.fillText('F I T   T I M E R', W / 2, 1256);
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
     const file = new File([blob], 'fittimer-progress.png', {type: 'image/png'});
@@ -1982,6 +2044,62 @@ async function importAllData(file){
   location.reload();
 }
 
+/* ================= ШЕРИНГ ГРАФИКА ВЕСА ================= */
+async function shareWeightChart(){
+  const ws = stats.weights;
+  if(ws.length < 2){ appAlert('Нужно минимум две записи веса.'); return; }
+  const cs = getComputedStyle(document.body);
+  const col = n => cs.getPropertyValue(n).trim();
+  const W = 1080, H = 1350, c = document.createElement('canvas');
+  c.width = W; c.height = H; const x = c.getContext('2d');
+  try{ await document.fonts.load('700 60px Oswald'); await document.fonts.load('500 40px Rubik'); }catch(e){}
+  x.fillStyle = col('--bg'); x.fillRect(0, 0, W, H);
+  x.textAlign = 'center';
+  x.fillStyle = col('--muted'); x.font = '600 44px Oswald';
+  x.fillText('F I T   T I M E R', W / 2, 110);
+  x.fillStyle = col('--ink'); x.font = '500 50px Rubik';
+  x.fillText('Мой прогресс', W / 2, 190);
+  const pts = ws.slice(-30);
+  const wv = pts.map(p => p.w);
+  const first = wv[0], last = wv[wv.length - 1];
+  const diff = Math.round((last - first) * 10) / 10;
+  x.fillStyle = diff <= 0 ? col('--rest') : col('--work');
+  x.font = '700 120px Oswald';
+  x.fillText(`${diff > 0 ? '+' : ''}${String(diff).replace('.', ',')} кг`, W / 2, 360);
+  x.fillStyle = col('--muted'); x.font = '500 36px Rubik';
+  const days = Math.round((new Date(pts[pts.length-1].d) - new Date(pts[0].d)) / 86400000);
+  x.fillText(`за ${days} ${plural(days, 'день', 'дня', 'дней')}`, W / 2, 415);
+  const gx = 90, gy = 520, gw = W - 180, gh = 480;
+  const min = Math.min(...wv), max = Math.max(...wv), span = Math.max(max - min, 0.5);
+  x.strokeStyle = col('--line'); x.lineWidth = 2;
+  x.beginPath(); x.moveTo(gx, gy + gh); x.lineTo(gx + gw, gy + gh); x.stroke();
+  const XY = pts.map((p, i) => [
+    gx + gw * (pts.length === 1 ? .5 : i / (pts.length - 1)),
+    gy + gh - (gh - 40) * ((p.w - min) / span) - 20
+  ]);
+  x.strokeStyle = col('--work'); x.lineWidth = 7; x.lineJoin = 'round'; x.lineCap = 'round';
+  x.beginPath(); XY.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke();
+  x.fillStyle = col('--work');
+  [0, XY.length - 1].forEach(i => { x.beginPath(); x.arc(XY[i][0], XY[i][1], 12, 0, 7); x.fill(); });
+  x.fillStyle = col('--ink'); x.font = '600 40px Oswald';
+  x.textAlign = 'left'; x.fillText(String(first).replace('.', ',') + ' кг', gx - 6, gy + gh + 52);
+  x.textAlign = 'right'; x.fillText(String(last).replace('.', ',') + ' кг', gx + gw + 6, gy + gh + 52);
+  x.textAlign = 'center';
+  x.fillStyle = col('--muted'); x.font = '600 32px Oswald';
+  x.fillText('F I T   T I M E R', W / 2, 1270);
+  c.toBlob(async blob => {
+    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
+    const file = new File([blob], 'fittimer-weight.png', {type: 'image/png'});
+    if(navigator.canShare && navigator.canShare({files: [file]})){
+      try{ await navigator.share({files: [file]}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'fittimer-weight.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    appAlert('Картинка сохранена в загрузки.');
+  }, 'image/png');
+}
+
 /* ================= ИСТОРИЯ ВЕСА (правка задним числом) ================= */
 function openWeightHist(){
   const list = $('whList'); list.innerHTML = '';
@@ -1990,12 +2108,14 @@ function openWeightHist(){
     const row = document.createElement('div');
     row.className = 'wh-row';
     const [y, m, d] = en.d.split('-');
-    row.innerHTML = `<span>${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)} ${y}</span>` +
-      `<input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w" title="Вес">` +
-      `<input type="number" step="0.5" inputmode="decimal" value="${en.waist || ''}" data-k="waist" placeholder="Т" title="Талия">` +
-      `<input type="number" step="0.5" inputmode="decimal" value="${en.hips || ''}" data-k="hips" placeholder="Б" title="Бёдра">` +
-      `<input type="number" step="0.5" inputmode="decimal" value="${en.chest || ''}" data-k="chest" placeholder="Г" title="Грудь">` +
-      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button>`;
+    const cell = (k, lbl, v) => `<div class="whc"><label>${lbl}</label><input type="number" step="0.5" inputmode="decimal" value="${v || ''}" data-k="${k}"></div>`;
+    row.innerHTML =
+      `<div class="wh-top"><b>${+d} ${MONTH_NAMES[+m - 1].toLowerCase()} ${y}</b>` +
+      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<div class="wh-cells">` +
+        `<div class="whc"><label>Вес</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
+        cell('waist', 'Талия', en.waist) + cell('hips', 'Бёдра', en.hips) + cell('chest', 'Грудь', en.chest) +
+      `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
   });
@@ -2118,9 +2238,8 @@ function renderToday(){
       row.className = 'today-row';
       const bits = [`Упражнений: ${plan.exercises.length}`, `Кругов: ${plan.rounds}`];
       if(p.time) bits.push(p.time);
-      row.innerHTML = `<div class="ti"><b></b><small>${bits.join(' • ')}</small></div>` +
-        (done ? `<span class="done-chip">✓ Выполнено</span>` : '') +
-        `<button class="btn-mini">${done ? 'Ещё раз' : 'Начать'}</button>`;
+      row.innerHTML = `<div class="ti"><b></b><small>${done ? '✓ Выполнено сегодня' : bits.join(' • ')}</small></div>` +
+        `<button class="btn-mini${done ? ' ghost' : ''}">${done ? 'Ещё раз' : 'Начать'}</button>`;
       row.querySelector('b').textContent = p.name;
       row.querySelector('.btn-mini').onclick = () => openStart(p);
       list.appendChild(row);
@@ -2220,8 +2339,8 @@ function renderMine(){
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${p.cover}" alt="">` : DUMBBELL_ICON;
     const line1 = plans.length > 1
-      ? `Вариантов: ${plans.length} • Упражнений: ${exTotal}`
-      : `Кругов: ${plans[0].rounds} • Упражнений: ${exTotal}`;
+      ? `Вар-ов: ${plans.length} • Упр-ий: ${exTotal}`
+      : `Кругов: ${plans[0].rounds} • Упр-ий: ${exTotal}`;
     card.innerHTML =
       `<div class="mc-cover">${cover}</div>` +
       `<div class="mc-body"><h3></h3>` +
@@ -2616,7 +2735,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 
 УПРАЖНЕНИЕ: название
 ОПИСАНИЕ: техника выполнения, 3–4 предложения: исходное положение, само движение, ключевые моменты (что напрячь, чего избегать). Должно быть предельно понятно, как выполнять упражнение, даже без видео. Максимум 600 символов.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Бёдра, Икры
+МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Бёдра, Икры
 ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
 ФОРМАТ: повторения — ИЛИ — время
 ЗНАЧЕНИЕ: число (количество повторений или секунды)
@@ -2760,13 +2879,14 @@ function parseProgramText(txt){
 
 /* ================= ЗАПРОС К ИИ В ОДНО КАСАНИЕ ================= */
 const Q_OPTS = {
-  goal: ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Сила и выносливость', 'Растяжка и лёгкость'],
+  goal: ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот', 'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина', 'Восстановиться после родов', 'Кардио и энергия'],
   level: ['Новичок', 'Средний', 'Продвинутый'],
-  dur: ['15 мин', '20 мин', '30 мин', '40 мин'],
-  equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул'],
-  limit: ['Нет', 'Без прыжков', 'Берегу колени', 'Берегу поясницу']
+  dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
+  focus: ['Ягодицы', 'Пресс', 'Бёдра', 'Руки', 'Спина', 'Грудь', 'Плечи', 'Ноги целиком'],
+  equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
+  limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность']
 };
-const q = {goal: '', level: 'Новичок', days: [], dur: '20 мин', equip: ['Нет'], limit: ['Нет'], split: false};
+const q = {goal: '', level: 'Новичок', days: [], dur: '20 мин', focus: [], equip: ['Нет'], limit: ['Нет'], note: '', split: false};
 
 function qChips(boxId, opts, isMulti, get, set){
   const box = $(boxId); box.innerHTML = '';
@@ -2798,6 +2918,7 @@ function initAIForm(){
   qChips('qGoal', Q_OPTS.goal, false, ()=> q.goal, v => q.goal = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
   qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
+  qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
   qChips('qEquip', Q_OPTS.equip, true, ()=> q.equip, v => q.equip = v);
   qChips('qLimit', Q_OPTS.limit, true, ()=> q.limit, v => q.limit = v);
   const db = $('qDays'); db.innerHTML = '';
@@ -2812,15 +2933,20 @@ function initAIForm(){
     db.appendChild(b);
   });
   $('qSplit').classList.toggle('on', q.split);
+  $('qNote').value = q.note || '';
 }
+$('qNote').oninput = e => q.note = e.target.value;
 $('qSplit').onclick = ()=>{ q.split = !q.split; $('qSplit').classList.toggle('on', q.split); };
 
 function composeRequest(){
   const days = q.days.length ? `дни: ${q.days.join(', ')}` : 'дни и количество тренировок предложи сам(а) исходя из цели';
-  return `Составь тренировку. Цель: ${q.goal.toLowerCase()}. Уровень: ${q.level.toLowerCase()}. ${days}. ` +
+  let s = `Составь тренировку. Цель: ${q.goal.toLowerCase()}. Уровень: ${q.level.toLowerCase()}. ${days}. ` +
     `Длительность: около ${q.dur}. Инвентарь: ${q.equip.join(', ').toLowerCase()}. ` +
-    `Ограничения: ${q.limit.join(', ').toLowerCase()}. ` +
-    `Одинаковая тренировка во все дни или разные: ${q.split ? 'разные — раздели по группам мышц' : 'одинаковая'}.`;
+    `Ограничения: ${q.limit.join(', ').toLowerCase()}. `;
+  if(q.focus.length) s += `Особый акцент на: ${q.focus.join(', ').toLowerCase()}. `;
+  s += `Одинаковая тренировка во все дни или разные: ${q.split ? 'разные — раздели по группам мышц' : 'одинаковая'}.`;
+  if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
+  return s;
 }
 const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
 
@@ -3024,17 +3150,17 @@ function renderStep(){
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
-  $('phaseTag').textContent = step.phase==='rest' ? 'Отдых' : 'Упражнение';
+  $('phaseTag').textContent = step.phase==='rest' ? 'Отдых' : '';
+  $('phaseTag').style.display = step.phase==='rest' ? '' : 'none';
   $('stepTitle').textContent = step.title;
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
 
-  // работающие мышцы + карта тела
+  // работающие мышцы — чипами
   const mus = (step.phase === 'work' && step.muscles && step.muscles.length) ? step.muscles : null;
   if(mus){
     $('stepMuscles').innerHTML =
-      `<div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>` +
-      bodyMap(mus);
+      `<span class="mr-label">Работают:</span><div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>`;
     $('stepMuscles').style.display = 'flex';
   } else {
     $('stepMuscles').style.display = 'none';
@@ -3060,7 +3186,7 @@ function renderStep(){
   // на отдыхе показываем, что будет дальше
   renderNextUp(step);
 
-  // Иллюстрация: только на упражнениях (SHOW_ILLUSTRATION), на отдыхе скрыта через CSS
+  // Иллюстрация внутри скролл-блока; на отдыхе скрыта через CSS
   const box = $('illoBox');
   if(step.media && step.media.kind === 'img'){
     box.innerHTML = `<img src="${step.media.data}" alt="">`;
@@ -3070,13 +3196,15 @@ function renderStep(){
   } else {
     box.innerHTML = ILLO[step.illo] || '';
   }
-  box.style.display = box.innerHTML ? '' : 'none';
+  const hasIllo = !!box.innerHTML;
+  $('illoWrap').style.display = (hasIllo && step.phase === 'work') ? 'block' : 'none';
 
-  // Иконка «Смотреть видео» рядом с названием — если у упражнения есть ссылка
-  const vl = $('videoLink');
+  // видео: есть картинка → маленький значок YouTube над ней; нет картинки → крупная кнопка «Смотреть видео»
   const hasVideo = !!(step.video && step.phase === 'work');
-  vl.classList.toggle('on', hasVideo);
-  if(hasVideo) vl.href = step.video;
+  const badge = $('videoLink'), cta = $('videoCta');
+  badge.classList.toggle('on', hasVideo && hasIllo);
+  cta.classList.toggle('on', hasVideo && !hasIllo);
+  if(hasVideo){ badge.href = step.video; cta.href = step.video; }
 
   if(step.kind === 'click'){
     $('stepReps').style.display='block';
@@ -3173,10 +3301,10 @@ function finishWorkout(){
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
   state.lastKcal = estimateKcal(totalSec, state.load || 100);
-  $('finKcal').textContent = `🔥 ≈ ${state.lastKcal} ккал`;
+  $('finKcal').textContent = '≈' + state.lastKcal;
   stats.totalSec += totalSec;
   stats.count = (stats.count || 0) + 1;
-  const histEntry = {d: localISO(new Date()), pid: (state.current && state.current.sourceId) || null, note: ''};
+  const histEntry = {d: localISO(new Date()), pid: (state.current && state.current.sourceId) || null, note: '', sec: totalSec, kcal: state.lastKcal || 0};
   stats.history.push(histEntry);
   if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
   state.lastHist = histEntry;
@@ -3197,7 +3325,7 @@ function finishWorkout(){
   releaseWake();
   document.body.classList.remove('phase-rest');
   const m = Math.floor(totalSec/60), s = totalSec%60;
-  $('finalTime').innerHTML = `${m} мин ${String(s).padStart(2,'0')} сек<small>Время тренировки</small>`;
+  $('finalTime').textContent = `${m}:${String(s).padStart(2,'0')}`;
   fanfare();
   // оценка нагрузки: по умолчанию «мне подходит»
   state.usedLoad = state.load || 100;
@@ -3282,28 +3410,39 @@ async function shareResult(){
   chips.push(`💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`);
   if(state.usedLoad && state.usedLoad !== 100) chips.push(`нагрузка ${state.usedLoad}%`);
   x.font = '500 36px Rubik';
-  const pad = 34, gap = 22, ch = 84;
-  const widths = chips.map(t => x.measureText(t).width + pad * 2);
-  let total = widths.reduce((a, b) => a + b, 0) + gap * (chips.length - 1);
-  let cx0 = (W - total) / 2, cy0 = 880;
+  const pad = 34, gap = 20, ch = 84, maxW = W - 80;
+  const widths = chips.map(t => Math.min(maxW, x.measureText(t).width + pad * 2));
+  // раскладка по рядам, чтобы ничего не уходило за края
+  const rows = [[]]; let rowW = 0;
   chips.forEach((t, i) => {
-    x.strokeStyle = col('--line'); x.lineWidth = 3;
-    x.fillStyle = col('--card');
-    roundRect(x, cx0, cy0, widths[i], ch, 42);
-    x.fill(); x.stroke();
-    x.fillStyle = col('--ink');
-    x.fillText(t, cx0 + widths[i] / 2, cy0 + ch / 2 + 13);
-    cx0 += widths[i] + gap;
+    if(rowW + widths[i] + (rows[rows.length-1].length ? gap : 0) > maxW){ rows.push([]); rowW = 0; }
+    rows[rows.length-1].push(i); rowW += widths[i] + gap;
+  });
+  let cy0 = 880;
+  rows.forEach(row => {
+    const total = row.reduce((a, i) => a + widths[i], 0) + gap * (row.length - 1);
+    let cx0 = (W - total) / 2;
+    row.forEach(i => {
+      x.strokeStyle = col('--line'); x.lineWidth = 3;
+      x.fillStyle = col('--card');
+      roundRect(x, cx0, cy0, widths[i], ch, 42);
+      x.fill(); x.stroke();
+      x.fillStyle = col('--ink');
+      x.fillText(chips[i], cx0 + widths[i] / 2, cy0 + ch / 2 + 13);
+      cx0 += widths[i] + gap;
+    });
+    cy0 += ch + 18;
   });
 
   // дата и подпись
   const now = new Date();
+  const dateY = Math.max(1180, cy0 + 60);
   x.fillStyle = col('--muted');
   x.font = '500 36px Rubik';
-  x.fillText(`${now.getDate()} ${MONTH_NAMES[now.getMonth()].toLowerCase()} ${now.getFullYear()}`, W / 2, 1180);
+  x.fillText(`${now.getDate()} ${MONTH_NAMES[now.getMonth()].toLowerCase()} ${now.getFullYear()}`, W / 2, dateY);
   x.fillStyle = col('--muted');
   x.font = '600 32px Oswald';
-  x.fillText('ДОМАШНИЕ ТРЕНИРОВКИ', W / 2, 1248);
+  x.fillText('F I T   T I M E R', W / 2, dateY + 60);
 
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
@@ -3338,27 +3477,37 @@ function confetti(){
 }
 
 const BADGES = [
-  {id: 'first',   name: '🌱 Первый шаг',            test: () => stats.count >= 1},
-  {id: 't5',      name: '⭐ 5 тренировок',           test: () => stats.count >= 5},
-  {id: 't10',     name: '💪 10 тренировок',          test: () => stats.count >= 10},
-  {id: 't25',     name: '🏆 25 тренировок',          test: () => stats.count >= 25},
-  {id: 't50',     name: '👑 Полсотни!',              test: () => stats.count >= 50},
-  {id: 's3',      name: '🔥 3 дня подряд',           test: () => calcStreak() >= 3},
-  {id: 's7',      name: '🚀 Первая неделя без пропусков', test: () => calcStreak() >= 7},
-  {id: 's14',     name: '💎 Две недели силы',        test: () => calcStreak() >= 14}
+  {id: 'first', emoji: '🌱', name: 'Первый шаг',   desc: 'Первая тренировка', test: () => stats.count >= 1},
+  {id: 't5',    emoji: '⭐', name: 'Разминка',      desc: '5 тренировок',      test: () => stats.count >= 5},
+  {id: 't10',   emoji: '💪', name: 'В ритме',       desc: '10 тренировок',     test: () => stats.count >= 10},
+  {id: 't25',   emoji: '🏆', name: 'Втянулась',     desc: '25 тренировок',     test: () => stats.count >= 25},
+  {id: 't50',   emoji: '👑', name: 'Железная леди', desc: '50 тренировок',     test: () => stats.count >= 50},
+  {id: 't100',  emoji: '🌟', name: 'Сотня',         desc: '100 тренировок',    test: () => stats.count >= 100},
+  {id: 's3',    emoji: '🔥', name: 'Серия',         desc: '3 дня подряд',      test: () => calcStreak() >= 3},
+  {id: 's7',    emoji: '🚀', name: 'Неделя силы',   desc: '7 дней подряд',     test: () => calcStreak() >= 7},
+  {id: 's14',   emoji: '💎', name: 'Две недели',    desc: '14 дней подряд',    test: () => calcStreak() >= 14},
+  {id: 's30',   emoji: '⚡', name: 'Несокрушимая',  desc: '30 дней подряд',    test: () => calcStreak() >= 30}
 ];
 function renderBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
-  const earned = BADGES.filter(b => b.test());
-  const fresh = earned.filter(b => !stats.badges.includes(b.id)).map(b => b.id);
-  stats.badges = earned.map(b => b.id);
-  $('badgeRow').innerHTML = earned.map(b =>
-    `<span class="badge${fresh.includes(b.id) ? ' new' : ''}">${b.name}${fresh.includes(b.id) ? ' · новый!' : ''}</span>`
+  const fresh = BADGES.filter(b => b.test() && !stats.badges.includes(b.id)).map(b => b.id);
+  stats.badges = BADGES.filter(b => b.test()).map(b => b.id);
+  let toShow = BADGES.filter(b => fresh.includes(b.id));
+  if(!toShow.length){
+    const earned = BADGES.filter(b => b.test());
+    if(earned.length) toShow = [earned[earned.length - 1]];
+  }
+  $('badgeRow').innerHTML = toShow.map(b =>
+    `<div class="badge${fresh.includes(b.id) ? ' new' : ''}">
+       <span class="b-emoji">${b.emoji}</span>
+       <div class="b-txt"><b>${b.name}</b><small>${fresh.includes(b.id) ? 'Новое достижение!' : b.desc}</small></div>
+     </div>`
   ).join('');
   const si = calcStreakInfo();
-  $('finStreak').textContent = si.n > 1
-    ? `🔥 Серия: ${si.n} ${plural(si.n, 'день', 'дня', 'дней')} подряд${si.freezes ? ' ❄' : ''}`
-    : '';
+  if(si.n > 1){
+    $('finStreak').textContent = si.n + (si.freezes ? ' ❄' : '');
+    $('finStreakBox').style.display = 'flex';
+  } else $('finStreakBox').style.display = 'none';
 }
 
 // сохраняем рекомендацию нагрузки на следующий раз
@@ -3623,6 +3772,7 @@ $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
+$('btnShareWeight').onclick = shareWeightChart;
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
