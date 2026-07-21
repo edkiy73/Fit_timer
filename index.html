@@ -498,6 +498,38 @@
   .avatar-btn.off{display:none}
   #btnStats{color:var(--work)}
   #btnStats svg{width:19px;height:19px}
+  .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
+  .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:'Rubik';font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
+  .tab.act{background:var(--work);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .premium-banner{
+    position:relative;overflow:hidden;width:100%;
+    display:flex;align-items:center;gap:14px;
+    background:linear-gradient(120deg,#3A2740,#5B2E4A 55%,#7A3B44);
+    border:1px solid rgba(255,190,120,.35);border-radius:18px;
+    padding:16px 16px;margin-bottom:16px;cursor:pointer;text-align:left;
+    box-shadow:0 6px 20px rgba(120,40,60,.28);
+  }
+  .pb-glow{position:absolute;top:-40%;left:-20%;width:80px;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:rotate(18deg);animation:pbShine 4.5s ease-in-out infinite}
+  @keyframes pbShine{0%,100%{left:-30%}55%,70%{left:120%}}
+  .pb-ico{flex:none;width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#FFD98A,#FF9E5E);color:#5B2E1A;display:flex;align-items:center;justify-content:center}
+  .pb-ico svg{width:24px;height:24px}
+  .pb-txt{flex:1;min-width:0;color:#fff}
+  .pb-txt b{display:block;font-size:15px;margin-bottom:3px;font-weight:600}
+  .pb-txt small{display:block;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.72)}
+  .pm-crown{font-size:46px;text-align:center;margin-bottom:6px}
+  .pm-title{text-align:center;font-size:22px;margin-bottom:14px}
+  .pm-lead{font-size:14.5px;line-height:1.55;color:var(--muted);margin-bottom:12px}
+  .pm-lead b{color:var(--ink);font-weight:600}
+  .pm-wallet{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0 14px;text-align:center}
+  .pm-wlabel{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'Oswald';margin-bottom:8px}
+  .pm-addr{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 10px;cursor:pointer;color:var(--ink);font-family:'Rubik';font-size:12.5px;word-break:break-all}
+  .pm-addr:active{transform:scale(.98)}
+  .pm-copyico{flex:none;color:var(--work)}
+  .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
+  .pm-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:8px}
+  .data-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:36px 0 24px;opacity:.7}
+  .data-link{background:none;border:none;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;padding:6px;text-decoration:underline;text-underline-offset:2px}
+  .data-sep{color:var(--line)}
   .quick-stats{display:flex;gap:10px;margin-bottom:20px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:'Rubik';font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--work)}
@@ -642,7 +674,32 @@
   <!-- ШАГ 1: главный экран -->
   <section class="screen on" id="scrMenu">
     <div class="hero">
+      <button class="premium-banner" id="btnPremium">
+        <div class="pb-glow"></div>
+        <div class="pb-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5L3 8Z"/></svg>
+        </div>
+        <div class="pb-txt">
+          <b>Открой Premium-возможности</b>
+          <small>Сотни программ от профи · Генерация тренировки из текста в 1 клик · Расширенная статистика · Режим соревнования</small>
+        </div>
+      </button>
       <button class="hero-help" id="btnHelp">Как пользоваться приложением?</button>
+    </div>
+
+    <div class="modal" id="premiumModal">
+      <div class="modal-card">
+        <div class="pm-crown">👑</div>
+        <h3 class="pm-title">Premium — пока бесплатно</h3>
+        <p class="pm-lead">Приложение сейчас <b>полностью бесплатное</b> и находится в стадии бета-теста. Все возможности открыты для всех.</p>
+        <p class="pm-lead">Если оно тебе нравится — поддержи разработку, и мы закрепим за тобой <b>Premium навсегда</b>, когда он появится.</p>
+        <div class="pm-wallet">
+          <span class="pm-wlabel">Кошелёк USDT (TRC-20)</span>
+          <button class="pm-addr" id="pmCopy"><span id="pmWallet"></span><span class="pm-copyico" id="pmCopyIco"></span></button>
+          <span class="pm-hint" id="pmHint">Нажми, чтобы скопировать адрес</span>
+        </div>
+        <button class="link-btn" id="pmClose" style="margin:0;padding:10px">Закрыть</button>
+      </div>
     </div>
     <div class="weight-card today-card" id="todayBox" style="display:none">
       <span class="ts-label">Сегодня · <span id="todayDayName"></span></span>
@@ -656,8 +713,12 @@
     <div class="section-title st-row" style="margin-top:0"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
     <div id="mineList"></div>
 
-
-
+    <div class="data-row">
+      <button class="data-link" id="btnExportAll"></button>
+      <span class="data-sep">·</span>
+      <button class="data-link" id="btnImportAll"></button>
+      <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
+    </div>
   </section>
 
   <!-- ШАГ 2: экран старта -->
@@ -927,10 +988,6 @@
         </div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
-      <div class="section-title">Данные</div>
-      <button class="btn-ghost" id="btnExportAll">Экспорт всех данных в файл</button>
-      <button class="btn-ghost" id="btnImportAll">Импорт данных из файла</button>
-      <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
     </div>
 
     <div class="tab-pane" id="tabWeight" style="display:none">
@@ -1383,6 +1440,7 @@ function show(id, push = true){
   $('btnSoundW').classList.toggle('on', id==='scrWork');
   $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
   $('btnUsers').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
+  $('btnStats').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
 }
 
 /* ================= ЭКРАН 2: СТАРТ ================= */
@@ -1554,7 +1612,7 @@ function renderUsers(){
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div><button class="ue" title="Изменить">${icon('pencil')}</button>`;
     row.querySelector('b').textContent = u.name || 'Без имени';
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
-    row.onclick = () => switchUser(u.id);
+    row.onclick = () => { $('usersModal').classList.remove('open'); switchUser(u.id); };
     box.appendChild(row);
   });
   const u = curUser();
@@ -1699,6 +1757,8 @@ function renderTotal(){
 
 /* ================= КАЛЕНДАРЬ И НЕДЕЛЯ ================= */
 let calOffset = 0;
+const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
 // серия с «заморозкой»: один пропущенный день не сжигает стрик (не чаще раза в 7 дней)
@@ -1906,12 +1966,14 @@ async function saveUser(){
       applyTheme();
     }
     renderAvatar(); renderUsers();
+    show('scrMenu');
     $('usersModal').classList.add('open');
   } else {
     uDraft.id = 'u' + Date.now();
     users.push(uDraft);
     await saveUsers();
     await switchUser(uDraft.id); // новый профиль сразу активен, со своей чистой статистикой
+    show('scrMenu');
     $('usersModal').classList.add('open');
   }
 }
@@ -1941,6 +2003,7 @@ async function deleteUser(){
   } else {
     renderUsers();
   }
+  show('scrMenu');
   $('usersModal').classList.add('open');
 }
 
@@ -2391,7 +2454,6 @@ function applyProgressionAll(){
 }
 
 /* ================= БЛОК «СЕГОДНЯ» ================= */
-const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 function renderToday(){
   const box = $('todayBox');
   const di = (new Date().getDay() + 6) % 7;
@@ -2643,7 +2705,6 @@ function enableDrag(wrap, handle){
 
 /* ================= КОНСТРУКТОР ================= */
 const MAX_EX = 10;
-const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 let draft = null;
 
 function blankExercise(){
@@ -3972,6 +4033,32 @@ $('btnSaveWeight').onclick = async ()=>{
   renderWeight();
 };
 // навигация по календарю
+// premium-баннер: демо-кошелёк (случайный TRC-20-подобный адрес на сессию)
+function randomTronAddress(){
+  const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let s = 'T';
+  for(let i = 0; i < 33; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+let premiumWallet = randomTronAddress();
+$('pmWallet').textContent = premiumWallet;
+$('pmCopyIco').innerHTML = icon('download');
+$('btnPremium').onclick = ()=> $('premiumModal').classList.add('open');
+$('pmClose').onclick = ()=> $('premiumModal').classList.remove('open');
+$('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
+$('pmCopy').onclick = async ()=>{
+  try{
+    await navigator.clipboard.writeText(premiumWallet);
+    $('pmHint').textContent = '✓ Адрес скопирован — спасибо за поддержку!';
+    $('pmHint').style.color = 'var(--rest)';
+  }catch(e){
+    $('pmHint').textContent = 'Выдели адрес и скопируй вручную';
+  }
+  setTimeout(()=>{ $('pmHint').textContent = 'Нажми, чтобы скопировать адрес'; $('pmHint').style.color = ''; }, 2500);
+};
+
+$('btnExportAll').textContent = 'Сохранить копию данных';
+$('btnImportAll').textContent = 'Восстановить из файла';
 $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
@@ -4126,6 +4213,7 @@ $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
 $('ueBackTop').innerHTML = icon('chevL');
 $('builderBackTop').innerHTML = icon('chevL');
+$('statsBackTop').innerHTML = icon('chevL');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
 $('helpBackTop').innerHTML = icon('chevL');
