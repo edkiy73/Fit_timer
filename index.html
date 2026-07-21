@@ -496,6 +496,12 @@
     font-family:'Oswald';font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
   }
   .avatar-btn.off{display:none}
+  #btnStats{color:var(--work)}
+  #btnStats svg{width:19px;height:19px}
+  .quick-stats{display:flex;gap:10px;margin-bottom:20px}
+  .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:'Rubik';font-size:12px}
+  .qs-ico{width:26px;height:26px;color:var(--work)}
+  .qs-ico svg{width:26px;height:26px}
   .avatar-btn img{width:100%;height:100%;object-fit:cover;display:block}
   .user-row{
     display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
@@ -624,6 +630,7 @@
     <div class="brand">FIT<b>/</b>TIMER</div>
     <div class="global-clock" id="globalClock">00:00</div>
     <div class="top-tools">
+      <button class="avatar-btn" id="btnStats" title="Статистика"></button>
       <button class="avatar-btn" id="btnUsers" title="Профили"><span id="avatarSlot">?</span></button>
       <button class="icon-btn btn-sound" id="btnSoundW" title="Звук">🔊</button>
       <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление">🎤</button>
@@ -641,15 +648,10 @@
       <span class="ts-label">Сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
-    <div class="weight-card" id="photoCard">
-      <div class="wc-top">
-        <div><span class="ts-label">Фото-прогресс</span><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
-        <button class="icon-btn" id="btnAddPhoto" title="Добавить фото"></button>
-      </div>
-      <div class="ph-row" id="photoStrip"></div>
-      <p class="mine-empty" id="photoEmpty" style="margin:8px 0 0">Снимайся раз в неделю в одинаковой одежде и освещении — прогресс станет видимым, даже когда вес стоит.</p>
-      <button class="link-btn" id="btnCompare" style="display:none;padding:8px;margin:4px 0 0">Сравнить и поделиться</button>
-      <input type="file" id="photoFile" accept="image/*" style="display:none">
+    <div class="quick-stats">
+      <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><span>Тренировки</span></button>
+      <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><span>Вес и объёмы</span></button>
+      <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><span>Фото-прогресс</span></button>
     </div>
     <div class="section-title st-row" style="margin-top:0"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
     <div id="mineList"></div>
@@ -900,48 +902,85 @@
   </section>
 
   <!-- Профили -->
-  <section class="screen builder" id="scrUsers">
-    <div class="screen-head"><button class="back-chip" id="usersBackTop">‹</button><h2>Профили</h2></div>
-    <div id="usersList"></div>
-    <button class="btn-ghost" id="btnAddUser">＋ Добавить профиль</button>
-    <div class="pref-row" style="border-top:none;margin-top:18px"><span>Тёмная тема</span><button class="switch" id="tglTheme"></button></div>
-    <div class="metric-card">
-      <div class="mc-head">
-        <div>
-          <span class="ts-label">Вес и объёмы</span>
-          <div class="mc-now"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
+  <!-- Статистика с табами -->
+  <section class="screen builder" id="scrStats">
+    <div class="screen-head"><button class="back-chip" id="statsBackTop"></button><h2>Статистика</h2></div>
+    <div class="tabs" id="statsTabs">
+      <button class="tab act" data-tab="workouts">Тренировки</button>
+      <button class="tab" data-tab="weight">Вес и объёмы</button>
+      <button class="tab" data-tab="photo">Фото</button>
+    </div>
+
+    <div class="tab-pane" id="tabWorkouts">
+      <div class="weight-card">
+        <div class="wc-top">
+          <div><span class="ts-label">Всего натренировано</span><b id="totalTime">0 мин</b><span class="w-delta" id="totalCount"></span></div>
+          <button class="icon-btn" id="btnResetTotal" title="Сбросить">⟲</button>
         </div>
-        <button class="add-btn" id="btnAddWeight" title="Записать"></button>
+        <div class="week-line"><span id="weekStat"></span><span class="streak" id="streakStat"></span></div>
+        <div class="bars-title">Тренировок по неделям <span class="bars-hint">(последние 8)</span></div>
+        <svg id="weekBars" viewBox="0 0 300 58"></svg>
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev">‹</button>
+          <b id="calTitle"></b>
+          <button class="cal-nav" id="calNext">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
       </div>
-      <div class="mc-meta" id="weightMeta" style="display:none"></div>
-      <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
-      <div class="mc-charts" id="weightCharts" style="display:none"></div>
-      <div class="mc-actions" id="weightActions" style="display:none">
-        <button class="mc-act" id="btnWeightHist"></button>
-        <button class="mc-act" id="btnShareWeight"></button>
+      <div class="section-title">Данные</div>
+      <button class="btn-ghost" id="btnExportAll">Экспорт всех данных в файл</button>
+      <button class="btn-ghost" id="btnImportAll">Импорт данных из файла</button>
+      <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
+    </div>
+
+    <div class="tab-pane" id="tabWeight" style="display:none">
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Вес и объёмы</span>
+            <div class="mc-now"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
+          </div>
+          <button class="add-btn" id="btnAddWeight" title="Записать"></button>
+        </div>
+        <div class="mc-meta" id="weightMeta" style="display:none"></div>
+        <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
+        <div class="mc-charts" id="weightCharts" style="display:none"></div>
+        <div class="mc-actions" id="weightActions" style="display:none">
+          <button class="mc-act" id="btnWeightHist"></button>
+          <button class="mc-act" id="btnShareWeight"></button>
+        </div>
       </div>
     </div>
-    <div class="section-title" style="margin-top:10px">Статистика · <span id="statsUserName"></span></div>
-    <div class="weight-card">
-      <div class="wc-top">
-        <div><span class="ts-label">Всего натренировано</span><b id="totalTime">0 мин</b><span class="w-delta" id="totalCount"></span></div>
-        <button class="icon-btn" id="btnResetTotal" title="Сбросить">⟲</button>
+
+    <div class="tab-pane" id="tabPhoto" style="display:none">
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Фото-прогресс</span>
+            <div class="mc-now"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
+          </div>
+          <button class="add-btn" id="btnAddPhoto" title="Добавить фото"></button>
+        </div>
+        <div class="ph-row" id="photoStrip" style="margin-top:14px"></div>
+        <div class="mc-empty" id="photoEmpty">Снимайся раз в неделю в одинаковой одежде и освещении — прогресс станет виден, даже когда вес стоит.</div>
+        <div class="mc-actions" id="photoActions" style="display:none">
+          <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
+        </div>
+        <input type="file" id="photoFile" accept="image/*" style="display:none">
       </div>
-      <div class="week-line"><span id="weekStat"></span><span class="streak" id="streakStat"></span></div>
-      <div class="bars-title">Тренировок по неделям <span class="bars-hint">(последние 8)</span></div>
-      <svg id="weekBars" viewBox="0 0 300 58"></svg>
-      <div class="cal-head">
-        <button class="cal-nav" id="calPrev">‹</button>
-        <b id="calTitle"></b>
-        <button class="cal-nav" id="calNext">›</button>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
     </div>
-    <div class="section-title">Данные</div>
-    <button class="btn-ghost" id="btnExportAll">Экспорт всех данных в файл</button>
-    <button class="btn-ghost" id="btnImportAll">Импорт данных из файла</button>
-    <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
   </section>
+
+  <!-- Попап профилей -->
+  <div class="modal" id="usersModal">
+    <div class="modal-card">
+      <span class="mini-label">Профили</span>
+      <div id="usersList"></div>
+      <button class="choice" id="btnAddUser" style="text-align:center"><b>＋ Добавить профиль</b></button>
+      <div class="pref-row" style="border-top:1px solid var(--line);margin-top:6px"><span>Тёмная тема</span><button class="switch" id="tglTheme"></button></div>
+      <button class="link-btn" id="usersClose" style="margin:0;padding:10px">Закрыть</button>
+    </div>
+  </div>
 
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
@@ -955,13 +994,15 @@
       <input type="file" id="uePhotoFile" accept="image/*" style="display:none">
       <div class="media-preview" id="uePhotoPrev"></div>
     </div>
-    <div class="field"><label>Пол</label>
-      <div class="seg"><button type="button" id="ueGenderF">Женский</button><button type="button" id="ueGenderM">Мужской</button></div>
+    <div class="row2">
+      <div class="field"><label>Пол</label>
+        <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
+      </div>
+      <div class="field"><label>Тема</label>
+        <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
+      </div>
     </div>
     <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth"></div>
-    <div class="field"><label>Тема по умолчанию</label>
-      <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
-    </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveUser">Сохранить</button>
       <button type="button" class="link-btn" id="btnDelUser" style="color:var(--work)">Удалить профиль</button>
@@ -1281,7 +1322,10 @@ const ICONS = {
   sparkle: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/>',
   chevL: '<path d="M15 18l-6-6 6-6"/>',
   chevR: '<path d="M9 18l6-6-6-6"/>',
-  more: '<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>'
+  more: '<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+  weight: '<circle cx="12" cy="6" r="3"/><path d="M6 21l1.5-9h9L18 21H6Z"/>',
+  camera: '<path d="M4 8h3l2-2h6l2 2h3v11H4V8Z"/><circle cx="12" cy="13" r="3.2"/>' 
 };
 function icon(name){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
@@ -1316,7 +1360,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrText','scrHelp','scrUsers','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -1514,7 +1558,6 @@ function renderUsers(){
     box.appendChild(row);
   });
   const u = curUser();
-  $('statsUserName').textContent = u ? (u.name || '') : '';
 }
 
 function renderWeight(){
@@ -1830,6 +1873,7 @@ document.addEventListener('click', e => {
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 let uDraft = null;
 function openUserEdit(id = null){
+  $('usersModal').classList.remove('open');
   const u = id ? users.find(x => x.id === id) : {id: null, name: '', gender: 'f', birth: '', photo: null, theme: 'light'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
@@ -1862,13 +1906,13 @@ async function saveUser(){
       applyTheme();
     }
     renderAvatar(); renderUsers();
-    show('scrUsers');
+    $('usersModal').classList.add('open');
   } else {
     uDraft.id = 'u' + Date.now();
     users.push(uDraft);
     await saveUsers();
     await switchUser(uDraft.id); // новый профиль сразу активен, со своей чистой статистикой
-    show('scrUsers');
+    $('usersModal').classList.add('open');
   }
 }
 async function deleteUser(){
@@ -1897,7 +1941,7 @@ async function deleteUser(){
   } else {
     renderUsers();
   }
-  show('scrUsers');
+  $('usersModal').classList.add('open');
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -1974,7 +2018,8 @@ function renderPhotos(){
     strip.appendChild(img);
   });
   $('photoEmpty').style.display = n ? 'none' : 'block';
-  $('btnCompare').style.display = n >= 2 ? 'block' : 'none';
+  const pa = $('photoActions');
+  if(pa) pa.style.display = n >= 2 ? 'flex' : 'none';
 }
 
 async function addPhoto(file){
@@ -3978,9 +4023,25 @@ $('obStart').onclick = ()=>{
 };
 $('obLater').onclick = ()=> show('scrMenu');
 // профили
-$('btnUsers').onclick = ()=>{ renderUsers(); show('scrUsers'); window.scrollTo(0,0); };
-$('usersBackTop').onclick = ()=> show('scrMenu');
-$('ueBackTop').onclick = ()=> show('scrUsers');
+$('btnUsers').onclick = ()=>{ renderUsers(); $('usersModal').classList.add('open'); };
+$('usersClose').onclick = ()=> $('usersModal').classList.remove('open');
+$('usersModal').onclick = e => { if(e.target === $('usersModal')) $('usersModal').classList.remove('open'); };
+$('btnStats').onclick = ()=> openStats('workouts');
+function openStats(tab){
+  renderStats(); renderWeight(); renderPhotos();
+  switchStatsTab(tab || 'workouts');
+  show('scrStats'); window.scrollTo(0, 0);
+}
+function switchStatsTab(tab){
+  document.querySelectorAll('#statsTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.tab === tab));
+  $('tabWorkouts').style.display = tab === 'workouts' ? 'block' : 'none';
+  $('tabWeight').style.display = tab === 'weight' ? 'block' : 'none';
+  $('tabPhoto').style.display = tab === 'photo' ? 'block' : 'none';
+}
+document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
+$('statsBackTop').onclick = ()=> show('scrMenu');
+document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
+$('ueBackTop').onclick = ()=>{ show('scrMenu'); $('usersModal').classList.add('open'); };
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
@@ -4055,10 +4116,14 @@ $('btnCreate').innerHTML = icon('plus');
 $('btnResetTotal').innerHTML = icon('reset');
 $('btnAddWeight').innerHTML = icon('plus');
 $('btnAddPhoto').innerHTML = icon('plus');
+$('btnStats').innerHTML = icon('chart');
+$('qsIco1').innerHTML = icon('chart');
+$('qsIco2').innerHTML = icon('weight');
+$('qsIco3').innerHTML = icon('camera');
+$('btnCompare').innerHTML = icon('share') + 'Сравнить и поделиться';
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
-$('usersBackTop').innerHTML = icon('chevL');
 $('ueBackTop').innerHTML = icon('chevL');
 $('builderBackTop').innerHTML = icon('chevL');
 $('startBackTop').innerHTML = icon('chevL');
