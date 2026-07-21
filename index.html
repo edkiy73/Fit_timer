@@ -3228,7 +3228,7 @@ const Q_OPTS = {
   equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
   limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность']
 };
-const q = {goal: '', level: 'Новичок', days: [], dur: '20 мин', focus: [], equip: ['Нет'], limit: ['Нет'], note: '', split: false};
+const q = {goal: [], level: 'Новичок', days: [], dur: '20 мин', focus: [], equip: ['Нет'], limit: ['Нет'], note: '', split: false};
 
 function qChips(boxId, opts, isMulti, get, set){
   const box = $(boxId); box.innerHTML = '';
@@ -3240,11 +3240,12 @@ function qChips(boxId, opts, isMulti, get, set){
     b.onclick = ()=>{
       if(isMulti){
         let arr = get();
+        const hasNone = opts.includes('Нет');
         if(o === 'Нет'){ arr = ['Нет']; }
         else {
           arr = arr.filter(x => x !== 'Нет');
           arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
-          if(!arr.length) arr = ['Нет'];
+          if(!arr.length && hasNone) arr = ['Нет']; // пусто → «Нет», только если такая опция есть
         }
         set(arr);
       } else set(o);
@@ -3256,8 +3257,11 @@ function qChips(boxId, opts, isMulti, get, set){
 
 function initAIForm(){
   const u = curUser();
-  if(!q.goal) q.goal = (u && u.goal && Q_OPTS.goal.includes(u.goal)) ? u.goal : Q_OPTS.goal[1];
-  qChips('qGoal', Q_OPTS.goal, false, ()=> q.goal, v => q.goal = v);
+  if(!q.goal.length){
+    const g = (u && u.goal && Q_OPTS.goal.includes(u.goal)) ? u.goal : Q_OPTS.goal[1];
+    q.goal = [g];
+  }
+  qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
   qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
   qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
@@ -3282,7 +3286,8 @@ $('qSplit').onclick = ()=>{ q.split = !q.split; $('qSplit').classList.toggle('on
 
 function composeRequest(){
   const days = q.days.length ? `дни: ${q.days.join(', ')}` : 'дни и количество тренировок предложи сам(а) исходя из цели';
-  let s = `Составь тренировку. Цель: ${q.goal.toLowerCase()}. Уровень: ${q.level.toLowerCase()}. ${days}. ` +
+  const goalTxt = q.goal.length ? q.goal.join(', ').toLowerCase() : 'общая физическая форма';
+  let s = `Составь тренировку. Цель: ${goalTxt}. Уровень: ${q.level.toLowerCase()}. ${days}. ` +
     `Длительность: около ${q.dur}. Инвентарь: ${q.equip.join(', ').toLowerCase()}. ` +
     `Ограничения: ${q.limit.join(', ').toLowerCase()}. `;
   if(q.focus.length) s += `Особый акцент на: ${q.focus.join(', ').toLowerCase()}. `;
@@ -3912,46 +3917,79 @@ function syncPrefs(){
   $('tglMusic').classList.toggle('on', musicMode);
 }
 
+let lastCmdTime = 0, lastCmdKind = '';
 function applyVoiceCommand(text){
-  if(!$('scrWork').classList.contains('on')) return;
+  if(!$('scrWork').classList.contains('on')) return false;
   const step = state.steps[state.stepIdx];
-  if(!step) return;
-  const t = text.toLowerCase();
-  if(/пауз/.test(t)){
+  if(!step) return false;
+  const t = text.toLowerCase().trim();
+
+  let kind = '';
+  if(/продолж|дальше пошл|поехали/.test(t)) kind = 'resume';
+  else if(/пауз|стоп|подожд/.test(t)) kind = 'pause';
+  else if(/готов|пропус|заверш|дальше|сделал|next|некст/.test(t)) kind = 'next';
+  if(!kind) return false;
+
+  // дедуп: промежуточные результаты повторяют одну фразу — не срабатываем дважды за 1.2с
+  const now = Date.now();
+  if(kind === lastCmdKind && now - lastCmdTime < 1200) return true;
+  lastCmdTime = now; lastCmdKind = kind;
+
+  if(kind === 'pause'){
     if(!state.paused){ setPause(true); beep(990, .1); }
-    return;
+    return true;
   }
-  if(/продолж/.test(t)){
+  if(kind === 'resume'){
     if(state.paused){ setPause(false); beep(990, .1); }
-    return;
+    return true;
   }
-  if(/готов|пропус|заверш|дальше/.test(t)){
-    if(state.paused) setPause(false);
-    if(step.kind === 'click'){
-      $('btnDone').click();
-    } else {
-      beep(990, .1);
-      nextStep();
-    }
-  }
+  // next
+  if(state.paused) setPause(false);
+  if(step.kind === 'click'){ $('btnDone').click(); }
+  else { beep(990, .1); nextStep(); }
+  return true;
 }
 
+let recogTimer = null, lastRecogStart = 0, stopRequested = false, recogFails = 0;
+function buildRecog(){
+  const r = new SR();
+  r.lang = 'ru-RU';
+  r.continuous = true;
+  r.interimResults = true; // промежуточные результаты — команда ловится быстрее, не дожидаясь паузы
+  r.maxAlternatives = 3;
+  r.onresult = e=>{
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const res = e.results[i];
+      // проверяем все альтернативы — короткие команды часто не «финализируются»
+      for(let a = 0; a < res.length; a++){
+        if(applyVoiceCommand(res[a].transcript)) return; // сработало — дальше не ищем
+      }
+    }
+  };
+  return r;
+}
 function startListening(){
   if(!SR || voiceActive) return;
+  stopRequested = false;
+  lastRecogStart = Date.now();
   try{
-    recog = new SR();
-    recog.lang = 'ru-RU';
-    recog.continuous = true;
-    recog.interimResults = false;
-    recog.onresult = e=>{
-      for(let i = e.resultIndex; i < e.results.length; i++){
-        if(e.results[i].isFinal) applyVoiceCommand(e.results[i][0].transcript);
-      }
-    };
+    recog = buildRecog();
     recog.onend = ()=>{
       voiceActive = false;
-      // браузер периодически сам останавливает распознавание — перезапускаем
-      if(voiceWanted && $('scrWork').classList.contains('on')) setTimeout(startListening, 100);
+      // ОС сама останавливает распознавание после каждой фразы/паузы тишины.
+      // перезапускаем СРАЗУ, иначе в промежутке команды не слышны.
+      if(voiceWanted && !stopRequested && $('scrWork').classList.contains('on')){
+        // защита от бесконечного мгновенного цикла при ошибке (если onend летит < 300мс подряд много раз)
+        const now = Date.now();
+        if(now - lastRecogStart < 300){ recogFails++; } else { recogFails = 0; }
+        if(recogFails > 8){
+          // распознавание падает мгновенно (нет доступа/не поддерживается) — не долбим микрофон
+          voiceWanted = false; kvSet('voiceCtl', '0'); syncPrefs();
+          return;
+        }
+        try{ recog.start(); voiceActive = true; lastRecogStart = now; }
+        catch(e){ setTimeout(()=>{ if(voiceWanted && !stopRequested) startListening(); }, 250); }
+      }
     };
     recog.onerror = ev=>{
       if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
@@ -3967,7 +4005,9 @@ function startListening(){
 }
 
 function stopListening(){
-  try{ if(recog) recog.stop(); }catch(e){}
+  stopRequested = true;
+  clearTimeout(recogTimer);
+  try{ if(recog){ recog.onend = null; recog.stop(); recog.abort && recog.abort(); } }catch(e){}
   voiceActive = false;
 }
 
@@ -4040,7 +4080,7 @@ $('tglVoice').onclick = async ()=>{
   toggleVoice();
   if(voiceWanted && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
-    appAlert('Голосовое управление включится во время тренировки.\n\nКоманды:\n«Готово», «Пропустить», «Завершить» — к следующему этапу\n«Пауза» — остановить\n«Продолжить» — продолжить');
+    appAlert('Голосовое управление включится во время тренировки. Говори чётко, команду можно повторить.\n\nКоманды:\n«Дальше» / «Готово» / «Пропустить» — следующий этап\n«Пауза» — остановить · «Продолжить» — дальше\n\nМикрофон слушает постоянно и сам перезапускается — телефон может иногда подавать короткий сигнал, это нормально. Работает только при интернете.');
   }
 };
 $('btnResume').onclick = ()=> setPause(false);
