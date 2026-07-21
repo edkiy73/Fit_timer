@@ -602,6 +602,8 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M13 5 5 13M13 9.5 9.5 13' stroke='%239C8FA0' stroke-width='1.8' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 6px bottom 6px;
   }
+  #hfModal .choice.act{border-color:var(--work)}
+  #hfModal .choice.act b{color:var(--work)}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
   .hf-title{font-size:14px;margin-bottom:10px}
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
@@ -1111,6 +1113,17 @@
     </div>
   </section>
 
+    <div class="modal" id="hfModal">
+      <div class="modal-card">
+        <span class="mini-label">Управление без рук</span>
+        <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
+        <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Возможен системный сигнал микрофона</small></button>
+        <button class="choice" data-hf="clap"><b>Хлопок</b><small>1 хлопок — дальше, 2 — пауза. Без системных звуков, офлайн</small></button>
+        <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
+        <button class="link-btn" id="hfClose" style="margin:0;padding:10px">Закрыть</button>
+      </div>
+    </div>
+
     <div class="modal" id="soundModal">
       <div class="modal-card">
         <span class="mini-label">Звук тренировки</span>
@@ -1233,6 +1246,7 @@ const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15"
 
 /* ================= ЗВУК ================= */
 let soundOn = true; // общий выключатель звука
+let lastAppSoundT = 0; // когда приложение само издавало звук (для детектора хлопка)
 let fxVol = 1;    // громкость звуковых эффектов 0..1
 let voiceVol = 1; // громкость голоса 0..1
 let audioCtx = null, masterGain = null;
@@ -1246,6 +1260,7 @@ function initAudio(){
 function fxDest(){ return masterGain || audioCtx.destination; }
 function beep(freq=880, dur=0.15, when=0, vol=0.25){
   if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + (when + dur) * 1000;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.type='sine'; o.frequency.value=freq;
   g.gain.setValueAtTime(vol, audioCtx.currentTime + when);
@@ -1259,6 +1274,7 @@ const endSignal = () => { beep(880,.14,0); beep(880,.14,.2); beep(1320,.3,.4,.3)
 // гонг — начало нового упражнения
 function gong(){
   if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
   const t = audioCtx.currentTime;
   [[110,1.6,.4],[164,1.2,.28],[218,1.0,.18],[329,1.9,.1]].forEach(([f,dur,vol])=>{
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -1273,6 +1289,7 @@ function gong(){
 // фанфары — тренировка завершена
 function fanfare(){
   if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
   const notes = [523.25, 659.25, 783.99, 1046.5];
   notes.forEach((f,i)=> {
     beep(f, .22, i*.16, .25);
@@ -1292,6 +1309,7 @@ function fanfare(){
 // щелчки — фолбэк голосового отсчёта: 1 щелчок = 15 сек, 2 = 30 и т.д.
 function clicks(n){
   if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
   for(let i=0;i<n;i++){
     const t = audioCtx.currentTime + i*0.22;
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -1354,7 +1372,7 @@ function speak(text, fallback){
     const chosen = ru.find(v => v.voiceURI === savedVoiceURI) || ru[0];
     if(chosen) u.voice = chosen;
     let started = false;
-    u.onstart = ()=>{ started = true; };
+    u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 4000; };
     u.onerror = ()=>{ if(!started && fallback) fallback(); };
     try{ speechSynthesis.cancel(); }catch(e){} // обрываем предыдущую фразу
     speechSynthesis.speak(u);
@@ -4000,7 +4018,8 @@ function stopHandsFree(){
 let clapStream = null, clapCtx = null, clapRAF = 0, lastClap = 0, clapCount = 0, clapTimer = null;
 async function startClap(){
   try{
-    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false}});
+    // echoCancellation глушит звук из собственного динамика — критично, чтобы гонг не считался хлопком
+    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}});
     clapCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = clapCtx.createMediaStreamSource(clapStream);
     const an = clapCtx.createAnalyser();
@@ -4008,6 +4027,7 @@ async function startClap(){
     src.connect(an);
     const buf = new Uint8Array(an.fftSize);
     let noise = 8; // адаптивный уровень фона (тихая комната ~2–8)
+    let prevPeak = 0;
     const loop = ()=>{
       if(!clapStream) return;
       an.getByteTimeDomainData(buf);
@@ -4016,10 +4036,20 @@ async function startClap(){
         const v = Math.abs(buf[i] - 128);
         if(v > peak) peak = v;
       }
-      noise = noise * 0.995 + peak * 0.005; // плавающий фон
       const now = Date.now();
-      // хлопок: резкий пик сильно выше фона, не чаще раза в 250мс
-      if(peak > Math.max(48, noise * 2.6) && now - lastClap > 250){
+      // пока приложение само звучит (гонг/бип/голос) — детект выключен, чтобы не ловить свой динамик
+      const appSpeaking = now < lastAppSoundT || (window.speechSynthesis && speechSynthesis.speaking);
+      if(appSpeaking){
+        prevPeak = peak;
+        clapRAF = requestAnimationFrame(loop);
+        return;
+      }
+      noise = noise * 0.995 + peak * 0.005; // плавающий фон
+      const th = Math.max(48, noise * 2.6);
+      // хлопок = резкий фронт: тихо в прошлом кадре → громко сейчас (музыка/речь нарастают плавно)
+      const sharp = prevPeak < th * 0.6;
+      prevPeak = peak;
+      if(peak > th && sharp && now - lastClap > 250){
         lastClap = now;
         clapCount++;
         clearTimeout(clapTimer);
@@ -4264,15 +4294,23 @@ function toggleSound(){
   if(!soundOn) stopSpeech();
   syncPrefs();
 }
-function cycleHfMode(){
-  const order = ['off', 'voice', 'clap', 'headset'];
-  let i = (order.indexOf(hfMode) + 1) % order.length;
-  if(order[i] === 'voice' && !SR) i = (i + 1) % order.length; // пропускаем голос, если не поддерживается
-  setHfMode(order[i]);
-  // короткая подсказка что включилось
-  const names = {off: 'Управление с экрана', voice: 'Голосовые команды', clap: 'Управление хлопком', headset: 'Кнопка гарнитуры'};
-  speak(names[order[i]], ()=> beep(880, .1));
+function openHfModal(){
+  document.querySelectorAll('#hfModal .choice').forEach(c => c.classList.toggle('act', c.dataset.hf === hfMode));
+  $('hfModal').classList.add('open');
 }
+document.querySelectorAll('#hfModal .choice').forEach(c => {
+  c.onclick = ()=>{
+    const mode = c.dataset.hf;
+    if(mode === 'voice' && !SR){
+      appAlert('Распознавание речи не поддерживается этим браузером. Попробуй «Хлопок».');
+      return;
+    }
+    setHfMode(mode);
+    $('hfModal').classList.remove('open');
+  };
+});
+$('hfClose').onclick = ()=> $('hfModal').classList.remove('open');
+$('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 $('btnSoundW').onclick = openSoundModal;
 function openSoundModal(){
   fillVoiceSelect($('sndVoiceSel'));
@@ -4306,7 +4344,7 @@ $('sndFxVol').oninput = e => { $('sndFxVolVal').textContent = e.target.value + '
 $('sndVoiceSel').onchange = ()=>{ applyAudioLive(); if(voiceVol>0) speak('Проверка голоса'); };
 $('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
-$('btnMicW').onclick = cycleHfMode;
+$('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
 $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
 $('chCancel').onclick = ()=> $('createModal').classList.remove('open');
