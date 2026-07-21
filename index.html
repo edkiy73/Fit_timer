@@ -602,6 +602,11 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M13 5 5 13M13 9.5 9.5 13' stroke='%239C8FA0' stroke-width='1.8' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 6px bottom 6px;
   }
+  .hf-block{padding:12px 0;border-top:1px solid var(--line)}
+  .hf-title{font-size:14px;margin-bottom:10px}
+  .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
+  .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
+  .hf-seg button.act{background:var(--work);color:#fff;font-weight:500}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
   .vol-label b{font-family:'Oswald';color:var(--work);font-size:15px}
@@ -764,7 +769,16 @@
       </div>
       <div class="prefs">
         <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
-        <div class="pref-row" id="voicePrefRow"><span>Голосовое управление<small>«готово», «пропустить», «завершить», «пауза», «продолжить»</small></span><button class="switch" id="tglVoice"></button></div>
+        <div class="hf-block" id="voicePrefRow">
+          <div class="hf-title">Управление без рук</div>
+          <div class="hf-seg" id="hfSeg">
+            <button type="button" data-hf="off" class="act">Выкл</button>
+            <button type="button" data-hf="voice">Голос</button>
+            <button type="button" data-hf="clap">Хлопок</button>
+            <button type="button" data-hf="headset">Гарнитура</button>
+          </div>
+          <p class="field-hint" id="hfHint" style="margin-top:8px"></p>
+        </div>
         <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
       </div>
       <button class="btn-primary" id="btnStart">Начать тренировку</button>
@@ -1524,7 +1538,7 @@ function openStart(raw){
     ph.textContent = `Прогрессия включена: +${raw.progStep || 30}% каждые ${raw.progression} дн.`;
     ph.style.display = 'block';
   } else ph.style.display = 'none';
-  $('voicePrefRow').style.display = SR ? 'flex' : 'none';
+  $('voicePrefRow').style.display = 'block';
   populateVoices();
   show('scrStart');
 }
@@ -3464,7 +3478,7 @@ function startWorkout(){
   state.steps = buildSteps();
   state.stepIdx = 0;
   show('scrWork');
-  if(voiceWanted) startListening();
+  startHandsFree();
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
   $('prepTitle').textContent = state.current.title + (state.load !== 100 ? ` · нагрузка ${state.load}%` : '');
@@ -3646,7 +3660,7 @@ function estimateKcal(sec, load){
 
 function finishWorkout(){
   setPause(false);
-  stopListening();
+  stopHandsFree();
   stopSpeech();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
@@ -3882,7 +3896,7 @@ function applyFeedback(kind){
 async function exitWorkout(){
   if(!(await appConfirm('Прервать тренировку? Прогресс не сохранится.'))) return;
   setPause(false);
-  stopListening();
+  stopHandsFree();
   stopSpeech();
   if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
   $('prepOverlay').classList.remove('on');
@@ -3908,12 +3922,12 @@ let voiceActive = false;  // распознавание реально запу�
 
 function syncPrefs(){
   $('tglSound').classList.toggle('on', soundOn);
-  $('tglVoice').classList.toggle('on', voiceWanted);
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
   $('btnSoundW').title = 'Настройки звука';
-  $('btnMicW').classList.toggle('listening', voiceWanted);
+  $('btnMicW').classList.toggle('listening', hfMode !== 'off');
+  $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', clap:'хлопок', headset:'гарнитура'}[hfMode] || 'выкл');
   $('tglMusic').classList.toggle('on', musicMode);
 }
 
@@ -3948,6 +3962,145 @@ function applyVoiceCommand(text){
   if(step.kind === 'click'){ $('btnDone').click(); }
   else { beep(990, .1); nextStep(); }
   return true;
+}
+
+/* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
+let hfMode = 'off'; // off | voice | clap | headset
+
+const HF_HINTS = {
+  off: 'Переключай этапы кнопками на экране.',
+  voice: 'Команды: «дальше», «пауза», «продолжить». На некоторых телефонах система подаёт сигнал при активации микрофона — это нормально. Нужен интернет.',
+  clap: 'Хлопни в ладоши — следующий этап. Два хлопка подряд — пауза/продолжить. Работает офлайн, без звуков системы.',
+  headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
+};
+
+function setHfMode(mode){
+  hfMode = mode;
+  kvSet('hfMode', mode);
+  document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === mode));
+  $('hfHint').textContent = HF_HINTS[mode] || '';
+  voiceWanted = (mode === 'voice');
+  syncPrefs();
+  // если уже на тренировке — переключаем на лету
+  if($('scrWork').classList.contains('on')){
+    stopListening(); stopClap(); stopHeadset();
+    startHandsFree();
+  }
+}
+function startHandsFree(){
+  if(hfMode === 'voice') startListening();
+  else if(hfMode === 'clap') startClap();
+  else if(hfMode === 'headset') startHeadset();
+}
+function stopHandsFree(){
+  stopListening(); stopClap(); stopHeadset();
+}
+
+/* ---- ХЛОПОК: один поток микрофона, без системного распознавания — не пиликает ---- */
+let clapStream = null, clapCtx = null, clapRAF = 0, lastClap = 0, clapCount = 0, clapTimer = null;
+async function startClap(){
+  try{
+    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false}});
+    clapCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = clapCtx.createMediaStreamSource(clapStream);
+    const an = clapCtx.createAnalyser();
+    an.fftSize = 512;
+    src.connect(an);
+    const buf = new Uint8Array(an.fftSize);
+    let noise = 8; // адаптивный уровень фона (тихая комната ~2–8)
+    const loop = ()=>{
+      if(!clapStream) return;
+      an.getByteTimeDomainData(buf);
+      let peak = 0;
+      for(let i = 0; i < buf.length; i++){
+        const v = Math.abs(buf[i] - 128);
+        if(v > peak) peak = v;
+      }
+      noise = noise * 0.995 + peak * 0.005; // плавающий фон
+      const now = Date.now();
+      // хлопок: резкий пик сильно выше фона, не чаще раза в 250мс
+      if(peak > Math.max(48, noise * 2.6) && now - lastClap > 250){
+        lastClap = now;
+        clapCount++;
+        clearTimeout(clapTimer);
+        clapTimer = setTimeout(()=>{
+          if(clapCount >= 2){
+            // двойной хлопок — пауза/продолжить
+            setPause(!state.paused); beep(990, .1);
+          } else {
+            // одинарный — следующий этап
+            const step = state.steps[state.stepIdx];
+            if(step){
+              if(state.paused) setPause(false);
+              if(step.kind === 'click') $('btnDone').click();
+              else { beep(990, .1); nextStep(); }
+            }
+          }
+          clapCount = 0;
+        }, 420); // окно ожидания второго хлопка
+      }
+      clapRAF = requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){
+    appAlert('Нет доступа к микрофону для режима «Хлопок». Разреши микрофон в настройках браузера.');
+    setHfMode('off');
+  }
+}
+function stopClap(){
+  cancelAnimationFrame(clapRAF);
+  clearTimeout(clapTimer);
+  clapCount = 0;
+  try{ if(clapStream){ clapStream.getTracks().forEach(t => t.stop()); } }catch(e){}
+  try{ if(clapCtx){ clapCtx.close(); } }catch(e){}
+  clapStream = null; clapCtx = null;
+}
+
+/* ---- ГАРНИТУРА: беззвучный луп + Media Session перехватывает кнопку наушников ---- */
+let hsAudio = null;
+function startHeadset(){
+  try{
+    if(!('mediaSession' in navigator)){
+      appAlert('Этот браузер не поддерживает управление с гарнитуры.');
+      setHfMode('off');
+      return;
+    }
+    // тихий бесконечный звук, чтобы система считала нас медиа-плеером
+    if(!hsAudio){
+      // 1-секундный почти беззвучный wav в base64 (тишина)
+      const silent = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+      hsAudio = new Audio(silent);
+      hsAudio.loop = true;
+      hsAudio.volume = 0.01;
+    }
+    hsAudio.play().catch(()=>{});
+    const advance = ()=>{
+      const step = state.steps[state.stepIdx];
+      if(!step || !$('scrWork').classList.contains('on')) return;
+      if(state.paused) setPause(false);
+      if(step.kind === 'click') $('btnDone').click();
+      else { beep(990, .1); nextStep(); }
+      try{ hsAudio.play().catch(()=>{}); }catch(e){}
+    };
+    navigator.mediaSession.setActionHandler('play', advance);
+    navigator.mediaSession.setActionHandler('pause', advance);
+    navigator.mediaSession.setActionHandler('nexttrack', advance);
+    try{
+      navigator.mediaSession.metadata = new MediaMetadata({title: 'Fit Timer — тренировка', artist: 'Кнопка гарнитуры = следующий этап'});
+    }catch(e){}
+  }catch(e){
+    setHfMode('off');
+  }
+}
+function stopHeadset(){
+  try{
+    if(hsAudio){ hsAudio.pause(); }
+    if('mediaSession' in navigator){
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+    }
+  }catch(e){}
 }
 
 let recogTimer = null, lastRecogStart = 0, stopRequested = false, recogFails = 0;
@@ -4076,13 +4229,24 @@ $('tglMusic').onclick = ()=>{
   if(musicMode) stopSpeech();
   syncPrefs();
 };
-$('tglVoice').onclick = async ()=>{
-  toggleVoice();
-  if(voiceWanted && (await kvGet('voiceHint')) !== '1'){
-    kvSet('voiceHint', '1');
-    appAlert('Голосовое управление включится во время тренировки. Говори чётко, команду можно повторить.\n\nКоманды:\n«Дальше» / «Готово» / «Пропустить» — следующий этап\n«Пауза» — остановить · «Продолжить» — дальше\n\nМикрофон слушает постоянно и сам перезапускается — телефон может иногда подавать короткий сигнал, это нормально. Работает только при интернете.');
-  }
-};
+document.querySelectorAll('#hfSeg button').forEach(b => {
+  b.onclick = async ()=>{
+    const mode = b.dataset.hf;
+    if(mode === 'voice' && !SR){
+      appAlert('Распознавание речи не поддерживается этим браузером. Попробуй «Хлопок» — он работает везде.');
+      return;
+    }
+    setHfMode(mode);
+    if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
+      kvSet('voiceHint', '1');
+      appAlert('Команды: «дальше», «готово», «пропустить» — следующий этап; «пауза» / «продолжить».\n\nНа некоторых телефонах система подаёт короткий сигнал при активации микрофона — это особенность ОС. Если мешает — попробуй режим «Хлопок».');
+    }
+    if(mode === 'clap' && (await kvGet('clapHint')) !== '1'){
+      kvSet('clapHint', '1');
+      appAlert('Хлопни в ладоши — следующий этап.\nДва хлопка подряд — пауза/продолжить.\n\nБраузер спросит доступ к микрофону при старте тренировки. Никаких системных звуков — микрофон открывается один раз на всю тренировку.');
+    }
+  };
+});
 $('btnResume').onclick = ()=> setPause(false);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
@@ -4100,13 +4264,14 @@ function toggleSound(){
   if(!soundOn) stopSpeech();
   syncPrefs();
 }
-function toggleVoice(){
-  voiceWanted = !voiceWanted;
-  kvSet('voiceCtl', voiceWanted ? '1' : '0');
-  syncPrefs();
-  if($('scrWork').classList.contains('on')){
-    if(voiceWanted) startListening(); else stopListening();
-  }
+function cycleHfMode(){
+  const order = ['off', 'voice', 'clap', 'headset'];
+  let i = (order.indexOf(hfMode) + 1) % order.length;
+  if(order[i] === 'voice' && !SR) i = (i + 1) % order.length; // пропускаем голос, если не поддерживается
+  setHfMode(order[i]);
+  // короткая подсказка что включилось
+  const names = {off: 'Управление с экрана', voice: 'Голосовые команды', clap: 'Управление хлопком', headset: 'Кнопка гарнитуры'};
+  speak(names[order[i]], ()=> beep(880, .1));
 }
 $('btnSoundW').onclick = openSoundModal;
 function openSoundModal(){
@@ -4141,7 +4306,7 @@ $('sndFxVol').oninput = e => { $('sndFxVolVal').textContent = e.target.value + '
 $('sndVoiceSel').onchange = ()=>{ applyAudioLive(); if(voiceVol>0) speak('Проверка голоса'); };
 $('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
-$('btnMicW').onclick = toggleVoice;
+$('btnMicW').onclick = cycleHfMode;
 // создание программы: одна кнопка + выбор способа
 $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
 $('chCancel').onclick = ()=> $('createModal').classList.remove('open');
@@ -4452,7 +4617,10 @@ try{
   renderWeight();
   renderPhotos();
   checkSchedules();
-  voiceWanted = (await kvGet('voiceCtl')) === '1' && !!SR;
+  hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
+  voiceWanted = hfMode === 'voice';
+  document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
+  $('hfHint').textContent = HF_HINTS[hfMode] || '';
   soundOn = (await kvGet('soundOff')) !== '1';
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   musicMode = (await kvGet('musicMode')) === '1';
