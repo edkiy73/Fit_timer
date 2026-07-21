@@ -602,6 +602,12 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M13 5 5 13M13 9.5 9.5 13' stroke='%239C8FA0' stroke-width='1.8' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 6px bottom 6px;
   }
+  .vol-field{margin:14px 0}
+  .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
+  .vol-label b{font-family:'Oswald';color:var(--work);font-size:15px}
+  .vol-range{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--line);outline:none}
+  .vol-range::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--work);cursor:pointer;border:3px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .vol-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--work);cursor:pointer;border:3px solid var(--card)}
   .voice-sel{max-width:56%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:9px 30px 9px 12px;font-family:'Rubik';font-size:13px;outline:none;
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%239C8FA0' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -759,7 +765,6 @@
       <div class="prefs">
         <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
         <div class="pref-row" id="voicePrefRow"><span>Голосовое управление<small>«готово», «пропустить», «завершить», «пауза», «продолжить»</small></span><button class="switch" id="tglVoice"></button></div>
-        <div class="pref-row" id="voiceSelRow" style="display:none"><span>Голос озвучки</span><select id="voiceSel" class="voice-sel"></select></div>
         <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
       </div>
       <button class="btn-primary" id="btnStart">Начать тренировку</button>
@@ -1074,11 +1079,39 @@
       </div>
     </div>
     <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth"></div>
+
+    <div class="section-title" style="margin-top:6px">Звук</div>
+    <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
+    <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
+      <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+      <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
+    </div>
+    <div class="vol-field">
+      <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
+      <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveUser">Сохранить</button>
       <button type="button" class="link-btn" id="btnDelUser" style="color:var(--work)">Удалить профиль</button>
     </div>
   </section>
+
+    <div class="modal" id="soundModal">
+      <div class="modal-card">
+        <span class="mini-label">Звук тренировки</span>
+        <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка</span><button class="switch" id="sndVoiceOn"></button></div>
+        <div class="field" id="sndVoiceField"><label>Голос озвучки</label>
+          <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+        </div>
+        <div class="vol-field">
+          <div class="vol-label"><span>Громкость сигналов</span><b id="sndFxVolVal">100%</b></div>
+          <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+        </div>
+        <p class="field-hint" style="margin-top:4px">Громкость голоса — кнопками громкости телефона.</p>
+        <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
+      </div>
+    </div>
 
     <div class="modal" id="dlg">
       <div class="modal-card">
@@ -1185,21 +1218,25 @@ const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15"
 
 
 /* ================= ЗВУК ================= */
-let soundOn = true; // общий выключатель звука (кнопка 🔊 в шапке)
-let audioCtx = null;
+let soundOn = true; // общий выключатель звука
+let fxVol = 1;    // громкость звуковых эффектов 0..1
+let voiceVol = 1; // громкость голоса 0..1
+let audioCtx = null, masterGain = null;
 function initAudio(){
   try{
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(!masterGain){ masterGain = audioCtx.createGain(); masterGain.gain.value = fxVol; masterGain.connect(audioCtx.destination); }
     if(audioCtx.state === 'suspended') audioCtx.resume();
   }catch(e){}
 }
+function fxDest(){ return masterGain || audioCtx.destination; }
 function beep(freq=880, dur=0.15, when=0, vol=0.25){
-  if(!audioCtx || !soundOn) return;
+  if(!audioCtx || !soundOn || fxVol<=0) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.type='sine'; o.frequency.value=freq;
   g.gain.setValueAtTime(vol, audioCtx.currentTime + when);
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + when + dur);
-  o.connect(g); g.connect(audioCtx.destination);
+  o.connect(g); g.connect(fxDest());
   o.start(audioCtx.currentTime + when); o.stop(audioCtx.currentTime + when + dur + 0.05);
 }
 const tick = () => beep(660, .09, 0, .18);
@@ -1207,21 +1244,21 @@ const endSignal = () => { beep(880,.14,0); beep(880,.14,.2); beep(1320,.3,.4,.3)
 
 // гонг — начало нового упражнения
 function gong(){
-  if(!audioCtx || !soundOn) return;
+  if(!audioCtx || !soundOn || fxVol<=0) return;
   const t = audioCtx.currentTime;
   [[110,1.6,.4],[164,1.2,.28],[218,1.0,.18],[329,1.9,.1]].forEach(([f,dur,vol])=>{
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type='sine'; o.frequency.value=f;
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t+dur);
-    o.connect(g); g.connect(audioCtx.destination);
+    o.connect(g); g.connect(fxDest());
     o.start(t); o.stop(t+dur+.1);
   });
 }
 
 // фанфары — тренировка завершена
 function fanfare(){
-  if(!audioCtx || !soundOn) return;
+  if(!audioCtx || !soundOn || fxVol<=0) return;
   const notes = [523.25, 659.25, 783.99, 1046.5];
   notes.forEach((f,i)=> {
     beep(f, .22, i*.16, .25);
@@ -1233,21 +1270,21 @@ function fanfare(){
     o.type='triangle'; o.frequency.value=f;
     g.gain.setValueAtTime(.18, t);
     g.gain.exponentialRampToValueAtTime(0.001, t+1.1);
-    o.connect(g); g.connect(audioCtx.destination);
+    o.connect(g); g.connect(fxDest());
     o.start(t); o.stop(t+1.2);
   });
 }
 
 // щелчки — фолбэк голосового отсчёта: 1 щелчок = 15 сек, 2 = 30 и т.д.
 function clicks(n){
-  if(!audioCtx || !soundOn) return;
+  if(!audioCtx || !soundOn || fxVol<=0) return;
   for(let i=0;i<n;i++){
     const t = audioCtx.currentTime + i*0.22;
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type='square'; o.frequency.value=1600;
     g.gain.setValueAtTime(.22, t);
     g.gain.exponentialRampToValueAtTime(0.001, t+.04);
-    o.connect(g); g.connect(audioCtx.destination);
+    o.connect(g); g.connect(fxDest());
     o.start(t); o.stop(t+.06);
   }
 }
@@ -1258,20 +1295,27 @@ function ruVoices(){
   try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ru')); }
   catch(e){ return []; }
 }
-function populateVoices(){
+function fillVoiceSelect(sel){
+  if(!sel) return;
   const list = ruVoices();
-  const row = $('voiceSelRow');
-  if(list.length < 2){ row.style.display = 'none'; return; }
-  row.style.display = 'flex';
-  const sel = $('voiceSel');
   sel.innerHTML = '';
+  if(!list.length){
+    const o = document.createElement('option');
+    o.textContent = 'Системный голос'; o.value = '';
+    sel.appendChild(o);
+    return;
+  }
   list.forEach(v => {
     const o = document.createElement('option');
     o.value = v.voiceURI;
-    o.textContent = v.name.replace(/^(Google|Microsoft)\s*/i, '').slice(0, 28);
+    o.textContent = v.name.replace(/^(Google|Microsoft)\s*/i, '').slice(0, 30);
     if(v.voiceURI === savedVoiceURI) o.selected = true;
     sel.appendChild(o);
   });
+}
+function populateVoices(){
+  // заполняем все селекты голоса, что есть в разметке (профиль + попап тренировки)
+  ['ueVoiceSel', 'sndVoiceSel'].forEach(id => { const s = $(id); if(s) fillVoiceSelect(s); });
 }
 if('speechSynthesis' in window){
   try{ speechSynthesis.addEventListener('voiceschanged', populateVoices); }catch(e){}
@@ -1281,6 +1325,7 @@ if('speechSynthesis' in window){
 let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
 function speak(text, fallback){
   if(!soundOn) return;
+  if(voiceVol <= 0){ if(fallback) fallback(); return; } // голос выключен — идём в звуковой фолбэк
   if(musicMode){ if(fallback) fallback(); return; } // TTS перехватывает аудиофокус — в режиме музыки не говорим
   try{
     if(!('speechSynthesis' in window)){ if(fallback) fallback(); return; }
@@ -1291,6 +1336,7 @@ function speak(text, fallback){
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ru-RU';
     u.rate = 1.05;
+    u.volume = 1;
     const chosen = ru.find(v => v.voiceURI === savedVoiceURI) || ru[0];
     if(chosen) u.voice = chosen;
     let started = false;
@@ -1462,6 +1508,7 @@ const LOADS = [40, 70, 100, 130, 160];
 
 function openStart(raw){
   applyProgressionAll();
+  applyAudioFromUser(curUser());
   state.raw = raw;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans);
@@ -1594,6 +1641,7 @@ async function switchUser(id){
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
+  applyAudioFromUser(curUser());
   const u = curUser();
   themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
   applyTheme();
@@ -1953,6 +2001,17 @@ function openUserEdit(id = null){
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
   $('ueBirth').value = uDraft.birth || '';
+  // звук: значения профиля (или дефолты)
+  if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
+  if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
+  if(uDraft.fxVol == null) uDraft.fxVol = 100;
+  const vOn = uDraft.voiceVol > 0;
+  $('ueVoiceOn').classList.toggle('on', vOn);
+  $('ueVoiceField').style.display = vOn ? 'block' : 'none';
+  fillVoiceSelect($('ueVoiceSel'));
+  $('ueVoiceSel').value = uDraft.voiceURI || '';
+  $('ueFxVol').value = uDraft.fxVol;
+  $('ueFxVolVal').textContent = uDraft.fxVol + '%';
   syncUserForm();
   $('btnDelUser').style.display = id ? 'block' : 'none';
   show('scrUserEdit');
@@ -1970,12 +2029,16 @@ function syncUserForm(){
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
+  uDraft.voiceURI = $('ueVoiceSel').value || '';
+  uDraft.voiceVol = $('ueVoiceOn').classList.contains('on') ? 100 : 0;
+  uDraft.fxVol = isFinite(parseInt($('ueFxVol').value)) ? parseInt($('ueFxVol').value) : 100;
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
   if(uDraft.id){
     const i = users.findIndex(x => x.id === uDraft.id);
     users[i] = uDraft;
     await saveUsers();
     if(uDraft.id === currentUser){
+      applyAudioFromUser(uDraft);
       themeLight = (uDraft.theme || 'light') !== 'dark';
       applyTheme();
     }
@@ -3841,9 +3904,10 @@ let voiceActive = false;  // распознавание реально запу�
 function syncPrefs(){
   $('tglSound').classList.toggle('on', soundOn);
   $('tglVoice').classList.toggle('on', voiceWanted);
-  $('btnSoundW').innerHTML = icon(soundOn ? 'vol' : 'volX');
-  $('btnSoundW').classList.toggle('muted', !soundOn);
-  $('btnSoundW').title = soundOn ? 'Выключить звук' : 'Включить звук';
+  const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
+  $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
+  $('btnSoundW').classList.toggle('muted', !anyAudio);
+  $('btnSoundW').title = 'Настройки звука';
   $('btnMicW').classList.toggle('listening', voiceWanted);
   $('tglMusic').classList.toggle('on', musicMode);
 }
@@ -3952,13 +4016,19 @@ $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnExit').onclick  = exitWorkout;
 $('btnPause').onclick = ()=> setPause(!state.paused);
-$('voiceSel').onchange = e => { savedVoiceURI = e.target.value; kvSet('voiceURI', savedVoiceURI); };
 $('tglTheme').onclick = ()=>{
   themeLight = !themeLight;
   const u = curUser();
   if(u){ u.theme = themeLight ? 'light' : 'dark'; saveUsers(); }
   applyTheme();
 };
+$('ueVoiceOn').onclick = ()=>{
+  const on = !$('ueVoiceOn').classList.contains('on');
+  $('ueVoiceOn').classList.toggle('on', on);
+  $('ueVoiceField').style.display = on ? 'block' : 'none';
+  uDraft.voiceVol = on ? 100 : 0;
+};
+$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; };
 $('tglSound').onclick = toggleSound;
 $('tglMusic').onclick = ()=>{
   musicMode = !musicMode;
@@ -3974,6 +4044,16 @@ $('tglVoice').onclick = async ()=>{
   }
 };
 $('btnResume').onclick = ()=> setPause(false);
+function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
+function applyAudioFromUser(u){
+  if(!u) return;
+  savedVoiceURI = u.voiceURI || '';
+  voiceVol = clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1);
+  fxVol = clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1);
+  if(masterGain) masterGain.gain.value = fxVol;
+  kvSet('voiceURI', savedVoiceURI);
+}
+
 function toggleSound(){
   soundOn = !soundOn;
   kvSet('soundOff', soundOn ? '0' : '1');
@@ -3988,7 +4068,39 @@ function toggleVoice(){
     if(voiceWanted) startListening(); else stopListening();
   }
 }
-$('btnSoundW').onclick = toggleSound;
+$('btnSoundW').onclick = openSoundModal;
+function openSoundModal(){
+  fillVoiceSelect($('sndVoiceSel'));
+  $('sndVoiceSel').value = savedVoiceURI || '';
+  const vOn = voiceVol > 0;
+  $('sndVoiceOn').classList.toggle('on', vOn);
+  $('sndVoiceField').style.display = vOn ? 'block' : 'none';
+  $('sndFxVol').value = Math.round(fxVol * 100);
+  $('sndFxVolVal').textContent = Math.round(fxVol * 100) + '%';
+  $('soundModal').classList.add('open');
+}
+function applyAudioLive(){
+  voiceVol = $('sndVoiceOn').classList.contains('on') ? 1 : 0;
+  fxVol = clampVol((parseInt($('sndFxVol').value) || 0) / 100, 1);
+  savedVoiceURI = $('sndVoiceSel').value || '';
+  if(masterGain) masterGain.gain.value = fxVol;
+  // синхронизируем в активный профиль, чтобы сохранилось
+  const u = curUser();
+  if(u){ u.voiceVol = Math.round(voiceVol*100); u.fxVol = Math.round(fxVol*100); u.voiceURI = savedVoiceURI; saveUsers(); }
+  kvSet('voiceURI', savedVoiceURI);
+  $('btnSoundW').innerHTML = icon(fxVol>0 || voiceVol>0 ? 'vol' : 'volX');
+}
+$('sndVoiceOn').onclick = ()=>{
+  const on = !$('sndVoiceOn').classList.contains('on');
+  $('sndVoiceOn').classList.toggle('on', on);
+  $('sndVoiceField').style.display = on ? 'block' : 'none';
+  applyAudioLive();
+  if(on) speak('Голос включён');
+};
+$('sndFxVol').oninput = e => { $('sndFxVolVal').textContent = e.target.value + '%'; applyAudioLive(); if(parseInt(e.target.value)>0) tick(); };
+$('sndVoiceSel').onchange = ()=>{ applyAudioLive(); if(voiceVol>0) speak('Проверка голоса'); };
+$('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
+$('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = toggleVoice;
 // создание программы: одна кнопка + выбор способа
 $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
@@ -4304,6 +4416,7 @@ try{
   soundOn = (await kvGet('soundOff')) !== '1';
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   musicMode = (await kvGet('musicMode')) === '1';
+  applyAudioFromUser(curUser());
   syncPrefs();
   const u = curUser();
   themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
