@@ -258,7 +258,7 @@
 
   .details{
     flex:1 1 0;min-height:56px;width:100%;max-width:420px;margin:12px auto 0;
-    overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:left;
+    overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:center;
   }
   .details::-webkit-scrollbar{width:5px}
   .details::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
@@ -272,8 +272,8 @@
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .head{fill:var(--ink)}
   .yt-badge{
-    position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:9px;
-    background:var(--card);border:1px solid var(--line);color:#FF0000;
+    position:absolute;top:24px;right:24px;width:32px;height:32px;border-radius:9px;
+    background:rgba(0,0,0,.6);color:#fff;
     display:none;align-items:center;justify-content:center;text-decoration:none;
   }
   .yt-badge.on{display:flex}
@@ -286,10 +286,9 @@
   .video-cta.on{display:flex}
   .video-cta svg{width:20px;height:20px;color:#FF0000}
   body.phase-rest .video-cta{display:none}
-  .instruction{color:var(--muted);font-size:15px;line-height:1.55}
-  .muscle-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
-  .mr-label{font-size:12px;color:var(--muted);flex:none}
-  .m-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+  .instruction{color:var(--muted);font-size:15px;line-height:1.55;text-align:center}
+  .muscle-row{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .m-chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
   .m-chip{border:1px solid var(--work);color:var(--work);border-radius:999px;padding:2px 9px;font-size:10.5px}
   body.phase-rest .muscle-row{display:none !important}
   .mistakes{
@@ -345,6 +344,8 @@
   }
   .count.warn{color:var(--work);animation:pulse 1s infinite}
   body.phase-rest .count.warn{color:var(--rest)}
+  body.phase-rest .stage h2{color:var(--rest)}
+  body.phase-rest .count{color:var(--rest)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 
   .actions{
@@ -412,6 +413,7 @@
   .load-row{display:flex;gap:6px}
   .load-chip{flex:1;padding:11px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-family:'Oswald';font-weight:600;font-size:14px;cursor:pointer;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--work);color:#fff}
+  .load-chip.prog{border-style:dashed}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
   .pref-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
   .prefs{margin-bottom:14px}
@@ -437,7 +439,7 @@
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
   .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
-  #weightChart{width:100%;height:130px;margin-top:12px;display:block;font-family:'Oswald'}
+  #weightChart{width:100%;height:auto;margin-top:12px;display:block;font-family:'Oswald'}
 
   /* ---------- оценка нагрузки на финише ---------- */
   .fb-block{margin:4px 0 18px;text-align:left}
@@ -499,7 +501,7 @@
   .cal-cell.today{box-shadow:inset 0 0 0 1.5px var(--work)}
   .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em;aspect-ratio:auto;padding:2px 0}
   .w-meta{color:var(--muted);font-size:13px;margin:6px 0 0}
-  .w-add{flex-wrap:wrap;gap:10px}
+  .w-add{display:none;flex-wrap:wrap;gap:10px}
   .w-add.on{display:flex}
   .wf{display:flex;flex-direction:column;gap:4px;flex:1 1 44%;min-width:0}
   .wf label{font-size:11px;color:var(--muted);font-family:'Oswald';letter-spacing:.08em;text-transform:uppercase}
@@ -622,14 +624,6 @@
         <button class="icon-btn" id="btnAddWeight" title="Записать вес">＋</button>
       </div>
       <p class="w-meta" id="weightMeta" style="display:none"></p>
-      <div class="w-add" id="weightAdd">
-        <div class="wf"><label>Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
-        <div class="wf"><label>Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
-        <div class="wf"><label>Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
-        <div class="wf"><label>Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
-        <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
-        <button class="btn-mini" id="btnSaveWeight">Сохранить</button>
-      </div>
       <svg id="weightChart" viewBox="0 0 300 130" style="display:none"></svg>
       <div class="legend" id="weightLegend" style="display:none"></div>
       <button class="link-btn" id="btnShareWeight" style="display:none;padding:8px;margin:2px 0 0">Поделиться графиком</button>
@@ -701,12 +695,16 @@
       <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
     </div>
     <div class="field"><label>Прогрессия нагрузки</label>
-      <select id="bProg">
-        <option value="0">Нет</option>
-        <option value="7">+1 ступень (+30%) каждую неделю</option>
-        <option value="14">+1 ступень (+30%) каждые 2 недели</option>
-      </select>
-      <p class="field-hint">Рекомендуемая нагрузка на экране старта будет расти сама — программа усложняется вместе с тобой.</p>
+      <div class="pref-row" style="border-top:none;padding:0 0 4px"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
+      <div id="bProgOpts" style="display:none">
+        <div class="load-row" id="bProgStep" style="margin-bottom:10px"></div>
+        <select id="bProgEvery">
+          <option value="7">каждую неделю</option>
+          <option value="14">каждые 2 недели</option>
+          <option value="30">каждый месяц</option>
+        </select>
+      </div>
+      <p class="field-hint">Рекомендуемая нагрузка на старте будет расти сама — программа усложняется вместе с тобой.</p>
     </div>
     <div class="section-title">Дни и круги</div>
     <div class="field">
@@ -980,6 +978,21 @@
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0"></p>
         <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
         <button class="link-btn" id="cmpClose" style="margin:0;padding:10px">Закрыть</button>
+      </div>
+    </div>
+
+    <div class="modal" id="waModal">
+      <div class="modal-card">
+        <span class="mini-label">Новая запись</span>
+        <div class="w-add on">
+          <div class="wf"><label>Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
+          <div class="wf"><label>Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
+          <div class="wf"><label>Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label>Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+        </div>
+        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="link-btn" id="waCancel" style="margin:0;padding:10px">Отмена</button>
       </div>
     </div>
 
@@ -1309,7 +1322,7 @@ function openStart(raw){
   state.raw = raw;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans);
-  state.load = LOADS.includes(raw.load) ? raw.load : 100;
+  state.load = (raw.load && raw.load >= 40 && raw.load <= 200) ? raw.load : 100;
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
@@ -1318,7 +1331,7 @@ function openStart(raw){
   syncPrefs();
   const ph = $('progHint');
   if(raw.progression){
-    ph.textContent = `Прогрессия включена: рекомендация растёт на ступень каждые ${raw.progression} дн.`;
+    ph.textContent = `Прогрессия включена: +${raw.progStep || 30}% каждые ${raw.progression} дн.`;
     ph.style.display = 'block';
   } else ph.style.display = 'none';
   $('voicePrefRow').style.display = SR ? 'flex' : 'none';
@@ -1359,11 +1372,14 @@ function renderStartInfo(){
 
 function renderLoadRow(){
   const row = $('loadRow'); row.innerHTML='';
-  LOADS.forEach(l=>{
+  // базовая шкала + текущее значение прогрессии, если оно вне сетки
+  const vals = LOADS.includes(state.load) ? LOADS.slice() : [...LOADS, state.load].sort((a,b)=>a-b);
+  vals.forEach(l=>{
     const b = document.createElement('button');
     b.className = 'load-chip';
     b.textContent = l + '%';
     b.classList.toggle('act', state.load === l);
+    if(!LOADS.includes(l)) b.classList.add('prog');
     b.onclick = ()=>{ state.load = l; renderLoadRow(); };
     row.appendChild(b);
   });
@@ -1477,6 +1493,17 @@ function renderUsers(){
 function renderWeight(){
   const ws = stats.weights;
   const chart = $('weightChart'), empty = $('weightEmpty');
+  $('weightLegend').style.display = 'none';
+  if(!ws.length){
+    $('weightNow').textContent = '—';
+    $('weightDelta').textContent = '';
+    $('weightMeta').style.display = 'none';
+    chart.style.display = 'none';
+    empty.style.display = 'block';
+    $('btnWeightHist').style.display = 'none';
+    $('btnShareWeight').style.display = 'none';
+    return;
+  }
   const meta0 = [];
   if(stats.height) meta0.push(`Рост ${stats.height} см`);
   const lastW = ws.length ? ws[ws.length - 1].w : null;
@@ -1516,49 +1543,55 @@ function renderWeight(){
   }
   empty.style.display = 'none';
   chart.style.display = 'block';
-  // график по последним 30 записям: вес + объёмы, каждая линия в своей шкале
+  // график: каждая метрика в своей горизонтальной полосе (не накладываются друг на друга)
   const pts = ws.slice(-30);
-  const W = 300, H = 130, padX = 10, padTop = 16, padBot = 16;
+  const W = 300, padX = 22;
   const xAt = i => padX + (W - padX * 2) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
-  const yAt = (v, min, span) => H - padBot - (H - padTop - padBot) * ((v - min) / span);
   const SERIES = [
     {k: 'w', color: 'var(--work)', label: 'Вес', unit: 'кг'},
     {k: 'waist', color: '#7C6FD9', label: 'Талия', unit: 'см'},
     {k: 'hips', color: '#3AA893', label: 'Бёдра', unit: 'см'},
     {k: 'chest', color: '#F0B429', label: 'Грудь', unit: 'см'}
   ];
+  const active = SERIES.filter(s => pts.some(p => p[s.k] != null));
+  const laneH = 46, laneGap = 10, padTop = 6;
+  const H = padTop + active.length * laneH + (active.length - 1) * laneGap + 4;
+  chart.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
   let svg = '', legend = '';
-  SERIES.forEach(s => {
-    const have = pts.map((p, i) => p[s.k] ? [i, p[s.k]] : null).filter(Boolean);
-    if(!have.length) return;
+  active.forEach((s, li) => {
+    const top = padTop + li * (laneH + laneGap);
+    const yBase = top + laneH, yTopIn = top + 16; // место под подпись сверху полосы
+    const have = pts.map((p, i) => (p[s.k] != null) ? [i, p[s.k]] : null).filter(Boolean);
     const vals = have.map(h => h[1]);
     const min = Math.min(...vals), max = Math.max(...vals);
-    const span = Math.max(max - min, 0.5);
-    const xy = have.map(([i, v]) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(v, min, span) * 10) / 10]);
+    const span = Math.max(max - min, 1);
+    const yAt = v => yBase - (yBase - yTopIn) * ((v - min) / span);
+    const xy = have.map(([i, v]) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(v) * 10) / 10]);
+    // фон полосы
+    svg += `<rect x="0" y="${top}" width="${W}" height="${laneH}" rx="10" fill="var(--line)" opacity="0.35"/>`;
+    // название метрики в углу полосы
+    svg += `<text x="8" y="${top + 13}" font-size="9" font-weight="600" fill="${s.color}">${s.label}</text>`;
+    // линия
     if(xy.length > 1){
-      svg += `<polyline points="${xy.map(p => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${s.k === 'w' ? 2.5 : 1.8}" stroke-linecap="round" stroke-linejoin="round" opacity="${s.k === 'w' ? 1 : .8}"/>`;
+      svg += `<polyline points="${xy.map(p => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
-    // подписи значений только для веса (иначе каша)
-    if(s.k === 'w'){
-      have.forEach(([i, v], j) => {
-        const p = xy[j];
-        svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}"/>`;
-        // первое, последнее и экстремумы
-        if(j === 0 || j === have.length - 1 || v === max || v === min){
-          const ty = p[1] < padTop + 14 ? p[1] + 14 : p[1] - 7;
-          svg += `<text x="${p[0]}" y="${ty}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink)">${String(v).replace('.', ',')}</text>`;
-        }
-      });
-    } else {
-      const lp = xy[xy.length - 1];
-      svg += `<circle cx="${lp[0]}" cy="${lp[1]}" r="2.5" fill="${s.color}"/>`;
-    }
+    // точки на концах + подписи первого и последнего значения
+    const p0 = xy[0], pN = xy[xy.length - 1];
+    svg += `<circle cx="${p0[0]}" cy="${p0[1]}" r="3.5" fill="${s.color}"/>`;
+    svg += `<circle cx="${pN[0]}" cy="${pN[1]}" r="3.5" fill="${s.color}"/>`;
+    const lbl = (p, v, anchor) => {
+      const ty = p[1] < top + 20 ? p[1] + 13 : p[1] - 7;
+      return `<text x="${p[0]}" y="${ty}" text-anchor="${anchor}" font-size="10" font-weight="700" fill="var(--ink)">${String(v).replace('.', ',')}</text>`;
+    };
+    svg += lbl(p0, have[0][1], have.length > 1 ? 'start' : 'middle');
+    if(have.length > 1) svg += lbl(pN, have[have.length - 1][1], 'end');
     legend += `<span><i style="background:${s.color}"></i>${s.label}</span>`;
   });
   chart.innerHTML = svg;
   const lg = $('weightLegend');
   lg.innerHTML = legend;
-  lg.style.display = (legend.split('</span>').length > 2) ? 'flex' : 'none';
+  lg.style.display = (active.length > 1) ? 'flex' : 'none';
   $('btnShareWeight').style.display = ws.length >= 2 ? 'block' : 'none';
 }
 async function savePrograms(){ await kvSet(pk('customPrograms'), JSON.stringify(customPrograms)); }
@@ -1758,7 +1791,7 @@ function openUserEdit(id = null){
   $('ueName').value = uDraft.name || '';
   $('ueBirth').value = uDraft.birth || '';
   syncUserForm();
-  $('btnDelUser').style.display = (id && users.length > 1) ? 'block' : 'none';
+  $('btnDelUser').style.display = id ? 'block' : 'none';
   show('scrUserEdit');
   window.scrollTo(0, 0);
 }
@@ -1794,8 +1827,12 @@ async function saveUser(){
   }
 }
 async function deleteUser(){
-  if(users.length <= 1) return;
-  if(!(await appConfirm(`Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`))) return;
+  if(!uDraft.id) return;
+  const isLast = users.length <= 1;
+  const msg = isLast
+    ? `Удалить профиль «${uDraft.name}»? Это единственный профиль — все данные будут стёрты, и приложение начнёт с чистого листа.`
+    : `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
+  if(!(await appConfirm(msg))) return;
   const id = uDraft.id;
   await kvDel('customPrograms_' + id);
   await kvDel('stats_' + id);
@@ -1803,8 +1840,14 @@ async function deleteUser(){
   await kvDel('warmupAdded_' + id);
   users = users.filter(x => x.id !== id);
   await saveUsers();
+  if(isLast){
+    // удалили последний — полный сброс и онбординг заново
+    try{ await kvDel('currentUser'); await kvDel('seenHelp'); }catch(e){}
+    location.reload();
+    return;
+  }
   if(id === currentUser){
-    currentUser = ''; // форсируем переключение
+    currentUser = '';
     await switchUser(users[0].id);
   } else {
     renderUsers();
@@ -2047,46 +2090,64 @@ async function importAllData(file){
 /* ================= ШЕРИНГ ГРАФИКА ВЕСА ================= */
 async function shareWeightChart(){
   const ws = stats.weights;
-  if(ws.length < 2){ appAlert('Нужно минимум две записи веса.'); return; }
+  if(ws.length < 2){ appAlert('Нужно минимум две записи.'); return; }
   const cs = getComputedStyle(document.body);
   const col = n => cs.getPropertyValue(n).trim();
   const W = 1080, H = 1350, c = document.createElement('canvas');
   c.width = W; c.height = H; const x = c.getContext('2d');
-  try{ await document.fonts.load('700 60px Oswald'); await document.fonts.load('500 40px Rubik'); }catch(e){}
+  try{ await document.fonts.load('700 60px Oswald'); await document.fonts.load('500 40px Rubik'); await document.fonts.load('600 34px Oswald'); }catch(e){}
   x.fillStyle = col('--bg'); x.fillRect(0, 0, W, H);
   x.textAlign = 'center';
   x.fillStyle = col('--muted'); x.font = '600 44px Oswald';
-  x.fillText('F I T   T I M E R', W / 2, 110);
-  x.fillStyle = col('--ink'); x.font = '500 50px Rubik';
-  x.fillText('Мой прогресс', W / 2, 190);
+  x.fillText('F I T   T I M E R', W / 2, 108);
+  x.fillStyle = col('--ink'); x.font = '500 52px Rubik';
+  x.fillText('Мои изменения', W / 2, 188);
+
   const pts = ws.slice(-30);
-  const wv = pts.map(p => p.w);
-  const first = wv[0], last = wv[wv.length - 1];
-  const diff = Math.round((last - first) * 10) / 10;
-  x.fillStyle = diff <= 0 ? col('--rest') : col('--work');
-  x.font = '700 120px Oswald';
-  x.fillText(`${diff > 0 ? '+' : ''}${String(diff).replace('.', ',')} кг`, W / 2, 360);
-  x.fillStyle = col('--muted'); x.font = '500 36px Rubik';
-  const days = Math.round((new Date(pts[pts.length-1].d) - new Date(pts[0].d)) / 86400000);
-  x.fillText(`за ${days} ${plural(days, 'день', 'дня', 'дней')}`, W / 2, 415);
-  const gx = 90, gy = 520, gw = W - 180, gh = 480;
-  const min = Math.min(...wv), max = Math.max(...wv), span = Math.max(max - min, 0.5);
-  x.strokeStyle = col('--line'); x.lineWidth = 2;
-  x.beginPath(); x.moveTo(gx, gy + gh); x.lineTo(gx + gw, gy + gh); x.stroke();
-  const XY = pts.map((p, i) => [
-    gx + gw * (pts.length === 1 ? .5 : i / (pts.length - 1)),
-    gy + gh - (gh - 40) * ((p.w - min) / span) - 20
-  ]);
-  x.strokeStyle = col('--work'); x.lineWidth = 7; x.lineJoin = 'round'; x.lineCap = 'round';
-  x.beginPath(); XY.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke();
-  x.fillStyle = col('--work');
-  [0, XY.length - 1].forEach(i => { x.beginPath(); x.arc(XY[i][0], XY[i][1], 12, 0, 7); x.fill(); });
-  x.fillStyle = col('--ink'); x.font = '600 40px Oswald';
-  x.textAlign = 'left'; x.fillText(String(first).replace('.', ',') + ' кг', gx - 6, gy + gh + 52);
-  x.textAlign = 'right'; x.fillText(String(last).replace('.', ',') + ' кг', gx + gw + 6, gy + gh + 52);
+  const SERIES = [
+    {k: 'w', color: col('--work'), label: 'Вес', unit: 'кг'},
+    {k: 'waist', color: '#7C6FD9', label: 'Талия', unit: 'см'},
+    {k: 'hips', color: '#3AA893', label: 'Бёдра', unit: 'см'},
+    {k: 'chest', color: '#F0B429', label: 'Грудь', unit: 'см'}
+  ];
+  const active = SERIES.filter(s => pts.some(p => p[s.k] != null));
+  const gx = 80, gw = W - 160;
+  const laneH = 190, gap = 30;
+  let gy = 260;
+  active.forEach(s => {
+    const have = pts.map((p, i) => (p[s.k] != null) ? [i, p[s.k]] : null).filter(Boolean);
+    const vals = have.map(h => h[1]);
+    const min = Math.min(...vals), max = Math.max(...vals), span = Math.max(max - min, 1);
+    // подложка
+    x.fillStyle = col('--card'); x.strokeStyle = col('--line'); x.lineWidth = 2;
+    roundRect(x, gx, gy, gw, laneH, 20); x.fill(); x.stroke();
+    // название и дельта
+    const first = have[0][1], last = have[have.length - 1][1];
+    const d = Math.round((last - first) * 10) / 10;
+    x.textAlign = 'left'; x.fillStyle = s.color; x.font = '600 34px Oswald';
+    x.fillText(s.label.toUpperCase(), gx + 24, gy + 44);
+    x.textAlign = 'right'; x.fillStyle = d <= 0 ? col('--rest') : col('--work'); x.font = '600 34px Oswald';
+    x.fillText(`${d > 0 ? '+' : ''}${String(d).replace('.', ',')} ${s.unit}`, gx + gw - 24, gy + 44);
+    // линия
+    const lx = i => gx + 40 + (gw - 80) * (have.length === 1 ? .5 : i / (have.length - 1));
+    const ly = v => gy + laneH - 30 - (laneH - 80) * ((v - min) / span);
+    x.strokeStyle = s.color; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round';
+    x.beginPath();
+    have.forEach(([i, v], j) => { const px = lx(j), py = ly(v); j ? x.lineTo(px, py) : x.moveTo(px, py); });
+    x.stroke();
+    x.fillStyle = s.color;
+    [0, have.length - 1].forEach(j => { x.beginPath(); x.arc(lx(j), ly(have[j][1]), 9, 0, 7); x.fill(); });
+    // подписи концов
+    x.fillStyle = col('--ink'); x.font = '600 30px Oswald';
+    x.textAlign = 'left'; x.fillText(String(first).replace('.', ','), lx(0) - 4, ly(first) - 16);
+    x.textAlign = 'right'; x.fillText(String(last).replace('.', ','), lx(have.length - 1) + 4, ly(last) - 16);
+    gy += laneH + gap;
+  });
+
   x.textAlign = 'center';
   x.fillStyle = col('--muted'); x.font = '600 32px Oswald';
-  x.fillText('F I T   T I M E R', W / 2, 1270);
+  x.fillText('F I T   T I M E R', W / 2, H - 46);
+
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
     const file = new File([blob], 'fittimer-weight.png', {type: 'image/png'});
@@ -2201,11 +2262,13 @@ function applyProgressionAll(){
     const days = Math.floor((today - last) / 86400000);
     const steps = Math.floor(days / p.progression);
     if(steps <= 0) return;
-    const idx = Math.max(0, LOADS.indexOf(p.load || 100));
-    const ni = Math.min(LOADS.length - 1, idx + steps);
-    if(ni !== idx){ p.load = LOADS[ni]; changed = true; }
-    const nl = new Date(last); nl.setDate(last.getDate() + steps * p.progression);
-    p.progLast = localISO(nl);
+    // повышаем ровно на progStep% за каждый период, потолок 200%
+    const stepPct = p.progStep || 30;
+    const cur = p.load || 100;
+    const nload = Math.min(200, cur + stepPct * steps);
+    if(nload !== cur){ p.load = nload; changed = true; }
+    const ndate = new Date(last); ndate.setDate(last.getDate() + steps * p.progression);
+    p.progLast = localISO(ndate);
     changed = true;
   });
   if(changed) savePrograms();
@@ -2494,6 +2557,23 @@ function openBuilder(id=null){
 
 function curPlan(){ return draft.plans[planIdx]; }
 
+function renderProgStep(){
+  const row = $('bProgStep'); row.innerHTML = '';
+  [10, 20, 30].forEach(s => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'load-chip';
+    b.textContent = '+' + s + '%';
+    b.classList.toggle('act', (draft.progStep || 30) === s);
+    b.onclick = ()=>{ draft.progStep = s; renderProgStep(); };
+    row.appendChild(b);
+  });
+}
+$('bProgOn').onclick = ()=>{
+  const on = !$('bProgOn').classList.contains('on');
+  $('bProgOn').classList.toggle('on', on);
+  $('bProgOpts').style.display = on ? 'block' : 'none';
+};
+
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
 function commitPlanFields(){
   const pl = curPlan();
@@ -2506,7 +2586,12 @@ function fillBuilder(title){
   $('builderTitle').textContent = title;
   $('bName').value = draft.name;
   $('bTime').value = draft.time || '';
-  $('bProg').value = String(draft.progression || 0);
+  const pOn = !!draft.progression;
+  $('bProgOn').classList.toggle('on', pOn);
+  $('bProgOpts').style.display = pOn ? 'block' : 'none';
+  draft.progStep = draft.progStep || 30;
+  $('bProgEvery').value = String(draft.progression || 7);
+  renderProgStep();
   syncCover();
   syncStats();
   renderPlanTabs();
@@ -2882,7 +2967,7 @@ const Q_OPTS = {
   goal: ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот', 'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина', 'Восстановиться после родов', 'Кардио и энергия'],
   level: ['Новичок', 'Средний', 'Продвинутый'],
   dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
-  focus: ['Ягодицы', 'Пресс', 'Бёдра', 'Руки', 'Спина', 'Грудь', 'Плечи', 'Ноги целиком'],
+  focus: ['Шея', 'Плечи', 'Руки', 'Грудь', 'Спина', 'Пресс', 'Талия', 'Ягодицы', 'Бёдра', 'Икры', 'Ноги целиком'],
   equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
   limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность']
 };
@@ -2988,9 +3073,14 @@ async function saveProgram(){
   commitPlanFields();
   draft.name = $('bName').value.trim();
   draft.time = $('bTime').value || '';
-  draft.progression = parseInt($('bProg').value) || 0;
-  if(draft.progression && !draft.progLast) draft.progLast = localISO(new Date());
-  if(!draft.progression) delete draft.progLast;
+  if($('bProgOn').classList.contains('on')){
+    draft.progression = parseInt($('bProgEvery').value) || 7;
+    draft.progStep = draft.progStep || 30;
+    if(!draft.progLast) draft.progLast = localISO(new Date());
+  } else {
+    draft.progression = 0;
+    delete draft.progLast;
+  }
   if(!draft.name){ appAlert('Дай программе название.'); return; }
   // проверка: один день не может быть в двух вариантах
   const seenDays = {};
@@ -3150,8 +3240,7 @@ function renderStep(){
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
-  $('phaseTag').textContent = step.phase==='rest' ? 'Отдых' : '';
-  $('phaseTag').style.display = step.phase==='rest' ? '' : 'none';
+  $('phaseTag').style.display = 'none';
   $('stepTitle').textContent = step.title;
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
@@ -3160,7 +3249,7 @@ function renderStep(){
   const mus = (step.phase === 'work' && step.muscles && step.muscles.length) ? step.muscles : null;
   if(mus){
     $('stepMuscles').innerHTML =
-      `<span class="mr-label">Работают:</span><div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>`;
+      `<div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>`;
     $('stepMuscles').style.display = 'flex';
   } else {
     $('stepMuscles').style.display = 'none';
@@ -3732,19 +3821,18 @@ $('btnHelp').onclick = ()=> { show('scrHelp'); window.scrollTo(0,0); };
 $('btnHelpDone').onclick = ()=> show('scrMenu');
 // трекер веса
 $('btnAddWeight').onclick = ()=>{
-  const row = $('weightAdd');
-  row.classList.toggle('on');
-  if(row.classList.contains('on')){
-    const last = stats.weights[stats.weights.length - 1];
-    $('weightInput').value = last ? last.w : '';
-    $('heightInput').value = stats.height || '';
-    const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
-    $('waistInput').value = lastOf('waist');
-    $('hipsInput').value = lastOf('hips');
-    $('chestInput').value = lastOf('chest');
-    $('weightInput').focus();
-  }
+  const last = stats.weights[stats.weights.length - 1];
+  $('weightInput').value = last ? last.w : '';
+  $('heightInput').value = stats.height || '';
+  const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
+  $('waistInput').value = lastOf('waist');
+  $('hipsInput').value = lastOf('hips');
+  $('chestInput').value = lastOf('chest');
+  $('waModal').classList.add('open');
+  setTimeout(()=> $('weightInput').focus(), 100);
 };
+$('waCancel').onclick = ()=> $('waModal').classList.remove('open');
+$('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
 $('btnSaveWeight').onclick = async ()=>{
   const w = parseFloat(String($('weightInput').value).replace(',', '.'));
   if(!w || w < 20 || w > 300){ appAlert('Введи вес от 20 до 300 кг.'); return; }
@@ -3764,7 +3852,7 @@ $('btnSaveWeight').onclick = async ()=>{
   if(chest) en.chest = chest; else delete en.chest;
   stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
   await saveStats();
-  $('weightAdd').classList.remove('on');
+  $('waModal').classList.remove('open');
   renderWeight();
 };
 // навигация по календарю
