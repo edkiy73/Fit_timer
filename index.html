@@ -1373,9 +1373,9 @@ function speak(text, fallback, onDone){
     const chosen = ru.find(v => v.voiceURI === savedVoiceURI) || ru[0];
     if(chosen) u.voice = chosen;
     let started = false;
-    u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 4000; };
-    u.onend = done;
-    u.onerror = ()=>{ if(!started && fallback) fallback(); done(); };
+    u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 8000; }; // потолок на случай зависания
+    u.onend = ()=>{ lastAppSoundT = Date.now() + 250; done(); };            // фраза кончилась — быстро отпускаем детектор
+    u.onerror = ()=>{ lastAppSoundT = Date.now() + 250; if(!started && fallback) fallback(); done(); };
     try{ speechSynthesis.cancel(); }catch(e){}
     speechSynthesis.speak(u);
     // предохранитель: если TTS завис и не дал ни onend, ни onerror
@@ -4050,9 +4050,10 @@ function stopHandsFree(){
 let clapStream = null, clapCtx = null, clapRAF = 0, lastClap = 0, clapCount = 0, clapTimer = null;
 async function startClap(){
   try{
-    // echoCancellation глушит звук из собственного динамика — критично, чтобы гонг не считался хлопком
-    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}});
+    // сырой звук: шумодав и автогейн давят импульсные звуки (хлопки); свои звуки отсекаем меткой lastAppSoundT
+    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
     clapCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(clapCtx.state === 'suspended') clapCtx.resume();
     const src = clapCtx.createMediaStreamSource(clapStream);
     const an = clapCtx.createAnalyser();
     an.fftSize = 512;
@@ -4066,6 +4067,7 @@ async function startClap(){
 
     const loop = ()=>{
       if(!clapStream) return;
+      if(clapCtx.state === 'suspended') clapCtx.resume(); // Android любит усыплять контекст
       an.getByteTimeDomainData(tbuf);
       let peak = 0;
       for(let i = 0; i < tbuf.length; i++){
@@ -4074,7 +4076,7 @@ async function startClap(){
       }
       const now = Date.now();
       // пока приложение само звучит — детект выключен
-      const appSpeaking = now < lastAppSoundT || (window.speechSynthesis && speechSynthesis.speaking);
+      const appSpeaking = now < lastAppSoundT; // только метки времени: флаг speechSynthesis.speaking залипает на Android
       if(appSpeaking || now - lastAction < 900){
         prevPeak = peak;
         clapRAF = requestAnimationFrame(loop);
