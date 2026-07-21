@@ -1118,7 +1118,7 @@
         <span class="mini-label">Управление без рук</span>
         <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
         <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Возможен системный сигнал микрофона</small></button>
-        <button class="choice" data-hf="clap"><b>Хлопок</b><small>1 хлопок — дальше, 2 — пауза. Без системных звуков, офлайн</small></button>
+        <button class="choice" data-hf="clap"><b>Хлопок</b><small>2 хлопка — дальше, 3 — пауза. Без системных звуков, офлайн</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
         <button class="link-btn" id="hfClose" style="margin:0;padding:10px">Закрыть</button>
       </div>
@@ -4019,7 +4019,7 @@ let hfMode = 'off'; // off | voice | clap | headset
 const HF_HINTS = {
   off: 'Переключай этапы кнопками на экране.',
   voice: 'Команды: «дальше», «пауза», «продолжить». На некоторых телефонах система подаёт сигнал при активации микрофона — это нормально. Нужен интернет.',
-  clap: 'Хлопни в ладоши — следующий этап. Два хлопка подряд — пауза/продолжить. Работает офлайн, без звуков системы.',
+  clap: 'Два хлопка — следующий этап. Три хлопка — пауза/продолжить. Работает офлайн, без звуков системы.',
   headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
 };
 
@@ -4101,25 +4101,29 @@ async function startClap(){
 
         lastClap = now;
         clapCount++;
-        if(clapCount >= 2){
-          // второй хлопок пришёл — пауза/продолжить срабатывает СРАЗУ, не ждём окно
-          clearTimeout(clapTimer);
+        clearTimeout(clapTimer);
+        if(clapCount >= 3){
+          // тройной — пауза/продолжить, срабатывает сразу
           clapCount = 0;
           lastAction = now;
           setPause(!state.paused);
           beep(990, .1);
         } else {
-          clearTimeout(clapTimer);
           clapTimer = setTimeout(()=>{
+            const n = clapCount;
             clapCount = 0;
-            lastAction = Date.now();
-            const step = state.steps[state.stepIdx];
-            if(step){
-              if(state.paused) setPause(false);
-              if(step.kind === 'click') $('btnDone').click();
-              else { beep(990, .1); nextStep(); }
+            if(n === 2){
+              // двойной — следующий этап
+              lastAction = Date.now();
+              const step = state.steps[state.stepIdx];
+              if(step){
+                if(state.paused) setPause(false);
+                if(step.kind === 'click') $('btnDone').click();
+                else { beep(990, .1); nextStep(); }
+              }
             }
-          }, 650); // широкое окно ожидания второго хлопка
+            // одиночный хлопок игнорируем — слишком много ложных срабатываний от бытовых звуков
+          }, 650); // окно ожидания следующего хлопка
         }
       }
       clapRAF = requestAnimationFrame(loop);
@@ -4326,7 +4330,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
     }
     if(mode === 'clap' && (await kvGet('clapHint')) !== '1'){
       kvSet('clapHint', '1');
-      appAlert('Хлопни в ладоши — следующий этап.\nДва хлопка подряд — пауза/продолжить.\n\nБраузер спросит доступ к микрофону при старте тренировки. Никаких системных звуков — микрофон открывается один раз на всю тренировку.');
+      appAlert('Два хлопка подряд — следующий этап.\nТри хлопка — пауза/продолжить.\nОдиночные хлопки и случайные звуки игнорируются.\n\nБраузер спросит доступ к микрофону при старте тренировки. Никаких системных звуков — микрофон открывается один раз на всю тренировку.');
     }
   };
 });
