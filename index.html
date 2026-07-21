@@ -2006,8 +2006,12 @@ async function deleteUser(){
   users = users.filter(x => x.id !== id);
   await saveUsers();
   if(isLast){
-    // удалили последний — полный сброс и онбординг заново
-    try{ await kvDel('currentUser'); await kvDel('seenHelp'); }catch(e){}
+    // удалили последний профиль — полный сброс: онбординг → обучение → главная
+    try{
+      await kvDel('currentUser'); await kvDel('profile');
+      await kvDel('seenHelp'); await kvDel('migrated');
+      await kvDel('customPrograms'); await kvDel('stats');
+    }catch(e){}
     location.reload();
     return;
   }
@@ -2433,7 +2437,6 @@ async function finishOnboardingCreate(){
   await saveUsers();
   currentUser = u.id;
   kvSet('currentUser', u.id);
-  kvSet('seenHelp', '1');
   await loadData();
   await loadPhotos();
   await ensureWarmup();
@@ -3944,7 +3947,7 @@ setInterval(checkSchedules, 20000);
 $('btnStart').onclick = ()=>{ state.current = customToProgram(state.raw, state.planIdx); startWorkout(); };
 $('startBackTop').onclick = ()=> show('scrMenu');
 $('textBackTop').onclick = ()=> show('scrMenu');
-$('helpBackTop').onclick = ()=> show('scrMenu');
+$('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnExit').onclick  = exitWorkout;
@@ -4009,7 +4012,8 @@ $('btnDelPlan').onclick = async ()=>{
   fillPlanFields();
 };
 $('btnHelp').onclick = ()=> { show('scrHelp'); window.scrollTo(0,0); };
-$('btnHelpDone').onclick = ()=> show('scrMenu');
+let helpNext = null;
+$('btnHelpDone').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
 // трекер веса
 $('btnAddWeight').onclick = ()=>{
   const last = stats.weights[stats.weights.length - 1];
@@ -4119,11 +4123,26 @@ $('obNext2').onclick = async ()=>{
   }
   $('obStep3').style.display = 'block';
 };
-$('obStart').onclick = ()=>{
+$('obStart').onclick = async ()=>{
+  // сначала краткое «как это работает», затем сразу разминка
   const w = customPrograms.find(p => p.id === 'warmup');
+  if((await kvGet('seenHelp')) !== '1'){
+    kvSet('seenHelp', '1');
+    helpNext = ()=>{ helpNext = null; if(w) openStart(w); else show('scrMenu'); };
+    show('scrHelp');
+    return;
+  }
   if(w) openStart(w); else show('scrMenu');
 };
-$('obLater').onclick = ()=> show('scrMenu');
+$('obLater').onclick = async ()=>{
+  if((await kvGet('seenHelp')) !== '1'){
+    kvSet('seenHelp', '1');
+    helpNext = ()=>{ helpNext = null; show('scrMenu'); };
+    show('scrHelp');
+    return;
+  }
+  show('scrMenu');
+};
 // профили
 $('btnUsers').onclick = ()=>{ renderUsers(); $('usersModal').classList.add('open'); };
 $('usersClose').onclick = ()=> $('usersModal').classList.remove('open');
