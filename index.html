@@ -1355,16 +1355,16 @@ if('speechSynthesis' in window){
 
 // русская речь; если голоса нет или ошибка — фолбэк-звук
 let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
-function speak(text, fallback){
-  if(!soundOn) return;
-  if(voiceVol <= 0){ if(fallback) fallback(); return; } // голос выключен — идём в звуковой фолбэк
-  if(musicMode){ if(fallback) fallback(); return; } // TTS перехватывает аудиофокус — в режиме музыки не говорим
+function speak(text, fallback, onDone){
+  const done = ()=>{ if(onDone){ const f = onDone; onDone = null; f(); } };
+  if(!soundOn){ done(); return; }
+  if(voiceVol <= 0){ if(fallback) fallback(); done(); return; } // голос выключен — фолбэк-звук
+  if(musicMode){ if(fallback) fallback(); done(); return; }
   try{
-    if(!('speechSynthesis' in window)){ if(fallback) fallback(); return; }
+    if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
     const voices = speechSynthesis.getVoices();
     const ru = ruVoices();
-    // голоса загружены, но русского нет — английский голос прочитает кириллицу кашей, лучше фолбэк
-    if(voices.length && !ru.length){ if(fallback) fallback(); return; }
+    if(voices.length && !ru.length){ if(fallback) fallback(); done(); return; }
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ru-RU';
     u.rate = 1.05;
@@ -1373,10 +1373,13 @@ function speak(text, fallback){
     if(chosen) u.voice = chosen;
     let started = false;
     u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 4000; };
-    u.onerror = ()=>{ if(!started && fallback) fallback(); };
-    try{ speechSynthesis.cancel(); }catch(e){} // обрываем предыдущую фразу
+    u.onend = done;
+    u.onerror = ()=>{ if(!started && fallback) fallback(); done(); };
+    try{ speechSynthesis.cancel(); }catch(e){}
     speechSynthesis.speak(u);
-  }catch(e){ if(fallback) fallback(); }
+    // предохранитель: если TTS завис и не дал ни onend, ни onerror
+    setTimeout(done, 6000);
+  }catch(e){ if(fallback) fallback(); done(); }
 }
 
 // «Осталось N секунд» на отметках 60/45/30/15
@@ -1411,7 +1414,7 @@ function plural(n, one, few, many){
 }
 
 // озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
-function announceExercise(step){
+function announceExercise(step, onDone){
   let text = step.title;
   if(step.kind === 'click'){
     const n = parseInt(step.reps);
@@ -1419,7 +1422,13 @@ function announceExercise(step){
   } else if(step.seconds){
     text += `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
   }
-  speak(text); // без фолбэка: если голоса нет, гонга достаточно
+  speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
+}
+
+// бодрый сигнал «старт!» после озвучки упражнения
+function startSignal(){
+  beep(880, .1, 0, .3);
+  beep(1320, .28, .13, .35);
 }
 
 /* ================= WAKE LOCK ================= */
@@ -3521,6 +3530,7 @@ function startWorkout(){
 
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
+  state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
 }
 
 function renderStep(){
@@ -3556,10 +3566,20 @@ function renderStep(){
     $('stepMistakes').style.display = 'none';
   }
 
-  // звуки начала шага
+  // звуки начала шага (для work запуск таймера происходит ниже, после озвучки)
+  state.stepToken = (state.stepToken || 0) + 1;
+  const myToken = state.stepToken;
   if(step.phase === 'work'){
     gong();
-    setTimeout(()=> announceExercise(step), 500); // после удара гонга
+    setTimeout(()=>{
+      if(state.stepToken !== myToken) return; // шаг уже сменили
+      announceExercise(step, ()=>{
+        if(state.stepToken !== myToken) return;
+        startSignal();
+        // отсчёт запускается через мгновение после старт-сигнала
+        setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
+      });
+    }, 500); // после удара гонга
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
     if(step.roundRest) roundDone(step.seconds, nxt && nxt.title);
@@ -3605,7 +3625,7 @@ function renderStep(){
     state.remaining = step.seconds;
     cd.textContent = fmt(state.remaining);
     cd.classList.remove('warn');
-    state.stepTimer = setInterval(()=>{
+    const launch = ()=> state.stepTimer = setInterval(()=>{
       if(state.paused) return;
       state.remaining--;
       if(state.remaining <= 0){
@@ -3618,6 +3638,17 @@ function renderStep(){
       if([60,45,30,15].includes(state.remaining)) announceRemaining(state.remaining);
       if(state.remaining <= 3){ cd.classList.add('warn'); tick(); }
     }, 1000);
+    if(step.phase === 'work'){
+      // упражнение: ждём озвучку → старт-сигнал → отсчёт (запустит цепочка выше)
+      state.beginTimer = ()=>{ state.beginTimer = null; launch(); };
+      // предохранитель: если звук выключен целиком и цепочка не запустит — стартуем через 900мс
+      const tk = state.stepToken;
+      setTimeout(()=>{ if(state.stepToken === tk && state.beginTimer) state.beginTimer(); }, soundOn && (voiceVol > 0) ? 8000 : 900);
+    } else {
+      // отдых: отсчёт сразу
+      state.beginTimer = null;
+      launch();
+    }
   }
 }
 
@@ -4023,51 +4054,73 @@ async function startClap(){
     clapCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = clapCtx.createMediaStreamSource(clapStream);
     const an = clapCtx.createAnalyser();
-    an.fftSize = 512;
+    an.fftSize = 1024;
     src.connect(an);
-    const buf = new Uint8Array(an.fftSize);
-    let noise = 8; // адаптивный уровень фона (тихая комната ~2–8)
+    const tbuf = new Uint8Array(an.fftSize);
+    const fbuf = new Uint8Array(an.frequencyBinCount);
+    let noise = 8;      // адаптивный фон по громкости
     let prevPeak = 0;
+    let lastAction = 0; // когда сработало последнее действие (защита от каскада шума)
+
     const loop = ()=>{
       if(!clapStream) return;
-      an.getByteTimeDomainData(buf);
+      an.getByteTimeDomainData(tbuf);
       let peak = 0;
-      for(let i = 0; i < buf.length; i++){
-        const v = Math.abs(buf[i] - 128);
+      for(let i = 0; i < tbuf.length; i++){
+        const v = Math.abs(tbuf[i] - 128);
         if(v > peak) peak = v;
       }
       const now = Date.now();
-      // пока приложение само звучит (гонг/бип/голос) — детект выключен, чтобы не ловить свой динамик
+      // пока приложение само звучит — детект выключен
       const appSpeaking = now < lastAppSoundT || (window.speechSynthesis && speechSynthesis.speaking);
-      if(appSpeaking){
+      if(appSpeaking || now - lastAction < 900){
         prevPeak = peak;
         clapRAF = requestAnimationFrame(loop);
         return;
       }
-      noise = noise * 0.995 + peak * 0.005; // плавающий фон
+      noise = noise * 0.995 + peak * 0.005;
       const th = Math.max(48, noise * 2.6);
-      // хлопок = резкий фронт: тихо в прошлом кадре → громко сейчас (музыка/речь нарастают плавно)
-      const sharp = prevPeak < th * 0.6;
+      const sharp = prevPeak < th * 0.6; // резкий фронт: тихо → громко
       prevPeak = peak;
-      if(peak > th && sharp && now - lastClap > 250){
+
+      if(peak > th && sharp && now - lastClap > 150){
+        // частотный фильтр: хлопок — широкополосный щелчок с сильными верхами;
+        // топот, прыжки и удары об пол — низкочастотные, верхов почти нет
+        an.getByteFrequencyData(fbuf);
+        const n = fbuf.length;
+        let lo = 0, hi = 0;
+        const split = Math.floor(n * 0.3); // ~выше 3–4 кГц при 44.1к
+        for(let i = 2; i < split; i++) lo += fbuf[i];
+        for(let i = split; i < n; i++) hi += fbuf[i];
+        lo /= (split - 2); hi /= (n - split);
+        const isClapSpectrum = hi > 22 && hi > lo * 0.45;
+        if(!isClapSpectrum){
+          clapRAF = requestAnimationFrame(loop);
+          return; // низкочастотный удар — не хлопок
+        }
+
         lastClap = now;
         clapCount++;
-        clearTimeout(clapTimer);
-        clapTimer = setTimeout(()=>{
-          if(clapCount >= 2){
-            // двойной хлопок — пауза/продолжить
-            setPause(!state.paused); beep(990, .1);
-          } else {
-            // одинарный — следующий этап
+        if(clapCount >= 2){
+          // второй хлопок пришёл — пауза/продолжить срабатывает СРАЗУ, не ждём окно
+          clearTimeout(clapTimer);
+          clapCount = 0;
+          lastAction = now;
+          setPause(!state.paused);
+          beep(990, .1);
+        } else {
+          clearTimeout(clapTimer);
+          clapTimer = setTimeout(()=>{
+            clapCount = 0;
+            lastAction = Date.now();
             const step = state.steps[state.stepIdx];
             if(step){
               if(state.paused) setPause(false);
               if(step.kind === 'click') $('btnDone').click();
               else { beep(990, .1); nextStep(); }
             }
-          }
-          clapCount = 0;
-        }, 420); // окно ожидания второго хлопка
+          }, 650); // широкое окно ожидания второго хлопка
+        }
       }
       clapRAF = requestAnimationFrame(loop);
     };
