@@ -89,6 +89,7 @@
   .icon-btn.btn-mic{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1;filter:grayscale(1);opacity:.65}
   .icon-btn.btn-mic.on{display:block}
   .icon-btn.btn-mic.listening{filter:none;opacity:1;border-color:var(--work);animation:micPulse 1.6s infinite}
+  .icon-btn.btn-mic.clap-hit{background:var(--work);color:#fff;transform:scale(1.15)}
   @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,61,.35)}50%{box-shadow:0 0 0 6px rgba(255,77,61,0)}}
   .icon-btn.btn-sound{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1}
   .icon-btn.btn-sound.on{display:block}
@@ -4054,7 +4055,8 @@ async function startClap(){
     clapCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = clapCtx.createMediaStreamSource(clapStream);
     const an = clapCtx.createAnalyser();
-    an.fftSize = 1024;
+    an.fftSize = 512;
+    an.smoothingTimeConstant = 0.1; // без инерции — хлопок виден в спектре мгновенно
     src.connect(an);
     const tbuf = new Uint8Array(an.fftSize);
     const fbuf = new Uint8Array(an.frequencyBinCount);
@@ -4080,10 +4082,12 @@ async function startClap(){
       }
       noise = noise * 0.995 + peak * 0.005;
       const th = Math.max(48, noise * 2.6);
-      const sharp = prevPeak < th * 0.6; // резкий фронт: тихо → громко
+      const inSeries = clapCount > 0 && now - lastClap < 900; // уже идёт серия хлопков
+      const sharp = inSeries || prevPeak < th * 0.6; // резкий фронт нужен только первому
       prevPeak = peak;
+      const effTh = inSeries ? th * 0.85 : th; // в серии порог чуть мягче
 
-      if(peak > th && sharp && now - lastClap > 150){
+      if(peak > effTh && sharp && now - lastClap > 150){
         // частотный фильтр: хлопок — широкополосный щелчок с сильными верхами;
         // топот, прыжки и удары об пол — низкочастотные, верхов почти нет
         an.getByteFrequencyData(fbuf);
@@ -4093,7 +4097,7 @@ async function startClap(){
         for(let i = 2; i < split; i++) lo += fbuf[i];
         for(let i = split; i < n; i++) hi += fbuf[i];
         lo /= (split - 2); hi /= (n - split);
-        const isClapSpectrum = hi > 22 && hi > lo * 0.45;
+        const isClapSpectrum = inSeries ? (hi > 14) : (hi > 22 && hi > lo * 0.45);
         if(!isClapSpectrum){
           clapRAF = requestAnimationFrame(loop);
           return; // низкочастотный удар — не хлопок
@@ -4102,6 +4106,12 @@ async function startClap(){
         lastClap = now;
         clapCount++;
         clearTimeout(clapTimer);
+        // визуальный отклик: видно, что хлопок пойман
+        try{
+          $('btnMicW').classList.add('clap-hit');
+          setTimeout(()=> $('btnMicW').classList.remove('clap-hit'), 180);
+          haptic(12);
+        }catch(e){}
         if(clapCount >= 3){
           // тройной — пауза/продолжить, срабатывает сразу
           clapCount = 0;
