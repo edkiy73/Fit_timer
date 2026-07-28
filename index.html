@@ -610,6 +610,11 @@
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:#fff;font-weight:500}
+  .act-row{display:flex;gap:10px;align-items:stretch}
+  .btn-prev{flex:0 0 54px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .btn-prev svg{width:20px;height:20px}
+  .btn-prev:disabled{opacity:.3}
+  .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
   .vol-label b{font-family:'Oswald';color:var(--work);font-size:15px}
@@ -757,7 +762,7 @@
       <h2 id="startTitle"></h2>
       <p class="desc" id="startDesc"></p>
       <div class="start-meta">
-        <div class="chip">Кругов: <b id="startRounds">4</b></div>
+        <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
         <div class="chip">Упражнений: <b id="startExCount"></b></div>
       </div>
       <div class="load-block" id="planBlock" style="display:none">
@@ -821,10 +826,14 @@
       <div class="plan-tabs" id="planTabs"></div>
       <p class="field-hint">Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.</p>
     </div>
-    <div class="field"><label>Дни этого варианта</label><div class="days" id="bDays"></div></div>
+    <div class="pref-row" id="bRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A независимо от дней недели, пропуск не сбивает очередь</small></span><button class="switch" id="bRotate"></button></div>
+    <div class="field" id="bDaysField"><label>Дни этого варианта</label><div class="days" id="bDays"></div></div>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <div class="field"><label>Время этого варианта (необязательно)</label><input type="time" id="bPlanTime">
+      <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
     <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:0 0 4px;padding:6px">Удалить этот вариант</button>
     <div class="section-title" style="margin-top:8px">Упражнения (до 10)</div>
@@ -917,7 +926,10 @@
     </div>
     <div class="actions">
       <button class="btn-done" id="btnDone">Готово ✓</button>
-      <button class="btn-skip" id="btnSkip">Пропустить</button>
+      <div class="act-row">
+        <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
+        <button class="btn-skip" id="btnSkip">Пропустить</button>
+      </div>
     </div>
   </section>
 
@@ -1417,11 +1429,15 @@ function plural(n, one, few, many){
 // озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
 function announceExercise(step, onDone){
   let text = step.title;
+  if(step.setsTotal > 1) text += `, подход ${step.setNo} из ${step.setsTotal}`;
   if(step.kind === 'click'){
-    const n = parseInt(step.reps);
-    if(n) text += `, ${n} ${plural(n, 'повторение', 'повторения', 'повторений')}`;
+    const r = parseValue(step.reps);
+    if(r.min === r.max) text += `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
+    else text += `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
+    if(step.perSide) text += ', на каждую сторону';
   } else if(step.seconds){
     text += `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
+    if(step.perSide) text += ', на каждую сторону';
   }
   speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
 }
@@ -1493,7 +1509,7 @@ function icon(name){
 /* ================= МЫШЕЧНЫЕ ГРУППЫ ================= */
 const MUSCLES = [
   ['ne','Шея'], ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
-  ['ba','Спина'], ['gl','Ягодицы'], ['le','Бёдра'], ['ca','Икры']
+  ['ba','Спина'], ['gl','Ягодицы'], ['le','Квадрицепс'], ['hm','Задняя бедра'], ['ca','Икры']
 ];
 const M_LABEL = Object.fromEntries(MUSCLES);
 
@@ -1553,7 +1569,7 @@ function openStart(raw){
   applyAudioFromUser(curUser());
   state.raw = raw;
   const plans = normPlans(raw);
-  state.planIdx = defaultPlanIdx(plans);
+  state.planIdx = defaultPlanIdx(plans, raw);
   state.load = (raw.load && raw.load >= 40 && raw.load <= 200) ? raw.load : 100;
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
@@ -1572,7 +1588,13 @@ function openStart(raw){
 }
 
 // по умолчанию выбираем вариант, в чьи дни попадает сегодня
-function defaultPlanIdx(plans){
+function defaultPlanIdx(plans, prog){
+  // режим ротации: варианты идут по очереди A-B-A-B независимо от календаря,
+  // пропуск дня не сбивает очередь
+  if(prog && prog.rotate && plans.length > 1){
+    const next = (typeof prog.rotIdx === 'number') ? prog.rotIdx : 0;
+    return ((next % plans.length) + plans.length) % plans.length;
+  }
   const today = DAYS[(new Date().getDay() + 6) % 7];
   const i = plans.findIndex(pl => (pl.days || []).includes(today));
   return i >= 0 ? i : 0;
@@ -1587,7 +1609,10 @@ function renderPlanRow(){
   plans.forEach((pl, i)=>{
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
-    b.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+    const rotOn = state.raw.rotate && plans.length > 1;
+    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • сейчас';
+    b.textContent = lbl;
     b.classList.toggle('act', state.planIdx === i);
     b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
     row.appendChild(b);
@@ -1595,10 +1620,23 @@ function renderPlanRow(){
 }
 
 function renderStartInfo(){
-  const pl = normPlans(state.raw)[state.planIdx];
-  const schedule = [state.raw.time, (pl.days && pl.days.length) ? pl.days.join(', ') : ''].filter(Boolean).join(' · ');
+  const plans = normPlans(state.raw);
+  const pl = plans[state.planIdx];
+  const rotOn = state.raw.rotate && plans.length > 1;
+  const t = pl.time || state.raw.time;
+  const whenTxt = rotOn ? 'по очереди' : ((pl.days && pl.days.length) ? pl.days.join(', ') : '');
+  const schedule = [t, whenTxt].filter(Boolean).join(' · ');
   $('startDesc').textContent = schedule ? `Расписание: ${schedule}` : '';
-  $('startRounds').textContent = pl.rounds;
+  // объём: круги для круговых, подходы для силовых
+  const mainEx = (pl.exercises || []).filter(e => !e.warmup);
+  const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
+  if(pl.rounds > 1 || setsTotal <= mainEx.length){
+    $('startVolLabel').textContent = 'Кругов';
+    $('startRounds').textContent = pl.rounds;
+  } else {
+    $('startVolLabel').textContent = 'Подходов';
+    $('startRounds').textContent = setsTotal;
+  }
   $('startExCount').textContent = pl.exercises.length;
 }
 
@@ -1999,31 +2037,63 @@ function programDaysUnion(p){
 
 // превращает выбранный план программы в тренировочный цикл
 function customToProgram(p, planIdx = 0){
-  const plan = normPlans(p)[planIdx] || normPlans(p)[0];
+  const plans = normPlans(p);
+  const plan = plans[planIdx] || plans[0];
+
+  const mkWork = (ex, setNo, setsTotal)=>{
+    const step = {
+      phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
+      video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
+      perSide: !!ex.perSide
+    };
+    if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
+    if(ex.type === 'time'){ step.kind = 'timer'; step.seconds = parseValue(ex.value).min; }
+    else { step.kind = 'click'; step.reps = normValue(ex.value, 'reps'); step.repsNote = 'повторений'; }
+    return step;
+  };
+  const mkRest = sec => ({kind:'timer', phase:'rest', title:'Отдых', seconds:sec, instruction:'Восстанови дыхание.', illo:'rest'});
+
+  const list = plan.exercises || [];
+  const warmEx = list.filter(e => e.warmup);
+  const mainEx = list.filter(e => !e.warmup);
+
+  // разминка выполняется один раз, до кругов
+  const warmup = [];
+  warmEx.forEach((ex, i)=>{
+    const w = mkWork(ex, 1, 1);
+    w.isWarmup = true;
+    warmup.push(w);
+    if(+ex.rest > 0) warmup.push(mkRest(+ex.rest));
+  });
+
+  // основная часть: у каждого упражнения свои подходы
   const cycle = [];
-  plan.exercises.forEach((ex, i)=>{
-    const step = { phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null, video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '' };
-    if(ex.type === 'time'){ step.kind='timer'; step.seconds=+ex.value; }
-    else { step.kind='click'; step.reps=String(ex.value); step.repsNote='повторений'; }
-    cycle.push(step);
-    // после последнего упражнения личный отдых не ставим — вместо него отдых между кругами
-    const isLast = i === plan.exercises.length - 1;
-    if(!isLast && +ex.rest > 0){
-      cycle.push({kind:'timer', phase:'rest', title:'Отдых', seconds:+ex.rest, instruction:'Восстанови дыхание.', illo:'rest'});
+  mainEx.forEach((ex, i)=>{
+    const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+    const isLastEx = i === mainEx.length - 1;
+    for(let s = 1; s <= sets; s++){
+      cycle.push(mkWork(ex, s, sets));
+      const isLastSet = s === sets;
+      // после самого последнего подхода последнего упражнения личный отдых не ставим —
+      // там сработает отдых между кругами
+      if(!(isLastEx && isLastSet) && +ex.rest > 0) cycle.push(mkRest(+ex.rest));
     }
   });
+
   const rr = parseInt(plan.roundRest) || 0;
   if(rr > 0){
     cycle.push({kind:'timer', phase:'rest', title:'Круг завершён', seconds:rr, instruction:'Попей воды и готовься к следующему кругу.', illo:'water', roundRest:true});
   }
-  const schedule = [p.time, (plan.days && plan.days.length) ? plan.days.join(', ') : ''].filter(Boolean).join(' · ');
+
+  const planTime = plan.time || p.time || '';
+  const schedule = [planTime, (plan.days && plan.days.length) ? plan.days.join(', ') : ''].filter(Boolean).join(' · ');
   return {
     num: 'Моя программа',
     title: p.name,
     sourceId: p.id,
     load: p.load || 100,
-    desc: `Упражнений: ${plan.exercises.length}` + (schedule ? `. Расписание: ${schedule}.` : ''),
-    rounds: plan.rounds, cycle
+    desc: `Упражнений: ${list.length}` + (schedule ? `. Расписание: ${schedule}.` : ''),
+    rounds: plan.rounds, cycle, warmup
   };
 }
 
@@ -2599,8 +2669,13 @@ function renderToday(){
     scheduled.forEach(({p, plan, done}) => {
       const row = document.createElement('div');
       row.className = 'today-row';
-      const bits = [`Упражнений: ${plan.exercises.length}`, `Кругов: ${plan.rounds}`];
-      if(p.time) bits.push(p.time);
+      const setsTotal = (plan.exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
+      const bits = [`Упражнений: ${plan.exercises.length}`];
+      // силовая (подходы у упражнений) — показываем подходы, круговая — круги
+      if(plan.rounds > 1) bits.push(`Кругов: ${plan.rounds}`);
+      else if(setsTotal > plan.exercises.length) bits.push(`Подходов: ${setsTotal}`);
+      const t = plan.time || p.time;
+      if(t) bits.push(t);
       row.innerHTML = `<div class="ti"><b></b><small>${done ? '✓ Выполнено сегодня' : bits.join(' • ')}</small></div>` +
         `<button class="btn-mini${done ? ' ghost' : ''}">${done ? 'Ещё раз' : 'Начать'}</button>`;
       row.querySelector('b').textContent = p.name;
@@ -2698,12 +2773,18 @@ function renderMine(){
     const plans = normPlans(p);
     const exTotal = plans.reduce((n, pl)=> n + pl.exercises.length, 0);
     const daysU = programDaysUnion(p);
-    const schedule = [p.time, daysU.length ? daysU.join(' · ') : ''].filter(Boolean).join(' — ');
+    const schedule = p.rotate && plans.length > 1
+      ? [p.time, 'по очереди'].filter(Boolean).join(' — ')
+      : [p.time, daysU.length ? daysU.join(' · ') : ''].filter(Boolean).join(' — ');
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${p.cover}" alt="">` : DUMBBELL_ICON;
+    const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
+    const volOne = plans[0].rounds > 1
+      ? `Кругов: ${plans[0].rounds}`
+      : (setsOne > plans[0].exercises.length ? `Подходов: ${setsOne}` : `Кругов: ${plans[0].rounds}`);
     const line1 = plans.length > 1
       ? `Вар-ов: ${plans.length} • Упр-ий: ${exTotal}`
-      : `Кругов: ${plans[0].rounds} • Упр-ий: ${exTotal}`;
+      : `${volOne} • Упр-ий: ${exTotal}`;
     card.innerHTML =
       `<div class="mc-cover">${cover}</div>` +
       `<div class="mc-body"><h3></h3>` +
@@ -2830,7 +2911,40 @@ const MAX_EX = 10;
 let draft = null;
 
 function blankExercise(){
-  return {name:'', desc:'', video:'', type:'reps', value:10, rest:45, media:null, muscles:[], mistakes:''};
+  return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
+          rest:45, media:null, muscles:[], mistakes:''};
+}
+
+/* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
+// возвращает {min, max} — для одиночного значения min === max
+function parseValue(v){
+  const s = String(v == null ? '' : v).replace(',', '.').trim();
+  const m = s.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+  if(m){
+    let a = parseInt(m[1]), b = parseInt(m[2]);
+    if(a > b){ const t = a; a = b; b = t; }
+    return {min: Math.max(1, a), max: Math.min(999, b)};
+  }
+  const n = Math.max(1, Math.min(999, parseInt(s) || 1));
+  return {min: n, max: n};
+}
+// «12» или «12–15»
+function valueText(v){
+  const r = parseValue(v);
+  return r.min === r.max ? String(r.min) : (r.min + '–' + r.max);
+}
+// масштабирование нагрузки с сохранением диапазона
+function scaleValue(v, k){
+  const r = parseValue(v);
+  const a = Math.max(1, Math.round(r.min * k));
+  const b = Math.max(1, Math.round(r.max * k));
+  return a === b ? String(a) : (a + '-' + b);
+}
+// нормализация значения для хранения
+function normValue(v, type){
+  const r = parseValue(v);
+  if(type === 'time') return String(r.min); // время — всегда одно число
+  return r.min === r.max ? String(r.min) : (r.min + '-' + r.max);
 }
 
 let planIdx = 0;
@@ -2867,6 +2981,16 @@ function renderProgStep(){
     row.appendChild(b);
   });
 }
+function syncRotateUI(){
+  // при ротации дни варианта не нужны — очередь идёт по порядку тренировок
+  const on = $('bRotate').classList.contains('on') && (draft.plans || []).length > 1;
+  $('bDaysField').style.display = on ? 'none' : 'block';
+}
+$('bRotate').onclick = ()=>{
+  draft.rotate = !$('bRotate').classList.contains('on');
+  $('bRotate').classList.toggle('on', draft.rotate);
+  syncRotateUI();
+};
 $('bProgOn').onclick = ()=>{
   const on = !$('bProgOn').classList.contains('on');
   $('bProgOn').classList.toggle('on', on);
@@ -2878,6 +3002,7 @@ function commitPlanFields(){
   const pl = curPlan();
   pl.rounds = +$('bRounds').value || 3;
   pl.roundRest = Math.max(0, Math.min(600, parseInt($('bRoundRest').value) || 0));
+  pl.time = $('bPlanTime').value || '';
 }
 
 // заполняет форму конструктора из draft и показывает экран
@@ -2885,6 +3010,11 @@ function fillBuilder(title){
   $('builderTitle').textContent = title;
   $('bName').value = draft.name;
   $('bTime').value = draft.time || '';
+  // ротация вариантов доступна, когда вариантов больше одного
+  const many = (draft.plans || []).length > 1;
+  $('bRotateRow').style.display = many ? 'flex' : 'none';
+  $('bRotate').classList.toggle('on', !!draft.rotate);
+  syncRotateUI();
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
   $('bProgOpts').style.display = pOn ? 'block' : 'none';
@@ -2935,6 +3065,7 @@ function renderPlanTabs(){
 function fillPlanFields(){
   const pl = curPlan();
   $('bRoundRest').value = pl.roundRest;
+  $('bPlanTime').value = pl.time || '';
   const sel = $('bRounds'); sel.innerHTML='';
   for(let i=1;i<=10;i++){
     const o = document.createElement('option');
@@ -2945,6 +3076,10 @@ function fillPlanFields(){
   renderDays();
   renderExList();
   $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
+  const many = draft.plans.length > 1;
+  $('bRotateRow').style.display = many ? 'flex' : 'none';
+  if(!many){ draft.rotate = false; $('bRotate').classList.remove('on'); }
+  syncRotateUI();
 }
 
 function syncStats(){
@@ -2987,6 +3122,7 @@ function exCard(ex, i){
   el.className = 'ex-card';
   el.innerHTML = `
     <div class="ex-head"><span class="t">Упражнение ${i+1}</span><button type="button" data-a="del">удалить</button></div>
+    <div class="pref-row" style="border-top:none;padding:2px 0 10px"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" data-a="warm"></button></div>
     <div class="field"><label>Название</label><input type="text" data-f="name" maxlength="60" placeholder="Например: Приседания"></div>
     <div class="field"><label>Описание / техника</label><textarea data-f="desc" maxlength="600" placeholder="Как выполнять упражнение"></textarea></div>
     <div class="field"><label>Работающие мышцы</label><div class="days" data-f="mus"></div></div>
@@ -2999,9 +3135,11 @@ function exCard(ex, i){
       </div>
     </div>
     <div class="row2">
-      <div class="field"><label data-l="value"></label><input type="number" data-f="value" min="1" max="999" inputmode="numeric"></div>
-      <div class="field"><label>Отдых после, сек</label><input type="number" data-f="rest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха"></div>
+      <div class="field"><label data-l="value"></label><input type="text" data-f="value" inputmode="numeric" placeholder="12 или 12-15"></div>
+      <div class="field"><label>Подходов</label><input type="number" data-f="sets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
     </div>
+    <div class="pref-row" style="padding:2px 0 10px" data-r="side"><span>На каждую сторону<small>выпады, планка на боку и т.п.</small></span><button type="button" class="switch" data-a="side"></button></div>
+    <div class="field"><label>Отдых после подхода, сек</label><input type="number" data-f="rest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха"></div>
     <div class="field"><label>Картинка или SVG (необязательно)</label>
       <div class="media-row">
         <button type="button" data-a="mImg">Фото</button>
@@ -3035,13 +3173,23 @@ function exCard(ex, i){
   };
   drawMus();
   q('[data-f=video]').value = ex.video || '';
-  q('[data-f=value]').value = ex.value;
+  q('[data-f=value]').value = valueText(ex.value).replace('–', '-');
+  q('[data-f=sets]').value  = ex.sets || 1;
   q('[data-f=rest]').value  = ex.rest;
+  q('[data-a=warm]').classList.toggle('on', !!ex.warmup);
+  q('[data-a=side]').classList.toggle('on', !!ex.perSide);
 
   const syncType = ()=>{
     q('[data-a=typeReps]').classList.toggle('act', ex.type==='reps');
     q('[data-a=typeTime]').classList.toggle('act', ex.type==='time');
     q('[data-l=value]').textContent = ex.type==='reps' ? 'Повторений' : 'Секунд';
+    // диапазон имеет смысл только для повторений
+    q('[data-f=value]').placeholder = ex.type==='reps' ? '12 или 12-15' : '45';
+  };
+  const syncWarm = ()=>{
+    // у разминки подходов не бывает — прячем поле
+    const w = !!ex.warmup;
+    q('[data-f=sets]').closest('.field').style.display = w ? 'none' : 'block';
   };
   const syncMedia = ()=>{
     const kind = ex.media ? ex.media.kind : null;
@@ -3052,14 +3200,25 @@ function exCard(ex, i){
     if(kind==='svg') q('[data-f=svg]').value = ex.media.data || '';
     q('[data-p]').innerHTML = (kind==='img' && ex.media.data) ? `<img src="${ex.media.data}" alt="">` : '';
   };
-  syncType(); syncMedia();
+  syncType(); syncMedia(); syncWarm();
 
   q('[data-f=name]').oninput  = e => ex.name  = e.target.value;
   q('[data-f=desc]').oninput  = e => ex.desc  = e.target.value;
   q('[data-f=video]').oninput = e => ex.video = e.target.value;
   q('[data-f=mistakes]').oninput = e => ex.mistakes = e.target.value;
   q('[data-f=value]').oninput = e => ex.value = e.target.value;
+  q('[data-f=sets]').oninput  = e => ex.sets  = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
   q('[data-f=rest]').oninput  = e => ex.rest  = e.target.value;
+  q('[data-a=warm]').onclick = ()=>{
+    ex.warmup = !ex.warmup;
+    q('[data-a=warm]').classList.toggle('on', ex.warmup);
+    if(ex.warmup) ex.sets = 1;
+    syncWarm();
+  };
+  q('[data-a=side]').onclick = ()=>{
+    ex.perSide = !ex.perSide;
+    q('[data-a=side]').classList.toggle('on', ex.perSide);
+  };
   q('[data-f=svg]').oninput   = e => { ex.media = {kind:'svg', data:e.target.value}; };
 
   q('[data-a=typeReps]').onclick = ()=>{ ex.type='reps'; syncType(); };
@@ -3106,24 +3265,29 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ПРОГРАММА: название программы
 ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
 ПРОГРЕССИЯ: нет / неделя / две недели — как быстро повышать рекомендуемую нагрузку по мере привыкания (или пропусти строку)
+ЧЕРЕДОВАНИЕ: да / нет — если вариантов несколько и они должны идти по очереди (A, потом B, потом снова A) независимо от дней недели. Для силовых сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки жёстко привязаны к дням недели — «нет» и укажи ДЕНЬ у каждого варианта.
 
 Дальше идёт один или несколько ВАРИАНТОВ тренировки. Вариант — это свой набор упражнений для определённых дней недели. Если тренировка одинаковая во все дни — сделай ровно один вариант. Если в разные дни разные упражнения (например, Пн/Чт — верх тела, Вт/Пт — ноги и ягодицы) — сделай несколько вариантов. Один и тот же день не может быть в двух вариантах. Максимум 7 вариантов.
 
 Каждый вариант начинается со строки "ДЕНЬ:" и содержит:
 
-ДЕНЬ: дни недели этого варианта через запятую (из списка: Пн, Вт, Ср, Чт, Пт, Сб, Вс)
-КРУГИ: число от 1 до 10
+ДЕНЬ: дни недели этого варианта через запятую (из списка: Пн, Вт, Ср, Чт, Пт, Сб, Вс). При ЧЕРЕДОВАНИЕ: да оставь значение пустым — просто строка «ДЕНЬ:» открывает новый вариант.
+КРУГИ: число от 1 до 10. Для силовой тренировки, где у каждого упражнения свои подходы, ставь КРУГИ: 1 — объём задаётся полем ПОДХОДЫ у упражнений. Круги больше 1 нужны для круговых тренировок, где весь список повторяется целиком.
 ОТДЫХ МЕЖДУ КРУГАМИ: секунды (0–600)
+ВРЕМЯ ВАРИАНТА: ЧЧ:ММ — если у этого варианта своё время тренировки (или пропусти строку)
 
 Затем упражнения варианта, каждое начинается со строки "УПРАЖНЕНИЕ:" (максимум 10 на вариант):
 
 УПРАЖНЕНИЕ: название
 ОПИСАНИЕ: техника выполнения, 3–4 предложения: исходное положение, само движение, ключевые моменты (что напрячь, чего избегать). Должно быть предельно понятно, как выполнять упражнение, даже без видео. Максимум 600 символов.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Бёдра, Икры
+МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
 ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
 ФОРМАТ: повторения — ИЛИ — время
-ЗНАЧЕНИЕ: число (количество повторений или секунды)
-ОТДЫХ: секунды отдыха после упражнения (0 — без отдыха, для суперсетов)
+ЗНАЧЕНИЕ: для повторений — число (12) или диапазон через дефис (12-15). Для времени — число секунд.
+ПОДХОДЫ: сколько подходов этого упражнения подряд, число от 1 до 10. Для силовых упражнений обычно 3–4, для круговых тренировок ставь 1.
+СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, планка на боку, тяга одной рукой). Иначе пропусти строку.
+РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
+ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАЧЕСТВО: пример ниже — это минимум. Если можешь — рисуй детальнее и красивее: анатомически правдоподобная поза с суставами (плечи, локти, колени, таз), плавные кривые вместо прямых линий, линия пола, инвентарь (гантель, стул, коврик) приглушённым цветом stroke="#8A93A5", стрелки направления движения акцентным #FF4D3D, вторая фаза движения полупрозрачным контуром (opacity="0.35"). Главное — чтобы по пиктограмме было понятно, как выполнять упражнение. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -3136,12 +3300,21 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 КРУГИ: 3
 ОТДЫХ МЕЖДУ КРУГАМИ: 120
 
+УПРАЖНЕНИЕ: Суставная разминка
+ОПИСАНИЕ: Встань прямо, ноги на ширине плеч. Сделай плавные круговые движения плечами назад, затем локтями и кистями. Дальше — наклоны головы в стороны и вращения тазом. Двигайся мягко, без рывков, дыши свободно.
+МЫШЦЫ: Шея, Плечи
+ФОРМАТ: время
+ЗНАЧЕНИЕ: 60
+РАЗМИНКА: да
+ОТДЫХ: 10
+
 УПРАЖНЕНИЕ: Классические отжимания
 ОПИСАНИЕ: Ладони на полу чуть шире плеч, тело вытянуто в прямую линию от макушки до пят. Согни руки и медленно опусти грудь почти до пола, затем мощно выжми себя вверх. Держи пресс и ягодицы в напряжении, не прогибай поясницу. Если тяжело — опустись на колени.
 МЫШЦЫ: Грудь, Руки, Пресс
 ОШИБКИ: Провисающая поясница и локти, разведённые строго в стороны, — держи их под углом 45 градусов к корпусу.
 ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
+ЗНАЧЕНИЕ: 10-12
+ПОДХОДЫ: 3
 ОТДЫХ: 45
 SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
@@ -3149,7 +3322,17 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ОПИСАНИЕ: Встань в упор на предплечья, локти строго под плечами. Вытяни тело в одну прямую линию, взгляд в пол. Напряги пресс и ягодицы, не поднимай таз вверх и не провисай в пояснице. Дыши ровно через нос.
 ФОРМАТ: время
 ЗНАЧЕНИЕ: 45
-ОТДЫХ: 0
+ПОДХОДЫ: 3
+ОТДЫХ: 30
+
+УПРАЖНЕНИЕ: Выпады назад
+ОПИСАНИЕ: Встань прямо, руки на поясе. Сделай широкий шаг назад и опустись, пока оба колена не согнутся под прямым углом. Переднее колено строго над стопой, корпус вертикально. Оттолкнись передней пяткой и вернись в исходное положение.
+МЫШЦЫ: Ягодицы, Квадрицепс, Задняя бедра
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 10-12
+ПОДХОДЫ: 3
+СТОРОНА: да
+ОТДЫХ: 60
 
 ДЕНЬ: Вт, Пт
 КРУГИ: 4
@@ -3219,19 +3402,47 @@ function parseProgramText(txt){
       case 'ДНИ': ensurePlan().days = parseDays(val); break;
       case 'КРУГИ': case 'КРУГОВ': ensurePlan().rounds = Math.max(1, Math.min(10, parseInt(val)||3)); break;
       case 'ОТДЫХ МЕЖДУ КРУГАМИ': ensurePlan().roundRest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
+      case 'ВРЕМЯ ВАРИАНТА': {
+        const t = val.match(/^(\d{1,2}):(\d{2})/);
+        if(t){
+          const h = +t[1], mn = +t[2];
+          if(h >= 0 && h <= 23 && mn >= 0 && mn <= 59) ensurePlan().time = String(h).padStart(2,'0') + ':' + String(mn).padStart(2,'0');
+        }
+        break;
+      }
+      case 'ЧЕРЕДОВАНИЕ': case 'РОТАЦИЯ':
+        p.rotate = !/нет|off|false|0/i.test(val);
+        break;
       case 'УПРАЖНЕНИЕ': {
         ensurePlan();
         if(plan.exercises.length >= MAX_EX){ cur = null; break; }
         cur = blankExercise();
         cur.name = val;
         cur.rest = 0;
+        cur.sets = 1;
         plan.exercises.push(cur);
         break;
       }
       case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
       case 'ФОРМАТ': if(cur) cur.type = /врем|сек|time/i.test(val) ? 'time' : 'reps'; break;
       case 'ЗНАЧЕНИЕ': case 'ПОВТОРЕНИЯ': case 'СЕКУНДЫ':
-        if(cur) cur.value = Math.max(1, Math.min(999, parseInt(val)||1));
+        if(cur){
+          cur.value = normValue(val, cur.type);
+          // «по 10 на каждую ногу» прямо в значении
+          if(/кажд|сторон|ногу|руку|на бок/i.test(val)) cur.perSide = true;
+        }
+        break;
+      case 'ПОДХОДЫ': case 'ПОДХОДОВ': case 'СЕТЫ':
+        if(cur) cur.sets = Math.max(1, Math.min(10, parseInt(val) || 1));
+        break;
+      case 'СТОРОНА': case 'НА КАЖДУЮ СТОРОНУ':
+        if(cur) cur.perSide = !/нет|no|false|0/i.test(val);
+        break;
+      case 'РАЗМИНКА':
+        if(cur){
+          cur.warmup = !/нет|no|false|0/i.test(val);
+          if(cur.warmup) cur.sets = 1;
+        }
         break;
       case 'ОТДЫХ': if(cur) cur.rest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
       case 'МЫШЦЫ': {
@@ -3377,6 +3588,8 @@ async function saveProgram(){
   commitPlanFields();
   draft.name = $('bName').value.trim();
   draft.time = $('bTime').value || '';
+  draft.rotate = $('bRotate').classList.contains('on');
+  if(!draft.rotate) delete draft.rotIdx;
   if($('bProgOn').classList.contains('on')){
     draft.progression = parseInt($('bProgEvery').value) || 7;
     draft.progStep = draft.progStep || 30;
@@ -3399,7 +3612,10 @@ async function saveProgram(){
     for(let i=0; i<pl.exercises.length; i++){
       const ex = pl.exercises[i];
       ex.name  = (ex.name || '').trim();
-      ex.value = Math.max(1, parseInt(ex.value) || 0);
+      ex.value = normValue(ex.value, ex.type);
+      ex.sets  = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+      ex.perSide = !!ex.perSide;
+      ex.warmup  = !!ex.warmup;
       ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
       if(!ex.name){
         appAlert(draft.plans.length > 1
@@ -3416,7 +3632,8 @@ async function saveProgram(){
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
   // расписание задано — попросим разрешение на уведомления
-  if(draft.time && programDaysUnion(draft).length && 'Notification' in window && Notification.permission === 'default'){
+  const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
+  if(anyTime && programDaysUnion(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}
   }
   renderMine();
@@ -3425,25 +3642,31 @@ async function saveProgram(){
 
 /* ================= СБОРКА ШАГОВ ================= */
 function buildSteps(){
-  const cycle = state.current.cycle;
-  const R = state.current.rounds;
+  const cur = state.current;
+  const cycle = cur.cycle;
+  const warmup = cur.warmup || [];
+  const R = cur.rounds;
   const steps = [];
-  for(let r=1; r<=R; r++){
-    cycle.forEach((s,i)=>{
+  const k = (state.load || 100) / 100;
+
+  const prep = (s, extra)=>{
+    const c = {...s, ...extra};
+    // масштабируем нагрузку: повторения и время упражнений, отдых не меняется
+    if(c.phase === 'work' && k !== 1){
+      if(c.kind === 'click' && c.reps) c.reps = scaleValue(c.reps, k);
+      else if(c.seconds) c.seconds = Math.max(5, Math.round(c.seconds * k));
+    }
+    return c;
+  };
+
+  // разминка — один раз перед основной частью
+  warmup.forEach(s => steps.push(prep(s, {round: 0})));
+
+  for(let r = 1; r <= R; r++){
+    cycle.forEach((s, i)=>{
       // последний отдых последнего круга пропускаем — сразу финал
-      if(r===R && i===cycle.length-1 && s.phase==='rest') return;
-      const c = {...s, round:r};
-      // масштабируем нагрузку: повторения и время упражнений, отдых не меняется
-      const k = (state.load || 100) / 100;
-      if(c.phase === 'work' && k !== 1){
-        if(c.kind === 'click'){
-          const n = parseInt(c.reps);
-          if(n) c.reps = String(Math.max(1, Math.round(n * k)));
-        } else if(c.seconds){
-          c.seconds = Math.max(5, Math.round(c.seconds * k));
-        }
-      }
-      steps.push(c);
+      if(r === R && i === cycle.length - 1 && s.phase === 'rest') return;
+      steps.push(prep(s, {round: r}));
     });
   }
   return steps;
@@ -3541,8 +3764,14 @@ function renderStep(){
   const total = state.steps.length;
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
-  $('roundLabel').textContent = `Круг ${step.round} / ${state.current.rounds}`;
+  // круг / разминка + подход
+  let rl;
+  if(step.round === 0) rl = 'Разминка';
+  else rl = `Круг ${step.round} / ${state.current.rounds}`;
+  if(step.setsTotal > 1) rl += ` · Подход ${step.setNo} / ${step.setsTotal}`;
+  $('roundLabel').textContent = rl;
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
+  $('btnPrev').disabled = state.stepIdx === 0;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
   $('phaseTag').style.display = 'none';
@@ -3612,7 +3841,8 @@ function renderStep(){
 
   if(step.kind === 'click'){
     $('stepReps').style.display='block';
-    $('stepReps').innerHTML = `${step.reps} <small>${step.repsNote||''}</small>`;
+    const note = (step.repsNote || '') + (step.perSide ? ' на каждую сторону' : '');
+    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${note.trim()}</small>`;
     $('countdown').style.display='none';
     $('btnDone').style.display='block';
     $('btnSkip').style.display='none';
@@ -3663,6 +3893,14 @@ function nextStep(){
   }
 }
 
+// шаг назад — если пропустил случайно или хочешь переделать подход
+function prevStep(){
+  if(state.stepIdx <= 0) return;
+  clearStepTimer();
+  state.stepIdx--;
+  renderStep();
+}
+
 /* ================= ПРЕВЬЮ СЛЕДУЮЩЕГО УПРАЖНЕНИЯ ================= */
 function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3683,7 +3921,7 @@ function renderNextUp(step){
     media = DUMBBELL_ICON;
   }
   const val = nxt.kind === 'click'
-    ? `${esc(nxt.reps)} ${esc(nxt.repsNote || 'повторений')}`.trim()
+    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${nxt.perSide ? ' на сторону' : ''}`.trim()
     : `${nxt.seconds} сек`;
 
   nu.innerHTML =
@@ -3733,6 +3971,14 @@ function finishWorkout(){
     if(p){
       p.stats = p.stats || {completions: 0};
       p.stats.completions++;
+      // ротация вариантов: следующая тренировка — следующий вариант по очереди
+      if(p.rotate){
+        const plansN = normPlans(p).length;
+        if(plansN > 1){
+          const usedIdx = (typeof state.planIdx === 'number') ? state.planIdx : 0;
+          p.rotIdx = (usedIdx + 1) % plansN;
+        }
+      }
       savePrograms();
     }
   }
@@ -4283,13 +4529,17 @@ function checkSchedules(){
   const cur = now.getHours() * 60 + now.getMinutes();
   const dateKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
   customPrograms.forEach(p=>{
-    if(!p.time || !programDaysUnion(p).includes(today)) return;
-    const [h, m] = p.time.split(':').map(Number);
+    // время сегодняшнего варианта важнее общего времени программы
+    const plansT = normPlans(p);
+    const todayPlan = plansT.find(pl => (pl.days || []).includes(today));
+    const useTime = (todayPlan && todayPlan.time) || p.time;
+    if(!useTime || !programDaysUnion(p).includes(today)) return;
+    const [h, m] = useTime.split(':').map(Number);
     const t = h * 60 + m;
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
     if(cur === t - 15 && !notifiedKeys.has(preKey)){
       notifiedKeys.add(preKey);
-      showNotification('Тренировка через 15 минут', `«${p.name}» начнётся в ${p.time}. Приготовься!`);
+      showNotification('Тренировка через 15 минут', `«${p.name}» начнётся в ${useTime}. Приготовься!`);
     }
     if(cur === t && !notifiedKeys.has(goKey)){
       notifiedKeys.add(goKey);
@@ -4306,6 +4556,8 @@ $('textBackTop').onclick = ()=> show('scrMenu');
 $('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
+$('btnPrev').onclick  = prevStep;
+$('btnPrev').innerHTML = icon('chevL');
 $('btnExit').onclick  = exitWorkout;
 $('btnPause').onclick = ()=> setPause(!state.paused);
 $('tglTheme').onclick = ()=>{
