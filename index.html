@@ -630,16 +630,28 @@
   }
   #hfModal .choice.act{border-color:var(--work)}
   #hfModal .choice.act b{color:var(--work)}
-  .settings-toggle{
-    width:100%;display:flex;align-items:center;gap:10px;margin:2px 0 6px;padding:14px 16px;
-    background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;
-    color:var(--ink);font-family:'Rubik';font-size:14px;text-align:left;
+  /* строка-переход на отдельный экран */
+  .nav-row{
+    width:100%;display:flex;align-items:center;gap:12px;margin:8px 0 14px;padding:15px 16px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;text-align:left;
   }
-  .settings-toggle .st-sum{flex:1;color:var(--muted);font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .settings-toggle .st-chev{flex:none;color:var(--muted);display:flex;transition:transform .2s}
-  .settings-toggle .st-chev svg{width:18px;height:18px}
-  .settings-toggle .st-chev{transform:rotate(90deg)}
-  .settings-toggle.open .st-chev{transform:rotate(-90deg)}
+  .nav-row .nr-body{flex:1;min-width:0}
+  .nav-row .nr-body b{display:block;font-size:14.5px;font-weight:500;color:var(--ink)}
+  .nav-row .nr-body small{display:block;font-size:12px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav-row .nr-chev{flex:none;color:var(--muted);display:flex}
+  .nav-row .nr-chev svg{width:18px;height:18px}
+
+  /* раскрывающийся раздел — выглядит как заголовок секции, а не как поле ввода */
+  .collapse-head{
+    width:100%;display:flex;align-items:center;gap:10px;margin:18px 0 0;padding:14px 0;
+    background:none;border:none;border-top:1px solid var(--line);cursor:pointer;text-align:left;
+    color:var(--ink);font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .collapse-head .st-sum{flex:1;color:var(--muted);font-size:11px;font-family:'Rubik';letter-spacing:0;text-transform:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .collapse-head .st-chev{flex:none;color:var(--muted);display:flex;transition:transform .22s}
+  .collapse-head .st-chev svg{width:18px;height:18px}
+  .collapse-head .st-chev{transform:rotate(90deg)}
+  .collapse-head.open .st-chev{transform:rotate(-90deg)}
 
   /* компактные строки упражнений с перетаскиванием */
   .ex-row{
@@ -650,7 +662,11 @@
   }
   .ex-row.dragging{z-index:25;border-color:var(--work);box-shadow:0 14px 32px rgba(0,0,0,.28)}
   .ex-row.warm{border-style:dashed}
-  .ex-grip{flex:none;width:30px;height:38px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:grab;border-radius:8px}
+  .ex-grip{
+    flex:none;width:34px;height:44px;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);cursor:grab;border-radius:8px;
+    touch-action:none; /* иначе жест уходит в прокрутку страницы */
+  }
   .ex-grip:active{background:var(--line)}
   .ex-grip svg{width:16px;height:16px}
   .ex-thumb{flex:none;width:44px;height:44px;border-radius:11px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -862,13 +878,32 @@
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
     <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
 
-    <button type="button" class="settings-toggle" id="bSettingsToggle">
-      <span>Настройки программы</span>
-      <span class="st-sum" id="bSettingsSum"></span>
-      <span class="st-chev" id="bSettingsChev"></span>
+    <button type="button" class="nav-row" id="bSettingsToggle">
+      <div class="nr-body">
+        <b>Настройки программы</b>
+        <small id="bSettingsSum"></small>
+      </div>
+      <span class="nr-chev" id="bSettingsChev"></span>
     </button>
 
-    <div id="bSettingsBox" style="display:none">
+    <div class="plan-tabs" id="planTabsTop" style="margin:14px 0 10px"></div>
+    <div class="section-title st-row" style="margin-top:2px"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
+    <div id="bExList"></div>
+    <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
+    <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
+      <div class="stat-line">Пройдено полностью: <b id="bStatCount">0</b>&nbsp;раз
+        <button type="button" class="stat-reset" id="bStatReset">Сбросить</button>
+      </div>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
+    </div>
+  </section>
+
+  <!-- Создание из текста -->
+  <!-- Настройки программы -->
+  <section class="screen builder" id="scrProgSettings">
+    <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
     <div class="field"><label>Обложка программы (необязательно)</label>
       <div class="media-row">
         <button type="button" id="bCoverBtn">Фото</button>
@@ -923,23 +958,11 @@
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
     <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:0 0 4px;padding:6px">Удалить этот вариант</button>
-    </div><!-- /bSettingsBox -->
-
-    <div class="plan-tabs" id="planTabsTop" style="margin:14px 0 10px"></div>
-    <div class="section-title st-row" style="margin-top:2px"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
-    <div id="bExList"></div>
-    <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
-    <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
-      <div class="stat-line">Пройдено полностью: <b id="bStatCount">0</b>&nbsp;раз
-        <button type="button" class="stat-reset" id="bStatReset">Сбросить</button>
-      </div>
-    </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
+      <button class="btn-primary" id="btnPsDone">Готово</button>
     </div>
   </section>
 
-  <!-- Создание из текста -->
   <!-- Редактор одного упражнения -->
   <section class="screen builder" id="scrExercise">
     <div class="screen-head"><button class="back-chip" id="exBackTop"></button><h2 id="exTitle">Упражнение</h2></div>
@@ -957,15 +980,15 @@
       <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
     </div>
 
-    <div class="pref-row" style="padding:2px 0 10px"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
+    <div class="pref-row" style="margin-top:6px;padding:12px 0"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
 
     <div class="field"><label>Отдых после подхода, сек</label>
       <div class="load-row" id="exRestChips" style="margin-bottom:8px"></div>
       <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
     </div>
 
-    <button type="button" class="settings-toggle" id="exDetailsToggle">
-      <span>Детали упражнения</span>
+    <button type="button" class="collapse-head" id="exDetailsToggle">
+      <span>Детали</span>
       <span class="st-sum" id="exDetailsSum"></span>
       <span class="st-chev" id="exDetailsChev"></span>
     </button>
@@ -1790,7 +1813,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrExercise','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -2267,6 +2290,13 @@ $('calGrid').addEventListener('click', e => {
     const p = customPrograms.find(x => x.id === en.pid);
     const name = p ? p.name : 'Тренировка';
     const meta = [];
+    // какой вариант выполняли — чтобы в следующий раз не путаться
+    if(p){
+      const plansN = normPlans(p).length;
+      if(plansN > 1 && typeof en.plan === 'number'){
+        meta.push(`вариант ${en.plan + 1}` + (en.planDays ? ` (${en.planDays})` : ''));
+      }
+    }
     if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
     if(en.kcal) meta.push(`≈${en.kcal} ккал`);
     let s = '🏋 ' + name;
@@ -3408,9 +3438,7 @@ function fillBuilder(title){
   $('builderTitle').textContent = title;
   $('bName').value = draft.name;
   $('bTime').value = draft.time || '';
-  // настройки свёрнуты по умолчанию — на виду только упражнения
-  $('bSettingsBox').style.display = 'none';
-  $('bSettingsToggle').classList.remove('open');
+
   // ротация вариантов доступна, когда вариантов больше одного
   syncRotateUI();
   const pOn = !!draft.progression;
@@ -4573,7 +4601,18 @@ function finishWorkout(){
   $('finKcal').textContent = '≈' + state.lastKcal;
   stats.totalSec += totalSec;
   stats.count = (stats.count || 0) + 1;
-  const histEntry = {d: localISO(new Date()), pid: (state.current && state.current.sourceId) || null, note: '', sec: totalSec, kcal: state.lastKcal || 0};
+  const histEntry = {
+    d: localISO(new Date()),
+    pid: (state.current && state.current.sourceId) || null,
+    note: '', sec: totalSec, kcal: state.lastKcal || 0,
+    plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
+    planDays: (()=>{ // подпись варианта, чтобы потом не гадать
+      try{
+        const pl = normPlans(state.raw)[state.planIdx];
+        return (pl && pl.days && pl.days.length) ? pl.days.join('·') : '';
+      }catch(e){ return ''; }
+    })()
+  };
   stats.history.push(histEntry);
   if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
   state.lastHist = histEntry;
@@ -5587,10 +5626,20 @@ $('exMediaFile').onchange = e => {
 
 /* ---- сворачивание настроек программы ---- */
 $('bSettingsToggle').onclick = ()=>{
-  const box = $('bSettingsBox'), open = box.style.display === 'none';
-  box.style.display = open ? 'block' : 'none';
-  $('bSettingsToggle').classList.toggle('open', open);
+  syncRotateUI();
+  fillPlanFields();
+  show('scrProgSettings');
+  window.scrollTo(0, 0);
 };
+function closeProgSettings(){
+  commitPlanFields();
+  draft.name = $('bName').value.trim() || draft.name;
+  syncSettingsSum();
+  renderExList();
+  show('scrBuilder');
+}
+$('psBackTop').onclick = closeProgSettings;
+$('btnPsDone').onclick = closeProgSettings;
 function syncSettingsSum(){
   const bits = [];
   const plans = draft.plans || [];
@@ -5655,6 +5704,7 @@ $('builderBackTop').innerHTML = icon('chevL');
 $('statsBackTop').innerHTML = icon('chevL');
 $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
+$('psBackTop').innerHTML = icon('chevL');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
