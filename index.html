@@ -217,6 +217,7 @@
   }
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .media-preview{margin-top:10px}
+  .mp-empty{font-size:12.5px;color:var(--muted)}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .builder-actions{margin-top:10px;padding-bottom:8px}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
@@ -348,10 +349,11 @@
   .nu-val{margin-top:5px;font-family:'Oswald';font-weight:600;font-size:13px;color:var(--rest);letter-spacing:.06em}
   /* на отдыхе превью следующего упражнения растягивается на всё свободное место */
   body.phase-rest .details{flex:0 0 auto}
-  body.phase-rest .next-up{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  body.phase-rest .next-up .nu-row{flex:1 1 auto;min-height:0;align-items:flex-start}
-  body.phase-rest .next-up .nu-body{display:flex;flex-direction:column;min-height:0;height:100%}
-  body.phase-rest .next-up .nu-body p{flex:1 1 auto;min-height:0;margin-bottom:6px}
+  /* растём по содержимому, но не выше доступного места */
+  body.phase-rest .next-up{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  body.phase-rest .next-up .nu-row{min-height:0;align-items:flex-start}
+  body.phase-rest .next-up .nu-body{display:flex;flex-direction:column;min-height:0}
+  body.phase-rest .next-up .nu-body p{min-height:0;margin-bottom:6px}
   body.phase-rest .next-up .nu-val{flex:none;margin-top:0}
 
   .count{
@@ -379,7 +381,13 @@
     padding:22px;transition:transform .12s ease;
   }
   .btn-done:active{transform:scale(.98)}
-  .btn-skip{background:none;border:none;color:var(--muted);font-size:14px;padding:14px;cursor:pointer;width:100%;font-family:'Rubik';text-decoration:underline;text-underline-offset:3px}
+  .btn-skip{
+    width:100%;background:none;color:var(--muted);
+    border:2px solid var(--line);border-radius:16px;
+    font-family:'Oswald';font-weight:600;font-size:20px;letter-spacing:.1em;text-transform:uppercase;
+    padding:20px;cursor:pointer;
+  }
+  .btn-skip:active{background:rgba(127,127,127,.08)}
 
   /* ---------- finish ---------- */
   .finish{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}
@@ -622,6 +630,39 @@
   }
   #hfModal .choice.act{border-color:var(--work)}
   #hfModal .choice.act b{color:var(--work)}
+  .settings-toggle{
+    width:100%;display:flex;align-items:center;gap:10px;margin:2px 0 6px;padding:14px 16px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;
+    color:var(--ink);font-family:'Rubik';font-size:14px;text-align:left;
+  }
+  .settings-toggle .st-sum{flex:1;color:var(--muted);font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .settings-toggle .st-chev{flex:none;color:var(--muted);display:flex;transition:transform .2s}
+  .settings-toggle .st-chev svg{width:18px;height:18px}
+  .settings-toggle .st-chev{transform:rotate(90deg)}
+  .settings-toggle.open .st-chev{transform:rotate(-90deg)}
+
+  /* компактные строки упражнений с перетаскиванием */
+  .ex-row{
+    position:relative;display:flex;align-items:center;gap:12px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:10px 10px 10px 12px;margin-bottom:8px;cursor:pointer;
+    -webkit-touch-callout:none;user-select:none;
+  }
+  .ex-row.dragging{z-index:25;border-color:var(--work);box-shadow:0 14px 32px rgba(0,0,0,.28)}
+  .ex-row.warm{border-style:dashed}
+  .ex-grip{flex:none;width:30px;height:38px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:grab;border-radius:8px}
+  .ex-grip:active{background:var(--line)}
+  .ex-grip svg{width:16px;height:16px}
+  .ex-thumb{flex:none;width:44px;height:44px;border-radius:11px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .ex-thumb img{width:100%;height:100%;object-fit:cover}
+  .ex-thumb svg{width:26px;height:26px;color:var(--muted)}
+  .ex-thumb .userSvg{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .ex-thumb .userSvg svg{width:100%;height:100%}
+  .ex-info{flex:1;min-width:0}
+  .ex-info b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ex-info small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ex-info .wm{color:var(--work)}
+  .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
   .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
   .sched-block{display:flex;flex-direction:column}
@@ -721,7 +762,7 @@
   <!-- ШАГ 1: главный экран -->
   <section class="screen on" id="scrMenu">
     <div class="hero">
-      <button class="premium-banner" id="btnPremium">
+      <button class="premium-banner" id="btnPremium" style="display:none">
         <div class="pb-glow"></div>
         <div class="pb-ico">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5L3 8Z"/></svg>
@@ -819,8 +860,15 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
-    <div class="section-title" style="margin-top:4px">Основное</div>
     <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+
+    <button type="button" class="settings-toggle" id="bSettingsToggle">
+      <span>Настройки программы</span>
+      <span class="st-sum" id="bSettingsSum"></span>
+      <span class="st-chev" id="bSettingsChev"></span>
+    </button>
+
+    <div id="bSettingsBox" style="display:none">
     <div class="field"><label>Обложка программы (необязательно)</label>
       <div class="media-row">
         <button type="button" id="bCoverBtn">Фото</button>
@@ -875,7 +923,10 @@
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
     <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:0 0 4px;padding:6px">Удалить этот вариант</button>
-    <div class="section-title" style="margin-top:8px">Упражнения</div>
+    </div><!-- /bSettingsBox -->
+
+    <div class="plan-tabs" id="planTabsTop" style="margin:14px 0 10px"></div>
+    <div class="section-title st-row" style="margin-top:2px"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
     <div id="bExList"></div>
     <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
     <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
@@ -889,6 +940,58 @@
   </section>
 
   <!-- Создание из текста -->
+  <!-- Редактор одного упражнения -->
+  <section class="screen builder" id="scrExercise">
+    <div class="screen-head"><button class="back-chip" id="exBackTop"></button><h2 id="exTitle">Упражнение</h2></div>
+
+    <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
+
+    <div class="pref-row" style="border-top:none;padding:2px 0 10px"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
+
+    <div class="field"><label>Формат</label>
+      <div class="seg"><button type="button" id="exTypeReps">Повторения</button><button type="button" id="exTypeTime">Время</button></div>
+    </div>
+
+    <div class="row2">
+      <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="12 или 12-15"></div>
+      <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
+    </div>
+
+    <div class="pref-row" style="padding:2px 0 10px"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
+
+    <div class="field"><label>Отдых после подхода, сек</label>
+      <div class="load-row" id="exRestChips" style="margin-bottom:8px"></div>
+      <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
+    </div>
+
+    <button type="button" class="settings-toggle" id="exDetailsToggle">
+      <span>Детали упражнения</span>
+      <span class="st-sum" id="exDetailsSum"></span>
+      <span class="st-chev" id="exDetailsChev"></span>
+    </button>
+
+    <div id="exDetailsBox" style="display:none">
+      <div class="field"><label>Как выполнять</label><textarea id="exDesc" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
+      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" placeholder="Чего избегать при выполнении"></textarea></div>
+      <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
+      <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" placeholder="https://youtube.com/..."></div>
+      <div class="field"><label>Картинка или пиктограмма</label>
+        <div class="media-row">
+          <button type="button" id="exMediaBtn">Фото</button>
+          <button type="button" id="exMediaNone">Без картинки</button>
+        </div>
+        <input type="file" id="exMediaFile" accept="image/*" style="display:none">
+        <div class="media-preview" id="exMediaPrev"></div>
+      </div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnSaveEx">Готово</button>
+      <button type="button" class="link-btn" id="btnDupEx" style="padding:10px">Дублировать упражнение</button>
+      <button type="button" class="link-btn" id="btnDelEx" style="padding:10px;color:var(--work)">Удалить упражнение</button>
+    </div>
+  </section>
+
   <section class="screen builder" id="scrText">
     <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Создание через ИИ</h2></div>
 
@@ -1502,18 +1605,28 @@ function announceRemaining(sec){
 }
 
 // круг завершён — голосом с временем отдыха и следующим упражнением
-function roundDone(seconds, nextTitle){
+function roundDone(seconds, nxt){
   let text = seconds
     ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`
     : 'Круг завершён';
-  if(nextTitle) text += `. Далее — ${nextTitle}`;
+  const nd = nextStepSpeech(nxt);
+  if(nd) text += `. Далее — ${nd}`;
   speak(text, ()=>{ gong(); setTimeout(gong, 550); });
 }
 
 // обычный отдых — «Отдохните 45 секунд. Далее — скручивания лёжа»
-function announceRest(seconds, nextTitle){
+// описание следующего шага для озвучки: «Планка, подход 2 из 3, сторона 1 из 2»
+function nextStepSpeech(nxt){
+  if(!nxt) return '';
+  let s = nxt.title;
+  if(nxt.setsTotal > 1) s += `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
+  if(nxt.side) s += `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
+  return s;
+}
+function announceRest(seconds, nxt){
   let text = `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
-  if(nextTitle) text += `. Далее — ${nextTitle}`;
+  const nd = nextStepSpeech(nxt);
+  if(nd) text += `. Далее — ${nd}`;
   speak(text, ()=> beep(520, .18, 0, .2)); // в режиме музыки — мягкий сигнал
 }
 
@@ -1677,7 +1790,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrExercise','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -3086,7 +3199,8 @@ function renderMine(){
 }
 
 /* ================= ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (за ручку, с задержкой) ================= */
-function enableDrag(wrap, handle){
+function enableDrag(wrap, handle, selector, onDrop){
+  selector = selector || '.mine-card';
   handle.oncontextmenu = e => e.preventDefault();
   handle.addEventListener('pointerdown', e => {
     e.preventDefault();
@@ -3111,7 +3225,7 @@ function enableDrag(wrap, handle){
         return;
       }
       wrap.style.transform = `translateY(${ev.clientY - baseY}px) scale(1.02)`;
-      const sibs = [...wrap.parentNode.querySelectorAll('.mine-card')].filter(x => x !== wrap);
+      const sibs = [...wrap.parentNode.querySelectorAll(selector)].filter(x => x !== wrap);
       for(const s of sibs){
         const r = s.getBoundingClientRect();
         if(ev.clientY > r.top && ev.clientY < r.bottom){
@@ -3130,7 +3244,9 @@ function enableDrag(wrap, handle){
       const wasActive = active;
       cleanup();
       if(wasActive){
-        const order = [...wrap.parentNode.querySelectorAll('.mine-card')].map(x => x.dataset.pid);
+        const nodes = [...wrap.parentNode.querySelectorAll(selector)];
+        if(onDrop){ onDrop(nodes); return; }
+        const order = nodes.map(x => x.dataset.pid);
         customPrograms.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
         await savePrograms();
       }
@@ -3292,6 +3408,9 @@ function fillBuilder(title){
   $('builderTitle').textContent = title;
   $('bName').value = draft.name;
   $('bTime').value = draft.time || '';
+  // настройки свёрнуты по умолчанию — на виду только упражнения
+  $('bSettingsBox').style.display = 'none';
+  $('bSettingsToggle').classList.remove('open');
   // ротация вариантов доступна, когда вариантов больше одного
   syncRotateUI();
   const pOn = !!draft.progression;
@@ -3309,7 +3428,16 @@ function fillBuilder(title){
 }
 
 function renderPlanTabs(){
-  const box = $('planTabs'); box.innerHTML='';
+  ['planTabs', 'planTabsTop'].forEach(id => buildPlanTabs(id));
+  // верхние вкладки нужны, только когда вариантов больше одного
+  $('planTabsTop').style.display = draft.plans.length > 1 ? 'flex' : 'none';
+  syncSettingsSum();
+  $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
+}
+
+function buildPlanTabs(boxId){
+  const box = $(boxId); box.innerHTML='';
+  const isTop = boxId === 'planTabsTop';
   draft.plans.forEach((pl, i)=>{
     const b = document.createElement('button');
     b.type = 'button';
@@ -3333,7 +3461,7 @@ function renderPlanTabs(){
     };
     box.appendChild(b);
   });
-  if(draft.plans.length < 7){
+  if(draft.plans.length < 7 && !isTop){
     const add = document.createElement('button');
     add.type = 'button';
     add.className = 'plan-tab add';
@@ -3420,145 +3548,176 @@ function renderDays(){
   });
 }
 
-function renderExList(){
-  const box = $('bExList'); box.innerHTML='';
-  curPlan().exercises.forEach((ex,i)=> box.appendChild(exCard(ex,i)));
-  syncVolHint();
-  const exList = curPlan().exercises;
-  const nWarm = exList.filter(e => e.warmup).length;
-  const nMain = exList.length - nWarm;
-  $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
+/* ================= РЕДАКТОР ОДНОГО УПРАЖНЕНИЯ ================= */
+let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
+let exDraft = null;  // копия для правки
+
+function openExercise(i){
+  const list = curPlan().exercises;
+  exIdx = i;
+  exDraft = JSON.parse(JSON.stringify(list[i]));
+  fillExercise();
+  show('scrExercise');
+  window.scrollTo(0, 0);
 }
 
-function exCard(ex, i){
-  const el = document.createElement('div');
-  el.className = 'ex-card';
-  el.innerHTML = `
-    <div class="ex-head"><span class="t">Упражнение ${i+1}</span><button type="button" data-a="del">удалить</button></div>
-    <div class="pref-row" style="border-top:none;padding:2px 0 10px"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" data-a="warm"></button></div>
-    <div class="field"><label>Название</label><input type="text" data-f="name" maxlength="60" placeholder="Например: Приседания"></div>
-    <div class="field"><label>Описание / техника</label><textarea data-f="desc" maxlength="600" placeholder="Как выполнять упражнение"></textarea></div>
-    <div class="field"><label>Работающие мышцы</label><div class="days" data-f="mus"></div></div>
-    <div class="field"><label>Частые ошибки (необязательно)</label><textarea data-f="mistakes" maxlength="300" placeholder="1–2 типичные ошибки выполнения"></textarea></div>
-    <div class="field"><label>Видео на YouTube (необязательно)</label><input type="url" data-f="video" placeholder="https://youtube.com/..."></div>
-    <div class="field"><label>Формат выполнения</label>
-      <div class="seg">
-        <button type="button" data-a="typeReps">Повторения</button>
-        <button type="button" data-a="typeTime">Время (сек)</button>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="field"><label data-l="value"></label><input type="text" data-f="value" inputmode="numeric" placeholder="12 или 12-15"></div>
-      <div class="field"><label>Подходов подряд</label><input type="number" data-f="sets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
-    </div>
-    <div class="pref-row" style="padding:2px 0 10px" data-r="side"><span>На каждую сторону<small>выпады, планка на боку и т.п.</small></span><button type="button" class="switch" data-a="side"></button></div>
-    <div class="field"><label>Отдых после подхода, сек</label><input type="number" data-f="rest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха"></div>
-    <div class="field"><label>Картинка или SVG (необязательно)</label>
-      <div class="media-row">
-        <button type="button" data-a="mImg">Фото</button>
-        <button type="button" data-a="mSvg">SVG-код</button>
-        <button type="button" data-a="mNone">Без картинки</button>
-      </div>
-      <textarea data-f="svg" style="display:none;margin-top:10px" placeholder="Вставь сюда код <svg>…</svg>"></textarea>
-      <input type="file" data-f="file" accept="image/*" style="display:none">
-      <div class="media-preview" data-p></div>
-    </div>`;
+function fillExercise(){
+  const ex = exDraft;
+  $('exTitle').textContent = (ex.name || '').trim() || 'Упражнение';
+  $('exName').value = ex.name || '';
+  $('exValue').value = valueText(ex.value).replace('–', '-');
+  $('exSets').value = ex.sets || 1;
+  $('exRest').value = ex.rest || 0;
+  $('exDesc').value = ex.desc || '';
+  $('exMistakes').value = ex.mistakes || '';
+  $('exVideo').value = ex.video || '';
+  $('exWarm').classList.toggle('on', !!ex.warmup);
+  $('exSide').classList.toggle('on', !!ex.perSide);
+  syncExType();
+  syncExWarm();
+  renderExMuscles();
+  renderExRestChips();
+  renderExMedia();
+  syncExDetailsSum();
+  // детали по умолчанию свёрнуты
+  $('exDetailsBox').style.display = 'none';
+  $('exDetailsToggle').classList.remove('open');
+}
 
-  const q = s => el.querySelector(s);
-  q('[data-f=name]').value  = ex.name;
-  q('[data-f=desc]').value  = ex.desc;
-  q('[data-f=mistakes]').value = ex.mistakes || '';
-  if(!Array.isArray(ex.muscles)) ex.muscles = [];
-  const musBox = q('[data-f=mus]');
-  const drawMus = ()=>{
-    musBox.innerHTML = '';
-    MUSCLES.forEach(([id, label]) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'day-chip'; b.textContent = label;
-      b.style.flex = '0 0 auto'; b.style.padding = '8px 11px';
-      b.classList.toggle('act', ex.muscles.includes(id));
-      b.onclick = ()=>{
-        ex.muscles = ex.muscles.includes(id) ? ex.muscles.filter(x => x !== id) : [...ex.muscles, id];
-        drawMus();
-      };
-      musBox.appendChild(b);
-    });
-  };
-  drawMus();
-  q('[data-f=video]').value = ex.video || '';
-  q('[data-f=value]').value = valueText(ex.value).replace('–', '-');
-  q('[data-f=sets]').value  = ex.sets || 1;
-  q('[data-f=rest]').value  = ex.rest;
-  q('[data-a=warm]').classList.toggle('on', !!ex.warmup);
-  q('[data-a=side]').classList.toggle('on', !!ex.perSide);
+function syncExType(){
+  const reps = exDraft.type !== 'time';
+  $('exTypeReps').classList.toggle('act', reps);
+  $('exTypeTime').classList.toggle('act', !reps);
+  $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
+  $('exValue').placeholder = reps ? '12 или 12-15' : '45';
+}
+function syncExWarm(){
+  $('exSetsField').style.display = exDraft.warmup ? 'none' : 'block';
+}
+function renderExMuscles(){
+  const box = $('exMuscles'); box.innerHTML = '';
+  if(!Array.isArray(exDraft.muscles)) exDraft.muscles = [];
+  MUSCLES.forEach(([id, label])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = label;
+    b.classList.toggle('act', exDraft.muscles.includes(id));
+    b.onclick = ()=>{
+      exDraft.muscles = exDraft.muscles.includes(id)
+        ? exDraft.muscles.filter(x => x !== id)
+        : [...exDraft.muscles, id];
+      renderExMuscles(); syncExDetailsSum();
+    };
+    box.appendChild(b);
+  });
+}
+function renderExRestChips(){
+  const box = $('exRestChips'); box.innerHTML = '';
+  [0, 30, 45, 60, 90].forEach(v=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'load-chip';
+    b.textContent = v === 0 ? 'без' : v + ' с';
+    b.classList.toggle('act', (parseInt(exDraft.rest) || 0) === v);
+    b.onclick = ()=>{ exDraft.rest = v; $('exRest').value = v; renderExRestChips(); };
+    box.appendChild(b);
+  });
+}
+function renderExMedia(){
+  const box = $('exMediaPrev');
+  const m = exDraft.media;
+  if(m && m.kind === 'img') box.innerHTML = `<img src="${m.data}" alt="">`;
+  else if(m && m.kind === 'svg'){
+    const light = svgIsDark(m.data) ? ' light' : '';
+    box.innerHTML = `<div class="userSvg${light}">${m.data}</div>`;
+  } else box.innerHTML = '<span class="mp-empty">Нет картинки</span>';
+}
+function syncExDetailsSum(){
+  const bits = [];
+  if((exDraft.desc || '').trim()) bits.push('описание');
+  if((exDraft.mistakes || '').trim()) bits.push('ошибки');
+  if((exDraft.muscles || []).length) bits.push('мышцы');
+  if(exDraft.media) bits.push('картинка');
+  if((exDraft.video || '').trim()) bits.push('видео');
+  $('exDetailsSum').textContent = bits.length ? bits.join(', ') : 'не заполнено';
+}
 
-  const syncType = ()=>{
-    q('[data-a=typeReps]').classList.toggle('act', ex.type==='reps');
-    q('[data-a=typeTime]').classList.toggle('act', ex.type==='time');
-    q('[data-l=value]').textContent = ex.type==='reps' ? 'Повторений' : 'Секунд';
-    // диапазон имеет смысл только для повторений
-    q('[data-f=value]').placeholder = ex.type==='reps' ? '12 или 12-15' : '45';
-  };
-  const syncWarm = ()=>{
-    // у разминки подходов не бывает — прячем поле
-    const w = !!ex.warmup;
-    q('[data-f=sets]').closest('.field').style.display = w ? 'none' : 'block';
-  };
-  const syncMedia = ()=>{
-    const kind = ex.media ? ex.media.kind : null;
-    q('[data-a=mImg]').classList.toggle('act', kind==='img');
-    q('[data-a=mSvg]').classList.toggle('act', kind==='svg');
-    q('[data-a=mNone]').classList.toggle('act', !kind);
-    q('[data-f=svg]').style.display = kind==='svg' ? 'block' : 'none';
-    if(kind==='svg') q('[data-f=svg]').value = ex.media.data || '';
-    q('[data-p]').innerHTML = (kind==='img' && ex.media.data) ? `<img src="${ex.media.data}" alt="">` : '';
-  };
-  syncType(); syncMedia(); syncWarm();
+function commitExercise(){
+  const ex = exDraft;
+  ex.name = $('exName').value.trim();
+  ex.value = normValue($('exValue').value, ex.type);
+  ex.sets = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
+  ex.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
+  ex.desc = $('exDesc').value.trim();
+  ex.mistakes = $('exMistakes').value.trim();
+  ex.video = $('exVideo').value.trim();
+  return ex;
+}
 
-  q('[data-f=name]').oninput  = e => ex.name  = e.target.value;
-  q('[data-f=desc]').oninput  = e => ex.desc  = e.target.value;
-  q('[data-f=video]').oninput = e => ex.video = e.target.value;
-  q('[data-f=mistakes]').oninput = e => ex.mistakes = e.target.value;
-  q('[data-f=value]').oninput = e => ex.value = e.target.value;
-  q('[data-f=sets]').oninput  = e => { ex.sets = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); syncVolHint(); };
-  q('[data-f=rest]').oninput  = e => ex.rest  = e.target.value;
-  q('[data-a=warm]').onclick = ()=>{
-    const list = curPlan().exercises;
-    if(!ex.warmup){
-      const nWarm = list.filter(e => e.warmup).length;
-      if(nWarm >= MAX_WARM){ appAlert(`В разминке можно до ${MAX_WARM} упражнений.`); return; }
-    } else {
-      const nMain = list.filter(e => !e.warmup).length;
-      if(nMain >= MAX_MAIN){ appAlert(`В основной части можно до ${MAX_MAIN} упражнений.`); return; }
-    }
-    ex.warmup = !ex.warmup;
-    q('[data-a=warm]').classList.toggle('on', ex.warmup);
-    if(ex.warmup) ex.sets = 1;
-    syncWarm();
+function renderExList(){
+  const box = $('bExList'); box.innerHTML = '';
+  const list = curPlan().exercises;
+  if(!list.length){
+    box.innerHTML = '<div class="ex-empty">Пока пусто. Добавь первое упражнение — название и сколько делать, остальное по желанию.</div>';
+  }
+  list.forEach((ex, i)=> box.appendChild(exRow(ex, i)));
+  syncVolHint();
+  const nWarm = list.filter(e => e.warmup).length;
+  const nMain = list.length - nWarm;
+  $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
+  const note = list.length ? `· ${list.length}` + (nWarm ? `, из них ${nWarm} в разминке` : '') : '';
+  $('exCountNote').textContent = note;
+}
+
+// короткое описание объёма для строки: «12–15 × 3 · отдых 60 с»
+function exSummary(ex){
+  const bits = [];
+  const val = ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`;
+  const sets = Math.max(1, parseInt(ex.sets) || 1);
+  bits.push(sets > 1 ? `${val} × ${sets}` : val);
+  if(ex.perSide) bits.push('на сторону');
+  if(+ex.rest > 0) bits.push(`отдых ${ex.rest} с`);
+  return bits.join(' · ');
+}
+
+function exThumb(ex){
+  if(ex.media && ex.media.kind === 'img') return `<img src="${ex.media.data}" alt="">`;
+  if(ex.media && ex.media.kind === 'svg'){
+    const light = svgIsDark(ex.media.data) ? ' light' : '';
+    return `<div class="userSvg${light}">${ex.media.data}</div>`;
+  }
+  return DUMBBELL_ICON;
+}
+
+function exRow(ex, i){
+  const row = document.createElement('div');
+  row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
+  row.dataset.idx = String(i);
+
+  const grip = document.createElement('div');
+  grip.className = 'ex-grip';
+  grip.innerHTML = icon('grip');
+  grip.title = 'Перетащить';
+
+  const thumb = document.createElement('div');
+  thumb.className = 'ex-thumb';
+  thumb.innerHTML = exThumb(ex);
+
+  const info = document.createElement('div');
+  info.className = 'ex-info';
+  const nameTxt = (ex.name || '').trim() || 'Без названия';
+  info.innerHTML = `<b></b><small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
+  info.querySelector('b').textContent = nameTxt;
+
+  row.append(grip, thumb, info);
+  // тап по строке (кроме ручки) открывает редактор
+  row.onclick = e => { if(e.target.closest('.ex-grip')) return; openExercise(i); };
+
+  enableDrag(row, grip, '.ex-row', nodes => {
+    const order = nodes.map(n => +n.dataset.idx);
+    const arr = curPlan().exercises;
+    curPlan().exercises = order.map(idx => arr[idx]);
     renderExList();
-  };
-  q('[data-a=side]').onclick = ()=>{
-    ex.perSide = !ex.perSide;
-    q('[data-a=side]').classList.toggle('on', ex.perSide);
-  };
-  q('[data-f=svg]').oninput   = e => { ex.media = {kind:'svg', data:e.target.value}; };
-
-  q('[data-a=typeReps]').onclick = ()=>{ ex.type='reps'; syncType(); };
-  q('[data-a=typeTime]').onclick = ()=>{ ex.type='time'; syncType(); };
-  q('[data-a=mNone]').onclick = ()=>{ ex.media=null; syncMedia(); };
-  q('[data-a=mSvg]').onclick  = ()=>{ ex.media={kind:'svg', data:(ex.media && ex.media.kind==='svg') ? ex.media.data : ''}; syncMedia(); };
-  q('[data-a=mImg]').onclick  = ()=> q('[data-f=file]').click();
-  q('[data-f=file]').onchange = e => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    shrinkImage(file, 640, dataUrl => { ex.media = {kind:'img', data:dataUrl}; syncMedia(); });
-  };
-  q('[data-a=del]').onclick = ()=>{
-    if(curPlan().exercises.length === 1){ appAlert('В варианте должно быть хотя бы одно упражнение.'); return; }
-    curPlan().exercises.splice(i, 1);
-    renderExList();
-  };
-  return el;
+  });
+  return row;
 }
 
 // уменьшаем фото до 640px по большей стороне, чтобы программа занимала мало места
@@ -4213,7 +4372,7 @@ function renderStep(){
             setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 300);
           });
         } else {
-          startSignal();
+          exerciseGong(); // тот же заметный сигнал, что и на упражнениях со временем
           setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
         }
       });
@@ -4221,11 +4380,15 @@ function renderStep(){
   } else if(step.sideSwitch){
     // пауза на смену стороны — коротко проговариваем
     beep(880, .12);
-    setTimeout(()=>{ if(state.stepToken === myToken) speak('Смените сторону'); }, 260);
+    setTimeout(()=>{
+      if(state.stepToken !== myToken) return;
+      const n2 = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
+      speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
+    }, 260);
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
-    if(step.roundRest) roundDone(step.seconds, nxt && nxt.title);
-    else announceRest(step.seconds, nxt && nxt.title);
+    if(step.roundRest) roundDone(step.seconds, nxt);
+    else announceRest(step.seconds, nxt);
   }
 
   // на отдыхе показываем, что будет дальше
@@ -4253,9 +4416,11 @@ function renderStep(){
 
   if(step.kind === 'click'){
     $('stepReps').style.display='block';
-    const note = (step.repsNote || '') + (step.perSide ? ' на каждую сторону' : '');
-    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${note.trim()}</small>`;
-    $('sideNote').style.display = 'none';
+    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>`;
+    // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
+    const snR = $('sideNote');
+    if(step.perSide){ snR.textContent = 'на каждую сторону'; snR.style.display = 'block'; }
+    else snR.style.display = 'none';
     $('countdown').style.display='none';
     $('btnDone').style.display='block';
     $('btnSkip').style.display='none';
@@ -4263,7 +4428,7 @@ function renderStep(){
     $('stepReps').style.display='none';
     $('btnDone').style.display='none';
     $('btnSkip').style.display='block';
-    $('btnSkip').textContent = step.phase==='rest' ? 'Пропустить отдых' : 'Завершить досрочно';
+    $('btnSkip').textContent = 'Пропустить';
     // подпись для упражнений «на каждую сторону» — как у повторений
     const sn = $('sideNote');
     if(step.phase === 'work' && step.perSide){
@@ -4369,11 +4534,20 @@ function fitNextUpDesc(){
   if(!nu || nu.style.display === 'none') return;
   const p = nu.querySelector('.nu-body p');
   if(!p) return;
-  p.style.webkitLineClamp = '999';           // снимаем ограничение, чтобы измерить выделенную высоту
+  p.style.webkitLineClamp = '999';           // снимаем ограничение, чтобы измерить настоящую высоту
   const lh = parseFloat(getComputedStyle(p).lineHeight) || 17;
-  const avail = p.clientHeight;              // флекс уже растянул абзац на доступное место
-  const lines = Math.max(2, Math.floor(avail / lh));
-  p.style.webkitLineClamp = String(lines);
+  const stage = nu.parentElement;
+  if(!stage) return;
+  // сколько места реально осталось от начала абзаца до низа блока
+  const bottom = stage.getBoundingClientRect().bottom;
+  const top = p.getBoundingClientRect().top;
+  const val = nu.querySelector('.nu-val');
+  const tail = (val ? val.offsetHeight + 8 : 0) + 16; // строка значения + внутренние отступы
+  const avail = bottom - top - tail;
+  const fit = Math.max(2, Math.floor(avail / lh));
+  const natural = Math.ceil(p.scrollHeight / lh);
+  // если текст короче — ограничение не мешает, если длиннее — обрежется многоточием
+  p.style.webkitLineClamp = String(Math.min(natural, fit));
 }
 window.addEventListener('resize', ()=>{ if(document.body.classList.contains('phase-rest')) fitNextUpDesc(); });
 
@@ -5327,7 +5501,107 @@ $('btnSendAI').onclick = sendToAI;
 $('aiGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('aiClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('btnParse').onclick = importFromText;
-$('btnAddEx').onclick = ()=>{ curPlan().exercises.push(blankExercise()); renderExList(); };
+$('btnAddEx').onclick = ()=>{
+  const list = curPlan().exercises;
+  const ex = blankExercise();
+  // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
+  const prev = list.filter(e => !e.warmup).slice(-1)[0];
+  if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
+  list.push(ex);
+  renderExList();
+  openExercise(list.length - 1);
+};
+
+/* ---- экран упражнения ---- */
+$('exBackTop').onclick = ()=>{ saveExAndBack(); };
+$('btnSaveEx').onclick = ()=>{ saveExAndBack(); };
+function saveExAndBack(){
+  if(exDraft && exIdx >= 0){
+    const list = curPlan().exercises;
+    if(list[exIdx]) list[exIdx] = commitExercise();
+  }
+  exDraft = null; exIdx = -1;
+  renderExList();
+  show('scrBuilder');
+}
+$('btnDupEx').onclick = ()=>{
+  if(!exDraft || exIdx < 0) return;
+  const list = curPlan().exercises;
+  const nWarm = list.filter(e => e.warmup).length;
+  const nMain = list.length - nWarm;
+  if(exDraft.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){
+    appAlert('Достигнут предел упражнений в этой части.');
+    return;
+  }
+  list[exIdx] = commitExercise();
+  const copy = JSON.parse(JSON.stringify(list[exIdx]));
+  list.splice(exIdx + 1, 0, copy);
+  exIdx = exIdx + 1;
+  exDraft = JSON.parse(JSON.stringify(copy));
+  fillExercise();
+  renderExList();
+};
+$('btnDelEx').onclick = async ()=>{
+  if(exIdx < 0) return;
+  if(!(await appConfirm('Удалить это упражнение?'))) return;
+  curPlan().exercises.splice(exIdx, 1);
+  exDraft = null; exIdx = -1;
+  renderExList();
+  show('scrBuilder');
+};
+$('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
+$('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
+$('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
+$('exWarm').onclick = ()=>{
+  const list = curPlan().exercises;
+  const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
+  const nMain = list.filter((e, i) => !e.warmup && i !== exIdx).length;
+  if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(`В разминке можно до ${MAX_WARM} упражнений.`); return; }
+  if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(`В основной части можно до ${MAX_MAIN} упражнений.`); return; }
+  exDraft.warmup = !exDraft.warmup;
+  $('exWarm').classList.toggle('on', exDraft.warmup);
+  if(exDraft.warmup) exDraft.sets = 1;
+  syncExWarm();
+};
+$('exSide').onclick = ()=>{ exDraft.perSide = !exDraft.perSide; $('exSide').classList.toggle('on', exDraft.perSide); };
+$('exRest').oninput = e => { exDraft.rest = Math.max(0, Math.min(600, parseInt(e.target.value) || 0)); renderExRestChips(); };
+$('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };
+$('exMistakes').oninput = e => { exDraft.mistakes = e.target.value; syncExDetailsSum(); };
+$('exVideo').oninput = e => { exDraft.video = e.target.value; syncExDetailsSum(); };
+$('exDetailsToggle').onclick = ()=>{
+  const box = $('exDetailsBox'), open = box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  $('exDetailsToggle').classList.toggle('open', open);
+};
+$('exMediaBtn').onclick = ()=> $('exMediaFile').click();
+$('exMediaNone').onclick = ()=>{ exDraft.media = null; $('exMediaFile').value = ''; renderExMedia(); syncExDetailsSum(); };
+$('exMediaFile').onchange = e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  shrinkImage(file, 640, data => {
+    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    exDraft.media = {kind: 'img', data};
+    renderExMedia(); syncExDetailsSum();
+  });
+};
+
+/* ---- сворачивание настроек программы ---- */
+$('bSettingsToggle').onclick = ()=>{
+  const box = $('bSettingsBox'), open = box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  $('bSettingsToggle').classList.toggle('open', open);
+};
+function syncSettingsSum(){
+  const bits = [];
+  const plans = draft.plans || [];
+  if(draft.time) bits.push(draft.time);
+  const daysU = programDaysUnion(draft);
+  if(daysU.length) bits.push(daysU.join('·'));
+  if(plans.length > 1) bits.push(`${plans.length} варианта`);
+  if(draft.progression) bits.push(`+${draft.progStep || 30}%`);
+  $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'время, дни, круги, прогрессия';
+}
+$('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
 $('btnSaveProgram').onclick = saveProgram;
 $('builderBackTop').onclick = ()=> show('scrMenu');
 // обложка программы
@@ -5379,6 +5653,9 @@ $('calNext').innerHTML = icon('chevR');
 $('ueBackTop').innerHTML = icon('chevL');
 $('builderBackTop').innerHTML = icon('chevL');
 $('statsBackTop').innerHTML = icon('chevL');
+$('exBackTop').innerHTML = icon('chevL');
+$('bSettingsChev').innerHTML = icon('chevR');
+$('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
 $('helpBackTop').innerHTML = icon('chevL');
