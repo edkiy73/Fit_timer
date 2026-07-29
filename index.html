@@ -219,6 +219,11 @@
   .media-preview{margin-top:10px}
   .mp-empty{font-size:12.5px;color:var(--muted)}
   textarea.auto-grow{overflow:hidden;resize:none;min-height:90px}
+  .prog-desc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:2px 0 16px;text-align:left}
+  .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+  .prog-desc.open p{-webkit-line-clamp:unset;display:block}
+  .pd-more{background:none;border:none;color:var(--work);font-family:'Rubik';font-size:13px;padding:8px 0 0;cursor:pointer}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .builder-actions{margin-top:10px;padding-bottom:8px}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
@@ -845,6 +850,10 @@
       <div class="num" id="startNum"></div>
       <h2 id="startTitle"></h2>
       <p class="desc" id="startDesc"></p>
+      <div class="prog-desc" id="progDescBox" style="display:none">
+        <p id="progDescText"></p>
+        <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
+      </div>
       <div class="start-meta">
         <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
         <div class="chip">Упражнений: <b id="startExCount"></b></div>
@@ -859,8 +868,15 @@
         <p class="field-hint">Выбирай по самочувствию: повторения и время упражнений изменятся пропорционально, отдых останется прежним.</p>
         <p class="field-hint" id="progHint" style="display:none;color:var(--work)"></p>
       </div>
-      <div class="prefs">
-        <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
+      <button class="btn-primary" id="btnStart">Начать тренировку</button>
+
+      <button type="button" class="collapse-head" id="startPrefsToggle" style="margin-top:22px">
+        <span>Звук и управление</span>
+        <span class="st-sum" id="startPrefsSum"></span>
+        <span class="st-chev" id="startPrefsChev"></span>
+      </button>
+      <div class="prefs" id="startPrefsBox" style="display:none">
+        <div class="pref-row" style="border-top:none"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
         <div class="hf-block" id="voicePrefRow">
           <div class="hf-title">Управление без рук</div>
           <div class="hf-seg" id="hfSeg">
@@ -873,7 +889,6 @@
         </div>
         <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
       </div>
-      <button class="btn-primary" id="btnStart">Начать тренировку</button>
     </div>
   </section>
 
@@ -915,6 +930,10 @@
       </div>
       <input type="file" id="bCoverFile" accept="image/*" style="display:none">
       <div class="media-preview" id="bCoverPrev"></div>
+    </div>
+    <div class="field"><label>Описание тренировки (необязательно)</label>
+      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
+      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
     <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
       <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
@@ -1905,6 +1924,24 @@ function renderPlanRow(){
 }
 
 function renderStartInfo(){
+  // блок звука и управления свёрнут по умолчанию
+  $('startPrefsBox').style.display = 'none';
+  $('startPrefsToggle').classList.remove('open');
+  syncStartPrefsSum();
+  // описание программы: 4 строки с возможностью раскрыть
+  const dBox = $('progDescBox'), dTxt = $('progDescText');
+  const d = (state.raw.desc || '').trim();
+  if(d){
+    dTxt.textContent = d;
+    dBox.style.display = 'block';
+    dBox.classList.remove('open');
+    $('progDescMore').textContent = 'Показать полностью';
+    requestAnimationFrame(()=>{
+      const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
+      $('progDescMore').style.display = fits ? 'none' : 'block';
+    });
+  } else dBox.style.display = 'none';
+
   const plans = normPlans(state.raw);
   const pl = plans[state.planIdx];
   const rotOn = state.raw.rotate && plans.length > 1;
@@ -3444,6 +3481,9 @@ function commitPlanFields(){
 function fillBuilder(title){
   $('builderTitle').textContent = title;
   $('bName').value = draft.name;
+  $('bDesc').value = draft.desc || '';
+  $('bDescCount').textContent = (draft.desc || '').length;
+  setTimeout(()=> autoGrow($('bDesc')), 0);
   $('bTime').value = draft.time || '';
 
   // ротация вариантов доступна, когда вариантов больше одного
@@ -3824,6 +3864,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 Общие поля (в самом начале, каждое с новой строки "КЛЮЧ: значение"):
 
 ПРОГРАММА: название программы
+ОПИСАНИЕ ПРОГРАММЫ: связный текст до 1000 символов В ОДНУ СТРОКУ (без переносов) — для кого эта программа, какого результата ждать и в какие сроки, как часто заниматься, на что обращать внимание при выполнении, когда стоит снизить нагрузку. Пиши обращаясь на «ты», по делу и без воды. Это единственное место, где можно объяснить логику всей тренировки целиком — используй его.
 ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
 ПРОГРЕССИЯ: нет / неделя / две недели — как быстро повышать рекомендуемую нагрузку по мере привыкания (или пропусти строку)
 ЧЕРЕДОВАНИЕ: да / нет — если вариантов несколько и они должны идти по очереди (A, потом B, потом снова A) независимо от дней недели. Для силовых сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки жёстко привязаны к дням недели — «нет» и укажи ДЕНЬ у каждого варианта.
@@ -3861,6 +3902,7 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 === ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
 
 ПРОГРАММА: Неделя тонуса
+ОПИСАНИЕ ПРОГРАММЫ: Программа для тех, кто начинает с нуля и хочет мягко втянуться в регулярные тренировки. Первые две недели тело привыкает к нагрузке — не гонись за скоростью, следи за техникой. Заниматься лучше через день, чтобы мышцы успевали восстанавливаться. Если после тренировки болят суставы, а не мышцы — снизь нагрузку на экране старта. Через месяц станет заметно легче держать планку и приседать глубже.
 ВРЕМЯ: 07:30
 
 ДЕНЬ: Пн, Чт
@@ -3950,6 +3992,7 @@ function parseProgramText(txt){
     const val = m[2].trim();
     switch(key){
       case 'ПРОГРАММА': case 'НАЗВАНИЕ ПРОГРАММЫ': p.name = val; break;
+      case 'ОПИСАНИЕ ПРОГРАММЫ': case 'О ПРОГРАММЕ': p.desc = val.slice(0, 1000); break;
       case 'ВРЕМЯ': {
         const t = val.match(/^(\d{1,2}):(\d{2})/);
         if(t){
@@ -4217,6 +4260,7 @@ function importFromText(){
 async function saveProgram(){
   commitPlanFields();
   draft.name = $('bName').value.trim();
+  draft.desc = $('bDesc').value.trim().slice(0, 1000);
   draft.time = $('bTime').value || '';
   // ротация имеет смысл только при нескольких вариантах
   if((draft.plans || []).length < 2) draft.rotate = false;
@@ -4935,6 +4979,7 @@ let voiceActive = false;  // распознавание реально запу�
 
 function syncPrefs(){
   $('tglSound').classList.toggle('on', soundOn);
+  if(typeof syncStartPrefsSum === 'function') syncStartPrefsSum();
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
@@ -5267,6 +5312,24 @@ function checkSchedules(){
 setInterval(checkSchedules, 20000);
 
 /* ================= СОБЫТИЯ ================= */
+$('progDescMore').onclick = ()=>{
+  const box = $('progDescBox'), open = !box.classList.contains('open');
+  box.classList.toggle('open', open);
+  $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
+};
+$('startPrefsToggle').onclick = ()=>{
+  const box = $('startPrefsBox'), open = box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  $('startPrefsToggle').classList.toggle('open', open);
+};
+function syncStartPrefsSum(){
+  const bits = [];
+  bits.push(soundOn ? 'звук вкл' : 'звук выкл');
+  const names = {off: '', voice: 'голос', clap: 'хлопок', headset: 'гарнитура'};
+  if(names[hfMode]) bits.push(names[hfMode]);
+  if(musicMode) bits.push('не прерывать музыку');
+  $('startPrefsSum').textContent = bits.join(' · ');
+}
 $('btnStart').onclick = ()=>{ state.current = customToProgram(state.raw, state.planIdx); startWorkout(); };
 $('startBackTop').onclick = ()=> show('scrMenu');
 $('textBackTop').onclick = ()=> show('scrMenu');
@@ -5691,6 +5754,7 @@ $('bSettingsToggle').onclick = ()=>{
 };
 function closeProgSettings(){
   commitPlanFields();
+  draft.desc = $('bDesc').value.trim().slice(0, 1000);
   draft.name = $('bName').value.trim() || draft.name;
   syncSettingsSum();
   renderExList();
@@ -5709,6 +5773,10 @@ function syncSettingsSum(){
   $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'время, дни, круги, прогрессия';
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
+$('bDesc').oninput = e => {
+  draft.desc = e.target.value.slice(0, 1000);
+  $('bDescCount').textContent = draft.desc.length;
+};
 $('btnSaveProgram').onclick = saveProgram;
 $('builderBackTop').onclick = ()=> show('scrMenu');
 // обложка программы
@@ -5763,6 +5831,7 @@ $('statsBackTop').innerHTML = icon('chevL');
 $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
+$('startPrefsChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
