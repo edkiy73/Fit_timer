@@ -257,6 +257,13 @@
   .reps small{font-size:.38em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
   body.phase-rest .reps{color:var(--rest)}
 
+  .ready-bar{max-width:320px;margin:6px auto 0}
+  .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:'Oswald';margin-bottom:8px}
+  .rb-label b{color:var(--work);font-size:16px}
+  body.phase-rest .rb-label b{color:var(--rest)}
+  .rb-track{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+  .rb-fill{height:100%;width:100%;border-radius:99px;background:var(--work)}
+  body.phase-rest .rb-fill{background:var(--rest)}
   .details{
     flex:1 1 0;min-height:56px;width:100%;max-width:420px;margin:12px auto 0;
     overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:center;
@@ -605,15 +612,19 @@
   }
   #hfModal .choice.act{border-color:var(--work)}
   #hfModal .choice.act b{color:var(--work)}
+  .sched-block{display:flex;flex-direction:column}
+  .sched-mode{order:1;margin-bottom:14px}
+  .st-note{font-family:'Rubik';font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
   .hf-title{font-size:14px;margin-bottom:10px}
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:#fff;font-weight:500}
   .act-row{display:flex;gap:10px;align-items:stretch}
-  .btn-prev{flex:0 0 54px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .btn-prev{flex:0 0 56px;min-height:56px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
-  .btn-prev:disabled{opacity:.3}
+  .btn-prev:disabled{opacity:.25}
+  .act-row .btn-done{flex:1;margin:0}
   .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
@@ -821,15 +832,28 @@
       </div>
       <p class="field-hint">Рекомендуемая нагрузка на старте будет расти сама — программа усложняется вместе с тобой.</p>
     </div>
-    <div class="section-title">Дни и круги</div>
-    <div class="field">
-      <div class="plan-tabs" id="planTabs"></div>
-      <p class="field-hint">Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.</p>
+    <div class="section-title">Расписание</div>
+    <div class="sched-block">
+      <div class="sched-mode" id="schedModeRow" style="display:none">
+        <div class="hf-seg" id="schedSeg">
+          <button type="button" data-mode="days">По дням недели</button>
+          <button type="button" data-mode="rot">По очереди</button>
+        </div>
+        <p class="field-hint" id="schedHint"></p>
+      </div>
+
+      <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+        <p class="field-hint" id="bDaysHint"></p>
+      </div>
+
+      <div class="field" id="variantsField">
+        <label id="variantsLabel">Варианты тренировки</label>
+        <div class="plan-tabs" id="planTabs"></div>
+        <p class="field-hint" id="variantsHint"></p>
+      </div>
     </div>
-    <div class="pref-row" id="bRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A независимо от дней недели, пропуск не сбивает очередь</small></span><button class="switch" id="bRotate"></button></div>
-    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
-      <p class="field-hint" id="bDaysHint"></p>
-    </div>
+
+    <div class="section-title" style="margin-top:6px">Круги и отдых <span class="st-note" id="stVariantNote"></span></div>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
@@ -918,6 +942,10 @@
         <h2 id="stepTitle"></h2>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
+        <div class="ready-bar" id="readyBar" style="display:none">
+          <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
+          <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
+        </div>
       </div>
       <div class="details" id="stepDetails">
         <div class="illo-wrap" id="illoWrap">
@@ -932,9 +960,9 @@
       <div class="next-up" id="nextUp"></div>
     </div>
     <div class="actions">
-      <button class="btn-done" id="btnDone">Готово ✓</button>
       <div class="act-row">
         <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
+        <button class="btn-done" id="btnDone">Готово ✓</button>
         <button class="btn-skip" id="btnSkip">Пропустить</button>
       </div>
     </div>
@@ -1116,6 +1144,13 @@
     </div>
     <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth"></div>
 
+    <div class="section-title" style="margin-top:6px">Тренировка</div>
+    <div class="row2">
+      <div class="field"><label>Отсчёт перед стартом, сек</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+      <div class="field"><label>Подготовка к упражнению, сек</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+    </div>
+    <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки после озвучки упражнения на время, перед тем как пойдёт отсчёт. 0 — выключить.</p>
+
     <div class="section-title" style="margin-top:6px">Звук</div>
     <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
     <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
@@ -1267,6 +1302,8 @@ const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15"
 /* ================= ЗВУК ================= */
 let soundOn = true; // общий выключатель звука
 let lastAppSoundT = 0; // когда приложение само издавало звук (для детектора хлопка)
+let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
+let readySec = 5;  // подготовка перед упражнением на время
 let fxVol = 1;    // громкость звуковых эффектов 0..1
 let voiceVol = 1; // громкость голоса 0..1
 let audioCtx = null, masterGain = null;
@@ -1449,6 +1486,43 @@ function announceExercise(step, onDone){
   speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
 }
 
+// мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
+// считаем по кадрам, чтобы пауза реально останавливала подготовку
+function runReadyBar(sec, done){
+  const box = $('readyBar'), fill = $('readyFill'), num = $('readyNum');
+  if(!box || sec <= 0){ done(); return; }
+  const totalMs = sec * 1000;
+  let left = totalMs, last = performance.now(), lastShown = sec;
+  box.style.display = 'block';
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  num.textContent = sec;
+  beep(660, .08);
+  state.readyRAF = requestAnimationFrame(function tick(now){
+    if(!state.readyRAF) return; // отменили
+    const dt = now - last; last = now;
+    if(!state.paused){
+      left -= dt;
+      if(left <= 0){
+        state.readyRAF = 0;
+        box.style.display = 'none';
+        done();
+        return;
+      }
+      fill.style.width = (left / totalMs * 100).toFixed(1) + '%';
+      const s = Math.ceil(left / 1000);
+      if(s !== lastShown){ lastShown = s; num.textContent = s; beep(660, .08); }
+    }
+    state.readyRAF = requestAnimationFrame(tick);
+  });
+}
+function hideReadyBar(){
+  if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
+  if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
+  const box = $('readyBar');
+  if(box) box.style.display = 'none';
+}
+
 // бодрый сигнал «старт!» после озвучки упражнения
 function startSignal(){
   beep(880, .1, 0, .3);
@@ -1470,7 +1544,9 @@ let state = {
   stepTimer: null, // interval текущего шага-таймера
   remaining: 0,
   load: 100,       // выбранная нагрузка в %
-  prepTimer: null, // отсчёт 5..1 перед стартом
+  prepTimer: null, // отсчёт перед стартом тренировки
+  readyTimer: null, // (не используется, оставлено для совместимости)
+  readyRAF: 0,      // кадровый цикл подготовки перед упражнением на время
   paused: false,
   pausedAt: 0,
   pausedTotal: 0,  // суммарное время на паузе, мс
@@ -2128,6 +2204,10 @@ function openUserEdit(id = null){
   $('ueName').value = uDraft.name || '';
   $('ueBirth').value = uDraft.birth || '';
   // звук: значения профиля (или дефолты)
+  if(uDraft.prepSec == null) uDraft.prepSec = 5;
+  if(uDraft.readySec == null) uDraft.readySec = 5;
+  $('uePrepSec').value = uDraft.prepSec;
+  $('ueReadySec').value = uDraft.readySec;
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
@@ -2155,6 +2235,8 @@ function syncUserForm(){
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
+  uDraft.prepSec = Math.max(0, Math.min(30, isFinite(parseInt($('uePrepSec').value)) ? parseInt($('uePrepSec').value) : 5));
+  uDraft.readySec = Math.max(0, Math.min(30, isFinite(parseInt($('ueReadySec').value)) ? parseInt($('ueReadySec').value) : 5));
   uDraft.voiceURI = $('ueVoiceSel').value || '';
   uDraft.voiceVol = $('ueVoiceOn').classList.contains('on') ? 100 : 0;
   uDraft.fxVol = isFinite(parseInt($('ueFxVol').value)) ? parseInt($('ueFxVol').value) : 100;
@@ -3010,21 +3092,46 @@ function renderProgStep(){
   });
 }
 function syncRotateUI(){
-  const on = !!draft.rotate && (draft.plans || []).length > 1;
-  // дни нужны всегда — это расписание (напоминания и блок «Сегодня»).
-  // меняется только их смысл: общие для программы или привязка конкретного варианта
-  $('bDaysLabel').textContent = on ? 'Дни тренировок (для всей программы)' : 'Дни этого варианта';
-  $('bDaysHint').textContent = on
-    ? 'Когда тренироваться. Какой вариант выпадет — решает очередь: A, потом B, потом снова A.'
+  const many = (draft.plans || []).length > 1;
+  const rot = !!draft.rotate && many;
+
+  // переключатель режима есть только когда вариантов больше одного
+  $('schedModeRow').style.display = many ? 'block' : 'none';
+  document.querySelectorAll('#schedSeg button').forEach(b =>
+    b.classList.toggle('act', (b.dataset.mode === 'rot') === rot));
+  $('schedHint').textContent = rot
+    ? 'Варианты идут по очереди: A, потом B, потом снова A. Дни ниже говорят только когда тренироваться — пропуск дня очередь не сбивает.'
+    : 'У каждого варианта свои дни недели. В нужный день откроется именно он.';
+
+  // порядок блоков: при очереди сначала общие дни, потом варианты; иначе наоборот
+  $('bDaysField').style.order = rot ? '2' : '3';
+  $('variantsField').style.order = rot ? '3' : '2';
+
+  // подписи дней
+  $('bDaysLabel').textContent = rot ? 'Дни тренировок' : (many ? 'Дни этого варианта' : 'Дни тренировок');
+  $('bDaysHint').textContent = rot
+    ? 'Общее расписание программы: в эти дни напомним о тренировке.'
     : 'В эти дни программа появится в блоке «Запланировано сегодня».';
-  $('bDaysHint').style.display = 'block';
+
+  // подписи вариантов
+  $('variantsLabel').textContent = rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки';
+  $('variantsHint').textContent = rot
+    ? 'Всё, что ниже, относится к выбранному варианту. Метка «сейчас» — тот, что выпадет на следующей тренировке.'
+    : 'Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.';
+
+  // пометка у заголовка «Круги и отдых»
+  $('stVariantNote').textContent = many ? `· вариант ${planIdx + 1}` : '';
+
   renderDays();
+  renderPlanTabs();
 }
-$('bRotate').onclick = ()=>{
-  draft.rotate = !$('bRotate').classList.contains('on');
-  $('bRotate').classList.toggle('on', draft.rotate);
-  syncRotateUI();
-};
+document.querySelectorAll('#schedSeg button').forEach(b => {
+  b.onclick = ()=>{
+    draft.rotate = b.dataset.mode === 'rot';
+    if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
+    syncRotateUI();
+  };
+});
 $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
 $('bProgOn').onclick = ()=>{
   const on = !$('bProgOn').classList.contains('on');
@@ -3046,9 +3153,6 @@ function fillBuilder(title){
   $('bName').value = draft.name;
   $('bTime').value = draft.time || '';
   // ротация вариантов доступна, когда вариантов больше одного
-  const many = (draft.plans || []).length > 1;
-  $('bRotateRow').style.display = many ? 'flex' : 'none';
-  $('bRotate').classList.toggle('on', !!draft.rotate);
   syncRotateUI();
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
@@ -3070,7 +3174,14 @@ function renderPlanTabs(){
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'plan-tab';
-    b.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+    const rot = !!draft.rotate && draft.plans.length > 1;
+    if(rot){
+      // при очереди дни варианта не имеют смысла — показываем номер и позицию в очереди
+      const nextIdx = ((draft.rotIdx || 0) % draft.plans.length + draft.plans.length) % draft.plans.length;
+      b.textContent = `Вариант ${i+1}` + (i === nextIdx ? ' • сейчас' : '');
+    } else {
+      b.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+    }
     b.classList.toggle('act', i === planIdx);
     b.onclick = ()=>{
       if(i === planIdx) return;
@@ -3078,6 +3189,7 @@ function renderPlanTabs(){
       planIdx = i;
       renderPlanTabs();
       fillPlanFields();
+      $('stVariantNote').textContent = draft.plans.length > 1 ? `· вариант ${planIdx + 1}` : '';
     };
     box.appendChild(b);
   });
@@ -3090,8 +3202,8 @@ function renderPlanTabs(){
       commitPlanFields();
       draft.plans.push(blankPlan());
       planIdx = draft.plans.length - 1;
-      renderPlanTabs();
       fillPlanFields();
+      syncRotateUI(); // появился второй вариант — показываем выбор режима
     };
     box.appendChild(add);
   }
@@ -3112,10 +3224,6 @@ function fillPlanFields(){
   renderDays();
   renderExList();
   $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
-  const many = draft.plans.length > 1;
-  $('bRotateRow').style.display = many ? 'flex' : 'none';
-  if(!many){ draft.rotate = false; $('bRotate').classList.remove('on'); }
-  syncRotateUI();
 }
 
 function syncStats(){
@@ -3731,7 +3839,8 @@ async function saveProgram(){
   commitPlanFields();
   draft.name = $('bName').value.trim();
   draft.time = $('bTime').value || '';
-  draft.rotate = $('bRotate').classList.contains('on');
+  // ротация имеет смысл только при нескольких вариантах
+  if((draft.plans || []).length < 2) draft.rotate = false;
   if(!draft.rotate){ delete draft.rotIdx; delete draft.days; }
   else if(!Array.isArray(draft.days)) draft.days = [];
   if($('bProgOn').classList.contains('on')){
@@ -3877,7 +3986,13 @@ function startWorkout(){
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
   $('prepTitle').textContent = state.current.title + (state.load !== 100 ? ` · нагрузка ${state.load}%` : '');
-  let n = 5;
+  let n = Math.max(0, prepSec);
+  if(n === 0){
+    ov.classList.remove('on');
+    startGlobal();
+    renderStep();
+    return;
+  }
   $('prepNum').textContent = n;
   ov.classList.add('on');
   beep(660, .1);
@@ -3899,6 +4014,7 @@ function startWorkout(){
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
+  hideReadyBar();
 }
 
 function renderStep(){
@@ -3949,9 +4065,17 @@ function renderStep(){
       if(state.stepToken !== myToken) return; // шаг уже сменили
       announceExercise(step, ()=>{
         if(state.stepToken !== myToken) return;
-        startSignal();
-        // отсчёт запускается через мгновение после старт-сигнала
-        setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
+        if(step.kind === 'timer' && readySec > 0){
+          // упражнение на время: даём подготовиться под убывающую полосу, затем гонг и отсчёт
+          runReadyBar(readySec, ()=>{
+            if(state.stepToken !== myToken) return;
+            gong();
+            setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 300);
+          });
+        } else {
+          startSignal();
+          setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
+        }
       });
     }, 500); // после удара гонга
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
@@ -4018,7 +4142,8 @@ function renderStep(){
       state.beginTimer = ()=>{ state.beginTimer = null; launch(); };
       // предохранитель: если звук выключен целиком и цепочка не запустит — стартуем через 900мс
       const tk = state.stepToken;
-      setTimeout(()=>{ if(state.stepToken === tk && state.beginTimer) state.beginTimer(); }, soundOn && (voiceVol > 0) ? 8000 : 900);
+      const guardMs = (soundOn && voiceVol > 0 ? 8000 : 900) + (step.kind === 'timer' ? readySec * 1000 : 0);
+      setTimeout(()=>{ if(state.stepToken === tk && state.beginTimer) state.beginTimer(); }, guardMs);
     } else {
       // отдых: отсчёт сразу
       state.beginTimer = null;
@@ -4746,6 +4871,8 @@ $('btnResume').onclick = ()=> setPause(false);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
+  prepSec = (u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec));
+  readySec = (u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec));
   savedVoiceURI = u.voiceURI || '';
   voiceVol = clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1);
   fxVol = clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1);
@@ -4828,8 +4955,9 @@ $('btnDelPlan').onclick = async ()=>{
   if(!(await appConfirm('Удалить этот вариант вместе с его упражнениями?'))) return;
   draft.plans.splice(planIdx, 1);
   planIdx = Math.max(0, planIdx - 1);
-  renderPlanTabs();
+  if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
   fillPlanFields();
+  syncRotateUI();
 };
 $('btnHelp').onclick = ()=> { show('scrHelp'); window.scrollTo(0,0); };
 let helpNext = null;
