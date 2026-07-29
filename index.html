@@ -257,6 +257,9 @@
   .reps small{font-size:.38em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
   body.phase-rest .reps{color:var(--rest)}
 
+  .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .side-note b{color:var(--work);font-weight:600}
+  body.phase-rest .side-note b{color:var(--rest)}
   .ready-bar{max-width:320px;margin:6px auto 0}
   .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:'Oswald';margin-bottom:8px}
   .rb-label b{color:var(--work);font-size:16px}
@@ -343,9 +346,16 @@
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
   }
   .nu-val{margin-top:5px;font-family:'Oswald';font-weight:600;font-size:13px;color:var(--rest);letter-spacing:.06em}
+  /* на отдыхе превью следующего упражнения растягивается на всё свободное место */
+  body.phase-rest .details{flex:0 0 auto}
+  body.phase-rest .next-up{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  body.phase-rest .next-up .nu-row{flex:1 1 auto;min-height:0;align-items:flex-start}
+  body.phase-rest .next-up .nu-body{display:flex;flex-direction:column;min-height:0;height:100%}
+  body.phase-rest .next-up .nu-body p{flex:1 1 auto;min-height:0;margin-bottom:6px}
+  body.phase-rest .next-up .nu-val{flex:none;margin-top:0}
 
   .count{
-    font-family:'Oswald';font-weight:700;
+    font-family:'Oswald';font-weight:700;font-size:clamp(56px,17vw,88px) !important;
     font-size:clamp(84px,30vw,150px);line-height:1;
     font-variant-numeric:tabular-nums;letter-spacing:.02em;
     margin:8px 0;color:var(--ink);
@@ -944,6 +954,7 @@
         <h2 id="stepTitle"></h2>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
+        <div class="side-note" id="sideNote" style="display:none"></div>
         <div class="ready-bar" id="readyBar" style="display:none">
           <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
           <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
@@ -1151,7 +1162,8 @@
       <div class="field"><label>Отсчёт перед стартом, сек</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
       <div class="field"><label>Подготовка к упражнению, сек</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
     </div>
-    <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки после озвучки упражнения на время, перед тем как пойдёт отсчёт. 0 — выключить.</p>
+    <div class="field"><label>Смена стороны, сек</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
+    <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки после озвучки упражнения на время, перед тем как пойдёт отсчёт (0 — выключить). Третье — пауза между сторонами в упражнениях «на каждую сторону».</p>
 
     <div class="section-title" style="margin-top:6px">Звук</div>
     <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
@@ -1211,7 +1223,7 @@
         <span class="mini-label">Новая программа</span>
         <button class="choice" id="chAI"><b>✨ С помощью ИИ</b><small>Скопируй готовый промт, вставь в любую нейросеть, опиши цель — программа соберётся сама. Потом её можно спокойно редактировать вручную: менять упражнения, дни и картинки.</small></button>
         <button class="choice" id="chManual"><b>✎ Вручную</b><small>Собери сама с нуля: упражнения, повторения или время, круги и дни недели.</small></button>
-        <button class="choice" id="chImport"><b>📥 По коду</b><small>Вставь код программы, которым с тобой поделились.</small></button>
+        <button class="choice" id="chImport"><b>📥 Импорт файла или ссылки</b><small>Загрузи файл программы или вставь ссылку либо код, которыми с тобой поделились.</small></button>
         <button class="link-btn" id="chCancel" style="margin:0;padding:10px">Отмена</button>
       </div>
     </div>
@@ -1310,6 +1322,7 @@ let soundOn = true; // общий выключатель звука
 let lastAppSoundT = 0; // когда приложение само издавало звук (для детектора хлопка)
 let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
 let readySec = 5;  // подготовка перед упражнением на время
+let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
 let fxVol = 1;    // громкость звуковых эффектов 0..1
 let voiceVol = 1; // громкость голоса 0..1
 let audioCtx = null, masterGain = null;
@@ -1347,6 +1360,44 @@ function gong(){
     o.connect(g); g.connect(fxDest());
     o.start(t); o.stop(t+dur+.1);
   });
+}
+
+// СТАРТ УПРАЖНЕНИЯ — самый заметный сигнал, ни на что не похожий:
+// низкий удар + восходящий колокольный аккорд со звоном
+function exerciseGong(){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 2200;
+  const t = audioCtx.currentTime;
+
+  // плотный низкий удар — «вес» события
+  const bo = audioCtx.createOscillator(), bg = audioCtx.createGain();
+  bo.type = 'sine';
+  bo.frequency.setValueAtTime(200, t);
+  bo.frequency.exponentialRampToValueAtTime(70, t + .55);
+  bg.gain.setValueAtTime(.55, t);
+  bg.gain.exponentialRampToValueAtTime(.001, t + .8);
+  bo.connect(bg); bg.connect(fxDest());
+  bo.start(t); bo.stop(t + .85);
+
+  // восходящий колокольный аккорд до-ми-соль-до
+  [[523.25, 0, .30], [659.25, .075, .28], [783.99, .15, .26], [1046.5, .225, .34]].forEach(([f, dt, vol])=>{
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + dt);
+    g.gain.linearRampToValueAtTime(vol, t + dt + .012);
+    g.gain.exponentialRampToValueAtTime(.001, t + dt + .75);
+    o.connect(g); g.connect(fxDest());
+    o.start(t + dt); o.stop(t + dt + .8);
+  });
+
+  // высокий звон-послезвучие
+  const so = audioCtx.createOscillator(), sg = audioCtx.createGain();
+  so.type = 'sine'; so.frequency.value = 2093;
+  sg.gain.setValueAtTime(0, t + .22);
+  sg.gain.linearRampToValueAtTime(.14, t + .25);
+  sg.gain.exponentialRampToValueAtTime(.001, t + 1.15);
+  so.connect(sg); sg.connect(fxDest());
+  so.start(t + .22); so.stop(t + 1.2);
 }
 
 // фанфары — тренировка завершена
@@ -1487,7 +1538,9 @@ function announceExercise(step, onDone){
     if(step.perSide) text += ', на каждую сторону';
   } else if(step.seconds){
     text += `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
-    if(step.perSide) text += ', на каждую сторону';
+    if(step.perSide){
+      text += step.side ? `, сторона ${step.side} из ${step.sidesTotal || 2}` : ', на каждую сторону';
+    }
   }
   speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
 }
@@ -2136,17 +2189,23 @@ function customToProgram(p, planIdx = 0){
   const plans = normPlans(p);
   const plan = plans[planIdx] || plans[0];
 
-  const mkWork = (ex, setNo, setsTotal)=>{
+  const mkWork = (ex, setNo, setsTotal, side)=>{
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
       video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
       perSide: !!ex.perSide
     };
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
+    if(side){ step.side = side; step.sidesTotal = 2; }
     if(ex.type === 'time'){ step.kind = 'timer'; step.seconds = parseValue(ex.value).min; }
     else { step.kind = 'click'; step.reps = normValue(ex.value, 'reps'); step.repsNote = 'повторений'; }
     return step;
   };
+  // короткая пауза на смену стороны между половинами упражнения
+  const mkSideSwitch = ()=> ({
+    kind:'timer', phase:'rest', title:'Смените сторону', seconds: Math.max(3, sideSec),
+    instruction:'Поменяй сторону и займи исходное положение.', illo:'rest', sideSwitch:true
+  });
   const mkRest = sec => ({kind:'timer', phase:'rest', title:'Отдых', seconds:sec, instruction:'Восстанови дыхание.', illo:'rest'});
 
   const list = plan.exercises || [];
@@ -2156,9 +2215,15 @@ function customToProgram(p, planIdx = 0){
   // разминка выполняется один раз, до кругов
   const warmup = [];
   warmEx.forEach((ex, i)=>{
-    const w = mkWork(ex, 1, 1);
-    w.isWarmup = true;
-    warmup.push(w);
+    if(ex.type === 'time' && ex.perSide){
+      const a = mkWork(ex, 1, 1, 1), b = mkWork(ex, 1, 1, 2);
+      a.isWarmup = b.isWarmup = true;
+      warmup.push(a, mkSideSwitch(), b);
+    } else {
+      const w = mkWork(ex, 1, 1);
+      w.isWarmup = true;
+      warmup.push(w);
+    }
     if(+ex.rest > 0) warmup.push(mkRest(+ex.rest));
   });
 
@@ -2167,8 +2232,16 @@ function customToProgram(p, planIdx = 0){
   mainEx.forEach((ex, i)=>{
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const isLastEx = i === mainEx.length - 1;
+    const twoSides = ex.type === 'time' && ex.perSide; // на время и на каждую сторону
     for(let s = 1; s <= sets; s++){
-      cycle.push(mkWork(ex, s, sets));
+      if(twoSides){
+        // каждая сторона отрабатывается полностью, между ними — пауза на смену
+        cycle.push(mkWork(ex, s, sets, 1));
+        cycle.push(mkSideSwitch());
+        cycle.push(mkWork(ex, s, sets, 2));
+      } else {
+        cycle.push(mkWork(ex, s, sets));
+      }
       const isLastSet = s === sets;
       // после самого последнего подхода последнего упражнения личный отдых не ставим —
       // там сработает отдых между кругами
@@ -2212,8 +2285,10 @@ function openUserEdit(id = null){
   // звук: значения профиля (или дефолты)
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
+  if(uDraft.sideSec == null) uDraft.sideSec = 10;
   $('uePrepSec').value = uDraft.prepSec;
   $('ueReadySec').value = uDraft.readySec;
+  $('ueSideSec').value = uDraft.sideSec;
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
@@ -2243,6 +2318,7 @@ async function saveUser(){
   uDraft.birth = $('ueBirth').value || '';
   uDraft.prepSec = Math.max(0, Math.min(30, isFinite(parseInt($('uePrepSec').value)) ? parseInt($('uePrepSec').value) : 5));
   uDraft.readySec = Math.max(0, Math.min(30, isFinite(parseInt($('ueReadySec').value)) ? parseInt($('ueReadySec').value) : 5));
+  uDraft.sideSec = Math.max(3, Math.min(60, isFinite(parseInt($('ueSideSec').value)) ? parseInt($('ueSideSec').value) : 10));
   uDraft.voiceURI = $('ueVoiceSel').value || '';
   uDraft.voiceVol = $('ueVoiceOn').classList.contains('on') ? 100 : 0;
   uDraft.fxVol = isFinite(parseInt($('ueFxVol').value)) ? parseInt($('ueFxVol').value) : 100;
@@ -4133,7 +4209,7 @@ function renderStep(){
           // упражнение на время: даём подготовиться под убывающую полосу, затем гонг и отсчёт
           runReadyBar(readySec, ()=>{
             if(state.stepToken !== myToken) return;
-            gong();
+            exerciseGong(); // упражнение началось — самый заметный сигнал
             setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 300);
           });
         } else {
@@ -4142,6 +4218,10 @@ function renderStep(){
         }
       });
     }, 500); // после удара гонга
+  } else if(step.sideSwitch){
+    // пауза на смену стороны — коротко проговариваем
+    beep(880, .12);
+    setTimeout(()=>{ if(state.stepToken === myToken) speak('Смените сторону'); }, 260);
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
     if(step.roundRest) roundDone(step.seconds, nxt && nxt.title);
@@ -4175,6 +4255,7 @@ function renderStep(){
     $('stepReps').style.display='block';
     const note = (step.repsNote || '') + (step.perSide ? ' на каждую сторону' : '');
     $('stepReps').innerHTML = `${valueText(step.reps)} <small>${note.trim()}</small>`;
+    $('sideNote').style.display = 'none';
     $('countdown').style.display='none';
     $('btnDone').style.display='block';
     $('btnSkip').style.display='none';
@@ -4183,6 +4264,13 @@ function renderStep(){
     $('btnDone').style.display='none';
     $('btnSkip').style.display='block';
     $('btnSkip').textContent = step.phase==='rest' ? 'Пропустить отдых' : 'Завершить досрочно';
+    // подпись для упражнений «на каждую сторону» — как у повторений
+    const sn = $('sideNote');
+    if(step.phase === 'work' && step.perSide){
+      sn.innerHTML = 'на каждую сторону' + (step.side ? ` · <b>сторона ${step.side} из ${step.sidesTotal || 2}</b>` : '');
+      sn.style.display = 'block';
+    } else sn.style.display = 'none';
+
     const cd = $('countdown');
     cd.style.display='block';
     state.remaining = step.seconds;
@@ -4253,9 +4341,14 @@ function renderNextUp(step){
   } else {
     media = DUMBBELL_ICON;
   }
-  const val = nxt.kind === 'click'
-    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${nxt.perSide ? ' на сторону' : ''}`.trim()
-    : `${nxt.seconds} сек`;
+  let val = nxt.kind === 'click'
+    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${nxt.perSide ? ' на каждую сторону' : ''}`.trim()
+    : `${nxt.seconds} сек${nxt.perSide ? ' на каждую сторону' : ''}`;
+  // подход и сторона — чтобы было видно, что именно предстоит
+  const meta = [];
+  if(nxt.setsTotal > 1) meta.push(`Подход ${nxt.setNo} из ${nxt.setsTotal}`);
+  if(nxt.side) meta.push(`сторона ${nxt.side} из ${nxt.sidesTotal || 2}`);
+  if(meta.length) val += ` · ${meta.join(' · ')}`;
 
   nu.innerHTML =
     `<div class="nu-label">Дальше</div>` +
@@ -4265,8 +4358,24 @@ function renderNextUp(step){
       (nxt.instruction ? `<p>${esc(nxt.instruction)}</p>` : '') +
       `<div class="nu-val">${val}</div></div>` +
     `</div>`;
-  nu.style.display = 'block';
+  nu.style.display = 'flex'; // блок показывается только на отдыхе, растягивается колонкой
+  // описание занимает всю доступную высоту, лишнее — под многоточие
+  requestAnimationFrame(fitNextUpDesc);
 }
+
+// подбирает -webkit-line-clamp так, чтобы текст заполнил выделенное место и обрезался многоточием
+function fitNextUpDesc(){
+  const nu = $('nextUp');
+  if(!nu || nu.style.display === 'none') return;
+  const p = nu.querySelector('.nu-body p');
+  if(!p) return;
+  p.style.webkitLineClamp = '999';           // снимаем ограничение, чтобы измерить выделенную высоту
+  const lh = parseFloat(getComputedStyle(p).lineHeight) || 17;
+  const avail = p.clientHeight;              // флекс уже растянул абзац на доступное место
+  const lines = Math.max(2, Math.floor(avail / lh));
+  p.style.webkitLineClamp = String(lines);
+}
+window.addEventListener('resize', ()=>{ if(document.body.classList.contains('phase-rest')) fitNextUpDesc(); });
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){ try{ speechSynthesis.cancel(); }catch(e){} }
@@ -4937,6 +5046,7 @@ function applyAudioFromUser(u){
   if(!u) return;
   prepSec = (u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec));
   readySec = (u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec));
+  sideSec = (u.sideSec == null) ? 10 : Math.max(3, Math.min(60, u.sideSec));
   savedVoiceURI = u.voiceURI || '';
   voiceVol = clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1);
   fxVol = clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1);
