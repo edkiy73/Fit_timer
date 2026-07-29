@@ -612,6 +612,8 @@
   }
   #hfModal .choice.act{border-color:var(--work)}
   #hfModal .choice.act b{color:var(--work)}
+  .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
+  .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
   .sched-block{display:flex;flex-direction:column}
   .sched-mode{order:1;margin-bottom:14px}
   .st-note{font-family:'Rubik';font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
@@ -1264,7 +1266,11 @@
         <span class="mini-label">Импорт программы</span>
         <div class="field"><textarea id="importCode" style="min-height:110px" placeholder="Вставь код (FIT1…) или ссылку, которой поделились"></textarea></div>
         <button class="btn-primary" id="btnDoImport" style="padding:15px">Импортировать</button>
-        <button class="link-btn" id="importCancel" style="margin:0;padding:10px">Отмена</button>
+        <div class="imp-or"><span>или</span></div>
+        <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
+        <p class="field-hint" style="margin-top:8px">Файл передаёт программу целиком — с обложкой и фото упражнений. Ссылка и код легче, но без картинок.</p>
+        <input type="file" id="importProgFile" accept="application/json,.json" style="display:none">
+        <button class="link-btn" id="importCancel" style="margin:6px 0 0;padding:10px">Отмена</button>
       </div>
     </div>
 
@@ -2833,10 +2839,64 @@ async function exportProgram(p){
   try{
     await navigator.clipboard.writeText(link || code);
     appAlert(link
-      ? 'Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nФото в ссылку не входят, svg-пиктограммы — входят.'
-      : 'Код программы скопирован — отправь его любым мессенджером.\n\nФото в код не входят, svg-пиктограммы — входят.');
+      ? 'Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nОбложка и фото упражнений в ссылку не помещаются (только пиктограммы). Чтобы передать всё целиком — «Сохранить в файл».'
+      : 'Код программы скопирован — отправь его любым мессенджером.\n\nОбложка и фото упражнений в код не помещаются (только пиктограммы). Чтобы передать всё целиком — «Сохранить в файл».');
   }catch(e){
     appAlert('Не удалось скопировать автоматически. Выдели и скопируй вручную:', {code: link || code});
+  }
+}
+
+// Экспорт программы файлом — со всем содержимым: обложка, фото упражнений, svg
+async function exportProgramFile(p){
+  const copy = JSON.parse(JSON.stringify(p));
+  delete copy.stats;      // чужая статистика получателю не нужна
+  delete copy.rotIdx;     // позиция в очереди — личная
+  delete copy.progLast;
+  copy.plans = normPlans(copy);
+  delete copy.exercises; delete copy.rounds; delete copy.roundRest;
+  const payload = {app: 'fittimer', type: 'program', v: 1, program: copy};
+  const json = JSON.stringify(payload);
+  const safeName = (p.name || 'program').replace(/[^\wа-яёА-ЯЁ\- ]+/g, '').trim().slice(0, 40) || 'program';
+  const fname = `fittimer-${safeName}.json`;
+  const blob = new Blob([json], {type: 'application/json'});
+  const file = new File([blob], fname, {type: 'application/json'});
+
+  const sizeKb = Math.round(json.length / 1024);
+  if(navigator.canShare && navigator.canShare({files: [file]})){
+    try{
+      await navigator.share({files: [file], title: `Программа «${p.name}»`});
+      return;
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 5000);
+  appAlert(`Файл программы сохранён в загрузки (${sizeKb} КБ).\n\nВ нём есть всё: обложка, фото упражнений и пиктограммы. Получатель откроет его через «Создать → Загрузить файл».`);
+}
+
+// Импорт программы из файла
+async function importProgramFile(file){
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    // поддерживаем и файл программы, и голый объект программы
+    const prog = (data && data.type === 'program' && data.program) ? data.program : data;
+    if(!prog || !prog.name || !Array.isArray(prog.plans)){
+      appAlert('Это не похоже на файл программы Fit Timer.');
+      return;
+    }
+    prog.id = 'p' + Date.now();
+    prog.stats = {completions: 0};
+    delete prog.rotIdx; delete prog.progLast;
+    prog.plans = normPlans(prog);
+    customPrograms.push(prog);
+    await savePrograms();
+    renderMine();
+    appAlert(`Программа «${prog.name}» добавлена.`);
+  }catch(e){
+    appAlert('Не удалось прочитать файл: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
   }
 }
 
@@ -2914,8 +2974,12 @@ function renderMine(){
     bEdit.innerHTML = icon('pencil') + 'Изменить';
     bEdit.onclick = ()=>{ closeAllMenus(); openBuilder(p.id); };
     const bShare = document.createElement('button');
-    bShare.innerHTML = icon('share') + 'Поделиться';
+    bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
+    const bFile = document.createElement('button');
+    bFile.innerHTML = icon('download') + 'Сохранить в файл';
+    bFile.title = 'Со всеми картинками';
+    bFile.onclick = ()=>{ closeAllMenus(); exportProgramFile(p); };
     const bDel = document.createElement('button');
     bDel.className = 'danger';
     bDel.innerHTML = icon('trash') + 'Удалить';
@@ -2926,7 +2990,7 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bShare, bDel);
+    menu.append(bEdit, bShare, bFile, bDel);
     more.onclick = e=>{
       e.stopPropagation();
       const wasOpen = menu.classList.contains('open');
@@ -5021,6 +5085,15 @@ $('pmCopy').onclick = async ()=>{
     $('pmHint').textContent = 'Выдели адрес и скопируй вручную';
   }
   setTimeout(()=>{ $('pmHint').textContent = 'Нажми, чтобы скопировать адрес'; $('pmHint').style.color = ''; }, 2500);
+};
+
+$('btnImportProgFile').onclick = ()=> $('importProgFile').click();
+$('importProgFile').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!f) return;
+  $('importModal').classList.remove('open');
+  await importProgramFile(f);
 };
 
 $('btnExportAll').textContent = 'Сохранить в файл';
