@@ -834,6 +834,7 @@
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
     </div>
+    <p class="field-hint" id="bVolHint" style="margin-top:-6px"></p>
     <div class="field"><label>Время этого варианта (необязательно)</label><input type="time" id="bPlanTime">
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
@@ -868,7 +869,7 @@
       <textarea id="qNote" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
     </div>
     <div class="field"><label>Тип тренировки</label><div class="days chips-wrap" id="qStyle"></div>
-      <p class="field-hint">Круговая — список повторяется кругами. Силовая — у каждого упражнения свои подходы (3×12).</p>
+      <p class="field-hint">Разница в порядке. <b>Круговая</b>: прошла весь список и вернулась к началу — A, B, C → A, B, C. <b>Силовая</b>: доделала все подходы одного упражнения и перешла к следующему — A, A, A → B, B, B. <b>Смешанная</b>: и то и другое — блок из подходов повторяется кругами.</p>
     </div>
     <div class="field"><label>Разминка</label><div class="days chips-wrap" id="qWarm"></div>
       <p class="field-hint">Разминка выполняется один раз в начале, вне кругов.</p>
@@ -3024,6 +3025,7 @@ $('bRotate').onclick = ()=>{
   $('bRotate').classList.toggle('on', draft.rotate);
   syncRotateUI();
 };
+$('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
 $('bProgOn').onclick = ()=>{
   const on = !$('bProgOn').classList.contains('on');
   $('bProgOn').classList.toggle('on', on);
@@ -3099,6 +3101,7 @@ function fillPlanFields(){
   const pl = curPlan();
   $('bRoundRest').value = pl.roundRest;
   $('bPlanTime').value = pl.time || '';
+  setTimeout(syncVolHint, 0);
   const sel = $('bRounds'); sel.innerHTML='';
   for(let i=1;i<=10;i++){
     const o = document.createElement('option');
@@ -3128,6 +3131,28 @@ function syncCover(){
 }
 
 // дни недели текущего варианта — множественный выбор
+// объясняет, как круги и подходы складываются в реальный объём
+function syncVolHint(){
+  const el = $('bVolHint');
+  if(!el) return;
+  const pl = curPlan();
+  const main = (pl.exercises || []).filter(e => !e.warmup);
+  const R = pl.rounds || 1;
+  if(!main.length){ el.textContent = 'Круги повторяют весь список целиком. Подходы у упражнения — повторы подряд, до перехода к следующему.'; return; }
+  const sets = main.map(e => Math.max(1, parseInt(e.sets) || 1));
+  const maxSet = Math.max(...sets), anySets = maxSet > 1;
+  if(R > 1 && !anySets){
+    el.textContent = `Круговая: список из ${main.length} ${plural(main.length,'упражнения','упражнений','упражнений')} пройдёшь ${R} ${plural(R,'раз','раза','раз')} подряд.`;
+  } else if(R === 1 && anySets){
+    const tot = sets.reduce((a,b)=>a+b,0);
+    el.textContent = `Силовая: подходы каждого упражнения идут подряд, всего ${tot} ${plural(tot,'подход','подхода','подходов')}.`;
+  } else if(R > 1 && anySets){
+    el.textContent = `Смешанная: блок с подходами повторится ${R} ${plural(R,'раз','раза','раз')} — упражнение с ${maxSet} ${plural(maxSet,'подходом','подходами','подходами')} выполнится ${R * maxSet} раз. Проверь, не много ли это.`;
+  } else {
+    el.textContent = `Один проход по списку. Увеличь круги для круговой или подходы у упражнений для силовой.`;
+  }
+}
+
 function renderDays(){
   const box = $('bDays'); box.innerHTML='';
   const rotOn = !!draft.rotate && (draft.plans || []).length > 1;
@@ -3150,6 +3175,7 @@ function renderDays(){
 function renderExList(){
   const box = $('bExList'); box.innerHTML='';
   curPlan().exercises.forEach((ex,i)=> box.appendChild(exCard(ex,i)));
+  syncVolHint();
   const exList = curPlan().exercises;
   const nWarm = exList.filter(e => e.warmup).length;
   const nMain = exList.length - nWarm;
@@ -3175,7 +3201,7 @@ function exCard(ex, i){
     </div>
     <div class="row2">
       <div class="field"><label data-l="value"></label><input type="text" data-f="value" inputmode="numeric" placeholder="12 или 12-15"></div>
-      <div class="field"><label>Подходов</label><input type="number" data-f="sets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
+      <div class="field"><label>Подходов подряд</label><input type="number" data-f="sets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
     </div>
     <div class="pref-row" style="padding:2px 0 10px" data-r="side"><span>На каждую сторону<small>выпады, планка на боку и т.п.</small></span><button type="button" class="switch" data-a="side"></button></div>
     <div class="field"><label>Отдых после подхода, сек</label><input type="number" data-f="rest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха"></div>
@@ -3246,7 +3272,7 @@ function exCard(ex, i){
   q('[data-f=video]').oninput = e => ex.video = e.target.value;
   q('[data-f=mistakes]').oninput = e => ex.mistakes = e.target.value;
   q('[data-f=value]').oninput = e => ex.value = e.target.value;
-  q('[data-f=sets]').oninput  = e => ex.sets  = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
+  q('[data-f=sets]').oninput  = e => { ex.sets = Math.max(1, Math.min(10, parseInt(e.target.value) || 1)); syncVolHint(); };
   q('[data-f=rest]').oninput  = e => ex.rest  = e.target.value;
   q('[data-a=warm]').onclick = ()=>{
     const list = curPlan().exercises;
@@ -3321,7 +3347,12 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 Каждый вариант начинается со строки "ДЕНЬ:" и содержит:
 
 ДЕНЬ: дни недели этого варианта через запятую (из списка: Пн, Вт, Ср, Чт, Пт, Сб, Вс). При ЧЕРЕДОВАНИЕ: да оставь значение пустым — просто строка «ДЕНЬ:» открывает новый вариант.
-КРУГИ: число от 1 до 10. Для силовой тренировки, где у каждого упражнения свои подходы, ставь КРУГИ: 1 — объём задаётся полем ПОДХОДЫ у упражнений. Круги больше 1 нужны для круговых тренировок, где весь список повторяется целиком.
+КРУГИ: число от 1 до 10 — сколько раз повторяется ВЕСЬ список упражнений подряд (A, B, C → A, B, C).
+ВАЖНО: КРУГИ и ПОДХОДЫ — две независимые настройки, они задают разный ПОРЯДОК выполнения:
+  · круговая тренировка → КРУГИ 2–5, ПОДХОДЫ 1 (прошёл весь список, вернулся к началу);
+  · силовая тренировка → КРУГИ 1, ПОДХОДЫ 3–4 (все подходы одного упражнения подряд, потом следующее);
+  · смешанная → КРУГИ 2–3 и ПОДХОДЫ 2–3 вместе (блок с подходами повторяется кругами).
+Общий объём каждого упражнения = КРУГИ × ПОДХОДЫ, следи, чтобы он был разумным.
 ОТДЫХ МЕЖДУ КРУГАМИ: секунды (0–600)
 ВРЕМЯ ВАРИАНТА: ЧЧ:ММ — если у этого варианта своё время тренировки (или пропусти строку)
 
@@ -3333,7 +3364,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
 ФОРМАТ: повторения — ИЛИ — время
 ЗНАЧЕНИЕ: для повторений — число (12) или диапазон через дефис (12-15). Для времени — число секунд.
-ПОДХОДЫ: сколько подходов этого упражнения подряд, число от 1 до 10. Для силовых упражнений обычно 3–4, для круговых тренировок ставь 1.
+ПОДХОДЫ: сколько раз это упражнение выполняется ПОДРЯД, прежде чем перейти к следующему, число от 1 до 10. Для силовых обычно 3–4, для круговых ставь 1.
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, планка на боку, тяга одной рукой). Иначе пропусти строку.
 РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
@@ -3535,7 +3566,7 @@ const Q_OPTS = {
   focus: ['Шея', 'Плечи', 'Руки', 'Грудь', 'Спина', 'Пресс', 'Талия', 'Ягодицы', 'Бёдра', 'Икры', 'Ноги целиком'],
   equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
   limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность'],
-  style: ['Круговая', 'Силовая (подходы)'],
+  style: ['Круговая', 'Силовая', 'Смешанная'],
   warm: ['С разминкой', 'Без разминки']
 };
 // пусто = «на усмотрение ИИ». Предзаполнены только уровень и ограничения.
@@ -3626,11 +3657,13 @@ function composeRequest(){
 
   // формат тренировки
   if(q.style === 'Круговая'){
-    parts.push('Формат: круговая тренировка — весь список упражнений повторяется целиком несколько раз. Поставь КРУГИ больше 1, а ПОДХОДЫ у упражнений оставь 1.');
-  } else if(q.style === 'Силовая (подходы)'){
-    parts.push('Формат: силовая тренировка — у каждого упражнения свои подходы. Поставь КРУГИ: 1, объём задай полем ПОДХОДЫ (обычно 3–4) и диапазоном повторений в ЗНАЧЕНИИ, например 10-12.');
+    parts.push('Формат: круговая тренировка — весь список упражнений проходится подряд и повторяется целиком. Поставь КРУГИ 2–5, а ПОДХОДЫ у упражнений оставь 1.');
+  } else if(q.style === 'Силовая'){
+    parts.push('Формат: силовая тренировка — все подходы одного упражнения выполняются подряд, потом переход к следующему. Поставь КРУГИ: 1, объём задай полем ПОДХОДЫ (обычно 3–4) и диапазоном повторений в ЗНАЧЕНИИ, например 10-12.');
+  } else if(q.style === 'Смешанная'){
+    parts.push('Формат: смешанная тренировка — блок упражнений с подходами повторяется кругами. Поставь КРУГИ 2–3 и ПОДХОДЫ 2–3 одновременно, но следи за общим объёмом: каждое упражнение выполнится КРУГИ × ПОДХОДЫ раз.');
   } else {
-    free.push('формат — круговая или силовая с подходами (выбери, что лучше подходит цели)');
+    free.push('формат — круговая (список повторяется кругами), силовая (подходы подряд у каждого упражнения) или смешанная');
   }
 
   // разминка
