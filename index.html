@@ -920,6 +920,40 @@
   </section>
 
   <!-- Создание из текста -->
+  <!-- Доработка программы через ИИ -->
+  <section class="screen builder" id="scrEditAI">
+    <div class="screen-head"><button class="back-chip" id="eaBackTop"></button><h2>Изменить через ИИ</h2></div>
+
+    <div class="nav-row" style="cursor:default">
+      <div class="nr-body">
+        <b id="eaProgName">Программа</b>
+        <small id="eaProgSum"></small>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:4px">1 · Что изменить?</div>
+    <div class="field">
+      <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
+      <p class="field-hint">ИИ получит текущую программу целиком и внесёт правки, остальное оставит как есть.</p>
+    </div>
+
+    <button class="btn-primary" id="eaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    <div class="ai-links">
+      <button type="button" id="eaGPT">Открыть ChatGPT</button>
+      <button type="button" id="eaClaude">Открыть Claude</button>
+      <button type="button" id="eaCopy">Скопировать</button>
+    </div>
+
+    <div class="section-title">2 · Вставь ответ ИИ</div>
+    <div class="field">
+      <textarea id="eaResult" style="min-height:180px" placeholder="Вставь сюда весь ответ нейросети"></textarea>
+    </div>
+    <p class="field-hint">Старая программа останется на месте — создастся её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся автоматически.</p>
+    <div class="builder-actions">
+      <button class="btn-primary" id="eaCreate">Создать изменённую программу</button>
+    </div>
+  </section>
+
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
     <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
@@ -1839,7 +1873,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -3163,6 +3197,132 @@ async function importProgramFile(file){
   }
 }
 
+/* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
+let editAIProg = null; // программа-исходник
+
+// программа → текст того же формата, который понимает парсер
+// картинки и svg НЕ включаем: они длинные, а перенесём их сами по названиям
+function programToText(p){
+  const L = [];
+  L.push('ПРОГРАММА: ' + (p.name || ''));
+  if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
+  if(p.time) L.push('ВРЕМЯ: ' + p.time);
+  if(p.progression){
+    const per = p.progression === 7 ? 'неделя' : (p.progression === 14 ? 'две недели' : 'месяц');
+    L.push(`ПРОГРЕССИЯ: ${per}, +${p.progStep || 30}%`);
+  }
+  const plans = normPlans(p);
+  if(p.rotate && plans.length > 1){
+    L.push('ЧЕРЕДОВАНИЕ: да');
+    if((p.days || []).length) L.push('ДНИ ТРЕНИРОВОК: ' + p.days.join(', '));
+  }
+  plans.forEach(pl => {
+    L.push('');
+    L.push('ДЕНЬ: ' + ((!p.rotate && pl.days && pl.days.length) ? pl.days.join(', ') : ''));
+    L.push('КРУГИ: ' + (pl.rounds || 1));
+    L.push('ОТДЫХ МЕЖДУ КРУГАМИ: ' + (pl.roundRest || 0));
+    if(pl.time) L.push('ВРЕМЯ ВАРИАНТА: ' + pl.time);
+    (pl.exercises || []).forEach(ex => {
+      L.push('');
+      L.push('УПРАЖНЕНИЕ: ' + (ex.name || ''));
+      if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
+      const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
+      if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
+      if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
+      L.push('ФОРМАТ: ' + (ex.type === 'time' ? 'время' : 'повторения'));
+      L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+      if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
+      if(ex.perSide) L.push('СТОРОНА: да');
+      if(ex.warmup) L.push('РАЗМИНКА: да');
+      L.push('ОТДЫХ: ' + (ex.rest || 0));
+      if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
+    });
+  });
+  return L.join('\n');
+}
+
+function editAIPrompt(){
+  const wish = ($('eaWish').value || '').trim();
+  return AI_PROMPT +
+    '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
+    'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
+    'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
+    'Строку SVG можно не писать для упражнений, которые остались с прежними названиями — их картинки сохранятся сами. ' +
+    'Для новых или переименованных упражнений SVG рисуй как обычно.\n\n' +
+    'ЗАПРОС ПОЛЬЗОВАТЕЛЯ: ' + (wish || '(не указан — просто улучши программу на своё усмотрение)') + '\n\n' +
+    '=== ТЕКУЩАЯ ПРОГРАММА ===\n' + programToText(editAIProg);
+}
+
+function openEditAI(p){
+  editAIProg = p;
+  $('eaProgName').textContent = p.name || 'Программа';
+  const plans = normPlans(p);
+  const exN = plans.reduce((n, pl) => n + pl.exercises.length, 0);
+  $('eaProgSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} упражнений`;
+  $('eaWish').value = '';
+  $('eaResult').value = '';
+  autoGrow($('eaWish'));
+  show('scrEditAI');
+  window.scrollTo(0, 0);
+}
+
+// подбирает свободное имя: «Ягодицы v2», «Ягодицы v3»…
+function versionedName(base){
+  const clean = String(base || 'Программа').replace(/\s+v\d+$/i, '').trim();
+  const taken = new Set(customPrograms.map(x => (x.name || '').trim().toLowerCase()));
+  if(!taken.has(clean.toLowerCase())) return clean;
+  for(let v = 2; v < 100; v++){
+    const cand = `${clean} v${v}`;
+    if(!taken.has(cand.toLowerCase())) return cand;
+  }
+  return clean + ' v' + Date.now();
+}
+
+// переносит картинки и обложку из исходной программы по совпадению названий
+function carryMedia(oldProg, newProg){
+  const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  const byName = new Map();
+  normPlans(oldProg).forEach(pl => (pl.exercises || []).forEach(ex => {
+    if(ex.media && !byName.has(norm(ex.name))) byName.set(norm(ex.name), ex.media);
+  }));
+  let carried = 0;
+  normPlans(newProg).forEach(pl => (pl.exercises || []).forEach(ex => {
+    if(!ex.media){
+      const m = byName.get(norm(ex.name));
+      if(m){ ex.media = JSON.parse(JSON.stringify(m)); carried++; }
+    }
+  }));
+  if(!newProg.cover && oldProg.cover) newProg.cover = oldProg.cover;
+  return carried;
+}
+
+async function createEditedProgram(){
+  const raw = ($('eaResult').value || '').trim();
+  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  const {program, errors} = parseProgramText(raw);
+  if(errors.length){
+    appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
+    return;
+  }
+  program.id = 'p' + Date.now();
+  program.stats = {completions: 0};
+  delete program.rotIdx; delete program.progLast;
+  // имя: если не изменилось — добавляем версию
+  program.name = versionedName(program.name || editAIProg.name);
+  const carried = carryMedia(editAIProg, program);
+  // настройки, которые ИИ мог не вернуть, берём из исходника
+  if(!program.time && editAIProg.time) program.time = editAIProg.time;
+  if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
+
+  customPrograms.push(program);
+  await savePrograms();
+  renderMine();
+  $('eaResult').value = '';
+  show('scrMenu');
+  appAlert(`Готово: создана «${program.name}».\n\nИсходная программа осталась без изменений.` +
+    (carried ? `\nПеренесено картинок: ${carried}.` : ''));
+}
+
 function importProgramCode(code){
   code = (code || '').trim();
   // принимаем и полную ссылку вида ...?import=FIT1...
@@ -3239,6 +3399,9 @@ function renderMine(){
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
+    const bAI = document.createElement('button');
+    bAI.innerHTML = icon('sparkle') + 'Изменить через ИИ';
+    bAI.onclick = ()=>{ closeAllMenus(); openEditAI(p); };
     const bFile = document.createElement('button');
     bFile.innerHTML = icon('download') + 'Сохранить в файл';
     bFile.title = 'Со всеми картинками';
@@ -3253,7 +3416,7 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bShare, bFile, bDel);
+    menu.append(bEdit, bAI, bShare, bFile, bDel);
     more.onclick = e=>{
       e.stopPropagation();
       const wasOpen = menu.classList.contains('open');
@@ -5660,6 +5823,29 @@ $('btnAgain').onclick = async ()=>{
   document.body.classList.remove('phase-rest');
   show('scrMenu');
 };
+/* ---- доработка через ИИ ---- */
+$('eaBackTop').onclick = ()=> show('scrMenu');
+$('eaCreate').onclick = createEditedProgram;
+$('eaSend').onclick = async ()=>{
+  const text = editAIPrompt();
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  copyEditPrompt();
+};
+$('eaCopy').onclick = ()=> copyEditPrompt();
+async function copyEditPrompt(){
+  const btn = $('eaCopy');
+  try{
+    await navigator.clipboard.writeText(editAIPrompt());
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+}
+$('eaGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(editAIPrompt()), '_blank');
+$('eaClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(editAIPrompt()), '_blank');
+
 $('btnCopyPrompt').onclick = copyPrompt;
 $('btnSendAI').onclick = sendToAI;
 $('aiGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
@@ -5831,6 +6017,7 @@ $('statsBackTop').innerHTML = icon('chevL');
 $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
+$('eaBackTop').innerHTML = icon('chevL');
 $('startPrefsChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
