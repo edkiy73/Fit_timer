@@ -218,6 +218,7 @@
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .media-preview{margin-top:10px}
   .mp-empty{font-size:12.5px;color:var(--muted)}
+  textarea.auto-grow{overflow:hidden;resize:none;min-height:90px}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .builder-actions{margin-top:10px;padding-bottom:8px}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
@@ -678,6 +679,9 @@
   .ex-info b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ex-info small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ex-info .wm{color:var(--work)}
+  .ex-row .ex-more{position:static;flex:none;width:32px;height:38px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
+  .ex-row .ex-more svg{width:17px;height:17px}
+  .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
   .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
@@ -994,24 +998,27 @@
     </button>
 
     <div id="exDetailsBox" style="display:none">
-      <div class="field"><label>Как выполнять</label><textarea id="exDesc" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
-      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" placeholder="Чего избегать при выполнении"></textarea></div>
+      <div class="field"><label>Как выполнять</label><textarea id="exDesc" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
+      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
       <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" placeholder="https://youtube.com/..."></div>
       <div class="field"><label>Картинка или пиктограмма</label>
         <div class="media-row">
           <button type="button" id="exMediaBtn">Фото</button>
-          <button type="button" id="exMediaNone">Без картинки</button>
+          <button type="button" id="exMediaSvg">Пиктограмма</button>
+          <button type="button" id="exMediaNone">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" style="display:none">
+        <div id="exSvgBox" style="display:none;margin-top:10px">
+          <textarea id="exSvgCode" class="auto-grow" placeholder="Вставь код пиктограммы: <svg viewBox=&quot;0 0 240 120&quot;>…</svg>"></textarea>
+          <p class="field-hint">Пиктограммы обычно приходят вместе с программой из ИИ. Здесь можно вставить или поправить код вручную — рисуй светлыми линиями, фон тёмный.</p>
+        </div>
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
 
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveEx">Готово</button>
-      <button type="button" class="link-btn" id="btnDupEx" style="padding:10px">Дублировать упражнение</button>
-      <button type="button" class="link-btn" id="btnDelEx" style="padding:10px;color:var(--work)">Удалить упражнение</button>
     </div>
   </section>
 
@@ -3607,6 +3614,8 @@ function fillExercise(){
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
+  $('exSvgBox').style.display = 'none';
+  $('exSvgCode').value = (ex.media && ex.media.kind === 'svg') ? ex.media.data : '';
   // детали по умолчанию свёрнуты
   $('exDetailsBox').style.display = 'none';
   $('exDetailsToggle').classList.remove('open');
@@ -3720,11 +3729,6 @@ function exRow(ex, i){
   row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
   row.dataset.idx = String(i);
 
-  const grip = document.createElement('div');
-  grip.className = 'ex-grip';
-  grip.innerHTML = icon('grip');
-  grip.title = 'Перетащить';
-
   const thumb = document.createElement('div');
   thumb.className = 'ex-thumb';
   thumb.innerHTML = exThumb(ex);
@@ -3735,9 +3739,57 @@ function exRow(ex, i){
   info.innerHTML = `<b></b><small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
   info.querySelector('b').textContent = nameTxt;
 
-  row.append(grip, thumb, info);
-  // тап по строке (кроме ручки) открывает редактор
-  row.onclick = e => { if(e.target.closest('.ex-grip')) return; openExercise(i); };
+  // контекстное меню ⋮ — дублировать / удалить
+  const more = document.createElement('button');
+  more.className = 'more-btn ex-more';
+  more.innerHTML = icon('more');
+  more.title = 'Действия';
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu ex-menu';
+
+  const bDup = document.createElement('button');
+  bDup.innerHTML = icon('plus') + 'Дублировать';
+  bDup.onclick = e => {
+    e.stopPropagation(); closeAllMenus();
+    const list = curPlan().exercises;
+    const nWarm = list.filter(x => x.warmup).length;
+    const nMain = list.length - nWarm;
+    if(ex.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){
+      appAlert('Достигнут предел упражнений в этой части.');
+      return;
+    }
+    list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
+    renderExList();
+  };
+  const bDel = document.createElement('button');
+  bDel.className = 'danger';
+  bDel.innerHTML = icon('trash') + 'Удалить';
+  bDel.onclick = async e => {
+    e.stopPropagation(); closeAllMenus();
+    if(!(await appConfirm(`Удалить «${nameTxt}»?`))) return;
+    curPlan().exercises.splice(i, 1);
+    renderExList();
+  };
+  menu.append(bDup, bDel);
+  more.onclick = e => {
+    e.stopPropagation();
+    const wasOpen = menu.classList.contains('open');
+    closeAllMenus();
+    menu.classList.toggle('open', !wasOpen);
+  };
+
+  // ручка перетаскивания — справа, как у карточек программ
+  const grip = document.createElement('div');
+  grip.className = 'ex-grip';
+  grip.innerHTML = icon('grip');
+  grip.title = 'Перетащить';
+
+  row.append(thumb, info, more, grip, menu);
+  // тап по строке (кроме ручки и меню) открывает редактор
+  row.onclick = e => {
+    if(e.target.closest('.ex-grip') || e.target.closest('.more-btn') || e.target.closest('.ctx-menu')) return;
+    openExercise(i);
+  };
 
   enableDrag(row, grip, '.ex-row', nodes => {
     const order = nodes.map(n => +n.dataset.idx);
@@ -4555,6 +4607,16 @@ function renderNextUp(step){
   // описание занимает всю доступную высоту, лишнее — под многоточие
   requestAnimationFrame(fitNextUpDesc);
 }
+
+// поле растёт по содержимому — не нужно скроллить внутри маленькой рамки
+function autoGrow(el){
+  if(!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + 2, 900) + 'px';
+}
+document.addEventListener('input', e => {
+  if(e.target && e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
+});
 
 // подбирает -webkit-line-clamp так, чтобы текст заполнил выделенное место и обрезался многоточием
 function fitNextUpDesc(){
@@ -5563,31 +5625,6 @@ function saveExAndBack(){
   renderExList();
   show('scrBuilder');
 }
-$('btnDupEx').onclick = ()=>{
-  if(!exDraft || exIdx < 0) return;
-  const list = curPlan().exercises;
-  const nWarm = list.filter(e => e.warmup).length;
-  const nMain = list.length - nWarm;
-  if(exDraft.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){
-    appAlert('Достигнут предел упражнений в этой части.');
-    return;
-  }
-  list[exIdx] = commitExercise();
-  const copy = JSON.parse(JSON.stringify(list[exIdx]));
-  list.splice(exIdx + 1, 0, copy);
-  exIdx = exIdx + 1;
-  exDraft = JSON.parse(JSON.stringify(copy));
-  fillExercise();
-  renderExList();
-};
-$('btnDelEx').onclick = async ()=>{
-  if(exIdx < 0) return;
-  if(!(await appConfirm('Удалить это упражнение?'))) return;
-  curPlan().exercises.splice(exIdx, 1);
-  exDraft = null; exIdx = -1;
-  renderExList();
-  show('scrBuilder');
-};
 $('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
 $('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
 $('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
@@ -5611,9 +5648,30 @@ $('exDetailsToggle').onclick = ()=>{
   const box = $('exDetailsBox'), open = box.style.display === 'none';
   box.style.display = open ? 'block' : 'none';
   $('exDetailsToggle').classList.toggle('open', open);
+  if(open){ autoGrow($('exDesc')); autoGrow($('exMistakes')); }
 };
-$('exMediaBtn').onclick = ()=> $('exMediaFile').click();
-$('exMediaNone').onclick = ()=>{ exDraft.media = null; $('exMediaFile').value = ''; renderExMedia(); syncExDetailsSum(); };
+$('exMediaBtn').onclick = ()=>{ $('exSvgBox').style.display = 'none'; $('exMediaFile').click(); };
+$('exMediaSvg').onclick = ()=>{
+  const box = $('exSvgBox'), open = box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  if(open){
+    $('exSvgCode').value = (exDraft.media && exDraft.media.kind === 'svg') ? exDraft.media.data : '';
+    autoGrow($('exSvgCode'));
+    $('exSvgCode').focus();
+  }
+};
+$('exSvgCode').oninput = e => {
+  const v = e.target.value.trim();
+  autoGrow(e.target);
+  if(!v){ exDraft.media = null; }
+  else if(/<svg[\s>]/i.test(v)){ exDraft.media = {kind: 'svg', data: v}; }
+  renderExMedia(); syncExDetailsSum();
+};
+$('exMediaNone').onclick = ()=>{
+  exDraft.media = null; $('exMediaFile').value = ''; $('exSvgCode').value = '';
+  $('exSvgBox').style.display = 'none';
+  renderExMedia(); syncExDetailsSum();
+};
 $('exMediaFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
