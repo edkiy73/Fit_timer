@@ -827,7 +827,9 @@
       <p class="field-hint">Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.</p>
     </div>
     <div class="pref-row" id="bRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A независимо от дней недели, пропуск не сбивает очередь</small></span><button class="switch" id="bRotate"></button></div>
-    <div class="field" id="bDaysField"><label>Дни этого варианта</label><div class="days" id="bDays"></div></div>
+    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+      <p class="field-hint" id="bDaysHint"></p>
+    </div>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
@@ -836,7 +838,7 @@
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
     <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:0 0 4px;padding:6px">Удалить этот вариант</button>
-    <div class="section-title" style="margin-top:8px">Упражнения (до 10)</div>
+    <div class="section-title" style="margin-top:8px">Упражнения</div>
     <div id="bExList"></div>
     <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
     <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
@@ -854,21 +856,25 @@
     <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Создание через ИИ</h2></div>
 
     <div class="section-title" style="margin-top:4px">1 · Какая тренировка нужна?</div>
+    <p class="field-hint" style="margin:-4px 0 14px">Заполняй только то, что для тебя важно. Всё, что пропустишь, ИИ подберёт сам под твою программу. Повторное нажатие снимает выбор.</p>
     <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
     <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
-    <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div>
-      <p class="field-hint">Не выберешь — ИИ предложит сам.</p>
-    </div>
+    <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
     <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
-    <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div>
-      <p class="field-hint">Что особенно хочешь прокачать (можно несколько или пропустить).</p>
-    </div>
+    <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
     <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
     <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
     <div class="field"><label>Свой запрос (необязательно)</label>
       <textarea id="qNote" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
     </div>
+    <div class="field"><label>Тип тренировки</label><div class="days chips-wrap" id="qStyle"></div>
+      <p class="field-hint">Круговая — список повторяется кругами. Силовая — у каждого упражнения свои подходы (3×12).</p>
+    </div>
+    <div class="field"><label>Разминка</label><div class="days chips-wrap" id="qWarm"></div>
+      <p class="field-hint">Разминка выполняется один раз в начале, вне кругов.</p>
+    </div>
     <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
+    <div class="pref-row" id="qRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
 
     <button class="btn-primary" id="btnSendAI" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
     <div class="ai-links">
@@ -1624,8 +1630,12 @@ function renderStartInfo(){
   const pl = plans[state.planIdx];
   const rotOn = state.raw.rotate && plans.length > 1;
   const t = pl.time || state.raw.time;
-  const whenTxt = rotOn ? 'по очереди' : ((pl.days && pl.days.length) ? pl.days.join(', ') : '');
-  const schedule = [t, whenTxt].filter(Boolean).join(' · ');
+  const daysTxt = rotOn
+    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.join(', ') : '')
+    : ((pl.days && pl.days.length) ? pl.days.join(', ') : '');
+  const parts = [t, daysTxt].filter(Boolean);
+  if(rotOn) parts.push(`вариант ${state.planIdx + 1} из ${plans.length} по очереди`);
+  const schedule = parts.join(' · ');
   $('startDesc').textContent = schedule ? `Расписание: ${schedule}` : '';
   // объём: круги для круговых, подходы для силовых
   const mainEx = (pl.exercises || []).filter(e => !e.warmup);
@@ -2031,6 +2041,9 @@ function normPlans(p){
   }];
 }
 function programDaysUnion(p){
+  // при чередовании дни задаются один раз для всей программы:
+  // они говорят КОГДА тренироваться, а какой вариант выпадет — решает очередь
+  if(p && p.rotate && Array.isArray(p.days)) return DAYS.filter(d => p.days.includes(d));
   const plans = normPlans(p);
   return DAYS.filter(d => plans.some(pl => (pl.days || []).includes(d)));
 }
@@ -2659,6 +2672,13 @@ function renderToday(){
   const scheduled = [];
   customPrograms.forEach(p => {
     const plans = normPlans(p);
+    if(p.rotate && plans.length > 1){
+      // ротация: дни общие для программы, вариант берём очередной по очереди
+      if((p.days || []).includes(today)){
+        scheduled.push({p, plan: plans[defaultPlanIdx(plans, p)], done: doneToday.has(p.id), rot: true});
+      }
+      return;
+    }
     const idx = plans.findIndex(pl => (pl.days || []).includes(today));
     if(idx >= 0) scheduled.push({p, plan: plans[idx], done: doneToday.has(p.id)});
   });
@@ -2666,11 +2686,16 @@ function renderToday(){
   const list = $('todayList');
   list.innerHTML = '';
   if(scheduled.length){
-    scheduled.forEach(({p, plan, done}) => {
+    scheduled.forEach(({p, plan, done, rot}) => {
       const row = document.createElement('div');
       row.className = 'today-row';
       const setsTotal = (plan.exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
-      const bits = [`Упражнений: ${plan.exercises.length}`];
+      const bits = [];
+      if(rot){
+        const plansR = normPlans(p);
+        bits.push(`Вариант ${plansR.indexOf(plan) + 1} из ${plansR.length}`);
+      }
+      bits.push(`Упражнений: ${plan.exercises.length}`);
       // силовая (подходы у упражнений) — показываем подходы, круговая — круги
       if(plan.rounds > 1) bits.push(`Кругов: ${plan.rounds}`);
       else if(setsTotal > plan.exercises.length) bits.push(`Подходов: ${setsTotal}`);
@@ -2774,7 +2799,7 @@ function renderMine(){
     const exTotal = plans.reduce((n, pl)=> n + pl.exercises.length, 0);
     const daysU = programDaysUnion(p);
     const schedule = p.rotate && plans.length > 1
-      ? [p.time, 'по очереди'].filter(Boolean).join(' — ')
+      ? [p.time, daysU.length ? daysU.join(' · ') : '', 'по очереди'].filter(Boolean).join(' — ')
       : [p.time, daysU.length ? daysU.join(' · ') : ''].filter(Boolean).join(' — ');
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${p.cover}" alt="">` : DUMBBELL_ICON;
@@ -2907,7 +2932,9 @@ function enableDrag(wrap, handle){
 }
 
 /* ================= КОНСТРУКТОР ================= */
-const MAX_EX = 10;
+const MAX_WARM = 20;  // разминочных упражнений на вариант
+const MAX_MAIN = 20;  // основных упражнений на вариант
+const MAX_EX = MAX_WARM + MAX_MAIN; // общий потолок списка
 let draft = null;
 
 function blankExercise(){
@@ -2982,9 +3009,15 @@ function renderProgStep(){
   });
 }
 function syncRotateUI(){
-  // при ротации дни варианта не нужны — очередь идёт по порядку тренировок
-  const on = $('bRotate').classList.contains('on') && (draft.plans || []).length > 1;
-  $('bDaysField').style.display = on ? 'none' : 'block';
+  const on = !!draft.rotate && (draft.plans || []).length > 1;
+  // дни нужны всегда — это расписание (напоминания и блок «Сегодня»).
+  // меняется только их смысл: общие для программы или привязка конкретного варианта
+  $('bDaysLabel').textContent = on ? 'Дни тренировок (для всей программы)' : 'Дни этого варианта';
+  $('bDaysHint').textContent = on
+    ? 'Когда тренироваться. Какой вариант выпадет — решает очередь: A, потом B, потом снова A.'
+    : 'В эти дни программа появится в блоке «Запланировано сегодня».';
+  $('bDaysHint').style.display = 'block';
+  renderDays();
 }
 $('bRotate').onclick = ()=>{
   draft.rotate = !$('bRotate').classList.contains('on');
@@ -3097,13 +3130,16 @@ function syncCover(){
 // дни недели текущего варианта — множественный выбор
 function renderDays(){
   const box = $('bDays'); box.innerHTML='';
-  const pl = curPlan();
+  const rotOn = !!draft.rotate && (draft.plans || []).length > 1;
+  // при ротации редактируем общие дни программы, иначе — дни текущего варианта
+  const owner = rotOn ? draft : curPlan();
+  if(!Array.isArray(owner.days)) owner.days = [];
   DAYS.forEach(d=>{
     const b = document.createElement('button');
     b.type='button'; b.className='day-chip'; b.textContent = d;
-    b.classList.toggle('act', pl.days.includes(d));
+    b.classList.toggle('act', owner.days.includes(d));
     b.onclick = ()=>{
-      pl.days = pl.days.includes(d) ? pl.days.filter(x=>x!==d) : DAYS.filter(x => pl.days.includes(x) || x===d);
+      owner.days = owner.days.includes(d) ? owner.days.filter(x=>x!==d) : DAYS.filter(x => owner.days.includes(x) || x===d);
       renderDays();
       renderPlanTabs();
     };
@@ -3114,7 +3150,10 @@ function renderDays(){
 function renderExList(){
   const box = $('bExList'); box.innerHTML='';
   curPlan().exercises.forEach((ex,i)=> box.appendChild(exCard(ex,i)));
-  $('btnAddEx').style.display = curPlan().exercises.length >= MAX_EX ? 'none' : 'block';
+  const exList = curPlan().exercises;
+  const nWarm = exList.filter(e => e.warmup).length;
+  const nMain = exList.length - nWarm;
+  $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
 }
 
 function exCard(ex, i){
@@ -3210,10 +3249,19 @@ function exCard(ex, i){
   q('[data-f=sets]').oninput  = e => ex.sets  = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
   q('[data-f=rest]').oninput  = e => ex.rest  = e.target.value;
   q('[data-a=warm]').onclick = ()=>{
+    const list = curPlan().exercises;
+    if(!ex.warmup){
+      const nWarm = list.filter(e => e.warmup).length;
+      if(nWarm >= MAX_WARM){ appAlert(`В разминке можно до ${MAX_WARM} упражнений.`); return; }
+    } else {
+      const nMain = list.filter(e => !e.warmup).length;
+      if(nMain >= MAX_MAIN){ appAlert(`В основной части можно до ${MAX_MAIN} упражнений.`); return; }
+    }
     ex.warmup = !ex.warmup;
     q('[data-a=warm]').classList.toggle('on', ex.warmup);
     if(ex.warmup) ex.sets = 1;
     syncWarm();
+    renderExList();
   };
   q('[data-a=side]').onclick = ()=>{
     ex.perSide = !ex.perSide;
@@ -3266,6 +3314,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
 ПРОГРЕССИЯ: нет / неделя / две недели — как быстро повышать рекомендуемую нагрузку по мере привыкания (или пропусти строку)
 ЧЕРЕДОВАНИЕ: да / нет — если вариантов несколько и они должны идти по очереди (A, потом B, потом снова A) независимо от дней недели. Для силовых сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки жёстко привязаны к дням недели — «нет» и укажи ДЕНЬ у каждого варианта.
+ДНИ ТРЕНИРОВОК: дни недели через запятую (Пн, Ср, Пт) — общее расписание программы. Указывай ТОЛЬКО при ЧЕРЕДОВАНИЕ: да: эти дни говорят, когда тренироваться, а какой именно вариант выпадет — решает очередь.
 
 Дальше идёт один или несколько ВАРИАНТОВ тренировки. Вариант — это свой набор упражнений для определённых дней недели. Если тренировка одинаковая во все дни — сделай ровно один вариант. Если в разные дни разные упражнения (например, Пн/Чт — верх тела, Вт/Пт — ноги и ягодицы) — сделай несколько вариантов. Один и тот же день не может быть в двух вариантах. Максимум 7 вариантов.
 
@@ -3276,7 +3325,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ОТДЫХ МЕЖДУ КРУГАМИ: секунды (0–600)
 ВРЕМЯ ВАРИАНТА: ЧЧ:ММ — если у этого варианта своё время тренировки (или пропусти строку)
 
-Затем упражнения варианта, каждое начинается со строки "УПРАЖНЕНИЕ:" (максимум 10 на вариант):
+Затем упражнения варианта, каждое начинается со строки "УПРАЖНЕНИЕ:" (до 20 разминочных и до 20 основных на вариант; сколько именно — реши сам исходя из длительности и цели):
 
 УПРАЖНЕНИЕ: название
 ОПИСАНИЕ: техника выполнения, 3–4 предложения: исходное положение, само движение, ключевые моменты (что напрячь, чего избегать). Должно быть предельно понятно, как выполнять упражнение, даже без видео. Максимум 600 символов.
@@ -3413,6 +3462,9 @@ function parseProgramText(txt){
       case 'ЧЕРЕДОВАНИЕ': case 'РОТАЦИЯ':
         p.rotate = !/нет|off|false|0/i.test(val);
         break;
+      case 'ДНИ ТРЕНИРОВОК': case 'ДНИ НЕДЕЛИ':
+        p.days = parseDays(val); // общее расписание программы (используется при чередовании)
+        break;
       case 'УПРАЖНЕНИЕ': {
         ensurePlan();
         if(plan.exercises.length >= MAX_EX){ cur = null; break; }
@@ -3440,7 +3492,10 @@ function parseProgramText(txt){
         break;
       case 'РАЗМИНКА':
         if(cur){
-          cur.warmup = !/нет|no|false|0/i.test(val);
+          const wantWarm = !/нет|no|false|0/i.test(val);
+          // не больше MAX_WARM разминочных на вариант
+          const warmCount = plan.exercises.filter(e => e.warmup && e !== cur).length;
+          cur.warmup = wantWarm && warmCount < MAX_WARM;
           if(cur.warmup) cur.sets = 1;
         }
         break;
@@ -3479,9 +3534,13 @@ const Q_OPTS = {
   dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
   focus: ['Шея', 'Плечи', 'Руки', 'Грудь', 'Спина', 'Пресс', 'Талия', 'Ягодицы', 'Бёдра', 'Икры', 'Ноги целиком'],
   equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
-  limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность']
+  limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность'],
+  style: ['Круговая', 'Силовая (подходы)'],
+  warm: ['С разминкой', 'Без разминки']
 };
-const q = {goal: [], level: 'Новичок', days: [], dur: '20 мин', focus: [], equip: ['Нет'], limit: ['Нет'], note: '', split: false};
+// пусто = «на усмотрение ИИ». Предзаполнены только уровень и ограничения.
+const q = {goal: [], level: 'Новичок', days: [], dur: '', focus: [], equip: [], limit: ['Нет'],
+           note: '', split: false, style: '', warm: '', rotate: false};
 
 function qChips(boxId, opts, isMulti, get, set){
   const box = $(boxId); box.innerHTML = '';
@@ -3494,14 +3553,13 @@ function qChips(boxId, opts, isMulti, get, set){
       if(isMulti){
         let arr = get();
         const hasNone = opts.includes('Нет');
-        if(o === 'Нет'){ arr = ['Нет']; }
+        if(o === 'Нет'){ arr = arr.includes('Нет') ? [] : ['Нет']; }
         else {
           arr = arr.filter(x => x !== 'Нет');
           arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
-          if(!arr.length && hasNone) arr = ['Нет']; // пусто → «Нет», только если такая опция есть
         }
         set(arr);
-      } else set(o);
+      } else set(get() === o ? '' : o);
       qChips(boxId, opts, isMulti, get, set);
     };
     box.appendChild(b);
@@ -3509,12 +3567,9 @@ function qChips(boxId, opts, isMulti, get, set){
 }
 
 function initAIForm(){
-  const u = curUser();
-  if(!q.goal.length){
-    const g = (u && u.goal && Q_OPTS.goal.includes(u.goal)) ? u.goal : Q_OPTS.goal[1];
-    q.goal = [g];
-  }
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
+  qChips('qStyle', Q_OPTS.style, false, ()=> q.style, v => q.style = v);
+  qChips('qWarm', Q_OPTS.warm, false, ()=> q.warm, v => q.warm = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
   qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
   qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
@@ -3532,21 +3587,76 @@ function initAIForm(){
     db.appendChild(b);
   });
   $('qSplit').classList.toggle('on', q.split);
+  $('qRotate').classList.toggle('on', q.rotate);
+  $('qRotateRow').style.display = q.split ? 'flex' : 'none';
   $('qNote').value = q.note || '';
 }
 $('qNote').oninput = e => q.note = e.target.value;
-$('qSplit').onclick = ()=>{ q.split = !q.split; $('qSplit').classList.toggle('on', q.split); };
+$('qSplit').onclick = ()=>{
+  q.split = !q.split;
+  $('qSplit').classList.toggle('on', q.split);
+  $('qRotateRow').style.display = q.split ? 'flex' : 'none';
+  if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
+};
+$('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
 
 function composeRequest(){
-  const days = q.days.length ? `дни: ${q.days.join(', ')}` : 'дни и количество тренировок предложи сам(а) исходя из цели';
-  const goalTxt = q.goal.length ? q.goal.join(', ').toLowerCase() : 'общая физическая форма';
-  let s = `Составь тренировку. Цель: ${goalTxt}. Уровень: ${q.level.toLowerCase()}. ${days}. ` +
-    `Длительность: около ${q.dur}. Инвентарь: ${q.equip.join(', ').toLowerCase()}. ` +
-    `Ограничения: ${q.limit.join(', ').toLowerCase()}. `;
-  if(q.focus.length) s += `Особый акцент на: ${q.focus.join(', ').toLowerCase()}. `;
-  s += `Одинаковая тренировка во все дни или разные: ${q.split ? 'разные — раздели по группам мышц' : 'одинаковая'}.`;
+  // всё, что не выбрано, отдаём на усмотрение ИИ — и говорим об этом прямо
+  const parts = [];
+  const free = [];
+
+  if(q.goal.length) parts.push(`Цель: ${q.goal.join(', ').toLowerCase()}.`);
+  else free.push('цель');
+
+  if(q.level) parts.push(`Уровень: ${q.level.toLowerCase()}.`);
+  else free.push('уровень подготовки');
+
+  if(q.days.length) parts.push(`Дни: ${q.days.join(', ')}.`);
+  else free.push('дни недели и количество тренировок');
+
+  if(q.dur) parts.push(`Длительность: около ${q.dur}.`);
+  else free.push('длительность');
+
+  if(q.focus.length) parts.push(`Особый акцент на: ${q.focus.join(', ').toLowerCase()}.`);
+
+  if(q.equip.length) parts.push(`Инвентарь: ${q.equip.join(', ').toLowerCase()}.`);
+  else free.push('инвентарь (исходи из домашних условий)');
+
+  if(q.limit.length) parts.push(`Ограничения: ${q.limit.join(', ').toLowerCase()}.`);
+
+  // формат тренировки
+  if(q.style === 'Круговая'){
+    parts.push('Формат: круговая тренировка — весь список упражнений повторяется целиком несколько раз. Поставь КРУГИ больше 1, а ПОДХОДЫ у упражнений оставь 1.');
+  } else if(q.style === 'Силовая (подходы)'){
+    parts.push('Формат: силовая тренировка — у каждого упражнения свои подходы. Поставь КРУГИ: 1, объём задай полем ПОДХОДЫ (обычно 3–4) и диапазоном повторений в ЗНАЧЕНИИ, например 10-12.');
+  } else {
+    free.push('формат — круговая или силовая с подходами (выбери, что лучше подходит цели)');
+  }
+
+  // разминка
+  if(q.warm === 'С разминкой'){
+    parts.push('Добавь в начало разминочные упражнения со строкой РАЗМИНКА: да — они выполняются один раз и не повторяются каждый круг.');
+  } else if(q.warm === 'Без разминки'){
+    parts.push('Разминочные упражнения не добавляй.');
+  } else {
+    free.push('нужна ли разминка и сколько в ней упражнений');
+  }
+
+  // варианты по дням
+  if(q.split){
+    parts.push('Сделай разные упражнения в разные дни — раздели программу по группам мышц.');
+    if(q.rotate) parts.push('Поставь ЧЕРЕДОВАНИЕ: да, не указывай дни у вариантов, а общее расписание задай строкой ДНИ ТРЕНИРОВОК.');
+    else parts.push('Поставь ЧЕРЕДОВАНИЕ: нет и укажи конкретные дни недели у каждого варианта.');
+  } else {
+    free.push('делить ли программу на разные дни или сделать одинаковой');
+  }
+
+  let s = 'Составь программу тренировок. ' + parts.join(' ');
+  if(free.length){
+    s += ` Не указано — реши сам(а), исходя из программы и здравого смысла: ${free.join('; ')}.`;
+  }
   if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
-  return s;
+  return s.trim();
 }
 const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
 
@@ -3589,7 +3699,8 @@ async function saveProgram(){
   draft.name = $('bName').value.trim();
   draft.time = $('bTime').value || '';
   draft.rotate = $('bRotate').classList.contains('on');
-  if(!draft.rotate) delete draft.rotIdx;
+  if(!draft.rotate){ delete draft.rotIdx; delete draft.days; }
+  else if(!Array.isArray(draft.days)) draft.days = [];
   if($('bProgOn').classList.contains('on')){
     draft.progression = parseInt($('bProgEvery').value) || 7;
     draft.progStep = draft.progStep || 30;
