@@ -191,12 +191,33 @@
 
   /* ---------- конструктор ---------- */
   .builder h2{font-size:21px;margin:18px 0 16px}
-  .field{margin:0 0 16px}
-  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin:0 0 6px}
-  .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field input[type=password],.field textarea,.field select{
-    width:100%;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
-    color:var(--ink);font-family:'Rubik';font-size:15px;padding:12px 14px;outline:none;appearance:none;
+  /* ======== КОМПОНЕНТ «ПОЛЕ» — единственный источник правды ========
+     поле = колонка: подпись, контрол, подсказка. Шаг внутри 6px.
+     Между полями расстояние задаёт контейнер (карточка через gap). */
+  .field{display:flex;flex-direction:column;gap:6px;margin:0 0 16px}
+  .field > *{margin:0}
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted)}
+
+  /* все элементы управления выглядят одинаково */
+  .field input,.field textarea,.field select,
+  input[type=text],input[type=url],input[type=number],input[type=time],input[type=date],input[type=password],
+  textarea,select{
+    width:100%;box-sizing:border-box;
+    background-color:var(--bg);border:1px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:'Rubik';font-size:15px;
+    padding:13px 14px;min-height:48px;text-align:left;
   }
+  textarea{min-height:90px;line-height:1.5;resize:vertical}
+  input[type=range]{padding:0;min-height:0;border:none;background:none}
+  input[type=file]{display:none}
+  /* селект — со стрелкой */
+  select{
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A5' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
+    padding-right:38px;
+  }
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin:0 0 6px}
   .field textarea{resize:vertical;min-height:64px}
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--work)}
   .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
@@ -204,7 +225,6 @@
   .row2{display:flex;gap:10px;margin:0 0 16px}
   .row2 .field{flex:1;min-width:0}
   .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
-  .ex-card .field input,.ex-card .field textarea{background:var(--bg)}
   .ex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .ex-head .t{font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--work)}
   .ex-head button{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:'Rubik'}
@@ -217,7 +237,7 @@
   .days{display:flex;gap:6px;flex-wrap:wrap}
   .day-chip{
     flex:1;min-width:40px;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
-    color:var(--muted);padding:0 8px;min-height:42px;font-size:13.5px;font-family:'Rubik';cursor:pointer;
+    color:var(--muted);padding:0 8px;min-height:36px;font-size:13.5px;font-family:'Rubik';cursor:pointer;
     display:flex;align-items:center;justify-content:center;text-align:center;
   }
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
@@ -467,7 +487,7 @@
   .mini-label{display:block;font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-block{margin:2px 0 14px}
   .load-row{display:flex;gap:6px}
-  .load-chip{flex:1;padding:0 8px;min-height:42px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
+  .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .load-chip.prog{border-style:dashed}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -519,7 +539,7 @@
   .w-delta{font-size:13px;color:var(--muted);margin-left:8px}
   .w-add{display:none;gap:8px;margin-top:12px}
   .w-add.on{display:flex}
-  .w-add input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
+  .w-add input{flex:1;min-width:0}
   .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
 
   /* ---------- оценка нагрузки на финише ---------- */
@@ -610,7 +630,6 @@
   .user-row .ub b{display:block;font-size:15px}
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
-  .modal-card .field textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:14px;padding:12px;outline:none;resize:vertical}
   .week-line{display:flex;flex-direction:column;gap:3px;margin-top:12px;font-size:13.5px;color:var(--muted)}
   .week-line .streak{color:var(--work);font-weight:500}
   .bars-title{font-size:12.5px;color:var(--muted);margin-top:14px}
@@ -629,7 +648,6 @@
   .w-add.on{display:flex}
   .wf{display:flex;flex-direction:column;gap:4px;flex:1 1 44%;min-width:0}
   .wf label{font-size:11px;color:var(--muted);font-family:'Oswald';letter-spacing:.08em;text-transform:uppercase}
-  .wf input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:'Rubik';font-size:15px;padding:11px 14px;outline:none}
   .w-add .btn-mini{flex:1 1 100%;height:46px}
   .mine-card{-webkit-touch-callout:none;user-select:none}
   .mine-card.dragging{z-index:25;position:relative}
@@ -645,7 +663,7 @@
   .more-btn svg{width:17px;height:17px}
   .more-btn{display:flex;align-items:center;justify-content:center}
   .plan-tabs{display:flex;gap:6px;flex-wrap:wrap}
-  .plan-tab{padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13.5px;font-family:'Rubik';cursor:pointer;min-height:42px;display:flex;align-items:center;justify-content:center}
+  .plan-tab{padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13.5px;font-family:'Rubik';cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center}
   .plan-tab.act{background:var(--work);border-color:var(--work);color:#fff}
   .plan-tab.add{border-style:dashed}
   .plan-chip{flex:0 0 auto !important;padding:11px 14px !important}
@@ -725,17 +743,17 @@
     display:flex;flex-direction:column;gap:16px;
   }
   .card-block > *{margin:0 !important}
+  /* скрытие через класс: инлайновый display:block убивал flex и все отступы */
+  .hidden{display:none !important}
   .card-block > .cb-title{
     font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--muted);
   }
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
-  .card-block input,.card-block textarea,.card-block select{background-color:var(--bg)}
   /* внутри карточки разделительные линии не нужны */
   .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
+  .card-block .field,.card-block .row2{margin:0}
   /* внутри карточки отступы задаёт только gap контейнеров */
-  .card-block .field,.card-block .row2,.card-block .vol-field{margin:0}
-  .card-block .field-hint{margin:6px 0 0}
   /* ЛЮБАЯ вложенная обёртка внутри карточки — колонка с тем же ритмом.
      gap работает только между прямыми детьми, поэтому перечисляем обёртки явно */
   .card-block .stack,
@@ -745,10 +763,6 @@
   .card-block .vol-field,
   .card-block .mc-charts{display:flex;flex-direction:column;gap:16px}
   /* поле — тесная связка: подпись, контрол, чипы, подсказка */
-  .card-block .field{display:flex;flex-direction:column;gap:8px}
-  .card-block .field label{margin:0}
-  .card-block .field-hint{margin:0}
-  .card-block .row2 > .field{gap:8px}
   .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
   /* заголовок с числом упражнений: в узком экране переносим числом на вторую строку */
   /* экран перед стартом: карточки, кнопка всегда снизу */
@@ -786,15 +800,6 @@
   .cmd-list b{color:var(--ink);font-weight:500}
 
   /* селект должен выглядеть как селект — со стрелкой */
-  /* селект узнаваем по стрелке; специфичность выше базового правила поля */
-  .field select,select.voice-sel,select{
-    -webkit-appearance:none;appearance:none;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A5' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
-    background-repeat:no-repeat;
-    background-position:right 12px center;
-    background-size:18px;
-    padding-right:38px;
-  }
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
@@ -872,7 +877,6 @@
   .wh-cells{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   .whc{display:flex;flex-direction:column;gap:3px}
   .whc label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  .whc input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:'Rubik';font-size:14px;padding:8px 6px;outline:none;text-align:center}
   .wh-row.del{opacity:.4}
   .wh-row.del input{text-decoration:line-through}
   .wh-del{flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -968,7 +972,7 @@
         <div class="chip">Упражнений: <b id="startExCount"></b></div>
       </div>
 
-      <div class="card-block" id="progDescBox" style="display:none">
+      <div class="card-block hidden" id="progDescBox">
         <p class="cb-title">О программе</p>
         <div class="prog-desc">
           <p id="progDescText"></p>
@@ -976,7 +980,7 @@
         </div>
       </div>
 
-      <div class="card-block" id="planBlock" style="display:none">
+      <div class="card-block hidden" id="planBlock">
         <p class="cb-title">Вариант тренировки</p>
         <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
       </div>
@@ -994,7 +998,7 @@
           <span class="st-sum" id="startPrefsSum"></span>
           <span class="st-chev" id="startPrefsChev"></span>
         </button>
-        <div class="prefs stack" id="startPrefsBox" style="display:none">
+        <div class="prefs stack hidden" id="startPrefsBox">
           <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
           <div class="hf-block" id="voicePrefRow">
             <div class="hf-title">Управление без рук</div>
@@ -1111,7 +1115,7 @@
       <p class="field-hint">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
     </div>
 
-    <div class="card-block" id="trayBox" style="display:none">
+    <div class="card-block hidden" id="trayBox">
       <div class="st-row">
         <p class="cb-title" style="margin:0">Не разложено <span class="st-note" id="trayCount"></span></p>
         <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px">Очистить</button>
@@ -1310,7 +1314,7 @@
     <div class="card-block">
     <p class="cb-title">Прогрессия нагрузки</p>
     <div class="pref-row"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
-    <div id="bProgOpts" class="stack" style="display:none">
+    <div id="bProgOpts" class="stack hidden">
       <div class="load-row" id="bProgStep"></div>
       <div class="field">
         <label>Как часто повышать</label>
@@ -1327,7 +1331,7 @@
     <div class="card-block">
     <p class="cb-title">Расписание</p>
     <div class="sched-block">
-      <div class="sched-mode" id="schedModeRow" style="display:none">
+      <div class="sched-mode hidden" id="schedModeRow">
         <div class="hf-seg" id="schedSeg">
           <button type="button" data-mode="days">По дням недели</button>
           <button type="button" data-mode="rot">По очереди</button>
@@ -1370,7 +1374,7 @@
 
   <!-- Редактор одного упражнения -->
   <section class="screen builder" id="scrExercise">
-    <div class="screen-head st-row">
+    <div class="screen-head">
       <button class="back-chip" id="exBackTop"></button>
       <h2 id="exTitle">Упражнение</h2>
     </div>
@@ -1408,7 +1412,7 @@
       <span class="st-chev" id="exDetailsChev"></span>
     </button>
 
-    <div id="exDetailsBox" class="stack" style="display:none">
+    <div id="exDetailsBox" class="stack hidden">
       <div class="field"><label>Как выполнять</label><textarea id="exDesc" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
       <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
@@ -1420,7 +1424,7 @@
           <button type="button" id="exMediaNone">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" style="display:none">
-        <div id="exSvgBox" style="display:none">
+        <div id="exSvgBox" class="hidden">
           <textarea id="exSvgCode" class="auto-grow" placeholder="Вставь код пиктограммы: <svg viewBox=&quot;0 0 240 120&quot;>…</svg>"></textarea>
           <p class="field-hint">Пиктограммы обычно приходят вместе с программой из ИИ. Здесь можно вставить или поправить код вручную — рисуй светлыми линиями, фон тёмный.</p>
         </div>
@@ -1462,7 +1466,7 @@
       <p class="field-hint">Разминка выполняется один раз в начале, вне кругов.</p>
     </div>
     <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
-    <div class="pref-row" id="qRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
+    <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
     </div>
 
     <div class="card-block">
@@ -1513,7 +1517,7 @@
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note" id="sideNote" style="display:none"></div>
-        <div class="ready-bar" id="readyBar" style="display:none">
+        <div class="ready-bar hidden" id="readyBar">
           <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
           <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
         </div>
@@ -1657,8 +1661,8 @@
         </div>
         <div class="mc-meta" id="weightMeta" style="display:none"></div>
         <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
-        <div class="mc-charts" id="weightCharts" style="display:none"></div>
-        <div class="mc-actions" id="weightActions" style="display:none">
+        <div class="mc-charts hidden" id="weightCharts"></div>
+        <div class="mc-actions hidden" id="weightActions">
           <button class="mc-act" id="btnWeightHist"></button>
           <button class="mc-act" id="btnShareWeight"></button>
         </div>
@@ -1676,7 +1680,7 @@
         </div>
         <div class="ph-row" id="photoStrip"></div>
         <div class="mc-empty" id="photoEmpty">Снимайся раз в неделю в одинаковой одежде и освещении — прогресс станет виден, даже когда вес стоит.</div>
-        <div class="mc-actions" id="photoActions" style="display:none">
+        <div class="mc-actions hidden" id="photoActions">
           <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" style="display:none">
@@ -2443,7 +2447,7 @@ function buildStartMenu(){
 function renderStartInfo(){
   buildStartMenu();
   // блок звука и управления свёрнут по умолчанию
-  $('startPrefsBox').style.display = 'none';
+  $('startPrefsBox').classList.add('hidden');
   $('startPrefsToggle').classList.remove('open');
   syncStartPrefsSum();
   // описание программы: 4 строки с возможностью раскрыть
@@ -2614,13 +2618,13 @@ function renderWeight(){
     $('weightNow').textContent = '—';
     $('weightDelta').textContent = '';
     $('weightMeta').style.display = 'none';
-    $('weightCharts').style.display = 'none';
-    $('weightActions').style.display = 'none';
+    $('weightCharts').classList.add('hidden');
+    $('weightActions').classList.add('hidden');
     $('weightEmpty').style.display = 'block';
     return;
   }
   $('weightEmpty').style.display = 'none';
-  $('weightActions').style.display = 'flex';
+  $('weightActions').classList.remove('hidden');
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
   $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
@@ -3007,7 +3011,7 @@ function openUserEdit(id = null){
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
   const vOn = uDraft.voiceVol > 0;
   $('ueVoiceOn').classList.toggle('on', vOn);
-  $('ueVoiceField').style.display = vOn ? 'block' : 'none';
+  $('ueVoiceField').classList.toggle('hidden', !(vOn));
   fillVoiceSelect($('ueVoiceSel'));
   $('ueVoiceSel').value = uDraft.voiceURI || '';
   $('ueFxVol').value = uDraft.fxVol;
@@ -3843,7 +3847,7 @@ function openImages(){
 
 function renderTray(){
   const box = $('tray');
-  $('trayBox').style.display = imgTray.length ? 'block' : 'none';
+  $('trayBox').classList.toggle('hidden', !(imgTray.length));
   $('trayCount').textContent = imgTray.length ? `· ${imgTray.length}` : '';
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
@@ -4576,7 +4580,7 @@ function syncRotateUI(){
   const rot = !!draft.rotate && many;
 
   // переключатель режима есть только когда вариантов больше одного
-  $('schedModeRow').style.display = many ? 'block' : 'none';
+  $('schedModeRow').classList.toggle('hidden', !(many));
   document.querySelectorAll('#schedSeg button').forEach(b =>
     b.classList.toggle('act', (b.dataset.mode === 'rot') === rot));
   $('schedHint').textContent = rot
@@ -4616,7 +4620,7 @@ $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHin
 $('bProgOn').onclick = ()=>{
   const on = !$('bProgOn').classList.contains('on');
   $('bProgOn').classList.toggle('on', on);
-  $('bProgOpts').style.display = on ? 'block' : 'none';
+  $('bProgOpts').classList.toggle('hidden', !(on));
 };
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
@@ -4641,7 +4645,7 @@ function fillBuilder(title){
   syncRotateUI();
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
-  $('bProgOpts').style.display = pOn ? 'block' : 'none';
+  $('bProgOpts').classList.toggle('hidden', !(pOn));
   draft.progStep = draft.progStep || 30;
   $('bProgEvery').value = String(draft.progression || 7);
   renderProgStep();
@@ -4801,10 +4805,10 @@ function fillExercise(){
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
-  $('exSvgBox').style.display = 'none';
+  $('exSvgBox').classList.add('hidden');
   $('exSvgCode').value = exKeptSvg(ex);
   // детали по умолчанию свёрнуты
-  $('exDetailsBox').style.display = 'none';
+  $('exDetailsBox').classList.add('hidden');
   $('exDetailsToggle').classList.remove('open');
 }
 
@@ -5334,14 +5338,14 @@ function initAIForm(){
   });
   $('qSplit').classList.toggle('on', q.split);
   $('qRotate').classList.toggle('on', q.rotate);
-  $('qRotateRow').style.display = q.split ? 'flex' : 'none';
+  $('qRotateRow').classList.toggle('hidden', !(q.split));
   $('qNote').value = q.note || '';
 }
 $('qNote').oninput = e => q.note = e.target.value;
 $('qSplit').onclick = ()=>{
   q.split = !q.split;
   $('qSplit').classList.toggle('on', q.split);
-  $('qRotateRow').style.display = q.split ? 'flex' : 'none';
+  $('qRotateRow').classList.toggle('hidden', !(q.split));
   if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
 };
 $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
@@ -5720,7 +5724,7 @@ function renderStep(){
     box.innerHTML = ILLO[step.illo] || '';
   }
   const hasIllo = !!box.innerHTML;
-  $('illoWrap').style.display = (hasIllo && step.phase === 'work') ? 'block' : 'none';
+  $('illoWrap').classList.toggle('hidden', !((hasIllo && step.phase === 'work')));
 
   // видео: есть картинка → маленький значок YouTube над ней; нет картинки → крупная кнопка «Смотреть видео»
   const hasVideo = !!(step.video && step.phase === 'work');
@@ -6519,8 +6523,8 @@ $('progDescMore').onclick = ()=>{
   $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
 };
 $('startPrefsToggle').onclick = ()=>{
-  const box = $('startPrefsBox'), open = box.style.display === 'none';
-  box.style.display = open ? 'block' : 'none';
+  const box = $('startPrefsBox'), open = box.classList.contains('hidden');
+  box.classList.toggle('hidden', !open);
   $('startPrefsToggle').classList.toggle('open', open);
 };
 function syncStartPrefsSum(){
@@ -6550,7 +6554,7 @@ $('tglTheme').onclick = ()=>{
 $('ueVoiceOn').onclick = ()=>{
   const on = !$('ueVoiceOn').classList.contains('on');
   $('ueVoiceOn').classList.toggle('on', on);
-  $('ueVoiceField').style.display = on ? 'block' : 'none';
+  $('ueVoiceField').classList.toggle('hidden', !(on));
   uDraft.voiceVol = on ? 100 : 0;
 };
 $('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; };
@@ -7318,15 +7322,15 @@ $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); 
 $('exMistakes').oninput = e => { exDraft.mistakes = e.target.value; syncExDetailsSum(); };
 $('exVideo').oninput = e => { exDraft.video = e.target.value; syncExDetailsSum(); };
 $('exDetailsToggle').onclick = ()=>{
-  const box = $('exDetailsBox'), open = box.style.display === 'none';
-  box.style.display = open ? 'block' : 'none';
+  const box = $('exDetailsBox'), open = box.classList.contains('hidden');
+  box.classList.toggle('hidden', !open);
   $('exDetailsToggle').classList.toggle('open', open);
   if(open){ autoGrow($('exDesc')); autoGrow($('exMistakes')); }
 };
-$('exMediaBtn').onclick = ()=>{ $('exSvgBox').style.display = 'none'; $('exMediaFile').click(); };
+$('exMediaBtn').onclick = ()=>{ $('exSvgBox').classList.add('hidden'); $('exMediaFile').click(); };
 $('exMediaSvg').onclick = ()=>{
-  const box = $('exSvgBox'), open = box.style.display === 'none';
-  box.style.display = open ? 'block' : 'none';
+  const box = $('exSvgBox'), open = box.classList.contains('hidden');
+  box.classList.toggle('hidden', !open);
   if(open){
     $('exSvgCode').value = (exDraft.media && exDraft.media.kind === 'svg') ? exDraft.media.data : '';
     autoGrow($('exSvgCode'));
@@ -7352,7 +7356,7 @@ $('exMediaNone').onclick = ()=>{
     appAlert('Фото убрано — вернулась пиктограмма. Нажми ещё раз, чтобы убрать и её.');
   } else {
     $('exSvgCode').value = '';
-    $('exSvgBox').style.display = 'none';
+    $('exSvgBox').classList.add('hidden');
   }
   renderExMedia(); syncExDetailsSum();
 };
