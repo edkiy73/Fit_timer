@@ -240,7 +240,7 @@
   .prog-desc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:2px 0 16px;text-align:left}
   .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
     display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
-  .prog-desc.open p{-webkit-line-clamp:unset;display:block}
+  .prog-desc.open p,.open .prog-desc p{-webkit-line-clamp:unset;display:block}
   .pd-more{background:none;border:none;color:var(--work);font-family:'Rubik';font-size:13px;padding:8px 0 0;cursor:pointer}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .builder-actions{margin-top:10px;padding-bottom:8px}
@@ -302,9 +302,11 @@
   *{scrollbar-width:none;-ms-overflow-style:none}
   .illo-wrap{position:relative;margin:0 auto 14px;width:min(300px,90%)}
   body.phase-rest .illo-wrap{display:none}
-  .illo{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
-  .illo svg{width:100%;height:auto;max-height:24vh;display:block}
-  .illo img{width:100%;height:auto;max-height:24vh;object-fit:contain;display:block;border-radius:10px}
+  /* картинка упражнения — без рамки-карточки, только еле заметная граница */
+  .illo{background:none;border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden;line-height:0}
+  .illo svg{width:100%;height:auto;max-height:26vh;display:block}
+  .illo img{width:100%;height:auto;max-height:26vh;object-fit:cover;display:block}
+  .illo .userSvg{padding:12px}
   .illo .stick{stroke:var(--ink);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
   .illo .prop{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
@@ -727,17 +729,35 @@
     text-transform:uppercase;color:var(--muted);
   }
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
-  .card-block input,.card-block textarea,.card-block select{background:var(--bg)}
+  .card-block input,.card-block textarea,.card-block select{background-color:var(--bg)}
   /* внутри карточки разделительные линии не нужны */
   .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
+  /* внутри карточки отступы задаёт только gap контейнеров */
+  .card-block .field,.card-block .row2,.card-block .vol-field{margin:0}
+  .card-block .field-hint{margin:6px 0 0}
+  /* вложенные группы полей — тоже флекс-колонки с тем же ритмом */
+  .card-block .stack{display:flex;flex-direction:column;gap:16px}
   .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  /* заголовок с числом упражнений: в узком экране переносим числом на вторую строку */
+  /* экран перед стартом: карточки, кнопка всегда снизу */
+  .start-wrap .card-block h2{font-size:22px;margin:0}
+  .start-wrap .card-block .num{font-size:11px}
+  .start-wrap .card-block .desc{font-size:13px;color:var(--muted);margin:0}
+  .start-wrap .card-block .desc:empty{display:none}
+  .start-wrap .card-block .num:empty{display:none}
+  .start-wrap .prog-desc{background:none;border:none;padding:0;margin:0}
+  .cb-head{display:flex;flex-direction:column;gap:4px}
+  .cb-head .st-note{font-family:'Rubik';font-size:11.5px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
 
   /* круглая аватарка рядом с именем */
   /* навигационная строка внутри карточки — без своей рамки */
   .nav-row.nr-flat{background:var(--bg);border-color:var(--line);margin:0;padding:13px 14px}
-  .ava-row{position:relative;display:flex;align-items:flex-end;gap:14px}
+  .ava-row{position:relative;display:flex;align-items:stretch;gap:14px}
+  .ava-row .field{flex:1;display:flex;flex-direction:column}
+  .ava-row .field input{flex:1}
   .ava-pick{
-    flex:none;width:66px;height:66px;border-radius:50%;overflow:hidden;cursor:pointer;
+    flex:none;width:64px;align-self:stretch;border-radius:50%;overflow:hidden;cursor:pointer;
+    aspect-ratio:1/1;
     border:2px solid var(--line);background:var(--bg);color:var(--muted);
     display:flex;align-items:center;justify-content:center;padding:0;
   }
@@ -745,7 +765,7 @@
   .ava-pick span{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
   .ava-pick svg{width:24px;height:24px}
   .ava-pick .ava-let{font-family:'Oswald';font-weight:600;font-size:26px;color:var(--work)}
-  .ava-row .ctx-menu{top:70px;left:0;right:auto}
+  .ava-row .ctx-menu{top:70px;right:0;left:auto}
 
   /* перечень голосовых команд */
   .cmd-list{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--muted);line-height:1.45}
@@ -925,48 +945,60 @@
       </div>
     </div>
     <div class="start-wrap">
-      <div class="num" id="startNum"></div>
-      <h2 id="startTitle"></h2>
-      <p class="desc" id="startDesc"></p>
-      <div class="prog-desc" id="progDescBox" style="display:none">
-        <p id="progDescText"></p>
-        <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
+      <div class="card-block">
+        <div class="num" id="startNum"></div>
+        <h2 id="startTitle"></h2>
+        <p class="desc" id="startDesc"></p>
+        <div class="start-meta">
+          <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
+          <div class="chip">Упражнений: <b id="startExCount"></b></div>
+        </div>
       </div>
-      <div class="start-meta">
-        <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
-        <div class="chip">Упражнений: <b id="startExCount"></b></div>
+
+      <div class="card-block" id="progDescBox" style="display:none">
+        <p class="cb-title">О программе</p>
+        <div class="prog-desc">
+          <p id="progDescText"></p>
+          <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
+        </div>
       </div>
-      <div class="load-block" id="planBlock" style="display:none">
-        <span class="mini-label">Вариант тренировки</span>
+
+      <div class="card-block" id="planBlock" style="display:none">
+        <p class="cb-title">Вариант тренировки</p>
         <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
       </div>
-      <div class="load-block">
-        <span class="mini-label">Нагрузка сегодня</span>
+
+      <div class="card-block">
+        <p class="cb-title">Нагрузка сегодня</p>
         <div class="load-row" id="loadRow"></div>
         <p class="field-hint">Выбирай по самочувствию: повторения и время упражнений изменятся пропорционально, отдых останется прежним.</p>
         <p class="field-hint" id="progHint" style="display:none;color:var(--work)"></p>
       </div>
-      <button class="btn-primary" id="btnStart">Начать тренировку</button>
 
-      <button type="button" class="collapse-head" id="startPrefsToggle">
-        <span>Звук и управление</span>
-        <span class="st-sum" id="startPrefsSum"></span>
-        <span class="st-chev" id="startPrefsChev"></span>
-      </button>
-      <div class="prefs" id="startPrefsBox" style="display:none">
-        <div class="pref-row" style="border-top:none"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
-        <div class="hf-block" id="voicePrefRow">
-          <div class="hf-title">Управление без рук</div>
-          <div class="hf-seg" id="hfSeg">
-            <button type="button" data-hf="off" class="act">Выкл</button>
-            <button type="button" data-hf="voice">Голос</button>
-            <button type="button" data-hf="clap">Хлопок</button>
-            <button type="button" data-hf="headset">Гарнитура</button>
+      <div class="card-block">
+        <button type="button" class="collapse-head" id="startPrefsToggle">
+          <span>Звук и управление</span>
+          <span class="st-sum" id="startPrefsSum"></span>
+          <span class="st-chev" id="startPrefsChev"></span>
+        </button>
+        <div class="prefs stack" id="startPrefsBox" style="display:none">
+          <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
+          <div class="hf-block" id="voicePrefRow">
+            <div class="hf-title">Управление без рук</div>
+            <div class="hf-seg" id="hfSeg">
+              <button type="button" data-hf="off" class="act">Выкл</button>
+              <button type="button" data-hf="voice">Голос</button>
+              <button type="button" data-hf="clap">Хлопок</button>
+              <button type="button" data-hf="headset">Гарнитура</button>
+            </div>
+            <p class="field-hint" id="hfHint"></p>
           </div>
-          <p class="field-hint" id="hfHint"></p>
+          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
         </div>
-        <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
       </div>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnStart">Начать тренировку</button>
     </div>
   </section>
 
@@ -998,7 +1030,7 @@
     </div>
 
     <div class="card-block">
-      <div class="st-row">
+      <div class="cb-head">
         <p class="cb-title" id="bVariantTitle">Упражнения</p>
         <span class="st-note" id="exCountNote"></span>
       </div>
@@ -1268,9 +1300,10 @@
     <div class="card-block">
     <p class="cb-title">Прогрессия нагрузки</p>
     <div class="pref-row"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
-    <div id="bProgOpts" style="display:none">
+    <div id="bProgOpts" class="stack" style="display:none">
+      <div class="load-row" id="bProgStep"></div>
       <div class="field">
-        <div class="load-row" id="bProgStep"></div>
+        <label>Как часто повышать</label>
         <select id="bProgEvery">
           <option value="7">каждую неделю</option>
           <option value="14">каждые 2 недели</option>
@@ -1312,8 +1345,8 @@
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
     </div>
     <p class="field-hint" id="bVolHint"></p>
-    <div class="field"><label>Время этого варианта (необязательно)</label><input type="time" id="bPlanTime">
-      <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
+    <div class="field"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
+      <p class="field-hint">Только для уведомлений: если этот вариант тренируешь в другое время, чем остальные, укажи его здесь — оно перебьёт общее время программы. Пусто — используется общее.</p>
     </div>
     <button type="button" class="link-btn" id="btnDelPlan" style="display:none;padding:6px">Удалить этот вариант</button>
     </div>
@@ -1667,13 +1700,13 @@
     <div class="ue-pane" id="uePaneMe">
       <div class="card-block">
         <div class="ava-row">
-          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
-            <span id="uePhotoPrev"></span>
-          </button>
-          <div class="field" style="flex:1">
+          <div class="field">
             <label>Имя</label>
             <input type="text" id="ueName" maxlength="30" placeholder="Как тебя зовут?">
           </div>
+          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
+            <span id="uePhotoPrev"></span>
+          </button>
           <div class="ctx-menu" id="uePhotoMenu"></div>
         </div>
         <input type="file" id="uePhotoFile" accept="image/*" style="display:none">
@@ -2357,7 +2390,7 @@ function renderPlanRow(){
   const block = $('planBlock'), row = $('planRow');
   row.innerHTML = '';
   if(plans.length < 2){ block.style.display = 'none'; return; }
-  block.style.display = 'block';
+  block.style.display = 'flex';
   plans.forEach((pl, i)=>{
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
@@ -2410,7 +2443,7 @@ function renderStartInfo(){
   const d = (state.raw.desc || '').trim();
   if(d){
     dTxt.textContent = d;
-    dBox.style.display = 'block';
+    dBox.style.display = 'flex';
     dBox.classList.remove('open');
     $('progDescMore').textContent = 'Показать полностью';
     requestAnimationFrame(()=>{
@@ -7114,6 +7147,17 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
   b.onclick = async ()=>{
     const m = b.dataset.m;
     if(m === 'manual') return;
+    // редактируем существующую программу → «через ИИ» = доработка этой же программы
+    const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
+    if(existing && m === 'text'){
+      const go = await appDialog(
+        'Перейти к доработке через ИИ? Несохранённые правки этой программы потеряются.',
+        {confirm: true, okText: 'Перейти', cancelText: 'Остаться'}
+      );
+      markBuilderTab();
+      if(go) openEditAI(existing);
+      return;
+    }
     // уходя с ручного редактирования, предупреждаем о несохранённом
     if(draft && (draft.name || (curPlan().exercises || []).length)){
       const go = await appDialog(
@@ -7155,13 +7199,14 @@ function switchCreateMode(m){
 });
 // ручной режим открывает конструктор с активной вкладкой «Вручную»
 function markBuilderTab(){
-  document.querySelectorAll('#bModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
-  // у существующей программы «создание через ИИ» неуместно — прячем эти вкладки
   const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
+  $('bModeTabs').style.display = 'flex';
   document.querySelectorAll('#bModeTabs .tab').forEach(x => {
-    if(x.dataset.m !== 'manual') x.style.display = isEdit ? 'none' : '';
+    x.classList.toggle('act', x.dataset.m === 'manual');
+    // у существующей программы «из видео» не нужен: он создаёт новую
+    if(x.dataset.m === 'video') x.style.display = isEdit ? 'none' : '';
+    if(x.dataset.m === 'text') x.textContent = isEdit ? 'Через ИИ' : 'Через ИИ';
   });
-  $('bModeTabs').style.display = isEdit ? 'none' : 'flex';
 }
 
 /* ---- правка упражнения через ИИ ---- */
