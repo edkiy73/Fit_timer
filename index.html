@@ -292,8 +292,9 @@
     flex:1 1 0;min-height:56px;width:100%;max-width:420px;margin:12px auto 0;
     overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:center;
   }
-  .details::-webkit-scrollbar{width:5px}
-  .details::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  /* полосы прокрутки скрыты — жест остаётся, визуального мусора нет */
+  *::-webkit-scrollbar{width:0;height:0;background:transparent}
+  *{scrollbar-width:none;-ms-overflow-style:none}
   .illo-wrap{position:relative;margin:0 auto 14px;width:min(300px,90%)}
   body.phase-rest .illo-wrap{display:none}
   .illo{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
@@ -473,7 +474,9 @@
   .prep{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);text-align:center;padding:20px}
   .prep.on{display:flex}
   .prep-title{font-family:'Oswald';font-weight:600;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);max-width:86%}
-  .prep-num{font-family:'Oswald';font-weight:700;font-size:130px;color:var(--work);line-height:1.05;margin:8px 0}
+  .prep-num{font-family:'Oswald';font-weight:700;font-size:clamp(90px,32vw,150px);color:var(--work);line-height:1.05;margin:8px 0}
+  body.prep-on{overflow:hidden}
+  body.prep-on .screen{overflow:hidden}
   .prep-sub{color:var(--muted);letter-spacing:.22em;text-transform:uppercase;font-family:'Oswald';font-size:13px}
 
   /* ---------- трекер веса ---------- */
@@ -702,6 +705,12 @@
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
+  .prog-menu-wrap{position:relative;margin-left:auto}
+  .prog-menu-wrap .more-btn{position:static;width:38px;height:38px;border:1px solid var(--line);background:var(--card);border-radius:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .prog-menu-wrap .ctx-menu{top:44px;right:0}
+  .ai-links .ai-self{width:100%;border-color:var(--work);color:var(--work)}
+  .ai-links .ai-self.off{border-color:var(--line);color:var(--muted);opacity:.75}
+  .ai-links .ai-self.busy{opacity:.6;pointer-events:none}
   .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
   .sched-block{display:flex;flex-direction:column}
@@ -859,7 +868,13 @@
 
   <!-- ШАГ 2: экран старта -->
   <section class="screen" id="scrStart">
-    <div class="screen-head" style="margin-bottom:8px"><button class="back-chip" id="startBackTop"></button></div>
+    <div class="screen-head st-row" style="margin-bottom:8px">
+      <button class="back-chip" id="startBackTop"></button>
+      <div class="prog-menu-wrap">
+        <button class="more-btn" id="startMore" title="Действия"></button>
+        <div class="ctx-menu" id="startMenu"></div>
+      </div>
+    </div>
     <div class="start-wrap">
       <div class="num" id="startNum"></div>
       <h2 id="startTitle"></h2>
@@ -941,6 +956,37 @@
   </section>
 
   <!-- Создание из текста -->
+  <!-- Правка упражнения через ИИ -->
+  <section class="screen builder" id="scrExEdAI">
+    <div class="screen-head"><button class="back-chip" id="exeBackTop"></button><h2>Изменить упражнение</h2></div>
+
+    <div class="nav-row" style="cursor:default">
+      <div class="nr-body"><b id="exeName">Упражнение</b><small id="exeSum"></small></div>
+    </div>
+
+    <div class="section-title" style="margin-top:4px">1 · Что изменить?</div>
+    <div class="field">
+      <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
+    </div>
+
+    <button class="btn-primary" id="exeSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    <div class="ai-links">
+      <button type="button" class="ai-self" id="exeSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="exeGPT">Открыть ChatGPT</button>
+      <button type="button" id="exeClaude">Открыть Claude</button>
+      <button type="button" id="exeCopy">Скопировать</button>
+    </div>
+
+    <div class="section-title">2 · Вставь ответ ИИ</div>
+    <div class="field">
+      <textarea id="exeResult" style="min-height:160px" placeholder="Вставь ответ нейросети — упражнение обновится"></textarea>
+    </div>
+    <p class="field-hint">Картинка и пиктограмма сохранятся, если ИИ их не вернёт.</p>
+    <div class="builder-actions">
+      <button class="btn-primary" id="exeApply">Применить изменения</button>
+    </div>
+  </section>
+
   <!-- Картинки программы: массовая загрузка -->
   <section class="screen builder" id="scrImages">
     <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
@@ -998,6 +1044,7 @@
 
     <button class="btn-primary" id="exaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
     <div class="ai-links">
+      <button type="button" class="ai-self" id="exaSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="exaGPT">Открыть ChatGPT</button>
       <button type="button" id="exaClaude">Открыть Claude</button>
       <button type="button" id="exaCopy">Скопировать</button>
@@ -1028,6 +1075,7 @@
 
     <button class="btn-primary" id="ytSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
     <div class="ai-links">
+      <button type="button" class="ai-self" id="ytSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="ytGPT">Открыть ChatGPT</button>
       <button type="button" id="ytClaude">Открыть Claude</button>
       <button type="button" id="ytCopy">Скопировать</button>
@@ -1062,6 +1110,7 @@
 
     <button class="btn-primary" id="eaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
     <div class="ai-links">
+      <button type="button" class="ai-self" id="eaSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="eaGPT">Открыть ChatGPT</button>
       <button type="button" id="eaClaude">Открыть Claude</button>
       <button type="button" id="eaCopy">Скопировать</button>
@@ -1145,7 +1194,14 @@
 
   <!-- Редактор одного упражнения -->
   <section class="screen builder" id="scrExercise">
-    <div class="screen-head"><button class="back-chip" id="exBackTop"></button><h2 id="exTitle">Упражнение</h2></div>
+    <div class="screen-head st-row">
+      <button class="back-chip" id="exBackTop"></button>
+      <h2 id="exTitle">Упражнение</h2>
+      <div class="prog-menu-wrap">
+        <button class="more-btn" id="exMore" title="Действия"></button>
+        <div class="ctx-menu" id="exMenu"></div>
+      </div>
+    </div>
 
     <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
 
@@ -1224,6 +1280,7 @@
 
     <button class="btn-primary" id="btnSendAI" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
     <div class="ai-links">
+      <button type="button" class="ai-self" id="btnSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="aiGPT">Открыть ChatGPT</button>
       <button type="button" id="aiClaude">Открыть Claude</button>
       <button type="button" id="btnCopyPrompt">Скопировать</button>
@@ -1473,6 +1530,17 @@
     </div>
     <div class="field"><label>Смена стороны, сек</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
     <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки после озвучки упражнения на время, перед тем как пойдёт отсчёт (0 — выключить). Третье — пауза между сторонами в упражнениях «на каждую сторону».</p>
+
+    <div class="section-title" style="margin-top:6px">ИИ внутри приложения</div>
+    <div class="field"><label>Ключ Gemini API</label>
+      <input type="password" id="ueGeminiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
+      <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программа и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве.</p>
+    </div>
+    <div class="media-row" style="margin-top:-4px">
+      <button type="button" id="ueGeminiHow">Как получить ключ</button>
+      <button type="button" id="ueGeminiTest">Проверить</button>
+    </div>
+    <p class="field-hint" id="ueGeminiState" style="margin-top:8px"></p>
 
     <div class="section-title" style="margin-top:6px">Звук</div>
     <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
@@ -1992,6 +2060,8 @@ function appDialog(msg, opts = {}){
     if(opts.code){ t.style.display = 'block'; t.value = opts.code; }
     else t.style.display = 'none';
     $('dlgOk').textContent = opts.okText || 'ОК';
+    if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
+    else $('dlgCancel').textContent = 'Отмена';
     $('dlgCancel').style.display = opts.confirm ? 'block' : 'none';
     $('dlg').classList.add('open');
     const done = v => {
@@ -2006,7 +2076,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -2090,7 +2160,36 @@ function renderPlanRow(){
   });
 }
 
+// меню действий на экране просмотра программы — те же пункты, что на карточке
+function buildStartMenu(){
+  const p = state.raw;
+  const menu = $('startMenu');
+  menu.innerHTML = '';
+  if(!p || p.id === 'warmup'){ $('startMore').style.display = p ? '' : 'none'; }
+  const mk = (html2, fn, cls)=>{
+    const b = document.createElement('button');
+    if(cls) b.className = cls;
+    b.innerHTML = html2;
+    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    return b;
+  };
+  menu.append(
+    mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
+    mk(icon('sparkle') + 'Изменить через ИИ', ()=> openEditAI(p)),
+    mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
+    mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
+    mk(icon('trash') + 'Удалить', async ()=>{
+      if(!(await appConfirm(`Удалить программу «${p.name}»?`))) return;
+      customPrograms = customPrograms.filter(x => x.id !== p.id);
+      await savePrograms();
+      renderMine();
+      show('scrMenu');
+    }, 'danger')
+  );
+}
+
 function renderStartInfo(){
+  buildStartMenu();
   // блок звука и управления свёрнут по умолчанию
   $('startPrefsBox').style.display = 'none';
   $('startPrefsToggle').classList.remove('open');
@@ -2623,9 +2722,14 @@ function customToProgram(p, planIdx = 0){
 function closeAllMenus(){
   document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open'));
 }
+// первый тап мимо открытого меню только закрывает его и НЕ нажимает то, что под ним
 document.addEventListener('click', e => {
-  if(!e.target.closest('.more-btn') && !e.target.closest('.ctx-menu')) closeAllMenus();
-});
+  if(!document.querySelector('.ctx-menu.open')) return;
+  if(e.target.closest('.ctx-menu') || e.target.closest('.more-btn')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  closeAllMenus();
+}, true);
 
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 let uDraft = null;
@@ -2637,6 +2741,8 @@ function openUserEdit(id = null){
   $('ueName').value = uDraft.name || '';
   $('ueBirth').value = uDraft.birth || '';
   // звук: значения профиля (или дефолты)
+  $('ueGeminiKey').value = uDraft.geminiKey || '';
+  $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопки «Сделать через ИИ» активны.' : 'Ключ не задан — кнопки «Сделать через ИИ» неактивны.';
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
   if(uDraft.sideSec == null) uDraft.sideSec = 10;
@@ -2670,6 +2776,7 @@ function syncUserForm(){
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
+  uDraft.geminiKey = ($('ueGeminiKey').value || '').trim();
   uDraft.prepSec = Math.max(0, Math.min(30, isFinite(parseInt($('uePrepSec').value)) ? parseInt($('uePrepSec').value) : 5));
   uDraft.readySec = Math.max(0, Math.min(30, isFinite(parseInt($('ueReadySec').value)) ? parseInt($('ueReadySec').value) : 5));
   uDraft.sideSec = Math.max(3, Math.min(60, isFinite(parseInt($('ueSideSec').value)) ? parseInt($('ueSideSec').value) : 10));
@@ -3330,6 +3437,91 @@ async function importProgramFile(file){
   }
 }
 
+/* ================= GEMINI API ================= */
+const GEMINI_MODEL = 'gemini-flash-latest';
+function geminiKey(){
+  const u = curUser();
+  return (u && u.geminiKey ? String(u.geminiKey).trim() : '');
+}
+function hasGemini(){ return !!geminiKey(); }
+
+async function callGemini(prompt){
+  const key = geminiKey();
+  if(!key) throw new Error('Ключ Gemini не задан');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
+    body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
+  });
+  if(!res.ok){
+    let msg = 'HTTP ' + res.status;
+    try{
+      const j = await res.json();
+      if(j && j.error && j.error.message) msg = j.error.message;
+    }catch(e){}
+    if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
+    if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  const text = parts.map(p => p.text || '').join('').trim();
+  if(!text) throw new Error('Пустой ответ модели. Попробуй ещё раз или сформулируй запрос иначе.');
+  return text;
+}
+
+// попап-объяснение, если ключа нет
+async function geminiSetupPrompt(){
+  const ok = await appDialog(
+    'Кнопка «Сделать через ИИ Fit Timer» работает через твой личный ключ Gemini — тогда приложение обращается к нейросети само, без копирования промтов.\n\n' +
+    'Как получить (бесплатно):\n' +
+    '1. Открой aistudio.google.com/apikey\n' +
+    '2. Войди в аккаунт Google и нажми «Create API key»\n' +
+    '3. Скопируй ключ (начинается с AIza…)\n' +
+    '4. Вставь его в профиле: аватар → ✎ → «ИИ внутри приложения»\n\n' +
+    'Ключ хранится только на этом устройстве и никуда не отправляется, кроме серверов Google.',
+    {confirm: true, okText: 'Настроить', cancelText: 'Отмена'}
+  );
+  if(ok){
+    const u = curUser();
+    if(u) openUserEdit(u.id);
+    setTimeout(()=>{ const el = $('ueGeminiKey'); if(el){ el.scrollIntoView({block: 'center'}); el.focus(); } }, 350);
+  }
+}
+
+// приводит кнопку «Сделать через ИИ» в нужное состояние
+function syncGeminiBtns(){
+  const on = hasGemini();
+  document.querySelectorAll('.ai-self').forEach(b => {
+    b.classList.toggle('off', !on);
+    b.title = on ? 'Собрать прямо в приложении' : 'Нужен ключ Gemini — нажми, чтобы узнать как';
+  });
+}
+
+/* ---- медиа упражнения: фото и пиктограмма живут рядом ---- */
+// ставим фото, пиктограмму запоминаем — вернётся, если фото убрать
+function setExImg(ex, data){
+  if(ex.media && ex.media.kind === 'svg') ex.svgKeep = ex.media.data;
+  ex.media = data ? {kind: 'img', data} : null;
+  if(!data && ex.svgKeep) ex.media = {kind: 'svg', data: ex.svgKeep};
+}
+function setExSvg(ex, code){
+  const v = (code || '').trim();
+  if(v){ ex.media = {kind: 'svg', data: v}; ex.svgKeep = v; }
+  else { ex.media = null; delete ex.svgKeep; }
+}
+// убираем текущее: фото → возвращаем пиктограмму, пиктограмму → пусто
+function dropExMedia(ex){
+  if(ex.media && ex.media.kind === 'img' && ex.svgKeep){
+    ex.media = {kind: 'svg', data: ex.svgKeep};
+    return 'svg';
+  }
+  ex.media = null; delete ex.svgKeep;
+  return 'none';
+}
+function exKeptSvg(ex){ return ex.svgKeep || (ex.media && ex.media.kind === 'svg' ? ex.media.data : ''); }
+
 /* ================= КАРТИНКИ ПРОГРАММЫ: МАССОВАЯ ЗАГРУЗКА ================= */
 let imgTray = [];        // загруженные, но ещё не разложенные картинки (data-url)
 let slotTarget = null;   // {kind:'cover'} | {kind:'ex', plan, idx}
@@ -3379,8 +3571,8 @@ function imageSlots(){
         group: plans.length > 1 ? `Вариант ${pi + 1}` : '',
         title: (ex.name || '').trim() || 'Без названия',
         get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
-        set: v => { ex.media = v ? {kind: 'img', data: v} : null; },
-        hasSvg: !!(ex.media && ex.media.kind === 'svg')
+        set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); },
+        hasSvg: !!exKeptSvg(ex)
       });
     });
   });
@@ -3451,6 +3643,90 @@ function trayAutoAssign(){
     : 'Все места уже заполнены. Нажми на нужное место, чтобы заменить картинку.');
 }
 
+/* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
+let exeIdx = -1; // индекс правимого упражнения
+
+// одно упражнение → текст в нашем формате
+function exerciseToText(ex){
+  const L = ['УПРАЖНЕНИЕ: ' + (ex.name || '')];
+  if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
+  const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
+  if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
+  if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
+  L.push('ФОРМАТ: ' + (ex.type === 'time' ? 'время' : 'повторения'));
+  L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+  L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
+  if(ex.perSide) L.push('СТОРОНА: да');
+  if(ex.warmup) L.push('РАЗМИНКА: да');
+  L.push('ОТДЫХ: ' + (ex.rest || 0));
+  if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
+  return L.join('\n');
+}
+
+function openExEdAI(i){
+  const ex = curPlan().exercises[i];
+  if(!ex) return;
+  exeIdx = i;
+  $('exeName').textContent = (ex.name || '').trim() || 'Упражнение';
+  $('exeSum').textContent = exSummary(ex);
+  $('exeWish').value = '';
+  $('exeResult').value = '';
+  autoGrow($('exeWish'));
+  syncGeminiBtns();
+  show('scrExEdAI');
+  window.scrollTo(0, 0);
+}
+
+function exePrompt(){
+  const ex = curPlan().exercises[exeIdx];
+  const wish = ($('exeWish').value || '').trim();
+  return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
+    'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
+    'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
+    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
+    `=== ФОРМАТ ОТВЕТА ===
+УПРАЖНЕНИЕ: название на русском
+ОПИСАНИЕ: техника на «ты», 3–5 предложений
+МЫШЦЫ: группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
+ОШИБКИ: 1–2 частые ошибки (или пропусти строку)
+ФОРМАТ: повторения — ИЛИ — время
+ЗНАЧЕНИЕ: число или диапазон через дефис (10-12); для времени — секунды
+ПОДХОДЫ: число от 1 до 5
+СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
+РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
+ОТДЫХ: секунды
+ВИДЕО: ссылка на технику (или пропусти строку)
+SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
+}
+
+async function applyExEdit(){
+  const raw = ($('exeResult').value || '').trim();
+  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
+  const {program} = parseProgramText(wrapped);
+  const got = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
+  if(!got.length){ appAlert('В ответе не найдено упражнения. Нужна строка «УПРАЖНЕНИЕ: …».'); return; }
+  const list = curPlan().exercises;
+  const oldEx = list[exeIdx];
+  if(!oldEx){ show('scrBuilder'); return; }
+  const upd = got[0];
+  // сохраняем картинку и пиктограмму, если ИИ их не вернул
+  if(!upd.media && oldEx.media) upd.media = oldEx.media;
+  if(!upd.svgKeep && oldEx.svgKeep) upd.svgKeep = oldEx.svgKeep;
+  list[exeIdx] = upd;
+  // если ИИ вернул больше одного — остальные добавим после
+  if(got.length > 1){
+    const extra = got.slice(1);
+    list.splice(exeIdx + 1, 0, ...extra);
+  }
+  $('exeResult').value = '';
+  renderExList();
+  show('scrBuilder');
+  appAlert(got.length > 1
+    ? `Упражнение обновлено, добавлено ещё: ${got.length - 1}.`
+    : `Упражнение «${upd.name}» обновлено.`);
+}
+
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
 const EXA_OPTS = {
   count: ['1', '1–3', '3–5', '5–7', '7 и более'],
@@ -3474,6 +3750,7 @@ function openExAI(){
   $('exaResult').value = '';
   exaChips();
   autoGrow($('exaWish'));
+  syncGeminiBtns();
   show('scrExAI');
   window.scrollTo(0, 0);
 }
@@ -3520,7 +3797,7 @@ function exaPrompt(){
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после подхода
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
-SVG: простая схема-пиктограмма одной строкой, viewBox="0 0 240 120", только светлые линии и заливки (фон тёмный), без внешних картинок и текста
+SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
 Ничего кроме этих строк не пиши.`;
   return s;
@@ -3594,6 +3871,7 @@ function openYouTube(){
   $('ytWish').value = '';
   $('ytResult').value = '';
   autoGrow($('ytWish'));
+  syncGeminiBtns();
   show('scrYouTube');
   window.scrollTo(0, 0);
 }
@@ -3673,6 +3951,7 @@ function openEditAI(p){
   $('eaWish').value = '';
   $('eaResult').value = '';
   autoGrow($('eaWish'));
+  syncGeminiBtns();
   show('scrEditAI');
   window.scrollTo(0, 0);
 }
@@ -4229,7 +4508,7 @@ function fillExercise(){
   renderExMedia();
   syncExDetailsSum();
   $('exSvgBox').style.display = 'none';
-  $('exSvgCode').value = (ex.media && ex.media.kind === 'svg') ? ex.media.data : '';
+  $('exSvgCode').value = exKeptSvg(ex);
   // детали по умолчанию свёрнуты
   $('exDetailsBox').style.display = 'none';
   $('exDetailsToggle').classList.remove('open');
@@ -4362,6 +4641,9 @@ function exRow(ex, i){
   const menu = document.createElement('div');
   menu.className = 'ctx-menu ex-menu';
 
+  const bAI = document.createElement('button');
+  bAI.innerHTML = icon('sparkle') + 'Изменить через ИИ';
+  bAI.onclick = e => { e.stopPropagation(); closeAllMenus(); openExEdAI(i); };
   const bDup = document.createElement('button');
   bDup.innerHTML = icon('plus') + 'Дублировать';
   bDup.onclick = e => {
@@ -4385,7 +4667,7 @@ function exRow(ex, i){
     curPlan().exercises.splice(i, 1);
     renderExList();
   };
-  menu.append(bDup, bDel);
+  menu.append(bAI, bDup, bDel);
   more.onclick = e => {
     e.stopPropagation();
     const wasOpen = menu.classList.contains('open');
@@ -4472,7 +4754,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
-SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАЧЕСТВО: пример ниже — это минимум. Если можешь — рисуй детальнее и красивее: анатомически правдоподобная поза с суставами (плечи, локти, колени, таз), плавные кривые вместо прямых линий, линия пола, инвентарь (гантель, стул, коврик) приглушённым цветом stroke="#8A93A5", стрелки направления движения акцентным #FF4D3D, вторая фаза движения полупрозрачным контуром (opacity="0.35"). Главное — чтобы по пиктограмме было понятно, как выполнять упражнение. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
+SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
 === ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
 
@@ -4987,18 +5269,24 @@ function startWorkout(){
   let n = Math.max(0, prepSec);
   if(n === 0){
     ov.classList.remove('on');
+    document.body.classList.remove('prep-on');
     startGlobal();
     renderStep();
     return;
   }
   $('prepNum').textContent = n;
   ov.classList.add('on');
+  // пока идёт отсчёт — страница не прокручивается и не дёргается
+  document.body.classList.add('prep-on');
+  window.scrollTo(0, 0);
   beep(660, .1);
   state.prepTimer = setInterval(()=>{
     n--;
     if(n <= 0){
       clearInterval(state.prepTimer); state.prepTimer = null;
       ov.classList.remove('on');
+      document.body.classList.remove('prep-on');
+      window.scrollTo(0, 0);
       beep(990, .15, 0, .3);
       startGlobal();
       renderStep();
@@ -5531,6 +5819,8 @@ async function exitWorkout(){
   stopHandsFree();
   stopSpeech();
   if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
+  document.body.classList.remove('prep-on');
+  $('prepOverlay').classList.remove('on');
   $('prepOverlay').classList.remove('on');
   clearStepTimer(); stopGlobal(); releaseWake();
   document.body.classList.remove('phase-rest');
@@ -5887,6 +6177,14 @@ function checkSchedules(){
 setInterval(checkSchedules, 20000);
 
 /* ================= СОБЫТИЯ ================= */
+$('startMore').innerHTML = icon('more');
+$('startMore').onclick = e => {
+  e.stopPropagation();
+  const menu = $('startMenu');
+  const wasOpen = menu.classList.contains('open');
+  closeAllMenus();
+  menu.classList.toggle('open', !wasOpen);
+};
 $('progDescMore').onclick = ()=>{
   const box = $('progDescBox'), open = !box.classList.contains('open');
   box.classList.toggle('open', open);
@@ -6029,7 +6327,7 @@ $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
 $('chCancel').onclick = ()=> $('createModal').classList.remove('open');
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
-$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); $('tImport').value=''; initAIForm(); show('scrText'); window.scrollTo(0,0); };
+$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); $('tImport').value=''; initAIForm(); syncGeminiBtns(); show('scrText'); window.scrollTo(0,0); };
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importCancel').onclick = ()=> $('importModal').classList.remove('open');
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
@@ -6322,6 +6620,58 @@ $('addExModal').onclick = e => { if(e.target === $('addExModal')) $('addExModal'
 $('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
 
+/* ---- ИИ внутри приложения (Gemini) ---- */
+$('ueGeminiHow').onclick = ()=> appAlert(
+  'Ключ Gemini бесплатный.\n\n' +
+  '1. Открой aistudio.google.com/apikey\n' +
+  '2. Войди в аккаунт Google\n' +
+  '3. Нажми «Create API key»\n' +
+  '4. Скопируй ключ (начинается с AIza…) и вставь в поле выше\n\n' +
+  'Ключ хранится только на этом устройстве. Запросы уходят напрямую в Google.'
+);
+$('ueGeminiTest').onclick = async ()=>{
+  const key = ($('ueGeminiKey').value || '').trim();
+  if(!key){ $('ueGeminiState').textContent = 'Сначала вставь ключ.'; return; }
+  const btn = $('ueGeminiTest'), old = btn.textContent;
+  btn.textContent = 'Проверяю…'; btn.disabled = true;
+  // проверяем на самом коротком запросе
+  const savedUser = curUser();
+  const prevKey = savedUser ? savedUser.geminiKey : '';
+  if(savedUser) savedUser.geminiKey = key;
+  try{
+    const out = await callGemini('Ответь одним словом: работает');
+    $('ueGeminiState').textContent = '✓ Ключ работает. Ответ модели: ' + out.slice(0, 40);
+  }catch(e){
+    $('ueGeminiState').textContent = '✗ ' + (e && e.message ? e.message : 'не удалось проверить');
+  }finally{
+    if(savedUser) savedUser.geminiKey = prevKey;
+    btn.textContent = old; btn.disabled = false;
+  }
+};
+
+// общий обработчик: собрать ответ через Gemini и положить в поле
+async function runSelfAI(btnId, promptFn, targetId, okMsg){
+  if(!hasGemini()){ geminiSetupPrompt(); return; }
+  const btn = $(btnId), old = btn.textContent;
+  btn.classList.add('busy');
+  btn.textContent = '✨ Думаю…';
+  try{
+    const text = await callGemini(promptFn());
+    $(targetId).value = text;
+    btn.textContent = '✓ Готово';
+    setTimeout(()=>{ btn.textContent = old; btn.classList.remove('busy'); }, 1400);
+    if(okMsg) appAlert(okMsg);
+    $(targetId).scrollIntoView({block: 'center', behavior: 'smooth'});
+  }catch(e){
+    btn.textContent = old; btn.classList.remove('busy');
+    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка'));
+  }
+}
+$('btnSelfAI').onclick = ()=> runSelfAI('btnSelfAI', fullAIPrompt, 'tImport', 'Ответ получен — проверь и нажми «Распознать».');
+$('ytSelfAI').onclick = ()=>{ if(!hasGemini()){ geminiSetupPrompt(); return; } if(!ytGuard()) return; runSelfAI('ytSelfAI', youtubePrompt, 'ytResult', 'Ответ получен — проверь и нажми «Распознать».'); };
+$('eaSelfAI').onclick = ()=> runSelfAI('eaSelfAI', editAIPrompt, 'eaResult', 'Ответ получен — проверь и нажми «Создать изменённую программу».');
+$('exaSelfAI').onclick = ()=> runSelfAI('exaSelfAI', exaPrompt, 'exaResult', 'Ответ получен — проверь и нажми «Добавить в программу».');
+
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
 $('imgDone').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
@@ -6367,6 +6717,30 @@ $('slotFile').onchange = e => {
     renderSlots();
   });
 };
+
+/* ---- правка упражнения через ИИ ---- */
+$('exeBackTop').onclick = ()=> show('scrBuilder');
+$('exeApply').onclick = applyExEdit;
+$('exeSend').onclick = async ()=>{
+  const text = exePrompt();
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  exeCopyPrompt();
+};
+async function exeCopyPrompt(){
+  const btn = $('exeCopy');
+  try{
+    await navigator.clipboard.writeText(exePrompt());
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать.'); }
+}
+$('exeCopy').onclick = ()=> exeCopyPrompt();
+$('exeGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(exePrompt()), '_blank');
+$('exeClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(exePrompt()), '_blank');
+$('exeSelfAI').onclick = ()=> runSelfAI('exeSelfAI', exePrompt, 'exeResult', 'Ответ получен — проверь и нажми «Применить изменения».');
 
 /* ---- упражнение через ИИ ---- */
 $('exaBackTop').onclick = ()=> show('scrBuilder');
@@ -6414,6 +6788,56 @@ function saveExAndBack(){
   renderExList();
   show('scrBuilder');
 }
+$('exMore').innerHTML = icon('more');
+$('exMore').onclick = e => {
+  e.stopPropagation();
+  const menu = $('exMenu');
+  const wasOpen = menu.classList.contains('open');
+  closeAllMenus();
+  if(!wasOpen){ buildExEditorMenu(); menu.classList.add('open'); }
+};
+function buildExEditorMenu(){
+  const menu = $('exMenu');
+  menu.innerHTML = '';
+  const mk = (h, fn, cls)=>{
+    const b = document.createElement('button');
+    if(cls) b.className = cls;
+    b.innerHTML = h;
+    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    return b;
+  };
+  menu.append(
+    mk(icon('sparkle') + 'Изменить через ИИ', ()=>{
+      const list = curPlan().exercises;
+      if(list[exIdx]) list[exIdx] = commitExercise();
+      const keep = exIdx;
+      exDraft = null; exIdx = -1;
+      renderExList();
+      openExEdAI(keep);
+    }),
+    mk(icon('plus') + 'Дублировать', ()=>{
+      const list = curPlan().exercises;
+      const nWarm = list.filter(e => e.warmup).length;
+      const nMain = list.length - nWarm;
+      if(exDraft.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){ appAlert('Достигнут предел упражнений.'); return; }
+      list[exIdx] = commitExercise();
+      const copy = JSON.parse(JSON.stringify(list[exIdx]));
+      list.splice(exIdx + 1, 0, copy);
+      exIdx = exIdx + 1;
+      exDraft = JSON.parse(JSON.stringify(copy));
+      fillExercise();
+      renderExList();
+      appAlert('Упражнение продублировано — правь копию.');
+    }),
+    mk(icon('trash') + 'Удалить', async ()=>{
+      if(!(await appConfirm('Удалить это упражнение?'))) return;
+      curPlan().exercises.splice(exIdx, 1);
+      exDraft = null; exIdx = -1;
+      renderExList();
+      show('scrBuilder');
+    }, 'danger')
+  );
+}
 $('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
 $('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
 $('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
@@ -6452,13 +6876,24 @@ $('exMediaSvg').onclick = ()=>{
 $('exSvgCode').oninput = e => {
   const v = e.target.value.trim();
   autoGrow(e.target);
-  if(!v){ exDraft.media = null; }
-  else if(/<svg[\s>]/i.test(v)){ exDraft.media = {kind: 'svg', data: v}; }
+  if(!v){ exDraft.svgKeep = ''; delete exDraft.svgKeep; if(exDraft.media && exDraft.media.kind === 'svg') exDraft.media = null; }
+  else if(/<svg[\s>]/i.test(v)){
+    exDraft.svgKeep = v;
+    // если сейчас показывается фото — пиктограмма просто запомнится
+    if(!exDraft.media || exDraft.media.kind === 'svg') exDraft.media = {kind: 'svg', data: v};
+  }
   renderExMedia(); syncExDetailsSum();
 };
 $('exMediaNone').onclick = ()=>{
-  exDraft.media = null; $('exMediaFile').value = ''; $('exSvgCode').value = '';
-  $('exSvgBox').style.display = 'none';
+  const res = dropExMedia(exDraft);
+  $('exMediaFile').value = '';
+  if(res === 'svg'){
+    $('exSvgCode').value = exDraft.media.data;
+    appAlert('Фото убрано — вернулась пиктограмма. Нажми ещё раз, чтобы убрать и её.');
+  } else {
+    $('exSvgCode').value = '';
+    $('exSvgBox').style.display = 'none';
+  }
   renderExMedia(); syncExDetailsSum();
 };
 $('exMediaFile').onchange = e => {
@@ -6466,7 +6901,7 @@ $('exMediaFile').onchange = e => {
   if(!file) return;
   shrinkImage(file, 640, data => {
     if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
-    exDraft.media = {kind: 'img', data};
+    setExImg(exDraft, data); // пиктограмма сохранится
     renderExMedia(); syncExDetailsSum();
   });
 };
@@ -6574,6 +7009,7 @@ $('eaBackTop').innerHTML = icon('chevL');
 $('ytBackTop').innerHTML = icon('chevL');
 $('exaBackTop').innerHTML = icon('chevL');
 $('imgBackTop').innerHTML = icon('chevL');
+$('exeBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
 $('startPrefsChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
