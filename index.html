@@ -184,15 +184,15 @@
   }
   .ts-label{display:block;font-family:'Oswald';font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   #totalTime{font-family:'Oswald';font-weight:700;font-size:24px;letter-spacing:.02em}
-  .field-hint{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45}
+  .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
   .stat-line b{color:var(--ink)}
   .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:'Rubik';font-size:13px;cursor:pointer}
 
   /* ---------- конструктор ---------- */
   .builder h2{font-size:21px;margin:18px 0 16px}
-  .field{margin-bottom:14px}
-  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin-bottom:6px}
+  .field{margin:0 0 16px}
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin:0 0 6px}
   .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field input[type=password],.field textarea,.field select{
     width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
     color:var(--ink);font-family:'Rubik';font-size:15px;padding:12px 14px;outline:none;appearance:none;
@@ -201,7 +201,7 @@
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--work)}
   .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
   body:not(.light) .field input[type=date],body:not(.light) .field input[type=time]{color-scheme:dark}
-  .row2{display:flex;gap:10px}
+  .row2{display:flex;gap:10px;margin:0 0 16px}
   .row2 .field{flex:1;min-width:0}
   .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .ex-card .field input,.ex-card .field textarea{background:var(--bg)}
@@ -661,7 +661,7 @@
   #hfModal .choice.act b{color:var(--work)}
   /* строка-переход на отдельный экран */
   .nav-row{
-    width:100%;display:flex;align-items:center;gap:12px;margin:8px 0 14px;padding:15px 16px;
+    width:100%;display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:15px 16px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;text-align:left;
   }
   .nav-row .nr-body{flex:1;min-width:0}
@@ -711,26 +711,33 @@
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
-  /* смысловой блок: группа полей в одной карточке, отступы одинаковые везде */
-  .card-block{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
-  .card-block > .cb-title{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
-  /* все прямые дети получают один и тот же вертикальный ритм */
-  .card-block > *{margin-top:0;margin-bottom:14px}
-  .card-block > *:last-child{margin-bottom:0}
-  .card-block .field{margin-bottom:0}
-  .card-block .field-hint{margin-top:8px;margin-bottom:0}
-  /* внутри карточки поля рисуются на фоне страницы, чтобы не сливались с карточкой */
-  .card-block .field input,.card-block .field textarea,.card-block .field select{background:var(--bg)}
-  /* разделители только между переключателями, и не прилипают к полям */
-  .card-block > .pref-row{border-top:1px solid var(--line);padding:14px 0;margin-bottom:0}
-  .card-block > .pref-row:first-child,.card-block > .cb-title + .pref-row{border-top:none;padding-top:0}
-  .card-block > .pref-row:last-child{padding-bottom:0}
-  .card-block > .field + .pref-row{margin-top:14px}
-  /* раскрывающийся заголовок внутри карточки */
-  .card-block > .collapse-head{margin:0;padding:14px 0;border-top:1px solid var(--line)}
-  .card-block > .collapse-head:first-child{border-top:none;padding-top:0}
 
-  .card-block .vol-field{margin:14px 0 0}
+
+  /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
+     между карточками ................ 14px
+     между элементами внутри карточки . 16px
+     между полем и его подписью ....... 6px  (тесная связка)
+     ничего больше вручную не задаём */
+  .card-block{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px;margin:0 0 14px;
+  }
+  .card-block > * + *{margin-top:16px}
+  .card-block > .cb-title{
+    font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);margin:0;
+  }
+  .card-block > .cb-title + *{margin-top:14px}
+  /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
+  .card-block input,.card-block textarea,.card-block select{background:var(--bg)}
+  /* внутри карточки разделительные линии не нужны: границы задаёт сама карточка */
+  .card-block .pref-row{border-top:none;padding:0;margin:0}
+  .card-block .collapse-head{border-top:none;padding:0;margin:0}
+  .card-block .vol-field{margin:0}
+  .card-block .load-row,.card-block .tray{margin:0}
+  .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  /* подпись внутри поля липнет к своему элементу, а не отрывается */
+  .field > .days + .field-hint,.field > .load-row + input{margin-top:6px}
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
@@ -932,7 +939,7 @@
       </div>
       <button class="btn-primary" id="btnStart">Начать тренировку</button>
 
-      <button type="button" class="collapse-head" id="startPrefsToggle" style="margin-top:22px">
+      <button type="button" class="collapse-head" id="startPrefsToggle">
         <span>Звук и управление</span>
         <span class="st-sum" id="startPrefsSum"></span>
         <span class="st-chev" id="startPrefsChev"></span>
@@ -947,7 +954,7 @@
             <button type="button" data-hf="clap">Хлопок</button>
             <button type="button" data-hf="headset">Гарнитура</button>
           </div>
-          <p class="field-hint" id="hfHint" style="margin-top:8px"></p>
+          <p class="field-hint" id="hfHint"></p>
         </div>
         <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
       </div>
@@ -957,7 +964,9 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
-    <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+    <div class="card-block">
+      <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+    </div>
 
     <button type="button" class="nav-row" id="bSettingsToggle">
       <div class="nr-body">
@@ -967,15 +976,15 @@
       <span class="nr-chev" id="bSettingsChev"></span>
     </button>
 
-    <div class="plan-tabs" id="planTabsTop" style="margin:14px 0 10px"></div>
-    <button type="button" class="nav-row" id="bImagesRow" style="margin:6px 0 14px">
+    <div class="plan-tabs" id="planTabsTop"></div>
+    <button type="button" class="nav-row" id="bImagesRow">
       <div class="nr-body">
         <b>Картинки программы</b>
         <small id="bImagesSum">Загрузить сразу много и разложить по упражнениям</small>
       </div>
       <span class="nr-chev" id="bImagesChev"></span>
     </button>
-    <div class="section-title st-row" style="margin-top:2px"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
+    <div class="section-title st-row"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
     <div id="bExList"></div>
     <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
     <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
@@ -1001,10 +1010,15 @@
       <div class="nr-body"><b id="exeName">Упражнение</b><small id="exeSum"></small></div>
     </div>
 
-    <div class="section-title" style="margin-top:4px">1 · Что изменить?</div>
+    <div class="card-block">
+    <p class="cb-title">1 · Что изменить?</p>
     <div class="field">
       <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
     </div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">2 · Получить результат</p>
 
     
     <div class="ai-links">
@@ -1015,11 +1029,12 @@
       <button type="button" id="exeCopy">Скопировать</button>
     </div>
 
-    <div class="section-title">2 · Вставь ответ ИИ</div>
     <div class="field">
-      <textarea id="exeResult" style="min-height:160px" placeholder="Вставь ответ нейросети — упражнение обновится"></textarea>
+      <textarea id="exeResult" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <p class="field-hint">Картинка и пиктограмма сохранятся, если ИИ их не вернёт.</p>
     </div>
-    <p class="field-hint">Картинка и пиктограмма сохранятся, если ИИ их не вернёт.</p>
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="exeApply">Применить изменения</button>
     </div>
@@ -1029,21 +1044,26 @@
   <section class="screen builder" id="scrImages">
     <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
 
-    <button class="btn-primary" id="imgPick" style="margin-top:2px">Выбрать картинки с телефона</button>
-    <input type="file" id="imgFiles" accept="image/*" multiple style="display:none">
-    <p class="field-hint" style="margin-top:8px">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
+    <div class="card-block">
+      <p class="cb-title">Загрузка</p>
+      <button class="btn-primary" id="imgPick">Выбрать картинки с телефона</button>
+      <input type="file" id="imgFiles" accept="image/*" multiple style="display:none">
+      <p class="field-hint">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
+    </div>
 
-    <div id="trayBox" style="display:none">
-      <div class="section-title st-row" style="margin-top:16px">
-        <span>Не разложено <span class="st-note" id="trayCount"></span></span>
+    <div class="card-block" id="trayBox" style="display:none">
+      <div class="st-row">
+        <p class="cb-title" style="margin:0">Не разложено <span class="st-note" id="trayCount"></span></p>
         <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px">Очистить</button>
       </div>
       <div class="tray" id="tray"></div>
-      <button type="button" class="btn-ghost" id="trayAuto" style="margin-top:10px">Разложить по порядку</button>
+      <button type="button" class="btn-ghost" id="trayAuto">Разложить по порядку</button>
     </div>
 
-    <div class="section-title" style="margin-top:18px">Куда подставить</div>
-    <div id="slotList"></div>
+    <div class="card-block">
+      <p class="cb-title">Куда подставить</p>
+      <div id="slotList"></div>
+    </div>
 
     <div class="builder-actions">
       <button class="btn-skip" id="imgDone">Готово</button>
@@ -1077,18 +1097,28 @@
   <section class="screen builder" id="scrExAI">
     <div class="screen-head"><button class="back-chip" id="exaBackTop"></button><h2>Упражнение через ИИ</h2></div>
 
-    <div class="section-title" style="margin-top:4px">1 · Что за упражнение?</div>
+    <div class="tabs" id="exaModeTabs">
+      <button class="tab" data-m="manual">Вручную</button>
+      <button class="tab act" data-m="ai">Через ИИ</button>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">1 · Что за упражнение?</p>
     <div class="field">
       <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
       <p class="field-hint">Можно назвать упражнение или описать, что нужно — ИИ подберёт и распишет технику.</p>
     </div>
-
     <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
     <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
     <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
     <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
-    <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div></div>
-    <p class="field-hint" style="margin-top:-6px">Что не выберешь — ИИ решит сам, исходя из описания.</p>
+    <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
+      <p class="field-hint">Что не выберешь — ИИ решит сам, исходя из описания.</p>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">2 · Получить упражнение</p>
 
     
     <div class="ai-links">
@@ -1099,10 +1129,11 @@
       <button type="button" id="exaCopy">Скопировать</button>
     </div>
 
-    <div class="section-title">2 · Вставь ответ ИИ</div>
     <div class="field">
-      <textarea id="exaResult" style="min-height:160px" placeholder="Вставь ответ нейросети — упражнение добавится в программу"></textarea>
+      <textarea id="exaResult" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="exaAdd">Добавить в программу</button>
     </div>
@@ -1115,17 +1146,20 @@
     <div class="tabs" id="ytModeTabs">
       <button class="tab" data-m="text">По описанию</button>
       <button class="tab act" data-m="video">Из видео</button>
-      <button class="tab" data-m="manual">Вручную</button>
     </div>
-    <div class="section-title" style="margin-top:4px">1 · Ссылка на видео</div>
+    <div class="card-block">
+    <p class="cb-title">1 · Ссылка на видео</p>
     <div class="field">
       <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
       <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be. Нейросеть разберёт видео и переведёт его в программу.</p>
     </div>
-
     <div class="field"><label>Пожелания (необязательно)</label>
       <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
     </div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">2 · Получить программу</p>
 
     
     <div class="ai-links">
@@ -1135,12 +1169,12 @@
       <button type="button" id="ytClaude">Открыть Claude</button>
       <button type="button" id="ytCopy">Скопировать</button>
     </div>
-    <p class="field-hint" style="margin-top:8px">Не каждая нейросеть умеет смотреть видео. Лучше всего справляются модели с доступом в интернет — если ответа нет, попроси её открыть ссылку и описать тренировку.</p>
-
-    <div class="section-title">2 · Вставь ответ ИИ</div>
+    <p class="field-hint">Не каждая нейросеть умеет смотреть видео. Лучше всего справляются модели с доступом в интернет — если ответа нет, попроси её открыть ссылку и описать тренировку.</p>
     <div class="field">
-      <textarea id="ytResult" style="min-height:180px" placeholder="Вставь сюда весь ответ нейросети — программа соберётся сама"></textarea>
+      <textarea id="ytResult" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="ytParse">Распознать</button>
     </div>
@@ -1157,11 +1191,16 @@
       </div>
     </div>
 
-    <div class="section-title" style="margin-top:4px">1 · Что изменить?</div>
+    <div class="card-block">
+    <p class="cb-title">1 · Что изменить?</p>
     <div class="field">
       <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
       <p class="field-hint">ИИ получит текущую программу целиком и внесёт правки, остальное оставит как есть.</p>
     </div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">2 · Получить результат</p>
 
     
     <div class="ai-links">
@@ -1172,11 +1211,12 @@
       <button type="button" id="eaCopy">Скопировать</button>
     </div>
 
-    <div class="section-title">2 · Вставь ответ ИИ</div>
     <div class="field">
-      <textarea id="eaResult" style="min-height:180px" placeholder="Вставь сюда весь ответ нейросети"></textarea>
+      <textarea id="eaResult" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <p class="field-hint">Старая программа останется на месте — создастся её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся автоматически.</p>
     </div>
-    <p class="field-hint">Старая программа останется на месте — создастся её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся автоматически.</p>
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="eaCreate">Создать изменённую программу</button>
     </div>
@@ -1209,7 +1249,7 @@
     <div class="pref-row"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" style="display:none">
       <div class="field">
-        <div class="load-row" id="bProgStep" style="margin-bottom:10px"></div>
+        <div class="load-row" id="bProgStep"></div>
         <select id="bProgEvery">
           <option value="7">каждую неделю</option>
           <option value="14">каждые 2 недели</option>
@@ -1254,7 +1294,7 @@
     <div class="field"><label>Время этого варианта (необязательно)</label><input type="time" id="bPlanTime">
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
-    <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:6px 0 0;padding:6px">Удалить этот вариант</button>
+    <button type="button" class="link-btn" id="btnDelPlan" style="display:none;padding:6px">Удалить этот вариант</button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnPsDone">Готово</button>
@@ -1293,7 +1333,7 @@
       </div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
       <div class="field"><label>Отдых после подхода, сек</label>
-        <div class="load-row" id="exRestChips" style="margin-bottom:8px"></div>
+        <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
       </div>
     </div>
@@ -1317,7 +1357,7 @@
           <button type="button" id="exMediaNone">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" style="display:none">
-        <div id="exSvgBox" style="display:none;margin-top:10px">
+        <div id="exSvgBox" style="display:none">
           <textarea id="exSvgCode" class="auto-grow" placeholder="Вставь код пиктограммы: <svg viewBox=&quot;0 0 240 120&quot;>…</svg>"></textarea>
           <p class="field-hint">Пиктограммы обычно приходят вместе с программой из ИИ. Здесь можно вставить или поправить код вручную — рисуй светлыми линиями, фон тёмный.</p>
         </div>
@@ -1337,10 +1377,10 @@
     <div class="tabs" id="aiModeTabs">
       <button class="tab act" data-m="text">По описанию</button>
       <button class="tab" data-m="video">Из видео</button>
-      <button class="tab" data-m="manual">Вручную</button>
     </div>
-    <div class="section-title" style="margin-top:4px">1 · Какая тренировка нужна?</div>
-    <p class="field-hint" style="margin:-4px 0 14px">Заполняй только то, что для тебя важно. Всё, что пропустишь, ИИ подберёт сам под твою программу. Повторное нажатие снимает выбор.</p>
+    <div class="card-block">
+    <p class="cb-title">1 · Какая тренировка нужна?</p>
+    <p class="field-hint">Заполняй только то, что для тебя важно. Всё, что пропустишь, ИИ подберёт сам под твою программу. Повторное нажатие снимает выбор.</p>
     <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
     <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
     <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
@@ -1359,6 +1399,10 @@
     </div>
     <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
     <div class="pref-row" id="qRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">2 · Получить программу</p>
 
     
     <div class="ai-links">
@@ -1370,10 +1414,11 @@
     </div>
     <p class="field-hint" style="margin-top:8px">Промт с твоим запросом попадёт в выбранное приложение — просто нажми там «отправить». ИИ вернёт программу в нужном формате.</p>
 
-    <div class="section-title">2 · Вставь ответ ИИ</div>
     <div class="field">
-      <textarea id="tImport" style="min-height:180px" placeholder="Вставь сюда весь ответ нейросети — программа соберётся сама"></textarea>
+      <textarea id="tImport" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
+    </div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="btnParse">Распознать</button>
     </div>
@@ -1477,7 +1522,7 @@
           <div class="seg"><button type="button" id="obF" class="act">Женский</button><button type="button" id="obM">Мужской</button></div>
         </div>
         <div class="field"><label>Дата рождения</label><input type="date" id="obBirth"></div>
-        <p class="field-hint" style="margin:-6px 0 16px">Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и восстановление. Это единственное, что мы спрашиваем обязательно.</p>
+        <p class="field-hint">Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и восстановление. Это единственное, что мы спрашиваем обязательно.</p>
         <button class="btn-primary" id="obNext1">Дальше</button>
       </div>
       <div id="obStep2" style="display:none">
@@ -1565,7 +1610,7 @@
           </div>
           <button class="add-btn" id="btnAddPhoto" title="Добавить фото"></button>
         </div>
-        <div class="ph-row" id="photoStrip" style="margin-top:14px"></div>
+        <div class="ph-row" id="photoStrip"></div>
         <div class="mc-empty" id="photoEmpty">Снимайся раз в неделю в одинаковой одежде и освещении — прогресс станет виден, даже когда вес стоит.</div>
         <div class="mc-actions" id="photoActions" style="display:none">
           <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
@@ -1628,6 +1673,9 @@
       </div>
     </div>
 
+    </div>
+
+    <div class="card-block">
     <button type="button" class="collapse-head" id="ueTimingHead">
       <span>Тайминги тренировки</span><span class="st-sum" id="ueTimingSum"></span><span class="st-chev" id="ueTimingChev"></span>
     </button>
@@ -1640,6 +1688,9 @@
       <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки перед упражнением на время. Третье — пауза между сторонами. 0 выключает.</p>
     </div>
 
+    </div>
+
+    <div class="card-block">
     <button type="button" class="collapse-head" id="ueAIHead">
       <span>ИИ внутри приложения</span><span class="st-sum" id="ueAISum"></span><span class="st-chev" id="ueAIChev"></span>
     </button>
@@ -1648,11 +1699,11 @@
         <input type="password" id="ueGeminiKey" placeholder="Вставь ключ из Google AI Studio" autocomplete="off" spellcheck="false">
         <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программы и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве и уходит только на серверы Google.</p>
       </div>
-      <div class="media-row" style="margin-top:-4px">
+      <div class="media-row">
         <button type="button" id="ueGeminiHow">Как получить ключ</button>
         <button type="button" id="ueGeminiTest">Проверить</button>
       </div>
-      <p class="field-hint" id="ueGeminiState" style="margin-top:8px"></p>
+      <p class="field-hint" id="ueGeminiState"></p>
     </div>
     </div>
 
@@ -1684,7 +1735,7 @@
           <div class="vol-label"><span>Громкость сигналов</span><b id="sndFxVolVal">100%</b></div>
           <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
         </div>
-        <p class="field-hint" style="margin-top:4px">Громкость голоса — кнопками громкости телефона.</p>
+        <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
         <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
       </div>
     </div>
@@ -6965,6 +7016,9 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
     renderExList();
     openExEdAI(keep);
   };
+});
+document.querySelectorAll('#exaModeTabs .tab').forEach(b => {
+  b.onclick = ()=>{ if(b.dataset.m === 'manual') addExManual(); };
 });
 document.querySelectorAll('#exeModeTabs .tab').forEach(b => {
   b.onclick = ()=>{
