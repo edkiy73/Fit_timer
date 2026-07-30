@@ -714,30 +714,52 @@
 
 
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
-     между карточками ................ 14px
-     между элементами внутри карточки . 16px
-     между полем и его подписью ....... 6px  (тесная связка)
-     ничего больше вручную не задаём */
+     карточка — флекс-колонка с gap, поэтому margin детей не важен
+     и правила больше не конфликтуют по специфичности */
   .card-block{
     background:var(--card);border:1px solid var(--line);border-radius:18px;
     padding:16px;margin:0 0 14px;
+    display:flex;flex-direction:column;gap:16px;
   }
-  .card-block > * + *{margin-top:16px}
+  .card-block > *{margin:0 !important}
   .card-block > .cb-title{
     font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--muted);margin:0;
+    text-transform:uppercase;color:var(--muted);
   }
-  .card-block > .cb-title + *{margin-top:14px}
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
   .card-block input,.card-block textarea,.card-block select{background:var(--bg)}
-  /* внутри карточки разделительные линии не нужны: границы задаёт сама карточка */
-  .card-block .pref-row{border-top:none;padding:0;margin:0}
-  .card-block .collapse-head{border-top:none;padding:0;margin:0}
-  .card-block .vol-field{margin:0}
-  .card-block .load-row,.card-block .tray{margin:0}
+  /* внутри карточки разделительные линии не нужны */
+  .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
   .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  /* подпись внутри поля липнет к своему элементу, а не отрывается */
-  .field > .days + .field-hint,.field > .load-row + input{margin-top:6px}
+
+  /* круглая аватарка рядом с именем */
+  /* навигационная строка внутри карточки — без своей рамки */
+  .nav-row.nr-flat{background:var(--bg);border-color:var(--line);margin:0;padding:13px 14px}
+  .ava-row{position:relative;display:flex;align-items:flex-end;gap:14px}
+  .ava-pick{
+    flex:none;width:66px;height:66px;border-radius:50%;overflow:hidden;cursor:pointer;
+    border:2px solid var(--line);background:var(--bg);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .ava-pick img{width:100%;height:100%;object-fit:cover;display:block}
+  .ava-pick span{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .ava-pick svg{width:24px;height:24px}
+  .ava-pick .ava-let{font-family:'Oswald';font-weight:600;font-size:26px;color:var(--work)}
+  .ava-row .ctx-menu{top:70px;left:0;right:auto}
+
+  /* перечень голосовых команд */
+  .cmd-list{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--muted);line-height:1.45}
+  .cmd-list li{padding-left:14px;position:relative}
+  .cmd-list li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--work)}
+  .cmd-list b{color:var(--ink);font-weight:500}
+
+  /* селект должен выглядеть как селект — со стрелкой */
+  select{
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A5' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
+    padding-right:38px !important;
+  }
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
@@ -889,21 +911,8 @@
     </div>
     <div class="section-title st-row" style="margin-top:0"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
     <div id="mineList"></div>
+    <button class="btn-ghost" id="btnCreateBottom">＋ Добавить программу</button>
 
-    <div class="data-card">
-      <div class="dc-head">
-        <span class="dc-ico" id="dcIco"></span>
-        <div>
-          <b>Резервная копия</b>
-          <small>Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси на новый телефон или сохрани на всякий случай.</small>
-        </div>
-      </div>
-      <div class="dc-actions">
-        <button class="dc-btn" id="btnExportAll"></button>
-        <button class="dc-btn" id="btnImportAll"></button>
-      </div>
-      <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
-    </div>
   </section>
 
   <!-- ШАГ 2: экран старта -->
@@ -964,33 +973,39 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
-    <div class="card-block">
-      <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+    <div class="tabs" id="bModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="text">Через ИИ</button>
+      <button class="tab" data-m="video">Из видео</button>
     </div>
 
-    <button type="button" class="nav-row" id="bSettingsToggle">
-      <div class="nr-body">
-        <b>Настройки программы</b>
-        <small id="bSettingsSum"></small>
-      </div>
-      <span class="nr-chev" id="bSettingsChev"></span>
-    </button>
+    <div class="card-block">
+      <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+      <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
+        <div class="nr-body">
+          <b>Настройки программы</b>
+          <small id="bSettingsSum"></small>
+        </div>
+        <span class="nr-chev" id="bSettingsChev"></span>
+      </button>
+      <button type="button" class="nav-row nr-flat" id="bImagesRow">
+        <div class="nr-body">
+          <b>Картинки программы</b>
+          <small id="bImagesSum">Загрузить сразу много и разложить по упражнениям</small>
+        </div>
+        <span class="nr-chev" id="bImagesChev"></span>
+      </button>
+    </div>
 
-    <div class="plan-tabs" id="planTabsTop"></div>
-    <button type="button" class="nav-row" id="bImagesRow">
-      <div class="nr-body">
-        <b>Картинки программы</b>
-        <small id="bImagesSum">Загрузить сразу много и разложить по упражнениям</small>
+    <div class="card-block">
+      <div class="st-row">
+        <p class="cb-title" id="bVariantTitle">Упражнения</p>
+        <span class="st-note" id="exCountNote"></span>
       </div>
-      <span class="nr-chev" id="bImagesChev"></span>
-    </button>
-    <div class="section-title st-row"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
-    <div id="bExList"></div>
-    <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
-    <div class="field" id="bStatsRow" style="display:none;margin-top:18px"><label>Статистика</label>
-      <div class="stat-line">Пройдено полностью: <b id="bStatCount">0</b>&nbsp;раз
-        <button type="button" class="stat-reset" id="bStatReset">Сбросить</button>
-      </div>
+      <p class="field-hint" id="bVariantHint"></p>
+      <div class="plan-tabs" id="planTabsTop"></div>
+      <div id="bExList"></div>
+      <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
@@ -1030,7 +1045,7 @@
     </div>
 
     <div class="field">
-      <textarea id="exeResult" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="exeResult" class="auto-grow" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
       <p class="field-hint">Картинка и пиктограмма сохранятся, если ИИ их не вернёт.</p>
     </div>
     </div>
@@ -1130,7 +1145,7 @@
     </div>
 
     <div class="field">
-      <textarea id="exaResult" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="exaResult" class="auto-grow" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
     </div>
 
@@ -1144,7 +1159,8 @@
     <div class="screen-head"><button class="back-chip" id="ytBackTop"></button><h2>Программа из видео</h2></div>
 
     <div class="tabs" id="ytModeTabs">
-      <button class="tab" data-m="text">По описанию</button>
+      <button class="tab" data-m="manual">Вручную</button>
+      <button class="tab" data-m="text">Через ИИ</button>
       <button class="tab act" data-m="video">Из видео</button>
     </div>
     <div class="card-block">
@@ -1171,7 +1187,7 @@
     </div>
     <p class="field-hint">Не каждая нейросеть умеет смотреть видео. Лучше всего справляются модели с доступом в интернет — если ответа нет, попроси её открыть ссылку и описать тренировку.</p>
     <div class="field">
-      <textarea id="ytResult" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="ytResult" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
     </div>
 
@@ -1183,6 +1199,11 @@
   <!-- Доработка программы через ИИ -->
   <section class="screen builder" id="scrEditAI">
     <div class="screen-head"><button class="back-chip" id="eaBackTop"></button><h2>Изменить через ИИ</h2></div>
+
+    <div class="tabs" id="eaModeTabs">
+      <button class="tab" data-m="manual">Вручную</button>
+      <button class="tab act" data-m="ai">Через ИИ</button>
+    </div>
 
     <div class="nav-row" style="cursor:default">
       <div class="nr-body">
@@ -1212,7 +1233,7 @@
     </div>
 
     <div class="field">
-      <textarea id="eaResult" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="eaResult" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
       <p class="field-hint">Старая программа останется на месте — создастся её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся автоматически.</p>
     </div>
     </div>
@@ -1375,7 +1396,8 @@
     <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Создание через ИИ</h2></div>
 
     <div class="tabs" id="aiModeTabs">
-      <button class="tab act" data-m="text">По описанию</button>
+      <button class="tab" data-m="manual">Вручную</button>
+      <button class="tab act" data-m="text">Через ИИ</button>
       <button class="tab" data-m="video">Из видео</button>
     </div>
     <div class="card-block">
@@ -1389,7 +1411,7 @@
     <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
     <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
     <div class="field"><label>Свой запрос (необязательно)</label>
-      <textarea id="qNote" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
+      <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
     </div>
     <div class="field"><label>Тип тренировки</label><div class="days chips-wrap" id="qStyle"></div>
       <p class="field-hint">Разница в порядке. <b>Круговая</b>: прошла весь список и вернулась к началу — A, B, C → A, B, C. <b>Силовая</b>: доделала все подходы одного упражнения и перешла к следующему — A, A, A → B, B, B. <b>Смешанная</b>: и то и другое — блок из подходов повторяется кругами.</p>
@@ -1415,7 +1437,7 @@
     <p class="field-hint" style="margin-top:8px">Промт с твоим запросом попадёт в выбранное приложение — просто нажми там «отправить». ИИ вернёт программу в нужном формате.</p>
 
     <div class="field">
-      <textarea id="tImport" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="tImport" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
     </div>
     </div>
 
@@ -1634,77 +1656,112 @@
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
-    <div class="card-block">
-    <div class="field"><label>Имя</label><input type="text" id="ueName" maxlength="30" placeholder="Как тебя зовут?"></div>
-    <div class="field"><label>Фото (необязательно)</label>
-      <div class="media-row">
-        <button type="button" id="uePhotoBtn">Выбрать фото</button>
-        <button type="button" id="uePhotoNone">Без фото</button>
-      </div>
-      <input type="file" id="uePhotoFile" accept="image/*" style="display:none">
-      <div class="media-preview" id="uePhotoPrev"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>Пол</label>
-        <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
-      </div>
-      <div class="field"><label>Тема</label>
-        <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
-      </div>
-    </div>
-    <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth">
-      <p class="field-hint">Пол и возраст важны для составления тренировок — от них зависят подбор упражнений, нагрузка и время восстановления. Эти данные уходят в запрос к ИИ.</p>
-    </div>
+    <div class="tabs" id="ueTabs">
+      <button class="tab act" data-t="me">Профиль</button>
+      <button class="tab" data-t="sound">Звук</button>
+      <button class="tab" data-t="timing">Тайминги</button>
+      <button class="tab" data-t="ai">ИИ</button>
     </div>
 
-    <div class="card-block">
-    <button type="button" class="collapse-head" id="ueSoundHead">
-      <span>Звук</span><span class="st-sum" id="ueSoundSum"></span><span class="st-chev" id="ueSoundChev"></span>
-    </button>
-    <div id="ueSoundBox" style="display:none">
-      <div class="pref-row"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
-      <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
-        <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-        <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
+    <!-- Профиль -->
+    <div class="ue-pane" id="uePaneMe">
+      <div class="card-block">
+        <div class="ava-row">
+          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
+            <span id="uePhotoPrev"></span>
+          </button>
+          <div class="field" style="flex:1">
+            <label>Имя</label>
+            <input type="text" id="ueName" maxlength="30" placeholder="Как тебя зовут?">
+          </div>
+          <div class="ctx-menu" id="uePhotoMenu"></div>
+        </div>
+        <input type="file" id="uePhotoFile" accept="image/*" style="display:none">
+        <div class="row2">
+          <div class="field"><label>Пол</label>
+            <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
+          </div>
+          <div class="field"><label>Тема</label>
+            <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
+          </div>
+        </div>
+        <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth">
+          <p class="field-hint">Пол и возраст важны для составления тренировок — от них зависят подбор упражнений, нагрузка и время восстановления. Эти данные уходят в запрос к ИИ.</p>
+        </div>
       </div>
-      <div class="vol-field">
-        <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
-        <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+
+      <div class="card-block">
+        <p class="cb-title">Резервная копия</p>
+        <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси на новый телефон или сохрани на всякий случай.</p>
+        <div class="dc-actions">
+          <button class="dc-btn" id="btnExportAll"></button>
+          <button class="dc-btn" id="btnImportAll"></button>
+        </div>
+        <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
       </div>
     </div>
 
+    <!-- Звук -->
+    <div class="ue-pane" id="uePaneSound" style="display:none">
+      <div class="card-block">
+        <p class="cb-title">Озвучка</p>
+        <div class="pref-row"><span>Голосовая озвучка<small>приложение проговаривает этапы тренировки</small></span><button class="switch" id="ueVoiceOn"></button></div>
+        <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
+          <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
+        </div>
+      </div>
+
+      <div class="card-block">
+        <p class="cb-title">Что произносит голос</p>
+        <ul class="cmd-list">
+          <li><b>Название упражнения</b> и сколько делать — при старте каждого этапа</li>
+          <li><b>«Подход 2 из 3»</b> — если у упражнения несколько подходов</li>
+          <li><b>«Сторона 1 из 2»</b> и <b>«Смените сторону»</b> — в упражнениях на каждую сторону</li>
+          <li><b>«Отдохните 45 секунд. Далее — …»</b> — на отдыхе, с анонсом следующего этапа</li>
+          <li><b>«Круг завершён»</b> — в конце круга</li>
+          <li><b>«Осталось 30 секунд»</b> — на длинных упражнениях по времени</li>
+          <li><b>«Тренировка завершена»</b> — в конце</li>
+        </ul>
+      </div>
+
+      <div class="card-block">
+        <p class="cb-title">Сигналы</p>
+        <div class="vol-field">
+          <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
+          <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+        </div>
+        <p class="field-hint">Гонг старта упражнения, отсчёт последних секунд, сигнал смены стороны и фанфары в конце.</p>
+      </div>
     </div>
 
-    <div class="card-block">
-    <button type="button" class="collapse-head" id="ueTimingHead">
-      <span>Тайминги тренировки</span><span class="st-sum" id="ueTimingSum"></span><span class="st-chev" id="ueTimingChev"></span>
-    </button>
-    <div id="ueTimingBox" style="display:none">
-      <div class="row2">
-        <div class="field"><label>Отсчёт перед стартом, сек</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
-        <div class="field"><label>Подготовка к упражнению, сек</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+    <!-- Тайминги -->
+    <div class="ue-pane" id="uePaneTiming" style="display:none">
+      <div class="card-block">
+        <p class="cb-title">Тайминги тренировки</p>
+        <div class="row2">
+          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+        </div>
+        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
+        <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
       </div>
-      <div class="field"><label>Смена стороны, сек</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
-      <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки перед упражнением на время. Третье — пауза между сторонами. 0 выключает.</p>
     </div>
 
-    </div>
-
-    <div class="card-block">
-    <button type="button" class="collapse-head" id="ueAIHead">
-      <span>ИИ внутри приложения</span><span class="st-sum" id="ueAISum"></span><span class="st-chev" id="ueAIChev"></span>
-    </button>
-    <div id="ueAIBox" style="display:none">
-      <div class="field"><label>Ключ Gemini API</label>
-        <input type="password" id="ueGeminiKey" placeholder="Вставь ключ из Google AI Studio" autocomplete="off" spellcheck="false">
-        <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программы и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве и уходит только на серверы Google.</p>
+    <!-- ИИ -->
+    <div class="ue-pane" id="uePaneAI" style="display:none">
+      <div class="card-block">
+        <p class="cb-title">ИИ внутри приложения</p>
+        <div class="field"><label>Ключ Gemini API</label>
+          <input type="password" id="ueGeminiKey" placeholder="Вставь ключ из Google AI Studio" autocomplete="off" spellcheck="false">
+          <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программы и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве и уходит только на серверы Google.</p>
+        </div>
+        <div class="media-row">
+          <button type="button" id="ueGeminiHow">Как получить ключ</button>
+          <button type="button" id="ueGeminiTest">Проверить</button>
+        </div>
+        <p class="field-hint" id="ueGeminiState"></p>
       </div>
-      <div class="media-row">
-        <button type="button" id="ueGeminiHow">Как получить ключ</button>
-        <button type="button" id="ueGeminiTest">Проверить</button>
-      </div>
-      <p class="field-hint" id="ueGeminiState"></p>
-    </div>
     </div>
 
     <div class="builder-actions">
@@ -2897,9 +2954,7 @@ function openUserEdit(id = null){
   // звук: значения профиля (или дефолты)
   $('ueGeminiKey').value = uDraft.geminiKey || '';
   $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопки «Сделать через ИИ» активны.' : 'Ключ не задан — кнопки «Сделать через ИИ» неактивны.';
-  ['ueSoundBox','ueTimingBox','ueAIBox'].forEach(id => $(id).style.display = 'none');
-  ['ueSoundHead','ueTimingHead','ueAIHead'].forEach(id => $(id).classList.remove('open'));
-  setTimeout(syncUserSums, 0);
+  switchUeTab('me');
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
   if(uDraft.sideSec == null) uDraft.sideSec = 10;
@@ -2926,9 +2981,11 @@ function syncUserForm(){
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   $('ueThemeL').classList.toggle('act', uDraft.theme !== 'dark');
   $('ueThemeD').classList.toggle('act', uDraft.theme === 'dark');
-  $('uePhotoBtn').classList.toggle('act', !!uDraft.photo);
-  $('uePhotoNone').classList.toggle('act', !uDraft.photo);
-  $('uePhotoPrev').innerHTML = uDraft.photo ? `<img src="${uDraft.photo}" alt="">` : '';
+  // аватарка: фото, либо первая буква имени, либо иконка
+  const nm = (uDraft.name || '').trim();
+  $('uePhotoPrev').innerHTML = uDraft.photo
+    ? `<img src="${uDraft.photo}" alt="">`
+    : (nm ? `<span class="ava-let">${nm[0].toUpperCase()}</span>` : icon('camera'));
 }
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
@@ -4535,6 +4592,7 @@ function commitPlanFields(){
 // заполняет форму конструктора из draft и показывает экран
 function fillBuilder(title){
   $('builderTitle').textContent = title;
+  setTimeout(markBuilderTab, 0);
   $('bName').value = draft.name;
   $('bDesc').value = draft.desc || '';
   $('bDescCount').textContent = (draft.desc || '').length;
@@ -4550,7 +4608,6 @@ function fillBuilder(title){
   $('bProgEvery').value = String(draft.progression || 7);
   renderProgStep();
   syncCover();
-  syncStats();
   renderPlanTabs();
   fillPlanFields();
   show('scrBuilder');
@@ -4561,6 +4618,7 @@ function renderPlanTabs(){
   ['planTabs', 'planTabsTop'].forEach(id => buildPlanTabs(id));
   // верхние вкладки нужны, только когда вариантов больше одного
   $('planTabsTop').style.display = draft.plans.length > 1 ? 'flex' : 'none';
+  if(typeof renderExList === 'function' && $('bVariantTitle')) { /* подписи обновит renderExList */ }
   syncSettingsSum();
   $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
 }
@@ -4622,12 +4680,6 @@ function fillPlanFields(){
   renderDays();
   renderExList();
   $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
-}
-
-function syncStats(){
-  const c = (draft.stats && draft.stats.completions) || 0;
-  $('bStatsRow').style.display = c > 0 ? 'block' : 'none';
-  $('bStatCount').textContent = c;
 }
 
 function syncCover(){
@@ -4812,9 +4864,29 @@ function renderExList(){
   const nWarm = list.filter(e => e.warmup).length;
   const nMain = list.length - nWarm;
   $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
-  const note = list.length ? `· ${list.length}` + (nWarm ? `, из них ${nWarm} в разминке` : '') : '';
+  const note = list.length ? `${list.length}` + (nWarm ? ` · ${nWarm} в разминке` : '') : '';
   $('exCountNote').textContent = note;
   syncImagesSum();
+  // объясняем, к чему относится список упражнений
+  const plans = draft.plans || [];
+  const pl = curPlan();
+  const t = $('bVariantTitle'), h = $('bVariantHint');
+  if(plans.length > 1){
+    const rot = !!draft.rotate;
+    const days = (pl.days || []).length ? pl.days.join(', ') : '';
+    t.textContent = `Упражнения · вариант ${planIdx + 1} из ${plans.length}`;
+    h.textContent = rot
+      ? 'Варианты идут по очереди. Ниже — упражнения выбранного варианта; переключай его вкладками.'
+      : (days
+          ? `Ниже — упражнения варианта на ${days}. Переключай вариант вкладками.`
+          : 'У этого варианта не выбраны дни — он не появится в расписании. Дни задаются в настройках программы.');
+    h.style.display = 'block';
+  } else {
+    t.textContent = 'Упражнения';
+    const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
+    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не появится в блоке «Запланировано сегодня».';
+    h.style.display = 'block';
+  }
 }
 
 // короткое описание объёма для строки: «12–15 × 3 · отдых 60 с»
@@ -6444,15 +6516,14 @@ $('ueVoiceOn').onclick = ()=>{
   $('ueVoiceField').style.display = on ? 'block' : 'none';
   uDraft.voiceVol = on ? 100 : 0;
 };
-$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; syncUserSums(); };
-$('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.trim(); syncUserSums(); };
+$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; };
+$('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.trim(); };
 ['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
   $(id).oninput = ()=>{
     if(!uDraft) return;
     uDraft.prepSec = parseInt($('uePrepSec').value) || 0;
     uDraft.readySec = parseInt($('ueReadySec').value) || 0;
     uDraft.sideSec = parseInt($('ueSideSec').value) || 10;
-    syncUserSums();
   };
 });
 $('tglSound').onclick = toggleSound;
@@ -6553,6 +6624,7 @@ $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal'
 $('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
 $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
+$('btnCreateBottom').onclick = ()=> $('createModal').classList.add('open');
 $('chCancel').onclick = ()=> $('createModal').classList.remove('open');
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
@@ -6648,7 +6720,6 @@ $('importProgFile').onchange = async e => {
 
 $('btnExportAll').textContent = 'Сохранить в файл';
 $('btnImportAll').textContent = 'Восстановить';
-$('dcIco').innerHTML = icon('download');
 $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
@@ -6745,8 +6816,37 @@ $('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
 $('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
 $('ueThemeL').onclick = ()=>{ uDraft.theme = 'light'; syncUserForm(); };
 $('ueThemeD').onclick = ()=>{ uDraft.theme = 'dark'; syncUserForm(); };
-$('uePhotoBtn').onclick = ()=> $('uePhotoFile').click();
-$('uePhotoNone').onclick = ()=>{ uDraft.photo = null; $('uePhotoFile').value=''; syncUserForm(); };
+// нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
+$('uePhotoBtn').onclick = e => {
+  e.stopPropagation();
+  if(!uDraft.photo){ $('uePhotoFile').click(); return; }
+  const menu = $('uePhotoMenu');
+  const wasOpen = menu.classList.contains('open');
+  closeAllMenus();
+  if(wasOpen) return;
+  menu.innerHTML = '';
+  const mk = (h, fn, cls)=>{
+    const b = document.createElement('button');
+    if(cls) b.className = cls;
+    b.innerHTML = h;
+    b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); fn(); };
+    return b;
+  };
+  menu.append(
+    mk(icon('camera') + 'Заменить фото', ()=> $('uePhotoFile').click()),
+    mk(icon('trash') + 'Удалить фото', ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
+  );
+  menu.classList.add('open');
+};
+
+/* ---- табы профиля ---- */
+const UE_PANES = {me: 'uePaneMe', sound: 'uePaneSound', timing: 'uePaneTiming', ai: 'uePaneAI'};
+function switchUeTab(t){
+  document.querySelectorAll('#ueTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.t === t));
+  Object.entries(UE_PANES).forEach(([k, id]) => $(id).style.display = (k === t) ? 'block' : 'none');
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('#ueTabs .tab').forEach(b => b.onclick = ()=> switchUeTab(b.dataset.t));
 $('uePhotoFile').onchange = e=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
@@ -6856,23 +6956,6 @@ $('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); 
 $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
 
 /* ---- ИИ внутри приложения (Gemini) ---- */
-// сворачиваемые секции профиля
-[['ueSoundHead','ueSoundBox'],['ueTimingHead','ueTimingBox'],['ueAIHead','ueAIBox']].forEach(([h, b])=>{
-  $(h).onclick = ()=>{
-    const box = $(b), open = box.style.display === 'none';
-    box.style.display = open ? 'block' : 'none';
-    $(h).classList.toggle('open', open);
-    if(open){ autoGrow($('exDesc')); }
-  };
-});
-function syncUserSums(){
-  if(!uDraft) return;
-  const vOn = (uDraft.voiceVol == null ? 100 : uDraft.voiceVol) > 0;
-  const fx = uDraft.fxVol == null ? 100 : uDraft.fxVol;
-  $('ueSoundSum').textContent = (vOn ? 'голос вкл' : 'голос выкл') + ` · сигналы ${fx}%`;
-  $('ueTimingSum').textContent = `${uDraft.prepSec == null ? 5 : uDraft.prepSec} · ${uDraft.readySec == null ? 5 : uDraft.readySec} · ${uDraft.sideSec == null ? 10 : uDraft.sideSec} сек`;
-  $('ueAISum').textContent = (uDraft.geminiKey || '').trim() ? 'ключ подключён' : 'не подключён';
-}
 
 $('ueGeminiHow').onclick = ()=> appAlert(
   'Ключ Gemini бесплатный.\n\n' +
@@ -6936,7 +7019,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title){
   try{
     const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined);
     aiRunClose();
-    if($(targetId)) $(targetId).value = text;
+    if($(targetId)){ $(targetId).value = text; autoGrow($(targetId)); }
     await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
   }catch(e){
     aiRunClose();
@@ -7017,6 +7100,31 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
     openExEdAI(keep);
   };
 });
+// правка программы: вручную ⇄ через ИИ
+document.querySelectorAll('#eaModeTabs .tab').forEach(b => {
+  b.onclick = ()=>{
+    if(b.dataset.m !== 'manual') return;
+    if(editAIProg) openBuilder(editAIProg.id);
+    else show('scrMenu');
+  };
+});
+
+// конструктор: вручную ⇄ через ИИ ⇄ из видео
+document.querySelectorAll('#bModeTabs .tab').forEach(b => {
+  b.onclick = async ()=>{
+    const m = b.dataset.m;
+    if(m === 'manual') return;
+    // уходя с ручного редактирования, предупреждаем о несохранённом
+    if(draft && (draft.name || (curPlan().exercises || []).length)){
+      const go = await appDialog(
+        'Перейти к созданию через ИИ? Несохранённые правки этой программы потеряются.',
+        {confirm: true, okText: 'Перейти', cancelText: 'Остаться'}
+      );
+      if(!go){ document.querySelectorAll('#bModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual')); return; }
+    }
+    switchCreateMode(m);
+  };
+});
 document.querySelectorAll('#exaModeTabs .tab').forEach(b => {
   b.onclick = ()=>{ if(b.dataset.m === 'manual') addExManual(); };
 });
@@ -7045,6 +7153,16 @@ function switchCreateMode(m){
     };
   });
 });
+// ручной режим открывает конструктор с активной вкладкой «Вручную»
+function markBuilderTab(){
+  document.querySelectorAll('#bModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+  // у существующей программы «создание через ИИ» неуместно — прячем эти вкладки
+  const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
+  document.querySelectorAll('#bModeTabs .tab').forEach(x => {
+    if(x.dataset.m !== 'manual') x.style.display = isEdit ? 'none' : '';
+  });
+  $('bModeTabs').style.display = isEdit ? 'none' : 'flex';
+}
 
 /* ---- правка упражнения через ИИ ---- */
 $('exeBackTop').onclick = ()=> show('scrBuilder');
@@ -7305,11 +7423,6 @@ $('bCoverFile').onchange = e=>{
   shrinkImage(file, 320, dataUrl => { draft.cover = dataUrl; syncCover(); });
 };
 // сброс счётчика прохождений (в редактировании программы)
-$('bStatReset').onclick = async ()=>{
-  if(!(await appConfirm('Сбросить счётчик прохождений этой программы?'))) return;
-  draft.stats = {completions: 0};
-  syncStats();
-};
 // сброс общего времени тренировок
 $('btnResetTotal').onclick = async ()=>{
   if(!(await appConfirm('Сбросить общее время и счётчик тренировок?'))) return;
