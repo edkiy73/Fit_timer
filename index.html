@@ -170,7 +170,11 @@
   .ctx-menu .danger{color:var(--work)}
   .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer}
   .icon-btn:active{transform:scale(.95)}
-  .btn-ghost{width:100%;border:1px dashed var(--line);background:none;color:var(--muted);border-radius:var(--radius);padding:16px;font-family:'Rubik';font-size:15px;cursor:pointer;margin-top:4px}
+  .btn-ghost{
+    width:100%;min-height:52px;border:1px dashed var(--line);background:none;color:var(--muted);
+    border-radius:14px;padding:0 16px;font-family:'Rubik';font-size:14.5px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
   .btn-ghost:active{transform:scale(.985)}
   .mine-empty{color:var(--muted);font-size:14px;margin-bottom:12px}
   .total-stat{
@@ -254,10 +258,11 @@
   .chip b{color:var(--ink);font-weight:500}
 
   .btn-primary{
-    width:100%;border:none;cursor:pointer;border-radius:16px;
+    width:100%;min-height:52px;border:none;cursor:pointer;border-radius:14px;
     background:var(--work);color:#fff;
-    font-family:'Oswald';font-weight:600;font-size:20px;letter-spacing:.1em;text-transform:uppercase;
-    padding:20px;transition:transform .12s ease,filter .12s ease;
+    font-family:'Oswald';font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
+    padding:0 18px;display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:transform .12s ease, opacity .15s ease;
   }
   .btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
   .btn-back{background:none;border:none;color:var(--muted);font-size:14px;padding:14px;cursor:pointer;width:100%;font-family:'Rubik'}
@@ -396,17 +401,18 @@
   }
   body.phase-rest .actions{background:linear-gradient(to top, var(--bg-rest) 72%, transparent)}
   .btn-done{
-    width:100%;border:none;cursor:pointer;border-radius:16px;
+    width:100%;min-height:52px;border:none;cursor:pointer;border-radius:14px;
     background:var(--work);color:#fff;
-    font-family:'Oswald';font-weight:600;font-size:22px;letter-spacing:.12em;text-transform:uppercase;
-    padding:22px;transition:transform .12s ease;
+    font-family:'Oswald';font-weight:600;font-size:18px;letter-spacing:.1em;text-transform:uppercase;
+    padding:0 18px;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s ease;
   }
   .btn-done:active{transform:scale(.98)}
   .btn-skip{
-    width:100%;background:none;color:var(--muted);
-    border:2px solid var(--line);border-radius:16px;
-    font-family:'Oswald';font-weight:600;font-size:20px;letter-spacing:.1em;text-transform:uppercase;
-    padding:20px;cursor:pointer;
+    width:100%;min-height:52px;background:none;color:var(--muted);
+    border:2px solid var(--line);border-radius:14px;
+    font-family:'Oswald';font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
+    padding:0 18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .btn-skip:active{background:rgba(127,127,127,.08)}
 
@@ -705,18 +711,26 @@
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
-  /* смысловой блок: группа полей в одной карточке */
+  /* смысловой блок: группа полей в одной карточке, отступы одинаковые везде */
   .card-block{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
   .card-block > .cb-title{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
-  .card-block .field{margin-bottom:14px}
-  .card-block .field:last-child{margin-bottom:0}
-  .card-block .row2{margin-bottom:14px}
-  .card-block .row2:last-child{margin-bottom:0}
-  .card-block .field-hint{margin-top:8px}
-  .card-block .pref-row:first-child{border-top:none;padding-top:0}
-  .card-block .pref-row:last-child{padding-bottom:0}
-  .card-block .collapse-head{margin-top:0}
-  .card-block .collapse-head:first-child{border-top:none;padding-top:0}
+  /* все прямые дети получают один и тот же вертикальный ритм */
+  .card-block > *{margin-top:0;margin-bottom:14px}
+  .card-block > *:last-child{margin-bottom:0}
+  .card-block .field{margin-bottom:0}
+  .card-block .field-hint{margin-top:8px;margin-bottom:0}
+  /* внутри карточки поля рисуются на фоне страницы, чтобы не сливались с карточкой */
+  .card-block .field input,.card-block .field textarea,.card-block .field select{background:var(--bg)}
+  /* разделители только между переключателями, и не прилипают к полям */
+  .card-block > .pref-row{border-top:1px solid var(--line);padding:14px 0;margin-bottom:0}
+  .card-block > .pref-row:first-child,.card-block > .cb-title + .pref-row{border-top:none;padding-top:0}
+  .card-block > .pref-row:last-child{padding-bottom:0}
+  .card-block > .field + .pref-row{margin-top:14px}
+  /* раскрывающийся заголовок внутри карточки */
+  .card-block > .collapse-head{margin:0;padding:14px 0;border-top:1px solid var(--line)}
+  .card-block > .collapse-head:first-child{border-top:none;padding-top:0}
+
+  .card-block .vol-field{margin:14px 0 0}
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
@@ -741,7 +755,7 @@
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:#fff;font-weight:500}
   .act-row{display:flex;gap:10px;align-items:stretch}
-  .btn-prev{flex:0 0 56px;min-height:56px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .btn-prev{flex:0 0 52px;min-height:52px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
   .btn-prev:disabled{opacity:.25}
   .act-row .btn-done{flex:1;margin:0}
@@ -992,9 +1006,10 @@
       <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
     </div>
 
-    <button class="btn-primary" id="exeSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    
     <div class="ai-links">
       <button type="button" class="ai-self" id="exeSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="exeSend">Отправить в другое приложение</button>
       <button type="button" id="exeGPT">Открыть ChatGPT</button>
       <button type="button" id="exeClaude">Открыть Claude</button>
       <button type="button" id="exeCopy">Скопировать</button>
@@ -1031,7 +1046,7 @@
     <div id="slotList"></div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="imgDone">Готово</button>
+      <button class="btn-skip" id="imgDone">Готово</button>
     </div>
   </section>
 
@@ -1075,9 +1090,10 @@
     <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div></div>
     <p class="field-hint" style="margin-top:-6px">Что не выберешь — ИИ решит сам, исходя из описания.</p>
 
-    <button class="btn-primary" id="exaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    
     <div class="ai-links">
       <button type="button" class="ai-self" id="exaSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="exaSend">Отправить в другое приложение</button>
       <button type="button" id="exaGPT">Открыть ChatGPT</button>
       <button type="button" id="exaClaude">Открыть Claude</button>
       <button type="button" id="exaCopy">Скопировать</button>
@@ -1111,9 +1127,10 @@
       <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
     </div>
 
-    <button class="btn-primary" id="ytSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    
     <div class="ai-links">
       <button type="button" class="ai-self" id="ytSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="ytSend">Отправить в другое приложение</button>
       <button type="button" id="ytGPT">Открыть ChatGPT</button>
       <button type="button" id="ytClaude">Открыть Claude</button>
       <button type="button" id="ytCopy">Скопировать</button>
@@ -1146,9 +1163,10 @@
       <p class="field-hint">ИИ получит текущую программу целиком и внесёт правки, остальное оставит как есть.</p>
     </div>
 
-    <button class="btn-primary" id="eaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    
     <div class="ai-links">
       <button type="button" class="ai-self" id="eaSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="eaSend">Отправить в другое приложение</button>
       <button type="button" id="eaGPT">Открыть ChatGPT</button>
       <button type="button" id="eaClaude">Открыть Claude</button>
       <button type="button" id="eaCopy">Скопировать</button>
@@ -1167,6 +1185,8 @@
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
     <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
+    <div class="card-block">
+    <p class="cb-title">О программе</p>
     <div class="field"><label>Обложка программы (необязательно)</label>
       <div class="media-row">
         <button type="button" id="bCoverBtn">Фото</button>
@@ -1182,9 +1202,13 @@
     <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
       <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
     </div>
-    <div class="field"><label>Прогрессия нагрузки</label>
-      <div class="pref-row" style="border-top:none;padding:0 0 4px"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
-      <div id="bProgOpts" style="display:none">
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">Прогрессия нагрузки</p>
+    <div class="pref-row"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
+    <div id="bProgOpts" style="display:none">
+      <div class="field">
         <div class="load-row" id="bProgStep" style="margin-bottom:10px"></div>
         <select id="bProgEvery">
           <option value="7">каждую неделю</option>
@@ -1194,7 +1218,10 @@
       </div>
       <p class="field-hint">Рекомендуемая нагрузка на старте будет расти сама — программа усложняется вместе с тобой.</p>
     </div>
-    <div class="section-title">Расписание</div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">Расписание</p>
     <div class="sched-block">
       <div class="sched-mode" id="schedModeRow" style="display:none">
         <div class="hf-seg" id="schedSeg">
@@ -1215,16 +1242,20 @@
       </div>
     </div>
 
-    <div class="section-title" style="margin-top:6px">Круги и отдых <span class="st-note" id="stVariantNote"></span></div>
+    </div>
+
+    <div class="card-block">
+    <p class="cb-title">Круги и отдых <span class="st-note" id="stVariantNote"></span></p>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
     </div>
-    <p class="field-hint" id="bVolHint" style="margin-top:-6px"></p>
+    <p class="field-hint" id="bVolHint"></p>
     <div class="field"><label>Время этого варианта (необязательно)</label><input type="time" id="bPlanTime">
       <p class="field-hint">Если у варианта своё время — оно важнее общего времени программы.</p>
     </div>
-    <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:0 0 4px;padding:6px">Удалить этот вариант</button>
+    <button type="button" class="link-btn" id="btnDelPlan" style="display:none;margin:6px 0 0;padding:6px">Удалить этот вариант</button>
+    </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnPsDone">Готово</button>
     </div>
@@ -1329,9 +1360,10 @@
     <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
     <div class="pref-row" id="qRotateRow" style="display:none"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
 
-    <button class="btn-primary" id="btnSendAI" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    
     <div class="ai-links">
       <button type="button" class="ai-self" id="btnSelfAI">✨ Сделать через ИИ Fit Timer</button>
+      <button type="button" id="btnSendAI">Отправить в другое приложение</button>
       <button type="button" id="aiGPT">Открыть ChatGPT</button>
       <button type="button" id="aiClaude">Открыть Claude</button>
       <button type="button" id="btnCopyPrompt">Скопировать</button>
@@ -1585,7 +1617,7 @@
       <span>Звук</span><span class="st-sum" id="ueSoundSum"></span><span class="st-chev" id="ueSoundChev"></span>
     </button>
     <div id="ueSoundBox" style="display:none">
-      <div class="pref-row" style="border-top:none;padding-top:6px"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
+      <div class="pref-row"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
       <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
         <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
         <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
