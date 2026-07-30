@@ -194,7 +194,7 @@
   .field{margin:0 0 16px}
   .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin:0 0 6px}
   .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field input[type=password],.field textarea,.field select{
-    width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    width:100%;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
     color:var(--ink);font-family:'Rubik';font-size:15px;padding:12px 14px;outline:none;appearance:none;
   }
   .field textarea{resize:vertical;min-height:64px}
@@ -216,8 +216,9 @@
   .media-row button.act{border-color:var(--work);color:var(--ink)}
   .days{display:flex;gap:6px;flex-wrap:wrap}
   .day-chip{
-    flex:1;min-width:40px;background:var(--card);border:1px solid var(--line);border-radius:10px;
-    color:var(--muted);padding:10px 0;font-size:13px;font-family:'Rubik';cursor:pointer;text-align:center;
+    flex:1;min-width:40px;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
+    color:var(--muted);padding:0 8px;min-height:42px;font-size:13.5px;font-family:'Rubik';cursor:pointer;
+    display:flex;align-items:center;justify-content:center;text-align:center;
   }
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .media-preview{margin-top:10px}
@@ -466,7 +467,7 @@
   .mini-label{display:block;font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-block{margin:2px 0 14px}
   .load-row{display:flex;gap:6px}
-  .load-chip{flex:1;padding:11px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-family:'Oswald';font-weight:600;font-size:14px;cursor:pointer;text-align:center}
+  .load-chip{flex:1;padding:0 8px;min-height:42px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .load-chip.prog{border-style:dashed}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -644,7 +645,7 @@
   .more-btn svg{width:17px;height:17px}
   .more-btn{display:flex;align-items:center;justify-content:center}
   .plan-tabs{display:flex;gap:6px;flex-wrap:wrap}
-  .plan-tab{padding:10px 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13px;font-family:'Rubik';cursor:pointer}
+  .plan-tab{padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13.5px;font-family:'Rubik';cursor:pointer;min-height:42px;display:flex;align-items:center;justify-content:center}
   .plan-tab.act{background:var(--work);border-color:var(--work);color:#fff}
   .plan-tab.add{border-style:dashed}
   .plan-chip{flex:0 0 auto !important;padding:11px 14px !important}
@@ -735,8 +736,19 @@
   /* внутри карточки отступы задаёт только gap контейнеров */
   .card-block .field,.card-block .row2,.card-block .vol-field{margin:0}
   .card-block .field-hint{margin:6px 0 0}
-  /* вложенные группы полей — тоже флекс-колонки с тем же ритмом */
-  .card-block .stack{display:flex;flex-direction:column;gap:16px}
+  /* ЛЮБАЯ вложенная обёртка внутри карточки — колонка с тем же ритмом.
+     gap работает только между прямыми детьми, поэтому перечисляем обёртки явно */
+  .card-block .stack,
+  .card-block .prefs,
+  .card-block .hf-block,
+  .card-block .sched-block,
+  .card-block .vol-field,
+  .card-block .mc-charts{display:flex;flex-direction:column;gap:16px}
+  /* поле — тесная связка: подпись, контрол, чипы, подсказка */
+  .card-block .field{display:flex;flex-direction:column;gap:8px}
+  .card-block .field label{margin:0}
+  .card-block .field-hint{margin:0}
+  .card-block .row2 > .field{gap:8px}
   .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
   /* заголовок с числом упражнений: в узком экране переносим числом на вторую строку */
   /* экран перед стартом: карточки, кнопка всегда снизу */
@@ -774,11 +786,14 @@
   .cmd-list b{color:var(--ink);font-weight:500}
 
   /* селект должен выглядеть как селект — со стрелкой */
-  select{
+  /* селект узнаваем по стрелке; специфичность выше базового правила поля */
+  .field select,select.voice-sel,select{
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A5' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
-    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
-    padding-right:38px !important;
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+    background-size:18px;
+    padding-right:38px;
   }
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
@@ -945,14 +960,12 @@
       </div>
     </div>
     <div class="start-wrap">
-      <div class="card-block">
-        <div class="num" id="startNum"></div>
-        <h2 id="startTitle"></h2>
-        <p class="desc" id="startDesc"></p>
-        <div class="start-meta">
-          <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
-          <div class="chip">Упражнений: <b id="startExCount"></b></div>
-        </div>
+      <div class="num" id="startNum"></div>
+      <h2 id="startTitle"></h2>
+      <p class="desc" id="startDesc"></p>
+      <div class="start-meta">
+        <div class="chip"><span id="startVolLabel">Кругов</span>: <b id="startRounds">4</b></div>
+        <div class="chip">Упражнений: <b id="startExCount"></b></div>
       </div>
 
       <div class="card-block" id="progDescBox" style="display:none">
@@ -1292,9 +1305,6 @@
       <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
       <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
-    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
-      <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
-    </div>
     </div>
 
     <div class="card-block">
@@ -1328,6 +1338,9 @@
       <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
         <p class="field-hint" id="bDaysHint"></p>
       </div>
+      <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
+        <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
+      </div>
 
       <div class="field" id="variantsField">
         <label id="variantsLabel">Варианты тренировки</label>
@@ -1360,10 +1373,6 @@
     <div class="screen-head st-row">
       <button class="back-chip" id="exBackTop"></button>
       <h2 id="exTitle">Упражнение</h2>
-      <div class="prog-menu-wrap">
-        <button class="more-btn" id="exMore" title="Действия"></button>
-        <div class="ctx-menu" id="exMenu"></div>
-      </div>
     </div>
 
     <div class="tabs" id="exModeTabs">
@@ -1399,7 +1408,7 @@
       <span class="st-chev" id="exDetailsChev"></span>
     </button>
 
-    <div id="exDetailsBox" style="display:none">
+    <div id="exDetailsBox" class="stack" style="display:none">
       <div class="field"><label>Как выполнять</label><textarea id="exDesc" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
       <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
@@ -2419,7 +2428,6 @@ function buildStartMenu(){
   };
   menu.append(
     mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
-    mk(icon('sparkle') + 'Изменить через ИИ', ()=> openEditAI(p)),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
@@ -4381,9 +4389,6 @@ function renderMine(){
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
-    const bAI = document.createElement('button');
-    bAI.innerHTML = icon('sparkle') + 'Изменить через ИИ';
-    bAI.onclick = ()=>{ closeAllMenus(); openEditAI(p); };
     const bFile = document.createElement('button');
     bFile.innerHTML = icon('download') + 'Сохранить в файл';
     bFile.title = 'Со всеми картинками';
@@ -4398,7 +4403,7 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bAI, bShare, bFile, bDel);
+    menu.append(bEdit, bShare, bFile, bDel);
     more.onclick = e=>{
       e.stopPropagation();
       const wasOpen = menu.classList.contains('open');
@@ -4897,7 +4902,9 @@ function renderExList(){
   const nWarm = list.filter(e => e.warmup).length;
   const nMain = list.length - nWarm;
   $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
-  const note = list.length ? `${list.length}` + (nWarm ? ` · ${nWarm} в разминке` : '') : '';
+  const note = list.length
+    ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}` + (nWarm ? ` · ${nWarm} в разминке` : '')
+    : '';
   $('exCountNote').textContent = note;
   syncImagesSum();
   // объясняем, к чему относится список упражнений
@@ -4965,9 +4972,6 @@ function exRow(ex, i){
   const menu = document.createElement('div');
   menu.className = 'ctx-menu ex-menu';
 
-  const bAI = document.createElement('button');
-  bAI.innerHTML = icon('sparkle') + 'Изменить через ИИ';
-  bAI.onclick = e => { e.stopPropagation(); closeAllMenus(); openExEdAI(i); };
   const bDup = document.createElement('button');
   bDup.innerHTML = icon('plus') + 'Дублировать';
   bDup.onclick = e => {
@@ -4991,7 +4995,7 @@ function exRow(ex, i){
     curPlan().exercises.splice(i, 1);
     renderExList();
   };
-  menu.append(bAI, bDup, bDel);
+  menu.append(bDup, bDel);
   more.onclick = e => {
     e.stopPropagation();
     const wasOpen = menu.classList.contains('open');
@@ -7293,56 +7297,6 @@ async function leaveExercise(){
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
   show('scrBuilder');
-}
-$('exMore').innerHTML = icon('more');
-$('exMore').onclick = e => {
-  e.stopPropagation();
-  const menu = $('exMenu');
-  const wasOpen = menu.classList.contains('open');
-  closeAllMenus();
-  if(!wasOpen){ buildExEditorMenu(); menu.classList.add('open'); }
-};
-function buildExEditorMenu(){
-  const menu = $('exMenu');
-  menu.innerHTML = '';
-  const mk = (h, fn, cls)=>{
-    const b = document.createElement('button');
-    if(cls) b.className = cls;
-    b.innerHTML = h;
-    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
-    return b;
-  };
-  menu.append(
-    mk(icon('sparkle') + 'Изменить через ИИ', ()=>{
-      const list = curPlan().exercises;
-      if(list[exIdx]) list[exIdx] = commitExercise();
-      const keep = exIdx;
-      exDraft = null; exIdx = -1;
-      renderExList();
-      openExEdAI(keep);
-    }),
-    mk(icon('plus') + 'Дублировать', ()=>{
-      const list = curPlan().exercises;
-      const nWarm = list.filter(e => e.warmup).length;
-      const nMain = list.length - nWarm;
-      if(exDraft.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){ appAlert('Достигнут предел упражнений.'); return; }
-      list[exIdx] = commitExercise();
-      const copy = JSON.parse(JSON.stringify(list[exIdx]));
-      list.splice(exIdx + 1, 0, copy);
-      exIdx = exIdx + 1;
-      exDraft = JSON.parse(JSON.stringify(copy));
-      fillExercise();
-      renderExList();
-      appAlert('Упражнение продублировано — правь копию.');
-    }),
-    mk(icon('trash') + 'Удалить', async ()=>{
-      if(!(await appConfirm('Удалить это упражнение?'))) return;
-      curPlan().exercises.splice(exIdx, 1);
-      exDraft = null; exIdx = -1;
-      renderExList();
-      show('scrBuilder');
-    }, 'danger')
-  );
 }
 $('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
 $('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
