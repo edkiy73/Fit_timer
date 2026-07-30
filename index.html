@@ -186,7 +186,7 @@
   .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:'Rubik';font-size:13px;cursor:pointer}
 
   /* ---------- конструктор ---------- */
-  .builder h2{font-size:26px;margin:18px 0 16px}
+  .builder h2{font-size:21px;margin:18px 0 16px}
   .field{margin-bottom:14px}
   .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin-bottom:6px}
   .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field input[type=password],.field textarea,.field select{
@@ -705,6 +705,19 @@
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
+  /* смысловой блок: группа полей в одной карточке */
+  .card-block{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  .card-block > .cb-title{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+  .card-block .field{margin-bottom:14px}
+  .card-block .field:last-child{margin-bottom:0}
+  .card-block .row2{margin-bottom:14px}
+  .card-block .row2:last-child{margin-bottom:0}
+  .card-block .field-hint{margin-top:8px}
+  .card-block .pref-row:first-child{border-top:none;padding-top:0}
+  .card-block .pref-row:last-child{padding-bottom:0}
+  .card-block .collapse-head{margin-top:0}
+  .card-block .collapse-head:first-child{border-top:none;padding-top:0}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -966,6 +979,10 @@
   <section class="screen builder" id="scrExEdAI">
     <div class="screen-head"><button class="back-chip" id="exeBackTop"></button><h2>Изменить упражнение</h2></div>
 
+    <div class="tabs" id="exeModeTabs">
+      <button class="tab" data-m="manual">Вручную</button>
+      <button class="tab act" data-m="ai">Через ИИ</button>
+    </div>
     <div class="nav-row" style="cursor:default">
       <div class="nr-body"><b id="exeName">Упражнение</b><small id="exeSum"></small></div>
     </div>
@@ -1079,6 +1096,11 @@
   <section class="screen builder" id="scrYouTube">
     <div class="screen-head"><button class="back-chip" id="ytBackTop"></button><h2>Программа из видео</h2></div>
 
+    <div class="tabs" id="ytModeTabs">
+      <button class="tab" data-m="text">По описанию</button>
+      <button class="tab act" data-m="video">Из видео</button>
+      <button class="tab" data-m="manual">Вручную</button>
+    </div>
     <div class="section-title" style="margin-top:4px">1 · Ссылка на видео</div>
     <div class="field">
       <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
@@ -1219,26 +1241,33 @@
       </div>
     </div>
 
-    <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
-
-    <div class="pref-row" style="border-top:none;padding:2px 0 10px"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
-
-    <div class="field"><label>Формат</label>
-      <div class="seg"><button type="button" id="exTypeReps">Повторения</button><button type="button" id="exTypeTime">Время</button></div>
+    <div class="tabs" id="exModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="ai">Через ИИ</button>
+    </div>
+    <div class="card-block">
+      <p class="cb-title">Что за упражнение</p>
+      <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
+      <div class="pref-row"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
     </div>
 
-    <div class="row2">
-      <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="12 или 12-15"></div>
-      <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
+    <div class="card-block">
+      <p class="cb-title">Сколько делать</p>
+      <div class="field"><label>Формат</label>
+        <div class="seg"><button type="button" id="exTypeReps">Повторения</button><button type="button" id="exTypeTime">Время</button></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="12 или 12-15"></div>
+        <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
+      </div>
+      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
+      <div class="field"><label>Отдых после подхода, сек</label>
+        <div class="load-row" id="exRestChips" style="margin-bottom:8px"></div>
+        <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
+      </div>
     </div>
 
-    <div class="pref-row" style="margin-top:6px;padding:12px 0"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
-
-    <div class="field"><label>Отдых после подхода, сек</label>
-      <div class="load-row" id="exRestChips" style="margin-bottom:8px"></div>
-      <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
-    </div>
-
+    <div class="card-block">
     <button type="button" class="collapse-head" id="exDetailsToggle">
       <span>Детали</span>
       <span class="st-sum" id="exDetailsSum"></span>
@@ -1264,6 +1293,7 @@
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
+    </div>
 
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveEx">Готово</button>
@@ -1273,6 +1303,11 @@
   <section class="screen builder" id="scrText">
     <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Создание через ИИ</h2></div>
 
+    <div class="tabs" id="aiModeTabs">
+      <button class="tab act" data-m="text">По описанию</button>
+      <button class="tab" data-m="video">Из видео</button>
+      <button class="tab" data-m="manual">Вручную</button>
+    </div>
     <div class="section-title" style="margin-top:4px">1 · Какая тренировка нужна?</div>
     <p class="field-hint" style="margin:-4px 0 14px">Заполняй только то, что для тебя важно. Всё, что пропустишь, ИИ подберёт сам под твою программу. Повторное нажатие снимает выбор.</p>
     <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
@@ -1409,6 +1444,8 @@
         <div class="field"><label>Пол</label>
           <div class="seg"><button type="button" id="obF" class="act">Женский</button><button type="button" id="obM">Мужской</button></div>
         </div>
+        <div class="field"><label>Дата рождения</label><input type="date" id="obBirth"></div>
+        <p class="field-hint" style="margin:-6px 0 16px">Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и восстановление. Это единственное, что мы спрашиваем обязательно.</p>
         <button class="btn-primary" id="obNext1">Дальше</button>
       </div>
       <div id="obStep2" style="display:none">
@@ -1520,6 +1557,7 @@
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
+    <div class="card-block">
     <div class="field"><label>Имя</label><input type="text" id="ueName" maxlength="30" placeholder="Как тебя зовут?"></div>
     <div class="field"><label>Фото (необязательно)</label>
       <div class="media-row">
@@ -1537,8 +1575,12 @@
         <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
       </div>
     </div>
-    <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth"></div>
+    <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth">
+      <p class="field-hint">Пол и возраст важны для составления тренировок — от них зависят подбор упражнений, нагрузка и время восстановления. Эти данные уходят в запрос к ИИ.</p>
+    </div>
+    </div>
 
+    <div class="card-block">
     <button type="button" class="collapse-head" id="ueSoundHead">
       <span>Звук</span><span class="st-sum" id="ueSoundSum"></span><span class="st-chev" id="ueSoundChev"></span>
     </button>
@@ -1579,6 +1621,7 @@
         <button type="button" id="ueGeminiTest">Проверить</button>
       </div>
       <p class="field-hint" id="ueGeminiState" style="margin-top:8px"></p>
+    </div>
     </div>
 
     <div class="builder-actions">
@@ -2815,6 +2858,12 @@ async function saveUser(){
   uDraft.voiceVol = $('ueVoiceOn').classList.contains('on') ? 100 : 0;
   uDraft.fxVol = isFinite(parseInt($('ueFxVol').value)) ? parseInt($('ueFxVol').value) : 100;
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
+  const bErr = birthError(uDraft.birth);
+  if(bErr){
+    appAlert(bErr);
+    $('ueBirth').focus();
+    return;
+  }
   if(uDraft.id){
     const i = users.findIndex(x => x.id === uDraft.id);
     users[i] = uDraft;
@@ -3251,7 +3300,7 @@ async function saveWeightHist(){
 
 /* ================= ПЕРВЫЙ ЗАПУСК (ОНБОРДИНГ) ================= */
 const OB_GOALS = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Сила и выносливость', 'Растяжка и лёгкость'];
-const obState = {gender: 'f', goal: ''};
+const obState = {gender: 'f', goal: '', birth: ''};
 
 function startOnboarding(){
   themeLight = true;
@@ -3274,7 +3323,7 @@ async function finishOnboardingCreate(){
     id: 'u' + Date.now(),
     name: obState.name,
     gender: obState.gender,
-    birth: '', photo: null,
+    birth: obState.birth || '', photo: null,
     theme: obState.gender === 'm' ? 'dark' : 'light',
     goal: obState.goal
   };
@@ -3466,6 +3515,40 @@ async function importProgramFile(file){
   }catch(e){
     appAlert('Не удалось прочитать файл: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
   }
+}
+
+/* ---- возраст и пол: нужны для подбора тренировок ---- */
+function userAge(u){
+  if(!u || !u.birth) return null;
+  const d = new Date(u.birth);
+  if(isNaN(d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if(m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return (a >= 5 && a <= 100) ? a : null;
+}
+function birthError(v){
+  if(!v) return 'Укажи дату рождения — от возраста зависит подбор упражнений и нагрузки.';
+  const d = new Date(v);
+  if(isNaN(d)) return 'Дата рождения указана некорректно.';
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if(m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  if(a < 5) return 'Проверь дату рождения — получается слишком маленький возраст.';
+  if(a > 100) return 'Проверь дату рождения — получается слишком большой возраст.';
+  return '';
+}
+// строка о человеке для запроса к ИИ
+function userForAI(){
+  const u = curUser();
+  if(!u) return '';
+  const bits = [];
+  bits.push(u.gender === 'm' ? 'Пол: мужской' : 'Пол: женский');
+  const a = userAge(u);
+  if(a) bits.push(`Возраст: ${a} ${plural(a, 'год', 'года', 'лет')}`);
+  return bits.join('. ') + '. Учитывай это при подборе упражнений, нагрузки и времени на восстановление.';
 }
 
 /* ================= GEMINI API ================= */
@@ -3714,6 +3797,7 @@ function exePrompt(){
   const wish = ($('exeWish').value || '').trim();
   return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
     'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
+    'ДЛЯ КОГО: ' + userForAI() + '\n' +
     'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
     '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
     `=== ФОРМАТ ОТВЕТА ===
@@ -3813,6 +3897,7 @@ function exaPrompt(){
   s += many
     ? 'Каждое упражнение — отдельный блок, начинающийся со строки «УПРАЖНЕНИЕ:». Блоки разделяй пустой строкой. Упражнения не должны дублировать друг друга. Верни только блоки, без пояснений до и после.\n\n'
     : 'Верни только блок упражнения, без пояснений до и после.\n\n';
+  s += 'ДЛЯ КОГО: ' + userForAI() + '\n';
   s += 'ЗАПРОС: ' + (wish || '(не указан — предложи полезное упражнение на своё усмотрение)') + '\n';
   if(given.length) s += given.join(' ') + '\n';
   if(free.length) s += 'Не указано — реши сам(а): ' + free.join('; ') + '.\n';
@@ -3882,7 +3967,8 @@ function youtubePrompt(){
   return AI_PROMPT +
     '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
     'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
-    'ССЫЛКА: ' + link + '\n\n' +
+    'ССЫЛКА: ' + link + '\n' +
+    'ДЛЯ КОГО: ' + userForAI() + '\n\n' +
     'Что важно:\n' +
     '· Возьми упражнения в том же порядке, что в ролике, с теми же повторениями или длительностью и паузами отдыха.\n' +
     '· Если в видео есть разминка — отметь эти упражнения строкой РАЗМИНКА: да.\n' +
@@ -3970,6 +4056,7 @@ function editAIPrompt(){
     'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
     'Строку SVG можно не писать для упражнений, которые остались с прежними названиями — их картинки сохранятся сами. ' +
     'Для новых или переименованных упражнений SVG рисуй как обычно.\n\n' +
+    'ДЛЯ КОГО: ' + userForAI() + '\n' +
     'ЗАПРОС ПОЛЬЗОВАТЕЛЯ: ' + (wish || '(не указан — просто улучши программу на своё усмотрение)') + '\n\n' +
     '=== ТЕКУЩАЯ ПРОГРАММА ===\n' + programToText(editAIProg);
 }
@@ -4512,10 +4599,12 @@ function renderDays(){
 let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
 let exDraft = null;  // копия для правки
 
+let exOrig = '';  // снимок упражнения на момент открытия — для проверки изменений
 function openExercise(i){
   const list = curPlan().exercises;
   exIdx = i;
   exDraft = JSON.parse(JSON.stringify(list[i]));
+  exOrig = JSON.stringify(list[i]);
   fillExercise();
   show('scrExercise');
   window.scrollTo(0, 0);
@@ -4600,6 +4689,21 @@ function syncExDetailsSum(){
   if(exDraft.media) bits.push('картинка');
   if((exDraft.video || '').trim()) bits.push('видео');
   $('exDetailsSum').textContent = bits.length ? bits.join(', ') : 'не заполнено';
+}
+
+// есть ли несохранённые правки
+function exDirty(){
+  if(!exDraft || exIdx < 0) return false;
+  const snapshot = JSON.parse(JSON.stringify(exDraft));
+  // подтягиваем текущее состояние формы, не меняя черновик
+  snapshot.name = $('exName').value.trim();
+  snapshot.value = normValue($('exValue').value, snapshot.type);
+  snapshot.sets = snapshot.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
+  snapshot.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
+  snapshot.desc = $('exDesc').value.trim();
+  snapshot.mistakes = $('exMistakes').value.trim();
+  snapshot.video = $('exVideo').value.trim();
+  return JSON.stringify(snapshot) !== exOrig;
 }
 
 function commitExercise(){
@@ -5103,7 +5207,7 @@ function composeRequest(){
     free.push('делить ли программу на разные дни или сделать одинаковой');
   }
 
-  let s = 'Составь программу тренировок. ' + parts.join(' ');
+  let s = 'Составь программу тренировок. ' + userForAI() + ' ' + parts.join(' ');
   if(free.length){
     s += ` Не указано — реши сам(а), исходя из программы и здравого смысла: ${free.join('; ')}.`;
   }
@@ -6493,7 +6597,11 @@ $('obName').addEventListener('keydown', e => { if(e.key === 'Enter') $('obNext1'
 $('obNext1').onclick = ()=>{
   const n = $('obName').value.trim();
   if(!n){ appAlert('Напиши, как тебя зовут — так будет уютнее.'); return; }
+  const b = $('obBirth').value || '';
+  const err = birthError(b);
+  if(err){ appAlert(err); return; }
   obState.name = n;
+  obState.birth = b;
   $('obStep1').style.display = 'none';
   $('obStep2').style.display = 'block';
 };
@@ -6810,6 +6918,48 @@ $('slotFile').onchange = e => {
   });
 };
 
+/* ---- переключение способа прямо на экране ---- */
+// упражнение: вручную ⇄ через ИИ, без возврата в меню
+document.querySelectorAll('#exModeTabs .tab').forEach(b => {
+  b.onclick = async ()=>{
+    if(b.dataset.m !== 'ai') return;
+    // сохраняем правки, чтобы ИИ получил актуальное упражнение
+    if(exDraft && exIdx >= 0){
+      const list = curPlan().exercises;
+      if(list[exIdx]) list[exIdx] = commitExercise();
+    }
+    const keep = exIdx;
+    exDraft = null; exIdx = -1; exOrig = '';
+    renderExList();
+    openExEdAI(keep);
+  };
+});
+document.querySelectorAll('#exeModeTabs .tab').forEach(b => {
+  b.onclick = ()=>{
+    if(b.dataset.m !== 'manual') return;
+    const keep = exeIdx;
+    if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
+    else show('scrBuilder');
+  };
+});
+
+// создание программы: по описанию ⇄ из видео ⇄ вручную
+function switchCreateMode(m){
+  if(m === 'text'){ initAIForm(); syncGeminiBtns(); show('scrText'); }
+  else if(m === 'video'){ openYouTube(); }
+  else if(m === 'manual'){ openBuilder(); }
+  window.scrollTo(0, 0);
+}
+['aiModeTabs', 'ytModeTabs'].forEach(id => {
+  document.querySelectorAll('#' + id + ' .tab').forEach(b => {
+    b.onclick = ()=>{
+      const cur = id === 'aiModeTabs' ? 'text' : 'video';
+      if(b.dataset.m === cur) return;
+      switchCreateMode(b.dataset.m);
+    };
+  });
+});
+
 /* ---- правка упражнения через ИИ ---- */
 $('exeBackTop').onclick = ()=> show('scrBuilder');
 $('exeApply').onclick = applyExEdit;
@@ -6869,14 +7019,29 @@ function addExManual(){
 }
 
 /* ---- экран упражнения ---- */
-$('exBackTop').onclick = ()=>{ saveExAndBack(); };
+$('exBackTop').onclick = ()=> leaveExercise();
 $('btnSaveEx').onclick = ()=>{ saveExAndBack(); };
+
 function saveExAndBack(){
   if(exDraft && exIdx >= 0){
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
   }
-  exDraft = null; exIdx = -1;
+  exDraft = null; exIdx = -1; exOrig = '';
+  renderExList();
+  show('scrBuilder');
+}
+
+// выход без сохранения — с предупреждением, если что-томенялось
+async function leaveExercise(){
+  if(exDirty()){
+    const go = await appDialog(
+      'Изменения этого упражнения не сохранены. Если выйти, они пропадут.',
+      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Вернуться'}
+    );
+    if(!go) return;
+  }
+  exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
   show('scrBuilder');
 }
