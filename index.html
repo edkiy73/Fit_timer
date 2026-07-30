@@ -122,7 +122,7 @@
   .hero h1 span{color:var(--work)}
   .hero p{color:var(--muted);margin-top:10px;font-size:15px;line-height:1.45}
   .month-card{
-    display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;
+    display:flex;align-items:flex-start;gap:14px;width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px;margin-bottom:12px;color:var(--ink);
     transition:transform .12s ease,border-color .12s ease;
@@ -138,7 +138,7 @@
   .mc-body{flex:1;min-width:0}
   .month-card .num{font-family:'Oswald';font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--work)}
   .month-card h3{
-    font-size:17px;line-height:1.22;margin:0 0 5px;
+    font-size:13.6px;line-height:1.22;margin:0 0 5px;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   }
   .month-card p{color:var(--muted);font-size:13px;line-height:1.4}
@@ -222,7 +222,7 @@
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--work)}
   .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
   body:not(.light) .field input[type=date],body:not(.light) .field input[type=time]{color-scheme:dark}
-  .row2{display:flex;gap:10px;margin:0 0 16px}
+  .row2{display:flex;gap:10px;margin:0 0 16px;align-items:flex-end}
   .row2 .field{flex:1;min-width:0}
   .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .ex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -2206,7 +2206,7 @@ function runReadyBar(sec, done){
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
-  box.style.display = 'block';
+  box.classList.remove('hidden');
   fill.style.transition = 'none';
   fill.style.width = '100%';
   num.textContent = sec;
@@ -2218,7 +2218,7 @@ function runReadyBar(sec, done){
       left -= dt;
       if(left <= 0){
         state.readyRAF = 0;
-        box.style.display = 'none';
+        box.classList.add('hidden');
         done();
         return;
       }
@@ -2233,7 +2233,7 @@ function hideReadyBar(){
   if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyBar');
-  if(box) box.style.display = 'none';
+  if(box) box.classList.add('hidden');
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -2308,6 +2308,31 @@ const MUSCLES = [
   ['ba','Спина'], ['gl','Ягодицы'], ['le','Квадрицепс'], ['hm','Задняя бедра'], ['ca','Икры']
 ];
 const M_LABEL = Object.fromEntries(MUSCLES);
+
+/* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
+// снимки форм: сравниваем текущее состояние с тем, что было при открытии
+const snap = {};
+function takeSnap(key, val){ snap[key] = JSON.stringify(val ?? null); }
+function isChanged(key, val){ return snap[key] !== undefined && snap[key] !== JSON.stringify(val ?? null); }
+function clearSnap(key){ delete snap[key]; }
+
+// спрашивает подтверждение, если что-то менялось; иначе уходит молча
+async function leaveGuard(changed, go, what){
+  if(changed){
+    const ok = await appDialog(
+      (what || 'Изменения') + ' не сохранены. Если уйти, они пропадут.',
+      {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'}
+    );
+    if(!ok) return false;
+  }
+  go();
+  return true;
+}
+
+// текст в полях ИИ-экрана считается несохранённой работой
+function aiScreenDirty(ids){
+  return ids.some(id => { const el = $(id); return el && (el.value || '').trim(); });
+}
 
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
 function appDialog(msg, opts = {}){
@@ -2402,8 +2427,8 @@ function renderPlanRow(){
   const plans = normPlans(state.raw);
   const block = $('planBlock'), row = $('planRow');
   row.innerHTML = '';
-  if(plans.length < 2){ block.style.display = 'none'; return; }
-  block.style.display = 'flex';
+  if(plans.length < 2){ block.classList.add('hidden'); return; }
+  block.classList.remove('hidden');
   plans.forEach((pl, i)=>{
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
@@ -2455,14 +2480,14 @@ function renderStartInfo(){
   const d = (state.raw.desc || '').trim();
   if(d){
     dTxt.textContent = d;
-    dBox.style.display = 'flex';
+    dBox.classList.remove('hidden');
     dBox.classList.remove('open');
     $('progDescMore').textContent = 'Показать полностью';
     requestAnimationFrame(()=>{
       const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
       $('progDescMore').style.display = fits ? 'none' : 'block';
     });
-  } else dBox.style.display = 'none';
+  } else dBox.classList.add('hidden');
 
   const plans = normPlans(state.raw);
   const pl = plans[state.planIdx];
@@ -2989,6 +3014,22 @@ document.addEventListener('click', e => {
 
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 let uDraft = null;
+// текущее состояние профиля для сравнения
+function userState(){
+  if(!uDraft) return null;
+  const u = JSON.parse(JSON.stringify(uDraft));
+  if($('ueName')) u.name = $('ueName').value.trim();
+  if($('ueBirth')) u.birth = $('ueBirth').value || '';
+  if($('ueGeminiKey')) u.geminiKey = ($('ueGeminiKey').value || '').trim();
+  if($('ueFxVol')) u.fxVol = parseInt($('ueFxVol').value) || 0;
+  if($('uePrepSec')) u.prepSec = parseInt($('uePrepSec').value) || 0;
+  if($('ueReadySec')) u.readySec = parseInt($('ueReadySec').value) || 0;
+  if($('ueSideSec')) u.sideSec = parseInt($('ueSideSec').value) || 0;
+  if($('ueVoiceSel')) u.voiceURI = $('ueVoiceSel').value || '';
+  return u;
+}
+function userDirty(){ return isChanged('user', userState()); }
+
 function openUserEdit(id = null){
   $('usersModal').classList.remove('open');
   const u = id ? users.find(x => x.id === id) : {id: null, name: '', gender: 'f', birth: '', photo: null, theme: 'light'};
@@ -3000,6 +3041,7 @@ function openUserEdit(id = null){
   $('ueGeminiKey').value = uDraft.geminiKey || '';
   $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопки «Сделать через ИИ» активны.' : 'Ключ не задан — кнопки «Сделать через ИИ» неактивны.';
   switchUeTab('me');
+  setTimeout(()=> takeSnap('user', userState()), 0);
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
   if(uDraft.sideSec == null) uDraft.sideSec = 10;
@@ -3557,7 +3599,7 @@ function renderToday(){
   $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
   const anyDays = customPrograms.some(p => programDaysUnion(p).length);
   if(!anyDays){ box.style.display = 'none'; return; }
-  box.style.display = 'block';
+  box.classList.remove('hidden');
 
   const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
   const scheduled = [];
@@ -4632,8 +4674,17 @@ function commitPlanFields(){
 }
 
 // заполняет форму конструктора из draft и показывает экран
+// текущее состояние программы для сравнения с исходным
+function programState(){
+  if(!draft) return null;
+  try{ commitPlanFields(); }catch(e){}
+  return {name: $('bName') ? $('bName').value.trim() : draft.name, d: draft};
+}
+function programDirty(){ return isChanged('program', programState()); }
+
 function fillBuilder(title){
   $('builderTitle').textContent = title;
+  setTimeout(()=> takeSnap('program', programState()), 0);
   setTimeout(markBuilderTab, 0);
   $('bName').value = draft.name;
   $('bDesc').value = draft.desc || '';
@@ -6537,7 +6588,7 @@ function syncStartPrefsSum(){
 }
 $('btnStart').onclick = ()=>{ state.current = customToProgram(state.raw, state.planIdx); startWorkout(); };
 $('startBackTop').onclick = ()=> show('scrMenu');
-$('textBackTop').onclick = ()=> show('scrMenu');
+$('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> show('scrMenu'), 'Заполненный запрос');
 $('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
@@ -6849,7 +6900,7 @@ function switchStatsTab(tab){
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
 $('statsBackTop').onclick = ()=> show('scrMenu');
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
-$('ueBackTop').onclick = ()=>{ show('scrMenu'); $('usersModal').classList.add('open'); };
+$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=>{ show('scrMenu'); $('usersModal').classList.add('open'); }, 'Изменения профиля');
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
@@ -6909,7 +6960,7 @@ $('btnAgain').onclick = async ()=>{
 };
 /* ---- программа из видео ---- */
 $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
-$('ytBackTop').onclick = ()=> show('scrMenu');
+$('ytBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['ytUrl','ytWish','ytResult']), ()=> show('scrMenu'), 'Заполненный запрос');
 $('ytUrl').oninput = ytCheckUrl;
 $('ytSend').onclick = async ()=>{
   if(!ytGuard()) return;
@@ -6963,7 +7014,7 @@ async function ytApplyResult(){
 }
 
 /* ---- доработка через ИИ ---- */
-$('eaBackTop').onclick = ()=> show('scrMenu');
+$('eaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['eaWish','eaResult']), ()=> show('scrMenu'), 'Заполненный запрос');
 $('eaCreate').onclick = createEditedProgram;
 $('eaSend').onclick = async ()=>{
   const text = editAIPrompt();
@@ -7130,7 +7181,15 @@ $('slotFile').onchange = e => {
 document.querySelectorAll('#exModeTabs .tab').forEach(b => {
   b.onclick = async ()=>{
     if(b.dataset.m !== 'ai') return;
-    // сохраняем правки, чтобы ИИ получил актуальное упражнение
+    // если правки есть — предупреждаем; иначе переключаемся молча
+    if(exDirty()){
+      const ok = await appDialog(
+        'Изменения этого упражнения не сохранены. Сохранить их перед переходом к ИИ?',
+        {confirm: true, okText: 'Сохранить и перейти', cancelText: 'Вернуться'}
+      );
+      document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+      if(!ok) return;
+    }
     if(exDraft && exIdx >= 0){
       const list = curPlan().exercises;
       if(list[exIdx]) list[exIdx] = commitExercise();
@@ -7143,8 +7202,16 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
 });
 // правка программы: вручную ⇄ через ИИ
 document.querySelectorAll('#eaModeTabs .tab').forEach(b => {
-  b.onclick = ()=>{
+  b.onclick = async ()=>{
     if(b.dataset.m !== 'manual') return;
+    if(aiScreenDirty(['eaWish','eaResult'])){
+      const ok = await appDialog(
+        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
+        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+      );
+      document.querySelectorAll('#eaModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
+      if(!ok) return;
+    }
     if(editAIProg) openBuilder(editAIProg.id);
     else show('scrMenu');
   };
@@ -7178,11 +7245,30 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
   };
 });
 document.querySelectorAll('#exaModeTabs .tab').forEach(b => {
-  b.onclick = ()=>{ if(b.dataset.m === 'manual') addExManual(); };
+  b.onclick = async ()=>{
+    if(b.dataset.m !== 'manual') return;
+    if(aiScreenDirty(['exaWish','exaResult'])){
+      const ok = await appDialog(
+        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
+        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+      );
+      document.querySelectorAll('#exaModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
+      if(!ok) return;
+    }
+    addExManual();
+  };
 });
 document.querySelectorAll('#exeModeTabs .tab').forEach(b => {
-  b.onclick = ()=>{
+  b.onclick = async ()=>{
     if(b.dataset.m !== 'manual') return;
+    if(aiScreenDirty(['exeWish','exeResult'])){
+      const ok = await appDialog(
+        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
+        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+      );
+      document.querySelectorAll('#exeModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
+      if(!ok) return;
+    }
     const keep = exeIdx;
     if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
     else show('scrBuilder');
@@ -7198,9 +7284,18 @@ function switchCreateMode(m){
 }
 ['aiModeTabs', 'ytModeTabs'].forEach(id => {
   document.querySelectorAll('#' + id + ' .tab').forEach(b => {
-    b.onclick = ()=>{
+    b.onclick = async ()=>{
       const cur = id === 'aiModeTabs' ? 'text' : 'video';
       if(b.dataset.m === cur) return;
+      const fields = cur === 'text' ? ['qNote', 'tImport'] : ['ytUrl', 'ytWish', 'ytResult'];
+      if(aiScreenDirty(fields)){
+        const ok = await appDialog(
+          'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
+          {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+        );
+        document.querySelectorAll('#' + id + ' .tab').forEach(x => x.classList.toggle('act', x.dataset.m === cur));
+        if(!ok) return;
+      }
       switchCreateMode(b.dataset.m);
     };
   });
@@ -7218,7 +7313,7 @@ function markBuilderTab(){
 }
 
 /* ---- правка упражнения через ИИ ---- */
-$('exeBackTop').onclick = ()=> show('scrBuilder');
+$('exeBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['exeWish','exeResult']), ()=> show('scrBuilder'), 'Заполненный запрос');
 $('exeApply').onclick = applyExEdit;
 $('exeSend').onclick = async ()=>{
   const text = exePrompt();
@@ -7242,7 +7337,7 @@ $('exeClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURI
 $('exeSelfAI').onclick = ()=> runSelfAI(exePrompt, 'exeResult', applyExEdit, 'Меняю упражнение');
 
 /* ---- упражнение через ИИ ---- */
-$('exaBackTop').onclick = ()=> show('scrBuilder');
+$('exaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['exaWish','exaResult']), ()=> show('scrBuilder'), 'Заполненный запрос');
 $('exaAdd').onclick = exaAddExercise;
 $('exaSend').onclick = async ()=>{
   const text = exaPrompt();
@@ -7416,7 +7511,7 @@ $('bDesc').oninput = e => {
   $('bDescCount').textContent = draft.desc.length;
 };
 $('btnSaveProgram').onclick = saveProgram;
-$('builderBackTop').onclick = ()=> show('scrMenu');
+$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); show('scrMenu'); }, 'Изменения программы');
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
