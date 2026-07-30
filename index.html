@@ -920,6 +920,37 @@
   </section>
 
   <!-- Создание из текста -->
+  <!-- Создание программы из видео -->
+  <section class="screen builder" id="scrYouTube">
+    <div class="screen-head"><button class="back-chip" id="ytBackTop"></button><h2>Программа из видео</h2></div>
+
+    <div class="section-title" style="margin-top:4px">1 · Ссылка на видео</div>
+    <div class="field">
+      <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
+      <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be. Нейросеть разберёт видео и переведёт его в программу.</p>
+    </div>
+
+    <div class="field"><label>Пожелания (необязательно)</label>
+      <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
+    </div>
+
+    <button class="btn-primary" id="ytSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    <div class="ai-links">
+      <button type="button" id="ytGPT">Открыть ChatGPT</button>
+      <button type="button" id="ytClaude">Открыть Claude</button>
+      <button type="button" id="ytCopy">Скопировать</button>
+    </div>
+    <p class="field-hint" style="margin-top:8px">Не каждая нейросеть умеет смотреть видео. Лучше всего справляются модели с доступом в интернет — если ответа нет, попроси её открыть ссылку и описать тренировку.</p>
+
+    <div class="section-title">2 · Вставь ответ ИИ</div>
+    <div class="field">
+      <textarea id="ytResult" style="min-height:180px" placeholder="Вставь сюда весь ответ нейросети — программа соберётся сама"></textarea>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="ytParse">Распознать</button>
+    </div>
+  </section>
+
   <!-- Доработка программы через ИИ -->
   <section class="screen builder" id="scrEditAI">
     <div class="screen-head"><button class="back-chip" id="eaBackTop"></button><h2>Изменить через ИИ</h2></div>
@@ -1408,6 +1439,7 @@
       <div class="modal-card">
         <span class="mini-label">Новая программа</span>
         <button class="choice" id="chAI"><b>✨ С помощью ИИ</b><small>Скопируй готовый промт, вставь в любую нейросеть, опиши цель — программа соберётся сама. Потом её можно спокойно редактировать вручную: менять упражнения, дни и картинки.</small></button>
+        <button class="choice" id="chYT"><b>▶ Из видео с YouTube</b><small>Дай ссылку на тренировку — нейросеть посмотрит ролик и соберёт программу с упражнениями и таймингом.</small></button>
         <button class="choice" id="chManual"><b>✎ Вручную</b><small>Собери сама с нуля: упражнения, повторения или время, круги и дни недели.</small></button>
         <button class="choice" id="chImport"><b>📥 Импорт файла или ссылки</b><small>Загрузи файл программы или вставь ссылку либо код, которыми с тобой поделились.</small></button>
         <button class="link-btn" id="chCancel" style="margin:0;padding:10px">Отмена</button>
@@ -1873,7 +1905,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -3195,6 +3227,54 @@ async function importProgramFile(file){
   }catch(e){
     appAlert('Не удалось прочитать файл: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
   }
+}
+
+/* ================= ПРОГРАММА ИЗ ВИДЕО ================= */
+// проверяем и нормализуем ссылку на YouTube
+function parseYouTubeUrl(raw){
+  const s = String(raw || '').trim();
+  if(!s) return null;
+  const m = s.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([\w-]{6,})/i);
+  if(!m) return null;
+  return {id: m[1], url: s.startsWith('http') ? s : ('https://' + s)};
+}
+
+function youtubePrompt(){
+  const yt = parseYouTubeUrl($('ytUrl').value);
+  const wish = ($('ytWish').value || '').trim();
+  const link = yt ? yt.url : ($('ytUrl').value || '').trim();
+  return AI_PROMPT +
+    '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
+    'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
+    'ССЫЛКА: ' + link + '\n\n' +
+    'Что важно:\n' +
+    '· Возьми упражнения в том же порядке, что в ролике, с теми же повторениями или длительностью и паузами отдыха.\n' +
+    '· Если в видео есть разминка — отметь эти упражнения строкой РАЗМИНКА: да.\n' +
+    '· Если ролик проходит список несколько раз — поставь соответствующее число КРУГОВ; если каждое упражнение делается подряд несколько раз — используй ПОДХОДЫ.\n' +
+    '· Названия упражнений переведи на русский и приведи к общепринятым.\n' +
+    '· Описание техники пиши сама(сам), не цитируя автора ролика дословно.\n' +
+    '· В ОПИСАНИЕ ПРОГРАММЫ добавь, из какого это видео и на что ролик рассчитан.\n' +
+    '· Если видео недоступно или это не тренировка — так и напиши, не выдумывай программу.\n' +
+    (wish ? ('\nПОЖЕЛАНИЯ ПОЛЬЗОВАТЕЛЯ: ' + wish + '\n') : '');
+}
+
+function openYouTube(){
+  $('ytUrl').value = '';
+  $('ytWish').value = '';
+  $('ytResult').value = '';
+  autoGrow($('ytWish'));
+  show('scrYouTube');
+  window.scrollTo(0, 0);
+}
+
+function ytCheckUrl(){
+  const v = ($('ytUrl').value || '').trim();
+  const ok = !v || !!parseYouTubeUrl(v);
+  $('ytHint').style.color = ok ? '' : 'var(--work)';
+  $('ytHint').textContent = ok
+    ? 'Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be. Нейросеть разберёт видео и переведёт его в программу.'
+    : 'Не похоже на ссылку YouTube. Проверь адрес — нужен формат youtube.com/watch?v=… или youtu.be/…';
+  return ok;
 }
 
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
@@ -5823,6 +5903,59 @@ $('btnAgain').onclick = async ()=>{
   document.body.classList.remove('phase-rest');
   show('scrMenu');
 };
+/* ---- программа из видео ---- */
+$('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
+$('ytBackTop').onclick = ()=> show('scrMenu');
+$('ytUrl').oninput = ytCheckUrl;
+$('ytSend').onclick = async ()=>{
+  if(!ytGuard()) return;
+  const text = youtubePrompt();
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  ytCopyPrompt();
+};
+function ytGuard(){
+  if(!($('ytUrl').value || '').trim()){ appAlert('Вставь ссылку на видео.'); return false; }
+  if(!ytCheckUrl()){ appAlert('Ссылка не похожа на YouTube. Проверь адрес.'); return false; }
+  return true;
+}
+async function ytCopyPrompt(){
+  const btn = $('ytCopy');
+  try{
+    await navigator.clipboard.writeText(youtubePrompt());
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+}
+$('ytCopy').onclick = ()=>{ if(ytGuard()) ytCopyPrompt(); };
+$('ytGPT').onclick = ()=>{ if(ytGuard()) window.open('https://chatgpt.com/?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
+$('ytClaude').onclick = ()=>{ if(ytGuard()) window.open('https://claude.ai/new?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
+$('ytParse').onclick = async ()=>{
+  const raw = ($('ytResult').value || '').trim();
+  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  const {program, errors} = parseProgramText(raw);
+  if(errors.length){
+    appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
+    return;
+  }
+  program.id = 'p' + Date.now();
+  program.stats = {completions: 0};
+  program.name = versionedName(program.name || 'Программа из видео');
+  // сохраняем ссылку на источник в описании, если ИИ её не упомянул
+  const link = ($('ytUrl').value || '').trim();
+  if(link && !(program.desc || '').includes('http')){
+    program.desc = ((program.desc || '') + ' Источник: ' + link).trim().slice(0, 1000);
+  }
+  customPrograms.push(program);
+  await savePrograms();
+  renderMine();
+  $('ytResult').value = '';
+  show('scrMenu');
+  appAlert(`Готово: добавлена «${program.name}».`);
+};
+
 /* ---- доработка через ИИ ---- */
 $('eaBackTop').onclick = ()=> show('scrMenu');
 $('eaCreate').onclick = createEditedProgram;
@@ -6018,6 +6151,7 @@ $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
 $('eaBackTop').innerHTML = icon('chevL');
+$('ytBackTop').innerHTML = icon('chevL');
 $('startPrefsChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
