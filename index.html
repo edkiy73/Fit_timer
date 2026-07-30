@@ -189,7 +189,7 @@
   .builder h2{font-size:26px;margin:18px 0 16px}
   .field{margin-bottom:14px}
   .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin-bottom:6px}
-  .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field textarea,.field select{
+  .field input[type=text],.field input[type=url],.field input[type=number],.field input[type=time],.field input[type=date],.field input[type=password],.field textarea,.field select{
     width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
     color:var(--ink);font-family:'Rubik';font-size:15px;padding:12px 14px;outline:none;appearance:none;
   }
@@ -705,6 +705,12 @@
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
   .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
+  .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
+    border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
+  @keyframes aiSpin{to{transform:rotate(360deg)}}
+  .ai-run-title{display:block;font-size:17px;margin-bottom:8px}
+  .ai-run-text{font-size:13.5px;line-height:1.5;color:var(--muted)}
+  .ai-run-timer{font-family:'Oswald';font-weight:600;font-size:22px;color:var(--work);margin-top:12px}
   .prog-menu-wrap{position:relative;margin-left:auto}
   .prog-menu-wrap .more-btn{position:static;width:38px;height:38px;border:1px solid var(--line);background:var(--card);border-radius:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .prog-menu-wrap .ctx-menu{top:44px;right:0}
@@ -1013,6 +1019,16 @@
   </section>
 
   <!-- Выбор картинки для места -->
+  <div class="modal" id="aiRunModal">
+    <div class="modal-card" style="text-align:center">
+      <div class="ai-spin"></div>
+      <b class="ai-run-title" id="aiRunTitle">Нейросеть работает</b>
+      <p class="ai-run-text" id="aiRunText">Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.</p>
+      <p class="ai-run-timer" id="aiRunTimer">0:00</p>
+      <button class="btn-skip" id="aiRunCancel" style="margin-top:14px">Отменить</button>
+    </div>
+  </div>
+
   <div class="modal" id="slotModal">
     <div class="modal-card">
       <span class="mini-label" id="slotTitle">Картинка</span>
@@ -1523,34 +1539,46 @@
     </div>
     <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth"></div>
 
-    <div class="section-title" style="margin-top:6px">Тренировка</div>
-    <div class="row2">
-      <div class="field"><label>Отсчёт перед стартом, сек</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
-      <div class="field"><label>Подготовка к упражнению, сек</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+    <button type="button" class="collapse-head" id="ueSoundHead">
+      <span>Звук</span><span class="st-sum" id="ueSoundSum"></span><span class="st-chev" id="ueSoundChev"></span>
+    </button>
+    <div id="ueSoundBox" style="display:none">
+      <div class="pref-row" style="border-top:none;padding-top:6px"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
+      <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
+        <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+        <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
+      </div>
+      <div class="vol-field">
+        <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
+        <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+      </div>
     </div>
-    <div class="field"><label>Смена стороны, сек</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
-    <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки после озвучки упражнения на время, перед тем как пойдёт отсчёт (0 — выключить). Третье — пауза между сторонами в упражнениях «на каждую сторону».</p>
 
-    <div class="section-title" style="margin-top:6px">ИИ внутри приложения</div>
-    <div class="field"><label>Ключ Gemini API</label>
-      <input type="password" id="ueGeminiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
-      <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программа и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве.</p>
+    <button type="button" class="collapse-head" id="ueTimingHead">
+      <span>Тайминги тренировки</span><span class="st-sum" id="ueTimingSum"></span><span class="st-chev" id="ueTimingChev"></span>
+    </button>
+    <div id="ueTimingBox" style="display:none">
+      <div class="row2">
+        <div class="field"><label>Отсчёт перед стартом, сек</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+        <div class="field"><label>Подготовка к упражнению, сек</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+      </div>
+      <div class="field"><label>Смена стороны, сек</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
+      <p class="field-hint">Первое — экран «Приготовься» в начале тренировки. Второе — полоса подготовки перед упражнением на время. Третье — пауза между сторонами. 0 выключает.</p>
     </div>
-    <div class="media-row" style="margin-top:-4px">
-      <button type="button" id="ueGeminiHow">Как получить ключ</button>
-      <button type="button" id="ueGeminiTest">Проверить</button>
-    </div>
-    <p class="field-hint" id="ueGeminiState" style="margin-top:8px"></p>
 
-    <div class="section-title" style="margin-top:6px">Звук</div>
-    <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка<small>«отдохните…», «далее…» и т.п.</small></span><button class="switch" id="ueVoiceOn"></button></div>
-    <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
-      <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-      <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
-    </div>
-    <div class="vol-field">
-      <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
-      <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+    <button type="button" class="collapse-head" id="ueAIHead">
+      <span>ИИ внутри приложения</span><span class="st-sum" id="ueAISum"></span><span class="st-chev" id="ueAIChev"></span>
+    </button>
+    <div id="ueAIBox" style="display:none">
+      <div class="field"><label>Ключ Gemini API</label>
+        <input type="password" id="ueGeminiKey" placeholder="Вставь ключ из Google AI Studio" autocomplete="off" spellcheck="false">
+        <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программы и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве и уходит только на серверы Google.</p>
+      </div>
+      <div class="media-row" style="margin-top:-4px">
+        <button type="button" id="ueGeminiHow">Как получить ключ</button>
+        <button type="button" id="ueGeminiTest">Проверить</button>
+      </div>
+      <p class="field-hint" id="ueGeminiState" style="margin-top:8px"></p>
     </div>
 
     <div class="builder-actions">
@@ -2743,6 +2771,9 @@ function openUserEdit(id = null){
   // звук: значения профиля (или дефолты)
   $('ueGeminiKey').value = uDraft.geminiKey || '';
   $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопки «Сделать через ИИ» активны.' : 'Ключ не задан — кнопки «Сделать через ИИ» неактивны.';
+  ['ueSoundBox','ueTimingBox','ueAIBox'].forEach(id => $(id).style.display = 'none');
+  ['ueSoundHead','ueTimingHead','ueAIHead'].forEach(id => $(id).classList.remove('open'));
+  setTimeout(syncUserSums, 0);
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
   if(uDraft.sideSec == null) uDraft.sideSec = 10;
@@ -3445,14 +3476,15 @@ function geminiKey(){
 }
 function hasGemini(){ return !!geminiKey(); }
 
-async function callGemini(prompt){
+async function callGemini(prompt, signal){
   const key = geminiKey();
   if(!key) throw new Error('Ключ Gemini не задан');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
-    body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})
+    body: JSON.stringify({contents: [{parts: [{text: prompt}]}]}),
+    signal
   });
   if(!res.ok){
     let msg = 'HTTP ' + res.status;
@@ -3478,7 +3510,7 @@ async function geminiSetupPrompt(){
     'Как получить (бесплатно):\n' +
     '1. Открой aistudio.google.com/apikey\n' +
     '2. Войди в аккаунт Google и нажми «Create API key»\n' +
-    '3. Скопируй ключ (начинается с AIza…)\n' +
+    '3. Скопируй ключ целиком\n' +
     '4. Вставь его в профиле: аватар → ✎ → «ИИ внутри приложения»\n\n' +
     'Ключ хранится только на этом устройстве и никуда не отправляется, кроме серверов Google.',
     {confirm: true, okText: 'Настроить', cancelText: 'Отмена'}
@@ -6225,7 +6257,17 @@ $('ueVoiceOn').onclick = ()=>{
   $('ueVoiceField').style.display = on ? 'block' : 'none';
   uDraft.voiceVol = on ? 100 : 0;
 };
-$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; };
+$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; syncUserSums(); };
+$('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.trim(); syncUserSums(); };
+['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
+  $(id).oninput = ()=>{
+    if(!uDraft) return;
+    uDraft.prepSec = parseInt($('uePrepSec').value) || 0;
+    uDraft.readySec = parseInt($('ueReadySec').value) || 0;
+    uDraft.sideSec = parseInt($('ueSideSec').value) || 10;
+    syncUserSums();
+  };
+});
 $('tglSound').onclick = toggleSound;
 $('tglMusic').onclick = ()=>{
   musicMode = !musicMode;
@@ -6562,7 +6604,8 @@ async function ytCopyPrompt(){
 $('ytCopy').onclick = ()=>{ if(ytGuard()) ytCopyPrompt(); };
 $('ytGPT').onclick = ()=>{ if(ytGuard()) window.open('https://chatgpt.com/?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
 $('ytClaude').onclick = ()=>{ if(ytGuard()) window.open('https://claude.ai/new?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
-$('ytParse').onclick = async ()=>{
+$('ytParse').onclick = ()=> ytApplyResult();
+async function ytApplyResult(){
   const raw = ($('ytResult').value || '').trim();
   if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
   const {program, errors} = parseProgramText(raw);
@@ -6584,7 +6627,8 @@ $('ytParse').onclick = async ()=>{
   $('ytResult').value = '';
   show('scrMenu');
   appAlert(`Готово: добавлена «${program.name}».`);
-};
+
+}
 
 /* ---- доработка через ИИ ---- */
 $('eaBackTop').onclick = ()=> show('scrMenu');
@@ -6621,12 +6665,31 @@ $('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); 
 $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
 
 /* ---- ИИ внутри приложения (Gemini) ---- */
+// сворачиваемые секции профиля
+[['ueSoundHead','ueSoundBox'],['ueTimingHead','ueTimingBox'],['ueAIHead','ueAIBox']].forEach(([h, b])=>{
+  $(h).onclick = ()=>{
+    const box = $(b), open = box.style.display === 'none';
+    box.style.display = open ? 'block' : 'none';
+    $(h).classList.toggle('open', open);
+    if(open){ autoGrow($('exDesc')); }
+  };
+});
+function syncUserSums(){
+  if(!uDraft) return;
+  const vOn = (uDraft.voiceVol == null ? 100 : uDraft.voiceVol) > 0;
+  const fx = uDraft.fxVol == null ? 100 : uDraft.fxVol;
+  $('ueSoundSum').textContent = (vOn ? 'голос вкл' : 'голос выкл') + ` · сигналы ${fx}%`;
+  $('ueTimingSum').textContent = `${uDraft.prepSec == null ? 5 : uDraft.prepSec} · ${uDraft.readySec == null ? 5 : uDraft.readySec} · ${uDraft.sideSec == null ? 10 : uDraft.sideSec} сек`;
+  $('ueAISum').textContent = (uDraft.geminiKey || '').trim() ? 'ключ подключён' : 'не подключён';
+}
+
 $('ueGeminiHow').onclick = ()=> appAlert(
   'Ключ Gemini бесплатный.\n\n' +
   '1. Открой aistudio.google.com/apikey\n' +
   '2. Войди в аккаунт Google\n' +
   '3. Нажми «Create API key»\n' +
-  '4. Скопируй ключ (начинается с AIza…) и вставь в поле выше\n\n' +
+  '4. Скопируй ключ целиком и вставь в поле выше\n\n' +
+  'Ключ — длинная строка из букв и цифр; как именно он начинается, зависит от способа создания, так что просто копируй полностью.\n\n' +
   'Ключ хранится только на этом устройстве. Запросы уходят напрямую в Google.'
 );
 $('ueGeminiTest').onclick = async ()=>{
@@ -6649,28 +6712,57 @@ $('ueGeminiTest').onclick = async ()=>{
   }
 };
 
-// общий обработчик: собрать ответ через Gemini и положить в поле
-async function runSelfAI(btnId, promptFn, targetId, okMsg){
+/* ---- окно ожидания генерации ---- */
+let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0;
+function aiRunOpen(title){
+  aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
+  $('aiRunTitle').textContent = title || 'Нейросеть работает';
+  $('aiRunTimer').textContent = '0:00';
+  $('aiRunModal').classList.add('open');
+  aiRunT0 = Date.now();
+  clearInterval(aiRunTick);
+  aiRunTick = setInterval(()=>{
+    const s = Math.floor((Date.now() - aiRunT0) / 1000);
+    $('aiRunTimer').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }, 1000);
+}
+function aiRunClose(){
+  clearInterval(aiRunTick); aiRunTick = 0;
+  $('aiRunModal').classList.remove('open');
+}
+$('aiRunCancel').onclick = ()=>{
+  try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
+  aiRunCtl = null;
+  aiRunClose();
+};
+
+// собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
+async function runSelfAI(promptFn, targetId, applyFn, title){
   if(!hasGemini()){ geminiSetupPrompt(); return; }
-  const btn = $(btnId), old = btn.textContent;
-  btn.classList.add('busy');
-  btn.textContent = '✨ Думаю…';
+  let prompt;
+  try{ prompt = promptFn(); }catch(e){ appAlert('Не удалось собрать запрос.'); return; }
+  aiRunOpen(title);
   try{
-    const text = await callGemini(promptFn());
-    $(targetId).value = text;
-    btn.textContent = '✓ Готово';
-    setTimeout(()=>{ btn.textContent = old; btn.classList.remove('busy'); }, 1400);
-    if(okMsg) appAlert(okMsg);
-    $(targetId).scrollIntoView({block: 'center', behavior: 'smooth'});
+    const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined);
+    aiRunClose();
+    if($(targetId)) $(targetId).value = text;
+    await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
   }catch(e){
-    btn.textContent = old; btn.classList.remove('busy');
-    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка'));
+    aiRunClose();
+    const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
+    if(aborted) return; // отменили — молча
+    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
+      '\n\nМожно попробовать ещё раз или отправить промт в нейросеть вручную кнопками ниже.');
   }
 }
-$('btnSelfAI').onclick = ()=> runSelfAI('btnSelfAI', fullAIPrompt, 'tImport', 'Ответ получен — проверь и нажми «Распознать».');
-$('ytSelfAI').onclick = ()=>{ if(!hasGemini()){ geminiSetupPrompt(); return; } if(!ytGuard()) return; runSelfAI('ytSelfAI', youtubePrompt, 'ytResult', 'Ответ получен — проверь и нажми «Распознать».'); };
-$('eaSelfAI').onclick = ()=> runSelfAI('eaSelfAI', editAIPrompt, 'eaResult', 'Ответ получен — проверь и нажми «Создать изменённую программу».');
-$('exaSelfAI').onclick = ()=> runSelfAI('exaSelfAI', exaPrompt, 'exaResult', 'Ответ получен — проверь и нажми «Добавить в программу».');
+$('btnSelfAI').onclick = ()=> runSelfAI(fullAIPrompt, 'tImport', importFromText, 'Собираю программу');
+$('ytSelfAI').onclick = ()=>{
+  if(!hasGemini()){ geminiSetupPrompt(); return; }
+  if(!ytGuard()) return;
+  runSelfAI(youtubePrompt, 'ytResult', ytApplyResult, 'Разбираю видео');
+};
+$('eaSelfAI').onclick = ()=> runSelfAI(editAIPrompt, 'eaResult', createEditedProgram, 'Вношу изменения');
+$('exaSelfAI').onclick = ()=> runSelfAI(exaPrompt, 'exaResult', exaAddExercise, 'Подбираю упражнение');
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
@@ -6740,7 +6832,7 @@ async function exeCopyPrompt(){
 $('exeCopy').onclick = ()=> exeCopyPrompt();
 $('exeGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(exePrompt()), '_blank');
 $('exeClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(exePrompt()), '_blank');
-$('exeSelfAI').onclick = ()=> runSelfAI('exeSelfAI', exePrompt, 'exeResult', 'Ответ получен — проверь и нажми «Применить изменения».');
+$('exeSelfAI').onclick = ()=> runSelfAI(exePrompt, 'exeResult', applyExEdit, 'Меняю упражнение');
 
 /* ---- упражнение через ИИ ---- */
 $('exaBackTop').onclick = ()=> show('scrBuilder');
@@ -7008,6 +7100,7 @@ $('psBackTop').innerHTML = icon('chevL');
 $('eaBackTop').innerHTML = icon('chevL');
 $('ytBackTop').innerHTML = icon('chevL');
 $('exaBackTop').innerHTML = icon('chevL');
+['ueSoundChev','ueTimingChev','ueAIChev'].forEach(id => $(id).innerHTML = icon('chevR'));
 $('imgBackTop').innerHTML = icon('chevL');
 $('exeBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
