@@ -218,6 +218,20 @@
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .media-preview{margin-top:10px}
   .mp-empty{font-size:12.5px;color:var(--muted)}
+  .tray{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+  .tray-item{flex:none;width:76px;height:76px;border-radius:12px;overflow:hidden;border:2px solid var(--line);background:var(--card);position:relative;cursor:pointer}
+  .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .tray-item.sel{border-color:var(--work)}
+  .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer}
+  .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .slot-row .sl-thumb{flex:none;width:52px;height:52px;border-radius:11px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  .slot-row .sl-thumb img{width:100%;height:100%;object-fit:cover}
+  .slot-row .sl-thumb svg{width:24px;height:24px;color:var(--muted)}
+  .slot-row .sl-body{flex:1;min-width:0}
+  .slot-row .sl-body b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot-row .sl-body small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .slot-row .sl-body small.has{color:var(--rest)}
+  .slot-group{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
   textarea.auto-grow{overflow:hidden;resize:none;min-height:90px}
   .prog-desc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:2px 0 16px;text-align:left}
   .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
@@ -906,6 +920,13 @@
     </button>
 
     <div class="plan-tabs" id="planTabsTop" style="margin:14px 0 10px"></div>
+    <button type="button" class="nav-row" id="bImagesRow" style="margin:6px 0 14px">
+      <div class="nr-body">
+        <b>Картинки программы</b>
+        <small id="bImagesSum">Загрузить сразу много и разложить по упражнениям</small>
+      </div>
+      <span class="nr-chev" id="bImagesChev"></span>
+    </button>
     <div class="section-title st-row" style="margin-top:2px"><span>Упражнения <span class="st-note" id="exCountNote"></span></span></div>
     <div id="bExList"></div>
     <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
@@ -920,6 +941,77 @@
   </section>
 
   <!-- Создание из текста -->
+  <!-- Картинки программы: массовая загрузка -->
+  <section class="screen builder" id="scrImages">
+    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
+
+    <button class="btn-primary" id="imgPick" style="margin-top:2px">Выбрать картинки с телефона</button>
+    <input type="file" id="imgFiles" accept="image/*" multiple style="display:none">
+    <p class="field-hint" style="margin-top:8px">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
+
+    <div id="trayBox" style="display:none">
+      <div class="section-title st-row" style="margin-top:16px">
+        <span>Не разложено <span class="st-note" id="trayCount"></span></span>
+        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px">Очистить</button>
+      </div>
+      <div class="tray" id="tray"></div>
+      <button type="button" class="btn-ghost" id="trayAuto" style="margin-top:10px">Разложить по порядку</button>
+    </div>
+
+    <div class="section-title" style="margin-top:18px">Куда подставить</div>
+    <div id="slotList"></div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="imgDone">Готово</button>
+    </div>
+  </section>
+
+  <!-- Выбор картинки для места -->
+  <div class="modal" id="slotModal">
+    <div class="modal-card">
+      <span class="mini-label" id="slotTitle">Картинка</span>
+      <div class="tray" id="slotTray"></div>
+      <p class="field-hint" id="slotEmptyHint" style="display:none">Лоток пуст — выбери картинки с телефона.</p>
+      <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
+      <input type="file" id="slotFile" accept="image/*" style="display:none">
+      <button type="button" class="link-btn" id="slotRemove" style="margin:6px 0 0;padding:10px;color:var(--work)">Убрать картинку</button>
+      <button class="link-btn" id="slotCancel" style="margin:0;padding:10px">Отмена</button>
+    </div>
+  </div>
+
+  <!-- Добавление упражнения через ИИ -->
+  <section class="screen builder" id="scrExAI">
+    <div class="screen-head"><button class="back-chip" id="exaBackTop"></button><h2>Упражнение через ИИ</h2></div>
+
+    <div class="section-title" style="margin-top:4px">1 · Что за упражнение?</div>
+    <div class="field">
+      <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
+      <p class="field-hint">Можно назвать упражнение или описать, что нужно — ИИ подберёт и распишет технику.</p>
+    </div>
+
+    <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
+    <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
+    <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
+    <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
+    <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div></div>
+    <p class="field-hint" style="margin-top:-6px">Что не выберешь — ИИ решит сам, исходя из описания.</p>
+
+    <button class="btn-primary" id="exaSend" style="margin-top:6px">✨ Отправить запрос в ИИ</button>
+    <div class="ai-links">
+      <button type="button" id="exaGPT">Открыть ChatGPT</button>
+      <button type="button" id="exaClaude">Открыть Claude</button>
+      <button type="button" id="exaCopy">Скопировать</button>
+    </div>
+
+    <div class="section-title">2 · Вставь ответ ИИ</div>
+    <div class="field">
+      <textarea id="exaResult" style="min-height:160px" placeholder="Вставь ответ нейросети — упражнение добавится в программу"></textarea>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="exaAdd">Добавить в программу</button>
+    </div>
+  </section>
+
   <!-- Создание программы из видео -->
   <section class="screen builder" id="scrYouTube">
     <div class="screen-head"><button class="back-chip" id="ytBackTop"></button><h2>Программа из видео</h2></div>
@@ -1435,6 +1527,15 @@
       </div>
     </div>
 
+    <div class="modal" id="addExModal">
+      <div class="modal-card">
+        <span class="mini-label">Новое упражнение</span>
+        <button class="choice" id="aeAI"><b>✨ Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, ошибки и пиктограмму.</small></button>
+        <button class="choice" id="aeManual"><b>✎ Вручную</b><small>Заполни поля сама: название, повторения или время, подходы, отдых.</small></button>
+        <button class="link-btn" id="aeCancel" style="margin:0;padding:10px">Отмена</button>
+      </div>
+    </div>
+
     <div class="modal" id="createModal">
       <div class="modal-card">
         <span class="mini-label">Новая программа</span>
@@ -1905,7 +2006,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
 try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
 window.addEventListener('popstate', e => {
   if($('scrWork').classList.contains('on')){
@@ -3229,6 +3330,232 @@ async function importProgramFile(file){
   }
 }
 
+/* ================= КАРТИНКИ ПРОГРАММЫ: МАССОВАЯ ЗАГРУЗКА ================= */
+let imgTray = [];        // загруженные, но ещё не разложенные картинки (data-url)
+let slotTarget = null;   // {kind:'cover'} | {kind:'ex', plan, idx}
+
+// последовательно сжимаем выбранные файлы
+function shrinkAll(files, maxSide, done){
+  const out = [];
+  let i = 0;
+  const next = ()=>{
+    if(i >= files.length){ done(out); return; }
+    shrinkImage(files[i++], maxSide, data => { if(data) out.push(data); next(); });
+  };
+  next();
+}
+
+function openImages(){
+  imgTray = [];
+  renderTray();
+  renderSlots();
+  show('scrImages');
+  window.scrollTo(0, 0);
+}
+
+function renderTray(){
+  const box = $('tray');
+  $('trayBox').style.display = imgTray.length ? 'block' : 'none';
+  $('trayCount').textContent = imgTray.length ? `· ${imgTray.length}` : '';
+  box.innerHTML = '';
+  imgTray.forEach((data, i)=>{
+    const el = document.createElement('div');
+    el.className = 'tray-item';
+    el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">✕</button>`;
+    el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
+    el.onclick = ()=> appAlert('Нажми на место в списке ниже, чтобы подставить туда картинку.');
+    box.appendChild(el);
+  });
+}
+
+// все места, куда можно подставить картинку
+function imageSlots(){
+  const slots = [{kind: 'cover', title: 'Обложка программы', get: ()=> draft.cover, set: v => draft.cover = v}];
+  const plans = draft.plans || [];
+  plans.forEach((pl, pi)=>{
+    (pl.exercises || []).forEach((ex, ei)=>{
+      slots.push({
+        kind: 'ex', plan: pi, idx: ei,
+        group: plans.length > 1 ? `Вариант ${pi + 1}` : '',
+        title: (ex.name || '').trim() || 'Без названия',
+        get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
+        set: v => { ex.media = v ? {kind: 'img', data: v} : null; },
+        hasSvg: !!(ex.media && ex.media.kind === 'svg')
+      });
+    });
+  });
+  return slots;
+}
+
+function renderSlots(){
+  const box = $('slotList'); box.innerHTML = '';
+  const slots = imageSlots();
+  let lastGroup = null;
+  slots.forEach((s, i)=>{
+    if(s.group && s.group !== lastGroup){
+      lastGroup = s.group;
+      const g = document.createElement('div');
+      g.className = 'slot-group';
+      g.textContent = s.group;
+      box.appendChild(g);
+    }
+    const cur = s.get();
+    const row = document.createElement('div');
+    row.className = 'slot-row';
+    row.innerHTML =
+      `<div class="sl-thumb">${cur ? `<img src="${cur}" alt="">` : DUMBBELL_ICON}</div>` +
+      `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : (s.hasSvg ? 'пиктограмма' : 'нет картинки')}</small></div>`;
+    row.querySelector('b').textContent = s.title;
+    row.onclick = ()=> openSlotPicker(i);
+    box.appendChild(row);
+  });
+}
+
+function openSlotPicker(i){
+  const slots = imageSlots();
+  slotTarget = i;
+  const s = slots[i];
+  $('slotTitle').textContent = s.title;
+  const box = $('slotTray'); box.innerHTML = '';
+  $('slotEmptyHint').style.display = imgTray.length ? 'none' : 'block';
+  imgTray.forEach((data, ti)=>{
+    const el = document.createElement('div');
+    el.className = 'tray-item';
+    el.innerHTML = `<img src="${data}" alt="">`;
+    el.onclick = ()=>{
+      s.set(data);
+      imgTray.splice(ti, 1);
+      $('slotModal').classList.remove('open');
+      renderTray(); renderSlots();
+    };
+    box.appendChild(el);
+  });
+  $('slotRemove').style.display = s.get() ? 'block' : 'none';
+  $('slotModal').classList.add('open');
+}
+
+// раскладывает лоток по местам без картинок, по порядку
+function trayAutoAssign(){
+  if(!imgTray.length){ appAlert('Лоток пуст — сначала выбери картинки.'); return; }
+  const slots = imageSlots();
+  let used = 0;
+  for(const s of slots){
+    if(!imgTray.length) break;
+    if(s.get()) continue;          // тут уже есть картинка — не трогаем
+    s.set(imgTray.shift());
+    used++;
+  }
+  renderTray(); renderSlots();
+  appAlert(used
+    ? `Подставлено картинок: ${used}.` + (imgTray.length ? ` Осталось в лотке: ${imgTray.length}.` : '')
+    : 'Все места уже заполнены. Нажми на нужное место, чтобы заменить картинку.');
+}
+
+/* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
+const EXA_OPTS = {
+  count: ['1', '1–3', '3–5', '5–7', '7 и более'],
+  format: ['Повторения', 'Время'],
+  level: ['Новичок', 'Средний', 'Продвинутый'],
+  equip: ['Без инвентаря', 'Коврик', 'Гантели', 'Резинка', 'Стул', 'Фитбол']
+};
+const exa = {count: '1', format: '', level: '', muscles: [], equip: []};
+
+function exaChips(){
+  qChips('exaCount', EXA_OPTS.count, false, ()=> exa.count, v => exa.count = v);
+  qChips('exaFormat', EXA_OPTS.format, false, ()=> exa.format, v => exa.format = v);
+  qChips('exaLevel', EXA_OPTS.level, false, ()=> exa.level, v => exa.level = v);
+  qChips('exaEquip', EXA_OPTS.equip, true, ()=> exa.equip, v => exa.equip = v);
+  qChips('exaMuscles', MUSCLES.map(m => m[1]), true, ()=> exa.muscles, v => exa.muscles = v);
+}
+
+function openExAI(){
+  exa.count = '1'; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
+  $('exaWish').value = '';
+  $('exaResult').value = '';
+  exaChips();
+  autoGrow($('exaWish'));
+  show('scrExAI');
+  window.scrollTo(0, 0);
+}
+
+function exaPrompt(){
+  const wish = ($('exaWish').value || '').trim();
+  const given = [], free = [];
+  if(exa.format) given.push(`Формат: ${exa.format.toLowerCase()}.`);
+  else free.push('формат — повторения или время (выбери, что естественнее для этого упражнения)');
+  if(exa.level) given.push(`Уровень: ${exa.level.toLowerCase()}.`);
+  else free.push('уровень сложности');
+  if(exa.muscles.length) given.push(`Целевые мышцы: ${exa.muscles.join(', ').toLowerCase()}.`);
+  else free.push('какие мышцы работают');
+  if(exa.equip.length) given.push(`Инвентарь: ${exa.equip.join(', ').toLowerCase()}.`);
+  else free.push('нужен ли инвентарь (по умолчанию считай, что дома ничего нет)');
+
+  const cnt = exa.count || '1';
+  const many = cnt !== '1';
+  const howMany = {
+    '1': 'ОДНО упражнение',
+    '1–3': 'от 1 до 3 упражнений',
+    '3–5': 'от 3 до 5 упражнений',
+    '5–7': 'от 5 до 7 упражнений',
+    '7 и более': '7 и более упражнений (сколько сочтёшь нужным, но не больше 15)'
+  }[cnt] || 'ОДНО упражнение';
+
+  let s = `Опиши ${howMany} для домашней тренировки в строгом формате ниже. `;
+  s += many
+    ? 'Каждое упражнение — отдельный блок, начинающийся со строки «УПРАЖНЕНИЕ:». Блоки разделяй пустой строкой. Упражнения не должны дублировать друг друга. Верни только блоки, без пояснений до и после.\n\n'
+    : 'Верни только блок упражнения, без пояснений до и после.\n\n';
+  s += 'ЗАПРОС: ' + (wish || '(не указан — предложи полезное упражнение на своё усмотрение)') + '\n';
+  if(given.length) s += given.join(' ') + '\n';
+  if(free.length) s += 'Не указано — реши сам(а): ' + free.join('; ') + '.\n';
+  s += `
+ФОРМАТ ОТВЕТА${many ? ' ДЛЯ КАЖДОГО УПРАЖНЕНИЯ' : ''} (каждый параметр с новой строки, ключи ровно как здесь):
+
+УПРАЖНЕНИЕ: название на русском, коротко и понятно
+ОПИСАНИЕ: техника выполнения на «ты», 3–5 предложений: исходное положение, само движение, дыхание, на что следить. Без воды и без ссылок.
+МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
+ОШИБКИ: 1–2 частые ошибки и чем они опасны (или пропусти строку)
+ФОРМАТ: повторения — ИЛИ — время
+ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для времени — секунды
+ПОДХОДЫ: разумное число подходов от 1 до 5
+СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
+ОТДЫХ: секунды отдыха после подхода
+ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
+SVG: простая схема-пиктограмма одной строкой, viewBox="0 0 240 120", только светлые линии и заливки (фон тёмный), без внешних картинок и текста
+
+Ничего кроме этих строк не пиши.`;
+  return s;
+}
+
+async function exaAddExercise(){
+  const raw = ($('exaResult').value || '').trim();
+  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
+  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
+  const {program, errors} = parseProgramText(wrapped);
+  const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
+  if(!list.length){
+    appAlert('В ответе не найдено упражнения. Проверь, что есть строка «УПРАЖНЕНИЕ: …».');
+    return;
+  }
+  const target = curPlan().exercises;
+  const nWarm = target.filter(e => e.warmup).length;
+  let nMain = target.length - nWarm;
+  let added = 0;
+  for(const ex of list){
+    if(ex.warmup ? nWarm + added >= MAX_WARM : nMain >= MAX_MAIN) break;
+    target.push(ex);
+    if(!ex.warmup) nMain++;
+    added++;
+  }
+  if(!added){ appAlert('Достигнут предел упражнений в этой части.'); return; }
+  $('exaResult').value = '';
+  renderExList();
+  show('scrBuilder');
+  appAlert(added === 1
+    ? `Упражнение «${list[0].name}» добавлено. Открой его, чтобы поправить детали.`
+    : `Добавлено упражнений: ${added}.`);
+}
+
 /* ================= ПРОГРАММА ИЗ ВИДЕО ================= */
 // проверяем и нормализуем ссылку на YouTube
 function parseYouTubeUrl(raw){
@@ -3252,6 +3579,10 @@ function youtubePrompt(){
     '· Если в видео есть разминка — отметь эти упражнения строкой РАЗМИНКА: да.\n' +
     '· Если ролик проходит список несколько раз — поставь соответствующее число КРУГОВ; если каждое упражнение делается подряд несколько раз — используй ПОДХОДЫ.\n' +
     '· Названия упражнений переведи на русский и приведи к общепринятым.\n' +
+    '· ВАЖНО: в строке ВИДЕО у КАЖДОГО упражнения дай ссылку на этот же ролик, но С ТАЙМКОДОМ момента, где упражнение начинается. ' +
+    'Формат: https://youtu.be/ID?t=СЕКУНДЫ или https://www.youtube.com/watch?v=ID&t=СЕКУНДЫs — секунды считай от начала ролика. ' +
+    'Не ставь всем упражнениям одну и ту же ссылку без таймкода: смысл в том, чтобы по тапу открывался нужный фрагмент. ' +
+    'Если точное время определить не удалось — укажи ближайшее приблизительное, а не начало ролика.\n' +
     '· Описание техники пиши сама(сам), не цитируя автора ролика дословно.\n' +
     '· В ОПИСАНИЕ ПРОГРАММЫ добавь, из какого это видео и на что ролик рассчитан.\n' +
     '· Если видео недоступно или это не тренировка — так и напиши, не выдумывай программу.\n' +
@@ -3985,6 +4316,7 @@ function renderExList(){
   $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
   const note = list.length ? `· ${list.length}` + (nWarm ? `, из них ${nWarm} в разминке` : '') : '';
   $('exCountNote').textContent = note;
+  syncImagesSum();
 }
 
 // короткое описание объёма для строки: «12–15 × 3 · отдых 60 с»
@@ -5984,7 +6316,82 @@ $('btnSendAI').onclick = sendToAI;
 $('aiGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('aiClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('btnParse').onclick = importFromText;
-$('btnAddEx').onclick = ()=>{
+$('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
+$('aeCancel').onclick = ()=> $('addExModal').classList.remove('open');
+$('addExModal').onclick = e => { if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
+$('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
+$('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
+
+/* ---- картинки программы ---- */
+$('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgDone').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgPick').onclick = ()=> $('imgFiles').click();
+$('imgFiles').onchange = e => {
+  const files = [...(e.target.files || [])];
+  e.target.value = '';
+  if(!files.length) return;
+  const btn = $('imgPick'), oldTxt = btn.textContent;
+  btn.textContent = `Обработка… 0/${files.length}`;
+  btn.disabled = true;
+  shrinkAll(files, 640, list => {
+    imgTray = imgTray.concat(list);
+    btn.textContent = oldTxt; btn.disabled = false;
+    renderTray();
+    if(list.length) appAlert(`Загружено картинок: ${list.length}. Теперь разложи их по местам или нажми «Разложить по порядку».`);
+  });
+};
+$('trayAuto').onclick = trayAutoAssign;
+$('trayClear').onclick = async ()=>{
+  if(!imgTray.length) return;
+  if(!(await appConfirm('Убрать все нераспределённые картинки из лотка?'))) return;
+  imgTray = []; renderTray();
+};
+$('slotCancel').onclick = ()=> $('slotModal').classList.remove('open');
+$('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
+$('slotRemove').onclick = ()=>{
+  const s = imageSlots()[slotTarget];
+  if(s) s.set(null);
+  $('slotModal').classList.remove('open');
+  renderSlots();
+};
+$('slotFromPhone').onclick = ()=> $('slotFile').click();
+$('slotFile').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!f) return;
+  shrinkImage(f, 640, data => {
+    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    const s = imageSlots()[slotTarget];
+    if(s) s.set(data);
+    $('slotModal').classList.remove('open');
+    renderSlots();
+  });
+};
+
+/* ---- упражнение через ИИ ---- */
+$('exaBackTop').onclick = ()=> show('scrBuilder');
+$('exaAdd').onclick = exaAddExercise;
+$('exaSend').onclick = async ()=>{
+  const text = exaPrompt();
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  exaCopyPrompt();
+};
+async function exaCopyPrompt(){
+  const btn = $('exaCopy');
+  try{
+    await navigator.clipboard.writeText(exaPrompt());
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+}
+$('exaCopy').onclick = ()=> exaCopyPrompt();
+$('exaGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(exaPrompt()), '_blank');
+$('exaClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(exaPrompt()), '_blank');
+
+function addExManual(){
   const list = curPlan().exercises;
   const ex = blankExercise();
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
@@ -5993,7 +6400,7 @@ $('btnAddEx').onclick = ()=>{
   list.push(ex);
   renderExList();
   openExercise(list.length - 1);
-};
+}
 
 /* ---- экран упражнения ---- */
 $('exBackTop').onclick = ()=>{ saveExAndBack(); };
@@ -6065,6 +6472,7 @@ $('exMediaFile').onchange = e => {
 };
 
 /* ---- сворачивание настроек программы ---- */
+$('bImagesRow').onclick = openImages;
 $('bSettingsToggle').onclick = ()=>{
   syncRotateUI();
   fillPlanFields();
@@ -6081,6 +6489,18 @@ function closeProgSettings(){
 }
 $('psBackTop').onclick = closeProgSettings;
 $('btnPsDone').onclick = closeProgSettings;
+function syncImagesSum(){
+  const el = $('bImagesSum');
+  if(!el || !draft) return;
+  let total = 1, filled = draft.cover ? 1 : 0; // обложка
+  (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+    total++;
+    if(ex.media && ex.media.kind === 'img') filled++;
+  }));
+  el.textContent = filled
+    ? `Заполнено ${filled} из ${total}`
+    : 'Загрузить сразу много и разложить по упражнениям';
+}
 function syncSettingsSum(){
   const bits = [];
   const plans = draft.plans || [];
@@ -6152,6 +6572,9 @@ $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
 $('eaBackTop').innerHTML = icon('chevL');
 $('ytBackTop').innerHTML = icon('chevL');
+$('exaBackTop').innerHTML = icon('chevL');
+$('imgBackTop').innerHTML = icon('chevL');
+$('bImagesChev').innerHTML = icon('chevR');
 $('startPrefsChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
