@@ -938,7 +938,7 @@
         <button class="link-btn" id="pmClose" style="margin:0;padding:10px">Закрыть</button>
       </div>
     </div>
-    <div class="weight-card today-card" id="todayBox" style="display:none">
+    <div class="weight-card today-card hidden" id="todayBox">
       <span class="ts-label">Запланировано сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
@@ -2685,7 +2685,7 @@ function renderWeight(){
     if(have.length < 1) return;
     box.insertAdjacentHTML('beforeend', metricGraph(s, have));
   });
-  box.style.display = box.innerHTML ? 'flex' : 'none';
+  box.classList.toggle('hidden', !box.innerHTML);
 }
 
 // один график метрики: сетка, плавная линия, заливка, подписи осей
@@ -3221,7 +3221,7 @@ function renderPhotos(){
   });
   $('photoEmpty').style.display = n ? 'none' : 'block';
   const pa = $('photoActions');
-  if(pa) pa.style.display = n >= 2 ? 'flex' : 'none';
+  if(pa) pa.classList.toggle('hidden', n < 2);
 }
 
 async function addPhoto(file){
@@ -3598,8 +3598,8 @@ function renderToday(){
   const today = DAYS[di];
   $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
   const anyDays = customPrograms.some(p => programDaysUnion(p).length);
-  if(!anyDays){ box.style.display = 'none'; return; }
-  box.classList.remove('hidden');
+  box.classList.toggle('hidden', !anyDays);
+  if(!anyDays) return;
 
   const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
   const scheduled = [];
