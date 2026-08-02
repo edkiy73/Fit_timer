@@ -366,7 +366,8 @@
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
   .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-  .ph-row{display:flex;gap:8px;margin-top:10px}
+  .ph-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .ph-row .ph-thumb{flex:none}
   .ph-thumb{width:56px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line);display:block}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
@@ -375,7 +376,7 @@
 
   /* карточка следующего упражнения на экране отдыха */
   .next-up{
-    display:none;max-width:420px;margin:16px auto 0;text-align:left;
+    display:block;max-width:420px;margin:16px auto 0;text-align:left;
     background:rgba(57,216,200,.07);border:1px solid rgba(57,216,200,.3);
     border-radius:16px;padding:12px 14px;
   }
@@ -911,7 +912,7 @@
   <!-- ШАГ 1: главный экран -->
   <section class="screen on" id="scrMenu">
     <div class="hero">
-      <button class="premium-banner" id="btnPremium" style="display:none">
+      <button class="premium-banner hidden" id="btnPremium">
         <div class="pb-glow"></div>
         <div class="pb-ico">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5L3 8Z"/></svg>
@@ -989,7 +990,7 @@
         <p class="cb-title">Нагрузка сегодня</p>
         <div class="load-row" id="loadRow"></div>
         <p class="field-hint">Выбирай по самочувствию: повторения и время упражнений изменятся пропорционально, отдых останется прежним.</p>
-        <p class="field-hint" id="progHint" style="display:none;color:var(--work)"></p>
+        <p class="field-hint hidden" id="progHint" style="color:var(--work)"></p>
       </div>
 
       <div class="card-block">
@@ -999,7 +1000,6 @@
           <span class="st-chev" id="startPrefsChev"></span>
         </button>
         <div class="prefs stack hidden" id="startPrefsBox">
-          <div class="pref-row"><span>Звуки и озвучка</span><button class="switch" id="tglSound"></button></div>
           <div class="hf-block" id="voicePrefRow">
             <div class="hf-title">Управление без рук</div>
             <div class="hf-seg" id="hfSeg">
@@ -1010,7 +1010,19 @@
             </div>
             <p class="field-hint" id="hfHint"></p>
           </div>
-          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="tglMusic"></button></div>
+          <div class="pref-row"><span>Звук</span><button class="switch" id="stSoundOn"></button></div>
+          <div class="stack" id="stSoundBox">
+            <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+            <div class="field" id="stVoiceField"><label>Голос озвучки</label>
+              <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+            </div>
+            <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="stFxOn"></button></div>
+            <div class="vol-field" id="stFxField">
+              <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
+              <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
+            </div>
+            <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="stMusic"></button></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1111,7 +1123,7 @@
     <div class="card-block">
       <p class="cb-title">Загрузка</p>
       <button class="btn-primary" id="imgPick">Выбрать картинки с телефона</button>
-      <input type="file" id="imgFiles" accept="image/*" multiple style="display:none">
+      <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
       <p class="field-hint">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
     </div>
 
@@ -1149,9 +1161,9 @@
     <div class="modal-card">
       <span class="mini-label" id="slotTitle">Картинка</span>
       <div class="tray" id="slotTray"></div>
-      <p class="field-hint" id="slotEmptyHint" style="display:none">Лоток пуст — выбери картинки с телефона.</p>
+      <p class="field-hint hidden" id="slotEmptyHint">Лоток пуст — выбери картинки с телефона.</p>
       <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
-      <input type="file" id="slotFile" accept="image/*" style="display:none">
+      <input type="file" id="slotFile" accept="image/*" class="hidden">
       <button type="button" class="link-btn" id="slotRemove" style="margin:6px 0 0;padding:10px;color:var(--work)">Убрать картинку</button>
       <button class="link-btn" id="slotCancel" style="margin:0;padding:10px">Отмена</button>
     </div>
@@ -1302,7 +1314,7 @@
         <button type="button" id="bCoverBtn">Фото</button>
         <button type="button" id="bCoverNone">Без обложки</button>
       </div>
-      <input type="file" id="bCoverFile" accept="image/*" style="display:none">
+      <input type="file" id="bCoverFile" accept="image/*" class="hidden">
       <div class="media-preview" id="bCoverPrev"></div>
     </div>
     <div class="field"><label>Описание тренировки (необязательно)</label>
@@ -1365,7 +1377,7 @@
     <div class="field"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
       <p class="field-hint">Только для уведомлений: если этот вариант тренируешь в другое время, чем остальные, укажи его здесь — оно перебьёт общее время программы. Пусто — используется общее.</p>
     </div>
-    <button type="button" class="link-btn" id="btnDelPlan" style="display:none;padding:6px">Удалить этот вариант</button>
+    <button type="button" class="link-btn hidden" id="btnDelPlan" style="padding:6px">Удалить этот вариант</button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnPsDone">Готово</button>
@@ -1423,7 +1435,7 @@
           <button type="button" id="exMediaSvg">Пиктограмма</button>
           <button type="button" id="exMediaNone">Убрать</button>
         </div>
-        <input type="file" id="exMediaFile" accept="image/*" style="display:none">
+        <input type="file" id="exMediaFile" accept="image/*" class="hidden">
         <div id="exSvgBox" class="hidden">
           <textarea id="exSvgCode" class="auto-grow" placeholder="Вставь код пиктограммы: <svg viewBox=&quot;0 0 240 120&quot;>…</svg>"></textarea>
           <p class="field-hint">Пиктограммы обычно приходят вместе с программой из ИИ. Здесь можно вставить или поправить код вручную — рисуй светлыми линиями, фон тёмный.</p>
@@ -1516,7 +1528,7 @@
         <h2 id="stepTitle"></h2>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
-        <div class="side-note" id="sideNote" style="display:none"></div>
+        <div class="side-note hidden" id="sideNote"></div>
         <div class="ready-bar hidden" id="readyBar">
           <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
           <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
@@ -1528,11 +1540,11 @@
           <div class="illo" id="illoBox"></div>
         </div>
         <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
-        <div class="muscle-row" id="stepMuscles" style="display:none"></div>
+        <div class="muscle-row hidden" id="stepMuscles"></div>
         <p class="instruction" id="stepInstruction"></p>
-        <p class="mistakes" id="stepMistakes" style="display:none"></p>
+        <p class="mistakes hidden" id="stepMistakes"></p>
       </div>
-      <div class="next-up" id="nextUp"></div>
+      <div class="next-up hidden" id="nextUp"></div>
     </div>
     <div class="actions">
       <div class="act-row">
@@ -1555,7 +1567,7 @@
         </div>
         <div class="rc-stats">
           <div class="rc-stat" id="finKcalBox"><b id="finKcal">—</b><small>ккал</small></div>
-          <div class="rc-stat" id="finStreakBox" style="display:none"><b id="finStreak">—</b><small>дней подряд</small></div>
+          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small>дней подряд</small></div>
         </div>
       </div>
       <div class="badge-row" id="badgeRow"></div>
@@ -1564,7 +1576,7 @@
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
       </div>
     </div>
-    <div class="fb-block" id="fbBlock" style="display:none">
+    <div class="fb-block hidden" id="fbBlock">
       <span class="mini-label">Как тебе нагрузка?</span>
       <div class="fb-options">
         <button data-fb="ok" id="fbOk">Мне подходит — оставить как есть</button>
@@ -1593,13 +1605,13 @@
         <p class="field-hint">Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и восстановление. Это единственное, что мы спрашиваем обязательно.</p>
         <button class="btn-primary" id="obNext1">Дальше</button>
       </div>
-      <div id="obStep2" style="display:none">
+      <div id="obStep2" class="hidden">
         <div class="eyebrow" style="font-family:'Oswald';letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 2 из 3</div>
         <h2 style="font-size:30px;margin:10px 0 18px">Какая у тебя цель?</h2>
         <div class="fb-options" id="obGoals"></div>
         <button class="btn-primary" id="obNext2" style="margin-top:16px">Дальше</button>
       </div>
-      <div id="obStep3" style="display:none;text-align:center">
+      <div id="obStep3" style="text-align:center" class="hidden">
         <div class="medal" style="font-size:52px">🎉</div>
         <h2 style="font-size:30px;margin:10px 0 12px" id="obDoneTitle">Готово!</h2>
         <p style="color:var(--muted);font-size:15px;line-height:1.55;margin-bottom:22px">Мы уже добавили тебе универсальную разминку на 10 минут — идеальный первый шаг. Свои программы соберёшь потом за пару минут.</p>
@@ -1650,7 +1662,7 @@
       </div>
     </div>
 
-    <div class="tab-pane" id="tabWeight" style="display:none">
+    <div class="tab-pane hidden" id="tabWeight">
       <div class="metric-card">
         <div class="mc-head">
           <div>
@@ -1659,7 +1671,7 @@
           </div>
           <button class="add-btn" id="btnAddWeight" title="Записать"></button>
         </div>
-        <div class="mc-meta" id="weightMeta" style="display:none"></div>
+        <div class="mc-meta hidden" id="weightMeta"></div>
         <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
         <div class="mc-charts hidden" id="weightCharts"></div>
         <div class="mc-actions hidden" id="weightActions">
@@ -1669,7 +1681,7 @@
       </div>
     </div>
 
-    <div class="tab-pane" id="tabPhoto" style="display:none">
+    <div class="tab-pane hidden" id="tabPhoto">
       <div class="metric-card">
         <div class="mc-head">
           <div>
@@ -1683,7 +1695,7 @@
         <div class="mc-actions hidden" id="photoActions">
           <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
         </div>
-        <input type="file" id="photoFile" accept="image/*" style="display:none">
+        <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
     </div>
   </section>
@@ -1722,7 +1734,7 @@
           </button>
           <div class="ctx-menu" id="uePhotoMenu"></div>
         </div>
-        <input type="file" id="uePhotoFile" accept="image/*" style="display:none">
+        <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
         <div class="row2">
           <div class="field"><label>Пол</label>
             <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
@@ -1743,19 +1755,28 @@
           <button class="dc-btn" id="btnExportAll"></button>
           <button class="dc-btn" id="btnImportAll"></button>
         </div>
-        <input type="file" id="importAllFile" accept="application/json,.json" style="display:none">
+        <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
       </div>
     </div>
 
     <!-- Звук -->
-    <div class="ue-pane" id="uePaneSound" style="display:none">
+    <div class="ue-pane hidden" id="uePaneSound">
       <div class="card-block">
-        <p class="cb-title">Озвучка</p>
-        <div class="pref-row"><span>Голосовая озвучка<small>приложение проговаривает этапы тренировки</small></span><button class="switch" id="ueVoiceOn"></button></div>
-        <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
-          <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-          <p class="field-hint">Громкость голоса регулируется кнопками громкости телефона во время тренировки.</p>
+        <p class="cb-title">Звук</p>
+        <div class="pref-row"><span>Звук</span><button class="switch" id="ueSoundOn"></button></div>
+        <div class="stack" id="ueSoundBox">
+          <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="ueVoiceOn"></button></div>
+          <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
+            <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          </div>
+          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="ueFxOn"></button></div>
+          <div class="vol-field" id="ueFxField">
+            <div class="vol-label"><span>Громкость</span><b id="ueFxVolVal">100%</b></div>
+            <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
+          </div>
+          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="ueMusic"></button></div>
         </div>
+        <p class="field-hint">Громкость голоса — кнопками громкости телефона во время тренировки.</p>
       </div>
 
       <div class="card-block">
@@ -1771,18 +1792,10 @@
         </ul>
       </div>
 
-      <div class="card-block">
-        <p class="cb-title">Сигналы</p>
-        <div class="vol-field">
-          <div class="vol-label"><span>Громкость сигналов</span><b id="ueFxVolVal">100%</b></div>
-          <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
-        </div>
-        <p class="field-hint">Гонг старта упражнения, отсчёт последних секунд, сигнал смены стороны и фанфары в конце.</p>
-      </div>
     </div>
 
     <!-- Тайминги -->
-    <div class="ue-pane" id="uePaneTiming" style="display:none">
+    <div class="ue-pane hidden" id="uePaneTiming">
       <div class="card-block">
         <p class="cb-title">Тайминги тренировки</p>
         <div class="row2">
@@ -1795,7 +1808,7 @@
     </div>
 
     <!-- ИИ -->
-    <div class="ue-pane" id="uePaneAI" style="display:none">
+    <div class="ue-pane hidden" id="uePaneAI">
       <div class="card-block">
         <p class="cb-title">ИИ внутри приложения</p>
         <div class="field"><label>Ключ Gemini API</label>
@@ -1830,13 +1843,18 @@
     <div class="modal" id="soundModal">
       <div class="modal-card">
         <span class="mini-label">Звук тренировки</span>
-        <div class="pref-row" style="border-top:none;padding-top:0"><span>Голосовая озвучка</span><button class="switch" id="sndVoiceOn"></button></div>
-        <div class="field" id="sndVoiceField"><label>Голос озвучки</label>
-          <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-        </div>
-        <div class="vol-field">
-          <div class="vol-label"><span>Громкость сигналов</span><b id="sndFxVolVal">100%</b></div>
-          <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+        <div class="pref-row"><span>Звук</span><button class="switch" id="sndSoundOn"></button></div>
+        <div class="stack" id="sndSoundBox">
+          <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
+          <div class="field" id="sndVoiceField"><label>Голос озвучки</label>
+            <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          </div>
+          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="sndFxOn"></button></div>
+          <div class="vol-field" id="sndFxField">
+            <div class="vol-label"><span>Громкость</span><b id="sndFxVolVal">100%</b></div>
+            <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+          </div>
+          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="sndMusic"></button></div>
         </div>
         <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
         <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
@@ -1846,7 +1864,7 @@
     <div class="modal" id="dlg">
       <div class="modal-card">
         <p class="dlg-msg" id="dlgMsg"></p>
-        <textarea id="dlgCode" readonly style="display:none"></textarea>
+        <textarea id="dlgCode" readonly class="hidden"></textarea>
         <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
         <button class="link-btn" id="dlgCancel" style="margin:0;padding:10px">Отмена</button>
       </div>
@@ -1925,7 +1943,7 @@
         <div class="imp-or"><span>или</span></div>
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px">Файл передаёт программу целиком — с обложкой и фото упражнений. Ссылка и код легче, но без картинок.</p>
-        <input type="file" id="importProgFile" accept="application/json,.json" style="display:none">
+        <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
         <button class="link-btn" id="importCancel" style="margin:6px 0 0;padding:10px">Отмена</button>
       </div>
     </div>
@@ -2206,7 +2224,7 @@ function runReadyBar(sec, done){
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
-  box.classList.remove('hidden');
+  setShown(box, true);
   fill.style.transition = 'none';
   fill.style.width = '100%';
   num.textContent = sec;
@@ -2218,7 +2236,7 @@ function runReadyBar(sec, done){
       left -= dt;
       if(left <= 0){
         state.readyRAF = 0;
-        box.classList.add('hidden');
+        setShown(box, false);
         done();
         return;
       }
@@ -2233,7 +2251,7 @@ function hideReadyBar(){
   if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyBar');
-  if(box) box.classList.add('hidden');
+  if(box) setShown(box, false);
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -2309,6 +2327,14 @@ const MUSCLES = [
 ];
 const M_LABEL = Object.fromEntries(MUSCLES);
 
+/* ================= ПОКАЗ И СКРЫТИЕ ================= */
+// единственный способ управлять видимостью: класс, а не инлайновый display.
+// инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
+function setShown(el, on){
+  const node = (typeof el === 'string') ? $(el) : el;
+  if(node) node.classList.toggle('hidden', !on);
+}
+
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
 // снимки форм: сравниваем текущее состояние с тем, что было при открытии
 const snap = {};
@@ -2334,17 +2360,28 @@ function aiScreenDirty(ids){
   return ids.some(id => { const el = $(id); return el && (el.value || '').trim(); });
 }
 
+/* ================= КАСКАД НАСТРОЕК ЗВУКА (общий для трёх мест) ================= */
+// показывает/прячет вложенные блоки по состоянию тумблеров; сама раскладка одна и та же
+// в профиле, на экране старта и в попапе на тренировке — меняются только префикс id и что именно сохраняется
+function syncSoundCascade(p){
+  const on = $(p + 'SoundOn').classList.contains('on');
+  setShown(p + 'SoundBox', on);
+  if(!on) return;
+  setShown(p + 'VoiceField', $(p + 'VoiceOn').classList.contains('on'));
+  setShown(p + 'FxField', $(p + 'FxOn').classList.contains('on'));
+}
+
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
 function appDialog(msg, opts = {}){
   return new Promise(res => {
     $('dlgMsg').textContent = msg;
     const t = $('dlgCode');
-    if(opts.code){ t.style.display = 'block'; t.value = opts.code; }
-    else t.style.display = 'none';
+    if(opts.code){ setShown(t, true); t.value = opts.code; }
+    else setShown(t, false);
     $('dlgOk').textContent = opts.okText || 'ОК';
     if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
     else $('dlgCancel').textContent = 'Отмена';
-    $('dlgCancel').style.display = opts.confirm ? 'block' : 'none';
+    setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
     const done = v => {
       $('dlg').classList.remove('open');
@@ -2403,9 +2440,9 @@ function openStart(raw){
   const ph = $('progHint');
   if(raw.progression){
     ph.textContent = `Прогрессия включена: +${raw.progStep || 30}% каждые ${raw.progression} дн.`;
-    ph.style.display = 'block';
-  } else ph.style.display = 'none';
-  $('voicePrefRow').style.display = 'block';
+    setShown(ph, true);
+  } else setShown(ph, false);
+  setShown('voicePrefRow', true);
   populateVoices();
   show('scrStart');
 }
@@ -2427,8 +2464,8 @@ function renderPlanRow(){
   const plans = normPlans(state.raw);
   const block = $('planBlock'), row = $('planRow');
   row.innerHTML = '';
-  if(plans.length < 2){ block.classList.add('hidden'); return; }
-  block.classList.remove('hidden');
+  if(plans.length < 2){ setShown(block, false); return; }
+  setShown(block, true);
   plans.forEach((pl, i)=>{
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
@@ -2472,22 +2509,23 @@ function buildStartMenu(){
 function renderStartInfo(){
   buildStartMenu();
   // блок звука и управления свёрнут по умолчанию
-  $('startPrefsBox').classList.add('hidden');
+  setShown('startPrefsBox', false);
   $('startPrefsToggle').classList.remove('open');
+  fillLiveSoundCascade('st');
   syncStartPrefsSum();
   // описание программы: 4 строки с возможностью раскрыть
   const dBox = $('progDescBox'), dTxt = $('progDescText');
   const d = (state.raw.desc || '').trim();
   if(d){
     dTxt.textContent = d;
-    dBox.classList.remove('hidden');
+    setShown(dBox, true);
     dBox.classList.remove('open');
     $('progDescMore').textContent = 'Показать полностью';
     requestAnimationFrame(()=>{
       const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
-      $('progDescMore').style.display = fits ? 'none' : 'block';
+      setShown('progDescMore', !(fits));
     });
-  } else dBox.classList.add('hidden');
+  } else setShown(dBox, false);
 
   const plans = normPlans(state.raw);
   const pl = plans[state.planIdx];
@@ -2642,14 +2680,14 @@ function renderWeight(){
   if(!ws.length){
     $('weightNow').textContent = '—';
     $('weightDelta').textContent = '';
-    $('weightMeta').style.display = 'none';
-    $('weightCharts').classList.add('hidden');
-    $('weightActions').classList.add('hidden');
-    $('weightEmpty').style.display = 'block';
+    setShown('weightMeta', false);
+    setShown('weightCharts', false);
+    setShown('weightActions', false);
+    setShown('weightEmpty', true);
     return;
   }
-  $('weightEmpty').style.display = 'none';
-  $('weightActions').classList.remove('hidden');
+  setShown('weightEmpty', false);
+  setShown('weightActions', true);
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
   $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
@@ -2669,7 +2707,7 @@ function renderWeight(){
   if(hps) meta.push(`<span class="chip">Бёдра <b>${hps}</b> см</span>`);
   if(cht) meta.push(`<span class="chip">Грудь <b>${cht}</b> см</span>`);
   $('weightMeta').innerHTML = meta.join('');
-  $('weightMeta').style.display = meta.length ? 'flex' : 'none';
+  setShown('weightMeta', meta.length);
 
   // отдельный аккуратный график на каждую метрику
   const SERIES = [
@@ -2685,7 +2723,7 @@ function renderWeight(){
     if(have.length < 1) return;
     box.insertAdjacentHTML('beforeend', metricGraph(s, have));
   });
-  box.classList.toggle('hidden', !box.innerHTML);
+  setShown(box, box.innerHTML);
 }
 
 // один график метрики: сетка, плавная линия, заливка, подписи осей
@@ -3051,18 +3089,57 @@ function openUserEdit(id = null){
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
-  const vOn = uDraft.voiceVol > 0;
-  $('ueVoiceOn').classList.toggle('on', vOn);
-  $('ueVoiceField').classList.toggle('hidden', !(vOn));
   fillVoiceSelect($('ueVoiceSel'));
   $('ueVoiceSel').value = uDraft.voiceURI || '';
-  $('ueFxVol').value = uDraft.fxVol;
-  $('ueFxVolVal').textContent = uDraft.fxVol + '%';
+  $('ueSoundOn').classList.toggle('on', soundOn);       // «Звук» — общий на приложение переключатель
+  $('ueVoiceOn').classList.toggle('on', uDraft.voiceVol > 0);
+  const fOn = uDraft.fxVol > 0;
+  if(fOn) fxVolMemory = uDraft.fxVol;
+  $('ueFxOn').classList.toggle('on', fOn);
+  $('ueFxVol').value = fOn ? uDraft.fxVol : fxVolMemory;
+  $('ueFxVolVal').textContent = (fOn ? uDraft.fxVol : fxVolMemory) + '%';
+  $('ueMusic').classList.toggle('on', musicMode);       // «Не прерывать музыку» — тоже общий, не за профиль
+  syncSoundCascade('ue');
   syncUserForm();
-  $('btnDelUser').style.display = id ? 'block' : 'none';
+  setShown('btnDelUser', id);
   show('scrUserEdit');
   window.scrollTo(0, 0);
 }
+$('ueSoundOn').onclick = ()=>{
+  soundOn = !soundOn;
+  kvSet('soundOff', soundOn ? '0' : '1');
+  if(!soundOn) stopSpeech();
+  $('ueSoundOn').classList.toggle('on', soundOn);
+  syncSoundCascade('ue');
+  syncPrefs();
+};
+$('ueVoiceOn').onclick = ()=>{
+  const on = !$('ueVoiceOn').classList.contains('on');
+  uDraft.voiceVol = on ? 100 : 0;
+  $('ueVoiceOn').classList.toggle('on', on);
+  syncSoundCascade('ue');
+};
+$('ueFxOn').onclick = ()=>{
+  const on = !$('ueFxOn').classList.contains('on');
+  if(on){ uDraft.fxVol = fxVolMemory; } else { fxVolMemory = uDraft.fxVol || fxVolMemory; uDraft.fxVol = 0; }
+  $('ueFxOn').classList.toggle('on', on);
+  $('ueFxVol').value = uDraft.fxVol;
+  $('ueFxVolVal').textContent = uDraft.fxVol + '%';
+  syncSoundCascade('ue');
+};
+$('ueFxVol').oninput = e => {
+  const v = parseInt(e.target.value) || 0;
+  uDraft.fxVol = v; fxVolMemory = v || fxVolMemory;
+  $('ueFxVolVal').textContent = v + '%';
+};
+$('ueMusic').onclick = ()=>{
+  musicMode = !musicMode;
+  kvSet('musicMode', musicMode ? '1' : '0');
+  if(musicMode) stopSpeech();
+  $('ueMusic').classList.toggle('on', musicMode);
+  syncPrefs();
+};
+
 function syncUserForm(){
   $('ueGenderF').classList.toggle('act', uDraft.gender !== 'm');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
@@ -3211,7 +3288,7 @@ function renderPhotos(){
   } else hint.textContent = '';
   const strip = $('photoStrip');
   strip.innerHTML = '';
-  photos.slice(-4).forEach(p => {
+  photos.forEach(p => {
     const img = document.createElement('img');
     img.className = 'ph-thumb';
     img.src = p.img;
@@ -3219,9 +3296,9 @@ function renderPhotos(){
     img.onclick = ()=>{ if(photos.length >= 2) openCompare(); };
     strip.appendChild(img);
   });
-  $('photoEmpty').style.display = n ? 'none' : 'block';
+  setShown('photoEmpty', !(n));
   const pa = $('photoActions');
-  if(pa) pa.classList.toggle('hidden', n < 2);
+  if(pa) setShown(pa, n >= 2);
 }
 
 async function addPhoto(file){
@@ -3598,8 +3675,8 @@ function renderToday(){
   const today = DAYS[di];
   $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
   const anyDays = customPrograms.some(p => programDaysUnion(p).length);
-  box.classList.toggle('hidden', !anyDays);
-  if(!anyDays) return;
+  if(!anyDays){ setShown(box, false); return; }
+  setShown(box, true);
 
   const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
   const scheduled = [];
@@ -3889,7 +3966,7 @@ function openImages(){
 
 function renderTray(){
   const box = $('tray');
-  $('trayBox').classList.toggle('hidden', !(imgTray.length));
+  setShown('trayBox', imgTray.length);
   $('trayCount').textContent = imgTray.length ? `· ${imgTray.length}` : '';
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
@@ -3951,7 +4028,7 @@ function openSlotPicker(i){
   const s = slots[i];
   $('slotTitle').textContent = s.title;
   const box = $('slotTray'); box.innerHTML = '';
-  $('slotEmptyHint').style.display = imgTray.length ? 'none' : 'block';
+  setShown('slotEmptyHint', !(imgTray.length));
   imgTray.forEach((data, ti)=>{
     const el = document.createElement('div');
     el.className = 'tray-item';
@@ -3964,7 +4041,7 @@ function openSlotPicker(i){
     };
     box.appendChild(el);
   });
-  $('slotRemove').style.display = s.get() ? 'block' : 'none';
+  setShown('slotRemove', s.get());
   $('slotModal').classList.add('open');
 }
 
@@ -4622,7 +4699,7 @@ function syncRotateUI(){
   const rot = !!draft.rotate && many;
 
   // переключатель режима есть только когда вариантов больше одного
-  $('schedModeRow').classList.toggle('hidden', !(many));
+  setShown('schedModeRow', many);
   document.querySelectorAll('#schedSeg button').forEach(b =>
     b.classList.toggle('act', (b.dataset.mode === 'rot') === rot));
   $('schedHint').textContent = rot
@@ -4662,7 +4739,7 @@ $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHin
 $('bProgOn').onclick = ()=>{
   const on = !$('bProgOn').classList.contains('on');
   $('bProgOn').classList.toggle('on', on);
-  $('bProgOpts').classList.toggle('hidden', !(on));
+  setShown('bProgOpts', on);
 };
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
@@ -4696,7 +4773,7 @@ function fillBuilder(title){
   syncRotateUI();
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
-  $('bProgOpts').classList.toggle('hidden', !(pOn));
+  setShown('bProgOpts', pOn);
   draft.progStep = draft.progStep || 30;
   $('bProgEvery').value = String(draft.progression || 7);
   renderProgStep();
@@ -4710,10 +4787,10 @@ function fillBuilder(title){
 function renderPlanTabs(){
   ['planTabs', 'planTabsTop'].forEach(id => buildPlanTabs(id));
   // верхние вкладки нужны, только когда вариантов больше одного
-  $('planTabsTop').style.display = draft.plans.length > 1 ? 'flex' : 'none';
+  setShown('planTabsTop', draft.plans.length > 1);
   if(typeof renderExList === 'function' && $('bVariantTitle')) { /* подписи обновит renderExList */ }
   syncSettingsSum();
-  $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
+  setShown('btnDelPlan', draft.plans.length > 1);
 }
 
 function buildPlanTabs(boxId){
@@ -4772,7 +4849,7 @@ function fillPlanFields(){
   }
   renderDays();
   renderExList();
-  $('btnDelPlan').style.display = draft.plans.length > 1 ? 'block' : 'none';
+  setShown('btnDelPlan', draft.plans.length > 1);
 }
 
 function syncCover(){
@@ -4856,10 +4933,10 @@ function fillExercise(){
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
-  $('exSvgBox').classList.add('hidden');
+  setShown('exSvgBox', false);
   $('exSvgCode').value = exKeptSvg(ex);
   // детали по умолчанию свёрнуты
-  $('exDetailsBox').classList.add('hidden');
+  setShown('exDetailsBox', false);
   $('exDetailsToggle').classList.remove('open');
 }
 
@@ -4871,7 +4948,7 @@ function syncExType(){
   $('exValue').placeholder = reps ? '12 или 12-15' : '45';
 }
 function syncExWarm(){
-  $('exSetsField').style.display = exDraft.warmup ? 'none' : 'block';
+  setShown('exSetsField', !(exDraft.warmup));
 }
 function renderExMuscles(){
   const box = $('exMuscles'); box.innerHTML = '';
@@ -4956,7 +5033,7 @@ function renderExList(){
   syncVolHint();
   const nWarm = list.filter(e => e.warmup).length;
   const nMain = list.length - nWarm;
-  $('btnAddEx').style.display = (nWarm >= MAX_WARM && nMain >= MAX_MAIN) ? 'none' : 'block';
+  setShown('btnAddEx', !((nWarm >= MAX_WARM && nMain >= MAX_MAIN)));
   const note = list.length
     ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}` + (nWarm ? ` · ${nWarm} в разминке` : '')
     : '';
@@ -4975,12 +5052,12 @@ function renderExList(){
       : (days
           ? `Ниже — упражнения варианта на ${days}. Переключай вариант вкладками.`
           : 'У этого варианта не выбраны дни — он не появится в расписании. Дни задаются в настройках программы.');
-    h.style.display = 'block';
+    setShown(h, true);
   } else {
     t.textContent = 'Упражнения';
     const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
     h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не появится в блоке «Запланировано сегодня».';
-    h.style.display = 'block';
+    setShown(h, true);
   }
 }
 
@@ -5389,14 +5466,14 @@ function initAIForm(){
   });
   $('qSplit').classList.toggle('on', q.split);
   $('qRotate').classList.toggle('on', q.rotate);
-  $('qRotateRow').classList.toggle('hidden', !(q.split));
+  setShown('qRotateRow', q.split);
   $('qNote').value = q.note || '';
 }
 $('qNote').oninput = e => q.note = e.target.value;
 $('qSplit').onclick = ()=>{
   q.split = !q.split;
   $('qSplit').classList.toggle('on', q.split);
-  $('qRotateRow').classList.toggle('hidden', !(q.split));
+  setShown('qRotateRow', q.split);
   if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
 };
 $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
@@ -5703,7 +5780,7 @@ function renderStep(){
   $('btnPrev').disabled = state.stepIdx === 0;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
-  $('phaseTag').style.display = 'none';
+  setShown('phaseTag', false);
   $('stepTitle').textContent = step.title;
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
@@ -5713,16 +5790,16 @@ function renderStep(){
   if(mus){
     $('stepMuscles').innerHTML =
       `<div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>`;
-    $('stepMuscles').style.display = 'flex';
+    setShown('stepMuscles', true);
   } else {
-    $('stepMuscles').style.display = 'none';
+    setShown('stepMuscles', false);
   }
   // частые ошибки
   if(step.phase === 'work' && step.mistakes){
     $('stepMistakes').textContent = '⚠ ' + step.mistakes;
-    $('stepMistakes').style.display = 'block';
+    setShown('stepMistakes', true);
   } else {
-    $('stepMistakes').style.display = 'none';
+    setShown('stepMistakes', false);
   }
 
   // звуки начала шага (для work запуск таймера происходит ниже, после озвучки)
@@ -5775,7 +5852,7 @@ function renderStep(){
     box.innerHTML = ILLO[step.illo] || '';
   }
   const hasIllo = !!box.innerHTML;
-  $('illoWrap').classList.toggle('hidden', !((hasIllo && step.phase === 'work')));
+  setShown('illoWrap', (hasIllo && step.phase === 'work'));
 
   // видео: есть картинка → маленький значок YouTube над ней; нет картинки → крупная кнопка «Смотреть видео»
   const hasVideo = !!(step.video && step.phase === 'work');
@@ -5785,29 +5862,29 @@ function renderStep(){
   if(hasVideo){ badge.href = step.video; cta.href = step.video; }
 
   if(step.kind === 'click'){
-    $('stepReps').style.display='block';
+    setShown('stepReps', true);
     $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>`;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
-    if(step.perSide){ snR.textContent = 'на каждую сторону'; snR.style.display = 'block'; }
-    else snR.style.display = 'none';
-    $('countdown').style.display='none';
-    $('btnDone').style.display='block';
-    $('btnSkip').style.display='none';
+    if(step.perSide){ snR.textContent = 'на каждую сторону'; setShown(snR, true); }
+    else setShown(snR, false);
+    setShown('countdown', false);
+    setShown('btnDone', true);
+    setShown('btnSkip', false);
   } else {
-    $('stepReps').style.display='none';
-    $('btnDone').style.display='none';
-    $('btnSkip').style.display='block';
+    setShown('stepReps', false);
+    setShown('btnDone', false);
+    setShown('btnSkip', true);
     $('btnSkip').textContent = 'Пропустить';
     // подпись для упражнений «на каждую сторону» — как у повторений
     const sn = $('sideNote');
     if(step.phase === 'work' && step.perSide){
       sn.innerHTML = 'на каждую сторону' + (step.side ? ` · <b>сторона ${step.side} из ${step.sidesTotal || 2}</b>` : '');
-      sn.style.display = 'block';
-    } else sn.style.display = 'none';
+      setShown(sn, true);
+    } else setShown(sn, false);
 
     const cd = $('countdown');
-    cd.style.display='block';
+    setShown(cd, true);
     state.remaining = step.seconds;
     cd.textContent = fmt(state.remaining);
     cd.classList.remove('warn');
@@ -5863,9 +5940,9 @@ function esc(s){
 }
 function renderNextUp(step){
   const nu = $('nextUp');
-  if(step.phase !== 'rest'){ nu.style.display='none'; nu.innerHTML=''; return; }
+  if(step.phase !== 'rest'){ setShown(nu, false); nu.innerHTML=''; return; }
   const nxt = state.steps.slice(state.stepIdx+1).find(s => s.phase === 'work');
-  if(!nxt){ nu.style.display='none'; nu.innerHTML=''; return; }
+  if(!nxt){ setShown(nu, false); nu.innerHTML=''; return; }
 
   let media, mediaClass = '';
   if(nxt.media && nxt.media.kind === 'img'){
@@ -5893,7 +5970,7 @@ function renderNextUp(step){
       (nxt.instruction ? `<p>${esc(nxt.instruction)}</p>` : '') +
       `<div class="nu-val">${val}</div></div>` +
     `</div>`;
-  nu.style.display = 'flex'; // блок показывается только на отдыхе, растягивается колонкой
+  setShown(nu, true); // блок показывается только на отдыхе, растягивается колонкой
   // описание занимает всю доступную высоту, лишнее — под многоточие
   requestAnimationFrame(fitNextUpDesc);
 }
@@ -5911,7 +5988,7 @@ document.addEventListener('input', e => {
 // подбирает -webkit-line-clamp так, чтобы текст заполнил выделенное место и обрезался многоточием
 function fitNextUpDesc(){
   const nu = $('nextUp');
-  if(!nu || nu.style.display === 'none') return;
+  if(!nu || nu.classList.contains('hidden')) return;
   const p = nu.querySelector('.nu-body p');
   if(!p) return;
   p.style.webkitLineClamp = '999';           // снимаем ограничение, чтобы измерить настоящую высоту
@@ -5997,7 +6074,7 @@ function finishWorkout(){
   fanfare();
   // оценка нагрузки: по умолчанию «мне подходит»
   state.usedLoad = state.load || 100;
-  $('fbBlock').style.display = (state.current && state.current.sourceId) ? 'block' : 'none';
+  setShown('fbBlock', (state.current && state.current.sourceId));
   if(state.current && state.current.sourceId) applyFeedback('ok');
   show('scrFinish');
 }
@@ -6174,8 +6251,8 @@ function renderBadges(){
   const si = calcStreakInfo();
   if(si.n > 1){
     $('finStreak').textContent = si.n + (si.freezes ? ' ❄' : '');
-    $('finStreakBox').style.display = 'flex';
-  } else $('finStreakBox').style.display = 'none';
+    setShown('finStreakBox', true);
+  } else setShown('finStreakBox', false);
 }
 
 // сохраняем рекомендацию нагрузки на следующий раз
@@ -6226,7 +6303,6 @@ let voiceWanted = false;  // пользователь включил микро�
 let voiceActive = false;  // распознавание реально запущено
 
 function syncPrefs(){
-  $('tglSound').classList.toggle('on', soundOn);
   if(typeof syncStartPrefsSum === 'function') syncStartPrefsSum();
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
@@ -6234,7 +6310,14 @@ function syncPrefs(){
   $('btnSoundW').title = 'Настройки звука';
   $('btnMicW').classList.toggle('listening', hfMode !== 'off');
   $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', clap:'хлопок', headset:'гарнитура'}[hfMode] || 'выкл');
-  $('tglMusic').classList.toggle('on', musicMode);
+  // держим три каскада («старт», «тренировка», «профиль») в согласованном состоянии
+  ['st', 'snd', 'ue'].forEach(p => {
+    const btn = $(p + 'SoundOn');
+    if(!btn) return;
+    btn.classList.toggle('on', soundOn);
+    const mb = $(p + 'Music'); if(mb) mb.classList.toggle('on', musicMode);
+    syncSoundCascade(p);
+  });
 }
 
 let lastCmdTime = 0, lastCmdKind = '';
@@ -6605,7 +6688,7 @@ $('tglTheme').onclick = ()=>{
 $('ueVoiceOn').onclick = ()=>{
   const on = !$('ueVoiceOn').classList.contains('on');
   $('ueVoiceOn').classList.toggle('on', on);
-  $('ueVoiceField').classList.toggle('hidden', !(on));
+  setShown('ueVoiceField', on);
   uDraft.voiceVol = on ? 100 : 0;
 };
 $('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; };
@@ -6618,13 +6701,6 @@ $('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.t
     uDraft.sideSec = parseInt($('ueSideSec').value) || 10;
   };
 });
-$('tglSound').onclick = toggleSound;
-$('tglMusic').onclick = ()=>{
-  musicMode = !musicMode;
-  kvSet('musicMode', musicMode ? '1' : '0');
-  if(musicMode) stopSpeech();
-  syncPrefs();
-};
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{
     const mode = b.dataset.hf;
@@ -6663,6 +6739,86 @@ function toggleSound(){
   if(!soundOn) stopSpeech();
   syncPrefs();
 }
+
+/* ---- один каскад «Звук → Голос / Звуки / Музыка», три места: старт (st), тренировка (snd), профиль (ue) ---- */
+let fxVolMemory = 100; // громкость сигналов, которую помним, пока «Звуки» выключены
+
+// заполняет каскад текущими значениями сессии (для st и snd — они делят одно состояние)
+function fillLiveSoundCascade(p){
+  fillVoiceSelect($(p + 'VoiceSel'));
+  $(p + 'VoiceSel').value = savedVoiceURI || '';
+  $(p + 'SoundOn').classList.toggle('on', soundOn);
+  $(p + 'VoiceOn').classList.toggle('on', voiceVol > 0);
+  const fOn = fxVol > 0;
+  if(fOn) fxVolMemory = Math.round(fxVol * 100);
+  $(p + 'FxOn').classList.toggle('on', fOn);
+  $(p + 'FxVol').value = fOn ? Math.round(fxVol * 100) : fxVolMemory;
+  $(p + 'FxVolVal').textContent = (fOn ? Math.round(fxVol * 100) : fxVolMemory) + '%';
+  $(p + 'Music').classList.toggle('on', musicMode);
+  syncSoundCascade(p);
+}
+
+// сохраняет живое состояние в аудио-движок и в активный профиль
+function persistLiveSound(){
+  if(masterGain) masterGain.gain.value = fxVol;
+  const u = curUser();
+  if(u){ u.voiceVol = Math.round(voiceVol * 100); u.fxVol = Math.round(fxVol * 100); u.voiceURI = savedVoiceURI; saveUsers(); }
+  kvSet('voiceURI', savedVoiceURI);
+  syncPrefs();
+}
+
+// вешает обработчики на каскад с префиксом p (вызывается один раз на префикс, при старте)
+function wireLiveSoundCascade(p){
+  $(p + 'SoundOn').onclick = ()=>{
+    soundOn = !soundOn;
+    kvSet('soundOff', soundOn ? '0' : '1');
+    if(!soundOn) stopSpeech();
+    $(p + 'SoundOn').classList.toggle('on', soundOn);
+    syncSoundCascade(p);
+    syncPrefs();
+  };
+  $(p + 'VoiceOn').onclick = ()=>{
+    const on = !$(p + 'VoiceOn').classList.contains('on');
+    voiceVol = on ? 1 : 0;
+    $(p + 'VoiceOn').classList.toggle('on', on);
+    syncSoundCascade(p);
+    persistLiveSound();
+    if(on) speak('Голос включён');
+  };
+  $(p + 'FxOn').onclick = ()=>{
+    const on = !$(p + 'FxOn').classList.contains('on');
+    if(on){ fxVol = clampVol(fxVolMemory / 100, 1); }
+    else { fxVolMemory = Math.round(fxVol * 100) || fxVolMemory; fxVol = 0; }
+    $(p + 'FxOn').classList.toggle('on', on);
+    $(p + 'FxVol').value = Math.round(fxVol * 100);
+    $(p + 'FxVolVal').textContent = Math.round(fxVol * 100) + '%';
+    syncSoundCascade(p);
+    persistLiveSound();
+    if(on) tick();
+  };
+  $(p + 'FxVol').oninput = e => {
+    const v = parseInt(e.target.value) || 0;
+    fxVol = clampVol(v / 100, 1);
+    fxVolMemory = v || fxVolMemory;
+    $(p + 'FxVolVal').textContent = v + '%';
+    persistLiveSound();
+    if(v > 0) tick();
+  };
+  $(p + 'VoiceSel').onchange = ()=>{
+    savedVoiceURI = $(p + 'VoiceSel').value || '';
+    persistLiveSound();
+    if(voiceVol > 0) speak('Проверка голоса');
+  };
+  $(p + 'Music').onclick = ()=>{
+    musicMode = !musicMode;
+    kvSet('musicMode', musicMode ? '1' : '0');
+    if(musicMode) stopSpeech();
+    $(p + 'Music').classList.toggle('on', musicMode);
+    syncPrefs();
+  };
+}
+wireLiveSoundCascade('st');
+wireLiveSoundCascade('snd');
 function openHfModal(){
   document.querySelectorAll('#hfModal .choice').forEach(c => c.classList.toggle('act', c.dataset.hf === hfMode));
   $('hfModal').classList.add('open');
@@ -6680,37 +6836,7 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 });
 $('hfClose').onclick = ()=> $('hfModal').classList.remove('open');
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
-$('btnSoundW').onclick = openSoundModal;
-function openSoundModal(){
-  fillVoiceSelect($('sndVoiceSel'));
-  $('sndVoiceSel').value = savedVoiceURI || '';
-  const vOn = voiceVol > 0;
-  $('sndVoiceOn').classList.toggle('on', vOn);
-  $('sndVoiceField').style.display = vOn ? 'block' : 'none';
-  $('sndFxVol').value = Math.round(fxVol * 100);
-  $('sndFxVolVal').textContent = Math.round(fxVol * 100) + '%';
-  $('soundModal').classList.add('open');
-}
-function applyAudioLive(){
-  voiceVol = $('sndVoiceOn').classList.contains('on') ? 1 : 0;
-  fxVol = clampVol((parseInt($('sndFxVol').value) || 0) / 100, 1);
-  savedVoiceURI = $('sndVoiceSel').value || '';
-  if(masterGain) masterGain.gain.value = fxVol;
-  // синхронизируем в активный профиль, чтобы сохранилось
-  const u = curUser();
-  if(u){ u.voiceVol = Math.round(voiceVol*100); u.fxVol = Math.round(fxVol*100); u.voiceURI = savedVoiceURI; saveUsers(); }
-  kvSet('voiceURI', savedVoiceURI);
-  $('btnSoundW').innerHTML = icon(fxVol>0 || voiceVol>0 ? 'vol' : 'volX');
-}
-$('sndVoiceOn').onclick = ()=>{
-  const on = !$('sndVoiceOn').classList.contains('on');
-  $('sndVoiceOn').classList.toggle('on', on);
-  $('sndVoiceField').style.display = on ? 'block' : 'none';
-  applyAudioLive();
-  if(on) speak('Голос включён');
-};
-$('sndFxVol').oninput = e => { $('sndFxVolVal').textContent = e.target.value + '%'; applyAudioLive(); if(parseInt(e.target.value)>0) tick(); };
-$('sndVoiceSel').onchange = ()=>{ applyAudioLive(); if(voiceVol>0) speak('Проверка голоса'); };
+$('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
 $('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
@@ -6848,18 +6974,18 @@ $('obNext1').onclick = ()=>{
   if(err){ appAlert(err); return; }
   obState.name = n;
   obState.birth = b;
-  $('obStep1').style.display = 'none';
-  $('obStep2').style.display = 'block';
+  setShown('obStep1', false);
+  setShown('obStep2', true);
 };
 $('obNext2').onclick = async ()=>{
-  $('obStep2').style.display = 'none';
+  setShown('obStep2', false);
   await finishOnboardingCreate();
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
     return;
   }
-  $('obStep3').style.display = 'block';
+  setShown('obStep3', true);
 };
 $('obStart').onclick = async ()=>{
   // сначала краткое «как это работает», затем сразу разминка
@@ -6893,9 +7019,9 @@ function openStats(tab){
 }
 function switchStatsTab(tab){
   document.querySelectorAll('#statsTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.tab === tab));
-  $('tabWorkouts').style.display = tab === 'workouts' ? 'block' : 'none';
-  $('tabWeight').style.display = tab === 'weight' ? 'block' : 'none';
-  $('tabPhoto').style.display = tab === 'photo' ? 'block' : 'none';
+  setShown('tabWorkouts', tab === 'workouts');
+  setShown('tabWeight', tab === 'weight');
+  setShown('tabPhoto', tab === 'photo');
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
 $('statsBackTop').onclick = ()=> show('scrMenu');
@@ -7184,8 +7310,8 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
     // если правки есть — предупреждаем; иначе переключаемся молча
     if(exDirty()){
       const ok = await appDialog(
-        'Изменения этого упражнения не сохранены. Сохранить их перед переходом к ИИ?',
-        {confirm: true, okText: 'Сохранить и перейти', cancelText: 'Вернуться'}
+        'Изменения этого упражнения не сохранены. Если переключиться, они пропадут.',
+        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
       );
       document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
       if(!ok) return;
@@ -7225,19 +7351,23 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
     // редактируем существующую программу → «через ИИ» = доработка этой же программы
     const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
     if(existing && m === 'text'){
-      const go = await appDialog(
-        'Перейти к доработке через ИИ? Несохранённые правки этой программы потеряются.',
-        {confirm: true, okText: 'Перейти', cancelText: 'Остаться'}
-      );
-      markBuilderTab();
-      if(go) openEditAI(existing);
+      const changed = programDirty();
+      if(changed){
+        const go = await appDialog(
+          'Изменения программы не сохранены. Если переключиться, они пропадут.',
+          {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+        );
+        markBuilderTab();
+        if(!go) return;
+      }
+      openEditAI(existing);
       return;
     }
-    // уходя с ручного редактирования, предупреждаем о несохранённом
-    if(draft && (draft.name || (curPlan().exercises || []).length)){
+    // уходя с ручного создания, предупреждаем о несохранённом
+    if(programDirty()){
       const go = await appDialog(
-        'Перейти к созданию через ИИ? Несохранённые правки этой программы потеряются.',
-        {confirm: true, okText: 'Перейти', cancelText: 'Остаться'}
+        'Изменения программы не сохранены. Если переключиться, они пропадут.',
+        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
       );
       if(!go){ document.querySelectorAll('#bModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual')); return; }
     }
@@ -7303,7 +7433,7 @@ function switchCreateMode(m){
 // ручной режим открывает конструктор с активной вкладкой «Вручную»
 function markBuilderTab(){
   const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
-  $('bModeTabs').style.display = 'flex';
+  setShown('bModeTabs', true);
   document.querySelectorAll('#bModeTabs .tab').forEach(x => {
     x.classList.toggle('act', x.dataset.m === 'manual');
     // у существующей программы «из видео» не нужен: он создаёт новую
@@ -7422,7 +7552,7 @@ $('exDetailsToggle').onclick = ()=>{
   $('exDetailsToggle').classList.toggle('open', open);
   if(open){ autoGrow($('exDesc')); autoGrow($('exMistakes')); }
 };
-$('exMediaBtn').onclick = ()=>{ $('exSvgBox').classList.add('hidden'); $('exMediaFile').click(); };
+$('exMediaBtn').onclick = ()=>{ setShown('exSvgBox', false); $('exMediaFile').click(); };
 $('exMediaSvg').onclick = ()=>{
   const box = $('exSvgBox'), open = box.classList.contains('hidden');
   box.classList.toggle('hidden', !open);
@@ -7451,7 +7581,7 @@ $('exMediaNone').onclick = ()=>{
     appAlert('Фото убрано — вернулась пиктограмма. Нажми ещё раз, чтобы убрать и её.');
   } else {
     $('exSvgCode').value = '';
-    $('exSvgBox').classList.add('hidden');
+    setShown('exSvgBox', false);
   }
   renderExMedia(); syncExDetailsSum();
 };
