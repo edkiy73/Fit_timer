@@ -208,7 +208,7 @@
     padding:13px 14px;min-height:48px;text-align:left;
   }
   textarea{min-height:90px;line-height:1.5;resize:vertical}
-  input[type=range]{padding:0;min-height:0;border:none;background:none}
+  input[type=range]{padding:0;min-height:0;border:none}
   input[type=file]{display:none}
   /* селект — со стрелкой */
   select{
@@ -366,12 +366,12 @@
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
   .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-  .ph-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .ph-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-top:16px;-webkit-overflow-scrolling:touch}
   .ph-row .ph-thumb{flex:none}
   .ph-thumb{width:56px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line);display:block}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
-  .cmp-img{margin-top:8px;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:3/4}
+  .cmp-img{margin-top:8px;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:3/4;touch-action:pan-y}
   .cmp-img img{width:100%;height:100%;object-fit:cover;display:block}
 
   /* карточка следующего упражнения на экране отдыха */
@@ -981,12 +981,11 @@
         </div>
       </div>
 
-      <div class="card-block hidden" id="planBlock">
-        <p class="cb-title">Вариант тренировки</p>
-        <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
-      </div>
-
       <div class="card-block">
+        <div class="stack hidden" id="planBlock">
+          <p class="cb-title">Вариант тренировки</p>
+          <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
+        </div>
         <p class="cb-title">Нагрузка сегодня</p>
         <div class="load-row" id="loadRow"></div>
         <p class="field-hint">Выбирай по самочувствию: повторения и время упражнений изменятся пропорционально, отдых останется прежним.</p>
@@ -1010,7 +1009,7 @@
             </div>
             <p class="field-hint" id="hfHint"></p>
           </div>
-          <div class="pref-row"><span>Звук</span><button class="switch" id="stSoundOn"></button></div>
+          <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
           <div class="stack" id="stSoundBox">
             <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
             <div class="field" id="stVoiceField"><label>Голос озвучки</label>
@@ -1695,6 +1694,7 @@
         <div class="mc-actions hidden" id="photoActions">
           <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
         </div>
+        <button type="button" class="link-btn hidden" id="btnDeleteAllPhotos" style="padding:8px;color:var(--work)">Удалить все фото</button>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
     </div>
@@ -1716,7 +1716,6 @@
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
     <div class="tabs" id="ueTabs">
       <button class="tab act" data-t="me">Профиль</button>
-      <button class="tab" data-t="sound">Звук</button>
       <button class="tab" data-t="timing">Тайминги</button>
       <button class="tab" data-t="ai">ИИ</button>
     </div>
@@ -1760,40 +1759,6 @@
     </div>
 
     <!-- Звук -->
-    <div class="ue-pane hidden" id="uePaneSound">
-      <div class="card-block">
-        <p class="cb-title">Звук</p>
-        <div class="pref-row"><span>Звук</span><button class="switch" id="ueSoundOn"></button></div>
-        <div class="stack" id="ueSoundBox">
-          <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="ueVoiceOn"></button></div>
-          <div class="field" id="ueVoiceField"><label>Голос озвучки</label>
-            <select id="ueVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-          </div>
-          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="ueFxOn"></button></div>
-          <div class="vol-field" id="ueFxField">
-            <div class="vol-label"><span>Громкость</span><b id="ueFxVolVal">100%</b></div>
-            <input type="range" id="ueFxVol" min="0" max="100" step="5" class="vol-range">
-          </div>
-          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="ueMusic"></button></div>
-        </div>
-        <p class="field-hint">Громкость голоса — кнопками громкости телефона во время тренировки.</p>
-      </div>
-
-      <div class="card-block">
-        <p class="cb-title">Что произносит голос</p>
-        <ul class="cmd-list">
-          <li><b>Название упражнения</b> и сколько делать — при старте каждого этапа</li>
-          <li><b>«Подход 2 из 3»</b> — если у упражнения несколько подходов</li>
-          <li><b>«Сторона 1 из 2»</b> и <b>«Смените сторону»</b> — в упражнениях на каждую сторону</li>
-          <li><b>«Отдохните 45 секунд. Далее — …»</b> — на отдыхе, с анонсом следующего этапа</li>
-          <li><b>«Круг завершён»</b> — в конце круга</li>
-          <li><b>«Осталось 30 секунд»</b> — на длинных упражнениях по времени</li>
-          <li><b>«Тренировка завершена»</b> — в конце</li>
-        </ul>
-      </div>
-
-    </div>
-
     <!-- Тайминги -->
     <div class="ue-pane hidden" id="uePaneTiming">
       <div class="card-block">
@@ -1833,7 +1798,7 @@
       <div class="modal-card">
         <span class="mini-label">Управление без рук</span>
         <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
-        <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Возможен системный сигнал микрофона</small></button>
+        <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Чтобы не было звука активации микрофона — отключи звук уведомлений в системе на время тренировки</small></button>
         <button class="choice" data-hf="clap"><b>Хлопок</b><small>2 хлопка — дальше, 3 — пауза. Без системных звуков, офлайн</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
         <button class="link-btn" id="hfClose" style="margin:0;padding:10px">Закрыть</button>
@@ -1843,7 +1808,7 @@
     <div class="modal" id="soundModal">
       <div class="modal-card">
         <span class="mini-label">Звук тренировки</span>
-        <div class="pref-row"><span>Звук</span><button class="switch" id="sndSoundOn"></button></div>
+        <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
         <div class="stack" id="sndSoundBox">
           <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
           <div class="field" id="sndVoiceField"><label>Голос озвучки</label>
@@ -2123,7 +2088,7 @@ function fillVoiceSelect(sel){
 }
 function populateVoices(){
   // заполняем все селекты голоса, что есть в разметке (профиль + попап тренировки)
-  ['ueVoiceSel', 'sndVoiceSel'].forEach(id => { const s = $(id); if(s) fillVoiceSelect(s); });
+  ['stVoiceSel', 'sndVoiceSel'].forEach(id => { const s = $(id); if(s) fillVoiceSelect(s); });
 }
 if('speechSynthesis' in window){
   try{ speechSynthesis.addEventListener('voiceschanged', populateVoices); }catch(e){}
@@ -3059,11 +3024,9 @@ function userState(){
   if($('ueName')) u.name = $('ueName').value.trim();
   if($('ueBirth')) u.birth = $('ueBirth').value || '';
   if($('ueGeminiKey')) u.geminiKey = ($('ueGeminiKey').value || '').trim();
-  if($('ueFxVol')) u.fxVol = parseInt($('ueFxVol').value) || 0;
   if($('uePrepSec')) u.prepSec = parseInt($('uePrepSec').value) || 0;
   if($('ueReadySec')) u.readySec = parseInt($('ueReadySec').value) || 0;
   if($('ueSideSec')) u.sideSec = parseInt($('ueSideSec').value) || 0;
-  if($('ueVoiceSel')) u.voiceURI = $('ueVoiceSel').value || '';
   return u;
 }
 function userDirty(){ return isChanged('user', userState()); }
@@ -3089,57 +3052,11 @@ function openUserEdit(id = null){
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
-  fillVoiceSelect($('ueVoiceSel'));
-  $('ueVoiceSel').value = uDraft.voiceURI || '';
-  $('ueSoundOn').classList.toggle('on', soundOn);       // «Звук» — общий на приложение переключатель
-  $('ueVoiceOn').classList.toggle('on', uDraft.voiceVol > 0);
-  const fOn = uDraft.fxVol > 0;
-  if(fOn) fxVolMemory = uDraft.fxVol;
-  $('ueFxOn').classList.toggle('on', fOn);
-  $('ueFxVol').value = fOn ? uDraft.fxVol : fxVolMemory;
-  $('ueFxVolVal').textContent = (fOn ? uDraft.fxVol : fxVolMemory) + '%';
-  $('ueMusic').classList.toggle('on', musicMode);       // «Не прерывать музыку» — тоже общий, не за профиль
-  syncSoundCascade('ue');
   syncUserForm();
   setShown('btnDelUser', id);
   show('scrUserEdit');
   window.scrollTo(0, 0);
 }
-$('ueSoundOn').onclick = ()=>{
-  soundOn = !soundOn;
-  kvSet('soundOff', soundOn ? '0' : '1');
-  if(!soundOn) stopSpeech();
-  $('ueSoundOn').classList.toggle('on', soundOn);
-  syncSoundCascade('ue');
-  syncPrefs();
-};
-$('ueVoiceOn').onclick = ()=>{
-  const on = !$('ueVoiceOn').classList.contains('on');
-  uDraft.voiceVol = on ? 100 : 0;
-  $('ueVoiceOn').classList.toggle('on', on);
-  syncSoundCascade('ue');
-};
-$('ueFxOn').onclick = ()=>{
-  const on = !$('ueFxOn').classList.contains('on');
-  if(on){ uDraft.fxVol = fxVolMemory; } else { fxVolMemory = uDraft.fxVol || fxVolMemory; uDraft.fxVol = 0; }
-  $('ueFxOn').classList.toggle('on', on);
-  $('ueFxVol').value = uDraft.fxVol;
-  $('ueFxVolVal').textContent = uDraft.fxVol + '%';
-  syncSoundCascade('ue');
-};
-$('ueFxVol').oninput = e => {
-  const v = parseInt(e.target.value) || 0;
-  uDraft.fxVol = v; fxVolMemory = v || fxVolMemory;
-  $('ueFxVolVal').textContent = v + '%';
-};
-$('ueMusic').onclick = ()=>{
-  musicMode = !musicMode;
-  kvSet('musicMode', musicMode ? '1' : '0');
-  if(musicMode) stopSpeech();
-  $('ueMusic').classList.toggle('on', musicMode);
-  syncPrefs();
-};
-
 function syncUserForm(){
   $('ueGenderF').classList.toggle('act', uDraft.gender !== 'm');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
@@ -3158,9 +3075,6 @@ async function saveUser(){
   uDraft.prepSec = Math.max(0, Math.min(30, isFinite(parseInt($('uePrepSec').value)) ? parseInt($('uePrepSec').value) : 5));
   uDraft.readySec = Math.max(0, Math.min(30, isFinite(parseInt($('ueReadySec').value)) ? parseInt($('ueReadySec').value) : 5));
   uDraft.sideSec = Math.max(3, Math.min(60, isFinite(parseInt($('ueSideSec').value)) ? parseInt($('ueSideSec').value) : 10));
-  uDraft.voiceURI = $('ueVoiceSel').value || '';
-  uDraft.voiceVol = $('ueVoiceOn').classList.contains('on') ? 100 : 0;
-  uDraft.fxVol = isFinite(parseInt($('ueFxVol').value)) ? parseInt($('ueFxVol').value) : 100;
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
   const bErr = birthError(uDraft.birth);
   if(bErr){
@@ -3299,6 +3213,16 @@ function renderPhotos(){
   setShown('photoEmpty', !(n));
   const pa = $('photoActions');
   if(pa) setShown(pa, n >= 2);
+  setShown('btnDeleteAllPhotos', n > 0);
+}
+
+async function deleteAllPhotos(){
+  if(!photos.length) return;
+  const ok = await appConfirm(`Удалить все фото (${photos.length})? Это нельзя отменить.`);
+  if(!ok) return;
+  photos = [];
+  await savePhotos();
+  renderPhotos();
 }
 
 async function addPhoto(file){
@@ -3338,6 +3262,35 @@ function openCompare(){
   renderCmp();
   $('cmpModal').classList.add('open');
 }
+
+// свайп по фото в сравнении: влево — следующая дата, вправо — предыдущая.
+// без оборота по кругу; правое фото не может стать раньше или равным левому
+function cmpStep(which, dir){
+  const selId = which === 'A' ? 'cmpA' : 'cmpB';
+  const other = which === 'A' ? +$('cmpB').value : +$('cmpA').value;
+  let idx = +$(selId).value + dir;
+  if(idx < 0 || idx > photos.length - 1) return; // край — дальше некуда, свайп молча гасится
+  if(which === 'A' && idx >= other) return;       // левое не может обогнать/сравняться с правым
+  if(which === 'B' && idx <= other) return;       // правое не может стать раньше/равным левому
+  $(selId).value = idx;
+  renderCmp();
+}
+function wireSwipe(el, onLeft, onRight){
+  let x0 = null, y0 = null;
+  el.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0]; x0 = t.clientX; y0 = t.clientY;
+  }, {passive: true});
+  el.addEventListener('touchend', e => {
+    if(x0 == null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    x0 = null;
+    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // слишком коротко или вертикально — не свайп
+    if(dx < 0) onLeft(); else onRight();
+  }, {passive: true});
+}
+wireSwipe($('cmpImgA'), ()=> cmpStep('A', 1), ()=> cmpStep('A', -1));
+wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -6311,7 +6264,7 @@ function syncPrefs(){
   $('btnMicW').classList.toggle('listening', hfMode !== 'off');
   $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', clap:'хлопок', headset:'гарнитура'}[hfMode] || 'выкл');
   // держим три каскада («старт», «тренировка», «профиль») в согласованном состоянии
-  ['st', 'snd', 'ue'].forEach(p => {
+  ['st', 'snd'].forEach(p => {
     const btn = $(p + 'SoundOn');
     if(!btn) return;
     btn.classList.toggle('on', soundOn);
@@ -6358,7 +6311,7 @@ let hfMode = 'off'; // off | voice | clap | headset
 
 const HF_HINTS = {
   off: 'Переключай этапы кнопками на экране.',
-  voice: 'Команды: «дальше», «пауза», «продолжить». На некоторых телефонах система подаёт сигнал при активации микрофона — это нормально. Нужен интернет.',
+  voice: 'Команды: «дальше», «пауза», «продолжить». Нужен интернет. Чтобы не было звука активации микрофона — отключи звук уведомлений в системе на время тренировки.',
   clap: 'Два хлопка — следующий этап. Три хлопка — пауза/продолжить. Работает офлайн, без звуков системы.',
   headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
 };
@@ -6685,13 +6638,6 @@ $('tglTheme').onclick = ()=>{
   if(u){ u.theme = themeLight ? 'light' : 'dark'; saveUsers(); }
   applyTheme();
 };
-$('ueVoiceOn').onclick = ()=>{
-  const on = !$('ueVoiceOn').classList.contains('on');
-  $('ueVoiceOn').classList.toggle('on', on);
-  setShown('ueVoiceField', on);
-  uDraft.voiceVol = on ? 100 : 0;
-};
-$('ueFxVol').oninput = e => { $('ueFxVolVal').textContent = e.target.value + '%'; if(uDraft) uDraft.fxVol = parseInt(e.target.value) || 0; };
 $('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.trim(); };
 ['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
   $(id).oninput = ()=>{
@@ -6950,6 +6896,7 @@ $('photoFile').onchange = e => {
   e.target.value = '';
 };
 $('btnCompare').onclick = openCompare;
+$('btnDeleteAllPhotos').onclick = deleteAllPhotos;
 $('cmpA').onchange = renderCmp;
 $('cmpB').onchange = renderCmp;
 $('cmpDelA').onclick = ()=> delCmpPhoto('cmpA');
@@ -7058,10 +7005,10 @@ $('uePhotoBtn').onclick = e => {
 };
 
 /* ---- табы профиля ---- */
-const UE_PANES = {me: 'uePaneMe', sound: 'uePaneSound', timing: 'uePaneTiming', ai: 'uePaneAI'};
+const UE_PANES = {me: 'uePaneMe', timing: 'uePaneTiming', ai: 'uePaneAI'};
 function switchUeTab(t){
   document.querySelectorAll('#ueTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.t === t));
-  Object.entries(UE_PANES).forEach(([k, id]) => $(id).style.display = (k === t) ? 'block' : 'none');
+  Object.entries(UE_PANES).forEach(([k, id]) => setShown(id, k === t));
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('#ueTabs .tab').forEach(b => b.onclick = ()=> switchUeTab(b.dataset.t));
@@ -7663,7 +7610,13 @@ $('btnResetTotal').onclick = async ()=>{
 
 document.addEventListener('visibilitychange', ()=>{
   const inWorkout = $('scrWork').classList.contains('on');
-  if(document.visibilityState === 'visible' && inWorkout) keepAwake();
+  if(document.visibilityState === 'visible' && inWorkout){
+    keepAwake();
+    // после сворачивания браузер может «подвесить» доступ к микрофону —
+    // переоткрываем поток заново, чтобы не требовалось лезть в системные настройки
+    if(hfMode === 'clap'){ stopClap(); startClap(); }
+    else if(hfMode === 'voice' && voiceWanted && !voiceActive){ startListening(); }
+  }
   // свернули приложение во время тренировки — ставим на паузу
   if(document.visibilityState === 'hidden' && inWorkout && !state.paused) setPause(true);
 });
