@@ -1120,6 +1120,15 @@
     <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
 
     <div class="card-block">
+      <p class="cb-title">Промт для генерации</p>
+      <p class="field-hint">Собери запрос с описанием программы, всех упражнений и единого стиля — и отдай его любой нейросети с генерацией картинок (Gemini, ChatGPT и т.п.). Готовые изображения потом разложи по местам ниже.</p>
+      <button class="btn-primary" id="imgPromptCopy">Скопировать промт для картинок</button>
+      <div class="ai-links">
+        <button type="button" id="imgPromptShare">Отправить в приложение</button>
+      </div>
+    </div>
+
+    <div class="card-block">
       <p class="cb-title">Загрузка</p>
       <button class="btn-primary" id="imgPick">Выбрать картинки с телефона</button>
       <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
@@ -3893,6 +3902,53 @@ function dropExMedia(ex){
   return 'none';
 }
 function exKeptSvg(ex){ return ex.svgKeep || (ex.media && ex.media.kind === 'svg' ? ex.media.data : ''); }
+
+/* ================= ПРОМТ ДЛЯ ГЕНЕРАЦИИ КАРТИНОК ================= */
+// уникальные упражнения программы: без повторов между вариантами, с описанием и мышцами
+function uniqueProgramExercises(){
+  const seen = new Map(); // ключ — имя в нижнем регистре
+  (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+    const name = (ex.name || '').trim();
+    if(!name) return;
+    const key = name.toLowerCase();
+    if(seen.has(key)) return;
+    seen.set(key, {
+      name,
+      desc: (ex.desc || '').trim(),
+      muscles: (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean)
+    });
+  }));
+  return [...seen.values()];
+}
+
+function imagesPromptText(){
+  const u = curUser();
+  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
+  const name = (draft.name || '').trim() || 'Программа тренировок';
+  const desc = (draft.desc || '').trim();
+  const exList = uniqueProgramExercises();
+
+  const L = [];
+  L.push('Сгенерируй набор изображений для карточек фитнес-приложения: одну обложку программы и по одной картинке на каждое упражнение из списка ниже. Все изображения должны выглядеть как единая серия — один визуальный стиль, один и тот же персонаж, одинаковый фон и цветовая гамма во всём наборе.');
+  L.push('');
+  L.push('СТИЛЬ (ориентируйся на этот образ): стилизованная реалистичная 3D-иллюстрация тела человека, само тело — в приглушённых серых тонах, а работающие в упражнении мышцы выделены тёплым оранжевым свечением. Направление движения показано белыми стрелками. Фон — чистый, слегка размытый, нейтральный или спортзал. Никакого текста, логотипов и водяных знаков на самих изображениях — подписи нужны только между картинками, не на них.');
+  L.push(`Персонаж на всех изображениях: ${genderTxt}, один и тот же человек и одна и та же спортивная форма на протяжении всего набора.`);
+  L.push('');
+  L.push(`ПРОГРАММА: ${name}`);
+  if(desc) L.push(`ОПИСАНИЕ: ${desc}`);
+  L.push('');
+  L.push('1. ОБЛОЖКА ПРОГРАММЫ — квадрат 1:1. Общий кадр, отражающий суть программы и её название, без фокуса на одном конкретном упражнении.');
+  exList.forEach((ex, i) => {
+    L.push('');
+    L.push(`${i + 2}. УПРАЖНЕНИЕ «${ex.name}» — широкий кадр 16:9. Поза — самая характерная фаза движения.`);
+    if(ex.desc) L.push(`   Техника: ${ex.desc}`);
+    if(ex.muscles.length) L.push(`   Выделить подсветкой мышцы: ${ex.muscles.join(', ').toLowerCase()}.`);
+  });
+  L.push('');
+  L.push('ПОРЯДОК ОТВЕТА: если умеешь возвращать несколько изображений за один раз — сгенерируй весь набор сразу, в том же порядке, что и список выше. Если нет — генерируй по одной картинке за раз, начиная с обложки.');
+  L.push('ВАЖНО: перед каждой картинкой коротко подпиши текстом, что это — «Обложка» или точное название упражнения из списка — чтобы потом не перепутать, какую картинку куда вставлять.');
+  return L.join('\n');
+}
 
 /* ================= КАРТИНКИ ПРОГРАММЫ: МАССОВАЯ ЗАГРУЗКА ================= */
 let imgTray = [];        // загруженные, но ещё не разложенные картинки (data-url)
@@ -7205,6 +7261,22 @@ $('exaSelfAI').onclick = ()=> runSelfAI(exaPrompt, 'exaResult', exaAddExercise, 
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgPromptCopy').onclick = async ()=>{
+  const btn = $('imgPromptCopy');
+  try{
+    await navigator.clipboard.writeText(imagesPromptText());
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+};
+$('imgPromptShare').onclick = async ()=>{
+  const text = imagesPromptText();
+  if(navigator.share){
+    try{ await navigator.share({text}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  $('imgPromptCopy').click();
+};
 $('imgDone').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
 $('imgPick').onclick = ()=> $('imgFiles').click();
 $('imgFiles').onchange = e => {
