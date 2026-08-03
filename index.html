@@ -94,28 +94,29 @@
   .icon-btn.btn-sound{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1}
   .icon-btn.btn-sound.on{display:block}
   .icon-btn.btn-sound.muted{filter:grayscale(1);opacity:.55}
-  /* пауза — компактный «остров» сверху, а не оверлей: весь контент под ним
-     остаётся видимым и скроллится точно так же, как без паузы */
+  /* пауза — «остров» прямо на хедере, а не оверлей на весь экран: весь контент
+     под ним остаётся видимым и скроллится точно так же, как без паузы.
+     Ширина и верхний отступ — те же, что у контента страницы (.app: 20px, max 480px). */
   .screen{position:relative}
   .pause-overlay{
-    position:absolute;top:8px;left:50%;transform:translateX(-50%);
-    width:calc(100% - 16px);max-width:472px;z-index:40;display:none;
+    position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
     align-items:center;justify-content:space-between;gap:12px;
-    padding:10px 10px 10px 20px;border-radius:30px;
-    background:rgba(18,20,28,.9);backdrop-filter:blur(14px);
+    padding:10px 12px;border-radius:14px;box-sizing:border-box;
+    background:rgba(18,20,28,.92);backdrop-filter:blur(14px);
     box-shadow:0 10px 30px rgba(0,0,0,.35);
   }
   body.paused .pause-overlay{display:flex}
   .pause-overlay .po-text{
-    color:#fff;font-family:'Oswald';font-weight:600;letter-spacing:.08em;
-    font-size:14px;text-transform:uppercase;
+    color:#fff;font-family:'Oswald';font-weight:600;letter-spacing:.06em;
+    font-size:13.5px;text-transform:uppercase;
   }
   .pause-overlay .po-sub{
-    display:block;color:rgba(255,255,255,.6);font-size:11px;margin-top:2px;
-    font-family:'Rubik';text-transform:none;letter-spacing:0;
+    display:block;color:rgba(255,255,255,.8);font-size:12px;margin-top:2px;
+    font-family:'Rubik';font-weight:400;text-transform:none;letter-spacing:0;line-height:1.4;
   }
   .btn-resume{
-    flex:none;width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+    flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
     background:var(--work);color:#fff;display:flex;align-items:center;justify-content:center;
   }
   .btn-resume:active{transform:scale(.94)}
