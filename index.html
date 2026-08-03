@@ -42,17 +42,6 @@
   }
   body.phase-rest{background:var(--bg-rest)}
 
-  /* ---------- светлая тема ---------- */
-  body.light{
-    --bg:#FAF5F1;
-    --bg-rest:#E9F3EE;
-    --card:#FFFFFF;
-    --ink:#3B3140;
-    --muted:#9C8FA0;
-    --work:#E4707E;
-    --rest:#3FA893;
-    --line:#EEDFDC;
-  }
   body.light .actions{background:linear-gradient(to top, var(--bg) 72%, rgba(250,245,241,0))}
   body.light.phase-rest .actions{background:linear-gradient(to top, var(--bg-rest) 72%, rgba(233,243,238,0))}
   body.light .mc-cover{background:#F6EAE7;color:#D9A9B0}
@@ -6457,8 +6446,13 @@ let themeLight = true; // по умолчанию светлая
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
   $('tglTheme').classList.toggle('on', !themeLight); // переключатель «Тёмная тема»
+  const bg = themeLight ? '#FAF5F0' : '#10141C';
   const meta = document.querySelector('meta[name=theme-color]');
-  if(meta) meta.content = themeLight ? '#FAF5F0' : '#10141C';
+  if(meta) meta.content = bg;
+  // html — родитель body, поэтому не видит --bg из body.light; красим его напрямую,
+  // иначе полоса статус-бара сверху и системная полоса снизу (safe-area) остаются
+  // тёмными даже в светлой теме, пока не отрисуется body
+  document.documentElement.style.background = bg;
 }
 
 /* ================= ГОЛОСОВОЕ УПРАВЛЕНИЕ ================= */
