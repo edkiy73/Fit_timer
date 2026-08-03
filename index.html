@@ -1122,6 +1122,12 @@
     <div class="card-block">
       <p class="cb-title">Промт для генерации</p>
       <p class="field-hint">Собери запрос с описанием программы, всех упражнений и единого стиля — и отдай его любой нейросети с генерацией картинок (Gemini, ChatGPT и т.п.). Готовые изображения потом разложи по местам ниже.</p>
+
+      <div class="ai-links">
+        <button type="button" class="ai-self" id="imgSelfGen">✨ Сгенерировать все картинки через ИИ Fit Timer</button>
+      </div>
+      <p class="field-hint" style="color:var(--work)">Платная функция Gemini — около $0.02–0.25 за картинку с твоего Google-аккаунта. В отличие от текста в приложении, бесплатной квоты здесь нет.</p>
+
       <button class="btn-primary" id="imgPromptCopy">Скопировать промт для картинок</button>
       <div class="ai-links">
         <button type="button" id="imgPromptShare">Отправить в приложение</button>
@@ -3903,6 +3909,139 @@ function dropExMedia(ex){
 }
 function exKeptSvg(ex){ return ex.svgKeep || (ex.media && ex.media.kind === 'svg' ? ex.media.data : ''); }
 
+/* ================= ГЕНЕРАЦИЯ КАРТИНОК ЧЕРЕЗ GEMINI ================= */
+// модель с выводом изображений — платная, в отличие от текстовой модели, которую приложение
+// использует для остального ИИ. У неё нет бесплатной квоты, поэтому предупреждаем перед тратой денег.
+const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
+
+async function callGeminiImage(prompt, signal){
+  const key = geminiKey();
+  if(!key) throw new Error('Ключ Gemini не задан');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
+    body: JSON.stringify({
+      contents: [{parts: [{text: prompt}]}],
+      generationConfig: {responseModalities: ['TEXT', 'IMAGE']}
+    }),
+    signal
+  });
+  if(!res.ok){
+    let msg = 'HTTP ' + res.status;
+    try{
+      const j = await res.json();
+      if(j && j.error && j.error.message) msg = j.error.message;
+    }catch(e){}
+    if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью.';
+    if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
+    if(res.status === 403 || /billing|permission/i.test(msg)) msg = 'Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.';
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
+  if(!imgPart){
+    const textPart = parts.find(p => p.text);
+    throw new Error(textPart ? 'Модель ответила текстом вместо картинки: ' + textPart.text.slice(0, 120) : 'Модель не вернула изображение.');
+  }
+  return `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
+}
+
+// сжимает готовую картинку (data URL) так же, как сжимаются загруженные с телефона фото
+function shrinkDataUrl(dataUrl, maxSide, cb){
+  const img = new Image();
+  img.onload = ()=>{
+    const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    try{ cb(c.toDataURL('image/jpeg', .85)); }catch(e){ cb(null); }
+  };
+  img.onerror = ()=> cb(null);
+  img.src = dataUrl;
+}
+
+// промт под ОДНО конкретное изображение (в отличие от промта для копирования — там просят весь набор разом)
+function singleImagePrompt(kind, item){
+  const u = curUser();
+  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
+  const name = (draft.name || '').trim() || 'Программа тренировок';
+  const styleLine = `Стиль: стилизованная реалистичная 3D-иллюстрация тела человека, тело в приглушённых серых тонах, а работающие мышцы выделены тёплым оранжевым свечением. Направление движения — белыми стрелками. Фон чистый, слегка размытый, нейтральный или спортзал. Персонаж: ${genderTxt}. Никакого текста, логотипов и водяных знаков на изображении.`;
+  if(kind === 'cover'){
+    return `Сгенерируй обложку для карточки фитнес-программы «${name}» в приложении.\n${styleLine}\nОбщий кадр по сути программы, без фокуса на одном упражнении.\nФормат кадра: квадрат 1:1.`;
+  }
+  const bits = [`Сгенерируй иллюстрацию к упражнению «${item.name}» для фитнес-приложения.`, styleLine];
+  if(item.desc) bits.push(`Техника: ${item.desc}`);
+  if(item.muscles && item.muscles.length) bits.push(`Выделить подсветкой мышцы: ${item.muscles.join(', ').toLowerCase()}.`);
+  bits.push('Поза — самая характерная фаза движения. Формат кадра: широкий 16:9.');
+  return bits.join('\n');
+}
+
+let imgGenCancelled = false;
+
+async function generateAllImagesViaAI(){
+  if(!hasGemini()){ geminiSetupPrompt(); return; }
+  const exList = uniqueProgramExercises();
+  const total = 1 + exList.length; // обложка + упражнения
+  const ok = await appDialog(
+    `Генерация картинок — платная функция Gemini (в отличие от текста в приложении, который бесплатен). ` +
+    `Ориентировочно $0.02–0.25 за картинку, спишется с твоего аккаунта Google. ` +
+    `Сейчас будет сгенерировано ${total} ${plural(total, 'картинка', 'картинки', 'картинок')} (обложка + все упражнения). Продолжить?`,
+    {confirm: true, okText: 'Сгенерировать', cancelText: 'Отмена'}
+  );
+  if(!ok) return;
+
+  imgGenCancelled = false;
+  aiRunOpen('Генерирую картинки', ()=>{ imgGenCancelled = true; });
+
+  const failed = [];
+  let done = 0;
+
+  const runOne = async (kind, item, applyFn)=>{
+    if(imgGenCancelled) return false;
+    $('aiRunTitle').textContent = `Картинка ${done + 1} из ${total}`;
+    $('aiRunText').textContent = kind === 'cover' ? 'Обложка программы' : item.name;
+    try{
+      const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined);
+      await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? 'Обложка' : item.name); res(); }));
+      renderSlots(); // видно прогресс по мере генерации
+    }catch(e){
+      if(imgGenCancelled) return false;
+      failed.push((kind === 'cover' ? 'Обложка' : item.name) + ': ' + (e && e.message ? e.message : 'ошибка'));
+    }
+    done++;
+    return !imgGenCancelled;
+  };
+
+  if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+  for(const ex of exList){
+    const go = await runOne('ex', ex, data => {
+      // применяем ко всем упражнениям с этим именем во всех вариантах — не платим за копию дважды
+      (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(e2 => {
+        if((e2.name || '').trim().toLowerCase() === ex.name.toLowerCase()) setExImg(e2, data);
+      }));
+    });
+    if(!go) break;
+  }
+  aiRunClose();
+  finishImgGen(done, total, failed);
+}
+
+function finishImgGen(done, total, failed){
+  renderSlots();
+  if(imgGenCancelled){
+    appAlert(`Остановлено. Успели сгенерировать: ${done} из ${total}. Уже готовые картинки на месте — можно продолжить позже.`);
+    return;
+  }
+  if(!failed.length){
+    appAlert(`Готово: сгенерировано ${done} из ${total}.`);
+  } else {
+    appAlert(`Готово: ${done - failed.length} из ${total} успешно.\n\nНе получилось:\n• ` + failed.join('\n• '));
+  }
+}
+
 /* ================= ПРОМТ ДЛЯ ГЕНЕРАЦИИ КАРТИНОК ================= */
 // уникальные упражнения программы: без повторов между вариантами, с описанием и мышцами
 function uniqueProgramExercises(){
@@ -3969,6 +4108,7 @@ function openImages(){
   imgTray = [];
   renderTray();
   renderSlots();
+  syncGeminiBtns();
   show('scrImages');
   window.scrollTo(0, 0);
 }
@@ -7208,10 +7348,13 @@ $('ueGeminiTest').onclick = async ()=>{
 };
 
 /* ---- окно ожидания генерации ---- */
-let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0;
-function aiRunOpen(title){
+let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
+// title — заголовок; onCancel — необязательный колбэк для многошаговых задач (генерация картинок)
+function aiRunOpen(title, onCancel){
   aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
+  aiRunOnCancel = onCancel || null;
   $('aiRunTitle').textContent = title || 'Нейросеть работает';
+  $('aiRunText').textContent = 'Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.';
   $('aiRunTimer').textContent = '0:00';
   $('aiRunModal').classList.add('open');
   aiRunT0 = Date.now();
@@ -7223,12 +7366,15 @@ function aiRunOpen(title){
 }
 function aiRunClose(){
   clearInterval(aiRunTick); aiRunTick = 0;
+  aiRunOnCancel = null;
   $('aiRunModal').classList.remove('open');
 }
 $('aiRunCancel').onclick = ()=>{
   try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
   aiRunCtl = null;
+  const cb = aiRunOnCancel;
   aiRunClose();
+  if(cb) cb();
 };
 
 // собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
@@ -7261,6 +7407,7 @@ $('exaSelfAI').onclick = ()=> runSelfAI(exaPrompt, 'exaResult', exaAddExercise, 
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgSelfGen').onclick = generateAllImagesViaAI;
 $('imgPromptCopy').onclick = async ()=>{
   const btn = $('imgPromptCopy');
   try{
