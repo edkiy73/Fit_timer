@@ -1,5 +1,5 @@
 /* Fit Timer — service worker v2: страница network-first (обновления подтягиваются сразу), статика cache-first */
-const CACHE = 'fittimer-v4';
+const CACHE = 'fittimer-v5'; // версия поднята — новые иконки: старый кэш будет удалён при активации
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,7 @@ const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;6
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c =>
-      c.addAll(ASSETS)
+      Promise.all(ASSETS.map(url => fetch(url, {cache: 'reload'}).then(res => c.put(url, res))))
         // шрифты пробуем закэшировать сразу, но не валим установку, если сети нет
         .then(() => c.add(FONT_CSS).catch(() => {}))
     ).then(() => self.skipWaiting())
