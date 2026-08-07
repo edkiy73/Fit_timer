@@ -806,6 +806,20 @@
 
   /* селект должен выглядеть как селект — со стрелкой */
 
+  /* счёт по камере */
+  .cam-wrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3}
+  .cam-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+  .cam-counter{
+    position:absolute;left:12px;bottom:12px;display:flex;align-items:baseline;gap:8px;
+    background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border-radius:12px;padding:8px 14px;
+  }
+  .cam-counter b{font-family:'Oswald';font-weight:700;font-size:34px;color:#fff;line-height:1}
+  .cam-counter small{font-size:12px;color:rgba(255,255,255,.75)}
+  .cam-counter b.pop{animation:camPop .3s ease}
+  @keyframes camPop{from{transform:scale(1.35)}to{transform:scale(1)}}
+  #camStatus.warn{color:var(--work)}
+  .btn-cam svg{width:17px;height:17px}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -907,6 +921,7 @@
       <button class="avatar-btn" id="btnUsers" title="Профили"><span id="avatarSlot">?</span></button>
       <button class="icon-btn btn-sound" id="btnSoundW" title="Звук">🔊</button>
       <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление">🎤</button>
+      <button class="icon-btn btn-cam hidden" id="btnCamW" title="Счёт по камере"></button>
       <button class="icon-btn btn-pause" id="btnPause" title="Пауза">⏸</button>
       <button class="btn-exit" id="btnExit">Выйти</button>
     </div>
@@ -1164,6 +1179,19 @@
   </section>
 
   <!-- Выбор картинки для места -->
+  <div class="modal" id="camModal">
+    <div class="modal-card">
+      <span class="mini-label">Счёт по камере</span>
+      <div class="cam-wrap">
+        <video id="camVideo" playsinline muted></video>
+        <div class="cam-counter"><b id="camReps">0</b><small>из <span id="camGoal">—</span></small></div>
+      </div>
+      <p class="field-hint" id="camStatus"></p>
+      <p class="field-hint">Кнопка «Готово» на экране тренировки работает как обычно — камера только считает и не завершает подход сама.</p>
+      <button class="btn-primary" id="camClose">Закрыть камеру</button>
+    </div>
+  </div>
+
   <div class="modal" id="aiRunModal">
     <div class="modal-card" style="text-align:center">
       <div class="ai-spin"></div>
@@ -1445,6 +1473,10 @@
       <div class="field"><label>Как выполнять</label><textarea id="exDesc" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
       <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
+      <div class="field"><label>Подсказка для счёта камерой</label>
+        <textarea id="exCamera" class="auto-grow" style="min-height:70px" placeholder="Например: колено, 100-160, вид сбоку"></textarea>
+        <p class="field-hint">Какой сустав считать камере и в каких углах. Работает только для упражнений на повторения. Понимаются суставы: колено, локоть, плечо, бедро. Пусто — счёт по камере для этого упражнения недоступен.</p>
+      </div>
       <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" placeholder="https://youtube.com/..."></div>
       <div class="field"><label>Картинка или пиктограмма</label>
         <div class="media-row">
@@ -2950,7 +2982,7 @@ function customToProgram(p, planIdx = 0){
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
       video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
-      perSide: !!ex.perSide
+      camera: ex.camera || '', perSide: !!ex.perSide
     };
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
@@ -4233,6 +4265,7 @@ function exerciseToText(ex){
   if(ex.warmup) L.push('РАЗМИНКА: да');
   L.push('ОТДЫХ: ' + (ex.rest || 0));
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
+  if((ex.camera || '').trim()) L.push('КАМЕРА: ' + ex.camera.trim());
   return L.join('\n');
 }
 
@@ -4270,6 +4303,7 @@ function exePrompt(){
 РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
 ОТДЫХ: секунды
 ВИДЕО: ссылка на технику (или пропусти строку)
+КАМЕРА: подсказка для счёта повторений камерой в формате «сустав, нижний-верхний угол, ракурс», например «колено, 100-160, вид сбоку». Суставы только: колено, локоть, плечо, бедро. Указывай ТОЛЬКО для упражнений на повторения с крупной амплитудой, снимаемых сбоку. Пропусти строку для упражнений на время, лёжа, со скручиваниями и малой амплитудой — при неверной подсказке счёт будет врать.
 SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
 }
 
@@ -4372,6 +4406,7 @@ function exaPrompt(){
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после подхода
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
+КАМЕРА: подсказка для счёта повторений камерой в формате «сустав, нижний-верхний угол, ракурс», например «колено, 100-160, вид сбоку». Суставы только: колено, локоть, плечо, бедро. Указывай ТОЛЬКО для упражнений на повторения с крупной амплитудой, снимаемых сбоку. Пропусти строку для упражнений на время, лёжа, со скручиваниями и малой амплитудой — при неверной подсказке счёт будет врать.
 SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
 Ничего кроме этих строк не пиши.`;
@@ -4501,6 +4536,7 @@ function programToText(p){
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push('ОТДЫХ: ' + (ex.rest || 0));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
+      if((ex.camera || '').trim()) L.push('КАМЕРА: ' + ex.camera.trim());
     });
   });
   return L.join('\n');
@@ -4779,7 +4815,7 @@ let draft = null;
 
 function blankExercise(){
   return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
-          rest:45, media:null, muscles:[], mistakes:''};
+          rest:45, media:null, muscles:[], mistakes:'', camera:''};
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -5079,6 +5115,7 @@ function fillExercise(){
   $('exDesc').value = ex.desc || '';
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
+  $('exCamera').value = ex.camera || '';
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
   syncExType();
@@ -5147,6 +5184,7 @@ function syncExDetailsSum(){
   if((exDraft.muscles || []).length) bits.push('мышцы');
   if(exDraft.media) bits.push('картинка');
   if((exDraft.video || '').trim()) bits.push('видео');
+  if((exDraft.camera || '').trim()) bits.push('камера');
   $('exDetailsSum').textContent = bits.length ? bits.join(', ') : 'не заполнено';
 }
 
@@ -5162,6 +5200,7 @@ function exDirty(){
   snapshot.desc = $('exDesc').value.trim();
   snapshot.mistakes = $('exMistakes').value.trim();
   snapshot.video = $('exVideo').value.trim();
+  snapshot.camera = $('exCamera').value.trim();
   return JSON.stringify(snapshot) !== exOrig;
 }
 
@@ -5174,6 +5213,7 @@ function commitExercise(){
   ex.desc = $('exDesc').value.trim();
   ex.mistakes = $('exMistakes').value.trim();
   ex.video = $('exVideo').value.trim();
+  ex.camera = $('exCamera').value.trim();
   return ex;
 }
 
@@ -5367,6 +5407,11 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, планка на боку, тяга одной рукой). Иначе пропусти строку.
 РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
+КАМЕРА: подсказка для автоматического счёта повторений камерой телефона. Приложение следит за УГЛОМ В ОДНОМ СУСТАВЕ и считает повторение, когда угол опустился ниже нижнего порога и вернулся выше верхнего.
+  Формат строки: сустав, нижний угол-верхний угол, ракурс. Например: «колено, 100-160, вид сбоку».
+  Доступны ТОЛЬКО эти суставы: колено, локоть, плечо, бедро. Выбери тот, который в этом упражнении меняет угол сильнее всего.
+  Указывай эту строку ТОЛЬКО для упражнений на ПОВТОРЕНИЯ с крупной, чётко различимой амплитудой, которые снимаются сбоку: приседания, отжимания, выпады, подъёмы рук, сгибания на бицепс, ягодичный мостик.
+  НЕ указывай эту строку (пропусти её совсем) для: упражнений на ВРЕМЯ (планка и любые удержания позы), упражнений лёжа на спине или на боку, скручиваний и любых движений с маленькой амплитудой, упражнений где суставы перекрывают друг друга или почти не двигаются, а также если не уверен, что камера надёжно распознает движение. Лучше пропустить, чем дать неверную подсказку — при ошибке счёт будет врать.
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -5395,6 +5440,7 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 ФОРМАТ: повторения
 ЗНАЧЕНИЕ: 10-12
 ПОДХОДЫ: 3
+КАМЕРА: локоть, 100-160, вид сбоку
 ОТДЫХ: 45
 SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
@@ -5547,6 +5593,7 @@ function parseProgramText(txt){
         break;
       }
       case 'ВИДЕО': if(cur && val) cur.video = val; break;
+      case 'КАМЕРА': if(cur && val) cur.camera = val.slice(0, 120); break;
       case 'SVG': case 'СВГ':
         if(cur && /<svg[\s>]/i.test(val)) cur.media = {kind:'svg', data:val};
         break;
@@ -5932,6 +5979,8 @@ function renderStep(){
   $('roundLabel').textContent = rl;
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
   $('btnPrev').disabled = state.stepIdx === 0;
+  // кнопка счёта по камере — только для упражнений на повторения с заданной подсказкой
+  setShown('btnCamW', cameraAvailableFor(step));
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
   setShown('phaseTag', false);
@@ -6801,6 +6850,195 @@ function checkSchedules(){
 }
 setInterval(checkSchedules, 20000);
 
+
+/* ================= СЧЁТ ПОВТОРЕНИЙ ПО КАМЕРЕ =================
+   Работает целиком на устройстве: MediaPipe Pose Landmarker считает 33 точки скелета,
+   мы следим за одним углом в суставе и считаем колебания между двумя порогами.
+   Видео никуда не отправляется. */
+
+// какие суставы умеем считать: индексы точек MediaPipe [A, вершина, C] для левой и правой стороны
+const CAM_JOINTS = {
+  'колено':  {label: 'колено',  left: [23, 25, 27], right: [24, 26, 28], down: 100, up: 160},
+  'локоть':  {label: 'локоть',  left: [11, 13, 15], right: [12, 14, 16], down: 100, up: 160},
+  'плечо':   {label: 'плечо',   left: [13, 11, 23], right: [14, 12, 24], down: 40,  up: 150},
+  'бедро':   {label: 'бедро',   left: [11, 23, 25], right: [12, 24, 26], down: 100, up: 165}
+};
+// только явные названия суставов: расплывчатые слова вроде «корпус» или «руки»
+// встречаются в обычном тексте и могли бы включить счёт с неверным суставом
+const CAM_JOINT_ALIASES = {
+  'колени': 'колено', 'коленный': 'колено',
+  'локти': 'локоть', 'локтевой': 'локоть',
+  'плечи': 'плечо', 'плечевой': 'плечо',
+  'бёдра': 'бедро', 'бедра': 'бедро', 'тазобедренный': 'бедро'
+};
+
+// разбирает подсказку в параметры счёта; если сустав не найден — камера для упражнения недоступна
+function parseCameraHint(text){
+  const s = String(text || '').toLowerCase().replace(/ё/g, 'е');
+  if(!s.trim()) return null;
+  let key = null;
+  for(const k of Object.keys(CAM_JOINTS)){
+    if(s.includes(k.replace(/ё/g, 'е'))){ key = k; break; }
+  }
+  if(!key){
+    for(const [alias, target] of Object.entries(CAM_JOINT_ALIASES)){
+      if(s.includes(alias.replace(/ё/g, 'е'))){ key = target; break; }
+    }
+  }
+  if(!key) return null;
+  const base = CAM_JOINTS[key];
+  // необязательные пороги: два числа в градусах, например «90-170»
+  const nums = (s.match(/\b(\d{2,3})\b/g) || []).map(Number).filter(n => n >= 20 && n <= 180);
+  let down = base.down, up = base.up;
+  if(nums.length >= 2){
+    down = Math.min(nums[0], nums[1]);
+    up = Math.max(nums[0], nums[1]);
+    if(up - down < 20){ down = base.down; up = base.up; } // слишком узко — доверяем значениям по умолчанию
+  }
+  return {key, label: base.label, left: base.left, right: base.right, down, up};
+}
+
+// угол в градусах в вершине b между лучами b→a и b→c
+function camAngle(a, b, c){
+  const abx = a.x - b.x, aby = a.y - b.y;
+  const cbx = c.x - b.x, cby = c.y - b.y;
+  const dot = abx * cbx + aby * cby;
+  const m1 = Math.hypot(abx, aby), m2 = Math.hypot(cbx, cby);
+  if(!m1 || !m2) return null;
+  let cos = dot / (m1 * m2);
+  cos = Math.max(-1, Math.min(1, cos));
+  return Math.acos(cos) * 180 / Math.PI;
+}
+
+let camStream = null, camLandmarker = null, camRAF = 0;
+let camCfg = null;          // параметры текущего упражнения
+let camPhase = 'up';        // фаза движения: ждём опускание или подъём
+let camReps = 0;            // счётчик повторений камерой
+let camLastRepT = 0;        // защита от двойного счёта
+let camLostSince = 0;       // когда пропала фигура из кадра
+
+function camSetStatus(text, warn){
+  const el = $('camStatus');
+  if(!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('warn', !!warn);
+}
+
+// упражнение поддерживает счёт камерой?
+function cameraAvailableFor(step){
+  return !!(step && step.kind === 'click' && parseCameraHint(step.camera));
+}
+
+async function openCameraCount(){
+  const step = state.steps[state.stepIdx];
+  if(!cameraAvailableFor(step)){
+    appAlert('Для этого упражнения счёт по камере недоступен: не задана подсказка для камеры или упражнение не на повторения.');
+    return;
+  }
+  camCfg = parseCameraHint(step.camera);
+  camReps = 0; camPhase = 'up'; camLastRepT = 0; camLostSince = 0;
+  $('camReps').textContent = '0';
+  $('camGoal').textContent = valueText(step.reps);
+  $('camModal').classList.add('open');
+  camSetStatus('Включаю камеру…');
+
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: {facingMode: 'environment', width: {ideal: 640}, height: {ideal: 480}},
+      audio: false
+    });
+  }catch(e){
+    camSetStatus('Нет доступа к камере. Разреши камеру в настройках браузера.', true);
+    return;
+  }
+  const v = $('camVideo');
+  v.srcObject = camStream;
+  await v.play().catch(()=>{});
+
+  if(!camLandmarker){
+    camSetStatus('Загружаю модель… (один раз, ~10 МБ)');
+    try{
+      const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
+      const fileset = await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      camLandmarker = await vision.PoseLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'GPU'
+        },
+        runningMode: 'VIDEO',
+        numPoses: 1
+      });
+    }catch(e){
+      camSetStatus('Не удалось загрузить модель. Нужен интернет при первом запуске.', true);
+      return;
+    }
+  }
+  camSetStatus(`Считаю по углу в суставе «${camCfg.label}». Встань боком, чтобы тебя было видно целиком.`);
+  camLoop();
+}
+
+function camLoop(){
+  const v = $('camVideo');
+  if(!camStream || !camLandmarker || !v){ return; }
+  camRAF = requestAnimationFrame(camLoop);
+  if(v.readyState < 2) return;
+
+  let res;
+  try{ res = camLandmarker.detectForVideo(v, performance.now()); }
+  catch(e){ return; }
+
+  const lm = res && res.landmarks && res.landmarks[0];
+  const now = Date.now();
+  if(!lm){
+    if(!camLostSince) camLostSince = now;
+    if(now - camLostSince > 1500) camSetStatus('Не вижу тебя в кадре — считай сам или поправь камеру.', true);
+    return;
+  }
+  camLostSince = 0;
+
+  // берём ту сторону, которая лучше видна (выше уверенность точек)
+  const pick = side => {
+    const idx = camCfg[side];
+    const pts = idx.map(i => lm[i]);
+    if(pts.some(p => !p)) return null;
+    const vis = pts.reduce((s, p) => s + (p.visibility != null ? p.visibility : 1), 0) / 3;
+    return {pts, vis};
+  };
+  const L = pick('left'), R = pick('right');
+  const best = (!L && !R) ? null : (!L ? R : (!R ? L : (L.vis >= R.vis ? L : R)));
+  if(!best || best.vis < 0.5){
+    camSetStatus('Сустав плохо видно — повернись боком к камере.', true);
+    return;
+  }
+
+  const ang = camAngle(best.pts[0], best.pts[1], best.pts[2]);
+  if(ang == null) return;
+
+  // считаем колебание между порогами: вниз → вверх = одно повторение
+  if(camPhase === 'up' && ang < camCfg.down){
+    camPhase = 'down';
+    camSetStatus('Вниз…');
+  } else if(camPhase === 'down' && ang > camCfg.up){
+    if(now - camLastRepT > 600){ // защита от дребезга на границе
+      camPhase = 'up';
+      camLastRepT = now;
+      camReps++;
+      $('camReps').textContent = camReps;
+      $('camReps').classList.remove('pop'); void $('camReps').offsetWidth; $('camReps').classList.add('pop');
+      speak(String(camReps), ()=> beep(880, .08));
+      camSetStatus('Засчитано');
+    }
+  }
+}
+
+function closeCameraCount(){
+  cancelAnimationFrame(camRAF); camRAF = 0;
+  try{ if(camStream) camStream.getTracks().forEach(t => t.stop()); }catch(e){}
+  camStream = null;
+  const v = $('camVideo');
+  if(v) v.srcObject = null;
+  $('camModal').classList.remove('open');
+}
 /* ================= СОБЫТИЯ ================= */
 $('startMore').innerHTML = icon('more');
 $('startMore').onclick = e => {
@@ -6872,6 +7110,9 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   };
 });
 $('btnResume').onclick = ()=> setPause(false);
+$('btnCamW').onclick = openCameraCount;
+$('camClose').onclick = closeCameraCount;
+$('camModal').onclick = e => { if(e.target === $('camModal')) closeCameraCount(); };
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
@@ -7853,6 +8094,7 @@ document.addEventListener('visibilitychange', ()=>{
 // статичные иконки
 $('btnPause').innerHTML = icon('pause');
 $('btnMicW').innerHTML = icon('mic');
+$('btnCamW').innerHTML = icon('camera');
 $('btnCreate').innerHTML = icon('plus');
 $('btnResetTotal').innerHTML = icon('reset');
 $('btnAddWeight').innerHTML = icon('plus');
