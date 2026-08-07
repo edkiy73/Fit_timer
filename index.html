@@ -88,12 +88,13 @@
      Ширина и верхний отступ — те же, что у контента страницы (.app: 20px, max 480px). */
   .screen{position:relative}
   .pause-overlay{
-    position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
     width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
     align-items:center;justify-content:space-between;gap:12px;
     padding:10px 12px;border-radius:14px;box-sizing:border-box;
     background:rgba(18,20,28,.92);backdrop-filter:blur(14px);
-    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 14px 40px rgba(0,0,0,.55);
   }
   body.paused .pause-overlay{display:flex}
   .pause-overlay .po-text{
@@ -806,18 +807,32 @@
 
   /* селект должен выглядеть как селект — со стрелкой */
 
-  /* счёт по камере */
-  .cam-wrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3}
-  .cam-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
-  .cam-counter{
-    position:absolute;left:12px;bottom:12px;display:flex;align-items:baseline;gap:8px;
-    background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border-radius:12px;padding:8px 14px;
+  /* счёт по камере — компактный плавающий HUD, не блокирует остальной экран,
+     фиксированный размер = ничего не прыгает, overflow:hidden = ничего не вылезает за рамки */
+  .cam-float{
+    position:fixed;top:calc(20px + env(safe-area-inset-top));right:16px;z-index:55;
+    width:118px;max-width:118px;box-sizing:border-box;overflow:hidden;
+    background:rgba(18,20,28,.92);backdrop-filter:blur(10px);
+    border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
   }
-  .cam-counter b{font-family:'Oswald';font-weight:700;font-size:34px;color:#fff;line-height:1}
-  .cam-counter small{font-size:12px;color:rgba(255,255,255,.75)}
-  .cam-counter b.pop{animation:camPop .3s ease}
-  @keyframes camPop{from{transform:scale(1.35)}to{transform:scale(1)}}
-  #camStatus.warn{color:var(--work)}
+  .cam-float.hidden{display:none !important}
+  .cam-thumb{position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#000}
+  .cam-thumb video{display:block;width:100%;height:100%;max-width:100%;object-fit:cover;transform:scaleX(-1)}
+  .cam-dot{
+    position:absolute;top:6px;left:6px;width:9px;height:9px;border-radius:50%;
+    background:#3FA893;box-shadow:0 0 0 2px rgba(0,0,0,.45);transition:background .2s;
+  }
+  .cam-dot.warn{background:var(--work)}
+  .cam-x{
+    position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;
+    background:var(--work);color:#fff;border:2px solid var(--card);
+    display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;z-index:1;
+  }
+  .cam-counter{font-family:'Oswald';font-weight:700;font-size:20px;color:#fff;line-height:1;white-space:nowrap}
+  .cam-counter small{font-size:11px;color:rgba(255,255,255,.7);font-weight:400;margin-left:2px}
+  .cam-counter.pop{animation:camPop .3s ease}
+  @keyframes camPop{from{transform:scale(1.3)}to{transform:scale(1)}}
   .btn-cam svg{width:17px;height:17px}
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
@@ -921,9 +936,8 @@
       <button class="avatar-btn" id="btnUsers" title="Профили"><span id="avatarSlot">?</span></button>
       <button class="icon-btn btn-sound" id="btnSoundW" title="Звук">🔊</button>
       <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление">🎤</button>
-      <button class="icon-btn btn-cam hidden" id="btnCamW" title="Счёт по камере"></button>
-      <button class="icon-btn btn-pause" id="btnPause" title="Пауза">⏸</button>
-      <button class="btn-exit" id="btnExit">Выйти</button>
+      <button class="icon-btn btn-cam" id="btnCamW" title="Счёт по камере"></button>
+            <button class="btn-exit" id="btnExit">Выйти</button>
     </div>
   </div>
 
@@ -1179,17 +1193,13 @@
   </section>
 
   <!-- Выбор картинки для места -->
-  <div class="modal" id="camModal">
-    <div class="modal-card">
-      <span class="mini-label">Счёт по камере</span>
-      <div class="cam-wrap">
-        <video id="camVideo" playsinline muted></video>
-        <div class="cam-counter"><b id="camReps">0</b><small>из <span id="camGoal">—</span></small></div>
-      </div>
-      <p class="field-hint" id="camStatus"></p>
-      <p class="field-hint">Кнопка «Готово» на экране тренировки работает как обычно — камера только считает и не завершает подход сама.</p>
-      <button class="btn-primary" id="camClose">Закрыть камеру</button>
+  <div class="cam-float hidden" id="camModal">
+    <button class="cam-x" id="camClose" title="Выключить камеру">✕</button>
+    <div class="cam-thumb">
+      <video id="camVideo" playsinline muted autoplay></video>
+      <span class="cam-dot" id="camDot"></span>
     </div>
+    <div class="cam-counter"><b id="camReps">0</b><small>/ <span id="camGoal">—</span></small></div>
   </div>
 
   <div class="modal" id="aiRunModal">
@@ -1600,6 +1610,7 @@
     <div class="actions">
       <div class="act-row">
         <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
+        <button class="btn-prev" id="btnPause" title="Пауза"></button>
         <button class="btn-done" id="btnDone">Готово ✓</button>
         <button class="btn-skip" id="btnSkip">Пропустить</button>
       </div>
@@ -2431,7 +2442,6 @@ function show(id, push = true){
   show._last = id;
   screens.forEach(s => $(s).classList.toggle('on', s===id));
   $('btnExit').classList.toggle('on', id==='scrWork');
-  $('btnPause').classList.toggle('on', id==='scrWork');
   $('btnSoundW').classList.toggle('on', id==='scrWork');
   $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
   $('btnUsers').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
@@ -5919,6 +5929,7 @@ function setPause(p){
 /* ================= ДВИЖОК ШАГОВ ================= */
 function startWorkout(){
   initAudio(); keepAwake();
+  resetCameraSession(); // новая тренировка — авто-включение камеры начинается заново
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.stepIdx = 0;
@@ -5962,6 +5973,7 @@ function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
+  closeCameraCount(); // на новом шаге счётчик обнулится и включится сам, если подходит
 }
 
 function renderStep(){
@@ -5979,14 +5991,8 @@ function renderStep(){
   $('roundLabel').textContent = rl;
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
   $('btnPrev').disabled = state.stepIdx === 0;
-  // кнопка счёта по камере — только для упражнений на повторения с заданной подсказкой
-  const hasCam = cameraAvailableFor(step);
-setShown('btnCamW', hasCam);
-$('btnCamW').classList.toggle('on', hasCam);
-if (hasCam && !$('btnCamW').innerHTML) {
-  $('btnCamW').innerHTML = icon('camera');
-}
-
+  // кнопка счёта по камере — тот же механизм видимости, что у соседних иконок шапки (.on, не .hidden)
+  $('btnCamW').classList.toggle('on', cameraAvailableFor(step));
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
   setShown('phaseTag', false);
@@ -6030,6 +6036,9 @@ if (hasCam && !$('btnCamW').innerHTML) {
         } else {
           exerciseGong(); // тот же заметный сигнал, что и на упражнениях со временем
           setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
+          // камеру включали раньше в этой тренировке — на подходящих упражнениях включаем сами,
+          // сразу после того как назвали упражнение, чтобы не листать к кнопке руками
+          if(camSessionOn && cameraAvailableFor(step)) openCameraCount();
         }
       });
     }, 500); // после удара гонга
@@ -6231,6 +6240,7 @@ function estimateKcal(sec, load){
 function finishWorkout(){
   setPause(false);
   stopHandsFree();
+  resetCameraSession(); // тренировка закончена — гасим камеру и сессионный флаг
   stopSpeech();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
@@ -6487,6 +6497,7 @@ async function exitWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
+  resetCameraSession();
   if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
   document.body.classList.remove('prep-on');
   $('prepOverlay').classList.remove('on');
@@ -6542,7 +6553,8 @@ function applyVoiceCommand(text){
   const t = text.toLowerCase().trim();
 
   let kind = '';
-  if(/продолж|дальше пошл|поехали/.test(t)) kind = 'resume';
+  if(/камер/.test(t)) kind = 'camera';
+  else if(/продолж|дальше пошл|поехали/.test(t)) kind = 'resume';
   else if(/пауз|стоп|подожд/.test(t)) kind = 'pause';
   else if(/готов|пропус|заверш|дальше|сделал|next|некст/.test(t)) kind = 'next';
   if(!kind) return false;
@@ -6552,6 +6564,12 @@ function applyVoiceCommand(text){
   if(kind === lastCmdKind && now - lastCmdTime < 1200) return true;
   lastCmdTime = now; lastCmdKind = kind;
 
+  if(kind === 'camera'){
+    if(!$('camModal').classList.contains('hidden')){ closeCameraCount(); beep(700, .1); }
+    else if(cameraAvailableFor(step)){ openCameraCount(); beep(990, .1); }
+    else { beep(300, .15); }
+    return true;
+  }
   if(kind === 'pause'){
     if(!state.paused){ setPause(true); beep(990, .1); }
     return true;
@@ -6922,12 +6940,11 @@ let camPhase = 'up';        // фаза движения: ждём опуска�
 let camReps = 0;            // счётчик повторений камерой
 let camLastRepT = 0;        // защита от двойного счёта
 let camLostSince = 0;       // когда пропала фигура из кадра
+let camSessionOn = false;   // включали ли камеру хоть раз в этой тренировке — тогда включаем сами дальше
 
-function camSetStatus(text, warn){
-  const el = $('camStatus');
-  if(!el) return;
-  el.textContent = text || '';
-  el.classList.toggle('warn', !!warn);
+function camSetDot(warn){
+  const el = $('camDot');
+  if(el) el.classList.toggle('warn', !!warn);
 }
 
 // упражнение поддерживает счёт камерой?
@@ -6937,32 +6954,35 @@ function cameraAvailableFor(step){
 
 async function openCameraCount(){
   const step = state.steps[state.stepIdx];
-  if(!cameraAvailableFor(step)){
-    appAlert('Для этого упражнения счёт по камере недоступен: не задана подсказка для камеры или упражнение не на повторения.');
-    return;
-  }
+  if(!cameraAvailableFor(step)) return; // молча: авто-включение может промахнуться мимо подходящего шага
+
   camCfg = parseCameraHint(step.camera);
   camReps = 0; camPhase = 'up'; camLastRepT = 0; camLostSince = 0;
   $('camReps').textContent = '0';
   $('camGoal').textContent = valueText(step.reps);
-  $('camModal').classList.add('open');
-  camSetStatus('Включаю камеру…');
+  $('camModal').classList.remove('hidden');
+  camSetDot(false);
 
-  try{
-    camStream = await navigator.mediaDevices.getUserMedia({
-      video: {facingMode: 'environment', width: {ideal: 640}, height: {ideal: 480}},
-      audio: false
-    });
-  }catch(e){
-    camSetStatus('Нет доступа к камере. Разреши камеру в настройках браузера.', true);
-    return;
+  if(!camStream){
+    try{
+      // фронтальная камера — телефон обычно стоит экраном к себе
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: {facingMode: 'user', width: {ideal: 480}, height: {ideal: 480}},
+        audio: false
+      });
+    }catch(e){
+      appAlert('Нет доступа к камере. Разреши камеру в настройках браузера.');
+      $('camModal').classList.add('hidden');
+      return;
+    }
+    const v = $('camVideo');
+    v.srcObject = camStream;
+    await v.play().catch(()=>{});
   }
-  const v = $('camVideo');
-  v.srcObject = camStream;
-  await v.play().catch(()=>{});
+
+  camSessionOn = true; // с этого момента камера сама включается на подходящих упражнениях этой тренировки
 
   if(!camLandmarker){
-    camSetStatus('Загружаю модель… (один раз, ~10 МБ)');
     try{
       const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
       const fileset = await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
@@ -6975,17 +6995,17 @@ async function openCameraCount(){
         numPoses: 1
       });
     }catch(e){
-      camSetStatus('Не удалось загрузить модель. Нужен интернет при первом запуске.', true);
+      appAlert('Не удалось загрузить модель распознавания. Нужен интернет при первом запуске камеры.');
+      closeCameraCount();
       return;
     }
   }
-  camSetStatus(`Считаю по углу в суставе «${camCfg.label}». Встань боком, чтобы тебя было видно целиком.`);
   camLoop();
 }
 
 function camLoop(){
   const v = $('camVideo');
-  if(!camStream || !camLandmarker || !v){ return; }
+  if(!camStream || !camLandmarker || !v || $('camModal').classList.contains('hidden')) return;
   camRAF = requestAnimationFrame(camLoop);
   if(v.readyState < 2) return;
 
@@ -6997,7 +7017,7 @@ function camLoop(){
   const now = Date.now();
   if(!lm){
     if(!camLostSince) camLostSince = now;
-    if(now - camLostSince > 1500) camSetStatus('Не вижу тебя в кадре — считай сам или поправь камеру.', true);
+    if(now - camLostSince > 1200) camSetDot(true);
     return;
   }
   camLostSince = 0;
@@ -7013,9 +7033,10 @@ function camLoop(){
   const L = pick('left'), R = pick('right');
   const best = (!L && !R) ? null : (!L ? R : (!R ? L : (L.vis >= R.vis ? L : R)));
   if(!best || best.vis < 0.5){
-    camSetStatus('Сустав плохо видно — повернись боком к камере.', true);
+    camSetDot(true);
     return;
   }
+  camSetDot(false);
 
   const ang = camAngle(best.pts[0], best.pts[1], best.pts[2]);
   if(ang == null) return;
@@ -7023,16 +7044,16 @@ function camLoop(){
   // считаем колебание между порогами: вниз → вверх = одно повторение
   if(camPhase === 'up' && ang < camCfg.down){
     camPhase = 'down';
-    camSetStatus('Вниз…');
   } else if(camPhase === 'down' && ang > camCfg.up){
     if(now - camLastRepT > 600){ // защита от дребезга на границе
       camPhase = 'up';
       camLastRepT = now;
       camReps++;
-      $('camReps').textContent = camReps;
-      $('camReps').classList.remove('pop'); void $('camReps').offsetWidth; $('camReps').classList.add('pop');
+      const box = $('camReps');
+      box.textContent = camReps;
+      const counter = box.closest('.cam-counter');
+      if(counter){ counter.classList.remove('pop'); void counter.offsetWidth; counter.classList.add('pop'); }
       speak(String(camReps), ()=> beep(880, .08));
-      camSetStatus('Засчитано');
     }
   }
 }
@@ -7043,7 +7064,13 @@ function closeCameraCount(){
   camStream = null;
   const v = $('camVideo');
   if(v) v.srcObject = null;
-  $('camModal').classList.remove('open');
+  $('camModal').classList.add('hidden');
+}
+
+// сброс на новую тренировку — иначе авто-включение «утечёт» из прошлой сессии
+function resetCameraSession(){
+  camSessionOn = false;
+  closeCameraCount();
 }
 /* ================= СОБЫТИЯ ================= */
 $('startMore').innerHTML = icon('more');
@@ -8220,8 +8247,6 @@ try{
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
-$('btnCamW').onclick = openCameraCount;
-
 </script>
 </body>
 </html>
