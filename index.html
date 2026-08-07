@@ -5980,7 +5980,13 @@ function renderStep(){
   $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
   $('btnPrev').disabled = state.stepIdx === 0;
   // кнопка счёта по камере — только для упражнений на повторения с заданной подсказкой
-  setShown('btnCamW', cameraAvailableFor(step));
+  const hasCam = cameraAvailableFor(step);
+setShown('btnCamW', hasCam);
+$('btnCamW').classList.toggle('on', hasCam);
+if (hasCam && !$('btnCamW').innerHTML) {
+  $('btnCamW').innerHTML = icon('camera');
+}
+
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
   setShown('phaseTag', false);
@@ -8214,6 +8220,8 @@ try{
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
+$('btnCamW').onclick = openCameraCount;
+
 </script>
 </body>
 </html>
