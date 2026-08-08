@@ -88,7 +88,7 @@
      Ширина и верхний отступ — те же, что у контента страницы (.app: 20px, max 480px). */
   .screen{position:relative}
   .pause-overlay{
-    position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
     width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
     align-items:center;justify-content:space-between;gap:12px;
     padding:10px 12px;border-radius:14px;box-sizing:border-box;
@@ -811,12 +811,14 @@
      фиксированный размер = ничего не прыгает, overflow:hidden = ничего не вылезает за рамки */
   .cam-float{
     position:fixed;top:calc(20px + env(safe-area-inset-top));right:16px;z-index:55;
-    width:118px;max-width:118px;box-sizing:border-box;overflow:hidden;
+    width:118px;max-width:118px;box-sizing:border-box;
     background:rgba(18,20,28,.92);backdrop-filter:blur(10px);
     border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:grab;touch-action:none;user-select:none;
   }
   .cam-float.hidden{display:none !important}
+  .cam-float.dragging{cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .cam-float.paused-dim{opacity:.55}
   .cam-thumb{position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#000}
   .cam-thumb video{display:block;width:100%;height:100%;max-width:100%;object-fit:cover;transform:scaleX(-1)}
   .cam-dot{
@@ -5916,6 +5918,7 @@ function setPause(p){
     state.paused = false;
   }
   document.body.classList.toggle('paused', p);
+  camSetPaused(p); // камера тоже встаёт на паузу — иначе продолжает считать, пока лежишь
   const btn = $('btnPause');
   btn.innerHTML = icon(p ? 'play' : 'pause');
   btn.title = p ? 'Продолжить' : 'Пауза';
@@ -6024,6 +6027,8 @@ function renderStep(){
     gong();
     setTimeout(()=>{
       if(state.stepToken !== myToken) return; // шаг уже сменили
+      // камера — независимо от озвучки: не ждём, пока договорит голос, и не зависим от его особенностей
+      if(camSessionOn && cameraAvailableFor(step)) openCameraCount();
       announceExercise(step, ()=>{
         if(state.stepToken !== myToken) return;
         if(step.kind === 'timer' && readySec > 0){
@@ -6036,9 +6041,6 @@ function renderStep(){
         } else {
           exerciseGong(); // тот же заметный сигнал, что и на упражнениях со временем
           setTimeout(()=>{ if(state.stepToken === myToken && state.beginTimer) state.beginTimer(); }, 350);
-          // камеру включали раньше в этой тренировке — на подходящих упражнениях включаем сами,
-          // сразу после того как назвали упражнение, чтобы не листать к кнопке руками
-          if(camSessionOn && cameraAvailableFor(step)) openCameraCount();
         }
       });
     }, 500); // после удара гонга
@@ -6934,13 +6936,20 @@ function camAngle(a, b, c){
   return Math.acos(cos) * 180 / Math.PI;
 }
 
-let camStream = null, camLandmarker = null, camRAF = 0;
+let camStream = null, camLandmarker = null, camRAF = 0, camPausedByWorkout = false;
 let camCfg = null;          // параметры текущего упражнения
 let camPhase = 'up';        // фаза движения: ждём опускание или подъём
 let camReps = 0;            // счётчик повторений камерой
 let camLastRepT = 0;        // защита от двойного счёта
 let camLostSince = 0;       // когда пропала фигура из кадра
 let camSessionOn = false;   // включали ли камеру хоть раз в этой тренировке — тогда включаем сами дальше
+
+// подтверждение фазы несколькими кадрами подряд — гасит дрожание точек на границе порога
+let camConfirm = 0, camPrevAng = null;
+const CAM_CONFIRM_FRAMES = 2;   // столько кадров подряд угол должен быть за порогом (больше — рискуем не заметить быстрый повтор)
+const CAM_MIN_VIS = 0.65;       // строже прежнего — меньше ложных срабатываний на плохо видимых точках
+const CAM_MIN_REP_MS = 400;     // страховка от нереально быстрых срабатываний — основную защиту даёт смена фазы и подтверждение кадрами
+const CAM_MAX_JUMP = 55;        // угол не может измениться сильнее за один кадр — это шум, не движение
 
 function camSetDot(warn){
   const el = $('camDot');
@@ -6952,16 +6961,79 @@ function cameraAvailableFor(step){
   return !!(step && step.kind === 'click' && parseCameraHint(step.camera));
 }
 
+/* ---- перетаскивание панели, позиция запоминается между тренировками ---- */
+function camLoadPos(){
+  try{
+    const raw = localStorage.getItem('camPanelPos');
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+function camSavePos(x, y){
+  try{ localStorage.setItem('camPanelPos', JSON.stringify({x, y})); }catch(e){}
+}
+function camApplyPos(){
+  const el = $('camModal');
+  if(!el) return;
+  const pos = camLoadPos();
+  if(!pos) return; // без сохранённой позиции — остаётся в CSS-углу по умолчанию
+  const w = el.offsetWidth || 118, h = el.offsetHeight || 150;
+  const x = Math.min(Math.max(8, pos.x), window.innerWidth - w - 8);
+  const y = Math.min(Math.max(8, pos.y), window.innerHeight - h - 8);
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.right = 'auto';
+  el.style.bottom = 'auto';
+}
+function camWireDrag(){
+  const el = $('camModal');
+  if(!el || el.dataset.dragWired) return;
+  el.dataset.dragWired = '1';
+  let startX = 0, startY = 0, origX = 0, origY = 0, dragging = false;
+  el.addEventListener('pointerdown', e => {
+    if(e.target.closest('.cam-x')) return; // крестик работает сам по себе
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+    const r = el.getBoundingClientRect();
+    origX = r.left; origY = r.top;
+    startX = e.clientX; startY = e.clientY;
+  });
+  el.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let x = origX + (e.clientX - startX);
+    let y = origY + (e.clientY - startY);
+    x = Math.min(Math.max(8, x), window.innerWidth - w - 8);
+    y = Math.min(Math.max(8, y), window.innerHeight - h - 8);
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.right = 'auto'; el.style.bottom = 'auto';
+  });
+  const stop = e => {
+    if(!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    const r = el.getBoundingClientRect();
+    camSavePos(r.left, r.top);
+  };
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointercancel', stop);
+}
+
+/* ---- открытие / закрытие / пауза ---- */
 async function openCameraCount(){
   const step = state.steps[state.stepIdx];
   if(!cameraAvailableFor(step)) return; // молча: авто-включение может промахнуться мимо подходящего шага
 
   camCfg = parseCameraHint(step.camera);
   camReps = 0; camPhase = 'up'; camLastRepT = 0; camLostSince = 0;
+  camConfirm = 0; camPrevAng = null;
   $('camReps').textContent = '0';
   $('camGoal').textContent = valueText(step.reps);
   $('camModal').classList.remove('hidden');
   camSetDot(false);
+  camWireDrag();
+  camApplyPos();
 
   if(!camStream){
     try{
@@ -7000,6 +7072,7 @@ async function openCameraCount(){
       return;
     }
   }
+  camPausedByWorkout = false;
   camLoop();
 }
 
@@ -7007,6 +7080,7 @@ function camLoop(){
   const v = $('camVideo');
   if(!camStream || !camLandmarker || !v || $('camModal').classList.contains('hidden')) return;
   camRAF = requestAnimationFrame(camLoop);
+  if(camPausedByWorkout) return; // тренировка на паузе — не считаем и не тратим батарею на разбор кадров
   if(v.readyState < 2) return;
 
   let res;
@@ -7018,22 +7092,25 @@ function camLoop(){
   if(!lm){
     if(!camLostSince) camLostSince = now;
     if(now - camLostSince > 1200) camSetDot(true);
+    camConfirm = 0; camPrevAng = null;
     return;
   }
   camLostSince = 0;
 
-  // берём ту сторону, которая лучше видна (выше уверенность точек)
+  // берём ту сторону, которая лучше видна (выше уверенность точек), и требуем каждую точку в отдельности
   const pick = side => {
     const idx = camCfg[side];
     const pts = idx.map(i => lm[i]);
     if(pts.some(p => !p)) return null;
-    const vis = pts.reduce((s, p) => s + (p.visibility != null ? p.visibility : 1), 0) / 3;
-    return {pts, vis};
+    const viss = pts.map(p => p.visibility != null ? p.visibility : 1);
+    if(viss.some(v2 => v2 < 0.4)) return null; // хоть одна точка почти не видна — вся тройка ненадёжна
+    return {pts, vis: viss.reduce((s, v2) => s + v2, 0) / 3};
   };
   const L = pick('left'), R = pick('right');
   const best = (!L && !R) ? null : (!L ? R : (!R ? L : (L.vis >= R.vis ? L : R)));
-  if(!best || best.vis < 0.5){
+  if(!best || best.vis < CAM_MIN_VIS){
     camSetDot(true);
+    camConfirm = 0; camPrevAng = null;
     return;
   }
   camSetDot(false);
@@ -7041,21 +7118,38 @@ function camLoop(){
   const ang = camAngle(best.pts[0], best.pts[1], best.pts[2]);
   if(ang == null) return;
 
-  // считаем колебание между порогами: вниз → вверх = одно повторение
-  if(camPhase === 'up' && ang < camCfg.down){
-    camPhase = 'down';
-  } else if(camPhase === 'down' && ang > camCfg.up){
-    if(now - camLastRepT > 600){ // защита от дребезга на границе
-      camPhase = 'up';
-      camLastRepT = now;
-      camReps++;
-      const box = $('camReps');
-      box.textContent = camReps;
-      const counter = box.closest('.cam-counter');
-      if(counter){ counter.classList.remove('pop'); void counter.offsetWidth; counter.classList.add('pop'); }
-      speak(String(camReps), ()=> beep(880, .08));
-    }
+  // резкий скачок угла за один кадр — почти всегда шум распознавания (сбилась точка), а не реальное движение
+  if(camPrevAng != null && Math.abs(ang - camPrevAng) > CAM_MAX_JUMP){
+    camPrevAng = ang;
+    return;
   }
+  camPrevAng = ang;
+
+  // фаза меняется только после нескольких кадров подряд за порогом — одиночный дрожащий кадр её не переключит
+  if(camPhase === 'up'){
+    if(ang < camCfg.down){ camConfirm++; if(camConfirm >= CAM_CONFIRM_FRAMES){ camPhase = 'down'; camConfirm = 0; } }
+    else camConfirm = 0;
+  } else {
+    if(ang > camCfg.up){
+      camConfirm++;
+      if(camConfirm >= CAM_CONFIRM_FRAMES && now - camLastRepT > CAM_MIN_REP_MS){
+        camPhase = 'up'; camConfirm = 0; camLastRepT = now;
+        camReps++;
+        const box = $('camReps');
+        box.textContent = camReps;
+        const counter = box.closest('.cam-counter');
+        if(counter){ counter.classList.remove('pop'); void counter.offsetWidth; counter.classList.add('pop'); }
+        speak(String(camReps), ()=> beep(880, .08));
+      }
+    } else camConfirm = 0;
+  }
+}
+
+// тренировка встала на паузу — камера тоже замирает, чтобы не считать, пока лежишь без движения
+function camSetPaused(paused){
+  camPausedByWorkout = paused;
+  const el = $('camModal');
+  if(el) el.classList.toggle('paused-dim', paused && !el.classList.contains('hidden'));
 }
 
 function closeCameraCount(){
@@ -7070,6 +7164,7 @@ function closeCameraCount(){
 // сброс на новую тренировку — иначе авто-включение «утечёт» из прошлой сессии
 function resetCameraSession(){
   camSessionOn = false;
+  camPausedByWorkout = false;
   closeCameraCount();
 }
 /* ================= СОБЫТИЯ ================= */
