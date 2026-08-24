@@ -1841,6 +1841,7 @@
         <div class="media-row">
           <button type="button" id="ueGeminiHow">Как получить ключ</button>
           <button type="button" id="ueGeminiTest">Проверить</button>
+          <button type="button" id="ueGeminiDiag">Диагностика</button>
         </div>
         <p class="field-hint" id="ueGeminiState"></p>
       </div>
@@ -3957,16 +3958,39 @@ function geminiModelOrder(){
   return saved ? [saved, ...GEMINI_MODELS.filter(m => m !== saved)] : GEMINI_MODELS.slice();
 }
 
+// «Failed to fetch» — запрос не дошёл до сервера: сеть, блокировка или отсутствие CORS.
+// Отличаем это от ответов API, чтобы не показывать бессмысленное «HTTP undefined».
+function isNetworkFail(e){
+  return e && (e.name === 'TypeError' || /failed to fetch|network|load failed/i.test(e.message || ''));
+}
+function networkFailMessage(){
+  const isFile = location.protocol === 'file:';
+  let m = 'Запрос не дошёл до Google — это сетевая ошибка, а не отказ ключа.\n\nВероятные причины:\n';
+  if(isFile) m += '• Приложение открыто как файл с диска (file://). Из такого режима браузер запрещает запросы к сторонним серверам — открой приложение по адресу http/https или установи как PWA.\n';
+  m += '• Нет интернета или он пропал в момент запроса.\n' +
+       '• Домен generativelanguage.googleapis.com недоступен у твоего провайдера или в регионе — в этом случае поможет VPN.\n' +
+       '• Запрос режет расширение браузера (блокировщик рекламы, антитрекер) — попробуй отключить их для этой страницы.\n\n' +
+       'Ключ при этом может быть полностью рабочим: в AI Studio запросы идут с серверов Google, а здесь — прямо с твоего устройства.';
+  return m;
+}
+
 // одна попытка на конкретной модели; возвращает {ok, text, status, msg}
 async function geminiTry(model, body, signal){
   const key = geminiKey();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
-    body: JSON.stringify(body),
-    signal
-  });
+  let res;
+  try{
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
+      body: JSON.stringify(body),
+      signal
+    });
+  }catch(e){
+    if(e && e.name === 'AbortError') throw e;         // отмена пользователем — пробрасываем как есть
+    if(isNetworkFail(e)) return {ok: false, status: 0, msg: networkFailMessage(), network: true};
+    throw e;
+  }
   if(res.ok) return {ok: true, data: await res.json()};
   let msg = 'HTTP ' + res.status;
   try{
@@ -3991,6 +4015,7 @@ async function callGemini(prompt, signal){
       return text;
     }
     last = r;
+    if(r.network) break; // сеть недоступна — другие модели не помогут
     // 404 / «модель не найдена» — пробуем следующую; остальные ошибки повторять смысла нет
     const modelGone = r.status === 404 || /not found|not supported|is not available/i.test(r.msg);
     if(!modelGone) break;
@@ -7558,6 +7583,26 @@ $('ueGeminiHow').onclick = ()=> appAlert(
   'Ключ — длинная строка из букв и цифр; как именно он начинается, зависит от способа создания, так что просто копируй полностью.\n\n' +
   'Ключ хранится только на этом устройстве. Запросы уходят напрямую в Google.'
 );
+// пошагово проверяем, где рвётся связь: интернет вообще → домен Google → сам ключ
+$('ueGeminiDiag').onclick = async ()=>{
+  const btn = $('ueGeminiDiag'), old = btn.textContent;
+  btn.textContent = 'Проверяю…'; btn.disabled = true;
+  const lines = [];
+  lines.push(location.protocol === 'file:'
+    ? '✗ Приложение открыто как файл (file://) — браузер запретит запросы к Google. Открой по адресу http/https или установи как PWA.'
+    : `✓ Приложение открыто по ${location.protocol.replace(':','')}`);
+  lines.push(navigator.onLine === false ? '✗ Браузер сообщает: интернета нет' : '✓ Браузер видит интернет');
+  // доступен ли вообще домен Gemini (без ключа — ждём осмысленный отказ, а не обрыв связи)
+  try{
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {method: 'GET'});
+    lines.push(`✓ Домен Google отвечает (код ${r.status}${r.status === 403 || r.status === 401 ? ' — это нормально без ключа' : ''})`);
+  }catch(e){
+    lines.push('✗ Домен generativelanguage.googleapis.com недоступен — запрос не дошёл.\n   Обычно это блокировка провайдером или регионом: поможет VPN. Также может резать расширение-блокировщик.');
+  }
+  btn.textContent = old; btn.disabled = false;
+  appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
+};
+
 $('ueGeminiTest').onclick = async ()=>{
   const key = ($('ueGeminiKey').value || '').trim();
   if(!key){ $('ueGeminiState').textContent = 'Сначала вставь ключ.'; return; }
