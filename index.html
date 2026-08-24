@@ -3975,22 +3975,43 @@ function networkFailMessage(){
 }
 
 // одна попытка на конкретной модели; возвращает {ok, text, status, msg}
-async function geminiTry(model, body, signal){
-  const key = geminiKey();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  let res;
-  try{
-    res = await fetch(url, {
+// Браузер шлёт предварительный запрос OPTIONS, если у POST нестандартный заголовок
+// (X-goog-api-key) или Content-Type: application/json. В некоторых сетях этот
+// предварительный запрос режется — тогда сам POST даже не отправляется («Failed to fetch»),
+// хотя обычный GET к тому же домену проходит.
+// Поэтому сначала пробуем «простой» запрос: ключ в адресе, Content-Type: text/plain —
+// такой POST отправляется сразу, без OPTIONS. Если не выйдет — пробуем обычный способ.
+async function geminiFetch(url, body, signal, simple){
+  if(simple){
+    return fetch(url + '?key=' + encodeURIComponent(geminiKey()), {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
+      headers: {'Content-Type': 'text/plain;charset=UTF-8'}, // из безопасного списка — OPTIONS не нужен
       body: JSON.stringify(body),
       signal
     });
-  }catch(e){
-    if(e && e.name === 'AbortError') throw e;         // отмена пользователем — пробрасываем как есть
-    if(isNetworkFail(e)) return {ok: false, status: 0, msg: networkFailMessage(), network: true};
-    throw e;
   }
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-goog-api-key': geminiKey()},
+    body: JSON.stringify(body),
+    signal
+  });
+}
+
+async function geminiTry(model, body, signal){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  let res = null, lastErr = null;
+  for(const simple of [true, false]){
+    try{
+      res = await geminiFetch(url, body, signal, simple);
+      break;
+    }catch(e){
+      if(e && e.name === 'AbortError') throw e;   // отмена пользователем — пробрасываем как есть
+      if(!isNetworkFail(e)) throw e;
+      lastErr = e;                                 // сеть не пустила — пробуем другой способ
+    }
+  }
+  if(!res) return {ok: false, status: 0, msg: networkFailMessage(), network: true};
   if(res.ok) return {ok: true, data: await res.json()};
   let msg = 'HTTP ' + res.status;
   try{
@@ -4089,15 +4110,20 @@ async function callGeminiImage(prompt, signal){
   const key = geminiKey();
   if(!key) throw new Error('Ключ Gemini не задан');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
-    body: JSON.stringify({
-      contents: [{parts: [{text: prompt}]}],
-      generationConfig: {responseModalities: ['TEXT', 'IMAGE']}
-    }),
-    signal
-  });
+  const body = {
+    contents: [{parts: [{text: prompt}]}],
+    generationConfig: {responseModalities: ['TEXT', 'IMAGE']}
+  };
+  // тот же обход предварительной проверки CORS, что и в текстовых запросах
+  let res = null;
+  for(const simple of [true, false]){
+    try{ res = await geminiFetch(url, body, signal, simple); break; }
+    catch(e){
+      if(e && e.name === 'AbortError') throw e;
+      if(!isNetworkFail(e)) throw e;
+    }
+  }
+  if(!res) throw new Error(networkFailMessage());
   if(!res.ok){
     let msg = 'HTTP ' + res.status;
     try{
@@ -7592,12 +7618,27 @@ $('ueGeminiDiag').onclick = async ()=>{
     ? '✗ Приложение открыто как файл (file://) — браузер запретит запросы к Google. Открой по адресу http/https или установи как PWA.'
     : `✓ Приложение открыто по ${location.protocol.replace(':','')}`);
   lines.push(navigator.onLine === false ? '✗ Браузер сообщает: интернета нет' : '✓ Браузер видит интернет');
-  // доступен ли вообще домен Gemini (без ключа — ждём осмысленный отказ, а не обрыв связи)
+  // 1) доступен ли домен вообще (простой GET — без предварительной проверки CORS)
   try{
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {method: 'GET'});
     lines.push(`✓ Домен Google отвечает (код ${r.status}${r.status === 403 || r.status === 401 ? ' — это нормально без ключа' : ''})`);
   }catch(e){
-    lines.push('✗ Домен generativelanguage.googleapis.com недоступен — запрос не дошёл.\n   Обычно это блокировка провайдером или регионом: поможет VPN. Также может резать расширение-блокировщик.');
+    lines.push('✗ Домен недоступен совсем — запрос не дошёл. Обычно это блокировка провайдером или регионом: поможет VPN.');
+    btn.textContent = old; btn.disabled = false;
+    appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
+    return;
+  }
+  // 2) проходит ли рабочий POST — именно им отправляются запросы к нейросети.
+  // Проверяем оба способа: без предварительной проверки CORS и с ней.
+  const probe = {contents: [{parts: [{text: 'ping'}]}]};
+  const purl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  let simpleOk = false, headerOk = false;
+  try{ await geminiFetch(purl, probe, undefined, true); simpleOk = true; }catch(e){}
+  try{ await geminiFetch(purl, probe, undefined, false); headerOk = true; }catch(e){}
+  if(simpleOk || headerOk){
+    lines.push(`✓ Запросы к нейросети проходят (способ: ${simpleOk ? 'ключ в адресе' : 'заголовок'})`);
+  } else {
+    lines.push('✗ POST-запросы не проходят, хотя домен отвечает.\n   Скорее всего режется предварительный запрос OPTIONS — так бывает у некоторых провайдеров и в корпоративных сетях. Помогает VPN или другая сеть.');
   }
   btn.textContent = old; btn.disabled = false;
   appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
