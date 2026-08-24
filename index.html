@@ -807,6 +807,15 @@
 
   /* селект должен выглядеть как селект — со стрелкой */
 
+  /* список выбора упражнения при старте */
+  .pick-list{max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:4px 0}
+  .pick-item{
+    width:100%;text-align:left;background-color:var(--bg);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font-family:'Rubik';
+  }
+  .pick-item b{display:block;font-size:14px;font-weight:500}
+  .pick-item small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -1164,6 +1173,34 @@
   </section>
 
   <!-- Выбор картинки для места -->
+  <div class="modal" id="exitModal">
+    <div class="modal-card">
+      <span class="mini-label">Прервать тренировку</span>
+      <p class="field-hint" id="exitProgress"></p>
+      <button class="choice" id="exitSave"><b>Сохранить и выйти</b><small>В следующий раз продолжишь с этого места</small></button>
+      <button class="choice" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
+      <button class="link-btn" id="exitCancel" style="margin:0;padding:10px">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="startModal">
+    <div class="modal-card">
+      <span class="mini-label">С чего начать</span>
+      <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
+      <button class="choice" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
+      <button class="choice" id="startPick"><b>Выбрать упражнение</b><small>Начать с любого места программы</small></button>
+      <button class="link-btn" id="startCancel" style="margin:0;padding:10px">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="pickStepModal">
+    <div class="modal-card">
+      <span class="mini-label">С какого упражнения начать</span>
+      <div class="pick-list" id="pickList"></div>
+      <button class="link-btn" id="pickCancel" style="margin:0;padding:10px">Отмена</button>
+    </div>
+  </div>
+
   <div class="modal" id="aiRunModal">
     <div class="modal-card" style="text-align:center">
       <div class="ai-spin"></div>
@@ -2793,6 +2830,79 @@ function renderTotal(){
   $('totalCount').textContent = n ? `· ${n} ${plural(n, 'тренировка', 'тренировки', 'тренировок')}` : '';
 }
 
+
+/* ================= НЕЗАВЕРШЁННАЯ СЕССИЯ ТРЕНИРОВКИ =================
+   Сохраняем место, на котором прервались, чтобы в следующий раз продолжить с него.
+   Храним не сами шаги (они пересобираются из программы), а координаты: какая программа,
+   какой вариант, нагрузка, номер шага и уже накопленное время. */
+
+function sessionKey(){ return pk('workoutSession'); }
+
+async function saveSession(){
+  const raw = state.raw, cur = state.current;
+  if(!raw || !cur || !state.steps.length) return;
+  const elapsed = state.globalStart
+    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal)
+    : 0;
+  const data = {
+    pid: raw.id,
+    planIdx: state.planIdx || 0,
+    load: state.load || 100,
+    stepIdx: state.stepIdx || 0,
+    total: state.steps.length,
+    elapsed,
+    at: Date.now()
+  };
+  await kvSet(sessionKey(), JSON.stringify(data));
+}
+
+async function loadSession(){
+  try{
+    const raw = await kvGet(sessionKey());
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || !s.pid) return null;
+    // программу могли удалить — тогда сессия бессмысленна
+    if(!customPrograms.some(p => p.id === s.pid)){ await clearSession(); return null; }
+    return s;
+  }catch(e){ return null; }
+}
+
+async function clearSession(){
+  try{ await kvDel(sessionKey()); }catch(e){}
+}
+
+// незавершённая сессия именно этой программы (для экрана перед стартом)
+async function sessionForProgram(pid){
+  const s = await loadSession();
+  return (s && s.pid === pid) ? s : null;
+}
+
+function sessionAgeText(at){
+  const mins = Math.round((Date.now() - at) / 60000);
+  if(mins < 1) return 'только что';
+  if(mins < 60) return `${mins} ${plural(mins, 'минуту', 'минуты', 'минут')} назад`;
+  const hours = Math.round(mins / 60);
+  if(hours < 24) return `${hours} ${plural(hours, 'час', 'часа', 'часов')} назад`;
+  const days = Math.round(hours / 24);
+  return `${days} ${plural(days, 'день', 'дня', 'дней')} назад`;
+}
+
+// список рабочих шагов для выбора «с какого упражнения начать»
+function workStepChoices(){
+  const out = [];
+  (state.steps || []).forEach((s, i) => {
+    if(s.phase !== 'work') return;
+    let label = s.title;
+    const meta = [];
+    if(s.round === 0) meta.push('разминка');
+    else if(state.current && state.current.rounds > 1) meta.push(`круг ${s.round}`);
+    if(s.setsTotal > 1) meta.push(`подход ${s.setNo}/${s.setsTotal}`);
+    if(s.side) meta.push(`сторона ${s.side}`);
+    out.push({idx: i, label, meta: meta.join(' · ')});
+  });
+  return out;
+}
 /* ================= КАЛЕНДАРЬ И НЕДЕЛЯ ================= */
 let calOffset = 0;
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -3829,38 +3939,69 @@ function userForAI(){
 }
 
 /* ================= GEMINI API ================= */
-const GEMINI_MODEL = 'gemini-flash-latest';
+// Несколько моделей на выбор: Google периодически выключает старые, и жёстко зашитое имя
+// однажды начинает отдавать 404 (так случилось с псевдонимом gemini-flash-latest).
+// Перебираем список, рабочую модель запоминаем, чтобы не тратить попытки каждый раз.
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.7-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+
 function geminiKey(){
   const u = curUser();
   return (u && u.geminiKey ? String(u.geminiKey).trim() : '');
 }
 function hasGemini(){ return !!geminiKey(); }
 
-async function callGemini(prompt, signal){
+function geminiModelOrder(){
+  let saved = '';
+  try{ saved = localStorage.getItem('geminiModel') || ''; }catch(e){}
+  // ранее сработавшую модель пробуем первой, остальные оставляем запасными
+  return saved ? [saved, ...GEMINI_MODELS.filter(m => m !== saved)] : GEMINI_MODELS.slice();
+}
+
+// одна попытка на конкретной модели; возвращает {ok, text, status, msg}
+async function geminiTry(model, body, signal){
   const key = geminiKey();
-  if(!key) throw new Error('Ключ Gemini не задан');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-goog-api-key': key},
-    body: JSON.stringify({contents: [{parts: [{text: prompt}]}]}),
+    body: JSON.stringify(body),
     signal
   });
-  if(!res.ok){
-    let msg = 'HTTP ' + res.status;
-    try{
-      const j = await res.json();
-      if(j && j.error && j.error.message) msg = j.error.message;
-    }catch(e){}
-    if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
-    if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
-    throw new Error(msg);
+  if(res.ok) return {ok: true, data: await res.json()};
+  let msg = 'HTTP ' + res.status;
+  try{
+    const j = await res.json();
+    if(j && j.error && j.error.message) msg = j.error.message;
+  }catch(e){}
+  return {ok: false, status: res.status, msg};
+}
+
+async function callGemini(prompt, signal){
+  const key = geminiKey();
+  if(!key) throw new Error('Ключ Gemini не задан');
+  const body = {contents: [{parts: [{text: prompt}]}]};
+  let last = null;
+  for(const model of geminiModelOrder()){
+    const r = await geminiTry(model, body, signal);
+    if(r.ok){
+      try{ localStorage.setItem('geminiModel', model); }catch(e){}
+      const parts = (((r.data.candidates || [])[0] || {}).content || {}).parts || [];
+      const text = parts.map(p => p.text || '').join('').trim();
+      if(!text) throw new Error('Пустой ответ модели. Попробуй ещё раз или сформулируй запрос иначе.');
+      return text;
+    }
+    last = r;
+    // 404 / «модель не найдена» — пробуем следующую; остальные ошибки повторять смысла нет
+    const modelGone = r.status === 404 || /not found|not supported|is not available/i.test(r.msg);
+    if(!modelGone) break;
   }
-  const data = await res.json();
-  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-  const text = parts.map(p => p.text || '').join('').trim();
-  if(!text) throw new Error('Пустой ответ модели. Попробуй ещё раз или сформулируй запрос иначе.');
-  return text;
+  let msg = last ? last.msg : 'Неизвестная ошибка';
+  if(last){
+    if(last.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
+    else if(last.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
+    else if(last.status === 404) msg = 'Ни одна из доступных моделей не отвечает. Возможно, Google снова обновил список моделей — напиши мне, и я поправлю.';
+  }
+  throw new Error(msg);
 }
 
 // попап-объяснение, если ключа нет
@@ -5829,7 +5970,9 @@ function globalElapsed(){
   return Math.floor((Date.now() - state.globalStart - state.pausedTotal - pausedNow) / 1000);
 }
 function startGlobal(){
-  state.globalStart = Date.now();
+  // при продолжении сессии сдвигаем точку отсчёта назад, чтобы часы шли с накопленного времени
+  state.globalStart = Date.now() - (state.resumeElapsed || 0);
+  state.resumeElapsed = 0;
   state.paused = false;
   state.pausedAt = 0;
   state.pausedTotal = 0;
@@ -5870,11 +6013,14 @@ function setPause(p){
 }
 
 /* ================= ДВИЖОК ШАГОВ ================= */
-function startWorkout(){
+// fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
+// elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
+function startWorkout(fromIdx, elapsed){
   initAudio(); keepAwake();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
-  state.stepIdx = 0;
+  state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
+  state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -6177,6 +6323,7 @@ function finishWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
+  clearSession(); // тренировка пройдена до конца — продолжать больше нечего
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
@@ -6427,14 +6574,24 @@ function applyFeedback(kind){
     : `В следующий раз предложим нагрузку ${p.load}%.`;
 }
 
-async function exitWorkout(){
-  if(!(await appConfirm('Прервать тренировку? Прогресс не сохранится.'))) return;
+// спрашиваем, сохранить ли место, и уходим согласно выбору
+function exitWorkout(){
+  const steps = state.steps || [];
+  const done = steps.slice(0, state.stepIdx).filter(s => s.phase === 'work').length;
+  const all = steps.filter(s => s.phase === 'work').length;
+  $('exitProgress').textContent = all
+    ? `Пройдено упражнений: ${done} из ${all}.`
+    : '';
+  $('exitModal').classList.add('open');
+}
+
+// общая часть выхода: гасим всё, что работает во время тренировки
+function tearDownWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
   if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
   document.body.classList.remove('prep-on');
-  $('prepOverlay').classList.remove('on');
   $('prepOverlay').classList.remove('on');
   clearStepTimer(); stopGlobal(); releaseWake();
   document.body.classList.remove('phase-rest');
@@ -6828,7 +6985,58 @@ function syncStartPrefsSum(){
   if(musicMode) bits.push('не прерывать музыку');
   $('startPrefsSum').textContent = bits.join(' · ');
 }
-$('btnStart').onclick = ()=>{ state.current = customToProgram(state.raw, state.planIdx); startWorkout(); };
+$('btnStart').onclick = async ()=>{
+  state.current = customToProgram(state.raw, state.planIdx);
+  const sess = await sessionForProgram(state.raw.id);
+  // без незавершённой сессии не спрашиваем лишнего — но выбор упражнения всё равно доступен
+  const steps = buildSteps();
+  setShown('startResume', !!sess);
+  if(sess){
+    const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
+    const workAll = steps.filter(s => s.phase === 'work').length;
+    $('startResumeSub').textContent =
+      `Остановились на ${workDone} из ${workAll} упражнений · ${sessionAgeText(sess.at)}`;
+  }
+  window.__pendingSession = sess || null;
+  $('startModal').classList.add('open');
+};
+$('startCancel').onclick = ()=> $('startModal').classList.remove('open');
+$('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
+
+$('startResume').onclick = ()=>{
+  const s = window.__pendingSession;
+  $('startModal').classList.remove('open');
+  if(!s){ startWorkout(); return; }
+  state.load = s.load || state.load;
+  startWorkout(s.stepIdx, s.elapsed);
+};
+$('startFresh').onclick = async ()=>{
+  $('startModal').classList.remove('open');
+  await clearSession();
+  startWorkout();
+};
+$('startPick').onclick = ()=>{
+  $('startModal').classList.remove('open');
+  // временно собираем шаги, чтобы показать список упражнений
+  state.steps = buildSteps();
+  const list = $('pickList');
+  list.innerHTML = '';
+  workStepChoices().forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pick-item';
+    b.innerHTML = '<b></b>' + (c.meta ? `<small>${c.meta}</small>` : '');
+    b.querySelector('b').textContent = c.label;
+    b.onclick = async ()=>{
+      $('pickStepModal').classList.remove('open');
+      await clearSession();
+      startWorkout(c.idx, 0);
+    };
+    list.appendChild(b);
+  });
+  $('pickStepModal').classList.add('open');
+};
+$('pickCancel').onclick = ()=> $('pickStepModal').classList.remove('open');
+$('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
 $('startBackTop').onclick = ()=> show('scrMenu');
 $('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> show('scrMenu'), 'Заполненный запрос');
 $('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
@@ -6837,6 +7045,19 @@ $('btnSkip').onclick  = nextStep;
 $('btnPrev').onclick  = prevStep;
 $('btnPrev').innerHTML = icon('chevL');
 $('btnExit').onclick  = exitWorkout;
+$('exitCancel').onclick = ()=> $('exitModal').classList.remove('open');
+$('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
+$('exitSave').onclick = async ()=>{
+  $('exitModal').classList.remove('open');
+  await saveSession();
+  tearDownWorkout();
+  appAlert('Место сохранено. В следующий раз сможешь продолжить отсюда.');
+};
+$('exitDrop').onclick = async ()=>{
+  $('exitModal').classList.remove('open');
+  await clearSession();
+  tearDownWorkout();
+};
 $('btnPause').onclick = ()=> setPause(!state.paused);
 $('tglTheme').onclick = ()=>{
   themeLight = !themeLight;
@@ -7348,7 +7569,9 @@ $('ueGeminiTest').onclick = async ()=>{
   if(savedUser) savedUser.geminiKey = key;
   try{
     const out = await callGemini('Ответь одним словом: работает');
-    $('ueGeminiState').textContent = '✓ Ключ работает. Ответ модели: ' + out.slice(0, 40);
+    let used = '';
+    try{ used = localStorage.getItem('geminiModel') || ''; }catch(e){}
+    $('ueGeminiState').textContent = '✓ Ключ работает' + (used ? ` (модель: ${used})` : '') + '. Ответ: ' + out.slice(0, 30);
   }catch(e){
     $('ueGeminiState').textContent = '✗ ' + (e && e.message ? e.message : 'не удалось проверить');
   }finally{
