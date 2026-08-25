@@ -4037,14 +4037,18 @@ async function callGemini(prompt, signal){
     }
     last = r;
     if(r.network) break; // сеть недоступна — другие модели не помогут
-    // 404 / «модель не найдена» — пробуем следующую; остальные ошибки повторять смысла нет
-    const modelGone = r.status === 404 || /not found|not supported|is not available/i.test(r.msg);
-    if(!modelGone) break;
+    // модели не существует, её убрали, или она сейчас перегружена — пробуем следующую из списка.
+    // 503/«high demand»/«overloaded» — это отказ КОНКРЕТНОЙ модели, а не всего сервиса,
+    // и именно это раньше обрывало попытки без перехода на запасной вариант.
+    const tryNext = r.status === 404 || r.status === 503 ||
+      /not found|not supported|is not available|overloaded|high demand|unavailable/i.test(r.msg);
+    if(!tryNext) break;
   }
   let msg = last ? last.msg : 'Неизвестная ошибка';
   if(last){
     if(last.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
     else if(last.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
+    else if(last.status === 503) msg = 'Серверы Gemini сейчас перегружены на всех доступных моделях. Обычно это проходит за пару минут — попробуй ещё раз.';
     else if(last.status === 404) msg = 'Ни одна из доступных моделей не отвечает. Возможно, Google снова обновил список моделей — напиши мне, и я поправлю.';
   }
   throw new Error(msg);
@@ -4133,6 +4137,7 @@ async function callGeminiImage(prompt, signal){
     if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью.';
     if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
     if(res.status === 403 || /billing|permission/i.test(msg)) msg = 'Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.';
+    if(res.status === 503 || /overloaded|high demand|unavailable/i.test(msg)) msg = 'Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.';
     throw new Error(msg);
   }
   const data = await res.json();
