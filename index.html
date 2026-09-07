@@ -832,6 +832,34 @@
   .weight-badge .wb-val b{font-family:'Oswald';font-weight:700;font-size:26px;color:var(--work);line-height:1}
   .weight-badge .wb-val small{font-size:12px;color:var(--muted)}
 
+  /* корректировка веса после последнего подхода: не перекрывает экран и
+     сама уезжает через несколько секунд, если не трогать */
+  .cam-free{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    width:calc(100% - 40px);max-width:480px;z-index:58;box-sizing:border-box;
+    background:rgba(18,20,28,.95);backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 14px 10px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .cam-free.hidden{display:none !important}
+  .wa-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .wa-head b{color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
+  .wa-head span{color:rgba(255,255,255,.7);font-size:13px}
+  .wa-row{display:flex;gap:8px}
+  .wa-btn{
+    flex:1;min-height:52px;border-radius:12px;cursor:pointer;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;
+    font-family:'Rubik';font-size:13.5px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;padding:6px 4px;
+  }
+  .wa-btn small{font-size:11px;color:rgba(255,255,255,.6)}
+  .wa-btn:active{background:rgba(255,255,255,.16)}
+  .wa-btn.wa-keep{background:var(--work);border-color:var(--work)}
+  .wa-track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+  .wa-fill{height:100%;width:100%;background:rgba(255,255,255,.55)}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -1215,6 +1243,19 @@
       <div class="pick-list" id="pickList"></div>
       <button class="link-btn" id="pickCancel" style="margin:0;padding:10px">Отмена</button>
     </div>
+  </div>
+
+  <div class="cam-free hidden" id="wAdjust">
+    <div class="wa-head">
+      <b id="waTitle">Как ощущался вес?</b>
+      <span id="waNow"></span>
+    </div>
+    <div class="wa-row">
+      <button type="button" class="wa-btn" id="waDown">Тяжело<small id="waDownKg"></small></button>
+      <button type="button" class="wa-btn wa-keep" id="waKeep">Так и оставить</button>
+      <button type="button" class="wa-btn" id="waUp">Легко<small id="waUpKg"></small></button>
+    </div>
+    <div class="wa-track"><div class="wa-fill" id="waFill"></div></div>
   </div>
 
   <div class="modal" id="aiRunModal">
@@ -2269,6 +2310,11 @@ function announceExercise(step, onDone){
     if(step.perSide){
       text += step.side ? `, сторона ${step.side} из ${step.sidesTotal || 2}` : ', на каждую сторону';
     }
+  }
+  // рабочий вес — часть задания, без него упражнение непонятно
+  if(step.progAxis === 'weight' && step.weight > 0){
+    const kg = fmtKg(step.weight).replace('.', ',');
+    text += `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
   }
   speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
 }
@@ -5045,6 +5091,68 @@ function blankExercise(){
           prog:'', weight:0, wStep:2};
 }
 
+/* ---- корректировка веса после последнего подхода ----
+   Спрашиваем один раз, когда упражнение полностью закончено: стало легко или тяжело.
+   Ничего не блокируем — окно само уезжает через несколько секунд, тренировка идёт дальше. */
+let waTimer = 0, waRAF = 0, waStep = null;
+
+function hideWeightAdjust(){
+  clearTimeout(waTimer); waTimer = 0;
+  cancelAnimationFrame(waRAF); waRAF = 0;
+  waStep = null;
+  setShown('wAdjust', false);
+}
+
+// это последний подход упражнения? дальше того же упражнения в тренировке уже нет
+function isLastSetOf(idx){
+  const s = state.steps[idx];
+  if(!s || s.phase !== 'work' || s.progAxis !== 'weight') return false;
+  for(let i = idx + 1; i < state.steps.length; i++){
+    const n = state.steps[i];
+    if(n.phase === 'work' && n.exName === s.exName) return false;
+  }
+  return true;
+}
+
+function showWeightAdjust(step){
+  if(!step || !(step.weight > 0)) return;
+  waStep = step;
+  const stepKg = +step.wStep || 2;
+  $('waTitle').textContent = step.exName || 'Как ощущался вес?';
+  $('waNow').textContent = `сейчас ${fmtKg(step.weight)} кг`;
+  $('waDownKg').textContent = '−' + fmtKg(stepKg) + ' кг';
+  $('waUpKg').textContent = '+' + fmtKg(stepKg) + ' кг';
+  setShown('wAdjust', true);
+
+  // полоска показывает, сколько осталось до автозакрытия
+  const total = 5000;
+  const fill = $('waFill');
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  const t0 = performance.now();
+  cancelAnimationFrame(waRAF);
+  const tick = now => {
+    const left = Math.max(0, total - (now - t0));
+    fill.style.width = (left / total * 100).toFixed(1) + '%';
+    if(left > 0) waRAF = requestAnimationFrame(tick);
+  };
+  waRAF = requestAnimationFrame(tick);
+  clearTimeout(waTimer);
+  waTimer = setTimeout(hideWeightAdjust, total);
+}
+
+// применяем выбор: меняем рабочий вес упражнения на будущее
+function applyWeightAdjust(dir){
+  if(!waStep) return;
+  const stepKg = +waStep.wStep || 2;
+  const next = Math.max(0, (+waStep.weight || 0) + dir * stepKg);
+  const name = waStep.exName;
+  state.steps.forEach(s => { if(s.exName === name && s.progAxis === 'weight') s.weight = next; });
+  if(state.raw) setExWeight(state.raw.id, {name, prog: 'weight'}, next);
+  if(dir !== 0) speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
+  hideWeightAdjust();
+}
+
 /* ---- прогрессия по упражнению ----
    Ось усложнения у разных упражнений разная: гантельные растут по весу (дискретно,
    шагами реальных гантелей), упражнения со своим весом — по повторениям,
@@ -6293,6 +6401,7 @@ function startWorkout(fromIdx, elapsed){
 }
 
 function clearStepTimer(){
+  hideWeightAdjust(); // окно правки веса не должно пережить смену шага
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -6403,7 +6512,8 @@ function renderStep(){
 
   if(step.kind === 'click'){
     setShown('stepReps', true);
-    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>`;
+    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? ` <small>× ${fmtKg(step.weight)} кг</small>` : '';
+    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>${kgTxt}`;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
     if(step.perSide){ snR.textContent = 'на каждую сторону'; setShown(snR, true); }
@@ -6457,12 +6567,16 @@ function renderStep(){
 }
 
 function nextStep(){
+  // упражнение с весом полностью закончено — предлагаем поправить вес на будущее
+  const justFinished = state.steps[state.stepIdx];
+  const askWeight = isLastSetOf(state.stepIdx);
   clearStepTimer();
   state.stepIdx++;
   if(state.stepIdx >= state.steps.length){
     finishWorkout();
   } else {
     renderStep();
+    if(askWeight) showWeightAdjust(justFinished);
   }
 }
 
@@ -7348,6 +7462,9 @@ function bumpWeight(delta){
   $('wbKg').textContent = fmtKg(next);
   if(state.raw) setExWeight(state.raw.id, {name, prog: 'weight'}, next);
 }
+$('waDown').onclick = ()=> applyWeightAdjust(-1);
+$('waUp').onclick   = ()=> applyWeightAdjust(1);
+$('waKeep').onclick = ()=> applyWeightAdjust(0);
 $('wbMinus').onclick = ()=> bumpWeight(-1);
 $('wbPlus').onclick  = ()=> bumpWeight(1);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
@@ -8361,8 +8478,8 @@ document.addEventListener('visibilitychange', ()=>{
     if(hfMode === 'clap'){ stopClap(); startClap(); }
     else if(hfMode === 'voice' && voiceWanted && !voiceActive){ startListening(); }
   }
-  // свернули приложение во время тренировки — ставим на паузу
-  if(document.visibilityState === 'hidden' && inWorkout && !state.paused) setPause(true);
+  // при сворачивании тренировку не останавливаем: таймер должен идти дальше,
+  // чтобы отдых и упражнения на время не «замирали», пока смотришь в другое приложение
 });
 
 // статичные иконки
