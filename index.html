@@ -4112,21 +4112,33 @@ async function geminiTry(model, body, signal){
     const j = await res.json();
     if(j && j.error && j.error.message) msg = j.error.message;
   }catch(e){}
-  return {ok: false, status: res.status, msg};
+  return {ok: false, status: res.status, msg, model};
 }
 
 async function callGemini(prompt, signal){
   const key = geminiKey();
   if(!key) throw new Error('Ключ Gemini не задан');
-  const body = {contents: [{parts: [{text: prompt}]}]};
+  // ответ бывает большим (программа целиком с описаниями и пиктограммами),
+  // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
+  const body = {
+    contents: [{parts: [{text: prompt}]}],
+    generationConfig: {maxOutputTokens: 32768, temperature: 1}
+  };
   let last = null;
   for(const model of geminiModelOrder()){
     const r = await geminiTry(model, body, signal);
     if(r.ok){
       try{ localStorage.setItem('geminiModel', model); }catch(e){}
-      const parts = (((r.data.candidates || [])[0] || {}).content || {}).parts || [];
+      const cand = (r.data.candidates || [])[0] || {};
+      const parts = (cand.content || {}).parts || [];
       const text = parts.map(p => p.text || '').join('').trim();
-      if(!text) throw new Error('Пустой ответ модели. Попробуй ещё раз или сформулируй запрос иначе.');
+      if(!text){
+        const why = cand.finishReason || (r.data.promptFeedback && r.data.promptFeedback.blockReason) || '';
+        throw new Error('Модель вернула пустой ответ' + (why ? ` (причина: ${why})` : '') + '. Попробуй ещё раз или сформулируй запрос иначе.');
+      }
+      if(cand.finishReason === 'MAX_TOKENS'){
+        throw new Error('Ответ не поместился в лимит модели — программа слишком большая. Попробуй дорабатывать по одному варианту или сократить описания упражнений.');
+      }
       return text;
     }
     last = r;
@@ -4139,11 +4151,18 @@ async function callGemini(prompt, signal){
     if(!tryNext) break;
   }
   let msg = last ? last.msg : 'Неизвестная ошибка';
-  if(last){
-    if(last.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
-    else if(last.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
-    else if(last.status === 503) msg = 'Серверы Gemini сейчас перегружены на всех доступных моделях. Обычно это проходит за пару минут — попробуй ещё раз.';
-    else if(last.status === 404) msg = 'Ни одна из доступных моделей не отвечает. Возможно, Google снова обновил список моделей — напиши мне, и я поправлю.';
+  if(last && !last.network){
+    // Свою формулировку добавляем, но НЕ затираем ответ сервера: без него
+    // невозможно понять настоящую причину (это ровно та ошибка, из-за которой
+    // «ни одна модель не отвечает» скрывало реальный текст от Google).
+    let hint = '';
+    if(last.status === 400 && /API key/i.test(msg)) hint = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
+    else if(last.status === 429) hint = 'Превышен лимит запросов. Подожди немного и попробуй снова.';
+    else if(last.status === 503) hint = 'Серверы Gemini перегружены на всех доступных моделях. Обычно проходит за пару минут.';
+    else if(last.status === 404) hint = 'Модель недоступна по этому запросу.';
+    else if(last.status === 413 || /too large|exceeds|token/i.test(msg)) hint = 'Запрос слишком большой для модели. Попробуй доработать программу по частям или сократить описание.';
+    msg = (hint ? hint + '\n\n' : '') +
+          `Ответ Google (модель ${last.model || '—'}, код ${last.status}):\n${last.msg}`;
   }
   throw new Error(msg);
 }
@@ -7973,6 +7992,15 @@ $('ueGeminiDiag').onclick = async ()=>{
   try{ await geminiFetch(purl, probe, undefined, false); headerOk = true; }catch(e){}
   if(simpleOk || headerOk){
     lines.push(`✓ Запросы к нейросети проходят (способ: ${simpleOk ? 'ключ в адресе' : 'заголовок'})`);
+    // 3) реальный рабочий запрос: большой промпт — именно на таких падало,
+    // хотя короткая проверка проходила
+    try{
+      const big = 'Повтори ровно одно слово: готово.\n\n' + 'Тестовый текст для проверки объёма. '.repeat(400);
+      const out = await callGemini(big);
+      lines.push('✓ Большой запрос проходит (ответ: ' + out.slice(0, 30) + ')');
+    }catch(e){
+      lines.push('✗ Большой запрос НЕ проходит, хотя короткий работает:\n   ' + (e && e.message ? e.message.slice(0, 300) : 'нет описания'));
+    }
   } else {
     lines.push('✗ POST-запросы не проходят, хотя домен отвечает.\n   Скорее всего режется предварительный запрос OPTIONS — так бывает у некоторых провайдеров и в корпоративных сетях. Помогает VPN или другая сеть.');
   }
