@@ -816,6 +816,22 @@
   .pick-item b{display:block;font-size:14px;font-weight:500}
   .pick-item small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
 
+  /* рабочий вес прямо на тренировке — можно поправить, не выходя из упражнения */
+  .weight-badge{
+    display:flex;align-items:center;justify-content:center;gap:14px;margin:10px auto 0;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:8px 10px;width:max-content;
+  }
+  .weight-badge .wb-btn{
+    width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .weight-badge .wb-btn:active{background:var(--line)}
+  .weight-badge .wb-val{display:flex;align-items:baseline;gap:4px;min-width:74px;justify-content:center}
+  .weight-badge .wb-val b{font-family:'Oswald';font-weight:700;font-size:26px;color:var(--work);line-height:1}
+  .weight-badge .wb-val small{font-size:12px;color:var(--muted)}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -1000,7 +1016,7 @@
         </div>
         <p class="cb-title">Нагрузка сегодня</p>
         <div class="load-row" id="loadRow"></div>
-        <p class="field-hint">Выбирай по самочувствию: повторения и время упражнений изменятся пропорционально, отдых останется прежним.</p>
+        <p class="field-hint">Поправка на сегодня: не выспалась — убавь, чувствуешь силы — прибавь. Меняется то, по чему упражнение усложняется: где вес — вес, где повторения — повторения. Разминку и растяжку не трогает, отдых остаётся прежним.<br>Это разовая правка на одну тренировку — рабочий вес и прогрессия от неё не меняются.</p>
         <p class="field-hint hidden" id="progHint" style="color:var(--work)"></p>
       </div>
 
@@ -1472,6 +1488,17 @@
     </div>
 
     <div class="card-block">
+      <p class="cb-title">Как усложнять со временем</p>
+      <div class="field"><div class="days chips-wrap" id="exProgAxis"></div>
+        <p class="field-hint" id="exProgHint"></p>
+      </div>
+      <div class="row2 hidden" id="exWeightRow">
+        <div class="field"><label>Начальный вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="8"></div>
+        <div class="field"><label>Шаг прибавки, кг</label><input type="text" id="exWStep" inputmode="decimal" placeholder="2"></div>
+      </div>
+    </div>
+
+    <div class="card-block">
     <button type="button" class="collapse-head" id="exDetailsToggle">
       <span>Детали</span>
       <span class="st-sum" id="exDetailsSum"></span>
@@ -1583,6 +1610,11 @@
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note hidden" id="sideNote"></div>
+        <div class="weight-badge hidden" id="stepWeight">
+          <button type="button" class="wb-btn" id="wbMinus" title="Меньше вес">−</button>
+          <div class="wb-val"><b id="wbKg">0</b><small>кг</small></div>
+          <button type="button" class="wb-btn" id="wbPlus" title="Больше вес">+</button>
+        </div>
         <div class="ready-bar hidden" id="readyBar">
           <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
           <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
@@ -2612,6 +2644,9 @@ function localISO(d){
 }
 let customPrograms = [];
 let stats = {totalSec: 0};
+// рабочие веса по упражнениям: {ключ: кг}. Живут между тренировками — без этого
+// прогрессия «+2 кг каждые две недели» невозможна в принципе.
+let progWeights = {};
 
 async function kvGet(key){
   // artifact-хранилище, если доступно; иначе localStorage
@@ -2645,6 +2680,7 @@ async function loadData(){
   if(!Array.isArray(stats.weights)) stats.weights = [];
   if(!Array.isArray(stats.history)) stats.history = [];
   if(typeof stats.count !== 'number') stats.count = 0;
+  await loadProgWeights();
 }
 
 async function switchUser(id){
@@ -2818,6 +2854,13 @@ function metricGraph(s, have){
 }
 async function savePrograms(){ await kvSet(pk('customPrograms'), JSON.stringify(customPrograms)); }
 async function saveStats(){ await kvSet(pk('stats'), JSON.stringify(stats)); }
+async function saveProgWeights(){ await kvSet(pk('progWeights'), JSON.stringify(progWeights)); }
+async function loadProgWeights(){
+  try{
+    const raw = await kvGet(pk('progWeights'));
+    progWeights = raw ? JSON.parse(raw) : {};
+  }catch(e){ progWeights = {}; }
+}
 
 function fmtLong(sec){
   const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
@@ -3061,7 +3104,12 @@ function customToProgram(p, planIdx = 0){
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
       video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
-      perSide: !!ex.perSide
+      perSide: !!ex.perSide,
+      progAxis: progAxis(ex),
+      // рабочий вес берём сохранённый (он растёт от тренировки к тренировке), иначе стартовый
+      weight: hasWeight(ex) ? getExWeight(p.id, ex) : 0,
+      wStep: +ex.wStep || 2,
+      exName: ex.name
     };
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
@@ -4429,6 +4477,11 @@ function exerciseToText(ex){
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
   L.push('ОТДЫХ: ' + (ex.rest || 0));
+  L.push('ПРОГРЕССИЯ: ' + ({reps:'повторения', weight:'вес', time:'время', none:'нет'}[progAxis(ex)] || 'повторения'));
+  if(hasWeight(ex)){
+    if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
+    L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep || 2));
+  }
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
   return L.join('\n');
 }
@@ -4466,6 +4519,9 @@ function exePrompt(){
 СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
 РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
 ОТДЫХ: секунды
+ПРОГРЕССИЯ: по чему упражнение усложняется со временем, одно слово: повторения / вес / время / нет. «вес» — если нужен снаряд (гантели, штанга, гиря); «нет» — разминка, растяжка, дыхание, техника.
+ВЕС: стартовый рабочий вес в кг — только при ПРОГРЕССИЯ: вес.
+ШАГ ВЕСА: на сколько кг прибавлять за раз — только при ПРОГРЕССИЯ: вес. Обычно 2 кг, для махов и мелких мышц 1 кг.
 ВИДЕО: ссылка на технику (или пропусти строку)
 SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
 }
@@ -4568,6 +4624,9 @@ function exaPrompt(){
 ПОДХОДЫ: разумное число подходов от 1 до 5
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после подхода
+ПРОГРЕССИЯ: по чему упражнение усложняется со временем, одно слово: повторения / вес / время / нет. «вес» — если нужен снаряд (гантели, штанга, гиря); «нет» — разминка, растяжка, дыхание, техника.
+ВЕС: стартовый рабочий вес в кг — только при ПРОГРЕССИЯ: вес.
+ШАГ ВЕСА: на сколько кг прибавлять за раз — только при ПРОГРЕССИЯ: вес. Обычно 2 кг, для махов и мелких мышц 1 кг.
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
 SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
@@ -4697,6 +4756,11 @@ function programToText(p){
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push('ОТДЫХ: ' + (ex.rest || 0));
+      L.push('ПРОГРЕССИЯ: ' + ({reps:'повторения', weight:'вес', time:'время', none:'нет'}[progAxis(ex)] || 'повторения'));
+      if(hasWeight(ex)){
+        if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
+        L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep || 2));
+      }
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -4976,7 +5040,47 @@ let draft = null;
 
 function blankExercise(){
   return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
-          rest:45, media:null, muscles:[], mistakes:''};
+          rest:45, media:null, muscles:[], mistakes:'',
+          // ось прогрессии: reps | weight | time | none. Для weight — стартовый вес и шаг в кг.
+          prog:'', weight:0, wStep:2};
+}
+
+/* ---- прогрессия по упражнению ----
+   Ось усложнения у разных упражнений разная: гантельные растут по весу (дискретно,
+   шагами реальных гантелей), упражнения со своим весом — по повторениям,
+   удержания — по времени, а разминка и техника не усложняются вовсе. */
+const PROG_AXES = [
+  {id:'reps',   label:'Повторения'},
+  {id:'weight', label:'Вес'},
+  {id:'time',   label:'Время'},
+  {id:'none',   label:'Не усложнять'}
+];
+// ось по умолчанию, если не задана явно: разминку не трогаем, время — по времени, иначе повторы
+function progAxis(ex){
+  if(!ex) return 'none';
+  if(ex.prog) return ex.prog;
+  if(ex.warmup) return 'none';
+  return ex.type === 'time' ? 'time' : 'reps';
+}
+function hasWeight(ex){ return progAxis(ex) === 'weight'; }
+// 12 кг, 12,5 кг — без хвостов вроде 12.50
+function fmtKg(kg){
+  const n = Math.round((+kg || 0) * 2) / 2;
+  return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+}
+
+// текущий рабочий вес упражнения: то, что человек поднимает сейчас (растёт от тренировки к тренировке)
+function exWeightKey(pid, name){
+  return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
+}
+function getExWeight(pid, ex){
+  if(!hasWeight(ex)) return 0;
+  const saved = progWeights[exWeightKey(pid, ex.name)];
+  return (saved != null) ? saved : (+ex.weight || 0);
+}
+function setExWeight(pid, ex, kg){
+  progWeights[exWeightKey(pid, ex.name)] = Math.max(0, Math.round(kg * 2) / 2); // до 0,5 кг
+  saveProgWeights();
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -5276,6 +5380,9 @@ function fillExercise(){
   $('exDesc').value = ex.desc || '';
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
+  $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
+  $('exWStep').value = ex.wStep ? fmtKg(ex.wStep) : '';
+  renderProgAxis();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
   syncExType();
@@ -5317,6 +5424,39 @@ function renderExMuscles(){
     box.appendChild(b);
   });
 }
+// «12,5» и «12.5» — одинаково допустимый ввод веса
+function parseKg(v){
+  const n = parseFloat(String(v || '').replace(',', '.'));
+  return isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
+}
+
+const PROG_HINTS = {
+  reps:   'Со временем растёт число повторений. Подходит упражнениям с собственным весом.',
+  weight: 'Со временем растёт вес снаряда, а повторения возвращаются к нижней границе диапазона. Вес запоминается между тренировками.',
+  time:   'Со временем растёт длительность. Подходит планкам и удержаниям.',
+  none:   'Не усложняется: разминка, техника, дыхание, растяжка. Ползунок нагрузки такие упражнения тоже не трогает.'
+};
+function renderProgAxis(){
+  const box = $('exProgAxis'); box.innerHTML = '';
+  const cur = progAxis(exDraft);
+  PROG_AXES.forEach(a => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'day-chip';
+    b.textContent = a.label;
+    b.classList.toggle('act', cur === a.id);
+    b.onclick = ()=>{
+      exDraft.prog = a.id;
+      if(a.id === 'weight' && !exDraft.wStep) exDraft.wStep = 2;
+      renderProgAxis();
+      syncExDetailsSum();
+    };
+    box.appendChild(b);
+  });
+  $('exProgHint').textContent = PROG_HINTS[cur] || '';
+  setShown('exWeightRow', cur === 'weight');
+  if(cur === 'weight' && !$('exWStep').value) $('exWStep').value = fmtKg(exDraft.wStep || 2);
+}
+
 function renderExRestChips(){
   const box = $('exRestChips'); box.innerHTML = '';
   [0, 30, 45, 60, 90].forEach(v=>{
@@ -5359,6 +5499,8 @@ function exDirty(){
   snapshot.desc = $('exDesc').value.trim();
   snapshot.mistakes = $('exMistakes').value.trim();
   snapshot.video = $('exVideo').value.trim();
+  snapshot.weight = parseKg($('exWeight').value);
+  snapshot.wStep = parseKg($('exWStep').value) || 2;
   return JSON.stringify(snapshot) !== exOrig;
 }
 
@@ -5371,6 +5513,8 @@ function commitExercise(){
   ex.desc = $('exDesc').value.trim();
   ex.mistakes = $('exMistakes').value.trim();
   ex.video = $('exVideo').value.trim();
+  ex.weight = parseKg($('exWeight').value);
+  ex.wStep = parseKg($('exWStep').value) || 2;
   return ex;
 }
 
@@ -5418,6 +5562,11 @@ function exSummary(ex){
   const val = ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`;
   const sets = Math.max(1, parseInt(ex.sets) || 1);
   bits.push(sets > 1 ? `${val} × ${sets}` : val);
+  if(hasWeight(ex)){
+    // показываем рабочий вес, если он уже набран тренировками, иначе стартовый
+    const w = draft && draft.id ? getExWeight(draft.id, ex) : (+ex.weight || 0);
+    if(w) bits.push(`${fmtKg(w)} кг`);
+  }
   if(ex.perSide) bits.push('на сторону');
   if(+ex.rest > 0) bits.push(`отдых ${ex.rest} с`);
   return bits.join(' · ');
@@ -5564,6 +5713,13 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, планка на боку, тяга одной рукой). Иначе пропусти строку.
 РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
+ПРОГРЕССИЯ: по чему это упражнение усложняется со временем. Ровно одно слово: повторения / вес / время / нет.
+  вес — если упражнение выполняется с гантелями, штангой, гирей или другим снарядом. Для него ОБЯЗАТЕЛЬНО добавь две строки ниже.
+  повторения — упражнения с собственным весом (отжимания, приседания, выпады, подтягивания).
+  время — удержания позы (планка, боковая планка, вис).
+  нет — разминка, суставная гимнастика, дыхание, растяжка, техника. Такие упражнения не усложняются вообще.
+ВЕС: стартовый рабочий вес в кг числом — ТОЛЬКО при ПРОГРЕССИЯ: вес. Бери реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
+ШАГ ВЕСА: на сколько кг прибавлять за раз — ТОЛЬКО при ПРОГРЕССИЯ: вес. Обычно 2 кг для тяг, жимов и тяжёлых движений, 1 кг для махов и мелких мышц. Гантели дискретны, поэтому шаг целый.
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -5593,6 +5749,7 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 ЗНАЧЕНИЕ: 10-12
 ПОДХОДЫ: 3
 ОТДЫХ: 45
+ПРОГРЕССИЯ: повторения
 SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
 УПРАЖНЕНИЕ: Планка на локтях
@@ -5744,6 +5901,17 @@ function parseProgramText(txt){
         break;
       }
       case 'ВИДЕО': if(cur && val) cur.video = val; break;
+      case 'ПРОГРЕССИЯ': {
+        if(!cur) break;
+        const v = val.toLowerCase();
+        if(/вес/.test(v)) cur.prog = 'weight';
+        else if(/врем/.test(v)) cur.prog = 'time';
+        else if(/повтор/.test(v)) cur.prog = 'reps';
+        else if(/нет|не усложн|no/.test(v)) cur.prog = 'none';
+        break;
+      }
+      case 'ВЕС': if(cur) cur.weight = parseKg(val); break;
+      case 'ШАГ ВЕСА': if(cur) cur.wStep = parseKg(val) || 2; break;
       case 'SVG': case 'СВГ':
         if(cur && /<svg[\s>]/i.test(val)) cur.media = {kind:'svg', data:val};
         break;
@@ -5993,12 +6161,23 @@ function buildSteps(){
   const steps = [];
   const k = (state.load || 100) / 100;
 
+  // Ползунок нагрузки и прогрессия — разные вещи и не должны спорить:
+  //   прогрессия — долгий рост (вес/повторы растут от тренировки к тренировке),
+  //   ползунок — разовая поправка на самочувствие сегодня.
+  // Поэтому ползунок применяется к ТОЙ ЖЕ оси, по которой идёт прогрессия,
+  // а упражнения с осью «не усложнять» (разминка, техника) он не трогает вовсе.
   const prep = (s, extra)=>{
     const c = {...s, ...extra};
-    // масштабируем нагрузку: повторения и время упражнений, отдых не меняется
-    if(c.phase === 'work' && k !== 1){
-      if(c.kind === 'click' && c.reps) c.reps = scaleValue(c.reps, k);
-      else if(c.seconds) c.seconds = Math.max(5, Math.round(c.seconds * k));
+    if(c.phase !== 'work' || k === 1) return c;
+    const axis = c.progAxis || 'reps';
+    if(axis === 'none') return c;                     // разминку и технику не масштабируем
+    if(axis === 'weight'){
+      // вес дискретен: округляем к половине килограмма, а не к произвольным процентам
+      if(c.weight) c.weight = Math.max(0, Math.round(c.weight * k * 2) / 2);
+    } else if(c.kind === 'click' && c.reps){
+      c.reps = scaleValue(c.reps, k);
+    } else if(c.seconds){
+      c.seconds = Math.max(5, Math.round(c.seconds * k));
     }
     return c;
   };
@@ -6216,6 +6395,11 @@ function renderStep(){
   badge.classList.toggle('on', hasVideo && hasIllo);
   cta.classList.toggle('on', hasVideo && !hasIllo);
   if(hasVideo){ badge.href = step.video; cta.href = step.video; }
+
+  // рабочий вес показываем только там, где прогрессия идёт по весу
+  const wOn = step.phase === 'work' && step.progAxis === 'weight';
+  setShown('stepWeight', wOn);
+  if(wOn) $('wbKg').textContent = fmtKg(step.weight);
 
   if(step.kind === 'click'){
     setShown('stepReps', true);
@@ -7149,6 +7333,23 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   };
 });
 $('btnResume').onclick = ()=> setPause(false);
+
+// правка рабочего веса прямо на тренировке: меняем и текущий шаг, и все следующие
+// подходы этого же упражнения, и запоминаем как новый рабочий вес
+function bumpWeight(delta){
+  const step = state.steps[state.stepIdx];
+  if(!step || step.progAxis !== 'weight') return;
+  const stepKg = +step.wStep || 2;
+  const next = Math.max(0, (+step.weight || 0) + delta * stepKg);
+  const name = step.exName;
+  state.steps.forEach((s, i) => {
+    if(i >= state.stepIdx && s.exName === name && s.progAxis === 'weight') s.weight = next;
+  });
+  $('wbKg').textContent = fmtKg(next);
+  if(state.raw) setExWeight(state.raw.id, {name, prog: 'weight'}, next);
+}
+$('wbMinus').onclick = ()=> bumpWeight(-1);
+$('wbPlus').onclick  = ()=> bumpWeight(1);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
