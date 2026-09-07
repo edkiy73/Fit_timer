@@ -1037,15 +1037,9 @@
         </div>
       </div>
 
-      <div class="card-block">
-        <div class="stack hidden" id="planBlock">
-          <p class="cb-title">Вариант тренировки</p>
-          <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
-        </div>
-        <p class="cb-title">Нагрузка сегодня</p>
-        <div class="load-row" id="loadRow"></div>
-        <p class="field-hint">Поправка на сегодня: не выспалась — убавь, чувствуешь силы — прибавь. Меняется то, по чему упражнение усложняется: где вес — вес, где повторения — повторения. Разминку и растяжку не трогает, отдых остаётся прежним.<br>Это разовая правка на одну тренировку — рабочий вес и прогрессия от неё не меняются.</p>
-        <p class="field-hint hidden" id="progHint" style="color:var(--work)"></p>
+      <div class="card-block hidden" id="planBlock">
+        <p class="cb-title">Вариант тренировки</p>
+        <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
       </div>
 
       <div class="card-block">
@@ -1435,10 +1429,9 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">Прогрессия нагрузки</p>
-    <div class="pref-row"><span>Повышать нагрузку автоматически</span><button class="switch" id="bProgOn"></button></div>
+    <p class="cb-title">Автоматическая прибавка веса</p>
+    <div class="pref-row"><span>Повышать вес сама<small>только упражнения с осью «вес»</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
-      <div class="load-row" id="bProgStep"></div>
       <div class="field">
         <label>Как часто повышать</label>
         <select id="bProgEvery">
@@ -1447,7 +1440,7 @@
           <option value="30">каждый месяц</option>
         </select>
       </div>
-      <p class="field-hint">Рекомендуемая нагрузка на старте будет расти сама — программа усложняется вместе с тобой.</p>
+      <p class="field-hint">Рабочий вес будет расти сам — на шаг, заданный у каждого упражнения (обычно 2 кг, для махов 1 кг). Повторения и время не трогаются: их ты ведёшь сама, ориентируясь на диапазон. Вес всегда можно поправить прямо на тренировке.</p>
     </div>
     </div>
 
@@ -1705,15 +1698,6 @@
         <label>Заметка о тренировке</label>
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
       </div>
-    </div>
-    <div class="fb-block hidden" id="fbBlock">
-      <span class="mini-label">Как тебе нагрузка?</span>
-      <div class="fb-options">
-        <button data-fb="ok" id="fbOk">Мне подходит — оставить как есть</button>
-        <button data-fb="hard" id="fbHard">Тяжеловато — в следующий раз полегче</button>
-        <button data-fb="easy" id="fbEasy">Слишком легко — в следующий раз побольше</button>
-      </div>
-      <p class="field-hint" id="fbHint"></p>
     </div>
     <div class="actions">
       <button class="btn-ghost btn-share-res" id="btnShareResult"></button>
@@ -2523,7 +2507,6 @@ function show(id, push = true){
 }
 
 /* ================= ЭКРАН 2: СТАРТ ================= */
-const LOADS = [40, 70, 100, 130, 160];
 
 function openStart(raw){
   applyProgressionAll();
@@ -2531,18 +2514,12 @@ function openStart(raw){
   state.raw = raw;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans, raw);
-  state.load = (raw.load && raw.load >= 40 && raw.load <= 200) ? raw.load : 100;
+  state.load = 100; // множителя нагрузки больше нет — оставлено для расчёта калорий
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
   renderStartInfo();
-  renderLoadRow();
   syncPrefs();
-  const ph = $('progHint');
-  if(raw.progression){
-    ph.textContent = `Прогрессия включена: +${raw.progStep || 30}% каждые ${raw.progression} дн.`;
-    setShown(ph, true);
-  } else setShown(ph, false);
   setShown('voicePrefRow', true);
   populateVoices();
   show('scrStart');
@@ -2650,21 +2627,6 @@ function renderStartInfo(){
     $('startRounds').textContent = setsTotal;
   }
   $('startExCount').textContent = pl.exercises.length;
-}
-
-function renderLoadRow(){
-  const row = $('loadRow'); row.innerHTML='';
-  // базовая шкала + текущее значение прогрессии, если оно вне сетки
-  const vals = LOADS.includes(state.load) ? LOADS.slice() : [...LOADS, state.load].sort((a,b)=>a-b);
-  vals.forEach(l=>{
-    const b = document.createElement('button');
-    b.className = 'load-chip';
-    b.textContent = l + '%';
-    b.classList.toggle('act', state.load === l);
-    if(!LOADS.includes(l)) b.classList.add('prog');
-    b.onclick = ()=>{ state.load = l; renderLoadRow(); };
-    row.appendChild(b);
-  });
 }
 
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
@@ -3823,9 +3785,12 @@ async function finishOnboardingCreate(){
 }
 
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
-// раз в progression дней рекомендация растёт на ступень шкалы (это и есть +30%)
+// Раз в progression дней рабочие веса растут на свой шаг.
+// Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
+// гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
+// включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
 function applyProgressionAll(){
-  let changed = false;
+  let changed = false, weightsChanged = false;
   const today = new Date(); today.setHours(0,0,0,0);
   customPrograms.forEach(p => {
     if(!p.progression) return;
@@ -3834,15 +3799,21 @@ function applyProgressionAll(){
     const days = Math.floor((today - last) / 86400000);
     const steps = Math.floor(days / p.progression);
     if(steps <= 0) return;
-    // повышаем ровно на progStep% за каждый период, потолок 200%
-    const stepPct = p.progStep || 30;
-    const cur = p.load || 100;
-    const nload = Math.min(200, cur + stepPct * steps);
-    if(nload !== cur){ p.load = nload; changed = true; }
+
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      if(progAxis(ex) !== 'weight') return;           // повторы и время человек ведёт сам
+      const cur = getExWeight(p.id, ex);
+      if(!cur) return;                                 // вес ещё не задан — повышать нечего
+      const add = (+ex.wStep || 2) * steps;
+      progWeights[exWeightKey(p.id, ex.name)] = Math.max(0, Math.round((cur + add) * 2) / 2);
+      weightsChanged = true;
+    }));
+
     const ndate = new Date(last); ndate.setDate(last.getDate() + steps * p.progression);
     p.progLast = localISO(ndate);
     changed = true;
   });
+  if(weightsChanged) saveProgWeights();
   if(changed) savePrograms();
 }
 
@@ -4811,7 +4782,7 @@ function programToText(p){
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
     const per = p.progression === 7 ? 'неделя' : (p.progression === 14 ? 'две недели' : 'месяц');
-    L.push(`ПРОГРЕССИЯ: ${per}, +${p.progStep || 30}%`);
+    L.push(`ПРОГРЕССИЯ: ${per} — автоматическая прибавка рабочего веса`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
@@ -5281,17 +5252,6 @@ function openBuilder(id=null){
 
 function curPlan(){ return draft.plans[planIdx]; }
 
-function renderProgStep(){
-  const row = $('bProgStep'); row.innerHTML = '';
-  [10, 20, 30].forEach(s => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'load-chip';
-    b.textContent = '+' + s + '%';
-    b.classList.toggle('act', (draft.progStep || 30) === s);
-    b.onclick = ()=>{ draft.progStep = s; renderProgStep(); };
-    row.appendChild(b);
-  });
-}
 function syncRotateUI(){
   const many = (draft.plans || []).length > 1;
   const rot = !!draft.rotate && many;
@@ -5372,9 +5332,7 @@ function fillBuilder(title){
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
   setShown('bProgOpts', pOn);
-  draft.progStep = draft.progStep || 30;
   $('bProgEvery').value = String(draft.progression || 7);
-  renderProgStep();
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -5826,7 +5784,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ПРОГРАММА: название программы
 ОПИСАНИЕ ПРОГРАММЫ: связный текст до 1000 символов В ОДНУ СТРОКУ (без переносов) — для кого эта программа, какого результата ждать и в какие сроки, как часто заниматься, на что обращать внимание при выполнении, когда стоит снизить нагрузку. Пиши обращаясь на «ты», по делу и без воды. Это единственное место, где можно объяснить логику всей тренировки целиком — используй его.
 ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
-ПРОГРЕССИЯ: нет / неделя / две недели — как быстро повышать рекомендуемую нагрузку по мере привыкания (или пропусти строку)
+ПРОГРЕССИЯ: нет / неделя / две недели — как часто автоматически прибавлять рабочий вес в упражнениях с осью «вес» (или пропусти строку)
 ЧЕРЕДОВАНИЕ: да / нет — если вариантов несколько и они должны идти по очереди (A, потом B, потом снова A) независимо от дней недели. Для силовых сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки жёстко привязаны к дням недели — «нет» и укажи ДЕНЬ у каждого варианта.
 ДНИ ТРЕНИРОВОК: дни недели через запятую (Пн, Ср, Пт) — общее расписание программы. Указывай ТОЛЬКО при ЧЕРЕДОВАНИЕ: да: эти дни говорят, когда тренироваться, а какой именно вариант выпадет — решает очередь.
 
@@ -5861,15 +5819,15 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
   повторения — упражнения с собственным весом (отжимания, приседания, выпады, подтягивания).
   время — удержания позы (планка, боковая планка, вис).
   нет — разминка, суставная гимнастика, дыхание, растяжка, техника. Такие упражнения не усложняются вообще.
-ВЕС: стартовый рабочий вес в кг числом — ТОЛЬКО при ПРОГРЕССИЯ: вес. Бери реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
-ШАГ ВЕСА: на сколько кг прибавлять за раз — ТОЛЬКО при ПРОГРЕССИЯ: вес. Обычно 2 кг для тяг, жимов и тяжёлых движений, 1 кг для махов и мелких мышц. Гантели дискретны, поэтому шаг целый.
+ВЕС: стартовый рабочий вес в кг числом — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Бери реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
+ШАГ ВЕСА: на сколько кг прибавлять за раз — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Обычно 2 кг для тяг, жимов и тяжёлых движений, 1 кг для махов и мелких мышц. Гантели дискретны, поэтому шаг целый.
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
 === ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
 
 ПРОГРАММА: Неделя тонуса
-ОПИСАНИЕ ПРОГРАММЫ: Программа для тех, кто начинает с нуля и хочет мягко втянуться в регулярные тренировки. Первые две недели тело привыкает к нагрузке — не гонись за скоростью, следи за техникой. Заниматься лучше через день, чтобы мышцы успевали восстанавливаться. Если после тренировки болят суставы, а не мышцы — снизь нагрузку на экране старта. Через месяц станет заметно легче держать планку и приседать глубже.
+ОПИСАНИЕ ПРОГРАММЫ: Программа для тех, кто начинает с нуля и хочет мягко втянуться в регулярные тренировки. Первые две недели тело привыкает к нагрузке — не гонись за скоростью, следи за техникой. Заниматься лучше через день, чтобы мышцы успевали восстанавливаться. Если после тренировки болят суставы, а не мышцы — убавь вес прямо на тренировке кнопкой «минус». Через месяц станет заметно легче держать планку и приседать глубже.
 ВРЕМЯ: 07:30
 
 ДЕНЬ: Пн, Чт
@@ -6256,8 +6214,7 @@ async function saveProgram(){
   else if(!Array.isArray(draft.days)) draft.days = [];
   if($('bProgOn').classList.contains('on')){
     draft.progression = parseInt($('bProgEvery').value) || 7;
-    draft.progStep = draft.progStep || 30;
-    if(!draft.progLast) draft.progLast = localISO(new Date());
+      if(!draft.progLast) draft.progLast = localISO(new Date());
   } else {
     draft.progression = 0;
     delete draft.progLast;
@@ -6315,28 +6272,12 @@ function buildSteps(){
   const warmup = cur.warmup || [];
   const R = cur.rounds;
   const steps = [];
-  const k = (state.load || 100) / 100;
 
-  // Ползунок нагрузки и прогрессия — разные вещи и не должны спорить:
-  //   прогрессия — долгий рост (вес/повторы растут от тренировки к тренировке),
-  //   ползунок — разовая поправка на самочувствие сегодня.
-  // Поэтому ползунок применяется к ТОЙ ЖЕ оси, по которой идёт прогрессия,
-  // а упражнения с осью «не усложнять» (разминка, техника) он не трогает вовсе.
-  const prep = (s, extra)=>{
-    const c = {...s, ...extra};
-    if(c.phase !== 'work' || k === 1) return c;
-    const axis = c.progAxis || 'reps';
-    if(axis === 'none') return c;                     // разминку и технику не масштабируем
-    if(axis === 'weight'){
-      // вес дискретен: округляем к половине килограмма, а не к произвольным процентам
-      if(c.weight) c.weight = Math.max(0, Math.round(c.weight * k * 2) / 2);
-    } else if(c.kind === 'click' && c.reps){
-      c.reps = scaleValue(c.reps, k);
-    } else if(c.seconds){
-      c.seconds = Math.max(5, Math.round(c.seconds * k));
-    }
-    return c;
-  };
+  // Глобального множителя нагрузки больше нет: он умножал вес, а исправленный вес
+  // сохранялся как новый рабочий — множитель просачивался в базу и накапливался
+  // (10 кг превращались в 29 кг за три тренировки). Единственный механизм роста —
+  // прогрессия по каждому упражнению: вес растёт шагами, повторы и время — по своим осям.
+  const prep = (s, extra)=> ({...s, ...extra});
 
   // разминка — один раз перед основной частью
   warmup.forEach(s => steps.push(prep(s, {round: 0})));
@@ -6416,7 +6357,7 @@ function startWorkout(fromIdx, elapsed){
   startHandsFree();
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
-  $('prepTitle').textContent = state.current.title + (state.load !== 100 ? ` · нагрузка ${state.load}%` : '');
+  $('prepTitle').textContent = state.current.title;
   let n = Math.max(0, prepSec);
   if(n === 0){
     ov.classList.remove('on');
@@ -6776,8 +6717,6 @@ function finishWorkout(){
   $('finalTime').textContent = `${m}:${String(s).padStart(2,'0')}`;
   fanfare();
   // оценка нагрузки: по умолчанию «мне подходит»
-  state.usedLoad = state.load || 100;
-  setShown('fbBlock', (state.current && state.current.sourceId));
   if(state.current && state.current.sourceId) applyFeedback('ok');
   show('scrFinish');
 }
@@ -6856,7 +6795,6 @@ async function shareResult(){
   if(state.lastKcal) chips.push(`🔥 ≈${state.lastKcal} ккал`);
   if(streak > 1) chips.push(`⚡ ${streak} ${plural(streak, 'день', 'дня', 'дней')} подряд`);
   chips.push(`💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`);
-  if(state.usedLoad && state.usedLoad !== 100) chips.push(`нагрузка ${state.usedLoad}%`);
   x.font = '500 36px Rubik';
   const pad = 34, gap = 20, ch = 84, maxW = W - 80;
   const widths = chips.map(t => Math.min(maxW, x.measureText(t).width + pad * 2));
@@ -6956,24 +6894,6 @@ function renderBadges(){
     $('finStreak').textContent = si.n + (si.freezes ? ' ❄' : '');
     setShown('finStreakBox', true);
   } else setShown('finStreakBox', false);
-}
-
-// сохраняем рекомендацию нагрузки на следующий раз
-function applyFeedback(kind){
-  const pid = state.current && state.current.sourceId;
-  const p = customPrograms.find(x => x.id === pid);
-  if(!p) return;
-  const idx = Math.max(0, LOADS.indexOf(state.usedLoad));
-  let ni = idx;
-  if(kind === 'hard') ni = Math.max(0, idx - 1);
-  if(kind === 'easy') ni = Math.min(LOADS.length - 1, idx + 1);
-  p.load = LOADS[ni];
-  savePrograms();
-  ['fbOk','fbHard','fbEasy'].forEach(id => $(id).classList.remove('act'));
-  $(kind === 'hard' ? 'fbHard' : kind === 'easy' ? 'fbEasy' : 'fbOk').classList.add('act');
-  $('fbHint').textContent = p.load === state.usedLoad
-    ? `Оставим нагрузку ${p.load}%.`
-    : `В следующий раз предложим нагрузку ${p.load}%.`;
 }
 
 // спрашиваем, сохранить ли место, и уходим согласно выбору
@@ -7646,9 +7566,6 @@ $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('impo
 $('importCancel').onclick = ()=> $('importModal').classList.remove('open');
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
-$('fbOk').onclick   = ()=> applyFeedback('ok');
-$('fbHard').onclick = ()=> applyFeedback('hard');
-$('fbEasy').onclick = ()=> applyFeedback('easy');
 $('btnDelPlan').onclick = async ()=>{
   if(draft.plans.length <= 1) return;
   if(!(await appConfirm('Удалить этот вариант вместе с его упражнениями?'))) return;
@@ -8502,7 +8419,7 @@ function syncSettingsSum(){
   const daysU = programDaysUnion(draft);
   if(daysU.length) bits.push(daysU.join('·'));
   if(plans.length > 1) bits.push(`${plans.length} варианта`);
-  if(draft.progression) bits.push(`+${draft.progStep || 30}%`);
+  if(draft.progression) bits.push('автоприбавка веса');
   $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'время, дни, круги, прогрессия';
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
