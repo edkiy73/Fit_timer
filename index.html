@@ -16,6 +16,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* Шрифты грузятся с Google Fonts. Если сеть недоступна (офлайн, PWA без интернета,
+       заблокированный домен), браузер обязан взять системный ГРОТЕСК, а не сваливаться
+       в шрифт с засечками по умолчанию — поэтому fallback-стек задан один раз здесь
+       и подставляется переменной везде, где раньше стояло голое имя шрифта. */
+    --font-display:'Oswald','Arial Narrow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --font-text:'Rubik',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
     --bg:#10141C;
     --bg-rest:#0D2426;
     --card:#1A2130;
@@ -33,7 +39,7 @@
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
   html,body{height:100%}
   body{
-    font-family:'Rubik',system-ui,sans-serif;
+    font-family:var(--font-text);
     background:var(--bg);
     color:var(--ink);
     transition:background .6s ease;
@@ -57,16 +63,16 @@
     flex:1;display:flex;flex-direction:column;
     padding:20px 20px calc(20px + env(safe-area-inset-bottom));
   }
-  h1,h2,h3,.disp{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em}
+  h1,h2,h3,.disp{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em}
 
   /* ---------- top bar ---------- */
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;position:relative;z-index:50}
-  .topbar .brand{font-family:'Oswald',sans-serif;font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .topbar .brand{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .topbar .brand b{color:var(--work)}
   body.phase-rest .topbar .brand b{color:var(--rest)}
-  .global-clock{font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:.08em;color:var(--muted);font-variant-numeric:tabular-nums;display:none}
+  .global-clock{font-family:var(--font-display);font-size:15px;letter-spacing:.08em;color:var(--muted);font-variant-numeric:tabular-nums;display:none}
   .global-clock.on{display:block}
-  .btn-exit{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;height:34px;padding:0 12px;font-family:'Rubik';font-size:13px;cursor:pointer;display:none;align-items:center}
+  .btn-exit{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;height:34px;padding:0 12px;font-family:var(--font-text);font-size:13px;cursor:pointer;display:none;align-items:center}
   .btn-exit.on{display:flex}
   .top-tools .icon-btn{width:34px;height:34px;border-radius:10px;padding:0;line-height:1;display:none;align-items:center;justify-content:center}
   .top-tools .icon-btn.on{display:flex}
@@ -98,12 +104,12 @@
   }
   body.paused .pause-overlay{display:flex}
   .pause-overlay .po-text{
-    color:#fff;font-family:'Oswald';font-weight:600;letter-spacing:.06em;
+    color:#fff;font-family:var(--font-display);font-weight:600;letter-spacing:.06em;
     font-size:13.5px;text-transform:uppercase;
   }
   .pause-overlay .po-sub{
     display:block;color:rgba(255,255,255,.8);font-size:12px;margin-top:2px;
-    font-family:'Rubik';font-weight:400;text-transform:none;letter-spacing:0;line-height:1.4;
+    font-family:var(--font-text);font-weight:400;text-transform:none;letter-spacing:0;line-height:1.4;
   }
   .btn-resume{
     flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
@@ -118,7 +124,7 @@
 
   /* ---------- menu ---------- */
   .hero{margin:22px 0 18px}
-  .hero .eyebrow{color:var(--muted);font-size:13px;letter-spacing:.2em;text-transform:uppercase;font-family:'Oswald'}
+  .hero .eyebrow{color:var(--muted);font-size:13px;letter-spacing:.2em;text-transform:uppercase;font-family:var(--font-display)}
   .hero h1{font-size:clamp(34px,9vw,46px);line-height:1.02;font-weight:700;margin-top:8px}
   .hero h1 span{color:var(--work)}
   .hero p{color:var(--muted);margin-top:10px;font-size:15px;line-height:1.45}
@@ -137,7 +143,7 @@
   .mc-cover img{width:100%;height:100%;object-fit:cover;display:block}
   .mc-cover svg{width:36px;height:36px}
   .mc-body{flex:1;min-width:0}
-  .month-card .num{font-family:'Oswald';font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--work)}
+  .month-card .num{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--work)}
   .month-card h3{
     font-size:13.6px;line-height:1.22;margin:0 0 5px;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -146,7 +152,7 @@
   .month-card .sched{color:var(--work);font-size:12px;margin-top:5px;font-weight:500}
 
   /* ---------- мои программы ---------- */
-  .section-title{font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px}
   .mine-card{position:relative;margin-bottom:12px}
   .mine-card .month-card{margin-bottom:0;padding-right:66px}
   .more-btn{
@@ -164,7 +170,7 @@
   .ctx-menu button{
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
     padding:13px 16px;background:none;border:none;color:var(--ink);
-    font-family:'Rubik';font-size:14px;cursor:pointer;
+    font-family:var(--font-text);font-size:14px;cursor:pointer;
   }
   .ctx-menu button + button{border-top:1px solid var(--line)}
   .ctx-menu button:active{background:var(--line)}
@@ -173,7 +179,7 @@
   .icon-btn:active{transform:scale(.95)}
   .btn-ghost{
     width:100%;min-height:52px;border:1px dashed var(--line);background:none;color:var(--muted);
-    border-radius:14px;padding:0 16px;font-family:'Rubik';font-size:14.5px;cursor:pointer;
+    border-radius:14px;padding:0 16px;font-family:var(--font-text);font-size:14.5px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
   }
   .btn-ghost:active{transform:scale(.985)}
@@ -183,12 +189,12 @@
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px 16px;margin-bottom:20px;
   }
-  .ts-label{display:block;font-family:'Oswald';font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-  #totalTime{font-family:'Oswald';font-weight:700;font-size:24px;letter-spacing:.02em}
+  .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  #totalTime{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:.02em}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
   .stat-line b{color:var(--ink)}
-  .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:'Rubik';font-size:13px;cursor:pointer}
+  .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:var(--font-text);font-size:13px;cursor:pointer}
 
   /* ---------- конструктор ---------- */
   .builder h2{font-size:21px;margin:18px 0 16px}
@@ -197,7 +203,7 @@
      Между полями расстояние задаёт контейнер (карточка через gap). */
   .field{display:flex;flex-direction:column;gap:6px;margin:0 0 16px}
   .field > *{margin:0}
-  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted)}
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-display);color:var(--muted)}
 
   /* все элементы управления выглядят одинаково */
   .field input,.field textarea,.field select,
@@ -205,7 +211,7 @@
   textarea,select{
     width:100%;box-sizing:border-box;
     background-color:var(--bg);border:1px solid var(--line);border-radius:12px;
-    color:var(--ink);font-family:'Rubik';font-size:15px;
+    color:var(--ink);font-family:var(--font-text);font-size:15px;
     padding:13px 14px;min-height:48px;text-align:left;
   }
   textarea{min-height:90px;line-height:1.5;resize:vertical}
@@ -221,7 +227,7 @@
     background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
     padding-right:38px;
   }
-  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:'Oswald';color:var(--muted);margin:0 0 6px}
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-display);color:var(--muted);margin:0 0 6px}
   .field textarea{resize:vertical;min-height:64px}
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--work)}
   .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
@@ -230,19 +236,19 @@
   .row2 .field{flex:1;min-width:0}
   .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .ex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .ex-head .t{font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--work)}
-  .ex-head button{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:'Rubik'}
+  .ex-head .t{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--work)}
+  .ex-head button{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text)}
   .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:'Rubik';font-size:14px;cursor:pointer}
+  .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
   .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
   .seg button.act{background:var(--work);color:#fff}
   .media-row{display:flex;gap:8px}
-  .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:'Rubik';cursor:pointer}
+  .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
   .media-row button.act{border-color:var(--work);color:var(--ink)}
   .days{display:flex;gap:6px;flex-wrap:wrap}
   .day-chip{
     flex:1;min-width:40px;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
-    color:var(--muted);padding:0 8px;min-height:36px;font-size:13.5px;font-family:'Rubik';cursor:pointer;
+    color:var(--muted);padding:0 8px;min-height:36px;font-size:13.5px;font-family:var(--font-text);cursor:pointer;
     display:flex;align-items:center;justify-content:center;text-align:center;
   }
   .day-chip.act{background:var(--work);border-color:var(--work);color:#fff}
@@ -261,7 +267,7 @@
   .slot-row .sl-body b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .slot-row .sl-body small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
   .slot-row .sl-body small.has{color:var(--rest)}
-  .slot-group{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+  .slot-group{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
   /* поле растёт под текст; когда упирается в предел высоты — скроллится внутри себя,
      поэтому overflow задаётся из autoGrow(), а не жёстко здесь */
   textarea.auto-grow{resize:none;min-height:90px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
@@ -270,7 +276,7 @@
   .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
     display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
   .prog-desc.open p,.open .prog-desc p{-webkit-line-clamp:unset;display:block}
-  .pd-more{background:none;border:none;color:var(--work);font-family:'Rubik';font-size:13px;padding:8px 0 0;cursor:pointer}
+  .pd-more{background:none;border:none;color:var(--work);font-family:var(--font-text);font-size:13px;padding:8px 0 0;cursor:pointer}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .builder-actions{margin-top:10px;padding-bottom:8px}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
@@ -279,7 +285,7 @@
 
   /* ---------- start screen ---------- */
   .start-wrap{flex:1;display:flex;flex-direction:column;justify-content:center}
-  .start-wrap .num{font-family:'Oswald';font-weight:700;letter-spacing:.18em;color:var(--work);font-size:14px}
+  .start-wrap .num{font-family:var(--font-display);font-weight:700;letter-spacing:.18em;color:var(--work);font-size:14px}
   .start-wrap h2{font-size:clamp(30px,8vw,40px);margin:8px 0 14px;line-height:1.05}
   .start-wrap .desc{color:var(--muted);font-size:15px;line-height:1.55}
   .start-meta{display:flex;gap:10px;margin:22px 0}
@@ -289,28 +295,28 @@
   .btn-primary{
     width:100%;min-height:52px;border:none;cursor:pointer;border-radius:14px;
     background:var(--work);color:#fff;
-    font-family:'Oswald';font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
+    font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;gap:8px;
     transition:transform .12s ease, opacity .15s ease;
   }
   .btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
-  .btn-back{background:none;border:none;color:var(--muted);font-size:14px;padding:14px;cursor:pointer;width:100%;font-family:'Rubik'}
+  .btn-back{background:none;border:none;color:var(--muted);font-size:14px;padding:14px;cursor:pointer;width:100%;font-family:var(--font-text)}
 
   /* ---------- workout ---------- */
   .progress{margin:14px 0 6px}
-  .progress .labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:'Oswald';margin-bottom:8px}
+  .progress .labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:var(--font-display);margin-bottom:8px}
   .progress .bar{height:4px;background:var(--line);border-radius:99px;overflow:hidden}
   .progress .fill{height:100%;width:0;background:var(--work);border-radius:99px;transition:width .4s ease}
   body.phase-rest .progress .fill{background:var(--rest)}
 
   .stage{flex:1;display:flex;flex-direction:column;justify-content:flex-start;text-align:center;padding:8px 0;min-height:0}
-  .phase-tag{font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--work)}
+  .phase-tag{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--work)}
   body.phase-rest .phase-tag{color:var(--rest)}
   /* «можно усложнить» — упражнение доросло до своего потолка, есть вариант посложнее */
   .swap-badge{
     display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:6px 12px;
     border:1px dashed var(--work);border-radius:999px;background:none;color:var(--work);
-    font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+    font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
   }
   .swap-badge:active{background:var(--work);color:#fff}
   .swap-badge svg{width:15px;height:15px;display:block}
@@ -320,7 +326,7 @@
   .swap-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;white-space:pre-line}
   .stage-head{flex:none}
   .stage h2{font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:6px 0 2px;min-height:1.1em}
-  .reps{font-family:'Oswald';font-weight:700;font-size:clamp(38px,11vw,56px);color:var(--work);line-height:1;margin:6px 0 2px;min-height:.9em}
+  .reps{font-family:var(--font-display);font-weight:700;font-size:clamp(38px,11vw,56px);color:var(--work);line-height:1;margin:6px 0 2px;min-height:.9em}
   .reps small{font-size:.38em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
   body.phase-rest .reps{color:var(--rest)}
 
@@ -328,7 +334,7 @@
   .side-note b{color:var(--work);font-weight:600}
   body.phase-rest .side-note b{color:var(--rest)}
   .ready-bar{max-width:320px;margin:6px auto 0}
-  .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:'Oswald';margin-bottom:8px}
+  .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-display);margin-bottom:8px}
   .rb-label b{color:var(--work);font-size:16px}
   body.phase-rest .rb-label b{color:var(--rest)}
   .rb-track{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
@@ -385,7 +391,7 @@
   .ai-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .ai-links button{
     flex:1;min-width:100px;padding:11px 10px;border-radius:12px;border:1px solid var(--line);
-    background:var(--card);color:var(--ink);font-family:'Rubik';font-size:13.5px;cursor:pointer;
+    background:var(--card);color:var(--ink);font-family:var(--font-text);font-size:13.5px;cursor:pointer;
   }
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
@@ -404,7 +410,7 @@
     background:rgba(57,216,200,.07);border:1px solid rgba(57,216,200,.3);
     border-radius:16px;padding:12px 14px;
   }
-  .next-up .nu-label{font-family:'Oswald';font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--rest);margin-bottom:8px}
+  .next-up .nu-label{font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--rest);margin-bottom:8px}
   .nu-row{display:flex;gap:12px;align-items:center}
   .nu-media{
     flex:none;width:56px;height:56px;border-radius:12px;overflow:hidden;
@@ -415,12 +421,12 @@
   .nu-media img{width:100%;height:100%;object-fit:cover;display:block}
   .nu-media svg{width:85%;height:85%}
   .nu-body{flex:1;min-width:0}
-  .nu-body h4{font-family:'Oswald';font-weight:600;font-size:15px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 3px;line-height:1.2}
+  .nu-body h4{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 3px;line-height:1.2}
   .nu-body p{
     color:var(--muted);font-size:12.5px;line-height:1.35;margin:0;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
   }
-  .nu-val{margin-top:5px;font-family:'Oswald';font-weight:600;font-size:13px;color:var(--rest);letter-spacing:.06em}
+  .nu-val{margin-top:5px;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--rest);letter-spacing:.06em}
   /* на отдыхе превью следующего упражнения растягивается на всё свободное место */
   body.phase-rest .details{flex:0 0 auto}
   /* растём по содержимому, но не выше доступного места */
@@ -431,7 +437,7 @@
   body.phase-rest .next-up .nu-val{flex:none;margin-top:0}
 
   .count{
-    font-family:'Oswald';font-weight:700;font-size:clamp(56px,17vw,88px) !important;
+    font-family:var(--font-display);font-weight:700;font-size:clamp(56px,17vw,88px) !important;
     font-size:clamp(84px,30vw,150px);line-height:1;
     font-variant-numeric:tabular-nums;letter-spacing:.02em;
     margin:8px 0;color:var(--ink);
@@ -451,7 +457,7 @@
   .btn-done{
     width:100%;min-height:52px;border:none;cursor:pointer;border-radius:14px;
     background:var(--work);color:#fff;
-    font-family:'Oswald';font-weight:600;font-size:18px;letter-spacing:.1em;text-transform:uppercase;
+    font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:.1em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;
     transition:transform .12s ease;
   }
@@ -459,7 +465,7 @@
   .btn-skip{
     width:100%;min-height:52px;background:none;color:var(--muted);
     border:2px solid var(--line);border-radius:14px;
-    font-family:'Oswald';font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
+    font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.09em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
   .btn-skip:active{background:rgba(127,127,127,.08)}
@@ -476,14 +482,14 @@
     flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;
     padding:16px 18px;display:flex;flex-direction:column;justify-content:center;
   }
-  .rc-time{font-family:'Oswald';font-weight:700;font-size:46px;line-height:1;color:var(--work)}
+  .rc-time{font-family:var(--font-display);font-weight:700;font-size:46px;line-height:1;color:var(--work)}
   .rc-sub{color:var(--muted);font-size:13px;margin-top:4px}
   .rc-stats{display:flex;flex-direction:column;gap:10px}
   .rc-stat{
     background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:10px 16px;min-width:96px;display:flex;flex-direction:column;justify-content:center;flex:1;
   }
-  .rc-stat b{font-family:'Oswald';font-weight:700;font-size:22px;color:var(--ink);line-height:1}
+  .rc-stat b{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--ink);line-height:1}
   .rc-stat small{color:var(--muted);font-size:12px;margin-top:3px}
   .finish .time small{display:block;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.2em;margin-top:8px}
 
@@ -509,10 +515,10 @@
   .icon-btn.btn-theme.on{display:block}
 
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
-  .mini-label{display:block;font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-block{margin:2px 0 14px}
   .load-row{display:flex;gap:6px}
-  .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
+  .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--work);color:#fff}
   .load-chip.prog{border-style:dashed}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -528,18 +534,18 @@
   /* ---------- отсчёт перед стартом ---------- */
   .prep{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);text-align:center;padding:20px}
   .prep.on{display:flex}
-  .prep-title{font-family:'Oswald';font-weight:600;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);max-width:86%}
-  .prep-num{font-family:'Oswald';font-weight:700;font-size:clamp(90px,32vw,150px);color:var(--work);line-height:1.05;margin:8px 0}
+  .prep-title{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);max-width:86%}
+  .prep-num{font-family:var(--font-display);font-weight:700;font-size:clamp(90px,32vw,150px);color:var(--work);line-height:1.05;margin:8px 0}
   body.prep-on{overflow:hidden}
   body.prep-on .screen{overflow:hidden}
-  .prep-sub{color:var(--muted);letter-spacing:.22em;text-transform:uppercase;font-family:'Oswald';font-size:13px}
+  .prep-sub{color:var(--muted);letter-spacing:.22em;text-transform:uppercase;font-family:var(--font-display);font-size:13px}
 
   /* ---------- трекер веса ---------- */
   .weight-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:20px}
   .mc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .mc-now{display:flex;align-items:baseline;gap:8px;margin-top:4px}
-  .mc-now b{font-family:'Oswald';font-weight:700;font-size:34px;line-height:1;color:var(--ink)}
+  .mc-now b{font-family:var(--font-display);font-weight:700;font-size:34px;line-height:1;color:var(--ink)}
   .mc-now .w-delta{font-size:14px;font-weight:500}
   .add-btn{flex:none;width:44px;height:44px;border-radius:14px;border:none;background:var(--work);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .add-btn svg{width:20px;height:20px}
@@ -552,35 +558,35 @@
   .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
   .mg-name{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);font-weight:500}
   .mg-name i{width:10px;height:10px;border-radius:3px;display:inline-block}
-  .mg-delta{font-size:13px;font-weight:600;font-family:'Oswald'}
+  .mg-delta{font-size:13px;font-weight:600;font-family:var(--font-display)}
   .mg-delta.down{color:var(--rest)}
   .mg-delta.up{color:var(--work)}
   .mg-delta.flat{color:var(--muted)}
-  .metric-graph svg{width:100%;height:auto;display:block;font-family:'Oswald'}
+  .metric-graph svg{width:100%;height:auto;display:block;font-family:var(--font-display)}
   .mc-actions{display:flex;gap:10px;margin-top:16px}
-  .mc-act{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Rubik';font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+  .mc-act{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
   .mc-act svg{width:16px;height:16px;color:var(--muted)}
   .wc-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  #weightNow{font-family:'Oswald';font-weight:700;font-size:24px;letter-spacing:.02em}
+  #weightNow{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:.02em}
   .w-delta{font-size:13px;color:var(--muted);margin-left:8px}
   .w-add{display:none;gap:8px;margin-top:12px}
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0}
-  .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
+  .btn-mini{border:none;border-radius:12px;background:var(--work);color:#fff;font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
 
   /* ---------- оценка нагрузки на финише ---------- */
   .fb-block{margin:4px 0 18px;text-align:left}
   .fb-options{display:flex;flex-direction:column;gap:8px}
-  .fb-options button{width:100%;text-align:left;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:'Rubik';font-size:14px;cursor:pointer}
+  .fb-options button{width:100%;text-align:left;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:var(--font-text);font-size:14px;cursor:pointer}
   .fb-options button.act{border-color:var(--work);background:var(--work);color:#fff}
 
   /* ---------- обучение ---------- */
   .help-step{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
-  .help-num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--work);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Oswald';font-weight:700;font-size:16px}
+  .help-num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--work);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px}
   .help-step h3{font-size:16px;margin:0 0 5px}
   .help-step p{color:var(--muted);font-size:14px;line-height:1.5;margin:0}
-  .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:'Rubik';font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
-  .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:'Rubik';font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
+  .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
+  .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
   .st-row{display:flex;align-items:center;justify-content:space-between}
   .st-row .icon-btn{width:38px;height:38px;font-size:18px;color:var(--work);border-color:var(--work)}
   .modal{position:fixed;inset:0;z-index:60;background:rgba(10,12,18,.5);display:none;align-items:flex-end;justify-content:center;padding:14px}
@@ -590,20 +596,20 @@
   @keyframes sheetUp{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
   #dlg{z-index:90}
   .modal-card{width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-  .choice{width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;color:var(--ink);font-family:'Rubik'}
+  .choice{width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;color:var(--ink);font-family:var(--font-text)}
   .choice:active{transform:scale(.99)}
   .choice b{display:block;font-size:15px;margin-bottom:4px;font-weight:600}
   .choice small{color:var(--muted);font-size:13px;line-height:1.45;display:block}
   .avatar-btn{
     width:36px;height:36px;border-radius:50%;border:1px solid var(--line);overflow:hidden;
     background:var(--card);color:var(--work);cursor:pointer;padding:0;
-    font-family:'Oswald';font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
   }
   .avatar-btn.off{display:none}
   #btnStats{color:var(--work)}
   #btnStats svg{width:19px;height:19px}
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
-  .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:'Rubik';font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
+  .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
   .premium-banner{
     position:relative;overflow:hidden;width:100%;
@@ -625,8 +631,8 @@
   .pm-lead{font-size:14.5px;line-height:1.55;color:var(--muted);margin-bottom:12px}
   .pm-lead b{color:var(--ink);font-weight:600}
   .pm-wallet{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0 14px;text-align:center}
-  .pm-wlabel{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'Oswald';margin-bottom:8px}
-  .pm-addr{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 10px;cursor:pointer;color:var(--ink);font-family:'Rubik';font-size:12.5px;word-break:break-all}
+  .pm-wlabel{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:8px}
+  .pm-addr{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 10px;cursor:pointer;color:var(--ink);font-family:var(--font-text);font-size:12.5px;word-break:break-all}
   .pm-addr:active{transform:scale(.98)}
   .pm-copyico{flex:none;color:var(--work)}
   .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
@@ -638,9 +644,9 @@
   .dc-head b{display:block;font-size:14.5px;margin-bottom:4px}
   .dc-head small{display:block;font-size:12px;line-height:1.5;color:var(--muted)}
   .dc-actions{display:flex;gap:10px}
-  .dc-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:'Rubik';font-size:13px;cursor:pointer}
+  .dc-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:13px;cursor:pointer}
   .quick-stats{display:flex;gap:10px;margin-bottom:20px}
-  .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:'Rubik';font-size:12px}
+  .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--work)}
   .qs-ico svg{width:26px;height:26px}
   .avatar-btn img{width:100%;height:100%;object-fit:cover;display:block}
@@ -650,7 +656,7 @@
     padding:12px 14px;margin-bottom:10px;color:var(--ink);
   }
   .user-row.act{border-color:var(--work)}
-  .user-row .ua{flex:none;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--line);color:var(--work);display:flex;align-items:center;justify-content:center;font-family:'Oswald';font-weight:700;font-size:18px}
+  .user-row .ua{flex:none;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--line);color:var(--work);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px}
   .user-row .ua img{width:100%;height:100%;object-fit:cover}
   .user-row .ub{flex:1;min-width:0}
   .user-row .ub b{display:block;font-size:15px}
@@ -660,9 +666,9 @@
   .week-line .streak{color:var(--work);font-weight:500}
   .bars-title{font-size:12.5px;color:var(--muted);margin-top:14px}
   .bars-hint{opacity:.7}
-  #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:'Oswald'}
+  #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
-  .cal-head b{font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+  .cal-head b{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
   .cal-nav{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer;line-height:1}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
   .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);border-radius:50%}
@@ -673,7 +679,7 @@
   .w-add{display:none;flex-wrap:wrap;gap:10px}
   .w-add.on{display:flex}
   .wf{display:flex;flex-direction:column;gap:4px;flex:1 1 44%;min-width:0}
-  .wf label{font-size:11px;color:var(--muted);font-family:'Oswald';letter-spacing:.08em;text-transform:uppercase}
+  .wf label{font-size:11px;color:var(--muted);font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase}
   .w-add .btn-mini{flex:1 1 100%;height:46px}
   .mine-card{-webkit-touch-callout:none;user-select:none}
   .mine-card.dragging{z-index:25;position:relative}
@@ -689,7 +695,7 @@
   .more-btn svg{width:17px;height:17px}
   .more-btn{display:flex;align-items:center;justify-content:center}
   .plan-tabs{display:flex;gap:6px;flex-wrap:wrap}
-  .plan-tab{padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13.5px;font-family:'Rubik';cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center}
+  .plan-tab{padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13.5px;font-family:var(--font-text);cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center}
   .plan-tab.act{background:var(--work);border-color:var(--work);color:#fff}
   .plan-tab.add{border-style:dashed}
   .plan-chip{flex:0 0 auto !important;padding:11px 14px !important}
@@ -721,9 +727,9 @@
   .collapse-head{
     width:100%;display:flex;align-items:center;gap:10px;margin:18px 0 0;padding:14px 0;
     background:none;border:none;border-top:1px solid var(--line);cursor:pointer;text-align:left;
-    color:var(--ink);font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink);font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase;
   }
-  .collapse-head .st-sum{flex:1;color:var(--muted);font-size:11px;font-family:'Rubik';letter-spacing:0;text-transform:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .collapse-head .st-sum{flex:1;color:var(--muted);font-size:11px;font-family:var(--font-text);letter-spacing:0;text-transform:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .collapse-head .st-chev{flex:none;color:var(--muted);display:flex;transition:transform .22s}
   .collapse-head .st-chev svg{width:18px;height:18px}
   .collapse-head .st-chev{transform:rotate(90deg)}
@@ -772,7 +778,7 @@
   /* скрытие через класс: инлайновый display:block убивал flex и все отступы */
   .hidden{display:none !important}
   .card-block > .cb-title{
-    font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.16em;
+    font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--muted);
   }
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
@@ -799,7 +805,7 @@
   .start-wrap .card-block .num:empty{display:none}
   .start-wrap .prog-desc{background:none;border:none;padding:0;margin:0}
   .cb-head{display:flex;flex-direction:column;gap:4px}
-  .cb-head .st-note{font-family:'Rubik';font-size:11.5px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
+  .cb-head .st-note{font-family:var(--font-text);font-size:11.5px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
 
   /* круглая аватарка рядом с именем */
   /* навигационная строка внутри карточки — без своей рамки */
@@ -816,7 +822,7 @@
   .ava-pick img{width:100%;height:100%;object-fit:cover;display:block}
   .ava-pick span{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
   .ava-pick svg{width:24px;height:24px}
-  .ava-pick .ava-let{font-family:'Oswald';font-weight:600;font-size:26px;color:var(--work)}
+  .ava-pick .ava-let{font-family:var(--font-display);font-weight:600;font-size:26px;color:var(--work)}
   .ava-row .ctx-menu{top:70px;right:0;left:auto}
 
   /* перечень голосовых команд */
@@ -831,7 +837,7 @@
   .pick-list{max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:4px 0}
   .pick-item{
     width:100%;text-align:left;background-color:var(--bg);border:1px solid var(--line);
-    border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font-family:'Rubik';
+    border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font-family:var(--font-text);
   }
   .pick-item b{display:block;font-size:14px;font-weight:500}
   .pick-item small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
@@ -849,7 +855,7 @@
   }
   .weight-badge .wb-btn:active{background:var(--line)}
   .weight-badge .wb-val{display:flex;align-items:baseline;gap:4px;min-width:74px;justify-content:center}
-  .weight-badge .wb-val b{font-family:'Oswald';font-weight:700;font-size:26px;color:var(--work);line-height:1}
+  .weight-badge .wb-val b{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--work);line-height:1}
   .weight-badge .wb-val small{font-size:12px;color:var(--muted)}
 
   /* корректировка веса после последнего подхода: не перекрывает экран и
@@ -865,13 +871,13 @@
   }
   .wa-popup.hidden{display:none !important}
   .wa-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  .wa-head b{color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
+  .wa-head b{color:#fff;font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
   .wa-head span{color:rgba(255,255,255,.7);font-size:13px}
   .wa-row{display:flex;gap:8px}
   .wa-btn{
     flex:1;min-height:52px;border-radius:12px;cursor:pointer;
     background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;
-    font-family:'Rubik';font-size:13.5px;display:flex;flex-direction:column;
+    font-family:var(--font-text);font-size:13.5px;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:2px;padding:6px 4px;
   }
   .wa-btn small{font-size:11px;color:rgba(255,255,255,.6)}
@@ -893,7 +899,7 @@
   .ps-btn:active{background-color:var(--line)}
   .ps-btn:disabled{opacity:.35;pointer-events:none}
   .ps-val{display:flex;flex-direction:column;align-items:center;min-width:90px}
-  .ps-val b{font-family:'Oswald';font-weight:700;font-size:30px;color:var(--work);line-height:1}
+  .ps-val b{font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--work);line-height:1}
   .ps-val small{font-size:11.5px;color:var(--muted);margin-top:2px}
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
@@ -901,7 +907,7 @@
   @keyframes aiSpin{to{transform:rotate(360deg)}}
   .ai-run-title{display:block;font-size:17px;margin-bottom:8px}
   .ai-run-text{font-size:13.5px;line-height:1.5;color:var(--muted)}
-  .ai-run-timer{font-family:'Oswald';font-weight:600;font-size:22px;color:var(--work);margin-top:12px}
+  .ai-run-timer{font-family:var(--font-display);font-weight:600;font-size:22px;color:var(--work);margin-top:12px}
   .prog-menu-wrap{position:relative;margin-left:auto}
   .prog-menu-wrap .more-btn{position:static;width:38px;height:38px;border:1px solid var(--line);background:var(--card);border-radius:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .prog-menu-wrap .ctx-menu{top:44px;right:0}
@@ -912,11 +918,11 @@
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
   .sched-block{display:flex;flex-direction:column}
   .sched-mode{order:1;margin-bottom:14px}
-  .st-note{font-family:'Rubik';font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
+  .st-note{font-family:var(--font-text);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
   .hf-title{font-size:14px;margin-bottom:10px}
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
-  .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:'Rubik';font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
+  .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:var(--font-text);font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:#fff;font-weight:500}
   .act-row{display:flex;gap:10px;align-items:stretch}
   .btn-prev{flex:0 0 52px;min-height:52px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -926,11 +932,11 @@
   .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
-  .vol-label b{font-family:'Oswald';color:var(--work);font-size:15px}
+  .vol-label b{font-family:var(--font-display);color:var(--work);font-size:15px}
   .vol-range{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--line);outline:none}
   .vol-range::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--work);cursor:pointer;border:3px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,.25)}
   .vol-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--work);cursor:pointer;border:3px solid var(--card)}
-  .voice-sel{max-width:56%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:9px 30px 9px 12px;font-family:'Rubik';font-size:13px;outline:none;
+  .voice-sel{max-width:56%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:9px 30px 9px 12px;font-family:var(--font-text);font-size:13px;outline:none;
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%239C8FA0' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat:no-repeat;background-position:right 10px center}
@@ -1768,7 +1774,7 @@
   <section class="screen" id="scrOnboard">
     <div class="start-wrap">
       <div id="obStep1">
-        <div class="eyebrow" style="font-family:'Oswald';letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 1 из 3</div>
+        <div class="eyebrow" style="font-family:var(--font-display);letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 1 из 3</div>
         <h2 style="font-size:30px;margin:10px 0 18px">Привет! Как тебя зовут?</h2>
         <div class="field"><input type="text" id="obName" maxlength="30" placeholder="Твоё имя"></div>
         <div class="field"><label>Пол</label>
@@ -1779,7 +1785,7 @@
         <button class="btn-primary" id="obNext1">Дальше</button>
       </div>
       <div id="obStep2" class="hidden">
-        <div class="eyebrow" style="font-family:'Oswald';letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 2 из 3</div>
+        <div class="eyebrow" style="font-family:var(--font-display);letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 2 из 3</div>
         <h2 style="font-size:30px;margin:10px 0 18px">Какая у тебя цель?</h2>
         <div class="fb-options" id="obGoals"></div>
         <button class="btn-primary" id="obNext2" style="margin-top:16px">Дальше</button>
@@ -3675,9 +3681,9 @@ async function shareCompare(){
   try{ await document.fonts.load('600 44px Oswald'); await document.fonts.load('500 38px Rubik'); }catch(e){}
   x.fillStyle = col('--bg'); x.fillRect(0, 0, W, H);
   x.textAlign = 'center';
-  x.fillStyle = col('--muted'); x.font = '600 44px Oswald';
+  x.fillStyle = col('--muted'); x.font = '600 44px Oswald, sans-serif';
   x.fillText('F I T  /  T I M E R', W / 2, 110);
-  x.fillStyle = col('--ink'); x.font = '500 46px Rubik';
+  x.fillStyle = col('--ink'); x.font = '500 46px Rubik, sans-serif';
   x.fillText('Мой прогресс', W / 2, 190);
   // два фото
   const pw = 486, ph = 760, gy = 240;
@@ -3686,13 +3692,13 @@ async function shareCompare(){
   x.strokeStyle = col('--line'); x.lineWidth = 3;
   roundRect(x, 34, gy, pw, ph, 26); x.stroke();
   roundRect(x, W - 34 - pw, gy, pw, ph, 26); x.stroke();
-  x.fillStyle = col('--muted'); x.font = '500 36px Rubik';
+  x.fillStyle = col('--muted'); x.font = '500 36px Rubik, sans-serif';
   x.fillText(fmtD(a.d), 34 + pw / 2, gy + ph + 58);
   x.fillText(fmtD(b.d), W - 34 - pw / 2, gy + ph + 58);
   const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
-  x.fillStyle = col('--work'); x.font = '600 52px Oswald';
+  x.fillStyle = col('--work'); x.font = '600 52px Oswald, sans-serif';
   x.fillText(days ? `${days} ${plural(days, 'ДЕНЬ', 'ДНЯ', 'ДНЕЙ')} РАБОТЫ НАД СОБОЙ` : 'НАЧАЛО ПУТИ', W / 2, 1180);
-  x.fillStyle = col('--muted'); x.font = '600 32px Oswald';
+  x.fillStyle = col('--muted'); x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, 1256);
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
@@ -3769,9 +3775,9 @@ async function shareWeightChart(){
   }catch(e){}
   x.fillStyle = col('--bg'); x.fillRect(0, 0, W, H);
   x.textAlign = 'center';
-  x.fillStyle = col('--muted'); x.font = '600 42px Oswald';
+  x.fillStyle = col('--muted'); x.font = '600 42px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, 100);
-  x.fillStyle = col('--ink'); x.font = '500 54px Rubik';
+  x.fillStyle = col('--ink'); x.font = '500 54px Rubik, sans-serif';
   x.fillText('Мои изменения', W / 2, 178);
 
   const SERIES = [
@@ -3795,13 +3801,13 @@ async function shareWeightChart(){
     x.fillStyle = col('--card'); x.strokeStyle = col('--line'); x.lineWidth = 2;
     roundRect(x, gx, gy, gw, laneH, 24); x.fill(); x.stroke();
     // шапка полосы
-    x.textAlign = 'left'; x.fillStyle = s.color; x.font = '600 34px Oswald';
+    x.textAlign = 'left'; x.fillStyle = s.color; x.font = '600 34px Oswald, sans-serif';
     // цветной кружок
     x.beginPath(); x.arc(gx + 34, gy + 40, 11, 0, 7); x.fill();
     x.fillStyle = col('--ink'); x.fillText(s.label, gx + 58, gy + 51);
     x.textAlign = 'right';
     x.fillStyle = d < 0 ? col('--rest') : (d > 0 ? col('--work') : col('--muted'));
-    x.font = '700 36px Oswald';
+    x.font = '700 36px Oswald, sans-serif';
     x.fillText(d === 0 ? `${last} ${s.unit}` : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`, gx + gw - 34, gy + 51);
 
     // график
@@ -3830,7 +3836,7 @@ async function shareWeightChart(){
     x.beginPath(); x.arc(lx(0), ly(first), 9, 0, 7); x.fill();
     x.beginPath(); x.arc(lx(have.length - 1), ly(last), 11, 0, 7); x.fill();
     // подписи концов
-    x.fillStyle = col('--ink'); x.font = '600 30px Oswald';
+    x.fillStyle = col('--ink'); x.font = '600 30px Oswald, sans-serif';
     x.textAlign = 'left'; x.fillText(String(first).replace('.', ','), lx(0), ly(first) - 20);
     if(have.length > 1){ x.textAlign = 'right'; x.fillText(String(last).replace('.', ','), lx(have.length - 1), ly(last) - 20); }
 
@@ -3838,7 +3844,7 @@ async function shareWeightChart(){
   });
 
   x.textAlign = 'center';
-  x.fillStyle = col('--muted'); x.font = '600 30px Oswald';
+  x.fillStyle = col('--muted'); x.font = '600 30px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, H - 44);
 
   c.toBlob(async blob => {
@@ -7702,11 +7708,11 @@ async function shareResult(){
   x.textAlign = 'center';
   // бренд
   x.fillStyle = col('--muted');
-  x.font = '600 44px Oswald';
+  x.font = '600 44px Oswald, sans-serif';
   x.fillText('F I T  /  T I M E R', W / 2, 118);
   // заголовок
   x.fillStyle = col('--ink');
-  x.font = '500 46px Rubik';
+  x.font = '500 46px Rubik, sans-serif';
   x.fillText('Тренировка завершена!', W / 2, 208);
 
   // разомкнутое кольцо + время
@@ -7716,15 +7722,15 @@ async function shareResult(){
   x.arc(W / 2, 480, 218, Math.PI * 0.62, Math.PI * 0.38 + Math.PI * 2);
   x.stroke();
   x.fillStyle = col('--ink');
-  x.font = '700 150px Oswald';
+  x.font = '700 150px Oswald, sans-serif';
   x.fillText(fmt(state.lastTotalSec || 0), W / 2, 520);
   x.fillStyle = col('--muted');
-  x.font = '500 34px Rubik';
+  x.font = '500 34px Rubik, sans-serif';
   x.fillText('минуты : секунды', W / 2, 578);
 
   // название программы
   x.fillStyle = col('--work');
-  x.font = '600 58px Oswald';
+  x.font = '600 58px Oswald, sans-serif';
   let title = (state.current && state.current.title || '').toUpperCase();
   if(title.length > 22) title = title.slice(0, 21) + '…';
   x.fillText(title, W / 2, 810);
@@ -7735,7 +7741,7 @@ async function shareResult(){
   if(state.lastKcal) chips.push(`🔥 ≈${state.lastKcal} ккал`);
   if(streak > 1) chips.push(`⚡ ${streak} ${plural(streak, 'день', 'дня', 'дней')} подряд`);
   chips.push(`💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`);
-  x.font = '500 36px Rubik';
+  x.font = '500 36px Rubik, sans-serif';
   const pad = 34, gap = 20, ch = 84, maxW = W - 80;
   const widths = chips.map(t => Math.min(maxW, x.measureText(t).width + pad * 2));
   // раскладка по рядам, чтобы ничего не уходило за края
@@ -7764,10 +7770,10 @@ async function shareResult(){
   const now = new Date();
   const dateY = Math.max(1180, cy0 + 60);
   x.fillStyle = col('--muted');
-  x.font = '500 36px Rubik';
+  x.font = '500 36px Rubik, sans-serif';
   x.fillText(`${now.getDate()} ${MONTH_NAMES[now.getMonth()].toLowerCase()} ${now.getFullYear()}`, W / 2, dateY);
   x.fillStyle = col('--muted');
-  x.font = '600 32px Oswald';
+  x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, dateY + 60);
 
   c.toBlob(async blob => {
