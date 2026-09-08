@@ -860,6 +860,19 @@
   .wa-track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
   .wa-fill{height:100%;width:100%;background:rgba(255,255,255,.55)}
 
+  /* счётчик шагов прогрессии на экране старта */
+  .ps-row{display:flex;align-items:center;justify-content:center;gap:16px}
+  .ps-btn{
+    width:44px;height:44px;border-radius:12px;border:1px solid var(--line);
+    background-color:var(--bg);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ps-btn:active{background-color:var(--line)}
+  .ps-btn:disabled{opacity:.35;pointer-events:none}
+  .ps-val{display:flex;flex-direction:column;align-items:center;min-width:90px}
+  .ps-val b{font-family:'Oswald';font-weight:700;font-size:30px;color:var(--work);line-height:1}
+  .ps-val small{font-size:11.5px;color:var(--muted);margin-top:2px}
+
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--work);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -1040,6 +1053,17 @@
       <div class="card-block hidden" id="planBlock">
         <p class="cb-title">Вариант тренировки</p>
         <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
+      </div>
+
+      <div class="card-block hidden" id="progStepsBlock">
+        <p class="cb-title">Прогрессия</p>
+        <p class="field-hint" id="progStepsInfo"></p>
+        <div class="ps-row">
+          <button type="button" class="ps-btn" id="psMinus" title="Меньше шагов">−</button>
+          <div class="ps-val"><b id="psCount">0</b><small>повышений</small></div>
+          <button type="button" class="ps-btn" id="psPlus" title="Больше шагов">+</button>
+        </div>
+        <p class="field-hint">Изменение сразу пересчитает вес, повторы и время во всех упражнениях с прогрессией — ничего не потеряется.</p>
       </div>
 
       <div class="card-block">
@@ -1519,17 +1543,17 @@
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
       </div>
-    </div>
 
-    <div class="card-block">
-      <p class="cb-title">Как усложнять со временем</p>
-      <div class="field"><div class="days chips-wrap" id="exProgAxis"></div>
-        <p class="field-hint" id="exProgHint"></p>
+      <div class="field"><label>Усложнять со временем</label>
+        <div class="days chips-wrap" id="exProgAxis"></div>
       </div>
       <div class="row2 hidden" id="exWeightRow">
         <div class="field"><label>Начальный вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="8"></div>
-        <div class="field"><label>Шаг прибавки, кг</label><input type="text" id="exWStep" inputmode="decimal" placeholder="2"></div>
+        <div class="field"><label>Прибавка за раз, кг</label><input type="text" id="exWStep" inputmode="decimal" placeholder="2"></div>
       </div>
+      <div class="field hidden" id="exRepsStepRow"><label>Прибавка повторений за раз</label><input type="text" id="exRepsStep" inputmode="numeric" placeholder="1"></div>
+      <div class="field hidden" id="exTimeStepRow"><label>Прибавка времени за раз, сек</label><input type="text" id="exTimeStep" inputmode="numeric" placeholder="5"></div>
+      <p class="field-hint" id="exProgHint"></p>
     </div>
 
     <div class="card-block">
@@ -2514,10 +2538,10 @@ function openStart(raw){
   state.raw = raw;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans, raw);
-  state.load = 100; // множителя нагрузки больше нет — оставлено для расчёта калорий
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
+  renderProgSteps();
   renderStartInfo();
   syncPrefs();
   setShown('voicePrefRow', true);
@@ -2555,6 +2579,39 @@ function renderPlanRow(){
     b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
     row.appendChild(b);
   });
+}
+
+// показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
+// Видно, только если у программы есть хоть одно упражнение с осью прогрессии — иначе
+// счётчику попросту нечего показывать, а пустая карточка только путает.
+function renderProgSteps(){
+  const p = state.raw;
+  const hasProgAxis = normPlans(p).some(pl => (pl.exercises || []).some(ex => progAxis(ex) !== 'none'));
+  const on = p.progression && hasProgAxis;
+  setShown('progStepsBlock', on);
+  if(!on) return;
+  const steps = progSteps(p);
+  $('psCount').textContent = steps;
+  $('psMinus').disabled = steps <= 0;
+
+  const perDays = {7: 'неделю', 14: '2 недели', 30: 'месяц'}[p.progression] || `${p.progression} дн.`;
+  let nextTxt = '';
+  if(p.progLast){
+    const last = new Date(p.progLast); last.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysLeft = p.progression - Math.floor((today - last) / 86400000);
+    nextTxt = daysLeft <= 0 ? 'Следующая уже готова — начнётся с этой тренировки.'
+                             : `Следующая через ${daysLeft} ${plural(daysLeft, 'день', 'дня', 'дней')}.`;
+  }
+  $('progStepsInfo').textContent =
+    (steps === 0 ? 'Пока без повышений.' : `Повышалась ${steps} ${plural(steps, 'раз', 'раза', 'раз')}, каждый — раз в ${perDays}.`)
+    + (nextTxt ? ' ' + nextTxt : '');
+}
+function bumpProgSteps(dir){
+  const p = state.raw;
+  p.progSteps = Math.max(0, progSteps(p) + dir);
+  savePrograms();
+  renderProgSteps();
 }
 
 // меню действий на экране просмотра программы — те же пункты, что на карточке
@@ -2689,6 +2746,30 @@ async function loadData(){
   if(!Array.isArray(stats.history)) stats.history = [];
   if(typeof stats.count !== 'number') stats.count = 0;
   await loadProgWeights();
+  migrateProgWeightsToDeltas();
+}
+
+// Раньше progWeights хранил АБСОЛЮТНЫЙ рабочий вес. Теперь то же число — это ручная
+// ПОПРАВКА поверх базы упражнения (см. комментарий в 12-builder.js про модель прогрессии).
+// Если это не сделать один раз явно, у всех, кто уже пользовался весом, формула
+// «база + поправка» посчитает поправку заново поверх базы и вес скакнёт вверх на старте.
+// Флаг — p.progSteps: у программ, созданных до этого обновления, поля нет вообще (undefined),
+// а у новых оно всегда число с самого создания — этим и отличаем «требует миграции» от «новая».
+function migrateProgWeightsToDeltas(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    if(p.progSteps != null) return; // уже мигрирована или создана в новой версии
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      const key = exWeightKey(p.id, ex.name);
+      if(progWeights[key] != null){
+        progWeights[key] = progRound(ex, progWeights[key] - progBaseValue(ex));
+        changed = true;
+      }
+    }));
+    p.progSteps = 0;
+    changed = true;
+  });
+  if(changed){ saveProgWeights(); savePrograms(); }
 }
 
 async function switchUser(id){
@@ -2899,7 +2980,6 @@ async function saveSession(){
   const data = {
     pid: raw.id,
     planIdx: state.planIdx || 0,
-    load: state.load || 100,
     stepIdx: state.stepIdx || 0,
     total: state.steps.length,
     elapsed,
@@ -3109,20 +3189,29 @@ function customToProgram(p, planIdx = 0){
   const plan = plans[planIdx] || plans[0];
 
   const mkWork = (ex, setNo, setsTotal, side)=>{
+    const axis = progAxis(ex);
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
       video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
       perSide: !!ex.perSide,
-      progAxis: progAxis(ex),
-      // рабочий вес берём сохранённый (он растёт от тренировки к тренировке), иначе стартовый
-      weight: hasWeight(ex) ? getExWeight(p.id, ex) : 0,
+      progAxis: axis,
+      // рабочий вес: сохранённая ручная поправка + текущие шаги программы поверх базы упражнения
+      weight: axis === 'weight' ? getExProgValue(p.id, ex, p) : 0,
+      weightBase: +ex.weight || 0,   // нужно попапу после подхода, чтобы не задваивать уже применённые шаги
       wStep: +ex.wStep || 2,
       exName: ex.name
     };
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
-    if(ex.type === 'time'){ step.kind = 'timer'; step.seconds = parseValue(ex.value).min; }
-    else { step.kind = 'click'; step.reps = normValue(ex.value, 'reps'); step.repsNote = 'повторений'; }
+    if(ex.type === 'time'){
+      step.kind = 'timer';
+      // время тоже растёт по шагам прогрессии, если ось упражнения — «время»
+      step.seconds = axis === 'time' ? getExProgValue(p.id, ex, p) : parseValue(ex.value).min;
+    } else {
+      step.kind = 'click'; step.repsNote = 'повторений';
+      // диапазон повторов сдвигается целиком (и низ, и верх), если ось упражнения — «повторения»
+      step.reps = axis === 'reps' ? progressedRepsRange(p.id, ex, p) : normValue(ex.value, 'reps');
+    }
     return step;
   };
   // короткая пауза на смену стороны между половинами упражнения
@@ -3789,8 +3878,12 @@ async function finishOnboardingCreate(){
 // Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
 // гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
 // включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
+// Счётчик шагов у программы (p.progSteps) — единственный источник роста по расписанию.
+// Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
+// (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
+// вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
 function applyProgressionAll(){
-  let changed = false, weightsChanged = false;
+  let changed = false;
   const today = new Date(); today.setHours(0,0,0,0);
   customPrograms.forEach(p => {
     if(!p.progression) return;
@@ -3799,21 +3892,11 @@ function applyProgressionAll(){
     const days = Math.floor((today - last) / 86400000);
     const steps = Math.floor(days / p.progression);
     if(steps <= 0) return;
-
-    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-      if(progAxis(ex) !== 'weight') return;           // повторы и время человек ведёт сам
-      const cur = getExWeight(p.id, ex);
-      if(!cur) return;                                 // вес ещё не задан — повышать нечего
-      const add = (+ex.wStep || 2) * steps;
-      progWeights[exWeightKey(p.id, ex.name)] = Math.max(0, Math.round((cur + add) * 2) / 2);
-      weightsChanged = true;
-    }));
-
+    p.progSteps = Math.max(0, Math.round(+p.progSteps || 0)) + steps;
     const ndate = new Date(last); ndate.setDate(last.getDate() + steps * p.progression);
     p.progLast = localISO(ndate);
     changed = true;
   });
-  if(weightsChanged) saveProgWeights();
   if(changed) savePrograms();
 }
 
@@ -4533,6 +4616,8 @@ function exerciseToText(ex){
   if(hasWeight(ex)){
     if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
     L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep || 2));
+    L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep || 1));
+    L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep || 5));
   }
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
   return L.join('\n');
@@ -4574,6 +4659,8 @@ function exePrompt(){
 УСЛОЖНЯТЬ: по чему упражнение усложняется со временем, одно слово: повторения / вес / время / нет. «вес» — если нужен снаряд (гантели, штанга, гиря); «нет» — разминка, растяжка, дыхание, техника.
 ВЕС: стартовый рабочий вес в кг — только при ПРОГРЕССИЯ: вес.
 ШАГ ВЕСА: на сколько кг прибавлять за раз — только при ПРОГРЕССИЯ: вес. Обычно 2 кг, для махов и мелких мышц 1 кг.
+ШАГ ПОВТОРОВ: на сколько повторений сдвигать диапазон за раз — только при УСЛОЖНЯТЬ: повторения. Обычно 1-2.
+ШАГ ВРЕМЕНИ: на сколько секунд прибавлять за раз — только при УСЛОЖНЯТЬ: время. Обычно 5-10 секунд.
 ВИДЕО: ссылка на технику (или пропусти строку)
 SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
 }
@@ -4679,6 +4766,8 @@ function exaPrompt(){
 УСЛОЖНЯТЬ: по чему упражнение усложняется со временем, одно слово: повторения / вес / время / нет. «вес» — если нужен снаряд (гантели, штанга, гиря); «нет» — разминка, растяжка, дыхание, техника.
 ВЕС: стартовый рабочий вес в кг — только при ПРОГРЕССИЯ: вес.
 ШАГ ВЕСА: на сколько кг прибавлять за раз — только при ПРОГРЕССИЯ: вес. Обычно 2 кг, для махов и мелких мышц 1 кг.
+ШАГ ПОВТОРОВ: на сколько повторений сдвигать диапазон за раз — только при УСЛОЖНЯТЬ: повторения. Обычно 1-2.
+ШАГ ВРЕМЕНИ: на сколько секунд прибавлять за раз — только при УСЛОЖНЯТЬ: время. Обычно 5-10 секунд.
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
 SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
@@ -4812,6 +4901,8 @@ function programToText(p){
       if(hasWeight(ex)){
         if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep || 2));
+        L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep || 1));
+        L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep || 5));
       }
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
@@ -5093,8 +5184,9 @@ let draft = null;
 function blankExercise(){
   return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, media:null, muscles:[], mistakes:'',
-          // ось прогрессии: reps | weight | time | none. Для weight — стартовый вес и шаг в кг.
-          prog:'', weight:0, wStep:2};
+          // ось прогрессии: reps | weight | time | none.
+          // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
+          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5};
 }
 
 /* ---- корректировка веса после последнего подхода ----
@@ -5149,13 +5241,14 @@ function showWeightAdjust(step){
 
 // применяем выбор: меняем рабочий вес упражнения на будущее
 function applyWeightAdjust(dir){
-  if(!waStep) return;
-  const stepKg = +waStep.wStep || 2;
-  const next = Math.max(0, (+waStep.weight || 0) + dir * stepKg);
-  const name = waStep.exName;
-  state.steps.forEach(s => { if(s.exName === name && s.progAxis === 'weight') s.weight = next; });
-  if(state.raw) setExWeight(state.raw.id, {name, prog: 'weight'}, next);
-  if(dir !== 0) speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
+  if(!waStep || !state.raw) { hideWeightAdjust(); return; }
+  const exLike = {name: waStep.exName, prog: 'weight', weight: waStep.weightBase, wStep: waStep.wStep};
+  if(dir !== 0){
+    bumpProgDelta(state.raw.id, exLike, dir);
+    const next = getExProgValue(state.raw.id, exLike, state.raw);
+    state.steps.forEach(s => { if(s.exName === waStep.exName && s.progAxis === 'weight') s.weight = next; });
+    speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
+  }
   hideWeightAdjust();
 }
 
@@ -5183,18 +5276,100 @@ function fmtKg(kg){
   return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
 }
 
+/* ================= ПРОГРЕССИЯ: единая модель для веса, повторов и времени =================
+   Итоговое значение = БАЗА упражнения + (номер шага прогрессии × размер шага) + ручная поправка.
+     • «Номер шага» — один на всю программу, растёт по расписанию («каждые 2 недели»).
+       Его можно посмотреть и поправить руками на экране перед стартом — это ОБРАТИМО:
+       базовые значения упражнений не трогаются, всё пересчитывается на лету.
+     • «Ручная поправка» — своя у каждого упражнения, копится от кнопок ± на тренировке
+       и от попапа «Легко / Тяжело» после подхода. Не зависит от номера шага и не теряется,
+       если номер шага потом изменят.
+   Раньше эти две вещи были смешаны в одном сохранённом числе — из-за этого правка веса
+   на тренировке необратимо искажала базу, и это было слышно на второй-третьей тренировке. */
+
+// значение упражнения «с нуля», без какой-либо прогрессии
+function progBaseValue(ex){
+  const axis = progAxis(ex);
+  if(axis === 'weight') return +ex.weight || 0;
+  if(axis === 'reps' || axis === 'time') return parseValue(ex.value).min;
+  // «не усложнять» — тоже не 0 «из воздуха», а честное текущее значение упражнения,
+  // на случай если эту функцию когда-то вызовут для такого упражнения по ошибке
+  return parseValue(ex.value).min;
+}
+// на сколько сдвигается значение за один шаг прогрессии
+function progStepSize(ex){
+  const axis = progAxis(ex);
+  if(axis === 'weight') return +ex.wStep || 2;
+  if(axis === 'reps') return +ex.repsStep || 1;
+  if(axis === 'time') return +ex.timeStep || 5;
+  return 0;
+}
+// нижняя граница, ниже которой значение не опускается (вес — 0, повторы и время — хотя бы 1)
+function progFloor(ex){ return progAxis(ex) === 'weight' ? 0 : 1; }
+// округление под ось: вес — до 0,5, повторы и время — целые
+function progRound(ex, v){
+  return progAxis(ex) === 'weight' ? Math.round(v * 2) / 2 : Math.round(v);
+}
+
 // текущий рабочий вес упражнения: то, что человек поднимает сейчас (растёт от тренировки к тренировке)
 function exWeightKey(pid, name){
   return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
 }
-function getExWeight(pid, ex){
-  if(!hasWeight(ex)) return 0;
-  const saved = progWeights[exWeightKey(pid, ex.name)];
-  return (saved != null) ? saved : (+ex.weight || 0);
+
+// программа: сколько раз уже сработала автоматическая прогрессия (обратимо, см. выше)
+function progSteps(p){ return Math.max(0, Math.round(+p.progSteps || 0)); }
+
+// ручная поправка конкретного упражнения — в родных единицах оси (кг / повторы / секунды).
+// Хранится в progWeights под тем же ключом, что и раньше: у людей, кто уже пользовался
+// весом до этого обновления, старое абсолютное значение автоматически становится
+// корректной поправкой, потому что счётчик шагов у всех стартует с нуля — скачка не будет.
+function progDelta(pid, ex){
+  const raw = progWeights[exWeightKey(pid, ex.name)];
+  return raw != null ? raw : 0;
 }
-function setExWeight(pid, ex, kg){
-  progWeights[exWeightKey(pid, ex.name)] = Math.max(0, Math.round(kg * 2) / 2); // до 0,5 кг
+function setProgDelta(pid, ex, delta){
+  progWeights[exWeightKey(pid, ex.name)] = progRound(ex, delta);
   saveProgWeights();
+}
+
+// суммарный сдвиг от базы: автоматические шаги программы + ручная поправка упражнения.
+// Отдельная функция нужна не только для одиночных значений (вес, время), но и для диапазона
+// повторов «8-12» — там сдвигаются сразу обе границы на одно и то же число.
+function progOffset(pid, ex, program){
+  const steps = program ? progSteps(program) : 0;
+  return steps * progStepSize(ex) + progDelta(pid, ex);
+}
+// итоговое значение упражнения сейчас: база + суммарный сдвиг
+function getExProgValue(pid, ex, program){
+  const axis = progAxis(ex);
+  if(axis === 'none') return progBaseValue(ex);
+  const v = progBaseValue(ex) + progOffset(pid, ex, program);
+  return Math.max(progFloor(ex), progRound(ex, v));
+}
+// диапазон повторов «8-12» со сдвигом обеих границ — для reps-оси значение не одно число, а диапазон
+function progressedRepsRange(pid, ex, program){
+  const r = parseValue(ex.value);
+  const off = progOffset(pid, ex, program);
+  const min = Math.max(1, Math.round(r.min + off));
+  const max = Math.max(min, Math.round(r.max + off));
+  return min === max ? String(min) : min + '-' + max;
+}
+// сдвинуть ручную поправку на dir «шагов» (±1 обычно) — используют кнопки на тренировке
+function bumpProgDelta(pid, ex, dir){
+  const next = progDelta(pid, ex) + dir * progStepSize(ex);
+  setProgDelta(pid, ex, next);
+  return next;
+}
+
+// вес отдельно — то же самое, но только для оси «вес» (используется в старых местах интерфейса)
+function getExWeight(pid, ex, program){
+  return hasWeight(ex) ? getExProgValue(pid, ex, program) : 0;
+}
+// абсолютное значение переводим в ручную поправку ОТНОСИТЕЛЬНО текущих шагов программы —
+// без program это посчитать нельзя, иначе поправка задвоит уже накопленные шаги
+function setExWeight(pid, ex, kg, program){
+  const steps = program ? progSteps(program) : 0;
+  setProgDelta(pid, ex, kg - progBaseValue(ex) - steps * progStepSize(ex));
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -5483,6 +5658,8 @@ function fillExercise(){
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
   $('exWStep').value = ex.wStep ? fmtKg(ex.wStep) : '';
+  $('exRepsStep').value = ex.repsStep && ex.repsStep !== 1 ? ex.repsStep : '';
+  $('exTimeStep').value = ex.timeStep && ex.timeStep !== 5 ? ex.timeStep : '';
   renderProgAxis();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
@@ -5532,10 +5709,10 @@ function parseKg(v){
 }
 
 const PROG_HINTS = {
-  reps:   'Со временем растёт число повторений. Подходит упражнениям с собственным весом.',
-  weight: 'Со временем растёт вес снаряда, а повторения возвращаются к нижней границе диапазона. Вес запоминается между тренировками.',
-  time:   'Со временем растёт длительность. Подходит планкам и удержаниям.',
-  none:   'Не усложняется: разминка, техника, дыхание, растяжка. Ползунок нагрузки такие упражнения тоже не трогает.'
+  reps:   'Диапазон повторов будет сдвигаться вверх целиком — и нижняя, и верхняя граница.',
+  weight: 'Вес запоминается между тренировками и растёт по расписанию программы. Его можно поправить прямо на тренировке кнопками ± или в попапе после последнего подхода.',
+  time:   'Длительность будет расти на шаг ниже. Подходит планкам и другим удержаниям.',
+  none:   'Не усложняется: разминка, техника, дыхание, растяжка.'
 };
 function renderProgAxis(){
   const box = $('exProgAxis'); box.innerHTML = '';
@@ -5548,6 +5725,8 @@ function renderProgAxis(){
     b.onclick = ()=>{
       exDraft.prog = a.id;
       if(a.id === 'weight' && !exDraft.wStep) exDraft.wStep = 2;
+      if(a.id === 'reps' && !exDraft.repsStep) exDraft.repsStep = 1;
+      if(a.id === 'time' && !exDraft.timeStep) exDraft.timeStep = 5;
       renderProgAxis();
       syncExDetailsSum();
     };
@@ -5555,7 +5734,11 @@ function renderProgAxis(){
   });
   $('exProgHint').textContent = PROG_HINTS[cur] || '';
   setShown('exWeightRow', cur === 'weight');
+  setShown('exRepsStepRow', cur === 'reps');
+  setShown('exTimeStepRow', cur === 'time');
   if(cur === 'weight' && !$('exWStep').value) $('exWStep').value = fmtKg(exDraft.wStep || 2);
+  if(cur === 'reps' && !$('exRepsStep').value) $('exRepsStep').value = exDraft.repsStep || 1;
+  if(cur === 'time' && !$('exTimeStep').value) $('exTimeStep').value = exDraft.timeStep || 5;
 }
 
 function renderExRestChips(){
@@ -5602,6 +5785,8 @@ function exDirty(){
   snapshot.video = $('exVideo').value.trim();
   snapshot.weight = parseKg($('exWeight').value);
   snapshot.wStep = parseKg($('exWStep').value) || 2;
+  snapshot.repsStep = Math.max(1, parseInt($('exRepsStep').value) || 1);
+  snapshot.timeStep = Math.max(1, parseInt($('exTimeStep').value) || 5);
   return JSON.stringify(snapshot) !== exOrig;
 }
 
@@ -5616,6 +5801,8 @@ function commitExercise(){
   ex.video = $('exVideo').value.trim();
   ex.weight = parseKg($('exWeight').value);
   ex.wStep = parseKg($('exWStep').value) || 2;
+  ex.repsStep = Math.max(1, parseInt($('exRepsStep').value) || 1);
+  ex.timeStep = Math.max(1, parseInt($('exTimeStep').value) || 5);
   return ex;
 }
 
@@ -5821,6 +6008,8 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
   нет — разминка, суставная гимнастика, дыхание, растяжка, техника. Такие упражнения не усложняются вообще.
 ВЕС: стартовый рабочий вес в кг числом — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Бери реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
 ШАГ ВЕСА: на сколько кг прибавлять за раз — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Обычно 2 кг для тяг, жимов и тяжёлых движений, 1 кг для махов и мелких мышц. Гантели дискретны, поэтому шаг целый.
+ШАГ ПОВТОРОВ: на сколько повторений сдвигать весь диапазон за раз — ТОЛЬКО при УСЛОЖНЯТЬ: повторения. Обычно 1-2.
+ШАГ ВРЕМЕНИ: на сколько секунд прибавлять за раз — ТОЛЬКО при УСЛОЖНЯТЬ: время. Обычно 5-10 секунд для планок и удержаний.
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -6022,6 +6211,8 @@ function parseProgramText(txt){
       }
       case 'ВЕС': if(cur) cur.weight = parseKg(val); break;
       case 'ШАГ ВЕСА': if(cur) cur.wStep = parseKg(val) || 2; break;
+      case 'ШАГ ПОВТОРОВ': if(cur) cur.repsStep = Math.max(1, parseInt(val) || 1); break;
+      case 'ШАГ ВРЕМЕНИ': if(cur) cur.timeStep = Math.max(1, parseInt(val) || 5); break;
       case 'SVG': case 'СВГ':
         if(cur && /<svg[\s>]/i.test(val)) cur.media = {kind:'svg', data:val};
         break;
@@ -6242,6 +6433,8 @@ async function saveProgram(){
       if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
       ex.weight = parseKg(ex.weight);
       ex.wStep  = parseKg(ex.wStep) || 2;
+      ex.repsStep = Math.max(1, Math.min(20, parseInt(ex.repsStep) || 1));
+      ex.timeStep = Math.max(1, Math.min(120, parseInt(ex.timeStep) || 5));
       if(!ex.name){
         appAlert(draft.plans.length > 1
           ? `Укажи название упражнения №${i+1} в варианте ${v+1}.`
@@ -6670,7 +6863,7 @@ function finishWorkout(){
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
-  state.lastKcal = estimateKcal(totalSec, state.load || 100);
+  state.lastKcal = estimateKcal(totalSec, 100);
   $('finKcal').textContent = '≈' + state.lastKcal;
   stats.totalSec += totalSec;
   stats.count = (stats.count || 0) + 1;
@@ -7329,7 +7522,6 @@ $('startResume').onclick = ()=>{
   const s = window.__pendingSession;
   $('startModal').classList.remove('open');
   if(!s){ startWorkout(); return; }
-  state.load = s.load || state.load;
   startWorkout(s.stepIdx, s.elapsed);
 };
 $('startFresh').onclick = async ()=>{
@@ -7415,20 +7607,22 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   };
 });
 $('btnResume').onclick = ()=> setPause(false);
+$('psMinus').onclick = ()=> bumpProgSteps(-1);
+$('psPlus').onclick = ()=> bumpProgSteps(1);
 
 // правка рабочего веса прямо на тренировке: меняем и текущий шаг, и все следующие
 // подходы этого же упражнения, и запоминаем как новый рабочий вес
 function bumpWeight(delta){
   const step = state.steps[state.stepIdx];
-  if(!step || step.progAxis !== 'weight') return;
-  const stepKg = +step.wStep || 2;
-  const next = Math.max(0, (+step.weight || 0) + delta * stepKg);
+  if(!step || step.progAxis !== 'weight' || !state.raw) return;
+  const exLike = {name: step.exName, prog: 'weight', weight: step.weightBase, wStep: step.wStep};
+  bumpProgDelta(state.raw.id, exLike, delta);
+  const next = getExProgValue(state.raw.id, exLike, state.raw);
   const name = step.exName;
   state.steps.forEach((s, i) => {
     if(i >= state.stepIdx && s.exName === name && s.progAxis === 'weight') s.weight = next;
   });
   $('wbKg').textContent = fmtKg(next);
-  if(state.raw) setExWeight(state.raw.id, {name, prog: 'weight'}, next);
 }
 $('waDown').onclick = ()=> applyWeightAdjust(-1);
 $('waUp').onclick   = ()=> applyWeightAdjust(1);
