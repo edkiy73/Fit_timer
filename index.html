@@ -6760,17 +6760,40 @@ function clearStepTimer(){
   hideReadyBar();
 }
 
+// На отдыхе у самого шага нет ни номера подхода, ни имени упражнения — mkRest создаёт
+// его без этих полей вовсе (в этом и была причина «Подход исчезает» и «Упражнение 0/N»).
+// Поэтому для подписей во время отдыха берём данные с ближайшего предыдущего рабочего шага,
+// а не с самого шага отдыха. Ищем по state.steps, а не полагаемся на то, что уже нарисовано —
+// так подпись верна и при переходе назад, и при возобновлении сессии сразу на отдыхе.
+function lastWorkStep(){
+  for(let i = state.stepIdx; i >= 0; i--){
+    if(state.steps[i].phase === 'work') return state.steps[i];
+  }
+  return state.steps[state.stepIdx];
+}
+
 // «Упражнение N из M» — считает именно упражнения, а не строки в state.steps: подходы одного
 // упражнения (setNo/setsTotal) и обе стороны (side) — это ОДНО упражнение, не два и не три,
-// а строки отдыха вообще не считаются. Разминка и основной круг считаются отдельно (сбрасывается
-// вместе со сменой круга), поэтому это дополняет «Круг X/Y», а не дублирует его.
+// а строки отдыха вообще не считаются. Разминка и упражнения основного круга объединены
+// в один сквозной счёт (4 разминочных + 6 основных = «упражнение N из 10»), а не считаются
+// раздельно — круг при этом не растягивает знаменатель: каждый круг заново проходит те же
+// «после разминки» позиции, номер круга и так виден отдельно в «Круг X/Y».
 function exerciseProgressLabel(step){
-  const order = [];
+  const warmupOrder = [], mainOrder = [];
+  // список основного круга берём ВСЕГДА по кругу 1 — он одинаков в любом круге (программа
+  // повторяется), а во время самой разминки step.round === 0 никогда бы не совпал с кругом
+  // основной части, и общее число упражнений считалось бы только по разминке (баг: 4 из 4
+  // вместо 4 из 10). round===1 — надёжный ориентир и для разминки, и для круга 2, 3…
   state.steps.forEach(s => {
-    if(s.round === step.round && s.phase === 'work' && !order.includes(s.exName)) order.push(s.exName);
+    if(s.phase !== 'work') return;
+    if(s.round === 0){ if(!warmupOrder.includes(s.exName)) warmupOrder.push(s.exName); }
+    else if(s.round === 1){ if(!mainOrder.includes(s.exName)) mainOrder.push(s.exName); }
   });
-  const idx = order.indexOf(step.exName) + 1;
-  return `Упражнение ${idx} / ${order.length}`;
+  const total = warmupOrder.length + mainOrder.length;
+  const idx = step.round === 0
+    ? warmupOrder.indexOf(step.exName) + 1
+    : warmupOrder.length + mainOrder.indexOf(step.exName) + 1;
+  return `Упражнение ${idx} / ${total}`;
 }
 
 function renderStep(){
@@ -6780,13 +6803,15 @@ function renderStep(){
   const total = state.steps.length;
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
+  // на отдыхе подписи берём с последнего рабочего шага — у самого отдыха этих данных нет
+  const labelStep = step.phase === 'rest' ? lastWorkStep() : step;
   // круг / разминка + подход
   let rl;
-  if(step.round === 0) rl = 'Разминка';
-  else rl = `Круг ${step.round} / ${state.current.rounds}`;
-  if(step.setsTotal > 1) rl += ` · Подход ${step.setNo} / ${step.setsTotal}`;
+  if(labelStep.round === 0) rl = 'Разминка';
+  else rl = `Круг ${labelStep.round} / ${state.current.rounds}`;
+  if(labelStep.setsTotal > 1) rl += ` · Подход ${labelStep.setNo} / ${labelStep.setsTotal}`;
   $('roundLabel').textContent = rl;
-  $('stepLabel').textContent = exerciseProgressLabel(step);
+  $('stepLabel').textContent = exerciseProgressLabel(labelStep);
   $('btnPrev').disabled = state.stepIdx === 0;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
