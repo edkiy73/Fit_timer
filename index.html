@@ -877,6 +877,9 @@
   .wa-btn small{font-size:11px;color:rgba(255,255,255,.6)}
   .wa-btn:active{background:rgba(255,255,255,.16)}
   .wa-btn.wa-keep{background:var(--work);border-color:var(--work)}
+  /* кнопка, взведённая первым нажатием: ждёт подтверждения вторым */
+  .wa-btn.armed{background:var(--work);border-color:var(--work)}
+  .wa-btn.armed small{color:rgba(255,255,255,.85)}
   .wa-track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
   .wa-fill{height:100%;width:100%;background:rgba(255,255,255,.55)}
 
@@ -1289,9 +1292,9 @@
       <span id="waNow"></span>
     </div>
     <div class="wa-row">
-      <button type="button" class="wa-btn" id="waDown">Тяжело<small id="waDownKg"></small></button>
+      <button type="button" class="wa-btn" id="waDown"><span id="waDownLbl">Тяжело</span><small id="waDownKg"></small></button>
       <button type="button" class="wa-btn wa-keep" id="waKeep">Так и оставить</button>
-      <button type="button" class="wa-btn" id="waUp">Легко<small id="waUpKg"></small></button>
+      <button type="button" class="wa-btn" id="waUp"><span id="waUpLbl">Легко</span><small id="waUpKg"></small></button>
     </div>
     <div class="wa-track"><div class="wa-fill" id="waFill"></div></div>
   </div>
@@ -1433,7 +1436,8 @@
     <div class="card-block">
     <p class="cb-title">2 · Получить результат</p>
 
-    
+    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — запрос короче и ответ быстрее</small></span><button class="switch" id="eaWantSvg"></button></div>
+
     <div class="ai-links">
       <button type="button" class="ai-self" id="eaSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="eaSend">Отправить в другое приложение</button>
@@ -1472,11 +1476,6 @@
       <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
       <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
-    </div>
-
-    <div class="card-block">
-    <p class="cb-title">Картинки упражнений</p>
-    <div class="pref-row"><span>Рисовать пиктограммы через ИИ<small>выключи — запрос короче и быстрее</small></span><button class="switch" id="bWantSvg"></button></div>
     </div>
 
     <div class="card-block">
@@ -1662,7 +1661,8 @@
     <div class="card-block">
     <p class="cb-title">2 · Получить программу</p>
 
-    
+    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — запрос короче и ответ быстрее</small></span><button class="switch" id="qWantSvg"></button></div>
+
     <div class="ai-links">
       <button type="button" class="ai-self" id="btnSelfAI">✨ Сделать через ИИ Fit Timer</button>
       <button type="button" id="btnSendAI">Отправить в другое приложение</button>
@@ -2142,6 +2142,7 @@ let readySec = 5;  // подготовка перед упражнением н�
 let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
 let fxVol = 1;    // громкость звуковых эффектов 0..1
 let voiceVol = 1; // громкость голоса 0..1
+let wantSvg = true; // просить ли у ИИ пиктограммы упражнений (настройка запроса, не программы)
 let audioCtx = null, masterGain = null;
 function initAudio(){
   try{
@@ -3719,7 +3720,7 @@ async function exportAllData(){
       warmupAdded: (await kvGet('warmupAdded_' + u.id)) === '1'
     };
   }
-  for(const k of ['voiceCtl', 'soundOff', 'voiceURI', 'musicMode', 'seenHelp', 'voiceHint']){
+  for(const k of ['voiceCtl', 'soundOff', 'voiceURI', 'musicMode', 'seenHelp', 'voiceHint', 'wantSvg']){
     dump.settings[k] = await kvGet(k);
   }
   const blob = new Blob([JSON.stringify(dump, null, 1)], {type: 'application/json'});
@@ -5059,6 +5060,7 @@ function openEditAI(p){
   $('eaResult').value = '';
   autoGrow($('eaWish'));
   syncGeminiBtns();
+  syncWantSvg();
   show('scrEditAI');
   window.scrollTo(0, 0);
 }
@@ -5357,12 +5359,26 @@ function normalizeExercise(ex){
    Спрашиваем один раз, когда упражнение полностью закончено: стало легко или тяжело.
    Ничего не блокируем — окно само уезжает через несколько секунд, тренировка идёт дальше. */
 let waTimer = 0, waRAF = 0, waStep = null;
+let waArmed = 0; // −1 / +1 — кнопка, взведённая первым нажатием и ждущая подтверждения
 
 function hideWeightAdjust(){
   clearTimeout(waTimer); waTimer = 0;
   cancelAnimationFrame(waRAF); waRAF = 0;
   waStep = null;
+  waArmed = 0;
   setShown('wAdjust', false);
+}
+
+// упражнение-исходник в самой программе по названию из шага: шаг тренировки — только копия,
+// в нём нет ни потолка, ни двойной прогрессии, ни собственного старта отсчёта
+function liveExercise(name){
+  const p = state.raw;
+  if(!p || !p.id || !name) return null;
+  const plan = normPlans(p)[(typeof state.planIdx === 'number') ? state.planIdx : 0];
+  if(!plan) return null;
+  const key = String(name).trim().toLowerCase();
+  const idx = (plan.exercises || []).findIndex(e => (e.name || '').trim().toLowerCase() === key);
+  return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx]} : null;
 }
 
 // это последний подход упражнения? дальше того же упражнения в тренировке уже нет
@@ -5376,17 +5392,9 @@ function isLastSetOf(idx){
   return true;
 }
 
-function showWeightAdjust(step){
-  if(!step || !(step.weight > 0)) return;
-  waStep = step;
-  const stepKg = +step.wStep || 2;
-  $('waTitle').textContent = step.exName || 'Как ощущался вес?';
-  $('waNow').textContent = `сейчас ${fmtKg(step.weight)} кг`;
-  $('waDownKg').textContent = '−' + fmtKg(stepKg) + ' кг';
-  $('waUpKg').textContent = '+' + fmtKg(stepKg) + ' кг';
-  setShown('wAdjust', true);
-
-  // полоска показывает, сколько осталось до автозакрытия
+// отсчёт до автозакрытия. Перезапускается после первого нажатия — чтобы хватило времени
+// на подтверждение вторым
+function waRestartTimer(){
   const total = 5000;
   const fill = $('waFill');
   fill.style.transition = 'none';
@@ -5403,16 +5411,64 @@ function showWeightAdjust(step){
   waTimer = setTimeout(hideWeightAdjust, total);
 }
 
-// применяем выбор: меняем рабочий вес упражнения на будущее
+// подписи кнопок: обычные или «нажми ещё раз» у взведённой
+function syncWaButtons(){
+  const stepKg = waStep ? (+waStep.wStep || 2) : 2;
+  const one = (btn, lbl, kg, dir, label, sign) => {
+    const armed = waArmed === dir;
+    $(btn).classList.toggle('armed', armed);
+    $(lbl).textContent = armed ? 'Ещё раз' : label;
+    $(kg).textContent = armed ? 'подтвердить' : sign + fmtKg(stepKg) + ' кг';
+  };
+  one('waDown', 'waDownLbl', 'waDownKg', -1, 'Тяжело', '−');
+  one('waUp', 'waUpLbl', 'waUpKg', 1, 'Легко', '+');
+  // пока кнопка ждёт подтверждения, акцент должен быть только на ней одной
+  $('waKeep').classList.toggle('wa-keep', !waArmed);
+}
+
+function showWeightAdjust(step){
+  if(!step || !(step.weight > 0)) return;
+  waStep = step;
+  waArmed = 0;
+  $('waTitle').textContent = step.exName || 'Как ощущался вес?';
+  $('waNow').textContent = `сейчас ${fmtKg(step.weight)} кг`;
+  syncWaButtons();
+  setShown('wAdjust', true);
+  waRestartTimer();
+}
+
+// применяем выбор: меняем рабочий вес упражнения на будущее.
+// Первое нажатие «Тяжело»/«Легко» только взводит кнопку, второе — применяет:
+// на тренировке легко задеть экран случайно, а вес поедет на все следующие занятия.
 function applyWeightAdjust(dir){
   if(!waStep || !state.raw) { hideWeightAdjust(); return; }
-  const exLike = {name: waStep.exName, prog: 'weight', weight: waStep.weightBase, wStep: waStep.wStep};
-  if(dir !== 0){
-    bumpProgDelta(state.raw.id, exLike, dir);
-    const next = getExProgValue(state.raw.id, exLike, state.raw);
-    state.steps.forEach(s => { if(s.exName === waStep.exName && s.progAxis === 'weight') s.weight = next; });
-    speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
+  if(dir === 0){ hideWeightAdjust(); return; }
+  if(waArmed !== dir){
+    waArmed = dir;
+    syncWaButtons();
+    waRestartTimer();
+    return;
   }
+  // шаг, потолок и двойная прогрессия живут в самом упражнении: собранная на лету копия
+  // их не знала и двигала вес не на ту величину
+  const src = liveExercise(waStep.exName);
+  const ex = src ? src.ex
+                 : {name: waStep.exName, prog: 'weight', weight: waStep.weightBase, wStep: waStep.wStep};
+  const pid = state.raw.id;
+  const before = getExProgValue(pid, ex, state.raw, 'weight');
+  bumpProgDelta(pid, ex, dir, 'weight');
+  const next = getExProgValue(pid, ex, state.raw, 'weight');
+  if(next === before){
+    // упёрлись в потолок упражнения (или в ноль) — копить невидимую поправку незачем
+    bumpProgDelta(pid, ex, -dir, 'weight');
+    waArmed = 0;
+    syncWaButtons();
+    $('waNow').textContent = dir > 0 ? `${fmtKg(before)} кг — это потолок` : `${fmtKg(before)} кг — меньше некуда`;
+    waRestartTimer();
+    return;
+  }
+  state.steps.forEach(s => { if(s.exName === waStep.exName && s.progAxis === 'weight') s.weight = next; });
+  speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
   hideWeightAdjust();
 }
 
@@ -5783,11 +5839,17 @@ $('bProgOn').onclick = ()=>{
   $('bProgOn').classList.toggle('on', on);
   setShown('bProgOpts', on);
 };
-$('bWantSvg').onclick = ()=>{
-  const on = !$('bWantSvg').classList.contains('on');
-  $('bWantSvg').classList.toggle('on', on);
-  draft.wantSvg = on;
-};
+// тумблер пиктограмм живёт сразу на двух экранах-запросах — держим их в одном состоянии
+function syncWantSvg(){
+  ['qWantSvg', 'eaWantSvg'].forEach(id => { if($(id)) $(id).classList.toggle('on', wantSvg); });
+}
+['qWantSvg', 'eaWantSvg'].forEach(id => {
+  $(id).onclick = ()=>{
+    wantSvg = !wantSvg;
+    kvSet('wantSvg', wantSvg ? '1' : '0');
+    syncWantSvg();
+  };
+});
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
 function commitPlanFields(){
@@ -5823,7 +5885,6 @@ function fillBuilder(title){
   setShown('bProgOpts', pOn);
   fillProgEveryOptions();
   $('bProgEvery').value = String(clampProgEvery(draft.progression || 6)); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
-  $('bWantSvg').classList.toggle('on', draft.wantSvg !== false); // по умолчанию включено
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -6762,6 +6823,7 @@ function qChips(boxId, opts, isMulti, get, set){
 }
 
 function initAIForm(){
+  syncWantSvg();
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qChips('qStyle', Q_OPTS.style, false, ()=> q.style, v => q.style = v);
   qChips('qWarm', Q_OPTS.warm, false, ()=> q.warm, v => q.warm = v);
@@ -6858,10 +6920,9 @@ function composeRequest(){
 // Инструкция по рисованию SVG — самая объёмная часть промта (больше 2 КБ). Если картинки
 // не нужны, вырезаем её целиком: и промт короче (меньше риск упереться в лимит ответа),
 // и модели не нужно тратить вывод на генерацию пиктограмм для каждого упражнения.
-function svgWanted(){
-  const p = (typeof draft !== 'undefined' && draft) ? draft : null;
-  return !p || p.wantSvg !== false; // по умолчанию включено — как было раньше
-}
+// Это настройка ЗАПРОСА, а не программы: она живёт рядом с кнопками «получить программу»
+// на экранах создания и доработки через ИИ и запоминается на устройстве.
+function svgWanted(){ return wantSvg; }
 function promptBase(){
   if(svgWanted()) return AI_PROMPT;
   return AI_PROMPT
@@ -7108,6 +7169,17 @@ function lastWorkStep(){
 // в один сквозной счёт (4 разминочных + 6 основных = «упражнение N из 10»), а не считаются
 // раздельно — круг при этом не растягивает знаменатель: каждый круг заново проходит те же
 // «после разминки» позиции, номер круга и так виден отдельно в «Круг X/Y».
+// какое это упражнение разминки по счёту — «Разминка 2 / 4». Разминка идёт вне кругов,
+// и без такого счёта на её экранах вообще не видно, сколько ещё осталось
+function warmupPosition(step){
+  const order = [];
+  state.steps.forEach(s => {
+    if(s.phase === 'work' && s.round === 0 && !order.includes(s.exName)) order.push(s.exName);
+  });
+  const i = order.indexOf(step.exName);
+  return i < 0 ? null : {idx: i + 1, total: order.length};
+}
+
 function exerciseProgressLabel(step){
   const warmupOrder = [], mainOrder = [];
   // список основного круга берём ВСЕГДА по кругу 1 — он одинаков в любом круге (программа
@@ -7137,9 +7209,15 @@ function renderStep(){
   const labelStep = step.phase === 'rest' ? lastWorkStep() : step;
   // круг / разминка + подход
   let rl;
-  if(labelStep.round === 0) rl = 'Разминка';
-  else rl = `Круг ${labelStep.round} / ${state.current.rounds}`;
-  if(labelStep.setsTotal > 1) rl += ` · Подход ${labelStep.setNo} / ${labelStep.setsTotal}`;
+  if(labelStep.round === 0){
+    // в разминке кругов нет — вместо них показываем, какое это упражнение разминки по счёту
+    const w = warmupPosition(labelStep);
+    rl = w ? `Разминка ${w.idx} / ${w.total}` : 'Разминка';
+  } else {
+    // круг всего один — «Круг 1 / 1» ничего не сообщает, только занимает строку
+    rl = state.current.rounds > 1 ? `Круг ${labelStep.round} / ${state.current.rounds}` : '';
+  }
+  if(labelStep.setsTotal > 1) rl += (rl ? ' · ' : '') + `Подход ${labelStep.setNo} / ${labelStep.setsTotal}`;
   $('roundLabel').textContent = rl;
   $('stepLabel').textContent = exerciseProgressLabel(labelStep);
   $('btnPrev').disabled = state.stepIdx === 0;
@@ -7322,15 +7400,10 @@ function closeSwapHint(){ $('swapModal').classList.remove('open'); }
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
 function swapSourceExercise(){
-  const p = state.raw;
-  if(!p || !p.id) return null;
   const step = state.steps[state.stepIdx];
-  if(!step || !step.exName) return null;
-  const plan = normPlans(p)[(typeof state.planIdx === 'number') ? state.planIdx : 0];
-  if(!plan) return null;
-  const name = step.exName.trim().toLowerCase();
-  const idx = (plan.exercises || []).findIndex(e => (e.name || '').trim().toLowerCase() === name);
-  return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx], step} : null;
+  if(!step) return null;
+  const src = liveExercise(step.exName);
+  return src ? {...src, step} : null;
 }
 
 function swapAIPrompt(ex, swap){
@@ -9463,6 +9536,8 @@ try{
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = HF_HINTS[hfMode] || '';
   soundOn = (await kvGet('soundOff')) !== '1';
+  wantSvg = (await kvGet('wantSvg')) !== '0';
+  syncWantSvg();
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   musicMode = (await kvGet('musicMode')) === '1';
   applyAudioFromUser(curUser());
