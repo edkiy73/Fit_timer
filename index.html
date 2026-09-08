@@ -259,7 +259,10 @@
   .slot-row .sl-body small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
   .slot-row .sl-body small.has{color:var(--rest)}
   .slot-group{font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
-  textarea.auto-grow{overflow:hidden;resize:none;min-height:90px}
+  /* поле растёт под текст; когда упирается в предел высоты — скроллится внутри себя,
+     поэтому overflow задаётся из autoGrow(), а не жёстко здесь */
+  textarea.auto-grow{resize:none;min-height:90px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+  textarea{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
   .prog-desc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:2px 0 16px;text-align:left}
   .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
     display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
@@ -300,6 +303,16 @@
   .stage{flex:1;display:flex;flex-direction:column;justify-content:flex-start;text-align:center;padding:8px 0;min-height:0}
   .phase-tag{font-family:'Oswald';font-weight:600;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--work)}
   body.phase-rest .phase-tag{color:var(--rest)}
+  /* «можно усложнить» — упражнение доросло до своего потолка, есть вариант посложнее */
+  .swap-badge{
+    display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:6px 12px;
+    border:1px dashed var(--work);border-radius:999px;background:none;color:var(--work);
+    font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  }
+  .swap-badge:active{background:var(--work);color:#fff}
+  .swap-card{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 12px;text-align:left}
+  .swap-card h4{margin:0 0 8px;font-size:17px}
+  .swap-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;white-space:pre-line}
   .stage-head{flex:none}
   .stage h2{font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:6px 0 2px;min-height:1.1em}
   .reps{font-family:'Oswald';font-weight:700;font-size:clamp(38px,11vw,56px);color:var(--work);line-height:1;margin:6px 0 2px;min-height:.9em}
@@ -1467,12 +1480,7 @@
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
-        <select id="bProgEvery">
-          <option value="3">каждые 3 тренировки</option>
-          <option value="4">каждые 4 тренировки</option>
-          <option value="6">каждые 6 тренировок</option>
-          <option value="8">каждые 8 тренировок</option>
-        </select>
+        <select id="bProgEvery"></select>
       </div>
       <p class="field-hint">Считается по реально пройденным тренировкам, а не по календарю — пропуски и перерывы нагрузку не поднимают.<br>Каждое упражнение растёт по-своему и не выше своего потолка — это настраивается в самом упражнении. На экране перед стартом видно, сколько повышений уже было, и это можно поправить вручную.</p>
     </div>
@@ -1574,6 +1582,12 @@
       </div>
       <div class="pref-row hidden" id="exDualRow"><span>Дошли до потолка — добавить вес<small>повторения вернутся к началу, вес вырастет на шаг</small></span><button type="button" class="switch" id="exDual"></button></div>
       <p class="field-hint hidden" id="exStepBothHint">Потолок можно оставить пустым — тогда роста без предела, но за год значения станут нереальными.</p>
+      <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда упрёшься в потолок</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+      <div class="stack hidden" id="exSwapBox">
+        <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
+        <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
+        <p class="field-hint">Когда упражнение дорастёт до своего потолка, рядом с названием на тренировке появится значок «можно усложнить» с этой подсказкой.</p>
+      </div>
     </div>
 
     <div class="card-block">
@@ -1685,6 +1699,7 @@
       <div class="stage-head">
         <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
+        <button type="button" class="swap-badge hidden" id="swapBadge">↑ Можно усложнить</button>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note hidden" id="sideNote"></div>
@@ -1987,6 +2002,20 @@
         <textarea id="dlgCode" readonly class="hidden"></textarea>
         <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
         <button class="link-btn" id="dlgCancel" style="margin:0;padding:10px">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="swapModal">
+      <div class="modal-card">
+        <span class="mini-label">Можно усложнить</span>
+        <p class="dlg-msg" id="swapIntro"></p>
+        <div class="swap-card">
+          <h4 id="swapName"></h4>
+          <p id="swapDesc"></p>
+        </div>
+        <p class="field-hint" style="margin-bottom:12px">Заменить упражнение можно после тренировки: открой программу → это упражнение → «Через ИИ» и вставь название с описанием.</p>
+        <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
+        <button class="link-btn" id="swapCopy" style="margin:0;padding:10px">Скопировать название и описание</button>
       </div>
     </div>
 
@@ -3230,6 +3259,10 @@ function customToProgram(p, planIdx = 0){
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name
     };
+    // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
+    if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){
+      step.swap = {name: ex.swapName.trim(), desc: (ex.swapDesc || '').trim()};
+    }
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
     if(isTimeFmt){
@@ -3923,9 +3956,14 @@ function applyProgressionAll(){
     // у программ, живших на календарной прогрессии, уже накоплен progSteps — превращаем его
     // в ручную поправку, чтобы прогресс не обнулился при переходе на счёт по тренировкам
     if(p.progLast != null && p.progStepsAdj == null){
-      const done = (p.stats && p.stats.completions) || 0;
-      const auto = p.progression ? Math.floor(done / p.progression) : 0;
-      p.progStepsAdj = Math.max(0, Math.round(+p.progSteps || 0)) - auto;
+      // переносим только реально накопленный календарём счётчик. Если его нет, программа
+      // на календарной прогрессии не жила и переносить нечего: поправка «0 минус авто»
+      // ушла бы в минус и навсегда обнулила бы весь будущий рост
+      if(p.progSteps != null){
+        const done = (p.stats && p.stats.completions) || 0;
+        const auto = p.progression ? Math.floor(done / p.progression) : 0;
+        p.progStepsAdj = Math.max(0, Math.round(+p.progSteps || 0)) - auto;
+      }
       delete p.progLast; // календарь больше не используется
       changed = true;
     }
@@ -4653,10 +4691,19 @@ function exerciseToText(ex){
       if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
       L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
       L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+      if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
+      if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+      if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
     } else if(ex.type === 'time'){
       L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
+      if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
     } else {
       L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
+      if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
+    }
+    if(ex.swapOn && (ex.swapName || '').trim()){
+      L.push('ЗАМЕНА: ' + ex.swapName.trim());
+      if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
   } else if(hasWeight(ex) && +ex.weight){
     L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
@@ -4704,6 +4751,10 @@ function exePrompt(){
   При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
   растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При «повторения и вес» вместо него — ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
+ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
+ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
+ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на технику (или пропусти строку)
 SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
 }
@@ -4812,6 +4863,10 @@ function exaPrompt(){
   При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
   растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При «повторения и вес» вместо него — ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
+ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
+ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
+ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
 SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
@@ -4914,8 +4969,7 @@ function programToText(p){
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
-    const per = p.progression === 7 ? 'неделя' : (p.progression === 14 ? 'две недели' : 'месяц');
-    L.push(`ПРОГРЕССИЯ: ${per} — автоматическая прибавка рабочего веса`);
+    L.push(`ПРОГРЕССИЯ: ${p.progression} — повышать нагрузку раз в ${p.progression} ${plural(p.progression, 'пройденную тренировку', 'пройденные тренировки', 'пройденных тренировок')}`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
@@ -4949,10 +5003,19 @@ function programToText(p){
           if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
           L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
           L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+          if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
+          if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+          if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
         } else if(ex.type === 'time'){
           L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
+          if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
         } else {
           L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
+          if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
+        }
+        if(ex.swapOn && (ex.swapName || '').trim()){
+          L.push('ЗАМЕНА: ' + ex.swapName.trim());
+          if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
         }
       } else if(hasWeight(ex) && +ex.weight){
         L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
@@ -5245,7 +5308,10 @@ function blankExercise(){
           repsMax:0, weightMax:0, timeMax:0,
           // Двойная прогрессия: дошли до потолка повторов → +шаг веса, повторы падают в начало.
           // Так растёт вес, а не бесконечное число повторений (классическая силовая схема).
-          dualProg:false};
+          dualProg:false,
+          // Чем заменить упражнение, когда потолок достигнут и расти дальше некуда:
+          // название и техника более сложного варианта того же движения.
+          swapOn:false, swapName:'', swapDesc:''};
 }
 
 /* ---- корректировка веса после последнего подхода ----
@@ -5354,9 +5420,28 @@ function exFormatState(ex){
   const format = ex.type === 'time' ? 'time' : (hasWeight(ex) ? 'reps_weight' : 'reps');
   return {format, progOn: progAxis(ex) !== 'none'};
 }
-// «каждую неделю» / «каждые 2 недели» / «каждый месяц» — подпись периода прогрессии программы
-function progPeriodLabel(days){
-  return {7: 'каждую неделю', 14: 'каждые 2 недели', 30: 'каждый месяц'}[days] || `каждые ${days} дн.`;
+// подпись периода прогрессии программы. Считаем в ПРОЙДЕННЫХ ТРЕНИРОВКАХ, а не в днях:
+// календарь поднимал нагрузку за время отпуска, поэтому от него отказались (см. progAutoSteps)
+const PROG_EVERY_MAX = 15;
+// у программ, созданных до перехода на счёт по тренировкам, здесь мог лежать календарный
+// период (например, 30 — «каждый месяц»): загоняем такое значение в допустимый диапазон
+function clampProgEvery(n){
+  return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || 6));
+}
+function progPeriodLabel(n){
+  n = Math.max(1, Math.round(+n || 1));
+  return n === 1 ? 'каждую тренировку' : `каждые ${n} ${plural(n, 'тренировку', 'тренировки', 'тренировок')}`;
+}
+// «как часто повышать» в настройках программы: 1–15 тренировок
+function fillProgEveryOptions(){
+  const sel = $('bProgEvery');
+  if(sel.options.length) return;
+  for(let n = 1; n <= PROG_EVERY_MAX; n++){
+    const o = document.createElement('option');
+    o.value = String(n);
+    o.textContent = progPeriodLabel(n);
+    sel.appendChild(o);
+  }
 }
 // 12 кг, 12,5 кг — без хвостов вроде 12.50
 function fmtKg(kg){
@@ -5505,11 +5590,11 @@ function progressedRepsRange(pid, ex, program){
   max = Math.max(min, max);
   return min === max ? String(min) : min + '-' + max;
 }
-// упёрлось ли упражнение в свой потолок — чтобы подсказать «пора усложнить вариант»
-function progAtCeiling(pid, ex, program){
-  const axis = progAxis(ex);
-  if(axis === 'none') return false;
-  if(isDualProg(ex)) return progCeil(ex, 'weight') != null && getExProgValue(pid, ex, program, 'weight') >= progCeil(ex, 'weight');
+// упёрлось ли упражнение в свой потолок — чтобы подсказать «пора усложнить вариант».
+// Потолок считается достигнутым, только когда РАСТИ БОЛЬШЕ НЕКУДА: каждая растущая ось
+// упражнения имеет потолок и уже на нём. Если хоть одна ось растёт без ограничения,
+// упражнение продолжает усложняться само и подсказка была бы ложной.
+function axisAtCeiling(pid, ex, program, axis){
   const ceil = progCeil(ex, axis);
   if(ceil == null) return false;
   if(axis === 'reps'){
@@ -5517,6 +5602,16 @@ function progAtCeiling(pid, ex, program){
     return top.max >= ceil;
   }
   return getExProgValue(pid, ex, program, axis) >= ceil;
+}
+function progAtCeiling(pid, ex, program){
+  const axis = progAxis(ex);
+  if(axis === 'none') return false;
+  // при двойной прогрессии повторы ходят по кругу, а копится вес — смотрим только на него
+  if(isDualProg(ex)) return axisAtCeiling(pid, ex, program, 'weight');
+  const axes = ex.type === 'time' ? ['time'] : (hasWeight(ex) ? ['weight', 'reps'] : ['reps']);
+  const growing = axes.filter(a => progStepSize(ex, a) > 0);
+  if(!growing.length) return false;
+  return growing.every(a => axisAtCeiling(pid, ex, program, a));
 }
 // сдвинуть ручную поправку веса на dir «шагов» (±1 обычно) — используют кнопки на тренировке
 function bumpProgDelta(pid, ex, dir, axis){
@@ -5680,7 +5775,8 @@ function fillBuilder(title){
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
   setShown('bProgOpts', pOn);
-  $('bProgEvery').value = String(draft.progression || 6); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
+  fillProgEveryOptions();
+  $('bProgEvery').value = String(clampProgEvery(draft.progression || 6)); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
   $('bWantSvg').classList.toggle('on', draft.wantSvg !== false); // по умолчанию включено
   syncCover();
   renderPlanTabs();
@@ -5833,6 +5929,10 @@ function openExercise(i){
 
 function fillExercise(){
   const ex = exDraft;
+  // «тронутые» поля шага и потолка помечаются, чтобы renderProgControls не затирал ввод.
+  // При открытии ДРУГОГО упражнения метка должна сбрасываться, иначе в полях остаются
+  // цифры предыдущего — и уходят в него при сохранении
+  ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
   $('exTitle').textContent = (ex.name || '').trim() || 'Упражнение';
   $('exName').value = ex.name || '';
   $('exValue').value = valueText(ex.value).replace('–', '-');
@@ -5921,16 +6021,17 @@ function renderProgControls(){
   $('exProgOn').disabled = false;
 
   const on = progAxis(exDraft) !== 'none';
+  const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
   $('exProgOn').classList.toggle('on', on);
   if(!on){
-    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint'].forEach(id => setShown(id, false));
+    $('exProgOnHint').textContent = 'выключено — нагрузка остаётся прежней';
+    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     return;
   }
 
-  const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
   $('exProgOnHint').textContent = period
-    ? `автоматически, ${progPeriodLabel(period)}`
-    : 'вручную — автопрогрессия в программе выключена';
+    ? `нагрузка растёт сама: ${progPeriodLabel(period)}`
+    : 'в настройках программы автоприбавка выключена — нагрузка не растёт';
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
@@ -5948,6 +6049,12 @@ function renderProgControls(){
   setShown('exDualRow', withWeight && !isTime);
   $('exDual').classList.toggle('on', !!exDraft.dualProg);
   setShown('exStepBothHint', true);
+  // замена нужна только усложняющемуся упражнению — при выключенном тумблере блок скрыт выше
+  setShown('exSwapRow', true);
+  $('exSwapOn').classList.toggle('on', !!exDraft.swapOn);
+  setShown('exSwapBox', !!exDraft.swapOn);
+  $('exSwapName').value = exDraft.swapName || '';
+  $('exSwapDesc').value = exDraft.swapDesc || '';
 
   const set = (id, val) => { if(!$(id).dataset.touched) $(id).value = val; };
   if(!isTime){
@@ -6026,6 +6133,9 @@ function applyFormTo(target){
       target.timeStep = num('exStepTime', 5, Math.round);
       target.timeMax = num('exMaxTime', 0, Math.round);
     }
+    target.swapName = $('exSwapName').value.trim().slice(0, 60);
+    target.swapDesc = $('exSwapDesc').value.trim().slice(0, 600);
+    target.swapOn = !!(target.swapOn && target.swapName);
   }
   return target;
 }
@@ -6205,7 +6315,7 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ПРОГРАММА: название программы
 ОПИСАНИЕ ПРОГРАММЫ: связный текст до 1000 символов В ОДНУ СТРОКУ (без переносов) — для кого эта программа, какого результата ждать и в какие сроки, как часто заниматься, на что обращать внимание при выполнении, когда стоит снизить нагрузку. Пиши обращаясь на «ты», по делу и без воды. Это единственное место, где можно объяснить логику всей тренировки целиком — используй его.
 ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
-ПРОГРЕССИЯ: нет / неделя / две недели — как часто автоматически прибавлять рабочий вес в упражнениях с осью «вес» (или пропусти строку)
+ПРОГРЕССИЯ: число от 1 до 15 или «нет» — раз во сколько ПРОЙДЕННЫХ ТРЕНИРОВОК автоматически повышать нагрузку в упражнениях со строкой УСЛОЖНЯТЬ: да. Считаются именно выполненные тренировки, а не дни календаря, поэтому недели и месяцы здесь не указывай. Новичку обычно 3–6, опытным 2–4 (или пропусти строку).
 ЧЕРЕДОВАНИЕ: да / нет — если вариантов несколько и они должны идти по очереди (A, потом B, потом снова A) независимо от дней недели. Для силовых сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки жёстко привязаны к дням недели — «нет» и укажи ДЕНЬ у каждого варианта.
 ДНИ ТРЕНИРОВОК: дни недели через запятую (Пн, Ср, Пт) — общее расписание программы. Указывай ТОЛЬКО при ЧЕРЕДОВАНИЕ: да: эти дни говорят, когда тренироваться, а какой именно вариант выпадет — решает очередь.
 
@@ -6241,6 +6351,10 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
   При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — пиши одну ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
   растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел, выше которого нагрузка не поднимается. Число в тех же единицах, что и ЗНАЧЕНИЕ: повторения (разумно 15-25) или секунды (60-120). При «повторения и вес» вместо ПОТОЛОК пиши ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (в кг, для дома обычно 10-24). Без потолка за год значения станут нереальными — не пропускай эту строку.
+ПРИ ПОТОЛКЕ: да/нет — только при ФОРМАТ «повторения и вес» и заданном ПОТОЛОК ПОВТОРОВ. «да» — дошли до потолка повторений, повторения возвращаются к началу диапазона, а вес прибавляется на ШАГ ВЕСА (классическая двойная прогрессия). Для силовых упражнений с гантелями обычно «да».
+ЗАМЕНА: название более сложного упражнения — на что перейти, когда потолок достигнут и расти дальше некуда (для отжиманий с колен — классические отжимания, для приседаний — приседания с гантелями). Указывай только при УСЛОЖНЯТЬ: да, иначе пропусти строку.
+ОПИСАНИЕ ЗАМЕНЫ: техника этого более сложного упражнения, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на YouTube с реальным разбором техники, если уверен, что видео существует. Не выдумывай — иначе пропусти строку.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -6272,6 +6386,9 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 ОТДЫХ: 45
 УСЛОЖНЯТЬ: да
 ШАГ: 2
+ПОТОЛОК: 20
+ЗАМЕНА: Отжимания с ногами на возвышении
+ОПИСАНИЕ ЗАМЕНЫ: Поставь стопы на диван или стул, ладони на полу чуть шире плеч. Тело держи прямой линией, опускайся грудью к полу и выжимай себя вверх. Чем выше опора для ног, тем больше нагрузка уходит на грудь и плечи.
 SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
 УПРАЖНЕНИЕ: Планка на локтях
@@ -6282,6 +6399,9 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ОТДЫХ: 30
 УСЛОЖНЯТЬ: да
 ШАГ: 10
+ПОТОЛОК: 120
+ЗАМЕНА: Планка с подъёмом руки
+ОПИСАНИЕ ЗАМЕНЫ: Из планки на локтях медленно вытяни одну руку вперёд, удерживая таз неподвижным. Задержись на пару секунд и вернись, затем повтори другой рукой. Чем меньше корпус качается, тем лучше работает пресс.
 
 УПРАЖНЕНИЕ: Тяга гантели в наклоне
 ОПИСАНИЕ: Обопрись коленом и рукой на скамью, во второй руке гантель. Держа спину прямой, потяни гантель к поясу, сводя лопатку. Медленно опусти обратно, не скручивая корпус.
@@ -6293,7 +6413,11 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 СТОРОНА: да
 ОТДЫХ: 60
 УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 1
 ШАГ ВЕСА: 2
+ПОТОЛОК ПОВТОРОВ: 15
+ПОТОЛОК ВЕСА: 16
+ПРИ ПОТОЛКЕ: да
 
 УПРАЖНЕНИЕ: Выпады назад
 ОПИСАНИЕ: Встань прямо, руки на поясе. Сделай широкий шаг назад и опустись, пока оба колена не согнутся под прямым углом. Переднее колено строго над стопой, корпус вертикально. Оттолкнись передней пяткой и вернись в исходное положение.
@@ -6305,6 +6429,7 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ОТДЫХ: 60
 УСЛОЖНЯТЬ: да
 ШАГ: 1
+ПОТОЛОК: 18
 
 ДЕНЬ: Вт, Пт
 КРУГИ: 4
@@ -6317,6 +6442,9 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ОТДЫХ: 30
 УСЛОЖНЯТЬ: да
 ШАГ: 3
+ПОТОЛОК: 35
+ЗАМЕНА: Приседания с гантелями
+ОПИСАНИЕ ЗАМЕНЫ: Возьми по гантели в каждую руку и держи их вдоль тела. Приседай до параллели бёдер с полом, спина прямая, колени в сторону носков. Вставай, отталкиваясь пятками и сжимая ягодицы наверху.
 
 === ШАБЛОН МОЕГО ЗАПРОСА ===
 Чтобы получить хорошую программу, я заполняю пропуски в квадратных скобках (или пишу своими словами):
@@ -6356,12 +6484,29 @@ function parseProgramText(txt){
   // раскладывает накопленный «сырой» ШАГ в нужное поле (вес/повторы/время) по итоговому
   // формату упражнения — вызывается, когда упражнение точно больше не изменится
   const finalizeExercise = ex => {
-    if(!ex || ex._rawStep == null) return;
-    const n = ex._rawStep; // уже прошёл parseStepNum — либо валидное число (включая 0), либо сюда не попал бы
-    if(ex.type === 'time') ex.timeStep = Math.round(n);
-    else if(ex.trackWeight) ex.wStep = Math.round(n * 2) / 2;
-    else ex.repsStep = Math.round(n);
-    delete ex._rawStep;
+    if(!ex) return;
+    if(ex._rawStep != null){
+      const n = ex._rawStep; // уже прошёл parseStepNum — либо валидное число (включая 0), либо сюда не попал бы
+      if(ex.type === 'time') ex.timeStep = Math.round(n);
+      else if(ex.trackWeight) ex.wStep = Math.round(n * 2) / 2;
+      else ex.repsStep = Math.round(n);
+      delete ex._rawStep;
+    }
+    // ПОТОЛОК раскладываем так же, как ШАГ: смысл числа задаёт формат упражнения,
+    // а строка ФОРМАТ могла встретиться в тексте и позже
+    if(ex._rawMax != null){
+      const n = ex._rawMax;
+      if(ex.type === 'time') ex.timeMax = Math.round(n);
+      else if(ex.trackWeight) ex.weightMax = Math.round(n * 2) / 2;
+      else ex.repsMax = Math.round(n);
+      delete ex._rawMax;
+    }
+    // двойная прогрессия имеет смысл только с весом и потолком повторов —
+    // иначе неоткуда взяться моменту «повторы упёрлись, добавляем вес»
+    if(ex.dualProg && !(ex.trackWeight && ex.repsMax > 0)) ex.dualProg = false;
+    // замена без названия — это просто пустой флаг, он ничего не покажет
+    if(!(ex.swapName || '').trim()){ ex.swapOn = false; ex.swapName = ''; ex.swapDesc = ''; }
+    else ex.swapOn = true;
   };
   const parseDays = val => {
     const list = val.split(/[,;]/).map(d => DAY_ALIASES[d.trim().toLowerCase()]).filter(Boolean);
@@ -6473,8 +6618,11 @@ function parseProgramText(txt){
           else if(/нет|не усложн/.test(v)) cur.prog = 'none';
           break;
         }
-        if(/2|две/i.test(val)) p.progression = 14;
-        else if(/недел/i.test(val)) p.progression = 7;
+        if(/нет|no|выкл|без/i.test(val)){ p.progression = 0; break; }
+        const num = parseInt(String(val).match(/\d+/));
+        if(isFinite(num) && num > 0){ p.progression = clampProgEvery(num); break; }
+        // прежние формулировки в неделях: переводим в тренировки из расчёта ~3 занятия в неделю
+        if(/недел/i.test(val)) p.progression = /2|две/i.test(val) ? 6 : 3;
         else p.progression = 0;
         break;
       }
@@ -6504,6 +6652,17 @@ function parseProgramText(txt){
       case 'ШАГ ВЕСА': if(cur){ const n = parseStepNum(val); cur.wStep = n != null ? Math.round(n * 2) / 2 : 2; } break;
       case 'ШАГ ПОВТОРОВ': if(cur){ const n = parseStepNum(val); cur.repsStep = n != null ? Math.round(n) : 1; } break;
       case 'ШАГ ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); cur.timeStep = n != null ? Math.round(n) : 5; } break;
+      // потолок роста: выше него прогрессия не поднимает. Единый ключ ПОТОЛОК разбирается
+      // по формату упражнения в finalizeExercise, раздельные — сразу
+      case 'ПОТОЛОК': if(cur){ const n = parseStepNum(val); if(n != null) cur._rawMax = n; } break;
+      case 'ПОТОЛОК ПОВТОРОВ': if(cur){ const n = parseStepNum(val); if(n != null) cur.repsMax = Math.round(n); } break;
+      case 'ПОТОЛОК ВЕСА': if(cur){ const n = parseStepNum(val); if(n != null) cur.weightMax = Math.round(n * 2) / 2; } break;
+      case 'ПОТОЛОК ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); if(n != null) cur.timeMax = Math.round(n); } break;
+      case 'ПРИ ПОТОЛКЕ': case 'ДВОЙНАЯ ПРОГРЕССИЯ':
+        if(cur) cur.dualProg = !/нет|no|false|0/i.test(val);
+        break;
+      case 'ЗАМЕНА': if(cur) cur.swapName = val.slice(0, 60); break;
+      case 'ОПИСАНИЕ ЗАМЕНЫ': case 'ЗАМЕНА ОПИСАНИЕ': if(cur) cur.swapDesc = val.slice(0, 600); break;
       case 'SVG': case 'СВГ':
         if(cur && /<svg[\s>]/i.test(val)) cur.media = {kind:'svg', data:val};
         break;
@@ -6712,8 +6871,11 @@ async function saveProgram(){
   if(!draft.rotate){ delete draft.rotIdx; delete draft.days; }
   else if(!Array.isArray(draft.days)) draft.days = [];
   if($('bProgOn').classList.contains('on')){
-    draft.progression = parseInt($('bProgEvery').value) || 6;
-      if(!draft.progLast) draft.progLast = localISO(new Date());
+    draft.progression = clampProgEvery($('bProgEvery').value);
+    // progLast — метка календарной прогрессии, от которой отказались. Если её проставить
+    // здесь, миграция applyProgressionAll при следующем запуске примет программу за старую
+    // и запишет отрицательную поправку, обнулив весь накопленный рост
+    delete draft.progLast;
   } else {
     draft.progression = 0;
     delete draft.progLast;
@@ -6743,6 +6905,14 @@ async function saveProgram(){
       ex.wStep  = parseKg(ex.wStep) || 2;
       ex.repsStep = Math.max(1, Math.min(20, parseInt(ex.repsStep) || 1));
       ex.timeStep = Math.max(1, Math.min(120, parseInt(ex.timeStep) || 5));
+      // потолки: 0 = без потолка. Верхние границы отсекают явную чушь из ответа ИИ
+      ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
+      ex.weightMax = parseKg(ex.weightMax);
+      ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
+      ex.dualProg = !!ex.dualProg && hasWeight(ex) && ex.repsMax > 0;
+      ex.swapName = (ex.swapName || '').trim().slice(0, 60);
+      ex.swapDesc = (ex.swapDesc || '').trim().slice(0, 600);
+      ex.swapOn = !!ex.swapName;
       if(!ex.name){
         appAlert(draft.plans.length > 1
           ? `Укажи название упражнения №${i+1} в варианте ${v+1}.`
@@ -6954,6 +7124,7 @@ function renderStep(){
 
   setShown('phaseTag', false);
   $('stepTitle').textContent = step.title;
+  setShown('swapBadge', step.phase === 'work' && !!step.swap);
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
 
@@ -7103,6 +7274,21 @@ function nextStep(){
   }
 }
 
+/* ---- подсказка «можно усложнить» ----
+   Упражнение доросло до потолка и расти дальше некуда, а более сложный вариант известен.
+   Ничего не меняем автоматически: показываем название и технику, а замену человек делает
+   сам через редактирование упражнения — на тренировке не место структурным правкам. */
+function openSwapHint(){
+  const step = state.steps[state.stepIdx];
+  if(!step || !step.swap) return;
+  $('swapIntro').textContent = `«${step.title}» дошло до своего потолка — дальше нагрузка не растёт. Вот что можно делать вместо него:`;
+  $('swapName').textContent = step.swap.name;
+  $('swapDesc').textContent = step.swap.desc || 'Описание не задано.';
+  $('swapCopy').textContent = 'Скопировать название и описание';
+  $('swapModal').classList.add('open');
+}
+function closeSwapHint(){ $('swapModal').classList.remove('open'); }
+
 // шаг назад — если пропустил случайно или хочешь переделать подход
 function prevStep(){
   if(state.stepIdx <= 0) return;
@@ -7152,11 +7338,22 @@ function renderNextUp(step){
   requestAnimationFrame(fitNextUpDesc);
 }
 
-// поле растёт по содержимому — не нужно скроллить внутри маленькой рамки
+// поле растёт по содержимому — не нужно скроллить внутри маленькой рамки.
+// Но у роста есть предел: дальше поле само становится прокручиваемым, иначе длинный
+// ответ нейросети просто обрезался бы без возможности до него добраться.
+// Предел роста — доля экрана, а не фиксированные пиксели: поле выше экрана нельзя
+// прокрутить внутри, не потеряв из виду его края, а длинные ответы нейросети именно такие.
+function autoGrowMax(){
+  return Math.max(180, Math.min(900, Math.round(window.innerHeight * 0.6)));
+}
 function autoGrow(el){
   if(!el) return;
+  const max = autoGrowMax();
+  el.style.overflowY = 'hidden';
   el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight + 2, 900) + 'px';
+  const need = el.scrollHeight + 2;
+  el.style.height = Math.min(need, max) + 'px';
+  if(need > max) el.style.overflowY = 'auto';
 }
 document.addEventListener('input', e => {
   if(e.target && e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
@@ -7250,8 +7447,6 @@ function finishWorkout(){
   const m = Math.floor(totalSec/60), s = totalSec%60;
   $('finalTime').textContent = `${m}:${String(s).padStart(2,'0')}`;
   fanfare();
-  // оценка нагрузки: по умолчанию «мне подходит»
-  if(state.current && state.current.sourceId) applyFeedback('ok');
   show('scrFinish');
 }
 
@@ -8417,6 +8612,22 @@ $('btnSendAI').onclick = sendToAI;
 $('aiGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('aiClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('btnParse').onclick = importFromText;
+$('swapBadge').onclick = openSwapHint;
+$('swapOk').onclick = closeSwapHint;
+$('swapModal').onclick = e => { if(e.target === $('swapModal')) closeSwapHint(); };
+$('swapCopy').onclick = async ()=>{
+  const step = state.steps[state.stepIdx];
+  if(!step || !step.swap) return;
+  const text = `${step.swap.name}\n${step.swap.desc || ''}`.trim();
+  try{
+    await navigator.clipboard.writeText(text);
+    $('swapCopy').textContent = '✓ Скопировано';
+  }catch(e){
+    closeSwapHint();
+    appAlert('Не удалось скопировать автоматически. Скопируй вручную:', {code: text});
+  }
+};
+
 $('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
 $('aeCancel').onclick = ()=> $('addExModal').classList.remove('open');
 $('addExModal').onclick = e => { if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
@@ -8889,6 +9100,14 @@ $('exDual').onclick = ()=>{
   $('exDual').classList.toggle('on', exDraft.dualProg);
   syncExDetailsSum();
 };
+$('exSwapOn').onclick = ()=>{
+  exDraft.swapOn = !exDraft.swapOn;
+  $('exSwapOn').classList.toggle('on', exDraft.swapOn);
+  setShown('exSwapBox', exDraft.swapOn);
+  if(exDraft.swapOn) autoGrow($('exSwapDesc'));
+};
+$('exSwapName').oninput = e => { exDraft.swapName = e.target.value; };
+$('exSwapDesc').oninput = e => { exDraft.swapDesc = e.target.value; };
 $('exWarm').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
