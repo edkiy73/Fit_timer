@@ -1456,7 +1456,7 @@
 
     <div class="card-block">
     <p class="cb-title">Автоматическая прибавка</p>
-    <div class="pref-row"><span>Усложнять само<small>упражнения с включённым «Усложнять со временем»</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="pref-row"><span>Прибавлять по расписанию<small>только упражнения с включённым «Усложнять со временем»</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
@@ -5768,6 +5768,10 @@ function fillExercise(){
 // вес — это ДОПОЛНЕНИЕ к повторениям, а не отдельный формат значения.
 function syncExType(){
   const reps = exDraft.type !== 'time';
+  // защита: формат «время» физически не совместим с весом — если trackWeight каким-то
+  // путём остался true (например, обработчик не сбросил), гасим его здесь принудительно,
+  // а не полагаемся только на то, что каждый обработчик таба не забудет это сделать
+  if(!reps && exDraft.trackWeight) exDraft.trackWeight = false;
   const withWeight = reps && hasWeight(exDraft);
   $('exTypeReps').classList.toggle('act', reps && !withWeight);
   $('exTypeRepsWeight').classList.toggle('act', withWeight);
@@ -6756,6 +6760,19 @@ function clearStepTimer(){
   hideReadyBar();
 }
 
+// «Упражнение N из M» — считает именно упражнения, а не строки в state.steps: подходы одного
+// упражнения (setNo/setsTotal) и обе стороны (side) — это ОДНО упражнение, не два и не три,
+// а строки отдыха вообще не считаются. Разминка и основной круг считаются отдельно (сбрасывается
+// вместе со сменой круга), поэтому это дополняет «Круг X/Y», а не дублирует его.
+function exerciseProgressLabel(step){
+  const order = [];
+  state.steps.forEach(s => {
+    if(s.round === step.round && s.phase === 'work' && !order.includes(s.exName)) order.push(s.exName);
+  });
+  const idx = order.indexOf(step.exName) + 1;
+  return `Упражнение ${idx} / ${order.length}`;
+}
+
 function renderStep(){
   clearStepTimer();
   setPause(false); // новый шаг всегда начинается без паузы
@@ -6769,7 +6786,7 @@ function renderStep(){
   else rl = `Круг ${step.round} / ${state.current.rounds}`;
   if(step.setsTotal > 1) rl += ` · Подход ${step.setNo} / ${step.setsTotal}`;
   $('roundLabel').textContent = rl;
-  $('stepLabel').textContent = `Шаг ${state.stepIdx+1} / ${total}`;
+  $('stepLabel').textContent = exerciseProgressLabel(step);
   $('btnPrev').disabled = state.stepIdx === 0;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
 
@@ -8671,7 +8688,7 @@ $('exTypeRepsWeight').onclick = ()=>{
   if(exDraft.wStep == null) exDraft.wStep = 2;
   syncExType();
 };
-$('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
+$('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; exDraft.trackWeight = false; syncExType(); };
 
 $('exProgOn').onclick = ()=>{
   const on = !$('exProgOn').classList.contains('on');
