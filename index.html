@@ -1422,7 +1422,9 @@
       <button type="button" id="eaGPT">Открыть ChatGPT</button>
       <button type="button" id="eaClaude">Открыть Claude</button>
       <button type="button" id="eaCopy">Скопировать</button>
+      <button type="button" id="eaCopyFull">Скопировать программу целиком</button>
     </div>
+    <p class="field-hint">«Скопировать программу целиком» — это вся текущая программа текстом плюс описание формата. Такой текст можно отправить любой нейросети (или мне) для разбора и переделки, не открывая приложение.</p>
 
     <div class="field">
       <textarea id="eaResult" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
@@ -1455,18 +1457,24 @@
     </div>
 
     <div class="card-block">
+    <p class="cb-title">Картинки упражнений</p>
+    <div class="pref-row"><span>Рисовать пиктограммы через ИИ<small>выключи — запрос короче и быстрее</small></span><button class="switch" id="bWantSvg"></button></div>
+    </div>
+
+    <div class="card-block">
     <p class="cb-title">Автоматическая прибавка</p>
     <div class="pref-row"><span>Прибавлять по расписанию<small>только упражнения с включённым «Усложнять со временем»</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
         <select id="bProgEvery">
-          <option value="7">каждую неделю</option>
-          <option value="14">каждые 2 недели</option>
-          <option value="30">каждый месяц</option>
+          <option value="3">каждые 3 тренировки</option>
+          <option value="4">каждые 4 тренировки</option>
+          <option value="6">каждые 6 тренировок</option>
+          <option value="8">каждые 8 тренировок</option>
         </select>
       </div>
-      <p class="field-hint">Каждое упражнение растёт по своей оси и на свой шаг: где задан вес — прибавится вес, где повторения — прибавятся повторения, где время — прибавится время. Всё это настраивается в самом упражнении. Кнопками на экране перед стартом можно посмотреть, сколько раз уже прибавляло, и поправить руками.</p>
+      <p class="field-hint">Считается по реально пройденным тренировкам, а не по календарю — пропуски и перерывы нагрузку не поднимают.<br>Каждое упражнение растёт по-своему и не выше своего потолка — это настраивается в самом упражнении. На экране перед стартом видно, сколько повышений уже было, и это можно поправить вручную.</p>
     </div>
     </div>
 
@@ -1554,10 +1562,18 @@
       <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
       <div class="row2 hidden" id="exStepRow">
         <div class="field hidden" id="exStepRepsRow"><label>Прибавка повторений</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="1"></div>
-        <div class="field hidden" id="exStepWeightRow"><label>Прибавка веса, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="2"></div>
-        <div class="field hidden" id="exStepTimeRow"><label>Прибавка времени, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="5"></div>
+        <div class="field hidden" id="exStepMaxRepsRow"><label>Потолок повторений</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="15"></div>
       </div>
-      <p class="field-hint hidden" id="exStepBothHint">Можно оставить 0 у одного из двух — тогда расти будет только второй.</p>
+      <div class="row2 hidden" id="exStepWRow">
+        <div class="field hidden" id="exStepWeightRow"><label>Прибавка веса, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="2"></div>
+        <div class="field hidden" id="exStepMaxWeightRow"><label>Потолок веса, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="24"></div>
+      </div>
+      <div class="row2 hidden" id="exStepTRow">
+        <div class="field hidden" id="exStepTimeRow"><label>Прибавка времени, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="5"></div>
+        <div class="field hidden" id="exStepMaxTimeRow"><label>Потолок времени, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="60"></div>
+      </div>
+      <div class="pref-row hidden" id="exDualRow"><span>Дошли до потолка — добавить вес<small>повторения вернутся к началу, вес вырастет на шаг</small></span><button type="button" class="switch" id="exDual"></button></div>
+      <p class="field-hint hidden" id="exStepBothHint">Потолок можно оставить пустым — тогда роста без предела, но за год значения станут нереальными.</p>
     </div>
 
     <div class="card-block">
@@ -2593,22 +2609,22 @@ function renderProgSteps(){
   $('psCount').textContent = steps;
   $('psMinus').disabled = steps <= 0;
 
-  const perDays = {7: 'неделю', 14: '2 недели', 30: 'месяц'}[p.progression] || `${p.progression} дн.`;
-  let nextTxt = '';
-  if(p.progLast){
-    const last = new Date(p.progLast); last.setHours(0,0,0,0);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const daysLeft = p.progression - Math.floor((today - last) / 86400000);
-    nextTxt = daysLeft <= 0 ? 'Следующая уже готова — начнётся с этой тренировки.'
-                             : `Следующая через ${daysLeft} ${plural(daysLeft, 'день', 'дня', 'дней')}.`;
-  }
+  // прогрессия теперь считается по пройденным тренировкам, а не по календарю
+  const done = (p.stats && p.stats.completions) || 0;
+  const left = p.progression - (done % p.progression);
+  const nextTxt = `Следующая через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`;
   $('progStepsInfo').textContent =
-    (steps === 0 ? 'Пока без повышений.' : `Повышалась ${steps} ${plural(steps, 'раз', 'раза', 'раз')}, каждый — раз в ${perDays}.`)
-    + (nextTxt ? ' ' + nextTxt : '');
+    (steps === 0 ? 'Пока без повышений.'
+                 : `Повышалась ${steps} ${plural(steps, 'раз', 'раза', 'раз')}, каждое — раз в ${p.progression} ${plural(p.progression, 'тренировку', 'тренировки', 'тренировок')}.`)
+    + ' ' + nextTxt;
 }
+// кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
+// пройденных тренировок и пересчитался бы заново, затерев ручное изменение
 function bumpProgSteps(dir){
   const p = state.raw;
-  p.progSteps = Math.max(0, progSteps(p) + dir);
+  const cur = progSteps(p);
+  if(dir < 0 && cur <= 0) return;
+  p.progStepsAdj = Math.round(+p.progStepsAdj || 0) + dir;
   savePrograms();
   renderProgSteps();
 }
@@ -3895,20 +3911,24 @@ async function finishOnboardingCreate(){
 // Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
 // (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
 // вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
+// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по календарю.
+// Раньше вес рос просто оттого, что прошло время: уехал в отпуск на месяц — вернулся,
+// а программа подняла нагрузку на четыре шага, хотя ты не тренировался. Это и демотивирует,
+// и травмоопасно. Теперь p.progression — это «повышать раз в N тренировок».
+// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам. Отдельная функция не нужна —
+// значение выводится на лету в progSteps(), поэтому здесь только миграция старых программ.
 function applyProgressionAll(){
   let changed = false;
-  const today = new Date(); today.setHours(0,0,0,0);
   customPrograms.forEach(p => {
-    if(!p.progression) return;
-    if(!p.progLast){ p.progLast = localISO(today); changed = true; return; }
-    const last = new Date(p.progLast); last.setHours(0,0,0,0);
-    const days = Math.floor((today - last) / 86400000);
-    const steps = Math.floor(days / p.progression);
-    if(steps <= 0) return;
-    p.progSteps = Math.max(0, Math.round(+p.progSteps || 0)) + steps;
-    const ndate = new Date(last); ndate.setDate(last.getDate() + steps * p.progression);
-    p.progLast = localISO(ndate);
-    changed = true;
+    // у программ, живших на календарной прогрессии, уже накоплен progSteps — превращаем его
+    // в ручную поправку, чтобы прогресс не обнулился при переходе на счёт по тренировкам
+    if(p.progLast != null && p.progStepsAdj == null){
+      const done = (p.stats && p.stats.completions) || 0;
+      const auto = p.progression ? Math.floor(done / p.progression) : 0;
+      p.progStepsAdj = Math.max(0, Math.round(+p.progSteps || 0)) - auto;
+      delete p.progLast; // календарь больше не используется
+      changed = true;
+    }
   });
   if(changed) savePrograms();
 }
@@ -4843,7 +4863,7 @@ function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = ($('ytWish').value || '').trim();
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return AI_PROMPT +
+  return promptBase() +
     '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
     'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
     'ССЫЛКА: ' + link + '\n' +
@@ -4945,7 +4965,7 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = ($('eaWish').value || '').trim();
-  return AI_PROMPT +
+  return promptBase() +
     '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
     'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
     'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
@@ -5219,7 +5239,13 @@ function blankExercise(){
           rest:45, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
-          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5};
+          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5,
+          // Потолок: выше него прогрессия не поднимает. Без него линейный рост за год
+          // доводит до нереальных значений (60 кг гантель, 60 повторений, 5 минут планки).
+          repsMax:0, weightMax:0, timeMax:0,
+          // Двойная прогрессия: дошли до потолка повторов → +шаг веса, повторы падают в начало.
+          // Так растёт вес, а не бесконечное число повторений (классическая силовая схема).
+          dualProg:false};
 }
 
 /* ---- корректировка веса после последнего подхода ----
@@ -5385,8 +5411,18 @@ function exWeightKey(pid, name){
   return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
 }
 
-// программа: сколько раз уже сработала автоматическая прогрессия (обратимо, см. выше)
-function progSteps(p){ return Math.max(0, Math.round(+p.progSteps || 0)); }
+// Сколько раз уже сработала прогрессия. Считается на лету из числа пройденных тренировок
+// (а не из календаря), плюс ручная поправка кнопками ± на экране перед стартом.
+// Поправка хранится отдельно, иначе автоматический пересчёт затирал бы ручное изменение.
+function progAutoSteps(p){
+  if(!p || !p.progression) return 0;
+  const done = (p.stats && p.stats.completions) || 0;
+  return Math.floor(done / p.progression);
+}
+function progSteps(p){
+  if(!p) return 0;
+  return Math.max(0, progAutoSteps(p) + Math.round(+p.progStepsAdj || 0));
+}
 
 // ручная поправка веса конкретного упражнения (в кг). Хранится в progWeights под тем же
 // ключом, что и раньше: у людей, кто уже пользовался весом до этого обновления, старое
@@ -5412,22 +5448,75 @@ function progOffset(pid, ex, program, axis){
   const steps = program ? progSteps(program) : 0;
   return steps * progStepSize(ex, axis) + progDelta(pid, ex, axis);
 }
-// итоговое значение упражнения сейчас: база + суммарный сдвиг (по конкретной оси axis,
-// или по «главной» оси упражнения, если axis не передан)
+// потолок оси: 0 или пусто = потолка нет (растём без ограничения, как раньше)
+function progCeil(ex, axis){
+  const v = axis === 'weight' ? ex.weightMax : axis === 'time' ? ex.timeMax : ex.repsMax;
+  return (+v > 0) ? +v : null;
+}
+// двойная прогрессия возможна, только когда есть и вес, и потолок повторов:
+// без потолка неизвестно, когда сбрасывать повторы и добавлять вес
+function isDualProg(ex){
+  return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
+}
+// сколько шагов прогрессии умещается в один цикл «повторы от низа до потолка + сброс»
+function dualCycleLen(ex){
+  const base = parseValue(ex.value).min;
+  const top = progCeil(ex, 'reps');
+  const step = progStepSize(ex, 'reps') || 1;
+  return Math.max(1, Math.floor((top - base) / step)) + 1; // +1 — сам шаг сброса с прибавкой веса
+}
+
+// итоговое значение упражнения сейчас: база + суммарный сдвиг, но НЕ выше потолка.
+// При двойной прогрессии вес растёт не каждый шаг, а раз в цикл (когда повторы упёрлись в потолок).
 function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
-  const v = progBaseValue(ex, axis) + progOffset(pid, ex, program, axis);
+  const base = progBaseValue(ex, axis);
+  const ceil = progCeil(ex, axis);
+  let v;
+  if(axis === 'weight' && isDualProg(ex)){
+    const steps = program ? progSteps(program) : 0;
+    const cycles = Math.floor(steps / dualCycleLen(ex));
+    v = base + cycles * progStepSize(ex, 'weight') + progDelta(pid, ex, 'weight');
+  } else {
+    v = base + progOffset(pid, ex, program, axis);
+  }
+  if(ceil != null) v = Math.min(ceil, v);
   return Math.max(progFloor(axis), progRound(axis, v));
 }
-// диапазон повторов «8-12» со сдвигом обеих границ. axis фиксирован — это всегда 'reps',
-// даже для формата «повторения и вес» (там диапазон и вес растут независимо друг от друга)
+// диапазон повторов «8-12»: при обычной прогрессии сдвигаются обе границы (но не выше потолка),
+// при двойной — повторы ходят по кругу внутри диапазона и сбрасываются, когда растёт вес
 function progressedRepsRange(pid, ex, program){
   const r = parseValue(ex.value);
-  const off = progOffset(pid, ex, program, 'reps');
-  const min = Math.max(1, Math.round(r.min + off));
-  const max = Math.max(min, Math.round(r.max + off));
+  const ceil = progCeil(ex, 'reps');
+  let min, max;
+  if(isDualProg(ex)){
+    const steps = program ? progSteps(program) : 0;
+    const pos = steps % dualCycleLen(ex);
+    min = r.min + pos * progStepSize(ex, 'reps');
+    max = min; // при двойной прогрессии цель — одно число, а диапазон служит рамками
+  } else {
+    const off = progOffset(pid, ex, program, 'reps');
+    min = Math.round(r.min + off);
+    max = Math.round(r.max + off);
+  }
+  if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
+  min = Math.max(1, min);
+  max = Math.max(min, max);
   return min === max ? String(min) : min + '-' + max;
+}
+// упёрлось ли упражнение в свой потолок — чтобы подсказать «пора усложнить вариант»
+function progAtCeiling(pid, ex, program){
+  const axis = progAxis(ex);
+  if(axis === 'none') return false;
+  if(isDualProg(ex)) return progCeil(ex, 'weight') != null && getExProgValue(pid, ex, program, 'weight') >= progCeil(ex, 'weight');
+  const ceil = progCeil(ex, axis);
+  if(ceil == null) return false;
+  if(axis === 'reps'){
+    const top = parseValue(progressedRepsRange(pid, ex, program));
+    return top.max >= ceil;
+  }
+  return getExProgValue(pid, ex, program, axis) >= ceil;
 }
 // сдвинуть ручную поправку веса на dir «шагов» (±1 обычно) — используют кнопки на тренировке
 function bumpProgDelta(pid, ex, dir, axis){
@@ -5553,6 +5642,11 @@ $('bProgOn').onclick = ()=>{
   $('bProgOn').classList.toggle('on', on);
   setShown('bProgOpts', on);
 };
+$('bWantSvg').onclick = ()=>{
+  const on = !$('bWantSvg').classList.contains('on');
+  $('bWantSvg').classList.toggle('on', on);
+  draft.wantSvg = on;
+};
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
 function commitPlanFields(){
@@ -5586,7 +5680,8 @@ function fillBuilder(title){
   const pOn = !!draft.progression;
   $('bProgOn').classList.toggle('on', pOn);
   setShown('bProgOpts', pOn);
-  $('bProgEvery').value = String(draft.progression || 7);
+  $('bProgEvery').value = String(draft.progression || 6); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
+  $('bWantSvg').classList.toggle('on', draft.wantSvg !== false); // по умолчанию включено
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -5819,7 +5914,7 @@ function renderProgControls(){
     $('exProgOn').classList.add('disabled');
     $('exProgOn').disabled = true;
     $('exProgOnHint').textContent = 'недоступно для разминки';
-    setShown('exStepRow', false);
+    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint'].forEach(id => setShown(id, false));
     return;
   }
   $('exProgOn').classList.remove('disabled');
@@ -5827,8 +5922,10 @@ function renderProgControls(){
 
   const on = progAxis(exDraft) !== 'none';
   $('exProgOn').classList.toggle('on', on);
-  setShown('exStepRow', on);
-  if(!on) return;
+  if(!on){
+    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint'].forEach(id => setShown(id, false));
+    return;
+  }
 
   const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
   $('exProgOnHint').textContent = period
@@ -5837,14 +5934,34 @@ function renderProgControls(){
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
-  setShown('exStepRepsRow', !isTime);              // повторы — и для «повторения», и для «повторения и вес»
-  setShown('exStepWeightRow', withWeight);          // вес — только для «повторения и вес»
+  // каждая ось — своя пара «прибавка + потолок» в одной строке
+  setShown('exStepRow', !isTime);
+  setShown('exStepRepsRow', !isTime);
+  setShown('exStepMaxRepsRow', !isTime);
+  setShown('exStepWRow', withWeight);
+  setShown('exStepWeightRow', withWeight);
+  setShown('exStepMaxWeightRow', withWeight);
+  setShown('exStepTRow', isTime);
   setShown('exStepTimeRow', isTime);
-  setShown('exStepBothHint', !isTime && withWeight); // подсказка про «оставь 0» — только когда полей реально два
+  setShown('exStepMaxTimeRow', isTime);
+  // двойная прогрессия возможна только там, где есть и повторы, и вес
+  setShown('exDualRow', withWeight && !isTime);
+  $('exDual').classList.toggle('on', !!exDraft.dualProg);
+  setShown('exStepBothHint', true);
 
-  if(!isTime && !$('exStepReps').dataset.touched) $('exStepReps').value = exDraft.repsStep != null ? exDraft.repsStep : 1;
-  if(withWeight && !$('exStepWeight').dataset.touched) $('exStepWeight').value = fmtKg(exDraft.wStep != null ? exDraft.wStep : 2);
-  if(isTime && !$('exStepTime').dataset.touched) $('exStepTime').value = exDraft.timeStep != null ? exDraft.timeStep : 5;
+  const set = (id, val) => { if(!$(id).dataset.touched) $(id).value = val; };
+  if(!isTime){
+    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : 1);
+    set('exMaxReps', exDraft.repsMax > 0 ? exDraft.repsMax : '');
+  }
+  if(withWeight){
+    set('exStepWeight', fmtKg(exDraft.wStep != null ? exDraft.wStep : 2));
+    set('exMaxWeight', exDraft.weightMax > 0 ? fmtKg(exDraft.weightMax) : '');
+  }
+  if(isTime){
+    set('exStepTime', exDraft.timeStep != null ? exDraft.timeStep : 5);
+    set('exMaxTime', exDraft.timeMax > 0 ? exDraft.timeMax : '');
+  }
 }
 
 
@@ -5893,17 +6010,21 @@ function applyFormTo(target){
   // и явный 0 в любом из них означает «эта ось у этого упражнения не растёт» (не путать
   // с пустым полем, куда ещё не вписали ничего — там остаётся дефолт оси)
   if(target.progOn){
-    if(!(target.type === 'time')){
-      const n = parseStepNum($('exStepReps').value);
-      target.repsStep = n != null ? Math.round(n) : 1;
+    const num = (id, def, round) => {
+      const n = parseStepNum($(id).value);
+      return n != null ? round(n) : def;
+    };
+    if(target.type !== 'time'){
+      target.repsStep = num('exStepReps', 1, Math.round);
+      target.repsMax = num('exMaxReps', 0, Math.round);   // 0 = потолка нет
     }
     if(hasWeight(target)){
-      const n = parseStepNum($('exStepWeight').value);
-      target.wStep = n != null ? Math.round(n * 2) / 2 : 2;
+      target.wStep = num('exStepWeight', 2, v => Math.round(v * 2) / 2);
+      target.weightMax = num('exMaxWeight', 0, v => Math.round(v * 2) / 2);
     }
     if(target.type === 'time'){
-      const n = parseStepNum($('exStepTime').value);
-      target.timeStep = n != null ? Math.round(n) : 5;
+      target.timeStep = num('exStepTime', 5, Math.round);
+      target.timeMax = num('exMaxTime', 0, Math.round);
     }
   }
   return target;
@@ -6529,7 +6650,23 @@ function composeRequest(){
   if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
   return s.trim();
 }
-const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
+// Инструкция по рисованию SVG — самая объёмная часть промта (больше 2 КБ). Если картинки
+// не нужны, вырезаем её целиком: и промт короче (меньше риск упереться в лимит ответа),
+// и модели не нужно тратить вывод на генерацию пиктограмм для каждого упражнения.
+function svgWanted(){
+  const p = (typeof draft !== 'undefined' && draft) ? draft : null;
+  return !p || p.wantSvg !== false; // по умолчанию включено — как было раньше
+}
+function promptBase(){
+  if(svgWanted()) return AI_PROMPT;
+  return AI_PROMPT
+    .split('\n')
+    .filter(line => !/^SVG:/.test(line.trim()))
+    .join('\n')
+    .replace(/\nПиктограмма ОБЯЗАТЕЛЬНА[^\n]*/g, '')
+    + '\nПиктограммы (строку SVG) не добавляй — они не нужны.';
+}
+const fullAIPrompt = ()=> promptBase() + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function sendToAI(){
@@ -6575,7 +6712,7 @@ async function saveProgram(){
   if(!draft.rotate){ delete draft.rotIdx; delete draft.days; }
   else if(!Array.isArray(draft.days)) draft.days = [];
   if($('bProgOn').classList.contains('on')){
-    draft.progression = parseInt($('bProgEvery').value) || 7;
+    draft.progression = parseInt($('bProgEvery').value) || 6;
       if(!draft.progLast) draft.progLast = localISO(new Date());
   } else {
     draft.progression = 0;
@@ -8247,6 +8384,22 @@ $('eaSend').onclick = async ()=>{
   copyEditPrompt();
 };
 $('eaCopy').onclick = ()=> copyEditPrompt();
+// «программа целиком»: полное описание формата + текущая программа. В отличие от обычного
+// «Скопировать» (там только промт с запросом на изменение), этот текст самодостаточен —
+// его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
+$('eaCopyFull').onclick = async ()=>{
+  const btn = $('eaCopyFull');
+  const text = promptBase()
+    + '\n\nВОТ МОЯ ТЕКУЩАЯ ПРОГРАММА В ЭТОМ ЖЕ ФОРМАТЕ:\n\n'
+    + programToText(editAIProg)
+    + '\n\nЧТО НУЖНО СДЕЛАТЬ: опиши задачу здесь. Верни программу целиком в том же формате — её можно будет вставить обратно в приложение.';
+  try{
+    await navigator.clipboard.writeText(text);
+    const old = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(()=> btn.textContent = old, 1600);
+  }catch(e){ appAlert('Не удалось скопировать. Попробуй ещё раз.'); }
+};
 async function copyEditPrompt(){
   const btn = $('eaCopy');
   try{
@@ -8724,13 +8877,18 @@ $('exProgOn').onclick = ()=>{
     if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = 1;
     if(exDraft.type === 'time' && exDraft.timeStep == null) exDraft.timeStep = 5;
   }
-  ['exStepReps', 'exStepWeight', 'exStepTime'].forEach(id => delete $(id).dataset.touched);
+  ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
   renderProgControls();
   syncExDetailsSum();
 };
-$('exStepReps').oninput = ()=>{ $('exStepReps').dataset.touched = '1'; };
-$('exStepWeight').oninput = ()=>{ $('exStepWeight').dataset.touched = '1'; };
-$('exStepTime').oninput = ()=>{ $('exStepTime').dataset.touched = '1'; };
+['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => {
+  $(id).oninput = ()=>{ $(id).dataset.touched = '1'; };
+});
+$('exDual').onclick = ()=>{
+  exDraft.dualProg = !exDraft.dualProg;
+  $('exDual').classList.toggle('on', exDraft.dualProg);
+  syncExDetailsSum();
+};
 $('exWarm').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
