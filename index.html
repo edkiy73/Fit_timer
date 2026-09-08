@@ -209,6 +209,9 @@
     padding:13px 14px;min-height:48px;text-align:left;
   }
   textarea{min-height:90px;line-height:1.5;resize:vertical}
+  /* подсказка в пустом поле заметно бледнее текста — иначе её путают с заполненным значением */
+  ::placeholder{color:var(--muted);opacity:.55}
+  ::-webkit-input-placeholder{color:var(--muted);opacity:.55}
   input[type=range]{padding:0;min-height:0;border:none}
   input[type=file]{display:none}
   /* селект — со стрелкой */
@@ -310,6 +313,8 @@
     font-family:'Oswald';font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
   }
   .swap-badge:active{background:var(--work);color:#fff}
+  .swap-badge svg{width:15px;height:15px;display:block}
+  .swap-badge span{display:flex}
   .swap-card{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 12px;text-align:left}
   .swap-card h4{margin:0 0 8px;font-size:17px}
   .swap-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;white-space:pre-line}
@@ -1517,7 +1522,7 @@
     <p class="cb-title">Круги и отдых <span class="st-note" id="stVariantNote"></span></p>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
-      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="0"></div>
+      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
     </div>
     <p class="field-hint" id="bVolHint"></p>
     <div class="field"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
@@ -1557,10 +1562,10 @@
         </div>
       </div>
       <div class="row2">
-        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="12 или 12-15"></div>
-        <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
+        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="Например: 12-15"></div>
+        <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
       </div>
-      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="8"></div>
+      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="Например: 8"></div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
       <div class="field"><label>Отдых после подхода, сек</label>
         <div class="load-row" id="exRestChips"></div>
@@ -1569,16 +1574,16 @@
 
       <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
       <div class="row2 hidden" id="exStepRow">
-        <div class="field hidden" id="exStepRepsRow"><label>Прибавка повторений</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="1"></div>
-        <div class="field hidden" id="exStepMaxRepsRow"><label>Потолок повторений</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="15"></div>
+        <div class="field hidden" id="exStepRepsRow"><label>Прибавка повторений</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
+        <div class="field hidden" id="exStepMaxRepsRow"><label>Потолок повторений</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
       </div>
       <div class="row2 hidden" id="exStepWRow">
-        <div class="field hidden" id="exStepWeightRow"><label>Прибавка веса, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="2"></div>
-        <div class="field hidden" id="exStepMaxWeightRow"><label>Потолок веса, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="24"></div>
+        <div class="field hidden" id="exStepWeightRow"><label>Прибавка веса, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
+        <div class="field hidden" id="exStepMaxWeightRow"><label>Потолок веса, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
       </div>
       <div class="row2 hidden" id="exStepTRow">
-        <div class="field hidden" id="exStepTimeRow"><label>Прибавка времени, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="5"></div>
-        <div class="field hidden" id="exStepMaxTimeRow"><label>Потолок времени, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="60"></div>
+        <div class="field hidden" id="exStepTimeRow"><label>Прибавка времени, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
+        <div class="field hidden" id="exStepMaxTimeRow"><label>Потолок времени, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
       </div>
       <div class="pref-row hidden" id="exDualRow"><span>Дошли до потолка — добавить вес<small>повторения вернутся к началу, вес вырастет на шаг</small></span><button type="button" class="switch" id="exDual"></button></div>
       <p class="field-hint hidden" id="exStepBothHint">Потолок можно оставить пустым — тогда роста без предела, но за год значения станут нереальными.</p>
@@ -1699,7 +1704,7 @@
       <div class="stage-head">
         <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
-        <button type="button" class="swap-badge hidden" id="swapBadge">↑ Можно усложнить</button>
+        <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note hidden" id="sideNote"></div>
@@ -1933,10 +1938,10 @@
       <div class="card-block">
         <p class="cb-title">Тайминги тренировки</p>
         <div class="row2">
-          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
-          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="5"></div>
+          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
         </div>
-        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="10"></div>
+        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
         <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
       </div>
     </div>
@@ -2013,7 +2018,8 @@
           <h4 id="swapName"></h4>
           <p id="swapDesc"></p>
         </div>
-        <p class="field-hint" style="margin-bottom:12px">Заменить упражнение можно после тренировки: открой программу → это упражнение → «Через ИИ» и вставь название с описанием.</p>
+        <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px">Заменить через ИИ сейчас</button>
+        <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
         <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
         <button class="link-btn" id="swapCopy" style="margin:0;padding:10px">Скопировать название и описание</button>
       </div>
@@ -4726,15 +4732,9 @@ function openExEdAI(i){
   window.scrollTo(0, 0);
 }
 
-function exePrompt(){
-  const ex = curPlan().exercises[exeIdx];
-  const wish = ($('exeWish').value || '').trim();
-  return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
-    'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
-    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    `=== ФОРМАТ ОТВЕТА ===
+// формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
+// с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
+const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 УПРАЖНЕНИЕ: название на русском
 ОПИСАНИЕ: техника на «ты», 3–5 предложений
 МЫШЦЫ: группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
@@ -4757,6 +4757,16 @@ function exePrompt(){
 ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на технику (или пропусти строку)
 SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
+
+function exePrompt(){
+  const ex = curPlan().exercises[exeIdx];
+  const wish = ($('exeWish').value || '').trim();
+  return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
+    'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
+    'ДЛЯ КОГО: ' + userForAI() + '\n' +
+    'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
+    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
+    EX_ANSWER_FORMAT;
 }
 
 async function applyExEdit(){
@@ -5314,6 +5324,35 @@ function blankExercise(){
           swapOn:false, swapName:'', swapDesc:''};
 }
 
+// приводит поля упражнения к валидным значениям: и после ручного ввода, и после ответа ИИ,
+// который может прислать что угодно. Меняет объект на месте и возвращает его же.
+function normalizeExercise(ex){
+  ex.name  = (ex.name || '').trim();
+  ex.value = normValue(ex.value, ex.type);
+  ex.sets  = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+  ex.perSide = !!ex.perSide;
+  ex.warmup  = !!ex.warmup;
+  ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
+  // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
+  if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
+  ex.weight = parseKg(ex.weight);
+  ex.wStep  = parseKg(ex.wStep) || 2;
+  ex.repsStep = Math.max(1, Math.min(20, parseInt(ex.repsStep) || 1));
+  ex.timeStep = Math.max(1, Math.min(120, parseInt(ex.timeStep) || 5));
+  // потолки: 0 = без потолка. Верхние границы отсекают явную чушь из ответа ИИ
+  ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
+  ex.weightMax = parseKg(ex.weightMax);
+  ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
+  ex.dualProg = !!ex.dualProg && hasWeight(ex) && ex.repsMax > 0;
+  ex.swapName = (ex.swapName || '').trim().slice(0, 60);
+  ex.swapDesc = (ex.swapDesc || '').trim().slice(0, 600);
+  ex.swapOn = !!ex.swapName;
+  ex.video = (ex.video || '').trim();
+  if(ex.video && !/^https?:\/\//i.test(ex.video)) ex.video = 'https://' + ex.video;
+  if(ex.media && ex.media.kind === 'svg' && !/<svg[\s>]/i.test(ex.media.data || '')) ex.media = null;
+  return ex;
+}
+
 /* ---- корректировка веса после последнего подхода ----
    Спрашиваем один раз, когда упражнение полностью закончено: стало легко или тяжело.
    Ничего не блокируем — окно само уезжает через несколько секунд, тренировка идёт дальше. */
@@ -5508,6 +5547,13 @@ function progSteps(p){
   if(!p) return 0;
   return Math.max(0, progAutoSteps(p) + Math.round(+p.progStepsAdj || 0));
 }
+// сколько шагов прогрессии прошло У КОНКРЕТНОГО УПРАЖНЕНИЯ. Счётчик один на программу,
+// но упражнение могло появиться позже — тогда в ex.progFrom записано, сколько шагов у
+// программы уже было на тот момент, и они этому упражнению не засчитываются. Иначе
+// свежая замена в программе с двадцатью повышениями мгновенно улетела бы в свой потолок.
+function exProgSteps(ex, program){
+  return Math.max(0, progSteps(program) - Math.max(0, Math.round(+(ex && ex.progFrom) || 0)));
+}
 
 // ручная поправка веса конкретного упражнения (в кг). Хранится в progWeights под тем же
 // ключом, что и раньше: у людей, кто уже пользовался весом до этого обновления, старое
@@ -5530,7 +5576,7 @@ function setProgDelta(pid, ex, delta, axis){
 // повторов «8-12» — там сдвигаются сразу обе границы на одно и то же число.
 function progOffset(pid, ex, program, axis){
   axis = axis || progAxis(ex);
-  const steps = program ? progSteps(program) : 0;
+  const steps = program ? exProgSteps(ex, program) : 0;
   return steps * progStepSize(ex, axis) + progDelta(pid, ex, axis);
 }
 // потолок оси: 0 или пусто = потолка нет (растём без ограничения, как раньше)
@@ -5560,7 +5606,7 @@ function getExProgValue(pid, ex, program, axis){
   const ceil = progCeil(ex, axis);
   let v;
   if(axis === 'weight' && isDualProg(ex)){
-    const steps = program ? progSteps(program) : 0;
+    const steps = program ? exProgSteps(ex, program) : 0;
     const cycles = Math.floor(steps / dualCycleLen(ex));
     v = base + cycles * progStepSize(ex, 'weight') + progDelta(pid, ex, 'weight');
   } else {
@@ -5576,7 +5622,7 @@ function progressedRepsRange(pid, ex, program){
   const ceil = progCeil(ex, 'reps');
   let min, max;
   if(isDualProg(ex)){
-    const steps = program ? progSteps(program) : 0;
+    const steps = program ? exProgSteps(ex, program) : 0;
     const pos = steps % dualCycleLen(ex);
     min = r.min + pos * progStepSize(ex, 'reps');
     max = min; // при двойной прогрессии цель — одно число, а диапазон служит рамками
@@ -5631,7 +5677,7 @@ function getExWeight(pid, ex, program){
 // абсолютное значение переводим в ручную поправку ОТНОСИТЕЛЬНО текущих шагов программы —
 // без program это посчитать нельзя, иначе поправка задвоит уже накопленные шаги
 function setExWeight(pid, ex, kg, program){
-  const steps = program ? progSteps(program) : 0;
+  const steps = program ? exProgSteps(ex, program) : 0;
   setProgDelta(pid, ex, kg - progBaseValue(ex, 'weight') - steps * progStepSize(ex, 'weight'), 'weight');
 }
 
@@ -5972,7 +6018,7 @@ function syncExType(){
   $('exTypeRepsWeight').classList.toggle('act', withWeight);
   $('exTypeTime').classList.toggle('act', !reps);
   $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
-  $('exValue').placeholder = reps ? '12 или 12-15' : '45';
+  $('exValue').placeholder = reps ? 'Например: 12-15' : 'Например: 45';
   setShown('exWeightRow', withWeight);
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
 }
@@ -6892,36 +6938,13 @@ async function saveProgram(){
   for(let v=0; v<draft.plans.length; v++){
     const pl = draft.plans[v];
     for(let i=0; i<pl.exercises.length; i++){
-      const ex = pl.exercises[i];
-      ex.name  = (ex.name || '').trim();
-      ex.value = normValue(ex.value, ex.type);
-      ex.sets  = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
-      ex.perSide = !!ex.perSide;
-      ex.warmup  = !!ex.warmup;
-      ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
-      // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
-      if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
-      ex.weight = parseKg(ex.weight);
-      ex.wStep  = parseKg(ex.wStep) || 2;
-      ex.repsStep = Math.max(1, Math.min(20, parseInt(ex.repsStep) || 1));
-      ex.timeStep = Math.max(1, Math.min(120, parseInt(ex.timeStep) || 5));
-      // потолки: 0 = без потолка. Верхние границы отсекают явную чушь из ответа ИИ
-      ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
-      ex.weightMax = parseKg(ex.weightMax);
-      ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
-      ex.dualProg = !!ex.dualProg && hasWeight(ex) && ex.repsMax > 0;
-      ex.swapName = (ex.swapName || '').trim().slice(0, 60);
-      ex.swapDesc = (ex.swapDesc || '').trim().slice(0, 600);
-      ex.swapOn = !!ex.swapName;
+      const ex = normalizeExercise(pl.exercises[i]);
       if(!ex.name){
         appAlert(draft.plans.length > 1
           ? `Укажи название упражнения №${i+1} в варианте ${v+1}.`
           : `Укажи название упражнения №${i+1}.`);
         return;
       }
-      ex.video = (ex.video || '').trim();
-      if(ex.video && !/^https?:\/\//i.test(ex.video)) ex.video = 'https://' + ex.video;
-      if(ex.media && ex.media.kind==='svg' && !/<svg[\s>]/i.test(ex.media.data || '')) ex.media = null;
     }
   }
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
@@ -7285,9 +7308,108 @@ function openSwapHint(){
   $('swapName').textContent = step.swap.name;
   $('swapDesc').textContent = step.swap.desc || 'Описание не задано.';
   $('swapCopy').textContent = 'Скопировать название и описание';
+  // заменить прямо здесь можно только своим ключом — без него остаётся ручной путь
+  const ai = hasGemini();
+  setShown('swapAI', ai);
+  $('swapOk').className = ai ? 'btn-ghost' : 'btn-primary';
+  $('swapHint').textContent = ai
+    ? 'Нейросеть сама подберёт технику, стартовые значения и новый потолок — упражнение в программе заменится сразу.'
+    : 'Заменить упражнение можно после тренировки: открой программу → это упражнение → «Через ИИ» и вставь название с описанием.';
   $('swapModal').classList.add('open');
 }
 function closeSwapHint(){ $('swapModal').classList.remove('open'); }
+
+// ---- замена упражнения через ИИ прямо на тренировке ----
+// находим упражнение-исходник в самой программе: шаг тренировки — это только копия
+function swapSourceExercise(){
+  const p = state.raw;
+  if(!p || !p.id) return null;
+  const step = state.steps[state.stepIdx];
+  if(!step || !step.exName) return null;
+  const plan = normPlans(p)[(typeof state.planIdx === 'number') ? state.planIdx : 0];
+  if(!plan) return null;
+  const name = step.exName.trim().toLowerCase();
+  const idx = (plan.exercises || []).findIndex(e => (e.name || '').trim().toLowerCase() === name);
+  return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx], step} : null;
+}
+
+function swapAIPrompt(ex, swap){
+  return 'Замени упражнение домашней тренировки на более сложное и верни НОВОЕ упражнение целиком в формате ниже. ' +
+    'Верни только блок упражнения, без пояснений до и после.\n\n' +
+    'ДЛЯ КОГО: ' + userForAI() + '\n' +
+    'НА ЧТО ЗАМЕНИТЬ: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
+    'ПОЧЕМУ: текущее упражнение доросло до своего потолка, дальше нагрузка не растёт. Нужен следующий уровень того же движения.\n' +
+    'ВАЖНО: подбери НОВЫЕ стартовые значения под возросшую сложность (обычно меньше повторений или секунд, чем в старом упражнении), свой ШАГ и свой ПОТОЛОК. ' +
+    'Число подходов и отдых сохрани близкими к текущим. Если у нового упражнения тоже есть следующий уровень сложности — укажи его в строках ЗАМЕНА и ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
+    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
+    EX_ANSWER_FORMAT;
+}
+
+// переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
+// Структура занятия (сколько подходов и в каком порядке) остаётся прежней до конца
+// тренировки — меняется только то, ЧТО делать; новое расписание вступит в силу со следующей.
+function refreshLiveSteps(oldName, ex){
+  const fresh = customToProgram(state.raw, (typeof state.planIdx === 'number') ? state.planIdx : 0);
+  const model = [...fresh.warmup, ...fresh.cycle].find(s => s.phase === 'work' && s.exName === ex.name);
+  if(!model) return false;
+  const KEEP = ['setNo', 'setsTotal', 'side', 'sidesTotal', 'round', 'isWarmup'];
+  let touchedCurrent = false;
+  state.steps.forEach((s, i) => {
+    if(i < state.stepIdx || s.phase !== 'work' || s.exName !== oldName) return;
+    const kept = {};
+    KEEP.forEach(k => { if(s[k] !== undefined) kept[k] = s[k]; });
+    Object.keys(s).forEach(k => delete s[k]);
+    Object.assign(s, JSON.parse(JSON.stringify(model)), kept);
+    if(i === state.stepIdx) touchedCurrent = true;
+  });
+  return touchedCurrent;
+}
+
+async function swapViaAI(){
+  if(!hasGemini()){ geminiSetupPrompt(); return; }
+  const src = swapSourceExercise();
+  if(!src || !src.step.swap){
+    appAlert('Не получилось найти это упражнение в программе — замени его через редактор программы.');
+    return;
+  }
+  const oldName = src.ex.name;
+  closeSwapHint();
+  aiRunOpen('Подбираю замену');
+  let text;
+  try{
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined);
+  }catch(e){
+    aiRunClose();
+    if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
+    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
+      '\n\nМожно попробовать ещё раз или заменить упражнение вручную после тренировки.');
+    return;
+  }
+  aiRunClose();
+  // разбираем ответ тем же парсером, что и обычный импорт — обёртка даёт ему минимальную программу
+  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + text);
+  const got = (program.plans[0] && program.plans[0].exercises[0]) || null;
+  if(!got || !(got.name || '').trim()){
+    appAlert('В ответе нейросети не нашлось упражнения. Попробуй ещё раз.');
+    return;
+  }
+  got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
+  normalizeExercise(got);                   // порядок важен: у разминки нормализация обнуляет подходы
+  // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
+  got.progFrom = progSteps(src.p);
+  if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
+  src.plan.exercises[src.idx] = got;
+  // ручная поправка веса относилась к прежнему упражнению — новому она не подходит
+  delete progWeights[exWeightKey(src.p.id, got.name)];
+  saveProgWeights();
+  await savePrograms();
+  renderMine();
+
+  const onCurrent = refreshLiveSteps(oldName, got);
+  if(onCurrent) renderStep();               // это же упражнение прямо сейчас — показываем новое
+  else renderNextUp(state.steps[state.stepIdx]);
+  appAlert(`Теперь это «${got.name}». Подходы и отдых до конца тренировки останутся прежними, дальше программа пойдёт уже с новым упражнением.`);
+}
 
 // шаг назад — если пропустил случайно или хочешь переделать подход
 function prevStep(){
@@ -8094,6 +8216,7 @@ $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnPrev').onclick  = prevStep;
 $('btnPrev').innerHTML = icon('chevL');
+$('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
 $('btnExit').onclick  = exitWorkout;
 $('exitCancel').onclick = ()=> $('exitModal').classList.remove('open');
 $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
@@ -8614,6 +8737,7 @@ $('aiClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIC
 $('btnParse').onclick = importFromText;
 $('swapBadge').onclick = openSwapHint;
 $('swapOk').onclick = closeSwapHint;
+$('swapAI').onclick = swapViaAI;
 $('swapModal').onclick = e => { if(e.target === $('swapModal')) closeSwapHint(); };
 $('swapCopy').onclick = async ()=>{
   const step = state.steps[state.stepIdx];
