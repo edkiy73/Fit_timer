@@ -231,6 +231,7 @@
   .ex-head button{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:'Rubik'}
   .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:'Rubik';font-size:14px;cursor:pointer}
+  .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
   .seg button.act{background:var(--work);color:#fff}
   .media-row{display:flex;gap:8px}
   .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:'Rubik';cursor:pointer}
@@ -834,16 +835,16 @@
 
   /* корректировка веса после последнего подхода: не перекрывает экран и
      сама уезжает через несколько секунд, если не трогать */
-  .cam-free{
-    position:fixed;left:50%;transform:translateX(-50%);
-    bottom:calc(20px + env(safe-area-inset-bottom));
-    width:calc(100% - 40px);max-width:480px;z-index:58;box-sizing:border-box;
-    background:rgba(18,20,28,.95);backdrop-filter:blur(14px);
-    border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 14px 10px;
-    box-shadow:0 14px 40px rgba(0,0,0,.55);
+  /* попап корректировки веса: по центру экрана — не перекрывает ни шапку, ни кнопки внизу */
+  .wa-popup{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:calc(100% - 40px);max-width:420px;z-index:58;box-sizing:border-box;
+    background:rgba(18,20,28,.97);backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 14px 12px;
+    box-shadow:0 20px 50px rgba(0,0,0,.6);
     display:flex;flex-direction:column;gap:12px;
   }
-  .cam-free.hidden{display:none !important}
+  .wa-popup.hidden{display:none !important}
   .wa-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   .wa-head b{color:#fff;font-family:'Oswald';font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
   .wa-head span{color:rgba(255,255,255,.7);font-size:13px}
@@ -1263,7 +1264,7 @@
     </div>
   </div>
 
-  <div class="cam-free hidden" id="wAdjust">
+  <div class="wa-popup hidden" id="wAdjust">
     <div class="wa-head">
       <b id="waTitle">Как ощущался вес?</b>
       <span id="waNow"></span>
@@ -1453,8 +1454,8 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">Автоматическая прибавка веса</p>
-    <div class="pref-row"><span>Повышать вес сама<small>только упражнения с осью «вес»</small></span><button class="switch" id="bProgOn"></button></div>
+    <p class="cb-title">Автоматическая прибавка</p>
+    <div class="pref-row"><span>Усложнять само<small>упражнения с включённым «Усложнять со временем»</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
@@ -1464,7 +1465,7 @@
           <option value="30">каждый месяц</option>
         </select>
       </div>
-      <p class="field-hint">Рабочий вес будет расти сам — на шаг, заданный у каждого упражнения (обычно 2 кг, для махов 1 кг). Повторения и время не трогаются: их ты ведёшь сама, ориентируясь на диапазон. Вес всегда можно поправить прямо на тренировке.</p>
+      <p class="field-hint">Каждое упражнение растёт по своей оси и на свой шаг: где задан вес — прибавится вес, где повторения — прибавятся повторения, где время — прибавится время. Всё это настраивается в самом упражнении. Кнопками на экране перед стартом можно посмотреть, сколько раз уже прибавляло, и поправить руками.</p>
     </div>
     </div>
 
@@ -1532,28 +1533,25 @@
     <div class="card-block">
       <p class="cb-title">Сколько делать</p>
       <div class="field"><label>Формат</label>
-        <div class="seg"><button type="button" id="exTypeReps">Повторения</button><button type="button" id="exTypeTime">Время</button></div>
+        <div class="seg seg3">
+          <button type="button" id="exTypeReps">Повторения</button>
+          <button type="button" id="exTypeRepsWeight">Повторения и вес</button>
+          <button type="button" id="exTypeTime">Время</button>
+        </div>
       </div>
       <div class="row2">
         <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="12 или 12-15"></div>
         <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="1"></div>
       </div>
+      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="8"></div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
       <div class="field"><label>Отдых после подхода, сек</label>
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
       </div>
 
-      <div class="field"><label>Усложнять со временем</label>
-        <div class="days chips-wrap" id="exProgAxis"></div>
-      </div>
-      <div class="row2 hidden" id="exWeightRow">
-        <div class="field"><label>Начальный вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="8"></div>
-        <div class="field"><label>Прибавка за раз, кг</label><input type="text" id="exWStep" inputmode="decimal" placeholder="2"></div>
-      </div>
-      <div class="field hidden" id="exRepsStepRow"><label>Прибавка повторений за раз</label><input type="text" id="exRepsStep" inputmode="numeric" placeholder="1"></div>
-      <div class="field hidden" id="exTimeStepRow"><label>Прибавка времени за раз, сек</label><input type="text" id="exTimeStep" inputmode="numeric" placeholder="5"></div>
-      <p class="field-hint" id="exProgHint"></p>
+      <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
+      <div class="field hidden" id="exStepRow"><label id="exStepLabel">Прибавка за раз</label><input type="text" id="exStepValue" inputmode="decimal" placeholder="2"></div>
     </div>
 
     <div class="card-block">
@@ -1668,11 +1666,6 @@
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note hidden" id="sideNote"></div>
-        <div class="weight-badge hidden" id="stepWeight">
-          <button type="button" class="wb-btn" id="wbMinus" title="Меньше вес">−</button>
-          <div class="wb-val"><b id="wbKg">0</b><small>кг</small></div>
-          <button type="button" class="wb-btn" id="wbPlus" title="Больше вес">+</button>
-        </div>
         <div class="ready-bar hidden" id="readyBar">
           <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
           <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
@@ -5263,13 +5256,42 @@ const PROG_AXES = [
   {id:'none',   label:'Не усложнять'}
 ];
 // ось по умолчанию, если не задана явно: разминку не трогаем, время — по времени, иначе повторы
+// Ось прогрессии определяется по-разному у старых и новых упражнений — специально совместимо:
+//   новые (после этого обновления): формат («повторения» / «повторения и вес» / «время»,
+//     через ex.type + ex.trackWeight) и отдельный тумблер ex.progOn — «усложнять со временем?».
+//     Это то, что видно и редактируется в интерфейсе: два простых вопроса вместо одной
+//     абстрактной оси из четырёх вариантов.
+//   старые (созданы до этого обновления, у них нет ex.progOn вовсе): ось читается из
+//     явно сохранённого ex.prog, как раньше. Апгрейд происходит сам собой в момент,
+//     когда упражнение открывают в редакторе и сохраняют — тогда оно уже пишет новые поля.
 function progAxis(ex){
   if(!ex) return 'none';
-  if(ex.prog) return ex.prog;
   if(ex.warmup) return 'none';
+  if(ex.progOn != null){
+    if(!ex.progOn) return 'none';
+    if(ex.type === 'time') return 'time';
+    return ex.trackWeight ? 'weight' : 'reps';
+  }
+  if(ex.prog) return ex.prog;
   return ex.type === 'time' ? 'time' : 'reps';
 }
-function hasWeight(ex){ return progAxis(ex) === 'weight'; }
+// «формат включает вес» — не зависит от того, усложняется ли упражнение сейчас:
+// вес может быть просто зафиксирован (тумблер выключен) и не расти, но оставаться видимым
+function hasWeight(ex){
+  if(!ex) return false;
+  if(ex.progOn != null) return !!ex.trackWeight;
+  return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
+}
+// для редактора: текущее состояние упражнения в терминах простого интерфейса —
+// какой формат выбран и включён ли тумблер «усложнять со временем»
+function exFormatState(ex){
+  const format = ex.type === 'time' ? 'time' : (hasWeight(ex) ? 'reps_weight' : 'reps');
+  return {format, progOn: progAxis(ex) !== 'none'};
+}
+// «каждую неделю» / «каждые 2 недели» / «каждый месяц» — подпись периода прогрессии программы
+function progPeriodLabel(days){
+  return {7: 'каждую неделю', 14: 'каждые 2 недели', 30: 'каждый месяц'}[days] || `каждые ${days} дн.`;
+}
 // 12 кг, 12,5 кг — без хвостов вроде 12.50
 function fmtKg(kg){
   const n = Math.round((+kg || 0) * 2) / 2;
@@ -5657,10 +5679,7 @@ function fillExercise(){
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
-  $('exWStep').value = ex.wStep ? fmtKg(ex.wStep) : '';
-  $('exRepsStep').value = ex.repsStep && ex.repsStep !== 1 ? ex.repsStep : '';
-  $('exTimeStep').value = ex.timeStep && ex.timeStep !== 5 ? ex.timeStep : '';
-  renderProgAxis();
+  renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
   syncExType();
@@ -5676,12 +5695,19 @@ function fillExercise(){
   $('exDetailsToggle').classList.remove('open');
 }
 
+// три таба формата: повторения / повторения и вес / время.
+// «Повторения и вес» — это ex.type='reps' + ex.trackWeight=true, отдельного поля-типа для него нет:
+// вес — это ДОПОЛНЕНИЕ к повторениям, а не отдельный формат значения.
 function syncExType(){
   const reps = exDraft.type !== 'time';
-  $('exTypeReps').classList.toggle('act', reps);
+  const withWeight = reps && hasWeight(exDraft);
+  $('exTypeReps').classList.toggle('act', reps && !withWeight);
+  $('exTypeRepsWeight').classList.toggle('act', withWeight);
   $('exTypeTime').classList.toggle('act', !reps);
   $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
   $('exValue').placeholder = reps ? '12 или 12-15' : '45';
+  setShown('exWeightRow', withWeight);
+  renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
 }
 function syncExWarm(){
   setShown('exSetsField', !(exDraft.warmup));
@@ -5708,38 +5734,33 @@ function parseKg(v){
   return isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
 }
 
-const PROG_HINTS = {
-  reps:   'Диапазон повторов будет сдвигаться вверх целиком — и нижняя, и верхняя граница.',
-  weight: 'Вес запоминается между тренировками и растёт по расписанию программы. Его можно поправить прямо на тренировке кнопками ± или в попапе после последнего подхода.',
-  time:   'Длительность будет расти на шаг ниже. Подходит планкам и другим удержаниям.',
-  none:   'Не усложняется: разминка, техника, дыхание, растяжка.'
-};
-function renderProgAxis(){
-  const box = $('exProgAxis'); box.innerHTML = '';
-  const cur = progAxis(exDraft);
-  PROG_AXES.forEach(a => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip';
-    b.textContent = a.label;
-    b.classList.toggle('act', cur === a.id);
-    b.onclick = ()=>{
-      exDraft.prog = a.id;
-      if(a.id === 'weight' && !exDraft.wStep) exDraft.wStep = 2;
-      if(a.id === 'reps' && !exDraft.repsStep) exDraft.repsStep = 1;
-      if(a.id === 'time' && !exDraft.timeStep) exDraft.timeStep = 5;
-      renderProgAxis();
-      syncExDetailsSum();
-    };
-    box.appendChild(b);
-  });
-  $('exProgHint').textContent = PROG_HINTS[cur] || '';
-  setShown('exWeightRow', cur === 'weight');
-  setShown('exRepsStepRow', cur === 'reps');
-  setShown('exTimeStepRow', cur === 'time');
-  if(cur === 'weight' && !$('exWStep').value) $('exWStep').value = fmtKg(exDraft.wStep || 2);
-  if(cur === 'reps' && !$('exRepsStep').value) $('exRepsStep').value = exDraft.repsStep || 1;
-  if(cur === 'time' && !$('exTimeStep').value) $('exTimeStep').value = exDraft.timeStep || 5;
+// подпись шага и плейсхолдер зависят от текущего формата — одно и то же поле,
+// разный смысл: прибавка кг / повторений / секунд
+function progStepMeta(){
+  if(hasWeight(exDraft)) return {label: 'Прибавка веса за раз, кг', ph: '2', val: exDraft.wStep || 2, fmt: fmtKg};
+  if(exDraft.type === 'time') return {label: 'Прибавка времени за раз, сек', ph: '5', val: exDraft.timeStep || 5, fmt: v => v};
+  return {label: 'Прибавка повторений за раз', ph: '1', val: exDraft.repsStep || 1, fmt: v => v};
 }
+// тумблер «усложнять со временем» + одно поле шага, смысл которого меняется по формату.
+// Раньше тут был выбор из четырёх абстрактных «осей» — вместо этого два простых вопроса:
+// «что считаем» (формат выше) и «растёт ли это со временем» (этот тумблер).
+function renderProgControls(){
+  const on = progAxis(exDraft) !== 'none';
+  $('exProgOn').classList.toggle('on', on);
+  setShown('exStepRow', on);
+
+  const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
+  $('exProgOnHint').textContent = period
+    ? `автоматически, ${progPeriodLabel(period)}`
+    : 'вручную — автопрогрессия в программе выключена';
+
+  if(!on) return;
+  const meta = progStepMeta();
+  $('exStepLabel').textContent = meta.label;
+  $('exStepValue').placeholder = meta.ph;
+  if(!$('exStepValue').dataset.touched) $('exStepValue').value = meta.fmt(meta.val);
+}
+
 
 function renderExRestChips(){
   const box = $('exRestChips'); box.innerHTML = '';
@@ -5771,39 +5792,35 @@ function syncExDetailsSum(){
   $('exDetailsSum').textContent = bits.length ? bits.join(', ') : 'не заполнено';
 }
 
+// переносит текущее состояние формы в объект упражнения (черновик или его снимок) —
+// общая логика для exDirty (сравнение) и commitExercise (сохранение), чтобы не дублировать
+function applyFormTo(target){
+  target.name = $('exName').value.trim();
+  target.value = normValue($('exValue').value, target.type);
+  target.sets = target.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
+  target.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
+  target.desc = $('exDesc').value.trim();
+  target.mistakes = $('exMistakes').value.trim();
+  target.video = $('exVideo').value.trim();
+  target.weight = parseKg($('exWeight').value);
+  // единое поле «прибавка за раз» — раскладываем в нужное внутреннее поле по текущему формату
+  if(target.progOn){
+    const step = parseFloat(String($('exStepValue').value || '').replace(',', '.')) || 0;
+    if(hasWeight(target)) target.wStep = step > 0 ? Math.round(step * 2) / 2 : 2;
+    else if(target.type === 'time') target.timeStep = step > 0 ? Math.round(step) : 5;
+    else target.repsStep = step > 0 ? Math.round(step) : 1;
+  }
+  return target;
+}
 // есть ли несохранённые правки
 function exDirty(){
   if(!exDraft || exIdx < 0) return false;
-  const snapshot = JSON.parse(JSON.stringify(exDraft));
-  // подтягиваем текущее состояние формы, не меняя черновик
-  snapshot.name = $('exName').value.trim();
-  snapshot.value = normValue($('exValue').value, snapshot.type);
-  snapshot.sets = snapshot.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
-  snapshot.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
-  snapshot.desc = $('exDesc').value.trim();
-  snapshot.mistakes = $('exMistakes').value.trim();
-  snapshot.video = $('exVideo').value.trim();
-  snapshot.weight = parseKg($('exWeight').value);
-  snapshot.wStep = parseKg($('exWStep').value) || 2;
-  snapshot.repsStep = Math.max(1, parseInt($('exRepsStep').value) || 1);
-  snapshot.timeStep = Math.max(1, parseInt($('exTimeStep').value) || 5);
+  const snapshot = applyFormTo(JSON.parse(JSON.stringify(exDraft)));
   return JSON.stringify(snapshot) !== exOrig;
 }
 
 function commitExercise(){
-  const ex = exDraft;
-  ex.name = $('exName').value.trim();
-  ex.value = normValue($('exValue').value, ex.type);
-  ex.sets = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
-  ex.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
-  ex.desc = $('exDesc').value.trim();
-  ex.mistakes = $('exMistakes').value.trim();
-  ex.video = $('exVideo').value.trim();
-  ex.weight = parseKg($('exWeight').value);
-  ex.wStep = parseKg($('exWStep').value) || 2;
-  ex.repsStep = Math.max(1, parseInt($('exRepsStep').value) || 1);
-  ex.timeStep = Math.max(1, parseInt($('exTimeStep').value) || 5);
-  return ex;
+  return applyFormTo(exDraft);
 }
 
 function renderExList(){
@@ -5995,21 +6012,21 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ОПИСАНИЕ: техника выполнения, 3–4 предложения: исходное положение, само движение, ключевые моменты (что напрячь, чего избегать). Должно быть предельно понятно, как выполнять упражнение, даже без видео. Максимум 600 символов.
 МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
 ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
-ФОРМАТ: повторения — ИЛИ — время
-ЗНАЧЕНИЕ: для повторений — число (12) или диапазон через дефис (12-15). Для времени — число секунд.
+ФОРМАТ: одно из трёх — повторения / повторения и вес / время.
+  повторения — упражнения с собственным весом (отжимания, приседания, выпады, подтягивания).
+  повторения и вес — выполняется с гантелями, штангой, гирей или другим снарядом.
+  время — удержания позы (планка, боковая планка, вис).
+ЗНАЧЕНИЕ: для «повторения» и «повторения и вес» — число (12) или диапазон через дефис (12-15). Для «время» — число секунд.
+ВЕС: стартовый рабочий вес в кг — ТОЛЬКО при ФОРМАТ: повторения и вес. Реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
 ПОДХОДЫ: сколько раз это упражнение выполняется ПОДРЯД, прежде чем перейти к следующему, число от 1 до 10. Для силовых обычно 3–4, для круговых ставь 1.
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, планка на боку, тяга одной рукой). Иначе пропусти строку.
 РАЗМИНКА: да — если это разминочное упражнение. Такие выполняются ОДИН раз в начале тренировки и не повторяются каждый круг. Ставь эту строку 2–4 первым упражнениям, если программе нужна разминка. Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после каждого подхода (0 — без отдыха, для суперсетов)
-УСЛОЖНЯТЬ: по чему это упражнение усложняется со временем. Ровно одно слово: повторения / вес / время / нет.
-  вес — если упражнение выполняется с гантелями, штангой, гирей или другим снарядом. Для него ОБЯЗАТЕЛЬНО добавь две строки ниже.
-  повторения — упражнения с собственным весом (отжимания, приседания, выпады, подтягивания).
-  время — удержания позы (планка, боковая планка, вис).
-  нет — разминка, суставная гимнастика, дыхание, растяжка, техника. Такие упражнения не усложняются вообще.
-ВЕС: стартовый рабочий вес в кг числом — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Бери реалистичный для уровня человека (новичку 5–8 кг в тягах и жимах, 3–5 кг в махах).
-ШАГ ВЕСА: на сколько кг прибавлять за раз — ТОЛЬКО при УСЛОЖНЯТЬ: вес. Обычно 2 кг для тяг, жимов и тяжёлых движений, 1 кг для махов и мелких мышц. Гантели дискретны, поэтому шаг целый.
-ШАГ ПОВТОРОВ: на сколько повторений сдвигать весь диапазон за раз — ТОЛЬКО при УСЛОЖНЯТЬ: повторения. Обычно 1-2.
-ШАГ ВРЕМЕНИ: на сколько секунд прибавлять за раз — ТОЛЬКО при УСЛОЖНЯТЬ: время. Обычно 5-10 секунд для планок и удержаний.
+УСЛОЖНЯТЬ: да / нет — растёт ли это упражнение со временем. «нет» — для разминки, суставной гимнастики, дыхания, растяжки, техники: такие не усложняются вообще. «да» — для всего остального.
+ШАГ: на сколько прибавлять за раз при каждом повышении — ТОЛЬКО при УСЛОЖНЯТЬ: да. Смысл числа зависит от ФОРМАТ этого же упражнения:
+  при «повторения» — на сколько повторений сдвигать весь диапазон (обычно 1-2);
+  при «повторения и вес» — на сколько кг прибавлять (обычно 2 кг для тяг и жимов, 1 кг для махов — гантели дискретны, шаг целый);
+  при «время» — на сколько секунд прибавлять (обычно 5-10 для планок и удержаний).
 ВИДЕО: ссылка на YouTube с разбором техники. Если можешь найти реальное существующее видео по этому упражнению — укажи ссылку. Если не уверен, что видео существует, ПРОПУСТИ эту строку. Никогда не выдумывай и не сочиняй ссылки.
 SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.
 
@@ -6039,7 +6056,8 @@ SVG: пиктограмма упражнения в виде кода <svg viewB
 ЗНАЧЕНИЕ: 10-12
 ПОДХОДЫ: 3
 ОТДЫХ: 45
-УСЛОЖНЯТЬ: повторения
+УСЛОЖНЯТЬ: да
+ШАГ: 2
 SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
 УПРАЖНЕНИЕ: Планка на локтях
@@ -6048,6 +6066,20 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ЗНАЧЕНИЕ: 45
 ПОДХОДЫ: 3
 ОТДЫХ: 30
+УСЛОЖНЯТЬ: да
+ШАГ: 10
+
+УПРАЖНЕНИЕ: Тяга гантели в наклоне
+ОПИСАНИЕ: Обопрись коленом и рукой на скамью, во второй руке гантель. Держа спину прямой, потяни гантель к поясу, сводя лопатку. Медленно опусти обратно, не скручивая корпус.
+МЫШЦЫ: Спина, Руки
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 10-12
+ВЕС: 8
+ПОДХОДЫ: 3
+СТОРОНА: да
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ: 2
 
 УПРАЖНЕНИЕ: Выпады назад
 ОПИСАНИЕ: Встань прямо, руки на поясе. Сделай широкий шаг назад и опустись, пока оба колена не согнутся под прямым углом. Переднее колено строго над стопой, корпус вертикально. Оттолкнись передней пяткой и вернись в исходное положение.
@@ -6057,6 +6089,8 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ПОДХОДЫ: 3
 СТОРОНА: да
 ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ: 1
 
 ДЕНЬ: Вт, Пт
 КРУГИ: 4
@@ -6067,6 +6101,8 @@ SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" st
 ФОРМАТ: повторения
 ЗНАЧЕНИЕ: 20
 ОТДЫХ: 30
+УСЛОЖНЯТЬ: да
+ШАГ: 3
 
 === ШАБЛОН МОЕГО ЗАПРОСА ===
 Чтобы получить хорошую программу, я заполняю пропуски в квадратных скобках (или пишу своими словами):
@@ -6092,6 +6128,16 @@ function parseProgramText(txt){
       p.plans.push(plan);
     }
     return plan;
+  };
+  // раскладывает накопленный «сырой» ШАГ в нужное поле (вес/повторы/время) по итоговому
+  // формату упражнения — вызывается, когда упражнение точно больше не изменится
+  const finalizeExercise = ex => {
+    if(!ex || ex._rawStep == null) return;
+    const n = ex._rawStep;
+    if(ex.type === 'time') ex.timeStep = Math.max(1, Math.round(n) || 5);
+    else if(ex.trackWeight) ex.wStep = n > 0 ? Math.round(n * 2) / 2 : 2;
+    else ex.repsStep = Math.max(1, Math.round(n) || 1);
+    delete ex._rawStep;
   };
   const parseDays = val => {
     const list = val.split(/[,;]/).map(d => DAY_ALIASES[d.trim().toLowerCase()]).filter(Boolean);
@@ -6142,6 +6188,7 @@ function parseProgramText(txt){
         p.days = parseDays(val); // общее расписание программы (используется при чередовании)
         break;
       case 'УПРАЖНЕНИЕ': {
+        finalizeExercise(cur); // предыдущее упражнение точно готово — раскладываем его ШАГ
         ensurePlan();
         if(plan.exercises.length >= MAX_EX){ cur = null; break; }
         cur = blankExercise();
@@ -6152,7 +6199,15 @@ function parseProgramText(txt){
         break;
       }
       case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
-      case 'ФОРМАТ': if(cur) cur.type = /врем|сек|time/i.test(val) ? 'time' : 'reps'; break;
+      case 'ФОРМАТ':
+        if(cur){
+          const v = val.toLowerCase();
+          cur.type = /врем|сек|time/.test(v) ? 'time' : 'reps';
+          // «повторения и вес» — отдельно от простых «повторения»; порядок важен: слово «вес»
+          // не должно случайно сработать на будущей строке УСЛОЖНЯТЬ, поэтому проверяем здесь и сразу
+          if(cur.type === 'reps' && /вес/.test(v)) cur.trackWeight = true;
+        }
+        break;
       case 'ЗНАЧЕНИЕ': case 'ПОВТОРЕНИЯ': case 'СЕКУНДЫ':
         if(cur){
           cur.value = normValue(val, cur.type);
@@ -6201,15 +6256,27 @@ function parseProgramText(txt){
       }
       case 'ВИДЕО': if(cur && val) cur.video = val; break;
       case 'УСЛОЖНЯТЬ': case 'КАК УСЛОЖНЯТЬ': {
+        // новая форма — просто да/нет, ось решает уже распарсенный ФОРМАТ этого же упражнения.
+        // старая форма (одно из четырёх слов: повторения/вес/время/нет) распознаётся тоже —
+        // на случай ручной вставки текста, собранного по прежней версии промта.
         if(!cur) break;
         const v = val.toLowerCase();
-        if(/вес|кг|гантел|штанг|гир/.test(v)) cur.prog = 'weight';
-        else if(/врем|секунд|удержан/.test(v)) cur.prog = 'time';
-        else if(/повтор/.test(v)) cur.prog = 'reps';
-        else if(/нет|не усложн|no/.test(v)) cur.prog = 'none';
+        // \b (граница слова) в JS не распознаёт кириллицу — используем явный конец строки/пробел
+        if(/^да(\s|$)|^yes(\s|$)/.test(v)) cur.progOn = true;
+        else if(/нет|не усложн|^no(\s|$)/.test(v)) cur.progOn = false;
+        else if(/вес|кг|гантел|штанг|гир/.test(v)){ cur.progOn = true; cur.trackWeight = true; }
+        else if(/врем|секунд|удержан/.test(v)){ cur.progOn = true; cur.type = 'time'; }
+        else if(/повтор/.test(v)){ cur.progOn = true; cur.trackWeight = false; }
         break;
       }
       case 'ВЕС': if(cur) cur.weight = parseKg(val); break;
+      // единый ключ ШАГ: что именно он значит — зависит от формата этого упражнения,
+      // распарсенного строкой раньше (ФОРМАТ идёт в спецификации перед УСЛОЖНЯТЬ и ШАГ)
+      // не резолвим сразу: ШАГ мог встретиться в тексте РАНЬШЕ строки ФОРМАТ, а его смысл
+      // (кг / повторы / секунды) зависит именно от формата. Копим «сырым» и решаем один раз
+      // при завершении упражнения — см. finalizeExercise ниже. Так порядок строк не важен.
+      case 'ШАГ': if(cur) cur._rawStep = parseFloat(String(val).replace(',', '.')) || 0; break;
+      // старые раздельные ключи шага — поддержаны для устойчивости к прежнему формату текста
       case 'ШАГ ВЕСА': if(cur) cur.wStep = parseKg(val) || 2; break;
       case 'ШАГ ПОВТОРОВ': if(cur) cur.repsStep = Math.max(1, parseInt(val) || 1); break;
       case 'ШАГ ВРЕМЕНИ': if(cur) cur.timeStep = Math.max(1, parseInt(val) || 5); break;
@@ -6218,6 +6285,7 @@ function parseProgramText(txt){
         break;
     }
   }
+  finalizeExercise(cur); // последнее упражнение в тексте — цикл закончился, но раскладку сделать нужно
   // выбрасываем пустые варианты
   p.plans = p.plans.filter(pl => pl.exercises.length);
   if(!p.name) errors.push('не найдено название (строка «ПРОГРАММА: …»)');
@@ -6686,11 +6754,6 @@ function renderStep(){
   badge.classList.toggle('on', hasVideo && hasIllo);
   cta.classList.toggle('on', hasVideo && !hasIllo);
   if(hasVideo){ badge.href = step.video; cta.href = step.video; }
-
-  // рабочий вес показываем только там, где прогрессия идёт по весу
-  const wOn = step.phase === 'work' && step.progAxis === 'weight';
-  setShown('stepWeight', wOn);
-  if(wOn) $('wbKg').textContent = fmtKg(step.weight);
 
   if(step.kind === 'click'){
     setShown('stepReps', true);
@@ -7610,25 +7673,11 @@ $('btnResume').onclick = ()=> setPause(false);
 $('psMinus').onclick = ()=> bumpProgSteps(-1);
 $('psPlus').onclick = ()=> bumpProgSteps(1);
 
-// правка рабочего веса прямо на тренировке: меняем и текущий шаг, и все следующие
-// подходы этого же упражнения, и запоминаем как новый рабочий вес
-function bumpWeight(delta){
-  const step = state.steps[state.stepIdx];
-  if(!step || step.progAxis !== 'weight' || !state.raw) return;
-  const exLike = {name: step.exName, prog: 'weight', weight: step.weightBase, wStep: step.wStep};
-  bumpProgDelta(state.raw.id, exLike, delta);
-  const next = getExProgValue(state.raw.id, exLike, state.raw);
-  const name = step.exName;
-  state.steps.forEach((s, i) => {
-    if(i >= state.stepIdx && s.exName === name && s.progAxis === 'weight') s.weight = next;
-  });
-  $('wbKg').textContent = fmtKg(next);
-}
+// правка веса теперь только через попап после последнего подхода (applyWeightAdjust) —
+// инлайновые кнопки ± на карточке упражнения убраны, чтобы не дублировать и не загромождать экран
 $('waDown').onclick = ()=> applyWeightAdjust(-1);
 $('waUp').onclick   = ()=> applyWeightAdjust(1);
 $('waKeep').onclick = ()=> applyWeightAdjust(0);
-$('wbMinus').onclick = ()=> bumpWeight(-1);
-$('wbPlus').onclick  = ()=> bumpWeight(1);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
@@ -8509,8 +8558,34 @@ async function leaveExercise(){
   show('scrBuilder');
 }
 $('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
-$('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
+// формат теперь трёхтабный: «повторения» и «повторения и вес» — оба type='reps',
+// различаются только trackWeight; переключение формата не трогает тумблер прогрессии,
+// но если ось «вес» стала бессмысленной (ушли с формата с весом) — переносим на «повторения»
+$('exTypeReps').onclick = ()=>{
+  exDraft.type = 'reps'; exDraft.trackWeight = false;
+  syncExType();
+};
+$('exTypeRepsWeight').onclick = ()=>{
+  exDraft.type = 'reps'; exDraft.trackWeight = true;
+  if(!exDraft.wStep) exDraft.wStep = 2;
+  syncExType();
+};
 $('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
+
+$('exProgOn').onclick = ()=>{
+  const on = !$('exProgOn').classList.contains('on');
+  exDraft.progOn = on;
+  if(on){
+    // включили — проставляем дефолтный шаг для текущего формата, если его ещё не было
+    if(hasWeight(exDraft) && !exDraft.wStep) exDraft.wStep = 2;
+    if(!hasWeight(exDraft) && exDraft.type !== 'time' && !exDraft.repsStep) exDraft.repsStep = 1;
+    if(exDraft.type === 'time' && !exDraft.timeStep) exDraft.timeStep = 5;
+  }
+  delete $('exStepValue').dataset.touched;
+  renderProgControls();
+  syncExDetailsSum();
+};
+$('exStepValue').oninput = ()=>{ $('exStepValue').dataset.touched = '1'; };
 $('exWarm').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
