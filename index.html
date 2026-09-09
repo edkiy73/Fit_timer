@@ -9568,10 +9568,19 @@ function applyVoiceCommand(text){
   else if(/готов|пропус|заверш|дальше|сделал|next|некст/.test(t)) kind = 'next';
   if(!kind) return false;
 
-  // дедуп: промежуточные результаты повторяют одну фразу — не срабатываем дважды за 1.2с
+  // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло
+  // перезапуститься посреди фразы, и тогда та же команда придёт уже новой сессией
+  // с индексом 0, мимо первой защиты.
   const now = Date.now();
-  if(kind === lastCmdKind && now - lastCmdTime < 1200) return true;
+  // «дальше» — единственная команда, которая двигает тренировку, и уезжала пачкой
+  // именно она: для неё окно широкое и общее для всех команд. «Пауза» и
+  // «продолжить» повтором ничего не ломают, им хватает узкой защиты от эха, иначе
+  // сказанное сразу после «пауза» слово «продолжить» просто не сработает.
+  if(kind === 'next'){ if(now - lastCmdTime < 1500) return true; }
+  else if(kind === lastCmdKind && now - lastCmdTime < 800) return true;
   lastCmdTime = now; lastCmdKind = kind;
+  // свой же гонг и озвучка следующего шага не должны вернуться командой
+  lastAppSoundT = Math.max(lastAppSoundT, now + 700);
 
   if(kind === 'pause'){
     if(!state.paused){ setPause(true); beep(990, .1); }
@@ -9777,6 +9786,8 @@ function stopHeadset(){
 }
 
 let recogTimer = null, lastRecogStart = 0, stopRequested = false, recogFails = 0;
+let recogSeq = 0;               // номер сессии распознавания
+let firedSeq = -1, firedIdx = -1; // какая фраза какой сессии уже дала команду
 function buildRecog(){
   const r = new SR();
   r.lang = 'ru-RU';
@@ -9784,23 +9795,54 @@ function buildRecog(){
   r.interimResults = true; // промежуточные результаты — команда ловится быстрее, не дожидаясь паузы
   r.maxAlternatives = 3;
   r.onresult = e=>{
+    if(recog !== r) return;              // экземпляр уже заменён — его результаты не наши
+    // Приложение говорит само, и микрофон слышит собственную озвучку. В ней есть
+    // и «Далее — Планка», и названия упражнений: распознавание охотно отдаёт
+    // «дальше» одной из трёх альтернатив, и тренировка сама проматывается вперёд
+    // шаг за шагом. Пока звучит наш собственный голос, команд не существует.
+    if(Date.now() < lastAppSoundT) return;
     for(let i = e.resultIndex; i < e.results.length; i++){
+      // Одна фраза — одна команда. Промежуточные результаты повторяют её по
+      // несколько раз, а финальный приходит секунды через две, когда защита по
+      // времени уже отпустила: отсюда и брались двойные-тройные переключения.
+      // Слот i внутри одной сессии распознавания срабатывает ровно один раз.
+      if(r._seq === firedSeq && i <= firedIdx) continue;
       const res = e.results[i];
       // проверяем все альтернативы — короткие команды часто не «финализируются»
       for(let a = 0; a < res.length; a++){
-        if(applyVoiceCommand(res[a].transcript)) return; // сработало — дальше не ищем
+        if(applyVoiceCommand(res[a].transcript)){
+          firedSeq = r._seq; firedIdx = i;
+          return; // сработало — дальше не ищем
+        }
       }
     }
   };
   return r;
 }
+// метка «эта фраза уже сработала»: сбрасывается на каждый запуск распознавания,
+// потому что при старте браузер заводит новый список результатов с нуля
+function resetVoiceDedup(){ firedSeq = -1; firedIdx = -1; }
 function startListening(){
   if(!SR || voiceActive) return;
   stopRequested = false;
   lastRecogStart = Date.now();
+  // Прежний экземпляр мог остаться живым: сворачивание окна, возврат по видимости и
+  // перезапуск по звуку вызывают startListening из трёх разных мест, и в промежутке
+  // voiceActive уже false. Два распознавателя на одном микрофоне давали по две
+  // команды на фразу. Старый глушим до того, как заводим новый.
   try{
-    recog = buildRecog();
-    recog.onend = ()=>{
+    if(recog){
+      recog.onend = null; recog.onresult = null; recog.onerror = null;
+      recog.abort ? recog.abort() : recog.stop();
+    }
+  }catch(e){}
+  try{
+    const r = buildRecog();
+    r._seq = ++recogSeq;
+    recog = r;
+    resetVoiceDedup();
+    r.onend = ()=>{
+      if(recog !== r) return;   // нас уже заменили — молча уходим, перезапуск не наш
       voiceActive = false;
       // приложение свернули — браузер обрывает распознавание сам. Это не отказ в доступе:
       // не перезапускаемся и НЕ выключаем режим, ждём возвращения (см. visibilitychange)
@@ -9816,11 +9858,15 @@ function startListening(){
           voiceWanted = false; kvSet('voiceCtl', '0'); syncPrefs();
           return;
         }
-        try{ recog.start(); voiceActive = true; lastRecogStart = now; }
+        // новая сессия — новый список результатов, метки прошлой к нему не относятся
+        r._seq = ++recogSeq;
+        resetVoiceDedup();
+        try{ r.start(); voiceActive = true; lastRecogStart = now; }
         catch(e){ setTimeout(()=>{ if(voiceWanted && !stopRequested) startListening(); }, 250); }
       }
     };
-    recog.onerror = ev=>{
+    r.onerror = ev=>{
+      if(recog !== r) return;
       if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
         // в свёрнутом приложении браузер отдаёт ту же ошибку, что и при запрете доступа.
         // Пугать человека и выключать голос из-за того, что он переключил окно, нельзя
@@ -9831,7 +9877,7 @@ function startListening(){
         appAlert('Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.');
       }
     };
-    recog.start();
+    r.start();
     voiceActive = true;
   }catch(e){ voiceActive = false; }
 }
@@ -9839,8 +9885,9 @@ function startListening(){
 function stopListening(){
   stopRequested = true;
   clearTimeout(recogTimer);
-  try{ if(recog){ recog.onend = null; recog.stop(); recog.abort && recog.abort(); } }catch(e){}
+  try{ if(recog){ recog.onend = null; recog.onresult = null; recog.stop(); recog.abort && recog.abort(); } }catch(e){}
   voiceActive = false;
+  resetVoiceDedup();
 }
 
 // Вернулись в приложение — молча поднимаем распознавание обратно. Раньше сворачивание
@@ -9848,8 +9895,9 @@ function stopListening(){
 // это отказом в доступе и просило заново выбирать «Голос» в меню микрофона.
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
-    if(voiceActive) try{ if(recog){ recog.onend = null; recog.stop(); } }catch(e){}
+    if(voiceActive) try{ if(recog){ recog.onend = null; recog.onresult = null; recog.stop(); } }catch(e){}
     voiceActive = false;
+    resetVoiceDedup();
     return;
   }
   if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
