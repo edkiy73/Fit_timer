@@ -2653,7 +2653,7 @@
         <div class="rc-stats">
           <div class="rc-stat" id="finKcalBox"><b id="finKcal">—</b><small>ккал</small></div>
           <div class="rc-stat" id="finExBox"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
-          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small>дней подряд</small></div>
+          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord">подряд</small></div>
         </div>
         <div class="badge-row" id="badgeRow"></div>
       </div>
@@ -4323,22 +4323,42 @@ const DAY_FULL = ['Понедельник','Вторник','Среда','Чет
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
 // серия с «заморозкой»: один пропущенный день не сжигает стрик (не чаще раза в 7 дней)
+/* Серия считается ПО ПЛАНУ, а не по календарю.
+   Раньше это были «дни подряд»: при расписании три раза в неделю между тренировками
+   всегда лежали пустые дни, серия обрывалась каждый раз и вечно показывала «1 день подряд» —
+   человек делал всё, что запланировал, а приложение как будто этого не замечало.
+   Теперь единица серии — выполненная тренировка: день не по плану ничего не рвёт,
+   рвёт только пропущенный запланированный день. Сделал три из трёх — «3 тренировки подряд».
+   Если расписания нет вообще, считать по плану нечего — тогда работает прежний счёт по дням. */
 function calcStreakInfo(){
-  const days = new Set(stats.history.map(h => h.d));
+  const done = new Set(stats.history.map(h => h.d));
+  const plan = new Set();
+  customPrograms.forEach(p => programDaysUnion(p).forEach(d => plan.add(d)));
+  const byPlan = plan.size > 0;
+  const isPlanned = dt => plan.has(DAYS[(dt.getDay() + 6) % 7]);
+  // дальше самой ранней тренировки уходить некуда — там просто нет истории
+  const earliest = stats.history.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
+
   let n = 0, freezes = 0, sinceFreeze = 99;
   const d = new Date();
-  if(!days.has(localISO(d))) d.setDate(d.getDate() - 1); // сегодня ещё впереди — не в счёт
-  while(true){
-    if(days.has(localISO(d))){
+  if(!done.has(localISO(d))) d.setDate(d.getDate() - 1); // сегодня ещё впереди — не в счёт
+  while(earliest && localISO(d) >= earliest){
+    const iso = localISO(d);
+    if(done.has(iso)){
       n++; sinceFreeze++;
       d.setDate(d.getDate() - 1);
       continue;
     }
+    // день вне расписания — это законный отдых, он серию не трогает
+    if(byPlan && !isPlanned(d)){
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
     // пропуск: заморозка тратится, только если за ним снова есть тренировка (мостик),
-    // и не чаще раза в 7 дней серии
+    // и не чаще раза в 7 засчитанных тренировок
     if(n > 0 && sinceFreeze >= 7){
       const peek = new Date(d); peek.setDate(peek.getDate() - 1);
-      if(days.has(localISO(peek))){
+      if(done.has(localISO(peek))){
         freezes++; sinceFreeze = 0;
         d.setTime(peek.getTime());
         continue;
@@ -4346,9 +4366,15 @@ function calcStreakInfo(){
     }
     break;
   }
-  return {n, freezes};
+  return {n, freezes, byPlan};
 }
 function calcStreak(){ return calcStreakInfo().n; }
+// подпись под число серии: по плану считаем тренировки, без плана — дни
+function streakWord(n, byPlan){
+  return byPlan
+    ? plural(n, 'тренировка подряд', 'тренировки подряд', 'тренировок подряд')
+    : plural(n, 'день подряд', 'дня подряд', 'дней подряд');
+}
 
 function renderStatsBlock(){
   const now = new Date();
@@ -4367,7 +4393,7 @@ function renderStatsBlock(){
 
   const si = calcStreakInfo();
   $('streakStat').textContent = si.n
-    ? `🔥 ${si.n} ${plural(si.n, 'день', 'дня', 'дней')} подряд${si.freezes ? ' · ❄ пропуск прощён' : ''}`
+    ? `🔥 ${si.n} ${streakWord(si.n, si.byPlan)}${si.freezes ? ' · ❄ пропуск прощён' : ''}`
     : '';
 
   // мини-график: сколько тренировок в каждую из 8 последних недель.
@@ -5213,8 +5239,8 @@ function renderGreeting(){
     el.querySelector('span').textContent = label;
     box.appendChild(el);
   };
-  const st = calcStreak();
-  if(st) chip('flame', st, plural(st, 'день подряд', 'дня подряд', 'дней подряд'), true);
+  const si = calcStreakInfo();
+  if(si.n) chip('flame', si.n, streakWord(si.n, si.byPlan), true);
   const n = stats.count || 0;
   // счётчик тренировок теперь крупной цифрой ниже, в «Прогрессе», — в чипах он был вторым разом
   const mins = Math.round((stats.totalSec || 0) / 60);
@@ -9232,7 +9258,7 @@ async function shareResult(){
   const streak = calcStreak();
   const chips = [];
   if(state.lastKcal) chips.push(`🔥 ≈${state.lastKcal} ккал`);
-  if(streak > 1) chips.push(`⚡ ${streak} ${plural(streak, 'день', 'дня', 'дней')} подряд`);
+  if(streak > 1) chips.push(`⚡ ${streak} ${streakWord(streak, calcStreakInfo().byPlan)}`);
   chips.push(`💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`);
   x.font = '500 36px Rubik, sans-serif';
   const pad = 34, gap = 20, ch = 84, maxW = W - 80;
@@ -9334,10 +9360,10 @@ const BADGES = [
   {id: 't25',   emoji: '🏆', name: 'Втянулась',     desc: '25 тренировок',     test: () => stats.count >= 25},
   {id: 't50',   emoji: '👑', name: 'Железная леди', desc: '50 тренировок',     test: () => stats.count >= 50},
   {id: 't100',  emoji: '🌟', name: 'Сотня',         desc: '100 тренировок',    test: () => stats.count >= 100},
-  {id: 's3',    emoji: '🔥', name: 'Серия',         desc: '3 дня подряд',      test: () => calcStreak() >= 3},
-  {id: 's7',    emoji: '🚀', name: 'Неделя силы',   desc: '7 дней подряд',     test: () => calcStreak() >= 7},
-  {id: 's14',   emoji: '💎', name: 'Две недели',    desc: '14 дней подряд',    test: () => calcStreak() >= 14},
-  {id: 's30',   emoji: '⚡', name: 'Несокрушимая',  desc: '30 дней подряд',    test: () => calcStreak() >= 30}
+  {id: 's3',    emoji: '🔥', name: 'Серия',         desc: '3 подряд по плану',  test: () => calcStreak() >= 3},
+  {id: 's7',    emoji: '🚀', name: 'Неделя силы',   desc: '7 подряд по плану',  test: () => calcStreak() >= 7},
+  {id: 's14',   emoji: '💎', name: 'Две недели',    desc: '14 подряд по плану', test: () => calcStreak() >= 14},
+  {id: 's30',   emoji: '⚡', name: 'Несокрушимая',  desc: '30 подряд по плану', test: () => calcStreak() >= 30}
 ];
 function renderBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
@@ -9357,6 +9383,7 @@ function renderBadges(){
   const si = calcStreakInfo();
   if(si.n > 1){
     $('finStreak').textContent = si.n + (si.freezes ? ' ❄' : '');
+    $('finStreakWord').textContent = si.byPlan ? 'подряд по плану' : 'дней подряд';
     setShown('finStreakBox', true);
   } else setShown('finStreakBox', false);
 }
