@@ -98,13 +98,17 @@
     --sh-dock:0 10px 30px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.34);
     --sh-dock-act:0 0 16px rgba(124,86,245,.34);
     /* пятна живого фона карточки плана */
-    --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.34;
+    --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.42;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn,.btn-mini{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
   button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active,.btn-mini:active{transform:scale(.96)}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
-  html,body{height:100%}
+  /* Горизонтальной прокрутки в приложении не бывает никогда: экран телефона —
+     единственный сценарий, и любой вылезший за край декоративный слой уводит
+     страницу вбок вместе с фиксированным доком. clip (а не hidden) — чтобы не
+     появлялся контейнер прокрутки и не ломался position:sticky внутри экранов. */
+  html,body{height:100%;overflow-x:clip}
   body{
     font-family:var(--font-text);
     background:var(--bg);
@@ -791,7 +795,7 @@
     --dock-line:rgba(45,25,80,.10);
     --sh-dock:0 10px 28px rgba(45,25,80,.16), 0 2px 8px rgba(45,25,80,.08);
     --sh-dock-act:0 0 14px rgba(107,63,224,.18);
-    --aura-a:#A585FF; --aura-b:#DDA0F0; --aura-op:.26;
+    --aura-a:#A585FF; --aura-b:#DDA0F0; --aura-op:.42;
   }
   body.light .ctx-menu{box-shadow:var(--sh-2)}
   /* пиктограммы от ИИ рисуются светлыми линиями — на светлой теме подкладываем тёмную плашку */
@@ -1277,25 +1281,33 @@
   @keyframes tcLine{from{background-position:0% 50%}to{background-position:300% 50%}}
   /* ---- живой фон карточки плана ----
      Единственная анимация на «Сегодня»: карточка плана — единственное, что зовёт
-     к действию. Два мягких пятна медленно плывут по кругу (полный цикл 38 с).
-     Двигается только transform одного слоя — это работа композитора, без
-     перерисовки и без filter, так что телефон не греется. Слой лежит ПОД
-     содержимым (z-index 0 против 1), поэтому на контрасте текста не сказывается:
+     к действию. Мягкие пятна медленно текут слева направо, полный проход 20 с.
+     Почему не вращение (как было): пятна лежали почти симметрично относительно
+     центра, поворот переводил картинку почти саму в себя, и движения не было
+     видно вообще — «фон не двигается».
+     Слой шириной в две карточки, узор замощён плиткой ровно в карточку
+     (background-size:50% 100%), поэтому сдвиг на -50% попадает плитка-в-плитку
+     и цикл не заметен. Двигается только transform одного слоя — работа
+     композитора, без перерисовки и без filter, телефон не греется. Слой лежит
+     ПОД содержимым (z-index 0 против 1): на контраст текста не влияет,
      непрозрачность подобрана по темам отдельно. */
   .tc-aura{
-    position:absolute;inset:-45%;z-index:0;pointer-events:none;
+    position:absolute;top:-40%;left:0;width:200%;height:180%;z-index:0;pointer-events:none;
     opacity:var(--aura-op,0);
     background:
-      radial-gradient(38% 42% at 26% 34%,var(--aura-a) 0%,transparent 66%),
-      radial-gradient(34% 38% at 74% 68%,var(--aura-b) 0%,transparent 66%);
+      radial-gradient(30% 58% at 20% 28%,var(--aura-a) 0%,transparent 70%),
+      radial-gradient(26% 50% at 58% 82%,var(--aura-b) 0%,transparent 70%),
+      radial-gradient(22% 44% at 88% 24%,var(--aura-a) 0%,transparent 70%);
+    background-size:50% 100%;
+    background-repeat:repeat-x;
   }
   /* слой промотируем в композитор только когда он реально едет */
-  .today-card.has-plan .tc-aura{animation:tcDrift 38s linear infinite;will-change:transform}
+  .today-card.has-plan .tc-aura{animation:tcDrift 20s linear infinite;will-change:transform}
   /* нечего делать — карточка спокойная: ни свечения, ни движения */
   .today-card:not(.has-plan) .tc-aura{opacity:0}
   @keyframes tcDrift{
-    from{transform:rotate(0deg) scale(1.04)}
-    to  {transform:rotate(360deg) scale(1.04)}
+    from{transform:translate3d(0,0,0)}
+    to  {transform:translate3d(-50%,0,0)}
   }
   @media (prefers-reduced-motion:reduce){
     .today-card.has-plan .tc-aura{animation:none;transform:none;will-change:auto}
@@ -1630,9 +1642,12 @@
      на сегодня. Иначе две одинаковые плашки подряд спорят за внимание. */
   .showcase{position:relative;padding:var(--sp-4) 0 0;margin-bottom:var(--sp-7)}
   /* мягкий блик за приветствием. Двигается на прокрутке — это единственная его
-     задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте. */
+     задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте.
+     right:-20px — ровно горизонтальное поле .app: блик доходит до края экрана и ни
+     пикселя дальше. С прежними -110px страница становилась на 90px шире экрана,
+     появлялся горизонтальный скролл, и фиксированный док уезжал вместе с ним. */
   .sc-glow{
-    position:absolute;top:-130px;right:-110px;width:300px;height:300px;border-radius:50%;
+    position:absolute;top:-130px;right:-20px;width:300px;height:300px;border-radius:50%;
     pointer-events:none;opacity:.34;z-index:0;
     background:radial-gradient(circle,var(--accent) 0%,transparent 70%);
     transform:translate3d(0,var(--par,0px),0);
