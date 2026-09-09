@@ -200,7 +200,7 @@
   .hero h1 span{color:var(--accent-ink)}
   .hero p{color:var(--muted);margin-top:10px;font-size:15px;line-height:1.45}
   .month-card{
-    display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    display:flex;align-items:flex-start;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     padding:var(--sp-3);margin-bottom:var(--sp-3);color:var(--ink);
     box-shadow:var(--sh-1);
@@ -454,7 +454,10 @@
   .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
   .side-note b{color:var(--accent-ink);font-weight:600}
   body.phase-rest .side-note b{color:var(--rest-ink)}
-  .ready-bar{max-width:320px;margin:6px auto 0}
+  /* место под полосу зарезервировано на весь шаг: раньше её появление и исчезновение
+     дважды дёргали всю композицию вверх-вниз прямо перед началом упражнения */
+  .ready-bar{max-width:320px;margin:6px auto 0;visibility:hidden}
+  .ready-bar.on{visibility:visible}
   .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-display);margin-bottom:8px}
   .rb-label b{color:var(--accent-ink);font-size:16px}
   body.phase-rest .rb-label b{color:var(--rest-ink)}
@@ -1531,7 +1534,6 @@
     <div class="section-title st-row"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
     <div id="mineList"></div>
     <button class="btn-ghost" id="btnCreateBottom">＋ Добавить программу</button>
-    <button class="hero-help" id="btnHelp">Как пользоваться приложением?</button>
 
   </section>
 
@@ -2706,6 +2708,16 @@
         </div>
         <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
       </div>
+
+      <div class="card-block">
+        <div class="cb-head"><p class="cb-title">Помощь</p></div>
+        <div class="ways">
+          <button type="button" class="way-row" id="btnHelp">
+            <span class="wr-ico" data-icon="book"></span>
+            <span class="wr-txt"><b>Как пользоваться приложением</b><small>Короткое объяснение за пять шагов</small></span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Звук -->
@@ -3174,7 +3186,7 @@ function runReadyBar(sec, done){
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
-  setShown(box, true);
+  box.classList.add('on');
   fill.style.transition = 'none';
   fill.style.width = '100%';
   num.textContent = sec;
@@ -3186,7 +3198,7 @@ function runReadyBar(sec, done){
       left -= dt;
       if(left <= 0){
         state.readyRAF = 0;
-        setShown(box, false);
+        box.classList.remove('on');
         done();
         return;
       }
@@ -3201,7 +3213,7 @@ function hideReadyBar(){
   if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyBar');
-  if(box) setShown(box, false);
+  if(box) box.classList.remove('on');
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -3498,6 +3510,7 @@ function openStart(raw){
   setShown('voicePrefRow', true);
   populateVoices();
   show('scrStart');
+  window.scrollTo(0, 0); // иначе экран открывается там же, где был прокручен предыдущий, — мимо названия
 }
 
 // по умолчанию выбираем вариант, в чьи дни попадает сегодня
@@ -8417,6 +8430,10 @@ function renderStep(){
   if(im) im.addEventListener('load', refreshDetailsFade, {once:true});
   requestAnimationFrame(refreshDetailsFade);
 
+  // место под полосу «Приготовься» держим весь шаг — но только там, где она вообще бывает:
+  // на упражнениях со временем. Иначе на повторениях резервировался бы пустой отступ
+  setShown('readyBar', step.phase === 'work' && step.kind === 'timer' && readySec > 0);
+
   if(step.kind === 'click'){
     setShown('stepReps', true);
     // рабочий вес — часть задания, поэтому цифра контрастнее подписи «повторений»
@@ -9275,6 +9292,9 @@ function startListening(){
     recog = buildRecog();
     recog.onend = ()=>{
       voiceActive = false;
+      // приложение свернули — браузер обрывает распознавание сам. Это не отказ в доступе:
+      // не перезапускаемся и НЕ выключаем режим, ждём возвращения (см. visibilitychange)
+      if(document.hidden) return;
       // ОС сама останавливает распознавание после каждой фразы/паузы тишины.
       // перезапускаем СРАЗУ, иначе в промежутке команды не слышны.
       if(voiceWanted && !stopRequested && $('scrWork').classList.contains('on')){
@@ -9292,6 +9312,9 @@ function startListening(){
     };
     recog.onerror = ev=>{
       if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
+        // в свёрнутом приложении браузер отдаёт ту же ошибку, что и при запрете доступа.
+        // Пугать человека и выключать голос из-за того, что он переключил окно, нельзя
+        if(document.hidden) return;
         voiceWanted = false;
         kvSet('voiceCtl', '0');
         syncPrefs();
@@ -9309,6 +9332,21 @@ function stopListening(){
   try{ if(recog){ recog.onend = null; recog.stop(); recog.abort && recog.abort(); } }catch(e){}
   voiceActive = false;
 }
+
+// Вернулись в приложение — молча поднимаем распознавание обратно. Раньше сворачивание
+// гасило голосовое управление насовсем: браузер обрывал распознавание, приложение считало
+// это отказом в доступе и просило заново выбирать «Голос» в меню микрофона.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    if(voiceActive) try{ if(recog){ recog.onend = null; recog.stop(); } }catch(e){}
+    voiceActive = false;
+    return;
+  }
+  if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
+    recogFails = 0;              // счётчик срывов относится к прошлой сессии микрофона
+    setTimeout(startListening, 300); // даём вкладке дорисоваться, иначе браузер снова оборвёт
+  }
+});
 
 /* ================= УВЕДОМЛЕНИЯ ПО РАСПИСАНИЮ ================= */
 // проверяем раз в 20 секунд: не пора ли напомнить о тренировке
