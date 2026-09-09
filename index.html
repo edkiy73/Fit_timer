@@ -267,6 +267,7 @@
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   #totalTime{font-family:var(--font-display);font-weight:700;letter-spacing:.02em;font-size:30px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
+  .field-hint:empty{display:none}
   .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
   .stat-line b{color:var(--ink)}
   .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:var(--font-text);font-size:13px;cursor:pointer}
@@ -370,16 +371,26 @@
 
   /* ---------- start screen ---------- */
   .start-wrap{flex:1;display:flex;flex-direction:column;justify-content:flex-start}
-  .start-hero{display:flex;align-items:center;gap:var(--sp-4);margin:var(--sp-2) 0 0}
+  /* шапка экрана — одна строка: «назад», чей это экран, действия с программой.
+     Раньше две кнопки висели по краям пустой полосы и отбивали лишние 40 px до названия */
+  .start-head{margin:8px 0 12px}
+  .sh-kicker{
+    font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  /* обложка выровнена по верху названия, а не по центру всего блока: иначе при длинном
+     названии картинка съезжала вниз и строка расписания оставалась без опоры */
+  .start-hero{display:flex;align-items:flex-start;gap:var(--sp-3);margin:0}
   .sh-cover{
-    flex:none;width:78px;height:78px;border-radius:var(--r-lg);overflow:hidden;
+    flex:none;width:72px;height:72px;border-radius:var(--r-lg);overflow:hidden;
     background:var(--surface);box-shadow:var(--sh-1);
   }
   .sh-cover img{width:100%;height:100%;object-fit:cover;display:block}
   .sh-body{flex:1;min-width:0}
   .start-wrap .num{font-family:var(--font-display);font-weight:700;letter-spacing:.18em;color:var(--accent-ink);font-size:14px}
-  .start-wrap h2{font-size:clamp(27px,7.4vw,36px);margin:0 0 8px;line-height:1.05;overflow-wrap:anywhere}
-  .start-wrap .desc{color:var(--muted);font-size:var(--fs-sm);line-height:1.5}
+  .start-wrap .num:empty{display:none}
+  .start-wrap h2{font-size:clamp(23px,6.2vw,30px);margin:0 0 6px;line-height:1.08;overflow-wrap:anywhere}
+  .start-wrap .desc{color:var(--muted);font-size:var(--fs-sm);line-height:1.45}
   .start-wrap .desc:empty{display:none}
   .start-meta{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-4) 0 var(--sp-5)}
   .chip{
@@ -403,19 +414,25 @@
 
   /* ---------- workout ---------- */
   .progress{margin:var(--sp-3) 0 var(--sp-1)}
-  .progress .labels{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-family:var(--font-display);font-weight:500;margin-bottom:8px;font-variant-numeric:tabular-nums}
+  /* строка над полосой прогресса не переносится: вторая строка сдвигала вниз всю
+     композицию экрана — название и цифру — на узких телефонах и на запасном шрифте */
+  .progress .labels{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:10px;font-size:clamp(10.5px,3vw,12px);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:var(--font-display);font-weight:500;margin-bottom:8px;font-variant-numeric:tabular-nums}
+  .progress .labels span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .progress .labels span:first-child{flex:1 1 auto;min-width:0}
+  .progress .labels span:last-child{flex:0 0 auto}
   .progress .bar{height:5px;background:var(--line);border-radius:var(--r-pill);overflow:hidden}
   .progress .fill{height:100%;width:0;background:var(--grad-accent);border-radius:var(--r-pill);transition:width .4s ease}
   body.phase-rest .progress .fill{background:var(--grad-rest)}
 
   /* Экран тренировки — две зоны с разными задачами.
-     ВЕРХ (.stage-head) стоит на месте и не двигается от упражнения к упражнению: название
-     и цифра — то, за чем возвращается взгляд, они не должны прыгать из-за длины описания.
-     НИЗ (.details) забирает ВСЮ оставшуюся высоту до кнопок. Раньше здесь был
-     декоративный padding-bottom:6vh и центрирование всей колонки: 55 px пустоты внизу,
-     при этом 95 px текста оставались за краем. Теперь пустоты нет вовсе, а если контент
-     всё равно не помещается — он прокручивается, и край это показывает. */
-  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:var(--sp-2) 0 0;min-height:0;overflow-x:clip}
+     ВЕРХ (.stage-head) стоит на месте: у него фиксированная высота слотов (строка чипов,
+     две строки под название, одна строка под цифру), поэтому название и цифра оказываются
+     на одной и той же высоте на любом шаге — на повторениях, на весе, на времени и на
+     отдыхе. Раньше вся колонка центрировалась целиком, и заголовок ездил по экрану на
+     240 px в зависимости от того, сколько текста в описании.
+     НИЗ (.details) забирает оставшуюся высоту до кнопок и прокручивается, если не влез;
+     свободное место при коротком контенте остаётся внизу и шапку не двигает. */
+  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:flex-start;text-align:center;padding:var(--sp-2) 0 0;min-height:0;overflow-x:clip}
   .stage > *{position:relative;z-index:1}
   .phase-tag{
     display:inline-flex;align-items:center;align-self:center;
@@ -426,7 +443,7 @@
   body.phase-rest .phase-tag{color:var(--rest-ink);background:var(--rest-soft)}
   /* «можно усложнить» — упражнение доросло до своего потолка, есть вариант посложнее */
   .swap-badge{
-    display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:6px 12px;
+    display:inline-flex;align-items:center;gap:6px;margin:0;padding:5px 12px;
     border:1px dashed var(--accent-ink);border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);
     font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
   }
@@ -438,18 +455,46 @@
   .swap-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;white-space:pre-line}
   /* фазовое свечение под названием и цифрой: один статичный радиальный градиент.
      Читается издалека, ничего не двигает и не отвлекает от таймера. */
-  .stage-head{flex:none;position:relative}
+  .stage-head{flex:none;position:relative;display:flex;flex-direction:column}
   .stage-head::before{
-    content:'';position:absolute;left:50%;top:50%;width:132%;height:250%;
+    content:'';position:absolute;left:50%;top:50%;width:132%;height:190%;
     transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
     background:radial-gradient(closest-side, var(--accent-soft), transparent 76%);
   }
   body.phase-rest .stage-head::before{background:radial-gradient(closest-side, var(--rest-soft), transparent 76%)}
-  .stage h2{font-size:clamp(25px,6.8vw,34px);line-height:1.08;margin:10px 0 2px;min-height:1.1em;overflow-wrap:anywhere}
-  .reps{font-family:var(--font-display);font-weight:700;font-size:clamp(42px,12vw,60px);color:var(--accent-ink);line-height:1;margin:6px 0 2px;min-height:.9em;font-variant-numeric:tabular-nums;letter-spacing:.01em}
-  .reps small{font-size:.34em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
-  .reps small.kg{color:var(--ink)}
-  body.phase-rest .reps{color:var(--rest-ink)}
+  /* строка чипов над названием. Место под неё занято всегда: значок «можно усложнить»
+     появляется редко, но раньше его появление сдвигало вниз и название, и цифру */
+  .head-chips{display:flex;align-items:center;justify-content:center;gap:8px;min-height:30px}
+  /* два слота под название: почти все названия — одна или две строки, и все они
+     оказываются в одном и том же месте экрана. Длинное имя растёт внутри слота,
+     а не толкает цифру вниз */
+  .stage{--title-fs:clamp(24px,6.4vw,32px)}
+  .stage h2{
+    font-size:var(--title-fs);line-height:1.1;margin:4px 0 0;
+    /* высота слота считается от базового размера, а не от текущего: длинное название
+       уменьшается шрифтом (fitStepTitle), а не растягивает шапку */
+    min-height:calc(var(--title-fs) * 2.2);
+    display:flex;align-items:center;justify-content:center;
+    overflow-wrap:anywhere;
+  }
+  /* ГЛАВНАЯ ЦИФРА экрана. Повторения, повторения с весом, время упражнения и таймер
+     отдыха — одна и та же сущность, поэтому один размер, одно начертание и один слот.
+     Отличается только цвет фазы. Части строки («20» + «повторений» + «× 8 кг») стоят
+     на общей базовой линии: раньше подписи были сдвинуты vertical-align:middle. */
+  .reps,.count{
+    font-family:var(--font-display);font-weight:700;
+    font-size:clamp(50px,15.5vw,72px);line-height:1;color:var(--accent-ink);
+    font-variant-numeric:tabular-nums;letter-spacing:.01em;
+    display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;
+    column-gap:.16em;row-gap:2px;margin:6px 0 0;min-height:1.04em;
+  }
+  .v-unit{
+    font-family:var(--font-display);font-size:.28em;font-weight:500;color:var(--muted);
+    letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+  }
+  /* рабочий вес — часть задания, а не подпись: ярче и плотнее, чем «повторений» */
+  .v-kg{color:var(--ink);font-weight:600}
+  body.phase-rest .reps,body.phase-rest .count{color:var(--rest-ink)}
 
   .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
   .side-note b{color:var(--accent-ink);font-weight:600}
@@ -601,30 +646,18 @@
     display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
   }
   .nu-val{margin-top:8px;font-family:var(--font-display);font-weight:600;font-size:13.5px;color:var(--rest-ink);letter-spacing:.06em}
-  /* отдых спокойнее: название фазы — тихая надстрочная подпись, герой — таймер */
-  body.phase-rest .stage h2{
-    font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.24em;
-    color:var(--rest-ink);margin:2px 0 0;min-height:0;
-  }
-  body.phase-rest .count{margin:10px 0 6px}
   /* на отдыхе у карточки нет ни картинки, ни мышц, ни ошибок — остаётся одна строка
      подсказки. Рамка вокруг неё была бы вторым лишним объектом рядом с «Дальше» */
   body.phase-rest .wk-card{background:none;border:none;box-shadow:none}
   body.phase-rest .wk-body{padding:0;text-align:center}
   body.phase-rest .instruction{text-align:center}
-  body.phase-rest .details{margin-top:var(--sp-4)}
-
-  .count{
-    font-family:var(--font-display);font-weight:700;font-size:clamp(60px,18vw,94px) !important;
-    line-height:1;
-    font-variant-numeric:tabular-nums;letter-spacing:.01em;
-    margin:8px 0;color:var(--ink);
-  }
-  .count:empty{display:none}
-  .count.warn{color:var(--accent-ink);animation:pulse 1s infinite}
-  body.phase-rest .count.warn{color:var(--rest-ink)}
   body.phase-rest .stage h2{color:var(--rest-ink)}
-  body.phase-rest .count{color:var(--rest-ink)}
+
+  .count:empty{display:none}
+  /* последние три секунды: цифра переходит в цвет основного текста и пульсирует.
+     Не жёлтый и не красный — жёлтым в этой системе помечены ошибки в технике,
+     а тут ничего не сломалось, просто время заканчивается */
+  .count.warn{color:var(--ink);animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 
   .actions{
@@ -641,12 +674,15 @@
     transition:transform .12s ease, box-shadow .15s ease;
   }
   .btn-done:active{transform:scale(.98);box-shadow:none}
+  /* «Пропустить» окрашена по фазе: на упражнении со временем она была цвета отдыха,
+     хотя всё вокруг — фиолетовое */
   .btn-skip{
-    width:100%;min-height:58px;background:var(--rest-soft);color:var(--rest-ink);
-    border:1.5px solid var(--rest-line);border-radius:var(--r-md);
+    width:100%;min-height:58px;background:var(--accent-soft);color:var(--accent-ink);
+    border:1.5px solid var(--accent-line);border-radius:var(--r-md);
     font-family:var(--font-display);font-weight:600;font-size:var(--fs-lg);letter-spacing:.09em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
+  body.phase-rest .btn-skip{background:var(--rest-soft);color:var(--rest-ink);border-color:var(--rest-line)}
   .btn-skip:active{transform:scale(.98)}
 
   /* ---------- finish ---------- */
@@ -1118,18 +1154,29 @@
   .wa-track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
   .wa-fill{height:100%;width:100%;background:rgba(255,255,255,.55)}
 
-  /* счётчик шагов прогрессии на экране старта */
-  .ps-row{display:flex;align-items:center;justify-content:center;gap:16px}
+  /* счётчик повышений на экране старта — ОДИН элемент управления, а не две
+     самостоятельные кнопки с цифрой между ними: та же поверхность, рамка и радиус,
+     что у полей ввода и сегментов, значение и подпись на общей базовой линии */
+  .ps-row{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:8px 8px 8px 14px;
+  }
   .ps-btn{
-    width:44px;height:44px;border-radius:12px;border:1px solid var(--line);
-    background-color:var(--bg);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
+    flex:0 0 46px;height:46px;border-radius:var(--r-sm);border:1px solid var(--line);
+    background:var(--card);color:var(--ink);
+    font-family:var(--font-display);font-weight:500;font-size:23px;line-height:1;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
   }
-  .ps-btn:active{background-color:var(--line)}
-  .ps-btn:disabled{opacity:.35;pointer-events:none}
-  .ps-val{display:flex;flex-direction:column;align-items:center;min-width:90px}
-  .ps-val b{font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--accent-ink);line-height:1}
-  .ps-val small{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .ps-btn:active{background-color:var(--accent-soft);color:var(--accent-ink)}
+  .ps-btn:disabled{opacity:.3;pointer-events:none}
+  /* значение слева, кнопки справа — та же схема, что у строк с переключателями */
+  .ps-val{order:-1;flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
+  .ps-val b{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--accent-ink);line-height:1}
+  .ps-val small{
+    font-family:var(--font-display);font-size:11.5px;color:var(--muted);
+    letter-spacing:.1em;text-transform:uppercase;
+  }
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--accent-ink);animation:aiSpin .9s linear infinite}
@@ -1146,7 +1193,8 @@
   .sched-mode{order:1;margin-bottom:14px}
   .st-note{font-family:var(--font-text);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
-  .hf-title{font-size:14px;margin-bottom:10px}
+  /* в карточке ритм задаёт gap, а верхняя линия рисовала бы вторую границу под заголовком */
+  .card-block .hf-block{padding:0;border-top:none}
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:var(--font-text);font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:var(--on-accent);font-weight:500}
@@ -1539,8 +1587,9 @@
 
   <!-- ШАГ 2: экран старта -->
   <section class="screen" id="scrStart">
-    <div class="screen-head st-row" style="margin-bottom:8px">
+    <div class="screen-head start-head">
       <button class="back-chip" id="startBackTop"></button>
+      <span class="sh-kicker">Программа</span>
       <div class="prog-menu-wrap">
         <button class="more-btn" id="startMore" title="Действия"></button>
         <div class="ctx-menu" id="startMenu"></div>
@@ -1577,22 +1626,21 @@
         <p class="cb-title">Прогрессия</p>
         <p class="field-hint" id="progStepsInfo"></p>
         <div class="ps-row">
-          <button type="button" class="ps-btn" id="psMinus" title="Меньше шагов">−</button>
+          <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
           <div class="ps-val"><b id="psCount">0</b><small>повышений</small></div>
-          <button type="button" class="ps-btn" id="psPlus" title="Больше шагов">+</button>
+          <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
         </div>
         <p class="field-hint">Изменение сразу пересчитает вес, повторы и время во всех упражнениях с прогрессией — ничего не потеряется.</p>
       </div>
 
       <div class="card-block">
-        <button type="button" class="collapse-head" id="startPrefsToggle">
-          <span>Звук и управление</span>
-          <span class="st-sum" id="startPrefsSum"></span>
-          <span class="st-chev" id="startPrefsChev"></span>
+        <button type="button" class="collapse-head" id="startHfToggle">
+          <span>Управление без рук</span>
+          <span class="st-sum" id="startHfSum"></span>
+          <span class="st-chev" id="startHfChev"></span>
         </button>
-        <div class="prefs stack hidden" id="startPrefsBox">
+        <div class="stack hidden" id="startHfBox">
           <div class="hf-block" id="voicePrefRow">
-            <div class="hf-title">Управление без рук</div>
             <div class="hf-seg" id="hfSeg">
               <button type="button" data-hf="off" class="act">Выкл</button>
               <button type="button" data-hf="voice">Голос</button>
@@ -1601,6 +1649,16 @@
             </div>
             <p class="field-hint" id="hfHint"></p>
           </div>
+        </div>
+      </div>
+
+      <div class="card-block">
+        <button type="button" class="collapse-head" id="startPrefsToggle">
+          <span>Звук и голос</span>
+          <span class="st-sum" id="startPrefsSum"></span>
+          <span class="st-chev" id="startPrefsChev"></span>
+        </button>
+        <div class="prefs stack hidden" id="startPrefsBox">
           <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
           <div class="stack" id="stSoundBox">
             <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
@@ -2408,7 +2466,7 @@
       <div class="prep-sub">Приготовься</div>
     </div>
     <div class="pause-overlay">
-      <div class="po-text">Пауза<span class="po-sub">Контент доступен, можно читать и скроллить</span></div>
+      <div class="po-text">Пауза<span class="po-sub">Таймер стоит. Описание можно читать и листать</span></div>
       <button class="btn-resume" id="btnResume" title="Продолжить"></button>
     </div>
     <div class="progress">
@@ -2420,9 +2478,11 @@
     </div>
     <div class="stage">
       <div class="stage-head">
-        <div class="phase-tag" id="phaseTag"></div>
+        <div class="head-chips">
+          <div class="phase-tag" id="phaseTag"></div>
+          <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
+        </div>
         <h2 id="stepTitle"></h2>
-        <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
         <div class="reps" id="stepReps"></div>
         <div class="count" id="countdown"></div>
         <div class="side-note hidden" id="sideNote"></div>
@@ -3607,11 +3667,16 @@ function buildStartMenu(){
 
 function renderStartInfo(){
   buildStartMenu();
-  // блок звука и управления свёрнут по умолчанию
+  // оба настроечных раздела свёрнуты по умолчанию
   setShown('startPrefsBox', false);
   $('startPrefsToggle').classList.remove('open');
+  setShown('startHfBox', false);
+  $('startHfToggle').classList.remove('open');
   fillLiveSoundCascade('st');
   syncStartPrefsSum();
+  // при самом первом запуске подсказка под сегментом оставалась пустой: загрузка
+  // настроек прерывается раньше, если дело идёт к онбордингу
+  $('hfHint').textContent = HF_HINTS[hfMode] || '';
   // описание программы: 4 строки с возможностью раскрыть
   const dBox = $('progDescBox'), dTxt = $('progDescText');
   const d = (state.raw.desc || '').trim();
@@ -8340,6 +8405,7 @@ function renderStep(){
 
   setShown('phaseTag', false);
   $('stepTitle').textContent = step.title;
+  fitStepTitle();
   setShown('swapBadge', step.phase === 'work' && !!step.swap);
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
@@ -8437,8 +8503,11 @@ function renderStep(){
   if(step.kind === 'click'){
     setShown('stepReps', true);
     // рабочий вес — часть задания, поэтому цифра контрастнее подписи «повторений»
-    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? ` <small class="kg">× ${fmtKg(step.weight)} кг</small>` : '';
-    $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>${kgTxt}`;
+    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>` : '';
+    // пробелы между частями строки — для чтения вслух и копирования; во флекс-контейнере
+    // они не создают отдельных элементов и на раскладку не влияют
+    $('stepReps').innerHTML = `<span class="v-num">${valueText(step.reps)}</span> `
+      + (step.repsNote ? `<span class="v-unit">${step.repsNote}</span> ` : '') + kgTxt;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
     if(step.perSide){ snR.textContent = 'на каждую сторону'; setShown(snR, true); }
@@ -8488,6 +8557,26 @@ function renderStep(){
       state.beginTimer = null;
       launch();
     }
+  }
+}
+
+/* Название упражнения живёт в слоте высотой ровно в две строки — так цифра под ним
+   стоит на одном и том же месте на любом шаге. Если имя длинное, уменьшаем ему кегль,
+   а не двигаем всё вниз: искать глазами цифру на потной тренировке хуже, чем читать
+   название на пару пунктов мельче. */
+function fitStepTitle(){
+  const h = $('stepTitle');
+  if(!h || !h.firstChild) return;
+  h.style.fontSize = '';
+  const slot = parseFloat(getComputedStyle(h).minHeight) || 0;
+  if(!slot) return;
+  const rng = document.createRange();
+  const textH = ()=>{ rng.selectNodeContents(h); return rng.getBoundingClientRect().height; };
+  let size = parseFloat(getComputedStyle(h).fontSize);
+  let guard = 0;
+  while(textH() > slot + 1 && size > 18 && guard++ < 14){
+    size -= 1.5;
+    h.style.fontSize = size + 'px';
   }
 }
 
@@ -8700,7 +8789,7 @@ document.addEventListener('input', e => {
 
 // карточка «дальше» больше не растягивается на всю высоту: описание в ней ограничено
 // четырьмя строками через CSS (line-clamp), подгонять высоту скриптом не нужно
-window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')) refreshDetailsFade(); });
+window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); } });
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){ try{ speechSynthesis.cancel(); }catch(e){} }
@@ -9402,18 +9491,29 @@ $('progDescMore').onclick = ()=>{
   box.classList.toggle('open', open);
   $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
 };
-$('startPrefsToggle').onclick = ()=>{
-  const box = $('startPrefsBox'), open = box.classList.contains('hidden');
-  box.classList.toggle('hidden', !open);
-  $('startPrefsToggle').classList.toggle('open', open);
-};
+// звук и управление без рук — два разных по смыслу раздела, поэтому две карточки
+// со своими сводками, а не один общий ящик «Звук и управление»
+function toggleStartSection(btnId, boxId){
+  $(btnId).onclick = ()=>{
+    const box = $(boxId), open = box.classList.contains('hidden');
+    setShown(box, open);
+    $(btnId).classList.toggle('open', open);
+  };
+}
+toggleStartSection('startPrefsToggle', 'startPrefsBox');
+toggleStartSection('startHfToggle', 'startHfBox');
 function syncStartPrefsSum(){
   const bits = [];
-  bits.push(soundOn ? 'звук вкл' : 'звук выкл');
-  const names = {off: '', voice: 'голос', clap: 'хлопок', headset: 'гарнитура'};
-  if(names[hfMode]) bits.push(names[hfMode]);
-  if(musicMode) bits.push('не прерывать музыку');
+  if(!soundOn) bits.push('выключен');
+  else {
+    if(voiceVol > 0) bits.push('голос');
+    if(fxVol > 0) bits.push('сигналы');
+    if(!bits.length) bits.push('без звука');
+    if(musicMode) bits.push('не прерывать музыку');
+  }
   $('startPrefsSum').textContent = bits.join(' · ');
+  const names = {off: 'выкл', voice: 'голос', clap: 'хлопок', headset: 'гарнитура'};
+  $('startHfSum').textContent = names[hfMode] || 'выкл';
 }
 $('btnStart').onclick = async ()=>{
   state.current = customToProgram(state.raw, state.planIdx);
@@ -10664,6 +10764,7 @@ $('imgBackTop').innerHTML = icon('chevL');
 $('exeBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
 $('startPrefsChev').innerHTML = icon('chevR');
+$('startHfChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
