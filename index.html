@@ -69,7 +69,9 @@
     --sh-2:0 16px 40px rgba(0,0,0,.55);
     --sh-accent:0 10px 26px rgba(108,58,232,.42);
     --scrim:rgba(6,4,12,.62);
-    --glass:rgba(23,17,38,.94);
+    --glass:rgba(23,17,38,.88);
+    --bg-0:rgba(12,9,22,0);   /* тот же --bg с нулевой прозрачностью: без него
+                                 градиент затухания даёт серую кромку */
 
     /* совместимость: --work остаётся именем акцента, --rest — фазы отдыха */
     --work:var(--accent);
@@ -89,8 +91,14 @@
     --plate-light:#EDEAF6;
     /* высота нижней панели кнопок — под неё резервируем прокрутку */
     --actions-h:78px;
-    /* высота дока без безопасной зоны — под неё резервируем прокрутку корневых экранов */
-    --dock-h:58px;
+    /* высота плавающего дока вместе с полем под ним (без безопасной зоны) —
+       под неё резервируем прокрутку корневых экранов */
+    --dock-h:74px;
+    --dock-line:rgba(255,255,255,.10);
+    --sh-dock:0 10px 30px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.34);
+    --sh-dock-act:0 0 16px rgba(124,86,245,.34);
+    /* пятна живого фона карточки плана */
+    --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.34;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn,.btn-mini{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
@@ -778,7 +786,12 @@
     --sh-2:0 16px 40px rgba(45,25,80,.16);
     --sh-accent:0 10px 26px rgba(92,46,214,.28);
     --scrim:rgba(30,18,58,.42);
-    --glass:rgba(255,255,255,.94);
+    --glass:rgba(255,255,255,.90);
+    --bg-0:rgba(246,244,252,0);
+    --dock-line:rgba(45,25,80,.10);
+    --sh-dock:0 10px 28px rgba(45,25,80,.16), 0 2px 8px rgba(45,25,80,.08);
+    --sh-dock-act:0 0 14px rgba(107,63,224,.18);
+    --aura-a:#A585FF; --aura-b:#DDA0F0; --aura-op:.26;
   }
   body.light .ctx-menu{box-shadow:var(--sh-2)}
   /* пиктограммы от ИИ рисуются светлыми линиями — на светлой теме подкладываем тёмную плашку */
@@ -876,12 +889,6 @@
   .choice:active{transform:scale(.99)}
   .choice b{display:block;font-size:15px;margin-bottom:4px;font-weight:600}
   .choice small{color:var(--muted);font-size:13px;line-height:1.45;display:block}
-  .avatar-btn{
-    width:36px;height:36px;border-radius:50%;border:1px solid var(--line);overflow:hidden;
-    background:var(--card);color:var(--accent-ink);cursor:pointer;padding:0;
-    font-family:var(--font-display);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
-  }
-  .avatar-btn.off{display:none}
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
@@ -911,11 +918,10 @@
   .pm-copyico{flex:none;color:var(--accent-ink)}
   .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
   .pm-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:8px}
-  .quick-stats{display:flex;gap:10px;margin-bottom:20px}
+  .quick-stats{display:flex;gap:10px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--accent-ink)}
   .qs-ico svg{width:26px;height:26px}
-  .avatar-btn img{width:100%;height:100%;object-fit:cover;display:block}
   .user-row{
     display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
@@ -1257,12 +1263,46 @@
   .today-card{
     position:relative;overflow:hidden;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-    padding:var(--sp-4);margin-bottom:var(--sp-5);box-shadow:var(--sh-1);
+    padding:var(--sp-4);box-shadow:var(--sh-1);
   }
   .today-card.has-plan{border-color:var(--accent-line)}
+  /* акцентная полоска сверху: тот же градиент, но втрое шире карточки и медленно
+     ползущий. Перерисовывается полоса 3px высотой — на батарее это не видно,
+     а карточка перестаёт быть статичной картинкой. */
   .today-card.has-plan::before{
-    content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad-accent);
+    content:'';position:absolute;inset:0 0 auto 0;height:3px;z-index:2;
+    background:var(--grad-accent);background-size:300% 100%;
+    animation:tcLine 16s linear infinite;
   }
+  @keyframes tcLine{from{background-position:0% 50%}to{background-position:300% 50%}}
+  /* ---- живой фон карточки плана ----
+     Единственная анимация на «Сегодня»: карточка плана — единственное, что зовёт
+     к действию. Два мягких пятна медленно плывут по кругу (полный цикл 38 с).
+     Двигается только transform одного слоя — это работа композитора, без
+     перерисовки и без filter, так что телефон не греется. Слой лежит ПОД
+     содержимым (z-index 0 против 1), поэтому на контрасте текста не сказывается:
+     непрозрачность подобрана по темам отдельно. */
+  .tc-aura{
+    position:absolute;inset:-45%;z-index:0;pointer-events:none;
+    opacity:var(--aura-op,0);
+    background:
+      radial-gradient(38% 42% at 26% 34%,var(--aura-a) 0%,transparent 66%),
+      radial-gradient(34% 38% at 74% 68%,var(--aura-b) 0%,transparent 66%);
+  }
+  /* слой промотируем в композитор только когда он реально едет */
+  .today-card.has-plan .tc-aura{animation:tcDrift 38s linear infinite;will-change:transform}
+  /* нечего делать — карточка спокойная: ни свечения, ни движения */
+  .today-card:not(.has-plan) .tc-aura{opacity:0}
+  @keyframes tcDrift{
+    from{transform:rotate(0deg) scale(1.04)}
+    to  {transform:rotate(360deg) scale(1.04)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .today-card.has-plan .tc-aura{animation:none;transform:none;will-change:auto}
+    .today-card.has-plan::before{animation:none}
+  }
+  /* содержимое карточки — над слоем фона */
+  .today-card > *:not(.tc-aura){position:relative;z-index:1}
   .today-card .ts-label{margin-bottom:var(--sp-3)}
   .today-row{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
@@ -1528,55 +1568,85 @@
   .dock{
     position:fixed;left:0;right:0;bottom:0;z-index:45;
     display:flex;justify-content:center;
-    padding:0 4px env(safe-area-inset-bottom);
-    background:var(--glass);
-    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
-    border-top:1px solid var(--line);
+    padding:0 var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom));
+    /* сама полоса — только поле вокруг плавающей панели: сквозь него виден и
+       прокручивается контент, поэтому нажатия она не перехватывает */
+    pointer-events:none;
   }
-  .dock-in{display:flex;width:100%;max-width:520px}
+  /* мягкое затухание страницы под доком: без него строки «въезжают» под панель
+     резко. Градиент статичный, ничего не перерисовывает. */
+  .dock::before{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:calc(100% + 18px);
+    background:linear-gradient(to top,var(--bg) 34%,var(--bg-0));
+    pointer-events:none;
+  }
+  .dock-in{
+    position:relative;pointer-events:auto;
+    display:flex;width:100%;max-width:440px;padding:5px;
+    border-radius:var(--r-pill);
+    background:var(--glass);
+    border:1px solid var(--dock-line);
+    box-shadow:var(--sh-dock);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+  }
   .dock-btn{
-    flex:1;min-width:0;min-height:var(--dock-h);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-    border:none;background:none;cursor:pointer;padding:6px 1px;
-    color:var(--muted);font-family:var(--font-text);font-size:10.5px;line-height:1.1;
-    white-space:nowrap;
+    flex:1;min-width:0;min-height:50px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    border:none;background:none;cursor:pointer;padding:4px 0;border-radius:var(--r-pill);
+    color:var(--muted);font-family:var(--font-text);font-size:clamp(9.5px,2.6vw,10.5px);
+    line-height:1.1;letter-spacing:-.01em;white-space:nowrap;
   }
   .dock-btn .db-ico{
-    display:flex;align-items:center;justify-content:center;width:46px;height:26px;
-    border-radius:var(--r-pill);transition:background .18s ease,color .18s ease;
+    display:flex;align-items:center;justify-content:center;width:100%;max-width:52px;height:28px;
+    border-radius:var(--r-pill);
+    transition:background .2s ease,color .2s ease,box-shadow .2s ease,transform .12s ease;
   }
   .dock-btn svg{width:21px;height:21px}
-  .dock-btn.act{color:var(--accent-ink)}
-  .dock-btn.act .db-ico{background:var(--accent-soft)}
+  /* активная вкладка: подложка-пилюля под иконкой, акцентный цвет и подпись
+     полужирной — состояние читается и цветом, и формой, и весом текста */
+  .dock-btn.act{color:var(--accent-ink);font-weight:600}
+  .dock-btn.act .db-ico{
+    background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line),var(--sh-dock-act);
+    animation:dockPop .34s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes dockPop{
+    0%{transform:scale(.82)}
+    60%{transform:scale(1.06)}
+    100%{transform:scale(1)}
+  }
   .dock-btn:active .db-ico{transform:scale(.9)}
-  .dock-btn:focus-visible{outline:2px solid var(--accent-line);outline-offset:-3px;border-radius:12px}
+  .dock-btn:focus-visible{outline:2px solid var(--accent-line);outline-offset:-2px}
+  /* на 360 подписи «Тренировки» и «Статистика» почти касаются — отдаём им поля дока */
+  @media (max-width:380px){ .dock{padding-left:var(--sp-2);padding-right:var(--sp-2)} }
   /* корневой экран резервирует прокрутку ровно под док — ничего не прячется под ним */
-  .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-3))}
+  .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-6))}
   .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
   .page-head h1{font-size:clamp(26px,7.2vw,32px);line-height:1.04}
   .page-head .ph-sub{display:block;font-family:var(--font-text);font-size:var(--fs-sm);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:6px;font-weight:400}
 
-  /* ================= «СЕГОДНЯ»: ВИТРИНА ================= */
-  .today-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
-  .today-top .avatar-btn{width:44px;height:44px;font-size:17px}
-  .brand-lg{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-  .brand-lg b{color:var(--accent-ink)}
-  .showcase{
-    position:relative;overflow:hidden;margin-top:var(--sp-4);
-    border:1px solid var(--line);border-radius:var(--r-xl);background:var(--card);
-    padding:var(--sp-5);box-shadow:var(--sh-1);
-  }
+  /* ================= «СЕГОДНЯ»: ВИТРИНА =================
+     Экран начинается прямо с приветствия: ни логотипа, ни аватарки сверху.
+     Приветствие живёт без рамки — карточка на экране ровно одна, и это план
+     на сегодня. Иначе две одинаковые плашки подряд спорят за внимание. */
+  .showcase{position:relative;padding:var(--sp-4) 0 0;margin-bottom:var(--sp-7)}
   /* мягкий блик за приветствием. Двигается на прокрутке — это единственная его
      задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте. */
   .sc-glow{
-    position:absolute;top:-120px;right:-90px;width:260px;height:260px;border-radius:50%;
-    pointer-events:none;opacity:.30;
+    position:absolute;top:-130px;right:-110px;width:300px;height:300px;border-radius:50%;
+    pointer-events:none;opacity:.34;z-index:0;
     background:radial-gradient(circle,var(--accent) 0%,transparent 70%);
     transform:translate3d(0,var(--par,0px),0);
   }
-  body.light .sc-glow{opacity:.16}
-  .showcase > .greet{position:relative;margin:0}
+  body.light .sc-glow{opacity:.18}
+  .showcase > .greet{position:relative;z-index:1;margin:0}
   @media (prefers-reduced-motion:reduce){.sc-glow{transform:none}}
+
+  /* ---- вертикальный ритм «Сегодня» ----
+     Крупные блоки разделяет --sp-7, заголовок раздела от своего блока — --sp-3,
+     подпись под блоком — --sp-2. Одна шкала на весь экран: раньше отступы
+     приходили вперемешку из инлайн-стилей и полей соседей, и ровно после
+     приветствия воздух пропадал. Собственных полей у блоков больше нет. */
+  #scrMenu .section-title{margin:var(--sp-7) 0 var(--sp-3)}
 
   /* неделя одним взглядом: галочка — тренировка уже сделана, точка — по плану */
   .week-strip{display:flex;gap:5px}
@@ -1635,13 +1705,11 @@
     </div>
   </div>
 
-  <!-- ШАГ 1: «Сегодня» — витрина. Логотип живёт здесь, а не в общей шапке -->
+  <!-- ШАГ 1: «Сегодня». Экран начинается с содержания: ни логотипа, ни аватарки —
+       логотип есть в иконке приложения и на знакомстве, профиль живёт во вкладке
+       «Аккаунт». Первое, что видит человек, — своё имя и что делать сегодня. -->
   <section class="screen root on" id="scrMenu">
-    <div class="today-top">
-      <div class="brand-lg">FIT<b>/</b>TIMER</div>
-      <button class="avatar-btn" id="btnUsers" title="Аккаунт"><span id="avatarSlot">?</span></button>
-    </div>
-    <!-- живое приветствие: имя из знакомства + серия и счётчик тренировок -->
+    <!-- живое приветствие: имя из знакомства + серия и суммарное время -->
     <div class="showcase">
       <div class="sc-glow" id="scGlow"></div>
       <div class="greet">
@@ -1680,14 +1748,15 @@
     <!-- ПЛАН НА СЕГОДНЯ. Каждая строка целиком — кнопка: раньше название программы
          выглядело ссылкой, но не нажималось, и это читалось как зависание. -->
     <div class="today-card hidden" id="todayBox">
+      <span class="tc-aura" aria-hidden="true"></span>
       <span class="ts-label">План на сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
-    <div class="section-title" style="margin-top:var(--sp-6)">Неделя</div>
+    <div class="section-title">Неделя</div>
     <div class="week-strip" id="weekStrip"></div>
     <p class="field-hint" id="weekStripHint"></p>
 
-    <div class="section-title" style="margin-top:var(--sp-6)">Прогресс</div>
+    <div class="section-title">Прогресс</div>
     <div class="quick-stats">
       <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
       <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
@@ -4044,20 +4113,12 @@ async function switchUser(id){
   const u = curUser();
   themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
   applyTheme();
-  renderAvatar();
   renderUsers();
   renderMine();
   renderStats();
   renderWeight();
   renderPhotos();
   syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
-}
-
-function renderAvatar(){
-  const u = curUser();
-  $('avatarSlot').innerHTML = (u && u.photo)
-    ? `<img src="${u.photo}" alt="">`
-    : (u && u.name ? esc(u.name[0].toUpperCase()) : '?');
 }
 
 function renderUsers(){
@@ -4681,7 +4742,7 @@ async function saveUser(){
       themeLight = (uDraft.theme || 'light') !== 'dark';
       applyTheme();
     }
-    renderAvatar(); renderUsers();
+    renderUsers();
     goTab('scrAccount');
   } else {
     uDraft.id = 'u' + Date.now();
@@ -5179,7 +5240,7 @@ async function finishOnboardingCreate(){
   await loadData();
   await loadPhotos();
   await ensureWarmup();
-  renderAvatar(); renderUsers(); renderMine(); renderStats(); renderWeight(); renderPhotos();
+  renderUsers(); renderMine(); renderStats(); renderWeight(); renderPhotos();
   themeLight = u.theme !== 'dark';
   applyTheme();
   $('obDoneTitle').textContent = `Готово, ${u.name}!`;
@@ -10269,7 +10330,6 @@ $('obLater').onclick = async ()=>{
   goTab('scrMenu');
 };
 // профили
-$('btnUsers').onclick = ()=> goTab('scrAccount');
 $('btnEditMe').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
 function openStats(tab){
   switchStatsTab(tab || 'workouts');
@@ -11186,7 +11246,6 @@ try{
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
-  renderAvatar();
   renderUsers();
   renderMine();
   renderStats();
