@@ -455,12 +455,28 @@
   }
   .phase-tag:empty{display:none}
   body.phase-rest .phase-tag{color:var(--rest-ink);background:var(--rest-soft)}
-  /* «можно усложнить» — упражнение доросло до своего потолка, есть вариант посложнее */
+  /* «можно усложнить» — упражнение доросло до своего потолка, есть вариант посложнее.
+     Раньше значок жил в собственной строке над названием, и место под него держалось
+     всегда: 30 пикселей высоты на каждом шаге ради подсказки, которая появляется
+     несколько раз за месяц. Теперь у него два дома и ни одного зарезервированного
+     пикселя — поверх картинки (см. .illo-wrap .swap-badge) или строкой в карточке. */
   .swap-badge{
     display:inline-flex;align-items:center;gap:6px;margin:0;padding:5px 12px;
     border:1px dashed var(--accent-ink);border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);
     font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
   }
+  /* есть картинка — значок лежит прямо на ней, в правом верхнем углу, 12 пикселей
+     от краёв. Подложка непрозрачная: под ним может оказаться что угодно */
+  .illo-wrap .swap-badge{
+    position:absolute;top:12px;right:12px;z-index:3;max-width:calc(100% - 24px);
+    /* на картинке значок — угловая метка, а не баннер: разрядка и кегль здесь
+       меньше, иначе надпись растягивается почти во всю ширину обложки */
+    font-size:11px;letter-spacing:.04em;padding:4px 10px;gap:5px;
+    background:var(--card);box-shadow:var(--sh-1);
+  }
+  .illo-wrap .swap-badge svg{width:14px;height:14px}
+  /* картинки нет — значок первой строкой карточки, по центру и без лишних отступов */
+  .swap-slot{display:flex;justify-content:center}
   .swap-badge:active{background:var(--work);color:var(--on-accent)}
   .swap-badge svg{width:15px;height:15px;display:block}
   .swap-badge span{display:flex}
@@ -476,9 +492,6 @@
     background:radial-gradient(closest-side, var(--accent-soft), transparent 76%);
   }
   body.phase-rest .stage-head::before{background:radial-gradient(closest-side, var(--rest-soft), transparent 76%)}
-  /* строка чипов над названием. Место под неё занято всегда: значок «можно усложнить»
-     появляется редко, но раньше его появление сдвигало вниз и название, и цифру */
-  .head-chips{display:flex;align-items:center;justify-content:center;gap:8px;min-height:30px}
   /* два слота под название: почти все названия — одна или две строки, и все они
      оказываются в одном и том же месте экрана. Длинное имя растёт внутри слота,
      а не толкает цифру вниз */
@@ -513,16 +526,36 @@
   .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
   .side-note b{color:var(--accent-ink);font-weight:600}
   body.phase-rest .side-note b{color:var(--rest-ink)}
-  /* место под полосу зарезервировано на весь шаг: раньше её появление и исчезновение
-     дважды дёргали всю композицию вверх-вниз прямо перед началом упражнения */
-  .ready-bar{max-width:320px;margin:6px auto 0;visibility:hidden}
-  .ready-bar.on{visibility:visible}
-  .rb-label{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-display);margin-bottom:8px}
-  .rb-label b{color:var(--accent-ink);font-size:16px}
-  body.phase-rest .rb-label b{color:var(--rest-ink)}
-  .rb-track{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
-  .rb-fill{height:100%;width:100%;border-radius:99px;background:var(--work)}
-  body.phase-rest .rb-fill{background:var(--rest)}
+  /* ПОДГОТОВКА ПЕРЕД УПРАЖНЕНИЕМ НА ВРЕМЯ.
+     Была полоса «Приготовься · 5» под цифрой, и место под неё держалось весь шаг —
+     ещё полсотни пикселей, отнятых у карточки упражнения на каждом таком шаге.
+     Стало кольцо сбоку от главной цифры: круг с еле заметной обводкой, который
+     заполняется цветом фазы, и отсчёт внутри. Обёртка ужимается по цифре, кольцо
+     висит абсолютом от её правого края — цифра остаётся ровно по центру и не
+     двигается ни когда кольцо появляется, ни когда исчезает. Слова «приготовься»
+     больше нет: заполняющийся круг с цифрой и так читается как «сейчас начнём». */
+  .count-wrap{position:relative;align-self:center;display:inline-flex;max-width:100%}
+  .ready-ring{
+    position:absolute;left:100%;top:50%;margin-left:14px;transform:translateY(-50%);
+    width:52px;height:52px;flex:none;align-items:center;justify-content:center;
+  }
+  .ready-ring:not(.hidden){display:flex}
+  .ready-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+  .rr-bg{fill:none;stroke:var(--line);stroke-width:2}
+  .rr-arc{
+    fill:none;stroke:var(--work);stroke-width:3;stroke-linecap:round;
+    stroke-dasharray:106.8;stroke-dashoffset:106.8;
+  }
+  .ready-ring b{
+    position:relative;font-family:var(--font-display);font-weight:700;font-size:21px;
+    color:var(--accent-ink);font-variant-numeric:tabular-nums;line-height:1;
+  }
+  body.phase-rest .rr-arc{stroke:var(--rest)}
+  body.phase-rest .ready-ring b{color:var(--rest-ink)}
+  /* совсем узкий экран: кольцу негде висеть сбоку — уводим его под цифру */
+  @media (max-width:340px){
+    .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
+  }
   .details{
     /* растём по содержимому, но НЕ выше свободного места: длинное описание займёт всё
        до кнопок и станет прокручиваемым, короткое — ровно свою высоту, без дыры внутри.
@@ -2711,22 +2744,28 @@
     </div>
     <div class="stage">
       <div class="stage-head">
-        <div class="head-chips">
-          <div class="phase-tag" id="phaseTag"></div>
-          <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
-        </div>
+        <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
         <div class="reps" id="stepReps"></div>
-        <div class="count" id="countdown"></div>
-        <div class="side-note hidden" id="sideNote"></div>
-        <div class="ready-bar hidden" id="readyBar">
-          <div class="rb-label">Приготовься · <b id="readyNum">5</b></div>
-          <div class="rb-track"><div class="rb-fill" id="readyFill"></div></div>
+        <!-- цифра и кольцо подготовки: кольцо висит сбоку абсолютом, поэтому
+             появляется и исчезает, не сдвигая саму цифру ни на пиксель -->
+        <div class="count-wrap">
+          <div class="count" id="countdown"></div>
+          <span class="ready-ring hidden" id="readyRing" aria-hidden="true">
+            <svg viewBox="0 0 40 40"><circle class="rr-bg" cx="20" cy="20" r="17"/><circle class="rr-arc" id="readyArc" cx="20" cy="20" r="17"/></svg>
+            <b id="readyNum">5</b>
+          </span>
         </div>
+        <div class="side-note hidden" id="sideNote"></div>
       </div>
       <div class="details" id="stepDetails">
+        <!-- запасной дом значка «можно усложнить»: картинки нет — значок стоит здесь,
+             по центру и без отступов. Живёт вне карточки, потому что карточки может
+             не быть совсем (нет ни описания, ни мышц, ни ошибок) -->
+        <div class="swap-slot hidden" id="swapSlot"></div>
         <div class="wk-card" id="exCard">
           <div class="illo-wrap" id="illoWrap">
+            <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
             <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
             <div class="illo" id="illoBox"></div>
           </div>
@@ -3490,14 +3529,14 @@ function announceExercise(step, onDone){
 
 // мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
 // считаем по кадрам, чтобы пауза реально останавливала подготовку
+const RR_LEN = 2 * Math.PI * 17; // длина окружности кольца подготовки (r=17 в svg 40×40)
 function runReadyBar(sec, done){
-  const box = $('readyBar'), fill = $('readyFill'), num = $('readyNum');
+  const box = $('readyRing'), arc = $('readyArc'), num = $('readyNum');
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
-  box.classList.add('on');
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
+  setShown(box, true);
+  arc.style.strokeDashoffset = RR_LEN;   // пустое кольцо в начале
   num.textContent = sec;
   beep(660, .08);
   state.readyRAF = requestAnimationFrame(function tick(now){
@@ -3507,11 +3546,12 @@ function runReadyBar(sec, done){
       left -= dt;
       if(left <= 0){
         state.readyRAF = 0;
-        box.classList.remove('on');
+        hideReadyBar();
         done();
         return;
       }
-      fill.style.width = (left / totalMs * 100).toFixed(1) + '%';
+      // кольцо заполняется к нулю: круг замкнулся — упражнение началось
+      arc.style.strokeDashoffset = (left / totalMs * RR_LEN).toFixed(2);
       const s = Math.ceil(left / 1000);
       if(s !== lastShown){ lastShown = s; num.textContent = s; beep(660, .08); }
     }
@@ -3521,8 +3561,8 @@ function runReadyBar(sec, done){
 function hideReadyBar(){
   if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
-  const box = $('readyBar');
-  if(box) box.classList.remove('on');
+  const box = $('readyRing');
+  if(box) setShown(box, false);
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -8826,7 +8866,6 @@ function renderStep(){
   setShown('phaseTag', false);
   $('stepTitle').textContent = step.title;
   fitStepTitle();
-  setShown('swapBadge', step.phase === 'work' && !!step.swap);
   $('stepInstruction').textContent = step.instruction || '';
   $('stepDetails').scrollTop = 0;
 
@@ -8911,14 +8950,21 @@ function renderStep(){
   setShown('exCard',
     (hasIllo && step.phase === 'work') || (hasVideo && !hasIllo) || !!mus ||
     !!(step.phase === 'work' && step.mistakes) || !!(step.instruction || '').trim());
+  // Значок «можно усложнить»: есть картинка — лежит на ней в правом верхнем углу,
+  // нет картинки — отдельной строкой по центру над карточкой. Своего постоянного
+  // места на экране у него больше нет, поэтому и пустого отступа под него тоже.
+  const wantSwap = step.phase === 'work' && !!step.swap;
+  const swapEl = $('swapBadge'), swapSlot = $('swapSlot');
+  const swapHost = (hasIllo && step.phase === 'work') ? $('illoWrap') : swapSlot;
+  if(swapEl.parentNode !== swapHost) swapHost.appendChild(swapEl);
+  setShown(swapEl, wantSwap);
+  setShown(swapSlot, wantSwap && swapHost === swapSlot);
+
   // картинка может доехать позже — пересчитаем края, когда она встанет на место
   const im = box.querySelector('img');
   if(im) im.addEventListener('load', refreshDetailsFade, {once:true});
   requestAnimationFrame(refreshDetailsFade);
 
-  // место под полосу «Приготовься» держим весь шаг — но только там, где она вообще бывает:
-  // на упражнениях со временем. Иначе на повторениях резервировался бы пустой отступ
-  setShown('readyBar', step.phase === 'work' && step.kind === 'timer' && readySec > 0);
 
   if(step.kind === 'click'){
     setShown('stepReps', true);
