@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
 <title>Fit Timer — домашние тренировки</title>
 <meta name="theme-color" content="#0C0916">
 <link rel="manifest" href="manifest.webmanifest">
@@ -89,6 +89,8 @@
     --plate-light:#EDEAF6;
     /* высота нижней панели кнопок — под неё резервируем прокрутку */
     --actions-h:78px;
+    /* высота дока без безопасной зоны — под неё резервируем прокрутку корневых экранов */
+    --dock-h:58px;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn,.btn-mini{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
@@ -880,8 +882,6 @@
     font-family:var(--font-display);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
   }
   .avatar-btn.off{display:none}
-  #btnStats{color:var(--accent-ink)}
-  #btnStats svg{width:19px;height:19px}
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
@@ -1283,6 +1283,8 @@
   .tr-ico svg{width:21px;height:21px}
   .today-row .ti{flex:1;min-width:0}
   .today-row .ti b{display:block;font-size:var(--fs-md);font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  /* у служебных строк заголовок не имя программы, обрезать его нечестно */
+  .today-row.info .ti b{white-space:normal;overflow:visible}
   .today-row .ti small{display:block;color:var(--muted);font-size:var(--fs-sm);line-height:1.35}
   .tr-go{
     flex:none;display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;
@@ -1319,8 +1321,12 @@
   .wh-del{flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .wh-row.del .wh-del{color:var(--accent-ink);border-color:var(--accent-line)}
   .wh-del svg{width:15px;height:15px}
-  .btn-share-res{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;color:var(--ink)}
+  .btn-share-res{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--ink)}
   .btn-share-res svg{width:18px;height:18px;color:var(--accent-ink)}
+  .actions.act-row{display:flex;gap:10px;align-items:stretch}
+  .actions.act-row .btn-share-res{flex:0 0 auto;width:auto;padding:0 16px;margin:0}
+  .actions.act-row .btn-primary{flex:1;margin:0}
+  @media (max-width:359px){.actions.act-row .btn-share-res span{display:none}}
   .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 16px;color:var(--ink)}
   #dlgCode{width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:monospace;font-size:12px;padding:10px;margin-bottom:12px;resize:vertical}
 
@@ -1512,6 +1518,102 @@
   body.light .voice-sel{
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%236B6188' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   }
+  /* ================= НИЖНЯЯ НАВИГАЦИЯ (ДОК) =================
+     Пять корневых разделов. Правило жёсткое: внизу экрана либо док, либо панель
+     действий — никогда обе. Поэтому док показывается ТОЛЬКО на .screen.root, а все
+     глубокие экраны (конструктор, упражнение, экраны ИИ, обучение, тренировка,
+     финал, знакомство) живут со своей нижней кнопкой и без дока.
+     z-index 45 — ниже попапов (60), попапа веса и паузы (58): открытая модалка
+     и перекрывает док, и перехватывает нажатия своим полотном. */
+  .dock{
+    position:fixed;left:0;right:0;bottom:0;z-index:45;
+    display:flex;justify-content:center;
+    padding:0 4px env(safe-area-inset-bottom);
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border-top:1px solid var(--line);
+  }
+  .dock-in{display:flex;width:100%;max-width:520px}
+  .dock-btn{
+    flex:1;min-width:0;min-height:var(--dock-h);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    border:none;background:none;cursor:pointer;padding:6px 1px;
+    color:var(--muted);font-family:var(--font-text);font-size:10.5px;line-height:1.1;
+    white-space:nowrap;
+  }
+  .dock-btn .db-ico{
+    display:flex;align-items:center;justify-content:center;width:46px;height:26px;
+    border-radius:var(--r-pill);transition:background .18s ease,color .18s ease;
+  }
+  .dock-btn svg{width:21px;height:21px}
+  .dock-btn.act{color:var(--accent-ink)}
+  .dock-btn.act .db-ico{background:var(--accent-soft)}
+  .dock-btn:active .db-ico{transform:scale(.9)}
+  .dock-btn:focus-visible{outline:2px solid var(--accent-line);outline-offset:-3px;border-radius:12px}
+  /* корневой экран резервирует прокрутку ровно под док — ничего не прячется под ним */
+  .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-3))}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
+  .page-head h1{font-size:clamp(26px,7.2vw,32px);line-height:1.04}
+  .page-head .ph-sub{display:block;font-family:var(--font-text);font-size:var(--fs-sm);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:6px;font-weight:400}
+
+  /* ================= «СЕГОДНЯ»: ВИТРИНА ================= */
+  .today-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+  .today-top .avatar-btn{width:44px;height:44px;font-size:17px}
+  .brand-lg{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .brand-lg b{color:var(--accent-ink)}
+  .showcase{
+    position:relative;overflow:hidden;margin-top:var(--sp-4);
+    border:1px solid var(--line);border-radius:var(--r-xl);background:var(--card);
+    padding:var(--sp-5);box-shadow:var(--sh-1);
+  }
+  /* мягкий блик за приветствием. Двигается на прокрутке — это единственная его
+     задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте. */
+  .sc-glow{
+    position:absolute;top:-120px;right:-90px;width:260px;height:260px;border-radius:50%;
+    pointer-events:none;opacity:.30;
+    background:radial-gradient(circle,var(--accent) 0%,transparent 70%);
+    transform:translate3d(0,var(--par,0px),0);
+  }
+  body.light .sc-glow{opacity:.16}
+  .showcase > .greet{position:relative;margin:0}
+  @media (prefers-reduced-motion:reduce){.sc-glow{transform:none}}
+
+  /* неделя одним взглядом: галочка — тренировка уже сделана, точка — по плану */
+  .week-strip{display:flex;gap:5px}
+  .ws-day{
+    flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;
+    padding:9px 2px;border-radius:var(--r-md);background:var(--card);border:1px solid var(--line);
+  }
+  .ws-day b{font-family:var(--font-display);font-weight:600;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .ws-day i{display:block;width:7px;height:7px;border-radius:50%;background:var(--line-2)}
+  .ws-day.plan i{background:var(--accent-ink)}
+  .ws-day .ws-ok{display:flex;color:var(--ok)}
+  .ws-day .ws-ok svg{width:14px;height:14px;stroke-width:3}
+  .ws-day.today{border-color:var(--accent-line);background:var(--accent-soft)}
+  .ws-day.today b{color:var(--accent-ink)}
+  #weekStripHint{margin-top:var(--sp-2)}
+
+  .qs-btn b{
+    font-family:var(--font-display);font-weight:700;font-size:23px;line-height:1;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .qs-btn span:last-child{color:var(--muted)}
+
+  /* карточка активного профиля на «Аккаунте» */
+  .acc-card{display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:var(--sp-4);
+    color:var(--ink);box-shadow:var(--sh-1);margin-bottom:var(--sp-4)}
+  .acc-card:active{transform:scale(.99)}
+  .acc-ava{flex:none;width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--surface);
+    color:var(--accent-ink);display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:23px}
+  .acc-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .acc-body{flex:1;min-width:0}
+  .acc-body b{display:block;font-size:var(--fs-lg);font-family:var(--font-display);text-transform:uppercase;letter-spacing:.03em}
+  .acc-body small{display:block;color:var(--muted);font-size:var(--fs-sm);margin-top:3px}
+  .acc-card .nr-chev{flex:none;color:var(--muted);display:flex}
+  .acc-card .nr-chev svg{width:18px;height:18px}
+
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important}
   }
@@ -1520,25 +1622,33 @@
 <body>
 <div class="app">
 
-  <div class="topbar">
+  <!-- Верхняя полоса осталась ровно одному экрану — тренировке: там нужны звук,
+       микрофон и «Выйти». На корневых разделах её роль играют док снизу и
+       собственный заголовок страницы, поэтому там она скрыта целиком. -->
+  <div class="topbar hidden" id="topBar">
     <div class="brand">FIT<b>/</b>TIMER</div>
     <div class="global-clock" id="globalClock">00:00</div>
     <div class="top-tools">
-      <button class="avatar-btn" id="btnStats" title="Статистика"></button>
-      <button class="avatar-btn" id="btnUsers" title="Профили"><span id="avatarSlot">?</span></button>
       <button class="icon-btn btn-sound" id="btnSoundW" title="Звук">🔊</button>
       <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление">🎤</button>
             <button class="btn-exit" id="btnExit">Выйти</button>
     </div>
   </div>
 
-  <!-- ШАГ 1: главный экран -->
-  <section class="screen on" id="scrMenu">
+  <!-- ШАГ 1: «Сегодня» — витрина. Логотип живёт здесь, а не в общей шапке -->
+  <section class="screen root on" id="scrMenu">
+    <div class="today-top">
+      <div class="brand-lg">FIT<b>/</b>TIMER</div>
+      <button class="avatar-btn" id="btnUsers" title="Аккаунт"><span id="avatarSlot">?</span></button>
+    </div>
     <!-- живое приветствие: имя из знакомства + серия и счётчик тренировок -->
-    <div class="greet">
-      <p class="greet-hi" id="greetHi">Привет</p>
-      <h1 class="greet-name" id="greetName"></h1>
-      <div class="greet-chips" id="greetChips"></div>
+    <div class="showcase">
+      <div class="sc-glow" id="scGlow"></div>
+      <div class="greet">
+        <p class="greet-hi" id="greetHi">Привет</p>
+        <h1 class="greet-name" id="greetName"></h1>
+        <div class="greet-chips" id="greetChips"></div>
+      </div>
     </div>
     <div class="hero">
       <button class="premium-banner hidden" id="btnPremium">
@@ -1573,16 +1683,26 @@
       <span class="ts-label">План на сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
-    <div class="section-title" style="margin-top:var(--sp-6)">Статистика</div>
+    <div class="section-title" style="margin-top:var(--sp-6)">Неделя</div>
+    <div class="week-strip" id="weekStrip"></div>
+    <p class="field-hint" id="weekStripHint"></p>
+
+    <div class="section-title" style="margin-top:var(--sp-6)">Прогресс</div>
     <div class="quick-stats">
-      <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><span>Тренировки</span></button>
-      <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><span>Вес и объёмы</span></button>
-      <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><span>Фото-прогресс</span></button>
+      <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
+      <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
+      <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
     </div>
-    <div class="section-title st-row"><span>Мои программы</span><button class="icon-btn" id="btnCreate" title="Создать программу">＋</button></div>
+  </section>
+
+  <!-- РАЗДЕЛ «ТРЕНИРОВКИ»: все программы и создание новой -->
+  <section class="screen root" id="scrPrograms">
+    <div class="page-head">
+      <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
+      <button class="icon-btn" id="btnCreate" title="Создать программу">＋</button>
+    </div>
     <div id="mineList"></div>
     <button class="btn-ghost" id="btnCreateBottom">＋ Добавить программу</button>
-
   </section>
 
   <!-- ШАГ 2: экран старта -->
@@ -2543,9 +2663,11 @@
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
       </div>
     </div>
-    <div class="actions">
-      <button class="btn-secondary btn-share-res" id="btnShareResult"></button>
-      <button class="btn-primary" id="btnAgain">На главный экран</button>
+    <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую
+         часть экрана, хотя оба действия помещаются рядом -->
+    <div class="actions act-row">
+      <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться"></button>
+      <button class="btn-primary" id="btnAgain">Готово</button>
     </div>
   </section>
 
@@ -2590,12 +2712,12 @@
 
     <div class="note">
       <span class="n-ico" data-icon="clock"></span>
-      <span>Пять шагов, две минуты чтения. Вернуться сюда можно в любой момент — ссылка «Как это работает» на главной.</span>
+      <span>Пять шагов, две минуты чтения. Вернуться сюда можно в любой момент: «Настройки» внизу экрана → «Как пользоваться приложением».</span>
     </div>
 
     <div class="help-step"><div class="help-num">1</div><div>
       <h3>Заведи программу</h3>
-      <p>На главной — кнопка «Создать программу». Можно собрать руками, а можно просто описать словами, какая тренировка нужна: упражнения, повторения и дни подберёт ИИ.</p>
+      <p>Внизу экрана — «Тренировки», там кнопка «Добавить программу». Можно собрать руками, а можно просто описать словами, какая тренировка нужна: упражнения, повторения и дни подберёт ИИ.</p>
     </div></div>
 
     <div class="help-step"><div class="help-num">2</div><div>
@@ -2625,8 +2747,8 @@
 
   <!-- Профили -->
   <!-- Статистика с табами -->
-  <section class="screen builder" id="scrStats">
-    <div class="screen-head"><button class="back-chip" id="statsBackTop"></button><h2>Статистика</h2></div>
+  <section class="screen root" id="scrStats">
+    <div class="page-head"><h1>Статистика</h1></div>
     <div class="tabs" id="statsTabs">
       <button class="tab act" data-tab="workouts">Тренировки</button>
       <button class="tab" data-tab="weight">Вес и объёмы</button>
@@ -2706,25 +2828,99 @@
     </div>
   </section>
 
-  <!-- Попап профилей -->
-  <div class="modal" id="usersModal">
-    <div class="modal-card">
-      <span class="mini-label">Профили</span>
-      <div id="usersList"></div>
-      <button class="choice" id="btnAddUser" style="text-align:center"><b>＋ Добавить профиль</b></button>
-      <div class="pref-row" style="border-top:1px solid var(--line);margin-top:6px"><span>Тёмная тема</span><button class="switch" id="tglTheme"></button></div>
-      <button class="link-btn" id="usersClose" style="margin:0;padding:10px">Закрыть</button>
+  <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
+       Раньше это был попап поверх главной — теперь полноценная страница. -->
+  <section class="screen root" id="scrAccount">
+    <div class="page-head"><h1>Аккаунт</h1></div>
+    <button type="button" class="acc-card" id="btnEditMe">
+      <span class="acc-ava" id="accAva">?</span>
+      <span class="acc-body"><b id="accName">Профиль</b><small id="accSub">Изменить имя, фото, пол и дату рождения</small></span>
+      <span class="nr-chev" data-icon="chevR"></span>
+    </button>
+    <div class="section-title hidden" id="usersTitle">Другие профили</div>
+    <div id="usersList"></div>
+    <button class="choice" id="btnAddUser" style="text-align:center"><b>＋ Добавить профиль</b></button>
+    <p class="field-hint" id="usersHint"></p>
+  </section>
+
+  <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
+       Сохранения здесь нет намеренно: каждое изменение применяется сразу, поэтому
+       на корневом экране не нужна нижняя панель действий — внизу только док. -->
+  <section class="screen root" id="scrSettings">
+    <div class="page-head"><h1>Настройки</h1></div>
+
+    <div class="card-block">
+      <p class="cb-title">Оформление</p>
+      <div class="pref-row" style="border-top:none"><span>Тёмная тема<small>Светлая — для дневного света, тёмная — для вечерних тренировок</small></span><button class="switch" id="tglTheme"></button></div>
     </div>
-  </div>
+
+    <div class="card-block">
+      <p class="cb-title">Отсчёты и паузы</p>
+      <div class="row2">
+        <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+        <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+      </div>
+      <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
+      <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Резервная копия</p></div>
+      <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси его на новый телефон или сохрани на всякий случай.</p>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnExportAll">
+          <span class="wr-ico" data-icon="download"></span>
+          <span class="wr-txt"><b>Сохранить в файл</b><small>Телефон предложит, куда его положить</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnImportAll">
+          <span class="wr-ico" data-icon="reset"></span>
+          <span class="wr-txt"><b>Восстановить из файла</b><small>Всё, что сейчас в приложении, заменится содержимым файла</small></span>
+        </button>
+      </div>
+      <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Кнопка «Сделать за меня»</p></div>
+      <div class="note">
+        <span class="n-ico" data-icon="key"></span>
+        <span>Чтобы приложение собирало программы и упражнения само, ему нужен личный ключ Google — это бесплатно и делается один раз, минуты за две. Без ключа всё работает по-прежнему, только задание для нейросети придётся переносить в чат руками.</span>
+      </div>
+      <div class="field"><label>Ключ Google AI (Gemini)</label>
+        <input type="password" id="ueGeminiKey" placeholder="Вставь сюда ключ из Google AI Studio" autocomplete="off" spellcheck="false">
+        <p class="field-hint">Ключ хранится только на этом телефоне и уходит только на серверы Google. Мы его не видим.</p>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="ueGeminiHow">
+          <span class="wr-ico" data-icon="key"></span>
+          <span class="wr-txt"><b>Как получить ключ</b><small>Короткая инструкция по шагам</small></span>
+        </button>
+        <button type="button" class="way-row" id="ueGeminiTest">
+          <span class="wr-ico" data-icon="check"></span>
+          <span class="wr-txt"><b>Проверить ключ</b><small>Сделаем пробный запрос и скажем, работает ли</small></span>
+        </button>
+        <button type="button" class="way-row" id="ueGeminiDiag">
+          <span class="wr-ico" data-icon="alert"></span>
+          <span class="wr-txt"><b>Что-то не работает</b><small>Подробный отчёт: сеть, ключ, ответ Google</small></span>
+        </button>
+      </div>
+      <p class="field-hint" id="ueGeminiState"></p>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Помощь</p></div>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnHelp">
+          <span class="wr-ico" data-icon="book"></span>
+          <span class="wr-txt"><b>Как пользоваться приложением</b><small>Короткое объяснение за пять шагов</small></span>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
-    <div class="tabs" id="ueTabs">
-      <button class="tab act" data-t="me">Профиль</button>
-      <button class="tab" data-t="timing">Отсчёты</button>
-      <button class="tab" data-t="ai">ИИ</button>
-    </div>
 
     <!-- Профиль -->
     <div class="ue-pane" id="uePaneMe">
@@ -2740,93 +2936,21 @@
           <div class="ctx-menu" id="uePhotoMenu"></div>
         </div>
         <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
-        <div class="row2">
-          <div class="field"><label>Пол</label>
-            <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
-          </div>
-          <div class="field"><label>Тема</label>
-            <div class="seg"><button type="button" id="ueThemeL">Светлая</button><button type="button" id="ueThemeD">Тёмная</button></div>
-          </div>
+        <div class="field"><label>Пол</label>
+          <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
         </div>
         <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth">
           <p class="field-hint">Пол и возраст важны для составления тренировок — от них зависят подбор упражнений, нагрузка и время восстановления. Эти данные уходят в запрос к ИИ.</p>
         </div>
       </div>
 
-      <div class="card-block">
-        <div class="cb-head"><p class="cb-title">Резервная копия</p></div>
-        <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси его на новый телефон или сохрани на всякий случай.</p>
-        <div class="ways">
-          <button type="button" class="way-row" id="btnExportAll">
-            <span class="wr-ico" data-icon="download"></span>
-            <span class="wr-txt"><b>Сохранить в файл</b><small>Телефон предложит, куда его положить</small></span>
-          </button>
-          <button type="button" class="way-row" id="btnImportAll">
-            <span class="wr-ico" data-icon="reset"></span>
-            <span class="wr-txt"><b>Восстановить из файла</b><small>Всё, что сейчас в приложении, заменится содержимым файла</small></span>
-          </button>
-        </div>
-        <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
-      </div>
-
-      <div class="card-block">
-        <div class="cb-head"><p class="cb-title">Помощь</p></div>
-        <div class="ways">
-          <button type="button" class="way-row" id="btnHelp">
-            <span class="wr-ico" data-icon="book"></span>
-            <span class="wr-txt"><b>Как пользоваться приложением</b><small>Короткое объяснение за пять шагов</small></span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Звук -->
-    <!-- Тайминги -->
-    <div class="ue-pane hidden" id="uePaneTiming">
-      <div class="card-block">
-        <p class="cb-title">Отсчёты и паузы</p>
-        <div class="row2">
-          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
-          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
-        </div>
-        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
-        <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
-      </div>
-    </div>
-
-    <!-- ИИ -->
-    <div class="ue-pane hidden" id="uePaneAI">
-      <div class="card-block">
-        <div class="cb-head"><p class="cb-title">Кнопка «Сделать за меня»</p></div>
-        <div class="note">
-          <span class="n-ico" data-icon="key"></span>
-          <span>Чтобы приложение собирало программы и упражнения само, ему нужен личный ключ Google — это бесплатно и делается один раз, минуты за две. Без ключа всё работает по-прежнему, только задание для нейросети придётся переносить в чат руками.</span>
-        </div>
-        <div class="field"><label>Ключ Google AI (Gemini)</label>
-          <input type="password" id="ueGeminiKey" placeholder="Вставь сюда ключ из Google AI Studio" autocomplete="off" spellcheck="false">
-          <p class="field-hint">Ключ хранится только на этом телефоне и уходит только на серверы Google. Мы его не видим.</p>
-        </div>
-        <div class="ways">
-          <button type="button" class="way-row" id="ueGeminiHow">
-            <span class="wr-ico" data-icon="key"></span>
-            <span class="wr-txt"><b>Как получить ключ</b><small>Короткая инструкция по шагам</small></span>
-          </button>
-          <button type="button" class="way-row" id="ueGeminiTest">
-            <span class="wr-ico" data-icon="check"></span>
-            <span class="wr-txt"><b>Проверить ключ</b><small>Сделаем пробный запрос и скажем, работает ли</small></span>
-          </button>
-          <button type="button" class="way-row" id="ueGeminiDiag">
-            <span class="wr-ico" data-icon="alert"></span>
-            <span class="wr-txt"><b>Что-то не работает</b><small>Подробный отчёт: сеть, ключ, ответ Google</small></span>
-          </button>
-        </div>
-        <p class="field-hint" id="ueGeminiState"></p>
-      </div>
+      <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
+           внизу страницы, а закреплённая панель осталась в одну строку -->
+      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)">Удалить профиль</button>
     </div>
 
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveUser">Сохранить</button>
-      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)">Удалить профиль</button>
     </div>
   </section>
 
@@ -2965,6 +3089,18 @@
     </div>
 
 </div>
+
+<!-- Нижняя навигация. Видна только на пяти корневых разделах и прячется, пока
+     открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
+<nav class="dock hidden" id="dock" aria-label="Разделы">
+  <div class="dock-in">
+    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
+    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
+    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Статистика</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="user"></span><span>Аккаунт</span></button>
+    <button class="dock-btn" data-scr="scrSettings"><span class="db-ico" data-icon="gear"></span><span>Настройки</span></button>
+  </div>
+</nav>
 
 <script>
 /* ================= ПИКТОГРАММЫ (инлайн-SVG) ================= */
@@ -3321,6 +3457,8 @@ const ICONS = {
   pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   grip: '<circle cx="9" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="19" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="19" r="1.3" fill="currentColor" stroke="none"/>',
   plus: '<path d="M5 12h14M12 5v14"/>',
+  home: '<path d="M3.6 10.4 12 3.6l8.4 6.8V20a1 1 0 0 1-1 1h-4.6v-6.2H9.2V21H4.6a1 1 0 0 1-1-1Z"/>',
+  gear: '<circle cx="12" cy="12" r="3.1"/><path d="M19.3 13.6a7.8 7.8 0 0 0 0-3.2l1.8-1.4-1.9-3.3-2.1.8a7.7 7.7 0 0 0-2.8-1.6L13.9 2.7h-3.8l-.4 2.2a7.7 7.7 0 0 0-2.8 1.6l-2.1-.8-1.9 3.3 1.8 1.4a7.8 7.8 0 0 0 0 3.2l-1.8 1.4 1.9 3.3 2.1-.8a7.7 7.7 0 0 0 2.8 1.6l.4 2.2h3.8l.4-2.2a7.7 7.7 0 0 0 2.8-1.6l2.1.8 1.9-3.3Z"/>',
   reset: '<path d="M3 3v6h6"/><path d="M3.8 9A9 9 0 1 0 6 5.3L3 8"/>',
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3"/>',
   pause: '<rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/>',
@@ -3490,8 +3628,13 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
-try{ history.replaceState({scr:'scrMenu'}, ''); }catch(e){}
+const screens = ['scrMenu','scrPrograms','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+// Пять корневых разделов: только у них внизу док и нет собственной панели действий.
+const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
+// Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
+// переживает и системную кнопку «назад», и перезаход по истории.
+let navDepth = 0;
+try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // Что считается несохранённой работой на каждом экране. Раньше эту проверку знали
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
 // напрямую — и набранная программа исчезала молча.
@@ -3514,6 +3657,7 @@ window.addEventListener('popstate', async e => {
     return;
   }
   let t = (e.state && e.state.scr) || 'scrMenu';
+  navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
   // на эти экраны нельзя вернуться «из истории» — там нет живого состояния
   if(t === 'scrWork' || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
 
@@ -3523,7 +3667,8 @@ window.addEventListener('popstate', async e => {
     try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
     if(g){
       // возвращаем позицию в истории, чтобы «Вернуться» действительно вернуло
-      try{ history.pushState({scr: cur}, ''); }catch(_){}
+      navDepth++;
+      try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
         g.what + ' не сохранены. Если уйти, они пропадут.',
         {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'}
@@ -3539,23 +3684,96 @@ window.addEventListener('popstate', async e => {
   show(t, false);
 });
 function show(id, push = true){
-  if(push && show._last !== id){ try{ history.pushState({scr: id}, ''); }catch(e){} }
+  if(push && show._last !== id){
+    navDepth++;
+    try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+  }
   if(show._last !== id) clearConfetti(); // праздник остаётся на своём экране
   show._last = id;
   screens.forEach(s => $(s).classList.toggle('on', s===id));
+  // верхняя полоса нужна ровно одному экрану — тренировке
+  setShown('topBar', id==='scrWork');
   $('btnExit').classList.toggle('on', id==='scrWork');
   $('btnSoundW').classList.toggle('on', id==='scrWork');
   $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
-  $('btnUsers').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
-  $('btnStats').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
+  document.querySelectorAll('.dock-btn').forEach(b => {
+    const on = b.dataset.scr === id;
+    b.classList.toggle('act', on);
+    b.setAttribute('aria-current', on ? 'page' : 'false');
+  });
+  syncDock();
   // тренировка живёт ровно в один экран телефона: скроллится только описание,
   // а панель управления всегда на одном месте (см. body.screen-work в стилях)
   document.body.classList.toggle('screen-work', id==='scrWork');
+  if(ROOT_TABS.includes(id)) prepTab(id);
+}
+
+// содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
+// внутри приложения или системным «назад»
+function prepTab(id){
+  try{
+    if(id === 'scrStats'){ renderStats(); renderWeight(); renderPhotos(); }
+    else if(id === 'scrPrograms'){ renderMine(); }
+    else if(id === 'scrAccount'){ renderUsers(); }
+    else if(id === 'scrSettings'){ syncSettingsForm(); }
+    else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
+  }catch(e){}
+}
+
+/* ---- док: показываем только на корневых разделах и только без клавиатуры ----
+   Правило владельца: две закреплённые полосы одновременно недопустимы. Панель
+   действий есть у каждого глубокого экрана, поэтому там дока нет вовсе, а на
+   корневых нет панели действий. Клавиатура — третий случай: пока в фокусе поле
+   ввода, док уезжает, иначе он сядет поверх клавиатуры на «Настройках». */
+function kbFocused(){
+  const el = document.activeElement;
+  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea,select'));
+}
+function syncDock(){
+  setShown('dock', ROOT_TABS.includes(show._last) && !kbFocused());
+}
+document.addEventListener('focusin', ()=> syncDock());
+document.addEventListener('focusout', ()=> setTimeout(syncDock, 60));
+
+// Переход по доку. Вкладки не копят историю: поверх «Сегодня» живёт максимум одна
+// запись, а «назад» с любой вкладки возвращает на «Сегодня».
+function goTab(id){
+  const cur = show._last;
+  if(cur === id){
+    try{ window.scrollTo({top: 0, behavior: 'smooth'}); }catch(e){ window.scrollTo(0, 0); }
+    return;
+  }
+  if(!ROOT_TABS.includes(cur)){
+    // возврат из глубины: текущая запись становится «Сегодня», вкладка ложится поверх
+    navDepth = 0;
+    try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
+    if(id === 'scrMenu'){ show('scrMenu', false); window.scrollTo(0, 0); return; }
+    show(id, true);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if(id === 'scrMenu'){
+    if(navDepth > 0){ history.go(-navDepth); return; }
+    show('scrMenu', false);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if(navDepth > 0){
+    navDepth = 1;
+    try{ history.replaceState({scr: id, d: 1}, ''); }catch(e){}
+    show(id, false);
+  } else {
+    show(id, true);
+  }
+  window.scrollTo(0, 0);
 }
 
 /* ================= ЭКРАН 2: СТАРТ ================= */
 
+// с какой вкладки открыли программу — туда и вернёт «назад» с экрана старта
+let startFrom = 'scrMenu';
 function openStart(raw){
+  if(ROOT_TABS.includes(show._last)) startFrom = show._last;
   applyProgressionAll();
   applyAudioFromUser(curUser());
   state.raw = raw;
@@ -3660,7 +3878,7 @@ function buildStartMenu(){
       customPrograms = customPrograms.filter(x => x.id !== p.id);
       await savePrograms();
       renderMine();
-      show('scrMenu');
+      goTab('scrPrograms');
     }, 'danger')
   );
 }
@@ -3832,6 +4050,7 @@ async function switchUser(id){
   renderStats();
   renderWeight();
   renderPhotos();
+  syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
 }
 
 function renderAvatar(){
@@ -3843,22 +4062,41 @@ function renderAvatar(){
 
 function renderUsers(){
   const box = $('usersList'); box.innerHTML = '';
-  users.forEach(u => {
+  // активный профиль уже показан карточкой сверху — в списке только остальные
+  const others = users.filter(u => u.id !== currentUser);
+  setShown('usersTitle', others.length > 0);
+  $('usersHint').textContent = others.length
+    ? 'У каждого профиля свои программы, статистика, вес и фото. Переключение — одним нажатием по строке.'
+    : 'Можно завести второй профиль — например, для мужа или подруги. У каждого свои программы, статистика, вес и фото.';
+  others.forEach(u => {
     const row = document.createElement('div');
-    row.className = 'user-row' + (u.id === currentUser ? ' act' : '');
+    row.className = 'user-row';
     const ua = u.photo ? `<img src="${u.photo}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
     bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
     const a = ageOf(u.birth);
     if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
-    if(u.id === currentUser) bits.push('активный');
+    bits.push('переключиться');
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div><button class="ue" title="Изменить">${icon('pencil')}</button>`;
     row.querySelector('b').textContent = u.name || 'Без имени';
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
-    row.onclick = () => { $('usersModal').classList.remove('open'); switchUser(u.id); };
+    row.onclick = () => switchUser(u.id);
     box.appendChild(row);
   });
+  renderAccount();
+}
+
+// карточка активного профиля наверху «Аккаунта»
+function renderAccount(){
   const u = curUser();
+  const nm = (u && u.name || '').trim();
+  $('accAva').innerHTML = (u && u.photo) ? `<img src="${u.photo}" alt="">` : esc(nm ? nm[0].toUpperCase() : '?');
+  $('accName').textContent = nm || 'Профиль';
+  const bits = [];
+  if(u) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
+  const a = u && ageOf(u.birth);
+  if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
+  $('accSub').textContent = bits.length ? bits.join(' · ') + ' · изменить' : 'Изменить имя, фото, пол и дату рождения';
 }
 
 function renderWeight(){
@@ -4365,32 +4603,22 @@ function userState(){
   const u = JSON.parse(JSON.stringify(uDraft));
   if($('ueName')) u.name = $('ueName').value.trim();
   if($('ueBirth')) u.birth = $('ueBirth').value || '';
-  if($('ueGeminiKey')) u.geminiKey = ($('ueGeminiKey').value || '').trim();
-  if($('uePrepSec')) u.prepSec = parseInt($('uePrepSec').value) || 0;
-  if($('ueReadySec')) u.readySec = parseInt($('ueReadySec').value) || 0;
-  if($('ueSideSec')) u.sideSec = parseInt($('ueSideSec').value) || 0;
   return u;
 }
 function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
-  $('usersModal').classList.remove('open');
   const u = id ? users.find(x => x.id === id) : {id: null, name: '', gender: 'f', birth: '', photo: null, theme: 'light'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
   $('ueBirth').value = uDraft.birth || '';
-  // звук: значения профиля (или дефолты)
-  $('ueGeminiKey').value = uDraft.geminiKey || '';
-  $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопка «Сделать за меня» работает.' : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
-  switchUeTab('me');
   setTimeout(()=> takeSnap('user', userState()), 0);
+  // отсчёты и ключ ИИ живут в «Настройках» и применяются сразу; здесь только
+  // раскладываем значения по умолчанию для нового профиля
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
   if(uDraft.readySec == null) uDraft.readySec = 5;
   if(uDraft.sideSec == null) uDraft.sideSec = 10;
-  $('uePrepSec').value = uDraft.prepSec;
-  $('ueReadySec').value = uDraft.readySec;
-  $('ueSideSec').value = uDraft.sideSec;
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
@@ -4402,8 +4630,6 @@ function openUserEdit(id = null){
 function syncUserForm(){
   $('ueGenderF').classList.toggle('act', uDraft.gender !== 'm');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
-  $('ueThemeL').classList.toggle('act', uDraft.theme !== 'dark');
-  $('ueThemeD').classList.toggle('act', uDraft.theme === 'dark');
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
@@ -4413,10 +4639,6 @@ function syncUserForm(){
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
-  uDraft.geminiKey = ($('ueGeminiKey').value || '').trim();
-  uDraft.prepSec = Math.max(0, Math.min(30, isFinite(parseInt($('uePrepSec').value)) ? parseInt($('uePrepSec').value) : 5));
-  uDraft.readySec = Math.max(0, Math.min(30, isFinite(parseInt($('ueReadySec').value)) ? parseInt($('ueReadySec').value) : 5));
-  uDraft.sideSec = Math.max(3, Math.min(60, isFinite(parseInt($('ueSideSec').value)) ? parseInt($('ueSideSec').value) : 10));
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
   const bErr = birthError(uDraft.birth);
   if(bErr){
@@ -4434,15 +4656,13 @@ async function saveUser(){
       applyTheme();
     }
     renderAvatar(); renderUsers();
-    show('scrMenu');
-    $('usersModal').classList.add('open');
+    goTab('scrAccount');
   } else {
     uDraft.id = 'u' + Date.now();
     users.push(uDraft);
     await saveUsers();
     await switchUser(uDraft.id); // новый профиль сразу активен, со своей чистой статистикой
-    show('scrMenu');
-    $('usersModal').classList.add('open');
+    goTab('scrAccount');
   }
 }
 async function deleteUser(){
@@ -4475,8 +4695,7 @@ async function deleteUser(){
   } else {
     renderUsers();
   }
-  show('scrMenu');
-  $('usersModal').classList.add('open');
+  goTab('scrAccount');
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -4997,7 +5216,7 @@ function renderGreeting(){
   const st = calcStreak();
   if(st) chip('flame', st, plural(st, 'день подряд', 'дня подряд', 'дней подряд'), true);
   const n = stats.count || 0;
-  if(n) chip('check', n, plural(n, 'тренировка', 'тренировки', 'тренировок'));
+  // счётчик тренировок теперь крупной цифрой ниже, в «Прогрессе», — в чипах он был вторым разом
   const mins = Math.round((stats.totalSec || 0) / 60);
   if(mins) chip('clock', mins < 60 ? mins : Math.round(mins / 60), mins < 60 ? 'минут в сумме' : plural(Math.round(mins / 60), 'час в сумме', 'часа в сумме', 'часов в сумме'));
   if(!box.children.length){
@@ -5006,6 +5225,27 @@ function renderGreeting(){
     el.innerHTML = icon('sparkle') + '<span>Первая тренировка ещё впереди</span>';
     box.appendChild(el);
   }
+  // крупные цифры под приветствием — они же кнопки в нужную вкладку статистики
+  const last = stats.weights && stats.weights.length ? stats.weights[stats.weights.length - 1] : null;
+  countTo('qsVal1', n);
+  $('qsVal2').textContent = last && last.w ? String(last.w).replace('.', ',') : '—';
+  countTo('qsVal3', (photos || []).length);
+}
+
+// счётчик добегает до значения — но только если человек не просил убрать движение
+function countTo(id, val){
+  const el = $(id);
+  if(!el) return;
+  val = Math.max(0, Math.round(val || 0));
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce || val <= 1 || el.textContent === String(val)){ el.textContent = val; return; }
+  clearInterval(el._cnt);
+  const t0 = Date.now(), dur = 520;
+  el._cnt = setInterval(()=>{
+    const k = Math.min(1, (Date.now() - t0) / dur);
+    el.textContent = Math.round(val * (1 - Math.pow(1 - k, 3)));
+    if(k >= 1) clearInterval(el._cnt);
+  }, 40);
 }
 
 // строка плана — целиком кнопка, чтобы нажатие по названию программы работало
@@ -5023,14 +5263,60 @@ function todayRow({cls, ico, title, sub, action, onclick}){
   return row;
 }
 
+// неделя одним взглядом: где галочка — уже сделано, где точка — по плану.
+// Состояние передаётся формой значка, а не только цветом.
+function renderWeekStrip(){
+  const box = $('weekStrip');
+  if(!box) return;
+  box.innerHTML = '';
+  const now = new Date();
+  const di = (now.getDay() + 6) % 7;
+  const monday = new Date(now); monday.setDate(now.getDate() - di);
+  const doneDays = new Set((stats.history || []).map(h => h.d));
+  let planned = 0, done = 0;
+  DAYS.forEach((d, i) => {
+    const day = new Date(monday); day.setDate(monday.getDate() + i);
+    const iso = localISO(day);
+    const isPlan = customPrograms.some(p => programDaysUnion(p).includes(d));
+    const isDone = doneDays.has(iso);
+    if(isPlan) planned++;
+    if(isDone) done++;
+    const cell = document.createElement('div');
+    cell.className = 'ws-day' + (isPlan ? ' plan' : '') + (isDone ? ' done' : '') + (i === di ? ' today' : '');
+    cell.innerHTML = `<b>${d}</b>` + (isDone ? `<span class="ws-ok">${icon('check')}</span>` : '<i></i>');
+    box.appendChild(cell);
+  });
+  $('weekStripHint').textContent = done
+    ? `Сделано на этой неделе: ${done} ${plural(done, 'тренировка', 'тренировки', 'тренировок')}` + (planned ? `, по плану — ${planned}` : '')
+    : (planned ? `По плану на этой неделе: ${planned} ${plural(planned, 'день', 'дня', 'дней')}` : 'Дни тренировок пока не выбраны');
+}
+
 function renderToday(){
+  renderWeekStrip();
   const box = $('todayBox');
   const di = (new Date().getDay() + 6) % 7;
   const today = DAYS[di];
   $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
   const anyDays = customPrograms.some(p => programDaysUnion(p).length);
-  if(!anyDays){ setShown(box, false); return; }
   setShown(box, true);
+  // раньше без расписания блок просто исчезал, и «Сегодня» оставалась пустой.
+  // Теперь она всегда честно говорит, что делать дальше, и ведёт в «Тренировки».
+  if(!anyDays){
+    const l = $('todayList');
+    l.innerHTML = '';
+    box.classList.remove('has-plan');
+    const own = customPrograms.filter(p => p.id !== 'warmup').length;
+    const onlyWarmup = !own && customPrograms.length > 0;
+    l.appendChild(todayRow({
+      cls: 'rest info',
+      ico: 'sparkle',
+      title: own ? 'Расписание не задано' : (onlyWarmup ? 'Пока только разминка' : 'Программ пока нет'),
+      sub: own ? 'Выбери дни недели — и план появится здесь' : 'Собери свою программу за пару минут',
+      action: own ? 'Открыть' : 'Создать',
+      onclick: ()=> goTab('scrPrograms')
+    }));
+    return;
+  }
 
   const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
   const scheduled = [];
@@ -5103,12 +5389,12 @@ function renderToday(){
       list.appendChild(note);
     } else {
       list.appendChild(todayRow({
-        cls: 'rest',
+        cls: 'rest info',
         ico: 'moon',
         title: 'Сегодня отдых',
         sub: 'В расписании на ближайшую неделю тренировок нет',
-        action: 'Программы',
-        onclick: () => { const el = $('mineList'); if(el) el.scrollIntoView({block: 'start', behavior: 'smooth'}); }
+        action: 'Открыть',
+        onclick: () => goTab('scrPrograms')
       }));
     }
   }
@@ -5391,14 +5677,13 @@ async function geminiSetupPrompt(){
     '1. Открой aistudio.google.com/apikey\n' +
     '2. Войди в аккаунт Google и нажми «Create API key»\n' +
     '3. Скопируй ключ целиком\n' +
-    '4. Вставь его в приложении: аватар вверху → ✎ → вкладка «ИИ»\n\n' +
+    '4. Вставь его в приложении: нижняя панель → «Настройки» → «Ключ Google AI»\n\n' +
     'Ключ хранится только на этом телефоне и уходит только на серверы Google.\n\n' +
     'Не хочешь возиться с ключом — ничего страшного: на том же экране есть «Сделать в чате с ИИ». Тогда задание нужно будет перенести в чат самой.',
     {confirm: true, okText: 'Настроить', cancelText: 'Отмена'}
   );
   if(ok){
-    const u = curUser();
-    if(u) openUserEdit(u.id);
+    goTab('scrSettings');
     setTimeout(()=>{ const el = $('ueGeminiKey'); if(el){ el.scrollIntoView({block: 'center'}); el.focus(); } }, 350);
   }
 }
@@ -6250,7 +6535,7 @@ async function createEditedProgram(){
   await savePrograms();
   renderMine();
   $('eaResult').value = '';
-  show('scrMenu');
+  goTab('scrPrograms');
   appAlert(`Готово: создана «${program.name}».\n\nИсходная программа осталась без изменений.` +
     (carried ? `\nПеренесено картинок: ${carried}.` : ''));
 }
@@ -6282,6 +6567,10 @@ function importProgramCode(code){
 
 function renderMine(){
   const box = $('mineList'); box.innerHTML='';
+  const own = customPrograms.length;
+  $('progCount').textContent = own
+    ? `${own} ${plural(own, 'программа', 'программы', 'программ')}`
+    : 'Ни одной программы';
 
   if(!customPrograms.length){
     box.insertAdjacentHTML('beforeend',
@@ -6958,7 +7247,7 @@ function syncRotateUI(){
   $('bDaysLabel').textContent = rot ? 'Дни тренировок' : (many ? 'Дни этого варианта' : 'Дни тренировок');
   $('bDaysHint').textContent = rot
     ? 'Общее расписание программы: в эти дни напомним о тренировке.'
-    : 'В эти дни программа появится в блоке «План на сегодня» на главной.';
+    : 'В эти дни программа появится в блоке «План на сегодня» на вкладке «Сегодня».';
 
   // подписи вариантов
   $('variantsLabel').textContent = rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки';
@@ -7440,7 +7729,7 @@ function renderExList(){
   } else {
     t.textContent = 'Упражнения';
     const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
-    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не появится в блоке «План на сегодня» на главной.';
+    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не появится в блоке «План на сегодня» на вкладке «Сегодня».';
     setShown(h, true);
   }
 }
@@ -8197,7 +8486,7 @@ async function saveProgram(){
     try{ Notification.requestPermission(); }catch(e){}
   }
   renderMine();
-  show('scrMenu');
+  goTab('scrPrograms');
 }
 
 /* ================= СБОРКА ШАГОВ ================= */
@@ -9093,7 +9382,7 @@ function tearDownWorkout(){
   $('prepOverlay').classList.remove('on');
   clearStepTimer(); stopGlobal(); releaseWake();
   document.body.classList.remove('phase-rest');
-  show('scrMenu');
+  goTab('scrMenu');
 }
 
 /* ================= ТЕМА ================= */
@@ -9566,9 +9855,9 @@ $('startPick').onclick = ()=>{
 };
 $('pickCancel').onclick = ()=> $('pickStepModal').classList.remove('open');
 $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
-$('startBackTop').onclick = ()=> show('scrMenu');
-$('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> show('scrMenu'), 'Заполненный запрос');
-$('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
+$('startBackTop').onclick = ()=> goTab(startFrom);
+$('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
+$('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else goTab('scrMenu'); };
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnPrev').onclick  = prevStep;
@@ -9589,21 +9878,59 @@ $('exitDrop').onclick = async ()=>{
   tearDownWorkout();
 };
 $('btnPause').onclick = ()=> setPause(!state.paused);
+/* ================= НАСТРОЙКИ =================
+   Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
+   внизу остаётся только док, а не вторая закреплённая полоса. */
 $('tglTheme').onclick = ()=>{
   themeLight = !themeLight;
   const u = curUser();
   if(u){ u.theme = themeLight ? 'light' : 'dark'; saveUsers(); }
   applyTheme();
 };
-$('ueGeminiKey').oninput = e => { if(uDraft) uDraft.geminiKey = e.target.value.trim(); };
-['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
-  $(id).oninput = ()=>{
-    if(!uDraft) return;
-    uDraft.prepSec = parseInt($('uePrepSec').value) || 0;
-    uDraft.readySec = parseInt($('ueReadySec').value) || 0;
-    uDraft.sideSec = parseInt($('ueSideSec').value) || 10;
+function syncSettingsForm(){
+  const u = curUser();
+  $('tglTheme').classList.toggle('on', !themeLight);
+  if(!u) return;
+  $('uePrepSec').value = (u.prepSec == null) ? 5 : u.prepSec;
+  $('ueReadySec').value = (u.readySec == null) ? 5 : u.readySec;
+  $('ueSideSec').value = (u.sideSec == null) ? 10 : u.sideSec;
+  if(document.activeElement !== $('ueGeminiKey')) $('ueGeminiKey').value = u.geminiKey || '';
+  $('ueGeminiState').textContent = u.geminiKey
+    ? 'Ключ сохранён — кнопка «Сделать за меня» работает.'
+    : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
+}
+let settingsSaveT = 0;
+function saveSettingsSoon(){
+  clearTimeout(settingsSaveT);
+  settingsSaveT = setTimeout(()=> saveUsers(), 350);
+}
+// пока в поле пусто или набирается «1» из «10», значение не считается ошибкой —
+// в силу оно вступает уже приведённым к границам
+function applyTimingSettings(){
+  const u = curUser(); if(!u) return;
+  const num = (id, def, lo, hi) => {
+    const v = parseInt($(id).value);
+    return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def;
   };
+  u.prepSec = num('uePrepSec', 5, 0, 30);
+  u.readySec = num('ueReadySec', 5, 0, 30);
+  u.sideSec = num('ueSideSec', 10, 3, 60);
+  applyAudioFromUser(u);
+  saveSettingsSoon();
+}
+['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
+  $(id).oninput = applyTimingSettings;
+  $(id).onblur = ()=>{ applyTimingSettings(); syncSettingsForm(); };
 });
+$('ueGeminiKey').oninput = e => {
+  const u = curUser(); if(!u) return;
+  u.geminiKey = (e.target.value || '').trim();
+  $('ueGeminiState').textContent = u.geminiKey
+    ? 'Ключ сохранён — кнопка «Сделать за меня» работает.'
+    : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
+  syncGeminiBtns();
+  saveSettingsSoon();
+};
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{
     const mode = b.dataset.hf;
@@ -9771,9 +10098,9 @@ $('btnDelPlan').onclick = async ()=>{
   fillPlanFields();
   syncRotateUI();
 };
-$('btnHelp').onclick = ()=> { show('scrHelp'); window.scrollTo(0,0); };
+$('btnHelp').onclick = ()=> { helpNext = ()=>{ helpNext = null; goTab('scrSettings'); }; show('scrHelp'); window.scrollTo(0,0); };
 let helpNext = null;
-$('btnHelpDone').onclick = ()=>{ if(helpNext){ helpNext(); } else show('scrMenu'); };
+$('btnHelpDone').onclick = ()=>{ if(helpNext){ helpNext(); } else goTab('scrMenu'); };
 // трекер веса
 $('btnAddWeight').onclick = ()=>{
   const last = stats.weights[stats.weights.length - 1];
@@ -9899,30 +10226,27 @@ $('obStart').onclick = async ()=>{
   const w = customPrograms.find(p => p.id === 'warmup');
   if((await kvGet('seenHelp')) !== '1'){
     kvSet('seenHelp', '1');
-    helpNext = ()=>{ helpNext = null; if(w) openStart(w); else show('scrMenu'); };
+    helpNext = ()=>{ helpNext = null; if(w) openStart(w); else goTab('scrMenu'); };
     show('scrHelp');
     return;
   }
-  if(w) openStart(w); else show('scrMenu');
+  if(w) openStart(w); else goTab('scrMenu');
 };
 $('obLater').onclick = async ()=>{
   if((await kvGet('seenHelp')) !== '1'){
     kvSet('seenHelp', '1');
-    helpNext = ()=>{ helpNext = null; show('scrMenu'); };
+    helpNext = ()=>{ helpNext = null; goTab('scrMenu'); };
     show('scrHelp');
     return;
   }
-  show('scrMenu');
+  goTab('scrMenu');
 };
 // профили
-$('btnUsers').onclick = ()=>{ renderUsers(); $('usersModal').classList.add('open'); };
-$('usersClose').onclick = ()=> $('usersModal').classList.remove('open');
-$('usersModal').onclick = e => { if(e.target === $('usersModal')) $('usersModal').classList.remove('open'); };
-$('btnStats').onclick = ()=> openStats('workouts');
+$('btnUsers').onclick = ()=> goTab('scrAccount');
+$('btnEditMe').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
 function openStats(tab){
-  renderStats(); renderWeight(); renderPhotos();
   switchStatsTab(tab || 'workouts');
-  show('scrStats'); window.scrollTo(0, 0);
+  goTab('scrStats');
 }
 function switchStatsTab(tab){
   document.querySelectorAll('#statsTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.tab === tab));
@@ -9931,16 +10255,14 @@ function switchStatsTab(tab){
   setShown('tabPhoto', tab === 'photo');
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
-$('statsBackTop').onclick = ()=> show('scrMenu');
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
-$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=>{ show('scrMenu'); $('usersModal').classList.add('open'); }, 'Изменения профиля');
+document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
+$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 'Изменения профиля');
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
 $('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
 $('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
-$('ueThemeL').onclick = ()=>{ uDraft.theme = 'light'; syncUserForm(); };
-$('ueThemeD').onclick = ()=>{ uDraft.theme = 'dark'; syncUserForm(); };
 // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
 $('uePhotoBtn').onclick = e => {
   e.stopPropagation();
@@ -9964,14 +10286,6 @@ $('uePhotoBtn').onclick = e => {
   menu.classList.add('open');
 };
 
-/* ---- табы профиля ---- */
-const UE_PANES = {me: 'uePaneMe', timing: 'uePaneTiming', ai: 'uePaneAI'};
-function switchUeTab(t){
-  document.querySelectorAll('#ueTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.t === t));
-  Object.entries(UE_PANES).forEach(([k, id]) => setShown(id, k === t));
-  window.scrollTo(0, 0);
-}
-document.querySelectorAll('#ueTabs .tab').forEach(b => b.onclick = ()=> switchUeTab(b.dataset.t));
 $('uePhotoFile').onchange = e=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
@@ -10003,11 +10317,11 @@ $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
   document.body.classList.remove('phase-rest');
-  show('scrMenu');
+  goTab('scrMenu');
 };
 /* ---- программа из видео ---- */
 $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
-$('ytBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['ytUrl','ytWish','ytResult']), ()=> show('scrMenu'), 'Заполненный запрос');
+$('ytBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['ytUrl','ytWish','ytResult']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
 $('ytUrl').oninput = ytCheckUrl;
 $('ytSend').onclick = async ()=>{
   if(!ytGuard()) return;
@@ -10053,13 +10367,13 @@ async function ytApplyResult(){
   await savePrograms();
   renderMine();
   $('ytResult').value = '';
-  show('scrMenu');
+  goTab('scrPrograms');
   appAlert(`Готово: добавлена «${program.name}».`);
 
 }
 
 /* ---- доработка через ИИ ---- */
-$('eaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['eaWish','eaResult']), ()=> show('scrMenu'), 'Заполненный запрос');
+$('eaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['eaWish','eaResult']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
 $('eaCreate').onclick = createEditedProgram;
 $('eaSend').onclick = async ()=>{
   const text = editAIPrompt();
@@ -10355,7 +10669,7 @@ document.querySelectorAll('#eaModeTabs .tab').forEach(b => {
       if(!ok) return;
     }
     if(editAIProg) openBuilder(editAIProg.id);
-    else show('scrMenu');
+    else goTab('scrPrograms');
   };
 });
 
@@ -10703,7 +11017,7 @@ $('bDesc').oninput = e => {
   $('bDescCount').textContent = draft.desc.length;
 };
 $('btnSaveProgram').onclick = ()=>{ if(numFieldsOk('scrBuilder')) saveProgram(); };
-$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); show('scrMenu'); }, 'Изменения программы');
+$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, 'Изменения программы');
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
@@ -10743,7 +11057,6 @@ $('btnCreate').innerHTML = icon('plus');
 $('btnResetTotal').innerHTML = icon('reset');
 $('btnAddWeight').innerHTML = icon('plus');
 $('btnAddPhoto').innerHTML = icon('plus');
-$('btnStats').innerHTML = icon('chart');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
@@ -10753,7 +11066,6 @@ $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
 $('ueBackTop').innerHTML = icon('chevL');
 $('builderBackTop').innerHTML = icon('chevL');
-$('statsBackTop').innerHTML = icon('chevL');
 $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
@@ -10783,6 +11095,28 @@ document.querySelectorAll('[data-icon]').forEach(el => {
   const n = el.dataset.icon;
   if(ICONS[n]) el.innerHTML = icon(n);
 });
+
+/* ---- витрина «Сегодня»: мягкий паралакс блика на прокрутке ----
+   Единственная задача движения — показать, что страница длиннее экрана.
+   При prefers-reduced-motion блик стоит на месте (см. стили). */
+(function(){
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce) return;
+  let tick = false;
+  window.addEventListener('scroll', ()=>{
+    if(tick) return;
+    tick = true;
+    requestAnimationFrame(()=>{
+      tick = false;
+      if(show._last !== 'scrMenu') return;
+      const el = $('scGlow');
+      if(el) el.style.setProperty('--par', Math.min(90, window.scrollY * 0.28) + 'px');
+    });
+  }, {passive: true});
+})();
+
+// стартовое состояние навигации: «Сегодня» с доком внизу
+show('scrMenu', false);
 
 // параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
 let pendingImport = null;
@@ -10846,6 +11180,7 @@ try{
   const u = curUser();
   themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
   applyTheme();
+  syncSettingsForm();
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
