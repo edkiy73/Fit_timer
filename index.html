@@ -1666,12 +1666,22 @@
   }
   .store-search .ss-ico{flex:none;color:var(--muted);display:flex}
   .store-search .ss-ico svg{width:18px;height:18px}
+  /* Фокус показывает вся «таблетка», а не поле внутри неё. Общее правило
+     input:focus рисует акцентную рамку и кольцо вокруг самого input — а он тут
+     голый, без своей формы, и кольцо ложилось прямоугольником ровно по тексту
+     посреди скруглённой строки поиска. Гасим его на поле и переносим на контейнер. */
   .store-search input{
-    flex:1;min-width:0;border:none;background:none;outline:none;
+    flex:1;min-width:0;border:none;background:none;
     font-family:var(--font-text);font-size:15px;color:var(--ink);
   }
+  .store-search input:focus{outline:none;border:none;box-shadow:none}
+  .store-search:has(input:focus){border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .store-search input::placeholder{color:var(--muted);opacity:.75}
-  .store-search input::-webkit-search-cancel-button{display:none}
+  /* системные украшения поля поиска (крестик, лупа, «результаты») — свои есть */
+  .store-search input::-webkit-search-cancel-button,
+  .store-search input::-webkit-search-decoration,
+  .store-search input::-webkit-search-results-button,
+  .store-search input::-webkit-search-results-decoration{display:none;-webkit-appearance:none}
   .ss-clear{
     flex:none;width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;
     background:var(--surface);color:var(--muted);display:flex;align-items:center;justify-content:center;
@@ -1694,6 +1704,15 @@
   .f-chip svg{width:15px;height:15px}
   .f-chip.act{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink);font-weight:600}
 
+  /* сколько нашлось: подпись раздела, а не подсказка под полем — тот же приём,
+     что у «Недели» и «Прогресса» на главной, и с воздухом до первой карточки */
+  .store-count{
+    font-family:var(--font-display);font-size:12px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    margin:var(--sp-2) 0 var(--sp-3);
+  }
+  .store-count:empty{display:none}
+
   /* карточка товара */
   .store-card{
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
@@ -1701,8 +1720,9 @@
   }
   .st-cover{position:relative;line-height:0}
   .st-cover svg{width:100%;height:auto;display:block;aspect-ratio:320/170}
-  /* метки поверх обложки: категория слева, уровень справа */
-  .st-tags{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px}
+  /* метка поверх обложки — только категория: уровень стоит строкой ниже, и на
+     картинке он был вторым экземпляром того же самого */
+  .st-tags{position:absolute;left:12px;top:12px;display:flex;gap:8px}
   .st-tag{
     display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:var(--r-pill);
     background:rgba(15,10,30,.5);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
@@ -1791,6 +1811,9 @@
   .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-6))}
   .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
   .page-head h1{font-size:clamp(26px,7.2vw,32px);line-height:1.04}
+  /* кнопки шапки — одна группа: у .page-head раскладка space-between, и без обёртки
+     заголовок расталкивал их по разным углам, будто они не связаны */
+  .page-head .ph-tools{display:flex;align-items:center;gap:8px;flex:none}
   .page-head .ph-sub{display:block;font-family:var(--font-text);font-size:var(--fs-sm);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:6px;font-weight:400}
 
   /* ================= «СЕГОДНЯ»: ВИТРИНА =================
@@ -1960,7 +1983,7 @@
     <div class="filter-row" id="storeCats"></div>
     <div class="filter-row sub" id="storeLevels"></div>
 
-    <p class="field-hint" id="storeCount"></p>
+    <p class="store-count" id="storeCount"></p>
     <div id="storeList"></div>
   </section>
 
@@ -1968,8 +1991,10 @@
   <section class="screen root" id="scrPrograms">
     <div class="page-head">
       <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
-      <button class="icon-btn" id="btnStorePrograms" title="Магазин программ"></button>
-      <button class="icon-btn" id="btnCreate" title="Создать программу">＋</button>
+      <div class="ph-tools">
+        <button class="icon-btn" id="btnStorePrograms" title="Магазин программ"></button>
+        <button class="icon-btn" id="btnCreate" title="Создать программу">＋</button>
+      </div>
     </div>
     <div id="mineList"></div>
     <button class="btn-ghost" id="btnCreateBottom">＋ Добавить программу</button>
@@ -7545,7 +7570,7 @@ function renderStore(){
     const own = storeOwned(it.id);
     return `<article class="store-card">
       <div class="st-cover">${storeCover(it)}
-        <div class="st-tags"><span class="st-tag">${c.name}</span><span class="st-tag">${it.level}</span></div>
+        <div class="st-tags"><span class="st-tag">${c.name}</span></div>
       </div>
       <div class="st-body">
         <h3>${it.name}</h3>
