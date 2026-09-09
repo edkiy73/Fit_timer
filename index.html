@@ -240,14 +240,13 @@
     display:flex;align-items:center;justify-content:center;
   }
   .btn-ghost:active{transform:scale(.985)}
-  .mine-empty{color:var(--muted);font-size:14px;margin-bottom:12px}
   .total-stat{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px 16px;margin-bottom:20px;
   }
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-  #totalTime{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:.02em}
+  #totalTime{font-family:var(--font-display);font-weight:700;letter-spacing:.02em;font-size:30px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
   .stat-line b{color:var(--ink)}
@@ -483,11 +482,6 @@
     background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-md);padding:10px 12px;
   }
   .chips-wrap .day-chip{flex:0 0 auto;padding:9px 13px}
-  .ai-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .ai-links button{
-    flex:1;min-width:100px;padding:11px 10px;border-radius:12px;border:1px solid var(--line);
-    background:var(--card);color:var(--ink);font-family:var(--font-text);font-size:13.5px;cursor:pointer;
-  }
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
   .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
@@ -678,7 +672,7 @@
   .weight-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:20px}
   .mc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-  .mc-now{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .mc-now{display:flex;align-items:baseline;gap:8px;margin-top:4px;flex-wrap:wrap}
   .mc-now b{font-family:var(--font-display);font-weight:700;font-size:34px;line-height:1;color:var(--ink)}
   .mc-now .w-delta{font-size:14px;font-weight:500}
   .add-btn{flex:none;width:44px;height:44px;border-radius:14px;border:none;background:var(--work);color:var(--on-accent);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -686,7 +680,7 @@
   .mc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
   .mc-meta .chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12.5px;color:var(--muted)}
   .mc-meta .chip b{color:var(--ink);font-weight:600}
-  .mc-empty{color:var(--muted);font-size:14px;line-height:1.5;margin-top:16px;padding:22px 16px;text-align:center;background:var(--bg);border-radius:14px;border:1px dashed var(--line)}
+  .mc-empty{color:var(--muted);font-size:14px;line-height:1.5;margin-top:16px;padding:22px 16px;text-align:center;background:var(--bg-2);border-radius:var(--r-lg);border:1px dashed var(--line-2)}
   .mc-charts{margin-top:18px;display:flex;flex-direction:column;gap:16px}
   .metric-graph{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px}
   .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
@@ -716,8 +710,9 @@
 
   /* ---------- обучение ---------- */
   .help-step{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
-  .help-num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--work);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px}
-  .help-step h3{font-size:16px;margin:0 0 5px}
+  .help-num{flex:none;width:34px;height:34px;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px}
+  .help-step{align-items:flex-start}
+  .help-step h3{font-size:15px;margin:0 0 6px;letter-spacing:.03em}
   .help-step p{color:var(--muted);font-size:14px;line-height:1.5;margin:0}
   .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
   .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
@@ -771,14 +766,6 @@
   .pm-copyico{flex:none;color:var(--accent-ink)}
   .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
   .pm-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:8px}
-  .data-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:34px 0 20px}
-  .dc-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
-  .dc-ico{flex:none;width:40px;height:40px;border-radius:12px;background:var(--bg);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
-  .dc-ico svg{width:20px;height:20px}
-  .dc-head b{display:block;font-size:14.5px;margin-bottom:4px}
-  .dc-head small{display:block;font-size:12px;line-height:1.5;color:var(--muted)}
-  .dc-actions{display:flex;gap:10px}
-  .dc-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:13px;cursor:pointer}
   .quick-stats{display:flex;gap:10px;margin-bottom:20px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--accent-ink)}
@@ -798,8 +785,6 @@
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
   .week-line{display:flex;flex-direction:column;gap:3px;margin-top:12px;font-size:13.5px;color:var(--muted)}
   .week-line .streak{color:var(--accent-ink);font-weight:500}
-  .bars-title{font-size:12.5px;color:var(--muted);margin-top:14px}
-  .bars-hint{opacity:.7}
   #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
   .cal-head b{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
@@ -851,6 +836,8 @@
     width:100%;display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:15px 16px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;text-align:left;
   }
+  .nav-row .nr-ico{flex:none;width:36px;height:36px;border-radius:11px;background:var(--surface);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+  .nav-row .nr-ico svg{width:18px;height:18px}
   .nav-row .nr-body{flex:1;min-width:0}
   .nav-row .nr-body b{display:block;font-size:14.5px;font-weight:500;color:var(--ink)}
   .nav-row .nr-body small{display:block;font-size:12px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -897,7 +884,6 @@
   .ex-row .ex-more{position:static;flex:none;width:32px;height:38px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
   .ex-row .ex-more svg{width:17px;height:17px}
   .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
-  .ex-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:10px}
 
 
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
@@ -1045,9 +1031,6 @@
   .prog-menu-wrap{position:relative;margin-left:auto}
   .prog-menu-wrap .more-btn{position:static;width:38px;height:38px;border:1px solid var(--line);background:var(--card);border-radius:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .prog-menu-wrap .ctx-menu{top:44px;right:0}
-  .ai-links .ai-self{width:100%;border-color:var(--accent-line);color:var(--accent-ink)}
-  .ai-links .ai-self.off{border-color:var(--line);color:var(--muted);opacity:.75}
-  .ai-links .ai-self.busy{opacity:.6;pointer-events:none}
   .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
   .sched-block{display:flex;flex-direction:column}
@@ -1194,6 +1177,168 @@
   .field.bad input{animation:fieldShake .3s ease}
   @keyframes fieldShake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
 
+
+  /* =========================================================================
+     ПРОХОД 2: общие компоненты для «вторых» экранов.
+     Всё, что раньше решалось локальными стилями и наборами одинаковых кнопок,
+     собрано в несколько повторяемых блоков — конструктор, статистика,
+     экраны запроса к ИИ и знакомство пользуются одними и теми же.
+     ========================================================================= */
+
+  /* ---- главное действие экрана: одна крупная карточка вместо ряда кнопок ---- */
+  .hero-action{
+    position:relative;overflow:hidden;width:100%;display:flex;align-items:center;gap:var(--sp-3);
+    background:var(--grad-accent);color:var(--on-accent);border:none;border-radius:var(--r-lg);
+    padding:var(--sp-4);cursor:pointer;text-align:left;box-shadow:var(--sh-accent);
+    font-family:var(--font-text);
+  }
+  .hero-action:active{transform:scale(.985);box-shadow:none}
+  .hero-action .ha-ico{
+    flex:none;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hero-action .ha-ico svg{width:24px;height:24px}
+  .hero-action .ha-txt{flex:1;min-width:0}
+  .hero-action .ha-txt b{
+    display:block;font-family:var(--font-display);font-weight:600;font-size:15px;
+    letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;
+  }
+  .hero-action .ha-txt small{display:block;font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.9)}
+  .hero-action .ha-go{flex:none;display:flex;color:rgba(255,255,255,.9)}
+  .hero-action .ha-go svg{width:20px;height:20px}
+  .hero-action.busy,.ai-self.busy{opacity:.6;pointer-events:none}
+  /* платное действие — тот же размер, но спокойнее: деньги не должны выглядеть заманчиво */
+  .hero-action.calm{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:var(--sh-1)}
+  .hero-action.calm .ha-ico{background:var(--accent-soft);color:var(--accent-ink)}
+  .hero-action.calm .ha-txt small{color:var(--muted)}
+  .hero-action.calm .ha-go{color:var(--muted)}
+
+  /* ---- карточка выбора с иконкой (модальные окна «новая программа» и т.п.) ---- */
+  .choice.ico{display:flex;gap:var(--sp-3);align-items:flex-start}
+  .choice .ch-ico{
+    flex:none;width:38px;height:38px;border-radius:12px;
+    background:var(--surface);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .choice .ch-ico svg{width:19px;height:19px}
+  .choice .ch-txt{flex:1;min-width:0}
+
+  /* ---- запасной путь: строка «что произойдёт, если нажать» ---- */
+  .ways{display:flex;flex-direction:column;gap:var(--sp-2)}
+  .way-row{
+    width:100%;display:flex;align-items:center;gap:var(--sp-3);text-align:left;cursor:pointer;
+    background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:12px 14px;color:var(--ink);font-family:var(--font-text);min-height:56px;
+  }
+  .way-row:active{transform:scale(.99)}
+  .way-row .wr-ico{
+    flex:none;width:36px;height:36px;border-radius:11px;
+    background:var(--surface);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .way-row .wr-ico svg{width:18px;height:18px}
+  .way-row .wr-txt{flex:1;min-width:0}
+  .way-row b{display:block;font-size:14px;font-weight:600;line-height:1.25}
+  .way-row small{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+
+  /* ---- выбор из нескольких вариантов, где разницу надо объяснить ---- */
+  .opt-list{display:flex;flex-direction:column;gap:var(--sp-2)}
+  .opt-card{
+    width:100%;display:flex;gap:var(--sp-3);align-items:flex-start;text-align:left;cursor:pointer;
+    background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:12px 14px;color:var(--ink);font-family:var(--font-text);
+  }
+  .opt-card:active{transform:scale(.99)}
+  .opt-card .oc-mark{
+    flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-2);
+    margin-top:2px;display:flex;align-items:center;justify-content:center;color:transparent;
+  }
+  .opt-card .oc-mark svg{width:12px;height:12px}
+  .opt-card .oc-txt{flex:1;min-width:0}
+  .opt-card b{display:block;font-size:14.5px;font-weight:600;margin-bottom:3px}
+  .opt-card small{display:block;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .opt-card.act{border-color:var(--accent);background:var(--accent-soft)}
+  .opt-card.act .oc-mark{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+  .opt-card.act small{color:var(--ink)}
+
+  /* ---- пустое состояние: часть дизайна, а не серая фраза ---- */
+  .empty-state{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sp-2);
+    padding:26px 18px;border:1px dashed var(--line-2);border-radius:var(--r-lg);background:var(--bg-2);
+  }
+  .empty-state .es-ico{
+    width:52px;height:52px;border-radius:16px;background:var(--accent-soft);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;margin-bottom:2px;
+  }
+  .empty-state .es-ico svg{width:26px;height:26px}
+  .empty-state b{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+  .empty-state p{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0;max-width:32ch}
+
+  /* ---- поясняющая плашка ---- */
+  .note{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:12px 14px;font-size:13px;line-height:1.5;color:var(--muted);
+  }
+  .note .n-ico{flex:none;display:flex;color:var(--accent-ink);margin-top:1px}
+  .note .n-ico svg{width:17px;height:17px}
+  .note b{color:var(--ink);font-weight:600}
+  .note.warn{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+  .note.warn .n-ico,.note.warn b{color:var(--warn)}
+
+  /* ---- вторая по важности кнопка внизу экрана ---- */
+  .btn-secondary{
+    width:100%;min-height:54px;border-radius:var(--r-md);cursor:pointer;
+    background:var(--card);border:1px solid var(--line-2);color:var(--ink);
+    font-family:var(--font-display);font-weight:600;font-size:var(--fs-lg);letter-spacing:.08em;
+    text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-secondary:active{transform:scale(.98)}
+
+  /* ---- знакомство ---- */
+  .ob-title{font-size:clamp(26px,7.4vw,32px);line-height:1.08;margin:0 0 12px}
+  .ob-lead{color:var(--muted);font-size:var(--fs-md);line-height:1.55;margin:0 0 18px}
+  #obStep3 .ob-lead{margin-bottom:22px}
+  #obStep3 .medal{
+    width:88px;height:88px;margin:6px auto 14px;border-radius:50%;font-size:44px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+  }
+  #scrOnboard .note{margin-bottom:18px}
+  #scrOnboard .field{margin-bottom:16px}
+
+  /* ---- шаги знакомства: полоски вместо слова «шаг» (оно уже занято прибавкой) ---- */
+  .step-dots{display:flex;gap:6px;align-items:center;margin-bottom:var(--sp-4)}
+  .step-dots i{width:26px;height:4px;border-radius:99px;background:var(--line);display:block}
+  .step-dots i.done{background:var(--accent-line)}
+  .step-dots i.on{background:var(--accent);width:38px}
+
+  /* ---- заголовок карточки со счётчиком ---- */
+  .cb-count{
+    flex:none;font-family:var(--font-display);font-weight:600;font-size:11.5px;letter-spacing:.08em;
+    color:var(--accent-ink);background:var(--accent-soft);border-radius:var(--r-pill);padding:3px 10px;
+  }
+  .cb-count:empty{display:none}
+  /* заголовок внутри .cb-head тоже должен выглядеть заголовком: правило .card-block > .cb-title
+     до вложенных не доставало, поэтому «Упражнения» выпадали из системы */
+  .card-block .cb-title{
+    font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .cb-head{display:flex;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+
+  /* ---- экраны без нижней панели действий: не резервируем под неё место ---- */
+  .screen.builder.no-actions{padding-bottom:var(--sp-4)}
+
+  /* ---- «или» между двумя путями ---- */
+  .or-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-family:var(--font-display)}
+  .or-line::before,.or-line::after{content:'';flex:1;height:1px;background:var(--line)}
+
+  /* ---- график по неделям в статистике ---- */
+  #weekBars{height:96px}
+  .chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:18px}
+  .chart-head b{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .chart-head small{font-size:11.5px;color:var(--muted);opacity:.8}
 
   /* Стрелки и уголки нарисованы data-URI, а он не читает CSS-переменные:
      это единственное место, где цвет задан вручную — по одному значению на тему,
@@ -1378,6 +1523,7 @@
     <div class="card-block">
       <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
+        <span class="nr-ico" data-icon="calendar"></span>
         <div class="nr-body">
           <b>Настройки программы</b>
           <small id="bSettingsSum"></small>
@@ -1385,9 +1531,10 @@
         <span class="nr-chev" id="bSettingsChev"></span>
       </button>
       <button type="button" class="nav-row nr-flat" id="bImagesRow">
+        <span class="nr-ico" data-icon="image"></span>
         <div class="nr-body">
           <b>Картинки программы</b>
-          <small id="bImagesSum">Загрузить сразу много и разложить по упражнениям</small>
+          <small id="bImagesSum">Обложка и картинки упражнений</small>
         </div>
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
@@ -1396,7 +1543,7 @@
     <div class="card-block">
       <div class="cb-head">
         <p class="cb-title" id="bVariantTitle">Упражнения</p>
-        <span class="st-note" id="exCountNote"></span>
+        <span class="cb-count" id="exCountNote"></span>
       </div>
       <p class="field-hint" id="bVariantHint"></p>
       <div class="plan-tabs" id="planTabsTop"></div>
@@ -1422,32 +1569,65 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">1 · Что изменить?</p>
+    <div class="cb-head"><p class="cb-title">Шаг 1 · Что изменить</p></div>
     <div class="field">
       <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
     </div>
     </div>
 
     <div class="card-block">
-    <p class="cb-title">2 · Получить результат</p>
+    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто внесёт правки</p></div>
 
-    
-    <div class="ai-links">
-      <button type="button" class="ai-self" id="exeSelfAI">✨ Сделать через ИИ Fit Timer</button>
-      <button type="button" id="exeSend">Отправить в другое приложение</button>
-      <button type="button" id="exeGPT">Открыть ChatGPT</button>
-      <button type="button" id="exeClaude">Открыть Claude</button>
-      <button type="button" id="exeCopy">Скопировать</button>
+    <button type="button" class="hero-action ai-self" id="exeSelfAI">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b>Изменить за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
+
+    <div class="note">
+      <span class="n-ico" data-icon="image"></span>
+      <span>Картинка и пиктограмма упражнения останутся на месте, если нейросеть не пришлёт новые.</span>
     </div>
 
+    <div class="or-line">или</div>
+
+    <button type="button" class="collapse-head" id="exeWaysToggle">
+      <span>Сделать в чате с ИИ</span>
+      <span class="st-sum">без ключа</span>
+      <span class="st-chev" data-icon="chevR"></span>
+    </button>
+    <div class="stack hidden" id="exeWaysBox">
+      <div class="ways">
+        <button type="button" class="way-row" id="exeCopy">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+        </button>
+        <button type="button" class="way-row" id="exeSend">
+          <span class="wr-ico" data-icon="share"></span>
+          <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+        </button>
+        <button type="button" class="way-row" id="exeGPT">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
+        </button>
+        <button type="button" class="way-row" id="exeClaude">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
+        </button>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint">Нужен, только если делала предыдущий шаг сама: скопируй ответ нейросети целиком и вставь сюда. Приложение подставит из ответа только то, что нейросеть прислала.</p>
     <div class="field">
-      <textarea id="exeResult" class="auto-grow" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
-      <p class="field-hint">Картинка и пиктограмма сохранятся, если ИИ их не вернёт.</p>
+      <textarea id="exeResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions">
-      <button class="btn-primary" id="exeApply">Применить изменения</button>
+    <div class="builder-actions" id="exeActions">
+      <button class="btn-secondary" id="exeApply">Применить изменения</button>
     </div>
   </section>
 
@@ -1455,44 +1635,74 @@
   <section class="screen builder" id="scrImages">
     <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
 
-    <div class="card-block">
-      <p class="cb-title">Промт для генерации</p>
-      <p class="field-hint">Собери запрос с описанием программы, всех упражнений и единого стиля — и отдай его любой нейросети с генерацией картинок (Gemini, ChatGPT и т.п.). Готовые изображения потом разложи по местам ниже.</p>
-
-      <div class="ai-links">
-        <button type="button" class="ai-self" id="imgSelfGen">✨ Сгенерировать все картинки через ИИ Fit Timer</button>
-      </div>
-      <p class="field-hint" style="color:var(--warn)">Платная функция Gemini — около $0.02–0.25 за картинку с твоего Google-аккаунта. В отличие от текста в приложении, бесплатной квоты здесь нет.</p>
-
-      <button class="btn-primary" id="imgPromptCopy">Скопировать промт для картинок</button>
-      <div class="ai-links">
-        <button type="button" id="imgPromptShare">Отправить в приложение</button>
-      </div>
+    <div class="note">
+      <span class="n-ico" data-icon="image"></span>
+      <span>У обложки и у каждого упражнения может быть своя картинка — её видно на тренировке. Загрузи их пачкой и разложи по местам.</span>
     </div>
 
     <div class="card-block">
-      <p class="cb-title">Загрузка</p>
-      <button class="btn-primary" id="imgPick">Выбрать картинки с телефона</button>
+      <div class="cb-head"><p class="cb-title">Откуда взять картинки</p></div>
+
+      <button type="button" class="hero-action" id="imgPick">
+        <span class="ha-ico" data-icon="camera"></span>
+        <span class="ha-txt"><b>Выбрать с телефона</b><small>Можно отметить сразу много — дальше разложим по упражнениям</small></span>
+        <span class="ha-go" data-icon="chevR"></span>
+      </button>
       <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
-      <p class="field-hint">Можно выбрать сразу много. Дальше разложи их по местам — или нажми «Разложить по порядку», если выбирала в том же порядке, что упражнения.</p>
+
+      <div class="or-line">или</div>
+
+      <button type="button" class="hero-action calm ai-self" id="imgSelfGen" data-nokey="Нужен ключ Google — нажми, покажем как его получить">
+        <span class="ha-ico" data-icon="sparkle"></span>
+        <span class="ha-txt"><b>Нарисовать нейросетью</b><small class="ha-sub">Все картинки разом, в одном стиле — приложение сделает это само</small></span>
+        <span class="ha-go" data-icon="chevR"></span>
+      </button>
+      <div class="note warn">
+        <span class="n-ico" data-icon="alert"></span>
+        <span>Рисование картинок у Google платное: примерно <b>0,02–0,25 $ за картинку</b> с твоего Google-аккаунта. Бесплатной квоты, в отличие от текста, здесь нет.</span>
+      </div>
+
+      <button type="button" class="collapse-head" id="imgWaysToggle">
+        <span>Нарисовать в чате с ИИ</span>
+        <span class="st-sum">без ключа</span>
+        <span class="st-chev" data-icon="chevR"></span>
+      </button>
+      <div class="stack hidden" id="imgWaysBox">
+        <div class="note">
+          <span class="n-ico" data-icon="chat"></span>
+          <span>Приложение соберёт задание с описанием программы, всех упражнений и единого стиля. Отдай его любому чату, который умеет рисовать, а готовые картинки сохрани на телефон и загрузи сюда кнопкой выше.</span>
+        </div>
+        <div class="ways">
+          <button type="button" class="way-row" id="imgPromptCopy">
+            <span class="wr-ico" data-icon="copy"></span>
+            <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+          </button>
+          <button type="button" class="way-row" id="imgPromptShare">
+            <span class="wr-ico" data-icon="share"></span>
+            <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="card-block hidden" id="trayBox">
-      <div class="st-row">
-        <p class="cb-title" style="margin:0">Не разложено <span class="st-note" id="trayCount"></span></p>
-        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px">Очистить</button>
+      <div class="cb-head">
+        <p class="cb-title">Ещё не разложено</p>
+        <span class="cb-count" id="trayCount"></span>
+        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto">Очистить</button>
       </div>
       <div class="tray" id="tray"></div>
       <button type="button" class="btn-ghost" id="trayAuto">Разложить по порядку</button>
     </div>
 
     <div class="card-block">
-      <p class="cb-title">Куда подставить</p>
+      <div class="cb-head"><p class="cb-title">Куда подставить</p></div>
+      <p class="field-hint">Нажми на место в списке — предложим картинки из загруженных или с телефона.</p>
       <div id="slotList"></div>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-skip" id="imgDone">Готово</button>
+      <button class="btn-secondary" id="imgDone">Готово</button>
     </div>
   </section>
 
@@ -1552,7 +1762,7 @@
     <div class="modal-card">
       <span class="mini-label" id="slotTitle">Картинка</span>
       <div class="tray" id="slotTray"></div>
-      <p class="field-hint hidden" id="slotEmptyHint">Лоток пуст — выбери картинки с телефона.</p>
+      <p class="field-hint hidden" id="slotEmptyHint">Загруженных картинок пока нет — выбери их с телефона.</p>
       <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
       <button type="button" class="link-btn" id="slotRemove" style="margin:6px 0 0;padding:10px;color:var(--danger)">Убрать картинку</button>
@@ -1569,40 +1779,78 @@
       <button class="tab act" data-m="ai">Через ИИ</button>
     </div>
 
+    <div class="note">
+      <span class="n-ico" data-icon="sparkle"></span>
+      <span>Опиши упражнение словами — нейросеть подберёт технику, рабочие мышцы, частые ошибки и пиктограмму и добавит всё это в программу.</span>
+    </div>
+
     <div class="card-block">
-    <p class="cb-title">1 · Что за упражнение?</p>
+    <div class="cb-head"><p class="cb-title">Шаг 1 · Что за упражнение</p></div>
     <div class="field">
       <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
-      <p class="field-hint">Можно назвать упражнение или описать, что нужно — ИИ подберёт и распишет технику.</p>
+      <p class="field-hint">Можно назвать упражнение, а можно описать, что нужно — подберётся само.</p>
     </div>
     <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
     <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
     <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
     <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
     <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
-      <p class="field-hint">Что не выберешь — ИИ решит сам, исходя из описания.</p>
+      <p class="field-hint">Что не выберешь — подберётся само, исходя из описания.</p>
     </div>
     </div>
 
     <div class="card-block">
-    <p class="cb-title">2 · Получить упражнение</p>
+    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто его подберёт</p></div>
 
-    
-    <div class="ai-links">
-      <button type="button" class="ai-self" id="exaSelfAI">✨ Сделать через ИИ Fit Timer</button>
-      <button type="button" id="exaSend">Отправить в другое приложение</button>
-      <button type="button" id="exaGPT">Открыть ChatGPT</button>
-      <button type="button" id="exaClaude">Открыть Claude</button>
-      <button type="button" id="exaCopy">Скопировать</button>
+    <button type="button" class="hero-action ai-self" id="exaSelfAI">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b>Подобрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
+
+    <div class="or-line">или</div>
+
+    <button type="button" class="collapse-head" id="exaWaysToggle">
+      <span>Сделать в чате с ИИ</span>
+      <span class="st-sum">без ключа</span>
+      <span class="st-chev" data-icon="chevR"></span>
+    </button>
+    <div class="stack hidden" id="exaWaysBox">
+      <div class="note">
+        <span class="n-ico" data-icon="chat"></span>
+        <span>Приложение подготовит задание для нейросети. Передай его в чат, а ответ вставь сюда — упражнение добавится в программу.</span>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="exaCopy">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+        </button>
+        <button type="button" class="way-row" id="exaSend">
+          <span class="wr-ico" data-icon="share"></span>
+          <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+        </button>
+        <button type="button" class="way-row" id="exaGPT">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
+        </button>
+        <button type="button" class="way-row" id="exaClaude">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
+        </button>
+      </div>
+    </div>
     </div>
 
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint">Нужен, только если делала предыдущий шаг сама: скопируй ответ нейросети целиком и вставь сюда. Упражнение добавится в конец программы — потом его можно поправить руками.</p>
     <div class="field">
-      <textarea id="exaResult" class="auto-grow" style="min-height:150px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="exaResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions">
-      <button class="btn-primary" id="exaAdd">Добавить в программу</button>
+    <div class="builder-actions" id="exaActions">
+      <button class="btn-secondary" id="exaAdd">Добавить в программу</button>
     </div>
   </section>
 
@@ -1615,11 +1863,17 @@
       <button class="tab" data-m="text">Через ИИ</button>
       <button class="tab act" data-m="video">Из видео</button>
     </div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="video"></span>
+      <span>Дай ссылку на тренировку с YouTube — нейросеть посмотрит ролик и разложит его на упражнения с повторениями и таймингом.</span>
+    </div>
+
     <div class="card-block">
-    <p class="cb-title">1 · Ссылка на видео</p>
+    <div class="cb-head"><p class="cb-title">Шаг 1 · Ссылка на видео</p></div>
     <div class="field">
       <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
-      <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be. Нейросеть разберёт видео и переведёт его в программу.</p>
+      <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be.</p>
     </div>
     <div class="field"><label>Пожелания (необязательно)</label>
       <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
@@ -1627,24 +1881,57 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">2 · Получить программу</p>
+    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто разберёт видео</p></div>
 
-    
-    <div class="ai-links">
-      <button type="button" class="ai-self" id="ytSelfAI">✨ Сделать через ИИ Fit Timer</button>
-      <button type="button" id="ytSend">Отправить в другое приложение</button>
-      <button type="button" id="ytGPT">Открыть ChatGPT</button>
-      <button type="button" id="ytClaude">Открыть Claude</button>
-      <button type="button" id="ytCopy">Скопировать</button>
+    <button type="button" class="hero-action ai-self" id="ytSelfAI">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b>Разобрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
+
+    <div class="or-line">или</div>
+
+    <button type="button" class="collapse-head" id="ytWaysToggle">
+      <span>Сделать в чате с ИИ</span>
+      <span class="st-sum">без ключа</span>
+      <span class="st-chev" data-icon="chevR"></span>
+    </button>
+    <div class="stack hidden" id="ytWaysBox">
+      <div class="note">
+        <span class="n-ico" data-icon="alert"></span>
+        <span>Видео умеет смотреть не каждый чат. Нужен тот, у кого есть доступ в интернет — иначе он ответит, что открыть ссылку не может.</span>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="ytCopy">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+        </button>
+        <button type="button" class="way-row" id="ytSend">
+          <span class="wr-ico" data-icon="share"></span>
+          <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+        </button>
+        <button type="button" class="way-row" id="ytGPT">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
+        </button>
+        <button type="button" class="way-row" id="ytClaude">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
+        </button>
+      </div>
     </div>
-    <p class="field-hint">Не каждая нейросеть умеет смотреть видео. Лучше всего справляются модели с доступом в интернет — если ответа нет, попроси её открыть ссылку и описать тренировку.</p>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint">Нужен, только если делала предыдущий шаг сама: скопируй ответ нейросети целиком и вставь сюда. Разобранная программа откроется в конструкторе — там её можно проверить и поправить.</p>
     <div class="field">
-      <textarea id="ytResult" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="ytResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions">
-      <button class="btn-primary" id="ytParse">Распознать</button>
+    <div class="builder-actions" id="ytActions">
+      <button class="btn-secondary" id="ytParse">Собрать программу из ответа</button>
     </div>
   </section>
 
@@ -1665,36 +1952,76 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">1 · Что изменить?</p>
+    <div class="cb-head"><p class="cb-title">Шаг 1 · Что изменить</p></div>
     <div class="field">
       <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
-      <p class="field-hint">ИИ получит текущую программу целиком и внесёт правки, остальное оставит как есть.</p>
+      <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём ты попросишь.</p>
     </div>
     </div>
 
     <div class="card-block">
-    <p class="cb-title">2 · Получить результат</p>
+    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто внесёт правки</p></div>
 
-    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — запрос короче и ответ быстрее</small></span><button class="switch" id="eaWantSvg"></button></div>
+    <button type="button" class="hero-action ai-self" id="eaSelfAI">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b>Изменить за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
 
-    <div class="ai-links">
-      <button type="button" class="ai-self" id="eaSelfAI">✨ Сделать через ИИ Fit Timer</button>
-      <button type="button" id="eaSend">Отправить в другое приложение</button>
-      <button type="button" id="eaGPT">Открыть ChatGPT</button>
-      <button type="button" id="eaClaude">Открыть Claude</button>
-      <button type="button" id="eaCopy">Скопировать</button>
-      <button type="button" id="eaCopyFull">Скопировать программу целиком</button>
+    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="eaWantSvg"></button></div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="check"></span>
+      <span>Старая программа останется на месте — рядом появится её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся сами.</span>
     </div>
-    <p class="field-hint">«Скопировать программу целиком» — это вся текущая программа текстом плюс описание формата. Такой текст можно отправить любой нейросети (или мне) для разбора и переделки, не открывая приложение.</p>
 
+    <div class="or-line">или</div>
+
+    <button type="button" class="collapse-head" id="eaWaysToggle">
+      <span>Сделать в чате с ИИ</span>
+      <span class="st-sum">без ключа</span>
+      <span class="st-chev" data-icon="chevR"></span>
+    </button>
+    <div class="stack hidden" id="eaWaysBox">
+      <div class="note">
+        <span class="n-ico" data-icon="chat"></span>
+        <span>Приложение подготовит задание с твоей программой внутри. Его надо передать в чат, а ответ вернуть сюда — из него соберётся изменённая копия.</span>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="eaCopy">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+        </button>
+        <button type="button" class="way-row" id="eaSend">
+          <span class="wr-ico" data-icon="share"></span>
+          <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+        </button>
+        <button type="button" class="way-row" id="eaGPT">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
+        </button>
+        <button type="button" class="way-row" id="eaClaude">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
+        </button>
+        <button type="button" class="way-row" id="eaCopyFull">
+          <span class="wr-ico" data-icon="download"></span>
+          <span class="wr-txt"><b>Скопировать саму программу</b><small>Вся программа текстом — можно обсудить её где угодно и вернуть ответ сюда</small></span>
+        </button>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint">Нужен, только если делала предыдущий шаг сама: скопируй ответ нейросети целиком и вставь сюда. Из ответа получится изменённая копия программы. Старая останется на месте.</p>
     <div class="field">
-      <textarea id="eaResult" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
-      <p class="field-hint">Старая программа останется на месте — создастся её изменённая копия. Картинки упражнений, названия которых не поменялись, перенесутся автоматически.</p>
+      <textarea id="eaResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions">
-      <button class="btn-primary" id="eaCreate">Создать изменённую программу</button>
+    <div class="builder-actions" id="eaActions">
+      <button class="btn-secondary" id="eaCreate">Создать изменённую программу</button>
     </div>
   </section>
 
@@ -1702,10 +2029,10 @@
   <section class="screen builder" id="scrProgSettings">
     <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
     <div class="card-block">
-    <p class="cb-title">О программе</p>
-    <div class="field"><label>Обложка программы (необязательно)</label>
+    <div class="cb-head"><p class="cb-title">Обложка и описание</p></div>
+    <div class="field"><label>Обложка (необязательно)</label>
       <div class="media-row">
-        <button type="button" id="bCoverBtn">Фото</button>
+        <button type="button" id="bCoverBtn">Выбрать фото</button>
         <button type="button" id="bCoverNone">Без обложки</button>
       </div>
       <input type="file" id="bCoverFile" accept="image/*" class="hidden">
@@ -1718,19 +2045,22 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">Автоматическая прибавка</p>
-    <div class="pref-row"><span>Прибавлять по расписанию<small>только упражнения с включённым «Усложнять со временем»</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="cb-head"><p class="cb-title">Рост нагрузки</p></div>
+    <div class="pref-row"><span>Усложнять тренировки со временем<small>повторений и веса станет больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
         <select id="bProgEvery"></select>
       </div>
-      <p class="field-hint">Считается по реально пройденным тренировкам, а не по календарю — пропуски и перерывы нагрузку не поднимают.<br>Каждое упражнение растёт по-своему и не выше своего потолка — это настраивается в самом упражнении. На экране перед стартом видно, сколько повышений уже было, и это можно поправить вручную.</p>
+      <div class="note">
+        <span class="n-ico" data-icon="chart"></span>
+        <span>Считаем по пройденным тренировкам, а не по календарю: пропуски и перерывы нагрузку не поднимают. Каждое упражнение растёт по-своему и не выше своего максимума — это задаётся в самом упражнении. Перед стартом видно, сколько повышений уже было, и это можно поправить руками.</span>
+      </div>
     </div>
     </div>
 
     <div class="card-block">
-    <p class="cb-title">Расписание</p>
+    <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
     <div class="sched-block">
       <div class="sched-mode hidden" id="schedModeRow">
         <div class="hf-seg" id="schedSeg">
@@ -1744,7 +2074,7 @@
         <p class="field-hint" id="bDaysHint"></p>
       </div>
       <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
-        <p class="field-hint">Если заданы время и дни — придёт уведомление за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
+        <p class="field-hint">Если заданы время и дни — придёт напоминание за 15 минут и в момент старта. Работает, пока приложение или браузер запущены; понадобится разрешить уведомления.</p>
       </div>
 
       <div class="field" id="variantsField">
@@ -1757,14 +2087,14 @@
     </div>
 
     <div class="card-block">
-    <p class="cb-title">Круги и отдых <span class="st-note" id="stVariantNote"></span></p>
+    <div class="cb-head"><p class="cb-title">Круги и отдых</p><span class="cb-count" id="stVariantNote"></span></div>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
     </div>
     <p class="field-hint" id="bVolHint"></p>
     <div class="field"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
-      <p class="field-hint">Только для уведомлений: если этот вариант тренируешь в другое время, чем остальные, укажи его здесь — оно перебьёт общее время программы. Пусто — используется общее.</p>
+      <p class="field-hint">Только для напоминаний: если этот вариант тренируешь в другое время, укажи его здесь — оно перебьёт общее время программы. Пусто — используется общее.</p>
     </div>
     <button type="button" class="link-btn hidden" id="btnDelPlan" style="padding:6px">Удалить этот вариант</button>
     </div>
@@ -1791,7 +2121,7 @@
     </div>
 
     <div class="card-block">
-      <p class="cb-title">Сколько делать</p>
+      <div class="cb-head"><p class="cb-title">Сколько делать</p></div>
       <div class="field"><label>Формат</label>
         <div class="seg seg3">
           <button type="button" id="exTypeReps">Повторения</button>
@@ -1809,27 +2139,30 @@
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
       </div>
+    </div>
 
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Рост нагрузки</p></div>
       <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
       <div class="row2 hidden" id="exStepRow">
-        <div class="field hidden" id="exStepRepsRow"><label>Прибавка повторений</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
-        <div class="field hidden" id="exStepMaxRepsRow"><label>Потолок повторений</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
+        <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
+        <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
       </div>
       <div class="row2 hidden" id="exStepWRow">
-        <div class="field hidden" id="exStepWeightRow"><label>Прибавка веса, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
-        <div class="field hidden" id="exStepMaxWeightRow"><label>Потолок веса, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
+        <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
+        <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
       </div>
       <div class="row2 hidden" id="exStepTRow">
-        <div class="field hidden" id="exStepTimeRow"><label>Прибавка времени, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
-        <div class="field hidden" id="exStepMaxTimeRow"><label>Потолок времени, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
+        <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
+        <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
       </div>
-      <div class="pref-row hidden" id="exDualRow"><span>Дошли до потолка — добавить вес<small>повторения вернутся к началу, вес вырастет на шаг</small></span><button type="button" class="switch" id="exDual"></button></div>
-      <p class="field-hint hidden" id="exStepBothHint">Потолок можно оставить пустым — тогда роста без предела, но за год значения станут нереальными.</p>
-      <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда упрёшься в потолок</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+      <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — насколько вырастет за одно повышение. «Максимум» — значение, выше которого упражнение не поднимется. Максимум можно оставить пустым, но тогда за год числа станут нереальными.</p>
+      <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
+      <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
       <div class="stack hidden" id="exSwapBox">
         <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
         <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
-        <p class="field-hint">Когда упражнение дорастёт до своего потолка, рядом с названием на тренировке появится значок «можно усложнить» с этой подсказкой.</p>
+        <p class="field-hint">Когда упражнение дорастёт до максимума, на тренировке рядом с названием появится значок «можно усложнить» с этой подсказкой.</p>
       </div>
     </div>
 
@@ -1867,16 +2200,22 @@
   </section>
 
   <section class="screen builder" id="scrText">
-    <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Создание через ИИ</h2></div>
+    <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Программа через ИИ</h2></div>
 
     <div class="tabs" id="aiModeTabs">
       <button class="tab" data-m="manual">Вручную</button>
       <button class="tab act" data-m="text">Через ИИ</button>
       <button class="tab" data-m="video">Из видео</button>
     </div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="sparkle"></span>
+      <span>Ответишь на пару вопросов — получишь готовую программу: упражнения, повторения, круги и дни недели. Всё, что не понравится, потом поправишь руками.</span>
+    </div>
+
     <div class="card-block">
-    <p class="cb-title">1 · Какая тренировка нужна?</p>
-    <p class="field-hint">Заполняй только то, что для тебя важно. Всё, что пропустишь, ИИ подберёт сам под твою программу. Повторное нажатие снимает выбор.</p>
+    <div class="cb-head"><p class="cb-title">Шаг 1 · Какая тренировка нужна</p></div>
+    <p class="field-hint">Отмечай только то, что для тебя важно: остальное подберётся само. Нажать второй раз — снять выбор.</p>
     <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
     <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
     <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
@@ -1887,37 +2226,66 @@
     <div class="field"><label>Свой запрос (необязательно)</label>
       <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
     </div>
-    <div class="field"><label>Тип тренировки</label><div class="days chips-wrap" id="qStyle"></div>
-      <p class="field-hint">Разница в порядке. <b>Круговая</b>: прошла весь список и вернулась к началу — A, B, C → A, B, C. <b>Силовая</b>: доделала все подходы одного упражнения и перешла к следующему — A, A, A → B, B, B. <b>Смешанная</b>: и то и другое — блок из подходов повторяется кругами.</p>
-    </div>
-    <div class="field"><label>Разминка</label><div class="days chips-wrap" id="qWarm"></div>
-      <p class="field-hint">Разминка выполняется один раз в начале, вне кругов.</p>
-    </div>
-    <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни</span><button class="switch" id="qSplit"></button></div>
+    <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
+    <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
+    <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
     <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
     </div>
 
     <div class="card-block">
-    <p class="cb-title">2 · Получить программу</p>
+    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто её соберёт</p></div>
 
-    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — запрос короче и ответ быстрее</small></span><button class="switch" id="qWantSvg"></button></div>
+    <button type="button" class="hero-action ai-self" id="btnSelfAI">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b>Собрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
 
-    <div class="ai-links">
-      <button type="button" class="ai-self" id="btnSelfAI">✨ Сделать через ИИ Fit Timer</button>
-      <button type="button" id="btnSendAI">Отправить в другое приложение</button>
-      <button type="button" id="aiGPT">Открыть ChatGPT</button>
-      <button type="button" id="aiClaude">Открыть Claude</button>
-      <button type="button" id="btnCopyPrompt">Скопировать</button>
+    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="qWantSvg"></button></div>
+
+    <div class="or-line">или</div>
+
+    <button type="button" class="collapse-head" id="aiWaysToggle">
+      <span>Сделать в чате с ИИ</span>
+      <span class="st-sum">без ключа</span>
+      <span class="st-chev" data-icon="chevR"></span>
+    </button>
+    <div class="stack hidden" id="aiWaysBox">
+      <div class="note">
+        <span class="n-ico" data-icon="chat"></span>
+        <span>Приложение подготовит длинное задание для нейросети. Его надо передать в чат, а полученный ответ вернуть сюда — из него и соберётся программа. Дольше, зато без ключа и бесплатно.</span>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnCopyPrompt">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше вставишь его в любой чат сама</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnSendAI">
+          <span class="wr-ico" data-icon="share"></span>
+          <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
+        </button>
+        <button type="button" class="way-row" id="aiGPT">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
+        </button>
+        <button type="button" class="way-row" id="aiClaude">
+          <span class="wr-ico" data-icon="chat"></span>
+          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
+        </button>
+      </div>
     </div>
-    <p class="field-hint" style="margin-top:8px">Промт с твоим запросом попадёт в выбранное приложение — просто нажми там «отправить». ИИ вернёт программу в нужном формате.</p>
+    </div>
 
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint">Нужен, только если делала предыдущий шаг сама: скопируй ответ нейросети целиком и вставь сюда. Собранная программа откроется в конструкторе — там её можно проверить и поправить.</p>
     <div class="field">
-      <textarea id="tImport" class="auto-grow" style="min-height:160px" placeholder="Ответ нейросети появится здесь автоматически — или вставь его вручную"></textarea>
+      <textarea id="tImport" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions">
-      <button class="btn-primary" id="btnParse">Распознать</button>
+    <div class="builder-actions" id="textActions">
+      <button class="btn-secondary" id="btnParse">Собрать программу из ответа</button>
     </div>
   </section>
 
@@ -2007,26 +2375,31 @@
   <section class="screen" id="scrOnboard">
     <div class="start-wrap">
       <div id="obStep1">
-        <div class="eyebrow" style="font-family:var(--font-display);letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 1 из 3</div>
-        <h2 style="font-size:30px;margin:10px 0 18px">Привет! Как тебя зовут?</h2>
+        <div class="step-dots"><i class="on"></i><i></i><i></i></div>
+        <h2 class="ob-title">Привет! Как тебя зовут?</h2>
         <div class="field"><input type="text" id="obName" maxlength="30" placeholder="Твоё имя"></div>
         <div class="field"><label>Пол</label>
           <div class="seg"><button type="button" id="obF" class="act">Женский</button><button type="button" id="obM">Мужской</button></div>
         </div>
         <div class="field"><label>Дата рождения</label><input type="date" id="obBirth"></div>
-        <p class="field-hint">Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и восстановление. Это единственное, что мы спрашиваем обязательно.</p>
+        <div class="note">
+          <span class="n-ico" data-icon="user"></span>
+          <span>Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и время на восстановление. Это единственное, что мы спрашиваем обязательно.</span>
+        </div>
         <button class="btn-primary" id="obNext1">Дальше</button>
       </div>
       <div id="obStep2" class="hidden">
-        <div class="eyebrow" style="font-family:var(--font-display);letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:var(--muted)">Шаг 2 из 3</div>
-        <h2 style="font-size:30px;margin:10px 0 18px">Какая у тебя цель?</h2>
+        <div class="step-dots"><i class="done"></i><i class="on"></i><i></i></div>
+        <h2 class="ob-title">Какая у тебя цель?</h2>
+        <p class="ob-lead">Выбери, что ближе — от этого зависит, какие тренировки будем предлагать. Потом можно поменять.</p>
         <div class="fb-options" id="obGoals"></div>
         <button class="btn-primary" id="obNext2" style="margin-top:16px">Дальше</button>
       </div>
-      <div id="obStep3" style="text-align:center" class="hidden">
-        <div class="medal" style="font-size:52px">🎉</div>
-        <h2 style="font-size:30px;margin:10px 0 12px" id="obDoneTitle">Готово!</h2>
-        <p style="color:var(--muted);font-size:15px;line-height:1.55;margin-bottom:22px">Мы уже добавили тебе универсальную разминку на 10 минут — идеальный первый шаг. Свои программы соберёшь потом за пару минут.</p>
+      <div id="obStep3" class="hidden" style="text-align:center">
+        <div class="step-dots" style="justify-content:center"><i class="done"></i><i class="done"></i><i class="on"></i></div>
+        <div class="medal">🎉</div>
+        <h2 class="ob-title" id="obDoneTitle">Готово!</h2>
+        <p class="ob-lead">Универсальная разминка на 10 минут уже в твоём списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
         <button class="btn-primary" id="obStart">Начать разминку</button>
         <button class="btn-back" id="obLater">Позже — на главный экран</button>
       </div>
@@ -2036,11 +2409,37 @@
   <!-- Обучение -->
   <section class="screen builder" id="scrHelp">
     <div class="screen-head"><button class="back-chip" id="helpBackTop"></button><h2>Как это работает</h2></div>
-    <div class="help-step"><div class="help-num">1</div><div><h3>Создай программу</h3><p>Нажми «＋ Создать свою программу», придумай название, добавь упражнения — с повторениями или на время. Между упражнениями и кругами можно настроить отдых.</p></div></div>
-    <div class="help-step"><div class="help-num">2</div><div><h3>Или попроси нейросеть</h3><p>Кнопка «✨ Создать из текста»: скопируй подсказку, вставь её в любой ИИ (например, Claude или ChatGPT), напиши, какая тренировка нужна, а ответ вставь обратно — программа соберётся сама.</p></div></div>
-    <div class="help-step"><div class="help-num">3</div><div><h3>Выбери нагрузку</h3><p>Перед стартом отметь, как себя чувствуешь: от 40% (лёгкий день) до 160% (полна сил). Приложение само пересчитает повторения и время.</p></div></div>
-    <div class="help-step"><div class="help-num">4</div><div><h3>Тренируйся без рук</h3><p>Приложение озвучивает упражнения и отсчёт, а если включить голосовое управление — достаточно сказать «готово», чтобы перейти дальше, или «пауза», чтобы остановиться.</p></div></div>
-    <div class="help-step"><div class="help-num">5</div><div><h3>Следи за прогрессом</h3><p>На главном экране копится общее время тренировок и график веса. После каждой тренировки скажи, как тебе нагрузка, — и в следующий раз приложение предложит подходящую.</p></div></div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="clock"></span>
+      <span>Пять шагов, две минуты чтения. Вернуться сюда можно в любой момент — ссылка «Как это работает» на главной.</span>
+    </div>
+
+    <div class="help-step"><div class="help-num">1</div><div>
+      <h3>Заведи программу</h3>
+      <p>На главной — кнопка «Создать программу». Можно собрать руками, а можно просто описать словами, какая тренировка нужна: упражнения, повторения и дни подберёт ИИ.</p>
+    </div></div>
+
+    <div class="help-step"><div class="help-num">2</div><div>
+      <h3>Поправь под себя</h3>
+      <p>В конструкторе всё меняется: порядок упражнений, повторения или время, подходы, отдых, круги и дни недели. Ничего не сохранится, пока не нажмёшь «Сохранить программу».</p>
+    </div></div>
+
+    <div class="help-step"><div class="help-num">3</div><div>
+      <h3>Выбери нагрузку перед стартом</h3>
+      <p>На экране перед тренировкой отметь, как себя чувствуешь: от 40% в тяжёлый день до 160%, когда полна сил. Повторения и время пересчитаются сами.</p>
+    </div></div>
+
+    <div class="help-step"><div class="help-num">4</div><div>
+      <h3>Тренируйся, не трогая телефон</h3>
+      <p>Приложение называет упражнение, считает время и отдых и показывает, что будет дальше. Если включить управление голосом или хлопком, переключать этапы руками не придётся.</p>
+    </div></div>
+
+    <div class="help-step"><div class="help-num">5</div><div>
+      <h3>Следи за прогрессом</h3>
+      <p>В статистике копятся время, календарь, серия дней, вес, замеры и фото. А нагрузка в программе растёт сама — по числу пройденных тренировок, а не по календарю.</p>
+    </div></div>
+
     <div class="builder-actions">
       <button class="btn-primary" id="btnHelpDone">Понятно!</button>
     </div>
@@ -2057,20 +2456,28 @@
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
-      <div class="weight-card">
-        <div class="wc-top">
-          <div><span class="ts-label">Всего натренировано</span><b id="totalTime">0 мин</b><span class="w-delta" id="totalCount"></span></div>
-          <button class="icon-btn" id="btnResetTotal" title="Сбросить">⟲</button>
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Всего натренировано</span>
+            <div class="mc-now"><b id="totalTime">0 мин</b><span class="w-delta" id="totalCount"></span></div>
+          </div>
+          <button class="icon-btn" id="btnResetTotal" title="Сбросить"></button>
         </div>
         <div class="week-line"><span id="weekStat"></span><span class="streak" id="streakStat"></span></div>
-        <div class="bars-title">Тренировок по неделям <span class="bars-hint">(последние 8)</span></div>
-        <svg id="weekBars" viewBox="0 0 300 58"></svg>
+
+        <div class="chart-head"><b>Тренировок по неделям</b><small id="weekBarsNote">последние 8</small></div>
+        <svg id="weekBars" viewBox="0 0 300 78"></svg>
+
         <div class="cal-head">
           <button class="cal-nav" id="calPrev">‹</button>
           <b id="calTitle"></b>
           <button class="cal-nav" id="calNext">›</button>
         </div>
         <div class="cal-grid" id="calGrid"></div>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>день с тренировкой — нажми, чтобы вспомнить какой</span>
+        </div>
       </div>
     </div>
 
@@ -2079,12 +2486,16 @@
         <div class="mc-head">
           <div>
             <span class="ts-label">Вес и объёмы</span>
-            <div class="mc-now"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
+            <div class="mc-now" id="weightNowRow"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
           </div>
           <button class="add-btn" id="btnAddWeight" title="Записать"></button>
         </div>
         <div class="mc-meta hidden" id="weightMeta"></div>
-        <div class="mc-empty" id="weightEmpty">Запиши вес и замеры — здесь появится наглядный график изменений.</div>
+        <div class="mc-empty empty-state" id="weightEmpty">
+          <span class="es-ico" data-icon="weight"></span>
+          <b>Записей пока нет</b>
+          <p>Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.</p>
+        </div>
         <div class="mc-charts hidden" id="weightCharts"></div>
         <div class="mc-actions hidden" id="weightActions">
           <button class="mc-act" id="btnWeightHist"></button>
@@ -2098,12 +2509,16 @@
         <div class="mc-head">
           <div>
             <span class="ts-label">Фото-прогресс</span>
-            <div class="mc-now"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
+            <div class="mc-now" id="photoNowRow"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
           </div>
           <button class="add-btn" id="btnAddPhoto" title="Добавить фото"></button>
         </div>
         <div class="ph-row" id="photoStrip"></div>
-        <div class="mc-empty" id="photoEmpty">Снимайся раз в неделю в одинаковой одежде и освещении — прогресс станет виден, даже когда вес стоит.</div>
+        <div class="mc-empty empty-state" id="photoEmpty">
+          <span class="es-ico" data-icon="camera"></span>
+          <b>Фотографий пока нет</b>
+          <p>Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
+        </div>
         <div class="mc-actions hidden" id="photoActions">
           <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
         </div>
@@ -2129,7 +2544,7 @@
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
     <div class="tabs" id="ueTabs">
       <button class="tab act" data-t="me">Профиль</button>
-      <button class="tab" data-t="timing">Тайминги</button>
+      <button class="tab" data-t="timing">Отсчёты</button>
       <button class="tab" data-t="ai">ИИ</button>
     </div>
 
@@ -2161,11 +2576,17 @@
       </div>
 
       <div class="card-block">
-        <p class="cb-title">Резервная копия</p>
-        <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси на новый телефон или сохрани на всякий случай.</p>
-        <div class="dc-actions">
-          <button class="dc-btn" id="btnExportAll"></button>
-          <button class="dc-btn" id="btnImportAll"></button>
+        <div class="cb-head"><p class="cb-title">Резервная копия</p></div>
+        <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси его на новый телефон или сохрани на всякий случай.</p>
+        <div class="ways">
+          <button type="button" class="way-row" id="btnExportAll">
+            <span class="wr-ico" data-icon="download"></span>
+            <span class="wr-txt"><b>Сохранить в файл</b><small>Телефон предложит, куда его положить</small></span>
+          </button>
+          <button type="button" class="way-row" id="btnImportAll">
+            <span class="wr-ico" data-icon="reset"></span>
+            <span class="wr-txt"><b>Восстановить из файла</b><small>Всё, что сейчас в приложении, заменится содержимым файла</small></span>
+          </button>
         </div>
         <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
       </div>
@@ -2175,7 +2596,7 @@
     <!-- Тайминги -->
     <div class="ue-pane hidden" id="uePaneTiming">
       <div class="card-block">
-        <p class="cb-title">Тайминги тренировки</p>
+        <p class="cb-title">Отсчёты и паузы</p>
         <div class="row2">
           <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
           <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
@@ -2188,15 +2609,28 @@
     <!-- ИИ -->
     <div class="ue-pane hidden" id="uePaneAI">
       <div class="card-block">
-        <p class="cb-title">ИИ внутри приложения</p>
-        <div class="field"><label>Ключ Gemini API</label>
-          <input type="password" id="ueGeminiKey" placeholder="Вставь ключ из Google AI Studio" autocomplete="off" spellcheck="false">
-          <p class="field-hint">С ключом появится кнопка «Сделать через ИИ Fit Timer» — программы и упражнения будут собираться прямо в приложении, без копирования промтов. Ключ хранится только на этом устройстве и уходит только на серверы Google.</p>
+        <div class="cb-head"><p class="cb-title">Кнопка «Сделать за меня»</p></div>
+        <div class="note">
+          <span class="n-ico" data-icon="key"></span>
+          <span>Чтобы приложение собирало программы и упражнения само, ему нужен личный ключ Google — это бесплатно и делается один раз, минуты за две. Без ключа всё работает по-прежнему, только задание для нейросети придётся переносить в чат руками.</span>
         </div>
-        <div class="media-row">
-          <button type="button" id="ueGeminiHow">Как получить ключ</button>
-          <button type="button" id="ueGeminiTest">Проверить</button>
-          <button type="button" id="ueGeminiDiag">Диагностика</button>
+        <div class="field"><label>Ключ Google AI (Gemini)</label>
+          <input type="password" id="ueGeminiKey" placeholder="Вставь сюда ключ из Google AI Studio" autocomplete="off" spellcheck="false">
+          <p class="field-hint">Ключ хранится только на этом телефоне и уходит только на серверы Google. Мы его не видим.</p>
+        </div>
+        <div class="ways">
+          <button type="button" class="way-row" id="ueGeminiHow">
+            <span class="wr-ico" data-icon="key"></span>
+            <span class="wr-txt"><b>Как получить ключ</b><small>Короткая инструкция по шагам</small></span>
+          </button>
+          <button type="button" class="way-row" id="ueGeminiTest">
+            <span class="wr-ico" data-icon="check"></span>
+            <span class="wr-txt"><b>Проверить ключ</b><small>Сделаем пробный запрос и скажем, работает ли</small></span>
+          </button>
+          <button type="button" class="way-row" id="ueGeminiDiag">
+            <span class="wr-ico" data-icon="alert"></span>
+            <span class="wr-txt"><b>Что-то не работает</b><small>Подробный отчёт: сеть, ключ, ответ Google</small></span>
+          </button>
         </div>
         <p class="field-hint" id="ueGeminiState"></p>
       </div>
@@ -2267,8 +2701,8 @@
     <div class="modal" id="addExModal">
       <div class="modal-card">
         <span class="mini-label">Новое упражнение</span>
-        <button class="choice" id="aeAI"><b>✨ Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, ошибки и пиктограмму.</small></button>
-        <button class="choice" id="aeManual"><b>✎ Вручную</b><small>Заполни поля сама: название, повторения или время, подходы, отдых.</small></button>
+        <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, частые ошибки и пиктограмму.</small></span></button>
+        <button class="choice ico" id="aeManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Заполнить поля самой: название, повторения или время, подходы, отдых.</small></span></button>
         <button class="link-btn" id="aeCancel" style="margin:0;padding:10px">Отмена</button>
       </div>
     </div>
@@ -2276,10 +2710,10 @@
     <div class="modal" id="createModal">
       <div class="modal-card">
         <span class="mini-label">Новая программа</span>
-        <button class="choice" id="chAI"><b>✨ С помощью ИИ</b><small>Скопируй готовый промт, вставь в любую нейросеть, опиши цель — программа соберётся сама. Потом её можно спокойно редактировать вручную: менять упражнения, дни и картинки.</small></button>
-        <button class="choice" id="chYT"><b>▶ Из видео с YouTube</b><small>Дай ссылку на тренировку — нейросеть посмотрит ролик и соберёт программу с упражнениями и таймингом.</small></button>
-        <button class="choice" id="chManual"><b>✎ Вручную</b><small>Собери сама с нуля: упражнения, повторения или время, круги и дни недели.</small></button>
-        <button class="choice" id="chImport"><b>📥 Импорт файла или ссылки</b><small>Загрузи файл программы или вставь ссылку либо код, которыми с тобой поделились.</small></button>
+        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — программу соберёт нейросеть. Потом всё можно поправить руками: упражнения, дни, картинки.</small></span></button>
+        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Дай ссылку на тренировку — нейросеть посмотрит ролик и разложит его на упражнения с таймингом.</small></span></button>
+        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Собрать самой с нуля: упражнения, повторения или время, круги и дни недели.</small></span></button>
+        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>Из файла или ссылки</b><small>Открыть программу, которой с тобой поделились: файл, ссылка или код.</small></span></button>
         <button class="link-btn" id="chCancel" style="margin:0;padding:10px">Отмена</button>
       </div>
     </div>
@@ -2720,7 +3154,17 @@ const ICONS = {
   check: '<path d="M4 12.5 9.5 18 20 6.5"/>',
   alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.4v.2"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
-  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M6 15H4.5A1.5 1.5 0 0 1 3 13.5V4.5A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V6"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12Z"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2.5 4 3.5"/>',
+  key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3.5M15.5 12v2.5"/>',
+  link: '<path d="M10 13.5a4 4 0 0 0 5.7.3l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
+  video: '<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="M16.5 10.5 22 7v10l-5.5-3.5Z"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
+  user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  dumbbell: '<path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M7.5 12h9"/>'
 };
 function icon(name){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
@@ -3226,8 +3670,8 @@ function renderWeight(){
   btnS.innerHTML = icon('share') + 'Поделиться';
 
   if(!ws.length){
-    $('weightNow').textContent = '—';
     $('weightDelta').textContent = '';
+    setShown('weightNowRow', false);   // пустое состояние говорит само за себя ниже
     setShown('weightMeta', false);
     setShown('weightCharts', false);
     setShown('weightActions', false);
@@ -3236,6 +3680,7 @@ function renderWeight(){
   }
   setShown('weightEmpty', false);
   setShown('weightActions', true);
+  setShown('weightNowRow', true);
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
   $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
@@ -3360,7 +3805,7 @@ function fmtLong(sec){
 function renderTotal(){
   $('totalTime').textContent = fmtLong(stats.totalSec);
   const n = stats.count || 0;
-  $('totalCount').textContent = n ? `· ${n} ${plural(n, 'тренировка', 'тренировки', 'тренировок')}` : '';
+  $('totalCount').textContent = n ? `за ${n} ${plural(n, 'тренировку', 'тренировки', 'тренировок')}` : '';
 }
 
 
@@ -3489,26 +3934,33 @@ function renderStatsBlock(){
     ? `🔥 ${si.n} ${plural(si.n, 'день', 'дня', 'дней')} подряд${si.freezes ? ' · ❄ пропуск прощён' : ''}`
     : '';
 
-  // мини-график: сколько тренировок в каждую из 8 последних недель
+  // мини-график: сколько тренировок в каждую из 8 последних недель.
+  // Раньше под столбиками стояли даты вида «20.7» — их принимали за проценты.
+  // Теперь это «20 июл» и «эта неделя»: число с месяцем ни с чем не перепутать.
+  const MON_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
   const counts = [], labels = [];
   for(let w = 7; w >= 0; w--){
     const s = new Date(monday); s.setDate(monday.getDate() - w * 7);
     counts.push(stats.history.filter(h => weekOf(s).includes(h.d)).length);
-    labels.push(w === 0 ? 'сейчас' : (`${s.getDate()}.${s.getMonth() + 1}`));
+    labels.push(w === 0 ? 'эта' : `${s.getDate()} ${MON_SHORT[s.getMonth()]}`);
   }
   const maxC = Math.max(1, ...counts);
-  const bw = 300 / 8, top = 14, base = 44;
-  $('weekBars').innerHTML = counts.map((c, i) => {
-    const h = c ? 5 + (base - top) * (c / maxC) : 2;
-    const x = i * bw + bw / 2;
-    const y = base - h;
-    const fill = i === 7 ? 'var(--accent-ink)' : 'var(--muted)';
-    const op = c ? (i === 7 ? 1 : .5) : .3;
-    let s = `<rect x="${(i * bw + 6).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 12).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}" opacity="${op}"/>`;
-    if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="600" fill="var(--muted)">${c}</text>`;
-    s += `<text x="${x.toFixed(1)}" y="55" text-anchor="middle" font-size="7" fill="var(--muted)" opacity="${i === 7 ? 1 : .7}">${labels[i]}</text>`;
-    return s;
-  }).join('');
+  const bw = 300 / 8, top = 16, base = 58;
+  $('weekBarsNote').textContent = `последние 8 · всего ${counts.reduce((a, b) => a + b, 0)}`;
+  $('weekBars').innerHTML =
+    `<line x1="2" y1="${base + .5}" x2="298" y2="${base + .5}" stroke="var(--line)" stroke-width="1"/>` +
+    counts.map((c, i) => {
+      const h = c ? 6 + (base - top) * (c / maxC) : 3;
+      const x = i * bw + bw / 2;
+      const y = base - h;
+      const now = i === 7;
+      const fill = now ? 'var(--accent)' : (c ? 'var(--accent-ink)' : 'var(--line-2)');
+      const op = now ? 1 : (c ? .45 : .55);
+      let s = `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
+      if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${now ? 'var(--accent-ink)' : 'var(--muted)'}">${c}</text>`;
+      s += `<text x="${x.toFixed(1)}" y="72" text-anchor="middle" font-size="8.5" fill="var(--muted)" opacity="${now ? 1 : .75}">${labels[i]}</text>`;
+      return s;
+    }).join('');
 
   renderCalendar();
 }
@@ -3732,7 +4184,7 @@ function openUserEdit(id = null){
   $('ueBirth').value = uDraft.birth || '';
   // звук: значения профиля (или дефолты)
   $('ueGeminiKey').value = uDraft.geminiKey || '';
-  $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопки «Сделать через ИИ» активны.' : 'Ключ не задан — кнопки «Сделать через ИИ» неактивны.';
+  $('ueGeminiState').textContent = uDraft.geminiKey ? 'Ключ сохранён — кнопка «Сделать за меня» работает.' : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
   switchUeTab('me');
   setTimeout(()=> takeSnap('user', userState()), 0);
   if(uDraft.prepSec == null) uDraft.prepSec = 5;
@@ -3884,7 +4336,8 @@ function fmtD(iso){
 
 function renderPhotos(){
   const n = photos.length;
-  $('photoCount').textContent = n ? `${n} фото` : '—';
+  $('photoCount').textContent = n ? `${n} фото` : '';
+  setShown('photoNowRow', !!n);
   const hint = $('photoHint');
   if(n){
     const last = new Date(photos[photos.length - 1].d);
@@ -4735,13 +5188,14 @@ async function callGemini(prompt, signal){
 // попап-объяснение, если ключа нет
 async function geminiSetupPrompt(){
   const ok = await appDialog(
-    'Кнопка «Сделать через ИИ Fit Timer» работает через твой личный ключ Gemini — тогда приложение обращается к нейросети само, без копирования промтов.\n\n' +
-    'Как получить (бесплатно):\n' +
+    'Чтобы приложение всё делало само, ему нужен твой личный ключ Google. Это бесплатно и делается один раз — минуты за две.\n\n' +
+    'Как получить:\n' +
     '1. Открой aistudio.google.com/apikey\n' +
     '2. Войди в аккаунт Google и нажми «Create API key»\n' +
     '3. Скопируй ключ целиком\n' +
-    '4. Вставь его в профиле: аватар → ✎ → «ИИ внутри приложения»\n\n' +
-    'Ключ хранится только на этом устройстве и никуда не отправляется, кроме серверов Google.',
+    '4. Вставь его в приложении: аватар вверху → ✎ → вкладка «ИИ»\n\n' +
+    'Ключ хранится только на этом телефоне и уходит только на серверы Google.\n\n' +
+    'Не хочешь возиться с ключом — ничего страшного: на том же экране есть «Сделать в чате с ИИ». Тогда задание нужно будет перенести в чат самой.',
     {confirm: true, okText: 'Настроить', cancelText: 'Отмена'}
   );
   if(ok){
@@ -4751,13 +5205,63 @@ async function geminiSetupPrompt(){
   }
 }
 
-// приводит кнопку «Сделать через ИИ» в нужное состояние
+// приводит главную кнопку «сделать за меня» в нужное состояние: без ключа она никуда
+// не исчезает — это по-прежнему самый короткий путь, просто честно говорит, чего не хватает
 function syncGeminiBtns(){
   const on = hasGemini();
   document.querySelectorAll('.ai-self').forEach(b => {
     b.classList.toggle('off', !on);
-    b.title = on ? 'Собрать прямо в приложении' : 'Нужен ключ Gemini — нажми, чтобы узнать как';
+    b.title = on ? 'Собрать прямо в приложении' : 'Нужен бесплатный ключ — нажми, расскажем как';
+    const sub = b.querySelector('.ha-sub');
+    if(sub){
+      if(!sub.dataset.ready) sub.dataset.ready = sub.textContent;
+      sub.textContent = on ? sub.dataset.ready : (b.dataset.nokey || 'Нужен бесплатный ключ Google — нажми, покажем как его получить');
+    }
   });
+}
+
+// временная подпись на кнопке («Проверяю…», «Обработка…»): меняем только текст,
+// иконка и пояснение в строке остаются на месте
+function btnBusy(btn, text){
+  const el = btn.querySelector('b') || btn;
+  const was = el.textContent;
+  el.textContent = text;
+  btn.disabled = true;
+  return ()=>{ el.textContent = was; btn.disabled = false; };
+}
+
+// короткое «✓ Скопировано» на кнопке: подпись живёт в <b>, поэтому меняем именно её,
+// а не всю кнопку целиком — иначе из строки пропадали иконка и пояснение
+function flashDone(btn, text){
+  if(!btn) return;
+  const el = btn.querySelector('b') || btn;
+  if(el.dataset.flash) return;
+  el.dataset.flash = el.textContent;
+  el.textContent = text || '✓ Скопировано';
+  setTimeout(()=>{ el.textContent = el.dataset.flash; delete el.dataset.flash; }, 1600);
+}
+
+/* ---- экраны запроса к ИИ: главный путь на виду, ручной — под раскрывашкой ----
+   Раньше на каждом таком экране подряд стояли четыре одинаковые кнопки («отправить
+   в приложение», «открыть ChatGPT», «открыть Claude», «скопировать») и поле для ответа.
+   Понять, чем они отличаются и что случится после нажатия, было невозможно. Теперь
+   виден один главный путь, а ручные способы открываются одной строкой и объясняют себя. */
+const aiWaysReset = {};
+function setupAIWays(cfg){
+  const head = $(cfg.toggle), box = $(cfg.box);
+  if(!head) return;
+  const apply = on => {
+    head.classList.toggle('open', on);
+    setShown(box, on);
+  };
+  head.onclick = ()=>{
+    const on = !head.classList.contains('open');
+    apply(on);
+    if(on) setTimeout(()=> box.scrollIntoView({behavior: 'smooth', block: 'nearest'}), 60);
+  };
+  // при открытии экрана ручной блок свёрнут: сначала главный путь
+  aiWaysReset[cfg.screen] = ()=> apply(false);
+  apply(false);
 }
 
 /* ---- медиа упражнения: фото и пиктограмма живут рядом ---- */
@@ -5003,7 +5507,7 @@ function renderTray(){
     el.className = 'tray-item';
     el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">✕</button>`;
     el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
-    el.onclick = ()=> appAlert('Нажми на место в списке ниже, чтобы подставить туда картинку.');
+    el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку.');
     box.appendChild(el);
   });
 }
@@ -5076,7 +5580,7 @@ function openSlotPicker(i){
 
 // раскладывает лоток по местам без картинок, по порядку
 function trayAutoAssign(){
-  if(!imgTray.length){ appAlert('Лоток пуст — сначала выбери картинки.'); return; }
+  if(!imgTray.length){ appAlert('Сначала выбери картинки с телефона.'); return; }
   const slots = imageSlots();
   let used = 0;
   for(const s of slots){
@@ -5087,7 +5591,7 @@ function trayAutoAssign(){
   }
   renderTray(); renderSlots();
   appAlert(used
-    ? `Подставлено картинок: ${used}.` + (imgTray.length ? ` Осталось в лотке: ${imgTray.length}.` : '')
+    ? `Подставлено картинок: ${used}.` + (imgTray.length ? ` Осталось нераспределённых: ${imgTray.length}.` : '')
     : 'Все места уже заполнены. Нажми на нужное место, чтобы заменить картинку.');
 }
 
@@ -5146,6 +5650,7 @@ function openExEdAI(i){
   $('exeResult').value = '';
   autoGrow($('exeWish'));
   syncGeminiBtns();
+  if(aiWaysReset.scrExEdAI) aiWaysReset.scrExEdAI();
   show('scrExEdAI');
   window.scrollTo(0, 0);
 }
@@ -5199,7 +5704,7 @@ function exePrompt(){
 
 async function applyExEdit(){
   const raw = ($('exeResult').value || '').trim();
-  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли делала запрос в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
   const {program} = parseProgramText(wrapped);
   const got = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
@@ -5249,6 +5754,7 @@ function openExAI(){
   exaChips();
   autoGrow($('exaWish'));
   syncGeminiBtns();
+  if(aiWaysReset.scrExAI) aiWaysReset.scrExAI();
   show('scrExAI');
   window.scrollTo(0, 0);
 }
@@ -5314,7 +5820,7 @@ SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Т
 
 async function exaAddExercise(){
   const raw = ($('exaResult').value || '').trim();
-  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли делала запрос в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
   const {program, errors} = parseProgramText(wrapped);
@@ -5382,6 +5888,7 @@ function openYouTube(){
   $('ytResult').value = '';
   autoGrow($('ytWish'));
   syncGeminiBtns();
+  if(aiWaysReset.scrYouTube) aiWaysReset.scrYouTube();
   show('scrYouTube');
   window.scrollTo(0, 0);
 }
@@ -5482,12 +5989,13 @@ function openEditAI(p){
   $('eaProgName').textContent = p.name || 'Программа';
   const plans = normPlans(p);
   const exN = plans.reduce((n, pl) => n + pl.exercises.length, 0);
-  $('eaProgSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} упражнений`;
+  $('eaProgSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} ${plural(exN, 'упражнение', 'упражнения', 'упражнений')}`;
   $('eaWish').value = '';
   $('eaResult').value = '';
   autoGrow($('eaWish'));
   syncGeminiBtns();
   syncWantSvg();
+  if(aiWaysReset.scrEditAI) aiWaysReset.scrEditAI();
   show('scrEditAI');
   window.scrollTo(0, 0);
 }
@@ -5524,7 +6032,7 @@ function carryMedia(oldProg, newProg){
 
 async function createEditedProgram(){
   const raw = ($('eaResult').value || '').trim();
-  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли делала запрос в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
     appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
@@ -5578,7 +6086,12 @@ function renderMine(){
   const box = $('mineList'); box.innerHTML='';
 
   if(!customPrograms.length){
-    box.insertAdjacentHTML('beforeend', '<p class="mine-empty">Своих программ пока нет — создай первую.</p>');
+    box.insertAdjacentHTML('beforeend',
+      '<div class="empty-state">' +
+      `<span class="es-ico">${icon('sparkle')}</span>` +
+      '<b>Своих программ пока нет</b>' +
+      '<p>Собери первую за пару минут: опиши, какая тренировка нужна, и её соберёт ИИ — или добавь упражнения руками.</p>' +
+      '</div>');
     renderToday();
     return;
   }
@@ -5892,7 +6405,7 @@ function applyWeightAdjust(dir){
     bumpProgDelta(pid, ex, -dir, 'weight');
     waArmed = 0;
     syncWaButtons();
-    $('waNow').textContent = dir > 0 ? `${fmtKg(before)} кг — это потолок` : `${fmtKg(before)} кг — меньше некуда`;
+    $('waNow').textContent = dir > 0 ? `${fmtKg(before)} кг — это максимум` : `${fmtKg(before)} кг — меньше некуда`;
     waRestartTimer();
     return;
   }
@@ -6250,7 +6763,7 @@ function syncRotateUI(){
     : 'Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.';
 
   // пометка у заголовка «Круги и отдых»
-  $('stVariantNote').textContent = many ? `· вариант ${planIdx + 1}` : '';
+  $('stVariantNote').textContent = many ? `вариант ${planIdx + 1}` : '';
 
   renderDays();
   renderPlanTabs();
@@ -6352,7 +6865,7 @@ function buildPlanTabs(boxId){
       planIdx = i;
       renderPlanTabs();
       fillPlanFields();
-      $('stVariantNote').textContent = draft.plans.length > 1 ? `· вариант ${planIdx + 1}` : '';
+      $('stVariantNote').textContent = draft.plans.length > 1 ? `вариант ${planIdx + 1}` : '';
     };
     box.appendChild(b);
   });
@@ -6690,7 +7203,11 @@ function renderExList(){
   const box = $('bExList'); box.innerHTML = '';
   const list = curPlan().exercises;
   if(!list.length){
-    box.innerHTML = '<div class="ex-empty">Пока пусто. Добавь первое упражнение — название и сколько делать, остальное по желанию.</div>';
+    box.innerHTML = '<div class="empty-state">' +
+      `<span class="es-ico">${icon('dumbbell')}</span>` +
+      '<b>Упражнений пока нет</b>' +
+      '<p>Добавь первое: хватит названия и того, сколько делать — повторения или время. Остальное по желанию.</p>' +
+      '</div>';
   }
   list.forEach((ex, i)=> box.appendChild(exRow(ex, i)));
   syncVolHint();
@@ -7256,11 +7773,35 @@ function qChips(boxId, opts, isMulti, get, set){
   });
 }
 
+// варианты, разницу между которыми по одному слову не понять: показываем описанием,
+// а не мелкой подсказкой под рядом одинаковых чипов
+const Q_DESC = {
+  'Круговая': 'Проходишь весь список по разу и возвращаешься к началу: A, B, C → A, B, C. Пульс выше, скучать некогда.',
+  'Силовая': 'Сначала все подходы одного упражнения, потом следующее: A, A, A → B, B, B. Мышца устаёт сильнее.',
+  'Смешанная': 'Несколько упражнений идут блоком, и этот блок повторяется кругами.',
+  'С разминкой': 'Пара лёгких упражнений в начале — один раз, до кругов.',
+  'Без разминки': 'Сразу к основной части: если разминаешься сама или продолжаешь после другой тренировки.'
+};
+// выбор одного варианта с пояснением; повторное нажатие снимает выбор
+function qCards(boxId, opts, get, set){
+  const box = $(boxId); box.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt-card';
+    b.classList.toggle('act', get() === o);
+    b.innerHTML = `<span class="oc-mark">${icon('check')}</span><span class="oc-txt"><b></b><small></small></span>`;
+    b.querySelector('b').textContent = o;
+    b.querySelector('small').textContent = Q_DESC[o] || '';
+    b.onclick = ()=>{ set(get() === o ? '' : o); qCards(boxId, opts, get, set); };
+    box.appendChild(b);
+  });
+}
+
 function initAIForm(){
   syncWantSvg();
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
-  qChips('qStyle', Q_OPTS.style, false, ()=> q.style, v => q.style = v);
-  qChips('qWarm', Q_OPTS.warm, false, ()=> q.warm, v => q.warm = v);
+  qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
+  qCards('qWarm', Q_OPTS.warm, ()=> q.warm, v => q.warm = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
   qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
   qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
@@ -7281,6 +7822,7 @@ function initAIForm(){
   $('qRotate').classList.toggle('on', q.rotate);
   setShown('qRotateRow', q.split);
   $('qNote').value = q.note || '';
+  if(aiWaysReset.scrText) aiWaysReset.scrText();
 }
 $('qNote').oninput = e => q.note = e.target.value;
 $('qSplit').onclick = ()=>{
@@ -7382,8 +7924,7 @@ async function copyPrompt(){
   const btn = $('btnCopyPrompt');
   try{
     await navigator.clipboard.writeText(fullAIPrompt());
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = 'Скопировать', 1600);
+    flashDone(btn);
   }catch(e){
     appAlert('Не удалось скопировать автоматически. Выдели текст вручную:', {code: fullAIPrompt()});
   }
@@ -7394,7 +7935,7 @@ function importFromText(){
   if(!txt){ appAlert('Вставь текст программы в поле.'); return; }
   const {program, errors} = parseProgramText(txt);
   if(errors.length){
-    appAlert('Не получилось распознать:\n— ' + errors.join('\n— ') + '\n\nПроверь, что текст соответствует формату из промта.');
+    appAlert('Не получилось разобрать ответ:\n— ' + errors.join('\n— ') + '\n\nПроверь, что вставлен весь ответ целиком — вместе со строками «ПРОГРАММА:» и «УПРАЖНЕНИЕ:».');
     return;
   }
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
@@ -7817,7 +8358,7 @@ function nextStep(){
 function openSwapHint(){
   const step = state.steps[state.stepIdx];
   if(!step || !step.swap) return;
-  $('swapIntro').textContent = `«${step.title}» дошло до своего потолка — дальше нагрузка не растёт. Вот что можно делать вместо него:`;
+  $('swapIntro').textContent = `«${step.title}» дошло до своего максимума — дальше нагрузка не растёт. Вот что можно делать вместо него:`;
   $('swapName').textContent = step.swap.name;
   $('swapDesc').textContent = step.swap.desc || 'Описание не задано.';
   $('swapCopy').textContent = 'Скопировать название и описание';
@@ -7826,7 +8367,7 @@ function openSwapHint(){
   setShown('swapAI', ai);
   $('swapOk').className = ai ? 'btn-ghost' : 'btn-primary';
   $('swapHint').textContent = ai
-    ? 'Нейросеть сама подберёт технику, стартовые значения и новый потолок — упражнение в программе заменится сразу.'
+    ? 'Нейросеть сама подберёт технику, стартовые значения и новый максимум — упражнение в программе заменится сразу.'
     : 'Заменить упражнение можно после тренировки: открой программу → это упражнение → «Через ИИ» и вставь название с описанием.';
   $('swapModal').classList.add('open');
 }
@@ -9025,8 +9566,6 @@ $('importProgFile').onchange = async e => {
   await importProgramFile(f);
 };
 
-$('btnExportAll').textContent = 'Сохранить в файл';
-$('btnImportAll').textContent = 'Восстановить';
 $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
@@ -9195,9 +9734,7 @@ async function ytCopyPrompt(){
   const btn = $('ytCopy');
   try{
     await navigator.clipboard.writeText(youtubePrompt());
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 $('ytCopy').onclick = ()=>{ if(ytGuard()) ytCopyPrompt(); };
@@ -9206,7 +9743,7 @@ $('ytClaude').onclick = ()=>{ if(ytGuard()) window.open('https://claude.ai/new?q
 $('ytParse').onclick = ()=> ytApplyResult();
 async function ytApplyResult(){
   const raw = ($('ytResult').value || '').trim();
-  if(!raw){ appAlert('Вставь ответ нейросети в поле ниже.'); return; }
+  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли делала запрос в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
     appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
@@ -9251,18 +9788,14 @@ $('eaCopyFull').onclick = async ()=>{
     + '\n\nЧТО НУЖНО СДЕЛАТЬ: опиши задачу здесь. Верни программу целиком в том же формате — её можно будет вставить обратно в приложение.';
   try{
     await navigator.clipboard.writeText(text);
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Попробуй ещё раз.'); }
 };
 async function copyEditPrompt(){
   const btn = $('eaCopy');
   try{
     await navigator.clipboard.writeText(editAIPrompt());
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 $('eaGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(editAIPrompt()), '_blank');
@@ -9299,7 +9832,7 @@ $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExMan
 /* ---- ИИ внутри приложения (Gemini) ---- */
 
 $('ueGeminiHow').onclick = ()=> appAlert(
-  'Ключ Gemini бесплатный.\n\n' +
+  'Ключ Google (Gemini) бесплатный.\n\n' +
   '1. Открой aistudio.google.com/apikey\n' +
   '2. Войди в аккаунт Google\n' +
   '3. Нажми «Create API key»\n' +
@@ -9309,8 +9842,7 @@ $('ueGeminiHow').onclick = ()=> appAlert(
 );
 // пошагово проверяем, где рвётся связь: интернет вообще → домен Google → сам ключ
 $('ueGeminiDiag').onclick = async ()=>{
-  const btn = $('ueGeminiDiag'), old = btn.textContent;
-  btn.textContent = 'Проверяю…'; btn.disabled = true;
+  const btn = $('ueGeminiDiag'), restore = btnBusy(btn, 'Проверяю…');
   const lines = [];
   lines.push(location.protocol === 'file:'
     ? '✗ Приложение открыто как файл (file://) — браузер запретит запросы к Google. Открой по адресу http/https или установи как PWA.'
@@ -9322,7 +9854,7 @@ $('ueGeminiDiag').onclick = async ()=>{
     lines.push(`✓ Домен Google отвечает (код ${r.status}${r.status === 403 || r.status === 401 ? ' — это нормально без ключа' : ''})`);
   }catch(e){
     lines.push('✗ Домен недоступен совсем — запрос не дошёл. Обычно это блокировка провайдером или регионом: поможет VPN.');
-    btn.textContent = old; btn.disabled = false;
+    restore();
     appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
     return;
   }
@@ -9347,15 +9879,14 @@ $('ueGeminiDiag').onclick = async ()=>{
   } else {
     lines.push('✗ POST-запросы не проходят, хотя домен отвечает.\n   Скорее всего режется предварительный запрос OPTIONS — так бывает у некоторых провайдеров и в корпоративных сетях. Помогает VPN или другая сеть.');
   }
-  btn.textContent = old; btn.disabled = false;
+  restore();
   appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
 };
 
 $('ueGeminiTest').onclick = async ()=>{
   const key = ($('ueGeminiKey').value || '').trim();
   if(!key){ $('ueGeminiState').textContent = 'Сначала вставь ключ.'; return; }
-  const btn = $('ueGeminiTest'), old = btn.textContent;
-  btn.textContent = 'Проверяю…'; btn.disabled = true;
+  const btn = $('ueGeminiTest'), restore = btnBusy(btn, 'Проверяю…');
   // проверяем на самом коротком запросе
   const savedUser = curUser();
   const prevKey = savedUser ? savedUser.geminiKey : '';
@@ -9369,7 +9900,7 @@ $('ueGeminiTest').onclick = async ()=>{
     $('ueGeminiState').textContent = '✗ ' + (e && e.message ? e.message : 'не удалось проверить');
   }finally{
     if(savedUser) savedUser.geminiKey = prevKey;
-    btn.textContent = old; btn.disabled = false;
+    restore();
   }
 };
 
@@ -9424,7 +9955,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title){
     const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
     if(aborted) return; // отменили — молча
     appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
-      '\n\nМожно попробовать ещё раз или отправить промт в нейросеть вручную кнопками ниже.');
+      '\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».');
   }
 }
 $('btnSelfAI').onclick = ()=> runSelfAI(fullAIPrompt, 'tImport', importFromText, 'Собираю программу');
@@ -9443,9 +9974,7 @@ $('imgPromptCopy').onclick = async ()=>{
   const btn = $('imgPromptCopy');
   try{
     await navigator.clipboard.writeText(imagesPromptText());
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 };
 $('imgPromptShare').onclick = async ()=>{
@@ -9461,12 +9990,10 @@ $('imgFiles').onchange = e => {
   const files = [...(e.target.files || [])];
   e.target.value = '';
   if(!files.length) return;
-  const btn = $('imgPick'), oldTxt = btn.textContent;
-  btn.textContent = `Обработка… 0/${files.length}`;
-  btn.disabled = true;
+  const btn = $('imgPick'), restore = btnBusy(btn, `Обработка… 0/${files.length}`);
   shrinkAll(files, 640, list => {
     imgTray = imgTray.concat(list);
-    btn.textContent = oldTxt; btn.disabled = false;
+    restore();
     renderTray();
     if(list.length) appAlert(`Загружено картинок: ${list.length}. Теперь разложи их по местам или нажми «Разложить по порядку».`);
   });
@@ -9653,9 +10180,7 @@ async function exeCopyPrompt(){
   const btn = $('exeCopy');
   try{
     await navigator.clipboard.writeText(exePrompt());
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать.'); }
 }
 $('exeCopy').onclick = ()=> exeCopyPrompt();
@@ -9677,9 +10202,7 @@ async function exaCopyPrompt(){
   const btn = $('exaCopy');
   try{
     await navigator.clipboard.writeText(exaPrompt());
-    const old = btn.textContent;
-    btn.textContent = '✓ Скопировано';
-    setTimeout(()=> btn.textContent = old, 1600);
+    flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 $('exaCopy').onclick = ()=> exaCopyPrompt();
@@ -9869,8 +10392,8 @@ function syncImagesSum(){
     if(ex.media && ex.media.kind === 'img') filled++;
   }));
   el.textContent = filled
-    ? `Заполнено ${filled} из ${total}`
-    : 'Загрузить сразу много и разложить по упражнениям';
+    ? `Есть ${filled} из ${total}`
+    : 'Обложка и картинки упражнений';
 }
 function syncSettingsSum(){
   const bits = [];
@@ -9879,8 +10402,8 @@ function syncSettingsSum(){
   const daysU = programDaysUnion(draft);
   if(daysU.length) bits.push(daysU.join('·'));
   if(plans.length > 1) bits.push(`${plans.length} варианта`);
-  if(draft.progression) bits.push('автоприбавка веса');
-  $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'время, дни, круги, прогрессия';
+  if(draft.progression) bits.push('нагрузка растёт сама');
+  $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'дни недели, время, круги, прибавка нагрузки';
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
 $('bDesc').oninput = e => {
@@ -9953,6 +10476,20 @@ $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
 $('helpBackTop').innerHTML = icon('chevL');
+// экраны запроса к ИИ: одна регистрация на экран
+[{screen:'scrText',    toggle:'aiWaysToggle',  box:'aiWaysBox',  actions:'textActions', result:'tImport'},
+ {screen:'scrYouTube', toggle:'ytWaysToggle',  box:'ytWaysBox',  actions:'ytActions',   result:'ytResult'},
+ {screen:'scrEditAI',  toggle:'eaWaysToggle',  box:'eaWaysBox',  actions:'eaActions',   result:'eaResult'},
+ {screen:'scrExAI',    toggle:'exaWaysToggle', box:'exaWaysBox', actions:'exaActions',  result:'exaResult'},
+ {screen:'scrExEdAI',  toggle:'exeWaysToggle', box:'exeWaysBox', actions:'exeActions',  result:'exeResult'},
+ {screen:'scrImages',  toggle:'imgWaysToggle', box:'imgWaysBox'}].forEach(setupAIWays);
+
+// иконки прямо в разметке: <span data-icon="copy"></span> — один проход на весь документ,
+// чтобы не заводить по строке JS на каждую новую кнопку
+document.querySelectorAll('[data-icon]').forEach(el => {
+  const n = el.dataset.icon;
+  if(ICONS[n]) el.innerHTML = icon(n);
+});
 
 // параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
 let pendingImport = null;
