@@ -1281,36 +1281,65 @@
   @keyframes tcLine{from{background-position:0% 50%}to{background-position:300% 50%}}
   /* ---- живой фон карточки плана ----
      Единственная анимация на «Сегодня»: карточка плана — единственное, что зовёт
-     к действию. Мягкие пятна медленно текут слева направо, полный проход 20 с.
-     Почему не вращение (как было): пятна лежали почти симметрично относительно
-     центра, поворот переводил картинку почти саму в себя, и движения не было
-     видно вообще — «фон не двигается».
-     Слой шириной в две карточки, узор замощён плиткой ровно в карточку
-     (background-size:50% 100%), поэтому сдвиг на -50% попадает плитка-в-плитку
-     и цикл не заметен. Двигается только transform одного слоя — работа
-     композитора, без перерисовки и без filter, телефон не греется. Слой лежит
-     ПОД содержимым (z-index 0 против 1): на контраст текста не влияет,
-     непрозрачность подобрана по темам отдельно. */
+     к действию.
+     Было два подхода, оба провалились по-своему. Поворот пары пятен вокруг центра
+     не читался вовсе: пятна лежали почти симметрично, и поворот переводил картинку
+     саму в себя. Замена на равномерный проезд слева направо двигалась, но выдавала
+     себя механикой — постоянная скорость, постоянный размер, одна прямая.
+     Сейчас движение задают два независимых пятна:
+       • у каждого свой период (19 и 26 с) — общий рисунок повторяется раз в восемь
+         минут, на глаз никогда;
+       • каждое одновременно едет и дышит масштабом (0.86…1.3), причём быстрее
+         всего в середине пути и почти замирая на краях — за это отвечает
+         cubic-bezier, а не linear;
+       • пятна идут навстречу друг другу по разным дугам, поэтому яркое место
+         карточки то расходится, то сходится.
+     alternate вместо повтора: слой не отматывается назад скачком, а разворачивается
+     в той же точке — шва не бывает в принципе, и период удваивается бесплатно.
+     Двигаются только transform двух слоёв — работа композитора, без перерисовки и
+     без filter, телефон не греется. Слой лежит ПОД содержимым (z-index 0 против 1):
+     на контраст текста не влияет, непрозрачность подобрана по темам отдельно. */
   .tc-aura{
-    position:absolute;top:-40%;left:0;width:200%;height:180%;z-index:0;pointer-events:none;
+    position:absolute;inset:0;z-index:0;pointer-events:none;
     opacity:var(--aura-op,0);
-    background:
-      radial-gradient(30% 58% at 20% 28%,var(--aura-a) 0%,transparent 70%),
-      radial-gradient(26% 50% at 58% 82%,var(--aura-b) 0%,transparent 70%),
-      radial-gradient(22% 44% at 88% 24%,var(--aura-a) 0%,transparent 70%);
-    background-size:50% 100%;
-    background-repeat:repeat-x;
   }
-  /* слой промотируем в композитор только когда он реально едет */
-  .today-card.has-plan .tc-aura{animation:tcDrift 20s linear infinite;will-change:transform}
+  .tc-aura::before,.tc-aura::after{
+    content:'';position:absolute;
+    background:radial-gradient(closest-side,var(--blob) 0%,transparent 76%);
+  }
+  .tc-aura::before{
+    --blob:var(--aura-a);
+    width:82%;aspect-ratio:1.3;left:-16%;top:-52%;
+  }
+  .tc-aura::after{
+    --blob:var(--aura-b);
+    width:70%;aspect-ratio:1.15;right:-12%;bottom:-58%;
+  }
+  /* слои промотируем в композитор только когда они реально едут */
+  .today-card.has-plan .tc-aura::before{
+    animation:tcBlobA 19s cubic-bezier(.5,0,.5,1) infinite alternate;will-change:transform;
+  }
+  .today-card.has-plan .tc-aura::after{
+    animation:tcBlobB 26s cubic-bezier(.42,0,.4,1) infinite alternate;will-change:transform;
+  }
   /* нечего делать — карточка спокойная: ни свечения, ни движения */
   .today-card:not(.has-plan) .tc-aura{opacity:0}
-  @keyframes tcDrift{
-    from{transform:translate3d(0,0,0)}
-    to  {transform:translate3d(-50%,0,0)}
+  @keyframes tcBlobA{
+    0%  {transform:translate3d(-8%,  6%,0) scale(1)}
+    38% {transform:translate3d(26%, -9%,0) scale(1.3)}
+    71% {transform:translate3d(52%,  8%,0) scale(1.02)}
+    100%{transform:translate3d(78%, -3%,0) scale(.88)}
+  }
+  @keyframes tcBlobB{
+    0%  {transform:translate3d(10%, -5%,0) scale(1.12)}
+    44% {transform:translate3d(-22%, 9%,0) scale(.86)}
+    78% {transform:translate3d(-50%,-7%,0) scale(1.18)}
+    100%{transform:translate3d(-68%, 4%,0) scale(.96)}
   }
   @media (prefers-reduced-motion:reduce){
-    .today-card.has-plan .tc-aura{animation:none;transform:none;will-change:auto}
+    /* движение выключено — но пятна остаются там, где картинка самая живая */
+    .today-card.has-plan .tc-aura::before{animation:none;transform:translate3d(26%,-9%,0) scale(1.2);will-change:auto}
+    .today-card.has-plan .tc-aura::after{animation:none;transform:translate3d(-22%,9%,0) scale(1.05);will-change:auto}
     .today-card.has-plan::before{animation:none}
   }
   /* содержимое карточки — над слоем фона */
