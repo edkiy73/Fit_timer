@@ -273,6 +273,11 @@
     display:flex;align-items:center;justify-content:center;
   }
   .btn-ghost:active{transform:scale(.985)}
+  .btn-ghost svg{width:18px;height:18px;margin-right:8px;flex:none}
+  /* «＋ Добавить профиль» — строка выбора с иконкой по центру, а не с плюсом-символом */
+  .choice.add-row{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+  .choice.add-row b{margin:0}
+  .choice.add-row svg{width:18px;height:18px;color:var(--muted);flex:none}
   .total-stat{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
@@ -359,7 +364,8 @@
   .tray-item{flex:none;width:76px;height:76px;border-radius:12px;overflow:hidden;border:2px solid var(--line);background:var(--card);position:relative;cursor:pointer}
   .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
   .tray-item.sel{border-color:var(--accent-line)}
-  .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer}
+  .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;line-height:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .tray-item .ti-x svg{width:11px;height:11px;stroke-width:2.6}
   .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
   .slot-row .sl-thumb{flex:none;width:52px;height:52px;border-radius:11px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
   .slot-row .sl-thumb img{width:100%;height:100%;object-fit:cover}
@@ -721,6 +727,7 @@
     transition:transform .12s ease, box-shadow .15s ease;
   }
   .btn-done:active{transform:scale(.98);box-shadow:none}
+  .btn-done svg{width:20px;height:20px;margin-left:10px;flex:none;stroke-width:2.6}
   /* «Пропустить» окрашена по фазе: на упражнении со временем она была цвета отдыха,
      хотя всё вокруг — фиолетовое */
   .btn-skip{
@@ -737,9 +744,10 @@
   /* медаль в градиентном круге — её просили не трогать по смыслу, но подать аккуратнее */
   .finish .medal{
     width:88px;height:88px;margin:0 auto var(--sp-3);border-radius:50%;
-    display:flex;align-items:center;justify-content:center;font-size:44px;
-    background:var(--accent-soft);border:1px solid var(--accent-line);
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);
   }
+  .medal svg{width:42px;height:42px;stroke-width:1.6}
   .finish h2{font-size:var(--fs-2xl);margin:0 0 var(--sp-4)}
   .finish p{color:var(--muted);margin-top:12px;font-size:var(--fs-md);line-height:1.55}
   /* Одна карточка результата: время, цифры и достижения — части одного объекта,
@@ -926,6 +934,29 @@
   .choice:active{transform:scale(.99)}
   .choice b{display:block;font-size:15px;margin-bottom:4px;font-weight:600}
   .choice small{color:var(--muted);font-size:13px;line-height:1.45;display:block}
+  /* Вариант по умолчанию. В списке одинаковых плашек не видно, какая из них
+     обычный ответ, и человек читает все три подряд, чтобы выбрать очевидное.
+     Выделенный вариант стоит последним — ближе всего к большому пальцу. */
+  .choice.primary{border-color:var(--accent);background:var(--accent-soft)}
+  .choice.primary b{color:var(--accent-ink)}
+  .choice.primary:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+
+  /* Нижние кнопки попапов: «Отмена», «Закрыть», «Убрать картинку». Были
+     подчёркнутыми ссылками с полем 10 пикселей — тап-таргет выходил около 34, вдвое
+     меньше минимальных 44, и по ним промахивались. Теперь полноценные кнопки во всю
+     ширину карточки: 52 пикселя высоты, своя подложка и рамка. */
+  .modal-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;min-height:52px;margin:8px 0 0;padding:0 16px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+    color:var(--ink);font-family:var(--font-text);font-size:15px;font-weight:500;
+    cursor:pointer;
+  }
+  .modal-btn:active{transform:scale(.99);background:var(--card)}
+  .modal-btn.danger{color:var(--danger);border-color:var(--danger-soft)}
+  /* воздух между текстом попапа и первой кнопкой: раньше подпись упиралась в неё */
+  .modal-card .mini-label{margin-bottom:10px}
+  .modal-card .field-hint{margin:0 0 16px}
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
@@ -972,7 +1003,8 @@
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
   .week-line{display:flex;flex-direction:column;gap:3px;margin-top:12px;font-size:13.5px;color:var(--muted)}
-  .week-line .streak{color:var(--accent-ink);font-weight:500}
+  .week-line .streak{color:var(--accent-ink);font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .week-line .streak svg{width:15px;height:15px;flex:none}
   #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
   .cal-head b{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
@@ -1263,7 +1295,14 @@
   .badge-row:empty{display:none}
   .badge{display:flex;align-items:center;gap:12px;border:none;background:none;border-radius:0;padding:var(--sp-3) var(--sp-4);text-align:left;animation:badgePop .4s ease both}
   .badge + .badge{border-top:1px solid var(--line)}
-  .badge .b-emoji{font-size:24px;line-height:1}
+  /* достижение — иконка из набора в акцентном кружке: эмодзи рисуется системным
+     шрифтом и на каждом телефоне выглядит по-своему, а набор один на всё приложение */
+  .badge .b-ico{
+    flex:none;width:40px;height:40px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .badge .b-ico svg{width:21px;height:21px}
   .badge .b-txt b{display:block;font-size:14px;color:var(--ink)}
   .badge .b-txt small{color:var(--muted);font-size:12px}
   .badge.new{background:var(--accent-soft)}
@@ -1441,7 +1480,7 @@
   .actions.act-row .btn-share-res{flex:0 0 auto;width:auto;padding:0 16px;margin:0}
   .actions.act-row .btn-primary{flex:1;margin:0}
   @media (max-width:359px){.actions.act-row .btn-share-res span{display:none}}
-  .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 16px;color:var(--ink)}
+  .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 22px;color:var(--ink)}
   #dlgCode{width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:monospace;font-size:12px;padding:10px;margin-bottom:12px;resize:vertical}
 
   /* ===== ошибка в поле — видно сразу, а не при сохранении ===== */
@@ -1580,9 +1619,9 @@
   .ob-lead{color:var(--muted);font-size:var(--fs-md);line-height:1.55;margin:0 0 18px}
   #obStep3 .ob-lead{margin-bottom:22px}
   #obStep3 .medal{
-    width:88px;height:88px;margin:6px auto 14px;border-radius:50%;font-size:44px;
+    width:88px;height:88px;margin:6px auto 14px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    background:var(--accent-soft);border:1px solid var(--accent-line);
+    background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);
   }
   #scrOnboard .note{margin-bottom:18px}
   #scrOnboard .field{margin-bottom:16px}
@@ -1894,8 +1933,8 @@
     <div class="brand">FIT<b>/</b>TIMER</div>
     <div class="global-clock" id="globalClock">00:00</div>
     <div class="top-tools">
-      <button class="icon-btn btn-sound" id="btnSoundW" title="Звук">🔊</button>
-      <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление">🎤</button>
+      <button class="icon-btn btn-sound" id="btnSoundW" title="Звук" data-icon="vol"></button>
+      <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление" data-icon="mic"></button>
             <button class="btn-exit" id="btnExit">Выйти</button>
     </div>
   </div>
@@ -1916,9 +1955,7 @@
     <div class="hero">
       <button class="premium-banner hidden" id="btnPremium">
         <div class="pb-glow"></div>
-        <div class="pb-ico">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5L3 8Z"/></svg>
-        </div>
+        <div class="pb-ico" data-icon="crown"></div>
         <div class="pb-txt">
           <b>Открой Premium-возможности</b>
           <small>Сотни программ от профи · Генерация тренировки из текста в 1 клик · Расширенная статистика · Режим соревнования</small>
@@ -1928,7 +1965,7 @@
 
     <div class="modal" id="premiumModal">
       <div class="modal-card">
-        <div class="pm-crown">👑</div>
+        <div class="pm-crown" data-icon="crown"></div>
         <h3 class="pm-title">Premium — пока бесплатно</h3>
         <p class="pm-lead">Приложение сейчас <b>полностью бесплатное</b> и находится в стадии бета-теста. Все возможности открыты для всех.</p>
         <p class="pm-lead">Если оно тебе нравится — поддержи разработку, и мы закрепим за тобой <b>Premium навсегда</b>, когда он появится.</p>
@@ -1937,7 +1974,7 @@
           <button class="pm-addr" id="pmCopy"><span id="pmWallet"></span><span class="pm-copyico" id="pmCopyIco"></span></button>
           <span class="pm-hint" id="pmHint">Нажми, чтобы скопировать адрес</span>
         </div>
-        <button class="link-btn" id="pmClose" style="margin:0;padding:10px">Закрыть</button>
+        <button class="modal-btn" id="pmClose">Закрыть</button>
       </div>
     </div>
     <!-- ПЛАН НА СЕГОДНЯ. Каждая строка целиком — кнопка: раньше название программы
@@ -1997,7 +2034,7 @@
       </div>
     </div>
     <div id="mineList"></div>
-    <button class="btn-ghost" id="btnCreateBottom">＋ Добавить программу</button>
+    <button class="btn-ghost" id="btnCreateBottom"><span data-icon="plus"></span>Добавить программу</button>
   </section>
 
   <!-- ШАГ 2: экран старта -->
@@ -2132,7 +2169,7 @@
       <p class="field-hint" id="bVariantHint"></p>
       <div class="plan-tabs" id="planTabsTop"></div>
       <div id="bExList"></div>
-      <button class="btn-ghost" id="btnAddEx">＋ Добавить упражнение</button>
+      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
@@ -2296,18 +2333,20 @@
       <span class="mini-label">Прервать тренировку</span>
       <p class="field-hint" id="exitProgress"></p>
       <button class="choice" id="exitSave"><b>Сохранить и выйти</b><small>В следующий раз продолжишь с этого места</small></button>
-      <button class="choice" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
-      <button class="link-btn" id="exitCancel" style="margin:0;padding:10px">Отмена</button>
+      <button class="choice primary" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
+      <button class="modal-btn" id="exitCancel">Отмена</button>
     </div>
   </div>
 
   <div class="modal" id="startModal">
     <div class="modal-card">
       <span class="mini-label">С чего начать</span>
-      <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
-      <button class="choice" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
+      <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
+           стоит последним, у самого пальца, и единственный выделен -->
       <button class="choice" id="startPick"><b>Выбрать упражнение</b><small>Начать с любого места программы</small></button>
-      <button class="link-btn" id="startCancel" style="margin:0;padding:10px">Отмена</button>
+      <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
+      <button class="choice primary" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
+      <button class="modal-btn" id="startCancel">Отмена</button>
     </div>
   </div>
 
@@ -2315,7 +2354,7 @@
     <div class="modal-card">
       <span class="mini-label">С какого упражнения начать</span>
       <div class="pick-list" id="pickList"></div>
-      <button class="link-btn" id="pickCancel" style="margin:0;padding:10px">Отмена</button>
+      <button class="modal-btn" id="pickCancel">Отмена</button>
     </div>
   </div>
 
@@ -2332,7 +2371,7 @@
     <div class="wa-track"><div class="wa-fill" id="waFill"></div></div>
   </div>
 
-  <div class="modal" id="aiRunModal">
+  <div class="modal" id="aiRunModal" data-locked="1">
     <div class="modal-card" style="text-align:center">
       <div class="ai-spin"></div>
       <b class="ai-run-title" id="aiRunTitle">Нейросеть работает</b>
@@ -2349,8 +2388,8 @@
       <p class="field-hint hidden" id="slotEmptyHint">Загруженных картинок пока нет — выбери их с телефона.</p>
       <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
-      <button type="button" class="link-btn" id="slotRemove" style="margin:6px 0 0;padding:10px;color:var(--danger)">Убрать картинку</button>
-      <button class="link-btn" id="slotCancel" style="margin:0;padding:10px">Отмена</button>
+      <button type="button" class="modal-btn danger" id="slotRemove">Убрать картинку</button>
+      <button class="modal-btn" id="slotCancel">Отмена</button>
     </div>
   </div>
 
@@ -2935,7 +2974,7 @@
       <div class="act-row">
         <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
         <button class="btn-prev" id="btnPause" title="Пауза"></button>
-        <button class="btn-done" id="btnDone">Готово ✓</button>
+        <button class="btn-done" id="btnDone"><span>Готово</span><span data-icon="check"></span></button>
         <button class="btn-skip" id="btnSkip">Пропустить</button>
       </div>
     </div>
@@ -2944,7 +2983,7 @@
   <!-- ШАГ 3: финал -->
   <section class="screen" id="scrFinish">
     <div class="finish">
-      <div class="medal">🏅</div>
+      <div class="medal" data-icon="medal"></div>
       <h2>Отличная работа!</h2>
       <div class="result-card">
         <div class="rc-main">
@@ -2998,7 +3037,7 @@
       </div>
       <div id="obStep3" class="hidden" style="text-align:center">
         <div class="step-dots" style="justify-content:center"><i class="done"></i><i class="done"></i><i class="on"></i></div>
-        <div class="medal">🎉</div>
+        <div class="medal" data-icon="confetti"></div>
         <h2 class="ob-title" id="obDoneTitle">Готово!</h2>
         <p class="ob-lead">Универсальная разминка на 10 минут уже в твоём списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
         <button class="btn-primary" id="obStart">Начать разминку</button>
@@ -3140,7 +3179,7 @@
     </button>
     <div class="section-title hidden" id="usersTitle">Другие профили</div>
     <div id="usersList"></div>
-    <button class="choice" id="btnAddUser" style="text-align:center"><b>＋ Добавить профиль</b></button>
+    <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
     <p class="field-hint" id="usersHint"></p>
   </section>
 
@@ -3262,7 +3301,7 @@
         <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Чтобы не было звука активации микрофона — отключи звук уведомлений в системе на время тренировки</small></button>
         <button class="choice" data-hf="clap"><b>Хлопок</b><small>2 хлопка — дальше, 3 — пауза. Без системных звуков, офлайн</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
-        <button class="link-btn" id="hfClose" style="margin:0;padding:10px">Закрыть</button>
+        <button class="modal-btn" id="hfClose">Закрыть</button>
       </div>
     </div>
 
@@ -3292,7 +3331,7 @@
         <p class="dlg-msg" id="dlgMsg"></p>
         <textarea id="dlgCode" readonly class="hidden"></textarea>
         <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
-        <button class="link-btn" id="dlgCancel" style="margin:0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="dlgCancel">Отмена</button>
       </div>
     </div>
 
@@ -3307,7 +3346,7 @@
         <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px">Заменить через ИИ сейчас</button>
         <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
         <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
-        <button class="link-btn" id="swapCopy" style="margin:0;padding:10px">Скопировать название и описание</button>
+        <button class="modal-btn" id="swapCopy">Скопировать название и описание</button>
       </div>
     </div>
 
@@ -3316,7 +3355,7 @@
         <span class="mini-label">Новое упражнение</span>
         <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, частые ошибки и пиктограмму.</small></span></button>
         <button class="choice ico" id="aeManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Заполнить поля самой: название, повторения или время, подходы, отдых.</small></span></button>
-        <button class="link-btn" id="aeCancel" style="margin:0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="aeCancel">Отмена</button>
       </div>
     </div>
 
@@ -3327,7 +3366,7 @@
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Дай ссылку на тренировку — нейросеть посмотрит ролик и разложит его на упражнения с таймингом.</small></span></button>
         <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Собрать самой с нуля: упражнения, повторения или время, круги и дни недели.</small></span></button>
         <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>Из файла или ссылки</b><small>Открыть программу, которой с тобой поделились: файл, ссылка или код.</small></span></button>
-        <button class="link-btn" id="chCancel" style="margin:0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="chCancel">Отмена</button>
       </div>
     </div>
 
@@ -3348,7 +3387,7 @@
         </div>
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0"></p>
         <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
-        <button class="link-btn" id="cmpClose" style="margin:0;padding:10px">Закрыть</button>
+        <button class="modal-btn" id="cmpClose">Закрыть</button>
       </div>
     </div>
 
@@ -3363,7 +3402,7 @@
           <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
         <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
-        <button class="link-btn" id="waCancel" style="margin:0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="waCancel">Отмена</button>
       </div>
     </div>
 
@@ -3372,7 +3411,7 @@
         <span class="mini-label">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
-        <button class="link-btn" id="whCancel" style="margin:0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="whCancel">Отмена</button>
       </div>
     </div>
 
@@ -3385,7 +3424,7 @@
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px">Файл передаёт программу целиком — с обложкой и фото упражнений. Ссылка и код легче, но без картинок.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
-        <button class="link-btn" id="importCancel" style="margin:6px 0 0;padding:10px">Отмена</button>
+        <button class="modal-btn" id="importCancel">Отмена</button>
       </div>
     </div>
 
@@ -3755,6 +3794,24 @@ document.addEventListener('pointerdown', e => {
 }, {passive: true});
 
 /* ================= ИКОНКИ (единый стиль, stroke 2) ================= */
+/* ================= ИКОНКИ =================
+   ЕДИНСТВЕННЫЙ источник иконок в приложении — этот объект. Ни эмодзи, ни типографские
+   заменители («＋», «‹», «✕», «✓»), ни картинки со стороны: они не масштабируются, не
+   слушаются темы и на каждом устройстве выглядят по-своему.
+
+   Как пользоваться:
+   • в разметке — пустой элемент с атрибутом: <span data-icon="plus"></span>.
+     Один проход по документу на старте подставит SVG во все такие элементы, заводить
+     строку JS на каждую новую кнопку не нужно;
+   • из кода — icon('plus') возвращает готовую разметку <svg>.
+
+   Как добавлять новую иконку: только сюда, значением — ВНУТРЕННОСТИ svg (пути, круги),
+   без самого тега <svg>: обёртку с общими атрибутами добавляет icon(). Правила формы —
+   сетка 24×24, только контур (stroke), толщина 2, скругления на концах, никакой заливки
+   и никаких захардкоженных цветов: цвет наследуется через currentColor.
+
+   Единственное исключение — логотип YouTube в разметке: это чужой фирменный знак,
+   у него своя форма и заливка, и «привести его к сетке» значит нарисовать не его. */
 const ICONS = {
   pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   grip: '<circle cx="9" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="19" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="19" r="1.3" fill="currentColor" stroke="none"/>',
@@ -3793,6 +3850,19 @@ const ICONS = {
   target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
   user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
+  crown: '<path d="M3.5 18h17l1.2-9.4-5 3.4L12 4.6 7.3 12l-5-3.4L3.5 18Z"/><path d="M4.4 21h15.2"/>',
+  trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.6a2 2 0 0 0 0 4H7M17 6h2.4a2 2 0 0 1 0 4H17"/><path d="M12 14v3M8.5 20.5h7M9.6 17.6h4.8l1 2.9H8.6l1-2.9Z"/>',
+  rocket: '<path d="M12 2.7c2.9 2.2 4.4 5.4 4.4 9.2l-1.7 3.4H9.3L7.6 11.9c0-3.8 1.5-7 4.4-9.2Z"/><circle cx="12" cy="10" r="1.9"/><path d="M9.3 15.3 6.6 17c-.5.3-.8.9-.7 1.5l.4 2.4 3.3-1.6M14.7 15.3l2.7 1.7c.5.3.8.9.7 1.5l-.4 2.4-3.3-1.6"/>',
+  gem: '<path d="M7.4 3.5h9.2l3.9 5.2L12 20.5 3.5 8.7l3.9-5.2Z"/><path d="M3.5 8.7h17M8.6 8.7 12 20.5l3.4-11.8M7.4 3.5l1.2 5.2M16.6 3.5l-1.2 5.2"/>',
+  star: '<path d="m12 3.2 2.7 5.6 6 .8-4.4 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.3 9.6l6-.8L12 3.2Z"/>',
+  sprout: '<path d="M12 21v-7.4"/><path d="M12 13.6C12 10.5 9.6 8 6.4 8c0 3.1 2.5 5.6 5.6 5.6Z"/><path d="M12 12.4c0-3.1 2.5-5.6 5.6-5.6 0 3.1-2.5 5.6-5.6 5.6Z"/><path d="M8 21h8"/>',
+  bolt: '<path d="M13.4 2.5 4.8 13.2h5.6l-.6 8.3 8.6-10.7h-5.6l.6-8.3Z"/>',
+  confetti: '<path d="M3.4 20.6 9 8.4l6.2 6.2-11.8 6Z"/><path d="m10.6 10 3.4 3.4"/>'
+          + '<circle cx="18.4" cy="4.6" r="1.1" fill="currentColor" stroke="none"/>'
+          + '<circle cx="13.9" cy="3.4" r="1.1" fill="currentColor" stroke="none"/>'
+          + '<circle cx="20.6" cy="9.4" r="1.1" fill="currentColor" stroke="none"/>'
+          + '<path d="M16.1 8.6 18 6.7M13.4 7.1l1.2-1.2"/>',
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   store: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1 11.2a2 2 0 0 1-2 1.8H7a2 2 0 0 1-2-1.8L4 8Z"/><path d="M8.5 11V6.5a3.5 3.5 0 0 1 7 0V11"/></svg>`,
@@ -3954,7 +4024,37 @@ const LEAVE_GUARDS = {
   scrExEdAI:   ()=> aiScreenDirty(['exeWish','exeResult']) ? {what:'Заполненный запрос'} : null
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
+// Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
+// Закрываем ровно тем же путём, что и собственная кнопка отмены: на ней у части
+// попапов висит возврат состояния, и простое снятие класса его бы потеряло.
+// #dlg проверяем первым: он лежит выше остальных (z-index 90) и может быть открыт
+// поверх другого попапа.
+function dismissTopModal(){
+  const dlg = $('dlg');
+  const m = dlg.classList.contains('open')
+    ? dlg
+    : [...document.querySelectorAll('.modal.open')].pop();
+  if(!m) return false;
+  // попап хода работы: пока идёт запрос к ИИ, закрывать нечего — жест просто гасим
+  if(m.dataset.locked === '1') return true;
+  if(m === dlg){
+    // тот же путь, что и нажатие мимо карточки: промис appDialog обязан завершиться
+    m.dispatchEvent(new MouseEvent('click', {bubbles: false}));
+    return true;
+  }
+  const cancel = m.querySelector('.modal-btn');
+  if(cancel){ cancel.click(); return true; }
+  m.classList.remove('open');
+  return true;
+}
+
 window.addEventListener('popstate', async e => {
+  // открытый попап забирает жест себе — экран под ним остаётся на месте
+  if(document.querySelector('.modal.open')){
+    try{ history.pushState(e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
+    dismissTopModal();
+    return;
+  }
   if($('scrWork').classList.contains('on')){
     // назад во время тренировки — спрашиваем, а не выбрасываем
     try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
@@ -4689,8 +4789,8 @@ function renderStatsBlock(){
     : `На этой неделе: ${doneWeek}`;
 
   const si = calcStreakInfo();
-  $('streakStat').textContent = si.n
-    ? `🔥 ${si.n} ${streakWord(si.n, si.byPlan)}${si.freezes ? ' · ❄ пропуск прощён' : ''}`
+  $('streakStat').innerHTML = si.n
+    ? icon('flame') + `<span>${si.n} ${streakWord(si.n, si.byPlan)}${si.freezes ? ' · пропуск прощён' : ''}</span>`
     : '';
 
   // мини-график: сколько тренировок в каждую из 8 последних недель.
@@ -5082,7 +5182,7 @@ function renderPhotos(){
   if(n){
     const last = new Date(photos[photos.length - 1].d);
     const days = Math.floor((new Date() - last) / 86400000);
-    hint.textContent = days >= 7 ? 'пора обновить 📸' : '';
+    hint.textContent = days >= 7 ? 'пора обновить' : '';
     hint.style.color = 'var(--danger)';
   } else hint.textContent = '';
   const strip = $('photoStrip');
@@ -6311,7 +6411,7 @@ function renderTray(){
   imgTray.forEach((data, i)=>{
     const el = document.createElement('div');
     el.className = 'tray-item';
-    el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">✕</button>`;
+    el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
     el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
     el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку.');
     box.appendChild(el);
@@ -8440,7 +8540,7 @@ function buildPlanTabs(boxId){
     const add = document.createElement('button');
     add.type = 'button';
     add.className = 'plan-tab add';
-    add.textContent = '＋ вариант';
+    add.innerHTML = icon('plus') + 'вариант';
     add.onclick = ()=>{
       commitPlanFields();
       draft.plans.push(blankPlan());
@@ -10408,16 +10508,16 @@ function confetti(){
 }
 
 const BADGES = [
-  {id: 'first', emoji: '🌱', name: 'Первый шаг',   desc: 'Первая тренировка', test: () => stats.count >= 1},
-  {id: 't5',    emoji: '⭐', name: 'Разминка',      desc: '5 тренировок',      test: () => stats.count >= 5},
-  {id: 't10',   emoji: '💪', name: 'В ритме',       desc: '10 тренировок',     test: () => stats.count >= 10},
-  {id: 't25',   emoji: '🏆', name: 'Втянулась',     desc: '25 тренировок',     test: () => stats.count >= 25},
-  {id: 't50',   emoji: '👑', name: 'Железная леди', desc: '50 тренировок',     test: () => stats.count >= 50},
-  {id: 't100',  emoji: '🌟', name: 'Сотня',         desc: '100 тренировок',    test: () => stats.count >= 100},
-  {id: 's3',    emoji: '🔥', name: 'Серия',         desc: '3 подряд по плану',  test: () => calcStreak() >= 3},
-  {id: 's7',    emoji: '🚀', name: 'Неделя силы',   desc: '7 подряд по плану',  test: () => calcStreak() >= 7},
-  {id: 's14',   emoji: '💎', name: 'Две недели',    desc: '14 подряд по плану', test: () => calcStreak() >= 14},
-  {id: 's30',   emoji: '⚡', name: 'Несокрушимая',  desc: '30 подряд по плану', test: () => calcStreak() >= 30}
+  {id: 'first', ico: 'sprout',   name: 'Первый шаг',   desc: 'Первая тренировка', test: () => stats.count >= 1},
+  {id: 't5',    ico: 'star',     name: 'Разминка',      desc: '5 тренировок',      test: () => stats.count >= 5},
+  {id: 't10',   ico: 'dumbbell', name: 'В ритме',       desc: '10 тренировок',     test: () => stats.count >= 10},
+  {id: 't25',   ico: 'trophy',   name: 'Втянулась',     desc: '25 тренировок',     test: () => stats.count >= 25},
+  {id: 't50',   ico: 'crown',    name: 'Железная леди', desc: '50 тренировок',     test: () => stats.count >= 50},
+  {id: 't100',  ico: 'medal',    name: 'Сотня',         desc: '100 тренировок',    test: () => stats.count >= 100},
+  {id: 's3',    ico: 'flame',    name: 'Серия',         desc: '3 подряд по плану',  test: () => calcStreak() >= 3},
+  {id: 's7',    ico: 'rocket',   name: 'Неделя силы',   desc: '7 подряд по плану',  test: () => calcStreak() >= 7},
+  {id: 's14',   ico: 'gem',      name: 'Две недели',    desc: '14 подряд по плану', test: () => calcStreak() >= 14},
+  {id: 's30',   ico: 'bolt',     name: 'Несокрушимая',  desc: '30 подряд по плану', test: () => calcStreak() >= 30}
 ];
 function renderBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
@@ -10430,13 +10530,13 @@ function renderBadges(){
   }
   $('badgeRow').innerHTML = toShow.map(b =>
     `<div class="badge${fresh.includes(b.id) ? ' new' : ''}">
-       <span class="b-emoji">${b.emoji}</span>
+       <span class="b-ico">${icon(b.ico)}</span>
        <div class="b-txt"><b>${b.name}</b><small>${fresh.includes(b.id) ? 'Новое достижение!' : b.desc}</small></div>
      </div>`
   ).join('');
   const si = calcStreakInfo();
   if(si.n > 1){
-    $('finStreak').textContent = si.n + (si.freezes ? ' ❄' : '');
+    $('finStreak').textContent = si.n;
     $('finStreakWord').textContent = si.byPlan ? 'подряд по плану' : 'дней подряд';
     setShown('finStreakBox', true);
   } else setShown('finStreakBox', false);
