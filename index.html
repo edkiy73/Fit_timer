@@ -102,6 +102,10 @@
     transition:background .6s ease;
     display:flex;flex-direction:column;
     min-height:100dvh;
+    /* ничто декоративное не должно создавать горизонтальную прокрутку: свечение за
+       заголовком шире колонки специально. clip (а не hidden) не делает body
+       контейнером прокрутки, поэтому липкие панели продолжают работать */
+    overflow-x:clip;
   }
   body.phase-rest{background:var(--bg-rest)}
 
@@ -173,8 +177,19 @@
   .btn-resume:active{transform:scale(.94)}
 
   /* ---------- screens ---------- */
-  .screen{display:none;flex:1;flex-direction:column}
+  .screen{display:none;flex:1;flex-direction:column;min-width:0}
   .screen.on{display:flex;animation:screenIn .26s ease}
+
+  /* ---------- экран тренировки: кнопки всегда на одном месте ----------
+     min-height у body задаёт только минимум, поэтому при длинном описании вся колонка
+     росла вниз и панель управления уезжала за нижний край — до неё приходилось
+     доскроллить. На тренировке это недопустимо: кнопки нужны мгновенно и вслепую.
+     Здесь высота становится ОПРЕДЕЛЁННОЙ, и лишнее берёт на себя блок описания. */
+  body.screen-work{height:100dvh;overflow:hidden}
+  body.screen-work .app{min-height:0}
+  body.screen-work #scrWork{min-height:0}
+  body.screen-work .details{flex:1 1 auto}
+  body.screen-work .actions{flex:none;position:static}
   @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   /* ---------- menu ---------- */
@@ -206,7 +221,10 @@
   }
   .month-card p{color:var(--muted);font-size:var(--fs-sm);line-height:1.4}
   .month-card .sched svg{width:12px;height:12px;flex:none}
-  .month-card .sched{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 9px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:500}
+  .month-card .sched{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:500;white-space:nowrap}
+  /* расписание и очередь — отдельные чипы: если не влезают в строку, переносится
+     чип целиком, а не разрывается фраза посередине */
+  .mc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 
   /* ---------- мои программы ---------- */
   .section-title{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px}
@@ -389,7 +407,7 @@
   .progress .fill{height:100%;width:0;background:var(--grad-accent);border-radius:var(--r-pill);transition:width .4s ease}
   body.phase-rest .progress .fill{background:var(--grad-rest)}
 
-  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:var(--sp-2) 0 6vh;min-height:0}
+  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:var(--sp-2) 0 6vh;min-height:0;overflow-x:clip}
   .stage > *{position:relative;z-index:1}
   .phase-tag{
     display:inline-flex;align-items:center;align-self:center;
@@ -3359,6 +3377,9 @@ function show(id, push = true){
   $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
   $('btnUsers').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
   $('btnStats').classList.toggle('off', id==='scrWork' || id==='scrOnboard');
+  // тренировка живёт ровно в один экран телефона: скроллится только описание,
+  // а панель управления всегда на одном месте (см. body.screen-work в стилях)
+  document.body.classList.toggle('screen-work', id==='scrWork');
 }
 
 /* ================= ЭКРАН 2: СТАРТ ================= */
@@ -6103,9 +6124,10 @@ function renderMine(){
     const plans = normPlans(p);
     const exTotal = plans.reduce((n, pl)=> n + pl.exercises.length, 0);
     const daysU = programDaysUnion(p);
-    const schedule = p.rotate && plans.length > 1
-      ? [daysU.length ? daysU.join(' · ') : '', p.time, 'варианты по очереди'].filter(Boolean).join(' · ')
-      : [daysU.length ? daysU.join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    // расписание — один чип, очередь вариантов — отдельный: длинная строка
+    // «Пн · Ср · 07:30 · варианты по очереди» разрывалась посреди фразы
+    const schedule = [daysU.length ? daysU.join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${p.cover}" alt="">` : DUMBBELL_ICON;
     const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
@@ -6122,7 +6144,12 @@ function renderMine(){
       `<div class="mc-body"><h3></h3>` +
       `<p>${line1}</p>` +
       (done ? `<p>Пройдено раз: ${done}</p>` : '') +
-      (schedule ? `<p><span class="sched">${icon('calendar')}<span></span></span></p>` : '') + `</div>`;
+      ((schedule || rotates)
+        ? `<p class="mc-chips">` +
+          (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
+          (rotates ? `<span class="sched">${icon('reset')}по очереди</span>` : '') +
+          `</p>`
+        : '') + `</div>`;
     card.querySelector('h3').textContent = p.name;
     if(schedule) card.querySelector('.sched span').textContent = schedule;
     card.onclick = ()=> openStart(p);
