@@ -115,8 +115,9 @@
   body.light .mc-cover.demo{background:var(--accent-soft);color:var(--accent-ink)}
   body.light .nu-media{background:var(--plate-dark);color:#CBBEE6}
   body.light .nu-media.light{background:var(--plate-light)}
-  /* светлые линии пользовательских SVG на белой карточке — подкладываем тёмный фон */
-  body.light .illo .userSvg:not(.light){background:var(--plate-dark);border-radius:10px;padding:8px}
+  /* светлые линии пользовательских SVG на белой карточке — подкладываем тёмный фон.
+     На тренировке эта подложка и есть обложка карточки: во всю ширину, без своего скругления */
+  body.light .illo .userSvg:not(.light){background:var(--plate-dark);border-radius:0;padding:12px}
   .app{
     width:100%;max-width:520px;margin:0 auto;
     flex:1;display:flex;flex-direction:column;
@@ -188,7 +189,7 @@
   body.screen-work{height:100dvh;overflow:hidden}
   body.screen-work .app{min-height:0}
   body.screen-work #scrWork{min-height:0}
-  body.screen-work .details{flex:1 1 auto}
+  body.screen-work .details{flex:0 1 auto}
   body.screen-work .actions{flex:none;position:static}
   @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -407,7 +408,14 @@
   .progress .fill{height:100%;width:0;background:var(--grad-accent);border-radius:var(--r-pill);transition:width .4s ease}
   body.phase-rest .progress .fill{background:var(--grad-rest)}
 
-  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:var(--sp-2) 0 6vh;min-height:0;overflow-x:clip}
+  /* Экран тренировки — две зоны с разными задачами.
+     ВЕРХ (.stage-head) стоит на месте и не двигается от упражнения к упражнению: название
+     и цифра — то, за чем возвращается взгляд, они не должны прыгать из-за длины описания.
+     НИЗ (.details) забирает ВСЮ оставшуюся высоту до кнопок. Раньше здесь был
+     декоративный padding-bottom:6vh и центрирование всей колонки: 55 px пустоты внизу,
+     при этом 95 px текста оставались за краем. Теперь пустоты нет вовсе, а если контент
+     всё равно не помещается — он прокручивается, и край это показывает. */
+  .stage{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:var(--sp-2) 0 0;min-height:0;overflow-x:clip}
   .stage > *{position:relative;z-index:1}
   .phase-tag{
     display:inline-flex;align-items:center;align-self:center;
@@ -440,6 +448,7 @@
   .stage h2{font-size:clamp(25px,6.8vw,34px);line-height:1.08;margin:10px 0 2px;min-height:1.1em;overflow-wrap:anywhere}
   .reps{font-family:var(--font-display);font-weight:700;font-size:clamp(42px,12vw,60px);color:var(--accent-ink);line-height:1;margin:6px 0 2px;min-height:.9em;font-variant-numeric:tabular-nums;letter-spacing:.01em}
   .reps small{font-size:.34em;color:var(--muted);font-weight:500;letter-spacing:.12em;vertical-align:middle}
+  .reps small.kg{color:var(--ink)}
   body.phase-rest .reps{color:var(--rest-ink)}
 
   .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
@@ -453,52 +462,98 @@
   .rb-fill{height:100%;width:100%;border-radius:99px;background:var(--work)}
   body.phase-rest .rb-fill{background:var(--rest)}
   .details{
+    /* растём по содержимому, но НЕ выше свободного места: длинное описание займёт всё
+       до кнопок и станет прокручиваемым, короткое — ровно свою высоту, без дыры внутри.
+       Пустоту, если она осталась, делит поровну центрирование всей колонки (.stage). */
     flex:0 1 auto;min-height:0;width:100%;max-width:420px;margin:var(--sp-3) auto 0;
-    overflow-y:auto;padding:0 4px;-webkit-overflow-scrolling:touch;text-align:left;
+    overflow-y:auto;padding:0 2px 2px;-webkit-overflow-scrolling:touch;text-align:left;
+    display:flex;flex-direction:column;gap:var(--sp-3);
+    /* края растворяются ровно тогда, когда за ними есть текст (значения ставит JS) */
+    --fade-t:0px; --fade-b:0px;
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade-t),#000 calc(100% - var(--fade-b)),transparent 100%);
+    mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade-t),#000 calc(100% - var(--fade-b)),transparent 100%);
   }
+  .details > *{flex:0 0 auto}
+  /* подсказка «текст продолжается»: появляется только когда снизу правда что-то есть.
+     Прижата к правому краю — как ползунок прокрутки, а не как клякса посреди фразы */
+  .stage > .scroll-cue{
+    position:absolute;right:4px;bottom:2px;z-index:3;pointer-events:none;
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line-2);color:var(--muted);
+    box-shadow:var(--sh-1);animation:cueBob 1.9s ease-in-out infinite;
+  }
+  .scroll-cue svg{width:15px;height:15px}
+  @keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
   /* полосы прокрутки скрыты — жест остаётся, визуального мусора нет */
   *::-webkit-scrollbar{width:0;height:0;background:transparent}
   *{scrollbar-width:none;-ms-overflow-style:none}
-  .illo-wrap{position:relative;margin:0 0 14px;width:100%}
+
+  /* ---- карточка упражнения: картинка, мышцы, описание и ошибки — ОДИН объект ----
+     Раньше это были четыре разнородные плашки со своими рамками, отступами и
+     выравниванием. Теперь одна поверхность: обложка сверху, тело с единым полем,
+     предупреждение — подвал той же карточки. */
+  .wk-card{
+    width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-1);
+  }
+  .wk-body{display:flex;flex-direction:column;gap:10px;padding:var(--sp-3) var(--sp-4) var(--sp-4)}
+  /* в теле карточки осталось одно предупреждение — верхнее поле превратилось бы
+     в узкую белую полосу между обложкой и жёлтой плашкой */
+  .wk-body:not(:has(.video-cta.on, .muscle-row:not(.hidden), .instruction:not(:empty))){padding-top:0}
+  .illo-wrap{position:relative;margin:0;width:100%}
   body.phase-rest .illo-wrap{display:none}
-  /* картинка упражнения — без рамки-карточки, только еле заметная граница */
-  .illo{background:none;border:1px solid var(--line);border-radius:16px;padding:0;overflow:hidden;line-height:0}
-  .illo svg{width:100%;height:auto;max-height:26vh;display:block}
-  .illo img{width:100%;height:auto;max-height:26vh;object-fit:cover;display:block}
+  /* обложка карточки: картинка во всю ширину, подложка одна и та же для фото и пиктограмм */
+  .illo{
+    background:var(--surface);border:none;border-radius:0;padding:0;overflow:hidden;line-height:0;
+    border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  }
+  .illo svg{width:100%;height:auto;max-height:min(26vh,210px);display:block}
+  .illo img{width:100%;height:auto;max-height:min(26vh,210px);object-fit:cover;display:block}
+  .illo > *{width:100%}
   .illo .userSvg{padding:12px}
   .illo .stick{stroke:var(--ink);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
   .illo .prop{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .head{fill:var(--ink)}
   .yt-badge{
-    position:absolute;top:24px;right:24px;width:32px;height:32px;border-radius:9px;
-    background:rgba(0,0,0,.6);color:#fff;
+    position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;
+    background:rgba(0,0,0,.62);color:#fff;
     display:none;align-items:center;justify-content:center;text-decoration:none;
   }
   .yt-badge.on{display:flex}
   .yt-badge svg{width:17px;height:17px}
+  /* нет картинки — вместо неё ссылка на видео первой строкой тела карточки */
   .video-cta{
     display:none;align-items:center;justify-content:center;gap:8px;
-    text-decoration:none;color:var(--ink);margin:0 auto 14px;
-    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;font-size:14px;
+    text-decoration:none;color:var(--ink);margin:0;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+    min-height:44px;padding:0 14px;font-size:14px;
   }
   .video-cta.on{display:flex}
   .video-cta svg{width:20px;height:20px;color:#FF0000}
   body.phase-rest .video-cta{display:none}
-  .instruction-card{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
-    padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);box-shadow:var(--sh-1);
-  }
+  /* описание — обычный абзац внутри карточки, своей рамки у него больше нет */
+  .instruction-card{background:none;border:none;border-radius:0;padding:0;margin:0;box-shadow:none}
   .instruction-card:has(.instruction:empty){display:none}
-  .instruction{color:var(--muted);font-size:15px;line-height:1.55;text-align:left;margin:0}
-  .muscle-row{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}
-  .m-chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
-  .m-chip{border:1px solid var(--accent-line);color:var(--accent-ink);border-radius:999px;padding:2px 9px;font-size:10.5px}
-  body.phase-rest .muscle-row{display:none !important}
-  .mistakes{
-    color:var(--warn);font-size:13.5px;line-height:1.5;margin-top:12px;text-align:left;
-    background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-md);padding:10px 12px;
+  .instruction{color:var(--muted);font-size:15px;line-height:1.6;text-align:left;margin:0}
+  .muscle-row{display:flex;align-items:center;justify-content:flex-start;gap:6px;flex-wrap:wrap;margin:0}
+  .m-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
+  .m-chip{
+    border:1px solid var(--line);background:var(--surface);color:var(--muted);
+    border-radius:var(--r-pill);padding:3px 10px;font-size:11.5px;line-height:1.4;
   }
+  body.phase-rest .muscle-row{display:none !important}
+  /* ошибки — подвал карточки во всю её ширину: часть объекта, а не отдельная плашка.
+     Отрицательные поля гасят padding тела, скругление даёт сама карточка (overflow:hidden) */
+  .mistakes{
+    display:flex;align-items:flex-start;gap:9px;
+    color:var(--warn);font-size:13.5px;line-height:1.45;text-align:left;
+    background:var(--warn-soft);border:none;border-top:1px solid var(--warn-line);border-radius:0;
+    padding:11px var(--sp-4);
+    margin:2px calc(var(--sp-4) * -1) calc(var(--sp-4) * -1);
+  }
+  .mistakes svg{width:17px;height:17px;flex:none;margin-top:1px}
   .chips-wrap .day-chip{flex:0 0 auto;padding:9px 13px}
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
@@ -511,37 +566,50 @@
   .cmp-img{margin-top:8px;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:3/4;touch-action:pan-y}
   .cmp-img img{width:100%;height:100%;object-fit:cover;display:block}
 
-  /* карточка следующего упражнения на экране отдыха */
+  /* Карточка «дальше» на отдыхе — та же форма, что и карточка упражнения:
+     одна поверхность, тот же радиус, та же тень, только цвет фазы другой.
+     Раньше она растягивалась на всю высоту и описание подгонялось скриптом —
+     полупустая растянутая рамка и выглядела дёшево. Теперь карточка по содержимому
+     и стоит по центру свободного места: отдых — это пауза, ей идёт простор. */
   .next-up{
-    display:block;max-width:420px;margin:var(--sp-4) auto 0;text-align:left;
-    background:var(--rest-soft);border:1px solid var(--rest-line);
-    border-radius:var(--r-lg);padding:var(--sp-3) var(--sp-4);
+    display:block;width:100%;margin:0;text-align:left;
+    background:var(--card-rest);border:1px solid var(--rest-line);
+    border-radius:var(--r-lg);padding:var(--sp-4);box-shadow:var(--sh-1);
   }
-  .next-up .nu-label{font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--rest-ink);margin-bottom:8px}
-  .nu-row{display:flex;gap:12px;align-items:center}
+  .next-up .nu-label{
+    display:flex;align-items:center;gap:10px;margin-bottom:12px;
+    font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--rest-ink);
+  }
+  .next-up .nu-label::after{content:'';flex:1;height:1px;background:var(--rest-line)}
+  .nu-row{display:flex;gap:var(--sp-3);align-items:flex-start}
   .nu-media{
-    flex:none;width:56px;height:56px;border-radius:12px;overflow:hidden;
-    background:var(--line);color:var(--muted);
+    flex:none;width:64px;height:64px;border-radius:var(--r-md);overflow:hidden;
+    background:var(--rest-soft);color:var(--muted);
     display:flex;align-items:center;justify-content:center;
   }
   .nu-media.light{background:var(--plate-light)}
   .nu-media img{width:100%;height:100%;object-fit:cover;display:block}
   .nu-media svg{width:85%;height:85%}
   .nu-body{flex:1;min-width:0}
-  .nu-body h4{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 3px;line-height:1.2}
+  .nu-body h4{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px;line-height:1.2}
   .nu-body p{
-    color:var(--muted);font-size:12.5px;line-height:1.35;margin:0;
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+    color:var(--muted);font-size:13px;line-height:1.45;margin:0;
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
   }
-  .nu-val{margin-top:5px;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--rest-ink);letter-spacing:.06em}
-  /* на отдыхе превью следующего упражнения растягивается на всё свободное место */
-  body.phase-rest .details{flex:0 0 auto}
-  /* растём по содержимому, но не выше доступного места */
-  body.phase-rest .next-up{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  body.phase-rest .next-up .nu-row{min-height:0;align-items:flex-start}
-  body.phase-rest .next-up .nu-body{display:flex;flex-direction:column;min-height:0}
-  body.phase-rest .next-up .nu-body p{min-height:0;margin-bottom:6px}
-  body.phase-rest .next-up .nu-val{flex:none;margin-top:0}
+  .nu-val{margin-top:8px;font-family:var(--font-display);font-weight:600;font-size:13.5px;color:var(--rest-ink);letter-spacing:.06em}
+  /* отдых спокойнее: название фазы — тихая надстрочная подпись, герой — таймер */
+  body.phase-rest .stage h2{
+    font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.24em;
+    color:var(--rest-ink);margin:2px 0 0;min-height:0;
+  }
+  body.phase-rest .count{margin:10px 0 6px}
+  /* на отдыхе у карточки нет ни картинки, ни мышц, ни ошибок — остаётся одна строка
+     подсказки. Рамка вокруг неё была бы вторым лишним объектом рядом с «Дальше» */
+  body.phase-rest .wk-card{background:none;border:none;box-shadow:none}
+  body.phase-rest .wk-body{padding:0;text-align:center}
+  body.phase-rest .instruction{text-align:center}
+  body.phase-rest .details{margin-top:var(--sp-4)}
 
   .count{
     font-family:var(--font-display);font-weight:700;font-size:clamp(60px,18vw,94px) !important;
@@ -586,25 +654,45 @@
     display:flex;align-items:center;justify-content:center;font-size:44px;
     background:var(--accent-soft);border:1px solid var(--accent-line);
   }
-  .finish h2{font-size:var(--fs-2xl);margin:0 0 var(--sp-5)}
+  .finish h2{font-size:var(--fs-2xl);margin:0 0 var(--sp-4)}
   .finish p{color:var(--muted);margin-top:12px;font-size:var(--fs-md);line-height:1.55}
+  /* Одна карточка результата: время, цифры и достижения — части одного объекта,
+     разделённые волосяными линиями, а не три плитки разной ширины. */
   .result-card{
-    display:flex;align-items:stretch;gap:var(--sp-3);margin:0 0 var(--sp-1);text-align:left;
-  }
-  .rc-main{
-    flex:1;background:var(--card);border:1px solid var(--accent-line);border-radius:var(--r-xl);
-    padding:var(--sp-4) 18px;display:flex;flex-direction:column;justify-content:center;
+    display:block;text-align:left;margin:0;overflow:hidden;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);
   }
-  .rc-time{font-family:var(--font-display);font-weight:700;font-size:48px;line-height:1;color:var(--accent-ink);font-variant-numeric:tabular-nums}
-  .rc-sub{color:var(--muted);font-size:var(--fs-sm);margin-top:4px}
-  .rc-stats{display:flex;flex-direction:column;gap:var(--sp-2)}
-  .rc-stat{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
-    padding:10px 16px;min-width:100px;display:flex;flex-direction:column;justify-content:center;flex:1;
+  .rc-main{position:relative;padding:var(--sp-5) var(--sp-4) var(--sp-4);text-align:center}
+  /* тёплый акцентный блик за главной цифрой — тот же приём, что на экране тренировки */
+  .rc-main::before{
+    content:'';position:absolute;left:50%;top:-20%;width:130%;height:170%;
+    transform:translateX(-50%);pointer-events:none;
+    background:radial-gradient(closest-side,var(--accent-soft),transparent 72%);
   }
-  .rc-stat b{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
-  .rc-stat small{color:var(--muted);font-size:12px;margin-top:3px}
+  .rc-time{position:relative;font-family:var(--font-display);font-weight:700;font-size:clamp(46px,14vw,62px);line-height:1;color:var(--accent-ink);font-variant-numeric:tabular-nums}
+  .rc-sub{
+    position:relative;color:var(--muted);font-size:12px;margin-top:8px;
+    font-family:var(--font-display);font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  }
+  .rc-stats{display:flex;border-top:1px solid var(--line)}
+  .rc-stat{
+    flex:1;min-width:0;background:none;border:none;border-left:1px solid var(--line);border-radius:0;
+    padding:var(--sp-3) var(--sp-2);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;text-align:center;
+  }
+  .rc-stat:first-child{border-left:none}
+  .rc-stat b{font-family:var(--font-display);font-weight:700;font-size:21px;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+  .rc-stat small{color:var(--muted);font-size:11.5px}
+  /* заметка — тихая строка, а не главное поле экрана: открывается по нажатию */
+  .note-toggle{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    margin:var(--sp-4) auto 0;min-height:44px;padding:0 18px;border-radius:var(--r-pill);
+    background:none;border:1px solid var(--line);color:var(--muted);
+    font-family:var(--font-text);font-size:14px;cursor:pointer;
+  }
+  .note-toggle svg{width:16px;height:16px}
+  .fin-note{margin-top:var(--sp-4);text-align:left}
   .finish .time small{display:block;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.2em;margin-top:8px}
 
   /* ---------- светлая тема ---------- */
@@ -1076,12 +1164,15 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%23A99FC4' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat:no-repeat;background-position:right 10px center}
   .fin-streak{color:var(--accent-ink);font-weight:500;font-size:15px;margin-top:-8px}
-  .badge-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
-  .badge{display:flex;align-items:center;gap:11px;border:1px solid var(--line);background:var(--card);border-radius:var(--r-lg);padding:11px 16px;text-align:left;animation:badgePop .4s ease both}
-  .badge .b-emoji{font-size:26px;line-height:1}
+  /* достижения — нижняя секция карточки результата, а не отдельная плашка */
+  .badge-row{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line)}
+  .badge-row:empty{display:none}
+  .badge{display:flex;align-items:center;gap:12px;border:none;background:none;border-radius:0;padding:var(--sp-3) var(--sp-4);text-align:left;animation:badgePop .4s ease both}
+  .badge + .badge{border-top:1px solid var(--line)}
+  .badge .b-emoji{font-size:24px;line-height:1}
   .badge .b-txt b{display:block;font-size:14px;color:var(--ink)}
   .badge .b-txt small{color:var(--muted);font-size:12px}
-  .badge.new{border-color:var(--accent-line);background:var(--accent-soft);box-shadow:var(--sh-1)}
+  .badge.new{background:var(--accent-soft)}
   .badge.new .b-txt small{color:var(--accent-ink)}
   @keyframes badgePop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
   #confettiBox{position:fixed;inset:0;z-index:70;pointer-events:none;overflow:hidden}
@@ -2339,18 +2430,23 @@
         </div>
       </div>
       <div class="details" id="stepDetails">
-        <div class="illo-wrap" id="illoWrap">
-          <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
-          <div class="illo" id="illoBox"></div>
+        <div class="wk-card" id="exCard">
+          <div class="illo-wrap" id="illoWrap">
+            <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
+            <div class="illo" id="illoBox"></div>
+          </div>
+          <div class="wk-body">
+            <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
+            <div class="muscle-row hidden" id="stepMuscles"></div>
+            <div class="instruction-card">
+              <p class="instruction" id="stepInstruction"></p>
+            </div>
+            <p class="mistakes hidden" id="stepMistakes"></p>
+          </div>
         </div>
-        <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
-        <div class="muscle-row hidden" id="stepMuscles"></div>
-        <div class="instruction-card">
-          <p class="instruction" id="stepInstruction"></p>
-        </div>
-        <p class="mistakes hidden" id="stepMistakes"></p>
+        <div class="next-up hidden" id="nextUp"></div>
       </div>
-      <div class="next-up hidden" id="nextUp"></div>
+      <div class="scroll-cue hidden" id="scrollCue"></div>
     </div>
     <div class="actions">
       <div class="act-row">
@@ -2370,21 +2466,23 @@
       <div class="result-card">
         <div class="rc-main">
           <div class="rc-time" id="finalTime">0:00</div>
-          <div class="rc-sub">минут тренировки</div>
+          <div class="rc-sub">время тренировки</div>
         </div>
         <div class="rc-stats">
           <div class="rc-stat" id="finKcalBox"><b id="finKcal">—</b><small>ккал</small></div>
+          <div class="rc-stat" id="finExBox"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
           <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small>дней подряд</small></div>
         </div>
+        <div class="badge-row" id="badgeRow"></div>
       </div>
-      <div class="badge-row" id="badgeRow"></div>
-      <div class="field" style="text-align:left;margin-top:14px">
+      <button type="button" class="note-toggle" id="finNoteToggle"></button>
+      <div class="field fin-note hidden" id="finNoteField">
         <label>Заметка о тренировке</label>
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
       </div>
     </div>
     <div class="actions">
-      <button class="btn-ghost btn-share-res" id="btnShareResult"></button>
+      <button class="btn-secondary btn-share-res" id="btnShareResult"></button>
       <button class="btn-primary" id="btnAgain">На главный экран</button>
     </div>
   </section>
@@ -3163,6 +3261,7 @@ const ICONS = {
   sparkle: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/>',
   chevL: '<path d="M15 18l-6-6 6-6"/>',
   chevR: '<path d="M9 18l6-6-6-6"/>',
+  chevD: '<path d="M6 9l6 6 6-6"/>',
   more: '<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>',
   chart: '<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
   weight: '<circle cx="12" cy="6" r="3"/><path d="M6 21l1.5-9h9L18 21H6Z"/>',
@@ -8241,9 +8340,9 @@ function renderStep(){
   } else {
     setShown('stepMuscles', false);
   }
-  // частые ошибки
+  // частые ошибки — подвал карточки: иконка из общего набора вместо эмодзи
   if(step.phase === 'work' && step.mistakes){
-    $('stepMistakes').textContent = '⚠ ' + step.mistakes;
+    $('stepMistakes').innerHTML = icon('alert') + '<span>' + esc(step.mistakes) + '</span>';
     setShown('stepMistakes', true);
   } else {
     setShown('stepMistakes', false);
@@ -8308,9 +8407,20 @@ function renderStep(){
   cta.classList.toggle('on', hasVideo && !hasIllo);
   if(hasVideo){ badge.href = step.video; cta.href = step.video; }
 
+  // карточка упражнения — один объект. Показывать нечего (нет ни картинки, ни описания,
+  // ни мышц, ни ошибок) — карточки нет совсем, вместо пустой рамки остаётся воздух.
+  setShown('exCard',
+    (hasIllo && step.phase === 'work') || (hasVideo && !hasIllo) || !!mus ||
+    !!(step.phase === 'work' && step.mistakes) || !!(step.instruction || '').trim());
+  // картинка может доехать позже — пересчитаем края, когда она встанет на место
+  const im = box.querySelector('img');
+  if(im) im.addEventListener('load', refreshDetailsFade, {once:true});
+  requestAnimationFrame(refreshDetailsFade);
+
   if(step.kind === 'click'){
     setShown('stepReps', true);
-    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? ` <small>× ${fmtKg(step.weight)} кг</small>` : '';
+    // рабочий вес — часть задания, поэтому цифра контрастнее подписи «повторений»
+    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? ` <small class="kg">× ${fmtKg(step.weight)} кг</small>` : '';
     $('stepReps').innerHTML = `${valueText(step.reps)} <small>${step.repsNote || ''}</small>${kgTxt}`;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
@@ -8362,6 +8472,21 @@ function renderStep(){
       launch();
     }
   }
+}
+
+/* Край области с описанием подсказывает, что текст продолжается: сверху и снизу
+   он растворяется ровно тогда, когда там правда есть непрочитанное, а внизу
+   появляется стрелка. Обрыв текста посреди фразы больше не выглядит как ошибка. */
+function refreshDetailsFade(){
+  const d = $('stepDetails');
+  if(!d) return;
+  const below = d.scrollHeight - d.clientHeight - d.scrollTop;
+  // растворяем ровно столько, сколько скрыто (но не больше 40 px): если за краем
+  // осталась пара пикселей, гасить целую строку читаемого текста незачем
+  const fade = v => (v > 12 ? Math.min(40, v) : 0) + 'px';
+  d.style.setProperty('--fade-t', fade(d.scrollTop));
+  d.style.setProperty('--fade-b', fade(below));
+  setShown('scrollCue', below > 24);
 }
 
 function nextStep(){
@@ -8519,8 +8644,8 @@ function renderNextUp(step){
     : `${nxt.seconds} сек${nxt.perSide ? ' на каждую сторону' : ''}`;
   // подход и сторона — чтобы было видно, что именно предстоит
   const meta = [];
-  if(nxt.setsTotal > 1) meta.push(`Подход ${nxt.setNo} из ${nxt.setsTotal}`);
-  if(nxt.side) meta.push(`сторона ${nxt.side} из ${nxt.sidesTotal || 2}`);
+  if(nxt.setsTotal > 1) meta.push(`подход ${nxt.setNo}/${nxt.setsTotal}`);
+  if(nxt.side) meta.push(`сторона ${nxt.side}/${nxt.sidesTotal || 2}`);
   if(meta.length) val += ` · ${meta.join(' · ')}`;
 
   nu.innerHTML =
@@ -8531,9 +8656,8 @@ function renderNextUp(step){
       (nxt.instruction ? `<p>${esc(nxt.instruction)}</p>` : '') +
       `<div class="nu-val">${val}</div></div>` +
     `</div>`;
-  setShown(nu, true); // блок показывается только на отдыхе, растягивается колонкой
-  // описание занимает всю доступную высоту, лишнее — под многоточие
-  requestAnimationFrame(fitNextUpDesc);
+  setShown(nu, true); // блок показывается только на отдыхе
+  requestAnimationFrame(refreshDetailsFade);
 }
 
 // поле растёт по содержимому — не нужно скроллить внутри маленькой рамки.
@@ -8557,28 +8681,9 @@ document.addEventListener('input', e => {
   if(e.target && e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
 });
 
-// подбирает -webkit-line-clamp так, чтобы текст заполнил выделенное место и обрезался многоточием
-function fitNextUpDesc(){
-  const nu = $('nextUp');
-  if(!nu || nu.classList.contains('hidden')) return;
-  const p = nu.querySelector('.nu-body p');
-  if(!p) return;
-  p.style.webkitLineClamp = '999';           // снимаем ограничение, чтобы измерить настоящую высоту
-  const lh = parseFloat(getComputedStyle(p).lineHeight) || 17;
-  const stage = nu.parentElement;
-  if(!stage) return;
-  // сколько места реально осталось от начала абзаца до низа блока
-  const bottom = stage.getBoundingClientRect().bottom;
-  const top = p.getBoundingClientRect().top;
-  const val = nu.querySelector('.nu-val');
-  const tail = (val ? val.offsetHeight + 8 : 0) + 16; // строка значения + внутренние отступы
-  const avail = bottom - top - tail;
-  const fit = Math.max(2, Math.floor(avail / lh));
-  const natural = Math.ceil(p.scrollHeight / lh);
-  // если текст короче — ограничение не мешает, если длиннее — обрежется многоточием
-  p.style.webkitLineClamp = String(Math.min(natural, fit));
-}
-window.addEventListener('resize', ()=>{ if(document.body.classList.contains('phase-rest')) fitNextUpDesc(); });
+// карточка «дальше» больше не растягивается на всю высоту: описание в ней ограничено
+// четырьмя строками через CSS (line-clamp), подгонять высоту скриптом не нужно
+window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')) refreshDetailsFade(); });
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){ try{ speechSynthesis.cancel(); }catch(e){} }
@@ -8618,7 +8723,14 @@ function finishWorkout(){
   stats.history.push(histEntry);
   if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
   state.lastHist = histEntry;
+  // сколько разных упражнений пройдено — третья цифра карточки результата
+  const exNames = new Set();
+  (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
+  state.lastExCount = exNames.size;
+  $('finExLabel').textContent = plural(exNames.size, 'упражнение', 'упражнения', 'упражнений');
   $('finNote').value = '';
+  setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
+  setShown('finNoteToggle', true);
   renderBadges();
   saveStats();
   renderStats();
@@ -8650,6 +8762,7 @@ function finishWorkout(){
   // при prefers-reduced-motion сразу ставим конечное значение
   countUp($('finalTime'), totalSec, v => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,'0')}`, timeText);
   countUp($('finKcal'), state.lastKcal || 0, v => '≈' + Math.round(v), '≈' + (state.lastKcal || 0));
+  countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
 }
 
 /* ================= ШЕРИНГ-КАРТИНКА РЕЗУЛЬТАТА ================= */
@@ -9731,10 +9844,24 @@ $('uePhotoFile').onchange = e=>{
 $('videoLink').addEventListener('click', ()=>{
   if($('scrWork').classList.contains('on')) setPause(true);
 });
-$('btnShareResult').innerHTML = icon('share') + '<span>Поделиться результатом</span>';
+// одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
+// в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
+$('btnShareResult').innerHTML = icon('share') + '<span>Поделиться</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = e.target.value.slice(0, 500); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
+// заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
+$('finNoteToggle').innerHTML = icon('pencil') + '<span>Добавить заметку</span>';
+$('finNoteToggle').onclick = ()=>{
+  setShown('finNoteToggle', false);
+  setShown('finNoteField', true);
+  $('finNote').focus();
+  // поле не должно остаться под клавиатурой
+  setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
+};
+// подсказка прокрутки на экране тренировки
+$('scrollCue').innerHTML = icon('chevD');
+$('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
   document.body.classList.remove('phase-rest');
