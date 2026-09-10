@@ -4731,7 +4731,31 @@ function dismissTopModal(){
   return true;
 }
 
+// Системная кнопка «назад» забирает у истории одну запись — и только тогда срабатывает
+// popstate. На корневом экране записей нет вообще: приложение просто сворачивалось,
+// даже когда поверх него был открыт попап. Поэтому попап сам добавляет себе запись —
+// её и заберёт жест «назад», а обработчик ниже закроет попап.
+let skipPop = 0;   // наш собственный history.back(), а не жест человека
+let modalsOpen = false;
+new MutationObserver(()=>{
+  const now = !!document.querySelector('.modal.open');
+  if(now === modalsOpen) return;
+  modalsOpen = now;
+  if(now){
+    try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(e){}
+    return;
+  }
+  // Попап закрыли кнопкой — лишнюю запись надо убрать. Но только если она всё ещё
+  // сверху: попап мог увести на другой экран (например, «Вручную» → конструктор),
+  // и тогда наш history.back() отменил бы этот переход.
+  if(history.state && history.state.m){
+    skipPop++;
+    try{ history.back(); }catch(e){ skipPop = Math.max(0, skipPop - 1); }
+  }
+}).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
+
 window.addEventListener('popstate', async e => {
+  if(skipPop > 0){ skipPop--; return; }   // это мы сами сняли запись закрытого попапа
   // открытый попап забирает жест себе — экран под ним остаётся на месте
   if(document.querySelector('.modal.open')){
     try{ history.pushState(e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
