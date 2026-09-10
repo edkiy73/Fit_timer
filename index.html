@@ -78,6 +78,9 @@
 
     /* ---- шкала отступов ---- */
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:26px; --sp-7:34px;
+    /* шаг между крупными блоками «Сегодня». Был --sp-7: экран получался разреженным
+       по сравнению с «Тренировками», где карточки идут через 12-16 px. */
+    --gap-main:24px;
     /* ---- шкала радиусов ---- */
     --r-xs:8px; --r-sm:11px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
     --radius:var(--r-lg);
@@ -951,7 +954,11 @@
   .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
   .st-row{display:flex;align-items:center;justify-content:space-between}
   .st-row .icon-btn{width:38px;height:38px;font-size:18px;color:var(--accent-ink);border-color:var(--accent-line)}
-  .modal{position:fixed;inset:0;z-index:60;background:var(--scrim);display:none;align-items:flex-end;justify-content:center;padding:14px}
+  /* Свайп по затемнению прокручивал страницу под попапом — попап «висел» над едущим
+     экраном. touch-action:none гасит жест на подложке, а карточка и её прокручиваемые
+     части возвращают себе вертикальный жест. */
+  .modal{position:fixed;inset:0;z-index:60;background:var(--scrim);display:none;align-items:flex-end;justify-content:center;padding:14px;touch-action:none;overscroll-behavior:contain}
+  .modal-card,.sess-list,.pm-scroll,#dlgCode,.modal-card textarea{touch-action:pan-y}
   .modal.open{display:flex;animation:modalFade .2s ease}
   .modal.open .modal-card{animation:sheetUp .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
@@ -1017,7 +1024,7 @@
     display:flex;align-items:center;gap:14px;
     background:var(--grad-accent);
     border:1px solid rgba(255,255,255,.16);border-radius:var(--r-lg);
-    padding:16px;margin:var(--sp-7) 0 0;cursor:pointer;text-align:left;
+    padding:16px;margin:var(--gap-main) 0 0;cursor:pointer;text-align:left;
     box-shadow:var(--sh-accent);font-family:var(--font-text);
   }
   .premium-banner:active{transform:scale(.985)}
@@ -1863,7 +1870,7 @@
      дороже горизонтали. */
   .store-cta{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
-    margin-top:var(--sp-7);padding:var(--sp-3) var(--sp-4);
+    margin-top:var(--gap-main);padding:var(--sp-3) var(--sp-4);
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);color:var(--ink);cursor:pointer;text-align:left;
     font-family:var(--font-text);
@@ -2055,14 +2062,15 @@
   }
   .dock-btn .db-ico{
     display:flex;align-items:center;justify-content:center;width:100%;max-width:52px;height:28px;
-    border-radius:var(--r-pill);
-    transition:background .2s ease,color .2s ease,box-shadow .2s ease,transform .12s ease;
+    transition:color .2s ease,transform .12s ease;
   }
   .dock-btn svg{width:21px;height:21px}
-  /* активная вкладка: подложка-пилюля под иконкой, акцентный цвет и подпись
-     полужирной — состояние читается и цветом, и формой, и весом текста */
-  .dock-btn.act{color:var(--accent-ink);font-weight:600}
-  .dock-btn.act .db-ico{
+  /* Активная вкладка: подложка под всей кнопкой, а не пилюля под одной иконкой.
+     Обведённая иконка с подписью снаружи читалась как две разные вещи, и подпись
+     оказывалась вне выделения. */
+  .dock-btn{transition:background .2s ease,color .2s ease,box-shadow .2s ease}
+  .dock-btn.act{
+    color:var(--accent-ink);font-weight:600;
     background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line),var(--sh-dock-act);
     animation:dockPop .34s cubic-bezier(.34,1.56,.64,1);
   }
@@ -2071,7 +2079,7 @@
     60%{transform:scale(1.06)}
     100%{transform:scale(1)}
   }
-  .dock-btn:active .db-ico{transform:scale(.9)}
+  .dock-btn:active{transform:scale(.94)}
   .dock-btn:focus-visible{outline:2px solid var(--accent-line);outline-offset:-2px}
   /* на 360 подписи «Тренировки» и «Статистика» почти касаются — отдаём им поля дока */
   @media (max-width:380px){ .dock{padding-left:var(--sp-2);padding-right:var(--sp-2)} }
@@ -2091,7 +2099,7 @@
      Приветствие живёт без рамки — карточка на экране ровно одна, и это план
      на сегодня. Иначе две одинаковые плашки подряд спорят за внимание. */
   /* приветствие начинается на той же высоте, что заголовок любого другого раздела */
-  .showcase{position:relative;padding:var(--sp-6) 0 0;margin-bottom:var(--sp-7)}
+  .showcase{position:relative;padding:var(--sp-6) 0 0;margin-bottom:var(--gap-main)}
   /* мягкий блик за приветствием. Двигается на прокрутке — это единственная его
      задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте.
      right:-20px — ровно горизонтальное поле .app: блик доходит до края экрана и ни
@@ -2119,7 +2127,7 @@
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     padding:var(--sp-4);box-shadow:var(--sh-1);
   }
-  #scrMenu .panel{margin-top:var(--sp-7)}
+  #scrMenu .panel{margin-top:var(--gap-main)}
   .panel .ts-label{margin-bottom:var(--sp-3)}
   .panel #weekStripHint{margin-top:var(--sp-3)}
   /* внутри белой карточки клетки и плитки серые: белое на белом не читается как блок */
@@ -2142,8 +2150,10 @@
      • тренировка сверх плана — бледная галочка;
      • ничего не было и не планировалось — бледная точка. */
   .ws-day.plan i{background:var(--accent-ink)}
-  .ws-day.miss i{background:transparent;box-shadow:inset 0 0 0 2px var(--warn)}
-  .ws-day.miss{border-color:var(--warn-line)}
+  /* пропуск — крестик, а не ещё одна обводка вокруг клетки: рамка спорила
+     с обводкой сегодняшнего дня и читалась как второе «выделено» */
+  .ws-day .ws-miss{display:flex;color:var(--danger)}
+  .ws-day .ws-miss svg{width:13px;height:13px;stroke-width:3}
   .ws-day .ws-ok{display:flex;color:var(--ok)}
   .ws-day .ws-ok svg{width:14px;height:14px;stroke-width:3}
   /* день закрыт наполовину: две программы назначены, пройдена одна */
@@ -2264,7 +2274,9 @@
      сверху и снизу она читалась как часть названия месяца */
   .cal-sub{margin:10px 0 12px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
   .cal-nav{width:44px;height:44px;border-radius:var(--r-md);flex:none}
-  .cal-grid{gap:3px;margin-top:12px}
+  /* 3 px между клетками не хватало: обводка сегодняшнего дня вставала вплотную
+     к соседям и месяц выглядел слипшимся */
+  .cal-grid{gap:6px;margin-top:12px}
   /* клетки квадратные: с height:34px при ширине 45 месяц выглядел сплющенным */
   .cal-cell{
     aspect-ratio:1;height:auto;border-radius:11px;font-size:12.5px;
@@ -2281,14 +2293,14 @@
   .cal-hint{margin-top:10px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
 
   /* ---- достижения ---- */
-  .bdg-row{display:flex;flex-wrap:wrap;gap:8px}
+  .bdg-row{display:flex;flex-wrap:wrap;gap:6px}
   .bdg{
-    display:inline-flex;align-items:center;gap:8px;padding:7px 13px 7px 9px;
+    display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 7px;
     border-radius:var(--r-pill);background:var(--accent-soft);border:1px solid var(--accent-line);
-    color:var(--ink);font-size:12.5px;font-family:var(--font-text);cursor:pointer;
+    color:var(--ink);font-size:11.5px;font-family:var(--font-text);cursor:pointer;
   }
   .bdg i{display:flex;color:var(--accent-ink)}
-  .bdg i svg{width:17px;height:17px;display:block}
+  .bdg i svg{width:14px;height:14px;display:block}
   .bdg-next{margin-top:14px;font-size:12.5px;line-height:1.45;color:var(--muted)}
 
   /* ---- вкладка «Тело»: один график вместо трёх ---- */
@@ -3575,7 +3587,6 @@
       <div class="metric-card" id="weeksCard">
         <div class="sec-head"><b>Последние 8 недель</b></div>
         <svg id="weekBars" viewBox="0 0 300 96"></svg>
-        <p class="cal-hint">Нажми на столбик — покажем тренировки той недели</p>
       </div>
 
       <!-- Итог за всё время. Пока тренировок нет, нули показывать незачем —
@@ -5736,9 +5747,7 @@ function renderStatsBlock(){
       const cur = i === 7;
       const fill = cur ? 'var(--accent)' : (c ? 'var(--accent-ink)' : 'var(--line-2)');
       const op = cur ? 1 : (c ? .42 : .55);
-      // прозрачная колонка во всю высоту — иначе в столбик высотой 3 px не попасть пальцем
-      let s = `<rect class="wb-hit" data-w="${i}" x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="96" fill="transparent"/>`;
-      s += `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
+      let s = `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
       if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${cur ? 'var(--accent-ink)' : 'var(--muted)'}">${c}</text>`;
       s += `<text x="${x.toFixed(1)}" y="89" text-anchor="middle" font-size="10" fill="var(--muted)" opacity="${cur ? 1 : .75}">${labels[i]}</text>`;
       return s;
@@ -5862,9 +5871,13 @@ const dayTitle = iso => { const [y, m, d] = iso.split('-'); return `${+d} ${MONT
 
 // неделя целиком: что было пройдено с понедельника по воскресенье того столбика
 $('weekBars').addEventListener('click', e => {
-  const hit = e.target.closest('.wb-hit');
-  if(!hit) return;
-  const startIso = weekBarStarts[+hit.dataset.w];
+  // колонку считаем по координате нажатия, а не по элементу: столбик бывает высотой
+  // в три пикселя, а поверх него ещё лежат число и подпись — попасть в сам прямоугольник
+  // пальцем нельзя. Кликабельна вся колонка целиком, вместе с цифрой и подписью.
+  const box = $('weekBars').getBoundingClientRect();
+  if(!box.width) return;
+  const i = Math.max(0, Math.min(7, Math.floor((e.clientX - box.left) / (box.width / 8))));
+  const startIso = weekBarStarts[i];
   if(!startIso) return;
   const start = new Date(startIso);
   const days = [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
@@ -7202,8 +7215,6 @@ function weekPlanInfo(date){
     anyDays: days.filter(d => d.any).length
   };
 }
-// «осталось по плану» — только дни, до которых ещё можно дойти
-const weekLeftDays = w => w.days.filter(d => d.planned > d.done && !d.past);
 
 function renderWeekStrip(){
   const box = $('weekStrip');
@@ -7224,6 +7235,7 @@ function renderWeekStrip(){
     let mark = '<i></i>';
     if(d.full) mark = `<span class="ws-ok">${icon('check')}</span>`;
     else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
+    else if(miss) mark = `<span class="ws-miss">${icon('close')}</span>`;
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
     cell.innerHTML = `<b>${d.name}</b>` + mark;
     cell.onclick = ()=> openWeekDay(d);
@@ -7235,11 +7247,10 @@ function renderWeekStrip(){
       ? `Сделано на этой неделе: ${w.anyDays} ${plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок')}`
       : 'Дни тренировок пока не выбраны');
   } else {
+    // перечислять оставшиеся дни незачем: они и так помечены точками прямо над этой
+    // строкой, а в списке из трёх названий подпись переносилась в две строки
     hint.push(`По плану: ${w.doneTotal} из ${w.plannedTotal}`);
-    const left = weekLeftDays(w);
     if(w.doneTotal >= w.plannedTotal) hint.push('неделя закрыта');
-    else if(left.length) hint.push('осталось ' + left.map(d => DAY_FULL[d.idx].toLowerCase()).join(', '));
-    else hint.push('плановые дни прошли');
   }
   if(w.extraTotal) hint.push(`${w.extraTotal} сверх плана`);
   $('weekStripHint').textContent = hint.join(' · ');
