@@ -1711,6 +1711,12 @@
   .legal-head .lh-chev svg{width:18px;height:18px}
   .legal-head[aria-expanded="true"] .lh-chev{transform:rotate(180deg)}
   .legal-body{padding:4px 14px 16px;border-top:1px solid var(--line)}
+  .legal-mail{
+    display:inline-block;font-family:var(--font-text);font-size:15px;font-weight:600;
+    color:var(--accent-ink);text-decoration:none;
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+    border-radius:var(--r-pill);padding:10px 16px;min-height:44px;line-height:24px;
+  }
   .legal-body h3{
     font-family:var(--font-display);font-size:13px;font-weight:600;
     letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);
@@ -1815,6 +1821,24 @@
     margin:var(--sp-2) 0 var(--sp-3);
   }
   .store-count:empty{display:none}
+
+  /* автор программы — нажимаемая строка, а не подпись: под ником живёт человек */
+  .st-by{border:none;background:none;padding:0;cursor:pointer;text-align:left;font-family:var(--font-text)}
+  .st-by:active{opacity:.7}
+
+  /* попап тренера */
+  .tr-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)}
+  .tr-photo{
+    flex:none;width:64px;height:64px;border-radius:50%;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .tr-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .tr-photo svg{width:30px;height:30px}
+  .tr-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .tr-id b{font-family:var(--font-display);font-size:19px;letter-spacing:.03em;text-transform:uppercase}
+  .tr-id small{color:var(--muted);font-size:13.5px}
+  .tr-about{font-size:14.5px;line-height:1.6;color:var(--ink);white-space:pre-line;margin:0 0 var(--sp-2)}
 
   /* карточка товара */
   .store-card{
@@ -2474,14 +2498,6 @@
           <span class="wr-ico" data-icon="share"></span>
           <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
         </button>
-        <button type="button" class="way-row" id="exeGPT">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
-        </button>
-        <button type="button" class="way-row" id="exeClaude">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
-        </button>
       </div>
     </div>
     </div>
@@ -2699,14 +2715,6 @@
           <span class="wr-ico" data-icon="share"></span>
           <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
         </button>
-        <button type="button" class="way-row" id="exaGPT">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
-        </button>
-        <button type="button" class="way-row" id="exaClaude">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
-        </button>
       </div>
     </div>
     </div>
@@ -2779,14 +2787,6 @@
         <button type="button" class="way-row" id="ytSend">
           <span class="wr-ico" data-icon="share"></span>
           <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
-        </button>
-        <button type="button" class="way-row" id="ytGPT">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
-        </button>
-        <button type="button" class="way-row" id="ytClaude">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
         </button>
       </div>
     </div>
@@ -2865,14 +2865,6 @@
         <button type="button" class="way-row" id="eaSend">
           <span class="wr-ico" data-icon="share"></span>
           <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
-        </button>
-        <button type="button" class="way-row" id="eaGPT">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
-        </button>
-        <button type="button" class="way-row" id="eaClaude">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
         </button>
         <button type="button" class="way-row" id="eaCopyFull">
           <span class="wr-ico" data-icon="download"></span>
@@ -3134,14 +3126,6 @@
           <span class="wr-ico" data-icon="share"></span>
           <span class="wr-txt"><b>Отправить в приложение</b><small>Телефон покажет, куда можно передать текст</small></span>
         </button>
-        <button type="button" class="way-row" id="aiGPT">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть ChatGPT</b><small>Откроется сайт с уже вставленным заданием</small></span>
-        </button>
-        <button type="button" class="way-row" id="aiClaude">
-          <span class="wr-ico" data-icon="chat"></span>
-          <span class="wr-txt"><b>Открыть Claude</b><small>То же самое, только другой чат</small></span>
-        </button>
       </div>
     </div>
     </div>
@@ -3389,7 +3373,6 @@
           <ul>
             <li><b>Запрос к нейросети.</b> Только тогда, когда ты сама просишь собрать программу или упражнение. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь и выбранные ограничения — включая «беременность», если ты её отметила. Запрос обрабатывает внешний сервис генерации; дальше эти данные живут по его условиям.</li>
             <li><b>Имя, вес, замеры, фотографии и история тренировок в запрос к нейросети не попадают никогда.</b></li>
-            <li><b>Кнопки «Открыть ChatGPT» и «Открыть Claude»</b> просто открывают чужой сайт. Что именно ты туда вставишь — решаешь ты, и это уже отношения между тобой и владельцем того сервиса.</li>
             <li><b>Шрифты</b> подгружаются с Google Fonts, поэтому Google видит факт обращения и твой IP-адрес. Без интернета приложение возьмёт системный шрифт и продолжит работать.</li>
             <li><b>Оплата.</b> Если появится подписка, деньги примет магазин приложений. Номера карт и другие платёжные реквизиты мы у себя не получаем и не храним.</li>
           </ul>
@@ -3405,6 +3388,11 @@
 
           <h3>Дети</h3>
           <p>Приложение не рассчитано на детей младше 12 лет и не собирает данные о них осознанно.</p>
+
+          <h3>Кто обрабатывает данные и как связаться</h3>
+          <p>Приложение делает и поддерживает частное лицо — автор Fit Timer. Вопросы о данных, просьбы выгрузить или удалить их, жалобы и всё остальное — на почту:</p>
+          <p><a class="legal-mail" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a></p>
+          <p>Отвечаем на такие обращения в разумный срок, обычно в течение нескольких дней.</p>
         </div>
       </div>
 
@@ -3438,6 +3426,9 @@
 
           <h3>Изменения</h3>
           <p>Условия могут меняться вместе с приложением. Дата последнего обновления указана внизу этой страницы.</p>
+
+          <h3>Связаться</h3>
+          <p>Приложение делает частное лицо — автор Fit Timer. Написать можно на <a class="legal-mail" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>.</p>
         </div>
       </div>
 
@@ -3787,6 +3778,23 @@
         <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
       </div>
     </div>
+
+  <!-- Кто составил программу. Ник в карточке не ссылка: каталог не должен уводить из
+       приложения. Здесь фото, имя и обычный текст о человеке — в тексте могут быть и
+       контакты. Фото нет — рисуем заглушку из набора иконок. -->
+    <div class="modal" id="trainerModal">
+    <div class="modal-card">
+      <div class="tr-head">
+        <span class="tr-photo" id="trPhoto"></span>
+        <span class="tr-id">
+          <b id="trName"></b>
+          <small id="trNick"></small>
+        </span>
+      </div>
+      <p class="tr-about" id="trAbout"></p>
+      <button class="modal-btn" id="trClose">Закрыть</button>
+    </div>
+  </div>
 
     <div class="modal" id="dlg">
       <div class="modal-card">
@@ -6131,7 +6139,11 @@ const OB_GOALS = ['Похудеть', 'Подтянуть всё тело', 'Я�
 const obState = {gender: 'f', goal: '', birth: ''};
 
 function startOnboarding(){
-  themeLight = true;
+  // Тема первого запуска — системная. Раньше здесь жёстко включалась светлая, и на
+  // тёмном телефоне знакомство начиналось с белой вспышки во весь экран. Дальше
+  // человек всё равно переключит её в настройках, а первое впечатление уже испорчено.
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  themeLight = !dark;
   applyTheme();
   const box = $('obGoals'); box.innerHTML = '';
   OB_GOALS.forEach(g => {
@@ -6741,7 +6753,7 @@ function flashDone(btn, text){
 
 /* ---- экраны запроса к ИИ: главный путь на виду, ручной — под раскрывашкой ----
    Раньше на каждом таком экране подряд стояли четыре одинаковые кнопки («отправить
-   в приложение», «открыть ChatGPT», «открыть Claude», «скопировать») и поле для ответа.
+   в приложение», «скопировать») и поле для ответа.
    Понять, чем они отличаются и что случится после нажатия, было невозможно. Теперь
    виден один главный путь, а ручные способы открываются одной строкой и объясняют себя. */
 const aiWaysReset = {};
@@ -7614,6 +7626,25 @@ function storeVariant(it){
   return (n < 0 ? 0 : n) % 3;
 }
 
+/* Тренеры каталога. Ник — ключ, по нему карточка находит человека. Фото пока нет ни
+   у кого: `photo` останется пустым до реального наполнения, и тогда в попапе рисуется
+   заглушка из набора иконок. Описание — обычный текст, в нём же могут быть контакты:
+   ссылками ник специально не делаем, чтобы карточка каталога не уводила из приложения. */
+const TRAINERS = {
+  '@lena.doma':      {name: 'Лена', photo: '', about: 'Тренер по домашнему фитнесу, 8 лет практики. Веду женские группы для тех, у кого дома нет ничего, кроме коврика и стула. Люблю тихие тренировки: у самой соседи снизу.'},
+  '@katya.hiit':     {name: 'Катя', photo: '', about: 'Специализируюсь на коротких интервальных тренировках. Считаю, что пятнадцать честных минут работают лучше часа вполсилы.'},
+  '@marina.core':    {name: 'Марина', photo: '', about: 'Работаю с мышцами центра и осанкой. Пришла в фитнес после того, как сама вылезла из проблем со спиной за письменным столом.'},
+  '@zhenya.core':    {name: 'Женя', photo: '', about: 'Тренер по функциональной подготовке. Собираю программы для тех, кто уже держит планку минуту и хочет дальше.'},
+  '@nastya.glutes':  {name: 'Настя', photo: '', about: 'Ягодицы и ноги без штанги и абонемента. Половина моих учениц занимается в комнате два на три метра — и у них получается.'},
+  '@dasha.iron':     {name: 'Даша', photo: '', about: 'Силовые с гантелями дома. Показываю, как расти в весах, когда снаряд один и он маленький.'},
+  '@vera.total':     {name: 'Вера', photo: '', about: 'Программы на всё тело для тех, у кого получается заниматься два-три раза в неделю. Считаю, что регулярность важнее интенсивности.'},
+  '@sonya.arms':     {name: 'Соня', photo: '', about: 'Руки, плечи и верх спины. Больше всего люблю момент, когда человек впервые отжимается от пола с носков.'},
+  '@alina.stretch':  {name: 'Алина', photo: '', about: 'Растяжка и подвижность. Учу тянуться без боли и рывков — тело отвечает на терпение, а не на силу.'},
+  '@ira.spine':      {name: 'Ира', photo: '', about: 'Работаю с теми, кто сидит весь день. Разбираю зажимы между лопатками и в пояснице.'},
+  '@masha.walk':     {name: 'Маша', photo: '', about: 'Самый мягкий вход в тренировки. Мои программы для тех, кто давно ничего не делал и боится начать.'},
+  '@olga.pilates':   {name: 'Оля', photo: '', about: 'Пилатес и дыхание. Медленно, осознанно и без единого прыжка.'}
+};
+
 const STORE_ITEMS = [
   {id:"slim-tiho", by:"@lena.doma", cat:"slim", level:"Новичок", min:18, name:"Кардио без прыжков",
    gives:"Три круга без единого прыжка: приседания, скалолаз и ходьба с высоким коленом. Пульс высокий, соседи снизу ничего не слышат.",
@@ -8276,11 +8307,11 @@ function renderStore(){
       <div class="st-body">
         <h3>${it.name}</h3>
         <div class="st-meta">${it.min} минут · ${it.level}</div>
-        <div class="st-by">
+        <button type="button" class="st-by" data-by="${it.by || ''}">
           <span class="st-ava">${icon('user')}</span>
           <span class="st-nick">${it.by || ''}</span>
           <span class="st-role">тренер</span>
-        </div>
+        </button>
         <p class="st-gives">${it.gives}</p>
         <div class="st-buy">
           <span class="st-what${own ? ' own' : ''}">${own ? 'Уже в твоих тренировках' : `${nEx} ${plural(nEx, 'упражнение', 'упражнения', 'упражнений')}`}</span>
@@ -8290,6 +8321,7 @@ function renderStore(){
     </article>`;
   }).join('');
   box.querySelectorAll('[data-buy]').forEach(b => b.onclick = ()=> addStoreItem(b.dataset.buy));
+  box.querySelectorAll('[data-by]').forEach(b => b.onclick = ()=> openTrainer(b.dataset.by));
 }
 
 async function addStoreItem(id){
@@ -8334,6 +8366,20 @@ async function addStoreItem(id){
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
 // должна возвращать туда же, а не всегда на главную
 let storeFrom = 'scrMenu';
+// Карточка тренера. Ник может не найтись в справочнике — тогда показываем сам ник и
+// честную строку вместо выдуманного описания, а не пустой попап.
+function openTrainer(nick){
+  if(!nick) return;
+  const t = TRAINERS[nick] || null;
+  $('trPhoto').innerHTML = (t && t.photo)
+    ? `<img src="${t.photo}" alt="">`
+    : icon('user');
+  $('trName').textContent = (t && t.name) ? t.name : nick.replace(/^@/, '');
+  $('trNick').textContent = nick + ' · тренер';
+  $('trAbout').textContent = (t && t.about) ? t.about : 'Тренер каталога Fit Timer.';
+  $('trainerModal').classList.add('open');
+}
+
 function openStore(from){
   storeFrom = from || 'scrMenu';
   storeFilter = {q: '', cat: '', level: ''};
@@ -12038,6 +12084,8 @@ $('btnSaveWeight').onclick = async ()=>{
 // навигация по календарю
 // Анонс подписки. Здесь нет и не должно быть ничего, что принимает деньги:
 // ни кошелька, ни ссылки на оплату — подписки ещё не существует.
+$('trClose').onclick = ()=> $('trainerModal').classList.remove('open');
+$('trainerModal').onclick = e => { if(e.target === $('trainerModal')) $('trainerModal').classList.remove('open'); };
 $('btnPremium').onclick = ()=> $('premiumModal').classList.add('open');
 $('pmClose').onclick = ()=> $('premiumModal').classList.remove('open');
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
@@ -12228,8 +12276,6 @@ async function ytCopyPrompt(){
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 $('ytCopy').onclick = ()=>{ if(ytGuard()) ytCopyPrompt(); };
-$('ytGPT').onclick = ()=>{ if(ytGuard()) window.open('https://chatgpt.com/?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
-$('ytClaude').onclick = ()=>{ if(ytGuard()) window.open('https://claude.ai/new?q=' + encodeURIComponent(youtubePrompt()), '_blank'); };
 $('ytParse').onclick = ()=> ytApplyResult();
 async function ytApplyResult(){
   const raw = ($('ytResult').value || '').trim();
@@ -12288,13 +12334,9 @@ async function copyEditPrompt(){
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
-$('eaGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(editAIPrompt()), '_blank');
-$('eaClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(editAIPrompt()), '_blank');
 
 $('btnCopyPrompt').onclick = copyPrompt;
 $('btnSendAI').onclick = sendToAI;
-$('aiGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
-$('aiClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(fullAIPrompt()), '_blank');
 $('btnParse').onclick = importFromText;
 $('swapBadge').onclick = openSwapHint;
 $('swapOk').onclick = closeSwapHint;
@@ -12674,8 +12716,6 @@ async function exeCopyPrompt(){
   }catch(e){ appAlert('Не удалось скопировать.'); }
 }
 $('exeCopy').onclick = ()=> exeCopyPrompt();
-$('exeGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(exePrompt()), '_blank');
-$('exeClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(exePrompt()), '_blank');
 $('exeSelfAI').onclick = ()=> runSelfAI(exePrompt, 'exeResult', applyExEdit, 'Меняю упражнение');
 
 /* ---- упражнение через ИИ ---- */
@@ -12696,8 +12736,6 @@ async function exaCopyPrompt(){
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 $('exaCopy').onclick = ()=> exaCopyPrompt();
-$('exaGPT').onclick = ()=> window.open('https://chatgpt.com/?q=' + encodeURIComponent(exaPrompt()), '_blank');
-$('exaClaude').onclick = ()=> window.open('https://claude.ai/new?q=' + encodeURIComponent(exaPrompt()), '_blank');
 
 function addExManual(){
   const list = curPlan().exercises;
