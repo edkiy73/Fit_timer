@@ -237,7 +237,6 @@
   .mc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 
   /* ---------- мои программы ---------- */
-  .section-title{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px}
   .mine-card{position:relative;margin-bottom:12px}
   .mine-card .month-card{margin-bottom:0;padding-right:66px}
   .more-btn{
@@ -666,6 +665,14 @@
     bottom:calc(16px + env(safe-area-inset-bottom));
     background:rgba(255,255,255,.14);border:none;color:#fff;
   }
+  /* список пройденного: каждая тренировка — отдельная плашка, длинный список
+     прокручивается внутри попапа, а не выталкивает кнопку за край экрана */
+  .sess-list{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow-y:auto;overscroll-behavior:contain;margin:2px 0 4px}
+  .sess-row{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px}
+  .sess-row b{display:block;font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.25}
+  .sess-row small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .sess-row .sess-note{display:block;font-size:12.5px;color:var(--muted);margin-top:5px;font-style:italic}
+  .sess-empty{font-size:13.5px;color:var(--muted);line-height:1.5;margin:2px 0 6px}
   .cmp-img{cursor:zoom-in}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
@@ -1396,12 +1403,14 @@
   .greet-hi{font-family:var(--font-display);font-weight:500;font-size:var(--fs-sm);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
   .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:anywhere}
   .greet-name .dot{color:var(--accent-ink)}
-  .greet-top{display:flex;align-items:flex-start;gap:var(--sp-3)}
+  /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
+     прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
+  .greet-top{display:flex;align-items:center;gap:var(--sp-3)}
   .greet-id{flex:1;min-width:0}
   .greet-ava{
     flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;cursor:pointer;
     background:var(--card);border:1px solid var(--line);color:var(--accent-ink);
-    display:flex;align-items:center;justify-content:center;padding:0;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;padding:0;
     font-family:var(--font-display);font-weight:700;font-size:20px;
   }
   .greet-ava img{width:100%;height:100%;object-fit:cover;display:block}
@@ -2076,17 +2085,38 @@
      подпись под блоком — --sp-2. Одна шкала на весь экран: раньше отступы
      приходили вперемешку из инлайн-стилей и полей соседей, и ровно после
      приветствия воздух пропадал. Собственных полей у блоков больше нет. */
-  #scrMenu .section-title{margin:var(--sp-7) 0 var(--sp-3)}
+
+  /* Карточка-панель: то же тело, что у «Плана на сегодня», но без живого фона —
+     он там ради единственного блока, который зовёт к действию. */
+  .panel{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:var(--sp-4);box-shadow:var(--sh-1);
+  }
+  #scrMenu .panel{margin-top:var(--sp-7)}
+  .panel .ts-label{margin-bottom:var(--sp-3)}
+  .panel #weekStripHint{margin-top:var(--sp-3)}
+  /* внутри белой карточки клетки и плитки серые: белое на белом не читается как блок */
+  .panel .ws-day,.panel .qs-btn{background:var(--bg-2);border-color:transparent}
 
   /* неделя одним взглядом: галочка — тренировка уже сделана, точка — по плану */
   .week-strip{display:flex;gap:5px}
   .ws-day{
     flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;
     padding:9px 2px;border-radius:var(--r-md);background:var(--card);border:1px solid var(--line);
+    cursor:pointer;font-family:var(--font-text);
   }
   .ws-day b{font-family:var(--font-display);font-weight:600;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
   .ws-day i{display:block;width:7px;height:7px;border-radius:50%;background:var(--line-2)}
+  /* Пять состояний дня, и все различаются формой значка, а не только цветом:
+     • по плану впереди — залитая точка акцентом;
+     • пропущен (план был, день прошёл) — пустой кружок в цвет предупреждения;
+     • выполнен полностью — галочка;
+     • выполнен частично — «1/2»;
+     • тренировка сверх плана — бледная галочка;
+     • ничего не было и не планировалось — бледная точка. */
   .ws-day.plan i{background:var(--accent-ink)}
+  .ws-day.miss i{background:transparent;box-shadow:inset 0 0 0 2px var(--warn)}
+  .ws-day.miss{border-color:var(--warn-line)}
   .ws-day .ws-ok{display:flex;color:var(--ok)}
   .ws-day .ws-ok svg{width:14px;height:14px;stroke-width:3}
   /* день закрыт наполовину: две программы назначены, пройдена одна */
@@ -2133,6 +2163,7 @@
     border:1px solid var(--warn-line);border-radius:var(--r-md);
     padding:12px 14px;display:flex;flex-direction:column;gap:2px;
   }
+  .danger-zone{text-align:center}
   .danger-zone p{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
   .danger-zone .link-btn{color:var(--danger);padding:10px 0 4px;margin:0}
 
@@ -2159,32 +2190,8 @@
   .tabs.seg .tab.act{background:var(--grad-accent);color:var(--on-accent);font-weight:500}
 
   /* ---- карточка недели ---- */
-  .streak-pill{
-    flex:none;display:inline-flex;align-items:center;gap:6px;
-    padding:9px 13px;border-radius:var(--r-pill);
-    background:var(--accent-soft);border:1px solid var(--accent-line);
-    color:var(--accent-ink);font-size:13px;font-weight:500;line-height:1;
-    font-variant-numeric:tabular-nums;
-  }
-  .streak-pill svg{width:16px;height:16px;flex:none}
   /* Неделя одной строкой: заливка — сделано, пунктир — день по плану впереди.
      Это тот же ответ, ради которого раньше листали календарь, но в 48 px. */
-  .wk-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:18px}
-  .wk-day{
-    height:48px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;
-    background:var(--bg-2);border:1.5px solid transparent;
-    font-size:12px;color:var(--muted);font-weight:500;
-  }
-  .wk-day.plan{border-style:dashed;border-color:var(--accent-line);color:var(--accent-ink)}
-  .wk-day.done{background:var(--accent);border-color:transparent;color:var(--on-accent);font-weight:600}
-  /* половина плана дня: заливка снизу вверх ровно наполовину */
-  .wk-day.part{border-color:var(--accent-line);color:var(--accent-ink);font-weight:600;
-    background:linear-gradient(to top,var(--accent-soft) 50%,var(--bg-2) 50%)}
-  .wk-day.extra{border-color:var(--line-2);color:var(--muted)}
-  .wk-day.today{box-shadow:0 0 0 1.5px var(--accent-line)}
-  .wk-day.fut{opacity:.75}
-  .wk-note{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.45}
-  .wk-note:empty{display:none}
 
   /* ---- общий итог: приятная сводка, но не главный герой ---- */
   .tot-row{
@@ -2353,19 +2360,17 @@
       <span class="sc-arrow" id="storeArrowMenu"></span>
     </button>
 
-    <div class="section-title">Неделя</div>
-    <div class="week-strip" id="weekStrip"></div>
-    <p class="field-hint" id="weekStripHint"></p>
-
-    <div class="section-title">Прогресс</div>
-    <div class="quick-stats">
-      <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
-      <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
-      <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
+    <!-- Неделя и прогресс — такие же карточки, как «План на сегодня»: раньше это
+         были голые блоки на фоне страницы с подписью-заголовком сбоку, и экран
+         распадался на две разные системы. Заголовок внутри карточки — тот же .ts-label. -->
+    <div class="panel week-card">
+      <span class="ts-label">Эта неделя</span>
+      <div class="week-strip" id="weekStrip"></div>
+      <p class="field-hint" id="weekStripHint"></p>
     </div>
 
-    <!-- Баннер подписки. Когда премиум уже оформлен, он не нужен и прячется:
-         продавать купленное — верный способ выглядеть навязчивым. -->
+    <!-- Баннер подписки стоит выше прогресса: прогресс — итог экрана, после него
+         читать предложение уже некому. Когда премиум оформлен, баннер прячется. -->
     <button class="premium-banner" id="btnPremium">
       <span class="pb-glow" aria-hidden="true"></span>
       <span class="pb-ico" data-icon="crown"></span>
@@ -2374,6 +2379,15 @@
         <small id="pbSub">Тренировку соберёт ИИ — без ключей и настроек. И весь каталог программ от живых тренеров.</small>
       </span>
     </button>
+
+    <div class="panel progress-card">
+      <span class="ts-label">Прогресс</span>
+      <div class="quick-stats">
+        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
+        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
+        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
+      </div>
+    </div>
   </section>
 
   <!-- КАТАЛОГ ПРОГРАММ. Не магазин: оплаты нет и в этой версии не появится —
@@ -3506,40 +3520,13 @@
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
-      <!-- Неделя — главный ответ. Общий итог ушёл под черту: он приятный, но
-           на вопрос «я занимаюсь?» отвечает хуже, чем «2 из 3 на этой неделе». -->
-      <div class="metric-card">
-        <div class="mc-head">
-          <div>
-            <span class="ts-label">Эта неделя</span>
-            <div class="mc-now"><b id="weekDone">0</b><span class="w-delta" id="weekPlan"></span></div>
-          </div>
-          <span class="streak-pill hidden" id="streakStat"></span>
-        </div>
-        <div class="wk-days" id="weekDays"></div>
-        <p class="wk-note" id="weekNote"></p>
-      </div>
-
-      <!-- Итог за всё время — своей карточкой. Раньше он лежал внутри «этой недели»,
-           и кнопка очистки читалась как «сбросить неделю», хотя стирала всю историю
-           целиком: календарь, недели, серии и достижения вместе с ней. -->
-      <div class="metric-card">
-        <div class="tot-row tot-plain">
-          <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
-          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
-          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику"></button>
-        </div>
-      </div>
-
+      <!-- «Эта неделя» отсюда убрана: тот же блок и в том же виде живёт на «Сегодня»,
+           а два одинаковых ответа на один вопрос в разной вёрстке путали сильнее,
+           чем помогали. Календарь поднят наверх — за месяцем сюда и приходят. -->
       <div class="mc-empty empty-state hidden" id="workEmpty">
         <span class="es-ico" data-icon="chart"></span>
         <b>Тренировок пока нет</b>
-        <p>Пройди первую — здесь появятся недели, календарь и достижения.</p>
-      </div>
-
-      <div class="metric-card" id="weeksCard">
-        <div class="sec-head"><b>Последние 8 недель</b></div>
-        <svg id="weekBars" viewBox="0 0 300 96"></svg>
+        <p>Пройди первую — здесь появятся календарь, недели и достижения.</p>
       </div>
 
       <div class="metric-card" id="calCard">
@@ -3550,7 +3537,22 @@
         </div>
         <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
-        <p class="cal-hint">Нажми на отмеченный день</p>
+      </div>
+
+      <div class="metric-card" id="weeksCard">
+        <div class="sec-head"><b>Последние 8 недель</b></div>
+        <svg id="weekBars" viewBox="0 0 300 96"></svg>
+        <p class="cal-hint">Нажми на столбик — покажем тренировки той недели</p>
+      </div>
+
+      <!-- Итог за всё время. Пока тренировок нет, нули показывать незачем —
+           на экране остаётся только «Тренировок пока нет». -->
+      <div class="metric-card hidden" id="totalCard">
+        <div class="tot-row tot-plain">
+          <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
+          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
+          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику"></button>
+        </div>
       </div>
 
       <!-- Достижения раньше жили только на финале и исчезали через минуту.
@@ -4061,6 +4063,18 @@
         <p class="pf-cap" id="pfCap"></p>
       </div>
       <button class="modal-btn" id="pfClose">Закрыть</button>
+    </div>
+
+    <!-- Что было сделано: за день, за неделю — где угодно. Раньше это был appAlert
+         с текстовой простынёй: тренировки слипались в один абзац, а длинный список
+         просто не помещался на экран и обрезался. -->
+    <div class="modal" id="sessModal">
+      <div class="modal-card">
+        <span class="mini-label" id="sessLabel">Тренировки</span>
+        <p class="dlg-msg" id="sessTitle"></p>
+        <div class="sess-list" id="sessList"></div>
+        <button class="modal-btn" id="sessClose">Закрыть</button>
+      </div>
     </div>
 
     <div class="modal" id="waModal">
@@ -5629,10 +5643,10 @@ function calcStreakInfo(){
 }
 function calcStreak(){ return calcStreakInfo().n; }
 // подпись под число серии: по плану считаем тренировки, без плана — дни
+// «3 тренировки подряд» переносилось в две строки и распирало чип — на главной
+// хватает сокращения, полная форма осталась в подсказке
 function streakWord(n, byPlan){
-  return byPlan
-    ? plural(n, 'тренировка подряд', 'тренировки подряд', 'тренировок подряд')
-    : plural(n, 'день подряд', 'дня подряд', 'дней подряд');
+  return byPlan ? 'трен. подряд' : plural(n, 'день подряд', 'дня подряд', 'дней подряд');
 }
 
 function renderStatsBlock(){
@@ -5642,49 +5656,13 @@ function renderStatsBlock(){
   monday.setHours(0,0,0,0);
   const weekOf = start => [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
 
+  // пока тренировок нет, показывать нули незачем: на экране остаётся одна честная
+  // строка «Тренировок пока нет», а не три пустых карточки
   const empty = !stats.history.length;
   setShown('workEmpty', empty);
   setShown('weeksCard', !empty);
   setShown('calCard', !empty);
-
-  // ---- эта неделя: главный ответ на вопрос «я вообще занимаюсь?» ----
-  const w = weekPlanInfo(now);
-  $('weekDone').textContent = w.plannedTotal ? w.doneTotal : w.anyDays;
-  $('weekPlan').textContent = w.plannedTotal
-    ? `из ${w.plannedTotal} по плану`
-    : plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок');
-
-  // полоска дней: заливка — план дня закрыт, половина — закрыт частично,
-  // пунктир — назначено и ещё не сделано
-  $('weekDays').innerHTML = w.days.map(d => {
-    const cls = ['wk-day'];
-    if(d.full) cls.push('done');
-    else if(d.part) cls.push('part');
-    else if(d.planned && !d.past) cls.push('plan');
-    else if(!d.planned && d.any) cls.push('extra');
-    if(d.today) cls.push('today');
-    else if(d.future) cls.push('fut');
-    return `<div class="${cls.join(' ')}">${d.name}</div>`;
-  }).join('');
-
-  // словами то, что полоска показывает цветом: без легенды и без «нажми, чтобы»
-  const bits = [];
-  if(!w.plannedTotal) bits.push(w.anyDays ? 'Расписания нет — тренируешься, когда удобно' : 'Расписания нет — начни, когда удобно');
-  else if(w.doneTotal >= w.plannedTotal) bits.push('План на неделю выполнен');
-  else {
-    const left = weekLeftDays(w);
-    if(left.length) bits.push('Осталось по плану: ' + left.map(d => DAY_FULL[d.idx].toLowerCase()).join(', '));
-    else bits.push('Плановые дни этой недели прошли');
-  }
-  if(w.extraTotal) bits.push(`${w.extraTotal} сверх плана`);
-
-  const si = calcStreakInfo();
-  const pill = $('streakStat');
-  pill.innerHTML = si.n ? icon('flame') + `<span>${si.n} подряд</span>` : '';
-  setShown(pill, !!si.n);
-  if(si.n) pill.title = `${si.n} ${streakWord(si.n, si.byPlan)}`;
-  if(si.freezes) bits.push('пропуск прощён');
-  $('weekNote').textContent = bits.join(' · ');
+  setShown('totalCard', !empty);
 
   // ---- мини-график: сколько тренировок в каждую из 8 последних недель ----
   // Подпись справа «всего 16» убрана: это была сумма по восьми показанным
@@ -5780,32 +5758,54 @@ function renderCalendar(){
   $('calGrid').innerHTML = cells.join('');
 }
 
+// Одна запись истории — одна строка: название программы, вариант, время и калории.
+// Из этого же строится список за день, за неделю и за что угодно ещё.
+function sessRow(en){
+  const p = customPrograms.find(x => x.id === en.pid);
+  const name = p ? p.name : 'Тренировка';
+  const meta = [];
+  if(p){
+    const plansN = normPlans(p).length;
+    if(plansN > 1 && typeof en.plan === 'number'){
+      meta.push(`вариант ${en.plan + 1}` + (en.planDays ? ` (${en.planDays})` : ''));
+    }
+  }
+  if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
+  if(en.kcal) meta.push(`≈${en.kcal} ккал`);
+  const row = document.createElement('div');
+  row.className = 'sess-row';
+  row.innerHTML = '<b></b>' + (meta.length ? `<small>${meta.join(' · ')}</small>` : '')
+    + (en.note ? '<span class="sess-note"></span>' : '');
+  row.querySelector('b').textContent = name;
+  if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
+  return row;
+}
+function openSessions(label, title, entries, emptyText){
+  $('sessLabel').textContent = label;
+  $('sessTitle').textContent = title;
+  const box = $('sessList');
+  box.innerHTML = '';
+  if(entries.length) entries.forEach(en => box.appendChild(sessRow(en)));
+  else if(emptyText){
+    const p = document.createElement('p');
+    p.className = 'sess-empty';
+    p.textContent = emptyText;
+    box.appendChild(p);
+  }
+  $('sessModal').classList.add('open');
+}
+$('sessClose').onclick = ()=> $('sessModal').classList.remove('open');
+$('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
+
+const dayTitle = iso => { const [y, m, d] = iso.split('-'); return `${+d} ${MONTH_OF[+m - 1]} ${y}`; };
+
 $('calGrid').addEventListener('click', e => {
   const cell = e.target.closest('.cal-cell.done');
   if(!cell || !cell.dataset.iso) return;
   const iso = cell.dataset.iso;
   const entries = stats.history.filter(h => h.d === iso);
   if(!entries.length) return;
-  const [y, m, d] = iso.split('-');
-  const lines = entries.map(en => {
-    const p = customPrograms.find(x => x.id === en.pid);
-    const name = p ? p.name : 'Тренировка';
-    const meta = [];
-    // какой вариант выполняли — чтобы в следующий раз не путаться
-    if(p){
-      const plansN = normPlans(p).length;
-      if(plansN > 1 && typeof en.plan === 'number'){
-        meta.push(`вариант ${en.plan + 1}` + (en.planDays ? ` (${en.planDays})` : ''));
-      }
-    }
-    if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
-    if(en.kcal) meta.push(`≈${en.kcal} ккал`);
-    let s = name;
-    if(meta.length) s += `\n   ${meta.join(' · ')}`;
-    if(en.note) s += `\n   «${en.note}»`;
-    return s;
-  });
-  appAlert(`${+d} ${MONTH_OF[+m - 1]} ${y}\n\n` + lines.join('\n\n'));
+  openSessions('Тренировки за день', dayTitle(iso), entries);
 });
 
 function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
@@ -7037,7 +7037,7 @@ function renderGreeting(){
   const n = stats.count || 0;
   // счётчик тренировок теперь крупной цифрой ниже, в «Прогрессе», — в чипах он был вторым разом
   const mins = Math.round((stats.totalSec || 0) / 60);
-  if(mins) chip('clock', mins < 60 ? mins : Math.round(mins / 60), mins < 60 ? 'минут в сумме' : plural(Math.round(mins / 60), 'час в сумме', 'часа в сумме', 'часов в сумме'));
+  if(mins) chip('clock', mins < 60 ? mins : Math.round(mins / 60), mins < 60 ? 'минут всего' : plural(Math.round(mins / 60), 'час всего', 'часа всего', 'часов всего'));
   if(!box.children.length){
     const el = document.createElement('span');
     el.className = 'g-chip';
@@ -7136,9 +7136,13 @@ function renderWeekStrip(){
   const w = weekPlanInfo();
   const di = (new Date().getDay() + 6) % 7;
   w.days.forEach((d, i) => {
-    const cell = document.createElement('div');
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    // пропуск — только у прошедших дней: сегодняшний план ещё можно закрыть
+    const miss = d.planned > 0 && d.done === 0 && d.past;
     cell.className = 'ws-day'
-      + (d.planned ? ' plan' : '')
+      + (d.planned && !d.past && !d.done ? ' plan' : '')
+      + (miss ? ' miss' : '')
       + (d.full ? ' done' : (d.part ? ' part' : ''))
       + (i === di ? ' today' : '');
     let mark = '<i></i>';
@@ -7146,6 +7150,7 @@ function renderWeekStrip(){
     else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
     cell.innerHTML = `<b>${d.name}</b>` + mark;
+    cell.onclick = ()=> openWeekDay(d);
     box.appendChild(cell);
   });
   const hint = [];
@@ -7162,6 +7167,19 @@ function renderWeekStrip(){
   }
   if(w.extraTotal) hint.push(`${w.extraTotal} сверх плана`);
   $('weekStripHint').textContent = hint.join(' · ');
+}
+
+// нажатие по дню недели: что в этот день сделано — и что было назначено, если не сделано
+function openWeekDay(d){
+  const entries = (stats.history || []).filter(h => h.d === d.iso);
+  const title = DAY_FULL[d.idx] + ', ' + dayTitle(d.iso);
+  let empty = '';
+  if(!entries.length){
+    const names = customPrograms.filter(p => programDaysUnion(p).includes(d.name)).map(p => p.name);
+    if(names.length) empty = (d.future ? 'По плану на этот день: ' : 'Тренировок не было. По плану было: ') + names.join(', ') + '.';
+    else empty = 'В этот день тренировок не было и не планировалось.';
+  }
+  openSessions('Тренировки за день', title, entries, empty);
 }
 
 function renderToday(){
@@ -7248,6 +7266,8 @@ function renderToday(){
       // Название выглядело нажимаемым, но не нажималось. Теперь это обычная строка
       // плана: тап открывает программу, и в день отдыха можно начать её досрочно.
       const when = next.in === 1 ? 'завтра' : ('в ' + next.day.toLowerCase());
+      // Название следующей программы в день отдыха не показываем: до неё ещё дожить,
+      // а расписание может смениться. Достаточно дня — «Следующая — в понедельник».
       // День установки: программу только что добавили, а приложение отвечает
       // «сегодня отдых» — и первая тренировка не случается никогда. Пока не пройдена
       // ни одна, «отдыха» не бывает: расписание есть, но начать предлагаем сейчас.
@@ -7256,7 +7276,7 @@ function renderToday(){
         cls: neverTrained ? '' : 'rest',
         ico: neverTrained ? 'play' : 'moon',
         title: neverTrained ? 'Начни сегодня' : 'Сегодня отдых',   // заголовок строки не переносится: длиннее — обрежется
-        sub: neverTrained ? `Первая тренировка: «${next.p.name}»` : `Следующая — ${when}: «${next.p.name}»`,
+        sub: neverTrained ? `Первая тренировка: «${next.p.name}»` : `Следующая — ${when}`,
         action: neverTrained ? 'Начать' : 'Открыть',
         onclick: () => openStart(next.p)
       }));
