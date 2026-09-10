@@ -286,7 +286,7 @@
   .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:var(--font-text);font-size:13px;cursor:pointer}
 
   /* ---------- конструктор ---------- */
-  .builder h2{font-size:21px;margin:18px 0 16px}
+  .builder h2{margin:18px 0 16px}
   /* ======== КОМПОНЕНТ «ПОЛЕ» — единственный источник правды ========
      поле = колонка: подпись, контрол, подсказка. Шаг внутри 6px.
      Между полями расстояние задаёт контейнер (карточка через gap). */
@@ -971,7 +971,7 @@
     display:flex;align-items:center;gap:14px;
     background:var(--grad-accent);
     border:1px solid rgba(255,255,255,.16);border-radius:var(--r-lg);
-    padding:16px;margin:var(--sp-6) 0 var(--sp-2);cursor:pointer;text-align:left;
+    padding:16px;margin:var(--sp-7) 0 0;cursor:pointer;text-align:left;
     box-shadow:var(--sh-accent);font-family:var(--font-text);
   }
   .premium-banner:active{transform:scale(.985)}
@@ -1094,7 +1094,7 @@
   }
   .plan-tab.add svg{width:16px;height:16px}
   .plan-chip{flex:0 0 auto !important;padding:11px 14px !important}
-  .screen-head{display:flex;align-items:center;gap:12px;margin:14px 0 16px}
+  .screen-head{display:flex;align-items:center;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
   .screen-head h2{margin:0 !important}
   .back-chip{flex:none;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:20px;cursor:pointer;line-height:1;padding-bottom:2px}
   .back-chip:active{background:var(--line)}
@@ -1376,10 +1376,20 @@
   .btn-resume svg{width:20px;height:20px}
   .ctx-menu svg{margin-right:8px;flex:none}
   /* ---------- приветствие на главной ---------- */
-  .greet{margin:var(--sp-6) 0 var(--sp-5)}
+  .greet{margin:0}
   .greet-hi{font-family:var(--font-display);font-weight:500;font-size:var(--fs-sm);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
   .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:anywhere}
   .greet-name .dot{color:var(--accent-ink)}
+  .greet-top{display:flex;align-items:flex-start;gap:var(--sp-3)}
+  .greet-id{flex:1;min-width:0}
+  .greet-ava{
+    flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;padding:0;margin-top:2px;
+    font-family:var(--font-display);font-weight:700;font-size:20px;
+  }
+  .greet-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .greet-ava svg{width:22px;height:22px}
   .greet-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)}
   .g-chip{
     display:inline-flex;align-items:center;gap:6px;
@@ -1403,10 +1413,14 @@
   /* акцентная полоска сверху: тот же градиент, но втрое шире карточки и медленно
      ползущий. Перерисовывается полоса 3px высотой — на батарее это не видно,
      а карточка перестаёт быть статичной картинкой. */
+  /* Полоса гаснет к краям маской: без неё она шла ровной чертой поверх скруглений
+     и упиралась в углы прямыми торцами — карточка выглядела надломленной. */
   .today-card.has-plan::before{
     content:'';position:absolute;inset:0 0 auto 0;height:3px;z-index:2;
     background:var(--grad-accent);background-size:300% 100%;
     animation:tcLine 16s linear infinite;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);
   }
   @keyframes tcLine{from{background-position:0% 50%}to{background-position:300% 50%}}
   /* ---- живой фон карточки плана ----
@@ -1797,7 +1811,7 @@
      дороже горизонтали. */
   .store-cta{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
-    margin-top:var(--sp-5);padding:var(--sp-3) var(--sp-4);
+    margin-top:var(--sp-7);padding:var(--sp-3) var(--sp-4);
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);color:var(--ink);cursor:pointer;text-align:left;
     font-family:var(--font-text);
@@ -1815,7 +1829,6 @@
   .store-cta .sc-arrow svg{width:20px;height:20px}
   /* значок каталога в шапке «Тренировок» стоит рядом с крупным «+» — уравниваем
      их по оптическому весу, иначе пара кнопок выглядит случайной */
-  #btnStorePrograms svg{width:20px;height:20px}
 
   /* поиск */
   .store-search{
@@ -2013,7 +2026,9 @@
   /* корневой экран резервирует прокрутку ровно под док — ничего не прячется под ним */
   .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-6))}
   .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
-  .page-head h1{font-size:clamp(26px,7.2vw,32px);line-height:1.04}
+  /* Один размер и одно место у заголовка любого экрана: корневые разделы и
+     внутренние экраны отличались и кеглем (32 против 21), и отступами сверху. */
+  .page-head h1,.screen-head h2{font-size:clamp(23px,6.4vw,28px);line-height:1.06}
   /* кнопки шапки — одна группа: у .page-head раскладка space-between, и без обёртки
      заголовок расталкивал их по разным углам, будто они не связаны */
   .page-head .ph-tools{display:flex;align-items:center;gap:8px;flex:none}
@@ -2023,7 +2038,8 @@
      Экран начинается прямо с приветствия: ни логотипа, ни аватарки сверху.
      Приветствие живёт без рамки — карточка на экране ровно одна, и это план
      на сегодня. Иначе две одинаковые плашки подряд спорят за внимание. */
-  .showcase{position:relative;padding:var(--sp-4) 0 0;margin-bottom:var(--sp-7)}
+  /* приветствие начинается на той же высоте, что заголовок любого другого раздела */
+  .showcase{position:relative;padding:var(--sp-6) 0 0;margin-bottom:var(--sp-7)}
   /* мягкий блик за приветствием. Двигается на прокрутке — это единственная его
      задача: показать, что страница длиннее экрана. При reduce-motion стоит на месте.
      right:-20px — ровно горизонтальное поле .app: блик доходит до края экрана и ни
@@ -2057,6 +2073,11 @@
   .ws-day.plan i{background:var(--accent-ink)}
   .ws-day .ws-ok{display:flex;color:var(--ok)}
   .ws-day .ws-ok svg{width:14px;height:14px;stroke-width:3}
+  /* день закрыт наполовину: две программы назначены, пройдена одна */
+  .ws-day .ws-part{font-family:var(--font-display);font-weight:600;font-size:11px;color:var(--accent-ink);line-height:1;font-variant-numeric:tabular-nums}
+  /* тренировка была, но не та, что по плану (или плана на день не было вовсе) */
+  .ws-day .ws-extra{display:flex;color:var(--muted);opacity:.7}
+  .ws-day .ws-extra svg{width:14px;height:14px;stroke-width:3}
   .ws-day.today{border-color:var(--accent-line);background:var(--accent-soft)}
   .ws-day.today b{color:var(--accent-ink)}
   #weekStripHint{margin-top:var(--sp-2)}
@@ -2114,10 +2135,6 @@
      плюс сегмент-контрол: до первой карточки ~110 px.
      Вкладки подписаны коротко («Тело» вместо «Вес и объёмы»), чтобы подписи
      никогда не переносились и пилюли не разъезжались по высоте. */
-  .stats-kicker{
-    display:block;font-family:var(--font-display);font-weight:600;font-size:12px;
-    letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:2px 0 10px;
-  }
   .tabs.seg{gap:4px;padding:4px;margin:0 0 16px;border-radius:var(--r-lg)}
   .tabs.seg .tab{
     height:44px;padding:0 6px;white-space:nowrap;font-size:13.5px;
@@ -2144,6 +2161,10 @@
   }
   .wk-day.plan{border-style:dashed;border-color:var(--accent-line);color:var(--accent-ink)}
   .wk-day.done{background:var(--accent);border-color:transparent;color:var(--on-accent);font-weight:600}
+  /* половина плана дня: заливка снизу вверх ровно наполовину */
+  .wk-day.part{border-color:var(--accent-line);color:var(--accent-ink);font-weight:600;
+    background:linear-gradient(to top,var(--accent-soft) 50%,var(--bg-2) 50%)}
+  .wk-day.extra{border-color:var(--line-2);color:var(--muted)}
   .wk-day.today{box-shadow:0 0 0 1.5px var(--accent-line)}
   .wk-day.fut{opacity:.75}
   .wk-note{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.45}
@@ -2154,6 +2175,8 @@
     display:flex;align-items:center;gap:10px;
     margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
   }
+  /* в своей карточке отбивать итог линией уже не от чего */
+  .tot-row.tot-plain{margin-top:0;padding-top:0;border-top:none}
   /* «31 ч 46 мин» длиннее «57», поэтому колонки не равные, а цифры не переносятся:
      в системном шрифте (сеть без Google Fonts) они шире, чем в Oswald. */
   .tot{min-width:0}
@@ -2299,8 +2322,15 @@
     <div class="showcase">
       <div class="sc-glow" id="scGlow"></div>
       <div class="greet">
-        <p class="greet-hi" id="greetHi">Привет</p>
-        <h1 class="greet-name" id="greetName"></h1>
+        <div class="greet-top">
+          <div class="greet-id">
+            <p class="greet-hi" id="greetHi">Привет</p>
+            <h1 class="greet-name" id="greetName"></h1>
+          </div>
+          <!-- аватарка ведёт в свой профиль: на «Сегодня» это единственное место,
+               где видно, чей это экран, — а на устройстве профилей может быть несколько -->
+          <button type="button" class="greet-ava" id="greetAva" title="Профиль"></button>
+        </div>
         <div class="greet-chips" id="greetChips"></div>
       </div>
     </div>
@@ -2370,9 +2400,6 @@
   <section class="screen root" id="scrPrograms">
     <div class="page-head">
       <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
-      <div class="ph-tools">
-        <button class="icon-btn" id="btnStorePrograms" title="Каталог программ"></button>
-      </div>
     </div>
     <!-- Главное действие экрана стоит первым и выглядит как действие. Раньше их было
          два: незаметный «＋» в шапке и бледная пунктирная кнопка под списком, до которой
@@ -3469,7 +3496,7 @@
        (сравнение месяцев в календаре). Большого h1 здесь нет специально: экран
        подписан в доке, а 180 px пустой шапки на телефоне дороже любой типографики. -->
   <section class="screen root" id="scrStats">
-    <span class="stats-kicker">Статистика</span>
+    <div class="page-head"><h1>Статистика</h1></div>
     <div class="tabs seg" id="statsTabs">
       <button class="tab act" data-tab="workouts">Тренировки</button>
       <button class="tab" data-tab="weight">Тело</button>
@@ -3489,10 +3516,16 @@
         </div>
         <div class="wk-days" id="weekDays"></div>
         <p class="wk-note" id="weekNote"></p>
-        <div class="tot-row">
+      </div>
+
+      <!-- Итог за всё время — своей карточкой. Раньше он лежал внутри «этой недели»,
+           и кнопка очистки читалась как «сбросить неделю», хотя стирала всю историю
+           целиком: календарь, недели, серии и достижения вместе с ней. -->
+      <div class="metric-card">
+        <div class="tot-row tot-plain">
           <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
           <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
-          <button class="icon-btn tot-reset" id="btnResetTotal" title="Сбросить общее время и счётчик"></button>
+          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику"></button>
         </div>
       </div>
 
@@ -5602,39 +5635,35 @@ function renderStatsBlock(){
   setShown('calCard', !empty);
 
   // ---- эта неделя: главный ответ на вопрос «я вообще занимаюсь?» ----
-  const thisWeek = weekOf(monday);
-  const doneSet = new Set(stats.history.map(h => h.d));
-  const doneWeek = stats.history.filter(h => thisWeek.includes(h.d)).length;
-  const planDays = new Set();
-  customPrograms.forEach(p => programDaysUnion(p).forEach(d => planDays.add(d)));
-  // Считаем РАЗНЫЕ дни недели, а не сумму по программам: две программы на Пн, Ср и
-  // Пт — это три тренировочных дня, а не шесть. Набор planDays для этого уже собран
-  // строкой выше, но раньше в счётчик шла сумма, и неделя показывала «1 из 6».
-  const planned = planDays.size;
-  $('weekDone').textContent = doneWeek;
-  $('weekPlan').textContent = planned
-    ? `из ${planned} по плану`
-    : plural(doneWeek, 'тренировка', 'тренировки', 'тренировок');
+  const w = weekPlanInfo(now);
+  $('weekDone').textContent = w.plannedTotal ? w.doneTotal : w.anyDays;
+  $('weekPlan').textContent = w.plannedTotal
+    ? `из ${w.plannedTotal} по плану`
+    : plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок');
 
-  // полоска дней: заливка — сделано, пунктир — день по плану, который ещё впереди
-  const todayIso = localISO(now);
-  $('weekDays').innerHTML = DAYS.map((nm, i) => {
-    const iso = thisWeek[i];
+  // полоска дней: заливка — план дня закрыт, половина — закрыт частично,
+  // пунктир — назначено и ещё не сделано
+  $('weekDays').innerHTML = w.days.map(d => {
     const cls = ['wk-day'];
-    if(doneSet.has(iso)) cls.push('done');
-    else if(planDays.has(nm) && iso >= todayIso) cls.push('plan');
-    if(iso === todayIso) cls.push('today');
-    else if(iso > todayIso) cls.push('fut');
-    return `<div class="${cls.join(' ')}">${nm}</div>`;
+    if(d.full) cls.push('done');
+    else if(d.part) cls.push('part');
+    else if(d.planned && !d.past) cls.push('plan');
+    else if(!d.planned && d.any) cls.push('extra');
+    if(d.today) cls.push('today');
+    else if(d.future) cls.push('fut');
+    return `<div class="${cls.join(' ')}">${d.name}</div>`;
   }).join('');
 
   // словами то, что полоска показывает цветом: без легенды и без «нажми, чтобы»
-  const left = DAYS.filter((nm, i) => planDays.has(nm) && thisWeek[i] >= todayIso && !doneSet.has(thisWeek[i]));
   const bits = [];
-  if(!planned) bits.push(doneWeek ? 'Расписания нет — тренируешься, когда удобно' : 'Расписания нет — начни, когда удобно');
-  else if(doneWeek >= planned) bits.push('План на неделю выполнен');
-  else if(left.length) bits.push('Осталось по плану: ' + left.map(d => DAY_FULL[DAYS.indexOf(d)].toLowerCase()).join(', '));
-  else bits.push('Плановые дни этой недели прошли');
+  if(!w.plannedTotal) bits.push(w.anyDays ? 'Расписания нет — тренируешься, когда удобно' : 'Расписания нет — начни, когда удобно');
+  else if(w.doneTotal >= w.plannedTotal) bits.push('План на неделю выполнен');
+  else {
+    const left = weekLeftDays(w);
+    if(left.length) bits.push('Осталось по плану: ' + left.map(d => DAY_FULL[d.idx].toLowerCase()).join(', '));
+    else bits.push('Плановые дни этой недели прошли');
+  }
+  if(w.extraTotal) bits.push(`${w.extraTotal} сверх плана`);
 
   const si = calcStreakInfo();
   const pill = $('streakStat');
@@ -6956,6 +6985,10 @@ function renderGreeting(){
   $('greetHi').textContent = hi;
   const name = (u && u.name || '').trim();
   $('greetName').textContent = name || 'С возвращением';
+  // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
+  $('greetAva').innerHTML = (u && u.photo)
+    ? `<img src="${u.photo}" alt="">`
+    : (name ? esc(name[0].toUpperCase()) : icon('user'));
   const box = $('greetChips');
   box.innerHTML = '';
   const chip = (ico, val, label, hot) => {
@@ -7018,30 +7051,84 @@ function todayRow({cls, ico, title, sub, action, onclick}){
 
 // неделя одним взглядом: где галочка — уже сделано, где точка — по плану.
 // Состояние передаётся формой значка, а не только цветом.
+/* ---- неделя: что назначено и что из назначенного закрыто ----
+   День выполнен, только когда пройдены ВСЕ программы, назначенные на этот день недели.
+   Раньше день закрывала любая тренировка: человек делал десятиминутную разминку вместо
+   силовой — и неделя рапортовала «выполнено». Тренировки сверх плана считаются отдельно
+   и плана не закрывают, но и не пропадают.
+   Записи истории до появления pid (id программы) отнести к плану нельзя — они идут
+   в «сверх плана», а не занижают выполнение. */
+function weekPlanInfo(date){
+  const now = date || new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+  const todayIso = localISO(now);
+  const hist = stats.history || [];
+  const days = DAYS.map((nm, i) => {
+    const day = new Date(monday); day.setDate(monday.getDate() + i);
+    const iso = localISO(day);
+    const planIds = customPrograms.filter(p => programDaysUnion(p).includes(nm)).map(p => p.id);
+    const doneIds = new Set(hist.filter(h => h.d === iso).map(h => h.pid).filter(Boolean));
+    const doneCount = hist.filter(h => h.d === iso).length;
+    const done = planIds.filter(id => doneIds.has(id)).length;
+    return {
+      name: nm, iso, idx: i,
+      planned: planIds.length,
+      done,
+      extra: Math.max(0, doneCount - done),
+      any: doneCount > 0,
+      full: planIds.length > 0 && done >= planIds.length,
+      part: planIds.length > 0 && done > 0 && done < planIds.length,
+      past: iso < todayIso, today: iso === todayIso, future: iso > todayIso
+    };
+  });
+  return {
+    monday, todayIso, days,
+    plannedDays: days.filter(d => d.planned).length,
+    fullDays: days.filter(d => d.full).length,
+    plannedTotal: days.reduce((a, d) => a + d.planned, 0),
+    doneTotal: days.reduce((a, d) => a + d.done, 0),
+    extraTotal: days.reduce((a, d) => a + d.extra, 0),
+    anyDays: days.filter(d => d.any).length
+  };
+}
+// «осталось по плану» — только дни, до которых ещё можно дойти
+const weekLeftDays = w => w.days.filter(d => d.planned > d.done && !d.past);
+
 function renderWeekStrip(){
   const box = $('weekStrip');
   if(!box) return;
   box.innerHTML = '';
-  const now = new Date();
-  const di = (now.getDay() + 6) % 7;
-  const monday = new Date(now); monday.setDate(now.getDate() - di);
-  const doneDays = new Set((stats.history || []).map(h => h.d));
-  let planned = 0, done = 0;
-  DAYS.forEach((d, i) => {
-    const day = new Date(monday); day.setDate(monday.getDate() + i);
-    const iso = localISO(day);
-    const isPlan = customPrograms.some(p => programDaysUnion(p).includes(d));
-    const isDone = doneDays.has(iso);
-    if(isPlan) planned++;
-    if(isDone) done++;
+  const w = weekPlanInfo();
+  const di = (new Date().getDay() + 6) % 7;
+  w.days.forEach((d, i) => {
     const cell = document.createElement('div');
-    cell.className = 'ws-day' + (isPlan ? ' plan' : '') + (isDone ? ' done' : '') + (i === di ? ' today' : '');
-    cell.innerHTML = `<b>${d}</b>` + (isDone ? `<span class="ws-ok">${icon('check')}</span>` : '<i></i>');
+    cell.className = 'ws-day'
+      + (d.planned ? ' plan' : '')
+      + (d.full ? ' done' : (d.part ? ' part' : ''))
+      + (i === di ? ' today' : '');
+    let mark = '<i></i>';
+    if(d.full) mark = `<span class="ws-ok">${icon('check')}</span>`;
+    else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
+    else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
+    cell.innerHTML = `<b>${d.name}</b>` + mark;
     box.appendChild(cell);
   });
-  $('weekStripHint').textContent = done
-    ? `Сделано на этой неделе: ${done} ${plural(done, 'тренировка', 'тренировки', 'тренировок')}` + (planned ? `, по плану — ${planned}` : '')
-    : (planned ? `По плану на этой неделе: ${planned} ${plural(planned, 'день', 'дня', 'дней')}` : 'Дни тренировок пока не выбраны');
+  const hint = [];
+  if(!w.plannedTotal){
+    hint.push(w.anyDays
+      ? `Сделано на этой неделе: ${w.anyDays} ${plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок')}`
+      : 'Дни тренировок пока не выбраны');
+  } else {
+    hint.push(`По плану: ${w.doneTotal} из ${w.plannedTotal}`);
+    const left = weekLeftDays(w);
+    if(w.doneTotal >= w.plannedTotal) hint.push('неделя закрыта');
+    else if(left.length) hint.push('осталось ' + left.map(d => DAY_FULL[d.idx].toLowerCase()).join(', '));
+    else hint.push('плановые дни прошли');
+  }
+  if(w.extraTotal) hint.push(`${w.extraTotal} сверх плана`);
+  $('weekStripHint').textContent = hint.join(' · ');
 }
 
 function renderToday(){
@@ -12772,9 +12859,9 @@ $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal'
 $('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
 $('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
+$('greetAva').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
 /* ---- каталог ---- */
 $('btnStoreMenu').onclick = ()=> openStore('scrMenu');
-$('btnStorePrograms').onclick = ()=> openStore('scrPrograms');
 $('storeBackTop').onclick = ()=> goTab(storeFrom);
 $('storeQuery').oninput = ()=>{
   storeFilter.q = $('storeQuery').value;
@@ -13750,8 +13837,15 @@ $('bCoverFile').onchange = e=>{
 };
 // сброс счётчика прохождений (в редактировании программы)
 // сброс общего времени тренировок
+// Кнопка называлась «сбросить общее время и счётчик», а стирала ВСЮ историю —
+// вместе с календарём, неделями, сериями и достижениями. Теперь говорит правду
+// и требует набрать фразу: восстановить это неоткуда.
 $('btnResetTotal').onclick = async ()=>{
-  if(!(await appConfirm('Сбросить общее время и счётчик тренировок?'))) return;
+  const ok = await appDialog(
+    'Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры и фото останутся.',
+    {confirm: true, okText: 'Очистить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+  );
+  if(!ok) return;
   stats.totalSec = 0;
   stats.count = 0;
   stats.history = [];
@@ -13776,7 +13870,6 @@ document.addEventListener('visibilitychange', ()=>{
 $('btnPause').innerHTML = icon('pause');
 $('btnMicW').innerHTML = icon('mic');
 // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
-$('btnStorePrograms').innerHTML = icon('book');
 $('storeIcoMenu').innerHTML = icon('book');
 $('storeArrowMenu').innerHTML = icon('chevR');
 $('storeBackTop').innerHTML = icon('chevL');
