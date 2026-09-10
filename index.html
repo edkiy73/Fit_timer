@@ -959,6 +959,10 @@
      части возвращают себе вертикальный жест. */
   .modal{position:fixed;inset:0;z-index:60;background:var(--scrim);display:none;align-items:flex-end;justify-content:center;padding:14px;touch-action:none;overscroll-behavior:contain}
   .modal-card,.sess-list,.pm-scroll,#dlgCode,.modal-card textarea{touch-action:pan-y}
+  /* Одного touch-action мало: жест по карточке, которая сама не прокручивается,
+     браузер передаёт ближайшему прокручиваемому предку — то есть странице. Поэтому
+     на время попапа страница фиксируется на своей позиции и возвращается обратно. */
+  body.modal-lock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   .modal.open{display:flex;animation:modalFade .2s ease}
   .modal.open .modal-card{animation:sheetUp .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
@@ -2055,8 +2059,8 @@
   }
   .dock-btn{
     flex:1;min-width:0;min-height:50px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    border:none;background:none;cursor:pointer;padding:4px 0;border-radius:var(--r-pill);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    border:none;background:none;cursor:pointer;padding:5px 2px;border-radius:16px;
     color:var(--muted);font-family:var(--font-text);font-size:clamp(9.5px,2.6vw,10.5px);
     line-height:1.1;letter-spacing:-.01em;white-space:nowrap;
   }
@@ -2065,15 +2069,19 @@
     transition:color .2s ease,transform .12s ease;
   }
   .dock-btn svg{width:21px;height:21px}
-  /* Активная вкладка: подложка под всей кнопкой, а не пилюля под одной иконкой.
-     Обведённая иконка с подписью снаружи читалась как две разные вещи, и подпись
-     оказывалась вне выделения. */
-  .dock-btn{transition:background .2s ease,color .2s ease,box-shadow .2s ease}
+  /* Активная вкладка. Обводка вокруг кнопки не работала: подпись «Тренировки» шире
+     иконки, и в скруглённую рамку по краям она не помещалась — рамка резала текст.
+     Поэтому у активной вкладки не рамка, а мягкая заливка без границы, тот же цвет
+     у иконки и подписи. Начертание не меняется: жирный текст
+     шире обычного и в узкой колонке дока прыгает по ширине при переключении. */
+  .dock-btn{transition:background .2s ease,color .2s ease;position:relative}
   .dock-btn.act{
-    color:var(--accent-ink);font-weight:600;
-    background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line),var(--sh-dock-act);
+    color:var(--accent-ink);
+    background:var(--accent-soft);
     animation:dockPop .34s cubic-bezier(.34,1.56,.64,1);
   }
+  /* черты под подписью нет намеренно: она читалась как подчёркивание слова,
+     а заливка и цвет уже говорят, какая вкладка открыта */
   @keyframes dockPop{
     0%{transform:scale(.82)}
     60%{transform:scale(1.06)}
@@ -4814,10 +4822,25 @@ function dismissTopModal(){
 // её и заберёт жест «назад», а обработчик ниже закроет попап.
 let skipPop = 0;   // наш собственный history.back(), а не жест человека
 let modalsOpen = false;
+let lockedY = 0;
+function lockPage(on){
+  const b = document.body;
+  if(on === b.classList.contains('modal-lock')) return;
+  if(on){
+    lockedY = window.scrollY || window.pageYOffset || 0;
+    b.style.top = `-${lockedY}px`;
+    b.classList.add('modal-lock');
+  } else {
+    b.classList.remove('modal-lock');
+    b.style.top = '';
+    window.scrollTo(0, lockedY);
+  }
+}
 new MutationObserver(()=>{
   const now = !!document.querySelector('.modal.open');
   if(now === modalsOpen) return;
   modalsOpen = now;
+  lockPage(now);
   if(now){
     try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(e){}
     return;
