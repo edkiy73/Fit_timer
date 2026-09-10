@@ -5,28 +5,69 @@ Trusted Web Activity: настоящее Android-приложение, внут�
 Своей копии приложения внутри APK нет: обновил `index.html` на сайте — обновилось
 и в установленном приложении, пересобирать APK не нужно.
 
-## Что где
+## Три вещи, которые должны сойтись
 
-- `app/src/main/AndroidManifest.xml` — вся обёртка. Адрес сайта задаётся один раз в
-  `manifestPlaceholders` в `app/build.gradle`.
-- `../.well-known/assetlinks.json` — файл на сайте, который доказывает, что APK и
-  домен принадлежат одному владельцу. Внутри — отпечаток SHA-256 ключа подписи.
-  **Если пересоздать ключ, отпечаток надо поменять и здесь**, иначе TWA перестанет
-  открываться в полноэкранном режиме и покажет адресную строку.
+1. **Сайт** на `https://edkiy73.github.io/Fit_timer/` — его публикует
+   `.github/workflows/pages.yml`.
+2. **APK**, подписанный ключом, — его собирает `.github/workflows/android.yml`.
+3. **`../.well-known/assetlinks.json`** на сайте — доказательство, что домен и
+   приложение принадлежат одному владельцу. Внутри отпечаток SHA-256 ключа подписи.
+
+Если отпечаток в `assetlinks.json` не совпадёт с ключом, которым подписан APK,
+приложение всё равно установится и будет работать, но покажет адресную строку
+сверху — то есть будет выглядеть браузером, а не приложением.
+
+## Что нужно сделать руками один раз
+
+### 1. Включить Pages
+
+**Settings → Pages → Source: GitHub Actions.** Из workflow это не включается:
+токену сборки не хватает прав. После этого `pages.yml` опубликует сайт сам и будет
+обновлять его на каждый пуш в `main`.
+
+### 2. Положить ключ подписи в секреты
+
+**Settings → Secrets and variables → Actions → New repository secret**, четыре штуки:
+
+| Секрет | Значение |
+|---|---|
+| `KEYSTORE_BASE64` | содержимое файла `fittimer.keystore.base64` |
+| `KEYSTORE_PASSWORD` | пароль хранилища |
+| `KEY_ALIAS` | `fittimer` |
+| `KEY_PASSWORD` | тот же пароль |
+
+Без секретов сборка не падает — она делает debug-вариант. Он ставится на телефон
+так же, но его отпечаток не совпадёт с `assetlinks.json`, и будет адресная строка.
 
 ## Сборка
 
-Только в GitHub Actions (`.github/workflows/android.yml`): Android SDK стоит на
-раннере. Кнопка «Run workflow» во вкладке Actions, готовый APK — в артефактах.
+Только в GitHub Actions: Android SDK стоит на раннере. Вкладка **Actions → Сборка
+APK → Run workflow**, готовый файл — внизу страницы запуска, в разделе Artifacts.
 
-Секреты репозитория для подписанной сборки:
+Установка на телефон: скинуть APK на устройство и открыть; Android спросит
+разрешение на установку из этого источника.
 
-| Секрет | Что это |
-|---|---|
-| `KEYSTORE_BASE64` | файл ключа, закодированный `base64 -w0 fittimer.keystore` |
-| `KEYSTORE_PASSWORD` | пароль хранилища |
-| `KEY_ALIAS` | `fittimer` |
-| `KEY_PASSWORD` | пароль ключа (тот же) |
+## Если понадобится новый ключ
 
-Без секретов workflow соберёт debug-вариант: он ставится на телефон так же, но его
-отпечаток не совпадёт с `assetlinks.json`, и приложение покажет адресную строку.
+```bash
+keytool -genkeypair -v -keystore fittimer.keystore -alias fittimer \
+  -keyalg RSA -keysize 2048 -validity 10000
+keytool -list -v -keystore fittimer.keystore -alias fittimer | grep SHA256
+```
+
+Отпечаток из второй команды **обязательно** вписать в `../.well-known/assetlinks.json`
+вместо старого, иначе TWA перестанет открываться полноэкранно.
+
+**Ключ нельзя терять.** Обновление приложения в Google Play принимается только за
+подписью тем же ключом. Потерял ключ — только новое приложение с нуля, со всеми
+установками и отзывами заново.
+
+## Что где менять
+
+- **Адрес сайта** — `manifestPlaceholders` в `app/build.gradle` (и ссылки в
+  `res/xml/shortcuts.xml`).
+- **Имя приложения** — `res/values/strings.xml`.
+- **Цвет заставки и системных полос** — `res/values/colors.xml`, держать
+  одинаковым с `theme_color` в `../manifest.webmanifest`.
+- **Версия** — `versionCode` и `versionName` в `app/build.gradle`; Play не примет
+  загрузку с уже использованным `versionCode`.
