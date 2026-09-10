@@ -1453,6 +1453,7 @@
   /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)
      даже там, где перенос по пробелу был возможен */
   .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:break-word}
+  .greet-name.solo{margin-top:0}
   .greet-name .dot{color:var(--accent-ink)}
   /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
      прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
@@ -1460,7 +1461,7 @@
   .greet-id{flex:1;min-width:0}
   .greet-ava{
     flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;cursor:pointer;
-    background:var(--card);border:1px solid var(--line);color:var(--accent-ink);
+    background:var(--card);border:2px solid var(--line-2);color:var(--accent-ink);
     display:flex;align-items:center;justify-content:center;padding:0;
     font-family:var(--font-display);font-weight:700;font-size:20px;
   }
@@ -7157,6 +7158,9 @@ function renderGreeting(){
   // разваливается на три строки. Без имени приветствие само становится заголовком.
   const named = !!name && !isDefaultName(name);
   setShown('greetHi', named);
+  // без строки приветствия сверху верхний отступ заголовка не от чего отбивать,
+  // а аватарка центруется по всему блоку — вместе с этим отступом, и съезжает вверх
+  $('greetName').classList.toggle('solo', !named);
   $('greetHi').textContent = hi;
   $('greetName').textContent = named ? name : hi;
   // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
