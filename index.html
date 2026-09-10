@@ -1128,6 +1128,9 @@
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
      карточка — флекс-колонка с gap, поэтому margin детей не важен
      и правила больше не конфликтуют по специфичности */
+  /* необратимое действие держим на расстоянии от «Добавить профиль»: соседство
+     кнопок «завести» и «стереть всё» — классический промах пальцем */
+  .card-block.danger-block{margin-top:var(--sp-7)}
   .card-block{
     background:var(--card);border:1px solid var(--line);border-radius:18px;
     padding:16px;margin:0 0 14px;
@@ -1636,20 +1639,13 @@
   /* ---- знакомство ---- */
   .ob-title{font-size:clamp(26px,7.4vw,32px);line-height:1.08;margin:0 0 12px}
   .ob-lead{color:var(--muted);font-size:var(--fs-md);line-height:1.55;margin:0 0 18px}
-  #obStep3 .ob-lead{margin-bottom:22px}
-  #obStep3 .medal{
+  #obHello .ob-lead{margin-bottom:22px}
+  #obHello .medal{
     width:88px;height:88px;margin:6px auto 14px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);
   }
   #scrOnboard .note{margin-bottom:18px}
-  #scrOnboard .field{margin-bottom:16px}
-
-  /* ---- шаги знакомства: полоски вместо слова «шаг» (оно уже занято прибавкой) ---- */
-  .step-dots{display:flex;gap:6px;align-items:center;margin-bottom:var(--sp-4)}
-  .step-dots i{width:26px;height:4px;border-radius:99px;background:var(--line);display:block}
-  .step-dots i.done{background:var(--accent-line)}
-  .step-dots i.on{background:var(--accent);width:38px}
 
   /* ---- заголовок карточки со счётчиком ---- */
   .cb-count{
@@ -3257,37 +3253,17 @@
   <!-- Первый запуск -->
   <section class="screen" id="scrOnboard">
     <div class="start-wrap">
-      <div id="obStep1">
-        <div class="step-dots"><i class="on"></i><i></i><i></i></div>
-        <h2 class="ob-title">Привет! Как тебя зовут?</h2>
-        <div class="field"><input type="text" id="obName" maxlength="30" placeholder="Твоё имя"></div>
-        <div class="field"><label>Пол</label>
-          <div class="seg"><button type="button" id="obF" class="act">Женский</button><button type="button" id="obM">Мужской</button></div>
-        </div>
-        <div class="field"><label>Дата рождения</label><input type="date" id="obBirth"></div>
-        <div class="note">
-          <span class="n-ico" data-icon="user"></span>
-          <span>Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и время на восстановление. Это единственное, что мы спрашиваем обязательно.</span>
-        </div>
-        <button class="btn-primary" id="obNext1">Дальше</button>
-        <p class="ob-legal">Нажимая «Дальше», ты принимаешь правила приложения и соглашаешься с тем, как оно обращается с данными.</p>
-        <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
-      </div>
-      <div id="obStep2" class="hidden">
-        <div class="step-dots"><i class="done"></i><i class="on"></i><i></i></div>
-        <h2 class="ob-title">Какая у тебя цель?</h2>
-        <p class="ob-lead">Выбери, что ближе — от этого зависит, какие тренировки будем предлагать. Потом можно поменять.</p>
-        <div class="fb-options" id="obGoals"></div>
-        <button class="btn-primary" id="obNext2" style="margin-top:16px">Дальше</button>
-      </div>
-      <div id="obStep3" class="hidden" style="text-align:center">
-        <div class="step-dots" style="justify-content:center"><i class="done"></i><i class="done"></i><i class="on"></i></div>
-        <div class="medal" data-icon="confetti"></div>
-        <h2 class="ob-title" id="obDoneTitle">Готово!</h2>
-        <p class="ob-lead">Универсальная разминка на 10 минут уже в твоём списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
+      <!-- Раньше знакомство начиналось с анкеты: имя, пол, дата рождения, цель — три
+           экрана до первой тренировки. Человек приходил включить таймер, а получал
+           форму, и часть людей уходила прямо здесь. Теперь профиль заводится сам
+           («Гость 1», «Гость 2» — по порядку), а пол и дату рождения спрашиваем позже
+           и ровно там, где без них не обойтись: перед составлением тренировки. -->
+      <div id="obHello" style="text-align:center">
+        <div class="medal" data-icon="sparkle"></div>
+        <h2 class="ob-title">Привет!</h2>
+        <p class="ob-lead">Приложение ведёт тренировку за тебя: считает подходы и отдых, подсказывает голосом и помнит, на чём ты остановилась. Универсальная разминка на 10 минут уже в списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
         <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
-             стоило ещё одного шага в и без того длинном знакомстве, а здесь его
-             видно ровно перед первой тренировкой -->
+             стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
         <div class="note ob-health">
           <span class="n-ico" data-icon="heart"></span>
           <span>Приложение — таймер, а не тренер и не врач. Если ты беременна, есть болезни сердца, травмы спины или коленей либо большой перерыв в занятиях — сначала посоветуйся с врачом. Заболело или закружилась голова — останови тренировку.</span>
@@ -3295,6 +3271,8 @@
         <button type="button" class="ob-legal-link" id="obLegal3">Здоровье и безопасность</button>
         <button class="btn-primary" id="obStart">Начать разминку</button>
         <button class="btn-back" id="obLater">Позже — на главный экран</button>
+        <p class="ob-legal">Нажимая любую из кнопок, ты принимаешь правила приложения и соглашаешься с тем, как оно обращается с данными.</p>
+        <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
       </div>
     </div>
   </section>
@@ -3636,6 +3614,15 @@
     <div id="usersList"></div>
     <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
     <p class="field-hint" id="usersHint"></p>
+
+    <!-- Удаление аккаунта живёт здесь, а не в настройках: человек ищет его там же, где
+         заведены профили. Требование сторов и 152-ФЗ — стереть всё, не переустанавливая
+         приложение, поэтому рядом напоминание про резервную копию: другого пути назад нет. -->
+    <div class="card-block danger-block">
+      <div class="cb-head"><p class="cb-title">Удаление аккаунта</p></div>
+      <p class="field-hint">Сотрёт всё и сразу: профили, программы, статистику, вес, замеры, фото и очередь на отправку. Восстановить будет неоткуда — кроме файла резервной копии, если ты сохранила его в «Настройках».</p>
+      <button type="button" class="link-btn" id="btnWipeAccount" style="color:var(--danger)">Удалить аккаунт и все данные</button>
+    </div>
   </section>
 
   <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
@@ -3661,7 +3648,7 @@
 
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
-      <p class="field-hint">Пока данные живут только на этом телефоне. Приложение уже ведёт учёт изменений, чтобы при подключении сервера ничего не потерялось.</p>
+      <p class="field-hint">Пока данные живут только на этом телефоне. Приложение уже ведёт учёт изменений: когда появится аккаунт на сервере, всё уедет туда само — выгружать и заливать вручную не придётся.</p>
       <div class="sync-row">
         <span class="sync-dot" id="syncDot"></span>
         <span class="sync-txt"><b id="syncState">Не подключена</b><small id="syncSub"></small></span>
@@ -3827,6 +3814,23 @@
       <button class="modal-btn" id="trClose">Закрыть</button>
     </div>
   </div>
+
+    <!-- Пол и дата рождения. На первом экране их не спрашивают: анкета не должна
+         стоять между человеком и первой тренировкой. Спрашиваем в момент, когда данные
+         правда идут в дело — перед составлением программы, — и ровно один раз: отказ
+         запоминается, чтобы попап не выскакивал на каждое действие. -->
+    <div class="modal" id="whoModal">
+      <div class="modal-card">
+        <span class="mini-label">Пара уточнений</span>
+        <p class="dlg-msg" id="whoMsg"></p>
+        <div class="field"><label>Пол</label>
+          <div class="seg"><button type="button" id="whoF">Женский</button><button type="button" id="whoM">Мужской</button></div>
+        </div>
+        <div class="field"><label>Дата рождения</label><input type="date" id="whoBirth"></div>
+        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px">Сохранить</button>
+        <button class="modal-btn" id="whoSkip">Не сейчас</button>
+      </div>
+    </div>
 
     <div class="modal" id="dlg">
       <div class="modal-card">
@@ -5213,9 +5217,32 @@ async function saveDoc(key, value){
 
 // Единственный шов, в который встанет сервер. Сейчас адаптера нет, и это не ошибка,
 // а состояние «синхронизация не подключена»: приложение обязано работать без неё.
+// Переезд существующего пользователя на сервер. Руками ничего выгружать и заливать не
+// нужно и не будет нужно: при первом подключении всё, что уже лежит на телефоне,
+// помечается изменённым и уходит наверх обычной очередью — тем же путём, что и правки,
+// сделанные офлайн. Резервная копия файлом остаётся отдельной ручной функцией.
+async function markAllForSync(){
+  const at = new Date().toISOString();
+  for(const key of SYNC_KEYS){
+    const prev = docMeta[key] || {rev: 0};
+    docMeta[key] = {rev: prev.rev + 1, at, schema: SCHEMA_VERSION};
+    outbox = outbox.filter(o => o.key !== key);
+    outbox.push({key, rev: docMeta[key].rev, at});
+  }
+  await kvSet(pk('docMeta'), JSON.stringify(docMeta));
+  await kvSet(pk('outbox'), JSON.stringify(outbox));
+  if(typeof renderSyncRow === 'function') renderSyncRow();
+}
+
 const SYNC = {
   adapter: null,
   get connected(){ return !!SYNC.adapter; },
+  // единственная точка входа для будущего сервера
+  async connect(adapter){
+    SYNC.adapter = adapter;
+    await markAllForSync();
+    return SYNC.push();
+  },
   pending(){ return outbox.length; },
   async push(){
     if(!SYNC.adapter) return {sent: 0, offline: true};
@@ -5738,7 +5765,8 @@ function userState(){
 function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
-  const u = id ? users.find(x => x.id === id) : {id: null, name: '', gender: 'f', birth: '', photo: null, theme: 'light'};
+  // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: 'f', birth: '', photo: null, theme: themeLight ? 'light' : 'dark'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
@@ -5803,18 +5831,13 @@ async function deleteUser(){
     : `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
   if(!(await appConfirm(msg))) return;
   const id = uDraft.id;
-  await kvDel('customPrograms_' + id);
-  await kvDel('stats_' + id);
-  await kvDel('photos_' + id);
-  await kvDel('warmupAdded_' + id);
+  for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
   users = users.filter(x => x.id !== id);
   await saveUsers();
   if(isLast){
     // удалили последний профиль — полный сброс: онбординг → обучение → главная
     try{
-      await kvDel('currentUser'); await kvDel('profile');
-      await kvDel('seenHelp'); await kvDel('migrated');
-      await kvDel('customPrograms'); await kvDel('stats');
+      for(const k of GLOBAL_KEYS) await kvDel(k);
     }catch(e){}
     location.reload();
     return;
@@ -5826,6 +5849,35 @@ async function deleteUser(){
     renderUsers();
   }
   goTab('scrAccount');
+}
+
+// Ключи, которые заводит приложение. Перечислены поимённо и в одном месте: удаление,
+// которое забыло ключ, оставляет от «удалённого» аккаунта хвост — а это ровно то, за
+// что и придёт претензия (и из стора, и по 152-ФЗ).
+const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
+                      'workoutSession', 'identity', 'docMeta', 'outbox'];
+const GLOBAL_KEYS = ['users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
+                     'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
+                     'voiceHint', 'voiceURI', 'clapHint', 'wantSvg'];
+
+// Полное удаление аккаунта. Требование и сторов, и 152-ФЗ: человек должен уметь
+// отозвать согласие и стереть всё, не переустанавливая приложение. Стираем и очередь
+// на отправку — иначе после подключения сервера удалённое уехало бы туда из очереди.
+async function wipeAccount(){
+  const ok = await appDialog(
+    'Удалить аккаунт и все данные? Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона. Восстановить их будет неоткуда — только из файла резервной копии, если ты его сохранила.',
+    {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена'}
+  );
+  if(!ok) return;
+  for(const u of users){
+    for(const k of PROFILE_KEYS){ try{ await kvDel(k + '_' + u.id); }catch(e){} }
+  }
+  for(const id of ['f', 'm']){  // профили старой схемы
+    for(const k of PROFILE_KEYS){ try{ await kvDel(k + '_' + id); }catch(e){} }
+  }
+  for(const k of GLOBAL_KEYS){ try{ await kvDel(k); }catch(e){} }
+  try{ localStorage.clear(); }catch(e){}
+  location.reload();
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -6274,8 +6326,17 @@ async function saveWeightHist(){
 }
 
 /* ================= ПЕРВЫЙ ЗАПУСК (ОНБОРДИНГ) ================= */
-const OB_GOALS = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Сила и выносливость', 'Растяжка и лёгкость'];
-const obState = {gender: 'f', goal: '', birth: ''};
+// Имя по умолчанию. Ничего не спрашиваем на старте, но профиль всё равно должен
+// как-то называться: «Гость 1», «Гость 2» — по порядку, не занимая уже занятый номер.
+// Переименовать можно в любой момент в профиле.
+function nextGuestName(){
+  let n = 0;
+  users.forEach(u => {
+    const m = /^Гость\s+(\d+)$/.exec((u.name || '').trim());
+    if(m) n = Math.max(n, +m[1]);
+  });
+  return 'Гость ' + (n + 1);
+}
 
 function startOnboarding(){
   // Тема первого запуска — системная. Раньше здесь жёстко включалась светлая, и на
@@ -6284,40 +6345,79 @@ function startOnboarding(){
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   themeLight = !dark;
   applyTheme();
-  const box = $('obGoals'); box.innerHTML = '';
-  OB_GOALS.forEach(g => {
-    const b = document.createElement('button');
-    b.textContent = g;
-    b.onclick = ()=>{
-      obState.goal = g;
-      [...box.children].forEach(x => x.classList.toggle('act', x === b));
-    };
-    box.appendChild(b);
-  });
   show('scrOnboard', false);
 }
 
+// Профиль заводится по нажатию любой кнопки знакомства — и там же фиксируется согласие
+// с правилами, о котором написано под кнопками.
 async function finishOnboardingCreate(){
+  if(users.length) return;
   const u = {
     id: 'u' + Date.now(),
-    name: obState.name,
-    gender: obState.gender,
-    birth: obState.birth || '', photo: null,
-    theme: obState.gender === 'm' ? 'dark' : 'light',
-    goal: obState.goal
+    name: nextGuestName(),
+    gender: 'f', birth: '', photo: null,
+    theme: themeLight ? 'light' : 'dark'
   };
   users = [u];
   await saveUsers();
   currentUser = u.id;
   kvSet('currentUser', u.id);
   await loadIdentity();
+  recordConsent('terms');
   await loadData();
   await loadPhotos();
   await ensureWarmup();
   renderUsers(); renderMine(); renderStats(); renderWeight(); renderPhotos();
-  themeLight = u.theme !== 'dark';
   applyTheme();
-  $('obDoneTitle').textContent = `Готово, ${u.name}!`;
+}
+
+/* ---- пол и дата рождения: спрашиваем по требованию ---- */
+// Пол по умолчанию женский — значит по одному значению не понять, выбрал его человек
+// или подставило приложение. Отдельный флаг genderSet и отвечает на этот вопрос.
+const WHO_MSG = {
+  program: 'Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужно знать пол и возраст. Спросим один раз — дальше это меняется в профиле.',
+  ai: 'Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.'
+};
+let whoDraft = null, whoDone = null;
+const needWho = u => !!u && (!u.birth || !u.genderSet);
+function whoSyncForm(){
+  $('whoF').classList.toggle('act', whoDraft.gender !== 'm');
+  $('whoM').classList.toggle('act', whoDraft.gender === 'm');
+}
+function askWho(reason){
+  const u = curUser();
+  if(!u) return Promise.resolve(false);
+  whoDraft = {gender: u.gender === 'm' ? 'm' : 'f'};
+  $('whoMsg').textContent = WHO_MSG[reason] || WHO_MSG.program;
+  $('whoBirth').value = u.birth || '';
+  whoSyncForm();
+  $('whoModal').classList.add('open');
+  return new Promise(res => { whoDone = res; });
+}
+// Отказ запоминаем: попап, выскакивающий на каждое открытие конструктора, раздражает
+// сильнее, чем анкета на старте. Платные сценарии (подписка) спросят это отдельно
+// и уже обязательно — вместе с почтой.
+async function maybeAskWho(reason){
+  const u = curUser();
+  if(!u || u.whoAsked || !needWho(u)) return false;
+  return await askWho(reason);
+}
+async function whoFinish(save){
+  const u = curUser();
+  if(!u){ $('whoModal').classList.remove('open'); return; }
+  if(save){
+    const b = $('whoBirth').value || '';
+    const err = birthError(b, true);
+    if(err){ appAlert(err); return; }
+    u.gender = whoDraft.gender;
+    u.genderSet = true;
+    u.birth = b;
+  }
+  u.whoAsked = true;
+  await saveUsers();
+  renderUsers();
+  $('whoModal').classList.remove('open');
+  if(whoDone){ whoDone(!!save); whoDone = null; }
 }
 
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
@@ -6663,8 +6763,11 @@ function userAge(u){
   if(m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
   return (a >= 5 && a <= 100) ? a : null;
 }
-function birthError(v){
-  if(!v) return 'Укажи дату рождения — от возраста зависит подбор упражнений и нагрузки.';
+// Дата рождения обязательна только там, где её спрашивают ради дела (попап «пара
+// уточнений»). В профиле пустое поле — законное состояние: на старте её больше не
+// спрашивают, и человек не должен упираться в ошибку, зайдя поменять имя.
+function birthError(v, required = false){
+  if(!v) return required ? 'Укажи дату рождения — от возраста зависит подбор упражнений и нагрузки.' : '';
   const d = new Date(v);
   if(isNaN(d)) return 'Дата рождения указана некорректно.';
   const now = new Date();
@@ -7541,6 +7644,7 @@ function openYouTube(){
   if(aiWaysReset.scrYouTube) aiWaysReset.scrYouTube();
   show('scrYouTube');
   window.scrollTo(0, 0);
+  maybeAskWho('ai');
 }
 
 function ytCheckUrl(){
@@ -9189,6 +9293,10 @@ function openBuilder(id=null){
   }
   planIdx = 0;
   fillBuilder(id ? 'Редактирование' : 'Новая программа');
+  // вот здесь пол и возраст впервые нужны по делу: от них зависят подбор упражнений
+  // и нагрузка. Спрашиваем после того, как экран открылся, — попап поверх конструктора
+  // видно, а сам конструктор уже на месте, если человек откажется отвечать
+  maybeAskWho('program');
 }
 
 function curPlan(){ return draft.plans[planIdx]; }
@@ -10270,6 +10378,7 @@ function qCards(boxId, opts, get, set){
 }
 
 function initAIForm(){
+  maybeAskWho('ai');   // эти данные уходят прямо в запрос к нейросети (см. userForAI)
   syncWantSvg();
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
@@ -12261,6 +12370,7 @@ $('importProgFile').onchange = async e => {
 
 $('btnExportAll').onclick = exportAllData;
 $('btnImportAll').onclick = ()=> $('importAllFile').click();
+$('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
@@ -12292,50 +12402,32 @@ $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classLi
 $('calPrev').onclick = ()=>{ calOffset--; renderCalendar(); };
 $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 // онбординг
-$('obF').onclick = ()=>{ obState.gender='f'; $('obF').classList.add('act'); $('obM').classList.remove('act'); };
-$('obM').onclick = ()=>{ obState.gender='m'; $('obM').classList.add('act'); $('obF').classList.remove('act'); };
-$('obName').addEventListener('keydown', e => { if(e.key === 'Enter') $('obNext1').click(); });
 // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
 $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 $('obLegal3').onclick = ()=> openLegal('health',  ()=> show('scrOnboard'));
-$('obNext1').onclick = ()=>{
-  // на этом шаге под кнопкой написано, что нажатием принимаются правила, — фиксируем
-  recordConsent('terms');
-  const n = $('obName').value.trim();
-  if(!n){ appAlert('Напиши, как тебя зовут — так будет уютнее.'); return; }
-  const b = $('obBirth').value || '';
-  const err = birthError(b);
-  if(err){ appAlert(err); return; }
-  obState.name = n;
-  obState.birth = b;
-  setShown('obStep1', false);
-  setShown('obStep2', true);
-};
-$('obNext2').onclick = async ()=>{
-  setShown('obStep2', false);
+// Обе кнопки знакомства делают ровно то, что на них написано: заводят профиль и ведут
+// либо в разминку, либо на главную. Обучение никуда не делось — оно в «Настройках →
+// Помощь», и seenHelp помечаем сразу, чтобы оно не выпрыгнуло само при следующем запуске.
+async function leaveOnboarding(toWarmup){
+  kvSet('seenHelp', '1');
   await finishOnboardingCreate();
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
     return;
   }
-  setShown('obStep3', true);
-};
-// Обе кнопки последнего шага знакомства раньше вели в «Как это работает»: человек
-// нажимал «Начать разминку» и получал инструкцию на пять экранов. Кнопка делает
-// ровно то, что написано на кнопке. Обучение никуда не делось — оно в
-// «Настройках → Помощь», и seenHelp помечаем сразу, чтобы оно не выпрыгнуло
-// само при следующем запуске.
-$('obStart').onclick = ()=>{
-  kvSet('seenHelp', '1');
-  const w = customPrograms.find(p => p.id === 'warmup');
+  const w = toWarmup && customPrograms.find(p => p.id === 'warmup');
   if(w) openStart(w); else goTab('scrMenu');
-};
-$('obLater').onclick = ()=>{
-  kvSet('seenHelp', '1');
-  goTab('scrMenu');
-};
+}
+$('obStart').onclick = ()=> leaveOnboarding(true);
+$('obLater').onclick = ()=> leaveOnboarding(false);
+// пара уточнений
+$('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
+$('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
+$('whoSave').onclick = ()=> whoFinish(true);
+$('whoSkip').onclick = ()=> whoFinish(false);
+$('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
 // профили
 $('btnEditMe').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
 function openStats(tab){
@@ -12355,8 +12447,10 @@ $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
-$('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
-$('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
+// пол, выбранный руками, больше не считается подставленным по умолчанию —
+// и попап «пара уточнений» об этом человека уже не спросит
+$('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; uDraft.genderSet = true; syncUserForm(); };
+$('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; uDraft.genderSet = true; syncUserForm(); };
 // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
 $('uePhotoBtn').onclick = e => {
   e.stopPropagation();
