@@ -3706,36 +3706,41 @@
       <p class="field-hint" id="usersHint"></p>
     </div>
 
-    <!-- Всё про аккаунт — в одной карточке: подписка, почта, продление, вход и удаление.
-         Отдельный градиентный баннер сверху занимал целый экран ради одной строки текста,
-         а искали её всё равно здесь, рядом с продлением. -->
+    <!-- Аккаунт и подписка в одной карточке. Она читается по-разному в двух состояниях,
+         и это важнее любой вёрстки: без аккаунта человек должен понять, что ничего не
+         сломано и регистрироваться не нужно — данные лежат на его телефоне, а аккаунт
+         появляется вместе с подпиской. Раньше карточка называлась «Данные аккаунта»
+         и показывала «Войти» и «Удалить аккаунт» человеку, у которого аккаунта нет. -->
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Данные аккаунта</p></div>
+      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
 
       <button type="button" class="pref-row row-link" id="btnPlanCard">
         <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
         <span class="nr-chev" data-icon="chevR"></span>
       </button>
 
+      <!-- аккаунта нет -->
+      <div class="stack hidden" id="accNone">
+        <div class="note">
+          <span class="n-ico" data-icon="shield"></span>
+          <span>Аккаунт заводить не нужно: программы, статистика, вес и фото лежат на этом телефоне и никуда не уходят. Аккаунт появляется вместе с подпиской — он нужен, чтобы всё это переезжало на новый телефон и возвращалось после переустановки.</span>
+        </div>
+        <button type="button" class="btn-secondary" id="btnLoginRow">Войти в аккаунт</button>
+        <p class="field-hint" style="text-align:center">Если аккаунт уже есть — с прошлого телефона или после переустановки.</p>
+      </div>
+
+      <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
       <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
-
-      <!-- Аккаунта на устройстве нет: единственное, что здесь можно предложить, — войти.
-           Заводится аккаунт при оформлении подписки, поэтому отдельной «регистрации» нет. -->
-      <button type="button" class="pref-row row-link hidden" id="btnLoginRow">
-        <span>Войти в аккаунт<small>Вернутся подписка и данные</small></span>
-        <span class="nr-chev" data-icon="chevR"></span>
-      </button>
-
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
 
       <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
            Предупреждение и кнопка обведены вместе: это одно действие, а не строка
            настроек по соседству с остальными. -->
       <div class="danger-zone">
-        <p>Удалится всё. Вернуть можно только из резервной копии — если она сохранена.</p>
-        <button type="button" class="link-btn" id="btnWipeAccount">Удалить аккаунт и все данные</button>
+        <p id="wipeNote"></p>
+        <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
       </div>
     </div>
   </section>
@@ -6205,8 +6210,10 @@ const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profil
 // отозвать согласие и стереть всё, не переустанавливая приложение. Стираем и очередь
 // на отправку — иначе после подключения сервера удалённое уехало бы туда из очереди.
 async function wipeAccount(){
+  const linked = !!(account && account.email);
   const ok = await appDialog(
-    'Удалить аккаунт и все данные? Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.',
+    (linked ? 'Удалить аккаунт и все данные? ' : 'Удалить все данные? ')
+      + 'Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.',
     {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена', type: 'подтверждаю удаление'}
   );
   if(!ok) return;
@@ -6364,12 +6371,20 @@ function renderPlan(){
   setShown('btnPremium', !on);
   $('pbSub').textContent = `Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От ${perMonth(pr, cur)} в месяц.`;
 
+  // Два состояния карточки. Без аккаунта на экране не должно быть ни «Данных
+  // аккаунта», ни «Удалить аккаунт»: удалять нечего, а название пугает человека,
+  // который ничего не заводил.
   const has = !!(account && account.email);
+  $('accCardTitle').textContent = has ? 'Данные аккаунта' : 'Аккаунт';
+  setShown('accNone', !has);
   setShown('rowEmail', has);
   setShown('btnSignOut', has);
-  setShown('btnLoginRow', !has);
   setShown('rowRenew', has && on);
   setShown('rowBio', has && bioOK);
+  $('btnWipeAccount').textContent = has ? 'Удалить аккаунт и все данные' : 'Удалить все данные';
+  $('wipeNote').textContent = has
+    ? 'Удалится всё, включая аккаунт и подписку. Вернуть можно только из резервной копии — если она сохранена.'
+    : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
   if(has){
     $('accEmail').textContent = account.email;
     if(on){
