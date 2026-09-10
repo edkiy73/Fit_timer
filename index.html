@@ -4999,7 +4999,10 @@ function renderStatsBlock(){
   const doneWeek = stats.history.filter(h => thisWeek.includes(h.d)).length;
   const planDays = new Set();
   customPrograms.forEach(p => programDaysUnion(p).forEach(d => planDays.add(d)));
-  const planned = customPrograms.reduce((n, p) => n + programDaysUnion(p).length, 0);
+  // Считаем РАЗНЫЕ дни недели, а не сумму по программам: две программы на Пн, Ср и
+  // Пт — это три тренировочных дня, а не шесть. Набор planDays для этого уже собран
+  // строкой выше, но раньше в счётчик шла сумма, и неделя показывала «1 из 6».
+  const planned = planDays.size;
   $('weekDone').textContent = doneWeek;
   $('weekPlan').textContent = planned
     ? `из ${planned} по плану`
