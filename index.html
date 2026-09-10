@@ -1170,9 +1170,6 @@
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
      карточка — флекс-колонка с gap, поэтому margin детей не важен
      и правила больше не конфликтуют по специфичности */
-  /* необратимое действие держим на расстоянии от «Добавить профиль»: соседство
-     кнопок «завести» и «стереть всё» — классический промах пальцем */
-  .card-block.danger-block{margin-top:var(--sp-7)}
   .card-block{
     background:var(--card);border:1px solid var(--line);border-radius:18px;
     padding:16px;margin:0 0 14px;
@@ -2086,37 +2083,31 @@
 
   /* Профили внутри карточки «Профили»: карточка в карточке выглядит тяжело, поэтому
      строки здесь плоские и держатся на общем фоне блока. */
-  #accProfiles .acc-card,#accProfiles .user-row{
-    background:none;box-shadow:none;border:none;border-radius:0;padding:0;margin:0;
-  }
-  /* активный профиль и остальные — строки одного веса: в одном списке заголовок
-     капсом рядом с обычным именем читался как два разных типа записей */
-  #accProfiles .acc-card .acc-body b{
-    font-family:var(--font-text);font-weight:600;font-size:15px;
-    text-transform:none;letter-spacing:0;
-  }
-  #accProfiles .acc-ava{width:46px;height:46px;font-size:18px}
-  #accProfiles #usersList{display:flex;flex-direction:column;gap:16px}
+  #accProfiles #usersList{display:flex;flex-direction:column;gap:10px}
   #accProfiles #usersList:empty{display:none}
+  /* активный профиль: та же строка, но с рамкой и меткой — форму менять нельзя,
+     иначе список читается как два разных типа записей */
+  #accProfiles .user-row{background:var(--bg-2);border:1px solid transparent;margin:0}
+  #accProfiles .user-row.act{border-color:var(--accent-line);background:var(--accent-soft)}
+  .u-now{
+    flex:none;font-family:var(--font-display);font-size:10px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);
+    background:var(--card);border-radius:var(--r-pill);padding:4px 9px;line-height:1.2;
+  }
+
+  /* Опасная зона: предупреждение и кнопка обведены вместе — это одно действие,
+     а не строка настроек, случайно оказавшаяся рядом с остальными. */
+  .danger-zone{
+    border:1px solid var(--warn-line);border-radius:var(--r-md);
+    padding:12px 14px;display:flex;flex-direction:column;gap:2px;
+  }
+  .danger-zone p{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
+  .danger-zone .link-btn{color:var(--danger);padding:10px 0 4px;margin:0}
 
   /* главное действие экрана «Тренировки» */
   .add-prog{margin-bottom:var(--sp-4)}
   .add-prog svg{width:18px;height:18px}
 
-  /* карточка активного профиля на «Аккаунте» */
-  .acc-card{display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:var(--sp-4);
-    color:var(--ink);box-shadow:var(--sh-1);margin-bottom:var(--sp-4)}
-  .acc-card:active{transform:scale(.99)}
-  .acc-ava{flex:none;width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--surface);
-    color:var(--accent-ink);display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-display);font-weight:700;font-size:23px}
-  .acc-ava img{width:100%;height:100%;object-fit:cover;display:block}
-  .acc-body{flex:1;min-width:0}
-  .acc-body b{display:block;font-size:var(--fs-lg);font-family:var(--font-display);text-transform:uppercase;letter-spacing:.03em}
-  .acc-body small{display:block;color:var(--muted);font-size:var(--fs-sm);margin-top:3px}
-  .acc-card .nr-chev{flex:none;color:var(--muted);display:flex}
-  .acc-card .nr-chev svg{width:18px;height:18px}
 
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important}
@@ -3640,6 +3631,16 @@
   <section class="screen root" id="scrAccount">
     <div class="page-head"><h1>Аккаунт</h1></div>
 
+    <!-- Профили — первое, за чем сюда приходят: чаще меняют профиль, чем читают
+         про подписку. Все строки одинаковые, активная помечена — раньше текущий
+         профиль был отдельной карточкой сверху и не читался как «выбранный». -->
+    <div class="card-block" id="accProfiles">
+      <div class="cb-head"><p class="cb-title">Профили</p></div>
+      <div id="usersList"></div>
+      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
+      <p class="field-hint" id="usersHint"></p>
+    </div>
+
     <!-- Всё про аккаунт — в одной карточке: подписка, почта, продление, вход и удаление.
          Отдельный градиентный баннер сверху занимал целый экран ради одной строки текста,
          а искали её всё равно здесь, рядом с продлением. -->
@@ -3665,23 +3666,12 @@
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
 
       <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
-           Рядом напоминание про резервную копию: другого пути назад нет. -->
-      <p class="field-hint" style="margin-top:2px">Удаление сотрёт всё и сразу: профили, программы, статистику, вес, замеры, фото и очередь на отправку. Восстановить будет неоткуда — кроме файла резервной копии, если он сохранён в «Настройках».</p>
-      <button type="button" class="link-btn" id="btnWipeAccount" style="color:var(--danger)">Удалить аккаунт и все данные</button>
-    </div>
-
-    <!-- Профили — второе, за чем сюда приходят, и всё про них лежит в одной карточке:
-         текущий, остальные, кнопка «добавить» и объяснение, зачем они вообще нужны. -->
-    <div class="card-block" id="accProfiles">
-      <div class="cb-head"><p class="cb-title">Профили</p></div>
-      <button type="button" class="acc-card" id="btnEditMe">
-        <span class="acc-ava" id="accAva">?</span>
-        <span class="acc-body"><b id="accName">Профиль</b><small id="accSub">Изменить имя, фото, пол и дату рождения</small></span>
-        <span class="nr-chev" data-icon="chevR"></span>
-      </button>
-      <div id="usersList"></div>
-      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
-      <p class="field-hint" id="usersHint"></p>
+           Предупреждение и кнопка обведены вместе: это одно действие, а не строка
+           настроек по соседству с остальными. -->
+      <div class="danger-zone">
+        <p>Удалится всё. Вернуть можно только из резервной копии — если она сохранена.</p>
+        <button type="button" class="link-btn" id="btnWipeAccount">Удалить аккаунт и все данные</button>
+      </div>
     </div>
   </section>
 
@@ -4015,6 +4005,12 @@
       <div class="modal-card">
         <p class="dlg-msg" id="dlgMsg"></p>
         <textarea id="dlgCode" readonly class="hidden"></textarea>
+        <!-- Необратимое действие подтверждается не нажатием, а набранной фразой:
+             промахнуться пальцем можно, случайно напечатать слово — нет. -->
+        <div class="field hidden" id="dlgTypeBox">
+          <label id="dlgTypeLabel"></label>
+          <input type="text" id="dlgType" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
         <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
         <button class="modal-btn" id="dlgCancel">Отмена</button>
       </div>
@@ -4681,6 +4677,20 @@ function appDialog(msg, opts = {}){
     const t = $('dlgCode');
     if(opts.code){ setShown(t, true); t.value = opts.code; }
     else setShown(t, false);
+    // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
+    const typed = $('dlgType');
+    setShown('dlgTypeBox', !!opts.type);
+    typed.oninput = null;
+    if(opts.type){
+      typed.value = '';
+      $('dlgTypeLabel').textContent = `Набери «${opts.type}»`;
+      const check = ()=>{ $('dlgOk').disabled = typed.value.trim().toLowerCase() !== opts.type.toLowerCase(); };
+      typed.oninput = check;
+      check();
+      setTimeout(()=> typed.focus(), 80);
+    } else {
+      $('dlgOk').disabled = false;
+    }
     $('dlgOk').textContent = opts.okText || 'ОК';
     if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
     else $('dlgCancel').textContent = 'Отмена';
@@ -4689,6 +4699,9 @@ function appDialog(msg, opts = {}){
     const done = v => {
       $('dlg').classList.remove('open');
       $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
+      $('dlgOk').disabled = false;
+      setShown('dlgTypeBox', false);
+      typed.oninput = null;
       res(v);
     };
     $('dlgOk').onclick = () => done(true);
@@ -5177,44 +5190,37 @@ async function switchUser(id){
   syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
 }
 
+// Все профили — одинаковыми строками, у каждой одна и та же кнопка-карандаш.
+// Активный отличается не формой, а меткой «сейчас» и рамкой: раньше он жил отдельной
+// карточкой сверху, и понять, какой из них выбран, было невозможно.
 function renderUsers(){
   const box = $('usersList'); box.innerHTML = '';
-  // активный профиль уже показан карточкой сверху — в списке только остальные
-  const others = users.filter(u => u.id !== currentUser);
-  $('usersHint').textContent = others.length
-    ? 'У каждого профиля свои программы, статистика, вес и фото. Переключение — одним нажатием по строке.'
-    : 'Можно завести второй профиль — например, для мужа или подруги. У каждого свои программы, статистика, вес и фото.';
-  others.forEach(u => {
+  users.forEach(u => {
+    const act = u.id === currentUser;
     const row = document.createElement('div');
-    row.className = 'user-row';
+    row.className = 'user-row' + (act ? ' act' : '');
     const ua = u.photo ? `<img src="${u.photo}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
     if(u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
     const a = ageOf(u.birth);
     if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
-    bits.push('переключиться');
-    row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div><button class="ue" title="Изменить">${icon('pencil')}</button>`;
+    if(!act) bits.push('переключиться');
+    row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div>`
+      + (act ? '<span class="u-now">сейчас</span>' : '')
+      + `<button class="ue" title="Изменить">${icon('pencil')}</button>`;
     row.querySelector('b').textContent = u.name || 'Без имени';
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
-    row.onclick = () => switchUser(u.id);
+    // нажатие по строке активного профиля переключать некуда — открываем его правку
+    row.onclick = ()=> act ? openUserEdit(u.id) : switchUser(u.id);
     box.appendChild(row);
   });
+  $('usersHint').textContent = users.length > 1
+    ? 'У каждого профиля свои программы, статистика, вес и фото. Переключение — нажатием по строке.'
+    : 'Можно завести второй профиль — например, для мужа или подруги. У каждого свои программы, статистика, вес и фото.';
   renderAccount();
 }
 
-// карточка активного профиля наверху «Аккаунта»
-function renderAccount(){
-  renderPlan();
-  const u = curUser();
-  const nm = (u && u.name || '').trim();
-  $('accAva').innerHTML = (u && u.photo) ? `<img src="${u.photo}" alt="">` : esc(nm ? nm[0].toUpperCase() : '?');
-  $('accName').textContent = nm || 'Профиль';
-  const bits = [];
-  if(u && u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
-  const a = u && ageOf(u.birth);
-  if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
-  $('accSub').textContent = bits.length ? bits.join(' · ') + ' · изменить' : 'Изменить имя, фото, пол и дату рождения';
-}
+function renderAccount(){ renderPlan(); }
 
 // метрики тела: вес всегда есть, остальное — если пользовательница его записывает
 const W_SERIES = [
@@ -6076,8 +6082,8 @@ const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profil
 // на отправку — иначе после подключения сервера удалённое уехало бы туда из очереди.
 async function wipeAccount(){
   const ok = await appDialog(
-    'Удалить аккаунт и все данные? Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона. Восстановить их будет неоткуда — только из файла резервной копии, если он сохранён.',
-    {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена'}
+    'Удалить аккаунт и все данные? Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.',
+    {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена', type: 'подтверждаю удаление'}
   );
   if(!ok) return;
   for(const u of users){
@@ -13070,7 +13076,6 @@ $('whoSave').onclick = ()=> whoFinish(true);
 $('whoSkip').onclick = ()=> whoFinish(false);
 $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
 // профили
-$('btnEditMe').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
 function openStats(tab){
   switchStatsTab(tab || 'workouts');
   goTab('scrStats');
