@@ -673,6 +673,9 @@
   .sess-row small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
   .sess-row .sess-note{display:block;font-size:12.5px;color:var(--muted);margin-top:5px;font-style:italic}
   .sess-empty{font-size:13.5px;color:var(--muted);line-height:1.5;margin:2px 0 6px}
+  .ph-tools{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .ph-tools .btn-ghost{min-height:46px}
+  .ph-tools .mc-danger{margin:0}
   .cmp-img{cursor:zoom-in}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
@@ -1085,8 +1088,12 @@
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
   .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);border-radius:50%}
   .cal-cell.done{background:var(--work);color:var(--on-accent);font-weight:500}
-  .cal-cell.today{box-shadow:inset 0 0 0 1.5px var(--work)}
-  .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em;aspect-ratio:auto;padding:2px 0}
+  /* обводка снаружи, а не внутрь: внутренняя съедала 3 px по диаметру, и сегодняшний
+     день выглядел мельче соседних */
+  .cal-cell.today{box-shadow:0 0 0 1.5px var(--work)}
+  /* дни недели остаются такими же квадратами, как числа под ними: с aspect-ratio:auto
+     строка «Пн Вт Ср» была приплюснутой и не попадала в сетку */
+  .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em}
   .w-meta{color:var(--muted);font-size:13px;margin:6px 0 0}
   .w-add{display:none;flex-wrap:wrap;gap:10px}
   .w-add.on{display:flex}
@@ -2233,18 +2240,24 @@
   }
   /* итог месяца и сравнение с прошлым — отдельной строкой во всю ширину:
      между двумя кнопками навигации ей оставалось 180 px и она переносилась */
-  .cal-sub{margin-top:4px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
+  /* подпись месяца — отдельная строка, а не приписка к заголовку: без воздуха
+     сверху и снизу она читалась как часть названия месяца */
+  .cal-sub{margin:10px 0 12px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
   .cal-nav{width:44px;height:44px;border-radius:var(--r-md);flex:none}
   .cal-grid{gap:3px;margin-top:12px}
+  /* клетки квадратные: с height:34px при ширине 45 месяц выглядел сплющенным */
   .cal-cell{
-    aspect-ratio:auto;height:34px;border-radius:11px;font-size:12.5px;
+    aspect-ratio:1;height:auto;border-radius:11px;font-size:12.5px;
     font-variant-numeric:tabular-nums;
   }
   .cal-cell.fut{opacity:.42}
   .cal-cell.done{background:var(--accent);color:var(--on-accent);font-weight:600}
-  .cal-cell.today{box-shadow:inset 0 0 0 1.5px var(--accent-line);color:var(--accent-ink);font-weight:700}
-  .cal-cell.today.done{box-shadow:inset 0 0 0 2px var(--card),inset 0 0 0 3.5px var(--accent);color:var(--on-accent)}
-  .cal-dow{height:auto;font-size:10px;padding:0 0 4px;opacity:.85}
+  /* обводка снаружи клетки, а не внутрь: внутренняя съедала 3 px по диаметру,
+     и сегодняшний день казался мельче соседних */
+  .cal-cell.today{box-shadow:0 0 0 1.5px var(--accent-line);color:var(--accent-ink);font-weight:700}
+  .cal-cell.today.done{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--accent);color:var(--on-accent)}
+  /* строка «Пн Вт Ср» — такие же квадраты, только подпись мельче */
+  .cal-dow{font-size:10px;opacity:.85}
   .cal-hint{margin-top:10px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
 
   /* ---- достижения ---- */
@@ -2252,7 +2265,7 @@
   .bdg{
     display:inline-flex;align-items:center;gap:8px;padding:7px 13px 7px 9px;
     border-radius:var(--r-pill);background:var(--accent-soft);border:1px solid var(--accent-line);
-    color:var(--ink);font-size:12.5px;
+    color:var(--ink);font-size:12.5px;font-family:var(--font-text);cursor:pointer;
   }
   .bdg i{display:flex;color:var(--accent-ink)}
   .bdg i svg{width:17px;height:17px;display:block}
@@ -3598,7 +3611,6 @@
             <span class="ts-label">Фото-прогресс</span>
             <div class="mc-now" id="photoNowRow"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
           </div>
-          <button class="add-btn" id="btnAddPhoto" title="Добавить фото"></button>
         </div>
         <div class="mc-empty empty-state" id="photoEmpty">
           <span class="es-ico" data-icon="camera"></span>
@@ -3609,10 +3621,15 @@
              раскрываться во весь экран сами по себе — их открывают, когда захотят,
              кнопкой «Сравнить». -->
         <div class="mc-actions hidden" id="photoActions">
-          <button class="mc-act primary" id="btnCompare">Сравнить и поделиться</button>
+          <button class="mc-act primary" id="btnCompare">Показать «было / стало»</button>
         </div>
         <div class="ph-grid hidden" id="photoStrip"></div>
-        <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos">Удалить все фото</button>
+        <!-- «Добавить» — обычная кнопка рядом с удалением, а не «плюс» в углу карточки:
+             маленький значок в шапке не читался как главное действие вкладки. -->
+        <div class="ph-tools">
+          <button type="button" class="btn-ghost" id="btnAddPhoto">Добавить фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos">Удалить все фото</button>
+        </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
     </div>
@@ -5649,6 +5666,9 @@ function streakWord(n, byPlan){
   return byPlan ? 'трен. подряд' : plural(n, 'день подряд', 'дня подряд', 'дней подряд');
 }
 
+const MON_SHORT_NAMES = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+let weekBarStarts = [];   // понедельник каждого из восьми столбиков
+
 function renderStatsBlock(){
   const now = new Date();
   const monday = new Date(now);
@@ -5669,7 +5689,7 @@ function renderStatsBlock(){
   // неделям, а читалась как общий итог и спорила с числом тренировок выше.
   // месяц пишем только там, где он меняется: восемь подписей «20 июл 27 июл 3 авг…»
   // не помещались в 35 px на столбик и слипались в кашу
-  const MON_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const MON_SHORT = MON_SHORT_NAMES;
   const counts = [], labels = [];
   let prevMon = -1;
   for(let w = 7; w >= 0; w--){
@@ -5681,6 +5701,12 @@ function renderStatsBlock(){
   }
   const maxC = Math.max(1, ...counts);
   const bw = 300 / 8, top = 24, base = 72;
+  // каждому столбику — понедельник его недели: по нажатию покажем, что в ту неделю сделано
+  weekBarStarts = [];
+  for(let w = 7; w >= 0; w--){
+    const st = new Date(monday); st.setDate(monday.getDate() - w * 7);
+    weekBarStarts.push(localISO(st));
+  }
   $('weekBars').innerHTML =
     `<line x1="2" y1="${base + .5}" x2="298" y2="${base + .5}" stroke="var(--line)" stroke-width="1"/>` +
     counts.map((c, i) => {
@@ -5690,7 +5716,9 @@ function renderStatsBlock(){
       const cur = i === 7;
       const fill = cur ? 'var(--accent)' : (c ? 'var(--accent-ink)' : 'var(--line-2)');
       const op = cur ? 1 : (c ? .42 : .55);
-      let s = `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
+      // прозрачная колонка во всю высоту — иначе в столбик высотой 3 px не попасть пальцем
+      let s = `<rect class="wb-hit" data-w="${i}" x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="96" fill="transparent"/>`;
+      s += `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
       if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${cur ? 'var(--accent-ink)' : 'var(--muted)'}">${c}</text>`;
       s += `<text x="${x.toFixed(1)}" y="89" text-anchor="middle" font-size="10" fill="var(--muted)" opacity="${cur ? 1 : .75}">${labels[i]}</text>`;
       return s;
@@ -5710,8 +5738,18 @@ function renderStatBadges(){
   setShown('badgeCard', !!earned.length);
   if(!earned.length) return;
   $('badgeNote').textContent = `${earned.length} из ${BADGES.length}`;
-  $('statBadges').innerHTML = earned.map(b =>
-    `<span class="bdg"><i>${icon(b.ico)}</i>${b.name}</span>`).join('');
+  const box = $('statBadges');
+  box.innerHTML = '';
+  earned.forEach(b => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'bdg';
+    el.innerHTML = `<i>${icon(b.ico)}</i><span></span>`;
+    el.querySelector('span').textContent = b.name;
+    // за что выдано — не написано нигде, а название само по себе не объясняет
+    el.onclick = ()=> appAlert(`«${b.name}» — ${b.desc.toLowerCase()}.`);
+    box.appendChild(el);
+  });
   const next = BADGES.find(b => !hasBadge(b.id));
   $('badgeNext').textContent = next
     ? `Следующее — «${next.name}»: ${next.desc.toLowerCase()}`
@@ -5760,7 +5798,7 @@ function renderCalendar(){
 
 // Одна запись истории — одна строка: название программы, вариант, время и калории.
 // Из этого же строится список за день, за неделю и за что угодно ещё.
-function sessRow(en){
+function sessRow(en, withDate){
   const p = customPrograms.find(x => x.id === en.pid);
   const name = p ? p.name : 'Тренировка';
   const meta = [];
@@ -5772,6 +5810,7 @@ function sessRow(en){
   }
   if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
   if(en.kcal) meta.push(`≈${en.kcal} ккал`);
+  if(withDate) meta.unshift(shortD(en.d));
   const row = document.createElement('div');
   row.className = 'sess-row';
   row.innerHTML = '<b></b>' + (meta.length ? `<small>${meta.join(' · ')}</small>` : '')
@@ -5785,7 +5824,9 @@ function openSessions(label, title, entries, emptyText){
   $('sessTitle').textContent = title;
   const box = $('sessList');
   box.innerHTML = '';
-  if(entries.length) entries.forEach(en => box.appendChild(sessRow(en)));
+  // за неделю записи из разных дней — без даты они сливаются в один список
+  const multiDay = new Set(entries.map(e => e.d)).size > 1;
+  if(entries.length) entries.forEach(en => box.appendChild(sessRow(en, multiDay)));
   else if(emptyText){
     const p = document.createElement('p');
     p.className = 'sess-empty';
@@ -5798,6 +5839,21 @@ $('sessClose').onclick = ()=> $('sessModal').classList.remove('open');
 $('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
 
 const dayTitle = iso => { const [y, m, d] = iso.split('-'); return `${+d} ${MONTH_OF[+m - 1]} ${y}`; };
+
+// неделя целиком: что было пройдено с понедельника по воскресенье того столбика
+$('weekBars').addEventListener('click', e => {
+  const hit = e.target.closest('.wb-hit');
+  if(!hit) return;
+  const startIso = weekBarStarts[+hit.dataset.w];
+  if(!startIso) return;
+  const start = new Date(startIso);
+  const days = [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
+  const entries = stats.history.filter(h => days.includes(h.d))
+    .sort((a, b) => a.d < b.d ? -1 : 1);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const title = `${start.getDate()} ${MON_SHORT_NAMES[start.getMonth()]} — ${end.getDate()} ${MON_SHORT_NAMES[end.getMonth()]}`;
+  openSessions('Тренировки за неделю', title, entries, 'На этой неделе тренировок не было.');
+});
 
 $('calGrid').addEventListener('click', e => {
   const cell = e.target.closest('.cal-cell.done');
@@ -13126,6 +13182,7 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
+$('btnAddPhoto').innerHTML = icon('camera') + 'Добавить фото';
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -13956,11 +14013,10 @@ $('storeSearchIco').innerHTML = icon('search');
 $('storeClear').innerHTML = icon('close');
 $('btnResetTotal').innerHTML = icon('reset');
 $('btnAddWeight').innerHTML = icon('plus');
-$('btnAddPhoto').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('share') + 'Сравнить и поделиться';
+$('btnCompare').innerHTML = icon('image') + 'Показать «было / стало»';
 $('btnDeleteAllPhotos').innerHTML = icon('trash') + 'Удалить все фото';
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
