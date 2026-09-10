@@ -39,6 +39,7 @@
 `scrWork` (тренировка), `scrFinish` (итог),
 `scrBuilder` (конструктор программы), `scrProgSettings` (настройки программы),
 `scrExercise` (упражнение), `scrExAI` / `scrExEdAI` (упражнение через ИИ),
+`scrAccount` (подписка, данные аккаунта и профили — двумя карточками),
 `scrImages` (картинки), `scrText` (создание программы через ИИ), `scrYouTube` (из видео),
 `scrEditAI` (доработка программы через ИИ), `scrHelp`, `scrStats`, `scrUserEdit`, `scrOnboard`.
 

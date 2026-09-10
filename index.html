@@ -2075,25 +2075,33 @@
   }
   .qs-btn span:last-child{color:var(--muted)}
 
-  /* Тариф на «Аккаунте». Бесплатный — обычная карточка, премиум — градиент: статус
-     должен читаться с первого взгляда, а не вычитываться из мелкой подписи. */
-  .plan-card{
-    display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-    padding:var(--sp-4);color:var(--ink);margin-bottom:var(--sp-4);font-family:var(--font-text);
+  /* Строка внутри карточки, которая ведёт на другой экран или попап: выглядит как
+     соседние строки настроек, но кликается целиком. */
+  .pref-row.row-link{
+    width:100%;text-align:left;background:none;border:none;color:var(--ink);
+    font-family:var(--font-text);font-size:15px;cursor:pointer;
   }
-  .plan-card:active{transform:scale(.99)}
-  .plan-card.on{background:var(--grad-accent);border-color:rgba(255,255,255,.16);color:#fff;box-shadow:var(--sh-accent)}
-  .plan-ico{flex:none;width:44px;height:44px;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
-  .plan-card.on .plan-ico{background:rgba(255,255,255,.18);color:#fff}
-  .plan-ico svg{width:22px;height:22px}
-  .plan-txt{flex:1;min-width:0}
-  .plan-txt b{display:block;font-size:15px;font-weight:600;margin-bottom:3px}
-  .plan-txt small{display:block;font-size:12.5px;line-height:1.4;color:var(--muted)}
-  .plan-card.on .plan-txt small{color:rgba(255,255,255,.85)}
-  .plan-card .nr-chev{flex:none;color:var(--muted);display:flex}
-  .plan-card.on .nr-chev{color:rgba(255,255,255,.8)}
-  .plan-card .nr-chev svg{width:18px;height:18px}
+  .pref-row .nr-chev{flex:none;color:var(--muted);display:flex}
+  .pref-row .nr-chev svg{width:18px;height:18px}
+
+  /* Профили внутри карточки «Профили»: карточка в карточке выглядит тяжело, поэтому
+     строки здесь плоские и держатся на общем фоне блока. */
+  #accProfiles .acc-card,#accProfiles .user-row{
+    background:none;box-shadow:none;border:none;border-radius:0;padding:0;margin:0;
+  }
+  /* активный профиль и остальные — строки одного веса: в одном списке заголовок
+     капсом рядом с обычным именем читался как два разных типа записей */
+  #accProfiles .acc-card .acc-body b{
+    font-family:var(--font-text);font-weight:600;font-size:15px;
+    text-transform:none;letter-spacing:0;
+  }
+  #accProfiles .acc-ava{width:46px;height:46px;font-size:18px}
+  #accProfiles #usersList{display:flex;flex-direction:column;gap:16px}
+  #accProfiles #usersList:empty{display:none}
+
+  /* главное действие экрана «Тренировки» */
+  .add-prog{margin-bottom:var(--sp-4)}
+  .add-prog svg{width:18px;height:18px}
 
   /* карточка активного профиля на «Аккаунте» */
   .acc-card{display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
@@ -2378,11 +2386,13 @@
       <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
       <div class="ph-tools">
         <button class="icon-btn" id="btnStorePrograms" title="Каталог программ"></button>
-        <button class="icon-btn" id="btnCreate" title="Создать программу">＋</button>
       </div>
     </div>
+    <!-- Главное действие экрана стоит первым и выглядит как действие. Раньше их было
+         два: незаметный «＋» в шапке и бледная пунктирная кнопка под списком, до которой
+         на длинном списке ещё надо было доскроллить. -->
+    <button class="btn-primary add-prog" id="btnAddProgram"><span data-icon="plus"></span>Добавить программу</button>
     <div id="mineList"></div>
-    <button class="btn-ghost" id="btnCreateBottom"><span data-icon="plus"></span>Добавить программу</button>
   </section>
 
   <!-- ШАГ 2: экран старта -->
@@ -3630,47 +3640,48 @@
   <section class="screen root" id="scrAccount">
     <div class="page-head"><h1>Аккаунт</h1></div>
 
-    <!-- Тариф стоит выше профиля: на этом экране первым делом ищут «что у меня
-         подключено и до какого числа», а имя с фотографией человек и так знает. -->
-    <button type="button" class="plan-card" id="btnPlanCard">
-      <span class="plan-ico" data-icon="crown"></span>
-      <span class="plan-txt"><b id="planTitle">Бесплатный тариф</b><small id="planSub"></small></span>
-      <span class="nr-chev" data-icon="chevR"></span>
-    </button>
-
-    <div class="card-block hidden" id="accDataBlock">
+    <!-- Всё про аккаунт — в одной карточке: подписка, почта, продление, вход и удаление.
+         Отдельный градиентный баннер сверху занимал целый экран ради одной строки текста,
+         а искали её всё равно здесь, рядом с продлением. -->
+    <div class="card-block">
       <div class="cb-head"><p class="cb-title">Данные аккаунта</p></div>
-      <div class="pref-row"><span>Почта<small id="accEmail"></small></span></div>
-      <div class="pref-row" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
+
+      <button type="button" class="pref-row row-link" id="btnPlanCard">
+        <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
+        <span class="nr-chev" data-icon="chevR"></span>
+      </button>
+
+      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
+      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
-      <button type="button" class="link-btn" id="btnSignOut">Выйти из аккаунта</button>
+
+      <!-- Аккаунта на устройстве нет: единственное, что здесь можно предложить, — войти.
+           Заводится аккаунт при оформлении подписки, поэтому отдельной «регистрации» нет. -->
+      <button type="button" class="pref-row row-link hidden" id="btnLoginRow">
+        <span>Войти в аккаунт<small>Вернутся подписка и данные</small></span>
+        <span class="nr-chev" data-icon="chevR"></span>
+      </button>
+
+      <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
+
+      <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
+           Рядом напоминание про резервную копию: другого пути назад нет. -->
+      <p class="field-hint" style="margin-top:2px">Удаление сотрёт всё и сразу: профили, программы, статистику, вес, замеры, фото и очередь на отправку. Восстановить будет неоткуда — кроме файла резервной копии, если он сохранён в «Настройках».</p>
+      <button type="button" class="link-btn" id="btnWipeAccount" style="color:var(--danger)">Удалить аккаунт и все данные</button>
     </div>
 
-    <!-- Аккаунта на устройстве нет: единственное, что здесь можно предложить, — войти.
-         Заводится аккаунт при оформлении подписки, поэтому отдельной «регистрации» нет. -->
-    <button type="button" class="nav-row hidden" id="btnLoginRow">
-      <span class="nr-ico" data-icon="mail"></span>
-      <span class="nr-body"><b>Войти в аккаунт</b><small>Вернутся подписка и данные</small></span>
-      <span class="nr-chev" data-icon="chevR"></span>
-    </button>
-
-    <button type="button" class="acc-card" id="btnEditMe">
-      <span class="acc-ava" id="accAva">?</span>
-      <span class="acc-body"><b id="accName">Профиль</b><small id="accSub">Изменить имя, фото, пол и дату рождения</small></span>
-      <span class="nr-chev" data-icon="chevR"></span>
-    </button>
-    <div class="section-title hidden" id="usersTitle">Другие профили</div>
-    <div id="usersList"></div>
-    <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
-    <p class="field-hint" id="usersHint"></p>
-
-    <!-- Удаление аккаунта живёт здесь, а не в настройках: человек ищет его там же, где
-         заведены профили. Требование сторов и 152-ФЗ — стереть всё, не переустанавливая
-         приложение, поэтому рядом напоминание про резервную копию: другого пути назад нет. -->
-    <div class="card-block danger-block">
-      <div class="cb-head"><p class="cb-title">Удаление аккаунта</p></div>
-      <p class="field-hint">Сотрёт всё и сразу: профили, программы, статистику, вес, замеры, фото и очередь на отправку. Восстановить будет неоткуда — кроме файла резервной копии, если он сохранён в «Настройках».</p>
-      <button type="button" class="link-btn" id="btnWipeAccount" style="color:var(--danger)">Удалить аккаунт и все данные</button>
+    <!-- Профили — второе, за чем сюда приходят, и всё про них лежит в одной карточке:
+         текущий, остальные, кнопка «добавить» и объяснение, зачем они вообще нужны. -->
+    <div class="card-block" id="accProfiles">
+      <div class="cb-head"><p class="cb-title">Профили</p></div>
+      <button type="button" class="acc-card" id="btnEditMe">
+        <span class="acc-ava" id="accAva">?</span>
+        <span class="acc-body"><b id="accName">Профиль</b><small id="accSub">Изменить имя, фото, пол и дату рождения</small></span>
+        <span class="nr-chev" data-icon="chevR"></span>
+      </button>
+      <div id="usersList"></div>
+      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
+      <p class="field-hint" id="usersHint"></p>
     </div>
   </section>
 
@@ -4036,6 +4047,7 @@
     <div class="modal" id="createModal">
       <div class="modal-card">
         <span class="mini-label">Новая программа</span>
+        <button class="choice ico" id="chStore"><span class="ch-ico" data-icon="book"></span><span class="ch-txt"><b>Выбрать из каталога</b><small>Готовые программы от тренеров: открыть каталог и добавить понравившуюся.</small></span></button>
         <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — программу соберёт нейросеть. Потом всё можно поправить руками: упражнения, дни, картинки.</small></span></button>
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Дай ссылку на тренировку — нейросеть посмотрит ролик и разложит его на упражнения с таймингом.</small></span></button>
         <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Собрать с нуля вручную: упражнения, повторения или время, круги и дни недели.</small></span></button>
@@ -5169,7 +5181,6 @@ function renderUsers(){
   const box = $('usersList'); box.innerHTML = '';
   // активный профиль уже показан карточкой сверху — в списке только остальные
   const others = users.filter(u => u.id !== currentUser);
-  setShown('usersTitle', others.length > 0);
   $('usersHint').textContent = others.length
     ? 'У каждого профиля свои программы, статистика, вес и фото. Переключение — одним нажатием по строке.'
     : 'Можно завести второй профиль — например, для мужа или подруги. У каждого свои программы, статистика, вес и фото.';
@@ -6215,28 +6226,28 @@ function renderPremium(){
 function renderPlan(){
   if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
   const on = isPremium(), pr = priceTable(), cur = userCurrency();
-  $('btnPlanCard').classList.toggle('on', on);
   $('planTitle').textContent = on ? 'Fit Timer Премиум' : 'Бесплатный тариф';
   $('planSub').textContent = on
     ? `До ${humanDate(account.sub.until)}` + (account.sub.autoRenew ? ' · продлится сам' : ' · продление выключено')
-    : 'ИИ, весь каталог тренеров и синхронизация между телефонами';
+    : `ИИ, весь каталог тренеров и синхронизация — от ${perMonth(pr, cur)} в месяц`;
   // купленное больше не продаём: баннер уходит с главной
   setShown('btnPremium', !on);
   $('pbSub').textContent = `Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От ${perMonth(pr, cur)} в месяц.`;
 
   const has = !!(account && account.email);
-  setShown('accDataBlock', has);
+  setShown('rowEmail', has);
+  setShown('btnSignOut', has);
   setShown('btnLoginRow', !has);
+  setShown('rowRenew', has && on);
+  setShown('rowBio', has && bioOK);
   if(has){
     $('accEmail').textContent = account.email;
-    setShown('rowRenew', on);
     if(on){
       $('accRenewSub').textContent = account.sub.autoRenew
         ? `${subPrice()} ${account.sub.plan === 'year' ? 'раз в год' : 'раз в месяц'}, следующее — ${humanDate(account.sub.until)}`
         : `Выключено: премиум закончится ${humanDate(account.sub.until)}`;
       $('tglRenew').classList.toggle('on', !!account.sub.autoRenew);
     }
-    setShown('rowBio', bioOK);
     $('tglBio').classList.toggle('on', !!(account.biometry && account.biometry.enabled));
   }
 }
@@ -12811,7 +12822,7 @@ $('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
-$('btnCreate').onclick = ()=> $('createModal').classList.add('open');
+$('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
 /* ---- каталог ---- */
 $('btnStoreMenu').onclick = ()=> openStore('scrMenu');
 $('btnStorePrograms').onclick = ()=> openStore('scrPrograms');
@@ -12828,9 +12839,10 @@ $('storeClear').onclick = ()=>{
   renderStore();
   $('storeQuery').focus();
 };
-$('btnCreateBottom').onclick = ()=> $('createModal').classList.add('open');
+
 $('chCancel').onclick = ()=> $('createModal').classList.remove('open');
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
+$('chStore').onclick = ()=>{ $('createModal').classList.remove('open'); openStore('scrPrograms'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
 $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); $('tImport').value=''; initAIForm(); syncGeminiBtns(); show('scrText'); window.scrollTo(0,0); };
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
@@ -13825,7 +13837,6 @@ document.addEventListener('visibilitychange', ()=>{
 // статичные иконки
 $('btnPause').innerHTML = icon('pause');
 $('btnMicW').innerHTML = icon('mic');
-$('btnCreate').innerHTML = icon('plus');
 // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
 $('btnStorePrograms').innerHTML = icon('book');
 $('storeIcoMenu').innerHTML = icon('book');
