@@ -903,11 +903,6 @@
   .fb-options button.act{border-color:var(--accent-line);background:var(--work);color:var(--on-accent)}
 
   /* ---------- обучение ---------- */
-  .help-step{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
-  .help-num{flex:none;width:34px;height:34px;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px}
-  .help-step{align-items:flex-start}
-  .help-step h3{font-size:15px;margin:0 0 6px;letter-spacing:.03em}
-  .help-step p{color:var(--muted);font-size:14px;line-height:1.5;margin:0}
   .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
   .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
   .st-row{display:flex;align-items:center;justify-content:space-between}
@@ -3295,45 +3290,6 @@
     </div>
   </section>
 
-  <!-- Обучение -->
-  <section class="screen builder" id="scrHelp">
-    <div class="screen-head"><button class="back-chip" id="helpBackTop"></button><h2>Как это работает</h2></div>
-
-    <div class="note">
-      <span class="n-ico" data-icon="clock"></span>
-      <span>Пять шагов, две минуты чтения. Вернуться сюда можно в любой момент: «Настройки» внизу экрана → «Как пользоваться приложением».</span>
-    </div>
-
-    <div class="help-step"><div class="help-num">1</div><div>
-      <h3>Заведи программу</h3>
-      <p>Внизу экрана — «Тренировки», там кнопка «Добавить программу». Можно собрать руками, а можно просто описать словами, какая тренировка нужна: упражнения, повторения и дни подберёт ИИ.</p>
-    </div></div>
-
-    <div class="help-step"><div class="help-num">2</div><div>
-      <h3>Поправь под себя</h3>
-      <p>В конструкторе всё меняется: порядок упражнений, повторения или время, подходы, отдых, круги и дни недели. Ничего не сохранится, пока не нажмёшь «Сохранить программу».</p>
-    </div></div>
-
-    <div class="help-step"><div class="help-num">3</div><div>
-      <h3>Выбери нагрузку перед стартом</h3>
-      <p>На экране перед тренировкой отметь, как себя чувствуешь: от 40% в тяжёлый день до 160%, когда полна сил. Повторения и время пересчитаются сами.</p>
-    </div></div>
-
-    <div class="help-step"><div class="help-num">4</div><div>
-      <h3>Тренируйся, не трогая телефон</h3>
-      <p>Приложение называет упражнение, считает время и отдых и показывает, что будет дальше. Если включить управление голосом или хлопком, переключать этапы руками не придётся.</p>
-    </div></div>
-
-    <div class="help-step"><div class="help-num">5</div><div>
-      <h3>Следи за прогрессом</h3>
-      <p>В статистике копятся время, календарь, серия дней, вес, замеры и фото. А нагрузка в программе растёт сама — по числу пройденных тренировок, а не по календарю.</p>
-    </div></div>
-
-    <div class="builder-actions">
-      <button class="btn-primary" id="btnHelpDone">Понятно!</button>
-    </div>
-  </section>
-
   <!-- ДАННЫЕ И ПРАВИЛА.
        Три обязательных текста в одном месте: политика конфиденциальности,
        пользовательское соглашение и предупреждение о здоровье. Гармошка, а не три
@@ -3682,21 +3638,6 @@
     <div class="page-head"><h1>Настройки</h1></div>
 
     <div class="card-block">
-      <p class="cb-title">Оформление</p>
-      <div class="pref-row" style="border-top:none"><span>Тёмная тема<small>Светлая — для дневного света, тёмная — для вечерних тренировок</small></span><button class="switch" id="tglTheme"></button></div>
-    </div>
-
-    <div class="card-block">
-      <p class="cb-title">Отсчёты и паузы</p>
-      <div class="row2">
-        <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
-        <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
-      </div>
-      <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
-      <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
-    </div>
-
-    <div class="card-block">
       <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
       <p class="field-hint">Пока данные живут только на этом телефоне. Приложение уже ведёт учёт изменений: когда появится аккаунт на сервере, всё уедет туда само — выгружать и заливать вручную не придётся.</p>
       <div class="sync-row">
@@ -3721,40 +3662,18 @@
       <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
     </div>
 
+    <!-- Служебный блок на время, пока запросы к нейросети идут через ключ.
+         С серверным ИИ он исчезнет целиком, поэтому здесь только поле и две кнопки —
+         разворачивать инструкции в интерфейсе, который скоро удалят, незачем. -->
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Кнопка «Сделать за меня»</p></div>
-      <div class="note">
-        <span class="n-ico" data-icon="key"></span>
-        <span>Чтобы приложение собирало программы и упражнения само, ему нужен личный ключ Google — это бесплатно и делается один раз, минуты за две. Без ключа всё работает по-прежнему, только задание для нейросети придётся переносить в чат руками.</span>
+      <div class="cb-head"><p class="cb-title">Ключ ИИ</p></div>
+      <div class="field">
+        <input type="password" id="ueGeminiKey" placeholder="Ключ Google AI" autocomplete="off" spellcheck="false">
+        <p class="field-hint" id="ueGeminiState"></p>
       </div>
-      <div class="field"><label>Ключ Google AI (Gemini)</label>
-        <input type="password" id="ueGeminiKey" placeholder="Вставь сюда ключ из Google AI Studio" autocomplete="off" spellcheck="false">
-        <p class="field-hint">Ключ хранится только на этом телефоне и уходит только на серверы Google. Мы его не видим.</p>
-      </div>
-      <div class="ways">
-        <button type="button" class="way-row" id="ueGeminiHow">
-          <span class="wr-ico" data-icon="key"></span>
-          <span class="wr-txt"><b>Как получить ключ</b><small>Короткая инструкция по шагам</small></span>
-        </button>
-        <button type="button" class="way-row" id="ueGeminiTest">
-          <span class="wr-ico" data-icon="check"></span>
-          <span class="wr-txt"><b>Проверить ключ</b><small>Сделаем пробный запрос и скажем, работает ли</small></span>
-        </button>
-        <button type="button" class="way-row" id="ueGeminiDiag">
-          <span class="wr-ico" data-icon="alert"></span>
-          <span class="wr-txt"><b>Что-то не работает</b><small>Подробный отчёт: сеть, ключ, ответ Google</small></span>
-        </button>
-      </div>
-      <p class="field-hint" id="ueGeminiState"></p>
-    </div>
-
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Помощь</p></div>
-      <div class="ways">
-        <button type="button" class="way-row" id="btnHelp">
-          <span class="wr-ico" data-icon="book"></span>
-          <span class="wr-txt"><b>Как пользоваться приложением</b><small>Короткое объяснение за пять шагов</small></span>
-        </button>
+      <div class="row2">
+        <button type="button" class="btn-mini" id="ueGeminiTest">Проверить</button>
+        <button type="button" class="btn-mini" id="ueGeminiDiag">Диагностика</button>
       </div>
     </div>
 
@@ -3804,6 +3723,31 @@
         <div class="field"><label>Дата рождения</label><input type="date" id="ueBirth">
           <p class="field-hint">Пол и возраст важны для составления тренировок — от них зависят подбор упражнений, нагрузка и время восстановления. Эти данные уходят в запрос к ИИ.</p>
         </div>
+      </div>
+
+      <!-- Тема у каждого профиля своя: телефон один, а вкусы у людей разные.
+           «Как в системе» — вариант по умолчанию: приложение просто не спорит с телефоном. -->
+      <div class="card-block">
+        <div class="cb-head"><p class="cb-title">Оформление</p></div>
+        <div class="field"><label>Тема</label>
+          <div class="seg seg3" id="ueThemeSeg">
+            <button type="button" data-theme="system">Как в системе</button>
+            <button type="button" data-theme="light">Светлая</button>
+            <button type="button" data-theme="dark">Тёмная</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Отсчёты жили в «Настройках», хотя всегда были у каждого профиля свои:
+           человек менял их «для приложения», а менял только для себя. -->
+      <div class="card-block">
+        <div class="cb-head"><p class="cb-title">Отсчёты и паузы</p></div>
+        <div class="row2">
+          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+        </div>
+        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
+        <p class="field-hint">Всё в секундах. <b>Перед стартом</b> — экран «Приготовься» в начале тренировки. <b>Перед упражнением</b> — полоса подготовки после озвучки, до начала отсчёта. <b>Смена стороны</b> — пауза между сторонами. Ноль выключает.</p>
       </div>
 
       <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
@@ -4711,7 +4655,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrLegal','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -5180,8 +5124,7 @@ async function switchUser(id){
   applyProgressionAll();
   applyAudioFromUser(curUser());
   const u = curUser();
-  themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
-  applyTheme();
+  applyThemeFor(u);
   renderUsers();
   renderMine();
   renderStats();
@@ -5978,7 +5921,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: '', birth: '', photo: null, theme: themeLight ? 'light' : 'dark'};
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: '', birth: '', photo: null, theme: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
@@ -5992,6 +5935,10 @@ function openUserEdit(id = null){
   if(uDraft.voiceURI == null) uDraft.voiceURI = savedVoiceURI || '';
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
+  if(!uDraft.theme) uDraft.theme = 'system';
+  $('uePrepSec').value = uDraft.prepSec;
+  $('ueReadySec').value = uDraft.readySec;
+  $('ueSideSec').value = uDraft.sideSec;
   syncUserForm();
   setShown('btnDelUser', id);
   show('scrUserEdit');
@@ -6002,6 +5949,8 @@ function syncUserForm(){
   // «женский» уходил в запрос к ИИ как настоящий ответ
   $('ueGenderF').classList.toggle('act', uDraft.gender === 'f');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
+  const th = themeOf(uDraft);
+  document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
@@ -6011,6 +5960,7 @@ function syncUserForm(){
 async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
+  readTimings();
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
   // пол и дата рождения — не украшение анкеты: они уходят в запрос к ИИ и определяют
   // подбор упражнений, нагрузку и восстановление. Пустыми их оставлять нельзя
@@ -6027,8 +5977,7 @@ async function saveUser(){
     await saveUsers();
     if(uDraft.id === currentUser){
       applyAudioFromUser(uDraft);
-      themeLight = (uDraft.theme || 'light') !== 'dark';
-      applyTheme();
+      applyThemeFor(uDraft);
     }
     renderUsers();
     goTab('scrAccount');
@@ -6898,7 +6847,7 @@ async function finishOnboardingCreate(){
     id: 'u' + Date.now(),
     name: nextGuestName(),
     gender: '', birth: '', photo: null,
-    theme: themeLight ? 'light' : 'dark'
+    theme: 'system'
   };
   users = [u];
   await saveUsers();
@@ -12071,9 +12020,23 @@ function tearDownWorkout(){
 
 /* ================= ТЕМА ================= */
 let themeLight = true; // по умолчанию светлая
+// Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
+// разные, и спорить с системной настройкой без спроса приложению незачем.
+const sysDark = ()=> !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+const themeOf = u => (u && u.theme) || 'system';
+function applyThemeFor(u){
+  const t = themeOf(u);
+  themeLight = (t === 'system') ? !sysDark() : t !== 'dark';
+  applyTheme();
+}
+try{
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+    const u = curUser();
+    if(themeOf(u) === 'system') applyThemeFor(u);
+  });
+}catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
-  $('tglTheme').classList.toggle('on', !themeLight); // переключатель «Тёмная тема»
   const bg = themeLight ? '#F6F4FC' : '#0C0916';
   const meta = document.querySelector('meta[name=theme-color]');
   if(meta) meta.content = bg;
@@ -12606,7 +12569,6 @@ $('pickCancel').onclick = ()=> $('pickStepModal').classList.remove('open');
 $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
 $('startBackTop').onclick = ()=> goTab(startFrom);
 $('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
-$('helpBackTop').onclick = ()=>{ if(helpNext){ helpNext(); } else goTab('scrMenu'); };
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnPrev').onclick  = prevStep;
@@ -12630,53 +12592,34 @@ $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
    внизу остаётся только док, а не вторая закреплённая полоса. */
-$('tglTheme').onclick = ()=>{
-  themeLight = !themeLight;
-  const u = curUser();
-  if(u){ u.theme = themeLight ? 'light' : 'dark'; saveUsers(); }
-  applyTheme();
-};
+// в «Настройках» остался только служебный ключ ИИ — всё остальное переехало в профиль
 function syncSettingsForm(){
   const u = curUser();
-  $('tglTheme').classList.toggle('on', !themeLight);
   if(!u) return;
-  $('uePrepSec').value = (u.prepSec == null) ? 5 : u.prepSec;
-  $('ueReadySec').value = (u.readySec == null) ? 5 : u.readySec;
-  $('ueSideSec').value = (u.sideSec == null) ? 10 : u.sideSec;
   if(document.activeElement !== $('ueGeminiKey')) $('ueGeminiKey').value = u.geminiKey || '';
-  $('ueGeminiState').textContent = u.geminiKey
-    ? 'Ключ сохранён — кнопка «Сделать за меня» работает.'
-    : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
+  $('ueGeminiState').textContent = u.geminiKey ? 'Ключ сохранён.' : 'Ключа пока нет.';
 }
 let settingsSaveT = 0;
 function saveSettingsSoon(){
   clearTimeout(settingsSaveT);
   settingsSaveT = setTimeout(()=> saveUsers(), 350);
 }
-// пока в поле пусто или набирается «1» из «10», значение не считается ошибкой —
-// в силу оно вступает уже приведённым к границам
-function applyTimingSettings(){
-  const u = curUser(); if(!u) return;
+// Отсчёты живут в черновике профиля и уезжают в него по «Сохранить» — как имя и
+// дата рождения. Раньше они правили текущего пользователя на лету прямо из настроек.
+function readTimings(){
+  if(!uDraft) return;
   const num = (id, def, lo, hi) => {
     const v = parseInt($(id).value);
     return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def;
   };
-  u.prepSec = num('uePrepSec', 5, 0, 30);
-  u.readySec = num('ueReadySec', 5, 0, 30);
-  u.sideSec = num('ueSideSec', 10, 3, 60);
-  applyAudioFromUser(u);
-  saveSettingsSoon();
+  uDraft.prepSec = num('uePrepSec', 5, 0, 30);
+  uDraft.readySec = num('ueReadySec', 5, 0, 30);
+  uDraft.sideSec = num('ueSideSec', 10, 3, 60);
 }
-['uePrepSec','ueReadySec','ueSideSec'].forEach(id => {
-  $(id).oninput = applyTimingSettings;
-  $(id).onblur = ()=>{ applyTimingSettings(); syncSettingsForm(); };
-});
 $('ueGeminiKey').oninput = e => {
   const u = curUser(); if(!u) return;
   u.geminiKey = (e.target.value || '').trim();
-  $('ueGeminiState').textContent = u.geminiKey
-    ? 'Ключ сохранён — кнопка «Сделать за меня» работает.'
-    : 'Ключа пока нет — программы придётся собирать через чат с ИИ.';
+  $('ueGeminiState').textContent = u.geminiKey ? 'Ключ сохранён.' : 'Ключа пока нет.';
   syncGeminiBtns();
   saveSettingsSoon();
 };
@@ -12864,8 +12807,6 @@ $('btnDelPlan').onclick = async ()=>{
   fillPlanFields();
   syncRotateUI();
 };
-$('btnHelp').onclick = ()=> { helpNext = ()=>{ helpNext = null; goTab('scrSettings'); }; show('scrHelp'); window.scrollTo(0,0); };
-let helpNext = null;
 
 /* ---- данные и правила ----
    Экран открывается из трёх мест: настроек, знакомства и подсказки про
@@ -12894,7 +12835,6 @@ $('btnLegalDone').onclick = ()=> legalBack();
 $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
 $('btnLegalTerms').onclick   = ()=> openLegal('terms');
 $('btnLegalHealth').onclick  = ()=> openLegal('health');
-$('btnHelpDone').onclick = ()=>{ if(helpNext){ helpNext(); } else goTab('scrMenu'); };
 // трекер веса
 $('btnAddWeight').onclick = ()=>{
   const last = stats.weights[stats.weights.length - 1];
@@ -13053,10 +12993,8 @@ $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 $('obLegal3').onclick = ()=> openLegal('health',  ()=> show('scrOnboard'));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
-// она уже в списке, — а начинать чужой сценарий за человека не стоит. Обучение живёт
-// в «Настройках → Помощь», seenHelp помечаем сразу, чтобы оно не выпрыгнуло само.
+// она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
-  kvSet('seenHelp', '1');
   await finishOnboardingCreate();
   if(pendingImport){
     importProgramCode(pendingImport);
@@ -13093,6 +13031,10 @@ $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
+// тему показываем сразу: выбирать её вслепую, не видя результата, бессмысленно
+document.querySelectorAll('#ueThemeSeg button').forEach(b => {
+  b.onclick = ()=>{ uDraft.theme = b.dataset.theme; syncUserForm(); applyThemeFor(uDraft); };
+});
 $('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
 $('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
 // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
@@ -13247,15 +13189,6 @@ $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExMan
 
 /* ---- ИИ внутри приложения (Gemini) ---- */
 
-$('ueGeminiHow').onclick = ()=> appAlert(
-  'Ключ Google (Gemini) бесплатный.\n\n' +
-  '1. Открой aistudio.google.com/apikey\n' +
-  '2. Войди в аккаунт Google\n' +
-  '3. Нажми «Create API key»\n' +
-  '4. Скопируй ключ целиком и вставь в поле выше\n\n' +
-  'Ключ — длинная строка из букв и цифр; как именно он начинается, зависит от способа создания, так что просто копируй полностью.\n\n' +
-  'Ключ хранится только на этом устройстве. Запросы уходят напрямую в Google.'
-);
 // пошагово проверяем, где рвётся связь: интернет вообще → домен Google → сам ключ
 $('ueGeminiDiag').onclick = async ()=>{
   const btn = $('ueGeminiDiag'), restore = btnBusy(btn, 'Проверяю…');
@@ -13876,7 +13809,6 @@ $('startHfChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
-$('helpBackTop').innerHTML = icon('chevL');
 $('legalBackTop').innerHTML = icon('chevL');
 // экраны запроса к ИИ: одна регистрация на экран
 [{screen:'scrText',    answer:'textAnswer', actions:'textActions', result:'tImport',   copy:['btnCopyPrompt']},
@@ -13985,8 +13917,7 @@ try{
   applyAudioFromUser(curUser());
   syncPrefs();
   const u = curUser();
-  themeLight = (u.theme || (u.gender === 'm' ? 'dark' : 'light')) !== 'dark';
-  applyTheme();
+  applyThemeFor(u);
   syncSettingsForm();
   if(pendingImport){
     importProgramCode(pendingImport);
@@ -14005,11 +13936,6 @@ try{
   if(pendingAction === 'create'){
     pendingAction = null;
     $('createModal').classList.add('open');
-  }
-  // первое знакомство — короткое обучение
-  if((await kvGet('seenHelp')) !== '1'){
-    kvSet('seenHelp', '1');
-    show('scrHelp');
   }
 })();
 
