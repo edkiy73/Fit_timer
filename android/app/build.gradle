@@ -1,0 +1,51 @@
+plugins { id "com.android.application" }
+
+android {
+  namespace "ru.fittimer.app"
+  compileSdk 35
+
+  defaultConfig {
+    applicationId "ru.fittimer.app"
+    minSdk 23
+    targetSdk 35
+    versionCode 1
+    versionName "1.0"
+    // адрес, который открывает TWA. Меняется в одном месте — здесь.
+    manifestPlaceholders = [
+      hostName        : "edkiy73.github.io",
+      launchUrl       : "https://edkiy73.github.io/Fit_timer/index.html",
+      defaultUrl      : "https://edkiy73.github.io/Fit_timer/index.html"
+    ]
+  }
+
+  signingConfigs {
+    release {
+      // заполняется из секретов в CI; без них сборка уходит в debug-подпись
+      def ks = System.getenv("KEYSTORE_FILE")
+      if (ks != null && new File(ks).exists()) {
+        storeFile     file(ks)
+        storePassword System.getenv("KEYSTORE_PASSWORD")
+        keyAlias      System.getenv("KEY_ALIAS")
+        keyPassword   System.getenv("KEY_PASSWORD")
+      }
+    }
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      def ks = System.getenv("KEYSTORE_FILE")
+      if (ks != null && new File(ks).exists()) signingConfig signingConfigs.release
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  // LauncherActivity и DelegationService живут здесь, а не в androidx.browser
+  implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.5.0"
+}

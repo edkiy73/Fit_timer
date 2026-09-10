@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+  <!-- нужен androidbrowserhelper для передачи файлов (шеринг картинки результата) -->
+  <files-path name="twa" path="."/>
+  <cache-path name="twa-cache" path="."/>
+</paths>

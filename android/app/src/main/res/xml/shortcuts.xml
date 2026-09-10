@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- быстрые действия по долгому нажатию на иконку — те же, что в манифесте PWA -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut
+      android:shortcutId="today"
+      android:enabled="true"
+      android:icon="@mipmap/ic_launcher"
+      android:shortcutShortLabel="@string/shortcut_today_short"
+      android:shortcutLongLabel="@string/shortcut_today_long">
+    <intent
+        android:action="android.intent.action.VIEW"
+        android:data="https://edkiy73.github.io/Fit_timer/index.html?today=1"/>
+  </shortcut>
+  <shortcut
+      android:shortcutId="create"
+      android:enabled="true"
+      android:icon="@mipmap/ic_launcher"
+      android:shortcutShortLabel="@string/shortcut_create_short"
+      android:shortcutLongLabel="@string/shortcut_create_long">
+    <intent
+        android:action="android.intent.action.VIEW"
+        android:data="https://edkiy73.github.io/Fit_timer/index.html?create=1"/>
+  </shortcut>
+</shortcuts>
