@@ -33,7 +33,11 @@ jobs:
           cp .well-known/assetlinks.json _site/.well-known/
           ls -R _site
 
+      # enablement: true включает Pages сам, если он ещё не включён в настройках —
+      # иначе первый запуск падает с «Get Pages site failed»
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
