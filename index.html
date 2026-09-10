@@ -991,8 +991,8 @@
      иконка растягивалась во всю ширину карточки */
   .pm-crown{display:flex;justify-content:center;margin-bottom:10px;color:var(--accent-ink)}
   .pm-crown svg{width:34px;height:34px}
-  .pm-title{text-align:center;font-size:22px;margin-bottom:14px}
-  .pm-lead{font-size:14.5px;line-height:1.55;color:var(--muted);margin-bottom:12px}
+  .pm-title{text-align:center;font-size:22px;margin-bottom:10px}
+  .pm-lead{font-size:14.5px;line-height:1.55;color:var(--muted);margin-bottom:10px}
   .pm-lead b{color:var(--ink);font-weight:600}
   .pm-label{
     display:block;font-family:var(--font-display);font-size:12px;font-weight:600;
@@ -1012,9 +1012,13 @@
   .pm-list b{display:block;font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
   .pm-list small{display:block;font-size:12.5px;line-height:1.5;color:var(--muted)}
   .pm-free{margin-bottom:18px}
+  .pm-short{gap:6px}
+  .pm-short li{padding:10px 12px 10px 44px;min-height:44px;display:flex;align-items:center}
+  .pm-short .pm-li-ico{top:50%;transform:translateY(-50%)}
+  .pm-short b{margin-bottom:0;font-size:14px;line-height:1.35}
   /* Выбор срока. Годовой стоит вторым и подсвечен по умолчанию: он выгоднее и человеку,
      и продукту, а выгода написана числом, а не словом «хит». */
-  .pm-plans{display:flex;gap:10px;margin:18px 0 14px}
+  .pm-plans{display:flex;gap:10px;margin:14px 0 12px}
   .pm-plan{
     flex:1;position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;
     padding:14px 12px 12px;border-radius:var(--r-md);border:1.5px solid var(--line);
@@ -1030,6 +1034,7 @@
     border-radius:var(--r-pill);padding:3px 8px;line-height:1.2;white-space:nowrap;
   }
   .pm-fine{font-size:11.5px;line-height:1.5;color:var(--muted);margin:12px 0 4px;text-align:center}
+
   /* активная подписка: вместо витрины — состояние и одна кнопка управления */
   .pm-state{
     display:flex;align-items:center;gap:12px;padding:14px;margin:16px 0 6px;
@@ -2287,12 +2292,15 @@
       <div class="modal-card">
         <div class="pm-crown" data-icon="crown"></div>
         <h3 class="pm-title">Fit Timer Премиум</h3>
-        <p class="pm-lead" id="pmLead">Нейросеть собирает программы прямо в приложении, каталог тренеров открыт целиком, а всё накопленное живёт в аккаунте и переезжает вместе с тобой на новый телефон.</p>
-        <ul class="pm-list">
-          <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Программы и упражнения собирает ИИ</b><small>Опиши словами, что хочешь, — программа придёт готовой. Свой ключ Google заводить не нужно.</small></li>
-          <li><span class="pm-li-ico" data-icon="book"></span><b>Весь каталог тренеров</b><small>Программы, которые составили живые тренеры под конкретную цель.</small></li>
-          <li><span class="pm-li-ico" data-icon="image"></span><b>Картинки к упражнениям</b><small>Обложка программы и иллюстрация к каждому движению — чтобы видеть технику, а не читать.</small></li>
-          <li><span class="pm-li-ico" data-icon="shield"></span><b>Аккаунт и синхронизация</b><small>Программы, статистика, вес и фото хранятся в аккаунте. Сменила телефон — всё на месте.</small></li>
+        <p class="pm-lead" id="pmLead">Всё, что стоит денег каждый раз, — без ключей, настроек и ограничений.</p>
+        <!-- Список нарочно в одну строку на пункт: с описаниями он занимал полтора
+             экрана, и на 360×740 цена с кнопкой уезжали под сгиб. Витрина, где не
+             видно кнопки, не продаёт. -->
+        <ul class="pm-list pm-short">
+          <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Программы и упражнения собирает нейросеть</b></li>
+          <li><span class="pm-li-ico" data-icon="book"></span><b>Весь каталог программ от тренеров</b></li>
+          <li><span class="pm-li-ico" data-icon="image"></span><b>Картинки и обложки к упражнениям</b></li>
+          <li><span class="pm-li-ico" data-icon="shield"></span><b>Аккаунт: данные переезжают на новый телефон</b></li>
         </ul>
 
         <div class="pm-state hidden" id="pmState">
