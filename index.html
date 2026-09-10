@@ -1108,7 +1108,7 @@
   .user-row .ua{flex:none;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--line);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px}
   .user-row .ua img{width:100%;height:100%;object-fit:cover}
   .user-row .ub{flex:1;min-width:0}
-  .user-row .ub b{display:block;font-size:15px}
+  .user-row .ub b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
   /* столбики по неделям: высоту диктует viewBox, поэтому подписи не мельчают */
@@ -1439,7 +1439,9 @@
   /* ---------- приветствие на главной ---------- */
   .greet{margin:0}
   .greet-hi{font-family:var(--font-display);font-weight:500;font-size:var(--fs-sm);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-  .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:anywhere}
+  /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)
+     даже там, где перенос по пробелу был возможен */
+  .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:break-word}
   .greet-name .dot{color:var(--accent-ink)}
   /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
      прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
@@ -3368,7 +3370,7 @@
       <!-- Раньше знакомство начиналось с анкеты: имя, пол, дата рождения, цель — три
            экрана до первой тренировки. Человек приходил включить таймер, а получал
            форму, и часть людей уходила прямо здесь. Теперь профиль заводится сам
-           («Гость 1», «Гость 2» — по порядку), а пол и дату рождения спрашиваем позже
+           («Мой профиль», дальше по номерам), а пол и дату рождения спрашиваем позже
            и ровно там, где без них не обойтись: перед составлением тренировки. -->
       <div id="obHello" style="text-align:center">
         <div class="medal" data-icon="sparkle"></div>
@@ -3804,7 +3806,7 @@
         <div class="ava-row">
           <div class="field">
             <label>Имя</label>
-            <input type="text" id="ueName" maxlength="30" placeholder="Как тебя зовут?">
+            <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?">
           </div>
           <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
             <span id="uePhotoPrev"></span>
@@ -6081,7 +6083,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: '', birth: '', photo: null, theme: 'system'};
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', birth: '', photo: null, theme: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
@@ -6118,7 +6120,8 @@ function syncUserForm(){
     : (nm ? `<span class="ava-let">${nm[0].toUpperCase()}</span>` : icon('camera'));
 }
 async function saveUser(){
-  uDraft.name = $('ueName').value.trim();
+  // maxlength сторожит только набор с клавиатуры — вставка и перенос данных мимо него
+  uDraft.name = $('ueName').value.trim().slice(0, NAME_MAX);
   uDraft.birth = $('ueBirth').value || '';
   readTimings();
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
@@ -6994,16 +6997,23 @@ async function saveWeightHist(){
 }
 
 /* ================= ПЕРВЫЙ ЗАПУСК (ОНБОРДИНГ) ================= */
-// Имя по умолчанию. Ничего не спрашиваем на старте, но профиль всё равно должен
-// как-то называться: «Гость 1», «Гость 2» — по порядку, не занимая уже занятый номер.
-// Переименовать можно в любой момент в профиле.
-function nextGuestName(){
-  let n = 0;
+// Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.
+// «Гость» здесь не годится: гость — это чужой и ненадолго, а человек у себя дома
+// и надолго. Имя профиля, в отличие от аккаунта, ничего не адресует — уникальность
+// ему не нужна, поэтому первый профиль просто «Мой профиль», а следующие нумеруются,
+// чтобы их можно было различить в списке.
+const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
+const DEFAULT_NAME = 'Мой профиль';
+// «Гость N» — имя по умолчанию из прошлой версии: здороваться им тоже не нужно
+const isDefaultName = nm => nm === DEFAULT_NAME || /^(Профиль|Гость)\s+\d+$/.test((nm || '').trim());
+function nextProfileName(){
+  if(!users.some(u => (u.name || '').trim() === DEFAULT_NAME)) return DEFAULT_NAME;
+  let n = 1;
   users.forEach(u => {
-    const m = /^Гость\s+(\d+)$/.exec((u.name || '').trim());
+    const m = /^Профиль\s+(\d+)$/.exec((u.name || '').trim());
     if(m) n = Math.max(n, +m[1]);
   });
-  return 'Гость ' + (n + 1);
+  return 'Профиль ' + (n + 1);
 }
 
 function startOnboarding(){
@@ -7022,7 +7032,7 @@ async function finishOnboardingCreate(){
   if(users.length) return;
   const u = {
     id: 'u' + Date.now(),
-    name: nextGuestName(),
+    name: nextProfileName(),
     gender: '', birth: '', photo: null,
     theme: 'system'
   };
@@ -7130,9 +7140,14 @@ function renderGreeting(){
   const u = curUser();
   const h = new Date().getHours();
   const hi = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
-  $('greetHi').textContent = hi;
   const name = (u && u.name || '').trim();
-  $('greetName').textContent = name || 'С возвращением';
+  // Именем по умолчанию не здороваются: «Доброе утро, Мой профиль» — не приветствие.
+  // Подставлять вместо имени «С возвращением» тоже нельзя: в крупном начертании оно
+  // разваливается на три строки. Без имени приветствие само становится заголовком.
+  const named = !!name && !isDefaultName(name);
+  setShown('greetHi', named);
+  $('greetHi').textContent = hi;
+  $('greetName').textContent = named ? name : hi;
   // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
   $('greetAva').innerHTML = (u && u.photo)
     ? `<img src="${u.photo}" alt="">`
