@@ -140,6 +140,17 @@
     flex:1;display:flex;flex-direction:column;
     padding:20px 20px calc(20px + env(safe-area-inset-bottom));
   }
+  /* ---- полоса прокрутки ----
+     Chrome на телефоне её не рисует, а браузер Samsung рисует — и она оставалась
+     светло-серой поверх тёмной темы. Красим сами и делаем узкой. Цвета берём из
+     переменных, заданных прямо на html (см. applyTheme): пседоэлемент полосы у
+     страницы принадлежит html, а не body, и переменных темы с body он не видит. */
+  html{scrollbar-width:thin;scrollbar-color:var(--sb-thumb,#3B2F58) transparent}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--sb-thumb,#3B2F58);border-radius:99px}
+  ::-webkit-scrollbar-corner{background:transparent}
+
   h1,h2,h3,.disp{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em}
 
   /* ---------- top bar ---------- */
@@ -12331,6 +12342,15 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
+  // color-scheme говорит браузеру, в каком свете рисовать СВОИ элементы: полосу
+  // прокрутки, календарь в поле даты, список в select. Без него они остаются
+  // системными светлыми поверх тёмной темы.
+  const root = document.documentElement;
+  root.style.colorScheme = themeLight ? 'light' : 'dark';
+  // цвет ползунка берём из палитры темы, а не дублируем константой: иначе при
+  // правке палитры полоса останется от старой темы, и заметят это не сразу
+  const sb = getComputedStyle(document.body).getPropertyValue('--line-2').trim();
+  root.style.setProperty('--sb-thumb', sb || (themeLight ? '#CFC5EA' : '#3B2F58'));
   const bg = themeLight ? '#F6F4FC' : '#0C0916';
   const meta = document.querySelector('meta[name=theme-color]');
   if(meta) meta.content = bg;
