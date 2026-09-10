@@ -1449,11 +1449,9 @@
   .ctx-menu svg{margin-right:8px;flex:none}
   /* ---------- приветствие на главной ---------- */
   .greet{margin:0}
-  .greet-hi{font-family:var(--font-display);font-weight:500;font-size:var(--fs-sm);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
   /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)
      даже там, где перенос по пробелу был возможен */
-  .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin-top:6px;overflow-wrap:break-word}
-  .greet-name.solo{margin-top:0}
+  .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin:0;overflow-wrap:break-word}
   .greet-name .dot{color:var(--accent-ink)}
   /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
      прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
@@ -2403,7 +2401,6 @@
       <div class="greet">
         <div class="greet-top">
           <div class="greet-id">
-            <p class="greet-hi" id="greetHi">Привет</p>
             <h1 class="greet-name" id="greetName"></h1>
           </div>
           <!-- аватарка ведёт в свой профиль: на «Сегодня» это единственное место,
@@ -7031,8 +7028,6 @@ async function saveWeightHist(){
 // чтобы их можно было различить в списке.
 const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
 const DEFAULT_NAME = 'Мой профиль';
-// «Гость N» — имя по умолчанию из прошлой версии: здороваться им тоже не нужно
-const isDefaultName = nm => nm === DEFAULT_NAME || /^(Профиль|Гость)\s+\d+$/.test((nm || '').trim());
 function nextProfileName(){
   if(!users.some(u => (u.name || '').trim() === DEFAULT_NAME)) return DEFAULT_NAME;
   let n = 1;
@@ -7168,16 +7163,12 @@ function renderGreeting(){
   const h = new Date().getHours();
   const hi = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
   const name = (u && u.name || '').trim();
-  // Именем по умолчанию не здороваются: «Доброе утро, Мой профиль» — не приветствие.
-  // Подставлять вместо имени «С возвращением» тоже нельзя: в крупном начертании оно
-  // разваливается на три строки. Без имени приветствие само становится заголовком.
-  const named = !!name && !isDefaultName(name);
-  setShown('greetHi', named);
-  // без строки приветствия сверху верхний отступ заголовка не от чего отбивать,
-  // а аватарка центруется по всему блоку — вместе с этим отступом, и съезжает вверх
-  $('greetName').classList.toggle('solo', !named);
-  $('greetHi').textContent = hi;
-  $('greetName').textContent = named ? name : hi;
+  // Имени на главной нет намеренно. Своё имя человек и так знает, а в крупном
+  // начертании оно ведёт себя непредсказуемо: длинное переносится, короткое выглядит
+  // обрубком, имя по умолчанию превращает приветствие в «Доброе утро, Мой профиль».
+  // Одно приветствие читается спокойнее и одинаково у всех. Чей это экран, показывает
+  // аватарка рядом.
+  $('greetName').textContent = hi;
   // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
   $('greetAva').innerHTML = (u && u.photo)
     ? `<img src="${u.photo}" alt="">`
