@@ -219,7 +219,7 @@
      читалось как перерисовка, а не как движение. Теперь всплывает каждая карточка
      со своей задержкой: экран собирается на глазах. Тренировка исключена — там
      таймер, и любое движение рядом с ним отвлекает от счёта. */
-  .screen.on:not(#scrWork) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) both}
+  .screen.on:not(#scrWork):not(#scrFinish) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) both}
   .screen.on:not(#scrWork) > *:nth-child(2){animation-delay:.04s}
   .screen.on:not(#scrWork) > *:nth-child(3){animation-delay:.08s}
   .screen.on:not(#scrWork) > *:nth-child(4){animation-delay:.12s}
@@ -794,13 +794,19 @@
     display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);
   }
+  .fin-crest .medal{
+    position:absolute;left:50%;top:50%;margin:0;
+    transform:translate(-50%,-50%) scale(calc(.86 + .14 * var(--p,1)));
+    opacity:calc(.32 + .68 * var(--p,1));
+    backdrop-filter:blur(2px);
+  }
   .medal svg{width:42px;height:42px;stroke-width:1.6}
   .finish h2{font-size:var(--fs-2xl);margin:0 0 var(--sp-4)}
   .finish p{color:var(--muted);margin-top:12px;font-size:var(--fs-md);line-height:1.55}
   /* Одна карточка результата: время, цифры и достижения — части одного объекта,
      разделённые волосяными линиями, а не три плитки разной ширины. */
   .result-card{
-    display:block;text-align:left;margin:0;overflow:hidden;
+    display:block;text-align:left;margin:0;overflow:hidden;position:relative;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);
   }
@@ -835,6 +841,89 @@
   .note-toggle svg{width:16px;height:16px}
   .fin-note{margin-top:var(--sp-4);text-align:left}
   .finish .time small{display:block;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.2em;margin-top:8px}
+
+  /* ---------- финал: «круг замкнулся» ----------
+     Салют убран намеренно: падающие бумажки — чужой праздник, они ничего не говорят
+     про пройденную тренировку. Вместо него один смысловой момент: искры со всего
+     экрана по спирали стягиваются к медали (это рисует canvas #finFx), кольцо вокруг
+     неё замыкается ровно по числу долетевших искр, и только когда круг сомкнулся —
+     вспышка, гонг, вибрация и уже потом всплывает карточка результата.
+     Прогресс кольца лежит в переменной --p на .fin-crest: от неё же зависят яркость
+     и размер медали, поэтому она разгорается вместе с кольцом, а не отдельно. */
+  .fin-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:.6}
+  .fin-aura i{position:absolute;display:block;border-radius:50%;filter:blur(42px);opacity:.55;will-change:transform}
+  .fin-aura i:nth-child(1){width:66vw;height:66vw;left:-16vw;top:2%;background:var(--accent);animation:finA1 17s ease-in-out infinite alternate}
+  .fin-aura i:nth-child(2){width:56vw;height:56vw;right:-16vw;top:24%;background:var(--rest);animation:finA2 21s ease-in-out infinite alternate}
+  .fin-aura i:nth-child(3){width:52vw;height:52vw;left:16vw;bottom:-6%;background:var(--accent-ink);animation:finA3 25s ease-in-out infinite alternate}
+  @keyframes finA1{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(13vw,6vh,0) scale(1.18)}}
+  @keyframes finA2{from{transform:translate3d(0,0,0) scale(1.12)}to{transform:translate3d(-11vw,-5vh,0) scale(.9)}}
+  @keyframes finA3{from{transform:translate3d(0,0,0) scale(.95)}to{transform:translate3d(-9vw,-8vh,0) scale(1.2)}}
+  body.light .fin-aura{opacity:.16}
+  #scrFinish .finish{position:relative;z-index:1}
+  #scrFinish .actions{position:relative;z-index:1}
+  #finFx{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
+
+  .fin-crest{position:relative;width:132px;height:132px;margin:0 auto var(--sp-3)}
+  .fin-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .fr-track{fill:none;stroke:var(--line);stroke-width:2}
+  .fr-arc{
+    fill:none;stroke:url(#finRingGrad);stroke-width:3.5;stroke-linecap:round;
+    stroke-dasharray:345.58;stroke-dashoffset:0;
+    transform:rotate(-90deg);transform-origin:60px 60px;
+  }
+  .frg-a{stop-color:var(--accent-ink)}
+  .frg-b{stop-color:var(--rest)}
+  .fr-head{transform-origin:60px 60px;opacity:0}
+  .fr-halo{fill:var(--accent-ink);opacity:.3}
+  .fr-dot{fill:var(--ink)}
+  #scrFinish.fin-play .fr-head{opacity:1}
+  .fin-bloom{
+    position:absolute;left:50%;top:50%;width:132px;height:132px;margin:-66px 0 0 -66px;
+    border-radius:50%;pointer-events:none;opacity:0;
+    background:radial-gradient(closest-side,var(--accent-ink),transparent 70%);
+  }
+  #scrFinish.fin-lit .fin-bloom{animation:finBloom .95s cubic-bezier(.2,.8,.3,1) both}
+  @keyframes finBloom{from{opacity:.8;transform:scale(.45)}to{opacity:0;transform:scale(3.4)}}
+  #scrFinish.fin-lit .fin-crest .medal{
+    opacity:1;animation:finMedal .8s cubic-bezier(.2,.9,.25,1) both;
+    box-shadow:0 0 0 1px var(--accent-line),0 10px 34px var(--accent-soft);
+  }
+  @keyframes finMedal{
+    0%{transform:translate(-50%,-50%) scale(1)}
+    38%{transform:translate(-50%,-50%) scale(1.13)}
+    100%{transform:translate(-50%,-50%) scale(1)}
+  }
+  /* Карточка и кнопки ждут своей очереди. Прячем их только когда анимация правда
+     запущена (класс .fin-arm ставит скрипт): если бы .fin-rise скрывал сам по себе,
+     любая ошибка в скрипте оставила бы экран результата пустым. */
+  #scrFinish.fin-arm:not(.fin-go) .fin-rise{opacity:0;pointer-events:none}
+  #scrFinish.fin-go .fin-rise{animation:finRise .6s cubic-bezier(.16,.86,.3,1) both;animation-delay:var(--d,0s)}
+  #scrFinish .finish h2.fin-rise{--d:.02s}
+  #scrFinish .result-card.fin-rise{--d:.1s}
+  #scrFinish .note-toggle.fin-rise{--d:.2s}
+  #scrFinish .actions.fin-rise{--d:.26s}
+  /* размытие, которое сходит на нет: карточка «наводится на резкость», а не просто едет */
+  @keyframes finRise{
+    from{opacity:0;transform:translateY(18px) scale(.985);filter:blur(9px)}
+    to{opacity:1;transform:none;filter:blur(0)}
+  }
+  #scrFinish.fin-go .rc-stat{animation:finRise .5s cubic-bezier(.16,.86,.3,1) both;animation-delay:.3s}
+  #scrFinish.fin-go .rc-stat:nth-child(2){animation-delay:.37s}
+  #scrFinish.fin-go .rc-stat:nth-child(3){animation-delay:.44s}
+  /* один блик по карточке — тонкая полоса света, проходящая наискось ровно один раз */
+  #scrFinish .result-card{--glare:rgba(255,255,255,.14)}
+  body.light #scrFinish .result-card{--glare:rgba(107,63,224,.10)}
+  #scrFinish.fin-go .result-card::after{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:linear-gradient(100deg,transparent 42%,var(--glare) 50%,transparent 58%);
+    animation:finGlare 1.05s .5s cubic-bezier(.3,.05,.2,1) both;
+  }
+  @keyframes finGlare{from{transform:translateX(-130%)}to{transform:translateX(130%)}}
+  /* без движения экран обязан быть просто собранным и полным */
+  @media (prefers-reduced-motion:reduce){
+    #scrFinish.fin-arm:not(.fin-go) .fin-rise{opacity:1;pointer-events:auto}
+    .fin-aura{opacity:.35}
+  }
 
   /* ---------- светлая тема ---------- */
   /* Светлая тема — не осветлённая копия тёмной, а своя раскладка:
@@ -1438,9 +1527,6 @@
   .badge.new{background:var(--accent-soft)}
   .badge.new .b-txt small{color:var(--accent-ink)}
   @keyframes badgePop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-  #confettiBox{position:fixed;inset:0;z-index:70;pointer-events:none;overflow:hidden}
-  .confetti{position:absolute;top:-14px;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:confFall linear forwards}
-  @keyframes confFall{to{transform:translateY(110vh) rotate(720deg);opacity:.7}}
   .cal-cell.done{cursor:pointer}
   .icon-btn svg,.back-chip svg,.cal-nav svg,.stat-reset svg,.user-row .ue svg,.ctx-menu svg{width:17px;height:17px;vertical-align:-3px}
   .back-chip,.cal-nav{display:flex;align-items:center;justify-content:center}
@@ -3344,10 +3430,31 @@
 
   <!-- ШАГ 3: финал -->
   <section class="screen" id="scrFinish">
+    <!-- Живой фон финала: три больших размытых пятна, которые медленно расходятся.
+         Двигается только transform — это целиком на компоновщике и не греет процессор. -->
+    <div class="fin-aura" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="finish">
-      <div class="medal" data-icon="medal"></div>
-      <h2>Отличная работа!</h2>
-      <div class="result-card">
+      <!-- Медаль в кольце: кольцо замыкается по мере того, как искры долетают до неё. -->
+      <div class="fin-crest" id="finCrest">
+        <svg class="fin-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="finRingGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop class="frg-a" offset="0"></stop>
+              <stop class="frg-b" offset="1"></stop>
+            </linearGradient>
+          </defs>
+          <circle class="fr-track" cx="60" cy="60" r="55"></circle>
+          <circle class="fr-arc" id="finArc" cx="60" cy="60" r="55"></circle>
+          <g class="fr-head" id="finHead">
+            <circle class="fr-halo" cx="60" cy="5" r="7.5"></circle>
+            <circle class="fr-dot" cx="60" cy="5" r="3"></circle>
+          </g>
+        </svg>
+        <span class="fin-bloom" aria-hidden="true"></span>
+        <div class="medal" data-icon="medal"></div>
+      </div>
+      <h2 class="fin-rise">Отличная работа!</h2>
+      <div class="result-card fin-rise">
         <div class="rc-main">
           <div class="rc-time" id="finalTime">0:00</div>
           <div class="rc-sub">время тренировки</div>
@@ -3359,7 +3466,7 @@
         </div>
         <div class="badge-row" id="badgeRow"></div>
       </div>
-      <button type="button" class="note-toggle" id="finNoteToggle"></button>
+      <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
       <div class="field fin-note hidden" id="finNoteField">
         <label>Заметка о тренировке</label>
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
@@ -3367,10 +3474,11 @@
     </div>
     <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую
          часть экрана, хотя оба действия помещаются рядом -->
-    <div class="actions act-row">
+    <div class="actions act-row fin-rise">
       <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться"></button>
       <button class="btn-primary" id="btnAgain">Готово</button>
     </div>
+    <canvas id="finFx" aria-hidden="true"></canvas>
   </section>
 
   <!-- Первый запуск -->
@@ -4919,7 +5027,7 @@ function show(id, push = true){
     navDepth++;
     try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
   }
-  if(show._last !== id) clearConfetti(); // праздник остаётся на своём экране
+  if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
   show._last = id;
   screens.forEach(s => $(s).classList.toggle('on', s===id));
   // верхняя полоса нужна ровно одному экрану — тренировке
@@ -12051,7 +12159,6 @@ function finishWorkout(){
   renderBadges();
   saveStats();
   renderStats();
-  confetti();
   if(state.current && state.current.sourceId){
     const p = customPrograms.find(x => x.id === state.current.sourceId);
     if(p){
@@ -12073,13 +12180,16 @@ function finishWorkout(){
   document.body.classList.remove('phase-rest');
   const m = Math.floor(totalSec/60), s = totalSec%60;
   const timeText = `${m}:${String(s).padStart(2,'0')}`;
-  fanfare();
   show('scrFinish');
-  // цифры набегают: результат «приходит», а не появляется готовым.
-  // при prefers-reduced-motion сразу ставим конечное значение
-  countUp($('finalTime'), totalSec, v => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,'0')}`, timeText);
-  countUp($('finKcal'), state.lastKcal || 0, v => '≈' + Math.round(v), '≈' + (state.lastKcal || 0));
-  countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
+  // Гонг звучит не здесь, а в момент, когда кольцо замкнулось: звук и вспышка
+  // обязаны совпасть. Цифры набегают тогда же, когда поднимается карточка, —
+  // результат «приходит», а не появляется готовым.
+  // При prefers-reduced-motion countUp сразу ставит конечное значение.
+  playFinishFx(() => {
+    countUp($('finalTime'), totalSec, v => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,'0')}`, timeText);
+    countUp($('finKcal'), state.lastKcal || 0, v => '≈' + Math.round(v), '≈' + (state.lastKcal || 0));
+    countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
+  });
 }
 
 /* ================= ШЕРИНГ-КАРТИНКА РЕЗУЛЬТАТА ================= */
@@ -12223,30 +12333,175 @@ function countUp(el, to, fmt, finalText){
   requestAnimationFrame(step);
 }
 
-// все летящие бумажки живут в одном контейнере: смена экрана — контейнер чистится,
-// иначе конфетти с финала продолжало сыпаться поверх статистики и календаря
-function clearConfetti(){
-  const box = document.getElementById('confettiBox');
-  if(box) box.innerHTML = '';
+/* ================= ФИНАЛ: «КРУГ ЗАМКНУЛСЯ» =================
+   Салют с экрана убран намеренно. Падающие бумажки — чужой праздник: они одинаковы
+   для дня рождения, выигрыша в казино и приседаний, ничего не говорят про
+   тренировку и на телефоне читаются как открытка из нулевых.
+   Теперь у экрана один смысловой момент. Искры со всего экрана по спирали
+   стягиваются к медали — это собранная за тренировку работа возвращается к
+   человеку, — и кольцо вокруг медали замыкается ровно по числу долетевших искр.
+   Круг сомкнулся: вспышка, гонг, короткая вибрация, и только ПОСЛЕ этого
+   поднимается карточка результата и набегают цифры. Порядок здесь и есть эффект:
+   когда всё появляется разом, «вау» просто негде случиться.
+   Технически — один canvas поверх экрана. Хвосты искр получаются не заливкой фона,
+   а вычитанием уже нарисованного (destination-out): под ними остаётся живой фон
+   экрана, а не серая плёнка. В тёмной теме искры складываются светом (lighter),
+   в светлой — обычным наложением: сложение на белом фоне невидимо.
+   Долететь искры обязаны при любом раскладе: если вкладка ушла в фон и кадры не
+   рисуются, сторожевой таймер сам достраивает финал — экран результата не может
+   остаться пустым из-за анимации. */
+const FIN_RING_C = 2 * Math.PI * 55;   // длина кольца в координатах viewBox
+let finFxRaf = 0, finFxTimers = [];
+
+// доля замкнутого кольца: она же управляет яркостью и размером медали через --p
+function setFinRing(p){
+  const arc = $('finArc'), head = $('finHead'), crest = $('finCrest');
+  if(arc) arc.style.strokeDashoffset = String(FIN_RING_C * (1 - p));
+  if(head) head.style.transform = `rotate(${360 * p}deg)`;
+  if(crest) crest.style.setProperty('--p', String(p));
 }
-function confetti(){
-  const cs = getComputedStyle(document.body);
-  const cvar = n => cs.getPropertyValue(n).trim() || '#7C56F5';
-  const colors = [cvar('--accent'), cvar('--accent-ink'), cvar('--rest'), cvar('--warn'), cvar('--ok')];
-  let box = document.getElementById('confettiBox');
-  if(!box){ box = document.createElement('div'); box.id = 'confettiBox'; document.body.appendChild(box); }
-  box.innerHTML = '';
-  for(let i = 0; i < 70; i++){
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    c.style.left = Math.random() * 100 + 'vw';
-    c.style.background = colors[Math.floor(Math.random() * colors.length)];
-    c.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
-    c.style.animationDelay = (Math.random() * .6) + 's';
-    c.style.transform = `rotate(${Math.random() * 360}deg)`;
-    box.appendChild(c);
-    c.addEventListener('animationend', () => c.remove());
+
+// смена экрана гасит эффект: раньше конфетти с финала продолжало сыпаться поверх
+// статистики и календаря
+function stopFinishFx(){
+  if(finFxRaf) cancelAnimationFrame(finFxRaf);
+  finFxRaf = 0;
+  finFxTimers.forEach(clearTimeout);
+  finFxTimers = [];
+  const c = $('finFx');
+  if(c && c.getContext) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  const sc = $('scrFinish');
+  if(sc) sc.classList.remove('fin-arm', 'fin-play', 'fin-go', 'fin-lit');
+  setFinRing(1);
+}
+
+// #RRGGBB + прозрачность: цвета берём из переменных темы, а рисовать нужно с альфой
+function hexA(hex, a){
+  const m = /^#([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if(!m) return `rgba(124,86,245,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+
+// after() вызывается ровно один раз — в момент, когда карточке пора подниматься
+function playFinishFx(after){
+  const sc = $('scrFinish'), c = $('finFx'), crest = $('finCrest');
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  stopFinishFx();
+  let handed = false;
+  const hand = () => { if(handed) return; handed = true; sc.classList.add('fin-go'); after(); };
+  if(reduced || !sc || !c || !c.getContext || !crest){
+    setFinRing(1);
+    if(sc) sc.classList.add('fin-arm', 'fin-lit');
+    fanfare();
+    hand();
+    return;
   }
+  sc.classList.add('fin-arm', 'fin-play');
+  setFinRing(0);
+
+  const rect = sc.getBoundingClientRect();
+  const W = Math.max(1, Math.round(rect.width)), H = Math.max(1, Math.round(rect.height));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+  const x = c.getContext('2d');
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const cr = crest.getBoundingClientRect();
+  const cx = cr.left - rect.left + cr.width / 2;
+  const cy = cr.top - rect.top + cr.height / 2;
+  const ringR = cr.width * 55 / 120;                       // радиус кольца в пикселях
+  const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) + 40;
+
+  const cs = getComputedStyle(document.body);
+  const cvar = n => cs.getPropertyValue(n).trim();
+  const light = document.body.classList.contains('light');
+  const tint = [cvar('--accent-ink') || '#B7A0FF', cvar('--rest') || '#3FD3E6', cvar('--accent') || '#7C56F5'];
+
+  const N = 56;
+  const motes = [];
+  for(let i = 0; i < N; i++){
+    motes.push({
+      a0: Math.random() * Math.PI * 2,
+      r0: far * (0.6 + Math.random() * 0.5),
+      spin: (Math.random() < .5 ? -1 : 1) * (0.6 + Math.random() * 0.9), // закрутка спирали
+      t0: 20 + (i / N) * 430 + Math.random() * 90,
+      dur: 420 + Math.random() * 280,
+      w: 1 + Math.random() * 1.7,
+      col: tint[i % tint.length],
+      px: 0, py: 0, on: false, done: false
+    });
+  }
+
+  const waves = [];
+  const T0 = performance.now();
+  let arrived = 0, bloomAt = 0;
+
+  const frame = now => {
+    finFxRaf = 0;
+    const t = now - T0;
+    // хвосты: подтираем нарисованное раньше, фон экрана при этом не трогаем
+    x.globalCompositeOperation = 'destination-out';
+    x.fillStyle = 'rgba(0,0,0,.16)';
+    x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = light ? 'source-over' : 'lighter';
+    x.lineCap = 'round';
+
+    motes.forEach(m => {
+      if(m.done) return;
+      const k = (t - m.t0) / m.dur;
+      if(k < 0) return;
+      if(k >= 1){ m.done = true; arrived++; return; }
+      const e = Math.pow(k, 1.7);                          // разгон к центру
+      const a = m.a0 + m.spin * e;
+      const r = m.r0 + (ringR - m.r0) * e;
+      const nx = cx + Math.cos(a) * r, ny = cy + Math.sin(a) * r;
+      if(m.on){
+        const al = (light ? .3 : .2) + .55 * k;
+        x.strokeStyle = hexA(m.col, al * .3);              // мягкое свечение
+        x.lineWidth = m.w * 3.4;
+        x.beginPath(); x.moveTo(m.px, m.py); x.lineTo(nx, ny); x.stroke();
+        x.strokeStyle = hexA(m.col, al);                   // сама искра
+        x.lineWidth = m.w;
+        x.beginPath(); x.moveTo(m.px, m.py); x.lineTo(nx, ny); x.stroke();
+      }
+      m.px = nx; m.py = ny; m.on = true;
+    });
+
+    if(!bloomAt) setFinRing(Math.min(1, arrived / N));
+
+    if(!bloomAt && arrived >= N){
+      bloomAt = now;
+      setFinRing(1);
+      sc.classList.remove('fin-play');
+      sc.classList.add('fin-lit');
+      haptic([0, 16, 70, 26]);
+      fanfare();
+      waves.push({t0: now, dur: 820}, {t0: now + 140, dur: 820});
+      finFxTimers.push(setTimeout(hand, 180));
+    }
+
+    waves.forEach(w => {
+      const k = (now - w.t0) / w.dur;
+      if(k < 0 || k > 1) return;
+      const r = ringR * (0.9 + 5.2 * (1 - Math.pow(1 - k, 2)));
+      x.strokeStyle = hexA(tint[0], (1 - k) * (light ? .22 : .3));
+      x.lineWidth = 1.5 + 4 * (1 - k);
+      x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+    });
+
+    if(bloomAt && now - bloomAt > 1600){ x.clearRect(0, 0, W, H); return; }
+    finFxRaf = requestAnimationFrame(frame);
+  };
+  finFxRaf = requestAnimationFrame(frame);
+  // вкладка в фоне — кадров нет; результат всё равно обязан появиться
+  finFxTimers.push(setTimeout(() => {
+    if(handed) return;
+    setFinRing(1);
+    sc.classList.remove('fin-play');
+    sc.classList.add('fin-lit');
+    hand();
+  }, 3200));
 }
 
 /* ---- достижения ----
