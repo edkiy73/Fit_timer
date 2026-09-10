@@ -284,7 +284,6 @@
     padding:14px 16px;margin-bottom:20px;
   }
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-  #totalTime{font-family:var(--font-display);font-weight:700;letter-spacing:.02em;font-size:30px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .field-hint:empty{display:none}
   .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
@@ -657,11 +656,6 @@
   .mistakes svg{width:17px;height:17px;flex:none;margin-top:1px}
   .chips-wrap .day-chip{flex:0 0 auto;padding:9px 13px}
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
-  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
-  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-  .ph-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-top:16px;-webkit-overflow-scrolling:touch}
-  .ph-row .ph-thumb{flex:none}
-  .ph-thumb{width:56px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line);display:block}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
   .cmp-img{margin-top:8px;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:3/4;touch-action:pan-y}
@@ -1002,10 +996,8 @@
   .user-row .ub b{display:block;font-size:15px}
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
-  .week-line{display:flex;flex-direction:column;gap:3px;margin-top:12px;font-size:13.5px;color:var(--muted)}
-  .week-line .streak{color:var(--accent-ink);font-weight:500;display:inline-flex;align-items:center;gap:6px}
-  .week-line .streak svg{width:15px;height:15px;flex:none}
-  #weekBars{width:100%;height:58px;margin-top:4px;display:block;font-family:var(--font-display)}
+  /* столбики по неделям: высоту диктует viewBox, поэтому подписи не мельчают */
+  #weekBars{width:100%;height:auto;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
   .cal-head b{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
   .cal-nav{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer;line-height:1}
@@ -1653,11 +1645,6 @@
   .or-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-family:var(--font-display)}
   .or-line::before,.or-line::after{content:'';flex:1;height:1px;background:var(--line)}
 
-  /* ---- график по неделям в статистике ---- */
-  #weekBars{height:96px}
-  .chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:18px}
-  .chart-head b{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-  .chart-head small{font-size:11.5px;color:var(--muted);opacity:.8}
 
   /* Стрелки и уголки нарисованы data-URI, а он не читает CSS-переменные:
      это единственное место, где цвет задан вручную — по одному значению на тему,
@@ -1921,6 +1908,172 @@
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important}
   }
+
+  /* ================= ЭКРАН СТАТИСТИКИ =================
+     Раньше 179 px (четверть экрана) уходило на заголовок и полосу вкладок, а
+     первые данные начинались уже под сгибом. Здесь шапка — маленькая надпись
+     плюс сегмент-контрол: до первой карточки ~110 px.
+     Вкладки подписаны коротко («Тело» вместо «Вес и объёмы»), чтобы подписи
+     никогда не переносились и пилюли не разъезжались по высоте. */
+  .stats-kicker{
+    display:block;font-family:var(--font-display);font-weight:600;font-size:12px;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:2px 0 10px;
+  }
+  .tabs.seg{gap:4px;padding:4px;margin:0 0 16px;border-radius:var(--r-lg)}
+  .tabs.seg .tab{
+    height:44px;padding:0 6px;white-space:nowrap;font-size:13.5px;
+    border-radius:var(--r-md);overflow:hidden;text-overflow:ellipsis;
+  }
+  .tabs.seg .tab.act{background:var(--grad-accent);color:var(--on-accent);font-weight:500}
+
+  /* ---- карточка недели ---- */
+  .streak-pill{
+    flex:none;display:inline-flex;align-items:center;gap:6px;
+    padding:9px 13px;border-radius:var(--r-pill);
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+    color:var(--accent-ink);font-size:13px;font-weight:500;line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .streak-pill svg{width:16px;height:16px;flex:none}
+  /* Неделя одной строкой: заливка — сделано, пунктир — день по плану впереди.
+     Это тот же ответ, ради которого раньше листали календарь, но в 48 px. */
+  .wk-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:18px}
+  .wk-day{
+    height:48px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;
+    background:var(--bg-2);border:1.5px solid transparent;
+    font-size:12px;color:var(--muted);font-weight:500;
+  }
+  .wk-day.plan{border-style:dashed;border-color:var(--accent-line);color:var(--accent-ink)}
+  .wk-day.done{background:var(--accent);border-color:transparent;color:var(--on-accent);font-weight:600}
+  .wk-day.today{box-shadow:0 0 0 1.5px var(--accent-line)}
+  .wk-day.fut{opacity:.75}
+  .wk-note{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.45}
+  .wk-note:empty{display:none}
+
+  /* ---- общий итог: приятная сводка, но не главный герой ---- */
+  .tot-row{
+    display:flex;align-items:center;gap:10px;
+    margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+  }
+  /* «31 ч 46 мин» длиннее «57», поэтому колонки не равные, а цифры не переносятся:
+     в системном шрифте (сеть без Google Fonts) они шире, чем в Oswald. */
+  .tot{min-width:0}
+  .tot:first-child{flex:1.9}
+  .tot:nth-child(2){flex:1}
+  .tot b{
+    display:block;font-family:var(--font-display);font-weight:700;font-size:17px;
+    line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tot span{display:block;margin-top:3px;font-size:11px;color:var(--muted);white-space:nowrap}
+  .tot-reset{flex:none;width:44px;height:44px}
+
+  /* ---- заголовок секции внутри карточки ---- */
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .sec-head b{
+    font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);white-space:nowrap;
+  }
+  .sec-head small{font-size:11.5px;color:var(--muted);opacity:.85;white-space:nowrap}
+
+  /* ---- календарь ----
+     Был на треть экрана и путал: сегодня — контур, тренировка — заливка, легенда
+     в две строки. Теперь месяц подписан итогом и сравнением с прошлым, сегодня
+     всегда акцентного цвета, а тренировка — единственная заливка. */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:0}
+  .cal-head b{
+    flex:1;min-width:0;text-align:center;
+    font-family:var(--font-display);font-weight:600;font-size:14px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink);
+  }
+  /* итог месяца и сравнение с прошлым — отдельной строкой во всю ширину:
+     между двумя кнопками навигации ей оставалось 180 px и она переносилась */
+  .cal-sub{margin-top:4px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
+  .cal-nav{width:44px;height:44px;border-radius:var(--r-md);flex:none}
+  .cal-grid{gap:3px;margin-top:12px}
+  .cal-cell{
+    aspect-ratio:auto;height:34px;border-radius:11px;font-size:12.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  .cal-cell.fut{opacity:.42}
+  .cal-cell.done{background:var(--accent);color:var(--on-accent);font-weight:600}
+  .cal-cell.today{box-shadow:inset 0 0 0 1.5px var(--accent-line);color:var(--accent-ink);font-weight:700}
+  .cal-cell.today.done{box-shadow:inset 0 0 0 2px var(--card),inset 0 0 0 3.5px var(--accent);color:var(--on-accent)}
+  .cal-dow{height:auto;font-size:10px;padding:0 0 4px;opacity:.85}
+  .cal-hint{margin-top:10px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
+
+  /* ---- достижения ---- */
+  .bdg-row{display:flex;flex-wrap:wrap;gap:8px}
+  .bdg{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 13px 7px 9px;
+    border-radius:var(--r-pill);background:var(--accent-soft);border:1px solid var(--accent-line);
+    color:var(--ink);font-size:12.5px;
+  }
+  .bdg i{display:flex;color:var(--accent-ink)}
+  .bdg i svg{width:17px;height:17px;display:block}
+  .bdg-next{margin-top:14px;font-size:12.5px;line-height:1.45;color:var(--muted)}
+
+  /* ---- вкладка «Тело»: один график вместо трёх ---- */
+  .wm-switch{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px;margin-top:16px}
+  .wm-chip{
+    display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
+    min-height:56px;padding:9px 11px;border-radius:var(--r-md);
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);
+    font-family:var(--font-text);text-align:left;cursor:pointer;
+  }
+  .wm-chip > span{font-size:11.5px;color:var(--muted)}
+  .wm-chip > b{
+    font-family:var(--font-display);font-weight:700;font-size:17px;line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .wm-chip > b small{margin-left:3px;font-size:10.5px;font-weight:400;color:var(--muted)}
+  .wm-chip.act{border-color:var(--accent-line);background:var(--accent-soft)}
+  .wm-chip.act > span{color:var(--accent-ink)}
+  /* график больше не сидит в собственной рамке внутри карточки внутри карточки */
+  .mc-charts .metric-graph{background:none;border:none;padding:0}
+  .mc-charts .mg-head{margin-bottom:2px}
+  .mg-head small{font-size:11.5px;color:var(--muted)}
+  .mg-delta{font-size:17px}
+
+  /* ---- вкладка «Фото» ---- */
+  .ba-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  .ba-cell{
+    position:relative;border-radius:var(--r-md);overflow:hidden;
+    background:var(--bg-2);border:1px solid var(--line);
+  }
+  .ba-cell img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+  .ba-cell .ba-tag{
+    position:absolute;top:8px;left:8px;padding:4px 9px;border-radius:var(--r-pill);
+    background:var(--panel-dark);border:1px solid var(--panel-dark-line);
+    color:#fff;font-family:var(--font-display);font-weight:600;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  }
+  .ba-cell b{display:block;padding:8px 10px;font-size:12px;font-weight:500;color:var(--muted)}
+  .ba-note{margin-top:10px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.4}
+  /* Раньше лента миниатюр уезжала за правый край и даты нигде не было —
+     теперь сетка на всю ширину, у каждого снимка подпись. */
+  .ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .ph-item{
+    padding:0;border:1px solid var(--line);background:var(--bg-2);
+    border-radius:var(--r-sm);overflow:hidden;cursor:pointer;display:block;width:100%;
+  }
+  .ph-item img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+  .ph-item small{
+    display:block;padding:6px 4px;font-family:var(--font-text);
+    font-size:10.5px;color:var(--muted);text-align:center;
+  }
+  .mc-actions .mc-act.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+  .mc-actions .mc-act.primary svg{color:var(--on-accent)}
+  /* «Удалить все фото» больше не красная ссылка вплотную под главной кнопкой:
+     отделено чертой и приглушено, красным становится только под пальцем. */
+  .mc-danger{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;min-height:44px;margin-top:18px;padding:12px;
+    border-radius:var(--r-md);border:1px solid var(--line);background:none;
+    color:var(--muted);font-family:var(--font-text);font-size:13px;cursor:pointer;
+  }
+  .mc-danger svg{width:16px;height:16px}
+  .mc-danger:active{color:var(--danger);border-color:var(--danger)}
 </style>
 </head>
 <body>
@@ -3086,38 +3239,67 @@
   </section>
 
   <!-- Профили -->
-  <!-- Статистика с табами -->
+  <!-- СТАТИСТИКА.
+       Экран отвечает на три вопроса, и в этом порядке: «я вообще занимаюсь?»
+       (неделя и серия), «стало лучше?» (тело и фото), «что изменилось за месяц?»
+       (сравнение месяцев в календаре). Большого h1 здесь нет специально: экран
+       подписан в доке, а 180 px пустой шапки на телефоне дороже любой типографики. -->
   <section class="screen root" id="scrStats">
-    <div class="page-head"><h1>Статистика</h1></div>
-    <div class="tabs" id="statsTabs">
+    <span class="stats-kicker">Статистика</span>
+    <div class="tabs seg" id="statsTabs">
       <button class="tab act" data-tab="workouts">Тренировки</button>
-      <button class="tab" data-tab="weight">Вес и объёмы</button>
+      <button class="tab" data-tab="weight">Тело</button>
       <button class="tab" data-tab="photo">Фото</button>
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
+      <!-- Неделя — главный ответ. Общий итог ушёл под черту: он приятный, но
+           на вопрос «я занимаюсь?» отвечает хуже, чем «2 из 3 на этой неделе». -->
       <div class="metric-card">
         <div class="mc-head">
           <div>
-            <span class="ts-label">Всего натренировано</span>
-            <div class="mc-now"><b id="totalTime">0 мин</b><span class="w-delta" id="totalCount"></span></div>
+            <span class="ts-label">Эта неделя</span>
+            <div class="mc-now"><b id="weekDone">0</b><span class="w-delta" id="weekPlan"></span></div>
           </div>
-          <button class="icon-btn" id="btnResetTotal" title="Сбросить"></button>
+          <span class="streak-pill hidden" id="streakStat"></span>
         </div>
-        <div class="week-line"><span id="weekStat"></span><span class="streak" id="streakStat"></span></div>
+        <div class="wk-days" id="weekDays"></div>
+        <p class="wk-note" id="weekNote"></p>
+        <div class="tot-row">
+          <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
+          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
+          <button class="icon-btn tot-reset" id="btnResetTotal" title="Сбросить общее время и счётчик"></button>
+        </div>
+      </div>
 
-        <div class="chart-head"><b>Тренировок по неделям</b><small id="weekBarsNote">последние 8</small></div>
-        <svg id="weekBars" viewBox="0 0 300 78"></svg>
+      <div class="mc-empty empty-state hidden" id="workEmpty">
+        <span class="es-ico" data-icon="chart"></span>
+        <b>Тренировок пока нет</b>
+        <p>Пройди первую — здесь появятся недели, календарь и достижения.</p>
+      </div>
 
+      <div class="metric-card" id="weeksCard">
+        <div class="sec-head"><b>Последние 8 недель</b></div>
+        <svg id="weekBars" viewBox="0 0 300 96"></svg>
+      </div>
+
+      <div class="metric-card" id="calCard">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev">‹</button>
+          <button class="cal-nav" id="calPrev" title="Прошлый месяц"></button>
           <b id="calTitle"></b>
-          <button class="cal-nav" id="calNext">›</button>
+          <button class="cal-nav" id="calNext" title="Следующий месяц"></button>
         </div>
+        <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
-        <div class="legend">
-          <span><i style="background:var(--accent)"></i>день с тренировкой — нажми, чтобы вспомнить какой</span>
-        </div>
+        <p class="cal-hint">Нажми на отмеченный день</p>
+      </div>
+
+      <!-- Достижения раньше жили только на финале и исчезали через минуту.
+           Здесь их можно пересматривать, и видно, что будет следующим. -->
+      <div class="metric-card hidden" id="badgeCard">
+        <div class="sec-head"><b>Достижения</b><small id="badgeNote"></small></div>
+        <div class="bdg-row" id="statBadges"></div>
+        <p class="bdg-next" id="badgeNext"></p>
       </div>
     </div>
 
@@ -3136,6 +3318,10 @@
           <b>Записей пока нет</b>
           <p>Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.</p>
         </div>
+        <!-- Раньше здесь стояли три одинаковых графика подряд (полэкрана).
+             Теперь метрики — переключатель: значения всех видны сразу,
+             а график один, зато крупный и читаемый. -->
+        <div class="wm-switch hidden" id="weightSwitch"></div>
         <div class="mc-charts hidden" id="weightCharts"></div>
         <div class="mc-actions hidden" id="weightActions">
           <button class="mc-act" id="btnWeightHist"></button>
@@ -3153,16 +3339,20 @@
           </div>
           <button class="add-btn" id="btnAddPhoto" title="Добавить фото"></button>
         </div>
-        <div class="ph-row" id="photoStrip"></div>
         <div class="mc-empty empty-state" id="photoEmpty">
           <span class="es-ico" data-icon="camera"></span>
           <b>Фотографий пока нет</b>
           <p>Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
         </div>
+        <!-- Главный ответ вкладки — «было / стало». Раньше его надо было
+             собрать самой в попапе сравнения, теперь он виден сразу. -->
+        <div class="ba-box hidden" id="photoBA"></div>
+        <p class="ba-note hidden" id="photoGap"></p>
         <div class="mc-actions hidden" id="photoActions">
-          <button class="mc-act" id="btnCompare">Сравнить и поделиться</button>
+          <button class="mc-act primary" id="btnCompare">Сравнить и поделиться</button>
         </div>
-        <button type="button" class="link-btn hidden" id="btnDeleteAllPhotos" style="padding:8px;color:var(--danger)">Удалить все фото</button>
+        <div class="ph-grid hidden" id="photoStrip"></div>
+        <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos">Удалить все фото</button>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
     </div>
@@ -3789,7 +3979,7 @@ const $ = id => document.getElementById(id);
 // лёгкая тактильная отдача на нажатия (где поддерживается)
 function haptic(ms){ try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){} }
 document.addEventListener('pointerdown', e => {
-  const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, .ph-thumb, a.btn-exit, .back-chip, .switch, .icon-btn');
+  const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
   if(t && !t.disabled) haptic(8);
 }, {passive: true});
 
@@ -4496,16 +4686,25 @@ function renderAccount(){
   $('accSub').textContent = bits.length ? bits.join(' · ') + ' · изменить' : 'Изменить имя, фото, пол и дату рождения';
 }
 
+// метрики тела: вес всегда есть, остальное — если пользовательница его записывает
+const W_SERIES = [
+  {k: 'w',     color: 'var(--accent-ink)', label: 'Вес',   unit: 'кг'},
+  {k: 'waist', color: 'var(--accent-ink)', label: 'Талия', unit: 'см'},
+  {k: 'hips',  color: 'var(--rest-ink)',   label: 'Бёдра', unit: 'см'},
+  {k: 'chest', color: 'var(--warn)',       label: 'Грудь', unit: 'см'}
+];
+let weightMetric = 'w';
+
 function renderWeight(){
   const ws = stats.weights;
-  const btnH = $('btnWeightHist'), btnS = $('btnShareWeight');
-  btnH.innerHTML = icon('pencil') + 'История';
-  btnS.innerHTML = icon('share') + 'Поделиться';
+  $('btnWeightHist').innerHTML = icon('pencil') + 'История';
+  $('btnShareWeight').innerHTML = icon('share') + 'Поделиться';
 
   if(!ws.length){
     $('weightDelta').textContent = '';
     setShown('weightNowRow', false);   // пустое состояние говорит само за себя ниже
     setShown('weightMeta', false);
+    setShown('weightSwitch', false);
     setShown('weightCharts', false);
     setShown('weightActions', false);
     setShown('weightEmpty', true);
@@ -4519,47 +4718,45 @@ function renderWeight(){
   $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
   if(prev){
     const d = Math.round((last.w - prev.w) * 10) / 10;
-    $('weightDelta').textContent = d === 0 ? 'без изменений' : (d > 0 ? '+' : '−') + String(Math.abs(d)).replace('.', ',') + ' кг';
+    $('weightDelta').textContent = d === 0 ? 'без изменений' : (d > 0 ? '+' : '−') + String(Math.abs(d)).replace('.', ',') + ' кг с прошлого раза';
     $('weightDelta').style.color = d > 0 ? 'var(--warn)' : (d < 0 ? 'var(--ok)' : 'var(--muted)');
   } else $('weightDelta').textContent = '';
 
-  // мета-чипы
-  const lastM = k => { for(let i = ws.length - 1; i >= 0; i--) if(ws[i][k] != null) return ws[i][k]; return null; };
+  // в чипах остались только рост и ИМТ: замеры переехали в переключатель ниже,
+  // где у каждого и значение, и свой график — раньше они дублировались дважды
   const meta = [];
-  if(stats.height) meta.push(`<span class="chip">Рост <b>${stats.height}</b> см</span>`);
-  if(stats.height) meta.push(`<span class="chip">ИМТ <b>${(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10).toString().replace('.',',')}</b></span>`);
-  const wst = lastM('waist'), hps = lastM('hips'), cht = lastM('chest');
-  if(wst) meta.push(`<span class="chip">Талия <b>${wst}</b> см</span>`);
-  if(hps) meta.push(`<span class="chip">Бёдра <b>${hps}</b> см</span>`);
-  if(cht) meta.push(`<span class="chip">Грудь <b>${cht}</b> см</span>`);
+  if(stats.height){
+    meta.push(`<span class="chip">Рост <b>${stats.height}</b> см</span>`);
+    meta.push(`<span class="chip">ИМТ <b>${(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10).toString().replace('.',',')}</b></span>`);
+  }
   $('weightMeta').innerHTML = meta.join('');
   setShown('weightMeta', meta.length);
 
-  // отдельный аккуратный график на каждую метрику
-  const SERIES = [
-    {k: 'w', color: 'var(--accent-ink)', label: 'Вес', unit: 'кг'},
-    {k: 'waist', color: 'var(--accent-ink)', label: 'Талия', unit: 'см'},
-    {k: 'hips', color: 'var(--rest-ink)', label: 'Бёдра', unit: 'см'},
-    {k: 'chest', color: 'var(--warn)', label: 'Грудь', unit: 'см'}
-  ];
-  const box = $('weightCharts');
-  box.innerHTML = '';
-  SERIES.forEach(s => {
-    const have = ws.map(p => (p[s.k] != null) ? [p.d, p[s.k]] : null).filter(Boolean).slice(-30);
-    if(have.length < 1) return;
-    box.insertAdjacentHTML('beforeend', metricGraph(s, have));
-  });
-  setShown(box, box.innerHTML);
+  // ---- переключатель метрик вместо трёх одинаковых графиков подряд ----
+  const avail = W_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  if(!avail.some(s => s.k === weightMetric)) weightMetric = avail.length ? avail[0].k : 'w';
+  $('weightSwitch').innerHTML = avail.map(s => {
+    const pts = ws.filter(p => p[s.k] != null);
+    const v = pts[pts.length - 1][s.k];
+    return `<button type="button" class="wm-chip${s.k === weightMetric ? ' act' : ''}" data-k="${s.k}">
+      <span>${s.label}</span><b>${String(v).replace('.', ',')}<small>${s.unit}</small></b></button>`;
+  }).join('');
+  setShown('weightSwitch', avail.length > 1);
+
+  const cur = avail.find(s => s.k === weightMetric) || avail[0];
+  const have = cur ? ws.map(p => (p[cur.k] != null) ? [p.d, p[cur.k]] : null).filter(Boolean).slice(-30) : [];
+  $('weightCharts').innerHTML = have.length ? metricGraph(cur, have) : '';
+  setShown('weightCharts', have.length);
 }
 
-// один график метрики: сетка, плавная линия, заливка, подписи осей
+// один график метрики: сетка, плавная линия, заливка, подписи концов и дат
 function metricGraph(s, have){
-  const W = 320, H = 120, padL = 8, padR = 8, padT = 22, padB = 18;
+  const W = 320, H = 148, padL = 10, padR = 10, padT = 26, padB = 26;
   const vals = have.map(h => h[1]);
   const first = vals[0], lastv = vals[vals.length - 1];
   const d = Math.round((lastv - first) * 10) / 10;
   const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
-  const dTxt = d === 0 ? '—' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`;
+  const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`;
 
   let min = Math.min(...vals), max = Math.max(...vals);
   const pad = Math.max((max - min) * 0.15, 0.5);
@@ -4593,18 +4790,21 @@ function metricGraph(s, have){
 
   // подписи значений у концов
   let labels = '';
-  const ly0 = xy[0][1] < padT + 12 ? xy[0][1] + 14 : xy[0][1] - 7;
-  labels += `<text x="${xy[0][0]}" y="${ly0}" text-anchor="start" font-size="11" font-weight="700" fill="var(--ink)">${String(first).replace('.', ',')}</text>`;
+  const ly0 = xy[0][1] < padT + 14 ? xy[0][1] + 17 : xy[0][1] - 11;
+  labels += `<text x="${xy[0][0]}" y="${ly0}" text-anchor="start" font-size="12" font-weight="700" fill="var(--ink)">${String(first).replace('.', ',')}</text>`;
   if(xy.length > 1){
     const lp = xy[xy.length - 1];
-    const lyN = lp[1] < padT + 12 ? lp[1] + 14 : lp[1] - 7;
-    labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="11" font-weight="700" fill="var(--ink)">${String(lastv).replace('.', ',')}</text>`;
+    const lyN = lp[1] < padT + 14 ? lp[1] + 17 : lp[1] - 11;
+    labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${String(lastv).replace('.', ',')}</text>`;
   }
+  // даты по краям: без них график не отвечал, за какой срок это движение
+  let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${shortD(have[0][0])}</text>`;
+  if(have.length > 1) axis += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="10.5" fill="var(--muted)">${shortD(have[have.length-1][0])}</text>`;
 
   return `<div class="metric-graph">
     <div class="mg-head">
-      <span class="mg-name"><i style="background:${s.color}"></i>${s.label}</span>
       <span class="mg-delta ${dCls}">${dTxt}</span>
+      <small>${s.label} · ${have.length} ${plural(have.length, 'запись', 'записи', 'записей')}</small>
     </div>
     <svg viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -4616,6 +4816,7 @@ function metricGraph(s, have){
       ${xy.length > 1 ? `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
       ${dots}
       ${labels}
+      ${axis}
     </svg>
   </div>`;
 }
@@ -4638,7 +4839,8 @@ function fmtLong(sec){
 function renderTotal(){
   $('totalTime').textContent = fmtLong(stats.totalSec);
   const n = stats.count || 0;
-  $('totalCount').textContent = n ? `за ${n} ${plural(n, 'тренировку', 'тренировки', 'тренировок')}` : '';
+  $('totalCount').textContent = n;
+  $('totalCountWord').textContent = plural(n, 'тренировка', 'тренировки', 'тренировок');
 }
 
 
@@ -4718,6 +4920,12 @@ let calOffset = 0;
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+// «чем в августе» — тот же список в предложном падеже: подставлять именительный
+// («чем в август») в живой текст нельзя, а склонять на лету незачем
+const MONTH_IN = ['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
+// и в родительном — «3 сентября», а не «3 сентябрь»: даты попадаются в попапе дня,
+// в истории веса и на картинке для шеринга
+const MONTH_OF = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 
 // серия с «заморозкой»: один пропущенный день не сжигает стрик (не чаще раза в 7 дней)
 /* Серия считается ПО ПЛАНУ, а не по календарю.
@@ -4780,48 +4988,100 @@ function renderStatsBlock(){
   monday.setHours(0,0,0,0);
   const weekOf = start => [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
 
-  // на этой неделе X из Y запланированных
+  const empty = !stats.history.length;
+  setShown('workEmpty', empty);
+  setShown('weeksCard', !empty);
+  setShown('calCard', !empty);
+
+  // ---- эта неделя: главный ответ на вопрос «я вообще занимаюсь?» ----
   const thisWeek = weekOf(monday);
+  const doneSet = new Set(stats.history.map(h => h.d));
   const doneWeek = stats.history.filter(h => thisWeek.includes(h.d)).length;
+  const planDays = new Set();
+  customPrograms.forEach(p => programDaysUnion(p).forEach(d => planDays.add(d)));
   const planned = customPrograms.reduce((n, p) => n + programDaysUnion(p).length, 0);
-  $('weekStat').textContent = planned
-    ? `На этой неделе: ${doneWeek} из ${planned} запланированных`
-    : `На этой неделе: ${doneWeek}`;
+  $('weekDone').textContent = doneWeek;
+  $('weekPlan').textContent = planned
+    ? `из ${planned} по плану`
+    : plural(doneWeek, 'тренировка', 'тренировки', 'тренировок');
+
+  // полоска дней: заливка — сделано, пунктир — день по плану, который ещё впереди
+  const todayIso = localISO(now);
+  $('weekDays').innerHTML = DAYS.map((nm, i) => {
+    const iso = thisWeek[i];
+    const cls = ['wk-day'];
+    if(doneSet.has(iso)) cls.push('done');
+    else if(planDays.has(nm) && iso >= todayIso) cls.push('plan');
+    if(iso === todayIso) cls.push('today');
+    else if(iso > todayIso) cls.push('fut');
+    return `<div class="${cls.join(' ')}">${nm}</div>`;
+  }).join('');
+
+  // словами то, что полоска показывает цветом: без легенды и без «нажми, чтобы»
+  const left = DAYS.filter((nm, i) => planDays.has(nm) && thisWeek[i] >= todayIso && !doneSet.has(thisWeek[i]));
+  const bits = [];
+  if(!planned) bits.push(doneWeek ? 'Расписания нет — тренируешься, когда удобно' : 'Расписания нет — начни, когда удобно');
+  else if(doneWeek >= planned) bits.push('План на неделю выполнен');
+  else if(left.length) bits.push('Осталось по плану: ' + left.map(d => DAY_FULL[DAYS.indexOf(d)].toLowerCase()).join(', '));
+  else bits.push('Плановые дни этой недели прошли');
 
   const si = calcStreakInfo();
-  $('streakStat').innerHTML = si.n
-    ? icon('flame') + `<span>${si.n} ${streakWord(si.n, si.byPlan)}${si.freezes ? ' · пропуск прощён' : ''}</span>`
-    : '';
+  const pill = $('streakStat');
+  pill.innerHTML = si.n ? icon('flame') + `<span>${si.n} подряд</span>` : '';
+  setShown(pill, !!si.n);
+  if(si.n) pill.title = `${si.n} ${streakWord(si.n, si.byPlan)}`;
+  if(si.freezes) bits.push('пропуск прощён');
+  $('weekNote').textContent = bits.join(' · ');
 
-  // мини-график: сколько тренировок в каждую из 8 последних недель.
-  // Раньше под столбиками стояли даты вида «20.7» — их принимали за проценты.
-  // Теперь это «20 июл» и «эта неделя»: число с месяцем ни с чем не перепутать.
+  // ---- мини-график: сколько тренировок в каждую из 8 последних недель ----
+  // Подпись справа «всего 16» убрана: это была сумма по восьми показанным
+  // неделям, а читалась как общий итог и спорила с числом тренировок выше.
+  // месяц пишем только там, где он меняется: восемь подписей «20 июл 27 июл 3 авг…»
+  // не помещались в 35 px на столбик и слипались в кашу
   const MON_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
   const counts = [], labels = [];
+  let prevMon = -1;
   for(let w = 7; w >= 0; w--){
     const s = new Date(monday); s.setDate(monday.getDate() - w * 7);
     counts.push(stats.history.filter(h => weekOf(s).includes(h.d)).length);
-    labels.push(w === 0 ? 'эта' : `${s.getDate()} ${MON_SHORT[s.getMonth()]}`);
+    const showMon = s.getMonth() !== prevMon;
+    prevMon = s.getMonth();
+    labels.push(w === 0 ? 'эта' : (showMon ? `${s.getDate()} ${MON_SHORT[s.getMonth()]}` : String(s.getDate())));
   }
   const maxC = Math.max(1, ...counts);
-  const bw = 300 / 8, top = 16, base = 58;
-  $('weekBarsNote').textContent = `последние 8 · всего ${counts.reduce((a, b) => a + b, 0)}`;
+  const bw = 300 / 8, top = 24, base = 72;
   $('weekBars').innerHTML =
     `<line x1="2" y1="${base + .5}" x2="298" y2="${base + .5}" stroke="var(--line)" stroke-width="1"/>` +
     counts.map((c, i) => {
-      const h = c ? 6 + (base - top) * (c / maxC) : 3;
+      const h = c ? 8 + (base - top) * (c / maxC) : 3;
       const x = i * bw + bw / 2;
       const y = base - h;
-      const now = i === 7;
-      const fill = now ? 'var(--accent)' : (c ? 'var(--accent-ink)' : 'var(--line-2)');
-      const op = now ? 1 : (c ? .45 : .55);
+      const cur = i === 7;
+      const fill = cur ? 'var(--accent)' : (c ? 'var(--accent-ink)' : 'var(--line-2)');
+      const op = cur ? 1 : (c ? .42 : .55);
       let s = `<rect x="${(i * bw + 5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 10).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${fill}" opacity="${op}"/>`;
-      if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${now ? 'var(--accent-ink)' : 'var(--muted)'}">${c}</text>`;
-      s += `<text x="${x.toFixed(1)}" y="72" text-anchor="middle" font-size="8.5" fill="var(--muted)" opacity="${now ? 1 : .75}">${labels[i]}</text>`;
+      if(c) s += `<text x="${x.toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${cur ? 'var(--accent-ink)' : 'var(--muted)'}">${c}</text>`;
+      s += `<text x="${x.toFixed(1)}" y="89" text-anchor="middle" font-size="10" fill="var(--muted)" opacity="${cur ? 1 : .75}">${labels[i]}</text>`;
       return s;
     }).join('');
 
   renderCalendar();
+  renderStatBadges();
+}
+
+// достижения переехали сюда с финального экрана: там они показывались минуту
+// и исчезали. Здесь видно и собранное, и что будет следующим.
+function renderStatBadges(){
+  const earned = BADGES.filter(b => b.test());
+  setShown('badgeCard', !!earned.length);
+  if(!earned.length) return;
+  $('badgeNote').textContent = `${earned.length} из ${BADGES.length}`;
+  $('statBadges').innerHTML = earned.map(b =>
+    `<span class="bdg"><i>${icon(b.ico)}</i>${b.name}</span>`).join('');
+  const next = BADGES.find(b => !b.test());
+  $('badgeNext').textContent = next
+    ? `Следующее — «${next.name}»: ${next.desc.toLowerCase()}`
+    : 'Собраны все достижения';
 }
 
 function renderCalendar(){
@@ -4834,6 +5094,23 @@ function renderCalendar(){
   const todayIso = localISO(new Date());
   const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
   const dim = new Date(y, m + 1, 0).getDate();
+
+  // подпись под месяцем — это и есть ответ на «что изменилось с прошлого месяца».
+  // Название месяца в сравнении не склоняем («в прошлом»), чтобы не городить падежи.
+  const key = `${y}-${String(m + 1).padStart(2,'0')}`;
+  const pm = new Date(y, m - 1, 1);
+  const pKey = `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2,'0')}`;
+  const cnt = stats.history.filter(h => h.d.slice(0,7) === key).length;
+  // текущий месяц ещё не кончился, поэтому у прошлого берём столько же дней —
+  // иначе первого числа приложение честно сообщает «на 9 меньше» и это обидно
+  const isCur = calOffset === 0;
+  const cut = isCur ? new Date().getDate() : 31;
+  const pCnt = stats.history.filter(h => h.d.slice(0,7) === pKey && +h.d.slice(8) <= cut).length;
+  const sub = [cnt ? `${cnt} ${plural(cnt, 'тренировка', 'тренировки', 'тренировок')}` : 'ни одной тренировки'];
+  // не «на 2 больше», а прямо два числа: так короче и не нужно доверять моей арифметике
+  if(cnt || pCnt) sub.push((isCur ? 'к этому дню ' : '') + `в ${MONTH_IN[pm.getMonth()]} было ${pCnt}`);
+  $('calSub').textContent = sub.join(' · ');
+
   const cells = DAYS.map(d => `<div class="cal-cell cal-dow">${d}</div>`);
   for(let i = 0; i < firstDow; i++) cells.push('<div class="cal-cell"></div>');
   for(let d = 1; d <= dim; d++){
@@ -4841,6 +5118,7 @@ function renderCalendar(){
     const cls = ['cal-cell'];
     if(doneSet.has(iso)) cls.push('done');
     if(iso === todayIso) cls.push('today');
+    else if(iso > todayIso) cls.push('fut');
     cells.push(`<div class="${cls.join(' ')}" data-iso="${iso}">${d}</div>`);
   }
   $('calGrid').innerHTML = cells.join('');
@@ -4866,12 +5144,12 @@ $('calGrid').addEventListener('click', e => {
     }
     if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
     if(en.kcal) meta.push(`≈${en.kcal} ккал`);
-    let s = '🏋 ' + name;
+    let s = name;
     if(meta.length) s += `\n   ${meta.join(' · ')}`;
-    if(en.note) s += `\n   💬 «${en.note}»`;
+    if(en.note) s += `\n   «${en.note}»`;
     return s;
   });
-  appAlert(`${+d} ${MONTH_NAMES[+m - 1].toLowerCase()} ${y}\n\n` + lines.join('\n\n'));
+  appAlert(`${+d} ${MONTH_OF[+m - 1]} ${y}\n\n` + lines.join('\n\n'));
 });
 
 function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
@@ -5173,6 +5451,11 @@ function fmtD(iso){
   const [y, m, d] = iso.split('-');
   return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)} ${y.slice(2)}`;
 }
+// то же без года — для подписей осей и миниатюр, где год только шумит
+function shortD(iso){
+  const [, m, d] = iso.split('-');
+  return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)}`;
+}
 
 function renderPhotos(){
   const n = photos.length;
@@ -5185,19 +5468,37 @@ function renderPhotos(){
     hint.textContent = days >= 7 ? 'пора обновить' : '';
     hint.style.color = 'var(--danger)';
   } else hint.textContent = '';
+
+  // «было / стало» прямо на вкладке: раньше эту пару надо было собрать самой
+  // в попапе сравнения, а вкладка была почти пустой
+  if(n >= 2){
+    const a = photos[0], b = photos[n - 1];
+    $('photoBA').innerHTML =
+      `<div class="ba-cell"><span class="ba-tag">Было</span><img src="${a.img}" alt=""><b>${fmtD(a.d)}</b></div>` +
+      `<div class="ba-cell"><span class="ba-tag">Стало</span><img src="${b.img}" alt=""><b>${fmtD(b.d)}</b></div>`;
+    const days = Math.round((new Date(b.d) - new Date(a.d)) / 86400000);
+    $('photoGap').textContent = days
+      ? `${days} ${plural(days, 'день', 'дня', 'дней')} между этими снимками`
+      : 'Оба снимка сделаны в один день';
+  }
+  setShown('photoBA', n >= 2);
+  setShown('photoGap', n >= 2);
+
+  // сетка вместо ленты: шестой снимок больше не обрезается краем экрана,
+  // и у каждого подписана дата — иначе непонятно, что с чем сравнивать
   const strip = $('photoStrip');
   strip.innerHTML = '';
-  photos.forEach(p => {
-    const img = document.createElement('img');
-    img.className = 'ph-thumb';
-    img.src = p.img;
-    img.alt = p.d;
-    img.onclick = ()=>{ if(photos.length >= 2) openCompare(); };
-    strip.appendChild(img);
+  photos.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ph-item';
+    b.innerHTML = `<img src="${p.img}" alt=""><small>${shortD(p.d)}</small>`;
+    b.onclick = ()=> openCompare(i);
+    strip.appendChild(b);
   });
-  setShown('photoEmpty', !(n));
-  const pa = $('photoActions');
-  if(pa) setShown(pa, n >= 2);
+  setShown(strip, !!n);
+  setShown('photoEmpty', !n);
+  setShown('photoActions', n >= 2);
   setShown('btnDeleteAllPhotos', n > 0);
 }
 
@@ -5240,10 +5541,13 @@ function renderCmp(){
     $('cmpDays').textContent = days ? `${days} ${plural(days, 'день', 'дня', 'дней')} между фото` : 'Фото за один день';
   }
 }
-function openCompare(){
+// нажатие на снимок в сетке открывает сравнение сразу с ним справа,
+// нажатие на кнопку — крайние даты (было/стало)
+function openCompare(bIdx){
   if(photos.length < 2) return;
+  const b = (typeof bIdx === 'number' && bIdx > 0) ? bIdx : photos.length - 1;
   fillCmpSel($('cmpA'), 0);
-  fillCmpSel($('cmpB'), photos.length - 1);
+  fillCmpSel($('cmpB'), b);
   renderCmp();
   $('cmpModal').classList.add('open');
 }
@@ -5504,7 +5808,7 @@ function openWeightHist(){
     const [y, m, d] = en.d.split('-');
     const cell = (k, lbl, v) => `<div class="whc"><label>${lbl}</label><input type="number" step="0.5" inputmode="decimal" value="${v || ''}" data-k="${k}"></div>`;
     row.innerHTML =
-      `<div class="wh-top"><b>${+d} ${MONTH_NAMES[+m - 1].toLowerCase()} ${y}</b>` +
+      `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
       `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
       `<div class="wh-cells">` +
         `<div class="whc"><label>Вес</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
@@ -10444,7 +10748,7 @@ async function shareResult(){
   const dateY = Math.max(1180, cy0 + 60);
   x.fillStyle = col('--muted');
   x.font = '500 36px Rubik, sans-serif';
-  x.fillText(`${now.getDate()} ${MONTH_NAMES[now.getMonth()].toLowerCase()} ${now.getFullYear()}`, W / 2, dateY);
+  x.fillText(`${now.getDate()} ${MONTH_OF[now.getMonth()]} ${now.getFullYear()}`, W / 2, dateY);
   x.fillStyle = col('--muted');
   x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, dateY + 60);
@@ -11427,7 +11731,14 @@ $('photoFile').onchange = e => {
   if(f) addPhoto(f);
   e.target.value = '';
 };
-$('btnCompare').onclick = openCompare;
+$('btnCompare').onclick = ()=> openCompare();
+// переключатель метрик на вкладке «Тело»: график один, метрика выбирается здесь
+$('weightSwitch').addEventListener('click', e => {
+  const b = e.target.closest('.wm-chip');
+  if(!b) return;
+  weightMetric = b.dataset.k;
+  renderWeight();
+});
 $('btnDeleteAllPhotos').onclick = deleteAllPhotos;
 $('cmpA').onchange = renderCmp;
 $('cmpB').onchange = renderCmp;
@@ -12311,6 +12622,7 @@ $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
 $('btnCompare').innerHTML = icon('share') + 'Сравнить и поделиться';
+$('btnDeleteAllPhotos').innerHTML = icon('trash') + 'Удалить все фото';
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
