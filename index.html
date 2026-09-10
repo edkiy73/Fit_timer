@@ -923,7 +923,13 @@
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
   @keyframes sheetUp{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
   #dlg{z-index:90}
-  .modal-card{width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  /* Длинный попап на 360×740 упирался в верх экрана и обрезал собственный
+     заголовок — карточка не имела ни потолка по высоте, ни прокрутки. */
+  .modal-card{
+    width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:18px;padding-bottom:calc(14px + env(safe-area-inset-bottom));
+    max-height:calc(100dvh - 28px);overflow-y:auto;overscroll-behavior:contain;
+  }
   .choice{width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;color:var(--ink);font-family:var(--font-text)}
   .choice:active{transform:scale(.99)}
   .choice b{display:block;font-size:15px;margin-bottom:4px;font-weight:600}
@@ -954,32 +960,58 @@
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
+  /* ================= АНОНС ПОДПИСКИ =================
+     Не витрина оплаты: подписки нет, кнопки «купить» нет, метка «скоро» стоит
+     прямо в заголовке баннера. Единственный градиентный блок на главной — и он
+     живёт в самом низу, ниже плана и прогресса, чтобы не перебивать их. */
   .premium-banner{
     position:relative;overflow:hidden;width:100%;
     display:flex;align-items:center;gap:14px;
     background:var(--grad-accent);
     border:1px solid rgba(255,255,255,.16);border-radius:var(--r-lg);
-    padding:16px 16px;margin-bottom:16px;cursor:pointer;text-align:left;
-    box-shadow:var(--sh-accent);
+    padding:16px;margin:var(--sp-6) 0 var(--sp-2);cursor:pointer;text-align:left;
+    box-shadow:var(--sh-accent);font-family:var(--font-text);
   }
+  .premium-banner:active{transform:scale(.985)}
   .pb-glow{position:absolute;top:-40%;left:-20%;width:80px;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:rotate(18deg);animation:pbShine 4.5s ease-in-out infinite}
   @keyframes pbShine{0%,100%{left:-30%}55%,70%{left:120%}}
   .pb-ico{flex:none;width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center}
   .pb-ico svg{width:24px;height:24px}
   .pb-txt{flex:1;min-width:0;color:#fff}
-  .pb-txt b{display:block;font-size:15px;margin-bottom:3px;font-weight:600}
+  .pb-txt b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;margin-bottom:4px;font-weight:600}
   .pb-txt small{display:block;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.85)}
-  .pm-crown{font-size:46px;text-align:center;margin-bottom:6px}
+  /* «скоро» — часть заголовка, а не украшение: без неё баннер читается как
+     кнопка оплаты, которой он не является */
+  .pb-soon{
+    flex:none;font-family:var(--font-display);font-size:10.5px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;
+    background:rgba(255,255,255,.22);border-radius:var(--r-pill);padding:3px 9px;line-height:1.3;
+  }
+  /* значок был рассчитан на эмодзи (font-size:46px) и не задавал размер svg —
+     иконка растягивалась во всю ширину карточки */
+  .pm-crown{display:flex;justify-content:center;margin-bottom:10px;color:var(--accent-ink)}
+  .pm-crown svg{width:34px;height:34px}
   .pm-title{text-align:center;font-size:22px;margin-bottom:14px}
   .pm-lead{font-size:14.5px;line-height:1.55;color:var(--muted);margin-bottom:12px}
   .pm-lead b{color:var(--ink);font-weight:600}
-  .pm-wallet{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0 14px;text-align:center}
-  .pm-wlabel{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:8px}
-  .pm-addr{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 10px;cursor:pointer;color:var(--ink);font-family:var(--font-text);font-size:12.5px;word-break:break-all}
-  .pm-addr:active{transform:scale(.98)}
-  .pm-copyico{flex:none;color:var(--accent-ink)}
-  .pm-copyico svg{width:16px;height:16px;vertical-align:-3px}
-  .pm-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:8px}
+  .pm-label{
+    display:block;font-family:var(--font-display);font-size:12px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px;
+  }
+  .pm-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .pm-list li{
+    position:relative;padding:12px 14px 12px 48px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+  }
+  .pm-li-ico{
+    position:absolute;left:12px;top:12px;width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .pm-li-ico svg{width:15px;height:15px}
+  .pm-list b{display:block;font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
+  .pm-list small{display:block;font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .pm-free{margin-bottom:18px}
   .quick-stats{display:flex;gap:10px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--accent-ink)}
@@ -1658,10 +1690,57 @@
   body.light .voice-sel{
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%236B6188' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   }
-  /* ================= МАГАЗИН ПРОГРАММ =================
-     Витрина, а не список настроек: обложка у карточки крупная, цена и кнопка —
-     одной строкой внизу, как в любом сторе. Фильтры прокручиваются вбок, чтобы
-     не съедать высоту: на телефоне вертикаль дороже горизонтали. */
+  /* ================= ДАННЫЕ И ПРАВИЛА =================
+     Юридические тексты длинные, и три подряд превращают экран в стену. Гармошка:
+     видно, что все три раздела есть, читается тот, который открыли. */
+  .legal-list{margin-top:var(--sp-4)}
+  .legal-item{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    margin-bottom:var(--sp-3);overflow:hidden;
+  }
+  .legal-head{
+    width:100%;min-height:44px;display:flex;align-items:center;gap:12px;
+    padding:14px;background:none;border:none;cursor:pointer;text-align:left;
+    color:var(--ink);font-family:var(--font-text);
+  }
+  .legal-head .lh-ico{
+    flex:none;width:36px;height:36px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .legal-head .lh-ico svg{width:18px;height:18px}
+  .legal-head .lh-txt{flex:1;min-width:0}
+  .legal-head .lh-txt b{display:block;font-size:15px;font-weight:600;margin-bottom:2px}
+  .legal-head .lh-txt small{display:block;font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .legal-head .lh-chev{flex:none;color:var(--muted);display:flex;transition:transform .2s ease}
+  .legal-head .lh-chev svg{width:18px;height:18px}
+  .legal-head[aria-expanded="true"] .lh-chev{transform:rotate(180deg)}
+  .legal-body{padding:4px 14px 16px;border-top:1px solid var(--line)}
+  .legal-body h3{
+    font-family:var(--font-display);font-size:13px;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);
+    margin:16px 0 8px;
+  }
+  .legal-body p{font-size:13.5px;line-height:1.65;color:var(--ink);margin:0 0 10px}
+  .legal-body ul{margin:0 0 10px;padding-left:20px}
+  .legal-body li{font-size:13.5px;line-height:1.65;color:var(--ink);margin-bottom:6px}
+  .legal-body b{font-weight:600}
+  .legal-upd{
+    font-size:12px;color:var(--muted);text-align:center;margin:var(--sp-4) 0 0;
+  }
+  /* сноска о правилах на первом шаге знакомства */
+  .ob-legal{font-size:12.5px;line-height:1.5;color:var(--muted);text-align:center;margin:14px 0 0}
+  .ob-legal-link{
+    display:block;width:100%;min-height:44px;background:none;border:none;cursor:pointer;
+    color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px;
+    font-family:var(--font-text);font-size:13.5px;
+  }
+
+  /* ================= КАТАЛОГ ПРОГРАММ =================
+     Витрина, а не список настроек: обложка у карточки крупная, автор и кнопка —
+     одной строкой внизу. Цены нет нигде: программу добавляют, а не покупают.
+     Фильтры прокручиваются вбок, чтобы не съедать высоту: на телефоне вертикаль
+     дороже горизонтали. */
   .store-cta{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
     margin-top:var(--sp-5);padding:var(--sp-3) var(--sp-4);
@@ -1680,7 +1759,7 @@
   .store-cta .sc-txt small{color:var(--muted);font-size:13px}
   .store-cta .sc-arrow{flex:none;color:var(--muted);display:flex}
   .store-cta .sc-arrow svg{width:20px;height:20px}
-  /* значок магазина в шапке «Тренировок» стоит рядом с крупным «+» — уравниваем
+  /* значок каталога в шапке «Тренировок» стоит рядом с крупным «+» — уравниваем
      их по оптическому весу, иначе пара кнопок выглядит случайной */
   #btnStorePrograms svg{width:20px;height:20px}
 
@@ -1758,19 +1837,31 @@
   .st-body h3{font-size:18px;margin:0;line-height:1.15}
   .st-meta{color:var(--muted);font-size:13px}
   .st-gives{color:var(--ink);font-size:14px;line-height:1.5;opacity:.86}
-  /* цена и кнопка — одной строкой, как на витрине */
-  .st-buy{display:flex;align-items:center;gap:var(--sp-3);margin-top:2px}
-  .st-price{
-    flex:1;min-width:0;font-family:var(--font-display);font-size:16px;letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ok-ink,var(--accent-ink));
+  /* автор программы. Кто это составил — важнее, чем «бесплатно»: именно ник
+     отличает каталог от безымянного набора файлов. */
+  .st-by{display:flex;align-items:center;gap:8px;min-width:0}
+  .st-by .st-ava{
+    flex:none;width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
   }
-  .st-price small{display:block;font-family:var(--font-text);font-size:12px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:400}
+  .st-by .st-ava svg{width:15px;height:15px}
+  .st-by .st-nick{font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .st-by .st-role{
+    flex:none;font-size:11px;color:var(--muted);border:1px solid var(--line);
+    border-radius:var(--r-pill);padding:2px 8px;line-height:1.3;
+  }
+  /* нижняя строка карточки: слева — из чего программа состоит либо «уже добавлена»,
+     справа — действие. Слот цены убран целиком: покупки здесь нет. */
+  .st-buy{display:flex;align-items:center;gap:var(--sp-3);margin-top:2px}
+  .st-what{flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--muted)}
+  .st-what.own{color:var(--accent-ink);font-weight:500}
   .st-btn{
     flex:none;min-height:44px;padding:0 20px;border:none;border-radius:var(--r-pill);cursor:pointer;
     background:var(--grad-accent);color:var(--on-accent);box-shadow:var(--sh-accent);
     font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;
   }
-  /* уже в библиотеке: кнопка перестаёт звать покупать и просто ведёт к программе */
+  /* уже в библиотеке: кнопка перестаёт звать добавлять и просто ведёт к программе */
   .st-btn.owned{background:none;box-shadow:none;color:var(--accent-ink);border:1px solid var(--accent-line)}
 
   /* ================= НИЖНЯЯ НАВИГАЦИЯ (ДОК) =================
@@ -2105,29 +2196,22 @@
         <div class="greet-chips" id="greetChips"></div>
       </div>
     </div>
-    <div class="hero">
-      <button class="premium-banner hidden" id="btnPremium">
-        <div class="pb-glow"></div>
-        <div class="pb-ico" data-icon="crown"></div>
-        <div class="pb-txt">
-          <b>Открой Premium-возможности</b>
-          <small>Сотни программ от профи · Генерация тренировки из текста в 1 клик · Расширенная статистика · Режим соревнования</small>
-        </div>
-      </button>
-    </div>
-
+    <!-- Анонс подписки. Это не кнопка оплаты: подписки ещё нет, платить негде, и
+         попап говорит об этом первой же строкой. Стоит внизу экрана намеренно —
+         «что делать сегодня» важнее, чем «что будет когда-нибудь». -->
     <div class="modal" id="premiumModal">
       <div class="modal-card">
         <div class="pm-crown" data-icon="crown"></div>
-        <h3 class="pm-title">Premium — пока бесплатно</h3>
-        <p class="pm-lead">Приложение сейчас <b>полностью бесплатное</b> и находится в стадии бета-теста. Все возможности открыты для всех.</p>
-        <p class="pm-lead">Если оно тебе нравится — поддержи разработку, и мы закрепим за тобой <b>Premium навсегда</b>, когда он появится.</p>
-        <div class="pm-wallet">
-          <span class="pm-wlabel">Кошелёк USDT (TRC-20)</span>
-          <button class="pm-addr" id="pmCopy"><span id="pmWallet"></span><span class="pm-copyico" id="pmCopyIco"></span></button>
-          <span class="pm-hint" id="pmHint">Нажми, чтобы скопировать адрес</span>
-        </div>
-        <button class="modal-btn" id="pmClose">Закрыть</button>
+        <h3 class="pm-title">Подписка — скоро</h3>
+        <p class="pm-lead"><b>Подписки пока нет</b> — платить негде и не нужно. Это анонс: когда она появится, приложение спросит отдельно.</p>
+        <span class="pm-label">Что будет в подписке</span>
+        <ul class="pm-list">
+          <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Тренировку соберёт ИИ</b><small>Опишешь словами, что хочешь, — программа придёт готовой. Свой ключ Google заводить не придётся.</small></li>
+          <li><span class="pm-li-ico" data-icon="book"></span><b>Каталог от тренеров</b><small>Полный каталог: программы, которые составили живые тренеры под конкретную цель.</small></li>
+        </ul>
+        <span class="pm-label">Что останется бесплатным</span>
+        <p class="pm-lead pm-free">Тренировка с таймером и голосом, конструктор программ, вся история и статистика. Уже собранные программы не заберут.</p>
+        <button class="modal-btn" id="pmClose">Понятно</button>
       </div>
     </div>
     <!-- ПЛАН НА СЕГОДНЯ. Каждая строка целиком — кнопка: раньше название программы
@@ -2137,10 +2221,12 @@
       <span class="ts-label">План на сегодня · <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
-    <!-- вход в магазин: готовые программы для тех, кому не хочется собирать свою -->
+    <!-- вход в каталог: готовые программы от тренеров для тех, кому не хочется
+         собирать свою. Не «магазин»: денег здесь нет и не будет — программу
+         добавляют в библиотеку, а не покупают. -->
     <button class="store-cta" id="btnStoreMenu">
       <span class="sc-ico" id="storeIcoMenu"></span>
-      <span class="sc-txt"><b>Магазин</b><small>Готовые программы под цель</small></span>
+      <span class="sc-txt"><b>Каталог</b><small>Готовые программы от тренеров</small></span>
       <span class="sc-arrow" id="storeArrowMenu"></span>
     </button>
 
@@ -2154,15 +2240,25 @@
       <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
       <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
     </div>
+
+    <button class="premium-banner" id="btnPremium">
+      <span class="pb-glow" aria-hidden="true"></span>
+      <span class="pb-ico" data-icon="crown"></span>
+      <span class="pb-txt">
+        <b>Подписка Fit Timer<span class="pb-soon">скоро</span></b>
+        <small>Тренировку соберёт ИИ — без ключей и настроек. И каталог программ от живых тренеров.</small>
+      </span>
+    </button>
   </section>
 
-  <!-- МАГАЗИН ПРОГРАММ. Пока витрина без оплаты: всё бесплатно, каталог лежит
-       прямо в файле. Программы описаны тем же текстовым форматом, что и ответы
-       нейросети, и при покупке проходят через тот же parseProgramText — купленная
-       программа ничем не отличается от собранной руками и живёт в той же
-       библиотеке. Когда появится база, поменяется только источник STORE_ITEMS. -->
+  <!-- КАТАЛОГ ПРОГРАММ. Не магазин: оплаты нет и в этой версии не появится —
+       программа добавляется в библиотеку, а не покупается. У каждой программы есть
+       автор — ник тренера. Программы описаны
+       тем же текстовым форматом, что и ответы нейросети, и при добавлении проходят
+       через тот же parseProgramText — программа из каталога ничем не отличается от
+       собранной руками. Когда появится база, поменяется только источник STORE_ITEMS. -->
   <section class="screen" id="scrStore">
-    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2>Магазин</h2></div>
+    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2>Каталог</h2></div>
 
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
@@ -2182,7 +2278,7 @@
     <div class="page-head">
       <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
       <div class="ph-tools">
-        <button class="icon-btn" id="btnStorePrograms" title="Магазин программ"></button>
+        <button class="icon-btn" id="btnStorePrograms" title="Каталог программ"></button>
         <button class="icon-btn" id="btnCreate" title="Создать программу">＋</button>
       </div>
     </div>
@@ -3180,6 +3276,8 @@
           <span>Пол и возраст нужны для подбора тренировок: от них зависят упражнения, нагрузка и время на восстановление. Это единственное, что мы спрашиваем обязательно.</span>
         </div>
         <button class="btn-primary" id="obNext1">Дальше</button>
+        <p class="ob-legal">Нажимая «Дальше», ты принимаешь правила приложения и соглашаешься с тем, как оно обращается с данными.</p>
+        <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
       </div>
       <div id="obStep2" class="hidden">
         <div class="step-dots"><i class="done"></i><i class="on"></i><i></i></div>
@@ -3193,6 +3291,14 @@
         <div class="medal" data-icon="confetti"></div>
         <h2 class="ob-title" id="obDoneTitle">Готово!</h2>
         <p class="ob-lead">Универсальная разминка на 10 минут уже в твоём списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
+        <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
+             стоило ещё одного шага в и без того длинном знакомстве, а здесь его
+             видно ровно перед первой тренировкой -->
+        <div class="note ob-health">
+          <span class="n-ico" data-icon="heart"></span>
+          <span>Приложение — таймер, а не тренер и не врач. Если ты беременна, есть болезни сердца, травмы спины или коленей либо большой перерыв в занятиях — сначала посоветуйся с врачом. Заболело или закружилась голова — останови тренировку.</span>
+        </div>
+        <button type="button" class="ob-legal-link" id="obLegal3">Здоровье и безопасность</button>
         <button class="btn-primary" id="obStart">Начать разминку</button>
         <button class="btn-back" id="obLater">Позже — на главный экран</button>
       </div>
@@ -3235,6 +3341,144 @@
 
     <div class="builder-actions">
       <button class="btn-primary" id="btnHelpDone">Понятно!</button>
+    </div>
+  </section>
+
+  <!-- ДАННЫЕ И ПРАВИЛА.
+       Три обязательных текста в одном месте: политика конфиденциальности,
+       пользовательское соглашение и предупреждение о здоровье. Гармошка, а не три
+       экрана: человек приходит сюда либо за одним конкретным разделом (тогда он
+       открыт сразу), либо чтобы убедиться, что тексты вообще есть.
+       Тексты писались под сегодняшнее устройство приложения — хранение локальное,
+       сервера нет. Раздел «Что изменится дальше» проговаривает переезд на сервер
+       заранее, чтобы при переезде правился один абзац, а не вся страница. -->
+  <section class="screen builder" id="scrLegal">
+    <div class="screen-head"><button class="back-chip" id="legalBackTop"></button><h2>Данные и правила</h2></div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="shield"></span>
+      <span>Коротко: имя, вес, замеры, фото и вся история тренировок лежат на этом телефоне и никуда не отправляются. Наружу уходит только запрос к нейросети — и только тогда, когда ты сама нажимаешь «собрать программу».</span>
+    </div>
+
+    <div class="legal-list">
+      <div class="legal-item">
+        <button type="button" class="legal-head" id="legalHeadPrivacy" aria-expanded="false" aria-controls="legalPrivacy">
+          <span class="lh-ico" data-icon="shield"></span>
+          <span class="lh-txt"><b>Политика конфиденциальности</b><small>Что собирается, где хранится, что уходит наружу</small></span>
+          <span class="lh-chev" data-icon="chevD"></span>
+        </button>
+        <div class="legal-body hidden" id="legalPrivacy">
+          <h3>Какие данные приложение хранит</h3>
+          <ul>
+            <li><b>Имя, пол, дата рождения.</b> Имя — чтобы обращаться к тебе по имени. Пол и возраст влияют на подбор упражнений и нагрузки.</li>
+            <li><b>Цель тренировок и ограничения</b> — в том числе «берегу поясницу», «берегу колени», «беременность». Это сведения о здоровье, и мы относимся к ним как к особо чувствительным.</li>
+            <li><b>Вес, рост, обхваты талии, груди и бёдер</b> и рассчитанный по ним индекс массы тела — если ты их вводишь. Вводить их необязательно.</li>
+            <li><b>Фотографии прогресса</b> — если ты их делаешь. Это фото твоего тела, и мы понимаем, насколько это личное.</li>
+            <li><b>История тренировок:</b> даты, длительность, какие упражнения и с каким весом выполнены, заметки к тренировке.</li>
+            <li><b>Настройки приложения:</b> тема, звук, голос, ключ Google AI, если ты его вставила.</li>
+          </ul>
+
+          <h3>Где эти данные лежат</h3>
+          <p>Всё перечисленное хранится <b>только на этом устройстве</b> — во внутреннем хранилище приложения (IndexedDB и localStorage браузера). Сервера, который бы их принимал, у приложения нет. Мы их не видим, не копируем и не можем восстановить.</p>
+          <p>Обратная сторона этого — потеря. Если удалить приложение, очистить данные сайта или потерять телефон, история, вес, замеры, фотографии и собранные программы исчезнут навсегда. Поэтому в настройках есть «Резервная копия» — файл со всеми данными, который стоит сохранять хотя бы иногда.</p>
+
+          <h3>Что уходит наружу</h3>
+          <ul>
+            <li><b>Запрос к нейросети.</b> Только когда ты сама просишь собрать программу или упражнение. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь и выбранные ограничения — включая «беременность», если ты её отметила. Запрос идёт напрямую в Google (Gemini) по ключу, который ты вставила в настройках, минуя нас. Дальше эти данные обрабатывает Google по своим условиям.</li>
+            <li><b>Имя, вес, замеры, фотографии и история тренировок в запрос не попадают никогда.</b></li>
+            <li><b>Кнопки «Открыть ChatGPT» и «Открыть Claude»</b> просто открывают чужой сайт. Что именно ты туда вставишь — решаешь ты, и это уже отношения между тобой и владельцем того сервиса.</li>
+            <li><b>Шрифты</b> подгружаются с Google Fonts, поэтому Google видит факт обращения и твой IP-адрес. Без интернета приложение возьмёт системный шрифт и продолжит работать.</li>
+          </ul>
+
+          <h3>Чего приложение не делает</h3>
+          <p>Не показывает рекламу. Не содержит счётчиков, трекеров и аналитики. Не передаёт и не продаёт данные третьим лицам. Не запрашивает доступ к контактам, звонкам и переписке.</p>
+
+          <h3>Что изменится дальше</h3>
+          <p>Мы планируем перенести хранение на сервер, чтобы данные не пропадали вместе с телефоном, и добавить вход в аккаунт. <b>Сегодня этого нет:</b> ни сервера, ни аккаунта, ни синхронизации. Когда появится, приложение спросит согласия отдельно и до того, как что-то отправит, а этот текст будет обновлён заранее. Платёжные данные мы не будем хранить у себя ни при каком раскладе — оплату, если она появится, обрабатывает магазин приложений.</p>
+
+          <h3>Твои права</h3>
+          <p>Данные лежат у тебя, поэтому и распоряжаешься ими ты: посмотреть — прямо в приложении, выгрузить — «Настройки → Резервная копия → Сохранить в файл», удалить — удалить профиль или очистить данные приложения. Запрашивать это у нас не нужно и некуда: мы физически не держим копии.</p>
+        </div>
+      </div>
+
+      <div class="legal-item">
+        <button type="button" class="legal-head" id="legalHeadTerms" aria-expanded="false" aria-controls="legalTerms">
+          <span class="lh-ico" data-icon="book"></span>
+          <span class="lh-txt"><b>Пользовательское соглашение</b><small>Что это за приложение и кто за что отвечает</small></span>
+          <span class="lh-chev" data-icon="chevD"></span>
+        </button>
+        <div class="legal-body hidden" id="legalTerms">
+          <h3>Что это такое</h3>
+          <p>Fit Timer — таймер и конструктор домашних тренировок. Он исполняет ту программу, которую ты собрала сама, получила от нейросети, взяла из каталога или импортировала по ссылке. Пользоваться им можно бесплатно.</p>
+
+          <h3>Приложение не заменяет тренера и врача</h3>
+          <p>Оно не оценивает, подходит ли тебе программа, не видит твоей техники и не следит за самочувствием. Решение заниматься и решение, какую нагрузку взять, остаётся за тобой. Подробности — в разделе «Здоровье и безопасность».</p>
+
+          <h3>Ответственность</h3>
+          <p>Ты занимаешься самостоятельно и на свой риск. Разработчик не несёт ответственности за травмы, ухудшение самочувствия и любые последствия занятий, а также за потерю данных, хранящихся на твоём устройстве.</p>
+
+          <h3>Содержимое каталога и ответы нейросети</h3>
+          <p>Программы в каталоге сейчас <b>тестовые</b> — это образцы, а не выверенный тренерский продукт. Ответы нейросети создаются автоматически и могут содержать ошибки, бессмыслицу и небезопасные рекомендации. Проверяй их здравым смыслом, а при сомнениях — с врачом или тренером.</p>
+
+          <h3>Ключ Google AI</h3>
+          <p>Ключ ты заводишь и вставляешь по своей воле. За соблюдение условий Google и за расход квоты по этому ключу отвечаешь ты. Ключ хранится на твоём устройстве и уходит только на серверы Google.</p>
+
+          <h3>Возраст</h3>
+          <p>Приложение не предназначено для детей младше 12 лет: в нём есть дневник веса, расчёт индекса массы тела и материалы о снижении веса.</p>
+
+          <h3>Деньги</h3>
+          <p>Сейчас приложение бесплатное, платежей в нём нет. Если появится подписка, её цена, срок и условия продления будут показаны до оплаты, а всё, что ты уже собрала и накопила, останется доступным.</p>
+
+          <h3>Изменения</h3>
+          <p>Условия могут меняться вместе с приложением. Дата последнего обновления указана внизу этой страницы.</p>
+        </div>
+      </div>
+
+      <div class="legal-item">
+        <button type="button" class="legal-head" id="legalHeadHealth" aria-expanded="false" aria-controls="legalHealth">
+          <span class="lh-ico" data-icon="heart"></span>
+          <span class="lh-txt"><b>Здоровье и безопасность</b><small>Когда нужно сначала к врачу и когда остановиться</small></span>
+          <span class="lh-chev" data-icon="chevD"></span>
+        </button>
+        <div class="legal-body hidden" id="legalHealth">
+          <h3>Главное</h3>
+          <p>Fit Timer — не медицинское изделие. Он не ставит диагнозов, не даёт медицинских рекомендаций и не заменяет консультацию врача.</p>
+
+          <h3>Сначала посоветуйся с врачом, если</h3>
+          <ul>
+            <li>ты беременна или недавно родила;</li>
+            <li>есть болезни сердца и сосудов, повышенное или пониженное давление;</li>
+            <li>есть травмы или боли в спине, коленях, плечах, шее;</li>
+            <li>за последний год была операция;</li>
+            <li>вес резко меняется без явной причины;</li>
+            <li>ты возвращаешься к нагрузке после долгого перерыва или тебе больше 50 лет.</li>
+          </ul>
+
+          <h3>Останови тренировку и обратись к врачу, если появились</h3>
+          <ul>
+            <li>боль или давление в груди;</li>
+            <li>сильное головокружение, потемнение в глазах, тошнота;</li>
+            <li>одышка, несоразмерная нагрузке;</li>
+            <li>резкая боль в суставе или спине.</li>
+          </ul>
+          <p>Дискомфорт от непривычной нагрузки — нормально. Боль — нет.</p>
+
+          <h3>Про программы от нейросети</h3>
+          <p>Нейросеть не знает твоих диагнозов, не видит, как ты двигаешься, и не отвечает за результат. Программу, которую она собрала, стоит прочитать целиком до первой тренировки, а при любых ограничениях по здоровью — обсудить с врачом.</p>
+
+          <h3>Про индекс массы тела</h3>
+          <p>ИМТ на вкладке «Тело» — грубая арифметика от роста и веса. Он не различает мышцы и жир, не учитывает телосложение и не является диагнозом.</p>
+
+          <h3>Беременность и период после родов</h3>
+          <p>Это тот случай, когда «попробую и посмотрю» не работает. И сам факт занятий, и набор упражнений, и нагрузку должен одобрить врач, который тебя наблюдает. Приложение не умеет определять срок и самочувствие и не остановит тебя само.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="legal-upd">Обновлено 10 сентября 2026</p>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnLegalDone">Понятно</button>
     </div>
   </section>
 
@@ -3443,6 +3687,27 @@
         <button type="button" class="way-row" id="btnHelp">
           <span class="wr-ico" data-icon="book"></span>
           <span class="wr-txt"><b>Как пользоваться приложением</b><small>Короткое объяснение за пять шагов</small></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Обязательные тексты. Три отдельные строки, а не одна общая: и человеку
+         понятнее, куда он идёт, и в консолях магазинов на политику нужна прямая
+         ссылка, а не «где-то в настройках». -->
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Данные и правила</p></div>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnLegalPrivacy">
+          <span class="wr-ico" data-icon="shield"></span>
+          <span class="wr-txt"><b>Политика конфиденциальности</b><small>Что собирается, где хранится, что уходит наружу</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnLegalTerms">
+          <span class="wr-ico" data-icon="book"></span>
+          <span class="wr-txt"><b>Пользовательское соглашение</b><small>Что это за приложение и кто за что отвечает</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnLegalHealth">
+          <span class="wr-ico" data-icon="heart"></span>
+          <span class="wr-txt"><b>Здоровье и безопасность</b><small>Когда сначала к врачу и когда остановиться</small></span>
         </button>
       </div>
     </div>
@@ -4038,6 +4303,10 @@ const ICONS = {
   link: '<path d="M10 13.5a4 4 0 0 0 5.7.3l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
   video: '<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="M16.5 10.5 22 7v10l-5.5-3.5Z"/>',
   target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  // щит — раздел о данных; сердце — раздел о здоровье. Та же сетка 24×24, контур,
+  // толщина 2, цвет через currentColor
+  shield: '<path d="M12 3l7 3v5.4c0 4.2-2.9 7.7-7 8.6-4.1-.9-7-4.4-7-8.6V6l7-3Z"/>',
+  heart: '<path d="M12 20.2C9.6 18.6 4 14.6 4 10.5A3.8 3.8 0 0 1 12 8.4a3.8 3.8 0 0 1 8 2.1c0 4.1-5.6 8.1-8 9.7Z"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
   user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
   medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
@@ -4193,7 +4462,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrHelp','scrLegal','scrStats','scrUserEdit','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -7295,13 +7564,18 @@ function importProgramCode(code){
   fillBuilder('Проверь и сохрани');
 }
 
-/* ================= МАГАЗИН ПРОГРАММ =================
-   Витрина готовых программ. Пока без оплаты: цена у всех «Бесплатно», каталог
-   лежит прямо здесь. Каждая программа описана ровно тем же текстовым форматом,
-   что и ответ нейросети, и при покупке проходит через тот же parseProgramText —
-   поэтому купленная программа неотличима от собранной руками: те же круги,
+/* ================= КАТАЛОГ ПРОГРАММ =================
+   Готовые программы от тренеров. Оплаты нет: программу добавляют в библиотеку,
+   а не покупают, и слова «купить», «цена», «бесплатно» на экране не встречаются
+   вовсе — иначе новичок читает «бесплатно» как «пока бесплатно».
+   Каталог лежит прямо здесь; поле by — ник тренера, составившего программу.
+   Каждая программа описана ровно тем же текстовым форматом, что и
+   ответ нейросети, и при добавлении проходит через тот же parseProgramText —
+   поэтому программа из каталога неотличима от собранной руками: те же круги,
    подходы, прогрессия с потолком и замены. Когда появится база, поменяется
-   только источник STORE_ITEMS, а всё остальное останется как есть. */
+   только источник STORE_ITEMS, а всё остальное останется как есть.
+   Метка storeId у добавленной программы прежняя — библиотеки старых пользователей
+   продолжают узнаваться. */
 const STORE_CATS = [
   {id:'slim', name:'Похудение',      ico:'flame'},
   {id:'core', name:'Пресс и талия',  ico:'target'},
@@ -7325,9 +7599,9 @@ function storeVariant(it){
 }
 
 const STORE_ITEMS = [
-  {id:"slim-tiho", cat:"slim", level:"Новичок", min:18, name:"Жиросжигание без прыжков",
-   gives:"Разгоняет пульс и держит его высоким 18 минут — а соседи снизу ничего не услышат: ни одного прыжка.",
-   text:`ПРОГРАММА: Жиросжигание без прыжков
+  {id:"slim-tiho", by:"@lena.doma", cat:"slim", level:"Новичок", min:18, name:"Кардио без прыжков",
+   gives:"Три круга без единого прыжка: приседания, скалолаз и ходьба с высоким коленом. Пульс высокий, соседи снизу ничего не слышат.",
+   text:`ПРОГРАММА: Кардио без прыжков
 ДНИ: Пн, Ср, Пт
 КРУГИ: 3
 ОТДЫХ МЕЖДУ КРУГАМИ: 60
@@ -7370,8 +7644,8 @@ const STORE_ITEMS = [
 ШАГ: 10
 ПОТОЛОК: 120
 `},
-  {id:"slim-tabata", cat:"slim", level:"Средний", min:15, name:"Экспресс 15 минут",
-   gives:"Короткая и честно тяжёлая: за 15 минут даёт нагрузку, ради которой обычно идут в зал на час.",
+  {id:"slim-tabata", by:"@katya.hiit", cat:"slim", level:"Средний", min:15, name:"Экспресс 15 минут",
+   gives:"Короткая и честно тяжёлая: четыре круга подряд — «звезда», берпи и планка, с паузой в 45 секунд между кругами.",
    text:`ПРОГРАММА: Экспресс 15 минут
 ДНИ: Вт, Чт, Сб
 КРУГИ: 4
@@ -7416,9 +7690,9 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 90
 `},
-  {id:"core-flat", cat:"core", level:"Новичок", min:12, name:"Плоский живот за 12 минут",
-   gives:"Собирает глубокие мышцы живота — те, что держат талию, а не только видимые кубики.",
-   text:`ПРОГРАММА: Плоский живот за 12 минут
+  {id:"core-flat", by:"@marina.core", cat:"core", level:"Новичок", min:12, name:"Мышцы центра за 12 минут",
+   gives:"Скручивания, планка на локтях и боковая планка: работа на глубокие мышцы живота, которые держат корпус.",
+   text:`ПРОГРАММА: Мышцы центра за 12 минут
 ДНИ: Пн, Ср, Пт
 КРУГИ: 3
 ОТДЫХ МЕЖДУ КРУГАМИ: 45
@@ -7463,8 +7737,8 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 60
 `},
-  {id:"core-waist", cat:"core", level:"Средний", min:16, name:"Талия и косые мышцы",
-   gives:"Работает по бокам живота: подтягивает талию и убирает то, что нависает над поясом джинсов.",
+  {id:"core-waist", by:"@olga.pilates", cat:"core", level:"Средний", min:16, name:"Талия и косые мышцы",
+   gives:"Русский поворот, «велосипед» и боковая планка — нагрузка на косые мышцы живота, а не только на прямую.",
    text:`ПРОГРАММА: Талия и косые мышцы
 ДНИ: Вт, Чт
 КРУГИ: 3
@@ -7508,9 +7782,9 @@ const STORE_ITEMS = [
 ШАГ: 1
 ПОТОЛОК: 18
 `},
-  {id:"glut-round", cat:"glut", level:"Новичок", min:20, name:"Круглые ягодицы",
-   gives:"Три базовых движения, которые дают ягодицам форму: подъём, отведение и выпад. Без штанги и без зала.",
-   text:`ПРОГРАММА: Круглые ягодицы
+  {id:"glut-round", by:"@nastya.glutes", cat:"glut", level:"Новичок", min:20, name:"Ягодицы без штанги",
+   gives:"Ягодичный мостик, отведение ноги назад и выпады — три базовых движения на ягодицы. Без штанги и без зала.",
+   text:`ПРОГРАММА: Ягодицы без штанги
 ДНИ: Пн, Чт
 КРУГИ: 3
 ОТДЫХ МЕЖДУ КРУГАМИ: 60
@@ -7556,8 +7830,8 @@ const STORE_ITEMS = [
 ШАГ: 1
 ПОТОЛОК: 18
 `},
-  {id:"glut-legs", cat:"glut", level:"Средний", min:22, name:"Ноги и ягодицы с гантелями",
-   gives:"Добавляет вес там, где собственного уже мало: две гантели или бутылки с водой — и нагрузка растёт вместе с тобой.",
+  {id:"glut-legs", by:"@dasha.iron", cat:"glut", level:"Средний", min:22, name:"Ноги и ягодицы с гантелями",
+   gives:"Для тех, кому собственного веса уже мало: приседания, румынская тяга и болгарский выпад с гантелями или бутылками воды.",
    text:`ПРОГРАММА: Ноги и ягодицы с гантелями
 ДНИ: Вт, Пт
 КРУГИ: 3
@@ -7601,8 +7875,8 @@ const STORE_ITEMS = [
 ШАГ: 1
 ПОТОЛОК: 15
 `},
-  {id:"tone-full", cat:"tone", level:"Новичок", min:20, name:"Всё тело за 20 минут",
-   gives:"Одна тренировка на всё тело: верх, низ и центр. Идеальна, когда в неделю получается заниматься два-три раза.",
+  {id:"tone-full", by:"@vera.total", cat:"tone", level:"Новичок", min:20, name:"Всё тело за 20 минут",
+   gives:"Одна тренировка на всё тело: отжимания с колен, приседания и планка. Удобна, когда в неделю выходит заниматься два-три раза.",
    text:`ПРОГРАММА: Всё тело за 20 минут
 ДНИ: Пн, Ср, Пт
 КРУГИ: 3
@@ -7647,8 +7921,8 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 90
 `},
-  {id:"tone-arms", cat:"tone", level:"Средний", min:18, name:"Руки и плечи",
-   gives:"Подтягивает заднюю поверхность рук — ту самую, из-за которой не хочется поднимать руку в майке.",
+  {id:"tone-arms", by:"@sonya.arms", cat:"tone", level:"Средний", min:18, name:"Руки и плечи",
+   gives:"Трицепс и плечи: обратные отжимания от стула, жим гантелей вверх и разведения в стороны.",
    text:`ПРОГРАММА: Руки и плечи
 ДНИ: Вт, Сб
 КРУГИ: 3
@@ -7691,8 +7965,8 @@ const STORE_ITEMS = [
 ШАГ: 0.5
 ПОТОЛОК: 8
 `},
-  {id:"flex-morning", cat:"flex", level:"Новичок", min:10, name:"Утро за 10 минут",
-   gives:"Мягко будит тело после сна: спина перестаёт ныть, а плечи опускаются с ушей.",
+  {id:"flex-morning", by:"@alina.stretch", cat:"flex", level:"Новичок", min:10, name:"Утро за 10 минут",
+   gives:"Мягкая раскрутка после сна без нагрузки на пульс: «кошка-корова», наклон к прямым ногам и растяжка грудного отдела у стены.",
    text:`ПРОГРАММА: Утро за 10 минут
 ДНИ: Пн, Вт, Ср, Чт, Пт
 КРУГИ: 2
@@ -7734,8 +8008,8 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 60
 `},
-  {id:"flex-back", cat:"flex", level:"Новичок", min:14, name:"Спина после рабочего дня",
-   gives:"Для тех, кто сидит весь день: снимает зажим между лопатками и в пояснице за один вечер.",
+  {id:"flex-back", by:"@ira.spine", cat:"flex", level:"Новичок", min:14, name:"Спина после рабочего дня",
+   gives:"Спокойная растяжка для тех, кто сидит весь день: поза ребёнка, скручивание лёжа и растяжка шеи.",
    text:`ПРОГРАММА: Спина после рабочего дня
 ДНИ: Пн, Ср, Пт, Вс
 КРУГИ: 2
@@ -7778,8 +8052,8 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 60
 `},
-  {id:"slim-walk", cat:"slim", level:"Новичок", min:25, name:"Домашняя ходьба",
-   gives:"Самый щадящий вход в тренировки: нагрузка как от быстрой прогулки, но не выходя из комнаты.",
+  {id:"slim-walk", by:"@masha.walk", cat:"slim", level:"Новичок", min:25, name:"Домашняя ходьба",
+   gives:"Самый щадящий вход в тренировки: ходьба на месте, захлёст голени и приставной шаг — без прыжков и без работы на полу.",
    text:`ПРОГРАММА: Домашняя ходьба
 ДНИ: Пн, Вт, Ср, Чт, Пт
 КРУГИ: 3
@@ -7820,8 +8094,8 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 90
 `},
-  {id:"core-deep", cat:"core", level:"Продвинутый", min:18, name:"Железный центр",
-   gives:"Для тех, кто уже держит планку минуту: статика на пределе плюс динамика, после которой пресс болит два дня.",
+  {id:"core-deep", by:"@zhenya.core", cat:"core", level:"Продвинутый", min:18, name:"Железный центр",
+   gives:"Для тех, кто уже держит планку минуту: планка с переходом на ладони, подъём прямых ног и длинная статика.",
    text:`ПРОГРАММА: Железный центр
 ДНИ: Вт, Чт, Сб
 КРУГИ: 3
@@ -7914,7 +8188,7 @@ function storeCover(it, square){
        stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${ico}</g>
   </svg>`;
 }
-// та же обложка, но как картинка для карточки в библиотеке: программа из магазина
+// та же обложка, но как картинка для карточки в библиотеке: программа из каталога
 // не должна выглядеть в списке безымянной гантелью
 function storeCoverData(it){
   // как отдельный документ SVG обязан объявить пространство имён: внутри HTML оно
@@ -7926,8 +8200,9 @@ function storeCoverData(it){
 }
 
 let storeFilter = {q: '', cat: '', level: ''};
-// куплено ли: у купленной программы остаётся метка storeId, поэтому повторная
-// покупка предлагает открыть, а не добавить второй раз
+// уже добавлена: у программы из каталога остаётся метка storeId, поэтому
+// повторный заход предлагает открыть, а не положить второй экземпляр.
+// Имя поля storeId не трогаем — по нему узнаются библиотеки старых пользователей.
 const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 
 function renderStoreFilters(){
@@ -7953,9 +8228,9 @@ function storeMatches(it){
   if(storeFilter.level && it.level !== storeFilter.level) return false;
   const q = storeFilter.q.trim().toLowerCase();
   if(!q) return true;
-  // ищем по названию — и по категории заодно: «пресс» человек наберёт скорее, чем
-  // полное имя программы
-  return (it.name + ' ' + storeCat(it.cat).name).toLowerCase().includes(q);
+  // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
+  // наберёт скорее, чем полное имя программы, а тренера ищут по нику
+  return (it.name + ' ' + storeCat(it.cat).name + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 function renderStore(){
@@ -7968,13 +8243,16 @@ function renderStore(){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
       '<b>Ничего не нашлось</b>' +
-      '<p>Попробуй другое слово или сними фильтры — программ в магазине пока немного.</p>' +
+      '<p>Попробуй другое слово или сними фильтры — программ в каталоге пока немного.</p>' +
       '</div>';
     return;
   }
   box.innerHTML = list.map(it => {
     const c = storeCat(it.cat);
     const own = storeOwned(it.id);
+    // из чего программа состоит — вместо бывшего слота цены: число упражнений
+    // считаем прямо по тексту программы, чтобы карточка не обещала больше, чем внутри
+    const nEx = (it.text.match(/^УПРАЖНЕНИЕ:/gm) || []).length;
     return `<article class="store-card">
       <div class="st-cover">${storeCover(it)}
         <div class="st-tags"><span class="st-tag">${c.name}</span></div>
@@ -7982,24 +8260,29 @@ function renderStore(){
       <div class="st-body">
         <h3>${it.name}</h3>
         <div class="st-meta">${it.min} минут · ${it.level}</div>
+        <div class="st-by">
+          <span class="st-ava">${icon('user')}</span>
+          <span class="st-nick">${it.by || ''}</span>
+          <span class="st-role">тренер</span>
+        </div>
         <p class="st-gives">${it.gives}</p>
         <div class="st-buy">
-          <span class="st-price">${own ? 'Куплено' : 'Бесплатно'}<small>${own ? 'Уже в библиотеке' : 'Пока бесплатно для всех'}</small></span>
-          <button type="button" class="st-btn${own ? ' owned' : ''}" data-buy="${it.id}">${own ? 'Открыть' : 'Купить'}</button>
+          <span class="st-what${own ? ' own' : ''}">${own ? 'Уже в твоих тренировках' : `${nEx} ${plural(nEx, 'упражнение', 'упражнения', 'упражнений')}`}</span>
+          <button type="button" class="st-btn${own ? ' owned' : ''}" data-buy="${it.id}">${own ? 'Открыть' : 'Добавить'}</button>
         </div>
       </div>
     </article>`;
   }).join('');
-  box.querySelectorAll('[data-buy]').forEach(b => b.onclick = ()=> buyStoreItem(b.dataset.buy));
+  box.querySelectorAll('[data-buy]').forEach(b => b.onclick = ()=> addStoreItem(b.dataset.buy));
 }
 
-async function buyStoreItem(id){
+async function addStoreItem(id){
   const it = STORE_ITEMS.find(x => x.id === id);
   if(!it) return;
   const own = storeOwned(id);
   if(own){
-    // уже куплено — открываем экран старта. Магазин не корневой раздел, поэтому
-    // «назад» с него сам не настроится: возвращаем туда, откуда пришли в магазин
+    // уже добавлена — открываем экран старта. Каталог не корневой раздел, поэтому
+    // «назад» с него сам не настроится: возвращаем туда, откуда пришли в каталог
     startFrom = storeFrom;
     openStart(own);
     return;
@@ -8012,15 +8295,15 @@ async function buyStoreItem(id){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
-  program.storeId = it.id;             // метка витрины: по ней узнаём, что уже куплено
+  program.storeId = it.id;             // метка каталога: по ней узнаём, что уже добавлено
   program.cover = storeCoverData(it);
   customPrograms.push(program);
   await savePrograms();
   renderMine();
   renderStore();                        // кнопка карточки превращается в «Открыть»
   const go = await appDialog(
-    `Успешно куплено и добавлено в вашу библиотеку.\n\nНастройте удобное время тренировки под себя.`,
-    {confirm: true, okText: 'Настроить время', cancelText: 'Позже'}
+    `«${it.name}» добавлена в твои тренировки.\n\nОстался один шаг: выбрать дни и время, когда тебе удобно заниматься.`,
+    {confirm: true, okText: 'Выбрать дни', cancelText: 'Позже'}
   );
   if(go){
     // ведём прямо к расписанию: дни и время программы живут там
@@ -8032,7 +8315,7 @@ async function buyStoreItem(id){
   }
 }
 
-// откуда пришли в магазин: с «Сегодня» или из «Тренировок». Кнопка «назад»
+// откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
 // должна возвращать туда же, а не всегда на главную
 let storeFrom = 'scrMenu';
 function openStore(from){
@@ -11616,7 +11899,7 @@ $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal'
 $('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
 $('btnCreate').onclick = ()=> $('createModal').classList.add('open');
-/* ---- магазин ---- */
+/* ---- каталог ---- */
 $('btnStoreMenu').onclick = ()=> openStore('scrMenu');
 $('btnStorePrograms').onclick = ()=> openStore('scrPrograms');
 $('storeBackTop').onclick = ()=> goTab(storeFrom);
@@ -11690,29 +11973,11 @@ $('btnSaveWeight').onclick = async ()=>{
   renderWeight();
 };
 // навигация по календарю
-// premium-баннер: демо-кошелёк (случайный TRC-20-подобный адрес на сессию)
-function randomTronAddress(){
-  const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let s = 'T';
-  for(let i = 0; i < 33; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
-}
-let premiumWallet = randomTronAddress();
-$('pmWallet').textContent = premiumWallet;
-$('pmCopyIco').innerHTML = icon('download');
+// Анонс подписки. Здесь нет и не должно быть ничего, что принимает деньги:
+// ни кошелька, ни ссылки на оплату — подписки ещё не существует.
 $('btnPremium').onclick = ()=> $('premiumModal').classList.add('open');
 $('pmClose').onclick = ()=> $('premiumModal').classList.remove('open');
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
-$('pmCopy').onclick = async ()=>{
-  try{
-    await navigator.clipboard.writeText(premiumWallet);
-    $('pmHint').textContent = '✓ Адрес скопирован — спасибо за поддержку!';
-    $('pmHint').style.color = 'var(--rest)';
-  }catch(e){
-    $('pmHint').textContent = 'Выдели адрес и скопируй вручную';
-  }
-  setTimeout(()=>{ $('pmHint').textContent = 'Нажми, чтобы скопировать адрес'; $('pmHint').style.color = ''; }, 2500);
-};
 
 $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
 $('importProgFile').onchange = async e => {
@@ -12612,8 +12877,9 @@ document.addEventListener('visibilitychange', ()=>{
 $('btnPause').innerHTML = icon('pause');
 $('btnMicW').innerHTML = icon('mic');
 $('btnCreate').innerHTML = icon('plus');
-$('btnStorePrograms').innerHTML = icon('store');
-$('storeIcoMenu').innerHTML = icon('store');
+// каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
+$('btnStorePrograms').innerHTML = icon('book');
+$('storeIcoMenu').innerHTML = icon('book');
 $('storeArrowMenu').innerHTML = icon('chevR');
 $('storeBackTop').innerHTML = icon('chevL');
 $('storeSearchIco').innerHTML = icon('search');
