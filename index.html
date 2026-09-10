@@ -651,6 +651,22 @@
   .mistakes svg{width:17px;height:17px;flex:none;margin-top:1px}
   .chips-wrap .day-chip{flex:0 0 auto;padding:9px 13px}
   .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
+  /* просмотр во весь экран: только снимок, дата и выход */
+  /* фон непрозрачный и выше остальных попапов: сквозь полупрозрачный просвечивало
+     сравнение со своей кнопкой «Закрыть», и на экране оказывалось две одинаковых */
+  #photoFullModal{align-items:center;background:#000;padding:0;z-index:80}
+  #photoFullModal .pf-wrap{
+    width:100%;height:100%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;padding:20px;
+  }
+  #photoFullModal img{max-width:100%;max-height:76vh;object-fit:contain;border-radius:var(--r-md)}
+  #photoFullModal .pf-cap{color:#fff;opacity:.8;font-size:13px;margin:0}
+  #photoFullModal .modal-btn{
+    position:absolute;left:20px;right:20px;width:auto;
+    bottom:calc(16px + env(safe-area-inset-bottom));
+    background:rgba(255,255,255,.14);border:none;color:#fff;
+  }
+  .cmp-img{cursor:zoom-in}
   .cmp-row{display:flex;gap:10px}
   .cmp-col{flex:1;min-width:0}
   .cmp-img{margin-top:8px;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:3/4;touch-action:pan-y}
@@ -2258,20 +2274,6 @@
   .mg-delta{font-size:17px}
 
   /* ---- вкладка «Фото» ---- */
-  .ba-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-  .ba-cell{
-    position:relative;border-radius:var(--r-md);overflow:hidden;
-    background:var(--bg-2);border:1px solid var(--line);
-  }
-  .ba-cell img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
-  .ba-cell .ba-tag{
-    position:absolute;top:8px;left:8px;padding:4px 9px;border-radius:var(--r-pill);
-    background:var(--panel-dark);border:1px solid var(--panel-dark-line);
-    color:#fff;font-family:var(--font-display);font-weight:600;
-    font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-  }
-  .ba-cell b{display:block;padding:8px 10px;font-size:12px;font-weight:500;color:var(--muted)}
-  .ba-note{margin-top:10px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.4}
   /* Раньше лента миниатюр уезжала за правый край и даты нигде не было —
      теперь сетка на всю ширину, у каждого снимка подпись. */
   .ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
@@ -3601,10 +3603,9 @@
           <b>Фотографий пока нет</b>
           <p>Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
         </div>
-        <!-- Главный ответ вкладки — «было / стало». Раньше его надо было
-             собрать самой в попапе сравнения, теперь он виден сразу. -->
-        <div class="ba-box hidden" id="photoBA"></div>
-        <p class="ba-note hidden" id="photoGap"></p>
+        <!-- Крупная пара «было / стало» с вкладки убрана: снимки тела не должны
+             раскрываться во весь экран сами по себе — их открывают, когда захотят,
+             кнопкой «Сравнить». -->
         <div class="mc-actions hidden" id="photoActions">
           <button class="mc-act primary" id="btnCompare">Сравнить и поделиться</button>
         </div>
@@ -4044,10 +4045,22 @@
             <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0">Удалить это фото</button>
           </div>
         </div>
-        <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0"></p>
+        <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
+        <p class="field-hint" style="text-align:center;margin:0 0 10px">Проведи пальцем по снимку вбок — сменится дата. Нажми — откроется во весь экран.</p>
         <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
         <button class="modal-btn" id="cmpClose">Закрыть</button>
       </div>
+    </div>
+
+    <!-- Снимок во весь экран. Отдельный попап, а не увеличенная карточка: смотреть
+         на себя человек приходит намеренно, и в этот момент на экране не должно быть
+         ничего, кроме фотографии. -->
+    <div class="modal photo-full" id="photoFullModal">
+      <div class="pf-wrap">
+        <img id="pfImg" alt="">
+        <p class="pf-cap" id="pfCap"></p>
+      </div>
+      <button class="modal-btn" id="pfClose">Закрыть</button>
     </div>
 
     <div class="modal" id="waModal">
@@ -5712,13 +5725,16 @@ function renderStatsBlock(){
 // достижения переехали сюда с финального экрана: там они показывались минуту
 // и исчезали. Здесь видно и собранное, и что будет следующим.
 function renderStatBadges(){
-  const earned = BADGES.filter(b => b.test());
+  // достижение могло открыться и без финального экрана (например, «Неделя по плану»
+  // закрывается последней тренировкой недели) — досчитываем здесь же
+  if(earnBadges().length) saveStats();
+  const earned = BADGES.filter(b => hasBadge(b.id));
   setShown('badgeCard', !!earned.length);
   if(!earned.length) return;
   $('badgeNote').textContent = `${earned.length} из ${BADGES.length}`;
   $('statBadges').innerHTML = earned.map(b =>
     `<span class="bdg"><i>${icon(b.ico)}</i>${b.name}</span>`).join('');
-  const next = BADGES.find(b => !b.test());
+  const next = BADGES.find(b => !hasBadge(b.id));
   $('badgeNext').textContent = next
     ? `Следующее — «${next.name}»: ${next.desc.toLowerCase()}`
     : 'Собраны все достижения';
@@ -6470,21 +6486,6 @@ function renderPhotos(){
     hint.style.color = 'var(--danger)';
   } else hint.textContent = '';
 
-  // «было / стало» прямо на вкладке: раньше эту пару надо было собрать самой
-  // в попапе сравнения, а вкладка была почти пустой
-  if(n >= 2){
-    const a = photos[0], b = photos[n - 1];
-    $('photoBA').innerHTML =
-      `<div class="ba-cell"><span class="ba-tag">Было</span><img src="${a.img}" alt=""><b>${fmtD(a.d)}</b></div>` +
-      `<div class="ba-cell"><span class="ba-tag">Стало</span><img src="${b.img}" alt=""><b>${fmtD(b.d)}</b></div>`;
-    const days = Math.round((new Date(b.d) - new Date(a.d)) / 86400000);
-    $('photoGap').textContent = days
-      ? `${days} ${plural(days, 'день', 'дня', 'дней')} между этими снимками`
-      : 'Оба снимка сделаны в один день';
-  }
-  setShown('photoBA', n >= 2);
-  setShown('photoGap', n >= 2);
-
   // сетка вместо ленты: шестой снимок больше не обрезается краем экрана,
   // и у каждого подписана дата — иначе непонятно, что с чем сравнивать
   const strip = $('photoStrip');
@@ -6505,7 +6506,10 @@ function renderPhotos(){
 
 async function deleteAllPhotos(){
   if(!photos.length) return;
-  const ok = await appConfirm(`Удалить все фото (${photos.length})? Это нельзя отменить.`);
+  const ok = await appDialog(
+    `Удалить все фото (${photos.length})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.`,
+    {confirm: true, okText: 'Удалить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+  );
   if(!ok) return;
   photos = [];
   await savePhotos();
@@ -6565,6 +6569,29 @@ function cmpStep(which, dir){
   $(selId).value = idx;
   renderCmp();
 }
+/* ---- снимок во весь экран ---- */
+let pfIdx = 0;
+function openPhotoFull(i){
+  if(!photos.length) return;
+  pfIdx = Math.max(0, Math.min(photos.length - 1, i));
+  renderPhotoFull();
+  $('photoFullModal').classList.add('open');
+}
+function renderPhotoFull(){
+  const p = photos[pfIdx];
+  if(!p) return;
+  $('pfImg').src = p.img;
+  $('pfCap').textContent = fmtD(p.d) + (photos.length > 1 ? ` · ${pfIdx + 1} из ${photos.length}` : '');
+}
+function pfStep(d){
+  const n = pfIdx + d;
+  if(n < 0 || n > photos.length - 1) return;
+  pfIdx = n;
+  renderPhotoFull();
+}
+// свайп и нажатие живут на одном элементе, поэтому после свайпа гасим ближайший клик:
+// иначе каждое пролистывание заодно открывало снимок во весь экран
+const justSwiped = el => Date.now() - (+(el.dataset.swiped || 0)) < 400;
 function wireSwipe(el, onLeft, onRight){
   let x0 = null, y0 = null;
   el.addEventListener('touchstart', e => {
@@ -6576,11 +6603,17 @@ function wireSwipe(el, onLeft, onRight){
     const dx = t.clientX - x0, dy = t.clientY - y0;
     x0 = null;
     if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // слишком коротко или вертикально — не свайп
+    el.dataset.swiped = String(Date.now());
     if(dx < 0) onLeft(); else onRight();
   }, {passive: true});
 }
 wireSwipe($('cmpImgA'), ()=> cmpStep('A', 1), ()=> cmpStep('A', -1));
 wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
+wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
+$('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
+$('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
+$('pfClose').onclick = ()=> $('photoFullModal').classList.remove('open');
+$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) $('photoFullModal').classList.remove('open'); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -10473,7 +10506,7 @@ function exRow(ex, i){
   info.innerHTML = `<b></b><small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
   info.querySelector('b').textContent = nameTxt;
 
-  // контекстное меню ⋮ — дублировать / удалить
+  // контекстное меню ⋮ — изменить / дублировать / удалить
   const more = document.createElement('button');
   more.className = 'more-btn ex-more';
   more.innerHTML = icon('more');
@@ -10481,6 +10514,9 @@ function exRow(ex, i){
   const menu = document.createElement('div');
   menu.className = 'ctx-menu ex-menu';
 
+  const bEdit = document.createElement('button');
+  bEdit.innerHTML = icon('pencil') + 'Изменить';
+  bEdit.onclick = e => { e.stopPropagation(); closeAllMenus(); openExercise(i); };
   const bDup = document.createElement('button');
   bDup.innerHTML = icon('plus') + 'Дублировать';
   bDup.onclick = e => {
@@ -10504,7 +10540,7 @@ function exRow(ex, i){
     curPlan().exercises.splice(i, 1);
     renderExList();
   };
-  menu.append(bDup, bDel);
+  menu.append(bEdit, bDup, bDel);
   more.onclick = e => {
     e.stopPropagation();
     const wasOpen = menu.classList.contains('open');
@@ -10519,11 +10555,9 @@ function exRow(ex, i){
   grip.title = 'Перетащить';
 
   row.append(thumb, info, more, grip, menu);
-  // тап по строке (кроме ручки и меню) открывает редактор
-  row.onclick = e => {
-    if(e.target.closest('.ex-grip') || e.target.closest('.more-btn') || e.target.closest('.ctx-menu')) return;
-    openExercise(i);
-  };
+  // Тап по строке больше ничего не открывает: строку задевали пальцем при
+  // перетаскивании и при попадании в «⋮», и вместо перестановки открывался редактор.
+  // Правка теперь там же, где дублирование и удаление, — в меню строки.
 
   enableDrag(row, grip, '.ex-row', nodes => {
     const order = nodes.map(n => +n.dataset.idx);
@@ -12046,25 +12080,50 @@ function confetti(){
   }
 }
 
+/* ---- достижения ----
+   Названия ни к кому не привязаны: приложением пользуются и женщины, и мужчины, а
+   «Железная леди» и «Несокрушимая» доставались обоим. Критерии тоже разведены —
+   счётчик, время, серия, план и разнообразие: десять достижений, открывающихся одним
+   и тем же способом, ничего не значат.
+   Полученное достижение больше не отбирают: раньше список считался каждый раз заново
+   по test(), и «Серия» пропадала вместе с прерванной серией — человек буквально терял
+   уже заработанное. Теперь всё собранное копится в stats.badges. */
 const BADGES = [
-  {id: 'first', ico: 'sprout',   name: 'Первый шаг',   desc: 'Первая тренировка', test: () => stats.count >= 1},
-  {id: 't5',    ico: 'star',     name: 'Разминка',      desc: '5 тренировок',      test: () => stats.count >= 5},
-  {id: 't10',   ico: 'dumbbell', name: 'В ритме',       desc: '10 тренировок',     test: () => stats.count >= 10},
-  {id: 't25',   ico: 'trophy',   name: 'Втянулась',     desc: '25 тренировок',     test: () => stats.count >= 25},
-  {id: 't50',   ico: 'crown',    name: 'Железная леди', desc: '50 тренировок',     test: () => stats.count >= 50},
-  {id: 't100',  ico: 'medal',    name: 'Сотня',         desc: '100 тренировок',    test: () => stats.count >= 100},
-  {id: 's3',    ico: 'flame',    name: 'Серия',         desc: '3 подряд по плану',  test: () => calcStreak() >= 3},
-  {id: 's7',    ico: 'rocket',   name: 'Неделя силы',   desc: '7 подряд по плану',  test: () => calcStreak() >= 7},
-  {id: 's14',   ico: 'gem',      name: 'Две недели',    desc: '14 подряд по плану', test: () => calcStreak() >= 14},
-  {id: 's30',   ico: 'bolt',     name: 'Несокрушимая',  desc: '30 подряд по плану', test: () => calcStreak() >= 30}
+  {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
+  {id: 't5',    ico: 'star',     name: 'Разгон',              desc: '5 тренировок',                       test: () => (stats.count || 0) >= 5},
+  {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
+  {id: 't25',   ico: 'target',   name: 'Двадцать пять',       desc: '25 тренировок',                      test: () => (stats.count || 0) >= 25},
+  {id: 't50',   ico: 'medal',    name: 'Полсотни',            desc: '50 тренировок',                      test: () => (stats.count || 0) >= 50},
+  {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100},
+  {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
+  {id: 'h10',   ico: 'chart',    name: 'Десять часов',        desc: '10 часов тренировок в сумме',        test: () => (stats.totalSec || 0) >= 36000},
+  {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
+  {id: 's3',    ico: 'flame',    name: 'Серия',               desc: '3 тренировки подряд по плану',       test: () => calcStreak() >= 3},
+  {id: 's7',    ico: 'rocket',   name: 'Неделя силы',         desc: '7 подряд по плану',                  test: () => calcStreak() >= 7},
+  {id: 's14',   ico: 'bolt',     name: 'Две недели',          desc: '14 подряд по плану',                 test: () => calcStreak() >= 14},
+  {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 подряд по плану',                 test: () => calcStreak() >= 30},
+  {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
+  {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
+  {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => (stats.history || []).some(h => (h.sec || 0) >= 2700)},
+  {id: 'span',  ico: 'sprout',   name: 'Месяц в деле',        desc: 'Между первой и последней тренировкой месяц', test: () => {
+    const ds = (stats.history || []).map(h => h.d).sort();
+    return ds.length > 1 && (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 >= 30;
+  }}
 ];
-function renderBadges(){
+// собранное копится и не отбирается обратно; возвращает список только что полученных
+function earnBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
-  const fresh = BADGES.filter(b => b.test() && !stats.badges.includes(b.id)).map(b => b.id);
-  stats.badges = BADGES.filter(b => b.test()).map(b => b.id);
+  const fresh = BADGES.filter(b => !stats.badges.includes(b.id) && b.test()).map(b => b.id);
+  if(fresh.length) stats.badges = stats.badges.concat(fresh);
+  return fresh;
+}
+const hasBadge = id => Array.isArray(stats.badges) && stats.badges.includes(id);
+
+function renderBadges(){
+  const fresh = earnBadges();
   let toShow = BADGES.filter(b => fresh.includes(b.id));
   if(!toShow.length){
-    const earned = BADGES.filter(b => b.test());
+    const earned = BADGES.filter(b => hasBadge(b.id));
     if(earned.length) toShow = [earned[earned.length - 1]];
   }
   $('badgeRow').innerHTML = toShow.map(b =>
