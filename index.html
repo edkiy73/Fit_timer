@@ -860,7 +860,7 @@
      замена фону. На .45 пятна перекрашивали тёмную тему в светло-сиреневую — экран
      переставал быть своим. Пятна прижаты к краям, поэтому середина и углы остаются
      чистым --bg, а свечение только угадывается. */
-  .fin-aura i{position:absolute;display:block;border-radius:50%;filter:blur(56px);opacity:.15;will-change:transform}
+  .fin-aura i{position:absolute;display:block;border-radius:50%;filter:blur(56px);opacity:.075;will-change:transform}
   .fin-aura i:nth-child(1){width:52vmax;height:52vmax;left:-16vmax;top:-14vmax;background:var(--accent);animation:finA1 17s ease-in-out infinite alternate}
   .fin-aura i:nth-child(2){width:40vmax;height:40vmax;right:-14vmax;top:16vmax;background:var(--rest);animation:finA2 21s ease-in-out infinite alternate}
   .fin-aura i:nth-child(3){width:46vmax;height:46vmax;left:-10vmax;bottom:-16vmax;background:var(--accent-ink);animation:finA3 25s ease-in-out infinite alternate}
@@ -12392,7 +12392,10 @@ function stopFinishFx(){
   finFxTimers.forEach(clearTimeout);
   finFxTimers = [];
   const c = $('finFx');
-  if(c && c.getContext) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  if(c){
+    c.style.opacity = '';
+    if(c.getContext) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  }
   const sc = $('scrFinish');
   if(sc) sc.classList.remove('fin-arm', 'fin-play', 'fin-go', 'fin-lit');
   setFinRing(1);
@@ -12422,6 +12425,7 @@ function playFinishFx(after){
   }
   sc.classList.add('fin-arm', 'fin-play');
   setFinRing(0);
+  c.style.opacity = '';
 
   // координаты считаем во вьюпорте: холст растянут на весь экран, а не по колонке
   const W = Math.max(1, Math.round(window.innerWidth)), H = Math.max(1, Math.round(window.innerHeight));
@@ -12513,7 +12517,16 @@ function playFinishFx(after){
       x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
     });
 
-    if(bloomAt && now - bloomAt > 1600){ x.clearRect(0, 0, W, H); return; }
+    // Следы гасим прозрачностью самого холста, а не обрывом. Вычитание
+    // (destination-out) до нуля не доходит: альфа в 8 битах округляется и на
+    // последних единицах застревает, поэтому бледные дорожки оставались висеть,
+    // а clearRect в конце срезал их разом — заметный щелчок. Кривая S-образная:
+    // и начало, и конец затухания без излома.
+    if(bloomAt){
+      const f = (now - bloomAt - 450) / 1000;
+      if(f >= 1){ c.style.opacity = ''; x.clearRect(0, 0, W, H); return; }
+      if(f > 0) c.style.opacity = String(1 - f * f * (3 - 2 * f));
+    }
     finFxRaf = requestAnimationFrame(frame);
   };
   finFxRaf = requestAnimationFrame(frame);
