@@ -176,7 +176,14 @@
     border:1px solid var(--panel-dark-line);
     box-shadow:0 14px 40px rgba(0,0,0,.5);
   }
-  body.paused .pause-overlay{display:flex}
+  /* панель паузы выезжает снизу. Своя анимация, а не общая sheetUp: панель
+     центрируется через translateX(-50%), и общий кадр «transform:none» сбросил бы
+     центровку — панель прыгала бы к левому краю. */
+  body.paused .pause-overlay{display:flex;animation:pauseIn .24s cubic-bezier(.2,.8,.2,1)}
+  @keyframes pauseIn{
+    from{opacity:0;transform:translateX(-50%) translateY(18px)}
+    to{opacity:1;transform:translateX(-50%)}
+  }
   .pause-overlay .po-text{
     color:#fff;font-family:var(--font-display);font-weight:600;letter-spacing:.06em;
     font-size:13.5px;text-transform:uppercase;
@@ -193,7 +200,18 @@
 
   /* ---------- screens ---------- */
   .screen{display:none;flex:1;flex-direction:column;min-width:0}
-  .screen.on{display:flex;animation:screenIn .26s ease}
+  .screen.on{display:flex}
+  /* Переход между экранами. Раньше вся страница целиком мигала прозрачностью — это
+     читалось как перерисовка, а не как движение. Теперь всплывает каждая карточка
+     со своей задержкой: экран собирается на глазах. Тренировка исключена — там
+     таймер, и любое движение рядом с ним отвлекает от счёта. */
+  .screen.on:not(#scrWork) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) both}
+  .screen.on:not(#scrWork) > *:nth-child(2){animation-delay:.04s}
+  .screen.on:not(#scrWork) > *:nth-child(3){animation-delay:.08s}
+  .screen.on:not(#scrWork) > *:nth-child(4){animation-delay:.12s}
+  .screen.on:not(#scrWork) > *:nth-child(5){animation-delay:.16s}
+  .screen.on:not(#scrWork) > *:nth-child(n+6){animation-delay:.2s}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
   /* ---------- экран тренировки: кнопки всегда на одном месте ----------
      min-height у body задаёт только минимум, поэтому при длинном описании вся колонка
@@ -205,7 +223,6 @@
   body.screen-work #scrWork{min-height:0}
   body.screen-work .details{flex:0 1 auto}
   body.screen-work .actions{flex:none;position:static}
-  @keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   /* ---------- menu ---------- */
   .month-card{
@@ -250,7 +267,8 @@
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     box-shadow:var(--sh-2);
   }
-  .ctx-menu.open{display:block}
+  .ctx-menu.open{display:block;animation:menuIn .16s cubic-bezier(.22,.7,.2,1)}
+  @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
   .ctx-menu button{
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
     padding:13px 16px;background:none;border:none;color:var(--ink);
@@ -937,7 +955,7 @@
   .modal.open{display:flex;animation:modalFade .2s ease}
   .modal.open .modal-card{animation:sheetUp .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
-  @keyframes sheetUp{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  @keyframes sheetUp{from{transform:translateY(26px) scale(.985);opacity:.35}to{transform:none;opacity:1}}
   #dlg{z-index:90}
   /* Замок закрывает экран целиком, а не притемняет его: под полупрозрачной шторкой
      читались имя, план на сегодня и вся статистика — то есть ровно то, что он и
@@ -988,6 +1006,8 @@
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
+  /* переключение вкладок: содержимое не подменяется рывком, а въезжает */
+  .tab-pane:not(.hidden){animation:cardIn .26s cubic-bezier(.22,.7,.2,1)}
   /* ================= ПОДПИСКА =================
      Единственный градиентный блок на главной — и он живёт в самом низу, ниже плана
      и прогресса, чтобы не перебивать их. Цену показывает попап, а не баннер:
