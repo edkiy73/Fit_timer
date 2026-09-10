@@ -3286,8 +3286,8 @@
           <span>Приложение — таймер, а не тренер и не врач. Если ты беременна, есть болезни сердца, травмы спины или коленей либо большой перерыв в занятиях — сначала посоветуйся с врачом. Заболело или закружилась голова — останови тренировку.</span>
         </div>
         <button type="button" class="ob-legal-link" id="obLegal3">Здоровье и безопасность</button>
-        <button class="btn-primary" id="obStart">Начать разминку</button>
-        <button class="btn-back" id="obLater">Позже — на главный экран</button>
+        <button class="btn-primary" id="obStart">Начать пользоваться</button>
+        <button class="btn-back" id="obLogin">Войти в аккаунт</button>
         <p class="ob-legal">Нажимая любую из кнопок, ты принимаешь правила приложения и соглашаешься с тем, как оно обращается с данными.</p>
         <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
       </div>
@@ -3643,7 +3643,16 @@
       <div class="pref-row"><span>Почта<small id="accEmail"></small></span></div>
       <div class="pref-row" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+      <button type="button" class="link-btn" id="btnSignOut">Выйти из аккаунта</button>
     </div>
+
+    <!-- Аккаунта на устройстве нет: единственное, что здесь можно предложить, — войти.
+         Заводится аккаунт при оформлении подписки, поэтому отдельной «регистрации» нет. -->
+    <button type="button" class="nav-row hidden" id="btnLoginRow">
+      <span class="nr-ico" data-icon="mail"></span>
+      <span class="nr-body"><b>Войти в аккаунт</b><small>Вернутся подписка и данные</small></span>
+      <span class="nr-chev" data-icon="chevR"></span>
+    </button>
 
     <button type="button" class="acc-card" id="btnEditMe">
       <span class="acc-ava" id="accAva">?</span>
@@ -3942,6 +3951,21 @@
         <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px">Включить вход по биометрии</button>
         <p class="pm-fine">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
         <button class="modal-btn" id="pokClose">Готово</button>
+      </div>
+    </div>
+
+    <!-- Вход в аккаунт. Пароля нет и не будет: вход по почте — на неё приходит письмо,
+         а на самом телефоне работает биометрия. -->
+    <div class="modal" id="loginModal">
+      <div class="modal-card">
+        <span class="mini-label">Вход в аккаунт</span>
+        <p class="dlg-msg" id="loginMsg">Введи почту, к которой привязан аккаунт: вернутся подписка и всё, что в нём хранится.</p>
+        <div class="field">
+          <label>Почта</label>
+          <input type="email" id="loginEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        </div>
+        <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px">Войти</button>
+        <button class="modal-btn" id="loginCancel">Отмена</button>
       </div>
     </div>
 
@@ -6008,7 +6032,7 @@ async function deleteUser(){
 // что и придёт претензия (и из стора, и по 152-ФЗ).
 const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
                       'workoutSession', 'identity', 'docMeta', 'outbox'];
-const GLOBAL_KEYS = ['account', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
+const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
                      'voiceHint', 'voiceURI', 'clapHint', 'wantSvg'];
 
@@ -6038,12 +6062,24 @@ async function wipeAccount(){
 // рядом с профилем: подписка принадлежит тому, кто заплатил, а не имени в списке.
 let account = null;
 let bioOK = false;   // устройство умеет проверять отпечаток или лицо
+// Аккаунты, которые на этом устройстве уже открывали. Выход не должен означать потерю
+// подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
+// биометрии переезжают сюда и возвращаются обратно при входе.
+let knownAccounts = [];
 const blankAccount = ()=> ({email: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null});
 async function loadAccount(){
   try{ account = JSON.parse(await kvGet('account')) || null; }catch(e){ account = null; }
   if(!account) account = blankAccount();
+  try{ knownAccounts = JSON.parse(await kvGet('knownAccounts')) || []; }catch(e){ knownAccounts = []; }
 }
 async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
+async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+function rememberAccount(){
+  if(!account.email) return;
+  const rec = {email: account.email, sub: account.sub, biometry: account.biometry,
+               createdAt: account.createdAt, linkedAt: account.linkedAt};
+  knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
+}
 const isPremium = ()=> !!(account && account.sub && account.sub.until && new Date(account.sub.until) > new Date());
 
 // Цены — фиксированные точки в валюте покупателя, а не пересчёт по курсу: так делают
@@ -6166,6 +6202,7 @@ function renderPlan(){
 
   const has = !!(account && account.email);
   setShown('accDataBlock', has);
+  setShown('btnLoginRow', !has);
   if(has){
     $('accEmail').textContent = account.email;
     setShown('rowRenew', on);
@@ -6190,7 +6227,9 @@ async function completePurchase(){
   account.email = email;
   account.linkedAt = account.linkedAt || now;
   account.sub = {plan: pmPlan, since: now, until: planUntil(pmPlan), currency: cur, price: pr[pmPlan], autoRenew: true};
+  rememberAccount();
   await saveAccount();
+  await saveKnown();
   // почта — часть личности аккаунта: с ней данные найдутся на новом телефоне
   if(identity){ identity.email = email; await saveIdentity(); }
   recordConsent('offer');
@@ -6200,6 +6239,60 @@ async function completePurchase(){
   setShown('pokBio', bioOK && !(account.biometry && account.biometry.enabled));
   $('premiumOkModal').classList.add('open');
   renderPlan(); renderPremium();
+}
+
+/* ---- вход и выход ---- */
+// Пароля нет: вход по почте, а на самом телефоне — по биометрии. Пока сервера нет,
+// найтись может только аккаунт, который на этом устройстве уже открывали; форма при
+// этом ровно та, что останется и с сервером, — почта и одна кнопка.
+let loginDone = null;
+function openLogin(after){
+  loginDone = after || null;
+  $('loginEmail').value = '';
+  $('loginMsg').textContent = 'Введи почту, к которой привязан аккаунт: вернутся подписка и всё, что в нём хранится.';
+  $('loginModal').classList.add('open');
+  setTimeout(()=> $('loginEmail').focus(), 60);
+}
+async function doLogin(){
+  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    $('loginMsg').textContent = 'Проверь адрес — похоже, в почте опечатка.';
+    return;
+  }
+  const rec = knownAccounts.find(a => (a.email || '').toLowerCase() === email);
+  if(!rec){
+    $('loginMsg').textContent = 'Аккаунт с такой почтой не найден. Проверь адрес — или оформи подписку, и аккаунт заведётся сам.';
+    return;
+  }
+  account.email = rec.email;
+  account.sub = rec.sub || null;
+  account.biometry = rec.biometry || null;
+  account.linkedAt = rec.linkedAt || new Date().toISOString();
+  await saveAccount();
+  if(identity){ identity.email = account.email; await saveIdentity(); }
+  $('loginModal').classList.remove('open');
+  renderPlan(); renderPremium(); syncGeminiBtns();
+  const done = loginDone; loginDone = null;
+  if(done) done();
+  else appAlert(isPremium()
+    ? `С возвращением! Премиум активен до ${humanDate(account.sub.until)}.`
+    : 'Готово — вход выполнен.');
+}
+// Выход отвязывает аккаунт от устройства, но не стирает тренировки: они лежат здесь же
+// и принадлежат человеку, а не подписке. Для «стереть всё» есть отдельная кнопка ниже.
+async function signOut(){
+  if(!account.email) return;
+  const ok = await appDialog(
+    `Выйти из аккаунта ${account.email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.`,
+    {confirm: true, okText: 'Выйти', cancelText: 'Отмена'});
+  if(!ok) return;
+  rememberAccount();
+  await saveKnown();
+  account = blankAccount();
+  await saveAccount();
+  if(identity){ identity.email = null; await saveIdentity(); }
+  renderPlan(); renderPremium(); syncGeminiBtns();
+  goTab('scrAccount');
 }
 
 /* ---- вход по биометрии ---- */
@@ -12843,6 +12936,12 @@ $('tglRenew').onclick = async ()=>{
   await saveAccount();
   renderPlan(); renderPremium();
 };
+$('loginGo').onclick = doLogin;
+$('loginCancel').onclick = ()=>{ loginDone = null; $('loginModal').classList.remove('open'); };
+$('loginModal').onclick = e => { if(e.target === $('loginModal')){ loginDone = null; $('loginModal').classList.remove('open'); } };
+$('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+$('btnLoginRow').onclick = ()=> openLogin();
+$('btnSignOut').onclick = signOut;
 $('schedSave').onclick = saveSchedule;
 // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
 // сохраняем и их, иначе выбор молча пропадёт
@@ -12911,10 +13010,10 @@ $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
 $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 $('obLegal3').onclick = ()=> openLegal('health',  ()=> show('scrOnboard'));
-// Обе кнопки знакомства делают ровно то, что на них написано: заводят профиль и ведут
-// либо в разминку, либо на главную. Обучение никуда не делось — оно в «Настройках →
-// Помощь», и seenHelp помечаем сразу, чтобы оно не выпрыгнуло само при следующем запуске.
-async function leaveOnboarding(toWarmup){
+// Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
+// она уже в списке, — а начинать чужой сценарий за человека не стоит. Обучение живёт
+// в «Настройках → Помощь», seenHelp помечаем сразу, чтобы оно не выпрыгнуло само.
+async function leaveOnboarding(){
   kvSet('seenHelp', '1');
   await finishOnboardingCreate();
   if(pendingImport){
@@ -12922,11 +13021,11 @@ async function leaveOnboarding(toWarmup){
     pendingImport = null;
     return;
   }
-  const w = toWarmup && customPrograms.find(p => p.id === 'warmup');
-  if(w) openStart(w); else goTab('scrMenu');
+  goTab('scrMenu');
 }
-$('obStart').onclick = ()=> leaveOnboarding(true);
-$('obLater').onclick = ()=> leaveOnboarding(false);
+$('obStart').onclick = ()=> leaveOnboarding();
+// у человека уже может быть аккаунт — с прошлого телефона или после переустановки
+$('obLogin').onclick = ()=> openLogin(()=> leaveOnboarding());
 // пара уточнений
 $('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
 $('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
