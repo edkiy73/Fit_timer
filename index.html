@@ -1822,6 +1822,18 @@
   }
   .store-count:empty{display:none}
 
+  /* состояние синхронизации: пока сервера нет, строка честно говорит «не подключена»,
+     но показывает, что учёт изменений уже идёт — иначе непонятно, работает ли подготовка */
+  .sync-row{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0 0}
+  .sync-dot{
+    flex:none;width:10px;height:10px;border-radius:50%;
+    background:var(--muted);box-shadow:0 0 0 4px var(--surface);
+  }
+  .sync-row.on .sync-dot{background:var(--ok)}
+  .sync-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .sync-txt b{font-size:15px;font-weight:600}
+  .sync-txt small{color:var(--muted);font-size:13px;line-height:1.45}
+
   /* автор программы — нажимаемая строка, а не подпись: под ником живёт человек */
   .st-by{border:none;background:none;padding:0;cursor:pointer;text-align:left;font-family:var(--font-text)}
   .st-by:active{opacity:.7}
@@ -3648,6 +3660,15 @@
     </div>
 
     <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
+      <p class="field-hint">Пока данные живут только на этом телефоне. Приложение уже ведёт учёт изменений, чтобы при подключении сервера ничего не потерялось.</p>
+      <div class="sync-row">
+        <span class="sync-dot" id="syncDot"></span>
+        <span class="sync-txt"><b id="syncState">Не подключена</b><small id="syncSub"></small></span>
+      </div>
+    </div>
+
+    <div class="card-block">
       <div class="cb-head"><p class="cb-title">Резервная копия</p></div>
       <p class="field-hint">Все профили, программы, статистика, вес, замеры и фото — в одном файле. Перенеси его на новый телефон или сохрани на всякий случай.</p>
       <div class="ways">
@@ -4929,6 +4950,7 @@ async function switchUser(id){
   if(currentUser === id) return;
   currentUser = id;
   kvSet('currentUser', id);
+  await loadIdentity();
   await loadData();
   await loadPhotos();
   await ensureWarmup();
@@ -5118,9 +5140,115 @@ function metricGraph(s, have){
     </svg>
   </div>`;
 }
-async function savePrograms(){ await kvSet(pk('customPrograms'), JSON.stringify(customPrograms)); }
-async function saveStats(){ await kvSet(pk('stats'), JSON.stringify(stats)); }
-async function saveProgWeights(){ await kvSet(pk('progWeights'), JSON.stringify(progWeights)); }
+/* ================= ПОДГОТОВКА К ПЕРЕЕЗДУ НА СЕРВЕР =================
+   Сервера ещё нет и хостинг не оплачивается. Но форма данных уже должна быть такой,
+   чтобы включение синхронизации оказалось заменой одного адаптера, а не переписыванием
+   приложения. Всё, что заведено здесь, работает вхолостую и ничего не отправляет.
+
+   Почему именно это и почему сейчас:
+
+   • ВЕРСИЯ СХЕМЫ у каждого документа. Сервер, получив запись от старой версии
+     приложения, должен понимать, надо ли её преобразовать. Проставить версию задним
+     числом нельзя: непомеченная запись неотличима от любой другой.
+   • ОТМЕТКА ВРЕМЕНИ И НОМЕР РЕДАКЦИИ. Правило «побеждает более поздняя запись»
+     не работает, если никто не знает, когда запись сделана. Это тоже не
+     восстанавливается задним числом — поэтому заводим до, а не после.
+   • ЖУРНАЛ ИЗМЕНЕНИЙ. Пока он никуда не уходит, но каждое сохранение в него уже
+     попадает. Когда появится сервер, надо будет разобрать очередь, а не гадать,
+     что изменилось за время без сети.
+   • ИДЕНТИФИКАТОРЫ устройства и аккаунта. Аккаунт пока анонимный и живёт только на
+     телефоне. Привязка к почте потом станет заполнением поля, а не миграцией.
+   • СОГЛАСИЯ С ДАТОЙ И ВЕРСИЕЙ. Когда человек согласился и с какой редакцией
+     документа — единственное здесь, что не восстанавливается вообще никак.
+
+   Фотографии в синхронизацию не входят намеренно: самые чувствительные данные,
+   самый дорогой трафик и наименьшая польза от переноса между устройствами. */
+const SCHEMA_VERSION = 1;
+// документы, которые поедут на сервер; всё остальное — настройки устройства
+const SYNC_KEYS = ['customPrograms', 'stats', 'progWeights'];
+
+const newId = () => (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+
+let identity = null;   // {accountId, deviceId, createdAt, email, linkedAt}
+let docMeta  = {};     // ключ -> {rev, at, schema}
+let outbox   = [];     // [{key, rev, at}] — что ждёт отправки на сервер
+
+// deviceId общий для устройства, accountId — свой у каждого профиля: на сервере это
+// будут разные аккаунты, ведь профили в приложении и есть разные люди
+async function loadIdentity(){
+  let dev = await kvGet('deviceId');
+  if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
+  try{ identity = JSON.parse(await kvGet(pk('identity'))) || null; }catch(e){ identity = null; }
+  if(!identity || !identity.accountId){
+    identity = {accountId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
+    await kvSet(pk('identity'), JSON.stringify(identity));
+  }
+  if(!identity.consents) identity.consents = {};
+  identity.deviceId = dev;
+  // отметки, поставленные до создания профиля, переносим на него — но не затираем
+  // уже существующие: повторное знакомство не должно сдвигать дату первого согласия
+  if(pendingConsents.length){
+    pendingConsents.forEach(({kind, rec}) => { if(!identity.consents[kind]) identity.consents[kind] = rec; });
+    pendingConsents = [];
+    await kvSet(pk('identity'), JSON.stringify(identity));
+  }
+  try{ docMeta = JSON.parse(await kvGet(pk('docMeta'))) || {}; }catch(e){ docMeta = {}; }
+  try{ outbox  = JSON.parse(await kvGet(pk('outbox')))  || []; }catch(e){ outbox  = []; }
+}
+async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
+
+// Одно сохранение документа: пишем значение, поднимаем редакцию, ставим в очередь.
+// Очередь схлопывается по ключу — на сервер уедет последнее состояние, а не история.
+async function saveDoc(key, value){
+  await kvSet(pk(key), JSON.stringify(value));
+  if(!SYNC_KEYS.includes(key)) return;
+  const prev = docMeta[key] || {rev: 0};
+  const meta = {rev: prev.rev + 1, at: new Date().toISOString(), schema: SCHEMA_VERSION};
+  docMeta[key] = meta;
+  outbox = outbox.filter(o => o.key !== key);
+  outbox.push({key, rev: meta.rev, at: meta.at});
+  await kvSet(pk('docMeta'), JSON.stringify(docMeta));
+  await kvSet(pk('outbox'), JSON.stringify(outbox));
+}
+
+// Единственный шов, в который встанет сервер. Сейчас адаптера нет, и это не ошибка,
+// а состояние «синхронизация не подключена»: приложение обязано работать без неё.
+const SYNC = {
+  adapter: null,
+  get connected(){ return !!SYNC.adapter; },
+  pending(){ return outbox.length; },
+  async push(){
+    if(!SYNC.adapter) return {sent: 0, offline: true};
+    const batch = outbox.slice();
+    await SYNC.adapter.push(batch.map(o => ({
+      key: o.key, rev: o.rev, at: o.at, schema: SCHEMA_VERSION,
+      accountId: identity.accountId, deviceId: identity.deviceId,
+      value: kvGet(pk(o.key))
+    })));
+    outbox = outbox.filter(o => !batch.find(b => b.key === o.key && b.rev === o.rev));
+    await kvSet(pk('outbox'), JSON.stringify(outbox));
+    return {sent: batch.length};
+  }
+};
+
+// Согласия: что именно, какой редакции и когда. Версию поднимаем при правке текстов —
+// иначе нельзя доказать, с какой редакцией человек соглашался.
+const CONSENT_VERSION = 1;
+// Согласие с правилами человек даёт на первом шаге знакомства — а профиля, и значит
+// личности, в этот момент ещё нет: он создаётся на последнем шаге. Молча терять такую
+// отметку нельзя, восстановить её потом неоткуда. Копим до появления личности.
+let pendingConsents = [];
+async function recordConsent(kind){
+  const rec = {v: CONSENT_VERSION, at: new Date().toISOString()};
+  if(!identity){ pendingConsents.push({kind, rec}); return; }
+  identity.consents[kind] = rec;
+  await saveIdentity();
+}
+const hasConsent = kind => !!(identity && identity.consents && identity.consents[kind]);
+
+async function savePrograms(){ await saveDoc('customPrograms', customPrograms); }
+async function saveStats(){ await saveDoc('stats', stats); }
+async function saveProgWeights(){ await saveDoc('progWeights', progWeights); }
 async function loadProgWeights(){
   try{
     const raw = await kvGet(pk('progWeights'));
@@ -6182,6 +6310,7 @@ async function finishOnboardingCreate(){
   await saveUsers();
   currentUser = u.id;
   kvSet('currentUser', u.id);
+  await loadIdentity();
   await loadData();
   await loadPhotos();
   await ensureWarmup();
@@ -11268,7 +11397,24 @@ let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
 
+// Что показать в строке синхронизации. Пока адаптера нет — говорим прямо, что
+// не подключена, но сообщаем, сколько изменений уже стоит в очереди: так видно,
+// что подготовка работает, а не лежит мёртвым кодом.
+function renderSyncRow(){
+  const row = document.querySelector('.sync-row');
+  if(!row || !identity) return;
+  const n = SYNC.pending();
+  row.classList.toggle('on', SYNC.connected);
+  $('syncState').textContent = SYNC.connected ? 'Подключена' : 'Не подключена';
+  $('syncSub').textContent = SYNC.connected
+    ? 'Данные уходят на сервер автоматически'
+    : (n
+        ? `${n} ${plural(n, 'изменение', 'изменения', 'изменений')} ждёт отправки · аккаунт ${identity.accountId.slice(0, 8)}`
+        : `Изменений пока нет · аккаунт ${identity.accountId.slice(0, 8)}`);
+}
+
 function syncPrefs(){
+  renderSyncRow();
   if(typeof syncStartPrefsSum === 'function') syncStartPrefsSum();
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
@@ -12081,6 +12227,9 @@ $('btnSaveWeight').onclick = async ()=>{
   };
   const today = localISO(new Date());
   let en = stats.weights.find(e => e.d === today);
+  // вес и обхваты — сведения о здоровье, специальная категория: отмечаем согласие
+  // в момент, когда человек впервые их вводит, а не абстрактно при установке
+  if(!hasConsent('health')) recordConsent('health');
   if(!en){ en = {d: today}; stats.weights.push(en); }
   en.w = w;
   const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
@@ -12151,6 +12300,8 @@ $('obName').addEventListener('keydown', e => { if(e.key === 'Enter') $('obNext1'
 $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 $('obLegal3').onclick = ()=> openLegal('health',  ()=> show('scrOnboard'));
 $('obNext1').onclick = ()=>{
+  // на этом шаге под кнопкой написано, что нажатием принимаются правила, — фиксируем
+  recordConsent('terms');
   const n = $('obName').value.trim();
   if(!n){ appAlert('Напиши, как тебя зовут — так будет уютнее.'); return; }
   const b = $('obBirth').value || '';
@@ -13097,6 +13248,7 @@ try{
   }
   currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
+  await loadIdentity();
   await loadData();
   await loadPhotos();
   await ensureWarmup();
