@@ -850,18 +850,25 @@
      вспышка, гонг, вибрация и уже потом всплывает карточка результата.
      Прогресс кольца лежит в переменной --p на .fin-crest: от неё же зависят яркость
      и размер медали, поэтому она разгорается вместе с кольцом, а не отдельно. */
-  .fin-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:.6}
-  .fin-aura i{position:absolute;display:block;border-radius:50%;filter:blur(42px);opacity:.55;will-change:transform}
-  .fin-aura i:nth-child(1){width:66vw;height:66vw;left:-16vw;top:2%;background:var(--accent);animation:finA1 17s ease-in-out infinite alternate}
-  .fin-aura i:nth-child(2){width:56vw;height:56vw;right:-16vw;top:24%;background:var(--rest);animation:finA2 21s ease-in-out infinite alternate}
-  .fin-aura i:nth-child(3){width:52vw;height:52vw;left:16vw;bottom:-6%;background:var(--accent-ink);animation:finA3 25s ease-in-out infinite alternate}
+  /* Фон обязан быть во весь экран, а не по колонке контента: .app держит поля по
+     20 px, и абсолютная аура упиралась в них — вокруг свечения оставалась рамка
+     чистого фона, и экран выглядел как наклейка. Поэтому fixed по вьюпорту.
+     Размеры пятен — в vmax, а не в vw: на телефоне экран выше, чем шире, и пятна
+     «в ширину экрана» закрывали только верхнюю треть, низ оставался пустым. */
+  .fin-aura{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:.6}
+  .fin-aura i{position:absolute;display:block;border-radius:50%;filter:blur(52px);opacity:.45;will-change:transform}
+  .fin-aura i:nth-child(1){width:64vmax;height:64vmax;left:-22vmax;top:-16vmax;background:var(--accent);animation:finA1 17s ease-in-out infinite alternate}
+  .fin-aura i:nth-child(2){width:56vmax;height:56vmax;right:-20vmax;top:14vmax;background:var(--rest);animation:finA2 21s ease-in-out infinite alternate}
+  .fin-aura i:nth-child(3){width:60vmax;height:60vmax;left:-8vmax;bottom:-18vmax;background:var(--accent-ink);animation:finA3 25s ease-in-out infinite alternate}
   @keyframes finA1{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(13vw,6vh,0) scale(1.18)}}
   @keyframes finA2{from{transform:translate3d(0,0,0) scale(1.12)}to{transform:translate3d(-11vw,-5vh,0) scale(.9)}}
   @keyframes finA3{from{transform:translate3d(0,0,0) scale(.95)}to{transform:translate3d(-9vw,-8vh,0) scale(1.2)}}
   body.light .fin-aura{opacity:.16}
   #scrFinish .finish{position:relative;z-index:1}
   #scrFinish .actions{position:relative;z-index:1}
-  #finFx{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
+  /* холст тоже по вьюпорту, а не по колонке: иначе искры обрывались за 20 px до
+     края экрана — полоса мёртвого фона по периметру */
+  #finFx{position:fixed;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
 
   .fin-crest{position:relative;width:132px;height:132px;margin:0 auto var(--sp-3)}
   .fin-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -12400,16 +12407,16 @@ function playFinishFx(after){
   sc.classList.add('fin-arm', 'fin-play');
   setFinRing(0);
 
-  const rect = sc.getBoundingClientRect();
-  const W = Math.max(1, Math.round(rect.width)), H = Math.max(1, Math.round(rect.height));
+  // координаты считаем во вьюпорте: холст растянут на весь экран, а не по колонке
+  const W = Math.max(1, Math.round(window.innerWidth)), H = Math.max(1, Math.round(window.innerHeight));
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
   const x = c.getContext('2d');
   x.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const cr = crest.getBoundingClientRect();
-  const cx = cr.left - rect.left + cr.width / 2;
-  const cy = cr.top - rect.top + cr.height / 2;
+  const cx = cr.left + cr.width / 2;
+  const cy = cr.top + cr.height / 2;
   const ringR = cr.width * 55 / 120;                       // радиус кольца в пикселях
   const far = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) + 40;
 
