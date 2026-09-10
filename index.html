@@ -918,6 +918,18 @@
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
   @keyframes sheetUp{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
   #dlg{z-index:90}
+  /* Замок закрывает экран целиком, а не притемняет его: под полупрозрачной шторкой
+     читались имя, план на сегодня и вся статистика — то есть ровно то, что он и
+     прячет. И он выше всех попапов: под ним не должно остаться ничего живого. */
+  #lockModal{background:var(--bg);align-items:center;z-index:95}
+  #lockModal .modal-card{border:none;background:none;box-shadow:none;text-align:center}
+  /* на экране входа значок — единственная картинка, и он должен читаться как знак,
+     а не как мелкая иконка в углу попапа */
+  #lockModal .pm-crown{
+    width:88px;height:88px;margin:0 auto 18px;border-radius:50%;align-items:center;
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+  }
+  #lockModal .pm-crown svg{width:40px;height:40px}
   /* Длинный попап на 360×740 упирался в верх экрана и обрезал собственный
      заголовок — карточка не имела ни потолка по высоте, ни прокрутки. */
   .modal-card{
@@ -955,10 +967,10 @@
   .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:6px 0 22px}
   .tab{flex:1;padding:12px 4px;border:none;background:none;border-radius:12px;color:var(--muted);font-family:var(--font-text);font-size:13.5px;font-weight:500;cursor:pointer;transition:background .2s, color .2s;-webkit-tap-highlight-color:transparent}
   .tab.act{background:var(--work);color:var(--on-accent);box-shadow:var(--sh-1)}
-  /* ================= АНОНС ПОДПИСКИ =================
-     Не витрина оплаты: подписки нет, кнопки «купить» нет, метка «скоро» стоит
-     прямо в заголовке баннера. Единственный градиентный блок на главной — и он
-     живёт в самом низу, ниже плана и прогресса, чтобы не перебивать их. */
+  /* ================= ПОДПИСКА =================
+     Единственный градиентный блок на главной — и он живёт в самом низу, ниже плана
+     и прогресса, чтобы не перебивать их. Цену показывает попап, а не баннер:
+     сумма без объяснения, что за неё дают, отпугивает сильнее, чем сама сумма. */
   .premium-banner{
     position:relative;overflow:hidden;width:100%;
     display:flex;align-items:center;gap:14px;
@@ -975,13 +987,6 @@
   .pb-txt{flex:1;min-width:0;color:#fff}
   .pb-txt b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;margin-bottom:4px;font-weight:600}
   .pb-txt small{display:block;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.85)}
-  /* «скоро» — часть заголовка, а не украшение: без неё баннер читается как
-     кнопка оплаты, которой он не является */
-  .pb-soon{
-    flex:none;font-family:var(--font-display);font-size:10.5px;font-weight:600;
-    letter-spacing:.14em;text-transform:uppercase;
-    background:rgba(255,255,255,.22);border-radius:var(--r-pill);padding:3px 9px;line-height:1.3;
-  }
   /* значок был рассчитан на эмодзи (font-size:46px) и не задавал размер svg —
      иконка растягивалась во всю ширину карточки */
   .pm-crown{display:flex;justify-content:center;margin-bottom:10px;color:var(--accent-ink)}
@@ -1007,6 +1012,33 @@
   .pm-list b{display:block;font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
   .pm-list small{display:block;font-size:12.5px;line-height:1.5;color:var(--muted)}
   .pm-free{margin-bottom:18px}
+  /* Выбор срока. Годовой стоит вторым и подсвечен по умолчанию: он выгоднее и человеку,
+     и продукту, а выгода написана числом, а не словом «хит». */
+  .pm-plans{display:flex;gap:10px;margin:18px 0 14px}
+  .pm-plan{
+    flex:1;position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;
+    padding:14px 12px 12px;border-radius:var(--r-md);border:1.5px solid var(--line);
+    background:var(--surface);color:var(--ink);cursor:pointer;font-family:var(--font-text);
+  }
+  .pm-plan.act{border-color:var(--accent);background:var(--accent-soft)}
+  .pm-plan b{font-family:var(--font-display);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .pm-plan .pp-price{font-size:19px;font-weight:600;line-height:1.2}
+  .pm-plan small{font-size:12px;color:var(--muted);line-height:1.4}
+  .pp-badge{
+    position:absolute;top:-9px;right:8px;font-family:var(--font-display);font-size:10px;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:var(--on-accent);
+    border-radius:var(--r-pill);padding:3px 8px;line-height:1.2;white-space:nowrap;
+  }
+  .pm-fine{font-size:11.5px;line-height:1.5;color:var(--muted);margin:12px 0 4px;text-align:center}
+  /* активная подписка: вместо витрины — состояние и одна кнопка управления */
+  .pm-state{
+    display:flex;align-items:center;gap:12px;padding:14px;margin:16px 0 6px;
+    background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--r-md);
+  }
+  .pm-state .ps-ico{flex:none;width:34px;height:34px;border-radius:50%;background:var(--card);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+  .pm-state .ps-ico svg{width:18px;height:18px}
+  .pm-state b{display:block;font-size:14.5px;font-weight:600}
+  .pm-state small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.4}
   .quick-stats{display:flex;gap:10px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--accent-ink)}
@@ -1175,9 +1207,11 @@
   .ava-row{position:relative;display:flex;align-items:stretch;gap:14px}
   .ava-row .field{flex:1;display:flex;flex-direction:column}
   .ava-row .field input{flex:1}
+  /* align-self:stretch растягивал кнопку на всю высоту строки (а в строке — подпись
+     плюс поле ввода), и круглая аватарка превращалась в вертикальный овал.
+     Размер задаём сами и прижимаем к низу, к линии поля ввода. */
   .ava-pick{
-    flex:none;width:64px;align-self:stretch;border-radius:50%;overflow:hidden;cursor:pointer;
-    aspect-ratio:1/1;
+    flex:none;width:64px;height:64px;align-self:flex-end;border-radius:50%;overflow:hidden;cursor:pointer;
     border:2px solid var(--line);background:var(--bg);color:var(--muted);
     display:flex;align-items:center;justify-content:center;padding:0;
   }
@@ -2011,6 +2045,26 @@
   }
   .qs-btn span:last-child{color:var(--muted)}
 
+  /* Тариф на «Аккаунте». Бесплатный — обычная карточка, премиум — градиент: статус
+     должен читаться с первого взгляда, а не вычитываться из мелкой подписи. */
+  .plan-card{
+    display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:var(--sp-4);color:var(--ink);margin-bottom:var(--sp-4);font-family:var(--font-text);
+  }
+  .plan-card:active{transform:scale(.99)}
+  .plan-card.on{background:var(--grad-accent);border-color:rgba(255,255,255,.16);color:#fff;box-shadow:var(--sh-accent)}
+  .plan-ico{flex:none;width:44px;height:44px;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+  .plan-card.on .plan-ico{background:rgba(255,255,255,.18);color:#fff}
+  .plan-ico svg{width:22px;height:22px}
+  .plan-txt{flex:1;min-width:0}
+  .plan-txt b{display:block;font-size:15px;font-weight:600;margin-bottom:3px}
+  .plan-txt small{display:block;font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .plan-card.on .plan-txt small{color:rgba(255,255,255,.85)}
+  .plan-card .nr-chev{flex:none;color:var(--muted);display:flex}
+  .plan-card.on .nr-chev{color:rgba(255,255,255,.8)}
+  .plan-card .nr-chev svg{width:18px;height:18px}
+
   /* карточка активного профиля на «Аккаунте» */
   .acc-card{display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:var(--sp-4);
@@ -2226,22 +2280,64 @@
         <div class="greet-chips" id="greetChips"></div>
       </div>
     </div>
-    <!-- Анонс подписки. Это не кнопка оплаты: подписки ещё нет, платить негде, и
-         попап говорит об этом первой же строкой. Стоит внизу экрана намеренно —
-         «что делать сегодня» важнее, чем «что будет когда-нибудь». -->
+    <!-- Подписка. Цена показывается в валюте покупателя и до нажатия «оформить»:
+         сторы этого требуют, и человек не должен узнавать сумму на последнем шаге.
+         Срок выбирается здесь же, годовой подсвечен и показывает выгоду числом. -->
     <div class="modal" id="premiumModal">
       <div class="modal-card">
         <div class="pm-crown" data-icon="crown"></div>
-        <h3 class="pm-title">Подписка — скоро</h3>
-        <p class="pm-lead"><b>Подписки пока нет</b> — платить негде и не нужно. Это анонс: когда она появится, приложение спросит отдельно.</p>
-        <span class="pm-label">Что будет в подписке</span>
+        <h3 class="pm-title">Fit Timer Премиум</h3>
+        <p class="pm-lead" id="pmLead">Нейросеть собирает программы прямо в приложении, каталог тренеров открыт целиком, а всё накопленное живёт в аккаунте и переезжает вместе с тобой на новый телефон.</p>
         <ul class="pm-list">
-          <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Тренировку соберёт ИИ</b><small>Опишешь словами, что хочешь, — программа придёт готовой. Свой ключ Google заводить не придётся.</small></li>
-          <li><span class="pm-li-ico" data-icon="book"></span><b>Каталог от тренеров</b><small>Полный каталог: программы, которые составили живые тренеры под конкретную цель.</small></li>
+          <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Программы и упражнения собирает ИИ</b><small>Опиши словами, что хочешь, — программа придёт готовой. Свой ключ Google заводить не нужно.</small></li>
+          <li><span class="pm-li-ico" data-icon="book"></span><b>Весь каталог тренеров</b><small>Программы, которые составили живые тренеры под конкретную цель.</small></li>
+          <li><span class="pm-li-ico" data-icon="image"></span><b>Картинки к упражнениям</b><small>Обложка программы и иллюстрация к каждому движению — чтобы видеть технику, а не читать.</small></li>
+          <li><span class="pm-li-ico" data-icon="shield"></span><b>Аккаунт и синхронизация</b><small>Программы, статистика, вес и фото хранятся в аккаунте. Сменила телефон — всё на месте.</small></li>
         </ul>
+
+        <div class="pm-state hidden" id="pmState">
+          <span class="ps-ico" data-icon="check"></span>
+          <span><b id="pmStateTitle">Премиум активен</b><small id="pmStateSub"></small></span>
+        </div>
+
+        <div class="pm-plans" id="pmPlans"></div>
+        <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px">Оформить</button>
+        <p class="pm-fine" id="pmFine"></p>
+
         <span class="pm-label">Что останется бесплатным</span>
-        <p class="pm-lead pm-free">Тренировка с таймером и голосом, конструктор программ, вся история и статистика. Уже собранные программы не заберут.</p>
-        <button class="modal-btn" id="pmClose">Понятно</button>
+        <p class="pm-lead pm-free">Тренировка с таймером и голосом, конструктор программ, вся история и статистика. Уже собранные программы не заберут — даже если подписку не продлевать.</p>
+        <button class="modal-btn" id="pmClose">Закрыть</button>
+      </div>
+    </div>
+
+    <!-- Оформление. Почта здесь не формальность: это единственное, по чему аккаунт
+         и оплаченная подписка находятся на новом телефоне. Пароль не спрашиваем —
+         вход по ссылке из письма и по биометрии на самом устройстве. -->
+    <div class="modal" id="payModal">
+      <div class="modal-card">
+        <span class="mini-label">Оформление подписки</span>
+        <p class="dlg-msg" id="payWhat"></p>
+        <div class="field">
+          <label>Почта</label>
+          <input type="email" id="payEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+          <p class="field-hint">На неё придёт чек, по ней же вернутся подписка и данные на новом телефоне. Пароль придумывать не надо.</p>
+        </div>
+        <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px">Оплатить</button>
+        <p class="pm-fine">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
+        <button class="modal-btn" id="payCancel">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Подписка оформлена. Здесь же предлагаем биометрию: это единственный момент,
+         когда аккаунт только что появился и защищать стало что. -->
+    <div class="modal" id="premiumOkModal">
+      <div class="modal-card" style="text-align:center">
+        <div class="pm-crown" data-icon="crown"></div>
+        <h3 class="pm-title">Премиум активен</h3>
+        <p class="pm-lead" id="pokLead"></p>
+        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px">Включить вход по биометрии</button>
+        <p class="pm-fine">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
+        <button class="modal-btn" id="pokClose">Готово</button>
       </div>
     </div>
     <!-- ПЛАН НА СЕГОДНЯ. Каждая строка целиком — кнопка: раньше название программы
@@ -2271,12 +2367,14 @@
       <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
     </div>
 
+    <!-- Баннер подписки. Когда премиум уже оформлен, он не нужен и прячется:
+         продавать купленное — верный способ выглядеть навязчивым. -->
     <button class="premium-banner" id="btnPremium">
       <span class="pb-glow" aria-hidden="true"></span>
       <span class="pb-ico" data-icon="crown"></span>
       <span class="pb-txt">
-        <b>Подписка Fit Timer<span class="pb-soon">скоро</span></b>
-        <small>Тренировку соберёт ИИ — без ключей и настроек. И каталог программ от живых тренеров.</small>
+        <b id="pbTitle">Fit Timer Премиум</b>
+        <small id="pbSub">Тренировку соберёт ИИ — без ключей и настроек. И весь каталог программ от живых тренеров.</small>
       </span>
     </button>
   </section>
@@ -3330,7 +3428,7 @@
 
     <div class="note">
       <span class="n-ico" data-icon="shield"></span>
-      <span>Коротко: мы храним то, что нужно приложению для работы, — имя, параметры тела, историю тренировок и фото, если ты их делаешь. Мы не показываем рекламу, не ставим трекеры, не продаём данные и не храним у себя платёжные реквизиты.</span>
+      <span>Коротко: мы храним то, что нужно приложению для работы, — имя, параметры тела, историю тренировок и фото, если ты их делаешь. Мы не показываем рекламу, не ставим трекеры, не продаём данные, не храним у себя платёжные реквизиты и не получаем твой отпечаток пальца.</span>
     </div>
 
     <div class="legal-list">
@@ -3364,7 +3462,8 @@
             <li><b>Запрос к нейросети.</b> Только тогда, когда ты сама просишь собрать программу или упражнение. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь и выбранные ограничения — включая «беременность», если ты её отметила. Имени и контактов в запросе нет. Сервис генерации находится за пределами России, то есть это трансграничная передача, и делается она только по твоему отдельному согласию — приложение спрашивает его перед первой генерацией.</li>
             <li><b>Имя, вес, замеры, фотографии и история тренировок в запрос к нейросети не попадают никогда.</b></li>
             <li><b>Шрифты</b> подгружаются с Google Fonts, поэтому Google видит факт обращения и твой IP-адрес. Без интернета приложение возьмёт системный шрифт и продолжит работать.</li>
-            <li><b>Оплата.</b> Если появится подписка, деньги примет магазин приложений. Номера карт и другие платёжные реквизиты мы у себя не получаем и не храним.</li>
+            <li><b>Оплата подписки.</b> Деньги принимает магазин приложений — App Store или Google Play. Номера карт и другие платёжные реквизиты в приложение не попадают и у нас не хранятся: мы узнаём только то, что подписка оплачена и до какого числа она действует.</li>
+            <li><b>Почта аккаунта.</b> Её ты вводишь при оформлении подписки. Она нужна, чтобы прислать чек и вернуть подписку вместе с данными на новом телефоне. Рассылок мы не делаем.</li>
           </ul>
 
           <h3>Чего приложение не делает</h3>
@@ -3422,8 +3521,14 @@
           <h3>Возраст</h3>
           <p>Приложение не предназначено для детей младше 12 лет: в нём есть дневник веса, расчёт индекса массы тела и материалы о снижении веса.</p>
 
-          <h3>Деньги</h3>
-          <p>Сейчас приложение бесплатное, платежей в нём нет. Если появится подписка, её цена, срок и условия продления будут показаны до оплаты, а всё, что ты уже собрала и накопила, останется доступным.</p>
+          <h3>Подписка и деньги</h3>
+          <p>Приложение бесплатное: тренировка с таймером и голосом, конструктор программ, статистика, вес и фото работают без всякой оплаты и всегда будут работать.</p>
+          <p>Подписка «Премиум» открывает то, что стоит нам денег каждый раз: составление программ и упражнений нейросетью, весь каталог тренеров, картинки к упражнениям и хранение данных в аккаунте. Цена, срок и условия продления показываются до оплаты, в валюте твоей страны. Подписка продлевается автоматически; отключить продление можно в любой момент в разделе «Аккаунт» — оплаченный срок при этом дорабатывает до конца.</p>
+          <p>Всё, что ты собрала и накопила, остаётся доступным и после окончания подписки: программы, история и статистика никуда не деваются, перестают работать только те функции, за которые платили.</p>
+          <p>Деньги принимает магазин приложений, и возврат тоже делается по его правилам — через App Store или Google Play.</p>
+
+          <h3>Вход по биометрии</h3>
+          <p>Отпечаток или снимок лица приложение не получает и не хранит: их проверяет сама операционная система телефона, а приложению достаётся только ответ «это владелец устройства». Выключить вход по биометрии можно в разделе «Аккаунт», запасной вход — по почте аккаунта.</p>
 
           <h3>Изменения</h3>
           <p>Условия могут меняться вместе с приложением. Дата последнего обновления указана внизу этой страницы.</p>
@@ -3605,6 +3710,22 @@
        Раньше это был попап поверх главной — теперь полноценная страница. -->
   <section class="screen root" id="scrAccount">
     <div class="page-head"><h1>Аккаунт</h1></div>
+
+    <!-- Тариф стоит выше профиля: на этом экране первым делом ищут «что у меня
+         подключено и до какого числа», а имя с фотографией человек и так знает. -->
+    <button type="button" class="plan-card" id="btnPlanCard">
+      <span class="plan-ico" data-icon="crown"></span>
+      <span class="plan-txt"><b id="planTitle">Бесплатный тариф</b><small id="planSub"></small></span>
+      <span class="nr-chev" data-icon="chevR"></span>
+    </button>
+
+    <div class="card-block hidden" id="accDataBlock">
+      <div class="cb-head"><p class="cb-title">Данные аккаунта</p></div>
+      <div class="pref-row"><span>Почта<small id="accEmail"></small></span></div>
+      <div class="pref-row" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
+      <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+    </div>
+
     <button type="button" class="acc-card" id="btnEditMe">
       <span class="acc-ava" id="accAva">?</span>
       <span class="acc-body"><b id="accName">Профиль</b><small id="accSub">Изменить имя, фото, пол и дату рождения</small></span>
@@ -3817,8 +3938,9 @@
 
     <!-- Пол и дата рождения. На первом экране их не спрашивают: анкета не должна
          стоять между человеком и первой тренировкой. Спрашиваем в момент, когда данные
-         правда идут в дело — перед составлением программы, — и ровно один раз: отказ
-         запоминается, чтобы попап не выскакивал на каждое действие. -->
+         правда идут в дело — перед составлением программы. Пропустить нельзя: без пола
+         и возраста нейросеть выдаёт упражнения наугад, а это хуже, чем лишний вопрос.
+         «Отмена» поэтому не пропускает вопрос, а возвращает с экрана назад. -->
     <div class="modal" id="whoModal">
       <div class="modal-card">
         <span class="mini-label">Пара уточнений</span>
@@ -3827,8 +3949,25 @@
           <div class="seg"><button type="button" id="whoF">Женский</button><button type="button" id="whoM">Мужской</button></div>
         </div>
         <div class="field"><label>Дата рождения</label><input type="date" id="whoBirth"></div>
-        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px">Сохранить</button>
-        <button class="modal-btn" id="whoSkip">Не сейчас</button>
+        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Замок биометрии. Закрыть жестом нельзя (data-locked), иначе замок не замок,
+         но запасной вход обязателен: отпечаток может не сработать, палец — быть
+         занят, а данные внутри принадлежат человеку, а не устройству. -->
+    <div class="modal" id="lockModal" data-locked="1">
+      <div class="modal-card" style="text-align:center">
+        <div class="pm-crown" data-icon="fingerprint"></div>
+        <h3 class="pm-title">Вход в Fit Timer</h3>
+        <p class="pm-lead" id="lockMsg">Приложи палец или посмотри на камеру — и продолжим.</p>
+        <div class="field hidden" id="lockMailBox" style="text-align:left">
+          <label>Почта аккаунта</label>
+          <input type="email" id="lockEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        </div>
+        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail">Войти по почте</button>
       </div>
     </div>
 
@@ -4351,6 +4490,8 @@ const ICONS = {
   chat: '<path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12Z"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2.5 4 3.5"/>',
   key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3.5M15.5 12v2.5"/>',
+  mail: '<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  fingerprint: '<path d="M3.5 12.5a8.5 8.5 0 0 1 17 0v1.5"/><path d="M6.5 12.5a5.5 5.5 0 0 1 11 0v3.5"/><path d="M9.5 12.5a2.5 2.5 0 0 1 5 0v5"/><path d="M12 12.5V20"/><path d="M6.4 17.6A7 7 0 0 1 5 20"/>',
   link: '<path d="M10 13.5a4 4 0 0 0 5.7.3l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
   video: '<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="M16.5 10.5 22 7v10l-5.5-3.5Z"/>',
   target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
@@ -4984,7 +5125,7 @@ function renderUsers(){
     row.className = 'user-row';
     const ua = u.photo ? `<img src="${u.photo}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
-    bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
+    if(u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
     const a = ageOf(u.birth);
     if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
     bits.push('переключиться');
@@ -4999,12 +5140,13 @@ function renderUsers(){
 
 // карточка активного профиля наверху «Аккаунта»
 function renderAccount(){
+  renderPlan();
   const u = curUser();
   const nm = (u && u.name || '').trim();
   $('accAva').innerHTML = (u && u.photo) ? `<img src="${u.photo}" alt="">` : esc(nm ? nm[0].toUpperCase() : '?');
   $('accName').textContent = nm || 'Профиль';
   const bits = [];
-  if(u) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
+  if(u && u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
   const a = u && ageOf(u.birth);
   if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
   $('accSub').textContent = bits.length ? bits.join(' · ') + ' · изменить' : 'Изменить имя, фото, пол и дату рождения';
@@ -5766,7 +5908,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: 'f', birth: '', photo: null, theme: themeLight ? 'light' : 'dark'};
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextGuestName(), gender: '', birth: '', photo: null, theme: themeLight ? 'light' : 'dark'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
   $('ueName').value = uDraft.name || '';
@@ -5786,7 +5928,9 @@ function openUserEdit(id = null){
   window.scrollTo(0, 0);
 }
 function syncUserForm(){
-  $('ueGenderF').classList.toggle('act', uDraft.gender !== 'm');
+  // ни одна кнопка не подсвечена, пока пол не выбран: подставленный по умолчанию
+  // «женский» уходил в запрос к ИИ как настоящий ответ
+  $('ueGenderF').classList.toggle('act', uDraft.gender === 'f');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
@@ -5798,7 +5942,10 @@ async function saveUser(){
   uDraft.name = $('ueName').value.trim();
   uDraft.birth = $('ueBirth').value || '';
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
-  const bErr = birthError(uDraft.birth);
+  // пол и дата рождения — не украшение анкеты: они уходят в запрос к ИИ и определяют
+  // подбор упражнений, нагрузку и восстановление. Пустыми их оставлять нельзя
+  if(!uDraft.gender){ appAlert('Выбери пол — от него зависит подбор упражнений и нагрузка.'); return; }
+  const bErr = birthError(uDraft.birth, true);
   if(bErr){
     appAlert(bErr);
     $('ueBirth').focus();
@@ -5856,7 +6003,7 @@ async function deleteUser(){
 // что и придёт претензия (и из стора, и по 152-ФЗ).
 const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
                       'workoutSession', 'identity', 'docMeta', 'outbox'];
-const GLOBAL_KEYS = ['users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
+const GLOBAL_KEYS = ['account', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
                      'voiceHint', 'voiceURI', 'clapHint', 'wantSvg'];
 
@@ -5878,6 +6025,262 @@ async function wipeAccount(){
   for(const k of GLOBAL_KEYS){ try{ await kvDel(k); }catch(e){} }
   try{ localStorage.clear(); }catch(e){}
   location.reload();
+}
+
+/* ================= АККАУНТ, ПОДПИСКА, БИОМЕТРИЯ ================= */
+// Аккаунт один на устройство, а профили лежат внутри него («второй — для мужа или
+// подруги»), поэтому почта, подписка и биометрия хранятся глобальным ключом, а не
+// рядом с профилем: подписка принадлежит тому, кто заплатил, а не имени в списке.
+let account = null;
+let bioOK = false;   // устройство умеет проверять отпечаток или лицо
+const blankAccount = ()=> ({email: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null});
+async function loadAccount(){
+  try{ account = JSON.parse(await kvGet('account')) || null; }catch(e){ account = null; }
+  if(!account) account = blankAccount();
+}
+async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
+const isPremium = ()=> !!(account && account.sub && account.sub.until && new Date(account.sub.until) > new Date());
+
+// Цены — фиксированные точки в валюте покупателя, а не пересчёт по курсу: так делают
+// и сторы. «4,99 $» читается как цена, а «412,73 ₽» — как ошибка округления.
+const PRICES = {
+  RUB: {month: 399,   year: 2990},
+  USD: {month: 4.99,  year: 39.99},
+  EUR: {month: 4.99,  year: 39.99},
+  GBP: {month: 4.49,  year: 34.99},
+  KZT: {month: 2490,  year: 18900},
+  UAH: {month: 199,   year: 1490},
+  BYN: {month: 14.9,  year: 109},
+  TRY: {month: 169,   year: 1290},
+  PLN: {month: 21.99, year: 169}
+};
+const CUR_BY_REGION = {RU:'RUB', BY:'BYN', KZ:'KZT', UA:'UAH', TR:'TRY', PL:'PLN', GB:'GBP',
+                       US:'USD', CA:'USD', AU:'USD', NZ:'USD', IL:'USD', AE:'USD'};
+const EURO_REGIONS = 'AT BE HR CY EE FI FR DE GR IE IT LV LT LU MT NL PT SK SI ES'.split(' ');
+// Часовой пояс — запасной путь, когда язык телефона без региона («ru», а не «ru-RU»).
+const TZ_REGION = {
+  'Europe/Moscow':'RU','Europe/Kaliningrad':'RU','Europe/Samara':'RU','Europe/Volgograd':'RU',
+  'Asia/Yekaterinburg':'RU','Asia/Omsk':'RU','Asia/Novosibirsk':'RU','Asia/Krasnoyarsk':'RU',
+  'Asia/Irkutsk':'RU','Asia/Yakutsk':'RU','Asia/Vladivostok':'RU','Asia/Magadan':'RU','Asia/Kamchatka':'RU',
+  'Europe/Minsk':'BY','Asia/Almaty':'KZ','Asia/Aqtobe':'KZ','Asia/Atyrau':'KZ',
+  'Europe/Kyiv':'UA','Europe/Kiev':'UA','Europe/Istanbul':'TR','Europe/Warsaw':'PL','Europe/London':'GB'
+};
+function userRegion(){
+  try{
+    const m = /[-_]([A-Za-z]{2})$/.exec(navigator.language || '');
+    if(m) return m[1].toUpperCase();
+  }catch(e){}
+  try{
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || '';
+    if(TZ_REGION[tz]) return TZ_REGION[tz];
+    if(tz.indexOf('Europe/') === 0) return 'DE';   // еврозона как общий случай
+  }catch(e){}
+  return 'US';
+}
+function userCurrency(){
+  const r = userRegion();
+  return CUR_BY_REGION[r] || (EURO_REGIONS.includes(r) ? 'EUR' : 'USD');
+}
+function money(v, cur){
+  const frac = (Math.round(v * 100) % 100) ? 2 : 0;
+  try{
+    return new Intl.NumberFormat(navigator.language || 'ru-RU',
+      {style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac}).format(v);
+  }catch(e){ return v + ' ' + cur; }
+}
+const priceTable = ()=> PRICES[userCurrency()] || PRICES.USD;
+function planUntil(plan, from){
+  const d = new Date(from || Date.now());
+  if(plan === 'year') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+  return d.toISOString();
+}
+// «10 сентября 2027 г.» в конце фразы даёт двойную точку и лишний хвост — убираем «г.»
+const humanDate = iso => new Date(iso)
+  .toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})
+  .replace(/\s*г\.$/, '');
+// цена за месяц при годовой оплате: округляем до точности самой цены, иначе
+// в рублях получается «249,17 ₽», чего не бывает ни в одном ценнике
+function perMonth(pr, cur){
+  const v = pr.year / 12;
+  return money((Math.round(pr.month * 100) % 100) ? Math.round(v * 100) / 100 : Math.round(v), cur);
+}
+// цена продления берётся из подписки, а не из сегодняшней таблицы: человек платит
+// по той цене, по которой оформлял
+const subPrice = ()=> (account.sub ? money(account.sub.price, account.sub.currency) : '');
+
+let pmPlan = 'year';   // годовой выбран заранее: он выгоднее и человеку, и продукту
+
+function renderPremium(){
+  const cur = userCurrency(), pr = priceTable(), on = isPremium();
+  setShown('pmState', on);
+  setShown('pmPlans', !on);
+  setShown('pmBuy', !on);
+  if(on){
+    $('pmStateTitle').textContent = `Премиум до ${humanDate(account.sub.until)}`;
+    $('pmStateSub').textContent = account.sub.autoRenew
+      ? `Продлится сам — ${subPrice()} ${account.sub.plan === 'year' ? 'в год' : 'в месяц'}`
+      : 'Продление выключено: после этой даты вернётся бесплатный тариф';
+    $('pmFine').textContent = 'Управление подпиской — в разделе «Аккаунт».';
+    return;
+  }
+  const save = Math.round((1 - pr.year / (pr.month * 12)) * 100);
+  const box = $('pmPlans');
+  box.innerHTML = '';
+  [['month', 'Месяц'], ['year', 'Год']].forEach(([k, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pm-plan' + (pmPlan === k ? ' act' : '');
+    const per = k === 'year' ? `${perMonth(pr, cur)} в месяц` : 'списание раз в месяц';
+    b.innerHTML = (k === 'year' && save > 0 ? `<span class="pp-badge">выгода ${save}%</span>` : '')
+      + `<b></b><span class="pp-price"></span><small></small>`;
+    b.querySelector('b').textContent = label;
+    b.querySelector('.pp-price').textContent = money(pr[k], cur);
+    b.querySelector('small').textContent = per;
+    b.onclick = ()=>{ pmPlan = k; renderPremium(); };
+    box.appendChild(b);
+  });
+  $('pmBuy').textContent = `Оформить за ${money(pr[pmPlan], cur)}`;
+  $('pmFine').textContent = pmPlan === 'year'
+    ? `Списание сразу, дальше — раз в год по ${money(pr.year, cur)}. Отменить можно в любой момент.`
+    : `Списание сразу, дальше — раз в месяц по ${money(pr.month, cur)}. Отменить можно в любой момент.`;
+}
+
+// Тариф на «Аккаунте», данные аккаунта и баннер на главной — одно состояние,
+// показанное в трёх местах, поэтому и обновляются они одной функцией.
+function renderPlan(){
+  if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
+  const on = isPremium(), pr = priceTable(), cur = userCurrency();
+  $('btnPlanCard').classList.toggle('on', on);
+  $('planTitle').textContent = on ? 'Fit Timer Премиум' : 'Бесплатный тариф';
+  $('planSub').textContent = on
+    ? `До ${humanDate(account.sub.until)}` + (account.sub.autoRenew ? ' · продлится сам' : ' · продление выключено')
+    : 'ИИ, весь каталог тренеров и синхронизация между телефонами';
+  // купленное больше не продаём: баннер уходит с главной
+  setShown('btnPremium', !on);
+  $('pbSub').textContent = `Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От ${perMonth(pr, cur)} в месяц.`;
+
+  const has = !!(account && account.email);
+  setShown('accDataBlock', has);
+  if(has){
+    $('accEmail').textContent = account.email;
+    setShown('rowRenew', on);
+    if(on){
+      $('accRenewSub').textContent = account.sub.autoRenew
+        ? `${subPrice()} ${account.sub.plan === 'year' ? 'раз в год' : 'раз в месяц'}, следующее — ${humanDate(account.sub.until)}`
+        : `Выключено: премиум закончится ${humanDate(account.sub.until)}`;
+      $('tglRenew').classList.toggle('on', !!account.sub.autoRenew);
+    }
+    setShown('rowBio', bioOK);
+    $('tglBio').classList.toggle('on', !!(account.biometry && account.biometry.enabled));
+  }
+}
+
+async function completePurchase(){
+  const email = ($('payEmail').value || '').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    appAlert('Проверь почту — похоже, в адресе опечатка.');
+    return;
+  }
+  const cur = userCurrency(), pr = priceTable(), now = new Date().toISOString();
+  account.email = email;
+  account.linkedAt = account.linkedAt || now;
+  account.sub = {plan: pmPlan, since: now, until: planUntil(pmPlan), currency: cur, price: pr[pmPlan], autoRenew: true};
+  await saveAccount();
+  // почта — часть личности аккаунта: с ней данные найдутся на новом телефоне
+  if(identity){ identity.email = email; await saveIdentity(); }
+  recordConsent('offer');
+  $('payModal').classList.remove('open');
+  $('premiumModal').classList.remove('open');
+  $('pokLead').textContent = `Подписка действует до ${humanDate(account.sub.until)}. Аккаунт привязан к почте ${email} — с неё вернутся программы, статистика и фото на любом телефоне.`;
+  setShown('pokBio', bioOK && !(account.biometry && account.biometry.enabled));
+  $('premiumOkModal').classList.add('open');
+  renderPlan(); renderPremium();
+}
+
+/* ---- вход по биометрии ---- */
+// Это passkey: телефон заводит ключ в защищённом хранилище и отдаёт подпись только
+// после отпечатка или лица. Проверку пока делает само устройство; когда появится
+// сервер, туда переедут только challenge и сверка подписи — ключ и весь код ниже
+// останутся прежними, перевыпускать людям ничего не придётся.
+async function bioSupported(){
+  try{
+    if(!window.PublicKeyCredential || !navigator.credentials || !navigator.credentials.create) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ return false; }
+}
+const rndBytes = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; };
+const toB64 = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+const fromB64 = s64 => Uint8Array.from(atob(s64), c => c.charCodeAt(0));
+function bioErr(e){
+  const n = (e && e.name) || '';
+  if(n === 'NotAllowedError') return 'запрос отменён или истёк.';
+  if(n === 'InvalidStateError') return 'на этом устройстве ключ уже заведён.';
+  if(n === 'NotSupportedError') return 'устройство не умеет проверять отпечаток или лицо.';
+  if(n === 'SecurityError') return 'приложение открыто не по защищённому адресу.';
+  return 'устройство отказало.';
+}
+async function bioEnable(){
+  if(!account.email){ appAlert('Биометрия привязывается к аккаунту — сначала нужна почта.'); return false; }
+  try{
+    const cred = await navigator.credentials.create({publicKey: {
+      challenge: rndBytes(32),
+      rp: {name: 'Fit Timer'},
+      user: {id: rndBytes(16), name: account.email, displayName: account.email},
+      pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
+      authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred'},
+      timeout: 60000, attestation: 'none'
+    }});
+    if(!cred) return false;
+    account.biometry = {enabled: true, credId: toB64(cred.rawId), at: new Date().toISOString()};
+    await saveAccount();
+    renderPlan();
+    return true;
+  }catch(e){
+    appAlert('Не получилось включить биометрию: ' + bioErr(e));
+    return false;
+  }
+}
+async function bioDisable(){
+  if(!(await appConfirm('Выключить вход по биометрии? Приложение будет открываться сразу.'))) return;
+  account.biometry = null;
+  await saveAccount();
+  renderPlan();
+}
+async function bioVerify(){
+  try{
+    const got = await navigator.credentials.get({publicKey: {
+      challenge: rndBytes(32),
+      allowCredentials: [{type: 'public-key', id: fromB64(account.biometry.credId)}],
+      userVerification: 'required', timeout: 60000
+    }});
+    return !!got;
+  }catch(e){ return false; }
+}
+
+/* ---- замок при запуске ---- */
+let lockMode = 'bio';
+const lockNeeded = ()=> !!(account && account.biometry && account.biometry.enabled);
+function openLock(){
+  lockMode = 'bio';
+  setShown('lockMailBox', false);
+  $('lockEmail').value = '';
+  $('lockMsg').textContent = 'Приложи палец или посмотри на камеру — и продолжим.';
+  $('lockGo').textContent = 'Разблокировать';
+  $('lockMail').textContent = 'Войти по почте';
+  $('lockModal').classList.add('open');
+  tryUnlock();   // сразу, чтобы не заставлять нажимать лишний раз
+}
+async function tryUnlock(){
+  if(lockMode === 'mail'){
+    const v = ($('lockEmail').value || '').trim().toLowerCase();
+    if(v && v === (account.email || '').toLowerCase()){ $('lockModal').classList.remove('open'); return; }
+    $('lockMsg').textContent = 'Такая почта к этому аккаунту не привязана. Проверь адрес.';
+    return;
+  }
+  if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
+  // отказ бывает и от системы, и от человека («отмена» в окне отпечатка) — в обоих
+  // случаях врать «приложи палец» уже нельзя, палец он приложил
+  $('lockMsg').textContent = 'Не получилось узнать. Попробуй ещё раз или войди по почте.';
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -6355,7 +6758,7 @@ async function finishOnboardingCreate(){
   const u = {
     id: 'u' + Date.now(),
     name: nextGuestName(),
-    gender: 'f', birth: '', photo: null,
+    gender: '', birth: '', photo: null,
     theme: themeLight ? 'light' : 'dark'
   };
   users = [u];
@@ -6372,35 +6775,37 @@ async function finishOnboardingCreate(){
 }
 
 /* ---- пол и дата рождения: спрашиваем по требованию ---- */
-// Пол по умолчанию женский — значит по одному значению не понять, выбрал его человек
-// или подставило приложение. Отдельный флаг genderSet и отвечает на этот вопрос.
+// Оба поля обязательны. Пол по умолчанию не выбран вовсе: подставленный «женский»
+// уходил в запрос к ИИ как настоящий ответ, и половина программ составлялась не для
+// того человека. Пропустить вопрос нельзя — «Отмена» возвращает туда, откуда пришли.
 const WHO_MSG = {
-  program: 'Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужно знать пол и возраст. Спросим один раз — дальше это меняется в профиле.',
+  program: 'Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужны пол и возраст. Спросим один раз — дальше это меняется в профиле.',
   ai: 'Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.'
 };
 let whoDraft = null, whoDone = null;
-const needWho = u => !!u && (!u.birth || !u.genderSet);
+const needWho = u => !!u && (!u.birth || !u.gender);
 function whoSyncForm(){
-  $('whoF').classList.toggle('act', whoDraft.gender !== 'm');
+  $('whoF').classList.toggle('act', whoDraft.gender === 'f');
   $('whoM').classList.toggle('act', whoDraft.gender === 'm');
+  $('whoSave').disabled = !whoDraft.gender || !!birthError($('whoBirth').value || '', true);
 }
 function askWho(reason){
   const u = curUser();
   if(!u) return Promise.resolve(false);
-  whoDraft = {gender: u.gender === 'm' ? 'm' : 'f'};
+  whoDraft = {gender: u.gender || ''};
   $('whoMsg').textContent = WHO_MSG[reason] || WHO_MSG.program;
   $('whoBirth').value = u.birth || '';
   whoSyncForm();
   $('whoModal').classList.add('open');
   return new Promise(res => { whoDone = res; });
 }
-// Отказ запоминаем: попап, выскакивающий на каждое открытие конструктора, раздражает
-// сильнее, чем анкета на старте. Платные сценарии (подписка) спросят это отдельно
-// и уже обязательно — вместе с почтой.
-async function maybeAskWho(reason){
+// Экран, которому эти данные нужны, уже открыт: попап видно поверх него. Если человек
+// отказался отвечать — уводим обратно, а не оставляем его на экране, который без
+// ответа всё равно не сработает.
+function requireWho(reason, onCancel){
   const u = curUser();
-  if(!u || u.whoAsked || !needWho(u)) return false;
-  return await askWho(reason);
+  if(!u || !needWho(u)) return;
+  askWho(reason).then(ok => { if(!ok && onCancel) onCancel(); });
 }
 async function whoFinish(save){
   const u = curUser();
@@ -6409,13 +6814,12 @@ async function whoFinish(save){
     const b = $('whoBirth').value || '';
     const err = birthError(b, true);
     if(err){ appAlert(err); return; }
+    if(!whoDraft.gender){ appAlert('Выбери пол — от него зависит подбор упражнений.'); return; }
     u.gender = whoDraft.gender;
-    u.genderSet = true;
     u.birth = b;
+    await saveUsers();
+    renderUsers();
   }
-  u.whoAsked = true;
-  await saveUsers();
-  renderUsers();
   $('whoModal').classList.remove('open');
   if(whoDone){ whoDone(!!save); whoDone = null; }
 }
@@ -7644,7 +8048,7 @@ function openYouTube(){
   if(aiWaysReset.scrYouTube) aiWaysReset.scrYouTube();
   show('scrYouTube');
   window.scrollTo(0, 0);
-  maybeAskWho('ai');
+  requireWho('ai', ()=> goTab('scrPrograms'));
 }
 
 function ytCheckUrl(){
@@ -9294,9 +9698,8 @@ function openBuilder(id=null){
   planIdx = 0;
   fillBuilder(id ? 'Редактирование' : 'Новая программа');
   // вот здесь пол и возраст впервые нужны по делу: от них зависят подбор упражнений
-  // и нагрузка. Спрашиваем после того, как экран открылся, — попап поверх конструктора
-  // видно, а сам конструктор уже на месте, если человек откажется отвечать
-  maybeAskWho('program');
+  // и нагрузка
+  requireWho('program', ()=> goTab('scrPrograms'));
 }
 
 function curPlan(){ return draft.plans[planIdx]; }
@@ -10378,7 +10781,7 @@ function qCards(boxId, opts, get, set){
 }
 
 function initAIForm(){
-  maybeAskWho('ai');   // эти данные уходят прямо в запрос к нейросети (см. userForAI)
+  requireWho('ai', ()=> goTab('scrPrograms'));   // данные уходят прямо в запрос (userForAI)
   syncWantSvg();
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
@@ -12351,13 +12754,64 @@ $('btnSaveWeight').onclick = async ()=>{
   renderWeight();
 };
 // навигация по календарю
-// Анонс подписки. Здесь нет и не должно быть ничего, что принимает деньги:
-// ни кошелька, ни ссылки на оплату — подписки ещё не существует.
+// Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
+// платёжные данные в приложение не попадают и у нас не хранятся.
 $('trClose').onclick = ()=> $('trainerModal').classList.remove('open');
 $('trainerModal').onclick = e => { if(e.target === $('trainerModal')) $('trainerModal').classList.remove('open'); };
-$('btnPremium').onclick = ()=> $('premiumModal').classList.add('open');
+function openPremium(){ renderPremium(); $('premiumModal').classList.add('open'); }
+$('btnPremium').onclick = openPremium;
+$('btnPlanCard').onclick = openPremium;
 $('pmClose').onclick = ()=> $('premiumModal').classList.remove('open');
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
+$('pmBuy').onclick = ()=>{
+  const pr = priceTable(), cur = userCurrency();
+  $('payWhat').textContent = pmPlan === 'year'
+    ? `Премиум на год — ${money(pr.year, cur)}. Дальше столько же раз в год, пока не отменишь.`
+    : `Премиум на месяц — ${money(pr.month, cur)}. Дальше столько же каждый месяц, пока не отменишь.`;
+  $('payGo').textContent = `Оплатить ${money(pr[pmPlan], cur)}`;
+  $('payEmail').value = (account && account.email) || '';
+  $('payModal').classList.add('open');
+};
+$('payCancel').onclick = ()=> $('payModal').classList.remove('open');
+$('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
+$('payGo').onclick = completePurchase;
+$('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
+$('pokClose').onclick = ()=> $('premiumOkModal').classList.remove('open');
+$('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
+$('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
+$('tglBio').onclick = async ()=>{
+  if(account.biometry && account.biometry.enabled) await bioDisable();
+  else await bioEnable();
+};
+// Отмена продления не забирает оплаченное: срок дорабатывает до конца. Иначе это
+// не отмена подписки, а изъятие уже купленного.
+$('tglRenew').onclick = async ()=>{
+  if(!account.sub) return;
+  if(account.sub.autoRenew){
+    const ok = await appDialog(
+      `Отключить автопродление? Премиум останется до ${humanDate(account.sub.until)}, дальше вернётся бесплатный тариф. Программы и статистика никуда не денутся.`,
+      {confirm: true, okText: 'Отключить', cancelText: 'Оставить'});
+    if(!ok) return;
+  }
+  account.sub.autoRenew = !account.sub.autoRenew;
+  await saveAccount();
+  renderPlan(); renderPremium();
+};
+$('lockGo').onclick = ()=> tryUnlock();
+$('lockEmail').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
+// Ссылка внизу переключает два способа входа и всегда называет тот, куда ведёт:
+// «Войти по почте», когда открыт отпечаток, и наоборот.
+$('lockMail').onclick = ()=>{
+  lockMode = lockMode === 'mail' ? 'bio' : 'mail';
+  const mail = lockMode === 'mail';
+  setShown('lockMailBox', mail);
+  $('lockMsg').textContent = mail
+    ? 'Введи почту, к которой привязан аккаунт.'
+    : 'Приложи палец или посмотри на камеру — и продолжим.';
+  $('lockGo').textContent = mail ? 'Войти' : 'Разблокировать';
+  $('lockMail').textContent = mail ? 'Вернуться к отпечатку' : 'Войти по почте';
+  if(mail) $('lockEmail').focus();
+};
 
 $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
 $('importProgFile').onchange = async e => {
@@ -12425,6 +12879,7 @@ $('obLater').onclick = ()=> leaveOnboarding(false);
 // пара уточнений
 $('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
 $('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
+$('whoBirth').oninput = ()=> whoSyncForm();
 $('whoSave').onclick = ()=> whoFinish(true);
 $('whoSkip').onclick = ()=> whoFinish(false);
 $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
@@ -12447,10 +12902,8 @@ $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
-// пол, выбранный руками, больше не считается подставленным по умолчанию —
-// и попап «пара уточнений» об этом человека уже не спросит
-$('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; uDraft.genderSet = true; syncUserForm(); };
-$('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; uDraft.genderSet = true; syncUserForm(); };
+$('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
+$('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
 // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
 $('uePhotoBtn').onclick = e => {
   e.stopPropagation();
@@ -13320,6 +13773,16 @@ try{
 }catch(e){}
 
 (async ()=>{
+  // Замок обязан появиться раньше, чем под ним что-то отрисуется, а общее чтение
+  // аккаунта асинхронное. Поэтому признак замка снимаем синхронно, до первого await.
+  try{
+    const raw = localStorage.getItem('account');
+    if(raw && JSON.parse(raw).biometry) $('lockModal').classList.add('open');
+  }catch(e){}
+  // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
+  await loadAccount();
+  bioOK = await bioSupported();
+  if(lockNeeded()) openLock();
   // пользователи: миграция со старой схемы профилей f/m
   try{ users = JSON.parse(await kvGet('users')) || []; }catch(e){ users = []; }
   if(!users.length){
