@@ -1420,7 +1420,6 @@
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
-  .card-block .sched-block,
   .card-block .vol-field,
   .card-block .mc-charts{display:flex;flex-direction:column;gap:16px}
   /* поле — тесная связка: подпись, контрол, чипы, подсказка */
@@ -1555,8 +1554,10 @@
   .prog-menu-wrap .ctx-menu{top:44px;right:0}
   .imp-or{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}
   .imp-or::before,.imp-or::after{content:'';flex:1;height:1px;background:var(--line)}
-  .sched-block{display:flex;flex-direction:column}
-  .sched-mode{order:1;margin-bottom:14px}
+  /* order:1 здесь больше не нужен и вреден: карточка сама флекс-колонка, и правило
+     уводило переключатель режима в самый низ, под поля, которыми он управляет.
+     Обёртки .sched-block тоже не осталось — порядок задаёт разметка. */
+  .sched-mode{display:flex;flex-direction:column;gap:8px}
   .st-note{font-family:var(--font-text);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
   /* в карточке ритм задаёт gap, а верхняя линия рисовала бы вторую границу под заголовком */
@@ -3221,35 +3222,37 @@
     </div>
     </div>
 
+    <!-- Расписание разложено по принадлежности, а не по темам «когда» и «сколько».
+         Раньше круги и отдых между кругами жили отдельной карточкой, хотя относятся
+         к выбранному варианту ровно так же, как его дни: человек переключал вариант
+         в одной карточке, а правил его круги в другой и не понимал, что связано.
+         Теперь сверху — общее для всей программы, ниже — карточка одного варианта,
+         и переключатель вариантов стоит в её заголовке: всё под ним про него. -->
     <div class="card-block">
     <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
-    <div class="sched-block">
-      <div class="sched-mode hidden" id="schedModeRow">
-        <div class="hf-seg" id="schedSeg">
-          <button type="button" data-mode="days">По дням недели</button>
-          <button type="button" data-mode="rot">По очереди</button>
-        </div>
-        <p class="field-hint" id="schedHint"></p>
+    <div class="sched-mode hidden" id="schedModeRow">
+      <div class="hf-seg" id="schedSeg">
+        <button type="button" data-mode="days">По дням недели</button>
+        <button type="button" data-mode="rot">По очереди</button>
       </div>
-
-      <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
-        <p class="field-hint" id="bDaysHint"></p>
-      </div>
-      <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
-        <p class="field-hint">Если заданы время и дни — напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
-      </div>
-
-      <div class="field" id="variantsField">
-        <label id="variantsLabel">Варианты тренировки</label>
-        <div class="plan-tabs" id="planTabs"></div>
-        <p class="field-hint" id="variantsHint"></p>
-      </div>
+      <p class="field-hint" id="schedHint"></p>
     </div>
-
+    <div class="field hidden" id="bDaysFieldTop"><label>Дни тренировок</label><div class="days" id="bDaysTop"></div>
+      <p class="field-hint">Общее расписание программы: в эти дни напомним о тренировке.</p>
+    </div>
+    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
+      <p class="field-hint">Если заданы время и дни — напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
+    </div>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Круги и отдых</p><span class="cb-count" id="stVariantNote"></span></div>
+    <div class="cb-head"><p class="cb-title" id="variantsLabel">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
+    <div class="plan-tabs" id="planTabs"></div>
+    <p class="field-hint" id="variantsHint"></p>
+
+    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+      <p class="field-hint" id="bDaysHint"></p>
+    </div>
     <div class="row2">
       <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
@@ -10422,15 +10425,9 @@ function syncRotateUI(){
     ? 'Варианты идут по очереди: A, потом B, потом снова A. Дни ниже говорят только когда тренироваться — пропуск дня очередь не сбивает.'
     : 'У каждого варианта свои дни недели. В нужный день откроется именно он.';
 
-  // порядок блоков: при очереди сначала общие дни, потом варианты; иначе наоборот
-  $('bDaysField').style.order = rot ? '2' : '3';
-  $('variantsField').style.order = rot ? '3' : '2';
-
-  // подписи дней
-  $('bDaysLabel').textContent = rot ? 'Дни тренировок' : (many ? 'Дни этого варианта' : 'Дни тренировок');
-  $('bDaysHint').textContent = rot
-    ? 'Общее расписание программы: в эти дни напомним о тренировке.'
-    : 'В эти дни программа появится в блоке «План на сегодня» на вкладке «Сегодня».';
+  // подписи дней варианта (общие дни программы подписаны в разметке: они не меняются)
+  $('bDaysLabel').textContent = many ? 'Дни этого варианта' : 'Дни тренировок';
+  $('bDaysHint').textContent = 'В эти дни программа появится в блоке «План на сегодня» на вкладке «Сегодня».';
 
   // подписи вариантов
   $('variantsLabel').textContent = rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки';
@@ -10608,9 +10605,13 @@ function syncVolHint(){
 }
 
 function renderDays(){
-  const box = $('bDays'); box.innerHTML='';
   const rotOn = !!draft.rotate && (draft.plans || []).length > 1;
-  // при ротации редактируем общие дни программы, иначе — дни текущего варианта
+  // При очереди дни принадлежат программе целиком — им место в верхней карточке,
+  // рядом с режимом и общим временем. Иначе дни принадлежат варианту и стоят в его
+  // карточке, над кругами и отдыхом того же варианта.
+  setShown('bDaysFieldTop', rotOn);
+  setShown('bDaysField', !rotOn);
+  const box = $(rotOn ? 'bDaysTop' : 'bDays'); box.innerHTML='';
   const owner = rotOn ? draft : curPlan();
   if(!Array.isArray(owner.days)) owner.days = [];
   DAYS.forEach(d=>{
