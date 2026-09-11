@@ -1903,12 +1903,21 @@
   /* ---- знакомство ---- */
   .ob-title{font-size:clamp(26px,7.4vw,32px);line-height:1.08;margin:0 0 12px}
   .ob-lead{color:var(--muted);font-size:var(--fs-md);line-height:1.55;margin:0 0 18px}
-  #obHello .ob-lead{margin-bottom:22px}
-  #obHello .medal{
-    width:88px;height:88px;margin:6px auto 14px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);
+  /* внутри знакомства отступы держит gap колонки, собственные поля только мешают */
+  #obHello .ob-title,#obHello .ob-lead{margin:0}
+  #obHello .ob-title{text-wrap:balance}
+  /* Один вертикальный ритм на весь экран и один край у текста: раньше заголовок с
+     абзацем стояли по центру, предупреждение — по левому краю, а ссылки снова по
+     центру, и глаз метался. Теперь по центру только знак, всё остальное — от левого
+     края, одной колонкой. */
+  #obHello{display:flex;flex-direction:column;gap:var(--sp-4);text-align:left}
+  .ob-mark{
+    align-self:center;font-family:var(--font-display);font-weight:700;
+    font-size:clamp(22px,6vw,26px);letter-spacing:.14em;color:var(--ink);
+    margin-bottom:var(--sp-2);
   }
+  .ob-mark i{font-style:normal;color:var(--accent-ink)}
+  .ob-actions{display:flex;flex-direction:column;gap:10px;margin-top:var(--sp-2)}
 
   /* ---- заголовок карточки со счётчиком ---- */
   .cb-count{
@@ -1997,8 +2006,10 @@
   /* последний шаг знакомства выровнен по центру — но абзац про здоровье так
      читается плохо, ему нужен обычный левый край */
   .ob-health{text-align:left;margin-top:18px}
+  #obHello .ob-health{margin:0}
   /* сноска о правилах на первом шаге знакомства */
   .ob-legal{font-size:12.5px;line-height:1.5;color:var(--muted);text-align:center;margin:14px 0 0}
+  #obHello .ob-legal{margin:var(--sp-2) 0 0}
   .ob-legal-link{
     display:block;width:100%;min-height:44px;background:none;border:none;cursor:pointer;
     color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px;
@@ -3489,20 +3500,27 @@
            форму, и часть людей уходила прямо здесь. Теперь профиль заводится сам
            («Мой профиль», дальше по номерам), а пол и дату рождения спрашиваем позже
            и ровно там, где без них не обойтись: перед составлением тренировки. -->
-      <div id="obHello" style="text-align:center">
-        <div class="medal" data-icon="sparkle"></div>
-        <h2 class="ob-title">Привет!</h2>
-        <p class="ob-lead">Приложение ведёт тренировку за тебя: считает подходы и отдых, подсказывает голосом и помнит, на каком упражнении прервалась тренировка. Универсальная разминка на 10 минут уже в списке — с неё удобно начать прямо сейчас. Свою программу соберёшь потом за пару минут.</p>
+      <!-- Первый экран человек не читает, а окидывает взглядом. Поэтому здесь ровно
+           три вещи: чей это экран, что приложение делает, и с чего начать.
+           Вместо декоративной звезды — название продукта: на первом экране оно
+           единственное, что обязано быть сказано о себе.
+           Ссылка на правила одна: «Здоровье и безопасность» вела на ту же страницу,
+           что и «Данные и правила», только к другому разделу. -->
+      <div id="obHello">
+        <div class="ob-mark">FIT<i>/</i>TIMER</div>
+        <h2 class="ob-title">Приложение ведёт тренировку</h2>
+        <p class="ob-lead">Считает подходы и отдых, подсказывает голосом и помнит место, если пришлось прерваться. Разминка на 10 минут уже внутри.</p>
         <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
              стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
         <div class="note ob-health">
           <span class="n-ico" data-icon="heart"></span>
-          <span>Приложение — таймер, а не тренер и не врач. Если ты беременна, есть болезни сердца, травмы спины или коленей либо большой перерыв в занятиях — сначала посоветуйся с врачом. Заболело или закружилась голова — останови тренировку.</span>
+          <span>Это таймер, а не тренер и не врач. Беременность, сердце, травмы спины или коленей, долгий перерыв — сначала к врачу. Стало плохо — остановись.</span>
         </div>
-        <button type="button" class="ob-legal-link" id="obLegal3">Здоровье и безопасность</button>
-        <button class="btn-primary" id="obStart">Начать пользоваться</button>
-        <button class="btn-back" id="obLogin">Войти в аккаунт</button>
-        <p class="ob-legal">Нажимая любую из кнопок, ты принимаешь правила приложения и соглашаешься с тем, как оно обращается с данными.</p>
+        <div class="ob-actions">
+          <button class="btn-primary" id="obStart">Начать</button>
+          <button type="button" class="btn-secondary" id="obLogin">Войти в аккаунт</button>
+        </div>
+        <p class="ob-legal">Нажимая любую кнопку, ты принимаешь правила приложения.</p>
         <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
       </div>
     </div>
@@ -3816,22 +3834,33 @@
          сломано и регистрироваться не нужно — данные лежат на его телефоне, а аккаунт
          появляется вместе с подпиской. Раньше карточка называлась «Данные аккаунта»
          и показывала «Войти» и «Удалить аккаунт» человеку, у которого аккаунта нет. -->
+    <!-- Тариф — своя карточка. Раньше он был первой строкой «Аккаунта», и получалось,
+         что в одной карточке идут подряд четыре разговора: тариф, объяснение про
+         аккаунт, вход и удаление всех данных. Читалось это как склад несвязанных
+         кусков, а не как один блок. -->
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
-
+      <div class="cb-head"><p class="cb-title">Тариф</p></div>
       <button type="button" class="pref-row row-link" id="btnPlanCard">
         <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
         <span class="nr-chev" data-icon="chevR"></span>
       </button>
+    </div>
 
-      <!-- аккаунта нет -->
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
+
+      <!-- аккаунта нет: одна мысль обычным абзацем и один способ действия строкой.
+           Рамка-«заметка» вокруг объяснения делала из него отдельный объект, а
+           широкая кнопка «Войти» звала сильнее, чем того стоит вход для человека,
+           который аккаунт никогда не заводил. -->
       <div class="stack hidden" id="accNone">
-        <div class="note">
-          <span class="n-ico" data-icon="shield"></span>
-          <span>Аккаунт заводить не нужно: программы, статистика, вес и фото лежат на этом телефоне и никуда не уходят. Аккаунт появляется вместе с подпиской — он нужен, чтобы всё это переезжало на новый телефон и возвращалось после переустановки.</span>
+        <p class="field-hint" id="accNoneText">Заводить не нужно: программы, статистика, вес и фото лежат на этом телефоне. Аккаунт появляется вместе с подпиской — чтобы всё это переехало на новый телефон.</p>
+        <div class="ways">
+          <button type="button" class="way-row" id="btnLoginRow">
+            <span class="wr-ico" data-icon="user"></span>
+            <span class="wr-txt"><b>Войти в аккаунт</b><small>Если он уже есть — с прошлого телефона или после переустановки</small></span>
+          </button>
         </div>
-        <button type="button" class="btn-secondary" id="btnLoginRow">Войти в аккаунт</button>
-        <p class="field-hint" style="text-align:center">Если аккаунт уже есть — с прошлого телефона или после переустановки.</p>
       </div>
 
       <!-- аккаунт есть -->
@@ -3839,10 +3868,13 @@
       <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
+    </div>
 
-      <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
-           Предупреждение и кнопка обведены вместе: это одно действие, а не строка
-           настроек по соседству с остальными. -->
+    <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
+         Отдельной карточкой: удаление всех данных — не часть разговора про аккаунт,
+         особенно когда аккаунта нет и удалять предлагается тренировки. -->
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="wipeCardTitle">Удаление данных</p></div>
       <div class="danger-zone">
         <p id="wipeNote"></p>
         <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
@@ -6533,6 +6565,7 @@ function renderPlan(){
   // который ничего не заводил.
   const has = !!(account && account.email);
   $('accCardTitle').textContent = has ? 'Данные аккаунта' : 'Аккаунт';
+  $('wipeCardTitle').textContent = has ? 'Удаление аккаунта' : 'Удаление данных';
   setShown('accNone', !has);
   setShown('rowEmail', has);
   setShown('btnSignOut', has);
@@ -13656,7 +13689,6 @@ $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
 $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
-$('obLegal3').onclick = ()=> openLegal('health',  ()=> show('scrOnboard'));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
