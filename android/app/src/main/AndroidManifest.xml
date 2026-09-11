@@ -27,16 +27,19 @@
       <meta-data
           android:name="android.support.customtabs.trusted.DEFAULT_URL"
           android:value="${defaultUrl}"/>
-      <!-- цвета системных полос: те же, что у темы приложения -->
+      <!-- Цвета системных полос. appBackground разведён по values/values-night,
+           поэтому верхняя полоса и splash подхватывают тему системы, а не один
+           зашитый тёмный цвет. Нижняя полоса прозрачная: страница рисуется под
+           неё (viewport-fit=cover), и цвет там — фон самого приложения. -->
       <meta-data
           android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-          android:resource="@color/colorPrimary"/>
+          android:resource="@color/appBackground"/>
       <meta-data
           android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-          android:resource="@color/colorPrimary"/>
+          android:resource="@color/systemNavBar"/>
       <meta-data
           android:name="androidx.browser.trusted.SPLASH_IMAGE_COLOR"
-          android:resource="@color/colorPrimary"/>
+          android:resource="@color/appBackground"/>
       <meta-data
           android:name="androidx.browser.trusted.FILE_PROVIDER_AUTHORITY"
           android:value="${applicationId}.fileprovider"/>

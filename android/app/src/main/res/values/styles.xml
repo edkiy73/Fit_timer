@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <style name="Theme.App" parent="android:Theme.Material.NoActionBar">
-    <item name="android:windowBackground">@color/colorPrimary</item>
-    <item name="android:statusBarColor">@color/colorPrimary</item>
-    <item name="android:navigationBarColor">@color/colorPrimary</item>
+    <!-- Фон окна и полоса статуса берут цвет темы: светлый по умолчанию, тёмный
+         в values-night. Это то, что видно на splash-экране до первой отрисовки
+         страницы — дальше верхнюю полосу перекрашивает сама страница через
+         meta[name=theme-color]. -->
+    <item name="android:windowBackground">@color/appBackground</item>
+    <item name="android:statusBarColor">@color/appBackground</item>
+    <!-- Нижняя полоса прозрачная: под ней видно фон самого приложения -->
+    <item name="android:navigationBarColor">@color/systemNavBar</item>
+    <!-- Значки системных полос: тёмные на светлом, светлые на тёмном.
+         windowLightNavigationBar появился в API 27, на более старых просто
+         игнорируется — отдельный набор ресурсов ради него заводить незачем. -->
+    <item name="android:windowLightStatusBar">@bool/lightSystemBars</item>
+    <item name="android:windowLightNavigationBar">@bool/lightSystemBars</item>
   </style>
 </resources>

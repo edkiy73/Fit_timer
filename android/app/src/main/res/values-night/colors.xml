@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Тёмная тема приложения: та же переменная bg, что в index.html -->
+  <color name="appBackground">#0C0916</color>
+  <color name="systemNavBar">#00000000</color>
+</resources>
