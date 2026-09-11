@@ -12595,31 +12595,58 @@ function playFinishFx(after){
    Полученное достижение больше не отбирают: раньше список считался каждый раз заново
    по test(), и «Серия» пропадала вместе с прерванной серией — человек буквально терял
    уже заработанное. Теперь всё собранное копится в stats.badges. */
+/* Оснований у достижения должно быть столько же, сколько самих достижений: из
+   прежних семнадцати тринадцать отличались только числом (шесть раз «сколько
+   тренировок», четыре «сколько подряд», три «сколько часов»), и в статистике это
+   читалось как одна плашка, размноженная множителем. Теперь двенадцать штук на
+   восьми разных основаниях: количество, суммарное время, закрытая неделя, серия,
+   длина одной тренировки, разнообразие программ, возвращение после перерыва и
+   взятый потолок прогрессии.
+   Формулировки не привязаны к полу: приложением пользуются и женщины, и мужчины. */
 const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
-  {id: 't5',    ico: 'star',     name: 'Разгон',              desc: '5 тренировок',                       test: () => (stats.count || 0) >= 5},
-  {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
-  {id: 't25',   ico: 'target',   name: 'Двадцать пять',       desc: '25 тренировок',                      test: () => (stats.count || 0) >= 25},
-  {id: 't50',   ico: 'medal',    name: 'Полсотни',            desc: '50 тренировок',                      test: () => (stats.count || 0) >= 50},
-  {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
-  {id: 'h10',   ico: 'chart',    name: 'Десять часов',        desc: '10 часов тренировок в сумме',        test: () => (stats.totalSec || 0) >= 36000},
-  {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
-  {id: 's3',    ico: 'flame',    name: 'Серия',               desc: '3 тренировки подряд по плану',       test: () => calcStreak() >= 3},
-  {id: 's7',    ico: 'rocket',   name: 'Неделя силы',         desc: '7 подряд по плану',                  test: () => calcStreak() >= 7},
-  {id: 's14',   ico: 'bolt',     name: 'Две недели',          desc: '14 подряд по плану',                 test: () => calcStreak() >= 14},
-  {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 подряд по плану',                 test: () => calcStreak() >= 30},
+  {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
   {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
-  {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
   {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => (stats.history || []).some(h => (h.sec || 0) >= 2700)},
-  {id: 'span',  ico: 'sprout',   name: 'Месяц в деле',        desc: 'Между первой и последней тренировкой месяц', test: () => {
-    const ds = (stats.history || []).map(h => h.d).sort();
-    return ds.length > 1 && (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 >= 30;
-  }}
+  {id: 's7',    ico: 'flame',    name: 'Серия',               desc: '7 тренировок подряд по плану',       test: () => calcStreak() >= 7},
+  {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
+  // Возвращение после перерыва — то, за что стоит хвалить сильнее всего: бросить
+  // проще, чем начать заново. Считаем разрыв между соседними тренировками: если он
+  // был две недели и после него есть ещё одна — человек вернулся.
+  {id: 'back',  ico: 'rocket',   name: 'Возвращение',         desc: 'Снова в деле после перерыва в две недели', test: () => {
+    const ds = [...new Set((stats.history || []).map(h => h.d).filter(Boolean))].sort();
+    for(let i = 1; i < ds.length; i++){
+      if((new Date(ds[i]) - new Date(ds[i - 1])) / 86400000 >= 14) return true;
+    }
+    return false;
+  }},
+  // Взятый потолок — единственное достижение про саму нагрузку, а не про регулярность.
+  // Ровно та механика, которой приложение отличается от соседей по полке.
+  {id: 'heavy', ico: 'bolt',     name: 'Тяжелее',             desc: 'Упражнение доросло до потолка прогрессии', test: () => {
+    try{
+      return (customPrograms || []).some(p =>
+        normPlans(p).some(pl => (pl.exercises || []).some(ex => !ex.warmup && progAtCeiling(p.id, ex, p))));
+    }catch(e){ return false; }
+  }},
+  {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
+  {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 тренировок подряд по плану',      test: () => calcStreak() >= 30},
+  {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100}
 ];
+// набор достижений менялся — собранное чистим от исчезнувших, иначе счётчик
+// «N из M» показывал бы больше собранного, чем достижений вообще существует
+function pruneBadges(){
+  if(!Array.isArray(stats.badges)) return false;
+  const live = new Set(BADGES.map(b => b.id));
+  const kept = stats.badges.filter(id => live.has(id));
+  if(kept.length === stats.badges.length) return false;
+  stats.badges = kept;
+  return true;
+}
 // собранное копится и не отбирается обратно; возвращает список только что полученных
 function earnBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
+  pruneBadges();
   const fresh = BADGES.filter(b => !stats.badges.includes(b.id) && b.test()).map(b => b.id);
   if(fresh.length) stats.badges = stats.badges.concat(fresh);
   return fresh;
