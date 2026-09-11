@@ -1938,19 +1938,52 @@
   .ob-lead{color:var(--muted);font-size:var(--fs-md);line-height:1.55;margin:0 0 18px}
   /* внутри знакомства отступы держит gap колонки, собственные поля только мешают */
   #obHello .ob-title,#obHello .ob-lead{margin:0}
-  #obHello .ob-title{text-wrap:balance}
-  /* Один вертикальный ритм на весь экран и один край у текста: раньше заголовок с
-     абзацем стояли по центру, предупреждение — по левому краю, а ссылки снова по
-     центру, и глаз метался. Теперь по центру только знак, всё остальное — от левого
-     края, одной колонкой. */
-  #obHello{display:flex;flex-direction:column;gap:var(--sp-4);text-align:left}
+  #obHello .ob-title{text-wrap:balance;font-size:clamp(25px,7.2vw,32px);letter-spacing:-.01em}
+  #obHello .ob-lead{max-width:34ch}
+  /* Шапка целиком по центру — знак, заголовок и подзаголовок одной группой.
+     Раньше знак стоял по центру, а заголовок с абзацем начинались от левого края:
+     под центрованным знаком это читалось как два несвязанных куска. */
+  /* Экран обязан помещаться целиком: предупреждение о здоровье — обязательный текст,
+     и человек должен видеть его ДО того, как нажмёт «Начать», а не после прокрутки.
+     Поэтому отступы и кегли здесь подобраны под высоту, а не «на глаз». */
+  #obHello{display:flex;flex-direction:column;gap:var(--sp-4);flex:1}
+  .ob-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sp-2)}
   .ob-mark{
-    align-self:center;font-family:var(--font-display);font-weight:700;
+    font-family:var(--font-display);font-weight:700;
     font-size:clamp(22px,6vw,26px);letter-spacing:.14em;color:var(--ink);
-    margin-bottom:var(--sp-2);
   }
   .ob-mark i{font-style:normal;color:var(--accent-ink)}
-  .ob-actions{display:flex;flex-direction:column;gap:10px;margin-top:var(--sp-2)}
+
+  /* Сетка возможностей: две колонки по три. Плитка — не карточка: заливка без
+     рамки, иначе шесть обведённых прямоугольников спорят друг с другом и с
+     кнопками внизу. */
+  .ob-grid{
+    list-style:none;margin:0;padding:0;
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  }
+  .ob-grid li{
+    display:flex;flex-direction:column;gap:4px;min-width:0;
+    padding:11px 12px;border-radius:var(--r-md);background:var(--bg-2);
+  }
+  .obg-ico{
+    width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .obg-ico svg{width:15px;height:15px}
+  .ob-grid b{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.25}
+  .ob-grid small{font-size:11.5px;line-height:1.35;color:var(--muted)}
+  @media (max-width:340px){ .ob-grid{grid-template-columns:1fr} }
+
+  /* Панель действий прилипает к нижнему краю: ради кнопок сюда и пришли, и видеть
+     их человек должен сразу, а не после прокрутки. Заливка снизу непрозрачная,
+     чтобы содержимое не просвечивало из-под кнопок. */
+  .ob-actions{
+    position:sticky;bottom:0;z-index:2;
+    display:flex;flex-direction:column;gap:10px;
+    margin-top:var(--sp-3);
+    padding:var(--sp-3) 0 calc(4px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,var(--bg) 76%,transparent);
+  }
 
   /* ---- заголовок карточки со счётчиком ---- */
   .cb-count{
@@ -2043,6 +2076,7 @@
   /* сноска о правилах на первом шаге знакомства */
   .ob-legal{font-size:12.5px;line-height:1.5;color:var(--muted);text-align:center;margin:14px 0 0}
   #obHello .ob-legal{margin:var(--sp-2) 0 0}
+  #obHello .ob-legal-link{min-height:40px;margin-top:calc(var(--sp-3) * -1)}
   .ob-legal-link{
     display:block;width:100%;min-height:44px;background:none;border:none;cursor:pointer;
     color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px;
@@ -3561,35 +3595,49 @@
 
   <!-- Первый запуск -->
   <section class="screen" id="scrOnboard">
-    <div class="start-wrap">
-      <!-- Раньше знакомство начиналось с анкеты: имя, пол, дата рождения, цель — три
-           экрана до первой тренировки. Человек приходил включить таймер, а получал
-           форму, и часть людей уходила прямо здесь. Теперь профиль заводится сам
-           («Мой профиль», дальше по номерам), а пол и дату рождения спрашиваем позже
-           и ровно там, где без них не обойтись: перед составлением тренировки. -->
-      <!-- Первый экран человек не читает, а окидывает взглядом. Поэтому здесь ровно
-           три вещи: чей это экран, что приложение делает, и с чего начать.
-           Вместо декоративной звезды — название продукта: на первом экране оно
-           единственное, что обязано быть сказано о себе.
-           Ссылка на правила одна: «Здоровье и безопасность» вела на ту же страницу,
-           что и «Данные и правила», только к другому разделу. -->
-      <div id="obHello">
+    <!-- Раньше знакомство начиналось с анкеты: имя, пол, дата рождения, цель — три
+         экрана до первой тренировки. Человек приходил тренироваться, а получал форму,
+         и часть людей уходила прямо здесь. Теперь профиль заводится сам, а пол и дату
+         рождения спрашиваем позже и ровно там, где без них не обойтись.
+         Экран собран так: наверху знак и обещание — по центру, потому что под
+         центрованным знаком текст с левого края читался как чужой кусок; ниже сетка
+         возможностей, которую окидывают взглядом, а не читают; кнопки закреплены у
+         нижнего края и видны сразу, не дожидаясь прокрутки.
+         Ссылка на правила одна: «Здоровье и безопасность» вела на ту же страницу,
+         что и «Данные и правила», просто к другому разделу. -->
+    <div id="obHello">
+      <div class="ob-hero">
         <div class="ob-mark">FIT<i>/</i>TIMER</div>
-        <h2 class="ob-title">Приложение ведёт тренировку</h2>
-        <p class="ob-lead">Считает подходы и отдых, подсказывает голосом и помнит место, если пришлось прерваться. Разминка на 10 минут уже внутри.</p>
-        <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
-             стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
-        <div class="note ob-health">
-          <span class="n-ico" data-icon="heart"></span>
-          <span>Это таймер, а не тренер и не врач. Беременность, сердце, травмы спины или коленей, долгий перерыв — сначала к врачу. Стало плохо — остановись.</span>
-        </div>
-        <div class="ob-actions">
-          <button class="btn-primary" id="obStart">Начать</button>
-          <button type="button" class="btn-secondary" id="obLogin">Войти в аккаунт</button>
-        </div>
-        <p class="ob-legal">Нажимая любую кнопку, ты принимаешь правила приложения.</p>
-        <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
+        <h2 class="ob-title">Тренируйся<br>без ограничений</h2>
+        <p class="ob-lead">Своя программа, своя нагрузка, свой темп. Всё на телефоне.</p>
       </div>
+
+      <!-- Шесть плиток вместо абзаца: что умеет приложение, видно за один взгляд.
+           Выбраны не все функции, а те, которых у соседей по полке нет. -->
+      <ul class="ob-grid">
+        <li><span class="obg-ico" data-icon="chart"></span><b>Нагрузка растёт сама</b><small>Вес и повторы прибавляются по мере занятий</small></li>
+        <li><span class="obg-ico" data-icon="grip"></span><b>Любая программа</b><small>Круги, подходы, время — собирается под себя</small></li>
+        <li><span class="obg-ico" data-icon="book"></span><b>Готовые программы</b><small>Каталог от тренеров, добавляется в один тап</small></li>
+        <li><span class="obg-ico" data-icon="sparkle"></span><b>Соберёт нейросеть</b><small>По описанию, по видео или из твоей программы</small></li>
+        <li><span class="obg-ico" data-icon="mic"></span><b>Без рук</b><small>Голос, хлопок или кнопка на гарнитуре</small></li>
+        <li><span class="obg-ico" data-icon="shield"></span><b>Работает без сети</b><small>Данные остаются на телефоне</small></li>
+      </ul>
+
+      <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
+           стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
+      <div class="note ob-health">
+        <span class="n-ico" data-icon="heart"></span>
+        <span>Не тренер и не врач. Беременность, сердце, травмы, долгий перерыв — сначала к врачу. Стало плохо — остановись.</span>
+      </div>
+      <button type="button" class="ob-legal-link" id="obLegal1">Данные и правила</button>
+    </div>
+
+    <!-- Кнопки закреплены у нижнего края: это единственное, ради чего сюда пришли,
+         и они не должны зависеть от того, докрутил человек экран или нет. -->
+    <div class="ob-actions">
+      <button class="btn-primary" id="obStart">Начать</button>
+      <button type="button" class="btn-secondary" id="obLogin">Войти в аккаунт</button>
+      <p class="ob-legal">Нажимая любую кнопку, ты принимаешь правила приложения.</p>
     </div>
   </section>
 
