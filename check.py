@@ -233,7 +233,11 @@ def check_screens(js, markup):
 # -------------------------------------------------------------- оформление
 def check_css(css, markup, js):
     declared = set()
-    for m in re.finditer(r'\.([a-zA-Z][\w-]*)', re.sub(r'/\*.*?\*/', '', css, flags=re.S)):
+    # Вырезаем комментарии И содержимое url(...): внутри лежат svg-данные с адресом
+    # www.w3.org, и «.org» с «.w3» попадали в список классов как мёртвые.
+    clean_css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    clean_css = re.sub(r'url\([^)]*\)', 'url()', clean_css)
+    for m in re.finditer(r'\.([a-zA-Z][\w-]*)', clean_css):
         declared.add(m.group(1))
     # Класс считается живым, если слово встречается где угодно: в разметке, в
     # шаблонной строке, в classList.toggle или просто отдельным литералом. Более

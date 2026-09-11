@@ -107,8 +107,8 @@
     --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.42;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn,.btn-mini{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
-  button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active,.btn-mini:active{transform:scale(.96)}
+  button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
+  button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active{transform:scale(.96)}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
   /* Горизонтальной прокрутки в приложении не бывает никогда: экран телефона —
      единственный сценарий, и любой вылезший за край декоративный слой уводит
@@ -132,7 +132,6 @@
   body.light .actions{background:linear-gradient(to top, var(--bg) 72%, rgba(250,245,241,0))}
   body.light.phase-rest .actions{background:linear-gradient(to top, var(--bg-rest) 72%, rgba(233,243,238,0))}
   body.light .mc-cover{background:var(--surface);color:var(--accent-ink)}
-  body.light .mc-cover.demo{background:var(--accent-soft);color:var(--accent-ink)}
   body.light .nu-media{background:var(--plate-dark);color:#CBBEE6}
   body.light .nu-media.light{background:var(--plate-light)}
   /* светлые линии пользовательских SVG на белой карточке — подкладываем тёмный фон.
@@ -154,7 +153,7 @@
   ::-webkit-scrollbar-thumb{background:var(--sb-thumb,#3B2F58);border-radius:99px}
   ::-webkit-scrollbar-corner{background:transparent}
 
-  h1,h2,h3,.disp{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em}
+  h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em}
 
   /* ---------- top bar ---------- */
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;position:relative;z-index:50}
@@ -169,9 +168,6 @@
   .top-tools .icon-btn.on{display:flex}
   .top-tools .icon-btn svg{width:17px;height:17px}
   .top-tools{display:flex;align-items:center;gap:8px}
-  .icon-btn.btn-pause{display:none;width:34px;height:34px;border-radius:10px;font-size:13px;padding:0;line-height:1}
-  .icon-btn.btn-pause.on{display:block}
-  .icon-btn.btn-pause.paused{border-color:var(--accent-line);color:var(--accent-ink)}
   .icon-btn.btn-mic{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1;filter:grayscale(1);opacity:.65}
   .icon-btn.btn-mic.on{display:block}
   .icon-btn.btn-mic.listening{filter:none;opacity:1;border-color:var(--accent-line);animation:micPulse 1.6s infinite}
@@ -317,17 +313,9 @@
   .choice.add-row{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
   .choice.add-row b{margin:0}
   .choice.add-row svg{width:18px;height:18px;color:var(--muted);flex:none}
-  .total-stat{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:14px 16px;margin-bottom:20px;
-  }
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .field-hint:empty{display:none}
-  .stat-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
-  .stat-line b{color:var(--ink)}
-  .stat-reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:7px 14px;font-family:var(--font-text);font-size:13px;cursor:pointer}
 
   /* ---------- конструктор ---------- */
   .builder h2{margin:18px 0 16px}
@@ -378,10 +366,6 @@
   body:not(.light) .field input[type=date],body:not(.light) .field input[type=time]{color-scheme:dark}
   .row2{display:flex;gap:10px;margin:0 0 16px;align-items:flex-end}
   .row2 .field{flex:1;min-width:0}
-  .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
-  .ex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .ex-head .t{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink)}
-  .ex-head button{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text)}
   .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
   .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
@@ -401,7 +385,6 @@
   .tray{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
   .tray-item{flex:none;width:76px;height:76px;border-radius:12px;overflow:hidden;border:2px solid var(--line);background:var(--card);position:relative;cursor:pointer}
   .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
-  .tray-item.sel{border-color:var(--accent-line)}
   .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;line-height:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .tray-item .ti-x svg{width:11px;height:11px;stroke-width:2.6}
   .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
@@ -468,7 +451,6 @@
   }
   .btn-primary:active{transform:scale(.98);box-shadow:none}
   .btn-primary:disabled{opacity:.5;box-shadow:none}
-  .btn-back{background:none;border:none;color:var(--muted);font-size:14px;padding:14px;cursor:pointer;width:100%;font-family:var(--font-text)}
 
   /* ---------- workout ---------- */
   .progress{margin:var(--sp-3) 0 var(--sp-1)}
@@ -651,10 +633,8 @@
   .illo img{width:100%;height:auto;max-height:min(26vh,210px);object-fit:cover;display:block}
   .illo > *{width:100%}
   .illo .userSvg{padding:12px}
-  .illo .stick{stroke:var(--ink);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
   .illo .prop{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
-  .illo .head{fill:var(--ink)}
   .yt-badge{
     position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;
     background:rgba(0,0,0,.62);color:#fff;
@@ -694,7 +674,6 @@
   }
   .mistakes svg{width:17px;height:17px;flex:none;margin-top:1px}
   .chips-wrap .day-chip{flex:0 0 auto;padding:9px 13px}
-  .fin-kcal{color:var(--muted);font-size:15px;margin-top:-6px}
   /* просмотр во весь экран: только снимок, дата и выход */
   /* фон непрозрачный и выше остальных попапов: сквозь полупрозрачный просвечивало
      сравнение со своей кнопкой «Закрыть», и на экране оказывалось две одинаковых */
@@ -1017,16 +996,12 @@
   body.light .nu-media:not(.light){background:var(--plate-dark)}
 
   /* ---------- кнопка темы ---------- */
-  .icon-btn.btn-theme{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1}
-  .icon-btn.btn-theme.on{display:block}
 
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
   .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  .load-block{margin:2px 0 14px}
   .load-row{display:flex;gap:6px}
   .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
-  .load-chip.prog{border-style:dashed}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
   .pref-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
   .prefs{margin-bottom:14px}
@@ -1047,7 +1022,6 @@
   .prep-sub{color:var(--muted);letter-spacing:.22em;text-transform:uppercase;font-family:var(--font-display);font-size:13px}
 
   /* ---------- трекер веса ---------- */
-  .weight-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:20px}
   .mc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .mc-now{display:flex;align-items:baseline;gap:8px;margin-top:4px;flex-wrap:wrap}
@@ -1062,8 +1036,6 @@
   .mc-charts{margin-top:18px;display:flex;flex-direction:column;gap:16px}
   .metric-graph{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px}
   .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
-  .mg-name{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);font-weight:500}
-  .mg-name i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .mg-delta{font-size:13px;font-weight:600;font-family:var(--font-display)}
   .mg-delta.down{color:var(--rest-ink)}
   .mg-delta.up{color:var(--accent-ink)}
@@ -1072,13 +1044,11 @@
   .mc-actions{display:flex;gap:10px;margin-top:16px}
   .mc-act{flex:1;padding:12px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
   .mc-act svg{width:16px;height:16px;color:var(--muted)}
-  .wc-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
   #weightNow{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:.02em}
   .w-delta{font-size:13px;color:var(--muted);margin-left:8px}
   .w-add{display:none;gap:8px;margin-top:12px}
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0}
-  .btn-mini{border:none;border-radius:12px;background:var(--work);color:var(--on-accent);font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
   /* Тихая кнопка второго плана: обычный текст на фоне карточки. Служебные действия
      («Проверить», «Диагностика») кричали заливкой акцентом громче, чем всё остальное
      на экране настроек, хотя нужны раз в жизни. */
@@ -1105,16 +1075,9 @@
   .key-actions{display:flex;gap:8px}
 
   /* ---------- оценка нагрузки на финише ---------- */
-  .fb-block{margin:4px 0 18px;text-align:left}
-  .fb-options{display:flex;flex-direction:column;gap:8px}
-  .fb-options button{width:100%;text-align:left;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:var(--font-text);font-size:14px;cursor:pointer}
-  .fb-options button.act{border-color:var(--accent-line);background:var(--work);color:var(--on-accent)}
 
   /* ---------- обучение ---------- */
   .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
-  .hero-help{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:0;margin-top:10px;display:block;text-align:left}
-  .st-row{display:flex;align-items:center;justify-content:space-between}
-  .st-row .icon-btn{width:38px;height:38px;font-size:18px;color:var(--accent-ink);border-color:var(--accent-line)}
   /* Свайп по затемнению прокручивал страницу под попапом — попап «висел» над едущим
      экраном. touch-action:none гасит жест на подложке, а карточка и её прокручиваемые
      части возвращают себе вертикальный жест. */
@@ -1293,12 +1256,10 @@
   /* дни недели остаются такими же квадратами, как числа под ними: с aspect-ratio:auto
      строка «Пн Вт Ср» была приплюснутой и не попадала в сетку */
   .cal-dow{font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-  .w-meta{color:var(--muted);font-size:13px;margin:6px 0 0}
   .w-add{display:none;flex-wrap:wrap;gap:10px}
   .w-add.on{display:flex}
   .wf{display:flex;flex-direction:column;gap:4px;flex:1 1 44%;min-width:0}
   .wf label{font-size:11px;color:var(--muted);font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase}
-  .w-add .btn-mini{flex:1 1 100%;height:46px}
   .mine-card{-webkit-touch-callout:none;user-select:none}
   .mine-card.dragging{z-index:25;position:relative}
   .mine-card.dragging .month-card{border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
@@ -1419,7 +1380,6 @@
   .card-block .vol-field,
   .card-block .mc-charts{display:flex;flex-direction:column;gap:16px}
   /* поле — тесная связка: подпись, контрол, чипы, подсказка */
-  .card-block .st-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
   /* заголовок с числом упражнений: в узком экране переносим числом на вторую строку */
   /* экран перед стартом: карточки, кнопка всегда снизу */
   .start-wrap .card-block h2{font-size:22px;margin:0}
@@ -1429,7 +1389,6 @@
   .start-wrap .card-block .num:empty{display:none}
   .start-wrap .prog-desc{background:none;border:none;padding:0;margin:0}
   .cb-head{display:flex;flex-direction:column;gap:4px}
-  .cb-head .st-note{font-family:var(--font-text);font-size:11.5px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
 
   /* круглая аватарка рядом с именем */
   /* навигационная строка внутри карточки — без своей рамки */
@@ -1452,10 +1411,6 @@
   .ava-row .ctx-menu{top:70px;right:0;left:auto}
 
   /* перечень голосовых команд */
-  .cmd-list{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--muted);line-height:1.45}
-  .cmd-list li{padding-left:14px;position:relative}
-  .cmd-list li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--work)}
-  .cmd-list b{color:var(--ink);font-weight:500}
 
   /* селект должен выглядеть как селект — со стрелкой */
 
@@ -1469,20 +1424,6 @@
   .pick-item small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
 
   /* рабочий вес прямо на тренировке — можно поправить, не выходя из упражнения */
-  .weight-badge{
-    display:flex;align-items:center;justify-content:center;gap:14px;margin:10px auto 0;
-    background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:8px 10px;width:max-content;
-  }
-  .weight-badge .wb-btn{
-    width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
-    background:var(--bg);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .weight-badge .wb-btn:active{background:var(--line)}
-  .weight-badge .wb-val{display:flex;align-items:baseline;gap:4px;min-width:74px;justify-content:center}
-  .weight-badge .wb-val b{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--accent-ink);line-height:1}
-  .weight-badge .wb-val small{font-size:12px;color:var(--muted)}
 
   /* корректировка веса после последнего подхода: не перекрывает экран и
      сама уезжает через несколько секунд, если не трогать */
@@ -1554,7 +1495,6 @@
      уводило переключатель режима в самый низ, под поля, которыми он управляет.
      Обёртки .sched-block тоже не осталось — порядок задаёт разметка. */
   .sched-mode{display:flex;flex-direction:column;gap:8px}
-  .st-note{font-family:var(--font-text);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
   .hf-block{padding:12px 0;border-top:1px solid var(--line)}
   /* в карточке ритм задаёт gap, а верхняя линия рисовала бы вторую границу под заголовком */
   .card-block .hf-block{padding:0;border-top:none}
@@ -1577,7 +1517,6 @@
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%23A99FC4' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat:no-repeat;background-position:right 10px center}
-  .fin-streak{color:var(--accent-ink);font-weight:500;font-size:15px;margin-top:-8px}
   /* достижения — нижняя секция карточки результата, а не отдельная плашка */
   .badge-row{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line)}
   .badge-row:empty{display:none}
@@ -1597,9 +1536,8 @@
   .badge.new .b-txt small{color:var(--accent-ink)}
   @keyframes badgePop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
   .cal-cell.done{cursor:pointer}
-  .icon-btn svg,.back-chip svg,.cal-nav svg,.stat-reset svg,.user-row .ue svg,.ctx-menu svg{width:17px;height:17px;vertical-align:-3px}
+  .icon-btn svg,.back-chip svg,.cal-nav svg,.user-row .ue svg,.ctx-menu svg{width:17px;height:17px;vertical-align:-3px}
   .back-chip,.cal-nav{display:flex;align-items:center;justify-content:center}
-  .st-row .icon-btn,.wc-top .icon-btn{display:flex;align-items:center;justify-content:center}
   .btn-resume svg{width:20px;height:20px}
   .ctx-menu svg{margin-right:8px;flex:none}
   /* ---------- приветствие на главной ---------- */
@@ -1607,7 +1545,6 @@
   /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)
      даже там, где перенос по пробелу был возможен */
   .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin:0;overflow-wrap:break-word}
-  .greet-name .dot{color:var(--accent-ink)}
   /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
      прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
   .greet-top{display:flex;align-items:center;gap:var(--sp-3)}
@@ -1827,7 +1764,6 @@
   .hero-action .ha-txt small{display:block;font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.9)}
   .hero-action .ha-go{flex:none;display:flex;color:rgba(255,255,255,.9)}
   .hero-action .ha-go svg{width:20px;height:20px}
-  .hero-action.busy,.ai-self.busy{opacity:.6;pointer-events:none}
   /* метка подписки прямо на кнопке: человек должен видеть, что это платное,
      ещё до нажатия, а не узнавать об этом из попапа */
   .ha-pro{
@@ -1996,7 +1932,6 @@
   .cb-head{display:flex;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
 
   /* ---- экраны без нижней панели действий: не резервируем под неё место ---- */
-  .screen.builder.no-actions{padding-bottom:var(--sp-4)}
 
   /* ---- «или» между двумя путями ---- */
   /* «Сделать в чате с ИИ» больше не раскрывашка: путь бесплатный и должен быть виден
@@ -2518,7 +2453,6 @@
   .cal-cell.today.done{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--accent);color:var(--on-accent)}
   /* строка «Пн Вт Ср» — такие же квадраты, только подпись мельче */
   .cal-dow{font-size:10px;opacity:.85}
-  .cal-hint{margin-top:10px;font-size:11.5px;line-height:1.4;color:var(--muted);text-align:center}
 
   /* ---- достижения ---- */
   .bdg-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -2648,7 +2582,7 @@
       <span class="pb-glow" aria-hidden="true"></span>
       <span class="pb-ico" data-icon="crown"></span>
       <span class="pb-txt">
-        <b id="pbTitle">Fit Timer Премиум</b>
+        <b>Fit Timer Премиум</b>
         <small id="pbSub">Тренировку соберёт ИИ — без ключей и настроек. И весь каталог программ от живых тренеров.</small>
       </span>
     </button>
@@ -2832,7 +2766,7 @@
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack" id="exeWaysBox">
+    <div class="stack">
       <div class="ways">
         <button type="button" class="way-row" id="exeCopy">
           <span class="wr-ico" data-icon="copy"></span>
@@ -2883,7 +2817,7 @@
       </button>
 
       <p class="ways-head">Нарисовать в чате с ИИ</p>
-    <div class="stack" id="imgWaysBox">
+    <div class="stack">
         <div class="note">
           <span class="n-ico" data-icon="chat"></span>
           <span>Приложение соберёт задание для чата, который умеет рисовать. Готовые картинки сохрани на телефон и загрузи кнопкой выше.</span>
@@ -3025,7 +2959,7 @@
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack" id="exaWaysBox">
+    <div class="stack">
       <div class="note">
         <span class="n-ico" data-icon="chat"></span>
         <span>Приложение подготовит задание. Передай его в чат, ответ вставь сюда.</span>
@@ -3090,7 +3024,7 @@
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack" id="ytWaysBox">
+    <div class="stack">
       <div class="note">
         <span class="n-ico" data-icon="alert"></span>
         <span>Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.</span>
@@ -3160,7 +3094,7 @@
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack" id="eaWaysBox">
+    <div class="stack">
       <div class="note">
         <span class="n-ico" data-icon="chat"></span>
         <span>Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.</span>
@@ -3414,7 +3348,7 @@
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack" id="aiWaysBox">
+    <div class="stack">
       <div class="note">
         <span class="n-ico" data-icon="chat"></span>
         <span>Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.</span>
@@ -3541,8 +3475,8 @@
           <div class="rc-sub">время тренировки</div>
         </div>
         <div class="rc-stats">
-          <div class="rc-stat" id="finKcalBox"><b id="finKcal">—</b><small>ккал</small></div>
-          <div class="rc-stat" id="finExBox"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
+          <div class="rc-stat"><b id="finKcal">—</b><small>ккал</small></div>
+          <div class="rc-stat"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
           <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord">подряд</small></div>
         </div>
         <div class="badge-row" id="badgeRow"></div>
@@ -4014,7 +3948,7 @@
       <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
       <p class="field-hint">Пока всё хранится на этом телефоне. Изменения уже учитываются: когда появится сервер, данные уедут туда сами.</p>
       <div class="sync-row">
-        <span class="sync-dot" id="syncDot"></span>
+        <span class="sync-dot"></span>
         <span class="sync-txt"><b id="syncState">Не подключена</b><small id="syncSub"></small></span>
       </div>
     </div>
@@ -4077,7 +4011,7 @@
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
 
     <!-- Профиль -->
-    <div class="ue-pane" id="uePaneMe">
+    <div class="ue-pane">
       <div class="card-block">
         <div class="ava-row">
           <div class="field">
@@ -4220,7 +4154,7 @@
         <div class="pm-scroll">
           <div class="pm-crown" data-icon="crown"></div>
           <h3 class="pm-title">Fit Timer Премиум</h3>
-          <p class="pm-lead" id="pmLead">Всё, что стоит денег каждый раз, — без ключей, настроек и ограничений.</p>
+          <p class="pm-lead">Всё, что стоит денег каждый раз, — без ключей, настроек и ограничений.</p>
           <!-- Список нарочно в одну строку на пункт: с описаниями он занимал полтора
                экрана и выталкивал цену за край. -->
           <ul class="pm-list pm-short">
@@ -4851,10 +4785,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M6 15H4.5A1.5 1.5 0 0 1 3 13.5V4.5A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V6"/>',
   chat: '<path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12Z"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2.5 4 3.5"/>',
-  key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3.5M15.5 12v2.5"/>',
-  mail: '<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m3.5 7 8.5 6 8.5-6"/>',
   fingerprint: '<path d="M3.5 12.5a8.5 8.5 0 0 1 17 0v1.5"/><path d="M6.5 12.5a5.5 5.5 0 0 1 11 0v3.5"/><path d="M9.5 12.5a2.5 2.5 0 0 1 5 0v5"/><path d="M12 12.5V20"/><path d="M6.4 17.6A7 7 0 0 1 5 20"/>',
-  link: '<path d="M10 13.5a4 4 0 0 0 5.7.3l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
   video: '<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="M16.5 10.5 22 7v10l-5.5-3.5Z"/>',
   target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
   // щит — раздел о данных; сердце — раздел о здоровье. Та же сетка 24×24, контур,
@@ -4871,12 +4802,10 @@ const ICONS = {
   trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.6a2 2 0 0 0 0 4H7M17 6h2.4a2 2 0 0 1 0 4H17"/><path d="M12 14v3M8.5 20.5h7M9.6 17.6h4.8l1 2.9H8.6l1-2.9Z"/>',
   rocket: '<path d="M12 2.7c2.9 2.2 4.4 5.4 4.4 9.2l-1.7 3.4H9.3L7.6 11.9c0-3.8 1.5-7 4.4-9.2Z"/><circle cx="12" cy="10" r="1.9"/><path d="M9.3 15.3 6.6 17c-.5.3-.8.9-.7 1.5l.4 2.4 3.3-1.6M14.7 15.3l2.7 1.7c.5.3.8.9.7 1.5l-.4 2.4-3.3-1.6"/>',
   gem: '<path d="M7.4 3.5h9.2l3.9 5.2L12 20.5 3.5 8.7l3.9-5.2Z"/><path d="M3.5 8.7h17M8.6 8.7 12 20.5l3.4-11.8M7.4 3.5l1.2 5.2M16.6 3.5l-1.2 5.2"/>',
-  star: '<path d="m12 3.2 2.7 5.6 6 .8-4.4 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.3 9.6l6-.8L12 3.2Z"/>',
   sprout: '<path d="M12 21v-7.4"/><path d="M12 13.6C12 10.5 9.6 8 6.4 8c0 3.1 2.5 5.6 5.6 5.6Z"/><path d="M12 12.4c0-3.1 2.5-5.6 5.6-5.6 0 3.1-2.5 5.6-5.6 5.6Z"/><path d="M8 21h8"/>',
   bolt: '<path d="M13.4 2.5 4.8 13.2h5.6l-.6 8.3 8.6-10.7h-5.6l.6-8.3Z"/>',
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
-  store: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1 11.2a2 2 0 0 1-2 1.8H7a2 2 0 0 1-2-1.8L4 8Z"/><path d="M8.5 11V6.5a3.5 3.5 0 0 1 7 0V11"/></svg>`,
   dumbbell: '<path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M7.5 12h9"/>'
 };
 function icon(name){
