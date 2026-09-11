@@ -70,13 +70,7 @@
     --sh-2:0 16px 40px rgba(0,0,0,.55);
     --sh-accent:0 10px 26px rgba(108,58,232,.42);
     --scrim:rgba(6,4,12,.62);
-    /* Заливка дока намеренно полупрозрачная: при .88 размытие за ней было почти
-       не видно, и «стекло» выглядело просто тёмной плашкой. */
-    --glass:rgba(23,17,38,.58);
-    --glass-rim:rgba(255,255,255,.34);    /* верхняя кромка ловит свет */
-    --glass-rim-lo:rgba(255,255,255,.06); /* нижняя уходит в тень */
-    --glass-gloss:rgba(255,255,255,.10);  /* блик по «толщине» стекла */
-    --glass-inner:rgba(0,0,0,.34);
+    --glass:rgba(23,17,38,.88);
     --bg-0:rgba(12,9,22,0);   /* тот же --bg с нулевой прозрачностью: без него
                                  градиент затухания даёт серую кромку */
 
@@ -252,8 +246,11 @@
   body.screen-work .actions{flex:none;position:static}
 
   /* ---------- menu ---------- */
+  /* По центру, а не по верху: обложка 60 px, а текста в карточке часто всего две
+     строки — название и «N упражнений · M кругов». Прижатый к верху текст оставлял
+     под собой пустоту и выглядел съехавшим. */
   .month-card{
-    display:flex;align-items:flex-start;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     padding:var(--sp-3);margin-bottom:var(--sp-3);color:var(--ink);
     box-shadow:var(--sh-1);
@@ -1004,11 +1001,7 @@
     --sh-2:0 16px 40px rgba(45,25,80,.16);
     --sh-accent:0 10px 26px rgba(92,46,214,.28);
     --scrim:rgba(30,18,58,.42);
-    --glass:rgba(255,255,255,.62);
-    --glass-rim:rgba(255,255,255,.85);
-    --glass-rim-lo:rgba(45,25,80,.10);
-    --glass-gloss:rgba(255,255,255,.55);
-    --glass-inner:rgba(45,25,80,.10);
+    --glass:rgba(255,255,255,.90);
     --bg-0:rgba(246,244,252,0);
     --dock-line:rgba(45,25,80,.10);
     --sh-dock:0 10px 28px rgba(45,25,80,.16), 0 2px 8px rgba(45,25,80,.08);
@@ -1096,11 +1089,11 @@
   /* Звук — два разных разговора, а не пять строк подряд: что говорит голос и что
      звенит сигналами. Раньше «Громкость» стояла между «Звуками» и «Не прерывать
      музыку», и по строчке было не понять, к чему она относится. */
-  .snd-group{
-    display:flex;flex-direction:column;gap:12px;
-    padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);
-    background:var(--bg-2);
-  }
+  /* Заливки у групп нет намеренно: --bg-2 темнее карточки, и два таких блока
+     внутри неё читались как дыры. Разделяет группы волосяная линия — этого хватает,
+     чтобы «Громкость» явно принадлежала «Звукам», а не висела сама по себе. */
+  .snd-group{display:flex;flex-direction:column;gap:12px}
+  .snd-group + .snd-group{padding-top:14px;border-top:1px solid var(--line)}
   .snd-label{
     margin:0;font-family:var(--font-display);font-weight:600;font-size:11px;
     letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
@@ -2257,15 +2250,11 @@
        прокручивается контент, поэтому нажатия она не перехватывает */
     pointer-events:none;
   }
-  /* Затухание закрывает ТОЛЬКО полосу под панелью, а не саму панель. Раньше
-     градиент шёл во всю высоту дока и заливал фоном то, что проезжает позади, —
-     стеклу было нечего преломлять, оно выглядело просто тёмной плашкой. Теперь
-     содержимое видно сквозь стекло, а под панелью строки по-прежнему не
-     обрываются резко. */
+  /* мягкое затухание страницы под доком: без него строки «въезжают» под панель
+     резко. Градиент статичный, ничего не перерисовывает. */
   .dock::before{
-    content:'';position:absolute;left:0;right:0;bottom:0;
-    height:calc(var(--sp-3) + env(safe-area-inset-bottom) + 14px);
-    background:linear-gradient(to top,var(--bg) 46%,var(--bg-0));
+    content:'';position:absolute;left:0;right:0;bottom:0;height:calc(100% + 18px);
+    background:linear-gradient(to top,var(--bg) 34%,var(--bg-0));
     pointer-events:none;
   }
   .dock-in{
@@ -2277,31 +2266,8 @@
     border-radius:20px;
     background:var(--glass);
     border:1px solid var(--dock-line);
-    /* Тень наружу + тонкая тень внутрь: вторая и читается как толщина стекла. */
-    box-shadow:var(--sh-dock), inset 0 0 14px var(--glass-inner);
-    -webkit-backdrop-filter:blur(22px) saturate(185%) brightness(1.06);
-    backdrop-filter:blur(22px) saturate(185%) brightness(1.06);
-  }
-  /* Фаска. Настоящее стекло на краю преломляет свет: верхняя кромка светится,
-     нижняя уходит в тень — по этой паре глаз и опознаёт стекло, а не заливку.
-     Пиксельного искажения фона (feDisplacementMap через backdrop-filter:url())
-     здесь намеренно нет: в браузерах оно поддержано вразнобой, а док висит на
-     экране всегда — сломанный или тормозящий фильтр стоил бы дороже эффекта. */
-  .dock-in::before{
-    content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-    padding:1.5px;
-    background:linear-gradient(158deg,
-      var(--glass-rim) 0%, transparent 32%, transparent 64%, var(--glass-rim-lo) 100%);
-    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor;
-    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite:exclude;
-  }
-  /* Блик по верху — та же толщина, вид сверху. Сходит на нет к середине, иначе
-     читается как вторая панель поверх первой. */
-  .dock-in::after{
-    content:'';position:absolute;inset:1px;border-radius:inherit;pointer-events:none;z-index:0;
-    background:linear-gradient(to bottom, var(--glass-gloss) 0%, transparent 48%);
+    box-shadow:var(--sh-dock);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
   }
   .dock-btn{
     flex:1;min-width:0;min-height:50px;
@@ -2320,9 +2286,7 @@
      Поэтому у активной вкладки не рамка, а мягкая заливка без границы, тот же цвет
      у иконки и подписи. Начертание не меняется: жирный текст
      шире обычного и в узкой колонке дока прыгает по ширине при переключении. */
-  /* z-index обязателен: ::after родителя рисуется после детей и без него
-     накрыл бы подписи молочной плёнкой */
-  .dock-btn{transition:background .2s ease,color .2s ease;position:relative;z-index:1}
+  .dock-btn{transition:background .2s ease,color .2s ease;position:relative}
   .dock-btn.act{
     color:var(--accent-ink);
     background:var(--accent-soft);
@@ -2454,7 +2418,7 @@
      и вторая рамка внутри первой — лишний объект, а не предупреждение.
      Кнопка красная, но не залитая: удаление не должно выглядеть главным действием
      экрана, иначе на него жмут не глядя. */
-  .danger-zone{display:flex;flex-direction:column;gap:10px;text-align:center}
+  .danger-zone{display:flex;flex-direction:column;gap:10px;text-align:left}
   .danger-zone p{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
   .danger-zone .link-btn{
     color:var(--danger);border:1px solid var(--danger-line);border-radius:var(--r-sm);
@@ -4014,9 +3978,6 @@
           <div class="snd-group">
             <p class="snd-label">Голос</p>
             <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
-            <div class="field" id="stVoiceField"><label>Какой голос</label>
-              <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-            </div>
             <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="stMusic"></button></div>
           </div>
           <div class="snd-group">
@@ -4186,9 +4147,6 @@
           <div class="snd-group">
             <p class="snd-label">Голос</p>
             <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
-            <div class="field" id="sndVoiceField"><label>Какой голос</label>
-              <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-            </div>
             <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
           </div>
           <div class="snd-group">
@@ -4661,31 +4619,10 @@ function ruVoices(){
   try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ru')); }
   catch(e){ return []; }
 }
-function fillVoiceSelect(sel){
-  if(!sel) return;
-  const list = ruVoices();
-  sel.innerHTML = '';
-  if(!list.length){
-    const o = document.createElement('option');
-    o.textContent = 'Системный голос'; o.value = '';
-    sel.appendChild(o);
-    return;
-  }
-  list.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v.voiceURI;
-    o.textContent = v.name.replace(/^(Google|Microsoft)\s*/i, '').slice(0, 30);
-    if(v.voiceURI === savedVoiceURI) o.selected = true;
-    sel.appendChild(o);
-  });
-}
-function populateVoices(){
-  // заполняем все селекты голоса, что есть в разметке (профиль + попап тренировки)
-  ['stVoiceSel', 'sndVoiceSel'].forEach(id => { const s = $(id); if(s) fillVoiceSelect(s); });
-}
-if('speechSynthesis' in window){
-  try{ speechSynthesis.addEventListener('voiceschanged', populateVoices); }catch(e){}
-}
+// Выбора голоса в интерфейсе нет: на части телефонов русский голос в системе ровно
+// один, и список из одного пункта только занимает место и вызывает вопросы. Берём
+// первый доступный русский голос. Сохранённый ранее выбор (savedVoiceURI) продолжает
+// работать — у тех, кто успел его сделать.
 
 // русская речь; если голоса нет или ошибка — фолбэк-звук
 let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
@@ -5044,7 +4981,6 @@ function syncSoundCascade(p){
   const on = $(p + 'SoundOn').classList.contains('on');
   setShown(p + 'SoundBox', on);
   if(!on) return;
-  setShown(p + 'VoiceField', $(p + 'VoiceOn').classList.contains('on'));
   setShown(p + 'FxField', $(p + 'FxOn').classList.contains('on'));
 }
 
@@ -5249,7 +5185,6 @@ function prepTab(id){
       syncSettingsForm();
       // звук и управление без рук живут здесь, поэтому состояние подтягиваем при входе
       fillLiveSoundCascade('st');
-      populateVoices();
       $('hfHint').textContent = HF_HINTS[hfMode] || '';
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
@@ -5322,7 +5257,6 @@ function openStart(raw){
   renderProgSteps();
   renderStartInfo();
   syncPrefs();
-  populateVoices();
   show('scrStart');
   window.scrollTo(0, 0); // иначе экран открывается там же, где был прокручен предыдущий, — мимо названия
 }
@@ -13505,8 +13439,6 @@ let fxVolMemory = 100; // громкость сигналов, которую п
 
 // заполняет каскад текущими значениями сессии (для st и snd — они делят одно состояние)
 function fillLiveSoundCascade(p){
-  fillVoiceSelect($(p + 'VoiceSel'));
-  $(p + 'VoiceSel').value = savedVoiceURI || '';
   $(p + 'SoundOn').classList.toggle('on', soundOn);
   $(p + 'VoiceOn').classList.toggle('on', voiceVol > 0);
   const fOn = fxVol > 0;
@@ -13563,11 +13495,6 @@ function wireLiveSoundCascade(p){
     $(p + 'FxVolVal').textContent = v + '%';
     persistLiveSound();
     if(v > 0) tick();
-  };
-  $(p + 'VoiceSel').onchange = ()=>{
-    savedVoiceURI = $(p + 'VoiceSel').value || '';
-    persistLiveSound();
-    if(voiceVol > 0) speak('Проверка голоса');
   };
   $(p + 'Music').onclick = ()=>{
     musicMode = !musicMode;
