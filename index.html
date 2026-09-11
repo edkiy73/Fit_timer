@@ -248,11 +248,8 @@
   body.screen-work .actions{flex:none;position:static}
 
   /* ---------- menu ---------- */
-  /* По центру, а не по верху: обложка 60 px, а текста в карточке часто всего две
-     строки — название и «N упражнений · M кругов». Прижатый к верху текст оставлял
-     под собой пустоту и выглядел съехавшим. */
   .month-card{
-    display:flex;align-items:center;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    display:flex;align-items:flex-start;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
     padding:var(--sp-3);margin-bottom:var(--sp-3);color:var(--ink);
     box-shadow:var(--sh-1);
@@ -266,7 +263,11 @@
   }
   .mc-cover img{width:100%;height:100%;object-fit:cover;display:block}
   .mc-cover svg{width:36px;height:36px}
-  .mc-body{flex:1;min-width:0}
+  /* Обложка стоит по верху всегда. Центрируется только текст и только когда его
+     мало: min-height по высоте обложки плюс justify-content:center — две строки
+     встают вровень с её серединой, а если текста больше, блок растёт вниз и
+     начинается с той же линии, что и обложка. */
+  .mc-body{flex:1;min-width:0;min-height:60px;display:flex;flex-direction:column;justify-content:center}
   .month-card .num{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--accent-ink)}
   .month-card h3{
     font-size:15px;line-height:1.2;margin:0 0 5px;
