@@ -62,6 +62,7 @@
     --warn-line:rgba(245,185,59,.36);
     --danger:#FF6079;
     --danger-soft:rgba(255,96,121,.12);
+    --danger-line:rgba(255,96,121,.38);
 
     --grad-accent:linear-gradient(135deg,#7E58F6 0%,#6134DE 52%,#9E3FD0 100%);
     --grad-rest:linear-gradient(135deg,#4FDCEC 0%,#3B8FE0 100%);
@@ -989,6 +990,7 @@
     --warn-line:rgba(170,120,10,.34);
     --danger:#D33A56;
     --danger-soft:rgba(211,58,86,.10);
+    --danger-line:rgba(211,58,86,.32);
 
     --grad-accent:linear-gradient(135deg,#7B4CF0 0%,#5C2ED6 52%,#A63FD0 100%);
     --grad-rest:linear-gradient(135deg,#12A5BE 0%,#2F6FD0 100%);
@@ -1081,6 +1083,19 @@
     display:flex;align-items:center;justify-content:center;
   }
   .btn-quiet:active{background:var(--line);color:var(--ink)}
+  /* Звук — два разных разговора, а не пять строк подряд: что говорит голос и что
+     звенит сигналами. Раньше «Громкость» стояла между «Звуками» и «Не прерывать
+     музыку», и по строчке было не понять, к чему она относится. */
+  .snd-group{
+    display:flex;flex-direction:column;gap:12px;
+    padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);
+    background:var(--bg-2);
+  }
+  .snd-label{
+    margin:0;font-family:var(--font-display);font-weight:600;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  }
+  .snd-group .pref-row{padding:0;border:none;min-height:0}
   .key-actions{display:flex;gap:8px}
 
   /* ---------- оценка нагрузки на финише ---------- */
@@ -2354,15 +2369,18 @@
     background:var(--card);border-radius:var(--r-pill);padding:4px 9px;line-height:1.2;
   }
 
-  /* Опасная зона: предупреждение и кнопка обведены вместе — это одно действие,
-     а не строка настроек, случайно оказавшаяся рядом с остальными. */
-  .danger-zone{
-    border:1px solid var(--warn-line);border-radius:var(--r-md);
-    padding:12px 14px;display:flex;flex-direction:column;gap:2px;
-  }
-  .danger-zone{text-align:center}
+  /* Обводки здесь больше нет: удаление данных уже вынесено в отдельную карточку,
+     и вторая рамка внутри первой — лишний объект, а не предупреждение.
+     Кнопка красная, но не залитая: удаление не должно выглядеть главным действием
+     экрана, иначе на него жмут не глядя. */
+  .danger-zone{display:flex;flex-direction:column;gap:10px;text-align:center}
   .danger-zone p{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
-  .danger-zone .link-btn{color:var(--danger);padding:10px 0 4px;margin:0}
+  .danger-zone .link-btn{
+    color:var(--danger);border:1px solid var(--danger-line);border-radius:var(--r-sm);
+    text-decoration:none;min-height:44px;padding:0 14px;margin:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .danger-zone .link-btn:active{background:var(--danger-soft)}
 
   /* главное действие экрана «Тренировки» */
   .add-prog{margin-bottom:var(--sp-4)}
@@ -3896,16 +3914,22 @@
       <div class="prefs stack">
         <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
         <div class="stack" id="stSoundBox">
-          <div class="pref-row"><span>Голос<small>называет упражнения, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
-          <div class="field" id="stVoiceField"><label>Голос озвучки</label>
-            <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          <div class="snd-group">
+            <p class="snd-label">Голос</p>
+            <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+            <div class="field" id="stVoiceField"><label>Какой голос</label>
+              <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+            </div>
+            <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="stMusic"></button></div>
           </div>
-          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="stFxOn"></button></div>
-          <div class="vol-field" id="stFxField">
-            <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
-            <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
+          <div class="snd-group">
+            <p class="snd-label">Звуки</p>
+            <div class="pref-row"><span>Гонг и отсчёт<small>сигналы начала, конца и последних секунд</small></span><button class="switch" id="stFxOn"></button></div>
+            <div class="vol-field" id="stFxField">
+              <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
+              <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
+            </div>
           </div>
-          <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — сигналы</small></span><button class="switch" id="stMusic"></button></div>
         </div>
       </div>
     </div>
@@ -4062,16 +4086,22 @@
         <span class="mini-label">Звук тренировки</span>
         <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
         <div class="stack" id="sndSoundBox">
-          <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
-          <div class="field" id="sndVoiceField"><label>Голос озвучки</label>
-            <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          <div class="snd-group">
+            <p class="snd-label">Голос</p>
+            <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
+            <div class="field" id="sndVoiceField"><label>Какой голос</label>
+              <select id="sndVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+            </div>
+            <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
           </div>
-          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="sndFxOn"></button></div>
-          <div class="vol-field" id="sndFxField">
-            <div class="vol-label"><span>Громкость</span><b id="sndFxVolVal">100%</b></div>
-            <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+          <div class="snd-group">
+            <p class="snd-label">Звуки</p>
+            <div class="pref-row"><span>Гонг и отсчёт<small>сигналы начала, конца и последних секунд</small></span><button class="switch" id="sndFxOn"></button></div>
+            <div class="vol-field" id="sndFxField">
+              <div class="vol-label"><span>Громкость</span><b id="sndFxVolVal">100%</b></div>
+              <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+            </div>
           </div>
-          <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="sndMusic"></button></div>
         </div>
         <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
         <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
@@ -6305,7 +6335,8 @@ function openUserEdit(id = null){
   $('ueReadySec').value = uDraft.readySec;
   $('ueSideSec').value = uDraft.sideSec;
   syncUserForm();
-  setShown('btnDelUser', id);
+  // единственный профиль удалить нельзя — кнопку не показываем вовсе
+  setShown('btnDelUser', id && users.length > 1);
   show('scrUserEdit');
   window.scrollTo(0, 0);
 }
@@ -6355,25 +6386,26 @@ async function saveUser(){
     goTab('scrAccount');
   }
 }
+/* Удаление профиля НЕ трогает аккаунт. Раньше удаление последнего профиля стирало
+   заодно все GLOBAL_KEYS — то есть почту, подписку и knownAccounts. Человек удалял
+   профиль, а терял оплаченное, причём безвозвратно: вернуть подписку входом было
+   уже неоткуда, список известных аккаунтов стирался тем же циклом.
+   Поэтому последний профиль удалить нельзя. Полный сброс никуда не делся — он живёт
+   на экране аккаунта под своим именем «Удалить все данные», с подтверждением фразой,
+   и человек понимает, на что идёт. */
 async function deleteUser(){
   if(!uDraft.id) return;
-  const isLast = users.length <= 1;
-  const msg = isLast
-    ? `Удалить профиль «${uDraft.name}»? Это единственный профиль — все данные будут стёрты, и приложение начнёт с чистого листа.`
-    : `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
+  if(users.length <= 1){
+    await appAlert('Это единственный профиль — без него приложению не с чем работать. '
+      + 'Чтобы стереть всё, открой «Аккаунт» и выбери «Удалить все данные».');
+    return;
+  }
+  const msg = `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
   if(!(await appConfirm(msg))) return;
   const id = uDraft.id;
   for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
   users = users.filter(x => x.id !== id);
   await saveUsers();
-  if(isLast){
-    // удалили последний профиль — полный сброс: онбординг → обучение → главная
-    try{
-      for(const k of GLOBAL_KEYS) await kvDel(k);
-    }catch(e){}
-    location.reload();
-    return;
-  }
   if(id === currentUser){
     currentUser = '';
     await switchUser(users[0].id);
@@ -6848,9 +6880,18 @@ async function deleteAllPhotos(){
   renderPhotos();
 }
 
+// Один день — один снимок: второе фото за ту же дату заменяет первое. Раньше замена
+// происходила молча, и человек терял утренний кадр, сняв вечерний «на пробу».
 async function addPhoto(file){
+  const today = localISO(new Date());
+  if(photos.some(p => p.d === today)){
+    const ok = await appDialog(
+      'Снимок за сегодня уже есть. Новый заменит его — вернуть старый будет неоткуда.',
+      {confirm: true, okText: 'Заменить', cancelText: 'Отмена'}
+    );
+    if(!ok) return;
+  }
   shrinkImage(file, 480, async dataUrl => {
-    const today = localISO(new Date());
     const ex = photos.find(p => p.d === today);
     if(ex) ex.img = dataUrl; else photos.push({d: today, img: dataUrl});
     photos.sort((a, b) => a.d < b.d ? -1 : 1);
