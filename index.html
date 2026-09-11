@@ -70,7 +70,13 @@
     --sh-2:0 16px 40px rgba(0,0,0,.55);
     --sh-accent:0 10px 26px rgba(108,58,232,.42);
     --scrim:rgba(6,4,12,.62);
-    --glass:rgba(23,17,38,.88);
+    /* Заливка дока намеренно полупрозрачная: при .88 размытие за ней было почти
+       не видно, и «стекло» выглядело просто тёмной плашкой. */
+    --glass:rgba(23,17,38,.58);
+    --glass-rim:rgba(255,255,255,.34);    /* верхняя кромка ловит свет */
+    --glass-rim-lo:rgba(255,255,255,.06); /* нижняя уходит в тень */
+    --glass-gloss:rgba(255,255,255,.10);  /* блик по «толщине» стекла */
+    --glass-inner:rgba(0,0,0,.34);
     --bg-0:rgba(12,9,22,0);   /* тот же --bg с нулевой прозрачностью: без него
                                  градиент затухания даёт серую кромку */
 
@@ -998,7 +1004,11 @@
     --sh-2:0 16px 40px rgba(45,25,80,.16);
     --sh-accent:0 10px 26px rgba(92,46,214,.28);
     --scrim:rgba(30,18,58,.42);
-    --glass:rgba(255,255,255,.90);
+    --glass:rgba(255,255,255,.62);
+    --glass-rim:rgba(255,255,255,.85);
+    --glass-rim-lo:rgba(45,25,80,.10);
+    --glass-gloss:rgba(255,255,255,.55);
+    --glass-inner:rgba(45,25,80,.10);
     --bg-0:rgba(246,244,252,0);
     --dock-line:rgba(45,25,80,.10);
     --sh-dock:0 10px 28px rgba(45,25,80,.16), 0 2px 8px rgba(45,25,80,.08);
@@ -1214,10 +1224,17 @@
   .pm-li-ico svg{width:15px;height:15px}
   .pm-list b{display:block;font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
   .pm-list small{display:block;font-size:12.5px;line-height:1.5;color:var(--muted)}
-  .pm-short{gap:6px}
-  .pm-short li{padding:10px 12px 10px 44px;min-height:44px;display:flex;align-items:center}
-  .pm-short .pm-li-ico{top:50%;transform:translateY(-50%)}
-  .pm-short b{margin-bottom:0;font-size:14px;line-height:1.35}
+  /* Список выгод — перечисление, а не четыре карточки. Рамка вокруг каждой строки
+     плюс жирное начертание давали четыре одинаково громких объекта подряд: глазу
+     не за что зацепиться, и всё вместе выглядело грязно. Осталась строка со значком
+     и обычный текст — читается сверху вниз одним движением. */
+  .pm-short{gap:4px}
+  .pm-short li{
+    padding:9px 0 9px 38px;min-height:0;display:flex;align-items:center;
+    background:none;border:none;border-radius:0;
+  }
+  .pm-short .pm-li-ico{left:0;top:50%;transform:translateY(-50%);width:26px;height:26px}
+  .pm-short b{margin-bottom:0;font-size:14.5px;line-height:1.4;font-weight:400;color:var(--ink)}
   /* Выбор срока. Годовой стоит вторым и подсвечен по умолчанию: он выгоднее и человеку,
      и продукту, а выгода написана числом, а не словом «хит». */
   .pm-plans{display:flex;gap:10px;margin:12px 0}
@@ -2205,11 +2222,15 @@
        прокручивается контент, поэтому нажатия она не перехватывает */
     pointer-events:none;
   }
-  /* мягкое затухание страницы под доком: без него строки «въезжают» под панель
-     резко. Градиент статичный, ничего не перерисовывает. */
+  /* Затухание закрывает ТОЛЬКО полосу под панелью, а не саму панель. Раньше
+     градиент шёл во всю высоту дока и заливал фоном то, что проезжает позади, —
+     стеклу было нечего преломлять, оно выглядело просто тёмной плашкой. Теперь
+     содержимое видно сквозь стекло, а под панелью строки по-прежнему не
+     обрываются резко. */
   .dock::before{
-    content:'';position:absolute;left:0;right:0;bottom:0;height:calc(100% + 18px);
-    background:linear-gradient(to top,var(--bg) 34%,var(--bg-0));
+    content:'';position:absolute;left:0;right:0;bottom:0;
+    height:calc(var(--sp-3) + env(safe-area-inset-bottom) + 14px);
+    background:linear-gradient(to top,var(--bg) 46%,var(--bg-0));
     pointer-events:none;
   }
   .dock-in{
@@ -2221,8 +2242,31 @@
     border-radius:20px;
     background:var(--glass);
     border:1px solid var(--dock-line);
-    box-shadow:var(--sh-dock);
-    -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+    /* Тень наружу + тонкая тень внутрь: вторая и читается как толщина стекла. */
+    box-shadow:var(--sh-dock), inset 0 0 14px var(--glass-inner);
+    -webkit-backdrop-filter:blur(22px) saturate(185%) brightness(1.06);
+    backdrop-filter:blur(22px) saturate(185%) brightness(1.06);
+  }
+  /* Фаска. Настоящее стекло на краю преломляет свет: верхняя кромка светится,
+     нижняя уходит в тень — по этой паре глаз и опознаёт стекло, а не заливку.
+     Пиксельного искажения фона (feDisplacementMap через backdrop-filter:url())
+     здесь намеренно нет: в браузерах оно поддержано вразнобой, а док висит на
+     экране всегда — сломанный или тормозящий фильтр стоил бы дороже эффекта. */
+  .dock-in::before{
+    content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+    padding:1.5px;
+    background:linear-gradient(158deg,
+      var(--glass-rim) 0%, transparent 32%, transparent 64%, var(--glass-rim-lo) 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite:exclude;
+  }
+  /* Блик по верху — та же толщина, вид сверху. Сходит на нет к середине, иначе
+     читается как вторая панель поверх первой. */
+  .dock-in::after{
+    content:'';position:absolute;inset:1px;border-radius:inherit;pointer-events:none;z-index:0;
+    background:linear-gradient(to bottom, var(--glass-gloss) 0%, transparent 48%);
   }
   .dock-btn{
     flex:1;min-width:0;min-height:50px;
@@ -2241,7 +2285,9 @@
      Поэтому у активной вкладки не рамка, а мягкая заливка без границы, тот же цвет
      у иконки и подписи. Начертание не меняется: жирный текст
      шире обычного и в узкой колонке дока прыгает по ширине при переключении. */
-  .dock-btn{transition:background .2s ease,color .2s ease;position:relative}
+  /* z-index обязателен: ::after родителя рисуется после детей и без него
+     накрыл бы подписи молочной плёнкой */
+  .dock-btn{transition:background .2s ease,color .2s ease;position:relative;z-index:1}
   .dock-btn.act{
     color:var(--accent-ink);
     background:var(--accent-soft);
