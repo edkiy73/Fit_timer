@@ -219,7 +219,13 @@
      читалось как перерисовка, а не как движение. Теперь всплывает каждая карточка
      со своей задержкой: экран собирается на глазах. Тренировка исключена — там
      таймер, и любое движение рядом с ним отвлекает от счёта. */
-  .screen.on:not(#scrWork):not(#scrFinish) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) both}
+  /* fill-mode именно backwards, а НЕ both. При both анимация продолжает влиять на
+     элемент и после конца: transform остаётся единичной матрицей вместо none, а это
+     уже контекст наложения. Из-за него контекстное меню в шапке экрана (z-index:30)
+     оказывалось заперто внутри шапки, и весь контент ниже рисовался поверх него —
+     на экране программы нельзя было нажать ни один пункт меню. backwards держит
+     начальный кадр до старта (ради этого fill и нужен) и отпускает элемент в конце. */
+  .screen.on:not(#scrWork):not(#scrFinish) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) backwards}
   .screen.on:not(#scrWork) > *:nth-child(2){animation-delay:.04s}
   .screen.on:not(#scrWork) > *:nth-child(3){animation-delay:.08s}
   .screen.on:not(#scrWork) > *:nth-child(4){animation-delay:.12s}
@@ -2460,15 +2466,16 @@
   /* ---- вкладка «Фото» ---- */
   /* Раньше лента миниатюр уезжала за правый край и даты нигде не было —
      теперь сетка на всю ширину, у каждого снимка подпись. */
-  .ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .ph-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}
   .ph-item{
     padding:0;border:1px solid var(--line);background:var(--bg-2);
     border-radius:var(--r-sm);overflow:hidden;cursor:pointer;display:block;width:100%;
   }
   .ph-item img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
   .ph-item small{
-    display:block;padding:6px 4px;font-family:var(--font-text);
-    font-size:10.5px;color:var(--muted);text-align:center;
+    display:block;padding:5px 2px;font-family:var(--font-text);
+    font-size:9.5px;color:var(--muted);text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .mc-actions .mc-act.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
   .mc-actions .mc-act.primary svg{color:var(--on-accent)}
@@ -6006,8 +6013,11 @@ function sessRow(en, withDate){
   const meta = [];
   if(p){
     const plansN = normPlans(p).length;
-    if(plansN > 1 && typeof en.plan === 'number'){
-      meta.push(`вариант ${en.plan + 1}` + (en.planDays ? ` (${en.planDays})` : ''));
+    if(plansN > 1){
+      // подпись днями надёжнее номера: она записана в момент тренировки и не зависит
+      // от того, как варианты переставились потом
+      if(en.planDays) meta.push(en.planDays);
+      else if(typeof en.plan === 'number') meta.push(`вариант ${en.plan + 1}`);
     }
   }
   if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
@@ -6073,8 +6083,26 @@ $('calGrid').addEventListener('click', e => {
 function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
 
 // планы программы: новые программы хранят plans[], старые — поля верхнего уровня
+// Варианты идут по дню недели, а не по времени добавления: заведя «Пн» после «Сб»,
+// человек ждёт его в начале списка. Сортируем по самому раннему дню варианта,
+// варианты без дней уходят в конец. Сортировка устойчивая (ES2019), поэтому равные
+// сохраняют свой порядок, и повторный вызов уже ничего не меняет.
+// При очереди (rotate) не сортируем никогда: там порядок вариантов — это и есть
+// очередь, и дни принадлежат программе целиком, а не варианту.
+function planDayRank(pl){
+  const ds = (pl && pl.days) || [];
+  let min = 99;
+  ds.forEach(d => { const i = DAYS.indexOf(d); if(i >= 0 && i < min) min = i; });
+  return min;
+}
+function sortPlans(plans){
+  return plans.sort((a, b) => planDayRank(a) - planDayRank(b));
+}
 function normPlans(p){
-  if(Array.isArray(p.plans) && p.plans.length) return p.plans;
+  if(Array.isArray(p.plans) && p.plans.length){
+    if(!p.rotate) sortPlans(p.plans);
+    return p.plans;
+  }
   return [{
     days: p.days || [],
     rounds: p.rounds || 3,
@@ -10468,6 +10496,13 @@ function renderDays(){
     b.classList.toggle('act', owner.days.includes(d));
     b.onclick = ()=>{
       owner.days = owner.days.includes(d) ? owner.days.filter(x=>x!==d) : DAYS.filter(x => owner.days.includes(x) || x===d);
+      // порядок вариантов пересобирается сразу, но редактируемый остаётся выбранным:
+      // иначе смена дня молча перебрасывала бы на соседний вариант
+      if(!rotOn){
+        const cur = draft.plans[planIdx];
+        sortPlans(draft.plans);
+        planIdx = Math.max(0, draft.plans.indexOf(cur));
+      }
       renderDays();
       renderPlanTabs();
     };
