@@ -747,10 +747,10 @@
   .nu-media svg{width:85%;height:85%}
   .nu-body{flex:1;min-width:0}
   .nu-body h4{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px;line-height:1.2}
-  .nu-body p{
-    color:var(--muted);font-size:13px;line-height:1.45;margin:0;
-    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
-  }
+  /* описание следующего упражнения показываем целиком: отдых — единственный момент,
+     когда его есть время прочитать, а места на экране хватает. Длинное уезжает в
+     прокрутку области описания, как и на самом упражнении */
+  .nu-body p{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
   .nu-val{margin-top:8px;font-family:var(--font-display);font-weight:600;font-size:13.5px;color:var(--rest-ink);letter-spacing:.06em}
   /* на отдыхе у карточки нет ни картинки, ни мышц, ни ошибок — остаётся одна строка
      подсказки. Рамка вокруг неё была бы вторым лишним объектом рядом с «Дальше» */
@@ -1071,6 +1071,17 @@
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0}
   .btn-mini{border:none;border-radius:12px;background:var(--work);color:var(--on-accent);font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:0 18px;cursor:pointer}
+  /* Тихая кнопка второго плана: обычный текст на фоне карточки. Служебные действия
+     («Проверить», «Диагностика») кричали заливкой акцентом громче, чем всё остальное
+     на экране настроек, хотя нужны раз в жизни. */
+  .btn-quiet{
+    flex:1;min-height:42px;padding:0 14px;border-radius:var(--r-sm);cursor:pointer;
+    background:none;border:1px solid var(--line);color:var(--muted);
+    font-family:var(--font-text);font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .btn-quiet:active{background:var(--line);color:var(--ink)}
+  .key-actions{display:flex;gap:8px}
 
   /* ---------- оценка нагрузки на финише ---------- */
   .fb-block{margin:4px 0 18px;text-align:left}
@@ -2655,47 +2666,6 @@
         <p class="field-hint">Изменение сразу пересчитает вес, повторы и время во всех упражнениях с прогрессией — ничего не потеряется.</p>
       </div>
 
-      <div class="card-block">
-        <button type="button" class="collapse-head" id="startHfToggle">
-          <span>Управление без рук</span>
-          <span class="st-sum" id="startHfSum"></span>
-          <span class="st-chev" id="startHfChev"></span>
-        </button>
-        <div class="stack hidden" id="startHfBox">
-          <div class="hf-block" id="voicePrefRow">
-            <div class="hf-seg" id="hfSeg">
-              <button type="button" data-hf="off" class="act">Выкл</button>
-              <button type="button" data-hf="voice">Голос</button>
-              <button type="button" data-hf="clap">Хлопок</button>
-              <button type="button" data-hf="headset">Гарнитура</button>
-            </div>
-            <p class="field-hint" id="hfHint"></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-block">
-        <button type="button" class="collapse-head" id="startPrefsToggle">
-          <span>Звук и голос</span>
-          <span class="st-sum" id="startPrefsSum"></span>
-          <span class="st-chev" id="startPrefsChev"></span>
-        </button>
-        <div class="prefs stack hidden" id="startPrefsBox">
-          <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
-          <div class="stack" id="stSoundBox">
-            <div class="pref-row"><span>Голос<small>озвучивает названия, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
-            <div class="field" id="stVoiceField"><label>Голос озвучки</label>
-              <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
-            </div>
-            <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="stFxOn"></button></div>
-            <div class="vol-field" id="stFxField">
-              <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
-              <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
-            </div>
-            <div class="pref-row"><span>Не прерывать музыку<small>голос заменится звуковыми сигналами</small></span><button class="switch" id="stMusic"></button></div>
-          </div>
-        </div>
-      </div>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnStart">Начать тренировку</button>
@@ -3886,6 +3856,41 @@
   <section class="screen root" id="scrSettings">
     <div class="page-head"><h1>Настройки</h1></div>
 
+    <!-- Звук и управление без рук стоят первыми и открыты сразу. Раньше они жили на
+         экране программы под сворачиваемыми заголовками: настраивать их приходилось
+         каждый раз перед стартом, хотя это настройки устройства, а не программы. -->
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Звук и голос</p></div>
+      <div class="prefs stack">
+        <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
+        <div class="stack" id="stSoundBox">
+          <div class="pref-row"><span>Голос<small>называет упражнения, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+          <div class="field" id="stVoiceField"><label>Голос озвучки</label>
+            <select id="stVoiceSel" class="voice-sel" style="max-width:none;width:100%"></select>
+          </div>
+          <div class="pref-row"><span>Звуки<small>гонг, отсчёт, сигналы</small></span><button class="switch" id="stFxOn"></button></div>
+          <div class="vol-field" id="stFxField">
+            <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
+            <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
+          </div>
+          <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — сигналы</small></span><button class="switch" id="stMusic"></button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Управление без рук</p></div>
+      <div class="hf-block" id="voicePrefRow">
+        <div class="hf-seg" id="hfSeg">
+          <button type="button" data-hf="off" class="act">Выкл</button>
+          <button type="button" data-hf="voice">Голос</button>
+          <button type="button" data-hf="clap">Хлопок</button>
+          <button type="button" data-hf="headset">Гарнитура</button>
+        </div>
+        <p class="field-hint" id="hfHint"></p>
+      </div>
+    </div>
+
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
       <p class="field-hint">Пока данные живут только на этом телефоне. Приложение уже ведёт учёт изменений: когда появится аккаунт на сервере, всё уедет туда само — выгружать и заливать вручную не придётся.</p>
@@ -3920,9 +3925,9 @@
         <input type="password" id="ueGeminiKey" placeholder="Ключ Google AI" autocomplete="off" spellcheck="false">
         <p class="field-hint" id="ueGeminiState"></p>
       </div>
-      <div class="row2">
-        <button type="button" class="btn-mini" id="ueGeminiTest">Проверить</button>
-        <button type="button" class="btn-mini" id="ueGeminiDiag">Диагностика</button>
+      <div class="key-actions">
+        <button type="button" class="btn-quiet" id="ueGeminiTest">Проверить</button>
+        <button type="button" class="btn-quiet" id="ueGeminiDiag">Диагностика</button>
       </div>
     </div>
 
@@ -5084,7 +5089,14 @@ function prepTab(id){
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){ renderUsers(); }
-    else if(id === 'scrSettings'){ syncSettingsForm(); }
+    else if(id === 'scrSettings'){
+      syncSettingsForm();
+      // звук и управление без рук живут здесь, поэтому состояние подтягиваем при входе
+      fillLiveSoundCascade('st');
+      populateVoices();
+      $('hfHint').textContent = HF_HINTS[hfMode] || '';
+      document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
+    }
     else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
   }catch(e){}
 }
@@ -5154,7 +5166,6 @@ function openStart(raw){
   renderProgSteps();
   renderStartInfo();
   syncPrefs();
-  setShown('voicePrefRow', true);
   populateVoices();
   show('scrStart');
   window.scrollTo(0, 0); // иначе экран открывается там же, где был прокручен предыдущий, — мимо названия
@@ -5254,16 +5265,6 @@ function buildStartMenu(){
 
 function renderStartInfo(){
   buildStartMenu();
-  // оба настроечных раздела свёрнуты по умолчанию
-  setShown('startPrefsBox', false);
-  $('startPrefsToggle').classList.remove('open');
-  setShown('startHfBox', false);
-  $('startHfToggle').classList.remove('open');
-  fillLiveSoundCascade('st');
-  syncStartPrefsSum();
-  // при самом первом запуске подсказка под сегментом оставалась пустой: загрузка
-  // настроек прерывается раньше, если дело идёт к онбордингу
-  $('hfHint').textContent = HF_HINTS[hfMode] || '';
   // описание программы: 4 строки с возможностью раскрыть
   const dBox = $('progDescBox'), dTxt = $('progDescText');
   const d = (state.raw.desc || '').trim();
@@ -9998,7 +9999,12 @@ function progAxis(ex){
 // вес может быть просто зафиксирован (тумблер выключен) и не расти, но оставаться видимым
 function hasWeight(ex){
   if(!ex) return false;
-  if(ex.progOn != null) return !!ex.trackWeight;
+  // trackWeight и есть «формат включает вес», и от тумблера прогрессии он не зависит.
+  // Раньше ему верили только вместе с progOn — и программа, разобранная из текста без
+  // строки «УСЛОЖНЯТЬ», теряла вес полностью: разборщик ставил trackWeight и число кг,
+  // а тренировка их не показывала, потому что progOn оставался пустым.
+  if(ex.trackWeight != null) return !!ex.trackWeight;
+  if(ex.progOn != null) return false;          // новая модель, но формат без веса
   return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
 }
 // для редактора: текущее состояние упражнения в терминах простого интерфейса —
@@ -11878,7 +11884,11 @@ function renderStep(){
   if(step.kind === 'click'){
     setShown('stepReps', true);
     // рабочий вес — часть задания, поэтому цифра контрастнее подписи «повторений»
-    const kgTxt = (step.progAxis === 'weight' && step.weight > 0) ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>` : '';
+    // Условие именно «вес задан», а не «вес растёт»: weight отличен от нуля только
+    // у форматов с весом, и при выключенной автопрогрессии там лежит зафиксированная
+    // база. По старому условию (progAxis === 'weight') такой вес не показывался вовсе —
+    // человек вписал 12 кг, а на тренировке их не видел.
+    const kgTxt = step.weight > 0 ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>` : '';
     // пробелы между частями строки — для чтения вслух и копирования; во флекс-контейнере
     // они не создают отдельных элементов и на раскладку не влияют
     $('stepReps').innerHTML = `<span class="v-num">${valueText(step.reps)}</span> `
@@ -12122,9 +12132,11 @@ function renderNextUp(step){
   } else {
     media = DUMBBELL_ICON;
   }
+  // рабочий вес — часть задания: на отдыхе по нему решают, что нести к коврику
+  const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} кг` : '';
   let val = nxt.kind === 'click'
-    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${nxt.perSide ? ' на каждую сторону' : ''}`.trim()
-    : `${nxt.seconds} сек${nxt.perSide ? ' на каждую сторону' : ''}`;
+    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${kg}${nxt.perSide ? ' на каждую сторону' : ''}`.trim()
+    : `${nxt.seconds} сек${kg}${nxt.perSide ? ' на каждую сторону' : ''}`;
   // подход и сторона — чтобы было видно, что именно предстоит
   const meta = [];
   if(nxt.setsTotal > 1) meta.push(`подход ${nxt.setNo}/${nxt.setsTotal}`);
@@ -12720,7 +12732,6 @@ function renderSyncRow(){
 
 function syncPrefs(){
   renderSyncRow();
-  if(typeof syncStartPrefsSum === 'function') syncStartPrefsSum();
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
@@ -13142,30 +13153,6 @@ $('progDescMore').onclick = ()=>{
   box.classList.toggle('open', open);
   $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
 };
-// звук и управление без рук — два разных по смыслу раздела, поэтому две карточки
-// со своими сводками, а не один общий ящик «Звук и управление»
-function toggleStartSection(btnId, boxId){
-  $(btnId).onclick = ()=>{
-    const box = $(boxId), open = box.classList.contains('hidden');
-    setShown(box, open);
-    $(btnId).classList.toggle('open', open);
-  };
-}
-toggleStartSection('startPrefsToggle', 'startPrefsBox');
-toggleStartSection('startHfToggle', 'startHfBox');
-function syncStartPrefsSum(){
-  const bits = [];
-  if(!soundOn) bits.push('выключен');
-  else {
-    if(voiceVol > 0) bits.push('голос');
-    if(fxVol > 0) bits.push('сигналы');
-    if(!bits.length) bits.push('без звука');
-    if(musicMode) bits.push('не прерывать музыку');
-  }
-  $('startPrefsSum').textContent = bits.join(' · ');
-  const names = {off: 'выкл', voice: 'голос', clap: 'хлопок', headset: 'гарнитура'};
-  $('startHfSum').textContent = names[hfMode] || 'выкл';
-}
 $('btnStart').onclick = async ()=>{
   state.current = customToProgram(state.raw, state.planIdx);
   const sess = await sessionForProgram(state.raw.id);
@@ -14460,8 +14447,6 @@ $('exaBackTop').innerHTML = icon('chevL');
 $('imgBackTop').innerHTML = icon('chevL');
 $('exeBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
-$('startPrefsChev').innerHTML = icon('chevR');
-$('startHfChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('textBackTop').innerHTML = icon('chevL');
