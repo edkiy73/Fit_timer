@@ -2859,7 +2859,7 @@
       <p class="field-hint" id="exitProgress"></p>
       <button class="choice" id="exitSave"><b>Сохранить и выйти</b><small>В следующий раз продолжишь с этого места</small></button>
       <button class="choice primary" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
-      <button class="modal-btn" id="exitCancel">Отмена</button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
     </div>
   </div>
 
@@ -2871,7 +2871,7 @@
       <button class="choice" id="startPick"><b>Выбрать упражнение</b><small>Начать с любого места программы</small></button>
       <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
       <button class="choice primary" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
-      <button class="modal-btn" id="startCancel">Отмена</button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
     </div>
   </div>
 
@@ -2879,7 +2879,7 @@
     <div class="modal-card">
       <span class="mini-label">С какого упражнения начать</span>
       <div class="pick-list" id="pickList"></div>
-      <button class="modal-btn" id="pickCancel">Отмена</button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
     </div>
   </div>
 
@@ -2914,7 +2914,7 @@
       <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
       <button type="button" class="modal-btn danger" id="slotRemove">Убрать картинку</button>
-      <button class="modal-btn" id="slotCancel">Отмена</button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
     </div>
   </div>
 
@@ -4074,7 +4074,7 @@
         <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Чтобы не было звука активации микрофона — отключи звук уведомлений в системе на время тренировки</small></button>
         <button class="choice" data-hf="clap"><b>Хлопок</b><small>2 хлопка — дальше, 3 — пауза. Без системных звуков, офлайн</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
-        <button class="modal-btn" id="hfClose">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>
     </div>
 
@@ -4098,7 +4098,7 @@
           </div>
         </div>
         <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
-        <button class="btn-primary" id="sndClose" style="padding:14px;margin-top:6px">Готово</button>
+        <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px">Готово</button>
       </div>
     </div>
 
@@ -4115,7 +4115,7 @@
         </span>
       </div>
       <p class="tr-about" id="trAbout"></p>
-      <button class="modal-btn" id="trClose">Закрыть</button>
+      <button class="modal-btn" data-act="closeModal">Закрыть</button>
     </div>
   </div>
 
@@ -4173,7 +4173,7 @@
           <div class="pm-plans" id="pmPlans"></div>
           <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px">Оформить</button>
           <p class="pm-fine" id="pmFine"></p>
-          <button class="modal-btn" id="pmClose">Закрыть</button>
+          <button class="modal-btn" data-act="closeModal">Закрыть</button>
         </div>
       </div>
     </div>
@@ -4192,7 +4192,7 @@
         </div>
         <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px">Оплатить</button>
         <p class="pm-fine">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
-        <button class="modal-btn" id="payCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -4205,7 +4205,7 @@
         <p class="pm-lead" id="pokLead"></p>
         <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px">Включить вход по биометрии</button>
         <p class="pm-fine">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
-        <button class="modal-btn" id="pokClose">Готово</button>
+        <button class="modal-btn" data-act="closeModal">Готово</button>
       </div>
     </div>
 
@@ -4290,7 +4290,7 @@
         <span class="mini-label">Новое упражнение</span>
         <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, частые ошибки и пиктограмму.</small></span></button>
         <button class="choice ico" id="aeManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Заполнить поля вручную: название, повторения или время, подходы, отдых.</small></span></button>
-        <button class="modal-btn" id="aeCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -4304,7 +4304,7 @@
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>По ссылке на тренировку</small></span></button>
         <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Собрать с нуля</small></span></button>
         <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>Из файла или ссылки</b><small>Если программой поделились</small></span></button>
-        <button class="modal-btn" id="chCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -4326,7 +4326,7 @@
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
         <p class="field-hint" style="text-align:center;margin:0 0 10px">Проведи пальцем по снимку вбок — сменится дата. Нажми — откроется во весь экран.</p>
         <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
-        <button class="modal-btn" id="cmpClose">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>
     </div>
 
@@ -4338,7 +4338,7 @@
         <img id="pfImg" alt="">
         <p class="pf-cap" id="pfCap"></p>
       </div>
-      <button class="modal-btn" id="pfClose">Закрыть</button>
+      <button class="modal-btn" data-act="closeModal">Закрыть</button>
     </div>
 
     <!-- Что было сделано: за день, за неделю — где угодно. Раньше это был appAlert
@@ -4349,7 +4349,7 @@
         <span class="mini-label" id="sessLabel">Тренировки</span>
         <p class="dlg-msg" id="sessTitle"></p>
         <div class="sess-list" id="sessList"></div>
-        <button class="modal-btn" id="sessClose">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>
     </div>
 
@@ -4364,7 +4364,7 @@
           <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
         <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
-        <button class="modal-btn" id="waCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -4373,7 +4373,7 @@
         <span class="mini-label">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
-        <button class="modal-btn" id="whCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -4386,7 +4386,7 @@
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px">Файл передаёт программу целиком — с обложкой и фото упражнений. Ссылка и код легче, но без картинок.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
-        <button class="modal-btn" id="importCancel">Отмена</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -6072,7 +6072,6 @@ function openSessions(label, title, entries, emptyText){
   }
   $('sessModal').classList.add('open');
 }
-$('sessClose').onclick = ()=> $('sessModal').classList.remove('open');
 $('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
 
 const dayTitle = iso => { const [y, m, d] = iso.split('-'); return `${+d} ${MONTH_OF[+m - 1]} ${y}`; };
@@ -6950,7 +6949,6 @@ wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
 $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
 $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('pfClose').onclick = ()=> $('photoFullModal').classList.remove('open');
 $('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) $('photoFullModal').classList.remove('open'); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
@@ -13200,6 +13198,44 @@ function checkSchedules(){
 }
 setInterval(checkSchedules, 20000);
 
+/* ================= ДЕЙСТВИЯ ПО ИМЕНИ =================
+   Обычный способ привязать кнопку в этом файле — найти её по имени и повесить
+   действие: $('btnX').onclick = ... Так сделано в 240 местах, и у способа есть
+   цена: код ищет элемент в момент запуска. Нет элемента — $('btnX') возвращает
+   пустоту, а попытка повесить на пустоту действие роняет ВЕСЬ запуск приложения.
+   Молча: белый экран и никакой ошибки человеку. Ровно так приложение падало,
+   когда кнопки убрали вместе с переделкой экранов, а строки с обработчиками
+   остались.
+
+   Здесь другой способ: кнопка помечается тем, ЧТО ОНА ДЕЛАЕТ, — data-act="имя",
+   а приложение слушает нажатия целиком и смотрит в этот реестр. Тогда кнопку
+   можно удалить из разметки, и ничего не сломается: действие просто некому
+   вызвать. И наоборот — добавить кнопку можно без единой строки кода, если
+   действие уже описано. Кнопки, которые рисуются из данных (строки списков),
+   работают сразу, без навешивания обработчиков после каждой перерисовки.
+
+   Старый способ никуда не делся и работает рядом: переводим по мере того, как
+   трогаем экран, а не отдельной большой задачей. Правило одно — data-act только
+   для кнопок, которые ничего не хранят в себе; тумблеры и поля остаются как есть.
+   Обработчик получает саму кнопку и событие: этого хватает, чтобы взять данные
+   из data-атрибутов рядом, не заводя элементу имя. */
+const ACTIONS = {
+  // Закрыть попап, внутри которого стоит кнопка. Имя попапа не нужно: он и так
+  // ближайший предок. Восемнадцать одинаковых строк «найди кнопку, найди попап,
+  // сними класс» свелись к одной. Историю навигации трогать не надо — за ней
+  // следит MutationObserver по классу .modal.open.
+  closeModal: btn => {
+    const m = btn.closest('.modal');
+    if(m) m.classList.remove('open');
+  }
+};
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if(!btn) return;
+  const fn = ACTIONS[btn.dataset.act];
+  if(fn) fn(btn, e);
+});
+
 /* ================= СОБЫТИЯ ================= */
 $('startMore').innerHTML = icon('more');
 $('startMore').onclick = e => {
@@ -13229,7 +13265,6 @@ $('btnStart').onclick = async ()=>{
   window.__pendingSession = sess || null;
   $('startModal').classList.add('open');
 };
-$('startCancel').onclick = ()=> $('startModal').classList.remove('open');
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
 
 $('startResume').onclick = ()=>{
@@ -13263,7 +13298,6 @@ $('startPick').onclick = ()=>{
   });
   $('pickStepModal').classList.add('open');
 };
-$('pickCancel').onclick = ()=> $('pickStepModal').classList.remove('open');
 $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
 $('startBackTop').onclick = ()=> goTab(startFrom);
 $('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
@@ -13273,7 +13307,6 @@ $('btnPrev').onclick  = prevStep;
 $('btnPrev').innerHTML = icon('chevL');
 $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
 $('btnExit').onclick  = exitWorkout;
-$('exitCancel').onclick = ()=> $('exitModal').classList.remove('open');
 $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
 $('exitSave').onclick = async ()=>{
   $('exitModal').classList.remove('open');
@@ -13455,10 +13488,8 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
     $('hfModal').classList.remove('open');
   };
 });
-$('hfClose').onclick = ()=> $('hfModal').classList.remove('open');
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
-$('sndClose').onclick = ()=> $('soundModal').classList.remove('open');
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
 // создание программы: одна кнопка + выбор способа
@@ -13480,13 +13511,11 @@ $('storeClear').onclick = ()=>{
   $('storeQuery').focus();
 };
 
-$('chCancel').onclick = ()=> $('createModal').classList.remove('open');
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
 $('chStore').onclick = ()=>{ $('createModal').classList.remove('open'); openStore('scrPrograms'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
 $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); $('tImport').value=''; initAIForm(); syncGeminiBtns(); show('scrText'); window.scrollTo(0,0); };
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
-$('importCancel').onclick = ()=> $('importModal').classList.remove('open');
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
 $('btnDelPlan').onclick = async ()=>{
@@ -13538,7 +13567,6 @@ $('btnAddWeight').onclick = ()=>{
   $('waModal').classList.add('open');
   setTimeout(()=> $('weightInput').focus(), 100);
 };
-$('waCancel').onclick = ()=> $('waModal').classList.remove('open');
 $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
 $('btnSaveWeight').onclick = async ()=>{
   const w = parseFloat(String($('weightInput').value).replace(',', '.'));
@@ -13568,12 +13596,10 @@ $('btnSaveWeight').onclick = async ()=>{
 // навигация по календарю
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
-$('trClose').onclick = ()=> $('trainerModal').classList.remove('open');
 $('trainerModal').onclick = e => { if(e.target === $('trainerModal')) $('trainerModal').classList.remove('open'); };
 function openPremium(){ renderPremium(); $('premiumModal').classList.add('open'); }
 $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;
-$('pmClose').onclick = ()=> $('premiumModal').classList.remove('open');
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
 $('pmBuy').onclick = ()=>{
   const pr = priceTable(), cur = userCurrency();
@@ -13584,11 +13610,9 @@ $('pmBuy').onclick = ()=>{
   $('payEmail').value = (account && account.email) || '';
   $('payModal').classList.add('open');
 };
-$('payCancel').onclick = ()=> $('payModal').classList.remove('open');
 $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
 $('payGo').onclick = completePurchase;
 $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
-$('pokClose').onclick = ()=> $('premiumOkModal').classList.remove('open');
 $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
 $('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
 $('tglBio').onclick = async ()=>{
@@ -13672,10 +13696,8 @@ $('cmpB').onchange = renderCmp;
 $('cmpDelA').onclick = ()=> delCmpPhoto('cmpA');
 $('cmpDelB').onclick = ()=> delCmpPhoto('cmpB');
 $('btnShareCmp').onclick = shareCompare;
-$('cmpClose').onclick = ()=> $('cmpModal').classList.remove('open');
 $('cmpModal').onclick = e => { if(e.target === $('cmpModal')) $('cmpModal').classList.remove('open'); };
 $('whSave').onclick = saveWeightHist;
-$('whCancel').onclick = ()=> $('whModal').classList.remove('open');
 $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classList.remove('open'); };
 $('calPrev').onclick = ()=>{ calOffset--; renderCalendar(); };
 $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
@@ -13873,7 +13895,6 @@ $('swapCopy').onclick = async ()=>{
 };
 
 $('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
-$('aeCancel').onclick = ()=> $('addExModal').classList.remove('open');
 $('addExModal').onclick = e => { if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
 $('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 $('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
@@ -14041,7 +14062,6 @@ $('trayClear').onclick = async ()=>{
   if(!(await appConfirm('Убрать все нераспределённые картинки из лотка?'))) return;
   imgTray = []; renderTray();
 };
-$('slotCancel').onclick = ()=> $('slotModal').classList.remove('open');
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
 $('slotRemove').onclick = ()=>{
   const s = imageSlots()[slotTarget];
