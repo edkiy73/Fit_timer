@@ -990,7 +990,8 @@
 
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
   .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  .load-row{display:flex;gap:6px}
+  .load-row{display:flex;flex-wrap:wrap;gap:6px}
+  .load-row .load-chip{flex:1 1 auto;min-width:54px}
   .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -1314,44 +1315,51 @@
   .collapse-head .st-chev{transform:rotate(90deg)}
   .collapse-head.open .st-chev{transform:rotate(-90deg)}
 
-  /* компактные строки упражнений с перетаскиванием */
+  /* СТРОКА УПРАЖНЕНИЯ.
+     Раньше в неё складывали заглушку-гантель, название, весь объём и две почти
+     одинаковые иконки справа — на текст оставалось меньше двухсот точек, и он
+     обрезался многоточием: «Тяга гантели в накл…», «10-12 повт. × 3 · 6 кг · от…».
+     Смотреть было не на что. Теперь слева номер по порядку (или фото, если оно
+     есть), название переносится целиком, а объём разложен отдельными метками,
+     которые сами уходят на вторую строку. Справа только ручка перетаскивания:
+     правка открывается нажатием на саму строку, а дублирование и удаление живут
+     в редакторе, рядом с остальными действиями над упражнением. */
   .ex-row{
-    position:relative;display:flex;align-items:center;gap:12px;
+    position:relative;display:flex;align-items:flex-start;gap:10px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:10px 10px 10px 12px;margin-bottom:8px;cursor:pointer;
+    padding:12px 4px 12px 12px;margin-bottom:8px;cursor:pointer;
     -webkit-touch-callout:none;user-select:none;
   }
   .ex-row.dragging{z-index:25;border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
   .ex-row.warm{border-style:dashed}
   .ex-grip{
-    flex:none;width:34px;height:44px;display:flex;align-items:center;justify-content:center;
+    flex:none;align-self:center;width:34px;height:44px;display:flex;align-items:center;justify-content:center;
     color:var(--muted);cursor:grab;border-radius:8px;
     touch-action:none; /* иначе жест уходит в прокрутку страницы */
   }
   .ex-grip:active{background:var(--line)}
   .ex-grip svg{width:16px;height:16px}
-  .ex-thumb{flex:none;width:44px;height:44px;border-radius:11px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center}
-  .ex-thumb img{width:100%;height:100%;object-fit:cover}
-  .ex-thumb svg{width:26px;height:26px;color:var(--muted)}
-  .ex-info{flex:1;min-width:0}
-  .ex-info b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* название правится на месте: в покое выглядит как заголовок строки, поле
-     проступает только под курсором — иначе список из десяти упражнений читался бы
-     как анкета из десяти полей */
-  .ex-info .ex-name{
-    display:block;width:100%;font-family:var(--font-text);font-size:14px;font-weight:500;
-    color:inherit;background:none;border:none;border-radius:8px;padding:0;
-    text-overflow:ellipsis;
+  /* номер — это порядок выполнения, а не украшение: заглушка-гантель у каждой
+     строки означала ровно ничего и делала список похожим на набор пустых мест */
+  .ex-thumb{
+    flex:none;width:38px;height:38px;border-radius:11px;background:var(--bg);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--muted);
+    font-variant-numeric:tabular-nums;
   }
-  .ex-info .ex-name::placeholder{color:var(--muted);font-weight:400}
-  /* подсветка фокуса — тенью, а не отступами: отступы сдвигали бы строку
-     и поле налезало на миниатюру слева */
-  .ex-info .ex-name:focus{outline:none;background:var(--bg);box-shadow:0 0 0 4px var(--bg)}
-  .ex-info small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ex-info .wm{color:var(--accent-ink)}
-  .ex-row .ex-more{position:static;flex:none;width:32px;height:38px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
-  .ex-row .ex-more svg{width:17px;height:17px}
-  .ex-row .ex-menu{top:auto;bottom:auto;right:44px;margin-top:0}
+  .ex-thumb img{width:100%;height:100%;object-fit:cover}
+  .ex-thumb svg{width:18px;height:18px}
+  .ex-info{flex:1;min-width:0}
+  .ex-info b{display:block;font-size:14.5px;font-weight:500;line-height:1.25}
+  .ex-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .ex-meta span{
+    font-size:11.5px;color:var(--muted);background:var(--bg);
+    border-radius:7px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums;
+  }
+  .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
+  /* действия над упражнением — в самом редакторе, а не иконкой в списке */
+  .ex-ops{display:flex;gap:8px}
+  .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
 
 
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
@@ -2721,6 +2729,16 @@
            «каким способом», было незачем. Два пути стоят рядом. -->
       <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
       <button type="button" class="btn-quiet" id="btnAddExAI"><span data-icon="sparkle"></span>Подобрать через ИИ</button>
+      <!-- Картинки — про упражнения, поэтому лежат в блоке упражнений. В настройках
+           программы, рядом с обложкой и расписанием, их искать было негде. -->
+      <button type="button" class="nav-row nr-flat" id="bImagesRow">
+        <span class="nr-ico" data-icon="image"></span>
+        <div class="nr-body">
+          <b>Картинки упражнений</b>
+          <small id="bImagesSum">Загрузить пачкой и разложить по местам</small>
+        </div>
+        <span class="nr-chev" id="bImagesChev"></span>
+      </button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
@@ -2882,17 +2900,6 @@
       <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
       <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
-    <!-- Картинки стояли в конструкторе строкой вровень с «Настройками программы»,
-         как будто это равные по весу вещи. Но это оформление, а не устройство
-         программы, и место им рядом с обложкой и описанием. -->
-    <button type="button" class="nav-row nr-flat" id="bImagesRow">
-      <span class="nr-ico" data-icon="image"></span>
-      <div class="nr-body">
-        <b>Картинки упражнений</b>
-        <small id="bImagesSum">Загрузить пачкой и разложить по местам</small>
-      </div>
-      <span class="nr-chev" id="bImagesChev"></span>
-    </button>
     </div>
 
     <div class="card-block">
@@ -2978,7 +2985,7 @@
       <div class="field"><label>Формат</label>
         <div class="seg seg3">
           <button type="button" id="exTypeReps">Повторения</button>
-          <button type="button" id="exTypeRepsWeight">Повторения и вес</button>
+          <button type="button" id="exTypeRepsWeight">С весом</button>
           <button type="button" id="exTypeTime">Время</button>
         </div>
       </div>
@@ -3049,6 +3056,14 @@
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
+    </div>
+
+    <!-- Дублирование и удаление стояли в меню «⋮» у строки списка вместе с
+         «Изменить». Место им здесь: это действия над упражнением, которое сейчас
+         открыто, и в списке они освобождают строку под собственно упражнение. -->
+    <div class="ex-ops">
+      <button type="button" class="btn-quiet" id="btnDupEx"><span data-icon="plus"></span>Дублировать</button>
+      <button type="button" class="btn-quiet danger" id="btnDelEx"><span data-icon="trash"></span>Удалить</button>
     </div>
 
     <div class="builder-actions">
@@ -10785,7 +10800,7 @@ function renderExList(){
   setShown('btnAddEx', !full);
   setShown('btnAddExAI', !full);
   const note = list.length
-    ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}` + (nWarm ? ` · ${nWarm} в разминке` : '')
+    ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}`
     : '';
   $('exCountNote').textContent = note;
   syncImagesSum();
@@ -10798,25 +10813,26 @@ function renderExList(){
     const days = (pl.days || []).length ? pl.days.join(', ') : '';
     t.textContent = `Упражнения · вариант ${planIdx + 1} из ${plans.length}`;
     h.textContent = rot
-      ? 'Варианты идут по очереди. Ниже — упражнения выбранного варианта; переключай его вкладками.'
+      ? 'Варианты идут по очереди. Ниже — упражнения выбранного, переключай вкладками.'
       : (days
-          ? `Ниже — упражнения варианта на ${days}. Переключай вариант вкладками.`
-          : 'У этого варианта не выбраны дни — он не появится в расписании. Дни задаются в настройках программы.');
+          ? `Упражнения варианта на ${days}. Переключай вариант вкладками.`
+          : 'У этого варианта не выбраны дни — он не попадёт в расписание.');
     setShown(h, true);
   } else {
     t.textContent = 'Упражнения';
     const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
-    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не появится в блоке «План на сегодня» на вкладке «Сегодня».';
+    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не попадёт в план на сегодня.';
     setShown(h, true);
   }
 }
 
-// короткое описание объёма для строки: «12–15 × 3 · отдых 60 с»
-function exSummary(ex){
+// объём упражнения разложен по кускам: в строке списка каждый кусок — отдельная
+// метка (и они переносятся), в тексте — те же куски через точку
+function exBits(ex){
   const bits = [];
-  const val = ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`;
+  bits.push(ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`);
   const sets = Math.max(1, parseInt(ex.sets) || 1);
-  bits.push(sets > 1 ? `${val} × ${sets}` : val);
+  if(sets > 1) bits.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
   if(hasWeight(ex)){
     // показываем рабочий вес, если он уже набран тренировками, иначе стартовый
     const w = draft && draft.id ? getExWeight(draft.id, ex) : (+ex.weight || 0);
@@ -10824,12 +10840,17 @@ function exSummary(ex){
   }
   if(ex.perSide) bits.push('на сторону');
   if(+ex.rest > 0) bits.push(`отдых ${ex.rest} с`);
-  return bits.join(' · ');
+  return bits;
 }
+function exSummary(ex){ return exBits(ex).join(' · '); }
 
-function exThumb(ex){
+// Номер считаем только по основным упражнениям: разминка идёт один раз до кругов,
+// где бы она ни лежала в списке, и сквозная нумерация врала бы о порядке.
+function exThumb(ex, i){
   if(ex.media && ex.media.kind === 'img') return `<img src="${ex.media.data}" alt="">`;
-  return DUMBBELL_ICON;
+  if(ex.warmup) return icon('flame');
+  const before = curPlan().exercises.slice(0, i).filter(e => !e.warmup).length;
+  return String(before + 1);
 }
 
 function exRow(ex, i){
@@ -10839,69 +10860,23 @@ function exRow(ex, i){
 
   const thumb = document.createElement('div');
   thumb.className = 'ex-thumb';
-  thumb.innerHTML = exThumb(ex);
+  thumb.innerHTML = exThumb(ex, i);
 
   const info = document.createElement('div');
   info.className = 'ex-info';
-  const nameTxt = (ex.name || '').trim() || 'Без названия';
-  // Название правится прямо здесь: собрать программу из пяти упражнений теперь
-  // можно, ни разу не уйдя на полный экран. У новой строки значения по умолчанию
-  // рабочие (повторения, 10, один подход), поэтому её достаточно назвать.
-  // Полный экран нужен за деталями — он в меню строки, под «Изменить».
-  info.innerHTML = `<input class="ex-name" type="text" maxlength="60" placeholder="Название упражнения">` +
-    `<small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
-  const nameInp = info.querySelector('.ex-name');
-  nameInp.value = ex.name || '';
-  nameInp.oninput = e => { ex.name = e.target.value; };   // без перерисовки — иначе ввод теряет фокус
-  nameInp.onkeydown = e => {
-    if(e.key !== 'Enter') return;
-    e.preventDefault();
-    // «ещё» с клавиатуры: с последней строки — следующая, из середины просто закрываем клавиатуру
-    if(i === curPlan().exercises.length - 1 && (ex.name || '').trim()) addExManual();
-    else e.target.blur();
+  const name = document.createElement('b');
+  name.textContent = (ex.name || '').trim() || 'Без названия';
+  const meta = document.createElement('div');
+  meta.className = 'ex-meta';
+  const tag = (txt, cls) => {
+    const el = document.createElement('span');
+    if(cls) el.className = cls;
+    el.textContent = txt;
+    meta.appendChild(el);
   };
-
-  // контекстное меню ⋮ — изменить / дублировать / удалить
-  const more = document.createElement('button');
-  more.className = 'more-btn ex-more';
-  more.innerHTML = icon('more');
-  more.title = 'Действия';
-  const menu = document.createElement('div');
-  menu.className = 'ctx-menu ex-menu';
-
-  const bEdit = document.createElement('button');
-  bEdit.innerHTML = icon('pencil') + 'Изменить';
-  bEdit.onclick = e => { e.stopPropagation(); closeAllMenus(); openExercise(i); };
-  const bDup = document.createElement('button');
-  bDup.innerHTML = icon('plus') + 'Дублировать';
-  bDup.onclick = e => {
-    e.stopPropagation(); closeAllMenus();
-    const list = curPlan().exercises;
-    const nWarm = list.filter(x => x.warmup).length;
-    const nMain = list.length - nWarm;
-    if(ex.warmup ? nWarm >= MAX_WARM : nMain >= MAX_MAIN){
-      appAlert('Достигнут предел упражнений в этой части.');
-      return;
-    }
-    list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
-    renderExList();
-  };
-  const bDel = document.createElement('button');
-  bDel.className = 'danger';
-  bDel.innerHTML = icon('trash') + 'Удалить';
-  bDel.onclick = async e => {
-    e.stopPropagation(); closeAllMenus();
-    if(!(await appConfirm(`Удалить «${nameTxt}»?`))) return;
-    curPlan().exercises.splice(i, 1);
-    renderExList();
-  };
-  menu.append(bEdit, bDup, bDel);
-  more.onclick = e => {
-    e.stopPropagation();
-    const wasOpen = menu.classList.contains('open');
-    closeAllMenus();
-    menu.classList.toggle('open', !wasOpen);
-  };
+  if(ex.warmup) tag('Разминка', 'wm');
+  exBits(ex).forEach(txt => tag(txt));
+  info.append(name, meta);
 
   // ручка перетаскивания — справа, как у карточек программ
   const grip = document.createElement('div');
@@ -10909,10 +10884,12 @@ function exRow(ex, i){
   grip.innerHTML = icon('grip');
   grip.title = 'Перетащить';
 
-  row.append(thumb, info, more, grip, menu);
-  // Тап по строке больше ничего не открывает: строку задевали пальцем при
-  // перетаскивании и при попадании в «⋮», и вместо перестановки открывался редактор.
-  // Правка теперь там же, где дублирование и удаление, — в меню строки.
+  row.append(thumb, info, grip);
+  // Нажатие на строку открывает редактор. Раньше здесь висело меню «⋮» с одним
+  // осмысленным пунктом «Изменить», а сама строка не делала ничего — то есть в
+  // самое крупное пятно на экране можно было тыкать без всякого результата.
+  // Перетаскивание начинается только с ручки и клика по строке не даёт.
+  row.onclick = e => { if(!grip.contains(e.target)) openExercise(i); };
 
   enableDrag(row, grip, '.ex-row', nodes => {
     const order = nodes.map(n => +n.dataset.idx);
@@ -14167,9 +14144,9 @@ async function exaCopyPrompt(){
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 
-// Добавление больше не уводит на полный экран и обратно: строка появляется прямо
-// в списке, поле названия — в фокусе. Пять упражнений — пять названий, без единого
-// перехода. Экран упражнения открывается, только когда нужны детали.
+// Новая строка заводится с рабочими значениями (повторения, 10, один подход) и
+// сразу открывается в редакторе: одно голое поле названия посреди списка не даёт
+// ничего — упражнение всё равно нужно настроить, а название у него первое поле.
 function addExManual(){
   const list = curPlan().exercises;
   const nWarm = list.filter(e => e.warmup).length;
@@ -14180,14 +14157,7 @@ function addExManual(){
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
   list.push(ex);
   renderExList();
-  show('scrBuilder');
-  focusExName(list.length - 1);
-}
-function focusExName(i){
-  const el = $('bExList').querySelector(`.ex-row[data-idx="${i}"] .ex-name`);
-  if(!el) return;
-  try{ el.scrollIntoView({block: 'center', behavior: 'smooth'}); }catch(_){}
-  el.focus();
+  openExercise(list.length - 1);
 }
 
 /* ---- экран упражнения ---- */
@@ -14199,6 +14169,32 @@ $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise')) saveExAndBack(); }
  ['exStepReps','int'],['exMaxReps','int'],['exStepWeight','dec'],['exMaxWeight','dec'],
  ['exStepTime','int'],['exMaxTime','int']].forEach(([id,k,req])=> guardNum(id,k,req));
 ['bRoundRest','uePrepSec','ueReadySec','ueSideSec'].forEach(id => guardNum(id,'int'));
+
+// дублируем то, что видно сейчас, вместе с несохранёнными правками формы
+$('btnDupEx').onclick = ()=>{
+  if(!exDraft || exIdx < 0) return;
+  const list = curPlan().exercises;
+  const nWarm = list.filter(x => x.warmup).length;
+  if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
+    appAlert('Достигнут предел упражнений в этой части.');
+    return;
+  }
+  if(!numFieldsOk('scrExercise')) return;
+  if(list[exIdx]) list[exIdx] = commitExercise();
+  list.splice(exIdx + 1, 0, JSON.parse(JSON.stringify(list[exIdx])));
+  exDraft = null; exIdx = -1; exOrig = '';
+  renderExList();
+  show('scrBuilder');
+};
+$('btnDelEx').onclick = async ()=>{
+  if(!exDraft || exIdx < 0) return;
+  const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
+  if(!(await appConfirm(`Удалить «${nameTxt}»?`))) return;
+  curPlan().exercises.splice(exIdx, 1);
+  exDraft = null; exIdx = -1; exOrig = '';
+  renderExList();
+  show('scrBuilder');
+};
 
 function saveExAndBack(){
   if(exDraft && exIdx >= 0){
@@ -14350,10 +14346,11 @@ function syncSettingsSum(){
   const bits = [];
   const plans = draft.plans || [];
   const pl = curPlan();
-  if(draft.time) bits.push(draft.time);
   const daysU = programDaysUnion(draft);
   if(daysU.length) bits.push(daysU.join('·'));
   else if(draft.rotate) bits.push('по очереди');
+  else bits.push('дни не выбраны');
+  if(draft.time) bits.push(draft.time);
   if(plans.length > 1) bits.push(`${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
   const rounds = (pl && +pl.rounds) || 1;
   bits.push(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
