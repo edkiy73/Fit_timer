@@ -4557,6 +4557,7 @@ let state = {
   prepTimer: null, // отсчёт перед стартом тренировки
   readyTimer: null, // (не используется, оставлено для совместимости)
   readyRAF: 0,      // кадровый цикл подготовки перед упражнением на время
+  live: false,     // тренировка идёт прямо сейчас
   paused: false,
   pausedAt: 0,
   pausedTotal: 0,  // суммарное время на паузе, мс
@@ -4954,8 +4955,11 @@ window.addEventListener('popstate', async e => {
     const at = navStack.lastIndexOf(t);
     if(at >= 0) navStack.length = at + 1; else navStack = [t];
   }
-  // на эти экраны нельзя вернуться «из истории» — там нет живого состояния
-  if(t === 'scrWork' || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
+  // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
+  // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
+  // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
+  // на «Сегодня», бросив занятие на середине.
+  if((t === 'scrWork' && !state.live) || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
 
   if(!guardBypass){
     const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
@@ -4996,7 +5000,11 @@ function show(id, push = true){
   // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
   // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
   // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
-  if(show._last === 'scrExercise' && id !== 'scrExercise'){ dropFreshEx(); exFromWork = false; }
+  // Переключение ВКЛАДКИ уходом не считается: это тот же экран в другом виде.
+  // Из-за этого ломалась правка упражнения прямо с тренировки: сходил на вкладку
+  // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
+  // бросив тренировку на середине.
+  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); exFromWork = false; }
   if(push && show._last !== id){
     if(tabSwitch){
       navStack[navStack.length - 1] = id;
@@ -8030,11 +8038,19 @@ const AI_SOURCES = {
     manual: ()=> {
       const keep = exeIdx;
       if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
-      else show('scrBuilder');
+      else exitExAI();
     },
-    back:  ()=> show('scrBuilder')
+    back:  ()=> exitExAI()
   }
 };
+
+// Куда возвращаться с экрана ИИ по упражнению: на тренировку, если правка началась
+// оттуда, иначе в конструктор. Раньше отсюда всегда уводило в конструктор — и
+// тренировка, идущая прямо сейчас, оставалась брошенной.
+function exitExAI(){
+  if(exFromWork) backToWorkout(false);
+  else goBackTo('scrBuilder');
+}
 
 // собирает экран под источник и показывает его
 function openAI(key){
@@ -8587,8 +8603,7 @@ async function applyExEdit(){
     list.splice(exeIdx + 1, 0, ...extra);
   }
   $('aiResult').value = '';
-  renderExList();
-  show('scrBuilder');
+  await afterExChange();
   appAlert(got.length > 1
     ? `Упражнение обновлено, добавлено ещё: ${got.length - 1}.`
     : `Упражнение «${upd.name}» обновлено.`);
@@ -11957,6 +11972,19 @@ function backToWorkout(rebuild){
   show('scrWork');
 }
 
+// Куда деваться после любой правки состава: на тренировку, если пришли оттуда
+// (тогда изменение сразу уезжает в саму программу и шаги пересобираются), иначе
+// обратно в конструктор.
+async function afterExChange(){
+  renderExList();
+  if(!exFromWork){ goBackTo('scrBuilder'); return; }
+  const i = customPrograms.findIndex(x => x.id === draft.id);
+  if(i >= 0) customPrograms[i] = draft;
+  await savePrograms();
+  renderMine();
+  backToWorkout(true);
+}
+
 async function saveExToWorkout(){
   const list = curPlan().exercises;
   if(list[exIdx]) list[exIdx] = commitExercise();
@@ -12000,6 +12028,7 @@ function startWorkout(fromIdx, elapsed){
   initAudio(); keepAwake();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
+  state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
   show('scrWork');
@@ -12519,6 +12548,7 @@ function estimateKcal(sec, load){
 }
 
 function finishWorkout(){
+  state.live = false;
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -13014,6 +13044,7 @@ function exitWorkout(){
 
 // общая часть выхода: гасим всё, что работает во время тренировки
 function tearDownWorkout(){
+  state.live = false;
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -14564,8 +14595,7 @@ function dupExercise(){
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, JSON.parse(JSON.stringify(list[exIdx])));
   exDraft = null; exIdx = -1; exOrig = '';
-  renderExList();
-  show('scrBuilder');
+  afterExChange();
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
@@ -14574,8 +14604,7 @@ async function delExercise(){
   exIsNew = false;
   curPlan().exercises.splice(exIdx, 1);
   exDraft = null; exIdx = -1; exOrig = '';
-  renderExList();
-  show('scrBuilder');
+  await afterExChange();
 }
 
 function saveExAndBack(){
