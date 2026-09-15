@@ -375,7 +375,11 @@
   .media-row{display:flex;gap:8px}
   .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
   .media-row button.act{border-color:var(--accent-line);color:var(--ink)}
+  /* семь дней недели — всегда одна строка: перенос одного дня на вторую строку
+     выглядел как сбой вёрстки. Чипы ужимаются, а не переносятся. */
   .days{display:flex;gap:6px;flex-wrap:wrap}
+  #bDays,#bDaysTop{flex-wrap:nowrap}
+  #bDays .day-chip,#bDaysTop .day-chip{min-width:0;padding:0 4px}
   .day-chip{
     flex:1;min-width:40px;background-color:var(--card);border:1px solid var(--line);border-radius:12px;
     color:var(--muted);padding:0 8px;min-height:36px;font-size:13.5px;font-family:var(--font-text);cursor:pointer;
@@ -1297,6 +1301,13 @@
     background:var(--accent-soft);gap:6px;font-weight:600;
   }
   .plan-tab.add svg{width:16px;height:16px}
+  .plan-tab{gap:8px}
+  .pt-x{
+    flex:none;width:20px;height:20px;border:none;border-radius:50%;cursor:pointer;padding:0;
+    background:rgba(255,255,255,.22);color:#fff;display:flex;align-items:center;justify-content:center;
+  }
+  .pt-x svg{width:11px;height:11px;stroke-width:2.6}
+  .pt-x:active{background:rgba(255,255,255,.4)}
   .plan-chip{flex:0 0 auto !important;padding:11px 14px !important}
   .screen-head{display:flex;align-items:center;gap:12px;margin:var(--sp-5) 0 var(--sp-4)}
   .screen-head h2{margin:0 !important}
@@ -1342,24 +1353,27 @@
      обрезался многоточием: «Тяга гантели в накл…», «10-12 повт. × 3 · 6 кг · от…».
      Смотреть было не на что. Теперь слева номер по порядку (или фото, если оно
      есть), название переносится целиком, а объём разложен отдельными метками,
-     которые сами уходят на вторую строку. Справа только ручка перетаскивания:
-     правка открывается нажатием на саму строку, а дублирование и удаление живут
-     в редакторе, рядом с остальными действиями над упражнением. */
+     которые сами уходят на вторую строку. Справа — как у карточки программы:
+     «⋮» сверху, ручка перетаскивания снизу. Нажатие на саму строку открывает
+     редактор. */
   .ex-row{
-    position:relative;display:flex;align-items:flex-start;gap:10px;
+    position:relative;display:flex;align-items:flex-start;gap:10px;min-height:80px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:12px 4px 12px 12px;cursor:pointer;
+    padding:12px 44px 12px 12px;cursor:pointer;box-sizing:border-box;
     -webkit-touch-callout:none;user-select:none;
   }
   .ex-row.dragging{z-index:25;border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
   .ex-row.warm{border-style:dashed}
+  .ex-row > .more-btn{top:6px;right:4px}
+  .ex-row > .ctx-menu{top:40px;right:6px}
   .ex-grip{
-    flex:none;align-self:center;width:34px;height:44px;display:flex;align-items:center;justify-content:center;
-    color:var(--muted);cursor:grab;border-radius:8px;
+    position:absolute;bottom:6px;right:4px;width:34px;height:34px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);cursor:grab;border-radius:10px;
     touch-action:none; /* иначе жест уходит в прокрутку страницы */
   }
   .ex-grip:active{background:var(--line)}
-  .ex-grip svg{width:16px;height:16px}
+  .ex-grip svg{width:17px;height:17px}
   /* номер — это порядок выполнения, а не украшение: заглушка-гантель у каждой
      строки означала ровно ничего и делала список похожим на набор пустых мест */
   .ex-thumb{
@@ -2917,10 +2931,6 @@
       <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
     </div>
     <p class="field-hint" id="bVolHint"></p>
-    <div class="field" id="bPlanTimeField"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
-      <p class="field-hint">Только для напоминаний: время этого варианта перебьёт общее. Пусто — берётся общее.</p>
-    </div>
-    <button type="button" class="link-btn hidden" id="btnDelPlan" style="padding:6px">Удалить этот вариант</button>
     </div>
 
     <div class="card-block">
@@ -2939,7 +2949,13 @@
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Обложка и описание</p></div>
+    <div class="cb-head"><p class="cb-title">Описание и обложка</p></div>
+    <!-- Описание стоит выше картинки: его читают перед стартом, а обложка — только
+         оформление списка. -->
+    <div class="field"><label>Описание (необязательно)</label>
+      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, как часто заниматься"></textarea>
+      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется перед стартом.</p>
+    </div>
     <div class="field"><label>Обложка (необязательно)</label>
       <div class="media-row">
         <button type="button" id="bCoverBtn">Выбрать фото</button>
@@ -2947,10 +2963,6 @@
       </div>
       <input type="file" id="bCoverFile" accept="image/*" class="hidden">
       <div class="media-preview" id="bCoverPrev"></div>
-    </div>
-    <div class="field"><label>Описание тренировки (необязательно)</label>
-      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
-      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
     </div>
 
@@ -4773,6 +4785,12 @@ const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
 // переживает и системную кнопку «назад», и перезаход по истории.
 let navDepth = 0;
+// Путь по экранам, каким его видит человек. Нужен, чтобы возврат на экран, где
+// он уже был, НЕ добавлял запись в историю: «конструктор → настройки → назад →
+// упражнение → назад → настройки → назад» копил по записи на каждый шаг, и
+// потом системная кнопка «назад» требовала столько же нажатий, сколько было
+// переходов. Теперь такой возврат отматывает историю назад, а не удлиняет её.
+let navStack = ['scrMenu'];
 try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // Что считается несохранённой работой на каждом экране. Раньше эту проверку знали
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
@@ -4888,6 +4906,10 @@ window.addEventListener('popstate', async e => {
   }
   let t = (e.state && e.state.scr) || 'scrMenu';
   navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
+  {
+    const at = navStack.lastIndexOf(t);
+    if(at >= 0) navStack.length = at + 1; else navStack = [t];
+  }
   // на эти экраны нельзя вернуться «из истории» — там нет живого состояния
   if(t === 'scrWork' || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
 
@@ -4913,12 +4935,26 @@ window.addEventListener('popstate', async e => {
   guardBypass = false;
   show(t, false);
 });
+// «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
+// экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
+// класть новую. Иначе «конструктор → настройки → назад → упражнение → назад» копил
+// по записи на каждый шаг: сорок переходов давали сорок одну запись, и системная
+// кнопка «назад» тридцать раз подряд не выводила из конструктора.
+// Экран покажет сам popstate — здесь только отматываем.
+function goBackTo(id){
+  if(navStack.length > 1 && navStack[navStack.length - 2] === id && show._last === navStack[navStack.length - 1]){
+    try{ history.back(); return; }catch(e){}
+  }
+  show(id);
+}
+
 function show(id, push = true){
   // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
   // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
   // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
   if(show._last === 'scrExercise' && id !== 'scrExercise'){ dropFreshEx(); exFromWork = false; }
   if(push && show._last !== id){
+    navStack.push(id);
     navDepth++;
     try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
   }
@@ -4986,6 +5022,7 @@ function goTab(id){
   if(!ROOT_TABS.includes(cur)){
     // возврат из глубины: текущая запись становится «Сегодня», вкладка ложится поверх
     navDepth = 0;
+    navStack = ['scrMenu'];
     try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
     if(id === 'scrMenu'){ show('scrMenu', false); window.scrollTo(0, 0); return; }
     show(id, true);
@@ -4994,12 +5031,14 @@ function goTab(id){
   }
   if(id === 'scrMenu'){
     if(navDepth > 0){ history.go(-navDepth); return; }
+    navStack = ['scrMenu'];
     show('scrMenu', false);
     window.scrollTo(0, 0);
     return;
   }
   if(navDepth > 0){
     navDepth = 1;
+    navStack = ['scrMenu', id];
     try{ history.replaceState({scr: id, d: 1}, ''); }catch(e){}
     show(id, false);
   } else {
@@ -8265,7 +8304,7 @@ function openImages(){
 function closeImages(){
   renderExList();
   syncSettingsSum();
-  show(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
+  goBackTo(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
 }
 
 // Какие из загруженных картинок уже где-то стоят. Раньше «разложенность» считали
@@ -10280,8 +10319,6 @@ function syncRotateUI(){
   // дни варианта показываются только когда вариантов правда несколько
   $('bDaysLabel').textContent = 'Дни этого варианта';
   $('bDaysHint').textContent = 'В эти дни вариант попадёт в план на сегодня.';
-  // у единственного варианта своё время напоминания дублирует общее
-  setShown('bPlanTimeField', many);
 
   // подписи вариантов. У программы с одним вариантом карточка не про варианты:
   // в ней круги и отдых, и называться она должна тем, что в ней лежит.
@@ -10319,7 +10356,9 @@ function commitPlanFields(){
   const pl = curPlan();
   pl.rounds = +$('bRounds').value || 3;
   pl.roundRest = Math.max(0, Math.min(600, parseInt($('bRoundRest').value) || 0));
-  pl.time = $('bPlanTime').value || '';
+  // Своё время напоминания у варианта из редактора убрано: одно время на программу
+  // и так есть, а второе рядом только путало. Ключ pl.time остаётся — его понимают
+  // импорт, формат обмена с ИИ и напоминания; просто мы его больше не предлагаем.
 }
 
 // заполняет форму конструктора из draft и показывает экран
@@ -10361,7 +10400,6 @@ function renderPlanTabs(){
   setShown('planTabsTop', draft.plans.length > 1);
   if(typeof renderExList === 'function' && $('bVariantTitle')) { /* подписи обновит renderExList */ }
   syncSettingsSum();
-  setShown('btnDelPlan', draft.plans.length > 1);
 }
 
 function buildPlanTabs(boxId){
@@ -10369,18 +10407,32 @@ function buildPlanTabs(boxId){
   const isTop = boxId === 'planTabsTop';
   // одна вкладка ничего не переключает и просто повторяет дни, выбранные выше
   (draft.plans.length > 1 ? draft.plans : []).forEach((pl, i)=>{
-    const b = document.createElement('button');
-    b.type = 'button';
+    const b = document.createElement('div');
     b.className = 'plan-tab';
+    b.setAttribute('role', 'button');
+    b.tabIndex = 0;
     const rot = !!draft.rotate && draft.plans.length > 1;
+    const lbl = document.createElement('span');
     if(rot){
       // при очереди дни варианта не имеют смысла — показываем номер и позицию в очереди
       const nextIdx = ((draft.rotIdx || 0) % draft.plans.length + draft.plans.length) % draft.plans.length;
-      b.textContent = `Вариант ${i+1}` + (i === nextIdx ? ' • сейчас' : '');
+      lbl.textContent = `Вариант ${i+1}` + (i === nextIdx ? ' • сейчас' : '');
     } else {
-      b.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+      lbl.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
     }
+    b.appendChild(lbl);
     b.classList.toggle('act', i === planIdx);
+    // удаление — крестиком на самом варианте: отдельной ссылкой внизу карточки
+    // его не искали, а отдельным чипом в ряду он не помещался
+    if(!isTop && i === planIdx){
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'pt-x';
+      x.innerHTML = icon('close');
+      x.title = 'Удалить этот вариант';
+      x.onclick = e => { e.stopPropagation(); delCurrentPlan(); };
+      b.appendChild(x);
+    }
     b.onclick = ()=>{
       if(i === planIdx) return;
       commitPlanFields();
@@ -10391,26 +10443,28 @@ function buildPlanTabs(boxId){
     };
     box.appendChild(b);
   });
-  if(draft.plans.length < 7 && !isTop){
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'plan-tab add';
-    add.innerHTML = icon('plus') + 'Добавить вариант';
-    add.onclick = ()=>{
-      commitPlanFields();
-      draft.plans.push(blankPlan());
-      planIdx = draft.plans.length - 1;
-      fillPlanFields();
-      syncRotateUI(); // появился второй вариант — показываем выбор режима
-    };
-    box.appendChild(add);
+  if(!isTop){
+    if(draft.plans.length < 7){
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'plan-tab add';
+      add.innerHTML = icon('plus') + 'Добавить';
+      add.title = 'Добавить вариант';
+      add.onclick = ()=>{
+        commitPlanFields();
+        draft.plans.push(blankPlan());
+        planIdx = draft.plans.length - 1;
+        fillPlanFields();
+        syncRotateUI(); // появился второй вариант — показываем выбор режима
+      };
+      box.appendChild(add);
+    }
   }
 }
 
 function fillPlanFields(){
   const pl = curPlan();
   $('bRoundRest').value = pl.roundRest;
-  $('bPlanTime').value = pl.time || '';
   setTimeout(syncVolHint, 0);
   const sel = $('bRounds'); sel.innerHTML='';
   for(let i=1;i<=10;i++){
@@ -10421,7 +10475,6 @@ function fillPlanFields(){
   }
   renderDays();
   renderExList();
-  setShown('btnDelPlan', draft.plans.length > 1);
 }
 
 function syncCover(){
@@ -10438,19 +10491,15 @@ function syncVolHint(){
   const pl = curPlan();
   const main = (pl.exercises || []).filter(e => !e.warmup);
   const R = pl.rounds || 1;
-  if(!main.length){ el.textContent = 'Круги повторяют весь список целиком. Подходы у упражнения — повторы подряд, до перехода к следующему.'; return; }
+  // Раньше здесь приклеивался ярлык — «Круговая», «Силовая», «Смешанная». Откуда он
+  // берётся, по экрану понять было нельзя, а человеку это слово ничего не даёт.
+  // Говорим то же самое числами: сколько всего подходов выйдет за тренировку.
+  if(!main.length){ el.textContent = ''; return; }
   const sets = main.map(e => Math.max(1, parseInt(e.sets) || 1));
-  const maxSet = Math.max(...sets), anySets = maxSet > 1;
-  if(R > 1 && !anySets){
-    el.textContent = `Круговая: список из ${main.length} ${plural(main.length,'упражнения','упражнений','упражнений')} пройдёшь ${R} ${plural(R,'раз','раза','раз')} подряд.`;
-  } else if(R === 1 && anySets){
-    const tot = sets.reduce((a,b)=>a+b,0);
-    el.textContent = `Силовая: подходы каждого упражнения идут подряд, всего ${tot} ${plural(tot,'подход','подхода','подходов')}.`;
-  } else if(R > 1 && anySets){
-    el.textContent = `Смешанная: блок с подходами повторится ${R} ${plural(R,'раз','раза','раз')} — упражнение с ${maxSet} ${plural(maxSet,'подходом','подходами','подходами')} выполнится ${R * maxSet} раз. Проверь, не много ли это.`;
-  } else {
-    el.textContent = `Один проход по списку. Увеличь круги для круговой или подходы у упражнений для силовой.`;
-  }
+  const total = sets.reduce((a, b) => a + b, 0) * R;
+  el.textContent = `${main.length} ${plural(main.length, 'упражнение', 'упражнения', 'упражнений')}`
+    + (R > 1 ? ` × ${R} ${plural(R, 'круг', 'круга', 'кругов')}` : '')
+    + ` — ${total} ${plural(total, 'подход', 'подхода', 'подходов')} за тренировку.`;
 }
 
 function renderDays(){
@@ -10899,6 +10948,32 @@ function exThumb(ex, i){
   return String(before + 1);
 }
 
+// Дублирование и удаление ПРЯМО ИЗ СПИСКА: те же действия есть и в редакторе, но
+// ради них не должно быть нужно открывать упражнение.
+function dupExerciseAt(i){
+  const list = curPlan().exercises;
+  const ex = list[i];
+  if(!ex) return;
+  const nWarm = list.filter(x => x.warmup).length;
+  if(ex.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
+    appAlert(ex.warmup
+      ? `В разминке уже ${MAX_WARM} упражнений — это предел.`
+      : `В основной части уже ${MAX_MAIN} упражнений — это предел.`);
+    return;
+  }
+  list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
+  renderExList();
+}
+async function delExerciseAt(i){
+  const list = curPlan().exercises;
+  const ex = list[i];
+  if(!ex) return;
+  const nameTxt = (ex.name || '').trim() || 'это упражнение';
+  if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  list.splice(i, 1);
+  renderExList();
+}
+
 function exRow(ex, i){
   const row = document.createElement('div');
   row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
@@ -10924,18 +10999,38 @@ function exRow(ex, i){
   exBits(ex).forEach(txt => tag(txt));
   info.append(name, meta);
 
-  // ручка перетаскивания — справа, как у карточек программ
+  // Справа всё как у карточки программы: «⋮» сверху, ручка перетаскивания снизу.
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'more-btn';
+  more.innerHTML = icon('more');
+  more.title = 'Действия';
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  const item = (html, fn, cls) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if(cls) b.className = cls;
+    b.innerHTML = html;
+    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    menu.appendChild(b);
+  };
+  item(icon('plus') + 'Дублировать', ()=> dupExerciseAt(i));
+  item(icon('trash') + 'Удалить', ()=> delExerciseAt(i), 'danger');
+  more.onclick = e => { e.stopPropagation(); toggleMenu(menu); };
+
   const grip = document.createElement('div');
   grip.className = 'ex-grip';
   grip.innerHTML = icon('grip');
   grip.title = 'Перетащить';
 
-  row.append(thumb, info, grip);
-  // Нажатие на строку открывает редактор. Раньше здесь висело меню «⋮» с одним
-  // осмысленным пунктом «Изменить», а сама строка не делала ничего — то есть в
-  // самое крупное пятно на экране можно было тыкать без всякого результата.
-  // Перетаскивание начинается только с ручки и клика по строке не даёт.
-  row.onclick = e => { if(!grip.contains(e.target)) openExercise(i); };
+  row.append(thumb, info, more, grip, menu);
+  // Нажатие на саму строку открывает редактор; перетаскивание начинается только
+  // с ручки и клика по строке не даёт.
+  row.onclick = e => {
+    if(grip.contains(e.target) || more.contains(e.target) || menu.contains(e.target)) return;
+    openExercise(i);
+  };
 
   enableDrag(row, grip, '.ex-row', nodes => {
     const order = nodes.map(n => +n.dataset.idx);
@@ -13578,15 +13673,16 @@ $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
-$('btnDelPlan').onclick = async ()=>{
+async function delCurrentPlan(){
   if(draft.plans.length <= 1) return;
-  if(!(await appConfirm('Удалить этот вариант вместе с его упражнениями?'))) return;
+  if(!(await appDialog('Удалить этот вариант вместе с его упражнениями?',
+    {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
   draft.plans.splice(planIdx, 1);
   planIdx = Math.max(0, planIdx - 1);
   if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
   fillPlanFields();
   syncRotateUI();
-};
+}
 
 /* ---- данные и правила ----
    Экран открывается из трёх мест: настроек, знакомства и подсказки про
@@ -14340,7 +14436,7 @@ function saveExAndBack(){
   }
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
-  show('scrBuilder');
+  goBackTo('scrBuilder');
 }
 
 // выход без сохранения — с предупреждением, если что-томенялось
@@ -14358,7 +14454,7 @@ async function leaveExercise(){
   exDraft = null; exIdx = -1; exOrig = '';
   if(exFromWork){ backToWorkout(false); return; }
   renderExList();
-  show('scrBuilder');
+  goBackTo('scrBuilder');
 }
 $('exName').oninput = e => { exDraft.name = e.target.value; };
 // формат теперь трёхтабный: «повторения» и «повторения и вес» — оба type='reps',
@@ -14464,7 +14560,7 @@ function closeProgSettings(){
   draft.name = $('bName').value.trim() || draft.name;
   syncSettingsSum();
   renderExList();
-  show('scrBuilder');
+  goBackTo('scrBuilder');
 }
 $('psBackTop').onclick = closeProgSettings;
 $('btnPsDone').onclick = ()=>{ if(numFieldsOk('scrProgSettings')) closeProgSettings(); };
