@@ -284,6 +284,9 @@
     box-shadow:var(--sh-2);
   }
   .ctx-menu.open{display:block;animation:menuIn .16s cubic-bezier(.22,.7,.2,1)}
+  /* внизу списка меню не помещается — раскрываем вверх от кнопки */
+  .ctx-menu.up{top:auto;bottom:calc(100% + 6px);animation:menuUp .16s cubic-bezier(.22,.7,.2,1)}
+  @keyframes menuUp{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
   @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
   .ctx-menu button{
     display:flex;align-items:center;gap:10px;width:100%;text-align:left;
@@ -383,7 +386,7 @@
   .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
   .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;line-height:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .tray-item .ti-x svg{width:11px;height:11px;stroke-width:2.6}
-  .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}
   .slot-row .sl-thumb{flex:none;width:52px;height:52px;border-radius:11px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
   .slot-row .sl-thumb img{width:100%;height:100%;object-fit:cover}
   .slot-row .sl-thumb svg{width:24px;height:24px;color:var(--muted)}
@@ -391,7 +394,7 @@
   .slot-row .sl-body b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .slot-row .sl-body small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
   .slot-row .sl-body small.has{color:var(--rest-ink)}
-  .slot-group{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+  .slot-group{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:8px 0 0}
   /* поле растёт под текст; когда упирается в предел высоты — скроллится внутри себя,
      поэтому overflow задаётся из autoGrow(), а не жёстко здесь */
   textarea.auto-grow{resize:none;min-height:90px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
@@ -1229,7 +1232,7 @@
   .user-row{
     display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
     background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:12px 14px;margin-bottom:10px;color:var(--ink);
+    padding:12px 14px;color:var(--ink);
   }
   .user-row.act{border-color:var(--accent-line)}
   .user-row .ua{flex:none;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--line);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px}
@@ -1330,7 +1333,7 @@
   .ex-row{
     position:relative;display:flex;align-items:flex-start;gap:10px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:12px 4px 12px 12px;margin-bottom:8px;cursor:pointer;
+    padding:12px 4px 12px 12px;cursor:pointer;
     -webkit-touch-callout:none;user-select:none;
   }
   .ex-row.dragging{z-index:25;border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
@@ -1382,14 +1385,26 @@
   /* внутри карточки разделительные линии не нужны */
   .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
   .card-block .field,.card-block .row2,.card-block .step-grid{margin:0}
-  /* внутри карточки отступы задаёт только gap контейнеров */
-  /* ЛЮБАЯ вложенная обёртка внутри карточки — колонка с тем же ритмом.
-     gap работает только между прямыми детьми, поэтому перечисляем обёртки явно */
+  /* ============ РИТМ ВНУТРИ КАРТОЧКИ ============
+     Отступы внутри карточки задаёт только gap, а gap работает между ПРЯМЫМИ
+     детьми. Поэтому каждая вложенная обёртка обязана быть колонкой с тем же
+     ритмом — иначе её содержимое слипается.
+
+     Раньше обёртки перечислялись по именам: .stack, .prefs, .hf-block,
+     .vol-field, .mc-charts. Список надо было помнить при каждой новой обёртке,
+     и .ai-pane в него не попал — из-за этого во ВСЕХ ПЯТИ панелях первого шага
+     у ИИ поля стояли вплотную. Ещё три обёртки вообще без класса.
+
+     Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
+     иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
   .card-block .vol-field,
   .card-block .mc-charts{display:flex;flex-direction:column;gap:16px}
+  /* списки одинаковых строк живут теснее полей: между ними 8, а не 16 */
+  .card-block > .list-rows{display:flex;flex-direction:column;gap:8px}
   /* поле — тесная связка: подпись, контрол, чипы, подсказка */
   /* заголовок с числом упражнений: в узком экране переносим числом на вторую строку */
   /* экран перед стартом: карточки, кнопка всегда снизу */
@@ -2739,7 +2754,7 @@
         </div>
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
-      <div id="bExList"></div>
+      <div class="list-rows" id="bExList"></div>
       <!-- Попап-развилка «Через ИИ / Вручную» ушла: добавление вручную теперь ничего
            не открывает, а прятать второй путь за лишним касанием, чтобы спросить
            «каким способом», было незачем. Два пути стоят рядом и одного размера. -->
@@ -2809,7 +2824,7 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Куда подставить</p></div>
       <p class="field-hint">Нажми на место в списке — предложим картинки из загруженных или с телефона.</p>
-      <div id="slotList"></div>
+      <div class="list-rows" id="slotList"></div>
     </div>
 
     <div class="builder-actions">
@@ -3672,7 +3687,7 @@
          профиль был отдельной карточкой сверху и не читался как «выбранный». -->
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title">Профили</p></div>
-      <div id="usersList"></div>
+      <div class="list-rows" id="usersList"></div>
       <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
       <p class="field-hint" id="usersHint"></p>
     </div>
@@ -6066,7 +6081,28 @@ function customToProgram(p, planIdx = 0){
 }
 
 function closeAllMenus(){
-  document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open', 'up'));
+}
+// Меню открывается вниз от кнопки, и у нижних карточек списка оно уезжало под док
+// или вовсе за край экрана — пункты были недоступны. Открываем его вверх, если
+// внизу не помещается. Док — плавающий и накрывает содержимое, поэтому нижней
+// границей считаем его верх, а не низ окна.
+function placeMenu(m){
+  m.classList.remove('up');
+  const dock = document.querySelector('.dock');
+  const dockTop = (dock && getComputedStyle(dock).display !== 'none')
+    ? dock.getBoundingClientRect().top : window.innerHeight;
+  const limit = Math.min(window.innerHeight, dockTop) - 8;
+  const r = m.getBoundingClientRect();
+  if(r.bottom > limit && r.top - r.height > 8) m.classList.add('up');
+}
+// Открыть меню: закрыть остальные, показать это и развернуть вверх, если надо.
+function toggleMenu(m){
+  const was = m.classList.contains('open');
+  closeAllMenus();
+  if(was) return;
+  m.classList.add('open');
+  placeMenu(m);
 }
 // первый тап мимо открытого меню только закрывает его и НЕ нажимает то, что под ним
 document.addEventListener('click', e => {
@@ -6884,7 +6920,19 @@ async function shareWeightChart(){
   const ws = stats.weights;
   if(ws.length < 1){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
   const cs = getComputedStyle(document.body);
-  const col = n => cs.getPropertyValue(n).trim();
+  // переменная темы может ссылаться на другую (--work: var(--accent)) — разворачиваем
+  const col = n => {
+    let v = cs.getPropertyValue(n).trim();
+    for(let i = 0; i < 5 && /^var\(/.test(v); i++) v = cs.getPropertyValue(v.slice(4, -1).split(',')[0].trim()).trim();
+    return v;
+  };
+  // «#RRGGBB» + прозрачность. Склейка «цвет + "44"» работала только с шестизначным
+  // hex: на любом другом значении createLinearGradient().addColorStop() бросает
+  // ошибку и обрывает всю отрисовку.
+  const alpha = (c0, a) => {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(c0).trim());
+    return m ? `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})` : c0;
+  };
   const W = 1080, H = 1350, c = document.createElement('canvas');
   c.width = W; c.height = H; const x = c.getContext('2d');
   try{
@@ -6901,9 +6949,9 @@ async function shareWeightChart(){
 
   const SERIES = [
     {k: 'w', color: col('--work'), label: 'ВЕС', unit: 'кг'},
-    {k: 'waist', color: 'var(--accent-ink)', label: 'ТАЛИЯ', unit: 'см'},
-    {k: 'hips', color: 'var(--rest-ink)', label: 'БЁДРА', unit: 'см'},
-    {k: 'chest', color: 'var(--warn)', label: 'ГРУДЬ', unit: 'см'}
+    {k: 'waist', color: col('--accent-ink'), label: 'ТАЛИЯ', unit: 'см'},
+    {k: 'hips', color: col('--rest-ink'), label: 'БЁДРА', unit: 'см'},
+    {k: 'chest', color: col('--warn'), label: 'ГРУДЬ', unit: 'см'}
   ];
   const active = SERIES.map(s => ({s, have: ws.map(p => p[s.k] != null ? p[s.k] : null).filter(v => v != null).slice(-30)}))
                        .filter(o => o.have.length);
@@ -6942,7 +6990,7 @@ async function shareWeightChart(){
     if(have.length > 1){
       // заливка
       const grad = x.createLinearGradient(0, plotY, 0, plotY + plotH);
-      grad.addColorStop(0, s.color + '44'); grad.addColorStop(1, s.color + '00');
+      grad.addColorStop(0, alpha(s.color, .27)); grad.addColorStop(1, alpha(s.color, 0));
       x.beginPath(); x.moveTo(lx(0), ly(have[0]));
       have.forEach((v, i) => x.lineTo(lx(i), ly(v)));
       x.lineTo(lx(have.length - 1), plotY + plotH); x.lineTo(lx(0), plotY + plotH); x.closePath();
@@ -9691,12 +9739,7 @@ function renderMine(){
       renderMine();
     };
     menu.append(bEdit, bShare, bFile, bDel);
-    more.onclick = e=>{
-      e.stopPropagation();
-      const wasOpen = menu.classList.contains('open');
-      closeAllMenus();
-      if(!wasOpen) menu.classList.add('open');
-    };
+    more.onclick = e=>{ e.stopPropagation(); toggleMenu(menu); };
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
     handle.innerHTML = icon('grip');
@@ -10841,9 +10884,20 @@ function commitExercise(){
   return applyFormTo(exDraft);
 }
 
+// Разминка выполняется один раз ДО кругов, где бы она ни лежала в списке
+// (см. buildSteps: warmEx идут первыми). Значит и список обязан показывать
+// порядок выполнения — иначе перетаскивание разминки вниз «получалось», но на
+// тренировке ничего не менялось, и номера строк врали.
+function sortWarmFirst(list){
+  const w = list.filter(e => e.warmup), m = list.filter(e => !e.warmup);
+  if(!w.length || !m.length) return list;
+  list.length = 0;
+  list.push(...w, ...m);
+  return list;
+}
 function renderExList(){
   const box = $('bExList'); box.innerHTML = '';
-  const list = curPlan().exercises;
+  const list = sortWarmFirst(curPlan().exercises);
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('dumbbell')}</span>` +
@@ -10956,7 +11010,7 @@ function exRow(ex, i){
     const order = nodes.map(n => +n.dataset.idx);
     const arr = curPlan().exercises;
     curPlan().exercises = order.map(idx => arr[idx]);
-    renderExList();
+    renderExList();   // sortWarmFirst внутри вернёт разминку наверх
   });
   return row;
 }
@@ -13257,13 +13311,7 @@ document.addEventListener('click', e => {
 
 /* ================= СОБЫТИЯ ================= */
 $('startMore').innerHTML = icon('more');
-$('startMore').onclick = e => {
-  e.stopPropagation();
-  const menu = $('startMenu');
-  const wasOpen = menu.classList.contains('open');
-  closeAllMenus();
-  menu.classList.toggle('open', !wasOpen);
-};
+$('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu')); };
 $('progDescMore').onclick = ()=>{
   const box = $('progDescBox'), open = !box.classList.contains('open');
   box.classList.toggle('open', open);
@@ -14140,13 +14188,7 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
 
 // действия над открытым упражнением — в меню шапки, как у программы на экране старта
 $('exMore').innerHTML = icon('more');
-$('exMore').onclick = e => {
-  e.stopPropagation();
-  const m = $('exMenu');
-  const was = m.classList.contains('open');
-  closeAllMenus();
-  m.classList.toggle('open', !was);
-};
+$('exMore').onclick = e => { e.stopPropagation(); toggleMenu($('exMenu')); };
 function buildExMenu(){
   const box = $('exMenu'); box.innerHTML = '';
   const mk = (html, fn, cls) => {
