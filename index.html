@@ -2748,7 +2748,7 @@
 
   <!-- Картинки программы: массовая загрузка -->
   <section class="screen builder" id="scrImages">
-    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки программы</h2></div>
+    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки упражнений</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="image"></span>
@@ -2884,20 +2884,46 @@
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
     <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
+    <!-- Порядок карточек — по важности: расписание, потом круги и отдых, потом рост
+         нагрузки, и только в конце оформление. Раньше первой стояла обложка с описанием,
+         а дни приходилось искать третьей карточкой — притом что карточка «Когда
+         тренироваться» дней как раз и не содержала: у программы с единственным вариантом
+         они лежали ниже, в «Вариантах тренировки». Теперь дни рисуются здесь всегда,
+         кроме случая «несколько вариантов, у каждого свои дни» (см. renderDays). -->
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Обложка и описание</p></div>
-    <div class="field"><label>Обложка (необязательно)</label>
-      <div class="media-row">
-        <button type="button" id="bCoverBtn">Выбрать фото</button>
-        <button type="button" id="bCoverNone">Без обложки</button>
+    <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
+    <div class="sched-mode hidden" id="schedModeRow">
+      <div class="hf-seg" id="schedSeg">
+        <button type="button" data-mode="days">По дням недели</button>
+        <button type="button" data-mode="rot">По очереди</button>
       </div>
-      <input type="file" id="bCoverFile" accept="image/*" class="hidden">
-      <div class="media-preview" id="bCoverPrev"></div>
+      <p class="field-hint" id="schedHint"></p>
     </div>
-    <div class="field"><label>Описание тренировки (необязательно)</label>
-      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
-      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
+    <div class="field hidden" id="bDaysFieldTop"><label>Дни тренировок</label><div class="days" id="bDaysTop"></div>
+      <p class="field-hint" id="bDaysTopHint"></p>
     </div>
+    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
+      <p class="field-hint">Если заданы время и дни — напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title" id="variantsLabel">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
+    <p class="field-hint" id="variantsHint"></p>
+    <div class="plan-tabs" id="planTabs"></div>
+
+    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+      <p class="field-hint" id="bDaysHint"></p>
+    </div>
+    <div class="row2">
+      <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
+      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
+    </div>
+    <p class="field-hint" id="bVolHint"></p>
+    <div class="field" id="bPlanTimeField"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
+      <p class="field-hint">Только для напоминаний: время этого варианта перебьёт общее. Пусто — берётся общее.</p>
+    </div>
+    <button type="button" class="link-btn hidden" id="btnDelPlan" style="padding:6px">Удалить этот вариант</button>
     </div>
 
     <div class="card-block">
@@ -2915,47 +2941,22 @@
     </div>
     </div>
 
-    <!-- Расписание разложено по принадлежности, а не по темам «когда» и «сколько».
-         Раньше круги и отдых между кругами жили отдельной карточкой, хотя относятся
-         к выбранному варианту ровно так же, как его дни: человек переключал вариант
-         в одной карточке, а правил его круги в другой и не понимал, что связано.
-         Теперь сверху — общее для всей программы, ниже — карточка одного варианта,
-         и переключатель вариантов стоит в её заголовке: всё под ним про него. -->
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
-    <div class="sched-mode hidden" id="schedModeRow">
-      <div class="hf-seg" id="schedSeg">
-        <button type="button" data-mode="days">По дням недели</button>
-        <button type="button" data-mode="rot">По очереди</button>
+    <div class="cb-head"><p class="cb-title">Обложка и описание</p></div>
+    <div class="field"><label>Обложка (необязательно)</label>
+      <div class="media-row">
+        <button type="button" id="bCoverBtn">Выбрать фото</button>
+        <button type="button" id="bCoverNone">Без обложки</button>
       </div>
-      <p class="field-hint" id="schedHint"></p>
+      <input type="file" id="bCoverFile" accept="image/*" class="hidden">
+      <div class="media-preview" id="bCoverPrev"></div>
     </div>
-    <div class="field hidden" id="bDaysFieldTop"><label>Дни тренировок</label><div class="days" id="bDaysTop"></div>
-      <p class="field-hint">Общее расписание программы: в эти дни напомним о тренировке.</p>
-    </div>
-    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
-      <p class="field-hint">Если заданы время и дни — напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
+    <div class="field"><label>Описание тренировки (необязательно)</label>
+      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
+      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
     </div>
 
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title" id="variantsLabel">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
-    <div class="plan-tabs" id="planTabs"></div>
-    <p class="field-hint" id="variantsHint"></p>
-
-    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
-      <p class="field-hint" id="bDaysHint"></p>
-    </div>
-    <div class="row2">
-      <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
-      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
-    </div>
-    <p class="field-hint" id="bVolHint"></p>
-    <div class="field"><label>Своё время напоминания</label><input type="time" id="bPlanTime">
-      <p class="field-hint">Только для напоминаний: время этого варианта перебьёт общее. Пусто — берётся общее.</p>
-    </div>
-    <button type="button" class="link-btn hidden" id="btnDelPlan" style="padding:6px">Удалить этот вариант</button>
-    </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnPsDone">Готово</button>
     </div>
@@ -4765,7 +4766,7 @@ try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:'Изменения программы', clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ exDraft = null; exIdx = -1; exOrig = ''; }} : null,
+  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; }} : null,
   scrUserEdit: ()=> userDirty() ? {what:'Изменения профиля'} : null,
   scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:'Заполненный запрос'} : null
 };
@@ -4874,6 +4875,10 @@ window.addEventListener('popstate', async e => {
   show(t, false);
 });
 function show(id, push = true){
+  // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
+  // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
+  // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
+  if(show._last === 'scrExercise' && id !== 'scrExercise') dropFreshEx();
   if(push && show._last !== id){
     navDepth++;
     try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
@@ -8203,13 +8208,13 @@ function renderTray(){
 
 // все места, куда можно подставить картинку
 function imageSlots(){
-  const slots = [{kind: 'cover', title: 'Обложка программы', get: ()=> draft.cover, set: v => draft.cover = v}];
+  const slots = [{kind: 'cover', group: 'Обложка', title: 'Обложка программы', get: ()=> draft.cover, set: v => draft.cover = v}];
   const plans = draft.plans || [];
   plans.forEach((pl, pi)=>{
     (pl.exercises || []).forEach((ex, ei)=>{
       slots.push({
         kind: 'ex', plan: pi, idx: ei,
-        group: plans.length > 1 ? `Вариант ${pi + 1}` : '',
+        group: plans.length > 1 ? `Вариант ${pi + 1}` : 'Упражнения',
         title: (ex.name || '').trim() || 'Без названия',
         get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
         set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); }
@@ -10279,15 +10284,22 @@ function syncRotateUI(){
     ? 'Варианты идут по очереди: A, потом B, потом снова A. Дни ниже говорят только когда тренироваться — пропуск дня очередь не сбивает.'
     : 'У каждого варианта свои дни недели. В нужный день откроется именно он.';
 
-  // подписи дней варианта (общие дни программы подписаны в разметке: они не меняются)
-  $('bDaysLabel').textContent = many ? 'Дни этого варианта' : 'Дни тренировок';
-  $('bDaysHint').textContent = 'В эти дни программа появится в блоке «План на сегодня» на вкладке «Сегодня».';
+  // дни варианта показываются только когда вариантов правда несколько
+  $('bDaysLabel').textContent = 'Дни этого варианта';
+  $('bDaysHint').textContent = 'В эти дни вариант попадёт в план на сегодня.';
+  // у единственного варианта своё время напоминания дублирует общее
+  setShown('bPlanTimeField', many);
 
-  // подписи вариантов
-  $('variantsLabel').textContent = rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки';
-  $('variantsHint').textContent = rot
-    ? 'Всё, что ниже, относится к выбранному варианту. Метка «сейчас» — тот, что выпадет на следующей тренировке.'
-    : 'Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни. Всё, что ниже, относится к выбранному варианту.';
+  // подписи вариантов. У программы с одним вариантом карточка не про варианты:
+  // в ней круги и отдых, и называться она должна тем, что в ней лежит.
+  $('variantsLabel').textContent = !many
+    ? 'Круги и отдых'
+    : (rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки');
+  $('variantsHint').textContent = !many
+    ? 'Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни.'
+    : (rot
+        ? 'Всё, что ниже, относится к выбранному варианту. Метка «сейчас» — тот, что выпадет на следующей тренировке.'
+        : 'Всё, что ниже, относится к выбранному варианту.');
 
   // пометка у заголовка «Круги и отдых»
   $('stVariantNote').textContent = many ? `вариант ${planIdx + 1}` : '';
@@ -10362,7 +10374,8 @@ function renderPlanTabs(){
 function buildPlanTabs(boxId){
   const box = $(boxId); box.innerHTML='';
   const isTop = boxId === 'planTabsTop';
-  draft.plans.forEach((pl, i)=>{
+  // одна вкладка ничего не переключает и просто повторяет дни, выбранные выше
+  (draft.plans.length > 1 ? draft.plans : []).forEach((pl, i)=>{
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'plan-tab';
@@ -10452,9 +10465,19 @@ function renderDays(){
   // При очереди дни принадлежат программе целиком — им место в верхней карточке,
   // рядом с режимом и общим временем. Иначе дни принадлежат варианту и стоят в его
   // карточке, над кругами и отдыхом того же варианта.
-  setShown('bDaysFieldTop', rotOn);
-  setShown('bDaysField', !rotOn);
-  const box = $(rotOn ? 'bDaysTop' : 'bDays'); box.innerHTML='';
+  // Где рисуем чипы: у очереди и у программы с единственным вариантом дни
+  // относятся ко всей программе на вид, поэтому стоят в карточке «Когда
+  // тренироваться». Карточка с таким названием без дней — а так и было, пока
+  // единственный вариант прятал их в «Вариантах тренировки», — бессмысленна.
+  // Чьи это дни, не меняется: при очереди — программы, иначе — варианта.
+  const one = (draft.plans || []).length <= 1;
+  const top = rotOn || one;
+  setShown('bDaysFieldTop', top);
+  setShown('bDaysField', !top);
+  $('bDaysTopHint').textContent = rotOn
+    ? 'Дни говорят, когда тренироваться. Очередь вариантов они не сбивают.'
+    : 'В эти дни программа попадёт в план на сегодня.';
+  const box = $(top ? 'bDaysTop' : 'bDays'); box.innerHTML='';
   const owner = rotOn ? draft : curPlan();
   if(!Array.isArray(owner.days)) owner.days = [];
   DAYS.forEach(d=>{
@@ -10480,11 +10503,25 @@ function renderDays(){
 /* ================= РЕДАКТОР ОДНОГО УПРАЖНЕНИЯ ================= */
 let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
 let exDraft = null;  // копия для правки
+let exIsNew = false; // упражнение только что заведено и в списке его держит сам редактор
+
+// убрать пустышку, заведённую «Добавить упражнение», если её так и не сохранили
+function dropFreshEx(){
+  if(!exIsNew) return;
+  exIsNew = false;
+  try{
+    const list = curPlan().exercises;
+    if(exIdx >= 0 && list[exIdx]) list.splice(exIdx, 1);
+    renderExList();
+  }catch(_){}
+  exDraft = null; exIdx = -1; exOrig = '';
+}
 
 let exOrig = '';  // снимок упражнения на момент открытия — для проверки изменений
-function openExercise(i){
+function openExercise(i, isNew){
   const list = curPlan().exercises;
   exIdx = i;
+  exIsNew = !!isNew;
   exDraft = JSON.parse(JSON.stringify(list[i]));
   // «материализуем» новую модель один раз при открытии: считаем progOn/trackWeight из того,
   // что фактически было (через старый совместимый путь), и с этого момента редактор работает
@@ -10494,11 +10531,14 @@ function openExercise(i){
     exDraft.progOn = progAxis(exDraft) !== 'none';
     exDraft.trackWeight = hasWeight(exDraft);
   }
-  // снимок для сравнения изменений берём ПОСЛЕ материализации — иначе открытие старого
-  // упражнения без единого клика ложно считалось бы «изменённым» (в списке нет progOn/trackWeight,
-  // а в exDraft уже есть — строки JSON не совпадут)
-  exOrig = JSON.stringify(exDraft);
   fillExercise();
+  // Снимок для сравнения снимаем С ФОРМЫ, тем же путём, каким потом сравниваем
+  // (applyFormTo), и уже ПОСЛЕ материализации progOn/trackWeight. Раньше снимок
+  // брали прямо с черновика — и он не совпадал с формой по типам: в черновике
+  // «значение» лежит числом (10), из поля читается строкой ("10"). Строки JSON
+  // расходились всегда, поэтому «назад» с упражнения, которого даже не коснулись,
+  // каждый раз спрашивало про несохранённые изменения.
+  exOrig = JSON.stringify(applyFormTo(JSON.parse(JSON.stringify(exDraft))));
   show('scrExercise');
   window.scrollTo(0, 0);
 }
@@ -14025,6 +14065,7 @@ $('slotFile').onchange = e => {
 // это обычная кнопка внизу, рядом с остальными действиями над упражнением.
 $('btnExAI').onclick = ()=>{
   if(!exDraft || exIdx < 0) return;
+  exIsNew = false;
   if(!numFieldsOk('scrExercise')) return;
   const list = curPlan().exercises;
   if(list[exIdx]) list[exIdx] = commitExercise();
@@ -14110,7 +14151,7 @@ function addExManual(){
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
   list.push(ex);
   renderExList();
-  openExercise(list.length - 1);
+  openExercise(list.length - 1, true);
 }
 
 /* ---- экран упражнения ---- */
@@ -14126,6 +14167,7 @@ $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise')) saveExAndBack(); }
 // дублируем то, что видно сейчас, вместе с несохранёнными правками формы
 $('btnDupEx').onclick = ()=>{
   if(!exDraft || exIdx < 0) return;
+  exIsNew = false;
   const list = curPlan().exercises;
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
@@ -14141,6 +14183,7 @@ $('btnDupEx').onclick = ()=>{
 };
 $('btnDelEx').onclick = async ()=>{
   if(!exDraft || exIdx < 0) return;
+  exIsNew = false;
   const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
   if(!(await appConfirm(`Удалить «${nameTxt}»?`))) return;
   curPlan().exercises.splice(exIdx, 1);
@@ -14150,6 +14193,7 @@ $('btnDelEx').onclick = async ()=>{
 };
 
 function saveExAndBack(){
+  exIsNew = false;
   if(exDraft && exIdx >= 0){
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
@@ -14163,11 +14207,14 @@ function saveExAndBack(){
 async function leaveExercise(){
   if(exDirty()){
     const go = await appDialog(
-      'Изменения этого упражнения не сохранены. Если выйти, они пропадут.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Вернуться'}
+      exIsNew
+        ? 'Упражнение не сохранено. Если выйти, оно не добавится.'
+        : 'Изменения этого упражнения не сохранены. Если выйти, они пропадут.',
+      {confirm: true, okText: exIsNew ? 'Не добавлять' : 'Выйти без сохранения', cancelText: 'Вернуться'}
     );
     if(!go) return;
   }
+  dropFreshEx();
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
   show('scrBuilder');
