@@ -1050,6 +1050,7 @@
     display:flex;align-items:center;justify-content:center;
   }
   .btn-quiet:active{background:var(--line);color:var(--ink)}
+  .btn-quiet svg{width:17px;height:17px;margin-right:8px;flex:none}
   /* Звук — два разных разговора, а не пять строк подряд: что говорит голос и что
      звенит сигналами. Раньше «Громкость» стояла между «Звуками» и «Не прерывать
      музыку», и по строчке было не понять, к чему она относится. */
@@ -1334,6 +1335,18 @@
   .ex-thumb svg{width:26px;height:26px;color:var(--muted)}
   .ex-info{flex:1;min-width:0}
   .ex-info b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* название правится на месте: в покое выглядит как заголовок строки, поле
+     проступает только под курсором — иначе список из десяти упражнений читался бы
+     как анкета из десяти полей */
+  .ex-info .ex-name{
+    display:block;width:100%;font-family:var(--font-text);font-size:14px;font-weight:500;
+    color:inherit;background:none;border:none;border-radius:8px;padding:0;
+    text-overflow:ellipsis;
+  }
+  .ex-info .ex-name::placeholder{color:var(--muted);font-weight:400}
+  /* подсветка фокуса — тенью, а не отступами: отступы сдвигали бы строку
+     и поле налезало на миниатюру слева */
+  .ex-info .ex-name:focus{outline:none;background:var(--bg);box-shadow:0 0 0 4px var(--bg)}
   .ex-info small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ex-info .wm{color:var(--accent-ink)}
   .ex-row .ex-more{position:static;flex:none;width:32px;height:38px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
@@ -2693,14 +2706,6 @@
         </div>
         <span class="nr-chev" id="bSettingsChev"></span>
       </button>
-      <button type="button" class="nav-row nr-flat" id="bImagesRow">
-        <span class="nr-ico" data-icon="image"></span>
-        <div class="nr-body">
-          <b>Картинки программы</b>
-          <small id="bImagesSum">Обложка и картинки упражнений</small>
-        </div>
-        <span class="nr-chev" id="bImagesChev"></span>
-      </button>
     </div>
 
     <div class="card-block">
@@ -2711,7 +2716,11 @@
       <p class="field-hint" id="bVariantHint"></p>
       <div class="plan-tabs" id="planTabsTop"></div>
       <div id="bExList"></div>
+      <!-- Попап-развилка «Через ИИ / Вручную» ушла: добавление вручную теперь ничего
+           не открывает, а прятать второй путь за лишним касанием, чтобы спросить
+           «каким способом», было незачем. Два пути стоят рядом. -->
       <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
+      <button type="button" class="btn-quiet" id="btnAddExAI"><span data-icon="sparkle"></span>Подобрать через ИИ</button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
@@ -2873,6 +2882,17 @@
       <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, на что обратить внимание, как часто заниматься"></textarea>
       <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется на экране перед стартом.</p>
     </div>
+    <!-- Картинки стояли в конструкторе строкой вровень с «Настройками программы»,
+         как будто это равные по весу вещи. Но это оформление, а не устройство
+         программы, и место им рядом с обложкой и описанием. -->
+    <button type="button" class="nav-row nr-flat" id="bImagesRow">
+      <span class="nr-ico" data-icon="image"></span>
+      <div class="nr-body">
+        <b>Картинки упражнений</b>
+        <small id="bImagesSum">Загрузить пачкой и разложить по местам</small>
+      </div>
+      <span class="nr-chev" id="bImagesChev"></span>
+    </button>
     </div>
 
     <div class="card-block">
@@ -4077,15 +4097,6 @@
         <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
         <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
         <button class="modal-btn" id="swapCopy">Скопировать название и описание</button>
-      </div>
-    </div>
-
-    <div class="modal" id="addExModal">
-      <div class="modal-card">
-        <span class="mini-label">Новое упражнение</span>
-        <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы и частые ошибки.</small></span></button>
-        <button class="choice ico" id="aeManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Заполнить поля вручную: название, повторения или время, подходы, отдых.</small></span></button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
 
@@ -8151,13 +8162,23 @@ function shrinkAll(files, maxSide, done){
   next();
 }
 
+// Экран картинок открывается и из настроек программы, и (для уже сохранённой
+// программы) из её меню — поэтому «Готово» возвращает туда, откуда пришли, а не
+// всегда в конструктор.
+let imagesFrom = 'scrBuilder';
 function openImages(){
+  imagesFrom = show._last || 'scrBuilder';
   imgTray = [];
   renderTray();
   renderSlots();
   syncGeminiBtns();
   show('scrImages');
   window.scrollTo(0, 0);
+}
+function closeImages(){
+  renderExList();
+  syncSettingsSum();
+  show(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
 }
 
 function renderTray(){
@@ -10213,8 +10234,11 @@ function normValue(v, type){
 }
 
 let planIdx = 0;
+// Новый вариант начинается пустым: раньше в нём сразу лежало безымянное упражнение,
+// и человек видел строку, которой не заводил. Теперь виден пустой список с объяснением,
+// а первую строку создаёт «Добавить упражнение» — сразу с полем названия в фокусе.
 function blankPlan(){
-  return {days:[], rounds:3, roundRest:120, exercises:[blankExercise()]};
+  return {days:[], rounds:3, roundRest:120, exercises:[]};
 }
 
 function openBuilder(id=null){
@@ -10757,7 +10781,9 @@ function renderExList(){
   syncVolHint();
   const nWarm = list.filter(e => e.warmup).length;
   const nMain = list.length - nWarm;
-  setShown('btnAddEx', !((nWarm >= MAX_WARM && nMain >= MAX_MAIN)));
+  const full = nWarm >= MAX_WARM && nMain >= MAX_MAIN;
+  setShown('btnAddEx', !full);
+  setShown('btnAddExAI', !full);
   const note = list.length
     ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}` + (nWarm ? ` · ${nWarm} в разминке` : '')
     : '';
@@ -10818,8 +10844,22 @@ function exRow(ex, i){
   const info = document.createElement('div');
   info.className = 'ex-info';
   const nameTxt = (ex.name || '').trim() || 'Без названия';
-  info.innerHTML = `<b></b><small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
-  info.querySelector('b').textContent = nameTxt;
+  // Название правится прямо здесь: собрать программу из пяти упражнений теперь
+  // можно, ни разу не уйдя на полный экран. У новой строки значения по умолчанию
+  // рабочие (повторения, 10, один подход), поэтому её достаточно назвать.
+  // Полный экран нужен за деталями — он в меню строки, под «Изменить».
+  info.innerHTML = `<input class="ex-name" type="text" maxlength="60" placeholder="Название упражнения">` +
+    `<small>${ex.warmup ? '<span class="wm">Разминка</span> · ' : ''}${exSummary(ex)}</small>`;
+  const nameInp = info.querySelector('.ex-name');
+  nameInp.value = ex.name || '';
+  nameInp.oninput = e => { ex.name = e.target.value; };   // без перерисовки — иначе ввод теряет фокус
+  nameInp.onkeydown = e => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    // «ещё» с клавиатуры: с последней строки — следующая, из середины просто закрываем клавиатуру
+    if(i === curPlan().exercises.length - 1 && (ex.name || '').trim()) addExManual();
+    else e.target.blur();
+  };
 
   // контекстное меню ⋮ — изменить / дублировать / удалить
   const more = document.createElement('button');
@@ -11508,6 +11548,12 @@ async function saveProgram(){
   }
   for(let v=0; v<draft.plans.length; v++){
     const pl = draft.plans[v];
+    if(!pl.exercises.length){
+      appAlert(draft.plans.length > 1
+        ? `В варианте ${v+1} нет ни одного упражнения.`
+        : 'Добавь хотя бы одно упражнение.');
+      return;
+    }
     for(let i=0; i<pl.exercises.length; i++){
       const ex = normalizeExercise(pl.exercises[i]);
       if(!ex.name){
@@ -13799,10 +13845,8 @@ $('swapCopy').onclick = async ()=>{
   }
 };
 
-$('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
-$('addExModal').onclick = e => { if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
-$('aeAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
-$('aeManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
+$('btnAddEx').onclick = ()=> addExManual();
+$('btnAddExAI').onclick = ()=> openExAI();
 
 /* ---- ИИ внутри приложения (Gemini) ---- */
 
@@ -13959,7 +14003,7 @@ $('aiBackTop').onclick = async ()=>{
 };
 
 /* ---- картинки программы ---- */
-$('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgBackTop').onclick = ()=> closeImages();
 $('imgSelfGen').onclick = generateAllImagesViaAI;
 $('imgPromptCopy').onclick = async ()=>{
   const btn = $('imgPromptCopy');
@@ -13968,7 +14012,7 @@ $('imgPromptCopy').onclick = async ()=>{
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 };
-$('imgDone').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
+$('imgDone').onclick = ()=> closeImages();
 $('imgPick').onclick = ()=> $('imgFiles').click();
 $('imgFiles').onchange = e => {
   const files = [...(e.target.files || [])];
@@ -14123,15 +14167,27 @@ async function exaCopyPrompt(){
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 
+// Добавление больше не уводит на полный экран и обратно: строка появляется прямо
+// в списке, поле названия — в фокусе. Пять упражнений — пять названий, без единого
+// перехода. Экран упражнения открывается, только когда нужны детали.
 function addExManual(){
   const list = curPlan().exercises;
+  const nWarm = list.filter(e => e.warmup).length;
+  if(list.length - nWarm >= MAX_MAIN){ appAlert('Достигнут предел упражнений в этой части.'); return; }
   const ex = blankExercise();
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
   list.push(ex);
   renderExList();
-  openExercise(list.length - 1);
+  show('scrBuilder');
+  focusExName(list.length - 1);
+}
+function focusExName(i){
+  const el = $('bExList').querySelector(`.ex-row[data-idx="${i}"] .ex-name`);
+  if(!el) return;
+  try{ el.scrollIntoView({block: 'center', behavior: 'smooth'}); }catch(_){}
+  el.focus();
 }
 
 /* ---- экран упражнения ---- */
@@ -14278,24 +14334,33 @@ $('btnPsDone').onclick = ()=>{ if(numFieldsOk('scrProgSettings')) closeProgSetti
 function syncImagesSum(){
   const el = $('bImagesSum');
   if(!el || !draft) return;
-  let total = 1, filled = draft.cover ? 1 : 0; // обложка
+  let total = 0, filled = 0;
   (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
     total++;
     if(ex.media && ex.media.kind === 'img') filled++;
   }));
   el.textContent = filled
     ? `Есть ${filled} из ${total}`
-    : 'Обложка и картинки упражнений';
+    : 'Загрузить пачкой и разложить по местам';
 }
+// Сводка говорит, что НАСТРОЕНО, а не как называются поля внутри. Круги и отдых
+// между ними здесь обязательны: это первое, что человек хочет проверить перед
+// стартом, а раньше их приходилось искать, открыв настройки.
 function syncSettingsSum(){
   const bits = [];
   const plans = draft.plans || [];
+  const pl = curPlan();
   if(draft.time) bits.push(draft.time);
   const daysU = programDaysUnion(draft);
   if(daysU.length) bits.push(daysU.join('·'));
-  if(plans.length > 1) bits.push(`${plans.length} варианта`);
+  else if(draft.rotate) bits.push('по очереди');
+  if(plans.length > 1) bits.push(`${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+  const rounds = (pl && +pl.rounds) || 1;
+  bits.push(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
+  const rr = (pl && +pl.roundRest) || 0;
+  if(rounds > 1 && rr > 0) bits.push('отдых ' + (rr % 60 === 0 ? (rr / 60) + ' мин' : rr + ' с'));
   if(draft.progression) bits.push('нагрузка растёт сама');
-  $('bSettingsSum').textContent = bits.length ? bits.join(' · ') : 'дни недели, время, круги, прибавка нагрузки';
+  $('bSettingsSum').textContent = bits.join(' · ');
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
 $('bDesc').oninput = e => {
