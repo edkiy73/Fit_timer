@@ -3103,7 +3103,16 @@
        ИМЕНА ПОЛЕЙ В ПАНЕЛЯХ НЕ МЕНЯЛИСЬ, весь код сборки промтов работает как
        работал. Формат обмена с нейросетью не тронут вообще. -->
   <section class="screen builder" id="scrAI">
-    <div class="screen-head"><button class="back-chip" id="aiBackTop"></button><h2 id="aiTitle">Через ИИ</h2></div>
+    <div class="screen-head">
+      <button class="back-chip" id="aiBackTop"></button>
+      <h2 id="aiTitle">Через ИИ</h2>
+      <!-- Те же действия над упражнением, что и на вкладке «Вручную»: вкладка
+           меняет способ, а не то, с чем человек работает. -->
+      <div class="prog-menu-wrap hidden" id="aiMenuWrap">
+        <button class="more-btn" id="aiMore" title="Действия"></button>
+        <div class="ctx-menu" id="aiMenu"></div>
+      </div>
+    </div>
 
     <div class="tabs" id="aiTabs"></div>
 
@@ -3160,7 +3169,7 @@
         <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
         <p class="field-hint">Назови упражнение или опиши, что нужно, — подберётся само.</p>
       </div>
-      <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
+      <div class="field"><label>Сколько упражнений</label><select id="exaCount"></select></div>
       <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
       <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
       <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
@@ -4643,6 +4652,15 @@ function icon(name){
 }
 
 /* ================= МЫШЕЧНЫЕ ГРУППЫ ================= */
+// ОДИН набор на всё приложение. Списки чипов у программы и у упражнения разошлись:
+// инвентарь начинался то с «Нет», то с «Без инвентаря», «Резинки» против «Резинка»,
+// а «Утяжелители» и «Турник» были только у программы. Держим их здесь, до первого
+// использования, и подставляем в оба места.
+const OPT_LEVEL = ['Новичок', 'Средний', 'Продвинутый'];
+// чипы-исключения: выбран такой — остальные снимаются, и наоборот
+const OPT_NONE = new Set(['Без инвентаря', 'Без ограничений']);
+const OPT_EQUIP = ['Без инвентаря', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'];
+
 const MUSCLES = [
   ['ne','Шея'], ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
   ['ba','Спина'], ['gl','Ягодицы'], ['le','Квадрицепс'], ['hm','Задняя бедра'], ['ca','Икры']
@@ -4807,6 +4825,16 @@ let navDepth = 0;
 // потом системная кнопка «назад» требовала столько же нажатий, сколько было
 // переходов. Теперь такой возврат отматывает историю назад, а не удлиняет её.
 let navStack = ['scrMenu'];
+// Вкладка — ДРУГОЙ ВИД ТОГО ЖЕ МЕСТА, а не шаг вглубь: «Вручную / Через ИИ / Из
+// видео» переключают способ, но человек всё это время делает одно и то же дело.
+// Поэтому переключение ЗАМЕНЯЕТ текущую запись истории, а не добавляет новую:
+// иначе двадцать переключений туда-сюда давали двадцать записей, и «назад»
+// приходилось жать двадцать два раза вместо одного (измерено).
+let tabSwitch = false;
+function asTab(fn){
+  tabSwitch = true;
+  try{ fn(); } finally { tabSwitch = false; }
+}
 try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // Что считается несохранённой работой на каждом экране. Раньше эту проверку знали
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
@@ -4970,9 +4998,14 @@ function show(id, push = true){
   // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
   if(show._last === 'scrExercise' && id !== 'scrExercise'){ dropFreshEx(); exFromWork = false; }
   if(push && show._last !== id){
-    navStack.push(id);
-    navDepth++;
-    try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+    if(tabSwitch){
+      navStack[navStack.length - 1] = id;
+      try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+    } else {
+      navStack.push(id);
+      navDepth++;
+      try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+    }
   }
   if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
   show._last = id;
@@ -7900,7 +7933,7 @@ function flashDone(btn, text){
 let aiSrc = null;                 // ключ текущего источника
 const AI_SOURCES = {
   text: {
-    title: 'Программа через ИИ',
+    title: 'Новая программа',
     tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
     lead: ['sparkle', 'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.'],
     pane: 'aiPaneText',
@@ -7919,7 +7952,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   video: {
-    title: 'Программа из видео',
+    title: 'Новая программа',
     tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
     lead: ['video', 'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.'],
     pane: 'aiPaneVideo',
@@ -7939,7 +7972,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   edit: {
-    title: 'Изменить через ИИ',
+    title: 'Редактирование',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
     pane: 'aiPaneEdit',
@@ -7960,7 +7993,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   exNew: {
-    title: 'Упражнение через ИИ',
+    title: 'Упражнение',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.'],
     pane: 'aiPaneExNew',
@@ -7979,7 +8012,7 @@ const AI_SOURCES = {
     back:  ()=> show('scrBuilder')
   },
   exEdit: {
-    title: 'Изменить упражнение',
+    title: 'Упражнение',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
     pane: 'aiPaneExEdit',
@@ -8039,6 +8072,10 @@ function openAI(key){
   note('aiSelfNote', 'aiSelfNoteIco', 'aiSelfNoteTxt', c.selfNote);
   note('aiChatNote', 'aiChatNoteIco', 'aiChatNoteTxt', c.chatNote);
 
+  // меню действий есть только там, где есть с чем действовать: у правки
+  // существующего упражнения
+  setShown('aiMenuWrap', key === 'exEdit');
+  if(key === 'exEdit') buildAiMenu();
   setShown('aiSubject', !!c.subject);
   setShown('aiCopyFull', !!c.copyFull);
 
@@ -8558,16 +8595,26 @@ async function applyExEdit(){
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
+// Наборы чипов ОДНИ И ТЕ ЖЕ у программы и у упражнения. Раньше они разошлись:
+// в программе инвентарь начинался с «Нет» и содержал «Резинки», «Утяжелители» и
+// «Турник», в упражнении — с «Без инвентаря», «Резинка» и без последних двух.
+// Мышцы тоже: у программы был свой список с «Талией» и «Ногами целиком», у
+// упражнения — строгий список MUSCLES, который понимает парсер.
 const EXA_OPTS = {
-  count: ['1', '1–3', '3–5', '5–7', '7 и более'],
   format: ['Повторения', 'С весом', 'Время'],
-  level: ['Новичок', 'Средний', 'Продвинутый'],
-  equip: ['Без инвентаря', 'Коврик', 'Гантели', 'Резинка', 'Стул', 'Фитбол']
+  level: OPT_LEVEL,
+  equip: OPT_EQUIP
 };
-const exa = {count: '1', format: '', level: '', muscles: [], equip: []};
+// сколько упражнений просить у нейросети — обычное число, а не диапазон чипом
+const exa = {count: 1, format: '', level: '', muscles: [], equip: []};
 
 function exaChips(){
-  qChips('exaCount', EXA_OPTS.count, false, ()=> exa.count, v => exa.count = v);
+  const sel = $('exaCount');
+  if(!sel.options.length){
+    for(let i = 1; i <= 10; i++) sel.add(new Option(String(i), String(i)));
+    sel.onchange = ()=> exa.count = Math.max(1, Math.min(10, parseInt(sel.value) || 1));
+  }
+  sel.value = String(exa.count || 1);
   qChips('exaFormat', EXA_OPTS.format, false, ()=> exa.format, v => exa.format = v);
   qChips('exaLevel', EXA_OPTS.level, false, ()=> exa.level, v => exa.level = v);
   qChips('exaEquip', EXA_OPTS.equip, true, ()=> exa.equip, v => exa.equip = v);
@@ -8575,7 +8622,7 @@ function exaChips(){
 }
 
 function openExAI(){
-  exa.count = '1'; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
+  exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
   exaChips();
   autoGrow($('exaWish'));
@@ -8595,15 +8642,11 @@ function exaPrompt(){
   if(exa.equip.length) given.push(`Инвентарь: ${exa.equip.join(', ').toLowerCase()}.`);
   else free.push('нужен ли инвентарь (по умолчанию считай, что дома ничего нет)');
 
-  const cnt = exa.count || '1';
-  const many = cnt !== '1';
-  const howMany = {
-    '1': 'ОДНО упражнение',
-    '1–3': 'от 1 до 3 упражнений',
-    '3–5': 'от 3 до 5 упражнений',
-    '5–7': 'от 5 до 7 упражнений',
-    '7 и более': '7 и более упражнений (сколько сочтёшь нужным, но не больше 15)'
-  }[cnt] || 'ОДНО упражнение';
+  const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
+  const many = cnt > 1;
+  const howMany = many
+    ? `РОВНО ${cnt} ${plural(cnt, 'упражнение', 'упражнения', 'упражнений')}`
+    : 'ОДНО упражнение';
 
   let s = `Опиши ${howMany} для домашней тренировки в строгом формате ниже. `;
   s += many
@@ -11535,16 +11578,17 @@ async function pregnancyWarning(){
 
 const Q_OPTS = {
   goal: ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот', 'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина', 'Восстановиться после родов', 'Кардио и энергия'],
-  level: ['Новичок', 'Средний', 'Продвинутый'],
+  level: OPT_LEVEL,
   dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
-  focus: ['Шея', 'Плечи', 'Руки', 'Грудь', 'Спина', 'Пресс', 'Талия', 'Ягодицы', 'Бёдра', 'Икры', 'Ноги целиком'],
-  equip: ['Нет', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'],
-  limit: ['Нет', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность'],
+  // мышцы — строгий список MUSCLES: его же понимает парсер и просит промт
+  focus: MUSCLES.map(m => m[1]),
+  equip: OPT_EQUIP,
+  limit: ['Без ограничений', 'Без прыжков', 'Тихо (соседи снизу)', 'Берегу колени', 'Берегу поясницу', 'Берегу запястья', 'Берегу шею', 'Беременность'],
   style: ['Круговая', 'Силовая', 'Смешанная'],
   warm: ['С разминкой', 'Без разминки']
 };
 // пусто = «на усмотрение ИИ». Предзаполнены только уровень и ограничения.
-const q = {goal: [], level: 'Новичок', days: [], dur: '', focus: [], equip: [], limit: ['Нет'],
+const q = {goal: [], level: 'Новичок', days: [], dur: '', focus: [], equip: [], limit: ['Без ограничений'],
            note: '', split: false, style: '', warm: '', rotate: false};
 
 function qChips(boxId, opts, isMulti, get, set){
@@ -11557,10 +11601,10 @@ function qChips(boxId, opts, isMulti, get, set){
     b.onclick = ()=>{
       if(isMulti){
         let arr = get();
-        const hasNone = opts.includes('Нет');
-        if(o === 'Нет'){ arr = arr.includes('Нет') ? [] : ['Нет']; }
+        const none = opts.find(x => OPT_NONE.has(x));
+        if(none && o === none){ arr = arr.includes(none) ? [] : [none]; }
         else {
-          arr = arr.filter(x => x !== 'Нет');
+          if(none) arr = arr.filter(x => x !== none);
           arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
         }
         set(arr);
@@ -14278,6 +14322,28 @@ $('aiApply').onclick = ()=>{
   if(c) c.apply();
 };
 $('aiBackTop').innerHTML = icon('chevL');
+// Вкладка меняет способ, а не то, с чем работает человек: действия над
+// упражнением должны быть на месте и здесь.
+$('aiMore').innerHTML = icon('more');
+$('aiMore').onclick = e => { e.stopPropagation(); toggleMenu($('aiMenu')); };
+function buildAiMenu(){
+  const box = $('aiMenu'); box.innerHTML = '';
+  const mk = (html, fn, cls) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if(cls) b.className = cls;
+    b.innerHTML = html;
+    b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); fn(); };
+    box.appendChild(b);
+  };
+  // openBuilder() здесь звать НЕЛЬЗЯ: он перечитывает программу из сохранённых и
+  // выбрасывает только что сделанную копию вместе со всей несохранённой правкой
+  mk(icon('plus') + 'Дублировать', ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
+  mk(icon('trash') + 'Удалить', async ()=>{
+    await delExerciseAt(exeIdx);
+    asTab(()=> show('scrBuilder'));
+  }, 'danger');
+}
 $('aiBackTop').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
@@ -14356,7 +14422,7 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
     const keep = exIdx;
     exDraft = null; exIdx = -1; exOrig = '';
     renderExList();
-    openExEdAI(keep);
+    asTab(()=> openExEdAI(keep));
   };
 });
 
@@ -14393,8 +14459,8 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
       back();
       if(!go) return;
     } else back();
-    if(existing && m === 'text'){ openEditAI(existing); return; }
-    switchCreateMode(m);
+    if(existing && m === 'text'){ asTab(()=> openEditAI(existing)); return; }
+    asTab(()=> switchCreateMode(m));
   };
 });
 
@@ -14421,10 +14487,13 @@ $('aiTabs').addEventListener('click', async e => {
     markAITab();   // подсветку возвращаем на месте, ушёл человек или нет
     if(!ok) return;
   }
-  if(b.dataset.m === 'manual'){ c.manual(); return; }
-  switchCreateMode(b.dataset.m);
+  if(b.dataset.m === 'manual'){ asTab(c.manual); return; }
+  asTab(()=> switchCreateMode(b.dataset.m));
 });
-// ручной режим открывает конструктор с активной вкладкой «Вручную»
+// ручной режим открывает конструктор с активной вкладкой «Вручную».
+// Подписи вкладок НЕ меняются от того, новая программа или сохранённая: у
+// сохранённой вкладка звалась «Доработать ИИ», а на самом экране ИИ — «Через ИИ»,
+// и получалось, что нажал одно, а попал в другое.
 function markBuilderTab(){
   const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
   setShown('bModeTabs', true);
@@ -14432,7 +14501,6 @@ function markBuilderTab(){
     x.classList.toggle('act', x.dataset.m === 'manual');
     // у существующей программы «из видео» не нужен: он создаёт новую
     if(x.dataset.m === 'video') x.style.display = isEdit ? 'none' : '';
-    if(x.dataset.m === 'text') x.textContent = isEdit ? 'Доработать ИИ' : 'Через ИИ';
   });
 }
 
