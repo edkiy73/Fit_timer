@@ -92,9 +92,8 @@
     /* панели, которые остаются тёмными в обеих темах (пауза, попап веса) */
     --panel-dark:rgba(22,16,38,.95);
     --panel-dark-line:rgba(255,255,255,.10);
-    /* подложки под пиктограммы: светлые линии кладём на тёмное и наоборот */
+    /* подложка под «Дальше» на отдыхе: светлая иконка на тёмном */
     --plate-dark:#241A3C;
-    --plate-light:#EDEAF6;
     /* высота нижней панели кнопок — под неё резервируем прокрутку */
     --actions-h:78px;
     /* высота плавающего дока вместе с полем под ним (без безопасной зоны) —
@@ -133,10 +132,6 @@
   body.light.phase-rest .actions{background:linear-gradient(to top, var(--bg-rest) 72%, rgba(233,243,238,0))}
   body.light .mc-cover{background:var(--surface);color:var(--accent-ink)}
   body.light .nu-media{background:var(--plate-dark);color:#CBBEE6}
-  body.light .nu-media.light{background:var(--plate-light)}
-  /* светлые линии пользовательских SVG на белой карточке — подкладываем тёмный фон.
-     На тренировке эта подложка и есть обложка карточки: во всю ширину, без своего скругления */
-  body.light .illo .userSvg:not(.light){background:var(--plate-dark);border-radius:0;padding:12px}
   .app{
     width:100%;max-width:520px;margin:0 auto;
     flex:1;display:flex;flex-direction:column;
@@ -407,8 +402,6 @@
   .pd-more{background:none;border:none;color:var(--accent-ink);font-family:var(--font-text);font-size:13px;padding:8px 0 0;cursor:pointer}
   .media-preview img{max-width:150px;border-radius:10px;display:block}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
-  .illo .userSvg svg{width:100%;height:auto;max-height:26vh;display:block}
-  .illo .userSvg.light{background:var(--plate-light);border-radius:10px;padding:8px}
 
   /* ---------- start screen ---------- */
   .start-wrap{flex:1;display:flex;flex-direction:column;justify-content:flex-start}
@@ -624,7 +617,7 @@
   .wk-body:not(:has(.video-cta.on, .muscle-row:not(.hidden), .instruction:not(:empty))){padding-top:0}
   .illo-wrap{position:relative;margin:0;width:100%}
   body.phase-rest .illo-wrap{display:none}
-  /* обложка карточки: картинка во всю ширину, подложка одна и та же для фото и пиктограмм */
+  /* обложка карточки: картинка во всю ширину */
   .illo{
     background:var(--surface);border:none;border-radius:0;padding:0;overflow:hidden;line-height:0;
     border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;
@@ -632,7 +625,6 @@
   .illo svg{width:100%;height:auto;max-height:min(26vh,210px);display:block}
   .illo img{width:100%;height:auto;max-height:min(26vh,210px);object-fit:cover;display:block}
   .illo > *{width:100%}
-  .illo .userSvg{padding:12px}
   .illo .prop{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none}
   .illo .acc{stroke:var(--work);stroke-width:4;stroke-linecap:round;fill:none}
   .yt-badge{
@@ -728,7 +720,6 @@
     background:var(--rest-soft);color:var(--muted);
     display:flex;align-items:center;justify-content:center;
   }
-  .nu-media.light{background:var(--plate-light)}
   .nu-media img{width:100%;height:100%;object-fit:cover;display:block}
   .nu-media svg{width:85%;height:85%}
   .nu-body{flex:1;min-width:0}
@@ -991,9 +982,6 @@
     --aura-a:#A585FF; --aura-b:#DDA0F0; --aura-op:.42;
   }
   body.light .ctx-menu{box-shadow:var(--sh-2)}
-  /* пиктограммы от ИИ рисуются светлыми линиями — на светлой теме подкладываем тёмную плашку */
-  body.light .userSvg:not(.light){background:var(--plate-dark);border-radius:10px;padding:8px}
-  body.light .nu-media:not(.light){background:var(--plate-dark)}
 
   /* ---------- кнопка темы ---------- */
 
@@ -1341,8 +1329,6 @@
   .ex-thumb{flex:none;width:44px;height:44px;border-radius:11px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center}
   .ex-thumb img{width:100%;height:100%;object-fit:cover}
   .ex-thumb svg{width:26px;height:26px;color:var(--muted)}
-  .ex-thumb .userSvg{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-  .ex-thumb .userSvg svg{width:100%;height:100%}
   .ex-info{flex:1;min-width:0}
   .ex-info b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ex-info small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3022,17 +3008,12 @@
       <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
       <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" placeholder="https://youtube.com/..."></div>
-      <div class="field"><label>Картинка или пиктограмма</label>
+      <div class="field"><label>Картинка</label>
         <div class="media-row">
-          <button type="button" id="exMediaBtn">Фото</button>
-          <button type="button" id="exMediaSvg">Пиктограмма</button>
+          <button type="button" id="exMediaBtn">Выбрать фото</button>
           <button type="button" id="exMediaNone">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" class="hidden">
-        <div id="exSvgBox" class="hidden">
-          <textarea id="exSvgCode" class="auto-grow" placeholder="Вставь код пиктограммы: <svg viewBox=&quot;0 0 240 120&quot;>…</svg>"></textarea>
-          <p class="field-hint">Обычно приходят вместе с программой из ИИ. Здесь код можно поправить вручную: светлые линии, тёмный фон.</p>
-        </div>
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
@@ -3137,7 +3118,6 @@
       <span class="ha-go" data-icon="chevR"></span>
     </button>
 
-    <div class="pref-row hidden" id="aiSvgRow"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="aiWantSvg"></button></div>
 
     <div class="note hidden" id="aiSelfNote">
       <span class="n-ico" id="aiSelfNoteIco"></span>
@@ -4091,7 +4071,7 @@
     <div class="modal" id="addExModal">
       <div class="modal-card">
         <span class="mini-label">Новое упражнение</span>
-        <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы, частые ошибки и пиктограмму.</small></span></button>
+        <button class="choice ico" id="aeAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши упражнение словами — нейросеть подберёт технику, мышцы и частые ошибки.</small></span></button>
         <button class="choice ico" id="aeManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Заполнить поля вручную: название, повторения или время, подходы, отдых.</small></span></button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
@@ -4208,23 +4188,7 @@
 </nav>
 
 <script>
-/* ================= ПИКТОГРАММЫ (инлайн-SVG) ================= */
-// если все цвета svg тёмные (или не заданы = чёрный по умолчанию) — рисуем на светлой подложке
-function svgIsDark(svg){
-  const lums = [];
-  const hex = svg.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
-  hex.forEach(h=>{
-    let r,g,b;
-    if(h.length >= 7){ r=parseInt(h.slice(1,3),16); g=parseInt(h.slice(3,5),16); b=parseInt(h.slice(5,7),16); }
-    else { r=parseInt(h[1]+h[1],16); g=parseInt(h[2]+h[2],16); b=parseInt(h[3]+h[3],16); }
-    lums.push((0.299*r + 0.587*g + 0.114*b) / 255);
-  });
-  if(/\b(white|#fff)\b/i.test(svg)) lums.push(1);
-  if(/\bblack\b/i.test(svg)) lums.push(0);
-  if(!lums.length) return true; // цвета не заданы — по умолчанию svg чёрный
-  return Math.max(...lums) < 0.5; // нет ни одного светлого цвета
-}
-
+/* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
   rest: `<svg viewBox="0 0 240 120"><path class="acc" d="M96 36 a28 28 0 1 0 52 34 a34 34 0 1 1 -52 -34 Z"/></svg>`
@@ -4244,7 +4208,6 @@ let readySec = 5;  // подготовка перед упражнением н�
 let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
 let fxVol = 1;    // громкость звуковых эффектов 0..1
 let voiceVol = 1; // громкость голоса 0..1
-let wantSvg = true; // просить ли у ИИ пиктограммы упражнений (настройка запроса, не программы)
 let audioCtx = null, masterGain = null;
 function initAudio(){
   try{
@@ -6185,7 +6148,8 @@ const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmu
                       'workoutSession', 'identity', 'docMeta', 'outbox'];
 const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
-                     'voiceHint', 'voiceURI', 'clapHint', 'wantSvg'];
+                     'voiceHint', 'voiceURI', 'clapHint',
+                     'wantSvg']; // wantSvg больше не пишется — строка нужна, чтобы стереть его у тех, кто успел его сохранить
 
 // Полное удаление аккаунта. Требование и сторов, и 152-ФЗ: человек должен уметь
 // отозвать согласие и стереть всё, не переустанавливая приложение. Стираем и очередь
@@ -6545,7 +6509,6 @@ async function tryUnlock(){
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
 function warmupProgram(){
-  const WSVG = {'Марш на месте': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="120" cy="18" r="10" fill="#F2F0EA"/><path d="M120 28 L120 62"/><path d="M120 40 L102 54 M120 40 L140 30"/><path d="M120 62 L104 78 L104 104"/><path d="M120 62 L138 72 L146 90" stroke="#FF4D3D"/><path d="M150 78 L162 66" stroke="#FF4D3D" stroke-width="3"/></svg>', 'Вращения плечами и руками': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="120" cy="18" r="10" fill="#F2F0EA"/><path d="M120 28 L120 66 M120 66 L108 104 M120 66 L132 104"/><path d="M120 40 L92 52 M120 40 L148 52"/><path d="M78 34 a16 16 0 1 1 -4 20" stroke="#FF4D3D" stroke-width="3.5"/><path d="M166 34 a16 16 0 1 0 4 20" stroke="#FF4D3D" stroke-width="3.5"/></svg>', 'Наклоны корпуса в стороны': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="140" cy="24" r="10" fill="#F2F0EA"/><path d="M134 32 C126 46 122 56 120 68"/><path d="M120 68 L108 104 M120 68 L132 104"/><path d="M136 40 L112 50"/><path d="M142 34 C158 26 170 30 178 42" stroke="#FF4D3D"/><path d="M96 20 a40 40 0 0 1 40 -8" stroke="#FF4D3D" stroke-width="3" opacity="0.7"/></svg>', 'Вращения тазом': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="120" cy="16" r="10" fill="#F2F0EA"/><path d="M120 26 L120 56"/><path d="M120 36 L100 48 M120 36 L140 48"/><ellipse cx="120" cy="66" rx="26" ry="10" stroke="#FF4D3D" stroke-width="3.5"/><path d="M150 62 l6 -6 M150 62 l-8 -2" stroke="#FF4D3D" stroke-width="3"/><path d="M120 72 L106 104 M120 72 L134 104"/></svg>', 'Приседания в лёгком темпе': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="112" cy="34" r="10" fill="#F2F0EA"/><path d="M114 44 C118 52 120 58 118 66"/><path d="M118 66 L96 74 L96 104"/><path d="M118 66 L140 78 L144 104"/><path d="M116 50 L146 46 M116 54 L146 58"/><path d="M170 46 L170 76 M164 70 L170 78 L176 70" stroke="#FF4D3D" stroke-width="3.5"/></svg>', 'Выпады на месте попеременно': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="118" cy="18" r="10" fill="#F2F0EA"/><path d="M118 28 L116 60"/><path d="M116 60 L92 74 L92 104"/><path d="M116 60 L142 80 L168 96" stroke="#FF4D3D"/><path d="M118 38 L100 48 M118 38 L136 46"/></svg>', 'Мельница': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="120" cy="36" r="10" fill="#F2F0EA"/><path d="M120 46 L120 64"/><path d="M120 64 L88 104 M120 64 L152 104"/><path d="M120 52 L82 96" stroke="#FF4D3D"/><path d="M120 52 L158 16" stroke="#FF4D3D"/></svg>', 'Вращения коленями и стопами': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><circle cx="120" cy="22" r="10" fill="#F2F0EA"/><path d="M120 32 C118 44 114 52 110 58"/><path d="M110 58 L102 72 M110 58 L120 70"/><path d="M102 72 L104 104 M120 70 L122 104"/><ellipse cx="112" cy="80" rx="20" ry="9" stroke="#FF4D3D" stroke-width="3" opacity="0.9"/></svg>', 'Прыжки Jumping Jack': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><circle cx="120" cy="16" r="10" fill="#F2F0EA"/><path d="M120 26 L120 58"/><path d="M120 36 L94 14 M120 36 L146 14"/><path d="M120 58 L98 84 M120 58 L142 84"/><path d="M72 104 L96 104 M144 104 L168 104" stroke="#FF4D3D" stroke-width="4"/><path d="M120 112 L120 98" stroke="#FF4D3D" stroke-width="3.5"/></svg>', 'Растяжка: наклон к стопам': '<svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="30" y1="104" x2="210" y2="104" stroke-width="4" opacity="0.5"/><path d="M132 104 L132 62"/><path d="M132 62 C128 44 118 34 104 30"/><circle cx="98" cy="30" r="10" fill="#F2F0EA"/><path d="M110 38 L106 96" stroke="#FF4D3D"/><path d="M100 88 L106 98 L112 88" stroke="#FF4D3D" stroke-width="3.5"/></svg>'};
   const WMUS = {
     'Марш на месте': ['le','ca'],
     'Вращения плечами и руками': ['sh','ar'],
@@ -6558,7 +6521,7 @@ function warmupProgram(){
     'Прыжки Jumping Jack': ['le','ca','sh'],
     'Растяжка: наклон к стопам': ['ba','le']
   };
-  const ex = (name, desc, type, value, rest) => ({name, desc, video:'', type, value, rest, media: WSVG[name] ? {kind:'svg', data: WSVG[name]} : null, muscles: WMUS[name] || [], mistakes: ''});
+  const ex = (name, desc, type, value, rest) => ({name, desc, video:'', type, value, rest, media: null, muscles: WMUS[name] || [], mistakes: ''});
   return {
     id: 'warmup', name: 'Разминка 10 минут', time: '', cover: null, stats: {completions: 0},
     plans: [{days: [], rounds: 1, roundRest: 0, exercises: [
@@ -6833,7 +6796,7 @@ async function exportAllData(){
       warmupAdded: (await kvGet('warmupAdded_' + u.id)) === '1'
     };
   }
-  for(const k of ['voiceCtl', 'soundOff', 'voiceURI', 'musicMode', 'seenHelp', 'voiceHint', 'wantSvg']){
+  for(const k of ['voiceCtl', 'soundOff', 'voiceURI', 'musicMode', 'seenHelp', 'voiceHint']){
     dump.settings[k] = await kvGet(k);
   }
   const blob = new Blob([JSON.stringify(dump, null, 1)], {type: 'application/json'});
@@ -7446,10 +7409,10 @@ async function exportProgram(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.cover = null;
   delete copy.stats;
-  // фото не влезают в код — оставляем только svg-пиктограммы
+  // фото не влезают в код — в ссылке и в тексте программы их нет
   copy.plans = normPlans(copy).map(pl => ({
     ...pl,
-    exercises: pl.exercises.map(ex => ({...ex, media: (ex.media && ex.media.kind === 'img') ? null : ex.media}))
+    exercises: pl.exercises.map(ex => ({...ex, media: null}))
   }));
   delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
   const code = 'FIT1.' + btoa(unescape(encodeURIComponent(JSON.stringify(copy))));
@@ -7465,14 +7428,14 @@ async function exportProgram(p){
   try{
     await navigator.clipboard.writeText(link || code);
     appAlert(link
-      ? 'Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nОбложка и фото упражнений в ссылку не помещаются (только пиктограммы). Чтобы передать всё целиком — «Сохранить в файл».'
-      : 'Код программы скопирован — отправь его любым мессенджером.\n\nОбложка и фото упражнений в код не помещаются (только пиктограммы). Чтобы передать всё целиком — «Сохранить в файл».');
+      ? 'Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nКартинки в ссылку не помещаются. Чтобы передать всё целиком — «Сохранить в файл».'
+      : 'Код программы скопирован — отправь его любым мессенджером.\n\nКартинки в код не помещаются. Чтобы передать всё целиком — «Сохранить в файл».');
   }catch(e){
     appAlert('Не удалось скопировать автоматически. Выдели и скопируй вручную:', {code: link || code});
   }
 }
 
-// Экспорт программы файлом — со всем содержимым: обложка, фото упражнений, svg
+// Экспорт программы файлом — со всем содержимым: обложка и фото упражнений
 async function exportProgramFile(p){
   const copy = JSON.parse(JSON.stringify(p));
   delete copy.stats;      // чужая статистика получателю не нужна
@@ -7499,7 +7462,7 @@ async function exportProgramFile(p){
   a.download = fname;
   a.click();
   setTimeout(()=> URL.revokeObjectURL(a.href), 5000);
-  appAlert(`Файл программы сохранён в загрузки (${sizeKb} КБ).\n\nВ нём есть всё: обложка, фото упражнений и пиктограммы. Получатель откроет его через «Создать → Загрузить файл».`);
+  appAlert(`Файл программы сохранён в загрузки (${sizeKb} КБ).\n\nВ нём есть всё: обложка и фото упражнений. Получатель откроет его через «Создать → Загрузить файл».`);
 }
 
 // Импорт программы из файла
@@ -7648,7 +7611,7 @@ async function geminiTry(model, body, signal){
 async function callGemini(prompt, signal){
   const key = geminiKey();
   if(!key) throw new Error('Ключ Gemini не задан');
-  // ответ бывает большим (программа целиком с описаниями и пиктограммами),
+  // ответ бывает большим (программа целиком с описаниями),
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
     contents: [{parts: [{text: prompt}]}],
@@ -7780,7 +7743,6 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Кто её соберёт',
     self: 'Собрать за меня',
     selfTitle: 'Собираю программу',
-    svg: true,
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
@@ -7820,7 +7782,6 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Кто внесёт правки',
     self: 'Изменить за меня',
     selfTitle: 'Вношу изменения',
-    svg: true,
     selfNote: ['check', 'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.'],
     chatNote: ['chat', 'Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.'],
     copyFull: true,
@@ -7836,7 +7797,7 @@ const AI_SOURCES = {
   exNew: {
     title: 'Упражнение через ИИ',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
-    lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы, частые ошибки и пиктограмму.'],
+    lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.'],
     pane: 'aiPaneExNew',
     step1: 'Шаг 1 · Что за упражнение',
     step2: 'Шаг 2 · Кто его подберёт',
@@ -7861,7 +7822,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Кто внесёт правки',
     self: 'Изменить за меня',
     selfTitle: 'Меняю упражнение',
-    selfNote: ['image', 'Картинка и пиктограмма упражнения останутся на месте, если нейросеть не пришлёт новые.'],
+    selfNote: ['image', 'Картинка упражнения останется на месте.'],
     answerHint: 'Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.',
     action: 'Применить изменения',
     prompt: ()=> exePrompt(),
@@ -7914,14 +7875,12 @@ function openAI(key){
   note('aiChatNote', 'aiChatNoteIco', 'aiChatNoteTxt', c.chatNote);
 
   setShown('aiSubject', !!c.subject);
-  setShown('aiSvgRow', !!c.svg);
   setShown('aiCopyFull', !!c.copyFull);
 
   // первый шаг у каждого источника свой
   document.querySelectorAll('#scrAI .ai-pane').forEach(el => setShown(el, el.id === c.pane));
 
   syncGeminiBtns();
-  if(c.svg) syncWantSvg();
   aiWaysReset.scrAI && aiWaysReset.scrAI();
   show('scrAI');
   window.scrollTo(0, 0);
@@ -7966,28 +7925,16 @@ function setupAIAnswer(cfg){
   apply(false);
 }
 
-/* ---- медиа упражнения: фото и пиктограмма живут рядом ---- */
-// ставим фото, пиктограмму запоминаем — вернётся, если фото убрать
+/* ---- картинка упражнения ---- */
+// Пиктограмм больше нет: рисованные нейросетью человечки на 44 пикселях списка
+// не читались вовсе, а правила их рисования занимали пятую часть промта и столько же
+// вывода модели. Осталось одно фото на упражнение.
 function setExImg(ex, data){
-  if(ex.media && ex.media.kind === 'svg') ex.svgKeep = ex.media.data;
   ex.media = data ? {kind: 'img', data} : null;
-  if(!data && ex.svgKeep) ex.media = {kind: 'svg', data: ex.svgKeep};
 }
-function setExSvg(ex, code){
-  const v = (code || '').trim();
-  if(v){ ex.media = {kind: 'svg', data: v}; ex.svgKeep = v; }
-  else { ex.media = null; delete ex.svgKeep; }
-}
-// убираем текущее: фото → возвращаем пиктограмму, пиктограмму → пусто
 function dropExMedia(ex){
-  if(ex.media && ex.media.kind === 'img' && ex.svgKeep){
-    ex.media = {kind: 'svg', data: ex.svgKeep};
-    return 'svg';
-  }
-  ex.media = null; delete ex.svgKeep;
-  return 'none';
+  ex.media = null;
 }
-function exKeptSvg(ex){ return ex.svgKeep || (ex.media && ex.media.kind === 'svg' ? ex.media.data : ''); }
 
 /* ================= ГЕНЕРАЦИЯ КАРТИНОК ЧЕРЕЗ GEMINI ================= */
 // модель с выводом изображений — платная, в отличие от текстовой модели, которую приложение
@@ -8227,8 +8174,7 @@ function imageSlots(){
         group: plans.length > 1 ? `Вариант ${pi + 1}` : '',
         title: (ex.name || '').trim() || 'Без названия',
         get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
-        set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); },
-        hasSvg: !!exKeptSvg(ex)
+        set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); }
       });
     });
   });
@@ -8252,7 +8198,7 @@ function renderSlots(){
     row.className = 'slot-row';
     row.innerHTML =
       `<div class="sl-thumb">${cur ? `<img src="${cur}" alt="">` : DUMBBELL_ICON}</div>` +
-      `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : (s.hasSvg ? 'пиктограмма' : 'нет картинки')}</small></div>`;
+      `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : 'нет картинки'}</small></div>`;
     row.querySelector('b').textContent = s.title;
     row.onclick = ()=> openSlotPicker(i);
     box.appendChild(row);
@@ -8357,16 +8303,6 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-// то же правило, что и в промте программы: выключенный тумблер убирает просьбу
-// про пиктограмму целиком, а не оставляет её половину
-function exAnswerFormat(){
-  if(svgWanted()) return EX_ANSWER_FORMAT;
-  return dropSvgLines(EX_ANSWER_FORMAT) + '\n' + AI_PROMPT_NO_SVG;
-}
-// убирает строки-пиктограммы из готового куска промта
-function dropSvgLines(text){
-  return text.split('\n').filter(l => !/^SVG:/.test(l.trim())).join('\n');
-}
 const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 УПРАЖНЕНИЕ: название на русском
 ОПИСАНИЕ: техника на «ты», 3–5 предложений
@@ -8388,8 +8324,7 @@ const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
 ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
 ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на технику (или пропусти строку)
-SVG: пиктограмму возвращай ТОЛЬКО если упражнение изменилось по сути — иначе пропусти строку, старая сохранится`;
+ВИДЕО: ссылка на технику (или пропусти строку)`;
 
 function exePrompt(){
   const ex = curPlan().exercises[exeIdx];
@@ -8399,7 +8334,7 @@ function exePrompt(){
     'ДЛЯ КОГО: ' + userForAI() + '\n' +
     'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
     '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+    EX_ANSWER_FORMAT;
 }
 
 async function applyExEdit(){
@@ -8413,9 +8348,8 @@ async function applyExEdit(){
   const oldEx = list[exeIdx];
   if(!oldEx){ show('scrBuilder'); return; }
   const upd = got[0];
-  // сохраняем картинку и пиктограмму, если ИИ их не вернул
+  // сохраняем картинку, если ИИ её не вернул
   if(!upd.media && oldEx.media) upd.media = oldEx.media;
-  if(!upd.svgKeep && oldEx.svgKeep) upd.svgKeep = oldEx.svgKeep;
   list[exeIdx] = upd;
   // если ИИ вернул больше одного — остальные добавим после
   if(got.length > 1){
@@ -8508,10 +8442,9 @@ function exaPrompt(){
 ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
 ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
-SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Только вид сбоку. Фигура занимает почти весь кадр (y от 15 до 105). Скелет: линия пола, голова (circle r≈10, fill="#F2F0EA"), корпус, две руки с локтями, две ноги с коленями — 7–11 элементов, не больше. На группе fill="none" stroke="#F2F0EA" stroke-width="6" stroke-linecap="round", пол и инвентарь stroke="#8A93A5" stroke-width="4". Суставы явно сгибай, позу бери в самой характерной фазе. Фон тёмный — чёрные и тёмные цвета запрещены. Без текста, градиентов, штриховки и мелких деталей.
 
 Ничего кроме этих строк не пиши.`;
-  return svgWanted() ? s : dropSvgLines(s).replace('Ничего кроме этих строк не пиши.', AI_PROMPT_NO_SVG + '\nНичего кроме этих строк не пиши.');
+  return s;
 }
 
 async function exaAddExercise(){
@@ -8558,7 +8491,7 @@ function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = ($('ytWish').value || '').trim();
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return promptBase() +
+  return AI_PROMPT +
     '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
     'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
     'ССЫЛКА: ' + link + '\n' +
@@ -8666,12 +8599,10 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = ($('eaWish').value || '').trim();
-  return promptBase() +
+  return AI_PROMPT +
     '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
     'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
     'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
-    'Строку SVG можно не писать для упражнений, которые остались с прежними названиями — их картинки сохранятся сами. ' +
-    'Для новых или переименованных упражнений SVG рисуй как обычно.\n\n' +
     'ДЛЯ КОГО: ' + userForAI() + '\n' +
     'ЗАПРОС ПОЛЬЗОВАТЕЛЯ: ' + (wish || '(не указан — просто улучши программу на своё усмотрение)') + '\n\n' +
     '=== ТЕКУЩАЯ ПРОГРАММА ===\n' + programToText(editAIProg);
@@ -9836,7 +9767,6 @@ function normalizeExercise(ex){
   ex.swapOn = !!ex.swapName;
   ex.video = (ex.video || '').trim();
   if(ex.video && !/^https?:\/\//i.test(ex.video)) ex.video = 'https://' + ex.video;
-  if(ex.media && ex.media.kind === 'svg' && !/<svg[\s>]/i.test(ex.media.data || '')) ex.media = null;
   return ex;
 }
 
@@ -10326,17 +10256,6 @@ $('bProgOn').onclick = ()=>{
   $('bProgOn').classList.toggle('on', on);
   setShown('bProgOpts', on);
 };
-// тумблер пиктограмм живёт сразу на двух экранах-запросах — держим их в одном состоянии
-function syncWantSvg(){
-  if($('aiWantSvg')) $('aiWantSvg').classList.toggle('on', wantSvg);
-}
-['aiWantSvg'].forEach(id => {
-  $(id).onclick = ()=>{
-    wantSvg = !wantSvg;
-    kvSet('wantSvg', wantSvg ? '1' : '0');
-    syncWantSvg();
-  };
-});
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
 function commitPlanFields(){
@@ -10556,8 +10475,6 @@ function fillExercise(){
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
-  setShown('exSvgBox', false);
-  $('exSvgCode').value = exKeptSvg(ex);
   // детали по умолчанию свёрнуты
   setShown('exDetailsBox', false);
   $('exDetailsToggle').classList.remove('open');
@@ -10692,10 +10609,7 @@ function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
   if(m && m.kind === 'img') box.innerHTML = `<img src="${m.data}" alt="">`;
-  else if(m && m.kind === 'svg'){
-    const light = svgIsDark(m.data) ? ' light' : '';
-    box.innerHTML = `<div class="userSvg${light}">${m.data}</div>`;
-  } else box.innerHTML = '<span class="mp-empty">Нет картинки</span>';
+  else box.innerHTML = '<span class="mp-empty">Нет картинки</span>';
 }
 function syncExDetailsSum(){
   const bits = [];
@@ -10815,10 +10729,6 @@ function exSummary(ex){
 
 function exThumb(ex){
   if(ex.media && ex.media.kind === 'img') return `<img src="${ex.media.data}" alt="">`;
-  if(ex.media && ex.media.kind === 'svg'){
-    const light = svgIsDark(ex.media.data) ? ' light' : '';
-    return `<div class="userSvg${light}">${ex.media.data}</div>`;
-  }
   return DUMBBELL_ICON;
 }
 
@@ -10916,11 +10826,6 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-// Блок про пиктограммы вынесен из шаблона: он занимает больше 2 КБ и целиком выключается
-// тумблером «Рисовать пиктограммы». Внутри шаблона на его месте стоит метка {{SVG}} —
-// иначе правила рисования оставались бы в промте даже с выключенным тумблером.
-const AI_PROMPT_SVG_RULES = `SVG: пиктограмма упражнения в виде кода <svg viewBox="0 0 240 120">...</svg>. ВАЖНО: весь код svg строго в одну строку, без переносов. КРИТИЧНО ПРО ЦВЕТА: пиктограмма показывается на ТЁМНОМ фоне (#1A2130), поэтому все линии рисуй только светлыми цветами — основные линии stroke="#F2F0EA", акценты stroke="#FF4D3D". ЗАПРЕЩЕНО использовать чёрный, тёмно-серый, тёмно-синий цвета и любую заливку фона — такая пиктограмма будет невидима. КАК РИСОВАТЬ, чтобы получилось понятно (это важнее красоты):\n  1) Только вид СБОКУ (профиль) — так поза читается однозначно. Не рисуй вид спереди и три четверти.\n  2) Фигура должна занимать почти весь кадр: по вертикали от y≈15 до y≈105, по горизонтали от x≈30 до x≈210. Мелкая фигура в углу — брак.\n  3) Скелет строго из этих частей и ничего больше: линия пола, голова (circle r=9–11, fill светлым), корпус от шеи к тазу, две руки (плечо→локоть→кисть), две ноги (таз→колено→стопа). Всего 7–11 элементов. Больше — превращается в кашу.\n  4) Толщина: корпус и конечности stroke-width="6", пол и инвентарь "4". Обязательно stroke-linecap="round" и fill="none" на группе.\n  5) Суставы реально сгибай: колено и локоть — отдельные точки перелома линии, а не одна прямая. Углы делай выраженными (60–120°), иначе позу не отличить.\n  6) Позу выбирай в самой характерной фазе: приседание — внизу, отжимание — внизу, планка — прямая линия тела, мостик — таз поднят.\n  7) Разрешено добавить: линию пола, коврик, стул или гантель приглушённым stroke="#8A93A5", одну стрелку направления акцентным #FF4D3D.\n  8) ЗАПРЕЩЕНО: текст и подписи, штриховка, градиенты, тени, узоры, много мелких деталей, пальцы, лицо, одежда, вторая фигура.\nПроверь себя перед ответом: если по силуэту нельзя угадать упражнение — упрости и увеличь фигуру, а не добавляй деталей. Пиктограмма ОБЯЗАТЕЛЬНА: строка SVG должна быть у КАЖДОГО упражнения, не пропускай её.`;
-const AI_PROMPT_NO_SVG = 'Пиктограммы не нужны: строку SVG не добавляй ни к одному упражнению.';
 const AI_PROMPT = `Ты — помощник по составлению домашних тренировок. Составь программу по моему запросу и выведи её СТРОГО в текстовом формате ниже, без пояснений, без markdown, без лишнего текста до и после.
 
 === ФОРМАТ ОТВЕТА ===
@@ -10971,7 +10876,6 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ЗАМЕНА: название более сложного упражнения — на что перейти, когда потолок достигнут и расти дальше некуда (для отжиманий с колен — классические отжимания, для приседаний — приседания с гантелями). Указывай только при УСЛОЖНЯТЬ: да, иначе пропусти строку.
 ОПИСАНИЕ ЗАМЕНЫ: техника этого более сложного упражнения, 2-4 предложения. Только если есть строка ЗАМЕНА.
 ВИДЕО: ссылка на YouTube с реальным разбором техники, если уверен, что видео существует. Не выдумывай — иначе пропусти строку.
-{{SVG}}
 
 === ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
 
@@ -11004,7 +10908,6 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ПОТОЛОК: 20
 ЗАМЕНА: Отжимания с ногами на возвышении
 ОПИСАНИЕ ЗАМЕНЫ: Поставь стопы на диван или стул, ладони на полу чуть шире плеч. Тело держи прямой линией, опускайся грудью к полу и выжимай себя вверх. Чем выше опора для ног, тем больше нагрузка уходит на грудь и плечи.
-SVG: <svg viewBox="0 0 240 120" fill="none" stroke="#F2F0EA" stroke-width="5" stroke-linecap="round"><line x1="14" y1="104" x2="226" y2="104" stroke-width="4" opacity="0.5"/><circle cx="42" cy="58" r="10" fill="#F2F0EA"/><path d="M52 62 L150 76 L210 88"/><path d="M62 64 L44 104 M62 64 L84 104"/></svg>
 
 УПРАЖНЕНИЕ: Планка на локтях
 ОПИСАНИЕ: Встань в упор на предплечья, локти строго под плечами. Вытяни тело в одну прямую линию, взгляд в пол. Напряги пресс и ягодицы, не поднимай таз вверх и не провисай в пояснице. Дыши ровно через нос.
@@ -11278,9 +11181,6 @@ function parseProgramText(txt){
         break;
       case 'ЗАМЕНА': if(cur) cur.swapName = val.slice(0, 60); break;
       case 'ОПИСАНИЕ ЗАМЕНЫ': case 'ЗАМЕНА ОПИСАНИЕ': if(cur) cur.swapDesc = val.slice(0, 600); break;
-      case 'SVG': case 'СВГ':
-        if(cur && /<svg[\s>]/i.test(val)) cur.media = {kind:'svg', data:val};
-        break;
     }
   }
   finalizeExercise(cur); // последнее упражнение в тексте — цикл закончился, но раскладку сделать нужно
@@ -11369,7 +11269,6 @@ function qCards(boxId, opts, get, set){
 
 function initAIForm(){
   requireWho('ai', ()=> goTab('scrPrograms'));   // данные уходят прямо в запрос (userForAI)
-  syncWantSvg();
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
   qCards('qWarm', Q_OPTS.warm, ()=> q.warm, v => q.warm = v);
@@ -11470,23 +11369,7 @@ function composeRequest(){
   if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
   return s.trim();
 }
-// Инструкция по рисованию SVG — самая объёмная часть промта (больше 2 КБ). Если картинки
-// не нужны, вырезаем её целиком: и промт короче (меньше риск упереться в лимит ответа),
-// и модели не нужно тратить вывод на генерацию пиктограмм для каждого упражнения.
-// Это настройка ЗАПРОСА, а не программы: она живёт рядом с кнопками «получить программу»
-// на экранах создания и доработки через ИИ и запоминается на устройстве.
-function svgWanted(){ return wantSvg; }
-function promptBase(){
-  if(svgWanted()) return AI_PROMPT.replace('{{SVG}}', AI_PROMPT_SVG_RULES);
-  // без пиктограмм: вместо правил рисования — короткий запрет, и строку SVG
-  // убираем ещё и из примера ответа, чтобы ИИ не копировал её оттуда
-  return AI_PROMPT
-    .replace('{{SVG}}', AI_PROMPT_NO_SVG)
-    .split('\n')
-    .filter(line => !/^SVG:/.test(line.trim()))
-    .join('\n');
-}
-const fullAIPrompt = ()=> promptBase() + composeRequest();
+const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
@@ -11834,9 +11717,6 @@ function renderStep(){
   const box = $('illoBox');
   if(step.media && step.media.kind === 'img'){
     box.innerHTML = `<img src="${step.media.data}" alt="">`;
-  } else if(step.media && step.media.kind === 'svg'){
-    const light = svgIsDark(step.media.data) ? ' light' : '';
-    box.innerHTML = `<div class="userSvg${light}">${step.media.data}</div>`;
   } else {
     box.innerHTML = ILLO[step.illo] || '';
   }
@@ -12022,7 +11902,7 @@ function swapAIPrompt(ex, swap){
     'ВАЖНО: подбери НОВЫЕ стартовые значения под возросшую сложность (обычно меньше повторений или секунд, чем в старом упражнении), свой ШАГ и свой ПОТОЛОК. ' +
     'Число подходов и отдых сохрани близкими к текущим. Если у нового упражнения тоже есть следующий уровень сложности — укажи его в строках ЗАМЕНА и ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
     '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+    EX_ANSWER_FORMAT;
 }
 
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
@@ -12113,15 +11993,9 @@ function renderNextUp(step){
   const nxt = state.steps.slice(state.stepIdx+1).find(s => s.phase === 'work');
   if(!nxt){ setShown(nu, false); nu.innerHTML=''; return; }
 
-  let media, mediaClass = '';
-  if(nxt.media && nxt.media.kind === 'img'){
-    media = `<img src="${nxt.media.data}" alt="">`;
-  } else if(nxt.media && nxt.media.kind === 'svg'){
-    media = nxt.media.data;
-    if(svgIsDark(nxt.media.data)) mediaClass = ' light';
-  } else {
-    media = DUMBBELL_ICON;
-  }
+  const media = (nxt.media && nxt.media.kind === 'img')
+    ? `<img src="${nxt.media.data}" alt="">`
+    : DUMBBELL_ICON;
   // рабочий вес — часть задания: на отдыхе по нему решают, что нести к коврику
   const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} кг` : '';
   let val = nxt.kind === 'click'
@@ -12136,7 +12010,7 @@ function renderNextUp(step){
   nu.innerHTML =
     `<div class="nu-label">Дальше</div>` +
     `<div class="nu-row">` +
-      `<div class="nu-media${mediaClass}">${media}</div>` +
+      `<div class="nu-media">${media}</div>` +
       `<div class="nu-body"><h4>${esc(nxt.title)}</h4>` +
       (nxt.instruction ? `<p>${esc(nxt.instruction)}</p>` : '') +
       `<div class="nu-val">${val}</div></div>` +
@@ -13809,7 +13683,7 @@ async function ytApplyResult(){
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = promptBase()
+  const text = AI_PROMPT
     + '\n\nВОТ МОЯ ТЕКУЩАЯ ПРОГРАММА В ЭТОМ ЖЕ ФОРМАТЕ:\n\n'
     + programToText(editAIProg)
     + '\n\nЧТО НУЖНО СДЕЛАТЬ: опиши задачу здесь. Верни программу целиком в том же формате — её можно будет вставить обратно в приложение.';
@@ -14280,37 +14154,10 @@ $('exDetailsToggle').onclick = ()=>{
   $('exDetailsToggle').classList.toggle('open', open);
   if(open){ autoGrow($('exDesc')); autoGrow($('exMistakes')); }
 };
-$('exMediaBtn').onclick = ()=>{ setShown('exSvgBox', false); $('exMediaFile').click(); };
-$('exMediaSvg').onclick = ()=>{
-  const box = $('exSvgBox'), open = box.classList.contains('hidden');
-  box.classList.toggle('hidden', !open);
-  if(open){
-    $('exSvgCode').value = (exDraft.media && exDraft.media.kind === 'svg') ? exDraft.media.data : '';
-    autoGrow($('exSvgCode'));
-    $('exSvgCode').focus();
-  }
-};
-$('exSvgCode').oninput = e => {
-  const v = e.target.value.trim();
-  autoGrow(e.target);
-  if(!v){ exDraft.svgKeep = ''; delete exDraft.svgKeep; if(exDraft.media && exDraft.media.kind === 'svg') exDraft.media = null; }
-  else if(/<svg[\s>]/i.test(v)){
-    exDraft.svgKeep = v;
-    // если сейчас показывается фото — пиктограмма просто запомнится
-    if(!exDraft.media || exDraft.media.kind === 'svg') exDraft.media = {kind: 'svg', data: v};
-  }
-  renderExMedia(); syncExDetailsSum();
-};
+$('exMediaBtn').onclick = ()=> $('exMediaFile').click();
 $('exMediaNone').onclick = ()=>{
-  const res = dropExMedia(exDraft);
+  dropExMedia(exDraft);
   $('exMediaFile').value = '';
-  if(res === 'svg'){
-    $('exSvgCode').value = exDraft.media.data;
-    appAlert('Фото убрано — вернулась пиктограмма. Нажми ещё раз, чтобы убрать и её.');
-  } else {
-    $('exSvgCode').value = '';
-    setShown('exSvgBox', false);
-  }
   renderExMedia(); syncExDetailsSum();
 };
 $('exMediaFile').onchange = e => {
@@ -14318,7 +14165,7 @@ $('exMediaFile').onchange = e => {
   if(!file) return;
   shrinkImage(file, 640, data => {
     if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
-    setExImg(exDraft, data); // пиктограмма сохранится
+    setExImg(exDraft, data);
     renderExMedia(); syncExDetailsSum();
   });
 };
@@ -14534,8 +14381,6 @@ try{
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = HF_HINTS[hfMode] || '';
   soundOn = (await kvGet('soundOff')) !== '1';
-  wantSvg = (await kvGet('wantSvg')) !== '0';
-  syncWantSvg();
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   musicMode = (await kvGet('musicMode')) === '1';
   applyAudioFromUser(curUser());
