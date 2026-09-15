@@ -94,8 +94,6 @@
     --panel-dark-line:rgba(255,255,255,.10);
     /* подложка под «Дальше» на отдыхе: светлая иконка на тёмном */
     --plate-dark:#241A3C;
-    /* высота нижней панели кнопок — под неё резервируем прокрутку */
-    --actions-h:78px;
     /* высота плавающего дока вместе с полем под ним (без безопасной зоны) —
        под неё резервируем прокрутку корневых экранов */
     --dock-h:74px;
@@ -1047,8 +1045,10 @@
   /* Тихая кнопка второго плана: обычный текст на фоне карточки. Служебные действия
      («Проверить», «Диагностика») кричали заливкой акцентом громче, чем всё остальное
      на экране настроек, хотя нужны раз в жизни. */
+  /* «Добавить упражнение» и «Подобрать через ИИ» стоят рядом и обязаны быть одного
+     роста и с одним скруглением: разница в десять точек читается как небрежность. */
   .btn-quiet{
-    flex:1;min-height:42px;padding:0 14px;border-radius:var(--r-sm);cursor:pointer;
+    flex:1;min-height:52px;padding:0 14px;border-radius:14px;cursor:pointer;
     background:none;border:1px solid var(--line);color:var(--muted);
     font-family:var(--font-text);font-size:14px;
     display:flex;align-items:center;justify-content:center;
@@ -1360,8 +1360,6 @@
     border-radius:7px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums;
   }
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
-  /* действия над упражнением — в самом редакторе, а не иконкой в списке */
-  .ex-ops{display:flex;gap:8px}
   .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
 
 
@@ -1713,7 +1711,12 @@
     content:'';position:absolute;left:0;right:0;bottom:100%;height:22px;pointer-events:none;
     background:linear-gradient(to top, var(--bg), transparent);
   }
-  .screen.builder,#scrStart{padding-bottom:var(--actions-h)}
+  /* Запаса под панель кнопок здесь БЫТЬ НЕ ДОЛЖНО. Панель (.builder-actions) —
+     последний элемент в потоке экрана, место она занимает сама; sticky только
+     поднимает её к низу окна, пока страница длиннее экрана. Отдельные 78 точек
+     padding-bottom считали тот же запас второй раз, и на коротком экране кнопка
+     вставала на сто точек выше низа — «как будто запас под док, которого нет».
+     Возвращать этот отступ нельзя. */
   .wh-row{padding:12px 0;border-bottom:1px solid var(--line)}
   .wh-row:last-child{border-bottom:none}
   .wh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -2701,6 +2704,12 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
+    <div class="tabs" id="bModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="text">Через ИИ</button>
+      <button class="tab" data-m="video">Из видео</button>
+    </div>
+
     <div class="card-block">
       <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
@@ -2720,14 +2729,8 @@
       </div>
       <p class="field-hint" id="bVariantHint"></p>
       <div class="plan-tabs" id="planTabsTop"></div>
-      <div id="bExList"></div>
-      <!-- Попап-развилка «Через ИИ / Вручную» ушла: добавление вручную теперь ничего
-           не открывает, а прятать второй путь за лишним касанием, чтобы спросить
-           «каким способом», было незачем. Два пути стоят рядом. -->
-      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
-      <button type="button" class="btn-quiet" id="btnAddExAI"><span data-icon="sparkle"></span>Подобрать через ИИ</button>
-      <!-- Картинки — про упражнения, поэтому лежат в блоке упражнений. В настройках
-           программы, рядом с обложкой и расписанием, их искать было негде. -->
+      <!-- Картинки — про упражнения, поэтому лежат в их блоке и НАД списком: внизу,
+           после кнопок добавления, строка терялась совсем. -->
       <button type="button" class="nav-row nr-flat" id="bImagesRow">
         <span class="nr-ico" data-icon="image"></span>
         <div class="nr-body">
@@ -2736,8 +2739,13 @@
         </div>
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
+      <div id="bExList"></div>
+      <!-- Попап-развилка «Через ИИ / Вручную» ушла: добавление вручную теперь ничего
+           не открывает, а прятать второй путь за лишним касанием, чтобы спросить
+           «каким способом», было незачем. Два пути стоят рядом и одного размера. -->
+      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
+      <button type="button" class="btn-quiet" id="btnAddExAI"><span data-icon="sparkle"></span>Подобрать через ИИ</button>
     </div>
-    <button type="button" class="btn-quiet" id="btnProgAI"><span data-icon="sparkle"></span><span id="btnProgAITxt">Собрать программу через ИИ</span></button>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
     </div>
@@ -2967,6 +2975,15 @@
     <div class="screen-head">
       <button class="back-chip" id="exBackTop"></button>
       <h2>Упражнение</h2>
+      <div class="prog-menu-wrap">
+        <button class="more-btn" id="exMore" title="Действия"></button>
+        <div class="ctx-menu" id="exMenu"></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="exModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="ai">Через ИИ</button>
     </div>
 
     <div class="card-block">
@@ -3047,15 +3064,6 @@
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
-    </div>
-
-    <!-- Дублирование и удаление стояли в меню «⋮» у строки списка вместе с
-         «Изменить». Место им здесь: это действия над упражнением, которое сейчас
-         открыто, и в списке они освобождают строку под собственно упражнение. -->
-    <button type="button" class="btn-quiet" id="btnExAI"><span data-icon="sparkle"></span>Доработать через ИИ</button>
-    <div class="ex-ops">
-      <button type="button" class="btn-quiet" id="btnDupEx"><span data-icon="plus"></span>Дублировать</button>
-      <button type="button" class="btn-quiet danger" id="btnDelEx"><span data-icon="trash"></span>Удалить</button>
     </div>
 
     <div class="builder-actions">
@@ -10543,6 +10551,8 @@ function openExercise(i, isNew){
     exDraft.trackWeight = hasWeight(exDraft);
   }
   fillExercise();
+  buildExMenu();
+  document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
   // Снимок для сравнения снимаем С ФОРМЫ, тем же путём, каким потом сравниваем
   // (applyFormTo), и уже ПОСЛЕ материализации progOn/trackWeight. Раньше снимок
   // брали прямо с черновика — и он не совпадал с формой по типам: в черновике
@@ -14109,42 +14119,68 @@ $('slotFile').onchange = e => {
   });
 };
 
-/* ---- доработка открытого упражнения через ИИ ---- */
-// Это была вкладка «Через ИИ» рядом с «Вручную». Вкладки обещают два вида одного
-// экрана, а эта уводила на другой экран и по дороге сохраняла упражнение. Теперь
-// это обычная кнопка внизу, рядом с остальными действиями над упражнением.
-$('btnExAI').onclick = async ()=>{
-  if(!exDraft || exIdx < 0) return;
-  exIsNew = false;
-  if(!numFieldsOk('scrExercise')) return;
-  if(exDirty()){
-    const ok = await appDialog(
-      'Изменения упражнения ещё не сохранены. Если перейти к ИИ, они останутся в черновике программы, но сама программа пока не сохранена.',
-      {confirm: true, okText: 'Перейти к ИИ', cancelText: 'Остаться'}
-    );
-    if(!ok) return;
-  }
-  const list = curPlan().exercises;
-  if(list[exIdx]) list[exIdx] = commitExercise();
-  const keep = exIdx;
-  exDraft = null; exIdx = -1; exOrig = '';
-  renderExList();
-  openExEdAI(keep);
-};
+/* ---- переключение способа прямо на экране ---- */
+// упражнение: вручную ⇄ через ИИ. Введённое переносится в упражнение по дороге,
+// поэтому спрашивать «а точно?» не о чем — ничего не теряется.
+document.querySelectorAll('#exModeTabs .tab').forEach(b => {
+  b.onclick = ()=>{
+    if(b.dataset.m !== 'ai') return;
+    document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+    if(!exDraft || exIdx < 0) return;
+    if(!numFieldsOk('scrExercise')) return;
+    exIsNew = false;
+    const list = curPlan().exercises;
+    if(list[exIdx]) list[exIdx] = commitExercise();
+    const keep = exIdx;
+    exDraft = null; exIdx = -1; exOrig = '';
+    renderExList();
+    openExEdAI(keep);
+  };
+});
 
-// программа целиком через ИИ: у новой — собрать, у сохранённой — доработать
-$('btnProgAI').onclick = async ()=>{
-  const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
-  if(programDirty()){
-    const go = await appDialog(
-      'Изменения программы ещё не сохранены. Если перейти к ИИ, они пропадут.',
-      {confirm: true, okText: 'Перейти к ИИ', cancelText: 'Остаться'}
-    );
-    if(!go) return;
-  }
-  if(existing) openEditAI(existing);
-  else switchCreateMode('text');
+// действия над открытым упражнением — в меню шапки, как у программы на экране старта
+$('exMore').innerHTML = icon('more');
+$('exMore').onclick = e => {
+  e.stopPropagation();
+  const m = $('exMenu');
+  const was = m.classList.contains('open');
+  closeAllMenus();
+  m.classList.toggle('open', !was);
 };
+function buildExMenu(){
+  const box = $('exMenu'); box.innerHTML = '';
+  const mk = (html, fn, cls) => {
+    const b = document.createElement('button');
+    if(cls) b.className = cls;
+    b.innerHTML = html;
+    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    box.appendChild(b);
+  };
+  mk(icon('plus') + 'Дублировать', dupExercise);
+  mk(icon('trash') + 'Удалить', delExercise, 'danger');
+}
+
+// конструктор: вручную ⇄ через ИИ ⇄ из видео
+document.querySelectorAll('#bModeTabs .tab').forEach(b => {
+  b.onclick = async ()=>{
+    const m = b.dataset.m;
+    if(m === 'manual') return;
+    const back = ()=> document.querySelectorAll('#bModeTabs .tab')
+      .forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+    // редактируем существующую программу → «через ИИ» = доработка этой же программы
+    const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
+    if(programDirty()){
+      const go = await appDialog(
+        'Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.',
+        {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+      );
+      back();
+      if(!go) return;
+    } else back();
+    if(existing && m === 'text'){ openEditAI(existing); return; }
+    switchCreateMode(m);
+  };
+});
 
 // создание программы: по описанию ⇄ из видео ⇄ вручную
 function switchCreateMode(m){
@@ -14172,9 +14208,16 @@ $('aiTabs').addEventListener('click', async e => {
   if(b.dataset.m === 'manual'){ c.manual(); return; }
   switchCreateMode(b.dataset.m);
 });
+// ручной режим открывает конструктор с активной вкладкой «Вручную»
 function markBuilderTab(){
   const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
-  $('btnProgAITxt').textContent = isEdit ? 'Доработать программу через ИИ' : 'Собрать программу через ИИ';
+  setShown('bModeTabs', true);
+  document.querySelectorAll('#bModeTabs .tab').forEach(x => {
+    x.classList.toggle('act', x.dataset.m === 'manual');
+    // у существующей программы «из видео» не нужен: он создаёт новую
+    if(x.dataset.m === 'video') x.style.display = isEdit ? 'none' : '';
+    if(x.dataset.m === 'text') x.textContent = isEdit ? 'Доработать ИИ' : 'Через ИИ';
+  });
 }
 
 /* ---- правка упражнения через ИИ ---- */
@@ -14222,7 +14265,7 @@ $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise')) saveExAndBack(); }
 ['bRoundRest','uePrepSec','ueReadySec','ueSideSec'].forEach(id => guardNum(id,'int'));
 
 // дублируем то, что видно сейчас, вместе с несохранёнными правками формы
-$('btnDupEx').onclick = ()=>{
+function dupExercise(){
   if(!exDraft || exIdx < 0) return;
   exIsNew = false;
   const list = curPlan().exercises;
@@ -14239,17 +14282,17 @@ $('btnDupEx').onclick = ()=>{
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
   show('scrBuilder');
-};
-$('btnDelEx').onclick = async ()=>{
+}
+async function delExercise(){
   if(!exDraft || exIdx < 0) return;
-  exIsNew = false;
   const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
   if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  exIsNew = false;
   curPlan().exercises.splice(exIdx, 1);
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
   show('scrBuilder');
-};
+}
 
 function saveExAndBack(){
   exIsNew = false;
