@@ -991,7 +991,10 @@
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
   .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-row{display:flex;flex-wrap:wrap;gap:6px}
-  .load-row .load-chip{flex:1 1 auto;min-width:54px}
+  /* шесть чипов отдыха в один ряд не влезали и обрезались краем карточки, а во
+     флексе одинокий перенесённый чип растягивался на всю ширину — поэтому сетка
+     с фиксированным числом колонок: «своё» переносится и остаётся чипом */
+  #exRestChips{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
   .load-chip{flex:1;padding:0 8px;min-height:36px;border-radius:12px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -2675,7 +2678,7 @@
 
       <div class="card-block hidden" id="planBlock">
         <p class="cb-title">Вариант тренировки</p>
-        <div class="load-row" id="planRow" style="flex-wrap:wrap"></div>
+        <div class="load-row" id="planRow"></div>
       </div>
 
       <div class="card-block hidden" id="progStepsBlock">
@@ -2698,12 +2701,6 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
-    <div class="tabs" id="bModeTabs">
-      <button class="tab act" data-m="manual">Вручную</button>
-      <button class="tab" data-m="text">Через ИИ</button>
-      <button class="tab" data-m="video">Из видео</button>
-    </div>
-
     <div class="card-block">
       <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
@@ -2735,11 +2732,12 @@
         <span class="nr-ico" data-icon="image"></span>
         <div class="nr-body">
           <b>Картинки упражнений</b>
-          <small id="bImagesSum">Загрузить пачкой и разложить по местам</small>
+          <small id="bImagesSum">Загрузить пачкой</small>
         </div>
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
     </div>
+    <button type="button" class="btn-quiet" id="btnProgAI"><span data-icon="sparkle"></span><span id="btnProgAITxt">Собрать программу через ИИ</span></button>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
     </div>
@@ -2967,21 +2965,11 @@
   <section class="screen builder" id="scrExercise">
     <div class="screen-head">
       <button class="back-chip" id="exBackTop"></button>
-      <h2 id="exTitle">Упражнение</h2>
+      <h2>Упражнение</h2>
     </div>
 
-    <div class="tabs" id="exModeTabs">
-      <button class="tab act" data-m="manual">Вручную</button>
-      <button class="tab" data-m="ai">Через ИИ</button>
-    </div>
     <div class="card-block">
-      <p class="cb-title">Что за упражнение</p>
       <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
-      <div class="pref-row"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
-    </div>
-
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Сколько делать</p></div>
       <div class="field"><label>Формат</label>
         <div class="seg seg3">
           <button type="button" id="exTypeReps">Повторения</button>
@@ -2994,11 +2982,12 @@
         <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
       </div>
       <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="Например: 8"></div>
-      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
       <div class="field"><label>Отдых после подхода</label>
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" class="hidden" min="0" max="600" inputmode="numeric" placeholder="секунд">
       </div>
+      <div class="pref-row"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
+      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
     </div>
 
     <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
@@ -3061,6 +3050,7 @@
     <!-- Дублирование и удаление стояли в меню «⋮» у строки списка вместе с
          «Изменить». Место им здесь: это действия над упражнением, которое сейчас
          открыто, и в списке они освобождают строку под собственно упражнение. -->
+    <button type="button" class="btn-quiet" id="btnExAI"><span data-icon="sparkle"></span>Доработать через ИИ</button>
     <div class="ex-ops">
       <button type="button" class="btn-quiet" id="btnDupEx"><span data-icon="plus"></span>Дублировать</button>
       <button type="button" class="btn-quiet danger" id="btnDelEx"><span data-icon="trash"></span>Удалить</button>
@@ -10519,7 +10509,6 @@ function fillExercise(){
   // При открытии ДРУГОГО упражнения метка должна сбрасываться, иначе в полях остаются
   // цифры предыдущего — и уходят в него при сохранении
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
-  $('exTitle').textContent = (ex.name || '').trim() || 'Упражнение';
   $('exName').value = ex.name || '';
   $('exValue').value = valueText(ex.value).replace('–', '-');
   $('exSets').value = ex.sets || 1;
@@ -14030,63 +14019,34 @@ $('slotFile').onchange = e => {
   });
 };
 
-/* ---- переключение способа прямо на экране ---- */
-// упражнение: вручную ⇄ через ИИ, без возврата в меню
-document.querySelectorAll('#exModeTabs .tab').forEach(b => {
-  b.onclick = async ()=>{
-    if(b.dataset.m !== 'ai') return;
-    // если правки есть — предупреждаем; иначе переключаемся молча
-    if(exDirty()){
-      const ok = await appDialog(
-        'Изменения этого упражнения не сохранены. Если переключиться, они пропадут.',
-        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-      );
-      document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
-      if(!ok) return;
-    }
-    if(exDraft && exIdx >= 0){
-      const list = curPlan().exercises;
-      if(list[exIdx]) list[exIdx] = commitExercise();
-    }
-    const keep = exIdx;
-    exDraft = null; exIdx = -1; exOrig = '';
-    renderExList();
-    openExEdAI(keep);
-  };
-});
-// правка программы: вручную ⇄ через ИИ
+/* ---- доработка открытого упражнения через ИИ ---- */
+// Это была вкладка «Через ИИ» рядом с «Вручную». Вкладки обещают два вида одного
+// экрана, а эта уводила на другой экран и по дороге сохраняла упражнение. Теперь
+// это обычная кнопка внизу, рядом с остальными действиями над упражнением.
+$('btnExAI').onclick = ()=>{
+  if(!exDraft || exIdx < 0) return;
+  if(!numFieldsOk('scrExercise')) return;
+  const list = curPlan().exercises;
+  if(list[exIdx]) list[exIdx] = commitExercise();
+  const keep = exIdx;
+  exDraft = null; exIdx = -1; exOrig = '';
+  renderExList();
+  openExEdAI(keep);
+};
 
-// конструктор: вручную ⇄ через ИИ ⇄ из видео
-document.querySelectorAll('#bModeTabs .tab').forEach(b => {
-  b.onclick = async ()=>{
-    const m = b.dataset.m;
-    if(m === 'manual') return;
-    // редактируем существующую программу → «через ИИ» = доработка этой же программы
-    const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
-    if(existing && m === 'text'){
-      const changed = programDirty();
-      if(changed){
-        const go = await appDialog(
-          'Изменения программы не сохранены. Если переключиться, они пропадут.',
-          {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-        );
-        markBuilderTab();
-        if(!go) return;
-      }
-      openEditAI(existing);
-      return;
-    }
-    // уходя с ручного создания, предупреждаем о несохранённом
-    if(programDirty()){
-      const go = await appDialog(
-        'Изменения программы не сохранены. Если переключиться, они пропадут.',
-        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-      );
-      if(!go){ document.querySelectorAll('#bModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual')); return; }
-    }
-    switchCreateMode(m);
-  };
-});
+// программа целиком через ИИ: у новой — собрать, у сохранённой — доработать
+$('btnProgAI').onclick = async ()=>{
+  const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
+  if(programDirty()){
+    const go = await appDialog(
+      'Изменения программы не сохранены. Если уйти к ИИ, они пропадут.',
+      {confirm: true, okText: 'Уйти к ИИ', cancelText: 'Вернуться'}
+    );
+    if(!go) return;
+  }
+  if(existing) openEditAI(existing);
+  else switchCreateMode('text');
+};
 
 // создание программы: по описанию ⇄ из видео ⇄ вручную
 function switchCreateMode(m){
@@ -14114,16 +14074,9 @@ $('aiTabs').addEventListener('click', async e => {
   if(b.dataset.m === 'manual'){ c.manual(); return; }
   switchCreateMode(b.dataset.m);
 });
-// ручной режим открывает конструктор с активной вкладкой «Вручную»
 function markBuilderTab(){
   const isEdit = !!(draft && draft.id && customPrograms.some(p => p.id === draft.id));
-  setShown('bModeTabs', true);
-  document.querySelectorAll('#bModeTabs .tab').forEach(x => {
-    x.classList.toggle('act', x.dataset.m === 'manual');
-    // у существующей программы «из видео» не нужен: он создаёт новую
-    if(x.dataset.m === 'video') x.style.display = isEdit ? 'none' : '';
-    if(x.dataset.m === 'text') x.textContent = isEdit ? 'Через ИИ' : 'Через ИИ';
-  });
+  $('btnProgAITxt').textContent = isEdit ? 'Доработать программу через ИИ' : 'Собрать программу через ИИ';
 }
 
 /* ---- правка упражнения через ИИ ---- */
@@ -14219,7 +14172,7 @@ async function leaveExercise(){
   renderExList();
   show('scrBuilder');
 }
-$('exName').oninput = e => { exDraft.name = e.target.value; $('exTitle').textContent = e.target.value.trim() || 'Упражнение'; };
+$('exName').oninput = e => { exDraft.name = e.target.value; };
 // формат теперь трёхтабный: «повторения» и «повторения и вес» — оба type='reps',
 // различаются только trackWeight; переключение формата не трогает тумблер прогрессии,
 // но если ось «вес» стала бессмысленной (ушли с формата с весом) — переносим на «повторения»
@@ -14337,7 +14290,7 @@ function syncImagesSum(){
   }));
   el.textContent = filled
     ? `Есть ${filled} из ${total}`
-    : 'Загрузить пачкой и разложить по местам';
+    : `Ни одной из ${total}`;
 }
 // Сводка говорит, что НАСТРОЕНО, а не как называются поля внутри. Круги и отдых
 // между ними здесь обязательны: это первое, что человек хочет проверить перед
