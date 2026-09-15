@@ -173,6 +173,12 @@
      под ним остаётся видимым и скроллится точно так же, как без паузы.
      Ширина и верхний отступ — те же, что у контента страницы (.app: 20px, max 480px). */
   .screen{position:relative}
+  /* метка роста на экране тренировки: под числом, тихая */
+  .grow-tag{
+    align-self:center;margin-top:8px;padding:3px 10px;border-radius:var(--r-pill);
+    border:1px solid var(--accent-line);color:var(--accent-ink);
+    font-size:12px;font-family:var(--font-text);white-space:nowrap;
+  }
   .pause-overlay{
     position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
     width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
@@ -1392,6 +1398,8 @@
     border-radius:7px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums;
   }
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
+  /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
+  .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
   .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
 
 
@@ -1426,7 +1434,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -2101,21 +2109,8 @@
   }
   .ss-clear svg{width:14px;height:14px}
 
-  /* фильтры: одна строка с прокруткой вбок, края растворяются */
-  .filter-row{
-    display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
-    padding:2px 0 8px;margin:0 calc(-1 * var(--sp-2));padding-left:var(--sp-2);padding-right:var(--sp-2);
-    scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  }
-  .filter-row::-webkit-scrollbar{display:none}
-  .filter-row.sub{padding-bottom:var(--sp-3)}
-  .f-chip{
-    flex:none;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;
-    border-radius:var(--r-pill);border:1px solid var(--line);background:var(--card);
-    color:var(--muted);cursor:pointer;font-family:var(--font-text);font-size:13px;white-space:nowrap;
-  }
-  .f-chip svg{width:15px;height:15px}
-  .f-chip.act{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink);font-weight:600}
+  /* фильтры витрины — два обычных списка в строку */
+  .store-filters{margin:0 0 var(--sp-2);align-items:flex-end}
 
   /* сколько нашлось: подпись раздела, а не подсказка под полем — тот же приём,
      что у «Недели» и «Прогресса» на главной, и с воздухом до первой карточки */
@@ -2156,13 +2151,26 @@
   .tr-id small{color:var(--muted);font-size:13.5px}
   .tr-about{font-size:14.5px;line-height:1.6;color:var(--ink);white-space:pre-line;margin:0 0 var(--sp-2)}
 
-  /* карточка товара */
+  /* витрина: две карточки в ряд. Раньше карточка шла во всю ширину и несла ещё
+     описание, ник тренера и кнопку — на экран помещалось полторы штуки. */
+  .store-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
   .store-card{
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-    overflow:hidden;box-shadow:var(--sh-1);margin-bottom:var(--sp-4);
+    overflow:hidden;box-shadow:var(--sh-1);cursor:pointer;display:flex;flex-direction:column;
   }
+  .store-card:active{transform:scale(.99)}
   .st-cover{position:relative;line-height:0}
-  .st-cover svg{width:100%;height:auto;display:block;aspect-ratio:320/170}
+  .st-cover svg{width:100%;height:auto;display:block;aspect-ratio:1/1}
+  /* уже добавлена — галочка на обложке вместо строки текста в карточке */
+  .st-own{
+    position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;
+    background:var(--work);color:var(--on-accent);display:flex;align-items:center;justify-content:center;
+  }
+  .st-own svg{width:15px;height:15px}
+  /* страница программы каталога */
+  .si-cover{line-height:0;border-radius:var(--r-xl);overflow:hidden;margin-bottom:var(--sp-4)}
+  .si-cover svg{width:100%;height:auto;display:block;aspect-ratio:320/170}
+  .si-name{font-size:21px;margin:0;line-height:1.15}
   /* метка поверх обложки — только категория: уровень стоит строкой ниже, и на
      картинке он был вторым экземпляром того же самого */
   .st-tags{position:absolute;left:12px;top:12px;display:flex;gap:8px}
@@ -2173,9 +2181,9 @@
     background:rgba(15,10,30,.5);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
     font-family:var(--font-text);font-size:11px;line-height:1;white-space:nowrap;
   }
-  .st-body{padding:var(--sp-3) var(--sp-4) var(--sp-4);display:flex;flex-direction:column;gap:8px}
-  .st-body h3{font-size:18px;margin:0;line-height:1.15}
-  .st-meta{color:var(--muted);font-size:13px}
+  .st-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
+  .st-body h3{font-size:14.5px;margin:0;line-height:1.2;font-weight:600}
+  .st-meta{color:var(--muted);font-size:12px}
   .st-gives{color:var(--ink);font-size:14px;line-height:1.5;opacity:.86}
   /* автор программы. Кто это составил — важнее, чем «бесплатно»: именно ник
      отличает каталог от безымянного набора файлов. */
@@ -2191,19 +2199,6 @@
     flex:none;font-size:11px;color:var(--muted);border:1px solid var(--line);
     border-radius:var(--r-pill);padding:2px 8px;line-height:1.3;
   }
-  /* нижняя строка карточки: слева — из чего программа состоит либо «уже добавлена»,
-     справа — действие. Слот цены убран целиком: покупки здесь нет. */
-  .st-buy{display:flex;align-items:center;gap:var(--sp-3);margin-top:2px}
-  .st-what{flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--muted)}
-  .st-what.own{color:var(--accent-ink);font-weight:500}
-  .st-btn{
-    flex:none;min-height:44px;padding:0 20px;border:none;border-radius:var(--r-pill);cursor:pointer;
-    background:var(--grad-accent);color:var(--on-accent);box-shadow:var(--sh-accent);
-    font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;
-  }
-  /* уже в библиотеке: кнопка перестаёт звать добавлять и просто ведёт к программе */
-  .st-btn.owned{background:none;box-shadow:none;color:var(--accent-ink);border:1px solid var(--accent-line)}
-
   /* ================= НИЖНЯЯ НАВИГАЦИЯ (ДОК) =================
      Пять корневых разделов. Правило жёсткое: внизу экрана либо док, либо панель
      действий — никогда обе. Поэтому док показывается ТОЛЬКО на .screen.root, а все
@@ -2643,11 +2638,42 @@
       <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить"></button>
     </div>
 
-    <div class="filter-row" id="storeCats"></div>
-    <div class="filter-row sub" id="storeLevels"></div>
+    <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
+         если пролистать, а сколько ещё за краем — не видно вообще. Обычный список
+         показывает весь набор сразу и занимает одну строку на двоих. -->
+    <div class="row2 store-filters">
+      <div class="field grow"><label>Направление</label><select id="storeCat"></select></div>
+      <div class="field grow"><label>Уровень</label><select id="storeLevel"></select></div>
+    </div>
 
     <p class="store-count" id="storeCount"></p>
-    <div id="storeList"></div>
+    <div class="store-grid" id="storeList"></div>
+  </section>
+
+  <!-- Страница программы каталога. Раньше всё, что о программе известно, лежало
+       прямо в карточке витрины — из-за этого карточка была высокой, а на экран их
+       помещалось полторы. Витрина теперь показывает обложку, название и главное в
+       двух словах, а подробности живут здесь: состав, тренер, расписание. -->
+  <section class="screen" id="scrStoreItem">
+    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2>Программа</h2></div>
+    <div class="si-cover" id="siCover"></div>
+    <div class="card-block">
+      <h3 class="si-name" id="siName"></h3>
+      <div class="ex-meta" id="siFacts"></div>
+      <p class="st-gives" id="siGives"></p>
+      <button type="button" class="st-by" id="siBy">
+        <span class="st-ava" data-icon="user"></span>
+        <span class="st-nick" id="siNick"></span>
+        <span class="st-role">тренер</span>
+      </button>
+    </div>
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Что внутри</p><span class="cb-count" id="siCount"></span></div>
+      <div class="list-rows" id="siList"></div>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="siBuy">Добавить</button>
+    </div>
   </section>
 
   <!-- РАЗДЕЛ «ТРЕНИРОВКИ»: все программы и создание новой -->
@@ -3229,6 +3255,9 @@
         <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
         <div class="reps" id="stepReps"></div>
+        <!-- нагрузка этого упражнения растёт со временем: короткая метка вместо
+             молчания. У упражнений без роста метки нет вовсе. -->
+        <div class="grow-tag hidden" id="growTag"></div>
         <!-- цифра и кольцо подготовки: кольцо висит сбоку абсолютом, поэтому
              появляется и исчезает, не сдвигая саму цифру ни на пиксель -->
         <div class="count-wrap">
@@ -4071,9 +4100,6 @@
         <div class="field"><label>Дни недели</label><div class="days" id="schedDays"></div>
           <p class="field-hint" id="schedHint2"></p>
         </div>
-        <div class="field"><label>Время</label><input type="time" id="schedTime">
-          <p class="field-hint">Если заданы дни и время — придёт напоминание за 15 минут и в момент старта.</p>
-        </div>
         <button class="btn-primary" id="schedSave" style="padding:15px;font-size:16px">Сохранить</button>
         <button class="modal-btn" id="schedLater">Позже</button>
       </div>
@@ -4779,7 +4805,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
 const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
-const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -6043,7 +6069,8 @@ function customToProgram(p, planIdx = 0){
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // нужно попапу после подхода, чтобы не задваивать уже применённые шаги
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
-      exName: ex.name
+      exName: ex.name,
+      grow: progShort(ex)      // что растёт — показываем прямо на тренировке
     };
     // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
     if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){
@@ -9542,21 +9569,17 @@ let storeFilter = {q: '', cat: '', level: ''};
 const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 
 function renderStoreFilters(){
-  const catBox = $('storeCats');
-  catBox.innerHTML = [{id:'', name:'Все направления', ico:'sparkle'}].concat(STORE_CATS).map(c =>
-    `<button type="button" class="f-chip${storeFilter.cat === c.id ? ' act' : ''}" data-cat="${c.id}">${icon(c.ico)}<span>${c.name}</span></button>`
-  ).join('');
-  catBox.querySelectorAll('.f-chip').forEach(b => b.onclick = ()=>{
-    storeFilter.cat = b.dataset.cat; renderStoreFilters(); renderStore();
-  });
-
-  const lvBox = $('storeLevels');
-  lvBox.innerHTML = [''].concat(STORE_LEVELS).map(l =>
-    `<button type="button" class="f-chip${storeFilter.level === l ? ' act' : ''}" data-lv="${l}">${l || 'Любой уровень'}</button>`
-  ).join('');
-  lvBox.querySelectorAll('.f-chip').forEach(b => b.onclick = ()=>{
-    storeFilter.level = b.dataset.lv; renderStoreFilters(); renderStore();
-  });
+  const fill = (id, opts, cur, onPick) => {
+    const sel = $(id);
+    sel.innerHTML = opts.map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('');
+    sel.onchange = ()=>{ onPick(sel.value); renderStore(); };
+  };
+  fill('storeCat',
+    [['', 'Все направления']].concat(STORE_CATS.map(c => [c.id, c.name])),
+    storeFilter.cat, v => storeFilter.cat = v);
+  fill('storeLevel',
+    [['', 'Любой уровень']].concat(STORE_LEVELS.map(l => [l, l])),
+    storeFilter.level, v => storeFilter.level = v);
 }
 
 function storeMatches(it){
@@ -9583,38 +9606,98 @@ function renderStore(){
       '</div>';
     return;
   }
+  // Карточка витрины отвечает на один вопрос — «стоит ли открыть». Обложка,
+  // название, минуты и уровень; всё остальное (состав, тренер, описание) живёт на
+  // странице программы. Раньше карточка несла ещё описание, ник тренера и кнопку —
+  // была высокой, и на экран помещалось полторы штуки.
   box.innerHTML = list.map(it => {
-    const c = storeCat(it.cat);
     const own = storeOwned(it.id);
-    // из чего программа состоит — вместо бывшего слота цены: число упражнений
-    // считаем прямо по тексту программы, чтобы карточка не обещала больше, чем внутри
-    const nEx = (it.text.match(/^УПРАЖНЕНИЕ:/gm) || []).length;
-    // программа по подписке: карточка выглядит так же и открывается так же —
-    // разница только в том, что «Добавить» ведёт на подписку, а не в библиотеку.
-    // Прятать такие программы нельзя: люди должны видеть, за что платят.
-    return `<article class="store-card">
-      <div class="st-cover">${storeCover(it)}
-        <div class="st-tags"><span class="st-tag">${c.name}</span>${it.pro ? `<span class="st-tag pro">${icon('crown')}Премиум</span>` : ''}</div>
+    return `<article class="store-card" data-open="${it.id}">
+      <div class="st-cover">${storeCover(it, true)}
+        ${it.pro ? `<div class="st-tags"><span class="st-tag pro">${icon('crown')}Премиум</span></div>` : ''}
+        ${own ? `<div class="st-own">${icon('check')}</div>` : ''}
       </div>
       <div class="st-body">
         <h3>${it.name}</h3>
-        <div class="st-meta">${it.min} минут · ${it.level}</div>
-        <button type="button" class="st-by" data-by="${it.by || ''}">
-          <span class="st-ava">${icon('user')}</span>
-          <span class="st-nick">${it.by || ''}</span>
-          <span class="st-role">тренер</span>
-        </button>
-        <p class="st-gives">${it.gives}</p>
-        <div class="st-buy">
-          <span class="st-what${own ? ' own' : ''}">${own ? 'Уже в твоих тренировках' : `${nEx} ${plural(nEx, 'упражнение', 'упражнения', 'упражнений')}`}</span>
-          <button type="button" class="st-btn${own ? ' owned' : ''}" data-buy="${it.id}">${own ? 'Открыть' : 'Добавить'}</button>
-        </div>
+        <div class="st-meta">${it.min} мин · ${it.level}</div>
       </div>
     </article>`;
   }).join('');
-  box.querySelectorAll('[data-buy]').forEach(b => b.onclick = ()=> addStoreItem(b.dataset.buy));
-  box.querySelectorAll('[data-by]').forEach(b => b.onclick = ()=> openTrainer(b.dataset.by));
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=> openStoreItem(b.dataset.open));
 }
+
+/* ---- страница программы каталога ---- */
+let siItem = null;
+// объём упражнения для превью. НЕ exSummary: тот смотрит в draft и подставил бы
+// рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
+function siBits(ex){
+  const b = [];
+  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`);
+  const sets = Math.max(1, parseInt(ex.sets) || 1);
+  if(sets > 1) b.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
+  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} кг`);
+  if(ex.perSide) b.push('на сторону');
+  return b;
+}
+function openStoreItem(id){
+  const it = STORE_ITEMS.find(x => x.id === id);
+  if(!it) return;
+  siItem = it;
+  const c = storeCat(it.cat);
+  $('siCover').innerHTML = storeCover(it);
+  $('siName').textContent = it.name;
+  $('siGives').textContent = it.gives || '';
+  $('siNick').textContent = it.by || '';
+  setShown('siBy', !!it.by);
+
+  const {program} = parseProgramText(it.text);
+  const plans = (program && program.plans) || [];
+  const exs = plans.reduce((a, pl) => a.concat(pl.exercises || []), []);
+  const rounds = (plans[0] && +plans[0].rounds) || 1;
+  const days = (plans[0] && (plans[0].days || [])).join(', ');
+
+  const facts = $('siFacts'); facts.innerHTML = '';
+  const fact = (txt, cls) => {
+    if(!txt) return;
+    const el = document.createElement('span');
+    if(cls) el.className = cls;
+    el.textContent = txt;
+    facts.appendChild(el);
+  };
+  fact(c.name, 'wm');
+  fact(it.level);
+  fact(`${it.min} мин`);
+  if(rounds > 1) fact(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
+  if(days) fact(days);
+  if(it.pro) fact('Премиум', 'wm');
+
+  const nWarm = exs.filter(e => e.warmup).length;
+  $('siCount').textContent = `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
+  const box = $('siList'); box.innerHTML = '';
+  exs.forEach((ex, i) => {
+    const row = document.createElement('div');
+    row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
+    row.style.cursor = 'default';
+    const before = exs.slice(0, i).filter(e => !e.warmup).length;
+    row.innerHTML =
+      `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
+      `<div class="ex-info"><b></b><div class="ex-meta">` +
+      (ex.warmup ? '<span class="wm">Разминка</span>' : '') +
+      siBits(ex).map(t => `<span>${t}</span>`).join('') +
+      (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
+      `</div></div>`;
+    row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
+    box.appendChild(row);
+  });
+
+  const own = storeOwned(it.id);
+  $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
+  show('scrStoreItem');
+  window.scrollTo(0, 0);
+}
+$('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
+$('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
+$('siBackTop').onclick = ()=> goBackTo('scrStore');
 
 async function addStoreItem(id){
   const it = STORE_ITEMS.find(x => x.id === id);
@@ -9642,7 +9725,11 @@ async function addStoreItem(id){
   customPrograms.push(program);
   await savePrograms();
   renderMine();
-  renderStore();                        // кнопка карточки превращается в «Открыть»
+  renderStore();                        // на витрине у карточки появляется галочка
+  // Уходить отсюда на витрину НЕЛЬЗЯ: возврат по истории асинхронный, и popstate
+  // приходит уже после открытия попапа — а обработчик popstate закрывает верхний
+  // попап. Остаёмся на странице программы, кнопка превращается в «Открыть».
+  if(siItem && siItem.id === id) $('siBuy').textContent = 'Открыть';
   openSchedule(program, `Сохранена в Мои программы. Выбери дни и время — придёт напоминание, и «${it.name}» появится в плане.`);
 }
 
@@ -9653,8 +9740,7 @@ async function addStoreItem(id){
 let schedProg = null;
 function openSchedule(program, msg){
   schedProg = program;
-  $('schedWhat').textContent = msg || 'Выбери дни и время — придёт напоминание, и программа появится в плане на сегодня.';
-  $('schedTime').value = program.time || '';
+  $('schedWhat').textContent = msg || 'Отметь дни — программа появится в плане на сегодня.';
   renderSchedDays();
   $('schedModal').classList.add('open');
 }
@@ -9690,7 +9776,8 @@ function renderSchedDays(){
 }
 async function saveSchedule(){
   if(!schedProg) return;
-  schedProg.time = $('schedTime').value || '';
+  // Время тренировки здесь больше не спрашиваем: в момент добавления человек его
+  // не знает, а настроить можно в самой программе. Остаются только дни.
   await savePrograms();
   renderMine();
   renderToday();
@@ -10078,6 +10165,27 @@ function progBaseValue(ex, axis){
 // (значит «эту ось для этого упражнения не растим») JS посчитает «не задано» и
 // молча подставит дефолт вместо нуля, полностью ломая независимую прогрессию
 // в формате «повторения и вес» (где именно 0 отключает конкретную ось).
+// Что именно растёт у упражнения, одной строкой: «+2 кг», «+1 повт. и +2 кг»,
+// «+5 сек». Пусто — значит не растёт, и тогда НЕ ПОКАЗЫВАЕМ НИЧЕГО: отсутствие
+// роста — обычное дело, сообщать о нём незачем, а метка «не растёт» у каждого
+// второго упражнения только зашумляет список и экран тренировки.
+function progShort(ex){
+  if(!ex || ex.warmup || progAxis(ex) === 'none') return '';
+  const bits = [];
+  if(ex.type === 'time'){
+    const st = progStepSize(ex, 'time');
+    if(st > 0) bits.push(`+${fmtKg(st)} сек`);
+  } else {
+    const r = progStepSize(ex, 'reps');
+    if(r > 0) bits.push(`+${fmtKg(r)} повт.`);
+    if(hasWeight(ex)){
+      const w = progStepSize(ex, 'weight');
+      if(w > 0) bits.push(`+${fmtKg(w)} кг`);
+    }
+  }
+  return bits.length ? bits.join(' и ') : 'растёт';
+}
+
 function progStepSize(ex, axis){
   axis = axis || progAxis(ex);
   if(axis === 'weight') return ex.wStep != null ? +ex.wStep : 2;
@@ -10997,6 +11105,8 @@ function exRow(ex, i){
   };
   if(ex.warmup) tag('Разминка', 'wm');
   exBits(ex).forEach(txt => tag(txt));
+  const grow = progShort(ex);
+  if(grow) tag(grow, 'grow');
   info.append(name, meta);
 
   // Справа всё как у карточки программы: «⋮» сверху, ручка перетаскивания снизу.
@@ -12092,6 +12202,10 @@ function renderStep(){
   if(im) im.addEventListener('load', refreshDetailsFade, {once:true});
   requestAnimationFrame(refreshDetailsFade);
 
+
+  const growTxt = (step.phase === 'work' && step.grow) ? step.grow : '';
+  $('growTag').textContent = growTxt ? `нагрузка растёт: ${growTxt}` : '';
+  setShown('growTag', !!growTxt);
 
   if(step.kind === 'click'){
     setShown('stepReps', true);
@@ -14649,6 +14763,7 @@ $('btnMicW').innerHTML = icon('mic');
 $('storeIcoMenu').innerHTML = icon('book');
 $('storeArrowMenu').innerHTML = icon('chevR');
 $('storeBackTop').innerHTML = icon('chevL');
+$('siBackTop').innerHTML = icon('chevL');
 $('storeSearchIco').innerHTML = icon('search');
 $('storeClear').innerHTML = icon('close');
 $('btnResetTotal').innerHTML = icon('reset');
