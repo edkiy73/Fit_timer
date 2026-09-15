@@ -2927,8 +2927,8 @@
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Рост нагрузки</p></div>
-    <div class="pref-row"><span>Усложнять тренировки со временем<small>повторений и веса станет больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="cb-head"><p class="cb-title">Со временем сложнее</p></div>
+    <div class="pref-row"><span>Автоматически добавлять нагрузку<small>повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label>Как часто повышать</label>
@@ -2936,7 +2936,7 @@
       </div>
       <div class="note">
         <span class="n-ico" data-icon="chart"></span>
-        <span>Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения свой шаг и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.</span>
+        <span>Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. Разберёт только повторяющиеся повторения и вес — в каждом упражнении своя прибавка и свой предел. Перед стартом видно, сколько повышений уже было, — это число можно поправить.</span>
       </div>
     </div>
     </div>
@@ -2971,12 +2971,13 @@
 
     <div class="card-block">
       <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
-      <div class="field"><label>Формат</label>
+      <div class="field"><label>Как считать</label>
         <div class="seg seg3">
           <button type="button" id="exTypeReps">Повторения</button>
           <button type="button" id="exTypeRepsWeight">С весом</button>
           <button type="button" id="exTypeTime">Время</button>
         </div>
+        <p class="field-hint" id="exTypeHint"></p>
       </div>
       <div class="row2">
         <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="Например: 12-15"></div>
@@ -2987,8 +2988,8 @@
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" class="hidden" min="0" max="600" inputmode="numeric" placeholder="секунд">
       </div>
-      <div class="pref-row"><span>Разминка<small>выполняется один раз, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
-      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
+      <div class="pref-row"><span>Разминка<small>делается один раз до основной части — подходы не нужны</small></span><button type="button" class="switch" id="exWarm"></button></div>
+      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
     </div>
 
     <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
@@ -2999,7 +3000,7 @@
          которые приходилось держать в синхроне руками. -->
     <div class="card-block">
       <button type="button" class="collapse-head" id="exProgToggle">
-        <span>Рост нагрузки</span>
+        <span>Со временем сложнее</span>
         <span class="st-sum" id="exProgSum"></span>
         <span class="st-chev" id="exProgChev"></span>
       </button>
@@ -3106,7 +3107,7 @@
       <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
       <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
       <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
-      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneVideo">
@@ -4110,12 +4111,13 @@
       <div class="modal-card">
         <span class="mini-label">Новая программа</span>
         <!-- Подписи здесь — не объяснения, а различители: человек выбирает путь за
-             секунду и читает их одним взглядом, а не абзацем. -->
-        <button class="choice ico" id="chStore"><span class="ch-ico" data-icon="book"></span><span class="ch-txt"><b>Выбрать из каталога</b><small>Готовые программы от тренеров</small></span></button>
-        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Пара вопросов — и программа готова</small></span></button>
-        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>По ссылке на тренировку</small></span></button>
-        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Собрать с нуля</small></span></button>
-        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>Из файла или ссылки</b><small>Если программой поделились</small></span></button>
+             секунду и читает их одним взглядом, а не абзацем. Самые частые пути —
+             «Через ИИ» и «Собрать самой» — стоят первыми. -->
+        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — остальное готово само</small></span></button>
+        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Собрать самой</b><small>Добавляешь упражнения по одному</small></span></button>
+        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Вставь ссылку на тренировку</small></span></button>
+        <button class="choice ico" id="chStore"><span class="ch-ico" data-icon="book"></span><span class="ch-txt"><b>Готовая программа</b><small>Готовые планы от тренеров — каталог</small></span></button>
+        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или коду</b><small>Если программу прислали или сохраняли в файл</small></span></button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -4630,11 +4632,14 @@ function isChanged(key, val){ return snap[key] !== undefined && snap[key] !== JS
 function clearSnap(key){ delete snap[key]; }
 
 // спрашивает подтверждение, если что-то менялось; иначе уходит молча
+// Формулировка одна на всё приложение: «ещё не сохранены» (а не «не сохранены» —
+// прошедшее время звучало как приговор), а кнопки всегда «Выйти без сохранения»
+// и «Остаться» — вместо пяти разных способов сказать «отменить».
 async function leaveGuard(changed, go, what){
   if(changed){
     const ok = await appDialog(
-      (what || 'Изменения') + ' не сохранены. Если уйти, они пропадут.',
-      {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'}
+      (what || 'Изменения') + ' ещё не сохранены. Если выйти сейчас, они пропадут.',
+      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
     );
     if(!ok) return false;
   }
@@ -4673,7 +4678,7 @@ function markNum(el){
       field.appendChild(hint);
     }
     hint.innerHTML = icon('alert') + '<span></span>';
-    hint.querySelector('span').textContent = empty ? 'Без этого не сохранить' : rule.msg;
+    hint.querySelector('span').textContent = empty ? 'Заполни поле — без него не сохранить' : rule.msg;
   } else if(hint) hint.remove();
   return !bad;
 }
@@ -4734,7 +4739,7 @@ function appDialog(msg, opts = {}){
     } else {
       $('dlgOk').disabled = false;
     }
-    $('dlgOk').textContent = opts.okText || 'ОК';
+    $('dlgOk').textContent = opts.okText || 'Понятно';
     if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
     else $('dlgCancel').textContent = 'Отмена';
     setShown('dlgCancel', opts.confirm);
@@ -4753,7 +4758,10 @@ function appDialog(msg, opts = {}){
   });
 }
 const appAlert = (m, o) => appDialog(m, o);
-const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
+// Подтверждение действия. Кнопка по умолчанию — «Подтвердить», а не «Да»:
+// «Да» была безопасна только когда текст вопроса читается как «да/нет», а
+// у нас — «Удалить программу?».
+const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
 const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
@@ -4861,8 +4869,8 @@ window.addEventListener('popstate', async e => {
       navDepth++;
       try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
-        g.what + ' не сохранены. Если уйти, они пропадут.',
-        {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'}
+        g.what + ' ещё не сохранены. Если выйти сейчас, они пропадут.',
+        {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
       );
       if(!ok) return;
       if(g.clean) g.clean();
@@ -5073,7 +5081,7 @@ function buildStartMenu(){
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
-      if(!(await appConfirm(`Удалить программу «${p.name}»?`))) return;
+      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
       customPrograms = customPrograms.filter(x => x.id !== p.id);
       await savePrograms();
       renderMine();
@@ -6160,7 +6168,7 @@ async function deleteUser(){
     return;
   }
   const msg = `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
-  if(!(await appConfirm(msg))) return;
+  if(!(await appDialog(msg, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
   const id = uDraft.id;
   for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
   users = users.filter(x => x.id !== id);
@@ -7694,17 +7702,17 @@ async function callGemini(prompt, signal){
   }
   let msg = last ? last.msg : 'Неизвестная ошибка';
   if(last && !last.network){
-    // Свою формулировку добавляем, но НЕ затираем ответ сервера: без него
-    // невозможно понять настоящую причину (это ровно та ошибка, из-за которой
-    // «ни одна модель не отвечает» скрывало реальный текст от Google).
+    // Дружелюбная формулировка первой строкой: «Ответ Google (модель X, код 429)»
+    // отпугивал ещё до дочитывания. Технический хвост оставляем — без него
+    // непонятно, что именно пошло не так, — но он идёт после человеческого текста.
     let hint = '';
-    if(last.status === 400 && /API key/i.test(msg)) hint = 'Ключ отклонён. Проверь, что скопирован полностью и включён Generative Language API.';
-    else if(last.status === 429) hint = 'Превышен лимит запросов. Подожди немного и попробуй снова.';
-    else if(last.status === 503) hint = 'Серверы Gemini перегружены на всех доступных моделях. Обычно проходит за пару минут.';
-    else if(last.status === 404) hint = 'Модель недоступна по этому запросу.';
-    else if(last.status === 413 || /too large|exceeds|token/i.test(msg)) hint = 'Запрос слишком большой для модели. Попробуй доработать программу по частям или сократить описание.';
+    if(last.status === 429) hint = 'Нейросеть сейчас перегружена — слишком много запросов за день. Попробуй ещё раз через минуту, а если не выходит и потом — собери программу в чате с нейросетью (способ ниже на экране).';
+    else if(last.status === 400 && /API key/i.test(msg)) hint = 'Похоже, ключ ИИ введён неверно — Google его отклонил. Проверь ключ в настройках, а если он на месте — включи Generative Language API в своём кабинете Google.';
+    else if(last.status === 503) hint = 'Серверы Google сейчас перегружены. Обычно проходит за пару минут — попробуй ещё раз.';
+    else if(last.status === 404) hint = 'Эта модель сейчас недоступна. Попробуй ещё раз — запрос пойдёт на другую.';
+    else if(last.status === 413 || /too large|exceeds|token/i.test(msg)) hint = 'Запрос оказался слишком длинным. Попробуй доработать программу по частям или сократить описание.';
     msg = (hint ? hint + '\n\n' : '') +
-          `Ответ Google (модель ${last.model || '—'}, код ${last.status}):\n${last.msg}`;
+          `Технические детали (можно не читать):\nмодель ${last.model || '—'}, код ${last.status}.\n${last.msg}`;
   }
   throw new Error(msg);
 }
@@ -7772,8 +7780,8 @@ const AI_SOURCES = {
     tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
     lead: ['sparkle', 'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.'],
     pane: 'aiPaneText',
-    step1: 'Шаг 1 · Какая тренировка нужна',
-    step2: 'Шаг 2 · Кто её соберёт',
+    step1: 'Шаг 1 · О тебе и тренировке',
+    step2: 'Шаг 2 · Как собрать',
     self: 'Собрать за меня',
     selfTitle: 'Собираю программу',
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
@@ -7792,7 +7800,7 @@ const AI_SOURCES = {
     lead: ['video', 'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.'],
     pane: 'aiPaneVideo',
     step1: 'Шаг 1 · Ссылка на видео',
-    step2: 'Шаг 2 · Кто разберёт видео',
+    step2: 'Шаг 2 · Как разобрать',
     self: 'Разобрать за меня',
     selfTitle: 'Разбираю видео',
     guard: ()=> ytGuard(),
@@ -7811,8 +7819,8 @@ const AI_SOURCES = {
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
     pane: 'aiPaneEdit',
-    step1: 'Шаг 1 · Что изменить',
-    step2: 'Шаг 2 · Кто внесёт правки',
+    step1: 'Шаг 1 · Что поправить',
+    step2: 'Шаг 2 · Как внести правки',
     self: 'Изменить за меня',
     selfTitle: 'Вношу изменения',
     selfNote: ['check', 'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.'],
@@ -7832,8 +7840,8 @@ const AI_SOURCES = {
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.'],
     pane: 'aiPaneExNew',
-    step1: 'Шаг 1 · Что за упражнение',
-    step2: 'Шаг 2 · Кто его подберёт',
+    step1: 'Шаг 1 · Какое упражнение нужно',
+    step2: 'Шаг 2 · Как подобрать',
     self: 'Подобрать за меня',
     selfTitle: 'Подбираю упражнение',
     chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
@@ -7851,8 +7859,8 @@ const AI_SOURCES = {
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
     pane: 'aiPaneExEdit',
-    step1: 'Шаг 1 · Что изменить',
-    step2: 'Шаг 2 · Кто внесёт правки',
+    step1: 'Шаг 1 · Что поменять',
+    step2: 'Шаг 2 · Как применить',
     self: 'Изменить за меня',
     selfTitle: 'Меняю упражнение',
     selfNote: ['image', 'Картинка упражнения останется на месте.'],
@@ -8050,7 +8058,7 @@ let imgGenCancelled = false;
 async function generateAllImagesViaAI(){
   if(!premiumGate()) return;
   if(!hasGemini()){
-    appAlert('Не удалось выполнить запрос. Попробуй ещё раз через минуту — или нарисуй картинки в чате с ИИ: задание рядом с кнопкой.');
+    appAlert('Нейросеть не подключена: ключа ИИ нет. Добавь его в настройках — или скопируй задание и нарисуй картинки в чате с ИИ (задание лежит рядом с кнопкой).');
     return;
   }
   const exList = uniqueProgramExercises();
@@ -8382,11 +8390,11 @@ function exePrompt(){
 
 async function applyExEdit(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
   const {program} = parseProgramText(wrapped);
   const got = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
-  if(!got.length){ appAlert('В ответе не найдено упражнения. Нужна строка «УПРАЖНЕНИЕ: …».'); return; }
+  if(!got.length){ appAlert(MSG_AI_NOEX); return; }
   const list = curPlan().exercises;
   const oldEx = list[exeIdx];
   if(!oldEx){ show('scrBuilder'); return; }
@@ -8410,7 +8418,7 @@ async function applyExEdit(){
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
 const EXA_OPTS = {
   count: ['1', '1–3', '3–5', '5–7', '7 и более'],
-  format: ['Повторения', 'Время'],
+  format: ['Повторения', 'С весом', 'Время'],
   level: ['Новичок', 'Средний', 'Продвинутый'],
   equip: ['Без инвентаря', 'Коврик', 'Гантели', 'Резинка', 'Стул', 'Фитбол']
 };
@@ -8435,8 +8443,9 @@ function openExAI(){
 function exaPrompt(){
   const wish = ($('exaWish').value || '').trim();
   const given = [], free = [];
-  if(exa.format) given.push(`Формат: ${exa.format.toLowerCase()}.`);
-  else free.push('формат — повторения или время (выбери, что естественнее для этого упражнения)');
+  const fmtMap = {'Повторения':'повторения','С весом':'повторения и вес','Время':'время'};
+  if(exa.format) given.push(`Формат: ${fmtMap[exa.format] || exa.format.toLowerCase()}.`);
+  else free.push('формат — повторения, с весом или время (выбери, что естественнее для этого упражнения)');
   if(exa.level) given.push(`Уровень: ${exa.level.toLowerCase()}.`);
   else free.push('уровень сложности');
   if(exa.muscles.length) given.push(`Целевые мышцы: ${exa.muscles.join(', ').toLowerCase()}.`);
@@ -8492,13 +8501,13 @@ function exaPrompt(){
 
 async function exaAddExercise(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
   const {program, errors} = parseProgramText(wrapped);
   const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
   if(!list.length){
-    appAlert('В ответе не найдено упражнения. Проверь, что есть строка «УПРАЖНЕНИЕ: …».');
+    appAlert(MSG_AI_NOEX);
     return;
   }
   const target = curPlan().exercises;
@@ -8511,7 +8520,7 @@ async function exaAddExercise(){
     if(!ex.warmup) nMain++;
     added++;
   }
-  if(!added){ appAlert('Достигнут предел упражнений в этой части.'); return; }
+  if(!added){ appAlert('Ничего не добавилось: в разминке бывает до 20, в основной части — тоже до 20 упражнений. Удали что-нибудь и попробуй ещё раз.'); return; }
   $('aiResult').value = '';
   renderExList();
   show('scrBuilder');
@@ -8662,16 +8671,18 @@ function openEditAI(p){
   openAI('edit');
 }
 
-// подбирает свободное имя: «Ягодицы v2», «Ягодицы v3»…
+// подбирает свободное имя: «Ягодицы (обновлённая)», «Ягодицы (обновлённая 2)»…
 function versionedName(base){
-  const clean = String(base || 'Программа').replace(/\s+v\d+$/i, '').trim();
+  const clean = String(base || 'Программа').replace(/\s+\(обновлённая(\s+\d+)?\)$/i, '').trim();
   const taken = new Set(customPrograms.map(x => (x.name || '').trim().toLowerCase()));
   if(!taken.has(clean.toLowerCase())) return clean;
+  const cand = `${clean} (обновлённая)`;
+  if(!taken.has(cand.toLowerCase())) return cand;
   for(let v = 2; v < 100; v++){
-    const cand = `${clean} v${v}`;
-    if(!taken.has(cand.toLowerCase())) return cand;
+    const cand2 = `${clean} (обновлённая ${v})`;
+    if(!taken.has(cand2.toLowerCase())) return cand2;
   }
-  return clean + ' v' + Date.now();
+  return clean + ' (обновлённая ' + Date.now() + ')';
 }
 
 // переносит картинки и обложку из исходной программы по совпадению названий
@@ -8694,10 +8705,10 @@ function carryMedia(oldProg, newProg){
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
-    appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
+    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
@@ -9406,7 +9417,7 @@ const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 
 function renderStoreFilters(){
   const catBox = $('storeCats');
-  catBox.innerHTML = [{id:'', name:'Все', ico:'sparkle'}].concat(STORE_CATS).map(c =>
+  catBox.innerHTML = [{id:'', name:'Все направления', ico:'sparkle'}].concat(STORE_CATS).map(c =>
     `<button type="button" class="f-chip${storeFilter.cat === c.id ? ' act' : ''}" data-cat="${c.id}">${icon(c.ico)}<span>${c.name}</span></button>`
   ).join('');
   catBox.querySelectorAll('.f-chip').forEach(b => b.onclick = ()=>{
@@ -9506,7 +9517,7 @@ async function addStoreItem(id){
   await savePrograms();
   renderMine();
   renderStore();                        // кнопка карточки превращается в «Открыть»
-  openSchedule(program, `«${it.name}» уже в твоих тренировках. Осталось выбрать, когда заниматься.`);
+  openSchedule(program, `Сохранена в Мои программы. Выбери дни и время — придёт напоминание, и «${it.name}» появится в плане.`);
 }
 
 /* ---- расписание в попапе ---- */
@@ -9666,7 +9677,7 @@ function renderMine(){
     bDel.innerHTML = icon('trash') + 'Удалить';
     bDel.onclick = async ()=>{
       closeAllMenus();
-      if(!(await appConfirm(`Удалить программу «${p.name}»?`))) return;
+      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
       customPrograms = customPrograms.filter(x=>x.id!==p.id);
       await savePrograms();
       renderMine();
@@ -10281,7 +10292,7 @@ function syncRotateUI(){
   document.querySelectorAll('#schedSeg button').forEach(b =>
     b.classList.toggle('act', (b.dataset.mode === 'rot') === rot));
   $('schedHint').textContent = rot
-    ? 'Варианты идут по очереди: A, потом B, потом снова A. Дни ниже говорят только когда тренироваться — пропуск дня очередь не сбивает.'
+    ? 'Порядок простой: первый вариант, потом следующий, потом снова первый. Дни ниже говорят только когда тренироваться — пропуск дня очередь не сбивает.'
     : 'У каждого варианта свои дни недели. В нужный день откроется именно он.';
 
   // дни варианта показываются только когда вариантов правда несколько
@@ -10590,6 +10601,13 @@ function syncExType(){
   $('exTypeTime').classList.toggle('act', !reps);
   $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
   $('exValue').placeholder = reps ? 'Например: 12-15' : 'Например: 45';
+  // Подпись под табами объясняет выбранный формат своими словами: «повт. + 8 кг»
+  // в списке не читалось как «повторения и килограммы вместе».
+  if($('exTypeHint')){
+    $('exTypeHint').textContent = withWeight
+      ? 'Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.'
+      : (reps ? 'Считаем повторения — например «12-15».' : 'Считаем время — например «45» секунд.');
+  }
   setShown('exWeightRow', withWeight);
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
 }
@@ -10642,15 +10660,15 @@ function renderProgControls(){
   const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
   $('exProgOn').classList.toggle('on', on);
   if(!on){
-    $('exProgOnHint').textContent = 'выключено — нагрузка остаётся прежней';
+    $('exProgOnHint').textContent = 'выключено — числа всегда одни и те же';
     ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     syncExProgSum();
     return;
   }
 
   $('exProgOnHint').textContent = period
-    ? `нагрузка растёт сама: ${progPeriodLabel(period)}`
-    : 'в настройках программы автоприбавка выключена — нагрузка не растёт';
+    ? `прибавляется автоматически: ${progPeriodLabel(period)}`
+    : 'в настройках программы автоприбавка выключена — числа не растут';
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
@@ -10698,19 +10716,21 @@ function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = 'у разминки не растёт'; return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = 'не растёт'; return; }
   const num = id => parseStepNum($(id).value);
+  // Читаем словами: «+2 повт., до 25» пугала, «+2 повт., максимум 25» — уже ближе.
   const part = (stepId, maxId, unit, withMax) => {
     const st = num(stepId), mx = num(maxId);
     if(st == null || st <= 0) return '';
-    return `+${fmtKg(st)} ${unit}` + (withMax && mx > 0 ? `, до ${fmtKg(mx)}` : '');
+    const s = `+${fmtKg(st)} ${unit}`;
+    return withMax && mx > 0 ? `${s}, максимум ${fmtKg(mx)}` : s;
   };
-  // осей может быть две (повторения и вес) — тогда потолки в строку не влезают,
-  // и сводка говорит только про шаг: подробности человек увидит, раскрыв блок
+  // осей может быть две (повторения и вес) — тогда предел в строку не влезает,
+  // и сводка говорит только про прибавку: подробности — в раскрытом блоке
   const dual = exDraft.type !== 'time' && hasWeight(exDraft);
   const bits = exDraft.type === 'time'
     ? [part('exStepTime', 'exMaxTime', 'сек', !dual)]
     : [part('exStepReps', 'exMaxReps', 'повт.', !dual), part('exStepWeight', 'exMaxWeight', 'кг', !dual)];
   const txt = bits.filter(Boolean).join(' и ');
-  $('exProgSum').textContent = txt || 'растёт';
+  $('exProgSum').textContent = txt || 'настройки пустые';
 }
 
 
@@ -10845,12 +10865,14 @@ function renderExList(){
       ? 'Варианты идут по очереди. Ниже — упражнения выбранного, переключай вкладками.'
       : (days
           ? `Упражнения варианта на ${days}. Переключай вариант вкладками.`
-          : 'У этого варианта не выбраны дни — он не попадёт в расписание.');
+          : 'Этому варианту можно добавить дни — иначе он будет просто запасным.');
     setShown(h, true);
   } else {
     t.textContent = 'Упражнения';
     const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
-    h.textContent = d1 ? `Тренировка по расписанию: ${d1}.` : 'Дни не выбраны — программа не попадёт в план на сегодня.';
+    h.textContent = d1
+      ? `Тренировка по расписанию: ${d1}.`
+      : 'Можно тренироваться в любой день. Выбери дни в настройках — будут напоминания.';
     setShown(h, true);
   }
 }
@@ -11314,8 +11336,11 @@ function parseProgramText(txt){
   finalizeExercise(cur); // последнее упражнение в тексте — цикл закончился, но раскладку сделать нужно
   // выбрасываем пустые варианты
   p.plans = p.plans.filter(pl => pl.exercises.length);
-  if(!p.name) errors.push('не найдено название (строка «ПРОГРАММА: …»)');
-  if(!p.plans.length) errors.push('не найдено ни одного упражнения (строки «УПРАЖНЕНИЕ: …»)');
+  // Ошибки — человеческим языком, без ключей формата. Ключи («ПРОГРАММА:»,
+  // «УПРАЖНЕНИЕ:») жили в тексте ошибки нарочно, чтобы человек понял, чего не
+  // хватило; на деле они только пугали. Теперь объясняем смысл, а не синтаксис.
+  if(!p.name) errors.push('в тексте нет названия программы');
+  if(!p.plans.length) errors.push('в тексте не найдено ни одного упражнения');
   return {program:p, errors};
 }
 
@@ -11510,12 +11535,20 @@ async function copyPrompt(){
   }
 }
 
+// Два повторяемых сообщения — одна формулировка на всё приложение. Слово «чат»
+// объясняется («чат с нейросетью — ChatGPT, Gemini и т.п.»), а формулировка
+// подсказывает и лёгкий путь («за меня»), и что именно делать («вставь ответ
+// целиком»).
+const MSG_AI_EMPTY = 'Поле с ответом нейросети пустое.\n\nЕсли запрос делали в чате (ChatGPT, Gemini — неважно каком), скопируй весь ответ и вставь его сюда. Проще всего — нажать «Сделать за меня» выше: приложение сделает всё само.';
+const MSG_AI_PARSE = 'Из вставленного текста не получилось собрать программу. Скорее всего, скопировано не всё: нужен весь ответ чата целиком, от первой до последней строки.';
+const MSG_AI_NOEX = 'В тексте ответа не нашлось ни одного упражнения. Скорее всего, скопировано не всё — вернись в чат и скопируй ответ целиком.';
+
 function importFromText(){
   const txt = ($('aiResult').value || '').trim();
   if(!txt){ appAlert('Вставь текст программы в поле.'); return; }
   const {program, errors} = parseProgramText(txt);
   if(errors.length){
-    appAlert('Не получилось разобрать ответ:\n— ' + errors.join('\n— ') + '\n\nПроверь, что вставлен весь ответ целиком — вместе со строками «ПРОГРАММА:» и «УПРАЖНЕНИЕ:».');
+    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
     return;
   }
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
@@ -11543,32 +11576,42 @@ async function saveProgram(){
     draft.progression = 0;
     delete draft.progLast;
   }
-  if(!draft.name){ appAlert('Дай программе название.'); return; }
-  // проверка: один день не может быть в двух вариантах
+  // Проверки собираются в один список и показываются одним попапом: раньше каждая
+  // проблема — отдельный попап, и пять нажатий «Сохранить» давали пять попапов.
+  const many = draft.plans.length > 1;
+  const miss = [];
+  if(!draft.name) miss.push('название программы');
+  // один день не может быть в двух вариантах
   const seenDays = {};
   for(const pl of draft.plans){
     for(const d of (pl.days || [])){
-      if(seenDays[d]){ appAlert(`День «${d}» указан сразу в двух вариантах. Оставь его только в одном.`); return; }
+      if(seenDays[d]) miss.push(`день «${d}» указан сразу в двух вариантах — оставь его в одном`);
       seenDays[d] = true;
     }
   }
   for(let v=0; v<draft.plans.length; v++){
     const pl = draft.plans[v];
     if(!pl.exercises.length){
-      appAlert(draft.plans.length > 1
-        ? `В варианте ${v+1} нет ни одного упражнения.`
-        : 'Добавь хотя бы одно упражнение.');
-      return;
+      miss.push(many ? `в варианте ${v+1} нет ни одного упражнения` : 'нет ни одного упражнения');
+      continue;
     }
+    let badNames = 0;
     for(let i=0; i<pl.exercises.length; i++){
       const ex = normalizeExercise(pl.exercises[i]);
-      if(!ex.name){
-        appAlert(draft.plans.length > 1
-          ? `Укажи название упражнения №${i+1} в варианте ${v+1}.`
-          : `Укажи название упражнения №${i+1}.`);
-        return;
-      }
+      if(!ex.name) badNames++;
     }
+    if(badNames){
+      miss.push(many
+        ? `в варианте ${v+1} без названия: ${badNames} ${plural(badNames, 'упражнение', 'упражнения', 'упражнений')}`
+        : `без названия: ${badNames} ${plural(badNames, 'упражнение', 'упражнения', 'упражнений')}`);
+    }
+  }
+  if(miss.length){
+    const tip = 'Подсвеченные поля тоже подскажут, где проблема.';
+    appAlert(miss.length === 1
+      ? 'Не получилось сохранить:\n— ' + miss[0] + '.\n\n' + tip
+      : 'Не получилось сохранить — вот что нужно поправить:\n— ' + miss.join('\n— ') + '\n\n' + tip);
+    return;
   }
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
@@ -12062,7 +12105,7 @@ function refreshLiveSteps(oldName, ex){
 async function swapViaAI(){
   if(!premiumGate()) return;
   if(!hasGemini()){
-    appAlert('Не удалось выполнить запрос. Попробуй ещё раз через минуту.');
+    appAlert('Нейросеть не подключена: ключа ИИ нет. Добавь его в настройках — и попробуй ещё раз.');
     return;
   }
   const src = swapSourceExercise();
@@ -13774,9 +13817,16 @@ $('btnAgain').onclick = async ()=>{
 /* ---- программа из видео ---- */
 $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
 $('ytUrl').oninput = ytCheckUrl;
-function ytGuard(){
-  if(!($('ytUrl').value || '').trim()){ appAlert('Вставь ссылку на видео.'); return false; }
-  if(!ytCheckUrl()){ appAlert('Ссылка не похожа на YouTube. Проверь адрес.'); return false; }
+async function ytGuard(){
+  const v = ($('ytUrl').value || '').trim();
+  if(!v){ appAlert('Вставь ссылку на видео.'); return false; }
+  if(!ytCheckUrl()){
+    const go = await appDialog(
+      'Ссылка не похожа на YouTube. Возможно, адрес скопирован не полностью или это другой сервис.',
+      {confirm: true, okText: 'Всё равно попробовать', cancelText: 'Проверить адрес'}
+    );
+    return !!go;
+  }
   return true;
 }
 async function ytCopyPrompt(){
@@ -13788,10 +13838,10 @@ async function ytCopyPrompt(){
 }
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
-    appAlert('Не удалось разобрать ответ:\n\n• ' + errors.join('\n• '));
+    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
@@ -13980,16 +14030,16 @@ async function runSelfAI(promptFn, targetId, applyFn, title){
 }
 // Один обработчик на все источники: чем собрать промт и чем применить ответ,
 // знает таблица AI_SOURCES, а не пять отдельных кнопок.
-$('aiSelf').onclick = ()=>{
+$('aiSelf').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
-  if(c.guard && !c.guard()) return;
+  if(c.guard && !(await c.guard())) return;
   runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle);
 };
-$('aiCopy').onclick = ()=>{
+$('aiCopy').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
-  if(c.guard && !c.guard()) return;
+  if(c.guard && !(await c.guard())) return;
   c.copy();
 };
 $('aiApply').onclick = ()=>{
@@ -14001,8 +14051,8 @@ $('aiBackTop').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(aiScreenDirty(c.dirty)){
-    const ok = await appDialog('Заполненный запрос не сохранён. Если уйти, он пропадёт.',
-      {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'});
+    const ok = await appDialog('Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.',
+      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'});
     if(!ok) return;
   }
   c.back();
@@ -14063,10 +14113,17 @@ $('slotFile').onchange = e => {
 // Это была вкладка «Через ИИ» рядом с «Вручную». Вкладки обещают два вида одного
 // экрана, а эта уводила на другой экран и по дороге сохраняла упражнение. Теперь
 // это обычная кнопка внизу, рядом с остальными действиями над упражнением.
-$('btnExAI').onclick = ()=>{
+$('btnExAI').onclick = async ()=>{
   if(!exDraft || exIdx < 0) return;
   exIsNew = false;
   if(!numFieldsOk('scrExercise')) return;
+  if(exDirty()){
+    const ok = await appDialog(
+      'Изменения упражнения ещё не сохранены. Если перейти к ИИ, они останутся в черновике программы, но сама программа пока не сохранена.',
+      {confirm: true, okText: 'Перейти к ИИ', cancelText: 'Остаться'}
+    );
+    if(!ok) return;
+  }
   const list = curPlan().exercises;
   if(list[exIdx]) list[exIdx] = commitExercise();
   const keep = exIdx;
@@ -14080,8 +14137,8 @@ $('btnProgAI').onclick = async ()=>{
   const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
   if(programDirty()){
     const go = await appDialog(
-      'Изменения программы не сохранены. Если уйти к ИИ, они пропадут.',
-      {confirm: true, okText: 'Уйти к ИИ', cancelText: 'Вернуться'}
+      'Изменения программы ещё не сохранены. Если перейти к ИИ, они пропадут.',
+      {confirm: true, okText: 'Перейти к ИИ', cancelText: 'Остаться'}
     );
     if(!go) return;
   }
@@ -14106,8 +14163,8 @@ $('aiTabs').addEventListener('click', async e => {
   if(b.dataset.m === cur) return;
   if(aiScreenDirty(c.dirty)){
     const ok = await appDialog(
-      'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
-      {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+      'Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.',
+      {confirm: true, okText: 'Переключиться', cancelText: 'Остаться'}
     );
     markAITab();   // подсветку возвращаем на месте, ушёл человек или нет
     if(!ok) return;
@@ -14144,7 +14201,7 @@ async function exaCopyPrompt(){
 function addExManual(){
   const list = curPlan().exercises;
   const nWarm = list.filter(e => e.warmup).length;
-  if(list.length - nWarm >= MAX_MAIN){ appAlert('Достигнут предел упражнений в этой части.'); return; }
+  if(list.length - nWarm >= MAX_MAIN){ appAlert(`В основной части уже ${MAX_MAIN} упражнений — это предел. Удали что-нибудь, чтобы добавить новое.`); return; }
   const ex = blankExercise();
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
@@ -14171,7 +14228,9 @@ $('btnDupEx').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
-    appAlert('Достигнут предел упражнений в этой части.');
+    appAlert(exDraft.warmup
+      ? `В разминке уже ${MAX_WARM} упражнений — это предел. Дублировать не получится.`
+      : `В основной части уже ${MAX_MAIN} упражнений — это предел. Дублировать не получится.`);
     return;
   }
   if(!numFieldsOk('scrExercise')) return;
@@ -14185,7 +14244,7 @@ $('btnDelEx').onclick = async ()=>{
   if(!exDraft || exIdx < 0) return;
   exIsNew = false;
   const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
-  if(!(await appConfirm(`Удалить «${nameTxt}»?`))) return;
+  if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
   curPlan().exercises.splice(exIdx, 1);
   exDraft = null; exIdx = -1; exOrig = '';
   renderExList();
@@ -14208,9 +14267,9 @@ async function leaveExercise(){
   if(exDirty()){
     const go = await appDialog(
       exIsNew
-        ? 'Упражнение не сохранено. Если выйти, оно не добавится.'
-        : 'Изменения этого упражнения не сохранены. Если выйти, они пропадут.',
-      {confirm: true, okText: exIsNew ? 'Не добавлять' : 'Выйти без сохранения', cancelText: 'Вернуться'}
+        ? 'Упражнение ещё пустое. Если выйти сейчас, оно не добавится в список.'
+        : 'Изменения этого упражнения ещё не сохранены. Если выйти сейчас, они пропадут.',
+      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
     );
     if(!go) return;
   }
@@ -14349,7 +14408,7 @@ function syncSettingsSum(){
   const daysU = programDaysUnion(draft);
   if(daysU.length) bits.push(daysU.join('·'));
   else if(draft.rotate) bits.push('по очереди');
-  else bits.push('дни не выбраны');
+  else bits.push('по любым дням');
   if(draft.time) bits.push(draft.time);
   if(plans.length > 1) bits.push(`${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
   const rounds = (pl && +pl.rounds) || 1;
