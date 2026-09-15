@@ -2731,63 +2731,6 @@
 
   <!-- Создание из текста -->
   <!-- Правка упражнения через ИИ -->
-  <section class="screen builder" id="scrExEdAI">
-    <div class="screen-head"><button class="back-chip" id="exeBackTop"></button><h2>Изменить упражнение</h2></div>
-
-    <div class="tabs" id="exeModeTabs">
-      <button class="tab" data-m="manual">Вручную</button>
-      <button class="tab act" data-m="ai">Через ИИ</button>
-    </div>
-    <div class="nav-row" style="cursor:default">
-      <div class="nr-body"><b id="exeName">Упражнение</b><small id="exeSum"></small></div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 1 · Что изменить</p></div>
-    <div class="field">
-      <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
-    </div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто внесёт правки</p></div>
-
-    <button type="button" class="hero-action ai-self" id="exeSelfAI">
-      <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b>Изменить за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
-      <span class="ha-go" data-icon="chevR"></span>
-    </button>
-
-    <div class="note">
-      <span class="n-ico" data-icon="image"></span>
-      <span>Картинка и пиктограмма упражнения останутся на месте, если нейросеть не пришлёт новые.</span>
-    </div>
-
-    <div class="or-line">или</div>
-
-    <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack">
-      <div class="ways">
-        <button type="button" class="way-row" id="exeCopy">
-          <span class="wr-ico" data-icon="copy"></span>
-          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
-        </button>
-      </div>
-    </div>
-    </div>
-
-    <div class="card-block hidden" id="exeAnswer">
-    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
-    <p class="field-hint">Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.</p>
-    <div class="field">
-      <textarea id="exeResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
-    </div>
-    </div>
-
-    <div class="builder-actions" id="exeActions">
-      <button class="btn-secondary" id="exeApply">Применить изменения</button>
-    </div>
-  </section>
 
   <!-- Картинки программы: массовая загрузка -->
   <section class="screen builder" id="scrImages">
@@ -2919,211 +2862,10 @@
   </div>
 
   <!-- Добавление упражнения через ИИ -->
-  <section class="screen builder" id="scrExAI">
-    <div class="screen-head"><button class="back-chip" id="exaBackTop"></button><h2>Упражнение через ИИ</h2></div>
-
-    <div class="tabs" id="exaModeTabs">
-      <button class="tab" data-m="manual">Вручную</button>
-      <button class="tab act" data-m="ai">Через ИИ</button>
-    </div>
-
-    <div class="note">
-      <span class="n-ico" data-icon="sparkle"></span>
-      <span>Опиши упражнение словами — нейросеть добавит технику, мышцы, частые ошибки и пиктограмму.</span>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 1 · Что за упражнение</p></div>
-    <div class="field">
-      <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
-      <p class="field-hint">Можно назвать упражнение, а можно описать, что нужно — подберётся само.</p>
-    </div>
-    <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
-    <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
-    <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
-    <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
-    <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
-      <p class="field-hint">Что не выберешь — подберётся само, исходя из описания.</p>
-    </div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто его подберёт</p></div>
-
-    <button type="button" class="hero-action ai-self" id="exaSelfAI">
-      <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b>Подобрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
-      <span class="ha-go" data-icon="chevR"></span>
-    </button>
-
-    <div class="or-line">или</div>
-
-    <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack">
-      <div class="note">
-        <span class="n-ico" data-icon="chat"></span>
-        <span>Приложение подготовит задание. Передай его в чат, ответ вставь сюда.</span>
-      </div>
-      <div class="ways">
-        <button type="button" class="way-row" id="exaCopy">
-          <span class="wr-ico" data-icon="copy"></span>
-          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
-        </button>
-      </div>
-    </div>
-    </div>
-
-    <div class="card-block hidden" id="exaAnswer">
-    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
-    <p class="field-hint">Вставь ответ нейросети целиком — упражнение добавится в конец программы.</p>
-    <div class="field">
-      <textarea id="exaResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
-    </div>
-    </div>
-
-    <div class="builder-actions" id="exaActions">
-      <button class="btn-secondary" id="exaAdd">Добавить в программу</button>
-    </div>
-  </section>
 
   <!-- Создание программы из видео -->
-  <section class="screen builder" id="scrYouTube">
-    <div class="screen-head"><button class="back-chip" id="ytBackTop"></button><h2>Программа из видео</h2></div>
-
-    <div class="tabs" id="ytModeTabs">
-      <button class="tab" data-m="manual">Вручную</button>
-      <button class="tab" data-m="text">Через ИИ</button>
-      <button class="tab act" data-m="video">Из видео</button>
-    </div>
-
-    <div class="note">
-      <span class="n-ico" data-icon="video"></span>
-      <span>Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.</span>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 1 · Ссылка на видео</p></div>
-    <div class="field">
-      <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
-      <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be.</p>
-    </div>
-    <div class="field"><label>Пожелания (необязательно)</label>
-      <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
-    </div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто разберёт видео</p></div>
-
-    <button type="button" class="hero-action ai-self" id="ytSelfAI">
-      <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b>Разобрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
-      <span class="ha-go" data-icon="chevR"></span>
-    </button>
-
-    <div class="or-line">или</div>
-
-    <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack">
-      <div class="note">
-        <span class="n-ico" data-icon="alert"></span>
-        <span>Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.</span>
-      </div>
-      <div class="ways">
-        <button type="button" class="way-row" id="ytCopy">
-          <span class="wr-ico" data-icon="copy"></span>
-          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
-        </button>
-      </div>
-    </div>
-    </div>
-
-    <div class="card-block hidden" id="ytAnswer">
-    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
-    <p class="field-hint">Вставь ответ нейросети целиком — программа откроется в конструкторе.</p>
-    <div class="field">
-      <textarea id="ytResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
-    </div>
-    </div>
-
-    <div class="builder-actions" id="ytActions">
-      <button class="btn-secondary" id="ytParse">Собрать программу из ответа</button>
-    </div>
-  </section>
 
   <!-- Доработка программы через ИИ -->
-  <section class="screen builder" id="scrEditAI">
-    <div class="screen-head"><button class="back-chip" id="eaBackTop"></button><h2>Изменить через ИИ</h2></div>
-
-    <div class="tabs" id="eaModeTabs">
-      <button class="tab" data-m="manual">Вручную</button>
-      <button class="tab act" data-m="ai">Через ИИ</button>
-    </div>
-
-    <div class="nav-row" style="cursor:default">
-      <div class="nr-body">
-        <b id="eaProgName">Программа</b>
-        <small id="eaProgSum"></small>
-      </div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 1 · Что изменить</p></div>
-    <div class="field">
-      <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
-      <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём ты попросишь.</p>
-    </div>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто внесёт правки</p></div>
-
-    <button type="button" class="hero-action ai-self" id="eaSelfAI">
-      <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b>Изменить за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
-      <span class="ha-go" data-icon="chevR"></span>
-    </button>
-
-    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="eaWantSvg"></button></div>
-
-    <div class="note">
-      <span class="n-ico" data-icon="check"></span>
-      <span>Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.</span>
-    </div>
-
-    <div class="or-line">или</div>
-
-    <p class="ways-head">Сделать в чате с ИИ</p>
-    <div class="stack">
-      <div class="note">
-        <span class="n-ico" data-icon="chat"></span>
-        <span>Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.</span>
-      </div>
-      <div class="ways">
-        <button type="button" class="way-row" id="eaCopy">
-          <span class="wr-ico" data-icon="copy"></span>
-          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
-        </button>
-        <button type="button" class="way-row" id="eaCopyFull">
-          <span class="wr-ico" data-icon="download"></span>
-          <span class="wr-txt"><b>Скопировать саму программу</b><small>Вся программа текстом — можно обсудить её где угодно и вернуть ответ сюда</small></span>
-        </button>
-      </div>
-    </div>
-    </div>
-
-    <div class="card-block hidden" id="eaAnswer">
-    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
-    <p class="field-hint">Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.</p>
-    <div class="field">
-      <textarea id="eaResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
-    </div>
-    </div>
-
-    <div class="builder-actions" id="eaActions">
-      <button class="btn-secondary" id="eaCreate">Создать изменённую программу</button>
-    </div>
-  </section>
 
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
@@ -3301,77 +3043,138 @@
     </div>
   </section>
 
-  <section class="screen builder" id="scrText">
-    <div class="screen-head"><button class="back-chip" id="textBackTop"></button><h2>Программа через ИИ</h2></div>
+  <!-- ЕДИНЫЙ ЭКРАН ЗАПРОСА К ИИ.
+       Раньше здесь стояли пять почти одинаковых экранов: программа по описанию,
+       программа из видео, доработка программы, новое упражнение и доработка
+       упражнения. Отличались они ровно одним — что человек вводит на первом шаге
+       и что уходит в промт. Всё остальное (кто это сделает, поле для ответа из
+       чата, кнопка внизу) дублировалось пять раз и успело разойтись: пять разных
+       формулировок одной мысли, три разных подписи у одинаковой кнопки.
+       Теперь экран один, а различия описаны таблицей AI_SOURCES в скрипте.
+       Первый шаг у каждого источника свой, поэтому он остался отдельной панелью —
+       ИМЕНА ПОЛЕЙ В ПАНЕЛЯХ НЕ МЕНЯЛИСЬ, весь код сборки промтов работает как
+       работал. Формат обмена с нейросетью не тронут вообще. -->
+  <section class="screen builder" id="scrAI">
+    <div class="screen-head"><button class="back-chip" id="aiBackTop"></button><h2 id="aiTitle">Через ИИ</h2></div>
 
-    <div class="tabs" id="aiModeTabs">
-      <button class="tab" data-m="manual">Вручную</button>
-      <button class="tab act" data-m="text">Через ИИ</button>
-      <button class="tab" data-m="video">Из видео</button>
+    <div class="tabs" id="aiTabs"></div>
+
+    <div class="note hidden" id="aiLead">
+      <span class="n-ico" id="aiLeadIco"></span>
+      <span id="aiLeadTxt"></span>
     </div>
 
-    <div class="note">
-      <span class="n-ico" data-icon="sparkle"></span>
-      <span>Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.</span>
-    </div>
-
-    <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 1 · Какая тренировка нужна</p></div>
-    <p class="field-hint">Отмечай только то, что важно: остальное подберётся само. Нажать второй раз — снять выбор.</p>
-    <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
-    <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
-    <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
-    <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
-    <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
-    <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
-    <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
-    <div class="field"><label>Свой запрос (необязательно)</label>
-      <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
-    </div>
-    <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
-    <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
-    <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
-    <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
+    <!-- что именно правим: программа или упражнение. Нужен только режимам доработки -->
+    <div class="nav-row hidden" id="aiSubject" style="cursor:default">
+      <div class="nr-body"><b id="aiSubjName"></b><small id="aiSubjSum"></small></div>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Шаг 2 · Кто её соберёт</p></div>
+    <div class="cb-head"><p class="cb-title" id="aiStep1Title">Шаг 1</p></div>
 
-    <button type="button" class="hero-action ai-self" id="btnSelfAI">
+    <div class="ai-pane hidden" id="aiPaneText">
+      <p class="field-hint">Отмечай только то, что важно: остальное подберётся само. Нажать второй раз — снять выбор.</p>
+      <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
+      <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
+      <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
+      <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
+      <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
+      <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
+      <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
+      <div class="field"><label>Свой запрос (необязательно)</label>
+        <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
+      </div>
+      <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
+      <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
+      <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>A → B → A вместо привязки к дням недели</small></span><button class="switch" id="qRotate"></button></div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneVideo">
+      <div class="field">
+        <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
+        <p class="field-hint" id="ytHint">Подойдёт ссылка на ролик с тренировкой — обычная или короткая youtu.be.</p>
+      </div>
+      <div class="field"><label>Пожелания (необязательно)</label>
+        <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneEdit">
+      <div class="field">
+        <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
+        <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём ты попросишь.</p>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneExNew">
+      <div class="field">
+        <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
+        <p class="field-hint">Можно назвать упражнение, а можно описать, что нужно — подберётся само.</p>
+      </div>
+      <div class="field"><label>Сколько упражнений</label><div class="days chips-wrap" id="exaCount"></div></div>
+      <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
+      <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
+      <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
+      <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
+        <p class="field-hint">Что не выберешь — подберётся само, исходя из описания.</p>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneExEdit">
+      <div class="field">
+        <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title" id="aiStep2Title">Шаг 2</p></div>
+
+    <button type="button" class="hero-action ai-self" id="aiSelf">
       <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b>Собрать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-txt"><b id="aiSelfLabel">Сделать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
       <span class="ha-go" data-icon="chevR"></span>
     </button>
 
-    <div class="pref-row"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="qWantSvg"></button></div>
+    <div class="pref-row hidden" id="aiSvgRow"><span>Рисовать пиктограммы упражнений<small>выключи — программа соберётся быстрее</small></span><button class="switch" id="aiWantSvg"></button></div>
+
+    <div class="note hidden" id="aiSelfNote">
+      <span class="n-ico" id="aiSelfNoteIco"></span>
+      <span id="aiSelfNoteTxt"></span>
+    </div>
 
     <div class="or-line">или</div>
 
     <p class="ways-head">Сделать в чате с ИИ</p>
     <div class="stack">
-      <div class="note">
-        <span class="n-ico" data-icon="chat"></span>
-        <span>Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.</span>
+      <div class="note hidden" id="aiChatNote">
+        <span class="n-ico" id="aiChatNoteIco"></span>
+        <span id="aiChatNoteTxt"></span>
       </div>
       <div class="ways">
-        <button type="button" class="way-row" id="btnCopyPrompt">
+        <button type="button" class="way-row" id="aiCopy">
           <span class="wr-ico" data-icon="copy"></span>
           <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
+        </button>
+        <button type="button" class="way-row hidden" id="aiCopyFull">
+          <span class="wr-ico" data-icon="download"></span>
+          <span class="wr-txt"><b>Скопировать саму программу</b><small>Вся программа текстом — можно обсудить её где угодно и вернуть ответ сюда</small></span>
         </button>
       </div>
     </div>
     </div>
 
-    <div class="card-block hidden" id="textAnswer">
+    <div class="card-block hidden" id="aiAnswer">
     <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
-    <p class="field-hint">Вставь ответ нейросети целиком — программа откроется в конструкторе.</p>
+    <p class="field-hint" id="aiAnswerHint"></p>
     <div class="field">
-      <textarea id="tImport" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
+      <textarea id="aiResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
-    <div class="builder-actions" id="textActions">
-      <button class="btn-secondary" id="btnParse">Собрать программу из ответа</button>
+    <div class="builder-actions" id="aiActions">
+      <button class="btn-secondary" id="aiApply">Собрать</button>
     </div>
   </section>
 
@@ -4959,7 +4762,7 @@ function appDialog(msg, opts = {}){
 }
 const appAlert = (m, o) => appDialog(m, o);
 const appConfirm = m => appDialog(m, {confirm: true, okText: 'Да'});
-const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrExAI','scrExEdAI','scrImages','scrText','scrYouTube','scrEditAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -4973,11 +4776,7 @@ const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:'Изменения программы', clean:()=> clearSnap('program')} : null,
   scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ exDraft = null; exIdx = -1; exOrig = ''; }} : null,
   scrUserEdit: ()=> userDirty() ? {what:'Изменения профиля'} : null,
-  scrText:     ()=> aiScreenDirty(['qNote','tImport']) ? {what:'Заполненный запрос'} : null,
-  scrYouTube:  ()=> aiScreenDirty(['ytUrl','ytWish','ytResult']) ? {what:'Заполненный запрос'} : null,
-  scrEditAI:   ()=> aiScreenDirty(['eaWish','eaResult']) ? {what:'Заполненный запрос'} : null,
-  scrExAI:     ()=> aiScreenDirty(['exaWish','exaResult']) ? {what:'Заполненный запрос'} : null,
-  scrExEdAI:   ()=> aiScreenDirty(['exeWish','exeResult']) ? {what:'Заполненный запрос'} : null
+  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:'Заполненный запрос'} : null
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
 // Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
@@ -7961,6 +7760,179 @@ function flashDone(btn, text){
   setTimeout(()=>{ el.textContent = el.dataset.flash; delete el.dataset.flash; }, 1600);
 }
 
+
+/* ================= ОДИН ЭКРАН ЗАПРОСА К ИИ =================
+   Источников пять, а экран один. Всё, чем источники отличаются, собрано здесь в
+   таблицу: заголовок, вкладки, панель первого шага, подписи, чем собрать промт,
+   чем применить ответ и куда вернуть «назад». Добавить шестой источник — одна
+   строка в этой таблице, а не ещё один экран.
+
+   Формат обмена с нейросетью таблица НЕ трогает: prompt и apply — те же самые
+   функции, что были на прежних экранах, просто названы по имени. */
+let aiSrc = null;                 // ключ текущего источника
+const AI_SOURCES = {
+  text: {
+    title: 'Программа через ИИ',
+    tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
+    lead: ['sparkle', 'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.'],
+    pane: 'aiPaneText',
+    step1: 'Шаг 1 · Какая тренировка нужна',
+    step2: 'Шаг 2 · Кто её соберёт',
+    self: 'Собрать за меня',
+    selfTitle: 'Собираю программу',
+    svg: true,
+    chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
+    answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
+    action: 'Собрать программу из ответа',
+    prompt: ()=> fullAIPrompt(),
+    copy:   ()=> copyPrompt(),
+    apply:  ()=> importFromText(),
+    dirty: ['qNote', 'aiResult'],
+    manual: ()=> openBuilder(),
+    back:  ()=> goTab('scrPrograms')
+  },
+  video: {
+    title: 'Программа из видео',
+    tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
+    lead: ['video', 'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.'],
+    pane: 'aiPaneVideo',
+    step1: 'Шаг 1 · Ссылка на видео',
+    step2: 'Шаг 2 · Кто разберёт видео',
+    self: 'Разобрать за меня',
+    selfTitle: 'Разбираю видео',
+    guard: ()=> ytGuard(),
+    chatNote: ['alert', 'Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.'],
+    answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
+    action: 'Собрать программу из ответа',
+    prompt: ()=> youtubePrompt(),
+    copy:   ()=> ytCopyPrompt(),
+    apply:  ()=> ytApplyResult(),
+    dirty: ['ytUrl', 'ytWish', 'aiResult'],
+    manual: ()=> openBuilder(),
+    back:  ()=> goTab('scrPrograms')
+  },
+  edit: {
+    title: 'Изменить через ИИ',
+    tabs: [['manual','Вручную'], ['ai','Через ИИ']],
+    subject: true,
+    pane: 'aiPaneEdit',
+    step1: 'Шаг 1 · Что изменить',
+    step2: 'Шаг 2 · Кто внесёт правки',
+    self: 'Изменить за меня',
+    selfTitle: 'Вношу изменения',
+    svg: true,
+    selfNote: ['check', 'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.'],
+    chatNote: ['chat', 'Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.'],
+    copyFull: true,
+    answerHint: 'Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.',
+    action: 'Создать изменённую программу',
+    prompt: ()=> editAIPrompt(),
+    copy:   ()=> copyEditPrompt(),
+    apply:  ()=> createEditedProgram(),
+    dirty: ['eaWish', 'aiResult'],
+    manual: ()=> editAIProg ? openBuilder(editAIProg.id) : goTab('scrPrograms'),
+    back:  ()=> goTab('scrPrograms')
+  },
+  exNew: {
+    title: 'Упражнение через ИИ',
+    tabs: [['manual','Вручную'], ['ai','Через ИИ']],
+    lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы, частые ошибки и пиктограмму.'],
+    pane: 'aiPaneExNew',
+    step1: 'Шаг 1 · Что за упражнение',
+    step2: 'Шаг 2 · Кто его подберёт',
+    self: 'Подобрать за меня',
+    selfTitle: 'Подбираю упражнение',
+    chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
+    answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
+    action: 'Добавить в программу',
+    prompt: ()=> exaPrompt(),
+    copy:   ()=> exaCopyPrompt(),
+    apply:  ()=> exaAddExercise(),
+    dirty: ['exaWish', 'aiResult'],
+    manual: ()=> addExManual(),
+    back:  ()=> show('scrBuilder')
+  },
+  exEdit: {
+    title: 'Изменить упражнение',
+    tabs: [['manual','Вручную'], ['ai','Через ИИ']],
+    subject: true,
+    pane: 'aiPaneExEdit',
+    step1: 'Шаг 1 · Что изменить',
+    step2: 'Шаг 2 · Кто внесёт правки',
+    self: 'Изменить за меня',
+    selfTitle: 'Меняю упражнение',
+    selfNote: ['image', 'Картинка и пиктограмма упражнения останутся на месте, если нейросеть не пришлёт новые.'],
+    answerHint: 'Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.',
+    action: 'Применить изменения',
+    prompt: ()=> exePrompt(),
+    copy:   ()=> exeCopyPrompt(),
+    apply:  ()=> applyExEdit(),
+    dirty: ['exeWish', 'aiResult'],
+    manual: ()=> {
+      const keep = exeIdx;
+      if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
+      else show('scrBuilder');
+    },
+    back:  ()=> show('scrBuilder')
+  }
+};
+
+// собирает экран под источник и показывает его
+function openAI(key){
+  const c = AI_SOURCES[key];
+  if(!c) return;
+  aiSrc = key;
+  $('aiTitle').textContent = c.title;
+  $('aiStep1Title').textContent = c.step1;
+  $('aiStep2Title').textContent = c.step2;
+  $('aiSelfLabel').textContent = c.self;
+  $('aiApply').textContent = c.action;
+  $('aiAnswerHint').textContent = c.answerHint;
+  $('aiResult').value = '';
+
+  // вкладки режима: у программы их три, у упражнения две
+  const tabs = $('aiTabs');
+  tabs.innerHTML = '';
+  c.tabs.forEach(([m, label]) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (m === key || (m === 'ai' && key !== 'manual' && c.tabs.length === 2) ? ' act' : '');
+    b.dataset.m = m;
+    b.textContent = label;
+    tabs.appendChild(b);
+  });
+  markAITab();
+
+  // заметки: показываем только те, что заданы у источника
+  const note = (box, ico, txt, val) => {
+    setShown(box, !!val);
+    if(!val) return;
+    $(ico).innerHTML = icon(val[0]);
+    $(txt).textContent = val[1];
+  };
+  note('aiLead', 'aiLeadIco', 'aiLeadTxt', c.lead);
+  note('aiSelfNote', 'aiSelfNoteIco', 'aiSelfNoteTxt', c.selfNote);
+  note('aiChatNote', 'aiChatNoteIco', 'aiChatNoteTxt', c.chatNote);
+
+  setShown('aiSubject', !!c.subject);
+  setShown('aiSvgRow', !!c.svg);
+  setShown('aiCopyFull', !!c.copyFull);
+
+  // первый шаг у каждого источника свой
+  document.querySelectorAll('#scrAI .ai-pane').forEach(el => setShown(el, el.id === c.pane));
+
+  syncGeminiBtns();
+  if(c.svg) syncWantSvg();
+  aiWaysReset.scrAI && aiWaysReset.scrAI();
+  show('scrAI');
+  window.scrollTo(0, 0);
+}
+
+// подсветка активной вкладки: «через ИИ» — это и text, и ai
+function markAITab(){
+  const cur = (aiSrc === 'video') ? 'video' : (aiSrc === 'text' ? 'text' : 'ai');
+  document.querySelectorAll('#aiTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === cur));
+}
+
 /* ---- экраны запроса к ИИ: главный путь и ручной ----
    Раньше ручной путь прятался под раскрывашкой (её надо было догадаться нажать), а поле
    «Ответ из чата» висело на экране всегда — даже у тех, кто ничего никуда не копировал,
@@ -7972,18 +7944,21 @@ function setupAIAnswer(cfg){
   const answer = cfg.answer ? $(cfg.answer) : null;
   const actions = cfg.actions ? $(cfg.actions) : null;
   if(!answer && !actions){ aiWaysReset[cfg.screen] = ()=>{}; return; }
-  let copied = false;
+  // «уже копировал» помним по источнику, а не по экрану: экран запроса к ИИ теперь
+  // один на пять источников, и общий флаг открывал поле ответа на упражнении только
+  // потому, что человек когда-то копировал задание на программе.
+  const copied = new Set();
   const apply = on => { setShown(answer, on); setShown(actions, on); };
   aiWaysReset[cfg.screen] = ()=>{
     const filled = cfg.result && $(cfg.result) && $(cfg.result).value.trim();
-    apply(copied || !!filled);
+    apply(copied.has(aiSrc) || !!filled);
   };
   (cfg.copy || []).forEach(id => {
     const b = $(id);
     if(!b) return;
     // именно addEventListener: у кнопки уже есть свой onclick с копированием
     b.addEventListener('click', ()=>{
-      copied = true;
+      copied.add(aiSrc);
       apply(true);
       setTimeout(()=> answer && answer.scrollIntoView({behavior: 'smooth', block: 'nearest'}), 150);
     });
@@ -8373,15 +8348,11 @@ function openExEdAI(i){
   const ex = curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
-  $('exeName').textContent = (ex.name || '').trim() || 'Упражнение';
-  $('exeSum').textContent = exSummary(ex);
+  $('aiSubjName').textContent = (ex.name || '').trim() || 'Упражнение';
+  $('aiSubjSum').textContent = exSummary(ex);
   $('exeWish').value = '';
-  $('exeResult').value = '';
   autoGrow($('exeWish'));
-  syncGeminiBtns();
-  if(aiWaysReset.scrExEdAI) aiWaysReset.scrExEdAI();
-  show('scrExEdAI');
-  window.scrollTo(0, 0);
+  openAI('exEdit');
 }
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
@@ -8432,7 +8403,7 @@ function exePrompt(){
 }
 
 async function applyExEdit(){
-  const raw = ($('exeResult').value || '').trim();
+  const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
   const {program} = parseProgramText(wrapped);
@@ -8451,7 +8422,7 @@ async function applyExEdit(){
     const extra = got.slice(1);
     list.splice(exeIdx + 1, 0, ...extra);
   }
-  $('exeResult').value = '';
+  $('aiResult').value = '';
   renderExList();
   show('scrBuilder');
   appAlert(got.length > 1
@@ -8479,13 +8450,9 @@ function exaChips(){
 function openExAI(){
   exa.count = '1'; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
-  $('exaResult').value = '';
   exaChips();
   autoGrow($('exaWish'));
-  syncGeminiBtns();
-  if(aiWaysReset.scrExAI) aiWaysReset.scrExAI();
-  show('scrExAI');
-  window.scrollTo(0, 0);
+  openAI('exNew');
 }
 
 function exaPrompt(){
@@ -8548,7 +8515,7 @@ SVG: пиктограмма одной строкой, viewBox="0 0 240 120". Т
 }
 
 async function exaAddExercise(){
-  const raw = ($('exaResult').value || '').trim();
+  const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
@@ -8569,7 +8536,7 @@ async function exaAddExercise(){
     added++;
   }
   if(!added){ appAlert('Достигнут предел упражнений в этой части.'); return; }
-  $('exaResult').value = '';
+  $('aiResult').value = '';
   renderExList();
   show('scrBuilder');
   appAlert(added === 1
@@ -8614,12 +8581,8 @@ function youtubePrompt(){
 function openYouTube(){
   $('ytUrl').value = '';
   $('ytWish').value = '';
-  $('ytResult').value = '';
   autoGrow($('ytWish'));
-  syncGeminiBtns();
-  if(aiWaysReset.scrYouTube) aiWaysReset.scrYouTube();
-  show('scrYouTube');
-  window.scrollTo(0, 0);
+  openAI('video');
   requireWho('ai', ()=> goTab('scrPrograms'));
 }
 
@@ -8716,18 +8679,13 @@ function editAIPrompt(){
 
 function openEditAI(p){
   editAIProg = p;
-  $('eaProgName').textContent = p.name || 'Программа';
+  $('aiSubjName').textContent = p.name || 'Программа';
   const plans = normPlans(p);
   const exN = plans.reduce((n, pl) => n + pl.exercises.length, 0);
-  $('eaProgSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} ${plural(exN, 'упражнение', 'упражнения', 'упражнений')}`;
+  $('aiSubjSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} ${plural(exN, 'упражнение', 'упражнения', 'упражнений')}`;
   $('eaWish').value = '';
-  $('eaResult').value = '';
   autoGrow($('eaWish'));
-  syncGeminiBtns();
-  syncWantSvg();
-  if(aiWaysReset.scrEditAI) aiWaysReset.scrEditAI();
-  show('scrEditAI');
-  window.scrollTo(0, 0);
+  openAI('edit');
 }
 
 // подбирает свободное имя: «Ягодицы v2», «Ягодицы v3»…
@@ -8761,7 +8719,7 @@ function carryMedia(oldProg, newProg){
 }
 
 async function createEditedProgram(){
-  const raw = ($('eaResult').value || '').trim();
+  const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
@@ -8781,7 +8739,7 @@ async function createEditedProgram(){
   customPrograms.push(program);
   await savePrograms();
   renderMine();
-  $('eaResult').value = '';
+  $('aiResult').value = '';
   goTab('scrPrograms');
   appAlert(`Готово: создана «${program.name}».\n\nИсходная программа осталась без изменений.` +
     (carried ? `\nПеренесено картинок: ${carried}.` : ''));
@@ -10370,9 +10328,9 @@ $('bProgOn').onclick = ()=>{
 };
 // тумблер пиктограмм живёт сразу на двух экранах-запросах — держим их в одном состоянии
 function syncWantSvg(){
-  ['qWantSvg', 'eaWantSvg'].forEach(id => { if($(id)) $(id).classList.toggle('on', wantSvg); });
+  if($('aiWantSvg')) $('aiWantSvg').classList.toggle('on', wantSvg);
 }
-['qWantSvg', 'eaWantSvg'].forEach(id => {
+['aiWantSvg'].forEach(id => {
   $(id).onclick = ()=>{
     wantSvg = !wantSvg;
     kvSet('wantSvg', wantSvg ? '1' : '0');
@@ -11344,7 +11302,7 @@ async function pregnancyWarning(){
     'Прочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.',
     {confirm: true, okText: 'Понятно', cancelText: 'Подробнее'}
   );
-  if(!go) openLegal('health', ()=> show('scrText'));
+  if(!go) openLegal('health', ()=> openAI('text'));
 }
 
 const Q_OPTS = {
@@ -11441,7 +11399,7 @@ function initAIForm(){
   $('qRotate').classList.toggle('on', q.rotate);
   setShown('qRotateRow', q.split);
   $('qNote').value = q.note || '';
-  if(aiWaysReset.scrText) aiWaysReset.scrText();
+  if(aiWaysReset.scrAI) aiWaysReset.scrAI();
 }
 $('qNote').oninput = e => q.note = e.target.value;
 $('qSplit').onclick = ()=>{
@@ -11532,7 +11490,7 @@ const fullAIPrompt = ()=> promptBase() + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
-  const btn = $('btnCopyPrompt');
+  const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(fullAIPrompt());
     flashDone(btn);
@@ -11542,7 +11500,7 @@ async function copyPrompt(){
 }
 
 function importFromText(){
-  const txt = $('tImport').value.trim();
+  const txt = ($('aiResult').value || '').trim();
   if(!txt){ appAlert('Вставь текст программы в поле.'); return; }
   const {program, errors} = parseProgramText(txt);
   if(errors.length){
@@ -13300,7 +13258,6 @@ $('startPick').onclick = ()=>{
 };
 $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
 $('startBackTop').onclick = ()=> goTab(startFrom);
-$('textBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['qNote','tImport']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
 $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
 $('btnSkip').onclick  = nextStep;
 $('btnPrev').onclick  = prevStep;
@@ -13514,7 +13471,7 @@ $('storeClear').onclick = ()=>{
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
 $('chStore').onclick = ()=>{ $('createModal').classList.remove('open'); openStore('scrPrograms'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
-$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); $('tImport').value=''; initAIForm(); syncGeminiBtns(); show('scrText'); window.scrollTo(0,0); };
+$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(); openAI('text'); };
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
@@ -13808,7 +13765,6 @@ $('btnAgain').onclick = async ()=>{
 };
 /* ---- программа из видео ---- */
 $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
-$('ytBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['ytUrl','ytWish','ytResult']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
 $('ytUrl').oninput = ytCheckUrl;
 function ytGuard(){
   if(!($('ytUrl').value || '').trim()){ appAlert('Вставь ссылку на видео.'); return false; }
@@ -13816,16 +13772,14 @@ function ytGuard(){
   return true;
 }
 async function ytCopyPrompt(){
-  const btn = $('ytCopy');
+  const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(youtubePrompt());
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
-$('ytCopy').onclick = ()=>{ if(ytGuard()) ytCopyPrompt(); };
-$('ytParse').onclick = ()=> ytApplyResult();
 async function ytApplyResult(){
-  const raw = ($('ytResult').value || '').trim();
+  const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert('Поле «Ответ из чата» пустое.\n\nЕсли запрос делали в чате — вставь туда ответ целиком. А проще всего нажать «за меня» выше: приложение сделает всё само.'); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
@@ -13843,21 +13797,18 @@ async function ytApplyResult(){
   customPrograms.push(program);
   await savePrograms();
   renderMine();
-  $('ytResult').value = '';
+  $('aiResult').value = '';
   goTab('scrPrograms');
   appAlert(`Готово: добавлена «${program.name}».`);
 
 }
 
 /* ---- доработка через ИИ ---- */
-$('eaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['eaWish','eaResult']), ()=> goTab('scrPrograms'), 'Заполненный запрос');
-$('eaCreate').onclick = createEditedProgram;
-$('eaCopy').onclick = ()=> copyEditPrompt();
 // «программа целиком»: полное описание формата + текущая программа. В отличие от обычного
 // «Скопировать» (там только промт с запросом на изменение), этот текст самодостаточен —
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
-$('eaCopyFull').onclick = async ()=>{
-  const btn = $('eaCopyFull');
+$('aiCopyFull').onclick = async ()=>{
+  const btn = $('aiCopyFull');
   const text = promptBase()
     + '\n\nВОТ МОЯ ТЕКУЩАЯ ПРОГРАММА В ЭТОМ ЖЕ ФОРМАТЕ:\n\n'
     + programToText(editAIProg)
@@ -13868,15 +13819,13 @@ $('eaCopyFull').onclick = async ()=>{
   }catch(e){ appAlert('Не удалось скопировать. Попробуй ещё раз.'); }
 };
 async function copyEditPrompt(){
-  const btn = $('eaCopy');
+  const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(editAIPrompt());
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
 
-$('btnCopyPrompt').onclick = copyPrompt;
-$('btnParse').onclick = importFromText;
 $('swapBadge').onclick = openSwapHint;
 $('swapOk').onclick = closeSwapHint;
 $('swapAI').onclick = swapViaAI;
@@ -14023,14 +13972,35 @@ async function runSelfAI(promptFn, targetId, applyFn, title){
       '\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».');
   }
 }
-$('btnSelfAI').onclick = ()=> runSelfAI(fullAIPrompt, 'tImport', importFromText, 'Собираю программу');
-$('ytSelfAI').onclick = ()=>{
-  if(!premiumGate()) return;
-  if(!ytGuard()) return;
-  runSelfAI(youtubePrompt, 'ytResult', ytApplyResult, 'Разбираю видео');
+// Один обработчик на все источники: чем собрать промт и чем применить ответ,
+// знает таблица AI_SOURCES, а не пять отдельных кнопок.
+$('aiSelf').onclick = ()=>{
+  const c = AI_SOURCES[aiSrc];
+  if(!c) return;
+  if(c.guard && !c.guard()) return;
+  runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle);
 };
-$('eaSelfAI').onclick = ()=> runSelfAI(editAIPrompt, 'eaResult', createEditedProgram, 'Вношу изменения');
-$('exaSelfAI').onclick = ()=> runSelfAI(exaPrompt, 'exaResult', exaAddExercise, 'Подбираю упражнение');
+$('aiCopy').onclick = ()=>{
+  const c = AI_SOURCES[aiSrc];
+  if(!c) return;
+  if(c.guard && !c.guard()) return;
+  c.copy();
+};
+$('aiApply').onclick = ()=>{
+  const c = AI_SOURCES[aiSrc];
+  if(c) c.apply();
+};
+$('aiBackTop').innerHTML = icon('chevL');
+$('aiBackTop').onclick = async ()=>{
+  const c = AI_SOURCES[aiSrc];
+  if(!c) return;
+  if(aiScreenDirty(c.dirty)){
+    const ok = await appDialog('Заполненный запрос не сохранён. Если уйти, он пропадёт.',
+      {confirm: true, okText: 'Уйти без сохранения', cancelText: 'Вернуться'});
+    if(!ok) return;
+  }
+  c.back();
+};
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=>{ renderExList(); syncSettingsSum(); show('scrBuilder'); };
@@ -14108,21 +14078,6 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
   };
 });
 // правка программы: вручную ⇄ через ИИ
-document.querySelectorAll('#eaModeTabs .tab').forEach(b => {
-  b.onclick = async ()=>{
-    if(b.dataset.m !== 'manual') return;
-    if(aiScreenDirty(['eaWish','eaResult'])){
-      const ok = await appDialog(
-        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
-        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-      );
-      document.querySelectorAll('#eaModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
-      if(!ok) return;
-    }
-    if(editAIProg) openBuilder(editAIProg.id);
-    else goTab('scrPrograms');
-  };
-});
 
 // конструктор: вручную ⇄ через ИИ ⇄ из видео
 document.querySelectorAll('#bModeTabs .tab').forEach(b => {
@@ -14155,61 +14110,32 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
     switchCreateMode(m);
   };
 });
-document.querySelectorAll('#exaModeTabs .tab').forEach(b => {
-  b.onclick = async ()=>{
-    if(b.dataset.m !== 'manual') return;
-    if(aiScreenDirty(['exaWish','exaResult'])){
-      const ok = await appDialog(
-        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
-        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-      );
-      document.querySelectorAll('#exaModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
-      if(!ok) return;
-    }
-    addExManual();
-  };
-});
-document.querySelectorAll('#exeModeTabs .tab').forEach(b => {
-  b.onclick = async ()=>{
-    if(b.dataset.m !== 'manual') return;
-    if(aiScreenDirty(['exeWish','exeResult'])){
-      const ok = await appDialog(
-        'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
-        {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-      );
-      document.querySelectorAll('#exeModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'ai'));
-      if(!ok) return;
-    }
-    const keep = exeIdx;
-    if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
-    else show('scrBuilder');
-  };
-});
 
 // создание программы: по описанию ⇄ из видео ⇄ вручную
 function switchCreateMode(m){
-  if(m === 'text'){ initAIForm(); syncGeminiBtns(); show('scrText'); }
+  if(m === 'text'){ initAIForm(); openAI('text'); }
   else if(m === 'video'){ openYouTube(); }
-  else if(m === 'manual'){ openBuilder(); }
-  window.scrollTo(0, 0);
+  else if(m === 'manual'){ openBuilder(); window.scrollTo(0, 0); }
 }
-['aiModeTabs', 'ytModeTabs'].forEach(id => {
-  document.querySelectorAll('#' + id + ' .tab').forEach(b => {
-    b.onclick = async ()=>{
-      const cur = id === 'aiModeTabs' ? 'text' : 'video';
-      if(b.dataset.m === cur) return;
-      const fields = cur === 'text' ? ['qNote', 'tImport'] : ['ytUrl', 'ytWish', 'ytResult'];
-      if(aiScreenDirty(fields)){
-        const ok = await appDialog(
-          'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
-          {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
-        );
-        document.querySelectorAll('#' + id + ' .tab').forEach(x => x.classList.toggle('act', x.dataset.m === cur));
-        if(!ok) return;
-      }
-      switchCreateMode(b.dataset.m);
-    };
-  });
+// Вкладки режима: раньше их было четыре набора с четырьмя почти одинаковыми
+// обработчиками. Теперь набор один, кнопки в нём рисуются под источник, а слушает
+// их сам контейнер — поэтому обработчик переживает перерисовку.
+$('aiTabs').addEventListener('click', async e => {
+  const b = e.target.closest('.tab');
+  const c = AI_SOURCES[aiSrc];
+  if(!b || !c) return;
+  const cur = (aiSrc === 'video') ? 'video' : (aiSrc === 'text' ? 'text' : 'ai');
+  if(b.dataset.m === cur) return;
+  if(aiScreenDirty(c.dirty)){
+    const ok = await appDialog(
+      'Заполненный запрос не сохранён. Если переключиться, он пропадёт.',
+      {confirm: true, okText: 'Переключиться', cancelText: 'Вернуться'}
+    );
+    markAITab();   // подсветку возвращаем на месте, ушёл человек или нет
+    if(!ok) return;
+  }
+  if(b.dataset.m === 'manual'){ c.manual(); return; }
+  switchCreateMode(b.dataset.m);
 });
 // ручной режим открывает конструктор с активной вкладкой «Вручную»
 function markBuilderTab(){
@@ -14224,29 +14150,22 @@ function markBuilderTab(){
 }
 
 /* ---- правка упражнения через ИИ ---- */
-$('exeBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['exeWish','exeResult']), ()=> show('scrBuilder'), 'Заполненный запрос');
-$('exeApply').onclick = applyExEdit;
 async function exeCopyPrompt(){
-  const btn = $('exeCopy');
+  const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(exePrompt());
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать.'); }
 }
-$('exeCopy').onclick = ()=> exeCopyPrompt();
-$('exeSelfAI').onclick = ()=> runSelfAI(exePrompt, 'exeResult', applyExEdit, 'Меняю упражнение');
 
 /* ---- упражнение через ИИ ---- */
-$('exaBackTop').onclick = ()=> leaveGuard(aiScreenDirty(['exaWish','exaResult']), ()=> show('scrBuilder'), 'Заполненный запрос');
-$('exaAdd').onclick = exaAddExercise;
 async function exaCopyPrompt(){
-  const btn = $('exaCopy');
+  const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(exaPrompt());
     flashDone(btn);
   }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
 }
-$('exaCopy').onclick = ()=> exaCopyPrompt();
 
 function addExManual(){
   const list = curPlan().exercises;
@@ -14514,22 +14433,13 @@ $('builderBackTop').innerHTML = icon('chevL');
 $('exBackTop').innerHTML = icon('chevL');
 $('bSettingsChev').innerHTML = icon('chevR');
 $('psBackTop').innerHTML = icon('chevL');
-$('eaBackTop').innerHTML = icon('chevL');
-$('ytBackTop').innerHTML = icon('chevL');
-$('exaBackTop').innerHTML = icon('chevL');
 $('imgBackTop').innerHTML = icon('chevL');
-$('exeBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
-$('textBackTop').innerHTML = icon('chevL');
 $('legalBackTop').innerHTML = icon('chevL');
 // экраны запроса к ИИ: одна регистрация на экран
-[{screen:'scrText',    answer:'textAnswer', actions:'textActions', result:'tImport',   copy:['btnCopyPrompt']},
- {screen:'scrYouTube', answer:'ytAnswer',   actions:'ytActions',   result:'ytResult',  copy:['ytCopy']},
- {screen:'scrEditAI',  answer:'eaAnswer',   actions:'eaActions',   result:'eaResult',  copy:['eaCopy']},
- {screen:'scrExAI',    answer:'exaAnswer',  actions:'exaActions',  result:'exaResult', copy:['exaCopy']},
- {screen:'scrExEdAI',  answer:'exeAnswer',  actions:'exeActions',  result:'exeResult', copy:['exeCopy']},
+[{screen:'scrAI', answer:'aiAnswer', actions:'aiActions', result:'aiResult', copy:['aiCopy', 'aiCopyFull']},
  {screen:'scrImages'}].forEach(setupAIAnswer);
 
 // иконки прямо в разметке: <span data-icon="copy"></span> — один проход на весь документ,
