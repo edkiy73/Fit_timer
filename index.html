@@ -1429,7 +1429,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -2146,39 +2146,63 @@
   .tr-id small{color:var(--muted);font-size:13.5px}
   .tr-about{font-size:14.5px;line-height:1.6;color:var(--ink);white-space:pre-line;margin:0 0 var(--sp-2)}
 
-  /* витрина: две карточки в ряд. Раньше карточка шла во всю ширину и несла ещё
-     описание, ник тренера и кнопку — на экран помещалось полторы штуки. */
-  .store-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
-  .store-card{
+  /* Витрина — СПИСОК, а не сетка из карточек. В половину ширины экрана помещались
+     только название и минуты; цель и ник тренера — то, по чему программу вообще
+     выбирают, — не помещались вовсе. В строке помещается всё, а обложка остаётся
+     квадратной: одна и та же картинка и здесь, и на странице программы. */
+  .store-list{display:flex;flex-direction:column;gap:10px}
+  .store-row{
+    display:flex;gap:12px;align-items:center;text-align:left;
     background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-    overflow:hidden;box-shadow:var(--sh-1);cursor:pointer;display:flex;flex-direction:column;
+    padding:10px;box-shadow:var(--sh-1);cursor:pointer;
   }
-  .store-card:active{transform:scale(.99)}
-  .st-cover{position:relative;line-height:0}
-  .st-cover svg{width:100%;height:auto;display:block;aspect-ratio:1/1}
-  /* уже добавлена — галочка на обложке вместо строки текста в карточке */
-  .st-own{
-    position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;
-    background:var(--work);color:var(--on-accent);display:flex;align-items:center;justify-content:center;
-  }
-  .st-own svg{width:15px;height:15px}
-  /* страница программы каталога */
-  .si-cover{line-height:0;border-radius:var(--r-xl);overflow:hidden;margin-bottom:var(--sp-4)}
-  .si-cover svg{width:100%;height:auto;display:block;aspect-ratio:320/170}
-  .si-name{font-size:21px;margin:0;line-height:1.15}
-  /* метка поверх обложки — только категория: уровень стоит строкой ниже, и на
-     картинке он был вторым экземпляром того же самого */
-  .st-tags{position:absolute;left:12px;top:12px;display:flex;gap:8px}
-  .st-tag.pro{background:var(--grad-accent);border-color:rgba(255,255,255,.2);color:#fff;display:inline-flex;align-items:center;gap:4px}
+  .store-row:active{transform:scale(.995)}
+  .sr-cover{flex:none;width:84px;height:84px;border-radius:var(--r-md);overflow:hidden;line-height:0}
+  .sr-cover svg{width:100%;height:100%;display:block}
+  .sr-info{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sr-info h3{font-size:15.5px;margin:0;line-height:1.25;font-weight:600}
+  .sr-goal{color:var(--accent-ink);font-size:12.5px;font-weight:500}
+  .sr-meta{color:var(--muted);font-size:12.5px}
+  .sr-meta span + span::before{content:'·';margin:0 5px;opacity:.6}
+  /* метки программы — одни и те же в списке и на странице программы */
+  .st-labels{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+  .st-tag.pro{background:var(--grad-accent);color:#fff;display:inline-flex;align-items:center;gap:4px}
   .st-tag.pro svg{width:12px;height:12px}
   .st-tag{
-    display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:var(--r-pill);
-    background:rgba(15,10,30,.5);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:var(--r-pill);
     font-family:var(--font-text);font-size:11px;line-height:1;white-space:nowrap;
   }
-  .st-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
-  .st-body h3{font-size:14.5px;margin:0;line-height:1.2;font-weight:600}
-  .st-meta{color:var(--muted);font-size:12px}
+  /* уже добавлена — ЗЕЛЁНАЯ метка словами. Галочка в углу обложки читалась как
+     «выбрано», а фиолетовой она ещё и сливалась с меткой «Премиум» рядом. */
+  .st-own{
+    display:inline-flex;align-items:center;gap:5px;min-height:22px;padding:0 9px;
+    border-radius:var(--r-pill);background:var(--ok-soft);color:var(--ok);
+    font-family:var(--font-text);font-size:11px;font-weight:600;line-height:1;white-space:nowrap;
+  }
+  .st-own svg{width:13px;height:13px}
+  /* страница программы: обложка квадратная и стоит РЯДОМ с названием. Во всю
+     ширину квадрат съедал пол-экрана, и до состава приходилось прокручивать. */
+  .si-hero{display:flex;gap:14px;align-items:flex-start}
+  .si-cover{flex:none;width:112px;height:112px;border-radius:var(--r-lg);overflow:hidden;line-height:0}
+  .si-cover svg{width:100%;height:100%;display:block}
+  .si-id{min-width:0;display:flex;flex-direction:column;gap:5px}
+  .si-name{font-size:20px;margin:0;line-height:1.15}
+  .si-goal{margin:0;color:var(--accent-ink);font-size:13px;font-weight:500}
+  /* состав премиум-программы виден только по подписке: вместо списка — заглушка,
+     которая объясняет, что там, и открывает витрину подписки */
+  .si-lock{
+    display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+    padding:22px 18px;border:1px dashed var(--accent-line);border-radius:var(--r-lg);
+    background:var(--accent-soft);color:var(--ink);cursor:pointer;font-family:var(--font-text);
+  }
+  .si-lock:active{opacity:.8}
+  .si-lock .sl-ico{
+    width:44px;height:44px;border-radius:50%;background:var(--grad-accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .si-lock .sl-ico svg{width:22px;height:22px}
+  .si-lock b{font-size:15px}
+  .si-lock p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5}
   .st-gives{color:var(--ink);font-size:14px;line-height:1.5;opacity:.86}
   /* автор программы. Кто это составил — важнее, чем «бесплатно»: именно ник
      отличает каталог от безымянного набора файлов. */
@@ -2637,23 +2661,30 @@
          если пролистать, а сколько ещё за краем — не видно вообще. Обычный список
          показывает весь набор сразу и занимает одну строку на двоих. -->
     <div class="row2 store-filters">
-      <div class="field grow"><label>Направление</label><select id="storeCat"></select></div>
-      <div class="field grow"><label>Уровень</label><select id="storeLevel"></select></div>
+      <div class="field grow"><select id="storeCat"></select></div>
+      <div class="field grow"><select id="storeLevel"></select></div>
     </div>
 
     <p class="store-count" id="storeCount"></p>
-    <div class="store-grid" id="storeList"></div>
+    <div class="store-list" id="storeList"></div>
   </section>
 
-  <!-- Страница программы каталога. Раньше всё, что о программе известно, лежало
-       прямо в карточке витрины — из-за этого карточка была высокой, а на экран их
-       помещалось полторы. Витрина теперь показывает обложку, название и главное в
-       двух словах, а подробности живут здесь: состав, тренер, расписание. -->
+  <!-- Страница программы каталога. Витрина показывает обложку, название, цель,
+       минуты, уровень и тренера; подробности живут здесь: состав, расписание,
+       описание. Обложка здесь та же квадратная, что и в списке, и стоит рядом с
+       названием: во всю ширину квадрат съедал пол-экрана. Состав премиум-программы
+       открыт только по подписке — вместо него заглушка, ведущая в витрину подписки. -->
   <section class="screen" id="scrStoreItem">
     <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2>Программа</h2></div>
-    <div class="si-cover" id="siCover"></div>
     <div class="card-block">
-      <h3 class="si-name" id="siName"></h3>
+      <div class="si-hero">
+        <div class="si-cover" id="siCover"></div>
+        <div class="si-id">
+          <h3 class="si-name" id="siName"></h3>
+          <p class="si-goal" id="siGoal"></p>
+          <div class="st-labels" id="siLabels"></div>
+        </div>
+      </div>
       <div class="ex-meta" id="siFacts"></div>
       <p class="st-gives" id="siGives"></p>
       <button type="button" class="st-by" id="siBy">
@@ -2665,6 +2696,11 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Что внутри</p><span class="cb-count" id="siCount"></span></div>
       <div class="list-rows" id="siList"></div>
+      <button type="button" class="si-lock hidden" id="siLock">
+        <span class="sl-ico" data-icon="crown"></span>
+        <b>Состав открыт по подписке</b>
+        <p id="siLockTxt"></p>
+      </button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="siBuy">Добавить</button>
@@ -4659,6 +4695,12 @@ function icon(name){
 // а «Утяжелители» и «Турник» были только у программы. Держим их здесь, до первого
 // использования, и подставляем в оба места.
 const OPT_LEVEL = ['Новичок', 'Средний', 'Продвинутый'];
+// Зачем человек тренируется. Один список и для вопроса при создании программы,
+// и для направлений каталога: «Похудение» в фильтре против «Похудеть» в чипах —
+// это два разных слова для одного и того же, и человек честно их не узнавал.
+const OPT_GOAL = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот',
+  'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина',
+  'Восстановиться после родов', 'Кардио и энергия'];
 // чипы-исключения: выбран такой — остальные снимаются, и наоборот
 const OPT_NONE = new Set(['Без инвентаря', 'Без ограничений']);
 const OPT_EQUIP = ['Без инвентаря', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'];
@@ -8968,19 +9010,25 @@ function importProgramCode(code){
    только источник STORE_ITEMS, а всё остальное останется как есть.
    Метка storeId у добавленной программы прежняя — библиотеки старых пользователей
    продолжают узнаваться. */
-const STORE_CATS = [
-  {id:'slim', name:'Похудение',      ico:'flame'},
-  {id:'core', name:'Пресс и талия',  ico:'target'},
-  {id:'glut', name:'Ягодицы и ноги', ico:'dumbbell'},
-  {id:'tone', name:'Сила и тонус',   ico:'weight'},
-  {id:'flex', name:'Растяжка',       ico:'moon'}
-];
-const STORE_LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
-// пары цветов обложек: все в фиолетовом семействе, чтобы витрина не рябила
-const STORE_GRAD = {
-  slim:['#F2617A','#8E33E0'], core:['#7C56F5','#B44BDA'], glut:['#C13AA0','#6134DE'],
-  tone:['#5B4BE8','#2E9BD6'], flex:['#4FB3A0','#7C56F5']
+// Направление программы в каталоге — ЭТО ТА ЖЕ ЦЕЛЬ, которую спрашивают при
+// создании программы: список один (OPT_GOAL), здесь к каждой цели добавлены
+// только короткий ключ, значок и пара цветов обложки. Ключ уходит в поле cat
+// у программы, поэтому менять его нельзя — поменяется расклад обложек.
+// Цвета — все в фиолетовом семействе, чтобы витрина не рябила.
+const STORE_LOOK = {
+  'Похудеть':                   {id:'slim',   ico:'flame',    grad:['#F2617A','#8E33E0']},
+  'Подтянуть всё тело':         {id:'tone',   ico:'dumbbell', grad:['#5B4BE8','#2E9BD6']},
+  'Ягодицы и пресс':            {id:'glut',   ico:'weight',   grad:['#C13AA0','#6134DE']},
+  'Плоский живот':              {id:'core',   ico:'target',   grad:['#7C56F5','#B44BDA']},
+  'Сила и выносливость':        {id:'power',  ico:'bolt',     grad:['#6A3FE0','#C13AA0']},
+  'Рельеф мышц':                {id:'relief', ico:'gem',      grad:['#8E33E0','#2E9BD6']},
+  'Растяжка и гибкость':        {id:'flex',   ico:'moon',     grad:['#4FB3A0','#7C56F5']},
+  'Осанка и спина':             {id:'back',   ico:'shield',   grad:['#4A7BE8','#8E33E0']},
+  'Восстановиться после родов': {id:'post',   ico:'heart',    grad:['#E06A9E','#7C56F5']},
+  'Кардио и энергия':           {id:'cardio', ico:'rocket',   grad:['#F2617A','#5B4BE8']}
 };
+const STORE_CATS = OPT_GOAL.map(name => Object.assign({name}, STORE_LOOK[name]));
+const STORE_LEVELS = OPT_LEVEL;
 const storeCat = id => STORE_CATS.find(c => c.id === id) || STORE_CATS[0];
 // Расклад обложки берём по месту программы ВНУТРИ её категории, а не по хешу
 // названия: хеш легко кладёт двух соседей в один вариант, и рядом стоящие
@@ -9010,7 +9058,7 @@ const TRAINERS = {
 };
 
 const STORE_ITEMS = [
-  {id:"slim-tiho", by:"@lena.doma", cat:"slim", level:"Новичок", min:18, name:"Кардио без прыжков",
+  {id:"slim-tiho", by:"@lena.doma", cat:"cardio", level:"Новичок", min:18, name:"Кардио без прыжков",
    gives:"Три круга без единого прыжка: приседания, скалолаз и ходьба с высоким коленом. Пульс высокий, соседи снизу ничего не слышат.",
    text:`ПРОГРАММА: Кардио без прыжков
 ДНИ: Пн, Ср, Пт
@@ -9332,7 +9380,7 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 90
 `},
-  {id:"tone-arms", pro:true, by:"@sonya.arms", cat:"tone", level:"Средний", min:18, name:"Руки и плечи",
+  {id:"tone-arms", pro:true, by:"@sonya.arms", cat:"relief", level:"Средний", min:18, name:"Руки и плечи",
    gives:"Трицепс и плечи: обратные отжимания от стула, жим гантелей вверх и разведения в стороны.",
    text:`ПРОГРАММА: Руки и плечи
 ДНИ: Вт, Сб
@@ -9419,7 +9467,7 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 60
 `},
-  {id:"flex-back", pro:true, by:"@ira.spine", cat:"flex", level:"Новичок", min:14, name:"Спина после рабочего дня",
+  {id:"flex-back", pro:true, by:"@ira.spine", cat:"back", level:"Новичок", min:14, name:"Спина после рабочего дня",
    gives:"Спокойная растяжка для тех, кто сидит весь день: поза ребёнка, скручивание лёжа и растяжка шеи.",
    text:`ПРОГРАММА: Спина после рабочего дня
 ДНИ: Пн, Ср, Пт, Вс
@@ -9505,7 +9553,7 @@ const STORE_ITEMS = [
 ШАГ: 5
 ПОТОЛОК: 90
 `},
-  {id:"core-deep", pro:true, by:"@zhenya.core", cat:"core", level:"Продвинутый", min:18, name:"Железный центр",
+  {id:"core-deep", pro:true, by:"@zhenya.core", cat:"power", level:"Продвинутый", min:18, name:"Железный центр",
    gives:"Для тех, кто уже держит планку минуту: планка с переходом на ладони, подъём прямых ног и длинная статика.",
    text:`ПРОГРАММА: Железный центр
 ДНИ: Вт, Чт, Сб
@@ -9554,10 +9602,15 @@ const STORE_ITEMS = [
 // Обложка рисуется, а не хранится: градиент, два мягких блика и крупная
 // пиктограмма категории. Ни одного внешнего файла — офлайн витрина выглядит
 // так же, как онлайн.
+// Счётчик у идентификатора градиента. Одна и та же обложка стоит теперь в двух
+// местах сразу (строка витрины и страница программы), и при одинаковых id браузер
+// берёт ПЕРВОЕ определение в документе — то, что лежит в скрытом экране витрины.
+// Обложка на странице программы из-за этого оставалась белой.
+let storeUid = 0;
 function storeCover(it, square){
   const c = storeCat(it.cat);
-  const g = STORE_GRAD[it.cat] || STORE_GRAD.core;
-  const uid = 'stg' + it.id.replace(/[^a-z0-9]/gi, '') + (square ? 'q' : '');
+  const g = c.grad;
+  const uid = 'stg' + it.id.replace(/[^a-z0-9]/gi, '') + (square ? 'q' : '') + (++storeUid);
   // Цвет обложки задаёт категория — по нему витрина читается с одного взгляда.
   // Но тогда две программы одной категории подряд выглядят близнецами, поэтому
   // наклон градиента, места бликов и посадка пиктограммы разводятся по самой
@@ -9622,11 +9675,15 @@ function renderStoreFilters(){
     sel.innerHTML = opts.map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('');
     sel.onchange = ()=>{ onPick(sel.value); renderStore(); };
   };
+  // Подписи над списками убраны: первый пункт и есть подпись — «Цель», «Уровень».
+  // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
+  // пункт в списке — обещание, которого каталог не выполняет.
+  const has = id => STORE_ITEMS.some(x => x.cat === id);
   fill('storeCat',
-    [['', 'Все направления']].concat(STORE_CATS.map(c => [c.id, c.name])),
+    [['', 'Цель']].concat(STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name])),
     storeFilter.cat, v => storeFilter.cat = v);
   fill('storeLevel',
-    [['', 'Любой уровень']].concat(STORE_LEVELS.map(l => [l, l])),
+    [['', 'Уровень']].concat(STORE_LEVELS.map(l => [l, l])),
     storeFilter.level, v => storeFilter.level = v);
 }
 
@@ -9638,6 +9695,18 @@ function storeMatches(it){
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
   return (it.name + ' ' + storeCat(it.cat).name + ' ' + (it.by || '')).toLowerCase().includes(q);
+}
+
+// «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
+// Раньше на странице «Премиум» был серой меткой в ряду фактов и с меткой на
+// витрине не имел ничего общего, а «добавлено» показывалось галочкой в углу
+// обложки — её читали как «выбрано».
+function storeLabels(it, own){
+  if(!it.pro && !own) return '';
+  return `<div class="st-labels">` +
+    (it.pro ? `<span class="st-tag pro">${icon('crown')}Премиум</span>` : '') +
+    (own ? `<span class="st-own">${icon('check')}Уже у вас</span>` : '') +
+    `</div>`;
 }
 
 function renderStore(){
@@ -9654,20 +9723,18 @@ function renderStore(){
       '</div>';
     return;
   }
-  // Карточка витрины отвечает на один вопрос — «стоит ли открыть». Обложка,
-  // название, минуты и уровень; всё остальное (состав, тренер, описание) живёт на
-  // странице программы. Раньше карточка несла ещё описание, ник тренера и кнопку —
-  // была высокой, и на экран помещалось полторы штуки.
+  // Строка витрины отвечает на один вопрос — «стоит ли открыть»: обложка, название,
+  // цель, минуты, уровень и тренер. Остальное (состав, расписание, описание) живёт
+  // на странице программы.
   box.innerHTML = list.map(it => {
     const own = storeOwned(it.id);
-    return `<article class="store-card" data-open="${it.id}">
-      <div class="st-cover">${storeCover(it, true)}
-        ${it.pro ? `<div class="st-tags"><span class="st-tag pro">${icon('crown')}Премиум</span></div>` : ''}
-        ${own ? `<div class="st-own">${icon('check')}</div>` : ''}
-      </div>
-      <div class="st-body">
+    return `<article class="store-row" data-open="${it.id}">
+      <div class="sr-cover">${storeCover(it, true)}</div>
+      <div class="sr-info">
         <h3>${it.name}</h3>
-        <div class="st-meta">${it.min} мин · ${it.level}</div>
+        <div class="sr-goal">${storeCat(it.cat).name}</div>
+        <div class="sr-meta"><span>${it.min} мин</span><span>${it.level}</span>${it.by ? `<span>${it.by}</span>` : ''}</div>
+        ${storeLabels(it, own)}
       </div>
     </article>`;
   }).join('');
@@ -9692,8 +9759,9 @@ function openStoreItem(id){
   if(!it) return;
   siItem = it;
   const c = storeCat(it.cat);
-  $('siCover').innerHTML = storeCover(it);
+  $('siCover').innerHTML = storeCover(it, true);
   $('siName').textContent = it.name;
+  $('siGoal').textContent = c.name;
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
   setShown('siBy', !!it.by);
@@ -9712,17 +9780,27 @@ function openStoreItem(id){
     el.textContent = txt;
     facts.appendChild(el);
   };
-  fact(c.name, 'wm');
   fact(it.level);
   fact(`${it.min} мин`);
   if(rounds > 1) fact(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
   if(days) fact(days);
-  if(it.pro) fact('Премиум', 'wm');
 
-  const nWarm = exs.filter(e => e.warmup).length;
+  const own = storeOwned(it.id);
+  $('siLabels').innerHTML = storeLabels(it, own);
+
   $('siCount').textContent = `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
+  // Состав премиум-программы — часть подписки: без неё показываем не пустоту и не
+  // отказ, а что именно там лежит. Нажатие открывает витрину подписки.
+  const locked = !!it.pro && !isPremium();
+  setShown('siList', !locked);
+  setShown('siLock', locked);
+  if(locked){
+    $('siLockTxt').textContent =
+      `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')} с техникой, ` +
+      `частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.`;
+  }
   const box = $('siList'); box.innerHTML = '';
-  exs.forEach((ex, i) => {
+  if(!locked) exs.forEach((ex, i) => {
     const row = document.createElement('div');
     row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
     row.style.cursor = 'default';
@@ -9738,11 +9816,11 @@ function openStoreItem(id){
     box.appendChild(row);
   });
 
-  const own = storeOwned(it.id);
   $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
   show('scrStoreItem');
   window.scrollTo(0, 0);
 }
+$('siLock').onclick = openPremium;
 $('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
 $('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
 $('siBackTop').onclick = ()=> goBackTo('scrStore');
@@ -9773,11 +9851,16 @@ async function addStoreItem(id){
   customPrograms.push(program);
   await savePrograms();
   renderMine();
-  renderStore();                        // на витрине у карточки появляется галочка
+  renderStore();                        // в списке у программы появляется метка «Уже у вас»
   // Уходить отсюда на витрину НЕЛЬЗЯ: возврат по истории асинхронный, и popstate
   // приходит уже после открытия попапа — а обработчик popstate закрывает верхний
   // попап. Остаёмся на странице программы, кнопка превращается в «Открыть».
-  if(siItem && siItem.id === id) $('siBuy').textContent = 'Открыть';
+  if(siItem && siItem.id === id){
+    $('siBuy').textContent = 'Открыть';
+    // метку «Уже у вас» ставим тут же: уходить с экрана после добавления нельзя
+    // (возврат по истории асинхронный и закрыл бы только что открытый попап)
+    $('siLabels').innerHTML = storeLabels(siItem, true);
+  }
   openSchedule(program, `Сохранена в Мои программы. Выбери дни и время — придёт напоминание, и «${it.name}» появится в плане.`);
 }
 
@@ -11643,7 +11726,7 @@ async function pregnancyWarning(){
 }
 
 const Q_OPTS = {
-  goal: ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот', 'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина', 'Восстановиться после родов', 'Кардио и энергия'],
+  goal: OPT_GOAL,
   level: OPT_LEVEL,
   dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
   // мышцы — строгий список MUSCLES: его же понимает парсер и просит промт
