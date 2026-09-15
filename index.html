@@ -57,6 +57,7 @@
 
     --ok:#3ED598;
     --ok-soft:rgba(62,213,152,.12);
+    --ok-line:rgba(62,213,152,.38);
     --warn:#F5B93B;
     --warn-soft:rgba(245,185,59,.11);
     --warn-line:rgba(245,185,59,.36);
@@ -979,6 +980,7 @@
 
     --ok:#0B7D58;
     --ok-soft:rgba(11,125,88,.12);
+    --ok-line:rgba(11,125,88,.30);
     --warn:#9A6708;
     --warn-soft:rgba(196,140,20,.13);
     --warn-line:rgba(170,120,10,.34);
@@ -2053,17 +2055,19 @@
      одной строкой внизу. Цены нет нигде: программу добавляют, а не покупают.
      Фильтры прокручиваются вбок, чтобы не съедать высоту: на телефоне вертикаль
      дороже горизонтали. */
+  /* Чуть зеленее остальных карточек меню — «Каталог» ведёт наружу, к готовым
+     программам, и должен выделяться на глаз, а не теряться среди прочих строк. */
   .store-cta{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
     margin-top:var(--gap-main);padding:var(--sp-3) var(--sp-4);
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+    background:var(--card);border:1px solid var(--ok-line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);color:var(--ink);cursor:pointer;text-align:left;
     font-family:var(--font-text);
   }
   .store-cta .sc-ico{
     flex:none;width:44px;height:44px;border-radius:var(--r-md);
     display:flex;align-items:center;justify-content:center;
-    background:var(--accent-soft);color:var(--accent-ink);
+    background:var(--ok-soft);color:var(--ok);
   }
   .store-cta .sc-ico svg{width:22px;height:22px}
   .store-cta .sc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
@@ -2074,18 +2078,20 @@
   /* значок каталога в шапке «Тренировок» стоит рядом с крупным «+» — уравниваем
      их по оптическому весу, иначе пара кнопок выглядит случайной */
 
-  /* поиск */
+  /* поиск — та же геометрия и цвет, что у обычного поля (.field input): полная
+     «таблетка» (r-pill) и фон карточки выбивались среди прямоугольных полей и
+     селектов на этом же экране */
   .store-search{
     position:relative;display:flex;align-items:center;gap:10px;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-pill);
+    background:var(--bg);border:1px solid var(--line);border-radius:12px;
     padding:0 14px;min-height:48px;margin-bottom:var(--sp-3);
   }
   .store-search .ss-ico{flex:none;color:var(--muted);display:flex}
   .store-search .ss-ico svg{width:18px;height:18px}
-  /* Фокус показывает вся «таблетка», а не поле внутри неё. Общее правило
+  /* Фокус показывает всю строку, а не поле внутри нее. Общее правило
      input:focus рисует акцентную рамку и кольцо вокруг самого input — а он тут
      голый, без своей формы, и кольцо ложилось прямоугольником ровно по тексту
-     посреди скруглённой строки поиска. Гасим его на поле и переносим на контейнер. */
+     посреди строки поиска. Гасим его на поле и переносим на контейнер. */
   .store-search input{
     flex:1;min-width:0;border:none;background:none;
     font-family:var(--font-text);font-size:15px;color:var(--ink);
@@ -2104,8 +2110,33 @@
   }
   .ss-clear svg{width:14px;height:14px}
 
-  /* фильтры витрины — два обычных списка в строку */
+  /* фильтры витрины — два обычных списка в строку. Кнопка выглядит как select
+     (та же геометрия и цвет, что у .field select), но открывает свой попап
+     #optModal, а не системную шторку. */
   .store-filters{margin:0 0 var(--sp-2);align-items:flex-end}
+  .filter-btn{
+    width:100%;box-sizing:border-box;text-align:left;cursor:pointer;
+    background-color:var(--bg);border:1px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:var(--font-text);font-size:15px;
+    padding:13px 14px;min-height:48px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+  }
+  .filter-btn.ph{color:var(--muted)}
+  .filter-btn .fb-chev{flex:none;color:var(--muted);display:flex}
+  .filter-btn .fb-chev svg{width:18px;height:18px}
+
+  /* список выбора одного варианта внутри попапа #optModal — строки без рамки-карточки
+     (не .pick-item: там карточки для перехода к шагу, здесь — значение из набора),
+     разделены тонкой линией, отмечена только выбранная */
+  .opt-row{
+    width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    text-align:left;border:none;border-top:1px solid var(--line);background:none;
+    padding:14px 2px;color:var(--ink);font-family:var(--font-text);font-size:15px;cursor:pointer;
+  }
+  .opt-row:first-child{border-top:none}
+  .opt-row .or-check{flex:none;width:20px;height:20px;color:var(--accent-ink);visibility:hidden;display:flex}
+  .opt-row.act{color:var(--accent-ink);font-weight:600}
+  .opt-row.act .or-check{visibility:visible}
 
   /* сколько нашлось: подпись раздела, а не подсказка под полем — тот же приём,
      что у «Недели» и «Прогресса» на главной, и с воздухом до первой карточки */
@@ -2659,10 +2690,13 @@
 
     <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
          если пролистать, а сколько ещё за краем — не видно вообще. Обычный список
-         показывает весь набор сразу и занимает одну строку на двоих. -->
+         показывает весь набор сразу и занимает одну строку на двоих. Список — не
+         нативный select: его системная шторка (белый фон, синее выделение) не
+         похожа на остальное приложение и на разных экранах всплывает в разных
+         местах. Вместо неё — свой попап #optModal с тем же списком. -->
     <div class="row2 store-filters">
-      <div class="field grow"><select id="storeCat"></select></div>
-      <div class="field grow"><select id="storeLevel"></select></div>
+      <button type="button" class="filter-btn ph" id="storeCatBtn"><span id="storeCatVal">Цель</span><span class="fb-chev" id="storeCatChev"></span></button>
+      <button type="button" class="filter-btn ph" id="storeLevelBtn"><span id="storeLevelVal">Уровень</span><span class="fb-chev" id="storeLevelChev"></span></button>
     </div>
 
     <p class="store-count" id="storeCount"></p>
@@ -3227,7 +3261,7 @@
 
     <button type="button" class="hero-action ai-self" id="aiSelf">
       <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b id="aiSelfLabel">Сделать за меня</b><small class="ha-sub">Приложение всё сделает само — примерно за минуту</small></span>
+      <span class="ha-txt"><b id="aiSelfLabel">Сделать за меня</b><small class="ha-sub">Приложение сделает это само</small></span>
       <span class="ha-go" data-icon="chevR"></span>
     </button>
 
@@ -4197,6 +4231,29 @@
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Вставь ссылку на тренировку</small></span></button>
         <button class="choice ico" id="chStore"><span class="ch-ico" data-icon="book"></span><span class="ch-txt"><b>Готовая программа</b><small>Готовые планы от тренеров — каталог</small></span></button>
         <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или коду</b><small>Если программу прислали или сохраняли в файл</small></span></button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Список для «обычного» выбора одного из вариантов — вместо системной шторки
+         select, чей вид и место всплытия приложение не контролирует. Переиспользуется
+         фильтрами каталога; заголовок и строки собирает openOptPicker(). -->
+    <div class="modal" id="optModal">
+      <div class="modal-card">
+        <span class="mini-label" id="optTitle"></span>
+        <div id="optList"></div>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Выбор способа для нового упражнения: вручную заводит пустую строку и
+         открывает её в редакторе, через ИИ ведёт сразу на экран подбора с чипами
+         (формат, уровень, мышцы, инвентарь) — без промежуточной пустышки. -->
+    <div class="modal" id="addExModal">
+      <div class="modal-card">
+        <span class="mini-label">Новое упражнение</span>
+        <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши, что нужно, — подберёт нейросеть</small></span></button>
+        <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Задаёшь название, формат и подходы</small></span></button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -8049,8 +8106,8 @@ const AI_SOURCES = {
     lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.'],
     pane: 'aiPaneExNew',
     step1: 'Шаг 1 · Какое упражнение нужно',
-    step2: 'Шаг 2 · Как подобрать',
-    self: 'Подобрать за меня',
+    step2: 'Шаг 2 · Как подобрать упражнение',
+    self: ()=> exaSelfLabel(),
     selfTitle: 'Подбираю упражнение',
     chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
     answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
@@ -8103,7 +8160,7 @@ function openAI(key){
   $('aiTitle').textContent = c.title;
   $('aiStep1Title').textContent = c.step1;
   $('aiStep2Title').textContent = c.step2;
-  $('aiSelfLabel').textContent = c.self;
+  $('aiSelfLabel').textContent = typeof c.self === 'function' ? c.self() : c.self;
   $('aiApply').textContent = c.action;
   $('aiAnswerHint').textContent = c.answerHint;
   $('aiResult').value = '';
@@ -8666,11 +8723,21 @@ const EXA_OPTS = {
 // сколько упражнений просить у нейросети — обычное число, а не диапазон чипом
 const exa = {count: 1, format: '', level: '', muscles: [], equip: []};
 
+// «Подобрать за меня» без объекта непонятно, что именно подберётся — называем
+// прямо, и число упражнений в кнопке следует за выбором в «Сколько упражнений»
+function exaSelfLabel(){
+  const n = exa.count || 1;
+  return n === 1 ? 'Подобрать упражнение' : `Подобрать ${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`;
+}
+
 function exaChips(){
   const sel = $('exaCount');
   if(!sel.options.length){
     for(let i = 1; i <= 10; i++) sel.add(new Option(String(i), String(i)));
-    sel.onchange = ()=> exa.count = Math.max(1, Math.min(10, parseInt(sel.value) || 1));
+    sel.onchange = ()=>{
+      exa.count = Math.max(1, Math.min(10, parseInt(sel.value) || 1));
+      if(aiSrc === 'exNew') $('aiSelfLabel').textContent = exaSelfLabel();
+    };
   }
   sel.value = String(exa.count || 1);
   qChips('exaFormat', EXA_OPTS.format, false, ()=> exa.format, v => exa.format = v);
@@ -9669,21 +9736,38 @@ let storeFilter = {q: '', cat: '', level: ''};
 // Имя поля storeId не трогаем — по нему узнаются библиотеки старых пользователей.
 const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 
+// список для выбора одного варианта в своём попапе — вместо системной шторки select
+function openOptPicker(title, opts, cur, onPick){
+  $('optTitle').textContent = title;
+  const box = $('optList'); box.innerHTML = '';
+  opts.forEach(([v, t]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt-row'; b.classList.toggle('act', v === cur);
+    b.innerHTML = `<span></span><span class="or-check">${icon('check')}</span>`;
+    b.querySelector('span').textContent = t;
+    b.onclick = ()=>{ $('optModal').classList.remove('open'); onPick(v); };
+    box.appendChild(b);
+  });
+  $('optModal').classList.add('open');
+}
+
 function renderStoreFilters(){
-  const fill = (id, opts, cur, onPick) => {
-    const sel = $(id);
-    sel.innerHTML = opts.map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('');
-    sel.onchange = ()=>{ onPick(sel.value); renderStore(); };
+  const fill = (btnId, valId, chevId, ph, opts, cur, onPick) => {
+    const cho = opts.find(([v]) => v === cur);
+    $(valId).textContent = cho ? cho[1] : ph;
+    $(btnId).classList.toggle('ph', !cho);
+    $(chevId).innerHTML = icon('chevD');
+    $(btnId).onclick = ()=> openOptPicker(ph, [['', ph]].concat(opts), cur, v => { onPick(v); renderStoreFilters(); renderStore(); });
   };
   // Подписи над списками убраны: первый пункт и есть подпись — «Цель», «Уровень».
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
   // пункт в списке — обещание, которого каталог не выполняет.
   const has = id => STORE_ITEMS.some(x => x.cat === id);
-  fill('storeCat',
-    [['', 'Цель']].concat(STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name])),
+  fill('storeCatBtn', 'storeCatVal', 'storeCatChev', 'Цель',
+    STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name]),
     storeFilter.cat, v => storeFilter.cat = v);
-  fill('storeLevel',
-    [['', 'Уровень']].concat(STORE_LEVELS.map(l => [l, l])),
+  fill('storeLevelBtn', 'storeLevelVal', 'storeLevelChev', 'Уровень',
+    STORE_LEVELS.map(l => [l, l]),
     storeFilter.level, v => storeFilter.level = v);
 }
 
@@ -10997,30 +11081,26 @@ function syncExNowHints(){
   if(!exDraft || !p || exDraft.warmup){ setShown(el, false); return; }
   let probe;
   try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){ setShown(el, false); return; }
-  const steps = exProgSteps(probe, p);
-  // «12 + 3 × 2» — откуда взялось число. Ручная правка с тренировки идёт отдельным слагаемым.
-  const how = (axis, baseTxt) => {
-    const st = progStepSize(probe, axis), d = progDelta(p.id, probe, axis);
-    let out = baseTxt;
-    if(steps > 0 && st > 0) out += ` + ${steps} × ${fmtKg(st)}`;
-    if(d > 0) out += ` + ${fmtKg(d)}`;
-    if(d < 0) out += ` − ${fmtKg(-d)}`;
-    return out === baseTxt ? '' : ` (${out})`;
-  };
+  // Только итог — без разбора «откуда цифра»: пример решения тут не нужен,
+  // важно само значение. Диапазон считает progressedRepsRange (растит min и max порознь,
+  // режет по потолку), при двойной прогрессии min===max — уже готовое число.
   const parts = [];
   if(hasWeight(probe)){
     const base = progBaseValue(probe, 'weight'), now = getExWeight(p.id, probe, p);
-    if(now > 0 && Math.abs(now - base) > 0.01) parts.push(`${fmtKg(now)} кг${how('weight', fmtKg(base))}`);
+    if(now > 0 && Math.abs(now - base) > 0.01) parts.push(`${fmtKg(now)} кг`);
   }
   if(probe.type === 'time'){
     const base = parseValue(probe.value).min, now = getExProgValue(p.id, probe, p, 'time');
-    if(now !== base) parts.push(`${now} сек${how('time', String(base))}`);
+    if(now !== base) parts.push(`${now} сек`);
   } else {
     const base = valueText(probe.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
-    if(now !== base) parts.push(`${now} повт.${how('reps', base)}`);
+    if(now !== base) parts.push(`${now} повт.`);
   }
   if(!parts.length){ setShown(el, false); return; }
-  el.textContent = `Сейчас ${parts.join(', ')}. В полях — стартовые числа.`;
+  // «повт.» уже заканчивается точкой — не дублируем её точкой предложения
+  let sentence = `Сейчас ${parts.join(', ')}`;
+  if(sentence.endsWith('.')) sentence = sentence.slice(0, -1);
+  el.textContent = `${sentence}. В полях — стартовые числа.`;
   setShown(el, true);
 }
 
@@ -14353,7 +14433,10 @@ $('swapCopy').onclick = async ()=>{
   }
 };
 
-$('btnAddEx').onclick = ()=> addExManual();
+$('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
+$('addExModal').onclick = e=>{ if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
+$('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
+$('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 
 /* ---- ИИ внутри приложения (Gemini) ---- */
 
