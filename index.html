@@ -1363,11 +1363,6 @@
   /* действия над упражнением — в самом редакторе, а не иконкой в списке */
   .ex-ops{display:flex;gap:8px}
   .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
-  /* универсальный вертикальный стек второстепенных кнопок: одинаковая ширина,
-     одинаковые отступы, не слипается с основной кнопкой и карточками */
-  .btn-stack{display:flex;flex-direction:column;gap:10px;margin:14px 0}
-  .btn-stack .btn-ghost,
-  .btn-stack .btn-quiet{width:100%;min-height:48px}
 
 
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
@@ -2706,7 +2701,6 @@
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
-    <div class="tabs" id="builderTabs"></div>
     <div class="card-block">
       <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
@@ -2727,6 +2721,11 @@
       <p class="field-hint" id="bVariantHint"></p>
       <div class="plan-tabs" id="planTabsTop"></div>
       <div id="bExList"></div>
+      <!-- Попап-развилка «Через ИИ / Вручную» ушла: добавление вручную теперь ничего
+           не открывает, а прятать второй путь за лишним касанием, чтобы спросить
+           «каким способом», было незачем. Два пути стоят рядом. -->
+      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
+      <button type="button" class="btn-quiet" id="btnAddExAI"><span data-icon="sparkle"></span>Подобрать через ИИ</button>
       <!-- Картинки — про упражнения, поэтому лежат в блоке упражнений. В настройках
            программы, рядом с обложкой и расписанием, их искать было негде. -->
       <button type="button" class="nav-row nr-flat" id="bImagesRow">
@@ -2738,6 +2737,7 @@
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
     </div>
+    <button type="button" class="btn-quiet" id="btnProgAI"><span data-icon="sparkle"></span><span id="btnProgAITxt">Собрать программу через ИИ</span></button>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
     </div>
@@ -2968,7 +2968,6 @@
       <button class="back-chip" id="exBackTop"></button>
       <h2>Упражнение</h2>
     </div>
-    <div class="tabs" id="exTabs"></div>
 
     <div class="card-block">
       <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
@@ -3048,6 +3047,15 @@
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
+    </div>
+
+    <!-- Дублирование и удаление стояли в меню «⋮» у строки списка вместе с
+         «Изменить». Место им здесь: это действия над упражнением, которое сейчас
+         открыто, и в списке они освобождают строку под собственно упражнение. -->
+    <button type="button" class="btn-quiet" id="btnExAI"><span data-icon="sparkle"></span>Доработать через ИИ</button>
+    <div class="ex-ops">
+      <button type="button" class="btn-quiet" id="btnDupEx"><span data-icon="plus"></span>Дублировать</button>
+      <button type="button" class="btn-quiet danger" id="btnDelEx"><span data-icon="trash"></span>Удалить</button>
     </div>
 
     <div class="builder-actions">
