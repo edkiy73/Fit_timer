@@ -2060,7 +2060,10 @@
   .store-cta{
     display:flex;align-items:center;gap:var(--sp-3);width:100%;
     margin-top:var(--gap-main);padding:var(--sp-3) var(--sp-4);
-    background:var(--card);border:1px solid var(--ok-line);border-radius:var(--r-xl);
+    /* лёгкий зелёный оттенок фона поверх обычного цвета карточки — просто
+       рамки оказалось мало, кнопка терялась среди остальных строк меню */
+    background:linear-gradient(var(--ok-soft),var(--ok-soft)),var(--card);
+    border:1px solid var(--ok-line);border-radius:var(--r-xl);
     box-shadow:var(--sh-1);color:var(--ink);cursor:pointer;text-align:left;
     font-family:var(--font-text);
   }
@@ -2122,6 +2125,9 @@
     display:flex;align-items:center;justify-content:space-between;gap:8px;
   }
   .filter-btn.ph{color:var(--muted)}
+  /* длинное значение обрезаем многоточием — перенос на вторую строку сбивал
+     высоту строки с полем поиска и вторым фильтром рядом */
+  .filter-btn span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .filter-btn .fb-chev{flex:none;color:var(--muted);display:flex}
   .filter-btn .fb-chev svg{width:18px;height:18px}
 
@@ -3079,13 +3085,17 @@
     <div class="card-block">
       <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
       <div class="field"><label>Как считать</label>
-        <div class="seg seg3">
+        <div class="seg">
           <button type="button" id="exTypeReps">Повторения</button>
-          <button type="button" id="exTypeRepsWeight">С весом</button>
           <button type="button" id="exTypeTime">Время</button>
         </div>
         <p class="field-hint" id="exTypeHint"></p>
       </div>
+      <!-- Вес — отдельный тумблер, а не третий вариант «как считать»: он сочетается
+           и с повторениями (снаряд), и со временем (удержание или перенос с грузом —
+           планка с блином, фермерская прогулка). Раньше «С весом» был третьей кнопкой
+           в этом же ряду, и добраться до «время и вес» было нечем. -->
+      <div class="pref-row"><span>Учитывать вес<small>снаряд, утяжелитель — добавится своё поле</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
       <div class="row2">
         <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="Например: 12-15"></div>
         <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
@@ -4242,6 +4252,7 @@
       <div class="modal-card">
         <span class="mini-label" id="optTitle"></span>
         <div id="optList"></div>
+        <button type="button" class="link-btn hidden" id="optReset">Сбросить</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -4581,8 +4592,11 @@ function announceExercise(step, onDone){
       text += step.side ? `, сторона ${step.side} из ${step.sidesTotal || 2}` : ', на каждую сторону';
     }
   }
-  // рабочий вес — часть задания, без него упражнение непонятно
-  if(step.progAxis === 'weight' && step.weight > 0){
+  // рабочий вес — часть задания, без него упражнение непонятно. По step.weight,
+  // а не по step.progAxis === 'weight': при формате «время и вес» ось прогрессии
+  // — 'time' (секунды растут своим шагом), но вес всё равно на снаряде и должен
+  // прозвучать.
+  if(step.weight > 0){
     const kg = fmtKg(step.weight).replace('.', ',');
     text += `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
   }
@@ -8594,30 +8608,34 @@ function trayAutoAssign(){
 /* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
 let exeIdx = -1; // индекс правимого упражнения
 
-// одно упражнение → текст в нашем формате
-function exerciseToText(ex){
-  const L = ['УПРАЖНЕНИЕ: ' + (ex.name || '')];
-  if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
-  const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
-  if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
-  if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
-  L.push('ФОРМАТ: ' + (ex.type === 'time' ? 'время' : (hasWeight(ex) ? 'повторения и вес' : 'повторения')));
-  L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
-  L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
-  if(ex.perSide) L.push('СТОРОНА: да');
-  if(ex.warmup) L.push('РАЗМИНКА: да');
-  L.push('ОТДЫХ: ' + (ex.rest || 0));
-  L.push('УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да'));
-  // ШАГ сериализуем только по осям, которые реально что-то значат для этого формата:
-  // для «повторения и вес» — оба независимо, для простых форматов — один
+// «ФОРМАТ: …» — четыре сочетания: повторения/время × без веса/с весом
+// («время и вес» — удержание или перенос с утяжелением: фермерская прогулка,
+// планка с блином, вис с утяжелителем).
+function exFormatLine(ex){
+  const axis = ex.type === 'time' ? 'время' : 'повторения';
+  return 'ФОРМАТ: ' + (hasWeight(ex) ? axis + ' и вес' : axis);
+}
+// строки УСЛОЖНЯТЬ/ВЕС/ШАГ/ПОТОЛОК/ЗАМЕНА — общие для сериализации упражнения
+// что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
+// Сериализуем только оси, которые реально что-то значат для этого формата: для
+// «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
+function exProgToLines(ex){
+  const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
       if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
-      L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-      L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
-      if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
-      if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
-      if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
+      if(ex.type === 'time'){
+        L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
+        L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+        if(+ex.timeMax > 0) L.push('ПОТОЛОК ВРЕМЕНИ: ' + ex.timeMax);
+        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+      } else {
+        L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
+        L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+        if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
+        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+        if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
+      }
     } else if(ex.type === 'time'){
       L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
       if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
@@ -8632,6 +8650,23 @@ function exerciseToText(ex){
   } else if(hasWeight(ex) && +ex.weight){
     L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
+  return L;
+}
+
+// одно упражнение → текст в нашем формате
+function exerciseToText(ex){
+  const L = ['УПРАЖНЕНИЕ: ' + (ex.name || '')];
+  if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
+  const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
+  if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
+  if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
+  L.push(exFormatLine(ex));
+  L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+  L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
+  if(ex.perSide) L.push('СТОРОНА: да');
+  if(ex.warmup) L.push('РАЗМИНКА: да');
+  L.push('ОТДЫХ: ' + (ex.rest || 0));
+  L.push(...exProgToLines(ex));
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
   return L.join('\n');
 }
@@ -8654,19 +8689,19 @@ const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 ОПИСАНИЕ: техника на «ты», 3–5 предложений
 МЫШЦЫ: группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
 ОШИБКИ: 1–2 частые ошибки (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания)
-ЗНАЧЕНИЕ: число или диапазон через дефис (10-12); для времени — секунды
-ВЕС: стартовый кг — только при ФОРМАТ «повторения и вес»
+ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
+ЗНАЧЕНИЕ: число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
+ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
 ПОДХОДЫ: число от 1 до 5
 СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
 РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
 ОТДЫХ: секунды
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
+ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
+  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При «повторения и вес» вместо него — ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
+  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
 ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
 ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
 ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
@@ -8788,18 +8823,18 @@ function exaPrompt(){
 ОПИСАНИЕ: техника выполнения на «ты», 3–5 предложений: исходное положение, само движение, дыхание, на что следить. Без воды и без ссылок.
 МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
 ОШИБКИ: 1–2 частые ошибки и чем они опасны (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания)
-ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для времени — секунды
+ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
+ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
 ПОДХОДЫ: разумное число подходов от 1 до 5
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
 ОТДЫХ: секунды отдыха после подхода
-ВЕС: стартовый кг — только при ФОРМАТ «повторения и вес»
+ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
+ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
+  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При «повторения и вес» вместо него — ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
+  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
 ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
 ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
 ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
@@ -8922,37 +8957,13 @@ function programToText(p){
       const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
-      L.push('ФОРМАТ: ' + (ex.type === 'time' ? 'время' : (hasWeight(ex) ? 'повторения и вес' : 'повторения')));
+      L.push(exFormatLine(ex));
       L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
       if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push('ОТДЫХ: ' + (ex.rest || 0));
-      L.push('УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да'));
-      // ШАГ сериализуем только по осям, которые реально что-то значат для этого формата:
-      // для «повторения и вес» — оба независимо (0 = эта ось намеренно не растёт), для простых — один
-      if(progAxis(ex) !== 'none'){
-        if(hasWeight(ex)){
-          if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
-          L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-          L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
-          if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
-          if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
-          if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
-        } else if(ex.type === 'time'){
-          L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
-          if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
-        } else {
-          L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-          if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
-        }
-        if(ex.swapOn && (ex.swapName || '').trim()){
-          L.push('ЗАМЕНА: ' + ex.swapName.trim());
-          if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
-        }
-      } else if(hasWeight(ex) && +ex.weight){
-        L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
-      }
+      L.push(...exProgToLines(ex));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -9737,6 +9748,9 @@ let storeFilter = {q: '', cat: '', level: ''};
 const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 
 // список для выбора одного варианта в своём попапе — вместо системной шторки select
+// «Цель»/«Уровень» — подпись поля, а не значение из набора: в списке её не
+// показываем, чтобы не выглядела как ещё один вариант выбора. Сброс — отдельной
+// строкой и только когда правда есть что сбрасывать.
 function openOptPicker(title, opts, cur, onPick){
   $('optTitle').textContent = title;
   const box = $('optList'); box.innerHTML = '';
@@ -9748,6 +9762,9 @@ function openOptPicker(title, opts, cur, onPick){
     b.onclick = ()=>{ $('optModal').classList.remove('open'); onPick(v); };
     box.appendChild(b);
   });
+  const reset = $('optReset');
+  setShown(reset, cur !== '');
+  reset.onclick = ()=>{ $('optModal').classList.remove('open'); onPick(''); };
   $('optModal').classList.add('open');
 }
 
@@ -9757,7 +9774,7 @@ function renderStoreFilters(){
     $(valId).textContent = cho ? cho[1] : ph;
     $(btnId).classList.toggle('ph', !cho);
     $(chevId).innerHTML = icon('chevD');
-    $(btnId).onclick = ()=> openOptPicker(ph, [['', ph]].concat(opts), cur, v => { onPick(v); renderStoreFilters(); renderStore(); });
+    $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); renderStoreFilters(); renderStore(); });
   };
   // Подписи над списками убраны: первый пункт и есть подпись — «Цель», «Уровень».
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
@@ -10393,10 +10410,12 @@ function progShort(ex){
   } else {
     const r = progStepSize(ex, 'reps');
     if(r > 0) bits.push(`+${fmtKg(r)} повт.`);
-    if(hasWeight(ex)){
-      const w = progStepSize(ex, 'weight');
-      if(w > 0) bits.push(`+${fmtKg(w)} кг`);
-    }
+  }
+  // вес — независимая ось что при повторениях, что при времени («время и вес»:
+  // фермерская прогулка, планка с блином)
+  if(hasWeight(ex)){
+    const w = progStepSize(ex, 'weight');
+    if(w > 0) bits.push(`+${fmtKg(w)} кг`);
   }
   return bits.length ? bits.join(' и ') : 'растёт';
 }
@@ -10539,7 +10558,10 @@ function progAtCeiling(pid, ex, program){
   if(axis === 'none') return false;
   // при двойной прогрессии повторы ходят по кругу, а копится вес — смотрим только на него
   if(isDualProg(ex)) return axisAtCeiling(pid, ex, program, 'weight');
-  const axes = ex.type === 'time' ? ['time'] : (hasWeight(ex) ? ['weight', 'reps'] : ['reps']);
+  // вес — независимая ось что при повторениях, что при времени («время и вес»)
+  const axes = ex.type === 'time'
+    ? (hasWeight(ex) ? ['time', 'weight'] : ['time'])
+    : (hasWeight(ex) ? ['weight', 'reps'] : ['reps']);
   const growing = axes.filter(a => progStepSize(ex, a) > 0);
   if(!growing.length) return false;
   return growing.every(a => axisAtCeiling(pid, ex, program, a));
@@ -10946,26 +10968,23 @@ function fillExercise(){
   $('exProgToggle').classList.remove('open');
 }
 
-// три таба формата: повторения / повторения и вес / время.
-// «Повторения и вес» — это ex.type='reps' + ex.trackWeight=true, отдельного поля-типа для него нет:
-// вес — это ДОПОЛНЕНИЕ к повторениям, а не отдельный формат значения.
+// «Как считать» (повторения/время) и «Учитывать вес» — независимые переключатели:
+// вес сочетается с обоими, четыре формата вместо трёх («время и вес» — удержание
+// или перенос с грузом: планка с блином, фермерская прогулка).
 function syncExType(){
   const reps = exDraft.type !== 'time';
-  // защита: формат «время» физически не совместим с весом — если trackWeight каким-то
-  // путём остался true (например, обработчик не сбросил), гасим его здесь принудительно,
-  // а не полагаемся только на то, что каждый обработчик таба не забудет это сделать
-  if(!reps && exDraft.trackWeight) exDraft.trackWeight = false;
-  const withWeight = reps && hasWeight(exDraft);
-  $('exTypeReps').classList.toggle('act', reps && !withWeight);
-  $('exTypeRepsWeight').classList.toggle('act', withWeight);
+  const withWeight = hasWeight(exDraft);
+  $('exTypeReps').classList.toggle('act', reps);
   $('exTypeTime').classList.toggle('act', !reps);
+  $('exWeightOn').classList.toggle('on', withWeight);
   $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
   $('exValue').placeholder = reps ? 'Например: 12-15' : 'Например: 45';
-  // Подпись под табами объясняет выбранный формат своими словами: «повт. + 8 кг»
-  // в списке не читалось как «повторения и килограммы вместе».
+  // Подпись объясняет выбранный формат своими словами: «повт. + 8 кг» в списке
+  // не читалось как «повторения и килограммы вместе».
   if($('exTypeHint')){
     $('exTypeHint').textContent = withWeight
-      ? 'Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.'
+      ? (reps ? 'Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.'
+              : 'Удержание или перенос с грузом — на тренировке рядом с секундами будут килограммы.')
       : (reps ? 'Считаем повторения — например «12-15».' : 'Считаем время — например «45» секунд.');
   }
   setShown('exWeightRow', withWeight);
@@ -11085,16 +11104,22 @@ function syncExNowHints(){
   // важно само значение. Диапазон считает progressedRepsRange (растит min и max порознь,
   // режет по потолку), при двойной прогрессии min===max — уже готовое число.
   const parts = [];
+  let weightChanged = false;
   if(hasWeight(probe)){
     const base = progBaseValue(probe, 'weight'), now = getExWeight(p.id, probe, p);
-    if(now > 0 && Math.abs(now - base) > 0.01) parts.push(`${fmtKg(now)} кг`);
+    weightChanged = now > 0 && Math.abs(now - base) > 0.01;
+    if(weightChanged) parts.push(`${fmtKg(now)} кг`);
   }
+  // Растёт вес, а вторая ось (повторы или секунды) сама по себе — нет (обычное
+  // дело: «время и вес» просит держать секунды на месте и добавлять только груз):
+  // всё равно показываем её рядом с весом, иначе «Сейчас 18 кг» без неё читалась
+  // так, будто сколько делать — не сказано.
   if(probe.type === 'time'){
     const base = parseValue(probe.value).min, now = getExProgValue(p.id, probe, p, 'time');
-    if(now !== base) parts.push(`${now} сек`);
+    if(now !== base || weightChanged) parts.push(`${now} сек`);
   } else {
     const base = valueText(probe.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
-    if(now !== base) parts.push(`${now} повт.`);
+    if(now !== base || weightChanged) parts.push(`${now} повт.`);
   }
   if(!parts.length){ setShown(el, false); return; }
   // «повт.» уже заканчивается точкой — не дублируем её точкой предложения
@@ -11118,12 +11143,14 @@ function syncExProgSum(){
     const s = `+${fmtKg(st)} ${unit}`;
     return withMax && mx > 0 ? `${s}, максимум ${fmtKg(mx)}` : s;
   };
-  // осей может быть две (повторения и вес) — тогда предел в строку не влезает,
-  // и сводка говорит только про прибавку: подробности — в раскрытом блоке
-  const dual = exDraft.type !== 'time' && hasWeight(exDraft);
+  // осей может быть две (вес — независимо от повторений или времени) — тогда
+  // предел в строку не влезает, и сводка говорит только про прибавку: подробности —
+  // в раскрытом блоке
+  const dual = hasWeight(exDraft);
   const bits = exDraft.type === 'time'
     ? [part('exStepTime', 'exMaxTime', 'сек', !dual)]
-    : [part('exStepReps', 'exMaxReps', 'повт.', !dual), part('exStepWeight', 'exMaxWeight', 'кг', !dual)];
+    : [part('exStepReps', 'exMaxReps', 'повт.', !dual)];
+  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', 'кг', !dual));
   const txt = bits.filter(Boolean).join(' и ');
   $('exProgSum').textContent = txt || 'настройки пустые';
 }
@@ -11460,19 +11487,19 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ОПИСАНИЕ: техника, 3–4 предложения: исходное положение, движение, что напрячь и чего избегать. Понятно даже без видео. До 600 символов.
 МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
 ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания).
-ЗНАЧЕНИЕ: число или диапазон 12-15; для времени — секунды.
-ВЕС: стартовый кг — только при ФОРМАТ «повторения и вес» (новичку 5–8 кг тяги/жимы, 3–5 кг махи).
+ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка).
+ЗНАЧЕНИЕ: число или диапазон 12-15; для «время» и «время и вес» — секунды.
+ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес» (новичку 5–8 кг тяги/жимы, 3–5 кг махи).
 ПОДХОДЫ: сколько ПОДРЯД перед следующим упражнением, 1–10 (силовые 3–4, круговые 1).
 СТОРОНА: да — считается отдельно на каждую сторону (иначе пропусти строку).
 РАЗМИНКА: да — для 2–4 первых упражнений, если нужна (иначе пропусти строку).
 ОТДЫХ: секунды после подхода (0 — без отдыха).
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При «повторения и вес» вместо ШАГ пиши ШАГ ПОВТОРОВ и/или ШАГ ВЕСА — можно оба, можно один:
+ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
+  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
   растёт только вес (обычное дело) — пиши одну ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растут только повторы — одна ШАГ ПОВТОРОВ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да — предел роста, в тех же единицах, что ЗНАЧЕНИЕ: повторения (15-25) или секунды (60-120). При «повторения и вес» вместо ПОТОЛОК пиши ПОТОЛОК ПОВТОРОВ и ПОТОЛОК ВЕСА (кг, дома обычно 10-24). Без потолка за год значения станут нереальными.
+  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
+ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста, в тех же единицах, что ЗНАЧЕНИЕ: повторения (15-25) или секунды (60-120). При формате с весом вместо ПОТОЛОК пиши ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, дома обычно 10-24). Без потолка за год значения станут нереальными.
 ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с заданным ПОТОЛОК ПОВТОРОВ. «да» — дойдя до потолка повторений, они возвращаются к началу диапазона, а вес растёт на ШАГ ВЕСА (двойная прогрессия). Для гантельных упражнений обычно «да».
 ЗАМЕНА: более сложное упражнение — на что перейти, когда потолок достигнут (отжимания с колен → классические, приседания → с гантелями). Только при УСЛОЖНЯТЬ: да.
 ОПИСАНИЕ ЗАМЕНЫ: техника этого более сложного упражнения, 2-4 предложения. Только если есть строка ЗАМЕНА.
@@ -11686,9 +11713,11 @@ function parseProgramText(txt){
         if(cur){
           const v = val.toLowerCase();
           cur.type = /врем|сек|time/.test(v) ? 'time' : 'reps';
-          // «повторения и вес» — отдельно от простых «повторения»; порядок важен: слово «вес»
-          // не должно случайно сработать на будущей строке УСЛОЖНЯТЬ, поэтому проверяем здесь и сразу
-          if(cur.type === 'reps' && /вес/.test(v)) cur.trackWeight = true;
+          // «и вес» — отдельно от простого формата, у обеих осей (повторения и
+          // время): удержание с утяжелением, фермерская прогулка на время. Порядок
+          // важен: слово «вес» не должно случайно сработать на будущей строке
+          // УСЛОЖНЯТЬ, поэтому проверяем здесь и сразу.
+          if(/вес/.test(v)) cur.trackWeight = true;
         }
         break;
       case 'ЗНАЧЕНИЕ': case 'ПОВТОРЕНИЯ': case 'СЕКУНДЫ':
@@ -12495,7 +12524,14 @@ function renderStep(){
     setShown('btnDone', true);
     setShown('btnSkip', false);
   } else {
-    setShown('stepReps', false);
+    // «время и вес» (удержание или перенос с грузом) — вес виден и на самом
+    // таймере, не только в озвучке в начале: не отдых, показывать нечего смысла нет
+    if(step.phase === 'work' && step.weight > 0){
+      $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
+      setShown('stepReps', true);
+    } else {
+      setShown('stepReps', false);
+    }
     setShown('btnDone', false);
     setShown('btnSkip', true);
     $('btnSkip').textContent = 'Пропустить';
@@ -14885,21 +14921,17 @@ async function leaveExercise(){
   goBackTo('scrBuilder');
 }
 $('exName').oninput = e => { exDraft.name = e.target.value; };
-// формат теперь трёхтабный: «повторения» и «повторения и вес» — оба type='reps',
-// различаются только trackWeight; переключение формата не трогает тумблер прогрессии,
-// но если ось «вес» стала бессмысленной (ушли с формата с весом) — переносим на «повторения»
-// != null везде вместо простой проверки на «истинность» — иначе явный 0 в шаге
-// (значит «эта ось не растёт») JS воспримет как «не задано» и подставит дефолт заново
-$('exTypeReps').onclick = ()=>{
-  exDraft.type = 'reps'; exDraft.trackWeight = false;
+// «Как считать» (повторения/время) и вес — независимы: переключение одного не
+// трогает другое. != null везде вместо простой проверки на «истинность» — иначе
+// явный 0 в шаге (значит «эта ось не растёт») JS воспримет как «не задано» и
+// подставит дефолт заново
+$('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
+$('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
+$('exWeightOn').onclick = ()=>{
+  exDraft.trackWeight = !exDraft.trackWeight;
+  if(exDraft.trackWeight && exDraft.wStep == null) exDraft.wStep = 2;
   syncExType();
 };
-$('exTypeRepsWeight').onclick = ()=>{
-  exDraft.type = 'reps'; exDraft.trackWeight = true;
-  if(exDraft.wStep == null) exDraft.wStep = 2;
-  syncExType();
-};
-$('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; exDraft.trackWeight = false; syncExType(); };
 
 $('exProgToggle').onclick = ()=>{
   const box = $('exProgBox'), open = box.classList.contains('hidden');
