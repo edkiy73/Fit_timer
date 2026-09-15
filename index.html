@@ -360,6 +360,9 @@
   .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
   body:not(.light) .field input[type=date],body:not(.light) .field input[type=time]{color-scheme:dark}
   .row2{display:flex;gap:10px;margin:0 0 16px;align-items:flex-end}
+  /* пары «прибавка + максимум»: у формата с весом их две, поэтому не flex-строка,
+     а сетка — иначе четыре поля встают в один ряд и подписи наезжают друг на друга */
+  .step-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
   .row2 .field{flex:1;min-width:0}
   .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
@@ -1356,7 +1359,7 @@
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
   /* внутри карточки разделительные линии не нужны */
   .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
-  .card-block .field,.card-block .row2{margin:0}
+  .card-block .field,.card-block .row2,.card-block .step-grid{margin:0}
   /* внутри карточки отступы задаёт только gap контейнеров */
   /* ЛЮБАЯ вложенная обёртка внутри карточки — колонка с тем же ритмом.
      gap работает только между прямыми детьми, поэтому перечисляем обёртки явно */
@@ -2965,34 +2968,43 @@
       </div>
       <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="Например: 8"></div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка и т.п.</small></span><button type="button" class="switch" id="exSide"></button></div>
-      <div class="field"><label>Отдых после подхода, сек</label>
+      <div class="field"><label>Отдых после подхода</label>
         <div class="load-row" id="exRestChips"></div>
-        <input type="number" id="exRest" min="0" max="600" inputmode="numeric" placeholder="0 — без отдыха">
+        <input type="number" id="exRest" class="hidden" min="0" max="600" inputmode="numeric" placeholder="секунд">
       </div>
     </div>
 
+    <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
+         делают по 15 повторений, здесь нечего настраивать, а раньше эти девять
+         контролов стояли посреди экрана открытыми. В заголовке — сводка.
+         Пары «прибавка + максимум» лежат ОДНИМ рядом: ось известна из формата,
+         лишние пары просто скрыты. Раньше это были три почти одинаковых блока,
+         которые приходилось держать в синхроне руками. -->
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Рост нагрузки</p></div>
-      <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
-      <div class="row2 hidden" id="exStepRow">
-        <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
-        <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
-      </div>
-      <div class="row2 hidden" id="exStepWRow">
-        <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
-        <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
-      </div>
-      <div class="row2 hidden" id="exStepTRow">
-        <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
-        <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
-      </div>
-      <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — насколько вырастет за одно повышение. «Максимум» — значение, выше которого упражнение не поднимется. Максимум можно оставить пустым, но тогда за год числа станут нереальными.</p>
-      <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
-      <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
-      <div class="stack hidden" id="exSwapBox">
-        <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
-        <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
-        <p class="field-hint">Дойдёт до максимума — на тренировке появится значок «можно усложнить» с этой подсказкой.</p>
+      <button type="button" class="collapse-head" id="exProgToggle">
+        <span>Рост нагрузки</span>
+        <span class="st-sum" id="exProgSum"></span>
+        <span class="st-chev" id="exProgChev"></span>
+      </button>
+
+      <div id="exProgBox" class="stack hidden">
+        <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
+        <div class="step-grid hidden" id="exStepRow">
+          <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
+          <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
+          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
+          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
+          <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
+        </div>
+        <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
+        <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
+        <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+        <div class="stack hidden" id="exSwapBox">
+          <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
+          <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
+          <p class="field-hint">Дойдёт до максимума — на тренировке появится значок «можно усложнить» с этой подсказкой.</p>
+        </div>
       </div>
     </div>
 
@@ -9754,9 +9766,20 @@ function normalizeExercise(ex){
   // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
   if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
   ex.weight = parseKg(ex.weight);
-  ex.wStep  = parseKg(ex.wStep) || 2;
-  ex.repsStep = Math.max(1, Math.min(20, parseInt(ex.repsStep) || 1));
-  ex.timeStep = Math.max(1, Math.min(120, parseInt(ex.timeStep) || 5));
+  // Шаг 0 — законное значение: «эта ось у этого упражнения не растёт», и именно на
+  // нём держится независимая прогрессия формата «повторения и вес» (progStepSize
+  // и подсказка «можно усложнить» уже понимают его так). Раньше здесь стоял
+  // Math.max(1, …), и явный ноль молча превращался в единицу: программа, где ИИ
+  // прислал одну «ШАГ ВЕСА» — как и просит промт, когда растёт только вес, — всё
+  // равно прибавляла по повторению за тренировку.
+  // Дефолт подставляем только там, где шага нет вовсе, и он зависит от формата.
+  const stepNum = (v, def, hi, round) => {
+    const n = parseStepNum(v);
+    return n == null ? def : Math.max(0, Math.min(hi, round(n)));
+  };
+  ex.wStep  = stepNum(ex.wStep, 2, 100, v => Math.round(v * 2) / 2);
+  ex.repsStep = stepNum(ex.repsStep, hasWeight(ex) ? 0 : 1, 20, Math.round);
+  ex.timeStep = stepNum(ex.timeStep, 5, 120, Math.round);
   // потолки: 0 = без потолка. Верхние границы отсекают явную чушь из ответа ИИ
   ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
   ex.weightMax = parseKg(ex.weightMax);
@@ -10466,6 +10489,7 @@ function fillExercise(){
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
+  restCustom = !REST_CHIPS.includes(parseInt(ex.rest) || 0);
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
@@ -10475,9 +10499,12 @@ function fillExercise(){
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
-  // детали по умолчанию свёрнуты
+  // обе раскрывашки по умолчанию свёрнуты: при открытии упражнения видно только то,
+  // без чего упражнения не существует
   setShown('exDetailsBox', false);
   $('exDetailsToggle').classList.remove('open');
+  setShown('exProgBox', false);
+  $('exProgToggle').classList.remove('open');
 }
 
 // три таба формата: повторения / повторения и вес / время.
@@ -10536,7 +10563,8 @@ function renderProgControls(){
     $('exProgOn').classList.add('disabled');
     $('exProgOn').disabled = true;
     $('exProgOnHint').textContent = 'недоступно для разминки';
-    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint'].forEach(id => setShown(id, false));
+    ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    syncExProgSum();
     return;
   }
   $('exProgOn').classList.remove('disabled');
@@ -10547,7 +10575,8 @@ function renderProgControls(){
   $('exProgOn').classList.toggle('on', on);
   if(!on){
     $('exProgOnHint').textContent = 'выключено — нагрузка остаётся прежней';
-    ['exStepRow','exStepWRow','exStepTRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    syncExProgSum();
     return;
   }
 
@@ -10557,14 +10586,14 @@ function renderProgControls(){
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
-  // каждая ось — своя пара «прибавка + потолок» в одной строке
-  setShown('exStepRow', !isTime);
+  // Пары «прибавка + потолок» живут одним рядом, показываем те, чья ось у этого
+  // упражнения вообще растёт: повторения, вес (обе сразу — это и есть двойная
+  // прогрессия) или секунды. Ось известна из формата, гадать не нужно.
+  setShown('exStepRow', true);
   setShown('exStepRepsRow', !isTime);
   setShown('exStepMaxRepsRow', !isTime);
-  setShown('exStepWRow', withWeight);
   setShown('exStepWeightRow', withWeight);
   setShown('exStepMaxWeightRow', withWeight);
-  setShown('exStepTRow', isTime);
   setShown('exStepTimeRow', isTime);
   setShown('exStepMaxTimeRow', isTime);
   // двойная прогрессия возможна только там, где есть и повторы, и вес
@@ -10580,7 +10609,7 @@ function renderProgControls(){
 
   const set = (id, val) => { if(!$(id).dataset.touched) $(id).value = val; };
   if(!isTime){
-    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : 1);
+    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : (withWeight ? 0 : 1));
     set('exMaxReps', exDraft.repsMax > 0 ? exDraft.repsMax : '');
   }
   if(withWeight){
@@ -10591,19 +10620,64 @@ function renderProgControls(){
     set('exStepTime', exDraft.timeStep != null ? exDraft.timeStep : 5);
     set('exMaxTime', exDraft.timeMax > 0 ? exDraft.timeMax : '');
   }
+  syncExProgSum();
+}
+
+// Сводка в заголовке свёрнутого блока: человек должен понимать, что внутри, не
+// открывая его. Читаем поля формы, а не exDraft: вписанное только что число ещё
+// не перенесено в черновик (перенос делает applyFormTo при сохранении).
+function syncExProgSum(){
+  if(exDraft.warmup){ $('exProgSum').textContent = 'у разминки не растёт'; return; }
+  if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = 'не растёт'; return; }
+  const num = id => parseStepNum($(id).value);
+  const part = (stepId, maxId, unit, withMax) => {
+    const st = num(stepId), mx = num(maxId);
+    if(st == null || st <= 0) return '';
+    return `+${fmtKg(st)} ${unit}` + (withMax && mx > 0 ? `, до ${fmtKg(mx)}` : '');
+  };
+  // осей может быть две (повторения и вес) — тогда потолки в строку не влезают,
+  // и сводка говорит только про шаг: подробности человек увидит, раскрыв блок
+  const dual = exDraft.type !== 'time' && hasWeight(exDraft);
+  const bits = exDraft.type === 'time'
+    ? [part('exStepTime', 'exMaxTime', 'сек', !dual)]
+    : [part('exStepReps', 'exMaxReps', 'повт.', !dual), part('exStepWeight', 'exMaxWeight', 'кг', !dual)];
+  const txt = bits.filter(Boolean).join(' и ');
+  $('exProgSum').textContent = txt || 'растёт';
 }
 
 
+// Одно значение — один видимый контрол. Раньше рядом стояли чипы и числовое поле,
+// оба про отдых: поле нужно ровно тем, кому не подходит ни один из пяти чипов,
+// и появляется оно теперь только по чипу «своё».
+const REST_CHIPS = [0, 30, 45, 60, 90];
+let restCustom = false;
 function renderExRestChips(){
+  const cur = parseInt(exDraft.rest) || 0;
+  if(!REST_CHIPS.includes(cur)) restCustom = true;
   const box = $('exRestChips'); box.innerHTML = '';
-  [0, 30, 45, 60, 90].forEach(v=>{
+  REST_CHIPS.forEach(v=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'load-chip';
     b.textContent = v === 0 ? 'без' : v + ' с';
-    b.classList.toggle('act', (parseInt(exDraft.rest) || 0) === v);
-    b.onclick = ()=>{ exDraft.rest = v; $('exRest').value = v; renderExRestChips(); };
+    b.classList.toggle('act', !restCustom && cur === v);
+    b.onclick = ()=>{
+      restCustom = false;
+      exDraft.rest = v; $('exRest').value = v;
+      renderExRestChips();
+    };
     box.appendChild(b);
   });
+  const own = document.createElement('button');
+  own.type = 'button'; own.className = 'load-chip';
+  own.textContent = restCustom ? `${cur} с` : 'своё';
+  own.classList.toggle('act', restCustom);
+  own.onclick = ()=>{
+    restCustom = true;
+    renderExRestChips();
+    $('exRest').focus();
+  };
+  box.appendChild(own);
+  setShown('exRest', restCustom);
 }
 function renderExMedia(){
   const box = $('exMediaPrev');
@@ -10641,7 +10715,7 @@ function applyFormTo(target){
       return n != null ? round(n) : def;
     };
     if(target.type !== 'time'){
-      target.repsStep = num('exStepReps', 1, Math.round);
+      target.repsStep = num('exStepReps', hasWeight(target) ? 0 : 1, Math.round);
       target.repsMax = num('exMaxReps', 0, Math.round);   // 0 = потолка нет
     }
     if(hasWeight(target)){
@@ -11019,6 +11093,14 @@ function parseProgramText(txt){
       else ex.repsMax = Math.round(n);
       delete ex._rawMax;
     }
+    // «Повторения и вес»: повторения растут, только если про них сказали явно.
+    // Промт так и просит — когда растёт только вес (обычное дело), в ответе одна
+    // строка «ШАГ ВЕСА». Раньше упражнение всё равно получало шаг повторений из
+    // заготовки пустого упражнения, и тренировка прибавляла по повторению за раз
+    // вопреки ответу: «10 повторений × 8 кг» через три повышения превращалось
+    // в «13 повторений × 14 кг».
+    if(ex.trackWeight && ex.type !== 'time' && !ex._gotRepsStep) ex.repsStep = 0;
+    delete ex._gotRepsStep;
     // двойная прогрессия имеет смысл только с весом и потолком повторов —
     // иначе неоткуда взяться моменту «повторы упёрлись, добавляем вес»
     if(ex.dualProg && !(ex.trackWeight && ex.repsMax > 0)) ex.dualProg = false;
@@ -11168,7 +11250,7 @@ function parseProgramText(txt){
       case 'ШАГ': if(cur){ const n = parseStepNum(val); if(n != null) cur._rawStep = n; } break;
       // старые раздельные ключи шага — поддержаны для устойчивости к прежнему формату текста
       case 'ШАГ ВЕСА': if(cur){ const n = parseStepNum(val); cur.wStep = n != null ? Math.round(n * 2) / 2 : 2; } break;
-      case 'ШАГ ПОВТОРОВ': if(cur){ const n = parseStepNum(val); cur.repsStep = n != null ? Math.round(n) : 1; } break;
+      case 'ШАГ ПОВТОРОВ': if(cur){ const n = parseStepNum(val); cur.repsStep = n != null ? Math.round(n) : 1; cur._gotRepsStep = true; } break;
       case 'ШАГ ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); cur.timeStep = n != null ? Math.round(n) : 5; } break;
       // потолок роста: выше него прогрессия не поднимает. Единый ключ ПОТОЛОК разбирается
       // по формату упражнения в finalizeExercise, раздельные — сразу
@@ -14102,13 +14184,18 @@ $('exTypeRepsWeight').onclick = ()=>{
 };
 $('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; exDraft.trackWeight = false; syncExType(); };
 
+$('exProgToggle').onclick = ()=>{
+  const box = $('exProgBox'), open = box.classList.contains('hidden');
+  setShown(box, open);
+  $('exProgToggle').classList.toggle('open', open);
+};
 $('exProgOn').onclick = ()=>{
   const on = !$('exProgOn').classList.contains('on');
   exDraft.progOn = on;
   if(on){
     // включили — проставляем дефолтный шаг для текущего формата, если его ещё вообще не было
     if(hasWeight(exDraft) && exDraft.wStep == null) exDraft.wStep = 2;
-    if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = 1;
+    if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = hasWeight(exDraft) ? 0 : 1;
     if(exDraft.type === 'time' && exDraft.timeStep == null) exDraft.timeStep = 5;
   }
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
@@ -14116,7 +14203,7 @@ $('exProgOn').onclick = ()=>{
   syncExDetailsSum();
 };
 ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => {
-  $(id).oninput = ()=>{ $(id).dataset.touched = '1'; };
+  $(id).oninput = ()=>{ $(id).dataset.touched = '1'; syncExProgSum(); };
 });
 $('exDual').onclick = ()=>{
   exDraft.dualProg = !exDraft.dualProg;
@@ -14283,6 +14370,7 @@ $('psBackTop').innerHTML = icon('chevL');
 $('imgBackTop').innerHTML = icon('chevL');
 $('bImagesChev').innerHTML = icon('chevR');
 $('exDetailsChev').innerHTML = icon('chevR');
+$('exProgChev').innerHTML = icon('chevR');
 $('startBackTop').innerHTML = icon('chevL');
 $('legalBackTop').innerHTML = icon('chevL');
 // экраны запроса к ИИ: одна регистрация на экран
