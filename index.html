@@ -2994,7 +2994,7 @@
         <div class="load-row" id="exRestChips"></div>
         <input type="number" id="exRest" class="hidden" min="0" max="600" inputmode="numeric" placeholder="секунд">
       </div>
-      <div class="pref-row"><span>Разминка<small>делается один раз до основной части — подходы не нужны</small></span><button type="button" class="switch" id="exWarm"></button></div>
+      <div class="pref-row"><span>Разминка<small>делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
     </div>
 
@@ -3261,7 +3261,7 @@
         <!-- Правка упражнения прямо с тренировки. Попап «Как ощущался вес?» после
              последнего подхода убран: он спрашивал про одну ось из трёх, выскакивал
              сам и уезжал по таймеру. Здесь — обычный редактор упражнения. -->
-        <div class="work-menu-wrap">
+        <div class="work-menu-wrap" id="workMenuWrap">
           <button class="btn-prev" id="workMore" title="Действия"></button>
           <div class="ctx-menu" id="workMenu"></div>
         </div>
@@ -6033,19 +6033,24 @@ function customToProgram(p, planIdx = 0){
   const warmEx = list.filter(e => e.warmup);
   const mainEx = list.filter(e => !e.warmup);
 
-  // разминка выполняется один раз, до кругов
+  // Разминка выполняется один раз, до кругов, — но внутри устроена так же, как
+  // основная часть: свои подходы и своя смена стороны. Раньше здесь жёстко стоял
+  // один подход, и заданные у разминочного упражнения подходы молча терялись.
   const warmup = [];
-  warmEx.forEach((ex, i)=>{
-    if(ex.type === 'time' && ex.perSide){
-      const a = mkWork(ex, 1, 1, 1), b = mkWork(ex, 1, 1, 2);
-      a.isWarmup = b.isWarmup = true;
-      warmup.push(a, mkSideSwitch(), b);
-    } else {
-      const w = mkWork(ex, 1, 1);
-      w.isWarmup = true;
-      warmup.push(w);
+  warmEx.forEach(ex =>{
+    const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+    const twoSides = ex.type === 'time' && ex.perSide;
+    for(let n = 1; n <= sets; n++){
+      const add = st => { st.isWarmup = true; warmup.push(st); };
+      if(twoSides){
+        add(mkWork(ex, n, sets, 1));
+        warmup.push(mkSideSwitch());
+        add(mkWork(ex, n, sets, 2));
+      } else {
+        add(mkWork(ex, n, sets));
+      }
+      if(+ex.rest > 0) warmup.push(mkRest(+ex.rest));
     }
-    if(+ex.rest > 0) warmup.push(mkRest(+ex.rest));
   });
 
   // основная часть: у каждого упражнения свои подходы
@@ -9877,7 +9882,10 @@ function blankExercise(){
 function normalizeExercise(ex){
   ex.name  = (ex.name || '').trim();
   ex.value = normValue(ex.value, ex.type);
-  ex.sets  = ex.warmup ? 1 : Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+  // Подходы у разминки принудительно сбрасывались в единицу, а поле в форме пряталось.
+  // Разминка отличается от обычного упражнения ровно одним — она идёт в начале,
+  // один раз, до кругов. Подходы и стороны у неё такие же.
+  ex.sets  = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
   ex.perSide = !!ex.perSide;
   ex.warmup  = !!ex.warmup;
   ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
@@ -10587,7 +10595,7 @@ function syncExType(){
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
 }
 function syncExWarm(){
-  setShown('exSetsField', !(exDraft.warmup));
+  setShown('exSetsField', true);
 }
 function renderExMuscles(){
   const box = $('exMuscles'); box.innerHTML = '';
@@ -11250,7 +11258,8 @@ function parseProgramText(txt){
           // не больше MAX_WARM разминочных на вариант
           const warmCount = plan.exercises.filter(e => e.warmup && e !== cur).length;
           cur.warmup = wantWarm && warmCount < MAX_WARM;
-          if(cur.warmup) cur.sets = 1;
+          // подходы у разминки больше не сбрасываются: она отличается от обычного
+          // упражнения только тем, что идёт в начале и один раз, до кругов
         }
         break;
       case 'ОТДЫХ': if(cur) cur.rest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
@@ -11860,11 +11869,16 @@ function exerciseProgressLabel(step){
 
 function renderStep(){
   clearStepTimer();
+  // На отдыхе и на смене стороны менять нечего: текущий шаг — не упражнение.
+  // Кнопка там открывала меню, которое отвечало «это упражнение не из сохранённой
+  // программы», — нажатие без результата.
+  closeAllMenus();
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
+  setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
   // на отдыхе подписи берём с последнего рабочего шага — у самого отдыха этих данных нет
   const labelStep = step.phase === 'rest' ? lastWorkStep() : step;
   // круг / разминка + подход
@@ -12183,7 +12197,7 @@ async function swapViaAI(){
     return;
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
-  normalizeExercise(got);                   // порядок важен: у разминки нормализация обнуляет подходы
+  normalizeExercise(got);
   // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
   got.progFrom = progSteps(src.p);
   if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
