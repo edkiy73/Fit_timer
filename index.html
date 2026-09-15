@@ -386,6 +386,12 @@
   .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
   .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;line-height:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .tray-item .ti-x svg{width:11px;height:11px;stroke-width:2.6}
+  /* картинка уже где-то стоит: она остаётся в списке — её можно поставить ещё раз */
+  .tray-item.used img{opacity:.42}
+  .tray-item.used::after{
+    content:'';position:absolute;inset:auto 0 0 0;height:4px;background:var(--accent);
+  }
+  .tray-item.act{border-color:var(--accent)}
   .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}
   .slot-row .sl-thumb{flex:none;width:52px;height:52px;border-radius:11px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
   .slot-row .sl-thumb img{width:100%;height:100%;object-fit:cover}
@@ -1085,7 +1091,13 @@
   /* Одного touch-action мало: жест по карточке, которая сама не прокручивается,
      браузер передаёт ближайшему прокручиваемому предку — то есть странице. Поэтому
      на время попапа страница фиксируется на своей позиции и возвращается обратно. */
-  body.modal-lock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+  /* overflow:hidden здесь НЕЛЬЗЯ. Тело — флекс-колонка с min-height:100dvh, а .app
+     внутри вырастает от содержимого и спокойно вылезает за эту высоту: на странице,
+     пролистанной на 733 точки, тело занимает −733..167, а содержимое — −733..900.
+     Пока overflow был visible, всё это рисовалось; hidden обрезал экран под попапом
+     по нижнему краю тела, и позади попапа оставалось пустое поле. Прокрутку держит
+     сам position:fixed — прокручивать документу становится нечего. */
+  body.modal-lock{position:fixed;left:0;right:0;width:100%}
   .modal.open{display:flex;animation:modalFade .2s ease}
   .modal.open .modal-card{animation:sheetUp .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
@@ -2813,10 +2825,11 @@
 
     <div class="card-block hidden" id="trayBox">
       <div class="cb-head">
-        <p class="cb-title">Ещё не разложено</p>
+        <p class="cb-title">Загружено</p>
         <span class="cb-count" id="trayCount"></span>
-        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto">Очистить</button>
+        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto">Убрать</button>
       </div>
+      <p class="field-hint" id="trayLeft"></p>
       <div class="tray" id="tray"></div>
       <button type="button" class="btn-ghost" id="trayAuto">Разложить по порядку</button>
     </div>
@@ -4833,17 +4846,43 @@ function dismissTopModal(){
 let skipPop = 0;   // наш собственный history.back(), а не жест человека
 let modalsOpen = false;
 let lockedY = 0;
+// Пока страница зафиксирована, у неё нет прокрутки — и нижняя панель кнопок,
+// которая держалась на position:sticky, теряет то, к чему прилипала: она
+// подпрыгивала вверх ровно на величину прокрутки. На экране, пролистанном на
+// треть, «Готово» с открытием любого попапа улетало на середину экрана.
+// Поэтому на время попапа панель замирает там, где её видно.
+function freezeSticky(on){
+  document.querySelectorAll('.builder-actions, .actions').forEach(el => {
+    if(on){
+      if(!el.offsetParent) return;
+      const r = el.getBoundingClientRect();
+      el.dataset.froze = '1';
+      el.style.position = 'fixed';
+      // top у fixed задаёт край ПОЛЯ, а не рамки: собственный верхний отступ
+      // панели сдвинул бы её ещё на свою величину вниз
+      el.style.margin = '0';
+      el.style.top = Math.round(r.top) + 'px';
+      el.style.left = Math.round(r.left) + 'px';
+      el.style.width = Math.round(r.width) + 'px';
+    } else if(el.dataset.froze){
+      delete el.dataset.froze;
+      el.style.position = el.style.top = el.style.left = el.style.width = el.style.margin = '';
+    }
+  });
+}
 function lockPage(on){
   const b = document.body;
   if(on === b.classList.contains('modal-lock')) return;
   if(on){
     lockedY = window.scrollY || window.pageYOffset || 0;
+    freezeSticky(true);          // замеряем ДО фиксации страницы
     b.style.top = `-${lockedY}px`;
     b.classList.add('modal-lock');
   } else {
     b.classList.remove('modal-lock');
     b.style.top = '';
     window.scrollTo(0, lockedY);
+    freezeSticky(false);
   }
 }
 new MutationObserver(()=>{
@@ -8255,17 +8294,33 @@ function closeImages(){
   show(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
 }
 
+// Какие из загруженных картинок уже где-то стоят. Раньше «разложенность» считали
+// тем, что картинка ИСЧЕЗАЛА из лотка при назначении, — и из-за этого: одну
+// картинку нельзя было поставить двум упражнениям; замена картинки у одного и
+// того же места съедала лоток по штуке за раз, а прежняя пропадала совсем; снятая
+// с упражнения картинка в лоток не возвращалась. Теперь назначение КОПИРУЕТ, а
+// лоток — просто то, что загружено.
+function trayUsed(){
+  const set = new Set();
+  imageSlots().forEach(s0 => { const v = s0.get(); if(v) set.add(v); });
+  return set;
+}
 function renderTray(){
   const box = $('tray');
   setShown('trayBox', imgTray.length);
+  const used = trayUsed();
+  const left = imgTray.filter(d => !used.has(d)).length;
   $('trayCount').textContent = imgTray.length ? `· ${imgTray.length}` : '';
+  $('trayLeft').textContent = imgTray.length
+    ? (left ? `Ещё не разложено: ${left}` : 'Все разложены — можно поставить любую ещё раз')
+    : '';
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
     const el = document.createElement('div');
-    el.className = 'tray-item';
+    el.className = 'tray-item' + (used.has(data) ? ' used' : '');
     el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
     el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
-    el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку.');
+    el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку. Одну картинку можно поставить в несколько мест.');
     box.appendChild(el);
   });
 }
@@ -8319,13 +8374,13 @@ function openSlotPicker(i){
   $('slotTitle').textContent = s.title;
   const box = $('slotTray'); box.innerHTML = '';
   setShown('slotEmptyHint', !(imgTray.length));
-  imgTray.forEach((data, ti)=>{
+  const cur = s.get();
+  imgTray.forEach(data =>{
     const el = document.createElement('div');
-    el.className = 'tray-item';
+    el.className = 'tray-item' + (data === cur ? ' act' : '');
     el.innerHTML = `<img src="${data}" alt="">`;
     el.onclick = ()=>{
-      s.set(data);
-      imgTray.splice(ti, 1);
+      s.set(data);                       // копируем, лоток не трогаем
       $('slotModal').classList.remove('open');
       renderTray(); renderSlots();
     };
@@ -8338,18 +8393,20 @@ function openSlotPicker(i){
 // раскладывает лоток по местам без картинок, по порядку
 function trayAutoAssign(){
   if(!imgTray.length){ appAlert('Сначала выбери картинки с телефона.'); return; }
-  const slots = imageSlots();
-  let used = 0;
-  for(const s of slots){
-    if(!imgTray.length) break;
+  const already = trayUsed();
+  const free = imgTray.filter(d => !already.has(d));   // раскладываем ещё не пристроенные
+  if(!free.length){ appAlert('Все загруженные картинки уже стоят по местам. Нажми на нужное место, чтобы заменить картинку.'); return; }
+  let n = 0;
+  for(const s of imageSlots()){
+    if(n >= free.length) break;
     if(s.get()) continue;          // тут уже есть картинка — не трогаем
-    s.set(imgTray.shift());
-    used++;
+    s.set(free[n++]);
   }
   renderTray(); renderSlots();
-  appAlert(used
-    ? `Подставлено картинок: ${used}.` + (imgTray.length ? ` Осталось нераспределённых: ${imgTray.length}.` : '')
-    : 'Все места уже заполнены. Нажми на нужное место, чтобы заменить картинку.');
+  const rest = free.length - n;
+  appAlert(n
+    ? `Подставлено картинок: ${n}.` + (rest ? ` Свободных мест не хватило: осталось ${rest}.` : '')
+    : 'Свободных мест нет. Нажми на нужное место, чтобы заменить картинку.');
 }
 
 /* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
@@ -14143,7 +14200,8 @@ $('imgFiles').onchange = e => {
 $('trayAuto').onclick = trayAutoAssign;
 $('trayClear').onclick = async ()=>{
   if(!imgTray.length) return;
-  if(!(await appConfirm('Убрать все нераспределённые картинки из лотка?'))) return;
+  if(!(await appDialog('Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.',
+    {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
   imgTray = []; renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
@@ -14151,7 +14209,7 @@ $('slotRemove').onclick = ()=>{
   const s = imageSlots()[slotTarget];
   if(s) s.set(null);
   $('slotModal').classList.remove('open');
-  renderSlots();
+  renderSlots(); renderTray();   // счётчик «ещё не разложено» считается по местам
 };
 $('slotFromPhone').onclick = ()=> $('slotFile').click();
 $('slotFile').onchange = e => {
