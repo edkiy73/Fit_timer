@@ -178,9 +178,12 @@
     width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
     align-items:center;justify-content:space-between;gap:12px;
     padding:10px 12px;border-radius:14px;box-sizing:border-box;
-    background:var(--panel-dark);backdrop-filter:blur(16px);
-    border:1px solid var(--panel-dark-line);
-    box-shadow:0 14px 40px rgba(0,0,0,.5);
+    /* Плашка была тёмно-серой на тёмном экране — её просто не замечали и думали,
+       что тренировка идёт. Пауза — состояние, из которого надо выйти, поэтому
+       цвет тревожный, а не нейтральный. */
+    background:var(--danger);
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
   }
   /* панель паузы выезжает снизу. Своя анимация, а не общая sheetUp: панель
      центрируется через translateX(-50%), и общий кадр «transform:none» сбросил бы
@@ -195,12 +198,12 @@
     font-size:13.5px;text-transform:uppercase;
   }
   .pause-overlay .po-sub{
-    display:block;color:rgba(255,255,255,.8);font-size:12px;margin-top:2px;
+    display:block;color:rgba(255,255,255,.88);font-size:12px;margin-top:2px;
     font-family:var(--font-text);font-weight:400;text-transform:none;letter-spacing:0;line-height:1.4;
   }
   .btn-resume{
     flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
-    background:var(--work);color:var(--on-accent);display:flex;align-items:center;justify-content:center;
+    background:#fff;color:var(--danger);display:flex;align-items:center;justify-content:center;
   }
   .btn-resume:active{transform:scale(.94)}
 
@@ -1463,37 +1466,6 @@
 
   /* рабочий вес прямо на тренировке — можно поправить, не выходя из упражнения */
 
-  /* корректировка веса после последнего подхода: не перекрывает экран и
-     сама уезжает через несколько секунд, если не трогать */
-  /* попап корректировки веса: по центру экрана — не перекрывает ни шапку, ни кнопки внизу */
-  .wa-popup{
-    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-    width:calc(100% - 40px);max-width:420px;z-index:58;box-sizing:border-box;
-    background:var(--panel-dark);backdrop-filter:blur(16px);
-    border:1px solid var(--panel-dark-line);border-radius:var(--r-md);padding:16px 14px 12px;
-    box-shadow:0 20px 50px rgba(0,0,0,.6);
-    display:flex;flex-direction:column;gap:12px;
-  }
-  .wa-popup.hidden{display:none !important}
-  .wa-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  .wa-head b{color:#fff;font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
-  .wa-head span{color:rgba(255,255,255,.7);font-size:13px}
-  .wa-row{display:flex;gap:8px}
-  .wa-btn{
-    flex:1;min-height:52px;border-radius:12px;cursor:pointer;
-    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;
-    font-family:var(--font-text);font-size:13.5px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:2px;padding:6px 4px;
-  }
-  .wa-btn small{font-size:11px;color:rgba(255,255,255,.6)}
-  .wa-btn:active{background:rgba(255,255,255,.16)}
-  .wa-btn.wa-keep{background:var(--work);border-color:var(--accent-line)}
-  /* кнопка, взведённая первым нажатием: ждёт подтверждения вторым */
-  .wa-btn.armed{background:var(--work);border-color:var(--accent-line)}
-  .wa-btn.armed small{color:rgba(255,255,255,.85)}
-  .wa-track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
-  .wa-fill{height:100%;width:100%;background:rgba(255,255,255,.55)}
-
   /* счётчик повышений на экране старта — ОДИН элемент управления, а не две
      самостоятельные кнопки с цифрой между ними: та же поверхность, рамка и радиус,
      что у полей ввода и сегментов, значение и подпись на общей базовой линии */
@@ -1540,6 +1512,8 @@
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:var(--font-text);font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:var(--on-accent);font-weight:500}
   .act-row{display:flex;gap:10px;align-items:stretch}
+  .work-menu-wrap{position:relative;flex:0 0 auto;display:flex}
+  .work-menu-wrap .ctx-menu{right:0;top:auto;bottom:calc(100% + 8px)}
   .btn-prev{flex:0 0 52px;min-height:58px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
   .btn-prev:disabled{opacity:.25}
@@ -2876,19 +2850,6 @@
     </div>
   </div>
 
-  <div class="wa-popup hidden" id="wAdjust">
-    <div class="wa-head">
-      <b id="waTitle">Как ощущался вес?</b>
-      <span id="waNow"></span>
-    </div>
-    <div class="wa-row">
-      <button type="button" class="wa-btn" id="waDown"><span id="waDownLbl">Тяжело</span><small id="waDownKg"></small></button>
-      <button type="button" class="wa-btn wa-keep" id="waKeep">Так и оставить</button>
-      <button type="button" class="wa-btn" id="waUp"><span id="waUpLbl">Легко</span><small id="waUpKg"></small></button>
-    </div>
-    <div class="wa-track"><div class="wa-fill" id="waFill"></div></div>
-  </div>
-
   <div class="modal" id="aiRunModal" data-locked="1">
     <div class="modal-card" style="text-align:center">
       <div class="ai-spin"></div>
@@ -3297,6 +3258,13 @@
         <button class="btn-prev" id="btnPause" title="Пауза"></button>
         <button class="btn-done" id="btnDone"><span>Готово</span><span data-icon="check"></span></button>
         <button class="btn-skip" id="btnSkip">Пропустить</button>
+        <!-- Правка упражнения прямо с тренировки. Попап «Как ощущался вес?» после
+             последнего подхода убран: он спрашивал про одну ось из трёх, выскакивал
+             сам и уезжал по таймеру. Здесь — обычный редактор упражнения. -->
+        <div class="work-menu-wrap">
+          <button class="btn-prev" id="workMore" title="Действия"></button>
+          <div class="ctx-menu" id="workMenu"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -4810,7 +4778,7 @@ try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:'Изменения программы', clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; }} : null,
+  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
   scrUserEdit: ()=> userDirty() ? {what:'Изменения профиля'} : null,
   scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:'Заполненный запрос'} : null
 };
@@ -4948,7 +4916,7 @@ function show(id, push = true){
   // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
   // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
   // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
-  if(show._last === 'scrExercise' && id !== 'scrExercise') dropFreshEx();
+  if(show._last === 'scrExercise' && id !== 'scrExercise'){ dropFreshEx(); exFromWork = false; }
   if(push && show._last !== id){
     navDepth++;
     try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
@@ -9943,19 +9911,6 @@ function normalizeExercise(ex){
   return ex;
 }
 
-/* ---- корректировка веса после последнего подхода ----
-   Спрашиваем один раз, когда упражнение полностью закончено: стало легко или тяжело.
-   Ничего не блокируем — окно само уезжает через несколько секунд, тренировка идёт дальше. */
-let waTimer = 0, waRAF = 0, waStep = null;
-let waArmed = 0; // −1 / +1 — кнопка, взведённая первым нажатием и ждущая подтверждения
-
-function hideWeightAdjust(){
-  clearTimeout(waTimer); waTimer = 0;
-  cancelAnimationFrame(waRAF); waRAF = 0;
-  waStep = null;
-  waArmed = 0;
-  setShown('wAdjust', false);
-}
 
 // упражнение-исходник в самой программе по названию из шага: шаг тренировки — только копия,
 // в нём нет ни потолка, ни двойной прогрессии, ни собственного старта отсчёта
@@ -9969,96 +9924,6 @@ function liveExercise(name){
   return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx]} : null;
 }
 
-// это последний подход упражнения? дальше того же упражнения в тренировке уже нет
-function isLastSetOf(idx){
-  const s = state.steps[idx];
-  if(!s || s.phase !== 'work' || s.progAxis !== 'weight') return false;
-  for(let i = idx + 1; i < state.steps.length; i++){
-    const n = state.steps[i];
-    if(n.phase === 'work' && n.exName === s.exName) return false;
-  }
-  return true;
-}
-
-// отсчёт до автозакрытия. Перезапускается после первого нажатия — чтобы хватило времени
-// на подтверждение вторым
-function waRestartTimer(){
-  const total = 5000;
-  const fill = $('waFill');
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
-  const t0 = performance.now();
-  cancelAnimationFrame(waRAF);
-  const tick = now => {
-    const left = Math.max(0, total - (now - t0));
-    fill.style.width = (left / total * 100).toFixed(1) + '%';
-    if(left > 0) waRAF = requestAnimationFrame(tick);
-  };
-  waRAF = requestAnimationFrame(tick);
-  clearTimeout(waTimer);
-  waTimer = setTimeout(hideWeightAdjust, total);
-}
-
-// подписи кнопок: обычные или «нажми ещё раз» у взведённой
-function syncWaButtons(){
-  const stepKg = waStep ? (+waStep.wStep || 2) : 2;
-  const one = (btn, lbl, kg, dir, label, sign) => {
-    const armed = waArmed === dir;
-    $(btn).classList.toggle('armed', armed);
-    $(lbl).textContent = armed ? 'Ещё раз' : label;
-    $(kg).textContent = armed ? 'подтвердить' : sign + fmtKg(stepKg) + ' кг';
-  };
-  one('waDown', 'waDownLbl', 'waDownKg', -1, 'Тяжело', '−');
-  one('waUp', 'waUpLbl', 'waUpKg', 1, 'Легко', '+');
-  // пока кнопка ждёт подтверждения, акцент должен быть только на ней одной
-  $('waKeep').classList.toggle('wa-keep', !waArmed);
-}
-
-function showWeightAdjust(step){
-  if(!step || !(step.weight > 0)) return;
-  waStep = step;
-  waArmed = 0;
-  $('waTitle').textContent = step.exName || 'Как ощущался вес?';
-  $('waNow').textContent = `сейчас ${fmtKg(step.weight)} кг`;
-  syncWaButtons();
-  setShown('wAdjust', true);
-  waRestartTimer();
-}
-
-// применяем выбор: меняем рабочий вес упражнения на будущее.
-// Первое нажатие «Тяжело»/«Легко» только взводит кнопку, второе — применяет:
-// на тренировке легко задеть экран случайно, а вес поедет на все следующие занятия.
-function applyWeightAdjust(dir){
-  if(!waStep || !state.raw) { hideWeightAdjust(); return; }
-  if(dir === 0){ hideWeightAdjust(); return; }
-  if(waArmed !== dir){
-    waArmed = dir;
-    syncWaButtons();
-    waRestartTimer();
-    return;
-  }
-  // шаг, потолок и двойная прогрессия живут в самом упражнении: собранная на лету копия
-  // их не знала и двигала вес не на ту величину
-  const src = liveExercise(waStep.exName);
-  const ex = src ? src.ex
-                 : {name: waStep.exName, prog: 'weight', weight: waStep.weightBase, wStep: waStep.wStep};
-  const pid = state.raw.id;
-  const before = getExProgValue(pid, ex, state.raw, 'weight');
-  bumpProgDelta(pid, ex, dir, 'weight');
-  const next = getExProgValue(pid, ex, state.raw, 'weight');
-  if(next === before){
-    // упёрлись в потолок упражнения (или в ноль) — копить невидимую поправку незачем
-    bumpProgDelta(pid, ex, -dir, 'weight');
-    waArmed = 0;
-    syncWaButtons();
-    $('waNow').textContent = dir > 0 ? `${fmtKg(before)} кг — это максимум` : `${fmtKg(before)} кг — меньше некуда`;
-    waRestartTimer();
-    return;
-  }
-  state.steps.forEach(s => { if(s.exName === waStep.exName && s.progAxis === 'weight') s.weight = next; });
-  speak(`Вес ${fmtKg(next).replace('.', ',')} на следующий раз`);
-  hideWeightAdjust();
-}
 
 /* ---- прогрессия по упражнению ----
    Ось усложнения у разных упражнений разная: гантельные растут по весу (дискретно,
@@ -11804,8 +11669,74 @@ function stopGlobal(){
   return total;
 }
 
+/* ---- правка упражнения прямо с тренировки ----
+   Всё встаёт на паузу, открывается обычный редактор того же упражнения. «Назад»
+   возвращает на тренировку нетронутой, «Готово» переносит правку в саму программу,
+   пересобирает оставшиеся шаги и возвращает на тот же шаг — по-прежнему на паузе. */
+let exFromWork = false;
+$('workMore').innerHTML = icon('more');
+$('workMore').onclick = e => { e.stopPropagation(); toggleMenu($('workMenu')); };
+(function buildWorkMenu(){
+  const box = $('workMenu');
+  const b = document.createElement('button');
+  b.innerHTML = icon('pencil') + 'Изменить упражнение';
+  b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); editExerciseFromWorkout(); };
+  box.appendChild(b);
+})();
+
+function editExerciseFromWorkout(){
+  const step = state.steps[state.stepIdx];
+  const src = step && liveExercise(step.exName);
+  if(!src){
+    appAlert('Это упражнение не из сохранённой программы — менять нечего.');
+    return;
+  }
+  setPause(true);
+  // редактор работает с draft: подставляем ту самую программу и тот самый вариант
+  draft = JSON.parse(JSON.stringify(src.p));
+  draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
+  delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days; delete draft.tod;
+  planIdx = (typeof state.planIdx === 'number') ? state.planIdx : 0;
+  exFromWork = true;
+  openExercise(src.idx);
+}
+
+// вернуться на тренировку; rebuild — пересобрать шаги под изменённое упражнение
+function backToWorkout(rebuild){
+  exFromWork = false;
+  if(rebuild && state.raw){
+    state.raw = customPrograms.find(p => p.id === state.raw.id) || state.raw;
+    state.current = customToProgram(state.raw, state.planIdx);
+    const cur = state.steps[state.stepIdx] || {};
+    state.steps = buildSteps();
+    // ищем тот же самый шаг по кругу, упражнению, подходу и стороне; если упражнение
+    // переименовали — остаёмся на том же месте по счёту
+    let i = state.steps.findIndex(x =>
+      x.exName === cur.exName && x.phase === cur.phase &&
+      (x.round || 0) === (cur.round || 0) &&
+      (x.setNo || 1) === (cur.setNo || 1) &&
+      (x.side || 0) === (cur.side || 0));
+    if(i < 0) i = Math.min(state.stepIdx, state.steps.length - 1);
+    state.stepIdx = Math.max(0, i);
+    renderStep();              // снимает паузу: «новый шаг всегда начинается без паузы»
+    setPause(true, true);      // но мы не начинали новый шаг, а вернулись в тот же
+  }
+  show('scrWork');
+}
+
+async function saveExToWorkout(){
+  const list = curPlan().exercises;
+  if(list[exIdx]) list[exIdx] = commitExercise();
+  const i = customPrograms.findIndex(x => x.id === draft.id);
+  if(i >= 0) customPrograms[i] = draft;
+  await savePrograms();
+  renderMine();
+  exDraft = null; exIdx = -1; exOrig = ''; exIsNew = false;
+  backToWorkout(true);
+}
+
 /* ================= ПАУЗА ================= */
-function setPause(p){
+function setPause(p, silent){
   if(p === state.paused) return;
   if(p){
     state.paused = true;
@@ -11815,6 +11746,10 @@ function setPause(p){
     state.paused = false;
   }
   document.body.classList.toggle('paused', p);
+  // Голосом отмечаем только ВХОД в паузу: на выходе и так идёт отсчёт, а второе
+  // слово поверх него только мешает. silent — когда пауза не новость: мы её и не
+  // снимали, просто вернулись из редактора упражнения.
+  if(p && !silent) speak('Пауза');
   const btn = $('btnPause');
   btn.innerHTML = icon(p ? 'play' : 'pause');
   btn.title = p ? 'Продолжить' : 'Пауза';
@@ -11871,7 +11806,6 @@ function startWorkout(fromIdx, elapsed){
 }
 
 function clearStepTimer(){
-  hideWeightAdjust(); // окно правки веса не должно пережить смену шага
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -12149,17 +12083,10 @@ function refreshDetailsFade(){
 }
 
 function nextStep(){
-  // упражнение с весом полностью закончено — предлагаем поправить вес на будущее
-  const justFinished = state.steps[state.stepIdx];
-  const askWeight = isLastSetOf(state.stepIdx);
   clearStepTimer();
   state.stepIdx++;
-  if(state.stepIdx >= state.steps.length){
-    finishWorkout();
-  } else {
-    renderStep();
-    if(askWeight) showWeightAdjust(justFinished);
-  }
+  if(state.stepIdx >= state.steps.length) finishWorkout();
+  else renderStep();
 }
 
 /* ---- подсказка «можно усложнить» ----
@@ -13499,11 +13426,6 @@ $('btnResume').onclick = ()=> setPause(false);
 $('psMinus').onclick = ()=> bumpProgSteps(-1);
 $('psPlus').onclick = ()=> bumpProgSteps(1);
 
-// правка веса теперь только через попап после последнего подхода (applyWeightAdjust) —
-// инлайновые кнопки ± на карточке упражнения убраны, чтобы не дублировать и не загромождать экран
-$('waDown').onclick = ()=> applyWeightAdjust(-1);
-$('waUp').onclick   = ()=> applyWeightAdjust(1);
-$('waKeep').onclick = ()=> applyWeightAdjust(0);
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
@@ -14395,6 +14317,7 @@ async function delExercise(){
 }
 
 function saveExAndBack(){
+  if(exFromWork){ saveExToWorkout(); return; }
   exIsNew = false;
   if(exDraft && exIdx >= 0){
     const list = curPlan().exercises;
@@ -14418,6 +14341,7 @@ async function leaveExercise(){
   }
   dropFreshEx();
   exDraft = null; exIdx = -1; exOrig = '';
+  if(exFromWork){ backToWorkout(false); return; }
   renderExList();
   show('scrBuilder');
 }
