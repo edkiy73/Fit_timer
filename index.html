@@ -275,11 +275,24 @@
 
   /* ---------- мои программы ---------- */
   .mine-card{position:relative;margin-bottom:12px}
-  .mine-card .month-card{margin-bottom:0;padding-right:66px}
-  /* Отключённая программа остаётся в списке и остаётся читаемой: гасим только
-     обложку и чипы расписания, текст не трогаем — иначе название не прочесть.
-     Само состояние сказано СЛОВОМ в чипе «Отключена», не одним лишь цветом. */
+  /* Справа в карточке живут «⋮» сверху и ручка перетаскивания снизу — обе шириной
+     34 px и в 6 px от края, то есть занимают 40 px. 66 px оставляли им лишних 26,
+     и на 360 чип «Откл» с чипом расписания «Пн · Ср · Пт» не влезали в строку из-за
+     этого запаса. 58 px держат 18 px просвета — кнопок текст по-прежнему не
+     касается, а чипы встают в одну строку. */
+  .mine-card .month-card{margin-bottom:0;padding-right:58px}
+  /* Отключённая программа остаётся в списке, но выглядит тише соседних ЦЕЛИКОМ, а
+     не одной обложкой: приглушённая картинка при названии в полном контрасте
+     читалась как «картинка не загрузилась», а не как «программа выключена».
+     Гасим обложку и опускаем название до цвета обычного текста карточки — это
+     всё ещё выше 4.5:1, название остаётся читаемым. Общий opacity на карточку не
+     ставим: он утопил бы и сам чип состояния, ради которого всё затевалось.
+     Само состояние сказано СЛОВОМ в чипе «Откл», не одним лишь цветом. */
   .mine-card.off .mc-cover{opacity:.45}
+  .mine-card.off .month-card h3{color:var(--muted)}
+  /* строку с чипами исключаем: opacity родителя дочерним :1 не отменить, и чип
+     «Откл» потускнел бы вместе со всем остальным */
+  .mine-card.off .month-card p:not(.mc-chips){opacity:.72}
   .mine-card.off .sched{background:var(--bg-2);color:var(--muted)}
   .mine-card.off .sched.off{background:var(--line);color:var(--ink);opacity:1}
   .more-btn{
@@ -469,6 +482,9 @@
     padding:8px 14px;font-size:var(--fs-sm);color:var(--muted);background:var(--card);
   }
   .chip b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  /* «Откл» рядом с объёмом программы: сообщает состояние словом, а не одним цветом */
+  .chip.chip-off{align-items:center;gap:6px;background:var(--line);color:var(--ink)}
+  .chip.chip-off svg{width:14px;height:14px;color:var(--muted)}
 
   .btn-primary{
     width:100%;min-height:56px;border:none;cursor:pointer;border-radius:var(--r-md);
@@ -2882,6 +2898,9 @@
       <div class="start-meta">
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
+        <!-- состояние программы: то же слово «Откл», что и на карточке в списке.
+             Без него выключенную программу видно только по пункту меню. -->
+        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Откл</div>
       </div>
 
       <div class="card-block hidden" id="progDescBox">
@@ -5481,8 +5500,20 @@ function buildStartMenu(){
     b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
     return b;
   };
+  const on = progActive(p);
+  setShown('startOffChip', !!p && !on);
   menu.append(
     mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
+    // тот же переключатель, что в меню карточки в списке: экран программы — второе
+    // место, где о программе думают целиком, и искать выключатель в другом списке
+    // ради одного действия человек не станет
+    mk(icon('power') + (on ? 'Отключить' : 'Включить'), async ()=>{
+      p.active = !on;
+      await savePrograms();
+      buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
+      renderMine();         // список под ним уже перерисован к возврату
+      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели — но останется в списке, и её можно запустить вручную или включить обратно.');
+    }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
@@ -10763,7 +10794,7 @@ function renderMine(){
       (done ? `<p>Пройдено раз: ${done}</p>` : '') +
       ((schedule || rotates || !on)
         ? `<p class="mc-chips">` +
-          (!on ? `<span class="sched off">${icon('power')}Отключена</span>` : '') +
+          (!on ? `<span class="sched off">${icon('power')}Откл</span>` : '') +
           (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
           (rotates ? `<span class="sched">${icon('reset')}по очереди</span>` : '') +
           `</p>`
