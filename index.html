@@ -2480,8 +2480,11 @@
     font-family:var(--font-display);font-weight:700;font-size:clamp(18px,5.5vw,23px);line-height:1;
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
-  .qs-btn span:last-child{color:var(--muted)}
-  #qsWellHint{margin-top:var(--sp-3)}
+  /* Подпись плитки тоже привязана к ширине экрана: «Ср. давление» — самая длинная
+     из шести и на 360 при 12 px уходила на вторую строку, а высота плитки в ряду
+     общая, и соседние подписи повисали не по центру. Кегль считают ОБЕ строки
+     одинаково, иначе верхний и нижний ряд разъезжаются. */
+  .qs-btn span:last-child{color:var(--muted);font-size:clamp(10.5px,2.9vw,12px)}
 
   /* Строка внутри карточки, которая ведёт на другой экран или попап: выглядит как
      соседние строки настроек, но кликается целиком. */
@@ -2763,7 +2766,6 @@
            тонометр дома есть у немногих — три тусклых «—» захламили бы главный блок
            экрана вместо того, чтобы что-то сообщить. -->
       <div class="quick-stats hidden" id="qsWell"></div>
-      <p class="field-hint hidden" id="qsWellHint">Самочувствие — в среднем за месяц</p>
     </div>
   </section>
 
@@ -7988,9 +7990,11 @@ function renderWellQuick(){
   const r1 = v => String(Math.round(v));
   const cards = [];
   // давление — одно число из двух половин, врозь «124» и «79» не читаются
-  if(a.sys != null && a.dia != null) cards.push({ico: 'gauge', val: r1(a.sys) + '/' + r1(a.dia), label: 'Давление'});
-  if(a.pulse != null) cards.push({ico: 'heart', val: r1(a.pulse), label: 'Пульс'});
-  if(a.sleep != null) cards.push({ico: 'moon', val: String(Math.round(a.sleep * 10) / 10).replace('.', ','), label: 'Сон, ч'});
+  // «Ср.» стоит в самой подписи: отдельная строка-пояснение под плитками была лишним
+  // текстом, а без неё среднее читалось как последнее измерение
+  if(a.sys != null && a.dia != null) cards.push({ico: 'gauge', val: r1(a.sys) + '/' + r1(a.dia), label: 'Ср. давление'});
+  if(a.pulse != null) cards.push({ico: 'heart', val: r1(a.pulse), label: 'Ср. пульс'});
+  if(a.sleep != null) cards.push({ico: 'moon', val: String(Math.round(a.sleep * 10) / 10).replace('.', ','), label: 'Ср. сон, ч'});
   box.innerHTML = '';
   cards.forEach(({ico, val, label}) => {
     const b = document.createElement('button');
@@ -8004,7 +8008,6 @@ function renderWellQuick(){
     box.appendChild(b);
   });
   setShown(box, !!cards.length);
-  setShown('qsWellHint', !!cards.length);
 }
 
 // счётчик добегает до значения — но только если человек не просил убрать движение
