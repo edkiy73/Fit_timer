@@ -2607,6 +2607,21 @@
   .wm-chip > b small{margin-left:3px;font-size:10.5px;font-weight:400;color:var(--muted)}
   .wm-chip.act{border-color:var(--accent-line);background:var(--accent-soft)}
   .wm-chip.act > span{color:var(--accent-ink)}
+  /* оценка дня 1–5: ряд цифр вместо числового поля — вариантов всего пять, и
+     попасть пальцем в нужный быстрее, чем открывать клавиатуру ради одной цифры */
+  .mood-field{margin-top:12px}
+  .mood-row{display:flex;gap:8px}
+  .mood-row button{
+    flex:1;min-width:0;min-height:46px;padding:0;
+    border:1px solid var(--line);border-radius:var(--r-md);background:var(--bg);
+    color:var(--ink);cursor:pointer;
+    font-family:var(--font-display);font-weight:700;font-size:17px;
+    font-variant-numeric:tabular-nums;
+  }
+  .mood-row button.act{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink)}
+  .mood-row button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+  #moodHint{min-height:17px}
+
   /* график больше не сидит в собственной рамке внутри карточки внутри карточки */
   .mc-charts .metric-graph{background:none;border:none;padding:0}
   .mc-charts .mg-head{margin-bottom:2px}
@@ -3800,6 +3815,30 @@
           <button class="mc-act" id="btnShareWeight"></button>
         </div>
       </div>
+
+      <!-- САМОЧУВСТВИЕ. Отдельная карточка, а не ещё четыре чипа к весу: это другие
+           данные и другая частота — вес записывают раз в неделю, давление и сон
+           бывают важны каждый день. Записи живут в stats.wellness, внутри уже
+           перечисленного ключа stats: нового ключа хранилища не заводим. -->
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Самочувствие</span>
+            <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
+          </div>
+          <button class="add-btn" id="btnAddWell" title="Записать"></button>
+        </div>
+        <div class="mc-empty empty-state" id="wellEmpty">
+          <span class="es-ico" data-icon="heart"></span>
+          <b>Записей пока нет</b>
+          <p>Давление, пульс, сон и оценка дня. Рядом с тренировками видно, чем отзывается нагрузка.</p>
+        </div>
+        <div class="wm-switch hidden" id="wellSwitch"></div>
+        <div class="mc-charts hidden" id="wellCharts"></div>
+        <div class="mc-actions hidden" id="wellActions">
+          <button class="mc-act" id="btnWellHist"></button>
+        </div>
+      </div>
     </div>
 
     <div class="tab-pane hidden" id="tabPhoto">
@@ -4391,6 +4430,37 @@
         <span class="mini-label">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Запись самочувствия. Все поля необязательные — как и обхваты у веса:
+         человек меряет давление не каждый день и не всегда помнит, сколько спал. -->
+    <div class="modal" id="wellModal">
+      <div class="modal-card">
+        <span class="mini-label">Как ты сегодня</span>
+        <div class="w-add on">
+          <div class="wf"><label>Давление, верхнее</label><input type="number" id="sysInput" min="70" max="250" inputmode="numeric"></div>
+          <div class="wf"><label>Нижнее</label><input type="number" id="diaInput" min="40" max="160" inputmode="numeric"></div>
+          <div class="wf"><label>Пульс в покое</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
+          <div class="wf"><label>Сон, часов</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
+        </div>
+        <!-- оценка дня — ряд цифр: из пяти вариантов выбрать быстрее, чем набрать -->
+        <div class="wf mood-field">
+          <label>Оценка дня</label>
+          <div class="mood-row" id="moodRow"></div>
+          <p class="field-hint" id="moodHint"></p>
+        </div>
+        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="wellHistModal">
+      <div class="modal-card">
+        <span class="mini-label">История самочувствия</span>
+        <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
+        <button class="btn-primary" id="wellHistSave" style="padding:14px">Сохранить</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -5210,7 +5280,7 @@ function show(id, push = true){
 // внутри приложения или системным «назад»
 function prepTab(id){
   try{
-    if(id === 'scrStats'){ renderStats(); renderWeight(); renderPhotos(); }
+    if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){ renderUsers(); }
     else if(id === 'scrSettings'){
@@ -5496,6 +5566,7 @@ async function loadData(){
   try{ stats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ stats = {totalSec:0}; }
   if(typeof stats.totalSec !== 'number') stats.totalSec = 0;
   if(!Array.isArray(stats.weights)) stats.weights = [];
+  if(!Array.isArray(stats.wellness)) stats.wellness = [];
   if(!Array.isArray(stats.history)) stats.history = [];
   if(typeof stats.count !== 'number') stats.count = 0;
   await loadProgWeights();
@@ -5543,6 +5614,7 @@ async function switchUser(id){
   renderMine();
   renderStats();
   renderWeight();
+  renderWellness();
   renderPhotos();
   syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
 }
@@ -5646,14 +5718,20 @@ function renderWeight(){
   setShown('weightCharts', have.length);
 }
 
-// один график метрики: сетка, плавная линия, заливка, подписи концов и дат
-function metricGraph(s, have){
+// Один график метрики: сетка, плавная линия, заливка, подписи концов и дат.
+// have2 — вторая линия той же метрики (нижнее давление): это не отдельная метрика,
+// а вторая половина одного числа, и врозь «120» и «80» ничего не значат.
+function metricGraph(s, have, have2){
   const W = 320, H = 148, padL = 10, padR = 10, padT = 26, padB = 26;
-  const vals = have.map(h => h[1]);
-  const first = vals[0], lastv = vals[vals.length - 1];
+  const pair = Array.isArray(have2) && have2.length === have.length ? have2 : null;
+  const vals = have.map(h => h[1]).concat(pair ? pair.map(h => h[1]) : []);
+  const first = have[0][1], lastv = have[have.length - 1][1];
   const d = Math.round((lastv - first) * 10) / 10;
   const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
-  const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`;
+  // единица в изменении бывает не та, что в значении: «5 из 5» — это оценка,
+  // а «+3 из 5» — бессмыслица, поэтому у такой метрики свой dUnit
+  const du = s.dUnit != null ? s.dUnit : s.unit;
+  const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${du || ''}`.trim();
 
   let min = Math.min(...vals), max = Math.max(...vals);
   const pad = Math.max((max - min) * 0.15, 0.5);
@@ -5664,13 +5742,18 @@ function metricGraph(s, have){
   const xy = have.map((h, i) => [Math.round(xAt(i) * 10) / 10, Math.round(yAt(h[1]) * 10) / 10]);
 
   // сглаженная линия (Catmull-Rom → Bezier)
-  let path = `M ${xy[0][0]} ${xy[0][1]}`;
-  for(let i = 0; i < xy.length - 1; i++){
-    const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    path += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0]} ${p2[1]}`;
-  }
+  const smooth = pts => {
+    let p = `M ${pts[0][0]} ${pts[0][1]}`;
+    for(let i = 0; i < pts.length - 1; i++){
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      p += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0]} ${p2[1]}`;
+    }
+    return p;
+  };
+  const path = smooth(xy);
+  const xy2 = pair ? pair.map((h, i) => [xy[i][0], Math.round(yAt(h[1]) * 10) / 10]) : null;
   const gid = 'g_' + s.k;
   const area = path + ` L ${xy[xy.length-1][0]} ${H-padB} L ${xy[0][0]} ${H-padB} Z`;
 
@@ -5685,14 +5768,18 @@ function metricGraph(s, have){
     ? `<circle cx="${xy[0][0]}" cy="${xy[0][1]}" r="4" fill="${s.color}"/>`
     : `<circle cx="${xy[0][0]}" cy="${xy[0][1]}" r="3.5" fill="${s.color}"/><circle cx="${xy[xy.length-1][0]}" cy="${xy[xy.length-1][1]}" r="4.5" fill="${s.color}"/>`;
 
-  // подписи значений у концов
+  // подписи значений у концов. У парной метрики подписываем обе половины сразу
+  // («120/80»): нижнюю линию без числа рядом всё равно не прочитать.
+  const num = v => String(v).replace('.', ',');
+  const capA = pair ? num(first) + '/' + num(pair[0][1]) : num(first);
+  const capB = pair ? num(lastv) + '/' + num(pair[pair.length - 1][1]) : num(lastv);
   let labels = '';
   const ly0 = xy[0][1] < padT + 14 ? xy[0][1] + 17 : xy[0][1] - 11;
-  labels += `<text x="${xy[0][0]}" y="${ly0}" text-anchor="start" font-size="12" font-weight="700" fill="var(--ink)">${String(first).replace('.', ',')}</text>`;
+  labels += `<text x="${xy[0][0]}" y="${ly0}" text-anchor="start" font-size="12" font-weight="700" fill="var(--ink)">${capA}</text>`;
   if(xy.length > 1){
     const lp = xy[xy.length - 1];
     const lyN = lp[1] < padT + 14 ? lp[1] + 17 : lp[1] - 11;
-    labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${String(lastv).replace('.', ',')}</text>`;
+    labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${capB}</text>`;
   }
   // даты по краям: без них график не отвечал, за какой срок это движение
   let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${shortD(have[0][0])}</text>`;
@@ -5711,12 +5798,169 @@ function metricGraph(s, have){
       ${grid}
       ${xy.length > 1 ? `<path d="${area}" fill="url(#${gid})"/>` : ''}
       ${xy.length > 1 ? `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${xy2 && xy2.length > 1 ? `<path d="${smooth(xy2)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" opacity="0.75"/>` : ''}
+      ${xy2 ? xy2.map((p, i) => (i === 0 || i === xy2.length - 1) ? `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}" opacity="0.75"/>` : '').join('') : ''}
       ${dots}
       ${labels}
       ${axis}
     </svg>
   </div>`;
 }
+/* ================= САМОЧУВСТВИЕ =================
+   Давление, пульс, сон и оценка дня. Живут в stats.wellness — внутри уже
+   перечисленного в PROFILE_KEYS ключа stats, отдельного ключа хранилища не заводим.
+   Запись — одна на день, как у веса: en = {d, sys, dia, pulse, sleep, mood}.
+   Давление — не две метрики, а одно число из двух половин: верхнее ведёт график,
+   нижнее идёт второй линией и подписывается вместе с ним («120/80»). */
+const WELL_SERIES = [
+  {k: 'sys',   pair: 'dia', color: 'var(--danger)',    label: 'Давление', unit: ''},
+  {k: 'pulse',              color: 'var(--accent-ink)', label: 'Пульс',    unit: 'уд/мин'},
+  {k: 'sleep',              color: 'var(--rest-ink)',   label: 'Сон',      unit: 'ч'},
+  {k: 'mood',               color: 'var(--warn)',       label: 'Оценка',   unit: 'из 5', dUnit: ''}
+];
+const MOOD_WORDS = ['тяжело', 'так себе', 'нормально', 'хорошо', 'отлично'];
+const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16], mood: [1, 5]};
+let wellMetric = 'sys';
+
+const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.wellness = []);
+// как метрика читается одной строкой: давление всегда парой, остальное — число с единицей
+function wellValue(en, s){
+  if(en[s.k] == null) return '';
+  const v = String(en[s.k]).replace('.', ',');
+  return s.pair && en[s.pair] != null ? v + '/' + String(en[s.pair]).replace('.', ',') : v;
+}
+
+function renderWellness(){
+  const ws = wellList();
+  $('btnWellHist').innerHTML = icon('pencil') + 'История';
+  if(!ws.length){
+    setShown('wellNowRow', false);
+    setShown('wellSwitch', false);
+    setShown('wellCharts', false);
+    setShown('wellActions', false);
+    setShown('wellEmpty', true);
+    return;
+  }
+  setShown('wellEmpty', false);
+  setShown('wellActions', true);
+  setShown('wellNowRow', true);
+
+  // доступна метрика, которую хоть раз записали, — как у веса с обхватами
+  const avail = WELL_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  if(!avail.length){ setShown('wellNowRow', false); setShown('wellSwitch', false); setShown('wellCharts', false); return; }
+  if(!avail.some(s => s.k === wellMetric)) wellMetric = avail[0].k;
+  const cur = avail.find(s => s.k === wellMetric);
+
+  $('wellSwitch').innerHTML = avail.map(s => {
+    const pts = ws.filter(p => p[s.k] != null);
+    const en = pts[pts.length - 1];
+    return `<button type="button" class="wm-chip${s.k === wellMetric ? ' act' : ''}" data-k="${s.k}">
+      <span>${s.label}</span><b>${wellValue(en, s)}${s.unit ? `<small>${s.unit}</small>` : ''}</b></button>`;
+  }).join('');
+  setShown('wellSwitch', avail.length > 1);
+
+  // крупная цифра — значение выбранной метрики: та же роль, что у веса в карточке выше
+  const pts = ws.filter(p => p[cur.k] != null);
+  const lastEn = pts[pts.length - 1];
+  $('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
+  $('wellWhen').textContent = 'запись от ' + shortD(lastEn.d);
+  $('wellWhen').style.color = 'var(--muted)';
+
+  const have = pts.map(p => [p.d, p[cur.k]]).slice(-30);
+  const have2 = cur.pair ? pts.map(p => [p.d, p[cur.pair]]).slice(-30) : null;
+  const paired = have2 && have2.every(h => h[1] != null) ? have2 : null;
+  $('wellCharts').innerHTML = have.length ? metricGraph(cur, have, paired) : '';
+  setShown('wellCharts', have.length);
+}
+
+// ---- запись самочувствия ----
+let moodPick = 0;
+function paintMood(){
+  [...$('moodRow').children].forEach(b => b.classList.toggle('act', +b.dataset.v === moodPick));
+  $('moodHint').textContent = moodPick ? `${moodPick} — ${MOOD_WORDS[moodPick - 1]}` : 'Не обязательно';
+}
+function openWellAdd(){
+  const ws = wellList();
+  const today = localISO(new Date());
+  const en = ws.find(e => e.d === today) || {};
+  // подставляем сегодняшнюю запись, если она уже есть: иначе вторая правка за день
+  // выглядела бы как новая пустая форма, а сохранение молча перетирало бы прежнюю
+  $('sysInput').value = en.sys || '';
+  $('diaInput').value = en.dia || '';
+  $('pulseInput').value = en.pulse || '';
+  $('sleepInput').value = en.sleep != null ? en.sleep : '';
+  moodPick = en.mood || 0;
+  $('moodRow').innerHTML = [1, 2, 3, 4, 5].map(v => `<button type="button" data-v="${v}">${v}</button>`).join('');
+  paintMood();
+  $('wellModal').classList.add('open');
+}
+async function saveWell(){
+  const num = (id, k) => {
+    const v = parseFloat(String($(id).value).replace(',', '.'));
+    return (!isNaN(v) && v >= WELL_LIM[k][0] && v <= WELL_LIM[k][1]) ? Math.round(v * 10) / 10 : null;
+  };
+  const sys = num('sysInput', 'sys'), dia = num('diaInput', 'dia');
+  const pulse = num('pulseInput', 'pulse'), sleep = num('sleepInput', 'sleep');
+  // половина давления бессмысленна: «верхнее 130» без нижнего не читается
+  if((sys && !dia) || (dia && !sys)){ appAlert('Давление записывают парой: верхнее и нижнее.'); return; }
+  if(!sys && !pulse && sleep == null && !moodPick){ appAlert('Заполни хотя бы одно поле.'); return; }
+  // пульс и давление — сведения о здоровье, как вес и обхваты
+  if(!hasConsent('health')) recordConsent('health');
+  const ws = wellList();
+  const today = localISO(new Date());
+  let en = ws.find(e => e.d === today);
+  if(!en){ en = {d: today}; ws.push(en); }
+  const put = (k, v) => { if(v != null) en[k] = v; else delete en[k]; };
+  put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
+  put('mood', moodPick || null);
+  ws.sort((a, b) => a.d < b.d ? -1 : 1);
+  await saveStats();
+  $('wellModal').classList.remove('open');
+  renderWellness();
+}
+
+// ---- история самочувствия: та же правка задним числом, что и у веса ----
+function openWellHist(){
+  const list = $('wellHistList'); list.innerHTML = '';
+  wellList().slice(-30).reverse().forEach(en => {
+    const row = document.createElement('div');
+    row.className = 'wh-row';
+    const [y, m, d] = en.d.split('-');
+    const cell = (k, lbl, st) => `<div class="whc"><label>${lbl}</label><input type="number" step="${st || 1}" inputmode="decimal" value="${en[k] != null ? en[k] : ''}" data-k="${k}"></div>`;
+    row.innerHTML =
+      `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
+      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<div class="wh-cells" data-d="${en.d}">` +
+        cell('sys', 'Верхнее') + cell('dia', 'Нижнее') + cell('pulse', 'Пульс') +
+        cell('sleep', 'Сон, ч', 0.5) + cell('mood', 'Оценка') +
+      `</div>`;
+    row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
+    list.appendChild(row);
+  });
+  $('wellHistModal').classList.add('open');
+}
+async function saveWellHist(){
+  const ws = wellList();
+  [...$('wellHistList').querySelectorAll('.wh-row')].forEach(row => {
+    const d = row.querySelector('.wh-cells').dataset.d;
+    const i = ws.findIndex(e => e.d === d);
+    if(i < 0) return;
+    if(row.classList.contains('del')){ ws.splice(i, 1); return; }
+    const en = ws[i];
+    Object.keys(WELL_LIM).forEach(k => {
+      const v = parseFloat(String(row.querySelector(`input[data-k=${k}]`).value).replace(',', '.'));
+      if(!isNaN(v) && v >= WELL_LIM[k][0] && v <= WELL_LIM[k][1]) en[k] = Math.round(v * 10) / 10;
+      else delete en[k];
+    });
+    // запись без единого числа — пустая строка в истории, убираем вместе с днём
+    if(!Object.keys(en).some(k => k !== 'd')) ws.splice(i, 1);
+  });
+  ws.sort((a, b) => a.d < b.d ? -1 : 1);
+  await saveStats();
+  $('wellHistModal').classList.remove('open');
+  renderWellness();
+}
+
 /* ================= ПОДГОТОВКА К ПЕРЕЕЗДУ НА СЕРВЕР =================
    Сервера ещё нет и хостинг не оплачивается. Но форма данных уже должна быть такой,
    чтобы включение синхронизации оказалось заменой одного адаптера, а не переписыванием
@@ -7442,7 +7686,7 @@ async function finishOnboardingCreate(){
   await loadData();
   await loadPhotos();
   await ensureWarmup();
-  renderUsers(); renderMine(); renderStats(); renderWeight(); renderPhotos();
+  renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
   applyTheme();
 }
 
@@ -14499,6 +14743,25 @@ $('weightSwitch').addEventListener('click', e => {
   weightMetric = b.dataset.k;
   renderWeight();
 });
+// самочувствие: тот же переключатель метрик, что и у веса
+$('wellSwitch').addEventListener('click', e => {
+  const b = e.target.closest('.wm-chip');
+  if(!b) return;
+  wellMetric = b.dataset.k;
+  renderWellness();
+});
+$('moodRow').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if(!b) return;
+  // повторное нажатие снимает оценку: поле необязательное, а очистить его иначе нечем
+  moodPick = (+b.dataset.v === moodPick) ? 0 : +b.dataset.v;
+  paintMood();
+});
+$('btnAddWell').onclick = openWellAdd;
+$('btnSaveWell').onclick = saveWell;
+$('btnWellHist').onclick = openWellHist;
+$('wellHistSave').onclick = saveWellHist;
+$('wellModal').onclick = e => { if(e.target === $('wellModal')) $('wellModal').classList.remove('open'); };
 $('btnDeleteAllPhotos').onclick = deleteAllPhotos;
 $('cmpA').onchange = renderCmp;
 $('cmpB').onchange = renderCmp;
@@ -15313,7 +15576,7 @@ $('bCoverFile').onchange = e=>{
 // и требует набрать фразу: восстановить это неоткуда.
 $('btnResetTotal').onclick = async ()=>{
   const ok = await appDialog(
-    'Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры и фото останутся.',
+    'Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры, самочувствие и фото останутся.',
     {confirm: true, okText: 'Очистить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
   );
   if(!ok) return;
@@ -15349,6 +15612,7 @@ $('storeSearchIco').innerHTML = icon('search');
 $('storeClear').innerHTML = icon('close');
 $('btnResetTotal').innerHTML = icon('reset');
 $('btnAddWeight').innerHTML = icon('plus');
+$('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
@@ -15457,6 +15721,7 @@ try{
   renderMine();
   renderStats();
   renderWeight();
+  renderWellness();
   renderPhotos();
   checkSchedules();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
