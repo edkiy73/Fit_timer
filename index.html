@@ -2473,8 +2473,11 @@
   .week-card .g-chip.ok svg{color:var(--ok)}
   .week-card .g-chip.ok span{color:var(--ok)}
 
+  /* Кегль числа привязан к ширине экрана: «138/92» в плитке давления шире любого
+     другого значения, и на 360 оно распирало свою треть — колонки двух строк
+     переставали совпадать. Обе строки считают кегль одинаково, чтобы не разойтись. */
   .qs-btn b{
-    font-family:var(--font-display);font-weight:700;font-size:23px;line-height:1;
+    font-family:var(--font-display);font-weight:700;font-size:clamp(18px,5.5vw,23px);line-height:1;
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
   .qs-btn span:last-child{color:var(--muted)}
@@ -8235,11 +8238,16 @@ function renderToday(){
     box.classList.remove('has-plan');
     const own = customPrograms.filter(p => p.id !== 'warmup').length;
     const onlyWarmup = !own && customPrograms.length > 0;
+    // расписание может быть задано и при этом не работать — если все программы
+    // выключены. «Расписание не задано» звало бы чинить то, что не сломано
+    const allOff = !!own && customPrograms.every(p => !progActive(p) || !programDaysUnion(p).length)
+                   && customPrograms.some(p => !progActive(p) && programDaysUnion(p).length);
     l.appendChild(todayRow({
       cls: 'rest info',
-      ico: 'sparkle',
-      title: own ? 'Расписание не задано' : (onlyWarmup ? 'Пока только разминка' : 'Программ пока нет'),
-      sub: own ? 'Выбери дни недели — и план появится здесь' : 'Собери свою программу за пару минут',
+      ico: allOff ? 'power' : 'sparkle',
+      title: allOff ? 'Программы отключены' : (own ? 'Расписание не задано' : (onlyWarmup ? 'Пока только разминка' : 'Программ пока нет')),
+      sub: allOff ? 'Включи любую — и план вернётся сюда'
+                  : (own ? 'Выбери дни недели — и план появится здесь' : 'Собери свою программу за пару минут'),
       action: own ? 'Открыть' : 'Создать',
       onclick: ()=> goTab('scrPrograms')
     }));
