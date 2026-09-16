@@ -6360,12 +6360,12 @@ function renderStatBadges(){
     el.innerHTML = `<i>${icon(b.ico)}</i><span></span>`;
     el.querySelector('span').textContent = b.name;
     // за что выдано — не написано нигде, а название само по себе не объясняет
-    el.onclick = ()=> appAlert(`«${b.name}» — ${b.desc.toLowerCase()}.`);
+    el.onclick = ()=> appAlert(`«${b.name}» — ${badgeDesc(b).toLowerCase()}.`);
     box.appendChild(el);
   });
   const next = BADGES.find(b => !hasBadge(b.id));
   $('badgeNext').textContent = next
-    ? `Следующее — «${next.name}»: ${next.desc.toLowerCase()}`
+    ? `Следующее — «${next.name}»: ${badgeDesc(next).toLowerCase()}`
     : 'Собраны все достижения';
 }
 
@@ -13282,6 +13282,9 @@ function finishWorkout(){
   stats.count = (stats.count || 0) + 1;
   const histEntry = {
     d: localISO(new Date()),
+    // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
+    // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
+    t: new Date(Date.now() - totalSec * 1000).getHours(),
     pid: (state.current && state.current.sourceId) || null,
     note: '', sec: totalSec, kcal: state.lastKcal || 0,
     plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
@@ -13301,6 +13304,19 @@ function finishWorkout(){
   const stk = calcStreakInfo().n;
   state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
   if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
+  // Суммарный поднятый вес: вес снаряда × нижняя граница повторов у каждого силового
+  // подхода. Копим итогом, а не считаем по истории задним числом: в истории лежат
+  // минуты и калории, а какие веса стояли в тот день, программа уже не помнит —
+  // с тех пор она могла вырасти на пять шагов прогрессии.
+  let lifted = 0;
+  (state.steps || []).forEach(s => {
+    if(s.phase !== 'work' || !(s.weight > 0)) return;
+    const reps = parseInt(String(s.reps || '').split('-')[0], 10);
+    if(reps > 0) lifted += s.weight * reps;
+  });
+  if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
+  // тренировка без рук: голос, хлопок или гарнитура — считаем сам факт, не режим
+  if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
   // сколько разных упражнений пройдено — третья цифра карточки результата
   const exNames = new Set();
   (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
@@ -13681,19 +13697,44 @@ function playFinishFx(after){
 /* Оснований у достижения должно быть столько же, сколько самих достижений: из
    прежних семнадцати тринадцать отличались только числом (шесть раз «сколько
    тренировок», четыре «сколько подряд», три «сколько часов»), и в статистике это
-   читалось как одна плашка, размноженная множителем. Теперь двенадцать штук на
-   восьми разных основаниях: количество, суммарное время, закрытая неделя, серия,
-   длина одной тренировки, разнообразие программ, возвращение после перерыва и
-   взятый потолок прогрессии.
-   Формулировки не привязаны к полу: приложением пользуются и женщины, и мужчины. */
+   читалось как одна плашка, размноженная множителем. Теперь двадцать две штуки на
+   восемнадцати разных основаниях: количество, суммарное время, закрытая неделя,
+   серия, личный рекорд серии, длина одной тренировки, разнообразие программ,
+   возвращение после перерыва, взятый потолок прогрессии, ведение веса, фото-прогресс,
+   самочувствие, заметки, раннее утро, суммарный поднятый вес, тренировка без рук,
+   второй профиль и срок, за который человек не бросил.
+   Формулировки не привязаны к полу: приложением пользуются и женщины, и мужчины.
+   desc бывает функцией — см. badgeDesc(): «Личный рекорд» обязан показывать нынешний
+   рекорд, а не застывшее число того дня, когда плашка выдалась. */
 const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
+  // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
+  {id: 'body',  ico: 'chart',    name: 'Под наблюдением',     desc: '4 записи веса или замеров',          test: () => (stats.weights || []).length >= 4},
+  {id: 'notes', ico: 'book',     name: 'Дневник',             desc: 'Заметка после тренировки',           test: () => (stats.history || []).some(h => (h.note || '').trim())},
   {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
   {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
+  {id: 'ph2',   ico: 'camera',   name: 'Было и стало',        desc: 'Два снимка прогресса',               test: () => (photos || []).length >= 2},
+  // час НАЧАЛА тренировки пишется в историю с этого обновления: у старых записей
+  // поля нет вовсе, и они просто не участвуют в проверке
+  {id: 'early', ico: 'sparkle',  name: 'Раннее утро',         desc: 'Тренировка начата до 7 утра',        test: () => (stats.history || []).some(h => h.t != null && h.t < 7)},
+  {id: 'hands', ico: 'mic',      name: 'Без рук',             desc: 'Тренировка с голосом или хлопком',   test: () => (stats.hfDone || 0) >= 1},
   {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => (stats.history || []).some(h => (h.sec || 0) >= 2700)},
   {id: 's7',    ico: 'flame',    name: 'Серия',               desc: '7 тренировок подряд по плану',       test: () => calcStreak() >= 7},
+  // Рекорд не выдаётся один раз с застывшим числом: он живёт вместе с stats.bestStreak
+  // и на следующем рекорде сам покажет новую цифру, не заводя второй плашки.
+  {id: 'record', ico: 'medal',   name: 'Личный рекорд',
+   // пока не выдано — это цель («серия из трёх»), после — нынешний рекорд. Иначе
+   // строка «следующее достижение» обещала бы «лучшая серия: 0 подряд»
+   desc: () => { const n = stats.bestStreak || 0;
+     return n >= 3 ? `Лучшая серия: ${n} ${plural(n, 'тренировка', 'тренировки', 'тренировок')} подряд`
+                   : 'Серия из 3 тренировок подряд'; },
+   test: () => (stats.bestStreak || 0) >= 3},
+  {id: 'well',  ico: 'heart',    name: 'Слушаю себя',         desc: '7 записей самочувствия',             test: () => (stats.wellness || []).length >= 7},
   {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
+  {id: 'duo',   ico: 'user',     name: 'Не в одиночку',       desc: 'Второй профиль на устройстве',       test: () => (users || []).length >= 2},
+  // не «сколько всего», а «как давно не бросил»: три разных месяца в истории
+  {id: 'season', ico: 'target',  name: 'Три месяца',          desc: 'Тренировки в трёх разных месяцах',   test: () => new Set((stats.history || []).map(h => (h.d || '').slice(0, 7)).filter(Boolean)).size >= 3},
   // Возвращение после перерыва — то, за что стоит хвалить сильнее всего: бросить
   // проще, чем начать заново. Считаем разрыв между соседними тренировками: если он
   // был две недели и после него есть ещё одна — человек вернулся.
@@ -13712,6 +13753,8 @@ const BADGES = [
         normPlans(p).some(pl => (pl.exercises || []).some(ex => !ex.warmup && progAtCeiling(p.id, ex, p))));
     }catch(e){ return false; }
   }},
+  // тоннаж копится с этого обновления (stats.totalKg): по истории его не восстановить
+  {id: 'tons',  ico: 'weight',   name: 'Десять тонн',         desc: '10 000 кг поднято за всё время',     test: () => (stats.totalKg || 0) >= 10000},
   {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
   {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 тренировок подряд по плану',      test: () => calcStreak() >= 30},
   {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100}
@@ -13735,6 +13778,9 @@ function earnBadges(){
   return fresh;
 }
 const hasBadge = id => Array.isArray(stats.badges) && stats.badges.includes(id);
+// за что выдано. У большинства это постоянная строка, но «Личный рекорд» обязан
+// говорить нынешнее число: плашка одна, а рекорд с человеком растёт.
+const badgeDesc = b => typeof b.desc === 'function' ? b.desc() : b.desc;
 
 function renderBadges(){
   const fresh = earnBadges();
@@ -13746,7 +13792,7 @@ function renderBadges(){
   $('badgeRow').innerHTML = toShow.map(b =>
     `<div class="badge${fresh.includes(b.id) ? ' new' : ''}">
        <span class="b-ico">${icon(b.ico)}</span>
-       <div class="b-txt"><b>${b.name}</b><small>${fresh.includes(b.id) ? 'Новое достижение!' : b.desc}</small></div>
+       <div class="b-txt"><b>${b.name}</b><small>${fresh.includes(b.id) ? 'Новое достижение!' : badgeDesc(b)}</small></div>
      </div>`
   ).join('');
   const si = calcStreakInfo();
