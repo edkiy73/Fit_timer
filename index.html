@@ -1750,7 +1750,12 @@
   /* колонок ровно столько, сколько влезает: с процентами состава тела замеров стало
      шесть, и жёсткие четыре колонки давали вторую строку из двух ячеек враскоряку */
   .wh-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:7px}
+  /* самочувствие — ровно три показателя в ряд; давлению шире, в нём два поля */
+  .wh-cells.wh-well{grid-template-columns:1.4fr 1fr 1fr}
   .whc{display:flex;flex-direction:column;gap:3px}
+  .whp{display:flex;align-items:center;gap:3px;min-width:0}
+  .whp input{min-width:0;padding-left:9px;padding-right:9px;text-align:center}
+  .whp i{flex:none;color:var(--muted);font-style:normal}
   .whc label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .wh-row.del{opacity:.4}
   .wh-row.del input{text-decoration:line-through}
@@ -2611,20 +2616,6 @@
   .wm-chip > b small{margin-left:3px;font-size:10.5px;font-weight:400;color:var(--muted)}
   .wm-chip.act{border-color:var(--accent-line);background:var(--accent-soft)}
   .wm-chip.act > span{color:var(--accent-ink)}
-  /* оценка дня 1–5: ряд цифр вместо числового поля — вариантов всего пять, и
-     попасть пальцем в нужный быстрее, чем открывать клавиатуру ради одной цифры */
-  .mood-field{margin-top:12px}
-  .mood-row{display:flex;gap:8px}
-  .mood-row button{
-    flex:1;min-width:0;min-height:46px;padding:0;
-    border:1px solid var(--line);border-radius:var(--r-md);background:var(--bg);
-    color:var(--ink);cursor:pointer;
-    font-family:var(--font-display);font-weight:700;font-size:17px;
-    font-variant-numeric:tabular-nums;
-  }
-  .mood-row button.act{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink)}
-  .mood-row button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
-  #moodHint{min-height:17px}
 
   /* график больше не сидит в собственной рамке внутри карточки внутри карточки */
   .mc-charts .metric-graph{background:none;border:none;padding:0}
@@ -3844,7 +3835,7 @@
           <!-- не «Записей пока нет»: ровно та же строка стоит в карточке выше, и две
                одинаковые шапки подряд читаются как одна пустая страница -->
           <b>Самочувствие не записано</b>
-          <p>Давление, пульс, сон и оценка дня. Рядом с тренировками видно, чем отзывается нагрузка.</p>
+          <p>Давление, пульс и сон. Рядом с тренировками видно, чем отзывается нагрузка.</p>
         </div>
         <div class="wm-switch hidden" id="wellSwitch"></div>
         <div class="mc-charts hidden" id="wellCharts"></div>
@@ -4457,12 +4448,6 @@
           <div class="wf"><label>Нижнее</label><input type="number" id="diaInput" min="40" max="160" inputmode="numeric"></div>
           <div class="wf"><label>Пульс в покое</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
           <div class="wf"><label>Сон, часов</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
-        </div>
-        <!-- оценка дня — ряд цифр: из пяти вариантов выбрать быстрее, чем набрать -->
-        <div class="wf mood-field">
-          <label>Оценка дня</label>
-          <div class="mood-row" id="moodRow"></div>
-          <p class="field-hint" id="moodHint"></p>
         </div>
         <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
@@ -5744,9 +5729,7 @@ function metricGraph(s, have, have2){
   const first = have[0][1], lastv = have[have.length - 1][1];
   const d = Math.round((lastv - first) * 10) / 10;
   const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
-  // единица в изменении бывает не та, что в значении: «5 из 5» — это оценка,
-  // а «+3 из 5» — бессмыслица, поэтому у такой метрики свой dUnit
-  const du = s.dUnit != null ? s.dUnit : s.unit;
+  const du = s.unit;
   const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${du || ''}`.trim();
 
   let min = Math.min(...vals), max = Math.max(...vals);
@@ -5823,19 +5806,23 @@ function metricGraph(s, have, have2){
   </div>`;
 }
 /* ================= САМОЧУВСТВИЕ =================
-   Давление, пульс, сон и оценка дня. Живут в stats.wellness — внутри уже
-   перечисленного в PROFILE_KEYS ключа stats, отдельного ключа хранилища не заводим.
-   Запись — одна на день, как у веса: en = {d, sys, dia, pulse, sleep, mood}.
+   Давление, пульс и сон. Живут в stats.wellness — внутри уже перечисленного
+   в PROFILE_KEYS ключа stats, отдельного ключа хранилища не заводим.
+   Запись — одна на день, как у веса: en = {d, sys, dia, pulse, sleep}.
    Давление — не две метрики, а одно число из двух половин: верхнее ведёт график,
-   нижнее идёт второй линией и подписывается вместе с ним («120/80»). */
+   нижнее идёт второй линией и подписывается вместе с ним («120/80»).
+
+   ОЦЕНКИ ДНЯ ЗДЕСЬ НЕТ. Три остальных показателя — измеренные числа: их даёт
+   тонометр или телефон, и они сравнимы между собой и между днями. «4 из 5» такой
+   же шкалой не является: сегодняшняя четвёрка и прошлогодняя — разные четвёрки,
+   а график из них выглядит как измерение. Поле mood в уже сохранённых записях
+   остаётся нетронутым — данные не трогаем, просто больше не показываем. */
 const WELL_SERIES = [
   {k: 'sys',   pair: 'dia', color: 'var(--danger)',    label: 'Давление', unit: ''},
   {k: 'pulse',              color: 'var(--accent-ink)', label: 'Пульс',    unit: 'уд/мин'},
-  {k: 'sleep',              color: 'var(--rest-ink)',   label: 'Сон',      unit: 'ч'},
-  {k: 'mood',               color: 'var(--warn)',       label: 'Оценка',   unit: 'из 5', dUnit: ''}
+  {k: 'sleep',              color: 'var(--rest-ink)',   label: 'Сон',      unit: 'ч'}
 ];
-const MOOD_WORDS = ['тяжело', 'так себе', 'нормально', 'хорошо', 'отлично'];
-const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16], mood: [1, 5]};
+const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16]};
 let wellMetric = 'sys';
 
 const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.wellness = []);
@@ -5906,11 +5893,6 @@ function renderWellness(){
 }
 
 // ---- запись самочувствия ----
-let moodPick = 0;
-function paintMood(){
-  [...$('moodRow').children].forEach(b => b.classList.toggle('act', +b.dataset.v === moodPick));
-  $('moodHint').textContent = moodPick ? `${moodPick} — ${MOOD_WORDS[moodPick - 1]}` : 'Не обязательно';
-}
 function openWellAdd(){
   const ws = wellList();
   const today = localISO(new Date());
@@ -5921,9 +5903,6 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  moodPick = en.mood || 0;
-  $('moodRow').innerHTML = [1, 2, 3, 4, 5].map(v => `<button type="button" data-v="${v}">${v}</button>`).join('');
-  paintMood();
   $('wellModal').classList.add('open');
 }
 async function saveWell(){
@@ -5935,7 +5914,7 @@ async function saveWell(){
   const pulse = num('pulseInput', 'pulse'), sleep = num('sleepInput', 'sleep');
   // половина давления бессмысленна: «верхнее 130» без нижнего не читается
   if((sys && !dia) || (dia && !sys)){ appAlert('Давление записывают парой: верхнее и нижнее.'); return; }
-  if(!sys && !pulse && sleep == null && !moodPick){ appAlert('Заполни хотя бы одно поле.'); return; }
+  if(!sys && !pulse && sleep == null){ appAlert('Заполни хотя бы одно поле.'); return; }
   // пульс и давление — сведения о здоровье, как вес и обхваты
   if(!hasConsent('health')) recordConsent('health');
   const ws = wellList();
@@ -5944,7 +5923,6 @@ async function saveWell(){
   if(!en){ en = {d: today}; ws.push(en); }
   const put = (k, v) => { if(v != null) en[k] = v; else delete en[k]; };
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
-  put('mood', moodPick || null);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
   $('wellModal').classList.remove('open');
@@ -5958,13 +5936,17 @@ function openWellHist(){
     const row = document.createElement('div');
     row.className = 'wh-row';
     const [y, m, d] = en.d.split('-');
-    const cell = (k, lbl, st) => `<div class="whc"><label>${lbl}</label><input type="number" step="${st || 1}" inputmode="decimal" value="${en[k] != null ? en[k] : ''}" data-k="${k}"></div>`;
+    const inp = (k, st) => `<input type="number" step="${st || 1}" inputmode="decimal" value="${en[k] != null ? en[k] : ''}" data-k="${k}">`;
+    const cell = (k, lbl, st) => `<div class="whc"><label>${lbl}</label>${inp(k, st)}</div>`;
+    // давление — одна ячейка с двумя полями через косую черту: «Верхнее» и «Нижнее»
+    // порознь выглядели как два разных показателя, и строка ехала в две ячейки враскоряку
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
       `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
-      `<div class="wh-cells" data-d="${en.d}">` +
-        cell('sys', 'Верхнее') + cell('dia', 'Нижнее') + cell('pulse', 'Пульс') +
-        cell('sleep', 'Сон, ч', 0.5) + cell('mood', 'Оценка') +
+      `<div class="wh-cells wh-well" data-d="${en.d}">` +
+        `<div class="whc"><label>Давление</label>` +
+          `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
+        cell('pulse', 'Пульс') + cell('sleep', 'Сон, ч', 0.5) +
       `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
@@ -14856,13 +14838,6 @@ $('wellSwitch').addEventListener('click', e => {
   if(!b) return;
   wellMetric = b.dataset.k;
   renderWellness();
-});
-$('moodRow').addEventListener('click', e => {
-  const b = e.target.closest('button');
-  if(!b) return;
-  // повторное нажатие снимает оценку: поле необязательное, а очистить его иначе нечем
-  moodPick = (+b.dataset.v === moodPick) ? 0 : +b.dataset.v;
-  paintMood();
 });
 $('btnAddWell').onclick = openWellAdd;
 $('btnSaveWell').onclick = saveWell;
