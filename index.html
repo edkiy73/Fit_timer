@@ -2416,6 +2416,39 @@
   .ws-day.today b{color:var(--accent-ink)}
   #weekStripHint{margin-top:var(--sp-2)}
 
+  /* ---- счёт недели ----
+     Главный вопрос карточки — «сколько из назначенного закрыто». Ответ стоит в
+     шапке крупной цифрой и повторяется полосой под днями: текстом «По плану: 1 из 4»
+     это читалось наравне с остальной серой строкой и терялось. */
+  .wk-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .panel .wk-head .ts-label{margin-bottom:0}
+  .wk-score{
+    display:inline-flex;align-items:baseline;gap:5px;flex:none;
+    font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1;
+  }
+  .wk-score b{font-size:20px;font-weight:700;color:var(--accent-ink)}
+  .wk-score span{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+  .wk-score.full b{color:var(--ok)}
+  .panel .wk-head + .week-strip{margin-top:var(--sp-3)}
+  /* полоса выполнения: доля закрытого видна раньше, чем прочитано хоть одно слово */
+  /* дорожка — var(--line), а не --bg-2: подложка карточки и --bg-2 отличаются на два
+     тона, и полоса выглядела обрывком без начала и конца */
+  .wk-bar{height:6px;border-radius:var(--r-pill);background:var(--line);overflow:hidden;margin-top:var(--sp-3)}
+  .wk-bar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--grad-accent);transition:width .55s cubic-bezier(.4,0,.2,1)}
+  .wk-bar.full i{background:var(--ok)}
+  @media (prefers-reduced-motion:reduce){.wk-bar i{transition:none}}
+  /* чипы под полосой — те же, что в приветствии: долг янтарный, закрытая неделя зелёная */
+  .wk-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+  .wk-chips:empty{display:none}
+  .panel .wk-chips{margin-top:var(--sp-3)}
+  .week-card .g-chip{background:var(--bg-2);border-color:transparent}
+  .week-card .g-chip svg{color:var(--muted)}
+  .week-card .g-chip.warn{background:var(--warn-soft);border-color:var(--warn-line)}
+  .week-card .g-chip.warn svg{color:var(--warn)}
+  .week-card .g-chip.ok{background:var(--ok-soft);border-color:var(--ok-line)}
+  .week-card .g-chip.ok svg{color:var(--ok)}
+  .week-card .g-chip.ok span{color:var(--ok)}
+
   .qs-btn b{
     font-family:var(--font-display);font-weight:700;font-size:23px;line-height:1;
     color:var(--ink);font-variant-numeric:tabular-nums;
@@ -2661,9 +2694,19 @@
     <!-- Неделя и прогресс — такие же карточки, как «План на сегодня»: раньше это
          были голые блоки на фоне страницы с подписью-заголовком сбоку, и экран
          распадался на две разные системы. Заголовок внутри карточки — тот же .ts-label. -->
+    <!-- «Сколько закрыто» и «что ещё можно закрыть» — два числа, ради которых сюда
+         смотрят. Раньше оба лежали в одной серой строке через « · » и переносились
+         в две строки мелким текстом. Теперь счёт стоит в шапке карточки, доля
+         выполненного видна полосой, а незакрытое — янтарным чипом, тем же, что и
+         «серия под угрозой»: одно незакрытое дело — один цвет по всему экрану. -->
     <div class="panel week-card">
-      <span class="ts-label">Эта неделя</span>
+      <div class="wk-head">
+        <span class="ts-label">Эта неделя</span>
+        <span class="wk-score hidden" id="weekScore"><b id="weekDone">0</b><span id="weekOf"></span></span>
+      </div>
       <div class="week-strip" id="weekStrip"></div>
+      <div class="wk-bar hidden" id="weekBar"><i id="weekBarFill"></i></div>
+      <div class="wk-chips" id="weekChips"></div>
       <p class="field-hint" id="weekStripHint"></p>
     </div>
 
@@ -7664,22 +7707,49 @@ function renderWeekStrip(){
     cell.onclick = ()=> openWeekDay(d);
     box.appendChild(cell);
   });
-  const hint = [];
-  if(!w.plannedTotal){
-    hint.push(w.anyDays
-      ? `Сделано на этой неделе: ${w.anyDays} ${plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок')}`
-      : 'Дни тренировок пока не выбраны');
-  } else {
-    // перечислять оставшиеся дни незачем: они и так помечены точками прямо над этой
-    // строкой, а в списке из трёх названий подпись переносилась в две строки
-    hint.push(`По плану: ${w.doneTotal} из ${w.plannedTotal}`);
-    if(w.doneTotal >= w.plannedTotal) hint.push('неделя закрыта');
-    // пропуск — не приговор, а незакрытое дело: неделя ещё идёт
-    else if(w.debtTotal) hint.push(`${w.debtTotal} можно отработать до воскресенья`);
+  // ---- счёт недели: цифра, полоса и чипы вместо одной серой строки через « · » ----
+  // Смысл тот же, что и был (weekPlanInfo не трогаем), но «сколько закрыто» и
+  // «что ещё можно закрыть» — разные мысли, и читаться должны раздельно.
+  const planned = w.plannedTotal, closed = planned > 0 && w.doneTotal >= planned;
+  setShown('weekScore', planned > 0);
+  setShown('weekBar', planned > 0);
+  if(planned > 0){
+    $('weekDone').textContent = w.doneTotal;
+    $('weekOf').textContent = 'из ' + planned;
+    $('weekScore').classList.toggle('full', closed);
+    $('weekBar').classList.toggle('full', closed);
+    // ширину ставим следующим кадром — иначе полоса не «дорастает», а появляется готовой
+    const fill = Math.round(100 * Math.min(1, w.doneTotal / planned)) + '%';
+    requestAnimationFrame(()=> { $('weekBarFill').style.width = fill; });
   }
-  if(w.movedTotal) hint.push(`${w.movedTotal} ${plural(w.movedTotal, 'отработана', 'отработаны', 'отработано')}`);
-  if(w.extraTotal) hint.push(`${w.extraTotal} сверх плана`);
-  $('weekStripHint').textContent = hint.join(' · ');
+
+  const chips = $('weekChips');
+  chips.innerHTML = '';
+  const chip = (ico, val, label, cls) => {
+    const el = document.createElement('span');
+    el.className = 'g-chip' + (cls ? ' ' + cls : '');
+    el.innerHTML = icon(ico) + (val === '' ? '' : '<b></b>') + '<span></span>';
+    if(val !== '') el.querySelector('b').textContent = val;
+    el.querySelector('span').textContent = label;
+    chips.appendChild(el);
+  };
+  if(planned > 0){
+    if(closed) chip('check', '', 'Неделя закрыта', 'ok');
+    // пропуск — не приговор, а незакрытое дело: неделя ещё идёт, срок — воскресенье
+    else if(w.debtTotal) chip('clock', w.debtTotal, 'можно отработать', 'warn');
+    if(w.movedTotal) chip('reset', w.movedTotal, plural(w.movedTotal, 'отработана', 'отработаны', 'отработано'));
+    // «сверх плана» без плана — пустые слова: там всё, что сделано, и есть вся неделя
+    if(w.extraTotal) chip('plus', w.extraTotal, 'сверх плана');
+  }
+
+  // подпись остаётся ровно там, где чипами не сказать: расписания ещё нет
+  const hint = !planned
+    ? (w.anyDays
+        ? `Сделано на этой неделе: ${w.anyDays} ${plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок')}`
+        : 'Дни тренировок пока не выбраны')
+    : '';
+  $('weekStripHint').textContent = hint;
+  setShown('weekStripHint', !!hint);
 }
 
 // нажатие по дню недели: что в этот день сделано — и что было назначено, если не сделано
