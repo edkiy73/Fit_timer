@@ -1248,6 +1248,9 @@
   .pm-state b{display:block;font-size:14.5px;font-weight:600}
   .pm-state small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.4}
   .quick-stats{display:flex;gap:10px}
+  /* вторая строка плиток (самочувствие) — та же сетка, свой отступ:
+     .panel не колонка с gap, ритм внутри неё задают соседские правила */
+  .quick-stats + .quick-stats{margin-top:10px}
   .qs-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font-text);font-size:12px}
   .qs-ico{width:26px;height:26px;color:var(--accent-ink)}
   .qs-ico svg{width:26px;height:26px}
@@ -2456,6 +2459,7 @@
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
   .qs-btn span:last-child{color:var(--muted)}
+  #qsWellHint{margin-top:var(--sp-3)}
 
   /* Строка внутри карточки, которая ведёт на другой экран или попап: выглядит как
      соседние строки настроек, но кликается целиком. */
@@ -2745,6 +2749,13 @@
         <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
         <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
       </div>
+      <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
+           есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
+           пульс и сон прочерками, как вес, нельзя: вес записывают почти все, а
+           тонометр дома есть у немногих — три тусклых «—» захламили бы главный блок
+           экрана вместо того, чтобы что-то сообщить. -->
+      <div class="quick-stats hidden" id="qsWell"></div>
+      <p class="field-hint hidden" id="qsWellHint">Самочувствие — в среднем за месяц</p>
     </div>
   </section>
 
@@ -4872,6 +4883,9 @@ const ICONS = {
   doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',
   shield: '<path d="M12 3l7 3v5.4c0 4.2-2.9 7.7-7 8.6-4.1-.9-7-4.4-7-8.6V6l7-3Z"/>',
   heart: '<path d="M12 20.2C9.6 18.6 4 14.6 4 10.5A3.8 3.8 0 0 1 12 8.4a3.8 3.8 0 0 1 8 2.1c0 4.1-5.6 8.1-8 9.7Z"/>',
+  // давление: шкала со стрелкой. Рядом с пульсом нужен ДРУГОЙ знак — два сердца
+  // подряд читаются как одна метрика, показанная дважды
+  gauge: '<path d="M3.5 17.5a8.5 8.5 0 1 1 17 0"/><path d="M12 17.5 16.4 12"/><circle cx="12" cy="17.7" r="1.5"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
   user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
   medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
@@ -5830,6 +5844,22 @@ function wellValue(en, s){
   if(en[s.k] == null) return '';
   const v = String(en[s.k]).replace('.', ',');
   return s.pair && en[s.pair] != null ? v + '/' + String(en[s.pair]).replace('.', ',') : v;
+}
+
+// Средние за последние 30 дней — то, что показывает главная. Именно среднее, а не
+// последняя запись: одно измерение давления ничего не говорит, а месяц — уже картина.
+// Окно жёсткое: если за месяц не записано ничего, метрики на главной нет вовсе —
+// прошлогодний пульс под заголовком «Прогресс» был бы враньём.
+function wellAvg(){
+  const from = new Date();
+  from.setDate(from.getDate() - 29);
+  const lo = localISO(from);
+  const ws = wellList().filter(e => e.d >= lo);
+  const avg = k => {
+    const v = ws.map(e => e[k]).filter(x => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+  return {sys: avg('sys'), dia: avg('dia'), pulse: avg('pulse'), sleep: avg('sleep')};
 }
 
 function renderWellness(){
@@ -7825,6 +7855,35 @@ function renderGreeting(){
   countTo('qsVal1', n);
   $('qsVal2').textContent = last && last.w ? String(last.w).replace('.', ',') : '—';
   countTo('qsVal3', (photos || []).length);
+  renderWellQuick();
+}
+
+// Вторая строка «Прогресса»: давление, пульс и сон средним за месяц.
+// Плитка появляется только под то, что человек правда записывает, — см. wellAvg().
+function renderWellQuick(){
+  const box = $('qsWell');
+  if(!box) return;
+  const a = wellAvg();
+  const r1 = v => String(Math.round(v));
+  const cards = [];
+  // давление — одно число из двух половин, врозь «124» и «79» не читаются
+  if(a.sys != null && a.dia != null) cards.push({ico: 'gauge', val: r1(a.sys) + '/' + r1(a.dia), label: 'Давление'});
+  if(a.pulse != null) cards.push({ico: 'heart', val: r1(a.pulse), label: 'Пульс'});
+  if(a.sleep != null) cards.push({ico: 'moon', val: String(Math.round(a.sleep * 10) / 10).replace('.', ','), label: 'Сон, ч'});
+  box.innerHTML = '';
+  cards.forEach(({ico, val, label}) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qs-btn';
+    b.innerHTML = `<span class="qs-ico">${icon(ico)}</span><b></b><span></span>`;
+    b.querySelector('b').textContent = val;
+    b.querySelector('span:last-child').textContent = label;
+    // самочувствие живёт во вкладке «Тело» — там же, где вес
+    b.onclick = ()=> openStats('weight');
+    box.appendChild(b);
+  });
+  setShown(box, !!cards.length);
+  setShown('qsWellHint', !!cards.length);
 }
 
 // счётчик добегает до значения — но только если человек не просил убрать движение
