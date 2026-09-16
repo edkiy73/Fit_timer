@@ -276,6 +276,12 @@
   /* ---------- мои программы ---------- */
   .mine-card{position:relative;margin-bottom:12px}
   .mine-card .month-card{margin-bottom:0;padding-right:66px}
+  /* Отключённая программа остаётся в списке и остаётся читаемой: гасим только
+     обложку и чипы расписания, текст не трогаем — иначе название не прочесть.
+     Само состояние сказано СЛОВОМ в чипе «Отключена», не одним лишь цветом. */
+  .mine-card.off .mc-cover{opacity:.45}
+  .mine-card.off .sched{background:var(--bg-2);color:var(--muted)}
+  .mine-card.off .sched.off{background:var(--line);color:var(--ink);opacity:1}
   .more-btn{
     position:absolute;top:8px;right:6px;z-index:5;
     width:34px;height:34px;border-radius:10px;border:none;background:none;
@@ -4883,6 +4889,8 @@ const ICONS = {
   // давление: шкала со стрелкой. Рядом с пульсом нужен ДРУГОЙ знак — два сердца
   // подряд читаются как одна метрика, показанная дважды
   gauge: '<path d="M3.5 17.5a8.5 8.5 0 1 1 17 0"/><path d="M12 17.5 16.4 12"/><circle cx="12" cy="17.7" r="1.5"/>',
+  // включить / отключить программу
+  power: '<path d="M12 3v9"/><path d="M6.9 6.9a7.5 7.5 0 1 0 10.2 0"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
   user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
   medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
@@ -6249,7 +6257,7 @@ const MONTH_OF = ['января','февраля','марта','апреля','�
 function calcStreakInfo(){
   const done = new Set(stats.history.map(h => h.d));
   const plan = new Set();
-  customPrograms.forEach(p => programDaysUnion(p).forEach(d => plan.add(d)));
+  customPrograms.forEach(p => planDays(p).forEach(d => plan.add(d)));
   const byPlan = plan.size > 0;
   const isPlanned = dt => plan.has(DAYS[(dt.getDay() + 6) % 7]);
   // дальше самой ранней тренировки уходить некуда — там просто нет истории
@@ -6547,6 +6555,24 @@ function programDaysUnion(p){
   const plans = normPlans(p);
   return DAYS.filter(d => plans.some(pl => (pl.days || []).includes(d)));
 }
+
+/* ---- отключённая программа ----
+   Программу бывает нужно убрать из планов, не удаляя: сезон закончился, травма,
+   переключились на другую. Удаление забирает вместе с ней всю её статистику, а
+   стереть расписание руками — значит потом набирать его заново.
+
+   Отключённая программа ОСТАЁТСЯ В СПИСКЕ и её по-прежнему можно запустить
+   руками: она не запрещена, она просто не стоит в расписании. Такая тренировка
+   попадёт в историю как «сверх плана» — слотов у программы нет, и закрывать ей
+   нечего, отдельного запрета для этого не нужно.
+
+   Поле active заводится со значением по умолчанию «включена»: у всех уже
+   сохранённых программ его нет, и `!== false` избавляет от миграции.
+   programDaysUnion остаётся ЧИСТЫМ ЧТЕНИЕМ настроек — им пользуются редактор и
+   карточка в списке, где дни надо показывать и у выключенной программы. Планы,
+   неделя, серия и уведомления спрашивают planDays(). */
+const progActive = p => !p || p.active !== false;
+const planDays = p => progActive(p) ? programDaysUnion(p) : [];
 
 // превращает выбранный план программы в тренировочный цикл
 function customToProgram(p, planIdx = 0){
@@ -8035,7 +8061,7 @@ function weekPlanInfo(date){
   const hist = stats.history || [];
 
   const slots = [];
-  customPrograms.forEach(p => programDaysUnion(p).forEach(nm => {
+  customPrograms.forEach(p => planDays(p).forEach(nm => {
     const i = DAYS.indexOf(nm);
     if(i >= 0) slots.push({pid: p.id, idx: i, from: null});
   }));
@@ -8177,7 +8203,7 @@ function openWeekDay(d){
   const title = DAY_FULL[d.idx] + ', ' + dayTitle(d.iso);
   let empty = '';
   if(!entries.length){
-    const names = customPrograms.filter(p => programDaysUnion(p).includes(d.name)).map(p => p.name);
+    const names = customPrograms.filter(p => planDays(p).includes(d.name)).map(p => p.name);
     if(d.full && d.movedFrom.length){
       // день закрыт отработкой: тренировки в нём нет, но план выполнен — иначе
       // человек видит галочку и пустой список и думает, что приложение врёт
@@ -8199,7 +8225,7 @@ function renderToday(){
   const di = (new Date().getDay() + 6) % 7;
   const today = DAYS[di];
   $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
-  const anyDays = customPrograms.some(p => programDaysUnion(p).length);
+  const anyDays = customPrograms.some(p => planDays(p).length);
   setShown(box, true);
   // раньше без расписания блок просто исчезал, и «Сегодня» оставалась пустой.
   // Теперь она всегда честно говорит, что делать дальше, и ведёт в «Тренировки».
@@ -8223,6 +8249,7 @@ function renderToday(){
   const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
   const scheduled = [];
   customPrograms.forEach(p => {
+    if(!progActive(p)) return;   // выключенная программа на сегодня не зовёт
     const plans = normPlans(p);
     if(p.rotate && plans.length > 1){
       // ротация: дни общие для программы, вариант берём очередной по очереди
@@ -8294,7 +8321,7 @@ function renderToday(){
       const d = new Date(); d.setDate(d.getDate() + i);
       const dd = DAYS[(d.getDay() + 6) % 7];
       for(const p of customPrograms){
-        if(programDaysUnion(p).includes(dd)){ next = {day: DAY_FULL[(d.getDay() + 6) % 7], p, in: i}; break; }
+        if(planDays(p).includes(dd)){ next = {day: DAY_FULL[(d.getDay() + 6) % 7], p, in: i}; break; }
       }
     }
     if(next){
@@ -8346,6 +8373,7 @@ async function exportProgram(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.cover = null;
   delete copy.stats;
+  delete copy.active;     // «отключена» — про мой список, а не про саму программу
   // фото не влезают в код — в ссылке и в тексте программы их нет
   copy.plans = normPlans(copy).map(pl => ({
     ...pl,
@@ -8376,6 +8404,7 @@ async function exportProgram(p){
 async function exportProgramFile(p){
   const copy = JSON.parse(JSON.stringify(p));
   delete copy.stats;      // чужая статистика получателю не нужна
+  delete copy.active;     // «отключена» — про мой список, а не про саму программу
   delete copy.rotIdx;     // позиция в очереди — личная
   delete copy.progLast;
   copy.plans = normPlans(copy);
@@ -10681,7 +10710,10 @@ function renderMine(){
   }
   customPrograms.forEach(p=>{
     const wrap = document.createElement('div');
-    wrap.className = 'mine-card';
+    // выключенную программу не прячем: иначе кажется, что она пропала совсем.
+    // Приглушаем и подписываем словом — одним цветом такое сообщать нельзя
+    const on = progActive(p);
+    wrap.className = 'mine-card' + (on ? '' : ' off');
     const card = document.createElement('button');
     card.className = 'month-card';
     const plans = normPlans(p);
@@ -10707,8 +10739,9 @@ function renderMine(){
       `<div class="mc-body"><h3></h3>` +
       `<p>${line1}</p>` +
       (done ? `<p>Пройдено раз: ${done}</p>` : '') +
-      ((schedule || rotates)
+      ((schedule || rotates || !on)
         ? `<p class="mc-chips">` +
+          (!on ? `<span class="sched off">${icon('power')}Отключена</span>` : '') +
           (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
           (rotates ? `<span class="sched">${icon('reset')}по очереди</span>` : '') +
           `</p>`
@@ -10727,6 +10760,20 @@ function renderMine(){
     const bEdit = document.createElement('button');
     bEdit.innerHTML = icon('pencil') + 'Изменить';
     bEdit.onclick = ()=>{ closeAllMenus(); openBuilder(p.id); };
+    // включить / отключить: рядом с «Изменить», а не рядом с «Удалить» — это
+    // не уничтожение, и путать эти два действия соседством нельзя
+    const bOff = document.createElement('button');
+    bOff.innerHTML = icon('power') + (on ? 'Отключить' : 'Включить');
+    bOff.title = on ? 'Убрать из планов, не удаляя' : 'Вернуть в расписание';
+    bOff.onclick = async ()=>{
+      closeAllMenus();
+      p.active = !on;
+      await savePrograms();
+      renderMine();
+      // объясняем только выключение: включение возвращает привычное поведение,
+      // а вот исчезновение программы из «Сегодня» без объяснения пугает
+      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели — но останется в списке, и её можно запустить вручную или включить обратно.');
+    };
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
@@ -10744,7 +10791,7 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bShare, bFile, bDel);
+    menu.append(bEdit, bOff, bShare, bFile, bDel);
     more.onclick = e=>{ e.stopPropagation(); toggleMenu(menu); };
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
@@ -12712,7 +12759,7 @@ async function saveProgram(){
   await savePrograms();
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
-  if(anyTime && programDaysUnion(draft).length && 'Notification' in window && Notification.permission === 'default'){
+  if(anyTime && planDays(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}
   }
   renderMine();
@@ -14440,7 +14487,7 @@ function checkSchedules(){
     const plansT = normPlans(p);
     const todayPlan = plansT.find(pl => (pl.days || []).includes(today));
     const useTime = (todayPlan && todayPlan.time) || p.time;
-    if(!useTime || !programDaysUnion(p).includes(today)) return;
+    if(!useTime || !planDays(p).includes(today)) return;
     const [h, m] = useTime.split(':').map(Number);
     const t = h * 60 + m;
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
@@ -15944,7 +15991,7 @@ try{
     // ярлык «Тренировка дня»: открываем сегодняшнюю невыполненную, иначе первую по расписанию
     const today = DAYS[(new Date().getDay() + 6) % 7];
     const doneT = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
-    const sched = customPrograms.filter(p => programDaysUnion(p).includes(today));
+    const sched = customPrograms.filter(p => planDays(p).includes(today));
     const pick = sched.find(p => !doneT.has(p.id)) || sched[0];
     if(pick){ openStart(pick); return; }
   }
