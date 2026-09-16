@@ -582,13 +582,21 @@
   .reps,.count{
     font-family:var(--font-display);font-weight:700;
     font-size:clamp(50px,15.5vw,72px);line-height:1;color:var(--accent-ink);
-    /* табличные цифры просим ДВАЖДЫ: font-variant-numeric понимают не все фолбэки,
-       а «00:10» → «00:09» не имеет права дёрнуть строку — рядом с таймером стоит
-       вес, и он поехал бы вместе с ней */
+    /* табличные цифры просим и стандартным способом (на случай, если браузер сам
+       умеет подставить моноширинный набор цифр из начертания) */
     font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;letter-spacing:.01em;
     display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;
     column-gap:.16em;row-gap:2px;margin:6px 0 0;min-height:1.04em;
   }
+  /* ...но полагаться только на это нельзя: не у всякого начертания цифры в принципе
+     одной ширины, и «00:10» → «00:09» дёргало таймер (а с ним и рабочий вес рядом).
+     Гарантия — не в шрифте, а в вёрстке: каждая цифра сидит в СВОЁМ инлайн-блоке
+     фиксированной ширины (tnum() ниже в JS оборачивает цифры 0-9, двоеточие и прочее
+     остаются как обычный текст). Смена символа внутри такого блока не меняет его
+     ширину, значит и строка не шевелится. Применяется к тому, что тикает: таймер
+     упражнения/отдыха и кольцо подготовки. Повторения и вес за секунду не меняются —
+     им фиксация ни к чему, там достаточно общего шрифта. */
+  .tnum-d{display:inline-block;width:.62em;text-align:center}
   /* «время и вес»: в строке остаётся один мелкий кусок «× 8 кг» справа от таймера.
      Слот высотой в целую цифру ему не нужен — с ним строка выросла бы на полсотни
      пикселей и утащила вниз всё, что под ней */
@@ -639,10 +647,13 @@
   }
   body.phase-rest .rr-arc{stroke:var(--rest)}
   body.phase-rest .ready-ring b{color:var(--rest-ink)}
-  /* Сбоку кольцу место есть не всегда: на совсем узком экране и на «времени с
-     весом», где справа от таймера уже стоит «× 8 кг». Тогда кольцо уходит под
-     правый край строки — оно живёт секунды и ничего под собой не ломает. */
-  .count-row.with-kg .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
+  /* На «времени с весом» вес и кольцо просят одно и то же место справа от таймера.
+     Раньше кольцо на это время просто падало под низ, отдельно и вразнобой —
+     подписи «× 8 кг» и кольца читались как две разные, не связанные друг с другом
+     вещи. Вместо этого на время самого отсчёта (пока кольцо видно, body.readying)
+     вес прячется — секунды на подготовку, смотреть на вес пока незачем, зато
+     кольцо встаёт ровно туда же, где обычно висит: сбоку от цифры. */
+  body.readying #stepReps{display:none}
   @media (max-width:340px){
     .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
   }
@@ -4841,8 +4852,9 @@ function runReadyBar(sec, done){
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
   setShown(box, true);
+  document.body.classList.add('readying'); // прячет вес рядом с таймером на время отсчёта — иначе им негде стоять вместе
   arc.style.strokeDashoffset = RR_LEN;   // пустое кольцо в начале
-  num.textContent = sec;
+  num.innerHTML = tnum(sec);
   beep(660, .08);
   state.readyRAF = requestAnimationFrame(function tick(now){
     if(!state.readyRAF) return; // отменили
@@ -4858,7 +4870,7 @@ function runReadyBar(sec, done){
       // кольцо заполняется к нулю: круг замкнулся — упражнение началось
       arc.style.strokeDashoffset = (left / totalMs * RR_LEN).toFixed(2);
       const s = Math.ceil(left / 1000);
-      if(s !== lastShown){ lastShown = s; num.textContent = s; beep(660, .08); }
+      if(s !== lastShown){ lastShown = s; num.innerHTML = tnum(s); beep(660, .08); }
     }
     state.readyRAF = requestAnimationFrame(tick);
   });
@@ -4868,6 +4880,7 @@ function hideReadyBar(){
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyRing');
   if(box) setShown(box, false);
+  document.body.classList.remove('readying');
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -12961,6 +12974,13 @@ function fmt(sec){
   const m = Math.floor(sec/60), s = sec%60;
   return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
+// каждая цифра — в блок фиксированной ширины (.tnum-d), чтобы смена секунды не
+// двигала строку целиком (см. комментарий у .tnum-d): двоеточие и прочее — как есть.
+// Внешний <span> — единственный флекс-элемент в .count/.reps: без него цифры сами
+// становятся элементами флекс-ряда, и column-gap рассаживает их с зазорами
+function tnum(str){
+  return '<span>' + String(str).replace(/[0-9]/g, d => `<span class="tnum-d">${d}</span>`) + '</span>';
+}
 function globalElapsed(){
   const pausedNow = state.paused ? (Date.now() - state.pausedAt) : 0;
   return Math.floor((Date.now() - state.globalStart - state.pausedTotal - pausedNow) / 1000);
@@ -13364,7 +13384,8 @@ function renderStep(){
     if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
     $('stepReps').classList.toggle('kg-side', withKg);
     setShown('stepReps', withKg);
-    // место справа от таймера занято весом — кольцу подготовки придётся встать под строкой
+    // класс нужен только вёрстке слота (.reps.kg-side чуть выше) — на позицию кольца
+    // подготовки больше не влияет, оно на время отсчёта прячет вес сам (body.readying)
     $('countRow').classList.toggle('with-kg', withKg);
     setShown('btnDone', false);
     setShown('btnSkip', true);
@@ -13379,7 +13400,7 @@ function renderStep(){
     const cd = $('countdown');
     setShown(cd, true);
     state.remaining = step.seconds;
-    cd.textContent = fmt(state.remaining);
+    cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
     const launch = ()=> state.stepTimer = setInterval(()=>{
       if(state.paused) return;
@@ -13390,7 +13411,7 @@ function renderStep(){
         nextStep();
         return;
       }
-      cd.textContent = fmt(state.remaining);
+      cd.innerHTML = tnum(fmt(state.remaining));
       if([60,45,30,15].includes(state.remaining)) announceRemaining(state.remaining);
       if(state.remaining <= 3){ cd.classList.add('warn'); tick(); }
     }, 1000);
