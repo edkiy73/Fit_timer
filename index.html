@@ -1060,10 +1060,6 @@
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
   .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-row{display:flex;flex-wrap:wrap;gap:6px}
-  /* шесть чипов отдыха в один ряд не влезали и обрезались краем карточки, а во
-     флексе одинокий перенесённый чип растягивался на всю ширину — поэтому сетка
-     с фиксированным числом колонок: «своё» переносится и остаётся чипом */
-  #exRestChips{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
   .load-chip{flex:1;padding:0 7px;min-height:33px;border-radius:11px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
@@ -3244,9 +3240,17 @@
       </div>
       <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="Например: 8"></div>
       <p class="field-hint hidden" id="exNowHint"></p>
-      <div class="field"><label>Отдых после подхода</label>
+      <!-- Два разных отдыха: между подходами ОДНОГО упражнения обычно короче, чем
+           после него целиком — например, дальше идёт совсем другая группа мышц,
+           или наоборот, лёгкое упражнение и ждать незачем. У каждого свой чип-ряд;
+           число вводится через попап #restModal, лишнего инпута в разметке нет. -->
+      <div class="field"><label>Отдых между подходами, сек</label>
         <div class="load-row" id="exRestChips"></div>
-        <input type="number" id="exRest" class="hidden" min="0" max="600" inputmode="numeric" placeholder="секунд">
+        <p class="field-hint">Между каждым подходом, если их больше одного.</p>
+      </div>
+      <div class="field"><label>Отдых после упражнения, сек</label>
+        <div class="load-row" id="exRestAfterChips"></div>
+        <p class="field-hint">После всего упражнения, перед следующим.</p>
       </div>
       <div class="pref-row"><span>Разминка<small>делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
       <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
@@ -4443,6 +4447,17 @@
         <span class="mini-label">Новое упражнение</span>
         <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши, что нужно, — подберёт нейросеть</small></span></button>
         <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Задаёшь название, формат и подходы</small></span></button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Свой отдых — общий попап на оба чип-ряда (между подходами / после
+         упражнения): какой из них открыт, помнит restModalKey. -->
+    <div class="modal" id="restModal">
+      <div class="modal-card">
+        <span class="mini-label" id="restModalTitle">Свой отдых</span>
+        <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20"></div>
+        <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px">Готово</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -6725,6 +6740,7 @@ function customToProgram(p, planIdx = 0){
   warmEx.forEach(ex =>{
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const twoSides = ex.type === 'time' && ex.perSide;
+    const restAfter = exRestAfter(ex);
     for(let n = 1; n <= sets; n++){
       const add = st => { st.isWarmup = true; warmup.push(st); };
       if(twoSides){
@@ -6734,7 +6750,10 @@ function customToProgram(p, planIdx = 0){
       } else {
         add(mkWork(ex, n, sets));
       }
-      if(+ex.rest > 0) warmup.push(mkRest(+ex.rest));
+      // между подходами одного упражнения — ex.rest, после последнего (следующее
+      // упражнение или конец разминки) — свой отдых «после упражнения»
+      const restSec = n === sets ? restAfter : (+ex.rest || 0);
+      if(restSec > 0) warmup.push(mkRest(restSec));
     }
   });
 
@@ -6744,6 +6763,7 @@ function customToProgram(p, planIdx = 0){
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const isLastEx = i === mainEx.length - 1;
     const twoSides = ex.type === 'time' && ex.perSide; // на время и на каждую сторону
+    const restAfter = exRestAfter(ex);
     for(let s = 1; s <= sets; s++){
       if(twoSides){
         // каждая сторона отрабатывается полностью, между ними — пауза на смену
@@ -6754,9 +6774,13 @@ function customToProgram(p, planIdx = 0){
         cycle.push(mkWork(ex, s, sets));
       }
       const isLastSet = s === sets;
-      // после самого последнего подхода последнего упражнения личный отдых не ставим —
-      // там сработает отдых между кругами
-      if(!(isLastEx && isLastSet) && +ex.rest > 0) cycle.push(mkRest(+ex.rest));
+      // после самого последнего подхода самого последнего упражнения личный отдых
+      // не ставим — там сработает отдых между кругами. Между подходами одного
+      // упражнения — ex.rest, после последнего подхода (переход к следующему
+      // упражнению) — свой отдых «после упражнения».
+      if(isLastEx && isLastSet) continue;
+      const restSec = isLastSet ? restAfter : (+ex.rest || 0);
+      if(restSec > 0) cycle.push(mkRest(restSec));
     }
   });
 
@@ -9353,6 +9377,16 @@ function exFormatLine(ex){
   const axis = ex.type === 'time' ? 'время' : 'повторения';
   return 'ФОРМАТ: ' + (hasWeight(ex) ? axis + ' и вес' : axis);
 }
+// ОТДЫХ — между подходами (как раньше). Вторую строку, «после упражнения»,
+// пишем только когда она реально отличается: у большинства упражнений отдых
+// после — то же число, и не указанное явно поле само возьмёт его в качестве
+// запасного варианта (exRestAfter) — не нужно засорять текст повтором.
+function exRestLines(ex){
+  const L = ['ОТДЫХ: ' + (ex.rest || 0)];
+  const after = exRestAfter(ex);
+  if(after !== (+ex.rest || 0)) L.push('ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: ' + after);
+  return L;
+}
 // строки УСЛОЖНЯТЬ/ВЕС/ШАГ/ПОТОЛОК/ЗАМЕНА — общие для сериализации упражнения
 // что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
 // Сериализуем только оси, которые реально что-то значат для этого формата: для
@@ -9403,7 +9437,7 @@ function exerciseToText(ex){
   L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
-  L.push('ОТДЫХ: ' + (ex.rest || 0));
+  L.push(...exRestLines(ex));
   L.push(...exProgToLines(ex));
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
   return L.join('\n');
@@ -9433,7 +9467,8 @@ const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 ПОДХОДЫ: число от 1 до 5
 СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
 РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
-ОТДЫХ: секунды
+ОТДЫХ: секунды между подходами одного упражнения
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку: возьмётся то же число). Обычно больше — смена движения или группы мышц требует времени.
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
 ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
   При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
@@ -9565,7 +9600,8 @@ function exaPrompt(){
 ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
 ПОДХОДЫ: разумное число подходов от 1 до 5
 СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
-ОТДЫХ: секунды отдыха после подхода
+ОТДЫХ: секунды между подходами одного упражнения
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку). Обычно больше — смена движения или группы мышц требует времени.
 ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
 ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
@@ -9700,7 +9736,7 @@ function programToText(p){
       if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
-      L.push('ОТДЫХ: ' + (ex.rest || 0));
+      L.push(...exRestLines(ex));
       L.push(...exProgToLines(ex));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
@@ -10977,7 +11013,7 @@ let draft = null;
 
 function blankExercise(){
   return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
-          rest:45, media:null, muscles:[], mistakes:'',
+          rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
           prog:'', weight:0, wStep:2, repsStep:1, timeStep:5,
@@ -11004,6 +11040,10 @@ function normalizeExercise(ex){
   ex.perSide = !!ex.perSide;
   ex.warmup  = !!ex.warmup;
   ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
+  // отдых после ВСЕГО упражнения (перед следующим) — своё число, независимое от
+  // отдыха между подходами. null = не задан явно: кто читает это поле, берёт
+  // rest как запасной вариант (см. exRestAfter() и paint в buildSteps)
+  ex.restAfter = ex.restAfter == null ? null : Math.max(0, Math.min(600, parseInt(ex.restAfter) || 0));
   // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
   if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
   ex.weight = parseKg(ex.weight);
@@ -11089,6 +11129,14 @@ function hasWeight(ex){
   if(ex.trackWeight != null) return !!ex.trackWeight;
   if(ex.progOn != null) return false;          // новая модель, но формат без веса
   return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
+}
+// отдых после ВСЕГО упражнения (перед следующим), а не между его подходами.
+// У старых упражнений (и когда явно не задан) поле пустое — запасной вариант
+// тогда тот же, что и между подходами: разное число нужно не всем, и лучше
+// молча унаследовать разумное значение, чем ломать программу или писать 0.
+function exRestAfter(ex){
+  if(!ex) return 0;
+  return ex.restAfter != null ? +ex.restAfter : (+ex.rest || 0);
 }
 // для редактора: текущее состояние упражнения в терминах простого интерфейса —
 // какой формат выбран и включён ли тумблер «усложнять со временем»
@@ -11674,6 +11722,11 @@ function openExercise(i, isNew){
     exDraft.progOn = progAxis(exDraft) !== 'none';
     exDraft.trackWeight = hasWeight(exDraft);
   }
+  // старые упражнения (и только что заведённые) не знают «отдых после упражнения»
+  // отдельно от «между подходами» — на первое открытие подставляем то же число,
+  // что и в rest, тем же приёмом, что и progOn/trackWeight выше. С этого момента
+  // оно явное: сохранится тем же числом, даже если человек его не тронет.
+  if(exDraft.restAfter == null) exDraft.restAfter = exDraft.rest;
   fillExercise();
   buildExMenu();
   // Пока упражнение только ЗАВОДЯТ, дублировать и удалять нечего: в списке оно
@@ -11701,12 +11754,10 @@ function fillExercise(){
   $('exName').value = ex.name || '';
   $('exValue').value = valueText(ex.value).replace('–', '-');
   $('exSets').value = ex.sets || 1;
-  $('exRest').value = ex.rest || 0;
   $('exDesc').value = ex.desc || '';
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
-  restCustom = !REST_CHIPS.includes(parseInt(ex.rest) || 0);
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
@@ -11912,39 +11963,56 @@ function syncExProgSum(){
 }
 
 
-// Одно значение — один видимый контрол. Раньше рядом стояли чипы и числовое поле,
-// оба про отдых: поле нужно ровно тем, кому не подходит ни один из пяти чипов,
-// и появляется оно теперь только по чипу «своё».
-const REST_CHIPS = [0, 30, 45, 60, 90];
-let restCustom = false;
-function renderExRestChips(){
-  const cur = parseInt(exDraft.rest) || 0;
-  if(!REST_CHIPS.includes(cur)) restCustom = true;
-  const box = $('exRestChips'); box.innerHTML = '';
+// Одно значение — один видимый контрол. Раньше рядом с чипами стояло числовое
+// поле, нужное только тем, кому не подходит ни один чип, — и висело в разметке
+// всегда. Теперь свой отдых вводится в попапе #restModal, а в самом экране
+// остаются только чипы. Два независимых ряда — «между подходами» и «после
+// упражнения» — используют одни и те же чипы и один и тот же попап; какой ряд
+// сейчас редактируют, помнит restModalKey.
+const REST_CHIPS = [0, 15, 30, 45, 60];
+const restCustom = {rest: false, restAfter: false};
+function renderRestChipsInto(boxId, key){
+  const cur = parseInt(exDraft[key]) || 0;
+  if(!REST_CHIPS.includes(cur)) restCustom[key] = true;
+  const box = $(boxId); box.innerHTML = '';
   REST_CHIPS.forEach(v=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'load-chip';
-    b.textContent = v === 0 ? 'без' : v + ' с';
-    b.classList.toggle('act', !restCustom && cur === v);
+    b.textContent = v === 0 ? 'без' : String(v);
+    b.classList.toggle('act', !restCustom[key] && cur === v);
     b.onclick = ()=>{
-      restCustom = false;
-      exDraft.rest = v; $('exRest').value = v;
-      renderExRestChips();
+      restCustom[key] = false;
+      exDraft[key] = v;
+      renderRestChipsInto(boxId, key);
     };
     box.appendChild(b);
   });
   const own = document.createElement('button');
   own.type = 'button'; own.className = 'load-chip';
-  own.textContent = restCustom ? `${cur} с` : 'своё';
-  own.classList.toggle('act', restCustom);
-  own.onclick = ()=>{
-    restCustom = true;
-    renderExRestChips();
-    $('exRest').focus();
-  };
+  own.textContent = restCustom[key] ? String(cur) : 'своё';
+  own.classList.toggle('act', restCustom[key]);
+  own.onclick = ()=> openRestModal(key, boxId);
   box.appendChild(own);
-  setShown('exRest', restCustom);
 }
+function renderExRestChips(){
+  renderRestChipsInto('exRestChips', 'rest');
+  renderRestChipsInto('exRestAfterChips', 'restAfter');
+}
+let restModalKey = null, restModalBoxId = null;
+function openRestModal(key, boxId){
+  restModalKey = key; restModalBoxId = boxId;
+  $('restModalTitle').textContent = key === 'rest' ? 'Свой отдых между подходами' : 'Свой отдых после упражнения';
+  $('restModalInput').value = parseInt(exDraft[key]) || '';
+  $('restModal').classList.add('open');
+  $('restModalInput').focus();
+}
+$('restModalDone').onclick = ()=>{
+  if(!restModalKey) return;
+  exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
+  restCustom[restModalKey] = true;
+  $('restModal').classList.remove('open');
+  renderRestChipsInto(restModalBoxId, restModalKey);
+};
 function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
@@ -11967,7 +12035,8 @@ function applyFormTo(target){
   target.name = $('exName').value.trim();
   target.value = normValue($('exValue').value, target.type);
   target.sets = target.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
-  target.rest = Math.max(0, Math.min(600, parseInt($('exRest').value) || 0));
+  // rest/restAfter не читаем из формы — чипы и попап #restModal пишут прямо в
+  // exDraft при клике, а target уже клон exDraft на момент вызова
   target.desc = $('exDesc').value.trim();
   target.mistakes = $('exMistakes').value.trim();
   target.video = $('exVideo').value.trim();
@@ -12249,7 +12318,8 @@ const AI_PROMPT = `Ты — помощник по составлению дом�
 ПОДХОДЫ: сколько ПОДРЯД перед следующим упражнением, 1–10 (силовые 3–4, круговые 1).
 СТОРОНА: да — считается отдельно на каждую сторону (иначе пропусти строку).
 РАЗМИНКА: да — для 2–4 первых упражнений, если нужна (иначе пропусти строку).
-ОТДЫХ: секунды после подхода (0 — без отдыха).
+ОТДЫХ: секунды между подходами одного упражнения (0 — без отдыха).
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — пиши, только если отличается от ОТДЫХ (иначе пропусти строку, возьмётся то же число). Обычно больше, когда следующее упражнение — совсем другая группа мышц или движение; для лёгких упражнений может быть и меньше.
 УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
 ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
   При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
@@ -12500,6 +12570,7 @@ function parseProgramText(txt){
         }
         break;
       case 'ОТДЫХ': if(cur) cur.rest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
+      case 'ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ': if(cur) cur.restAfter = Math.max(0, Math.min(600, parseInt(val)||0)); break;
       case 'МЫШЦЫ': {
         if(cur){
           const labels = val.split(/[,;]/).map(s => s.trim().toLowerCase());
@@ -15698,7 +15769,7 @@ $('exBackTop').onclick = ()=> leaveExercise();
 // числовые поля проверяются перед сохранением: неверное значение больше не
 // «исправляется» молча в единицу
 $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise') && exNameOk()) saveExAndBack(); };
-[['exValue','range',true],['exSets','int'],['exRest','int'],['exWeight','dec'],
+[['exValue','range',true],['exSets','int'],['exWeight','dec'],
  ['exStepReps','int'],['exMaxReps','int'],['exStepWeight','dec'],['exMaxWeight','dec'],
  ['exStepTime','int'],['exMaxTime','int']].forEach(([id,k,req])=> guardNum(id,k,req));
 ['bRoundRest','uePrepSec','ueReadySec','ueSideSec'].forEach(id => guardNum(id,'int'));
@@ -15822,7 +15893,6 @@ $('exWarm').onclick = ()=>{
   renderProgControls(); // разминка блокирует «усложнять со временем» — обновляем сразу
 };
 $('exSide').onclick = ()=>{ exDraft.perSide = !exDraft.perSide; $('exSide').classList.toggle('on', exDraft.perSide); };
-$('exRest').oninput = e => { exDraft.rest = Math.max(0, Math.min(600, parseInt(e.target.value) || 0)); renderExRestChips(); };
 $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };
 $('exMistakes').oninput = e => { exDraft.mistakes = e.target.value; syncExDetailsSum(); };
 $('exVideo').oninput = e => { exDraft.video = e.target.value; syncExDetailsSum(); };
