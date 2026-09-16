@@ -1041,10 +1041,6 @@
   /* ---------- выбор нагрузки и настройки на экране старта ---------- */
   .mini-label{display:block;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   .load-row{display:flex;flex-wrap:wrap;gap:6px}
-  /* шесть чипов отдыха в один ряд не влезали и обрезались краем карточки, а во
-     флексе одинокий перенесённый чип растягивался на всю ширину — поэтому сетка
-     с фиксированным числом колонок: «своё» переносится и остаётся чипом */
-  #exRestChips{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px}
   .load-chip{flex:1;padding:0 7px;min-height:33px;border-radius:11px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
