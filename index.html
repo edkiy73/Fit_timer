@@ -1592,11 +1592,19 @@
   .greet-ava img{width:100%;height:100%;object-fit:cover;display:block}
   .greet-ava svg{width:22px;height:22px}
   .greet-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)}
+  /* Чип не рвёт свой текст: flex-wrap должен переносить ЧИП ЦЕЛИКОМ на новую
+     строку, а не сжимать его до двух строк внутри. По умолчанию флекс-элемент
+     сжимается, и «можно отработать» рядом с соседом ломалось пополам. */
   .g-chip{
-    display:inline-flex;align-items:center;gap:6px;
+    display:inline-flex;align-items:center;gap:6px;flex:none;white-space:nowrap;
     border:1px solid var(--line);border-radius:var(--r-pill);
     padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);background:var(--card);
   }
+  /* чип, который умеет объяснить себя, — кнопка. Сам он остаётся мелким (иначе
+     ряд чипов начинает спорить с заголовком), а под палец область нажатия
+     дотягивается невидимым псевдоэлементом до 44 точек по высоте */
+  button.g-chip{font-family:var(--font-text);cursor:pointer;position:relative;text-align:left}
+  button.g-chip::after{content:'';position:absolute;inset:-7px -3px}
   .g-chip b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .g-chip svg{width:14px;height:14px;flex:none;color:var(--accent-ink)}
   .g-chip.hot{border-color:var(--accent-line);background:var(--accent-soft)}
@@ -7869,6 +7877,23 @@ function applyProgressionAll(){
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
+
+/* Чип на главной — короткая метка, и объяснить себя в двух словах она не может:
+   «под угрозой» и «отработано» звучат как приговор, пока не сказано, что за ними.
+   Поэтому чип с объяснением — КНОПКА, и нажатие открывает одну фразу: откуда
+   число и что с ним делать. Тот же приём, что у достижений в «Прогрессе». */
+function makeChip({ico, val, label, cls, why}){
+  const el = document.createElement(why ? 'button' : 'span');
+  if(why) el.type = 'button';
+  el.className = 'g-chip' + (cls ? ' ' + cls : '');
+  const has = val !== '' && val != null;
+  el.innerHTML = icon(ico) + (has ? '<b></b>' : '') + '<span></span>';
+  if(has) el.querySelector('b').textContent = val;
+  el.querySelector('span').textContent = label;
+  if(why) el.onclick = ()=> appAlert(why);
+  return el;
+}
+
 function renderGreeting(){
   const u = curUser();
   const h = new Date().getHours();
@@ -7886,30 +7911,34 @@ function renderGreeting(){
     : (name ? esc(name[0].toUpperCase()) : icon('user'));
   const box = $('greetChips');
   box.innerHTML = '';
-  const chip = (ico, val, label, cls) => {
-    const el = document.createElement('span');
-    el.className = 'g-chip' + (cls ? ' ' + cls : '');
-    el.innerHTML = icon(ico) + '<b></b><span></span>';
-    el.querySelector('b').textContent = val;
-    el.querySelector('span').textContent = label;
-    box.appendChild(el);
-  };
+  const chip = o => box.appendChild(makeChip(o));
   const si = calcStreakInfo();
   // Серия не пропадает с экрана от одного пропуска. Пока долг можно отработать, она
   // висит «под угрозой» — это приглашение, а не приговор; а сгоревшая оставляет после
   // себя рекорд, потому что собранное мы не отбираем.
-  if(si.n) chip('flame', si.n, si.risk ? 'под угрозой' : streakWord(si.n, si.byPlan), si.risk ? 'warn' : 'hot');
-  else if(si.best > 1) chip('flame', si.best, 'лучшая серия');
+  if(si.n) chip({
+    ico: 'flame', val: si.n, cls: si.risk ? 'warn' : 'hot',
+    label: si.risk ? 'под угрозой' : streakWord(si.n, si.byPlan),
+    // числа в подсказках стоят ПОСЛЕ двоеточия: «1 тренировка ещё не пройдены»
+    // получалось само собой, стоило числу встать перед глаголом
+    why: si.risk
+      ? `Серия не сгорела, в ней тренировок: ${si.n}. На этой неделе остался незакрытый день — пройди его программу до воскресенья, и серия продолжится.`
+      : `Тренировок подряд без пропусков: ${si.n}. Один пропуск серию не обнуляет — пока идёт та же неделя, его можно отработать.`
+  });
+  else if(si.best > 1) chip({
+    ico: 'flame', val: si.best, label: 'лучшая серия',
+    why: `Личный рекорд, тренировок подряд: ${si.best}. Рекорд остаётся навсегда, даже когда серия прервалась.`
+  });
   const n = stats.count || 0;
   // счётчик тренировок теперь крупной цифрой ниже, в «Прогрессе», — в чипах он был вторым разом
   const mins = Math.round((stats.totalSec || 0) / 60);
-  if(mins) chip('clock', mins < 60 ? mins : Math.round(mins / 60), mins < 60 ? 'минут всего' : plural(Math.round(mins / 60), 'час всего', 'часа всего', 'часов всего'));
-  if(!box.children.length){
-    const el = document.createElement('span');
-    el.className = 'g-chip';
-    el.innerHTML = icon('sparkle') + '<span>Первая тренировка ещё впереди</span>';
-    box.appendChild(el);
-  }
+  if(mins) chip({
+    ico: 'clock',
+    val: mins < 60 ? mins : Math.round(mins / 60),
+    label: mins < 60 ? 'минут всего' : plural(Math.round(mins / 60), 'час всего', 'часа всего', 'часов всего'),
+    why: `Всё время тренировок вместе, с самой первой. Минут: ${mins}. Тренировок: ${n}.`
+  });
+  if(!box.children.length) chip({ico: 'sparkle', label: 'Первая тренировка ещё впереди'});
   // крупные цифры под приветствием — они же кнопки в нужную вкладку статистики
   const last = stats.weights && stats.weights.length ? stats.weights[stats.weights.length - 1] : null;
   countTo('qsVal1', n);
@@ -8107,21 +8136,26 @@ function renderWeekStrip(){
 
   const chips = $('weekChips');
   chips.innerHTML = '';
-  const chip = (ico, val, label, cls) => {
-    const el = document.createElement('span');
-    el.className = 'g-chip' + (cls ? ' ' + cls : '');
-    el.innerHTML = icon(ico) + (val === '' ? '' : '<b></b>') + '<span></span>';
-    if(val !== '') el.querySelector('b').textContent = val;
-    el.querySelector('span').textContent = label;
-    chips.appendChild(el);
-  };
+  const chip = o => chips.appendChild(makeChip(o));
   if(planned > 0){
-    if(closed) chip('check', '', 'Неделя закрыта', 'ok');
+    if(closed) chip({
+      ico: 'check', val: '', label: 'Неделя закрыта', cls: 'ok',
+      why: `План недели выполнен: ${planned} из ${planned}. Что сделаешь сверх — пойдёт отдельной строкой и неделю уже не меняет.`
+    });
     // пропуск — не приговор, а незакрытое дело: неделя ещё идёт, срок — воскресенье
-    else if(w.debtTotal) chip('clock', w.debtTotal, 'можно отработать', 'warn');
-    if(w.movedTotal) chip('reset', w.movedTotal, plural(w.movedTotal, 'отработана', 'отработаны', 'отработано'));
+    else if(w.debtTotal) chip({
+      ico: 'clock', val: w.debtTotal, label: 'можно отработать', cls: 'warn',
+      why: `Незакрытых тренировок этой недели: ${w.debtTotal}. Неделя идёт до воскресенья — пройди программу в любой день, и день закроется.`
+    });
+    if(w.movedTotal) chip({
+      ico: 'reset', val: w.movedTotal, label: plural(w.movedTotal, 'отработана', 'отработаны', 'отработано'),
+      why: `Тренировок, прошедших не в назначенный день: ${w.movedTotal}. Неделя их засчитала — план недельный, а не суточный.`
+    });
     // «сверх плана» без плана — пустые слова: там всё, что сделано, и есть вся неделя
-    if(w.extraTotal) chip('plus', w.extraTotal, 'сверх плана');
+    if(w.extraTotal) chip({
+      ico: 'plus', val: w.extraTotal, label: 'сверх плана',
+      why: `Тренировок сверх расписания: ${w.extraTotal}. В счёт недели они не идут и ничего не закрывают — это работа в плюс.`
+    });
   }
 
   // подпись остаётся ровно там, где чипами не сказать: расписания ещё нет
