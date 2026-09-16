@@ -6145,23 +6145,50 @@ async function saveWellHist(){
    Фотографии в синхронизацию не входят намеренно: самые чувствительные данные,
    самый дорогой трафик и наименьшая польза от переноса между устройствами. */
 const SCHEMA_VERSION = 1;
-// документы, которые поедут на сервер; всё остальное — настройки устройства
-const SYNC_KEYS = ['customPrograms', 'stats', 'progWeights'];
+/* Документы, которые поедут на сервер; всё остальное — настройки устройства.
+
+   Единица синхронизации — ОДНА ПРОГРАММА, а не весь их список. Иначе два устройства,
+   правящие РАЗНЫЕ программы, растят редакцию одного и того же документа: на сервере
+   они конфликтуют целиком, и любое разрешение конфликта теряет чью-то правку.
+   Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
+   только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
+   сервер не отличит «программу удалили» от «программа ещё не доехала». */
+const SYNC_KEYS = ['stats', 'progWeights'];
+const PROGRAM_DOC = id => 'program:' + id;
+const isSyncKey = key => SYNC_KEYS.includes(key) || key === 'index' || key.startsWith('program:');
+// Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
+// гонять на сервер программы, которых человек не трогал.
+function docHash(s){
+  let h = 5381;
+  for(let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
 
 const newId = () => (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
 
-let identity = null;   // {accountId, deviceId, createdAt, email, linkedAt}
+let identity = null;   // {profileId, deviceId, createdAt, email, linkedAt}
 let docMeta  = {};     // ключ -> {rev, at, schema}
 let outbox   = [];     // [{key, rev, at}] — что ждёт отправки на сервер
 
-// deviceId общий для устройства, accountId — свой у каждого профиля: на сервере это
-// будут разные аккаунты, ведь профили в приложении и есть разные люди
+// deviceId общий для устройства, profileId — свой у каждого профиля.
+//
+// Имя поля здесь важнее, чем кажется. Аккаунт на сервере будет ОДИН — почта, подписка,
+// оплата, — а профилей внутри него несколько, ведь профили в приложении и есть разные
+// люди. Поле, названное accountId, увезло бы эту путаницу в схему базы, и жила бы она
+// там годами; переименовать до первого запроса — правка в десять строк, после — миграция
+// с данными у всех.
 async function loadIdentity(){
   let dev = await kvGet('deviceId');
   if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
   try{ identity = JSON.parse(await kvGet(pk('identity'))) || null; }catch(e){ identity = null; }
-  if(!identity || !identity.accountId){
-    identity = {accountId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
+  // прежнее имя поля; у тех, кто успел завести личность, оно уже лежит в хранилище
+  if(identity && !identity.profileId && identity.accountId){
+    identity.profileId = identity.accountId;
+    delete identity.accountId;
+    await kvSet(pk('identity'), JSON.stringify(identity));
+  }
+  if(!identity || !identity.profileId){
+    identity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
     await kvSet(pk('identity'), JSON.stringify(identity));
   }
   if(!identity.consents) identity.consents = {};
@@ -6178,18 +6205,39 @@ async function loadIdentity(){
 }
 async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
 
-// Одно сохранение документа: пишем значение, поднимаем редакцию, ставим в очередь.
-// Очередь схлопывается по ключу — на сервер уедет последнее состояние, а не история.
-async function saveDoc(key, value){
-  await kvSet(pk(key), JSON.stringify(value));
-  if(!SYNC_KEYS.includes(key)) return;
+// Поднять редакцию документа и поставить его в очередь. Очередь схлопывается по ключу —
+// на сервер уедет последнее состояние, а не история правок.
+function bumpDoc(key, extra){
   const prev = docMeta[key] || {rev: 0};
-  const meta = {rev: prev.rev + 1, at: new Date().toISOString(), schema: SCHEMA_VERSION};
-  docMeta[key] = meta;
+  const at = new Date().toISOString();
+  docMeta[key] = Object.assign({rev: prev.rev + 1, at, schema: SCHEMA_VERSION}, extra || {});
   outbox = outbox.filter(o => o.key !== key);
-  outbox.push({key, rev: meta.rev, at: meta.at});
+  outbox.push({key, rev: docMeta[key].rev, at});
+}
+async function flushMeta(){
   await kvSet(pk('docMeta'), JSON.stringify(docMeta));
   await kvSet(pk('outbox'), JSON.stringify(outbox));
+}
+
+// Одно сохранение документа: пишем значение, поднимаем редакцию, ставим в очередь.
+async function saveDoc(key, value){
+  await kvSet(pk(key), JSON.stringify(value));
+  if(!isSyncKey(key)) return;
+  bumpDoc(key);
+  await flushMeta();
+}
+
+// Что уедет на сервер под этим ключом. Программы лежат в памяти одним списком, поэтому
+// значение документа собирается здесь, а не читается из хранилища по имени ключа.
+// null — это НАДГРОБИЕ: программу удалили, и сервер должен об этом узнать.
+async function docValue(key){
+  if(key === 'index') return JSON.stringify({order: customPrograms.map(p => p.id)});
+  if(key.startsWith('program:')){
+    const id = key.slice('program:'.length);
+    const p = customPrograms.find(x => String(x.id) === id);
+    return p ? JSON.stringify(p) : null;
+  }
+  return await kvGet(pk(key));
 }
 
 // Единственный шов, в который встанет сервер. Сейчас адаптера нет, и это не ошибка,
@@ -6199,15 +6247,10 @@ async function saveDoc(key, value){
 // помечается изменённым и уходит наверх обычной очередью — тем же путём, что и правки,
 // сделанные офлайн. Резервная копия файлом остаётся отдельной ручной функцией.
 async function markAllForSync(){
-  const at = new Date().toISOString();
-  for(const key of SYNC_KEYS){
-    const prev = docMeta[key] || {rev: 0};
-    docMeta[key] = {rev: prev.rev + 1, at, schema: SCHEMA_VERSION};
-    outbox = outbox.filter(o => o.key !== key);
-    outbox.push({key, rev: docMeta[key].rev, at});
-  }
-  await kvSet(pk('docMeta'), JSON.stringify(docMeta));
-  await kvSet(pk('outbox'), JSON.stringify(outbox));
+  for(const key of SYNC_KEYS) bumpDoc(key);
+  for(const p of customPrograms) bumpDoc(PROGRAM_DOC(p.id), {h: docHash(JSON.stringify(p))});
+  bumpDoc('index', {h: docHash(customPrograms.map(p => p.id).join(','))});
+  await flushMeta();
   if(typeof renderSyncRow === 'function') renderSyncRow();
 }
 
@@ -6222,13 +6265,27 @@ const SYNC = {
   },
   pending(){ return outbox.length; },
   async push(){
-    if(!SYNC.adapter) return {sent: 0, offline: true};
+    // без личности отправлять некуда и незачем: профиль ещё не заведён
+    if(!SYNC.adapter || !identity) return {sent: 0, offline: true};
     const batch = outbox.slice();
-    await SYNC.adapter.push(batch.map(o => ({
-      key: o.key, rev: o.rev, at: o.at, schema: SCHEMA_VERSION,
-      accountId: identity.accountId, deviceId: identity.deviceId,
-      value: kvGet(pk(o.key))
-    })));
+    // Значения собираем ЗДЕСЬ и через await. docValue асинхронная, и без await на сервер
+    // уехал бы список промисов вместо документов — молча, потому что JSON.stringify
+    // превращает промис в пустой объект.
+    const payload = [];
+    for(const o of batch){
+      const value = await docValue(o.key);
+      // Надгробие бывает только у программы. У обычного ключа пустое значение означает
+      // «ещё ни разу не сохраняли», а не «удалили»: отправить его как удаление — значит
+      // стереть на сервере статистику, которой человек просто пока не набрал.
+      const gone = value === null && o.key.startsWith('program:');
+      if(value === null && !gone) continue;
+      payload.push({
+        key: o.key, rev: o.rev, at: o.at, schema: SCHEMA_VERSION,
+        profileId: identity.profileId, deviceId: identity.deviceId,
+        deleted: gone, value
+      });
+    }
+    if(payload.length) await SYNC.adapter.push(payload);
     outbox = outbox.filter(o => !batch.find(b => b.key === o.key && b.rev === o.rev));
     await kvSet(pk('outbox'), JSON.stringify(outbox));
     return {sent: batch.length};
@@ -6250,7 +6307,32 @@ async function recordConsent(kind){
 }
 const hasConsent = kind => !!(identity && identity.consents && identity.consents[kind]);
 
-async function savePrograms(){ await saveDoc('customPrograms', customPrograms); }
+// Программы хранятся одним ключом, а в очередь встают поштучно: на сервер уйдут только
+// те, что человек действительно тронул. Хеш программы лежит рядом с её редакцией —
+// без него каждое сохранение любой программы гнало бы наверх весь список.
+async function savePrograms(){
+  await kvSet(pk('customPrograms'), JSON.stringify(customPrograms));
+  let touched = false;
+  const live = new Set();
+  for(const p of customPrograms){
+    const key = PROGRAM_DOC(p.id);
+    live.add(key);
+    const h = docHash(JSON.stringify(p));
+    const prev = docMeta[key];
+    if(prev && prev.h === h && !prev.gone) continue;
+    bumpDoc(key, {h});
+    touched = true;
+  }
+  // удалённая программа — тоже документ: без надгробия она вернётся с другого устройства
+  for(const key of Object.keys(docMeta)){
+    if(!key.startsWith('program:') || live.has(key) || docMeta[key].gone) continue;
+    bumpDoc(key, {gone: true});
+    touched = true;
+  }
+  const order = docHash(customPrograms.map(p => p.id).join(','));
+  if(!docMeta.index || docMeta.index.h !== order){ bumpDoc('index', {h: order}); touched = true; }
+  if(touched) await flushMeta();
+}
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ await saveDoc('progWeights', progWeights); }
 async function loadProgWeights(){
@@ -14299,8 +14381,8 @@ function renderSyncRow(){
   $('syncSub').textContent = SYNC.connected
     ? 'Данные уходят на сервер автоматически'
     : (n
-        ? `${n} ${plural(n, 'изменение', 'изменения', 'изменений')} ждёт отправки · аккаунт ${identity.accountId.slice(0, 8)}`
-        : `Изменений пока нет · аккаунт ${identity.accountId.slice(0, 8)}`);
+        ? `${n} ${plural(n, 'изменение', 'изменения', 'изменений')} ждёт отправки · профиль ${identity.profileId.slice(0, 8)}`
+        : `Изменений пока нет · профиль ${identity.profileId.slice(0, 8)}`);
 }
 
 function syncPrefs(){
