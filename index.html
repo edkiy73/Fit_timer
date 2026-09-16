@@ -1794,6 +1794,9 @@
   /* самочувствие — ровно три показателя в ряд; давлению шире, в нём два поля */
   .wh-cells.wh-well{grid-template-columns:1.4fr 1fr 1fr}
   .whc{display:flex;flex-direction:column;gap:3px}
+  /* форма новой записи берёт ту же сетку, но стоит отдельным блоком под заголовком,
+     а не строкой внутри списка — отступ сверху ей нужен свой */
+  #wellModal .wh-cells{margin:12px 0 10px}
   .whp{display:flex;align-items:center;gap:3px;min-width:0}
   .whp input{min-width:0;padding-left:9px;padding-right:9px;text-align:center}
   .whp i{flex:none;color:var(--muted);font-style:normal}
@@ -4493,11 +4496,19 @@
     <div class="modal" id="wellModal">
       <div class="modal-card">
         <span class="mini-label">Как ты сегодня</span>
-        <div class="w-add on">
-          <div class="wf"><label>Давление, верхнее</label><input type="number" id="sysInput" min="70" max="250" inputmode="numeric"></div>
-          <div class="wf"><label>Нижнее</label><input type="number" id="diaInput" min="40" max="160" inputmode="numeric"></div>
-          <div class="wf"><label>Пульс в покое</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
-          <div class="wf"><label>Сон, часов</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
+        <!-- Те же три ячейки в ряд, что и в истории (.wh-cells.wh-well): «Давление»
+             одним полем из двух половин через косую, «Пульс», «Сон». Четыре
+             отдельных поля укладывались по два в ряд, «Нижнее» отрывалось от
+             «Давление, верхнее» и читалось как самостоятельный показатель, а
+             форма записи и форма правки выглядели разными местами. -->
+        <div class="wh-cells wh-well">
+          <div class="whc"><label>Давление</label>
+            <span class="whp">
+              <input type="number" id="sysInput" min="70" max="250" inputmode="numeric" aria-label="Давление, верхнее"><i>/</i><input type="number" id="diaInput" min="40" max="160" inputmode="numeric" aria-label="Давление, нижнее">
+            </span>
+          </div>
+          <div class="whc"><label>Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
+          <div class="whc"><label>Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
         <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
