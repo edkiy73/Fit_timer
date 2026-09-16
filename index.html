@@ -3841,6 +3841,7 @@
         <div class="mc-charts hidden" id="wellCharts"></div>
         <div class="mc-actions hidden" id="wellActions">
           <button class="mc-act" id="btnWellHist"></button>
+          <button class="mc-act" id="btnShareWell"></button>
         </div>
       </div>
     </div>
@@ -5852,6 +5853,7 @@ function wellAvg(){
 function renderWellness(){
   const ws = wellList();
   $('btnWellHist').innerHTML = icon('pencil') + 'История';
+  $('btnShareWell').innerHTML = icon('share') + 'Поделиться';
   if(!ws.length){
     setShown('wellNowRow', false);
     setShown('wellSwitch', false);
@@ -14918,6 +14920,7 @@ $('wellSwitch').addEventListener('click', e => {
 $('btnAddWell').onclick = openWellAdd;
 $('btnSaveWell').onclick = saveWell;
 $('btnWellHist').onclick = openWellHist;
+$('btnShareWell').onclick = shareWellChart;
 $('wellHistSave').onclick = saveWellHist;
 $('wellModal').onclick = e => { if(e.target === $('wellModal')) $('wellModal').classList.remove('open'); };
 $('btnDeleteAllPhotos').onclick = deleteAllPhotos;
