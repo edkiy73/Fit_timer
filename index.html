@@ -2335,7 +2335,7 @@
   }
   .dock-btn:active{transform:scale(.94)}
   .dock-btn:focus-visible{outline:2px solid var(--accent-line);outline-offset:-2px}
-  /* на 360 подписи «Тренировки» и «Статистика» почти касаются — отдаём им поля дока */
+  /* на 360 подписи «Тренировки» и «Прогресс» почти касаются — отдаём им поля дока */
   @media (max-width:380px){ .dock{padding-left:var(--sp-2);padding-right:var(--sp-2)} }
   /* корневой экран резервирует прокрутку ровно под док — ничего не прячется под ним */
   .screen.root{padding-bottom:calc(var(--dock-h) + var(--sp-6))}
@@ -3741,7 +3741,7 @@
        (сравнение месяцев в календаре). Большого h1 здесь нет специально: экран
        подписан в доке, а 180 px пустой шапки на телефоне дороже любой типографики. -->
   <section class="screen root" id="scrStats">
-    <div class="page-head"><h1>Статистика</h1></div>
+    <div class="page-head"><h1>Прогресс</h1></div>
     <div class="tabs seg" id="statsTabs">
       <button class="tab act" data-tab="workouts">Тренировки</button>
       <button class="tab" data-tab="weight">Тело</button>
@@ -4485,7 +4485,7 @@
   <div class="dock-in">
     <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
     <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
-    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Статистика</span></button>
+    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
     <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="user"></span><span>Аккаунт</span></button>
     <button class="dock-btn" data-scr="scrSettings"><span class="db-ico" data-icon="gear"></span><span>Настройки</span></button>
   </div>
