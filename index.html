@@ -3237,7 +3237,7 @@
            и с повторениями (снаряд), и со временем (удержание или перенос с грузом —
            планка с блином, фермерская прогулка). Раньше «С весом» был третьей кнопкой
            в этом же ряду, и добраться до «время и вес» было нечем. -->
-      <div class="pref-row"><span>Учитывать вес<small>снаряд, утяжелитель — добавится своё поле</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
+      <div class="pref-row"><span>Упражнение с доп. весом<small>снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
       <div class="row2">
         <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="Например: 12-15"></div>
         <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
@@ -3268,12 +3268,17 @@
       <div id="exProgBox" class="stack hidden">
         <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
         <div class="step-grid hidden" id="exStepRow">
+          <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
+               он сочетается и с повторениями, и со временем, и в обоих случаях
+               главная ось упражнения должна стоять выше своей добавки. Раньше
+               весовая пара лежала между повторениями и временем, и на формате
+               «время и вес» вес оказывался НАД секундами. -->
           <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
           <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
-          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
-          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
           <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
           <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
+          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
+          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
         </div>
         <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
         <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
@@ -11719,7 +11724,7 @@ function fillExercise(){
   $('exProgToggle').classList.remove('open');
 }
 
-// «Как считать» (повторения/время) и «Учитывать вес» — независимые переключатели:
+// «Как считать» (повторения/время) и «Упражнение с доп. весом» — независимые переключатели:
 // вес сочетается с обоими, четыре формата вместо трёх («время и вес» — удержание
 // или перенос с грузом: планка с блином, фермерская прогулка).
 function syncExType(){
