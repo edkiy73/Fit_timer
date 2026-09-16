@@ -5566,7 +5566,7 @@ function buildStartMenu(){
       await savePrograms();
       buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
       renderMine();         // список под ним уже перерисован к возврату
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели — но останется в списке, и её можно запустить вручную или включить обратно.');
+      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
     }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
@@ -10900,7 +10900,7 @@ function renderMine(){
       renderMine();
       // объясняем только выключение: включение возвращает привычное поведение,
       // а вот исчезновение программы из «Сегодня» без объяснения пугает
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели — но останется в списке, и её можно запустить вручную или включить обратно.');
+      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
     };
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
@@ -13653,71 +13653,79 @@ function finishWorkout(){
   state.lastTotalSec = totalSec;
   state.lastKcal = estimateKcal(totalSec, 100);
   $('finKcal').textContent = '≈' + state.lastKcal;
-  stats.totalSec += totalSec;
-  stats.count = (stats.count || 0) + 1;
-  const histEntry = {
-    d: localISO(new Date()),
-    // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
-    // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
-    t: new Date(Date.now() - totalSec * 1000).getHours(),
-    pid: (state.current && state.current.sourceId) || null,
-    note: '', sec: totalSec, kcal: state.lastKcal || 0,
-    plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-    planDays: (()=>{ // подпись варианта, чтобы потом не гадать
-      try{
-        const pl = normPlans(state.raw)[state.planIdx];
-        return (pl && pl.days && pl.days.length) ? pl.days.join('·') : '';
-      }catch(e){ return ''; }
-    })()
-  };
-  stats.history.push(histEntry);
-  if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
-  state.lastHist = histEntry;
-  // Рекорд серии считаем здесь, на единственной записи в историю: он остаётся с
-  // человеком навсегда, даже когда серия сгорит. Существующая серия попадёт в рекорд
-  // на первой же тренировке — ровно тогда, когда это нужно.
-  const stk = calcStreakInfo().n;
-  state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
-  if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
-  // Суммарный поднятый вес: вес снаряда × нижняя граница повторов у каждого силового
-  // подхода. Копим итогом, а не считаем по истории задним числом: в истории лежат
-  // минуты и калории, а какие веса стояли в тот день, программа уже не помнит —
-  // с тех пор она могла вырасти на пять шагов прогрессии.
-  let lifted = 0;
-  (state.steps || []).forEach(s => {
-    if(s.phase !== 'work' || !(s.weight > 0)) return;
-    const reps = parseInt(String(s.reps || '').split('-')[0], 10);
-    if(reps > 0) lifted += s.weight * reps;
-  });
-  if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
-  // тренировка без рук: голос, хлопок или гарнитура — считаем сам факт, не режим
-  if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
-  // сколько разных упражнений пройдено — третья цифра карточки результата
+  // Отключённую программу (progActive(p) === false) запускать можно — предупредили
+  // об этом ДО старта (#btnStart) — но раз человек всё равно начал, держим слово:
+  // результат нигде не оседает, будто его не было. Финал при этом доигрывает как
+  // обычно — это про текущую сессию, а не про то, что сохранится.
+  const srcProgram = (state.current && state.current.sourceId)
+    ? customPrograms.find(x => x.id === state.current.sourceId) : null;
+  const countsToStats = !srcProgram || progActive(srcProgram);
+  if(countsToStats){
+    stats.totalSec += totalSec;
+    stats.count = (stats.count || 0) + 1;
+    const histEntry = {
+      d: localISO(new Date()),
+      // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
+      // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
+      t: new Date(Date.now() - totalSec * 1000).getHours(),
+      pid: (state.current && state.current.sourceId) || null,
+      note: '', sec: totalSec, kcal: state.lastKcal || 0,
+      plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
+      planDays: (()=>{ // подпись варианта, чтобы потом не гадать
+        try{
+          const pl = normPlans(state.raw)[state.planIdx];
+          return (pl && pl.days && pl.days.length) ? pl.days.join('·') : '';
+        }catch(e){ return ''; }
+      })()
+    };
+    stats.history.push(histEntry);
+    if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
+    state.lastHist = histEntry;
+    // Рекорд серии считаем здесь, на единственной записи в историю: он остаётся с
+    // человеком навсегда, даже когда серия сгорит. Существующая серия попадёт в рекорд
+    // на первой же тренировке — ровно тогда, когда это нужно.
+    const stk = calcStreakInfo().n;
+    state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
+    if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
+    // Суммарный поднятый вес: вес снаряда × нижняя граница повторов у каждого силового
+    // подхода. Копим итогом, а не считаем по истории задним числом: в истории лежат
+    // минуты и калории, а какие веса стояли в тот день, программа уже не помнит —
+    // с тех пор она могла вырасти на пять шагов прогрессии.
+    let lifted = 0;
+    (state.steps || []).forEach(s => {
+      if(s.phase !== 'work' || !(s.weight > 0)) return;
+      const reps = parseInt(String(s.reps || '').split('-')[0], 10);
+      if(reps > 0) lifted += s.weight * reps;
+    });
+    if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
+    // тренировка без рук: голос, хлопок или гарнитура — считаем сам факт, не режим
+    if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
+  }
+  // сколько разных упражнений пройдено — третья цифра карточки результата (текущая
+  // сессия, показываем всегда — это не то, что сохраняется)
   const exNames = new Set();
   (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
   state.lastExCount = exNames.size;
   $('finExLabel').textContent = plural(exNames.size, 'упражнение', 'упражнения', 'упражнений');
   $('finNote').value = '';
   setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
-  setShown('finNoteToggle', true);
+  setShown('finNoteToggle', countsToStats); // нечего комментировать у того, что не сохранится
   renderBadges();
   saveStats();
   renderStats();
-  if(state.current && state.current.sourceId){
-    const p = customPrograms.find(x => x.id === state.current.sourceId);
-    if(p){
-      p.stats = p.stats || {completions: 0};
-      p.stats.completions++;
-      // ротация вариантов: следующая тренировка — следующий вариант по очереди
-      if(p.rotate){
-        const plansN = normPlans(p).length;
-        if(plansN > 1){
-          const usedIdx = (typeof state.planIdx === 'number') ? state.planIdx : 0;
-          p.rotIdx = (usedIdx + 1) % plansN;
-        }
+  if(countsToStats && srcProgram){
+    const p = srcProgram;
+    p.stats = p.stats || {completions: 0};
+    p.stats.completions++;
+    // ротация вариантов: следующая тренировка — следующий вариант по очереди
+    if(p.rotate){
+      const plansN = normPlans(p).length;
+      if(plansN > 1){
+        const usedIdx = (typeof state.planIdx === 'number') ? state.planIdx : 0;
+        p.rotIdx = (usedIdx + 1) % plansN;
       }
-      savePrograms();
     }
+    savePrograms();
   }
   renderMine();
   releaseWake();
@@ -14720,6 +14728,16 @@ $('progDescMore').onclick = ()=>{
   $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
 };
 $('btnStart').onclick = async ()=>{
+  // Отключённая программа не запрещена (её всё ещё можно запустить), но результат
+  // нигде не осядет (см. countsToStats в finishWorkout) — предупреждаем ДО модалки
+  // выбора способа, а не после сорока минут тренировки.
+  if(!progActive(state.raw)){
+    const go = await appConfirm(
+      'Программа отключена. Результат никуда не попадёт: ни в статистику, ни в достижения.',
+      {okText: 'Всё равно начать'}
+    );
+    if(!go) return;
+  }
   state.current = customToProgram(state.raw, state.planIdx);
   const sess = await sessionForProgram(state.raw.id);
   // без незавершённой сессии не спрашиваем лишнего — но выбор упражнения всё равно доступен
