@@ -652,16 +652,16 @@
   }
   body.phase-rest .rr-arc{stroke:var(--rest)}
   body.phase-rest .ready-ring b{color:var(--rest-ink)}
-  /* На «времени с весом» вес и кольцо просят одно и то же место справа от таймера.
-     Раньше кольцо на это время просто падало под низ, отдельно и вразнобой —
-     подписи «× 8 кг» и кольца читались как две разные, не связанные друг с другом
-     вещи. Вместо этого на время самого отсчёта (пока кольцо видно, body.readying)
-     вес прячется — секунды на подготовку, смотреть на вес пока незачем, зато
-     кольцо встаёт ровно туда же, где обычно висит: сбоку от цифры. */
-  body.readying #stepReps{display:none}
-  @media (max-width:340px){
-    .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
-  }
+  /* На «времени с весом» вес и кольцо не спорят за одно место: left:100% у кольца
+     считается от правого края ВСЕЙ .count-row, а вес — часть этой строки. Раз он
+     показан, кольцо просто встаёт правее него; нет веса — встаёт сразу после
+     таймера, как обычно. Пропадать вес во время отсчёта не должен: это то же
+     задание, что и после гонга.
+     Когда веса нет, места всегда хватает (проверено на узких экранах). Когда вес
+     есть, «цифра + × NN кг + кольцо» иногда не помещается в ширину экрана — тогда
+     JS (fitReadyRing) меряет реальное переполнение и переключает на класс .below:
+     кольцо уходит под низ, а не обрезается за краем. */
+  .ready-ring.below{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
   .details{
     /* растём по содержимому, но НЕ выше свободного места: длинное описание займёт всё
        до кнопок и станет прокручиваемым, короткое — ровно свою высоту, без дыры внутри.
@@ -2935,12 +2935,12 @@
         </div>
       </div>
       <div class="start-meta">
+        <!-- состояние программы — первым: это важнее объёма, и полным словом, а не
+             сокращением «Откл» — иначе рядом с «3 упражнения» и «3 круга» читалось
+             как оборванное. Без чипа выключенную программу видно только по пункту меню. -->
+        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
-        <!-- состояние программы словом, полностью: сокращение «Откл» рядом с
-             «3 упражнения» и «3 круга» читалось как оборванное. Без чипа выключенную
-             программу видно только по пункту меню. -->
-        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
       </div>
 
       <div class="card-block hidden" id="progDescBox">
@@ -4857,13 +4857,24 @@ function announceExercise(step, onDone){
 // мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
 // считаем по кадрам, чтобы пауза реально останавливала подготовку
 const RR_LEN = 2 * Math.PI * 17; // длина окружности кольца подготовки (r=17 в svg 40×40)
+// Рядом с весом («× 24 кг») кольцо иногда не помещается сбоку от цифры до края
+// экрана — считать это заранее по тексту веса нельзя (ширина зависит от шрифта
+// и локали), поэтому меряем по факту и уводим кольцо под низ тем же классом,
+// что раньше включался только по фиксированной ширине экрана.
+function fitReadyRing(){
+  const box = $('readyRing');
+  if(!box || box.classList.contains('hidden')) return;
+  box.classList.remove('below');
+  const r = box.getBoundingClientRect();
+  box.classList.toggle('below', r.right > window.innerWidth - 4);
+}
 function runReadyBar(sec, done){
   const box = $('readyRing'), arc = $('readyArc'), num = $('readyNum');
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
   let left = totalMs, last = performance.now(), lastShown = sec;
   setShown(box, true);
-  document.body.classList.add('readying'); // прячет вес рядом с таймером на время отсчёта — иначе им негде стоять вместе
+  fitReadyRing();
   arc.style.strokeDashoffset = RR_LEN;   // пустое кольцо в начале
   num.innerHTML = tnum(sec);
   beep(660, .08);
@@ -4891,7 +4902,6 @@ function hideReadyBar(){
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyRing');
   if(box) setShown(box, false);
-  document.body.classList.remove('readying');
 }
 
 // бодрый сигнал «старт!» после озвучки упражнения
@@ -13394,8 +13404,6 @@ function renderStep(){
     if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
     $('stepReps').classList.toggle('kg-side', withKg);
     setShown('stepReps', withKg);
-    // класс нужен только вёрстке слота (.reps.kg-side чуть выше) — на позицию кольца
-    // подготовки больше не влияет, оно на время отсчёта прячет вес сам (body.readying)
     $('countRow').classList.toggle('with-kg', withKg);
     setShown('btnDone', false);
     setShown('btnSkip', true);
@@ -13660,7 +13668,7 @@ document.addEventListener('input', e => {
 
 // карточка «дальше» больше не растягивается на всю высоту: описание в ней ограничено
 // четырьмя строками через CSS (line-clamp), подгонять высоту скриптом не нужно
-window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); } });
+window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); fitReadyRing(); } });
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){ try{ speechSynthesis.cancel(); }catch(e){} }
