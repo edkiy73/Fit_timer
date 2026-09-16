@@ -7487,10 +7487,22 @@ async function importAllData(file){
   location.reload();
 }
 
-/* ================= ШЕРИНГ ГРАФИКА ВЕСА ================= */
-async function shareWeightChart(){
-  const ws = stats.weights;
-  if(ws.length < 1){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
+/* ================= КАРТИНКА ДЛЯ ШЕРИНГА =================
+   Колонка полос, по полосе на метрику. Один и тот же код рисует и метрики тела,
+   и самочувствие: отличаются они только набором полос.
+
+   ВЫСОТА ХОЛСТА СЧИТАЕТСЯ ОТ ЧИСЛА ПОЛОС. С жиром и мышцами метрик тела стало
+   шесть, а холст оставался 1080×1350: на полосу приходилось 150 точек, в которые
+   не помещались ни шапка полосы, ни график под ней, — числа налезали на подписи,
+   а линия выходила за подложку. Полоса теперь не меньше 210 точек, холст растёт
+   вниз, а всё внутри полосы (отступы, кегли, поле графика) считается от её
+   высоты, а не жёсткими числами: полоса любого размера остаётся читаемой.
+
+   Подписи концов линии прижаты к полю графика: у точки под самым верхом подпись
+   уходит ПОД неё, иначе она вылезала в шапку полосы. */
+const SHARE_W = 1080, SHARE_TOP = 250, SHARE_BOT = 90, SHARE_GAP = 26, SHARE_LANE = 210;
+
+async function sharePng(title, lanes, fname){
   const cs = getComputedStyle(document.body);
   // переменная темы может ссылаться на другую (--work: var(--accent)) — разворачиваем
   const col = n => {
@@ -7505,8 +7517,19 @@ async function shareWeightChart(){
     const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(c0).trim());
     return m ? `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})` : c0;
   };
-  const W = 1080, H = 1350, c = document.createElement('canvas');
-  c.width = W; c.height = H; const x = c.getContext('2d');
+  const num = v => String(Math.round(v * 10) / 10).replace('.', ',');
+
+  // Полосу сначала подгоняем под привычные 1080×1350, потом зажимаем в границы
+  // читаемости — и уже от неё считаем высоту холста. Так картинка с шестью
+  // метриками растёт вниз, а с одной не превращается в полосу во весь экран.
+  const n = Math.max(1, lanes.length);
+  const W = SHARE_W;
+  const fit = Math.floor((1350 - SHARE_TOP - SHARE_BOT - SHARE_GAP * (n - 1)) / n);
+  const laneH = Math.max(SHARE_LANE, Math.min(320, fit));
+  const H = SHARE_TOP + n * laneH + SHARE_GAP * (n - 1) + SHARE_BOT;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
   try{
     await document.fonts.load('700 60px Oswald');
     await document.fonts.load('600 34px Oswald');
@@ -7517,46 +7540,42 @@ async function shareWeightChart(){
   x.fillStyle = col('--muted'); x.font = '600 42px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, 100);
   x.fillStyle = col('--ink'); x.font = '500 54px Rubik, sans-serif';
-  x.fillText('Мои изменения', W / 2, 178);
-
-  const SERIES = [
-    {k: 'w', color: col('--work'), label: 'ВЕС', unit: 'кг'},
-    {k: 'fat', color: col('--danger'), label: 'ЖИР', unit: '%'},
-    {k: 'musc', color: col('--ok'), label: 'МЫШЦЫ', unit: '%'},
-    {k: 'waist', color: col('--accent-ink'), label: 'ТАЛИЯ', unit: 'см'},
-    {k: 'hips', color: col('--rest-ink'), label: 'БЁДРА', unit: 'см'},
-    {k: 'chest', color: col('--warn'), label: 'ГРУДЬ', unit: 'см'}
-  ];
-  const active = SERIES.map(s => ({s, have: ws.map(p => p[s.k] != null ? p[s.k] : null).filter(v => v != null).slice(-30)}))
-                       .filter(o => o.have.length);
+  x.fillText(title, W / 2, 178);
 
   const gx = 70, gw = W - 140;
-  const gap = 26;
-  let gy = 250;
-  // высоту полосы считаем от остатка холста, а не по таблице «столько-то серий»:
-  // с жиром и мышцами серий стало шесть, и прежние 205 точек на каждую уезжали за низ
-  const room = H - gy - 90; // 90 — место под нижнюю подпись
-  const laneH = Math.max(150, Math.min(300, Math.floor((room - gap * (active.length - 1)) / Math.max(1, active.length))));
+  // вся внутренняя вёрстка полосы — от её высоты
+  const pad = Math.round(laneH * 0.11);
+  const fsHead = Math.max(24, Math.min(34, Math.round(laneH * 0.17)));
+  const fsVal = Math.max(22, Math.min(30, Math.round(laneH * 0.15)));
+  let gy = SHARE_TOP;
 
-  active.forEach(({s, have}) => {
+  lanes.forEach(L => {
+    const have = L.have;
+    const pair = (L.have2 && L.have2.length === have.length) ? L.have2 : null;
+    const color = col(L.v);
     const first = have[0], last = have[have.length - 1];
     const d = Math.round((last - first) * 10) / 10;
     // подложка
     x.fillStyle = col('--card'); x.strokeStyle = col('--line'); x.lineWidth = 2;
     roundRect(x, gx, gy, gw, laneH, 24); x.fill(); x.stroke();
-    // шапка полосы
-    x.textAlign = 'left'; x.fillStyle = s.color; x.font = '600 34px Oswald, sans-serif';
-    // цветной кружок
-    x.beginPath(); x.arc(gx + 34, gy + 40, 11, 0, 7); x.fill();
-    x.fillStyle = col('--ink'); x.fillText(s.label, gx + 58, gy + 51);
+    // шапка полосы: цветной кружок, название слева, изменение справа
+    const headY = gy + pad + Math.round(fsHead * 0.85);
+    x.fillStyle = color;
+    x.beginPath(); x.arc(gx + 34, headY - Math.round(fsHead * 0.3), 11, 0, 7); x.fill();
+    x.textAlign = 'left'; x.fillStyle = col('--ink'); x.font = `600 ${fsHead}px Oswald, sans-serif`;
+    x.fillText(L.label, gx + 58, headY);
     x.textAlign = 'right';
     x.fillStyle = d < 0 ? col('--rest') : (d > 0 ? col('--work') : col('--muted'));
-    x.font = '700 36px Oswald, sans-serif';
-    x.fillText(d === 0 ? `${last} ${s.unit}` : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${s.unit}`, gx + gw - 34, gy + 51);
+    x.font = `700 ${fsHead + 2}px Oswald, sans-serif`;
+    const dTxt = d === 0 ? `${num(last)} ${L.unit}` : `${d > 0 ? '+' : '−'}${num(Math.abs(d))} ${L.unit}`;
+    x.fillText(dTxt.trim(), gx + gw - 34, headY);
 
-    // график
-    const plotX = gx + 40, plotW = gw - 80, plotY = gy + 80, plotH = laneH - 120;
-    let min = Math.min(...have), max = Math.max(...have);
+    // поле графика
+    const plotX = gx + 40, plotW = gw - 80;
+    const plotY = gy + pad + fsHead + Math.round(laneH * 0.07);
+    const plotH = laneH - (plotY - gy) - pad;
+    const all = pair ? have.concat(pair) : have;
+    let min = Math.min(...all), max = Math.max(...all);
     const pd = Math.max((max - min) * 0.15, 0.5); min -= pd; max += pd;
     const span = Math.max(max - min, 1);
     const lx = i => plotX + plotW * (have.length === 1 ? .5 : i / (have.length - 1));
@@ -7567,24 +7586,35 @@ async function shareWeightChart(){
     if(have.length > 1){
       // заливка
       const grad = x.createLinearGradient(0, plotY, 0, plotY + plotH);
-      grad.addColorStop(0, alpha(s.color, .27)); grad.addColorStop(1, alpha(s.color, 0));
+      grad.addColorStop(0, alpha(color, .27)); grad.addColorStop(1, alpha(color, 0));
       x.beginPath(); x.moveTo(lx(0), ly(have[0]));
       have.forEach((v, i) => x.lineTo(lx(i), ly(v)));
       x.lineTo(lx(have.length - 1), plotY + plotH); x.lineTo(lx(0), plotY + plotH); x.closePath();
       x.fillStyle = grad; x.fill();
       // линия
-      x.strokeStyle = s.color; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round';
+      x.strokeStyle = color; x.lineWidth = 6; x.lineJoin = 'round'; x.lineCap = 'round';
       x.beginPath(); have.forEach((v, i) => i ? x.lineTo(lx(i), ly(v)) : x.moveTo(lx(i), ly(v))); x.stroke();
+      // вторая половина одного числа (нижнее давление) — та же линия тоньше и бледнее
+      if(pair){
+        x.strokeStyle = alpha(color, .55); x.lineWidth = 4;
+        x.beginPath(); pair.forEach((v, i) => i ? x.lineTo(lx(i), ly(v)) : x.moveTo(lx(i), ly(v))); x.stroke();
+      }
     }
-    x.fillStyle = s.color;
+    x.fillStyle = color;
     x.beginPath(); x.arc(lx(0), ly(first), 9, 0, 7); x.fill();
     x.beginPath(); x.arc(lx(have.length - 1), ly(last), 11, 0, 7); x.fill();
-    // подписи концов
-    x.fillStyle = col('--ink'); x.font = '600 30px Oswald, sans-serif';
-    x.textAlign = 'left'; x.fillText(String(first).replace('.', ','), lx(0), ly(first) - 20);
-    if(have.length > 1){ x.textAlign = 'right'; x.fillText(String(last).replace('.', ','), lx(have.length - 1), ly(last) - 20); }
+    // подписи концов: у самого верха поля подпись уходит ПОД точку, иначе вылезет в шапку
+    x.fillStyle = col('--ink'); x.font = `600 ${fsVal}px Oswald, sans-serif`;
+    const mark = (i, v, v2, align) => {
+      const py = ly(v);
+      const yy = (py - 20 < plotY + fsVal) ? py + fsVal + 10 : py - 20;
+      x.textAlign = align;
+      x.fillText(pair ? `${num(v)}/${num(v2)}` : num(v), lx(i), Math.min(yy, plotY + plotH));
+    };
+    mark(0, first, pair ? pair[0] : 0, 'left');
+    if(have.length > 1) mark(have.length - 1, last, pair ? pair[pair.length - 1] : 0, 'right');
 
-    gy += laneH + gap;
+    gy += laneH + SHARE_GAP;
   });
 
   x.textAlign = 'center';
@@ -7593,15 +7623,61 @@ async function shareWeightChart(){
 
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    const file = new File([blob], 'fittimer-progress.png', {type: 'image/png'});
+    const file = new File([blob], fname, {type: 'image/png'});
     if(navigator.canShare && navigator.canShare({files: [file]})){
       try{ await navigator.share({files: [file]}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'fittimer-progress.png'; a.click();
+    a.download = fname; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     appAlert('Картинка сохранена в загрузки.');
   }, 'image/png');
+  return c;
+}
+
+// полосы метрик тела: тот же порядок, что в карточке «Вес и объёмы»
+function shareBodyLanes(){
+  const ws = stats.weights || [];
+  const defs = [
+    {k: 'w',     v: '--work',       label: 'ВЕС',    unit: 'кг'},
+    {k: 'fat',   v: '--danger',     label: 'ЖИР',    unit: '%'},
+    {k: 'musc',  v: '--ok',         label: 'МЫШЦЫ',  unit: '%'},
+    {k: 'waist', v: '--accent-ink', label: 'ТАЛИЯ',  unit: 'см'},
+    {k: 'hips',  v: '--rest-ink',   label: 'БЁДРА',  unit: 'см'},
+    {k: 'chest', v: '--warn',       label: 'ГРУДЬ',  unit: 'см'}
+  ];
+  return defs.map(s => {
+    s.have = ws.map(p => p[s.k]).filter(v => v != null).slice(-30);
+    return s;
+  }).filter(L => L.have.length);
+}
+
+// полосы самочувствия: давление идёт парой линий — верхнее ведёт, нижнее следом
+function shareWellLanes(){
+  const ws = wellList();
+  const defs = [
+    {k: 'sys', pair: 'dia', v: '--danger',     label: 'ДАВЛЕНИЕ', unit: ''},
+    {k: 'pulse',            v: '--accent-ink', label: 'ПУЛЬС',    unit: 'уд/мин'},
+    {k: 'sleep',            v: '--rest-ink',   label: 'СОН',      unit: 'ч'}
+  ];
+  return defs.map(s => {
+    const pts = ws.filter(p => p[s.k] != null).slice(-30);
+    s.have = pts.map(p => p[s.k]);
+    s.have2 = (s.pair && pts.length && pts.every(p => p[s.pair] != null)) ? pts.map(p => p[s.pair]) : null;
+    return s;
+  }).filter(L => L.have.length);
+}
+
+async function shareWeightChart(){
+  const lanes = shareBodyLanes();
+  if(!lanes.length){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
+  await sharePng('Мои изменения', lanes, 'fittimer-progress.png');
+}
+
+async function shareWellChart(){
+  const lanes = shareWellLanes();
+  if(!lanes.length){ appAlert('Сначала запиши хотя бы одно измерение.'); return; }
+  await sharePng('Моё самочувствие', lanes, 'fittimer-wellness.png');
 }
 
 /* ================= ИСТОРИЯ ВЕСА (правка задним числом) ================= */
