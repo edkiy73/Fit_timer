@@ -582,10 +582,17 @@
   .reps,.count{
     font-family:var(--font-display);font-weight:700;
     font-size:clamp(50px,15.5vw,72px);line-height:1;color:var(--accent-ink);
-    font-variant-numeric:tabular-nums;letter-spacing:.01em;
+    /* табличные цифры просим ДВАЖДЫ: font-variant-numeric понимают не все фолбэки,
+       а «00:10» → «00:09» не имеет права дёрнуть строку — рядом с таймером стоит
+       вес, и он поехал бы вместе с ней */
+    font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;letter-spacing:.01em;
     display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;
     column-gap:.16em;row-gap:2px;margin:6px 0 0;min-height:1.04em;
   }
+  /* «время и вес»: в строке остаётся один мелкий кусок «× 8 кг» справа от таймера.
+     Слот высотой в целую цифру ему не нужен — с ним строка выросла бы на полсотни
+     пикселей и утащила вниз всё, что под ней */
+  .reps.kg-side{min-height:0}
   .v-unit{
     font-family:var(--font-display);font-size:.28em;font-weight:500;color:var(--muted);
     letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
@@ -597,15 +604,24 @@
   .side-note{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.3}
   .side-note b{color:var(--accent-ink);font-weight:600}
   body.phase-rest .side-note b{color:var(--rest-ink)}
+  /* СТРОКА ГЛАВНОЙ ЦИФРЫ. Ужимается по содержимому и стоит по центру. Внутри —
+     таймер (или повторения) и рабочий вес на ОБЩЕЙ БАЗОВОЙ ЛИНИИ: на формате
+     «время и вес» вес читается справа от таймера и мелким кеглем, а не отдельной
+     строкой такого же размера над ним. Ширина таймера постоянна («ММ:СС»
+     табличными цифрами), поэтому смена секунды не двигает вес. */
+  .count-row{
+    position:relative;align-self:center;display:inline-flex;max-width:100%;
+    align-items:baseline;justify-content:center;flex-wrap:wrap;column-gap:10px;row-gap:0;
+  }
   /* ПОДГОТОВКА ПЕРЕД УПРАЖНЕНИЕМ НА ВРЕМЯ.
      Была полоса «Приготовься · 5» под цифрой, и место под неё держалось весь шаг —
      ещё полсотни пикселей, отнятых у карточки упражнения на каждом таком шаге.
      Стало кольцо сбоку от главной цифры: круг с еле заметной обводкой, который
-     заполняется цветом фазы, и отсчёт внутри. Обёртка ужимается по цифре, кольцо
-     висит абсолютом от её правого края — цифра остаётся ровно по центру и не
-     двигается ни когда кольцо появляется, ни когда исчезает. Слова «приготовься»
-     больше нет: заполняющийся круг с цифрой и так читается как «сейчас начнём». */
-  .count-wrap{position:relative;align-self:center;display:inline-flex;max-width:100%}
+     заполняется цветом фазы, и отсчёт внутри. Кольцо висит абсолютом от правого
+     края всей строки (а не одного таймера — иначе оно легло бы на вес), поэтому
+     цифра не двигается ни когда оно появляется, ни когда исчезает. Слова
+     «приготовься» больше нет: заполняющийся круг с цифрой и так читается как
+     «сейчас начнём». */
   .ready-ring{
     position:absolute;left:100%;top:50%;margin-left:14px;transform:translateY(-50%);
     width:52px;height:52px;flex:none;align-items:center;justify-content:center;
@@ -623,7 +639,10 @@
   }
   body.phase-rest .rr-arc{stroke:var(--rest)}
   body.phase-rest .ready-ring b{color:var(--rest-ink)}
-  /* совсем узкий экран: кольцу негде висеть сбоку — уводим его под цифру */
+  /* Сбоку кольцу место есть не всегда: на совсем узком экране и на «времени с
+     весом», где справа от таймера уже стоит «× 8 кг». Тогда кольцо уходит под
+     правый край строки — оно живёт секунды и ничего под собой не ломает. */
+  .count-row.with-kg .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
   @media (max-width:340px){
     .ready-ring{left:auto;right:-4px;top:auto;bottom:-46px;transform:none;margin:0}
   }
@@ -3460,11 +3479,15 @@
       <div class="stage-head">
         <div class="phase-tag" id="phaseTag"></div>
         <h2 id="stepTitle"></h2>
-        <div class="reps" id="stepReps"></div>
-        <!-- цифра и кольцо подготовки: кольцо висит сбоку абсолютом, поэтому
-             появляется и исчезает, не сдвигая саму цифру ни на пиксель -->
-        <div class="count-wrap">
+        <!-- Главная цифра шага и всё, что читается вместе с ней, — ОДНА строка по
+             базовой линии: таймер, повторения и рабочий вес. Раньше вес на формате
+             «время и вес» вставал отдельной строкой такого же огромного кегля НАД
+             таймером и спорил с ним за внимание.
+             Кольцо подготовки висит сбоку абсолютом, поэтому появляется и исчезает,
+             не сдвигая саму цифру ни на пиксель. -->
+        <div class="count-row" id="countRow">
           <div class="count" id="countdown"></div>
+          <div class="reps" id="stepReps"></div>
           <span class="ready-ring hidden" id="readyRing" aria-hidden="true">
             <svg viewBox="0 0 40 40"><circle class="rr-bg" cx="20" cy="20" r="17"/><circle class="rr-arc" id="readyArc" cx="20" cy="20" r="17"/></svg>
             <b id="readyNum">5</b>
@@ -13240,6 +13263,10 @@ function renderStep(){
     // база. По старому условию (progAxis === 'weight') такой вес не показывался вовсе —
     // человек вписал 12 кг, а на тренировке их не видел.
     const kgTxt = step.weight > 0 ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>` : '';
+    // здесь у строки есть своя цифра: слот главной цифры нужен целиком, а место
+    // справа от неё ничем не занято — кольцу подготовки на этом шаге и не нужно
+    $('stepReps').classList.remove('kg-side');
+    $('countRow').classList.remove('with-kg');
     // пробелы между частями строки — для чтения вслух и копирования; во флекс-контейнере
     // они не создают отдельных элементов и на раскладку не влияют
     $('stepReps').innerHTML = `<span class="v-num">${valueText(step.reps)}</span> `
@@ -13253,13 +13280,16 @@ function renderStep(){
     setShown('btnSkip', false);
   } else {
     // «время и вес» (удержание или перенос с грузом) — вес виден и на самом
-    // таймере, не только в озвучке в начале: не отдых, показывать нечего смысла нет
-    if(step.phase === 'work' && step.weight > 0){
-      $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
-      setShown('stepReps', true);
-    } else {
-      setShown('stepReps', false);
-    }
+    // таймере, не только в озвучке в начале: не отдых, показывать нечего смысла нет.
+    // Встаёт он СПРАВА от таймера, на одной с ним базовой линии (одна .count-row):
+    // отдельной строкой он занимал весь слот главной цифры и весил столько же,
+    // сколько сам отсчёт. Класс kg-side снимает этот слот.
+    const withKg = step.phase === 'work' && step.weight > 0;
+    if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
+    $('stepReps').classList.toggle('kg-side', withKg);
+    setShown('stepReps', withKg);
+    // место справа от таймера занято весом — кольцу подготовки придётся встать под строкой
+    $('countRow').classList.toggle('with-kg', withKg);
     setShown('btnDone', false);
     setShown('btnSkip', true);
     $('btnSkip').textContent = 'Пропустить';
