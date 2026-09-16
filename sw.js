@@ -1,5 +1,5 @@
 /* Fit Timer — service worker v2: страница network-first (обновления подтягиваются сразу), статика cache-first */
-const CACHE = 'fittimer-v5'; // версия поднята — новые иконки: старый кэш будет удалён при активации
+const CACHE = 'fittimer-v6'; // версия поднята — кабинет тренера: старый кэш будет удалён при активации
 const ASSETS = [
   './',
   './index.html',

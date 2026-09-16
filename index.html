@@ -340,9 +340,9 @@
   .btn-ghost:active{transform:scale(.985)}
   .btn-ghost svg{width:18px;height:18px;margin-right:8px;flex:none}
   /* «＋ Добавить профиль» — строка выбора с иконкой по центру, а не с плюсом-символом */
-  .choice.add-row{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
-  .choice.add-row b{margin:0}
-  .choice.add-row svg{width:18px;height:18px;color:var(--muted);flex:none}
+  .choice.add-row, .choice.ico-row{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+  .choice.add-row b, .choice.ico-row b{margin:0}
+  .choice.add-row svg, .choice.ico-row svg{width:18px;height:18px;color:var(--muted);flex:none}
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .field-hint:empty{display:none}
@@ -488,7 +488,12 @@
   .chip.chip-off{align-items:center;gap:6px;background:var(--line);color:var(--ink)}
   /* span вокруг иконки сам становится flex-элементом ряда (baseline подмешивал
      нижний зазор строчных элементов, и иконка визуально «падала» ниже текста) */
-  .chip.chip-off span{display:flex;align-items:center}
+  /* От кого программа. Акцентная рамка, а не заливка: это метка происхождения,
+     а не состояние — в отличие от «Отключена», которая гасит программу целиком. */
+  .chip.chip-by{align-items:center;gap:6px;border-color:var(--accent-line);color:var(--ink)}
+  .chip.chip-by svg{width:14px;height:14px;color:var(--accent-ink);display:block}
+  .chip.chip-by b{font-family:var(--font-text);font-weight:600}
+  .chip.chip-off span, .chip.chip-by span{display:flex;align-items:center}
   .chip.chip-off svg{width:14px;height:14px;color:var(--muted);display:block}
 
   .btn-primary{
@@ -1330,6 +1335,29 @@
   .user-row .ub b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
+  /* Клиент в картотеке. Форма та же, что у строки профиля: это тоже «человек в
+     списке», и заводить для него второй визуальный язык незачем. Состояние —
+     СЛОВОМ справа, а не одним оттенком: «молчит 12 дней» видно, серую строку нет. */
+  .cl-row{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;color:var(--ink);
+  }
+  .cl-row .ua{flex:none;width:46px;height:46px;border-radius:50%;background:var(--line);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px}
+  .cl-row .ub{flex:1;min-width:0}
+  .cl-row .ub b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl-row .ub small{color:var(--muted);font-size:12.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl-state{flex:none;font-size:12px;color:var(--muted);text-align:right;max-width:38%}
+  .cl-state.ok{color:var(--ok)}
+  .cl-state.cold{color:var(--warn)}
+  /* Сводка: одно крупное число и пояснение под ним — то же, чем живёт «Прогресс». */
+  .cls-sum{display:flex;flex-direction:column;gap:2px}
+  .cls-sum b{font-family:var(--font-display);font-size:22px;line-height:1.1}
+  .cls-sum small{color:var(--muted);font-size:13px}
+  /* Рост нагрузки в отчёте: слева упражнение, справа «было → стало». */
+  .cl-grow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+  .cl-grow span{color:var(--muted);font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl-grow b{flex:none;font-size:14px;color:var(--ok)}
   /* столбики по неделям: высоту диктует viewBox, поэтому подписи не мельчают */
   #weekBars{width:100%;height:auto;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
@@ -2939,6 +2967,9 @@
              сокращением «Откл» — иначе рядом с «3 упражнения» и «3 круга» читалось
              как оборванное. Без чипа выключенную программу видно только по пункту меню. -->
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
+        <!-- от кого программа. Клиент тренера должен видеть это на самом видном месте:
+             он пришёл заниматься к конкретному человеку, а не «в приложение». -->
+        <div class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></div>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
       </div>
@@ -4015,6 +4046,33 @@
       </button>
     </div>
 
+    <!-- Тренер. Режим выключен по умолчанию: подавляющему большинству он не нужен,
+         и карточка не должна выглядеть как незаполненная анкета. Включил — появились
+         ник и вход в картотеку клиентов. -->
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Тренер</p></div>
+      <div class="pref-row">
+        <span>Я тренирую других<small>Отправлять свои программы клиентам по ссылке и видеть, кто занимается</small></span>
+        <button class="switch" id="tglTrainer"></button>
+      </div>
+      <div class="stack hidden" id="coachFields">
+        <div class="field">
+          <label>Ник</label>
+          <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
+          <p class="field-hint">Клиент увидит его рядом с программой — так он поймёт, от кого она.</p>
+        </div>
+        <div class="field">
+          <label>Ссылка на себя</label>
+          <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
+          <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
+        </div>
+        <button type="button" class="pref-row row-link" id="btnClients">
+          <span><span>Клиенты</span><small id="coachClientsSub">Пока никого</small></span>
+          <span class="nr-chev" data-icon="chevR"></span>
+        </button>
+      </div>
+    </div>
+
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
 
@@ -4217,6 +4275,70 @@
       <button class="btn-primary" id="btnSaveUser">Сохранить</button>
     </div>
   </section>
+
+  <!-- КЛИЕНТЫ ТРЕНЕРА. Сервера нет: картотека локальная, а связь с клиентом держится
+       на ссылках, которые в приложении уже работают — программа уезжает ссылкой FIT1,
+       отчёт возвращается ссылкой FITR1. Подробности — docs/trainer-ui.md. -->
+  <section class="screen builder" id="scrTrainer">
+    <div class="screen-head"><button class="back-chip" id="clsBackTop">‹</button><h2>Клиенты</h2></div>
+
+    <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
+         идёт. Список — уже подробности. -->
+    <div class="card-block" id="clsSumCard">
+      <div class="tr-sum" id="clsSum"></div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Список</p></div>
+      <div class="list-rows" id="clsList"></div>
+      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b>Добавить клиента</b></button>
+      <p class="field-hint" id="clsHint"></p>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Отчёт от клиента</p></div>
+      <p class="field-hint">Клиент жмёт «Отправить отчёт тренеру» и присылает ссылку. Вставь её — занятия появятся в его карточке.</p>
+      <div class="field"><input type="text" id="clsReportCode" placeholder="Ссылка или код FITR1…"></div>
+      <button type="button" class="choice" id="btnTakeReport"><b>Добавить отчёт</b></button>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scrClient">
+    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Клиент</h2></div>
+
+    <div class="card-block">
+      <div class="field"><label>Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать"></div>
+      <div class="field"><label>Заметка</label><input type="text" id="clNote" maxlength="80" placeholder="Например: колено, без прыжков">
+        <p class="field-hint">Только для тебя. Клиенту не уходит.</p>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Программа</p></div>
+      <div class="pref-row"><span><span id="clProgName">Не выбрана</span><small id="clSentSub"></small></span></div>
+      <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="share"></span><b id="btnClSendTxt">Отправить ссылку</b></button>
+      <p class="field-hint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.</p>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Занятия</p></div>
+      <div id="clReports"></div>
+    </div>
+
+    <div class="card-block danger-zone">
+      <button type="button" class="link-btn" id="btnDelClient">Удалить клиента</button>
+    </div>
+  </section>
+
+    <!-- Кому отправить программу. Список короткий и выбирается в один тап; завести
+         нового клиента можно прямо отсюда, не уходя на другой экран. -->
+    <div class="modal" id="pickClientModal">
+      <div class="modal-card">
+        <span class="mini-label">Кому отправить</span>
+        <div class="stack" id="pickClientList"></div>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
 
     <div class="modal" id="hfModal">
       <div class="modal-card">
@@ -5006,6 +5128,7 @@ const ICONS = {
   power: '<path d="M12 3v9"/><path d="M6.9 6.9a7.5 7.5 0 1 0 10.2 0"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
   user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.3a3.2 3.2 0 0 1 0 5.4"/><path d="M17.5 14.2A6.5 6.5 0 0 1 21.5 20"/>',
   medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
   crown: '<path d="M3.5 18h17l1.2-9.4-5 3.4L12 4.6 7.3 12l-5-3.4L3.5 18Z"/><path d="M4.4 21h15.2"/>',
   trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.6a2 2 0 0 0 0 4H7M17 6h2.4a2 2 0 0 1 0 4H17"/><path d="M12 14v3M8.5 20.5h7M9.6 17.6h4.8l1 2.9H8.6l1-2.9Z"/>',
@@ -5189,7 +5312,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
 const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
-const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -5416,7 +5539,7 @@ function prepTab(id){
   try{
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
-    else if(id === 'scrAccount'){ renderUsers(); }
+    else if(id === 'scrAccount'){ renderUsers(); renderTrainerCard(); }
     else if(id === 'scrSettings'){
       syncSettingsForm();
       // звук и управление без рук живут здесь, поэтому состояние подтягиваем при входе
@@ -5580,6 +5703,10 @@ function buildStartMenu(){
   };
   const on = progActive(p);
   setShown('startOffChip', !!p && !on);
+  // Программа пришла от тренера: показываем, от кого, и даём отчитаться.
+  const by = p && p.by ? String(p.by) : '';
+  setShown('startByChip', !!by);
+  if(by) $('startByName').textContent = by;
   menu.append(
     mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
     // тот же переключатель, что в меню карточки в списке: экран программы — второе
@@ -5593,6 +5720,10 @@ function buildStartMenu(){
       if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
     }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
+    ...(trainerOn() ? [mk(icon('users') + 'Отправить клиенту', ()=> pickClientFor(p))] : []),
+    // Отчёт есть только у программы, пришедшей от тренера, и отправляет его сам
+    // человек: приложение не сообщает никому ничего без его ведома.
+    ...(by ? [mk(icon('chart') + 'Отправить отчёт тренеру', ()=> sendReport(p))] : []),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
       if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
@@ -5716,6 +5847,7 @@ async function loadData(){
   if(!Array.isArray(stats.history)) stats.history = [];
   if(typeof stats.count !== 'number') stats.count = 0;
   await loadProgWeights();
+  await loadTrainer();
   migrateProgWeightsToDeltas();
 }
 
@@ -7057,7 +7189,8 @@ async function deleteUser(){
 // которое забыло ключ, оставляет от «удалённого» аккаунта хвост — а это ровно то, за
 // что и придёт претензия (и из стора, и по 152-ФЗ).
 const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
-                      'workoutSession', 'identity', 'docMeta', 'outbox'];
+                      'workoutSession', 'identity', 'docMeta', 'outbox',
+                      'trainer', 'clients'];
 const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
                      'voiceHint', 'voiceURI', 'clapHint',
@@ -8602,6 +8735,12 @@ async function exportProgram(p){
     exercises: pl.exercises.map(ex => ({...ex, media: null}))
   }));
   delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
+  // Штамп тренера. По нему приложение клиента поймёт, от кого программа, и покажет
+  // кнопку отчёта. Поле by не новое: под этим же именем ник лежит у программ каталога.
+  if(typeof trainerOn === 'function' && trainerOn()){
+    copy.by = normHandle(trainer.handle);
+    if((trainer.links || '').trim()) copy.byLink = trainer.links.trim();
+  }
   const code = 'FIT1.' + btoa(unescape(encodeURIComponent(JSON.stringify(copy))));
   // если приложение на хостинге — делимся ссылкой: подруга просто тапает и получает программу
   const hosted = location.protocol.startsWith('http');
@@ -9956,6 +10095,321 @@ function importProgramCode(code){
   fillBuilder('Проверь и сохрани');
 }
 
+/* ================= ТРЕНЕР И ЕГО КЛИЕНТЫ =================
+   Кабинет строится ДО бэкенда, потому что его задача — не хранить данные, а выяснить,
+   пользуются ли тренеры каналом вообще. Поэтому v1 целиком локальная и держится на
+   том, что в приложении уже работает: программа уезжает клиенту ссылкой FIT1, отчёт
+   возвращается ссылкой FITR1. Ни аккаунта, ни регистрации, ни сети.
+
+   Когда появится сервер, экраны останутся те же — поменяется только источник клиентов
+   и способ доставки отчётов. Разбор — docs/trainer-ui.md. */
+
+let trainer = null;    // {on, handle, links}
+let clients = [];      // [{id, name, note, programId, programName, sentAt, reports:[]}]
+let clientIdx = -1;    // какого клиента открыли на scrClient
+
+async function loadTrainer(){
+  try{ trainer = JSON.parse(await kvGet(pk('trainer'))) || null; }catch(e){ trainer = null; }
+  if(!trainer) trainer = {on: false, handle: '', links: ''};
+  try{ clients = JSON.parse(await kvGet(pk('clients'))) || []; }catch(e){ clients = []; }
+  if(!Array.isArray(clients)) clients = [];
+}
+async function saveTrainer(){ await kvSet(pk('trainer'), JSON.stringify(trainer)); }
+async function saveClients(){ await kvSet(pk('clients'), JSON.stringify(clients)); }
+// Режим считается включённым только вместе с ником: без ника клиент не поймёт, от кого
+// пришла программа, а «Отправить клиенту» в меню без адресата — пункт в никуда.
+const trainerOn = () => !!(trainer && trainer.on && (trainer.handle || '').trim());
+// ник приводим к одному виду: человек напишет и «@lena», и «lena», и «t.me/lena»
+function normHandle(v){
+  let h = String(v || '').trim().replace(/^https?:\/\//, '').replace(/^(t\.me|instagram\.com)\//, '');
+  h = h.replace(/^@+/, '').replace(/[^\wа-яё.\-]/gi, '');
+  return h ? '@' + h : '';
+}
+function humanDay(iso){
+  if(!iso) return '';
+  try{ return new Date(iso + 'T12:00:00').toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'}); }
+  catch(e){ return iso; }
+}
+function daysSince(iso){
+  if(!iso) return null;
+  try{ return Math.floor((Date.now() - new Date(iso + 'T12:00:00').getTime()) / 86400000); }catch(e){ return null; }
+}
+const lastReport = c => (c && c.reports && c.reports.length) ? c.reports[c.reports.length - 1] : null;
+
+/* ---- экран аккаунта: карточка «Тренер» ---- */
+function renderTrainerCard(){
+  if(!$('tglTrainer')) return;
+  $('tglTrainer').classList.toggle('on', !!(trainer && trainer.on));
+  setShown('coachFields', !!(trainer && trainer.on));
+  if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (trainer && trainer.handle) || '';
+  if(document.activeElement !== $('coachLinks'))  $('coachLinks').value  = (trainer && trainer.links) || '';
+  const n = clients.length;
+  const live = clients.filter(c => lastReport(c)).length;
+  $('coachClientsSub').textContent = !n ? 'Пока никого'
+    : `${n} ${plural(n, 'человек', 'человека', 'человек')}` + (live ? ` · ${live} занимаются` : '');
+}
+
+/* ---- экран «Клиенты» ---- */
+function openClients(){
+  renderClients();
+  show('scrTrainer');
+}
+function renderClients(){
+  const n = clients.length;
+  const live = clients.filter(c => lastReport(c)).length;
+  const total = clients.reduce((a, c) => a + (lastReport(c) ? lastReport(c).n : 0), 0);
+  setShown('clsSumCard', n > 0);
+  if(n){
+    const sum = $('clsSum');
+    sum.innerHTML = '<b></b><small></small>';
+    sum.querySelector('b').textContent = `${n} ${plural(n, 'клиент', 'клиента', 'клиентов')}`;
+    sum.querySelector('small').textContent =
+      (live ? `${live} ${live === 1 ? 'занимается' : 'занимаются'} · ` : '')
+      + `${total} ${plural(total, 'тренировка', 'тренировки', 'тренировок')} всего`;
+  }
+  const box = $('clsList');
+  box.innerHTML = '';
+  clients.forEach((c, i) => {
+    const r = lastReport(c);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'cl-row';
+    // Состояние говорится СЛОВОМ, а не одной приглушённостью: «ждёт» и «молчит 12 дней»
+    // читаются с расстояния, а серый оттенок — нет.
+    let state, tone = 'wait';
+    if(r){
+      const d = daysSince(r.last);
+      state = `${r.n} ${plural(r.n, 'занятие', 'занятия', 'занятий')}`;
+      tone = (d != null && d > 10) ? 'cold' : 'ok';
+      if(d != null && d > 10) state += ` · молчит ${d} ${plural(d, 'день', 'дня', 'дней')}`;
+    } else if(c.sentAt){
+      const d = daysSince(c.sentAt);
+      state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
+    } else state = 'не отправлено';
+    const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
+    row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
+      + `<span class="cl-state ${tone}"></span>`;
+    row.querySelector('b').textContent = c.name || 'Без имени';
+    row.querySelector('.ub small').textContent = c.programName || 'Программа не выбрана';
+    row.querySelector('.cl-state').textContent = state;
+    row.onclick = ()=> openClient(i);
+    box.appendChild(row);
+  });
+  $('clsHint').textContent = n
+    ? 'Клиент занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.'
+    : 'Добавь клиента, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.';
+}
+
+/* ---- карточка клиента ---- */
+function openClient(i){
+  clientIdx = i;
+  fillClient();
+  show('scrClient');
+}
+const curClient = () => clients[clientIdx] || null;
+
+function fillClient(){
+  const c = curClient();
+  if(!c) return;
+  $('clTitle').textContent = c.name || 'Клиент';
+  if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
+  if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
+  const prog = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
+  $('clProgName').textContent = c.programName || 'Программа не выбрана';
+  $('clSentSub').textContent = !c.sentAt ? 'ещё не отправлена'
+    : `отправлена ${humanDay(c.sentAt)}` + (prog ? '' : ' · программы уже нет в списке');
+  $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
+  renderClientReports();
+}
+
+function renderClientReports(){
+  const c = curClient(), box = $('clReports');
+  box.innerHTML = '';
+  const r = lastReport(c);
+  if(!r){
+    const h = document.createElement('p');
+    h.className = 'field-hint';
+    h.textContent = 'Пока ничего. Отчёт приходит ссылкой: клиент жмёт «Отправить отчёт тренеру» у себя в приложении.';
+    box.appendChild(h);
+    return;
+  }
+  const rest = [];
+  if(r.last) rest.push(`последняя ${humanDay(r.last)}`);
+  if(r.streak > 1) rest.push(`серия ${r.streak}`);
+  const head = document.createElement('div');
+  head.className = 'cls-sum';
+  head.innerHTML = '<b></b><small></small>';
+  head.querySelector('b').textContent = `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
+  head.querySelector('small').textContent = rest.join(' · ');
+  box.appendChild(head);
+  // Рост нагрузки показываем там, где он есть: упражнение, которое не выросло,
+  // в отчёте только шумит.
+  (r.ex || []).forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'cl-grow';
+    row.innerHTML = '<span></span><b></b>';
+    row.querySelector('span').textContent = e.n;
+    row.querySelector('b').textContent = e.a === e.b ? e.b : `${e.a} → ${e.b}`;
+    box.appendChild(row);
+  });
+  const note = document.createElement('p');
+  note.className = 'field-hint';
+  note.textContent = `Отчёт от ${humanDay(r.at)}`
+    + (c.reports.length > 1 ? ` · всего отчётов ${c.reports.length}` : '');
+  box.appendChild(note);
+}
+
+/* ---- отправка программы клиенту ----
+   Программа уходит обычной ссылкой FIT1, но со штампом by: по нему приложение клиента
+   поймёт, что программа от тренера, и покажет кнопку отчёта. Поле by не новое — под
+   этим же именем ник тренера лежит у программ каталога. */
+async function sendProgramToClient(c){
+  const p = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
+  if(!p){ appAlert('Сначала выбери программу: пункт «Отправить клиенту» есть в меню любой программы в списке тренировок.'); return; }
+  c.sentAt = localISO(new Date());
+  c.programName = p.name;
+  await saveClients();
+  fillClient();
+  renderClients();
+  renderTrainerCard();
+  await exportProgram(p);
+}
+
+async function addClient(){
+  const c = {id: 'c' + Date.now(), name: 'Клиент ' + (clients.length + 1), note: '',
+             programId: null, programName: '', sentAt: null, reports: []};
+  clients.push(c);
+  await saveClients();
+  return c;
+}
+
+// «Отправить клиенту» из меню программы: выбрать, кому, — и сразу отправить.
+function pickClientFor(p){
+  const box = $('pickClientList');
+  box.innerHTML = '';
+  $('pickClientModal').querySelector('.mini-label').textContent = 'Кому отправить';
+  clients.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'choice';
+    b.innerHTML = '<b></b><small></small>';
+    b.querySelector('b').textContent = c.name || 'Без имени';
+    b.querySelector('small').textContent = !c.programName ? 'программы пока нет'
+      : (c.programId === p.id ? 'уже эта программа' : `сейчас: ${c.programName}`);
+    b.onclick = async ()=>{
+      $('pickClientModal').classList.remove('open');
+      c.programId = p.id;
+      c.programName = p.name;
+      await saveClients();
+      await sendProgramToClient(c);
+    };
+    box.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'choice add-row';
+  add.innerHTML = icon('plus') + '<b>Новый клиент</b>';
+  add.onclick = async ()=>{
+    $('pickClientModal').classList.remove('open');
+    const c = await addClient();
+    c.programId = p.id;
+    c.programName = p.name;
+    await saveClients();
+    await sendProgramToClient(c);
+  };
+  box.appendChild(add);
+  $('pickClientModal').classList.add('open');
+}
+
+/* ---- сторона клиента: отчёт тренеру ----
+   Отчёт собирает и отправляет САМ человек, кнопкой. Приложение не следит за ним и не
+   отсылает ничего без ведома — иначе «тренер видит мои тренировки» превращается в то,
+   на что никто не соглашался. */
+function buildReport(p){
+  const mine = stats.history.filter(h => h.pid === p.id);
+  const me = users.find(u => u.id === currentUser);
+  const ex = [];
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(e => {
+    // поля упражнения — type и warmup (не kind/warm: те у ШАГА тренировки, а не у
+    // упражнения). Разминку в отчёт не берём: она не растёт (progAxis → none).
+    if(ex.length >= 4 || e.warmup || e.type === 'time') return;
+    const now = progressedRepsRange(p.id, e, p);
+    const was = String(e.value == null ? '' : e.value);
+    const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
+    const kgWas = hasWeight(e) ? (+e.weight || 0) : 0;
+    if(now === was && kgNow === kgWas) return;
+    ex.push({n: e.name || 'Упражнение',
+             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} кг` : ''),
+             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
+  }));
+  return {
+    v: 1, by: p.by || '', who: (me && me.name) || '', name: p.name,
+    n: mine.length,
+    sec: mine.reduce((a, h) => a + (h.sec || 0), 0),
+    first: mine.length ? mine[0].d : null,
+    last: mine.length ? mine[mine.length - 1].d : null,
+    streak: calcStreakInfo().n,
+    ex
+  };
+}
+
+async function sendReport(p){
+  const rep = buildReport(p);
+  if(!rep.n){
+    appAlert('Отчёт пока пустой: по этой программе ещё нет ни одной законченной тренировки.');
+    return;
+  }
+  const code = 'FITR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(rep))));
+  const hosted = location.protocol.startsWith('http');
+  const link = hosted ? location.origin + location.pathname + '?report=' + encodeURIComponent(code) : null;
+  const text = (rep.who ? rep.who + ': ' : '')
+    + `${rep.n} ${plural(rep.n, 'тренировка', 'тренировки', 'тренировок')} по программе «${p.name}»`;
+  if(link && navigator.share){
+    try{ await navigator.share({title: 'Fit Timer', text, url: link}); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  try{
+    await navigator.clipboard.writeText(link || code);
+    appAlert('Отчёт скопирован — отправь его тренеру любым мессенджером. Внутри только занятия по этой программе: сколько, когда и как выросла нагрузка.');
+  }catch(e){
+    appAlert('Скопируй отчёт и отправь тренеру:', {code: link || code});
+  }
+}
+
+/* ---- сторона тренера: приём отчёта ---- */
+async function takeReport(code){
+  code = (code || '').trim();
+  if(code.includes('report=')){
+    try{ code = decodeURIComponent(code.split('report=')[1].split('&')[0]); }catch(e){}
+  }
+  if(!code.startsWith('FITR1.')){ appAlert('Это не похоже на отчёт — он начинается с FITR1. Можно вставить и целую ссылку.'); return; }
+  let rep;
+  try{ rep = JSON.parse(decodeURIComponent(escape(atob(code.slice(6))))); }
+  catch(e){ appAlert('Не удалось прочитать отчёт. Проверь, что он скопирован целиком.'); return; }
+  if(!rep || !rep.name){ appAlert('В отчёте нет данных о тренировках.'); return; }
+  // Кому он: сначала по имени, потом по названию программы. Не нашли — спрашиваем,
+  // а не заводим втихую: два Игоря в списке — обычное дело.
+  let c = clients.find(x => rep.who && (x.name || '').trim().toLowerCase() === rep.who.trim().toLowerCase())
+       || clients.find(x => x.programName === rep.name && !lastReport(x));
+  if(!c){
+    const who = rep.who ? `«${rep.who}»` : 'этого человека';
+    if(!(await appDialog(`Отчёт по программе «${rep.name}». В списке нет ${who} — добавить как нового клиента?`,
+                         {confirm: true, okText: 'Добавить', cancelText: 'Отмена'}))) return;
+    c = await addClient();
+    c.name = rep.who || rep.name;
+    c.programName = rep.name;
+  }
+  c.reports = c.reports || [];
+  c.reports.push({at: localISO(new Date()), n: rep.n, sec: rep.sec, streak: rep.streak || 0,
+                  first: rep.first, last: rep.last, ex: rep.ex || []});
+  if(!c.programName) c.programName = rep.name;
+  await saveClients();
+  renderClients();
+  renderTrainerCard();
+  if($('clsReportCode')) $('clsReportCode').value = '';
+  openClient(clients.indexOf(c));
+}
+
 /* ================= КАТАЛОГ ПРОГРАММ =================
    Готовые программы от тренеров. Оплаты нет: программу добавляют в библиотеку,
    а не покупают, и слова «купить», «цена», «бесплатно» на экране не встречаются
@@ -11010,6 +11464,11 @@ function renderMine(){
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
+    // «Отправить клиенту» — то же действие, но с адресатом: отправка запоминается,
+    // и потом видно, кому что уходило. Пункт есть только у тренера.
+    const bClient = document.createElement('button');
+    bClient.innerHTML = icon('users') + 'Отправить клиенту';
+    bClient.onclick = ()=>{ closeAllMenus(); pickClientFor(p); };
     const bFile = document.createElement('button');
     bFile.innerHTML = icon('download') + 'Сохранить в файл';
     bFile.title = 'Со всеми картинками';
@@ -11024,7 +11483,9 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bOff, bShare, bFile, bDel);
+    menu.append(bEdit, bOff, bShare);
+    if(trainerOn()) menu.append(bClient);
+    menu.append(bFile, bDel);
     more.onclick = e=>{ e.stopPropagation(); toggleMenu(menu); };
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
@@ -15119,6 +15580,97 @@ $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
+
+/* ---- тренер: карточка на аккаунте, картотека, карточка клиента ---- */
+$('tglTrainer').onclick = async ()=>{
+  trainer.on = !trainer.on;
+  await saveTrainer();
+  renderTrainerCard();
+  // Ник спрашиваем сразу, но не окриком: поле уже открыто и ждёт, а объяснение
+  // стоит под ним. Без ника режим не считается включённым (trainerOn).
+  if(trainer.on && !(trainer.handle || '').trim()) setTimeout(()=> $('coachHandle').focus(), 120);
+};
+$('coachHandle').oninput = async e => { trainer.handle = e.target.value; await saveTrainer(); };
+$('coachHandle').onblur  = async e => {
+  trainer.handle = normHandle(e.target.value);
+  e.target.value = trainer.handle;
+  await saveTrainer();
+};
+$('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); };
+$('btnClients').onclick = ()=> openClients();
+
+$('clsBackTop').onclick = ()=> goBackTo('scrAccount');
+$('btnAddClient').onclick = async ()=>{
+  const c = await addClient();
+  renderClients();
+  renderTrainerCard();
+  openClient(clients.indexOf(c));
+  setTimeout(()=> $('clName').select(), 120);
+};
+$('btnTakeReport').onclick = ()=> takeReport($('clsReportCode').value);
+
+$('clBackTop').onclick = ()=> goBackTo('scrTrainer');
+// Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
+// снимает весь разговор о несохранённом при выходе жестом.
+$('clName').oninput = async e => {
+  const c = curClient(); if(!c) return;
+  c.name = e.target.value;
+  $('clTitle').textContent = c.name || 'Клиент';
+  await saveClients();
+};
+$('clNote').oninput = async e => {
+  const c = curClient(); if(!c) return;
+  c.note = e.target.value;
+  await saveClients();
+};
+$('btnClSend').onclick = async ()=>{
+  const c = curClient(); if(!c) return;
+  if(!c.programId){ pickProgramForClient(c); return; }
+  await sendProgramToClient(c);
+};
+$('btnDelClient').onclick = async ()=>{
+  const c = curClient(); if(!c) return;
+  if(!(await appDialog(`Убрать «${c.name || 'клиента'}» из списка? Программа у него останется — ссылка уже отправлена.`,
+       {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+  clients = clients.filter(x => x.id !== c.id);
+  clientIdx = -1;
+  await saveClients();
+  renderClients();
+  renderTrainerCard();
+  goBackTo('scrTrainer');
+};
+
+// Выбор программы для клиента, когда её ещё нет. Тот же попап, что и «кому отправить»,
+// только наоборот: клиент известен, выбирают программу.
+function pickProgramForClient(c){
+  const box = $('pickClientList');
+  box.innerHTML = '';
+  const list = customPrograms.filter(p => p.id !== 'warmup');
+  if(!list.length){
+    const h = document.createElement('p');
+    h.className = 'field-hint';
+    h.textContent = 'Сначала собери программу на экране «Тренировки» — её и отправим.';
+    box.appendChild(h);
+  }
+  list.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'choice';
+    b.innerHTML = '<b></b><small></small>';
+    b.querySelector('b').textContent = p.name;
+    b.querySelector('small').textContent = `${(normPlans(p)[0].exercises || []).length} упражнений`;
+    b.onclick = async ()=>{
+      $('pickClientModal').classList.remove('open');
+      c.programId = p.id;
+      c.programName = p.name;
+      await saveClients();
+      await sendProgramToClient(c);
+    };
+    box.appendChild(b);
+  });
+  $('pickClientModal').querySelector('.mini-label').textContent = 'Какую программу отправить';
+  $('pickClientModal').classList.add('open');
+}
 async function delCurrentPlan(){
   if(draft.plans.length <= 1) return;
   if(!(await appDialog('Удалить этот вариант вместе с его упражнениями?',
@@ -16219,14 +16771,17 @@ show('scrMenu', false);
 
 // параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
 let pendingImport = null;
+let pendingReport = null;   // ссылка с отчётом от клиента
 let pendingAction = null;
 try{
   const sp = new URLSearchParams(location.search);
   const q = sp.get('import');
   if(q && q.startsWith('FIT1.')) pendingImport = q;
+  const r = sp.get('report');
+  if(r && r.startsWith('FITR1.')) pendingReport = r;
   if(sp.has('today')) pendingAction = 'today';
   if(sp.has('create')) pendingAction = 'create';
-  if(pendingImport || pendingAction){
+  if(pendingImport || pendingReport || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', location.pathname); // чистим адрес
   }
 }catch(e){}
@@ -16291,6 +16846,14 @@ try{
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
+    return;
+  }
+  // Отчёт от клиента. Открываем сразу картотеку: тренер перешёл по ссылке именно
+  // затем, чтобы увидеть, как у человека дела, — лишний шаг здесь только мешает.
+  if(pendingReport){
+    const code = pendingReport;
+    pendingReport = null;
+    takeReport(code);
     return;
   }
   if(pendingAction === 'today'){
