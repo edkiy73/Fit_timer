@@ -461,15 +461,17 @@
     font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.2em;
     text-transform:uppercase;color:var(--muted);
   }
-  /* обложка выровнена по верху названия, а не по центру всего блока: иначе при длинном
-     названии картинка съезжала вниз и строка расписания оставалась без опоры */
+  /* обложка выровнена по верху блока (align-items:flex-start), а не по центру:
+     иначе при длинном названии картинка съезжала вниз и строка расписания оставалась
+     без опоры. Текст короче обложки при этом центруется в её высоте через align-self
+     на самом .sh-body — на длинный текст это не влияет: он и так задаёт высоту строки. */
   .start-hero{display:flex;align-items:flex-start;gap:var(--sp-3);margin:0}
   .sh-cover{
     flex:none;width:72px;height:72px;border-radius:var(--r-lg);overflow:hidden;
     background:var(--surface);box-shadow:var(--sh-1);
   }
   .sh-cover img{width:100%;height:100%;object-fit:cover;display:block}
-  .sh-body{flex:1;min-width:0}
+  .sh-body{flex:1;min-width:0;align-self:center}
   .start-wrap .num{font-family:var(--font-display);font-weight:700;letter-spacing:.18em;color:var(--accent-ink);font-size:14px}
   .start-wrap .num:empty{display:none}
   .start-wrap h2{font-size:clamp(23px,6.2vw,30px);margin:0 0 6px;line-height:1.08;overflow-wrap:anywhere}
@@ -482,9 +484,12 @@
     padding:8px 14px;font-size:var(--fs-sm);color:var(--muted);background:var(--card);
   }
   .chip b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-  /* «Откл» рядом с объёмом программы: сообщает состояние словом, а не одним цветом */
+  /* «Отключена» рядом с объёмом программы: сообщает состояние словом, а не одним цветом */
   .chip.chip-off{align-items:center;gap:6px;background:var(--line);color:var(--ink)}
-  .chip.chip-off svg{width:14px;height:14px;color:var(--muted)}
+  /* span вокруг иконки сам становится flex-элементом ряда (baseline подмешивал
+     нижний зазор строчных элементов, и иконка визуально «падала» ниже текста) */
+  .chip.chip-off span{display:flex;align-items:center}
+  .chip.chip-off svg{width:14px;height:14px;color:var(--muted);display:block}
 
   .btn-primary{
     width:100%;min-height:56px;border:none;cursor:pointer;border-radius:var(--r-md);
@@ -1429,6 +1434,9 @@
   }
   .ex-row.dragging{z-index:25;border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
   .ex-row.warm{border-style:dashed}
+  /* превью состава в каталоге: ни «⋮», ни ручки перетаскивания — правый отступ
+     под них не нужен, и метки жались в две строки при живом месте справа */
+  .ex-row.static{padding-right:12px;cursor:default}
   .ex-row > .more-btn{top:6px;right:4px}
   .ex-row > .ctx-menu{top:40px;right:6px}
   .ex-grip{
@@ -2306,7 +2314,9 @@
   .si-hero{display:flex;gap:14px;align-items:flex-start}
   .si-cover{flex:none;width:112px;height:112px;border-radius:var(--r-lg);overflow:hidden;line-height:0}
   .si-cover svg{width:100%;height:100%;display:block}
-  .si-id{min-width:0;display:flex;flex-direction:column;gap:5px}
+  /* текст короче обложки — центруем его в её высоте; сама обложка всегда сверху
+     (align-items у .si-hero остаётся flex-start), align-self не двигает её */
+  .si-id{min-width:0;display:flex;flex-direction:column;gap:5px;align-self:center}
   .si-name{font-size:20px;margin:0;line-height:1.15}
   .si-goal{margin:0;color:var(--accent-ink);font-size:13px;font-weight:500}
   /* состав премиум-программы виден только по подписке: вместо списка — заглушка,
@@ -2927,9 +2937,10 @@
       <div class="start-meta">
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
-        <!-- состояние программы: то же слово «Откл», что и на карточке в списке.
-             Без него выключенную программу видно только по пункту меню. -->
-        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Откл</div>
+        <!-- состояние программы словом, полностью: сокращение «Откл» рядом с
+             «3 упражнения» и «3 круга» читалось как оборванное. Без чипа выключенную
+             программу видно только по пункту меню. -->
+        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
       </div>
 
       <div class="card-block hidden" id="progDescBox">
@@ -10690,8 +10701,7 @@ function openStoreItem(id){
   const box = $('siList'); box.innerHTML = '';
   if(!locked) exs.forEach((ex, i) => {
     const row = document.createElement('div');
-    row.className = 'ex-row' + (ex.warmup ? ' warm' : '');
-    row.style.cursor = 'default';
+    row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
     const before = exs.slice(0, i).filter(e => !e.warmup).length;
     row.innerHTML =
       `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
@@ -14738,6 +14748,13 @@ document.addEventListener('click', e => {
   if(!btn) return;
   const fn = ACTIONS[btn.dataset.act];
   if(fn) fn(btn, e);
+});
+// Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
+// с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
+// свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
+document.addEventListener('click', e => {
+  const m = e.target;
+  if(m.id !== 'dlg' && m.classList.contains('modal') && m.classList.contains('open')) dismissTopModal();
 });
 
 /* ================= СОБЫТИЯ ================= */
