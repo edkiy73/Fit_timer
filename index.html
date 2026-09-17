@@ -4295,12 +4295,6 @@
       <p class="field-hint" id="clsHint"></p>
     </div>
 
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Отчёт от клиента</p></div>
-      <p class="field-hint">Обычно отчёты приходят сами — открой карточку клиента. Это поле нужно, когда клиент отправлял отчёт без интернета: тогда он получается ссылкой, и её надо вставить сюда.</p>
-      <div class="field"><input type="text" id="clsReportCode" placeholder="Ссылка или код FITR1…"></div>
-      <button type="button" class="choice" id="btnTakeReport"><b>Добавить отчёт</b></button>
-    </div>
   </section>
 
   <section class="screen builder" id="scrClient">
@@ -5721,9 +5715,6 @@ function buildStartMenu(){
     }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     ...(trainerOn() ? [mk(icon('users') + 'Отправить клиенту', ()=> pickClientFor(p))] : []),
-    // Отчёт есть только у программы, пришедшей от тренера, и отправляет его сам
-    // человек: приложение не сообщает никому ничего без его ведома.
-    ...(by ? [mk(icon('chart') + 'Отправить отчёт тренеру', ()=> sendReport(p))] : []),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
       if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
@@ -10139,6 +10130,12 @@ async function importProgramLink(id){
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
   fillBuilder('Проверь и сохрани');
+  // Говорим ОДИН РАЗ и ЗАРАНЕЕ: тренер будет видеть занятия по этой программе.
+  // Отчёты уходят сами, и узнавать об этом постфактум человек не должен —
+  // согласие на «за мной смотрят» даётся до, а не после.
+  if(prog.by){
+    appAlert(`Программу прислал тренер ${prog.by}. Он будет видеть, как ты занимаешься именно по ней: сколько тренировок, когда была последняя и как растёт нагрузка.\n\nБольше ничего ему не видно — ни другие программы, ни вес, ни фото.`);
+  }
 }
 
 function importProgramCode(code){
@@ -10348,7 +10345,7 @@ function renderClientReports(){
   if(!r){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Пока ничего. Отчёт приходит ссылкой: клиент жмёт «Отправить отчёт тренеру» у себя в приложении.';
+    h.textContent = 'Пока ничего. Отчёты приходят сами, как только клиент закончит первую тренировку по этой программе.';
     box.appendChild(h);
     return;
   }
@@ -10515,76 +10512,23 @@ function buildReport(p){
   };
 }
 
-async function sendReport(p){
-  const rep = buildReport(p);
-  if(!rep.n){
-    appAlert('Отчёт пока пустой: по этой программе ещё нет ни одной законченной тренировки.');
-    return;
-  }
-  // Программа пришла по короткой ссылке — отчёт уезжает сам, одним нажатием. Это и
-  // была главная потеря прежней схемы: копипаст туда и обратно на каждый отчёт
-  // рвал связь между тренером и клиентом надёжнее любой технической причины.
-  if(p.src){
-    try{
-      await apiPost('/api/report', {link: p.src, report: rep});
-      appAlert('Отправлено. Тренер увидит: сколько тренировок, когда была последняя и как выросла нагрузка.');
-      return;
-    }catch(e){
-      // сеть или сервер подвели — не тупик: остаётся прежний путь ссылкой
-    }
-  }
-  const code = 'FITR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(rep))));
-  const hosted = location.protocol.startsWith('http');
-  let link = hosted ? location.origin + location.pathname + '?report=' + encodeURIComponent(code) : null;
-  // Отчёт короткий (имя, числа, до четырёх строк роста), но правило одно на всё
-  // приложение: длинный адрес не выдаём — он не откроется у получателя.
-  if(link && link.length > URL_SAFE) link = null;
-  const text = (rep.who ? rep.who + ': ' : '')
-    + `${rep.n} ${plural(rep.n, 'тренировка', 'тренировки', 'тренировок')} по программе «${p.name}»`;
-  if(link && navigator.share){
-    try{ await navigator.share({title: 'Fit Timer', text, url: link}); return; }
-    catch(e){ if(e && e.name === 'AbortError') return; }
-  }
-  try{
-    await navigator.clipboard.writeText(link || code);
-    appAlert('Отчёт скопирован — отправь его тренеру любым мессенджером. Внутри только занятия по этой программе: сколько, когда и как выросла нагрузка.');
-  }catch(e){
-    appAlert('Скопируй отчёт и отправь тренеру:', {code: link || code});
-  }
-}
+/* Отчёт тренеру — сам, после каждой законченной тренировки.
 
-/* ---- сторона тренера: приём отчёта ---- */
-async function takeReport(code){
-  code = (code || '').trim();
-  if(code.includes('report=')){
-    try{ code = decodeURIComponent(code.split('report=')[1].split('&')[0]); }catch(e){}
-  }
-  if(!code.startsWith('FITR1.')){ appAlert('Это не похоже на отчёт — он начинается с FITR1. Можно вставить и целую ссылку.'); return; }
+   Отчёт НАКОПИТЕЛЬНЫЙ: в нём всегда всё состояние целиком, а не «что нового».
+   Из этого следует главное свойство — неудачная отправка ничего не теряет.
+   Нет сети, сервер не отвечает, человек тренировался в подвале — следующая
+   отправка увезёт и это тоже. Поэтому здесь нет ни очереди, ни повторов, ни
+   сообщений об ошибке: всё это чинило бы беду, которой нет.
+
+   Молчим и при успехе: человек закончил тренировку и смотрит на свой результат,
+   а не на отчётность. О том, что тренер видит занятия, сказано один раз — когда
+   программа принималась (см. importProgramLink). */
+function autoReport(p){
+  if(!p || !p.src) return;
   let rep;
-  try{ rep = JSON.parse(decodeURIComponent(escape(atob(code.slice(6))))); }
-  catch(e){ appAlert('Не удалось прочитать отчёт. Проверь, что он скопирован целиком.'); return; }
-  if(!rep || !rep.name){ appAlert('В отчёте нет данных о тренировках.'); return; }
-  // Кому он: сначала по имени, потом по названию программы. Не нашли — спрашиваем,
-  // а не заводим втихую: два Игоря в списке — обычное дело.
-  let c = clients.find(x => rep.who && (x.name || '').trim().toLowerCase() === rep.who.trim().toLowerCase())
-       || clients.find(x => x.programName === rep.name && !lastReport(x));
-  if(!c){
-    const who = rep.who ? `«${rep.who}»` : 'этого человека';
-    if(!(await appDialog(`Отчёт по программе «${rep.name}». В списке нет ${who} — добавить как нового клиента?`,
-                         {confirm: true, okText: 'Добавить', cancelText: 'Отмена'}))) return;
-    c = await addClient();
-    c.name = rep.who || rep.name;
-    c.programName = rep.name;
-  }
-  c.reports = c.reports || [];
-  c.reports.push({at: localISO(new Date()), n: rep.n, sec: rep.sec, streak: rep.streak || 0,
-                  first: rep.first, last: rep.last, ex: rep.ex || []});
-  if(!c.programName) c.programName = rep.name;
-  await saveClients();
-  renderClients();
-  renderTrainerCard();
-  if($('clsReportCode')) $('clsReportCode').value = '';
-  openClient(clients.indexOf(c));
+  try{ rep = buildReport(p); }catch(e){ return; }
+  if(!rep.n) return;
+  apiPost('/api/report', {link: p.src, report: rep}).catch(()=>{});
 }
 
 /* ================= КАТАЛОГ ПРОГРАММ =================
@@ -14477,6 +14421,10 @@ function finishWorkout(){
       }
     }
     savePrograms();
+    // Программа пришла от тренера — он увидит эту тренировку. Отправляем сами и
+    // молча: кнопка «отправить отчёт» лежала в меню программы, куда после финала
+    // никто не заходит, и поэтому не срабатывала никогда.
+    autoReport(p);
   }
   renderMine();
   releaseWake();
@@ -15784,7 +15732,6 @@ $('btnAddClient').onclick = async ()=>{
   openClient(clients.indexOf(c));
   setTimeout(()=> $('clName').select(), 120);
 };
-$('btnTakeReport').onclick = ()=> takeReport($('clsReportCode').value);
 
 $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
 // Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
@@ -16955,19 +16902,16 @@ show('scrMenu', false);
 // параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
 let pendingImport = null;
 let pendingLink = null;     // короткая ссылка ?p=<id> — программа лежит на сервере
-let pendingReport = null;   // ссылка с отчётом от клиента
 let pendingAction = null;
 try{
   const sp = new URLSearchParams(location.search);
   const q = sp.get('import');
   if(q && q.startsWith('FIT1.')) pendingImport = q;
-  const r = sp.get('report');
-  if(r && r.startsWith('FITR1.')) pendingReport = r;
   const sp_p = sp.get('p');
   if(sp_p && /^[0-9a-z]{4,16}$/.test(sp_p)) pendingLink = sp_p;
   if(sp.has('today')) pendingAction = 'today';
   if(sp.has('create')) pendingAction = 'create';
-  if(pendingImport || pendingLink || pendingReport || pendingAction){
+  if(pendingImport || pendingLink || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', location.pathname); // чистим адрес
   }
 }catch(e){}
@@ -17038,14 +16982,6 @@ try{
     const id = pendingLink;
     pendingLink = null;
     importProgramLink(id);
-    return;
-  }
-  // Отчёт от клиента. Открываем сразу картотеку: тренер перешёл по ссылке именно
-  // затем, чтобы увидеть, как у человека дела, — лишний шаг здесь только мешает.
-  if(pendingReport){
-    const code = pendingReport;
-    pendingReport = null;
-    takeReport(code);
     return;
   }
   if(pendingAction === 'today'){
