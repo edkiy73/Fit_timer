@@ -89,15 +89,42 @@ const store = {
     };
   },
 
-  // Настоящая проверка: записать, прочитать, стереть. Наличие переменных ничего не
-  // доказывает — токен бывает просроченным, а база выключенной.
+  /* Настоящая проверка — прогнать ВСЕ операции, которыми пользуется приложение, и
+     назвать ту, что сломалась.
+
+     Наличие переменных не доказывает ничего: токен бывает просроченным, база
+     выключенной, а у некоторых хранилищ нет списков — и тогда программа отдаётся
+     (это GET), а отчёты молча не сохраняются (это RPUSH). Ровно так и выглядела
+     беда, которую иначе пришлось бы искать гаданием. */
   async selfTest(){
-    const key = 'healthcheck:' + Date.now();
+    const k = 'healthcheck:' + Date.now() + ':' + Math.random().toString(36).slice(2);
     const val = 'ok-' + Math.random().toString(36).slice(2);
-    await store.set(key, val, 60);
-    const back = await store.get(key);
-    if(back !== val) throw new Error('записали одно, прочитали другое');
-    return true;
+    const steps = [];
+    const step = async (name, fn) => {
+      try{ await fn(); steps.push({name, ok: true}); }
+      catch(e){ steps.push({name, ok: false, err: (e && e.message) || String(e)}); }
+    };
+
+    await step('запись (SET)',        async ()=> { await store.set(k, val, 60); });
+    await step('чтение (GET)',        async ()=> {
+      const back = await store.get(k);
+      if(back !== val) throw new Error(`записали ${JSON.stringify(val)}, прочитали ${JSON.stringify(back)}`);
+    });
+    await step('счётчик (INCR)',      async ()=> {
+      const n = await store.incr(k + ':n', 60);
+      if(n !== 1) throw new Error('первый счёт вернул ' + n + ', а должен 1');
+    });
+    await step('список (RPUSH)',      async ()=> { await store.push(k + ':l', 'раз', 60); });
+    await step('чтение списка (LRANGE)', async ()=> {
+      const arr = await store.list(k + ':l');
+      if(!Array.isArray(arr) || arr[0] !== 'раз'){
+        throw new Error('вернулось ' + JSON.stringify(arr));
+      }
+    });
+
+    const bad = steps.find(x => !x.ok);
+    if(bad) throw Object.assign(new Error(`${bad.name}: ${bad.err}`), {steps});
+    return steps;
   },
 
   async get(key){

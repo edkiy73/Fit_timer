@@ -346,6 +346,9 @@
   .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
   .field-hint:empty{display:none}
+  /* Подсказка, которая сообщает о неполадке, — янтарная: тем же цветом в приложении
+     помечен незакрытый долг. Одно незакрытое дело должно читаться одинаково. */
+  .field-hint.warn{color:var(--warn)}
 
   /* ---------- конструктор ---------- */
   .builder h2{margin:18px 0 16px}
@@ -4066,6 +4069,7 @@
           <label>Ник</label>
           <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
           <p class="field-hint">Клиент увидит его рядом с программой — так он поймёт, от кого она.</p>
+          <p class="field-hint" id="coachHandleErr"></p>
         </div>
         <!-- Сначала «кто ты», потом «где тебя найти». Клиент открывает страницу
              тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
@@ -4363,6 +4367,7 @@
 
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Занятия</p></div>
+      <p class="field-hint hidden" id="clState"></p>
       <div id="clReports"></div>
     </div>
 
@@ -8801,6 +8806,33 @@ function trainerProfile(){
   };
 }
 
+/* Отправка профиля на сервер. С задержкой, потому что зовётся на каждый набранный
+   символ; и молча при успехе, потому что человек печатает, а не ждёт отчёта.
+   Заметным делаем только то, что требует его решения: занятый ник. */
+let profileTimer = null;
+function pushProfileSoon(){
+  clearTimeout(profileTimer);
+  profileTimer = setTimeout(pushProfile, 1200);
+}
+async function pushProfile(){
+  if(!trainerOn()) return;
+  try{
+    const r = await apiPost('/api/profile', {
+      handle: normHandle(trainer.handle),
+      trainer: trainerProfile(),
+      trainerKey: trainer.key || ''
+    });
+    if(r.trainerKey){ trainer.key = r.trainerKey; await saveTrainer(); }
+    trainer.pageErr = null;
+  }catch(e){
+    trainer.pageErr = e && e.code === 'handle_taken'
+      ? 'Этот ник уже занят другим тренером — возьми другой.'
+      : null;
+    await saveTrainer();
+  }
+  renderTrainerCard();
+}
+
 async function programLink(p, extra){
   const program = programPayload(p);
   const r = await apiPost('/api/share', Object.assign(
@@ -10301,6 +10333,7 @@ function renderTrainerCard(){
   if(document.activeElement !== $('coachLinks'))  $('coachLinks').value  = (trainer && trainer.links) || '';
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
+  $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
   const n = clients.length;
   const live = clients.filter(c => lastReport(c)).length;
   $('coachClientsSub').textContent = !n ? 'Пока никого'
@@ -10311,6 +10344,17 @@ function renderTrainerCard(){
 function openClients(){
   renderClients();
   show('scrTrainer');
+  // Тренер открывает список, чтобы одним взглядом понять, всё ли идёт. Если
+  // свежие данные приезжают только внутри карточки, этот взгляд врёт.
+  pullAll();
+}
+async function pullAll(){
+  const list = clients.filter(c => c && c.link && c.link.id);
+  if(!list.length) return;
+  let any = false;
+  for(const c of list){ if(await pullClient(c)) any = true; }
+  if(show._last === 'scrTrainer'){ renderClients(); renderTrainerCard(); }
+  if(any && show._last === 'scrClient') fillClient();
 }
 function renderClients(){
   const n = clients.length;
@@ -10389,6 +10433,14 @@ function fillClient(){
   if(c.sentAt && !prog) bits.push('программы уже нет в списке');
   $('clSentSub').textContent = bits.length ? bits.join(' · ') : 'ещё не отправлена';
   $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
+  // Ссылка, отправленная старой версией приложения, сервера не знает — отметок по
+  // ней не будет никогда, и молчать об этом нельзя: тренер ждёт того, что не придёт.
+  const stale = !!c.sentAt && !c.link;
+  $('clState').textContent = c.err ? c.err
+    : stale ? 'Эта ссылка отправлена старой версией: отметок «открыл» и отчётов по ней не будет. Отправь программу заново.'
+    : '';
+  setShown('clState', !!(c.err || stale));
+  $('clState').classList.toggle('warn', !!(c.err || stale));
   renderClientReports();
 }
 
@@ -10472,12 +10524,31 @@ async function sendProgramToClient(c){
 }
 
 /* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
-   в саму ссылку он не попадает, иначе доступ к отчётам пересылался бы вместе с ней. */
+   в саму ссылку он не попадает, иначе доступ к отчётам пересылался бы вместе с ней.
+
+   Ошибку ЗАПОМИНАЕМ и показываем. Раньше здесь стоял пустой catch, и тренер видел
+   ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
+   в порядке, но клиент ещё не занимался»: пустую карточку. Отличить эти четыре
+   случая было нельзя ни ему, ни мне. */
+const PULL_ERR = {
+  no_store: 'На сервере не подключено хранилище — отметки и отчёты не сохраняются.',
+  not_found: 'Ссылка на сервере не найдена. Отправь программу заново.',
+  bad_key: 'Нет доступа к этой ссылке. Отправь программу заново.',
+  rate_limited: 'Слишком много проверок подряд. Загляни через пару минут.'
+};
 async function pullClient(c){
   if(!c || !c.link || !c.link.id) return false;
   let d;
-  try{ d = await apiFetch(`/api/link/${encodeURIComponent(c.link.id)}?key=${encodeURIComponent(c.link.key)}`); }
-  catch(e){ return false; }
+  try{
+    d = await apiFetch(`/api/link/${encodeURIComponent(c.link.id)}?key=${encodeURIComponent(c.link.key)}`);
+  }catch(e){
+    c.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
+    c.checkedAt = null;
+    await saveClients();
+    return false;
+  }
+  c.err = null;
+  c.checkedAt = Date.now();
   c.opens = d.opens || 0;
   c.firstOpen = d.firstOpen || null;
   // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
@@ -15840,13 +15911,15 @@ $('coachHandle').onblur  = async e => {
   trainer.handle = normHandle(e.target.value);
   e.target.value = trainer.handle;
   await saveTrainer();
+  pushProfileSoon();
 };
-$('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); };
-$('coachAbout').oninput = async e => { trainer.about = e.target.value.slice(0, 400); await saveTrainer(); };
+$('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); pushProfileSoon(); };
+$('coachAbout').oninput = async e => { trainer.about = e.target.value.slice(0, 400); await saveTrainer(); pushProfileSoon(); };
 $('coachYears').oninput = async e => {
   const n = parseInt(e.target.value, 10);
   trainer.years = (isFinite(n) && n >= 0 && n <= 60) ? n : null;
   await saveTrainer();
+  pushProfileSoon();
 };
 $('btnClients').onclick = ()=> openClients();
 
