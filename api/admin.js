@@ -14,6 +14,21 @@ const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back'
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
 const clean = (v, n) => String(v == null ? '' : v).slice(0, n);
 
+// Карта «название упражнения → картинка». Режем и по числу, и по общему весу:
+// запись в хранилище не резиновая, а тридцать фото — это уже не программа.
+function pics(src){
+  const out = {};
+  let budget = 800 * 1024;
+  for(const [k, v] of Object.entries((src && typeof src === 'object') ? src : {})){
+    const key = clean(k, 60), val = String(v || '');
+    if(!key || !val.startsWith('data:image/') || val.length > budget) continue;
+    out[key] = val;
+    budget -= val.length;
+    if(Object.keys(out).length >= 30) break;
+  }
+  return out;
+}
+
 async function readItems(listKey, want){
   const ids = (await store.list(listKey)).slice(-300);
   const raws = await store.many(ids.map(id => `c:${id}`));
@@ -118,6 +133,7 @@ module.exports = async (req, res) => {
       min: Math.max(1, Math.min(180, Math.round(+it.min || 20))),
       name: clean(it.name, 60), gives: clean(it.gives, 300),
       text: clean(it.text, 60000), cover: clean(it.cover, 90000) || null,
+      media: pics(it.media),
       exCount: Math.max(0, Math.round(+it.exCount || 0)),
       status: 'approved', at: new Date().toISOString(), mine: true
     }));
@@ -138,6 +154,10 @@ module.exports = async (req, res) => {
     });
     if(it.min != null) c.min = Math.max(1, Math.min(180, Math.round(+it.min || 20)));
     if(it.cover !== undefined) c.cover = clean(it.cover, 90000) || null;
+    if(it.exCount != null) c.exCount = Math.max(0, Math.round(+it.exCount || 0));
+    // Картинки правятся целиком: присланная карта заменяет прежнюю, поэтому убрать
+    // фото можно тем же действием, каким его добавляют.
+    if(it.media !== undefined) c.media = pics(it.media);
     await store.set(`c:${id}`, JSON.stringify(c));
     return send(res, 200, {ok: true});
   }

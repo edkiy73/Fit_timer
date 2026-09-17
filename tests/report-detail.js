@@ -85,9 +85,9 @@ async function boot(b, label, errs, url){
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
-    const c = await addClient(); c.name = 'Марина'; c.programId = 'tp1'; c.programName = 'Сила дома';
+    const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
   }, {txt: PROG, nick: NICK});
 
@@ -129,7 +129,7 @@ async function boot(b, label, errs, url){
   // ---- что увидел тренер ----
   await tp.evaluate(() => openClient(0));
   await tp.waitForTimeout(2000);
-  const r = await tp.evaluate(() => (clients[0].reports || []).slice(-1)[0] || {});
+  const r = await tp.evaluate(() => (clients[0].progs[0].reports || []).slice(-1)[0] || {});
 
   ok('журнал тренировок доехал', (r.log || []).length >= 5, (r.log || []).length + ' записей');
   ok('варианты посчитаны по отдельности',
@@ -146,12 +146,31 @@ async function boot(b, label, errs, url){
      new Set((r.ex || []).map(e => e.p)).size >= 1 && (r.ex || []).length >= 1,
      (r.ex || []).map(e => `${e.n} ${e.a}→${e.b}`).join(' | '));
 
-  const card = await tp.evaluate(() => document.getElementById('clReports').textContent.replace(/\s+/g, ' ').trim());
+  const card = await tp.evaluate(() => document.getElementById('clProgs').textContent.replace(/\s+/g, ' ').trim());
   ok('на экране есть блок про правки', /Поменял в программе/.test(card));
-  ok('на экране есть недели', /за четыре недели|эта/.test(card));
+  ok('на экране есть недели', /По неделям/.test(card));
   ok('на экране есть разбивка по дням', /По дням/.test(card));
-  ok('видно, сколько длится вариант', /мин/.test(card), (card.match(/Пн[^А-Я]*/)||[''])[0].slice(0, 40));
-  ok('недели подписаны датами, а не «3 нед.»', /эта неделя/.test(card) && !/\d нед\./.test(card));
+  // Средней длительности по варианту тут нет намеренно: одна тренировка на двадцать
+  // минут и одна на час дают «сорок минут», которых не было ни разу. Минуты стоят
+  // у КАЖДОЙ тренировки в журнале — см. проверку ниже.
+  ok('в разбивке по дням только счёт раз', /Пн\s*5 раз/.test(card.replace(/\s+/g, ' ')),
+     (card.match(/Пн[^А-Я]*/)||[''])[0].slice(0, 30));
+
+  // Вторая программа тому же клиенту не должна затирать первую вместе с занятиями.
+  const two = await tp.evaluate(async () => {
+    const r = parseProgramText('ПРОГРАММА: Растяжка\nДНИ: Сб\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Наклоны\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
+    const p2 = r.program || r; p2.id = 'tp2';
+    customPrograms.push(p2); await savePrograms();
+    await sendProgramToClient(clients[0], p2);
+    return {progs: clients[0].progs.length,
+            names: clients[0].progs.map(x => x.name),
+            firstKeeps: (clients[0].progs[0].reports || []).length};
+  });
+  ok('вторая программа не затирает первую', two.progs === 2, two.names.join(' | '));
+  ok('занятия по первой остались', two.firstKeeps > 0, two.firstKeeps + ' отчётов');
+  ok('недели подписаны датами, а не «3 нед.»', /сейчас/.test(card) && /\d{2}\.\d{2}/.test(card));
+  ok('каждая тренировка показана отдельно, со своими минутами',
+     /Тренировки/.test(card) && /\d+ мин/.test(card));
 
   // Ложного роста быть не должно: при двойной прогрессии диапазон схлопывается в
   // одно число уже на нулевом шаге, и раньше это попадало в отчёт как изменение.

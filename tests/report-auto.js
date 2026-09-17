@@ -56,14 +56,14 @@ async function boot(b, label, errs, url){
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
-    const c = await addClient(); c.name = 'Марина'; c.programId = 'tp1'; c.programName = 'Сила дома';
+    const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
   }, PROG);
 
   ok('ключ тренера остался у него и не попал в ссылку',
-     await tp.evaluate(() => !!(clients[0].link && clients[0].link.key)) && !/key=/.test(link || ''));
+     await tp.evaluate(() => !!(clients[0].progs[0].link && clients[0].progs[0].link.key)) && !/key=/.test(link || ''));
 
   // ---- клиент принимает: его предупреждают ДО, а не после ----
   const cp = await boot(b, 'клиент', errs, link);
@@ -109,18 +109,18 @@ async function boot(b, label, errs, url){
   await tp.evaluate(() => openClient(0));
   await tp.waitForTimeout(1800);
   const card = await tp.evaluate(() => ({
-    n: (clients[0].reports || []).length,
-    txt: document.getElementById('clReports').textContent.replace(/\s+/g, ' ').trim()
+    n: (clients[0].progs[0].reports || []).length,
+    txt: document.getElementById('clProgs').textContent.replace(/\s+/g, ' ').trim()
   }));
   ok('отчёт доехал сам, без единого нажатия', card.n >= 1, card.txt.slice(0, 56) + '…');
-  ok('видно, что клиент открыл ссылку', await tp.evaluate(() => clients[0].opens > 0));
+  ok('видно, что клиент открыл ссылку', await tp.evaluate(() => clients[0].progs[0].opens > 0));
 
   // сервер — источник правды: повторный заход не должен задваивать отчёты
-  const was = await tp.evaluate(() => clients[0].reports.length);
+  const was = await tp.evaluate(() => clients[0].progs[0].reports.length);
   await tp.evaluate(() => openClient(0));
   await tp.waitForTimeout(1200);
   ok('повторный заход не задваивает отчёты',
-     (await tp.evaluate(() => clients[0].reports.length)) === was, was + '');
+     (await tp.evaluate(() => clients[0].progs[0].reports.length)) === was, was + '');
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

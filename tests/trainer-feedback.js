@@ -73,11 +73,12 @@ async function boot(b, label, errs, url){
   // ---- клиент со старой ссылкой: говорим прямо, что отметок не будет ----
   const staleMsg = await tp.evaluate(async () => {
     const c = await addClient();
-    c.name = 'Старый'; c.programName = 'Что-то'; c.sentAt = '2026-09-01';
-    delete c.link;                     // так выглядит запись, сделанная прежней версией
+    c.name = 'Старый';
+    // так выглядит запись, сделанная прежней версией: ссылки нет
+    c.progs = [{pid: null, name: 'Что-то', sentAt: '2026-09-01', link: null, reports: []}];
     await saveClients();
     openClient(clients.indexOf(c));
-    return document.getElementById('clState').textContent;
+    return document.getElementById('clProgs').textContent;
   });
   ok('про старую ссылку сказано прямо', /старой версией/.test(staleMsg), staleMsg.slice(0, 48) + '…');
 
@@ -89,9 +90,9 @@ async function boot(b, label, errs, url){
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
-    const c = await addClient(); c.name = 'Марина'; c.programId = 'tp1'; c.programName = 'Сила дома';
+    const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
   }, PROG);
 
@@ -132,7 +133,8 @@ async function boot(b, label, errs, url){
   await tp.waitForTimeout(2000);
   const row = await tp.evaluate(() => {
     const c = clients.find(x => x.name === 'Марина');
-    return {opens: c.opens, reports: (c.reports || []).length, err: c.err,
+    const pr = c.progs[0];
+    return {opens: pr.opens, reports: (pr.reports || []).length, err: pr.err,
             list: document.getElementById('clsList').textContent.replace(/\s+/g,' ').trim()};
   });
   ok('список обновился сам, без захода в карточку', row.opens > 0 && row.reports > 0,

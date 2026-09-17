@@ -78,9 +78,9 @@ async function boot(b, label, errs, url){
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
-    const c = await addClient(); c.name = 'Марина'; c.programId = 'pic1'; c.programName = name;
+    const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, customPrograms.find(x => x.id === 'pic1'));
     return out;
   }, {txt: PROG, nick: NICK, name: NAME});
 

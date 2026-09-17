@@ -64,9 +64,9 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
-    const c = await addClient(); c.name = 'Марина'; c.programId = 'tp1'; c.programName = 'Сила дома';
+    const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
   }, {txt: PROG, nick: NICK});
   ok('профиль тренера закрепился за ником',

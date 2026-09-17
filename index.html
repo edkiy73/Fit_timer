@@ -349,6 +349,16 @@
   /* Подсказка, которая сообщает о неполадке, — янтарная: тем же цветом в приложении
      помечен незакрытый долг. Одно незакрытое дело должно читаться одинаково. */
   .field-hint.warn{color:var(--warn)}
+  /* ЗАГЛУШКА НА ВРЕМЯ ЗАГРУЗКИ. Раньше экран сначала рисовал одну раскладку, потом
+     заменял её другой — и это читалось как сбой, хотя всё работало. Серые полосы
+     той же формы, что и будущее содержимое, говорят «сейчас будет» и не врут: их
+     нельзя перепутать с данными, и раскладка не прыгает.
+     Мерцание намеренно медленное — быстрое само по себе выглядит тревожно. */
+  .sk{background:var(--line);border-radius:8px;animation:skPulse 1.6s ease-in-out infinite}
+  @keyframes skPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.sk{animation:none}}
+  .sk-line{height:13px;margin:9px 0}
+
   /* Своя обложка программы вместо рисованной по цели. Форму держит тот же
      контейнер, что и у рисованной, — иначе строка витрины поедет. */
   .st-photo{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
@@ -1381,14 +1391,20 @@
              letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
              margin-top:6px}
   .cls-label.warn{color:var(--warn)}
-  /* Четыре недели подряд: провал должен быть виден глазом, а не вычитаться из чисел. */
-  .cl-weeks{display:flex;gap:6px}
-  .cw{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-      border:1px solid var(--line);border-radius:10px;padding:8px 2px;background:var(--card)}
-  .cw.on{border-color:var(--accent-line)}
-  .cw b{font-family:var(--font-display);font-size:18px;line-height:1}
-  .cw:not(.on) b{color:var(--muted)}
-  .cw small{color:var(--muted);font-size:10.5px}
+  /* Четыре недели подряд. Столбик, а не рамка с числом: провал должен читаться
+     формой, с одного взгляда, а не вычитаться из четырёх цифр. Рамки вокруг каждой
+     клетки убраны — они делили ряд на четыре отдельных объекта, хотя это один
+     график, и подписи в них не помещались, разъезжаясь на две строки. */
+  .cl-weeks{display:flex;gap:10px;align-items:flex-end}
+  .cw{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+  .cw b{font-family:var(--font-display);font-size:15px;line-height:1;color:var(--muted)}
+  .cw.on b{color:var(--ink)}
+  .cw-bar{display:flex;align-items:flex-end;justify-content:center;
+          width:100%;height:42px;border-radius:7px;background:var(--line)}
+  .cw-bar i{display:block;width:100%;min-height:3px;border-radius:7px;background:var(--accent-soft)}
+  .cw.on .cw-bar i{background:var(--accent)}
+  .cw.now .cw-bar{outline:1px solid var(--accent-line);outline-offset:2px}
+  .cw small{color:var(--muted);font-size:11px;white-space:nowrap}
   /* столбики по неделям: высоту диктует viewBox, поэтому подписи не мельчают */
   #weekBars{width:100%;height:auto;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
@@ -4441,18 +4457,13 @@
       </div>
     </div>
 
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Программа</p></div>
-      <div class="pref-row"><span><span id="clProgName">Не выбрана</span><small id="clSentSub"></small></span></div>
-      <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="share"></span><b id="btnClSendTxt">Отправить ссылку</b></button>
-      <p class="field-hint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.</p>
-    </div>
+    <!-- Программ у клиента бывает несколько: курс сменился, добавили второй день,
+         дали отдельную растяжку. Раньше запись хранила одну ссылку, и вторая
+         отправка молча затирала первую вместе со всеми её занятиями. -->
+    <div id="clProgs"></div>
 
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Занятия</p></div>
-      <p class="field-hint hidden" id="clState"></p>
-      <div id="clReports"></div>
-    </div>
+    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt">Отправить программу</b></button>
+    <p class="field-hint" id="clSendHint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.</p>
 
     <div class="card-block danger-zone">
       <button type="button" class="link-btn" id="btnDelClient">Удалить клиента</button>
@@ -10470,7 +10481,13 @@ const apiPost = (path, body) => apiFetch(path, {
    и способ доставки отчётов. Разбор — docs/trainer-ui.md. */
 
 let trainer = null;    // {on, handle, links}
-let clients = [];      // [{id, name, note, programId, programName, sentAt, reports:[]}]
+/* Клиент: [{id, name, note, progs: [...]}]
+   progs — программы, отправленные ЭТОМУ человеку, у каждой своя ссылка, свои
+   отметки и свои занятия:
+     {pid, name, sentAt, link:{id,key}, opens, firstOpen, reports:[], err, checkedAt}
+   Раньше ссылка была одна на клиента, и вторая отправка затирала первую вместе с
+   её занятиями — тренер терял всё, что человек сделал по прошлому курсу. */
+let clients = [];
 let clientIdx = -1;    // какого клиента открыли на scrClient
 
 async function loadTrainer(){
@@ -10478,6 +10495,21 @@ async function loadTrainer(){
   if(!trainer) trainer = {on: false, handle: '', links: ''};
   try{ clients = JSON.parse(await kvGet(pk('clients'))) || []; }catch(e){ clients = []; }
   if(!Array.isArray(clients)) clients = [];
+  // Прежняя запись: одна программа прямо на клиенте. Переносим её в список, ничего
+  // не теряя, — у тех, кто уже отправлял, занятия должны остаться на месте.
+  let moved = false;
+  clients.forEach(c => {
+    if(Array.isArray(c.progs)) return;
+    c.progs = (c.programId || c.link || c.sentAt) ? [{
+      pid: c.programId || null, name: c.programName || '', sentAt: c.sentAt || null,
+      link: c.link || null, opens: c.opens || 0, firstOpen: c.firstOpen || null,
+      reports: c.reports || []
+    }] : [];
+    ['programId', 'programName', 'sentAt', 'link', 'opens', 'firstOpen', 'reports', 'err', 'checkedAt']
+      .forEach(k => delete c[k]);
+    moved = true;
+  });
+  if(moved) await saveClients();
 }
 async function saveTrainer(){ await kvSet(pk('trainer'), JSON.stringify(trainer)); }
 async function saveClients(){ await kvSet(pk('clients'), JSON.stringify(clients)); }
@@ -10499,7 +10531,19 @@ function daysSince(iso){
   if(!iso) return null;
   try{ return Math.floor((Date.now() - new Date(iso + 'T12:00:00').getTime()) / 86400000); }catch(e){ return null; }
 }
-const lastReport = c => (c && c.reports && c.reports.length) ? c.reports[c.reports.length - 1] : null;
+const lastReport = pr => (pr && pr.reports && pr.reports.length) ? pr.reports[pr.reports.length - 1] : null;
+const clProgs = c => (c && Array.isArray(c.progs)) ? c.progs : [];
+// Сводка по клиенту целиком: занятия по всем программам, самое свежее из них.
+function clientSum(c){
+  let n = 0, last = '', opens = 0, sent = 0;
+  clProgs(c).forEach(pr => {
+    const r = lastReport(pr);
+    if(r){ n += r.n || 0; if((r.last || '') > last) last = r.last || ''; }
+    opens += pr.opens || 0;
+    if(pr.sentAt) sent++;
+  });
+  return {n, last, opens, sent, progs: clProgs(c).length};
+}
 
 /* ---- экран аккаунта: карточка «Тренер» ---- */
 function renderTrainerCard(){
@@ -10518,7 +10562,7 @@ function renderTrainerCard(){
        [byStatus('rejected'), 'не взяли']]
       .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`).join(' · ');
   const n = clients.length;
-  const live = clients.filter(c => lastReport(c)).length;
+  const live = clients.filter(c => clientSum(c).n > 0).length;
   $('coachClientsSub').textContent = !n ? 'Пока никого'
     : `${n} ${plural(n, 'человек', 'человека', 'человек')}` + (live ? ` · ${live} занимаются` : '');
 }
@@ -10532,7 +10576,7 @@ function openClients(){
   pullAll();
 }
 async function pullAll(){
-  const list = clients.filter(c => c && c.link && c.link.id);
+  const list = clients.filter(c => clProgs(c).some(pr => pr.link && pr.link.id));
   if(!list.length) return;
   let any = false;
   for(const c of list){ if(await pullClient(c)) any = true; }
@@ -10541,8 +10585,8 @@ async function pullAll(){
 }
 function renderClients(){
   const n = clients.length;
-  const live = clients.filter(c => lastReport(c)).length;
-  const total = clients.reduce((a, c) => a + (lastReport(c) ? lastReport(c).n : 0), 0);
+  const live = clients.filter(c => clientSum(c).n > 0).length;
+  const total = clients.reduce((a, c) => a + clientSum(c).n, 0);
   setShown('clsSumCard', n > 0);
   if(n){
     const sum = $('clsSum');
@@ -10555,30 +10599,33 @@ function renderClients(){
   const box = $('clsList');
   box.innerHTML = '';
   clients.forEach((c, i) => {
-    const r = lastReport(c);
+    const sum = clientSum(c);
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'cl-row';
     // Состояние говорится СЛОВОМ, а не одной приглушённостью: «ждёт» и «молчит 12 дней»
     // читаются с расстояния, а серый оттенок — нет.
+    const newest = clProgs(c).slice().reverse().find(pr => pr.sentAt) || null;
     let state, tone = 'wait';
-    if(r){
-      const d = daysSince(r.last);
-      state = `${r.n} ${plural(r.n, 'занятие', 'занятия', 'занятий')}`;
+    if(sum.n > 0){
+      const d = daysSince(sum.last);
+      state = `${sum.n} ${plural(sum.n, 'занятие', 'занятия', 'занятий')}`;
       tone = (d != null && d > 10) ? 'cold' : 'ok';
       if(d != null && d > 10) state += ` · молчит ${d} ${plural(d, 'день', 'дня', 'дней')}`;
-    } else if(c.sentAt){
-      const d = daysSince(c.sentAt);
+    } else if(newest){
+      const d = daysSince(newest.sentAt);
       // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
       // и тренеру нужно видеть, какой из них его.
-      if(c.opens > 0) state = 'открыл, занятий нет';
+      if(sum.opens > 0) state = 'открыл, занятий нет';
       else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
     } else state = 'не отправлено';
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || 'Без имени';
-    row.querySelector('.ub small').textContent = c.programName || 'Программа не выбрана';
+    row.querySelector('.ub small').textContent = !sum.progs ? 'Программ пока нет'
+      : sum.progs === 1 ? (newest ? newest.name : 'Программа')
+      : `${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
     box.appendChild(row);
@@ -10594,7 +10641,7 @@ function openClient(i){
   fillClient();                 // сначала показываем что есть — экран не ждёт сети
   show('scrClient');
   const c = curClient();
-  if(c && c.link) pullClient(c).then(got => {
+  if(c && clProgs(c).length) pullClient(c).then(got => {
     if(got && curClient() === c){ fillClient(); renderClients(); renderTrainerCard(); }
   });
 }
@@ -10606,35 +10653,97 @@ function fillClient(){
   $('clTitle').textContent = c.name || 'Клиент';
   if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
   if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
-  const prog = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
-  $('clProgName').textContent = c.programName || 'Программа не выбрана';
-  const bits = [];
-  if(c.sentAt) bits.push(`отправлена ${humanDay(c.sentAt)}`);
-  if(c.link) bits.push(c.opens > 0
-    ? (c.firstOpen ? `открыл ${humanDay((c.firstOpen || '').slice(0, 10))}` : 'открыл')
-    : 'ещё не открывал');
-  if(c.sentAt && !prog) bits.push('программы уже нет в списке');
-  $('clSentSub').textContent = bits.length ? bits.join(' · ') : 'ещё не отправлена';
-  $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
-  // Ссылка, отправленная старой версией приложения, сервера не знает — отметок по
-  // ней не будет никогда, и молчать об этом нельзя: тренер ждёт того, что не придёт.
-  const stale = !!c.sentAt && !c.link;
-  $('clState').textContent = c.err ? c.err
-    : stale ? 'Эта ссылка отправлена старой версией: отметок «открыл» и отчётов по ней не будет. Отправь программу заново.'
-    : '';
-  setShown('clState', !!(c.err || stale));
-  $('clState').classList.toggle('warn', !!(c.err || stale));
-  renderClientReports();
+
+  const box = $('clProgs');
+  box.innerHTML = '';
+  const list = clProgs(c);
+  $('btnClSendTxt').textContent = list.length ? 'Отправить ещё программу' : 'Отправить программу';
+  $('clSendHint').textContent = list.length
+    ? 'У клиента может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.'
+    : 'Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.';
+
+  if(!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'card-block';
+    empty.innerHTML = '<p class="field-hint">Программ пока нет. Отправь первую — и здесь появятся её занятия.</p>';
+    box.appendChild(empty);
+    return;
+  }
+
+  // Каждая программа — своя карточка со своими занятиями. Складывать занятия по
+  // разным курсам в одну кучу нельзя: «двенадцать тренировок» ни о чём не говорит,
+  // если восемь из них по программе, которую человек уже закончил.
+  list.slice().reverse().forEach(pr => box.appendChild(progCard(c, pr)));
 }
 
-function renderClientReports(){
-  const c = curClient(), box = $('clReports');
-  box.innerHTML = '';
-  const r = lastReport(c);
+function progCard(c, pr){
+  const el = document.createElement('div');
+  el.className = 'card-block';
+  const prog = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
+
+  const head = document.createElement('div');
+  head.className = 'cb-head';
+  head.innerHTML = '<p class="cb-title"></p>';
+  head.querySelector('.cb-title').textContent = pr.name || 'Программа';
+  el.appendChild(head);
+
+  const bits = [];
+  if(pr.sentAt) bits.push(`отправлена ${humanDay(pr.sentAt)}`);
+  if(pr.link) bits.push(pr.opens > 0
+    ? (pr.firstOpen ? `открыл ${humanDay((pr.firstOpen || '').slice(0, 10))}` : 'открыл')
+    : 'ещё не открывал');
+  if(pr.sentAt && !prog) bits.push('программы уже нет в твоём списке');
+  const sub = document.createElement('p');
+  sub.className = 'field-hint';
+  sub.textContent = bits.join(' · ');
+  el.appendChild(sub);
+
+  // Ссылка, отправленная старой версией приложения, сервера не знает — отметок по
+  // ней не будет никогда, и молчать об этом нельзя: тренер ждёт того, что не придёт.
+  const stale = !!pr.sentAt && !pr.link;
+  if(pr.err || stale){
+    const st = document.createElement('p');
+    st.className = 'field-hint warn';
+    st.textContent = pr.err || 'Эта ссылка отправлена старой версией: отметок и отчётов по ней не будет. Отправь программу заново.';
+    el.appendChild(st);
+  }
+
+  renderReport(el, pr);
+
+  const acts = document.createElement('div');
+  acts.className = 'list-rows';
+  const again = document.createElement('button');
+  again.type = 'button';
+  again.className = 'choice ico-row';
+  again.innerHTML = icon('share') + '<b>Отправить ссылку ещё раз</b>';
+  again.onclick = ()=> resendProgram(c, pr);
+  acts.appendChild(again);
+  const drop = document.createElement('button');
+  drop.type = 'button';
+  drop.className = 'link-btn';
+  drop.textContent = 'Убрать эту программу';
+  drop.onclick = async ()=>{
+    if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у клиента программа останется.`,
+      {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+    c.progs = clProgs(c).filter(x => x !== pr);
+    await saveClients();
+    fillClient();
+    renderClients();
+  };
+  acts.appendChild(drop);
+  el.appendChild(acts);
+  return el;
+}
+
+/* ОТЧЁТ ПО ОДНОЙ ПРОГРАММЕ. Что тренер должен видеть — разобрано в
+   docs/trainer-ui.md: держит ли расписание, что именно делает, как растёт и не
+   переделал ли программу. */
+function renderReport(box, pr){
+  const r = lastReport(pr);
   if(!r){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Пока ничего. Отчёты приходят сами, как только клиент закончит первую тренировку по этой программе.';
+    h.textContent = 'Занятий пока нет. Отчёт придёт сам, как только клиент закончит первую тренировку.';
     box.appendChild(h);
     return;
   }
@@ -10642,7 +10751,7 @@ function renderClientReports(){
   const add = (cls, html) => {
     const el = document.createElement('div');
     el.className = cls;
-    el.innerHTML = html;
+    el.innerHTML = html || '';
     box.appendChild(el);
     return el;
   };
@@ -10654,37 +10763,26 @@ function renderClientReports(){
     if(tone) b.className = tone;
   };
   // Было → стало. Старое перечёркнутым и приглушённым: стрелка между двумя
-  // одинаково яркими числами заставляет разбираться, где какое, а взгляд должен
-  // цепляться за то, что сейчас.
-  const change = (label, a, b, tone) => {
+  // одинаково яркими числами заставляет разбираться, где какое.
+  const change = (label, a, b2, tone) => {
     const el = add('cl-grow', '<span></span><b><s></s> <i></i></b>');
     el.querySelector('span').textContent = label;
     el.querySelector('s').textContent = a;
-    el.querySelector('i').textContent = b;
+    el.querySelector('i').textContent = b2;
     if(tone) el.querySelector('b').className = tone;
   };
 
-  // ---- 1. Сколько и когда ----
+  // ---- сколько и когда ----
   const head = add('tr-sum cls-sum', '<b></b><small></small>');
-  head.querySelector('b').textContent =
-    `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
+  head.querySelector('b').textContent = `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
   const bits = [];
   if(r.last) bits.push(`последняя ${humanDay(r.last)}`);
   if(r.streak > 1) bits.push(`серия ${r.streak}`);
-  if(r.sec > 0 && r.n > 0){
-    // Средняя длительность тренировки. Раньше здесь стояло «всего» — сумма за все
-    // недели, число без применения: у тренера вопрос «сколько это у него занимает»,
-    // а не «сколько накопилось». У программы без вариантов это единственное место,
-    // где ответ вообще есть.
-    const m = Math.round(r.sec / r.n / 60);
-    if(m > 0 && m < 360) bits.push(`тренировка ~${m} мин`);
-  }
   head.querySelector('small').textContent = bits.join(' · ');
 
-  /* ---- 2. Последние четыре недели ----
+  /* ---- четыре недели ----
      Главное число не «сколько всего», а «сколько за последние недели»: двенадцать
-     тренировок за полгода и двенадцать за месяц — это два разных человека, и без
-     срока их не отличить. Показываем по неделям, чтобы провал был виден глазом. */
+     за полгода и двенадцать за месяц — два разных человека. */
   const log = r.log || [];
   if(log.length){
     const now = new Date();
@@ -10693,45 +10791,57 @@ function renderClientReports(){
       const d = daysSince(x.d);
       if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
     });
+    const top = Math.max(1, ...weeks);
+    add('cls-label', 'По неделям');
     const wrap = add('cl-weeks', '');
-    // Подписываем НАСТОЯЩИМИ числами, а не «3 нед.»: от какой точки отсчитывать
-    // эти недели, по надписи понять нельзя, и столбики читались как загадка.
-    const dm = t => t.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'}).replace('.', '');
+    const dm = t => t.getDate() + '.' + String(t.getMonth() + 1).padStart(2, '0');
     weeks.slice().reverse().forEach((n, i) => {
-      const back = 3 - i;                       // 3 недели назад … 0 = эта
+      const back = 3 - i;
       const to = new Date(now); to.setDate(to.getDate() - back * 7);
       const from = new Date(to); from.setDate(from.getDate() - 6);
       const w = document.createElement('div');
-      w.className = 'cw' + (n ? ' on' : '');
-      w.innerHTML = `<b>${n}</b><small></small>`;
-      w.querySelector('small').textContent = back === 0 ? 'эта неделя' : `${dm(from)} – ${dm(to)}`;
+      w.className = 'cw' + (n ? ' on' : '') + (back === 0 ? ' now' : '');
+      // Столбик, а не рамка с числом: провал должен читаться формой, а не чтением.
+      w.innerHTML = `<b></b><span class="cw-bar"><i style="height:${Math.round(n / top * 100)}%"></i></span><small></small>`;
+      w.querySelector('b').textContent = n;
+      w.querySelector('small').textContent = back === 0 ? 'сейчас' : dm(from);
       wrap.appendChild(w);
     });
-    const hint = add('field-hint', '');
-    const last4 = weeks.reduce((a, b) => a + b, 0);
-    hint.textContent = last4
-      ? `${last4} ${plural(last4, 'тренировка', 'тренировки', 'тренировок')} за четыре недели`
-      : 'За последние четыре недели тренировок не было';
-    hint.classList.toggle('warn', !last4);
   }
 
-  /* ---- 3. Какие дни делает ----
-     У программы бывает несколько вариантов, и «делает только лёгкий, тяжёлый
-     пропускает» — разговор, который без этой разбивки просто не состоится. */
+  /* ---- какие дни делает ---- */
   const plans = (r.plans || []).filter(x => x.days || x.n);
   if(plans.length > 1){
     add('cls-label', 'По дням');
     plans.forEach(pl => line(pl.days || `вариант ${pl.i + 1}`,
-      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}`
-             + (pl.sec ? ` · ~${Math.round(pl.sec / 60)} мин` : '')
-           : 'ни разу',
+      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}` : 'ни разу',
       pl.n ? '' : 'muted'));
   }
 
-  /* ---- 4. Что клиент поменял в программе ----
-     Самое важное и самое неочевидное. Тренер, уверенный, что человек делает
-     присланное, а тот выкинул половину, — худший вид слепоты. Поэтому блок стоит
-     ВЫШЕ роста нагрузки: рост по выброшенному упражнению не значит ничего. */
+  /* ---- каждая тренировка отдельно ----
+     Средняя длительность скрывает то, ради чего её смотрят: одна тренировка на
+     двадцать минут и одна на час дают «сорок минут», которых не было ни разу. */
+  if(log.length){
+    add('cls-label', 'Тренировки');
+    const wd = ['вс','пн','вт','ср','чт','пт','сб'];
+    // Сортируем сами: порядок записей в журнале — это порядок, в котором они легли,
+    // а не порядок дней. Список тренировок, идущий вразнобой, нельзя читать вовсе.
+    const sorted = log.slice().sort((a2, b2) => String(b2.d).localeCompare(String(a2.d)));
+    sorted.slice(0, 8).forEach(x => {
+      const pl = plans.find(y => y.i === x.p);
+      let when = humanDay(x.d);
+      try{ when += ', ' + wd[new Date(x.d + 'T12:00:00').getDay()]; }catch(e){}
+      // Вариант в скобках, как у упражнений. Через точку он читался как второй день
+      // («17 сентября, чт · Пн» выглядит ошибкой), хотя говорит другое: человек
+      // сделал понедельничную тренировку в четверг, и это как раз стоит заметить.
+      if(plans.length > 1 && pl && pl.days) when += ` (${pl.days})`;
+      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' мин' : '';
+      line(when, mins || '—', mins ? '' : 'muted');
+    });
+    if(log.length > 8) add('field-hint', '').textContent = `и ещё ${log.length - 8} раньше`;
+  }
+
+  /* ---- что клиент поменял ---- */
   const d = r.diff || {};
   const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
   if(changed){
@@ -10741,7 +10851,7 @@ function renderClientReports(){
     (d.mod || []).forEach(m => change(m.n, m.a, m.b, 'warn'));
   }
 
-  // ---- 5. Рост нагрузки ----
+  // ---- рост нагрузки ----
   const ex = r.ex || [];
   if(ex.length){
     add('cls-label', 'Растёт');
@@ -10753,53 +10863,65 @@ function renderClientReports(){
     });
   }
 
-  const note = document.createElement('p');
-  note.className = 'field-hint';
-  note.textContent = `Отчёт от ${humanDay(r.at)}`
-    + (c.reports.length > 1 ? ` · всего отчётов ${c.reports.length}` : '');
-  box.appendChild(note);
+  add('field-hint', '').textContent = `Отчёт от ${humanDay(r.at)}`
+    + (pr.reports.length > 1 ? ` · всего отчётов ${pr.reports.length}` : '');
 }
 
 /* ---- отправка программы клиенту ----
-   Программа уходит обычной ссылкой FIT1, но со штампом by: по нему приложение клиента
-   поймёт, что программа от тренера, и покажет кнопку отчёта. Поле by не новое — под
-   этим же именем ник тренера лежит у программ каталога. */
-async function sendProgramToClient(c){
-  const p = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
+   Программа уходит короткой ссылкой через сервер: по ней видно, открыл ли её
+   клиент, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
+   клиента, от кого она пришла. */
+async function sendProgramToClient(c, p){
   if(!p){ appAlert('Сначала выбери программу: пункт «Отправить клиенту» есть в меню любой программы в списке тренировок.'); return; }
 
-  // Через сервер ссылка получается короткой, и — главное — по ней видно, открыл ли
-  // её клиент, а его отчёты приезжают сами. Не вышло — ссылки НЕ БУДЕТ: адрес с
-  // программой внутри хостинг отбивает на длинной программе, и получатель увидит
-  // ошибку вместо тренировки. Тогда остаётся код или файл, и об этом сказано прямо.
+  // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
+  // иначе у клиента в карточке две одинаковые строки с разными половинами занятий.
+  let pr = clProgs(c).find(x => x.pid === p.id);
   let link = null, failed = null;
-  try{
-    link = await programLink(p, {to: c.name});
-    c.link = {id: link.id, key: link.key};
-  }catch(e){ failed = e; }
+  try{ link = await programLink(p, {to: c.name}); }
+  catch(e){ failed = e; }
 
-  c.sentAt = link ? localISO(new Date()) : c.sentAt;
-  c.programName = p.name;
+  if(!link){ appAlert(linkFailNote(failed) + FILE_HINT); return; }
+
+  if(!pr){
+    pr = {pid: p.id, name: p.name, reports: []};
+    c.progs = clProgs(c).concat([pr]);
+  }
+  pr.name = p.name;
+  pr.sentAt = localISO(new Date());
+  pr.link = {id: link.id, key: link.key};
+  pr.opens = 0;
+  pr.firstOpen = null;
   await saveClients();
   fillClient();
   renderClients();
   renderTrainerCard();
 
-  if(!link){
-    appAlert(linkFailNote(failed) + FILE_HINT);
+  await shareLink(link.url, c.name, p.name);
+}
+
+// Повторная отправка ТОЙ ЖЕ ссылки: отметки и занятия по ней остаются на месте.
+async function resendProgram(c, pr){
+  if(!pr.link || !pr.link.id){
+    const p = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
+    if(p) return sendProgramToClient(c, p);
+    appAlert('Этой программы уже нет в твоём списке — отправь любую другую.');
     return;
   }
-  link = link.url;
+  await shareLink(location.origin + location.pathname + '?p=' + encodeURIComponent(pr.link.id),
+                  c.name, pr.name);
+}
 
-  const text = `Программа «${p.name}»${c.name ? ' для ' + c.name : ''} — открой ссылку, и она добавится в Fit Timer:`;
+async function shareLink(url, who, what){
+  const text = `Программа «${what}»${who ? ' для ' + who : ''} — открой ссылку, и она добавится в Fit Timer:`;
   if(navigator.share){
-    try{ await navigator.share({title: 'Fit Timer', text, url: link}); return; }
+    try{ await navigator.share({title: 'Fit Timer', text, url}); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
   try{
-    await navigator.clipboard.writeText(link);
+    await navigator.clipboard.writeText(url);
     appAlert('Ссылка скопирована — отправь её клиенту любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
-  }catch(e){ appAlert('Скопируй ссылку и отправь клиенту:', {code: link}); }
+  }catch(e){ appAlert('Скопируй ссылку и отправь клиенту:', {code: url}); }
 }
 
 /* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
@@ -10807,36 +10929,39 @@ async function sendProgramToClient(c){
 
    Ошибку ЗАПОМИНАЕМ и показываем. Раньше здесь стоял пустой catch, и тренер видел
    ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
-   в порядке, но клиент ещё не занимался»: пустую карточку. Отличить эти четыре
-   случая было нельзя ни ему, ни мне. */
+   в порядке, но клиент ещё не занимался»: пустую карточку. */
 const PULL_ERR = {
   no_store: 'На сервере не подключено хранилище — отметки и отчёты не сохраняются.',
   not_found: 'Ссылка на сервере не найдена. Отправь программу заново.',
   bad_key: 'Нет доступа к этой ссылке. Отправь программу заново.',
   rate_limited: 'Слишком много проверок подряд. Загляни через пару минут.'
 };
-async function pullClient(c){
-  if(!c || !c.link || !c.link.id) return false;
+async function pullProgram(pr){
+  if(!pr || !pr.link || !pr.link.id) return false;
   let d;
   try{
-    d = await apiFetch(`/api/link/${encodeURIComponent(c.link.id)}?key=${encodeURIComponent(c.link.key)}`);
+    d = await apiFetch(`/api/link/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
   }catch(e){
-    c.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
-    c.checkedAt = null;
-    await saveClients();
+    pr.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
     return false;
   }
-  c.err = null;
-  c.checkedAt = Date.now();
-  c.opens = d.opens || 0;
-  c.firstOpen = d.firstOpen || null;
+  pr.err = null;
+  pr.checkedAt = Date.now();
+  pr.opens = d.opens || 0;
+  pr.firstOpen = d.firstOpen || null;
   // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
   // иначе после переустановки у тренера задвоится всё, что уже было.
-  c.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
+  pr.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
     streak: r.streak, first: r.first, last: r.last, ex: r.ex || [],
     log: r.log || [], plans: r.plans || [], diff: r.diff || null}));
-  await saveClients();
   return true;
+}
+// Обновить все программы клиента разом.
+async function pullClient(c){
+  let any = false;
+  for(const pr of clProgs(c)){ if(await pullProgram(pr)) any = true; }
+  await saveClients();
+  return any;
 }
 
 async function addClient(){
@@ -10858,14 +10983,14 @@ function pickClientFor(p){
     b.className = 'choice';
     b.innerHTML = '<b></b><small></small>';
     b.querySelector('b').textContent = c.name || 'Без имени';
-    b.querySelector('small').textContent = !c.programName ? 'программы пока нет'
-      : (c.programId === p.id ? 'уже эта программа' : `сейчас: ${c.programName}`);
+    const has = clProgs(c).find(x => x.pid === p.id);
+    const sum = clientSum(c);
+    b.querySelector('small').textContent = has ? 'эта программа уже у него — отправим ссылку заново'
+      : !sum.progs ? 'программ пока нет'
+      : `уже ${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
-      c.programId = p.id;
-      c.programName = p.name;
-      await saveClients();
-      await sendProgramToClient(c);
+      await sendProgramToClient(c, p);
     };
     box.appendChild(b);
   });
@@ -10876,10 +11001,7 @@ function pickClientFor(p){
   add.onclick = async ()=>{
     $('pickClientModal').classList.remove('open');
     const c = await addClient();
-    c.programId = p.id;
-    c.programName = p.name;
-    await saveClients();
-    await sendProgramToClient(c);
+    await sendProgramToClient(c, p);
   };
   box.appendChild(add);
   $('pickClientModal').classList.add('open');
@@ -11075,7 +11197,9 @@ let storeServer = [];
    сети. Каталога без сети у того, кто его ни разу не открывал, не будет — и это
    честно: пустая витрина лучше вечно устаревшей. */
 const storeAll = () => storeServer;
+let storeLoading = false;
 async function loadStoreServer(){
+  storeLoading = true;
   try{
     const d = await apiFetch('/api/catalog');
     storeServer = Array.isArray(d.items) ? d.items : [];
@@ -11084,7 +11208,7 @@ async function loadStoreServer(){
     // Каталог без сети — это то, что видели в прошлый раз, плюс зашитые программы.
     // Пустая витрина вместо вчерашней — потеря без выигрыша.
     storeServer = lastSeen('catalog') || [];
-  }
+  } finally { storeLoading = false; }
 }
 
 
@@ -11229,6 +11353,18 @@ function storeLabels(it, own){
 
 function renderStore(){
   const box = $('storeList');
+  // Пока каталог едет и показывать нечего — заглушка строками той же формы.
+  if(storeLoading && !storeServer.length){
+    $('storeCount').textContent = '';
+    // Форма строки та же, что у настоящей (.store-row), иначе появление данных
+    // подвинет всё на экране — ровно то мигание, от которого заглушка и спасает.
+    box.innerHTML = [0, 1, 2, 3].map(()=>
+      '<article class="store-row"><div class="sr-cover"><span class="sk" style="display:block;width:100%;height:100%"></span></div>'
+      + '<div class="sr-info"><span class="sk sk-line" style="display:block;width:72%"></span>'
+      + '<span class="sk sk-line" style="display:block;width:46%"></span>'
+      + '<span class="sk sk-line" style="display:block;width:58%"></span></div></article>').join('');
+    return;
+  }
   const list = storeAll().filter(storeMatches);
   $('storeCount').textContent = list.length
     ? `${list.length} ${plural(list.length, 'программа', 'программы', 'программ')}`
@@ -11456,9 +11592,12 @@ let tpFrom = 'scrMenu';
 function openTrainer(nick){
   if(!nick) return;
   tpFrom = show._last;
-  // Сразу рисуем виденное в прошлый раз: пустой экран, пока идёт запрос, читается
-  // как поломка, хотя всё работает.
-  fillTrainerPage(nick, lastSeen('tr_' + nick));
+  /* Сразу рисуем виденное в прошлый раз. Если человека видим впервые — заглушку:
+     пустой экран, который через секунду наполняется, читается как сбой, а смена
+     одной раскладки на другую — как мигание. */
+  const seen = lastSeen('tr_' + nick);
+  if(seen) fillTrainerPage(nick, seen);
+  else skeletonTrainer(nick);
   show('scrTrainerPage');
   apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
     const t = Object.assign({}, d, {
@@ -11469,6 +11608,22 @@ function openTrainer(nick){
   }).catch(()=>{});
 }
 
+// Заглушка страницы тренера: та же форма, что и настоящая, — фото, имя, ник,
+// три числа и ссылка. Поэтому появление данных не двигает ни одну строку.
+function skeletonTrainer(nick){
+  $('tpPhoto').innerHTML = '<span class="sk" style="width:100%;height:100%;border-radius:50%"></span>';
+  $('tpName').textContent = nick.replace(/^@/, '');
+  $('tpNick').textContent = nick;
+  setShown('tpAbout', true);
+  $('tpAbout').innerHTML = '<span class="sk sk-line" style="display:block;width:92%"></span>'
+    + '<span class="sk sk-line" style="display:block;width:64%"></span>';
+  setShown('tpStatsCard', true);
+  $('tpStats').innerHTML = [0, 1, 2].map(()=>
+    '<div class="tp-stat"><span class="sk" style="width:34px;height:20px"></span>'
+    + '<span class="sk sk-line" style="width:56px;margin:4px 0 0"></span></div>').join('');
+  setShown('tpLinkCard', false);
+}
+
 function fillTrainerPage(nick, t){
   t = t || {};
   $('tpPhoto').innerHTML = t.photo ? `<img src="${esc(t.photo)}" alt="">` : icon('user');
@@ -11476,7 +11631,7 @@ function fillTrainerPage(nick, t){
   $('tpNick').textContent = nick;
   const about = t.about || '';
   setShown('tpAbout', !!about);
-  $('tpAbout').textContent = about;
+  $('tpAbout').textContent = about;   // textContent затирает и разметку заглушки
 
   // Три числа, и каждое показывается, только если оно есть. «0 программ» и
   // «стаж не указан» доверия не добавляют, а место занимают.
@@ -16003,10 +16158,11 @@ $('clNote').oninput = async e => {
   c.note = e.target.value;
   await saveClients();
 };
-$('btnClSend').onclick = async ()=>{
+// Кнопка всегда спрашивает, КАКУЮ программу отправить: их может быть несколько,
+// и «отправить ещё раз» живёт у самой программы, а не здесь.
+$('btnClSend').onclick = ()=>{
   const c = curClient(); if(!c) return;
-  if(!c.programId){ pickProgramForClient(c); return; }
-  await sendProgramToClient(c);
+  pickProgramForClient(c);
 };
 $('btnDelClient').onclick = async ()=>{
   const c = curClient(); if(!c) return;
@@ -16038,13 +16194,13 @@ function pickProgramForClient(c){
     b.className = 'choice';
     b.innerHTML = '<b></b><small></small>';
     b.querySelector('b').textContent = p.name;
-    b.querySelector('small').textContent = `${(normPlans(p)[0].exercises || []).length} упражнений`;
+    const has = clProgs(c).find(x => x.pid === p.id);
+    b.querySelector('small').textContent = has
+      ? 'уже отправлена — пошлём ссылку заново'
+      : `${(normPlans(p)[0].exercises || []).length} упражнений`;
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
-      c.programId = p.id;
-      c.programName = p.name;
-      await saveClients();
-      await sendProgramToClient(c);
+      await sendProgramToClient(c, p);
     };
     box.appendChild(b);
   });

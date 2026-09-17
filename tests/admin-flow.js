@@ -83,6 +83,30 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   const cat4 = await fetch(BASE + '/api/catalog').then(r => r.json());
   ok('и пропала с витрины', !cat4.items.some(x => x.id === added.j.id));
 
+  // ---- картинки: обложка и фото упражнений ----
+  const pic = t => 'data:image/png;base64,' + btoa('pic-' + t).replace(/=/g, '');
+  const withPics = await добавь({
+    name: NAME + ' с фото',
+    cover: pic('cover'),
+    media: {'Приседания': pic('sq'), 'Планка': pic('pl')}
+  });
+  ok('программа добавляется с картинками', withPics.s === 200, withPics.j.id);
+  const one = await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
+  ok('обложка сохранилась', !!(one.item && one.item.cover));
+  ok('фото упражнений сохранились', Object.keys(one.item.media || {}).length === 2,
+     Object.keys(one.item.media || {}).join(', '));
+
+  // правкой картинку можно и заменить, и убрать
+  await api('edit', {id: withPics.j.id, item: {cover: '', media: {'Планка': pic('pl2')}}});
+  const one2 = await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
+  ok('обложку можно убрать правкой', !one2.item.cover);
+  ok('карта фото заменяется целиком', Object.keys(one2.item.media || {}).join() === 'Планка',
+     Object.keys(one2.item.media || {}).join(', '));
+  ok('мусор вместо картинки не принимается',
+     (await api('edit', {id: withPics.j.id, item: {media: {'Планка': 'не-картинка'}}})).s === 200
+     && Object.keys((await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media || {}).length === 0);
+  await api('remove', {id: withPics.j.id});
+
   // ---- закрыть и вернуть тренера ----
   ok('тренер закрывается', (await api('ban', {handle: '@lena.doma'})).s === 200);
   const banned = (await api('overview')).j.trainers.find(t => t.handle === '@lena.doma');
@@ -112,6 +136,14 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
      /последняя активность/.test(await page.textContent('#body')));
+  await page.click('.tab[data-tab="add"]');
+  await page.waitForTimeout(300);
+  await page.fill('#fText', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
+  await page.waitForTimeout(300);
+  const slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
+  ok('места под фото берутся из текста программы',
+     slots.join(',') === 'Приседания,Планка', slots.join(', '));
+  ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
   await page.screenshot({path: __dirname + '/shot-admin.png', fullPage: true});
 
   console.log('\npageerror:', errs.length ? errs : 'нет');

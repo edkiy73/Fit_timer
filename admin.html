@@ -69,6 +69,19 @@
         padding:2px 9px;font-size:11.5px;color:var(--muted);margin-left:6px}
   .pill.ban{color:var(--danger);border-color:var(--danger)}
   .gate{max-width:380px;margin:80px auto;padding:0 16px}
+  /* Картинки. Правка каталога без них — полдела: обложка решает, откроют ли строку,
+     а фото упражнения объясняет движение быстрее любого описания. */
+  .pics{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .pic{position:relative;width:88px}
+  .pic .ph{width:88px;height:88px;border-radius:10px;overflow:hidden;background:var(--soft);
+           border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;
+           color:var(--muted);font-size:11px;text-align:center;cursor:pointer;padding:6px}
+  .pic .ph img{width:100%;height:100%;object-fit:cover}
+  .pic small{display:block;font-size:11px;color:var(--muted);margin-top:4px;
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pic .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;
+          border:1px solid var(--line);background:var(--card);color:var(--danger);
+          font-size:13px;line-height:1;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
@@ -174,7 +187,8 @@ function itemCard(c){
       <div style="flex:1;min-width:0">
         <p class="name">${esc(c.name)}</p>
         ${c.by ? `<a class="who" href="/api/trainer/${encodeURIComponent(c.by)}" target="_blank" rel="noopener">${esc(c.by)}</a>` : '<span class="muted">от нас</span>'}
-        <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}</p>
+        <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}${
+          c.media && Object.keys(c.media).length ? ' · ' + Object.keys(c.media).length + ' фото' : ''}</p>
       </div>
     </div>
     <p class="gives">${esc(c.gives)}</p>
@@ -234,6 +248,75 @@ function renderTrainers(b){
 }
 
 let editing = null;
+let form = {cover: null, media: {}};   // картинки живут отдельно от полей ввода
+
+/* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
+   запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
+   не поместятся никуда, и отправлять их незачем — на экране они всё равно
+   размером с ноготь. */
+function shrinkPic(file, maxSide, cb){
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    try{ cb(c.toDataURL('image/jpeg', .82)); }catch(e){ cb(null); }
+    URL.revokeObjectURL(img.src);
+  };
+  img.onerror = () => cb(null);
+  img.src = URL.createObjectURL(file);
+}
+
+// Один выбор файла на всю страницу: кто его ждёт, тот и получит.
+let pickTo = null;
+function pickPic(fn){
+  pickTo = fn;
+  const f = $('fFile');
+  f.value = '';
+  f.click();
+}
+
+// Названия упражнений — из текста программы. Другого источника нет и не нужно:
+// фото привязано к названию, и расходиться им нельзя.
+function exNames(){
+  const out = [];
+  ($('fText').value.match(/^УПРАЖНЕНИЕ:\s*(.+)$/gmi) || []).forEach(l => {
+    const n = l.replace(/^УПРАЖНЕНИЕ:\s*/i, '').trim();
+    if(n && !out.includes(n)) out.push(n);
+  });
+  return out;
+}
+
+function renderPics(){
+  const cover = $('fCoverBox');
+  cover.innerHTML = '';
+  cover.appendChild(picBox('Обложка', form.cover, d => { form.cover = d; renderPics(); }));
+
+  const names = exNames();
+  const box = $('fPics');
+  box.innerHTML = '';
+  $('fPicsHint').textContent = names.length
+    ? 'Нажми на квадрат, чтобы выбрать фото. Картинка уменьшается сама.'
+    : 'Названия берутся из текста программы — впиши упражнения, и здесь появятся места под фото.';
+  names.forEach(n => box.appendChild(
+    picBox(n, form.media[n], d => { if(d) form.media[n] = d; else delete form.media[n]; renderPics(); })));
+  // фото упражнений, которых в тексте больше нет, держать незачем
+  Object.keys(form.media).forEach(k => { if(!names.includes(k)) delete form.media[k]; });
+}
+
+function picBox(label, data, set){
+  const el = document.createElement('div');
+  el.className = 'pic';
+  el.innerHTML = `<div class="ph">${data ? `<img src="${esc(data)}" alt="">` : 'выбрать'}</div>`
+    + `<small>${esc(label)}</small>`
+    + (data ? '<button class="x" title="Убрать">✕</button>' : '');
+  el.querySelector('.ph').onclick = () => pickPic(set);
+  const x = el.querySelector('.x');
+  if(x) x.onclick = e => { e.stopPropagation(); set(null); };
+  return el;
+}
 function renderAdd(b){
   b.innerHTML = `<div class="card">
     <p class="name" id="formTitle">Новая программа</p>
@@ -247,6 +330,12 @@ function renderAdd(b){
     <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
     <label>Что она даёт</label><textarea id="fGives" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
     <label>Текст программы</label><textarea id="fText" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
+    <label>Обложка</label>
+    <div class="pics" id="fCoverBox"></div>
+    <label>Фото упражнений</label>
+    <p class="muted" id="fPicsHint">Названия берутся из текста программы — впиши упражнения, и здесь появятся места под фото.</p>
+    <div class="pics" id="fPics"></div>
+    <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
     <div class="acts">
       <button class="b ok" id="fSave">Сохранить</button>
@@ -254,11 +343,22 @@ function renderAdd(b){
     </div>
   </div>`;
   $('fSave').onclick = saveForm;
-  $('fClear').onclick = () => { editing = null; render(); };
+  $('fClear').onclick = () => { editing = null; form = {cover: null, media: {}}; render(); };
+  // Места под фото пересобираются, пока правишь текст: добавил упражнение — сразу
+  // видно, куда класть картинку.
+  $('fText').oninput = renderPics;
+  $('fFile').onchange = e => {
+    const file = e.target.files && e.target.files[0];
+    if(!file || !pickTo) return;
+    // Обложку режем крупнее: она показывается большим квадратом на странице программы.
+    shrinkPic(file, 640, d => { pickTo(d); pickTo = null; });
+  };
+  renderPics();
 }
 
 function fillForm(c){
   editing = c.id;
+  form = {cover: c.cover || null, media: Object.assign({}, c.media || {})};
   $('formTitle').textContent = 'Изменить: ' + c.name;
   $('fName').value = c.name || '';
   $('fCat').value = c.cat || 'tone';
@@ -267,6 +367,7 @@ function fillForm(c){
   $('fBy').value = c.by || '';
   $('fGives').value = c.gives || '';
   $('fText').value = c.text || '';
+  renderPics();
 }
 
 async function saveForm(){
@@ -274,12 +375,14 @@ async function saveForm(){
     name: $('fName').value.trim(), cat: $('fCat').value, level: $('fLevel').value,
     min: +$('fMin').value, by: $('fBy').value.trim(), gives: $('fGives').value.trim(),
     text: $('fText').value,
-    exCount: ($('fText').value.match(/^УПРАЖНЕНИЕ:/gmi) || []).length
+    exCount: exNames().length,
+    cover: form.cover, media: form.media
   };
   try{
     if(editing) await api('edit', {id: editing, item});
     else await api('add', {item});
     editing = null;
+    form = {cover: null, media: {}};
     tab = 'approved';
     await load();
   }catch(e){
