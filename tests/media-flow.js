@@ -129,6 +129,25 @@ async function boot(b, label, errs, url){
   ok('отдельным запросом фото приходят', Object.keys(full.item.media || {}).length === 3,
      Object.keys(full.item.media || {}).length + '');
 
+  /* ---- страница программы в каталоге показывает фото ----
+     Их там нет в момент отрисовки: список каталога фото не несёт, и они доезжают
+     отдельным запросом уже после того, как страница открылась. Ждём. */
+  const onPage = await cp.evaluate(async (name) => {
+    await loadStoreServer();
+    const it = storeAll().find(x => x.name === name);
+    if(!it) return {found: false};
+    openStoreItem(it.id);
+    const count = () => document.querySelectorAll('#siList .ex-thumb img').length;
+    const atOnce = count();
+    for(let i = 0; i < 40 && count() < 3; i++) await new Promise(r => setTimeout(r, 100));
+    return {found: true, atOnce, later: count(),
+            rows: document.querySelectorAll('#siList .ex-row').length};
+  }, NAME);
+  ok('страница программы открывается сразу, не дожидаясь фото',
+     onPage.found && onPage.rows === 3 && onPage.atOnce === 0,
+     `${onPage.rows} строк, фото сразу ${onPage.atOnce}`);
+  ok('и фото доезжают на свои места', onPage.later === 3, onPage.later + ' из 3');
+
   // ---- добавление себе возвращает фото на места ----
   const added = await cp.evaluate(async (name) => {
     await loadStoreServer();

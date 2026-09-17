@@ -431,8 +431,8 @@
   /* семь дней недели — всегда одна строка: перенос одного дня на вторую строку
      выглядел как сбой вёрстки. Чипы ужимаются, а не переносятся. */
   .days{display:flex;gap:6px;flex-wrap:wrap}
-  #bDays,#bDaysTop,#qDays,#schedDays{flex-wrap:nowrap}
-  #bDays .day-chip,#bDaysTop .day-chip,#qDays .day-chip,#schedDays .day-chip{min-width:0;padding:0 4px}
+  #bDays,#bDaysTop,#qDays{flex-wrap:nowrap}
+  #bDays .day-chip,#bDaysTop .day-chip,#qDays .day-chip{min-width:0;padding:0 4px}
   /* чипы чуть ниже и теснее: в ряд помещается больше, но палец ещё попадает */
   .day-chip{
     flex:1;min-width:38px;background-color:var(--card);border:1px solid var(--line);border-radius:11px;
@@ -1183,6 +1183,10 @@
   /* ---------- оценка нагрузки на финише ---------- */
 
   /* ---------- обучение ---------- */
+  .build-line{
+    margin:0;text-align:center;font-size:12px;color:var(--muted);
+    font-family:var(--font-text);letter-spacing:.02em;
+  }
   .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-family:var(--font-text);font-size:14px;cursor:pointer;padding:14px;width:100%;margin-top:4px}
   /* Свайп по затемнению прокручивал страницу под попапом — попап «висел» над едущим
      экраном. touch-action:none гасит жест на подложке, а карточка и её прокручиваемые
@@ -2325,11 +2329,12 @@
   }
   .store-count:empty{display:none}
 
-    flex:none;width:10px;height:10px;border-radius:50%;
-    background:var(--muted);box-shadow:0 0 0 4px var(--surface);
-  }
-
-  /* автор программы — нажимаемая строка, а не подпись: под ником живёт человек */
+  /* автор программы — нажимаемая строка, а не подпись: под ником живёт человек.
+     Тут лежал осколок от удалённого правила: объявления без селектора и лишняя
+     закрывающая скобка. Браузер на таком не останавливается — он ищет `{` дальше
+     по тексту и съедает СЛЕДУЮЩЕЕ правило целиком как тело мусорного. Поэтому у
+     кнопки автора не снимался фон, и на странице программы она выглядела серой
+     системной кнопкой посреди карточки. */
   .st-by{border:none;background:none;padding:0;cursor:pointer;text-align:left;font-family:var(--font-text)}
   .st-by:active{opacity:.7}
 
@@ -4310,6 +4315,10 @@
         <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
       </div>
     </div>
+    <!-- Какая версия сейчас на телефоне. Без этой строки «я не вижу изменений»
+         нечем проверить: приложение обновляется само и молча, и отличить «не
+         выкатилось» от «выкатилось, но я смотрю на старое» нельзя было вовсе. -->
+    <p class="build-line" id="buildLine"></p>
     </div>
 
   </section>
@@ -4663,20 +4672,6 @@
         <p class="field-err" id="loginErr"></p>
         <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px">Прислать код</button>
         <button class="modal-btn" id="loginCancel">Отмена</button>
-      </div>
-    </div>
-
-    <!-- Когда тренироваться. Всего два поля, ради которых незачем открывать
-         конструктор чужой программы целиком. -->
-    <div class="modal" id="schedModal">
-      <div class="modal-card">
-        <span class="mini-label">Когда тренироваться</span>
-        <p class="dlg-msg" id="schedWhat"></p>
-        <div class="field"><label>Дни недели</label><div class="days" id="schedDays"></div>
-          <p class="field-hint" id="schedHint2"></p>
-        </div>
-        <button class="btn-primary" id="schedSave" style="padding:15px;font-size:16px">Сохранить</button>
-        <button class="modal-btn" id="schedLater">Позже</button>
       </div>
     </div>
 
@@ -7566,7 +7561,18 @@ function renderPremium(){
 
 // Тариф на «Аккаунте», данные аккаунта и баннер на главной — одно состояние,
 // показанное в трёх местах, поэтому и обновляются они одной функцией.
+/* Версия приложения. Правится ВМЕСТЕ с номером кэша в sw.js — это про одно и то
+   же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
+   номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
+   вопрос сразу. */
+const BUILD = '17.09 · аккаунт, каталог, разбор (v12)';
+function renderBuild(){
+  const el = $('buildLine');
+  if(el) el.textContent = 'Версия ' + BUILD;
+}
+
 function renderPlan(){
+  renderBuild();
   if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
   const on = isPremium(), pr = priceTable(), cur = userCurrency();
   $('planTitle').textContent = on ? 'Fit Timer Премиум' : 'Бесплатный тариф';
@@ -11698,12 +11704,47 @@ function openStoreItem(id){
       (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
       `</div></div>`;
     row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
+    // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
+    // её с рядами надо по тому же, по чему она собрана на сервере.
+    row.dataset.ex = (ex.name || '').trim();
     box.appendChild(row);
   });
 
   $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
   show('scrStoreItem');
   window.scrollTo(0, 0);
+  if(!locked) siPaintMedia(it);
+}
+
+/* Фото упражнений на странице программы.
+
+   В списке каталога их нет намеренно — тридцать программ по полмегабайта картинок
+   это пятнадцать мегабайт на открытие витрины, где у программы одна строка. Но на
+   странице программы они обязательны: по фото и понятно, что за движение, а без
+   них состав читается как список слов.
+
+   Поэтому отдельным запросом и ПОСЛЕ отрисовки: страница открывается сразу, фото
+   доезжают через мгновение. Ждать их, чтобы показать текст, значит показывать
+   пустой экран. Карта кладётся на саму позицию — второй заход по той же программе
+   уже не спрашивает сервер. */
+async function siPaintMedia(it){
+  if(!(it.hasMedia || it.media)) return;
+  let media = it.media;
+  if(!media){
+    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+    catch(e){ return; }            // без фото страница остаётся рабочей
+    it.media = media || {};
+  }
+  if(!media) return;
+  // Пока фото ехали, человек мог уйти на другую программу. Рисуем только если
+  // открыта всё та же.
+  if(!siItem || siItem.id !== it.id) return;
+  $('siList').querySelectorAll('.ex-row').forEach(row => {
+    const pic = media[row.dataset.ex || ''];
+    if(!pic) return;
+    const thumb = row.querySelector('.ex-thumb');
+    if(thumb) thumb.innerHTML = `<img src="${esc(pic)}" alt="">`;
+  });
 }
 $('siLock').onclick = openPremium;
 $('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
@@ -11757,59 +11798,12 @@ async function addStoreItem(id){
     // (возврат по истории асинхронный и закрыл бы только что открытый попап)
     $('siLabels').innerHTML = storeLabels(siItem, true);
   }
-  openSchedule(program, `Сохранена в Мои программы. Выбери дни и время — придёт напоминание, и «${it.name}» появится в плане.`);
-}
-
-/* ---- расписание в попапе ---- */
-// Раньше после добавления программы человека уводили в конструктор — на экран
-// со всеми настройками программы разом. Он приходил выбрать два дня и время, а
-// получал редактор чужой программы. Здесь только те два поля, о которых спросили.
-let schedProg = null;
-function openSchedule(program, msg){
-  schedProg = program;
-  $('schedWhat').textContent = msg || 'Отметь дни — программа появится в плане на сегодня.';
-  renderSchedDays();
-  $('schedModal').classList.add('open');
-}
-// дни у программы живут в вариантах; в каталоге вариант всегда один, но если их
-// несколько — правим первый и честно говорим об этом строкой под днями
-function schedOwner(){
-  if(!schedProg) return null;
-  const many = (schedProg.plans || []).length > 1;
-  return (many && schedProg.rotate) ? schedProg : (schedProg.plans || [])[0];
-}
-function renderSchedDays(){
-  const owner = schedOwner();
-  if(!owner) return;
-  if(!Array.isArray(owner.days)) owner.days = [];
-  const box = $('schedDays'); box.innerHTML = '';
-  DAYS.forEach(d => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip'; b.textContent = d;
-    b.classList.toggle('act', owner.days.includes(d));
-    // перерисовывать весь ряд на каждое нажатие нельзя: нажатая кнопка при этом
-    // исчезает из документа, и быстрый второй тап по соседнему дню теряется
-    b.onclick = ()=>{
-      const on = owner.days.includes(d);
-      owner.days = on ? owner.days.filter(x => x !== d) : DAYS.filter(x => owner.days.includes(x) || x === d);
-      b.classList.toggle('act', !on);
-    };
-    box.appendChild(b);
-  });
-  const many = (schedProg.plans || []).length > 1;
-  $('schedHint2').textContent = many
-    ? 'Здесь дни первого варианта. Остальные — в настройках программы.'
-    : 'Можно не выбирать — программа просто останется без напоминаний.';
-}
-async function saveSchedule(){
-  if(!schedProg) return;
-  // Время тренировки здесь больше не спрашиваем: в момент добавления человек его
-  // не знает, а настроить можно в самой программе. Остаются только дни.
-  await savePrograms();
-  renderMine();
   renderToday();
-  $('schedModal').classList.remove('open');
-  schedProg = null;
+  /* Про дни здесь БОЛЬШЕ НЕ СПРАШИВАЕМ. Дни у программы из каталога уже есть — они
+     записаны в её тексте, — и попап предлагал переделать их человеку, который
+     секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
+     иначе — поменяет в самой программе, туда за этим и ходят. */
+  appAlert(`«${it.name}» в твоих тренировках.`);
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
@@ -13758,6 +13752,52 @@ const DAY_ALIASES = {
   'вс':'Вс','воскресенье':'Вс'
 };
 
+/* Все ключи, которые понимает парсер. Берём их ИЗ САМОГО ПАРСЕРА, а не списком
+   рядом: список пришлось бы помнить, а расходятся такие пары тихо — новый ключ
+   заработал бы в разборе и не заработал бы в починке ниже. Сборки в проекте нет,
+   имена в исходнике остаются как написаны, так что читать их оттуда безопасно. */
+let PARSE_KEYS = null;
+function parseKeys(){
+  if(PARSE_KEYS) return PARSE_KEYS;
+  const out = [];
+  const src = String(parseProgramText);
+  const re = /case\s*'([А-ЯЁ][А-ЯЁ\s]*)'/g;
+  let m;
+  while((m = re.exec(src))) out.push(m[1].trim());
+  // Длинные вперёд: иначе «ОТДЫХ» срабатывает раньше «ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ»
+  // и режет строку посередине ключа.
+  PARSE_KEYS = [...new Set(out)].sort((a, b) => b.length - a.length);
+  return PARSE_KEYS;
+}
+
+/* Починка текста, у которого пропали переносы строк.
+
+   Некоторые чаты с ИИ отдают ответ так, что при копировании переносы теряются, и
+   вся программа приезжает одной строкой: «ПРОГРАММА: Сила дома ДНИ: Пн КРУГИ: 3…».
+   Разбор на этом ломался молча и целиком: первая строка съедала всё, программа
+   получалась из одного названия без единого упражнения.
+
+   Просить ИИ ставить особый символ — не выход: во-первых, его теряют ровно так же,
+   во-вторых, весь уже написанный текст (каталог, сохранённые программы, чужие
+   ссылки) этого символа не знает, и формат пришлось бы менять дважды. Чинить надо
+   то, что пришло, а не требовать другого.
+
+   Ключи известны наперёд, и ключ в середине строки — это всегда начало новой:
+   в значении «ДНИ:» с двоеточием взяться неоткуда. Ставим перенос перед каждым
+   таким ключом. Уже целый текст правило не трогает: там перед ключом и так
+   перенос. */
+function repairLines(txt){
+  const keys = parseKeys();
+  if(!keys.length) return txt;   // не вышло прочитать ключи — не трогаем текст вовсе
+  const alt = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  return txt
+    // ключ посреди строки: перед ним пробел, а не начало строки
+    .replace(new RegExp('([^\\n])[ \\t]+(' + alt + ')[ \\t]*:', 'g'), '$1\n$2:')
+    // хвостовые маркеры списка: «УПРАЖНЕНИЕ: Приседания -» после разреза остаётся
+    // от «- ФОРМАТ:», и дефис прилипал бы к названию
+    .replace(/[ \t]*[•*\u2013-]+[ \t]*$/gm, '');
+}
+
 function parseProgramText(txt){
   const p = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, progression:0, plans:[]};
   let plan = null;
@@ -13809,7 +13849,7 @@ function parseProgramText(txt){
     const list = val.split(/[,;]/).map(d => DAY_ALIASES[d.trim().toLowerCase()]).filter(Boolean);
     return DAYS.filter(d => list.includes(d));
   };
-  const lines = txt.replace(/\*\*/g,'').split(/\r?\n/);
+  const lines = repairLines(txt.replace(/\*\*/g,'')).split(/\r?\n/);
   for(let raw of lines){
     const line = raw.replace(/^[\s#>*•\-–]+/,'').trim();
     if(!line) continue;
@@ -16623,11 +16663,8 @@ $('loginModal').onclick = e => { if(e.target === $('loginModal')){ loginDone = n
 $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
 $('btnLoginRow').onclick = ()=> openLogin();
 $('btnSignOut').onclick = signOut;
-$('schedSave').onclick = saveSchedule;
 // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
 // сохраняем и их, иначе выбор молча пропадёт
-$('schedLater').onclick = saveSchedule;
-$('schedModal').onclick = e => { if(e.target === $('schedModal')) saveSchedule(); };
 $('lockGo').onclick = ()=> tryUnlock();
 $('lockEmail').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
 // Ссылка внизу переключает два способа входа и всегда называет тот, куда ведёт:

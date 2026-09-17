@@ -7,7 +7,7 @@
    он не переустанавливается — то есть офлайн-копия остаётся той, что была
    девять правок назад. Ещё это единственный способ выбросить старый кэш целиком:
    при активации удаляются все кэши с другим именем. */
-const CACHE = 'fittimer-v11';
+const CACHE = 'fittimer-v12';
 const ASSETS = [
   './',
   './index.html',
@@ -52,8 +52,12 @@ self.addEventListener('fetch', e => {
 
   // HTML-страница: сначала сеть (свежая версия), кэш — только офлайн-фолбэк
   if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    /* cache:'reload' — мимо HTTP-кэша браузера. Без него «сначала сеть» означало
+       «сначала спросить, а браузер ответит из своего кэша»: новая сборка лежала на
+       сервере, а человек открывал приложение и видел старое. Снаружи это выглядит
+       как «изменения не выкатились», и проверить нечего. */
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, {cache: 'reload'}).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
