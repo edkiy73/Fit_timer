@@ -12,9 +12,14 @@
    то есть завести вторую такую же задачу поверх первой. Код на почту доказывает
    ровно то же самое: человек имеет доступ к адресу.
 
-   Два действия:
-     {action:'send',  email}
+   Три действия:
+     {action:'send',   email}
      {action:'verify', email, code, handle, trainerKey, sub}
+     {action:'forget', email, handle, trainerKey, scope, links}
+
+   Удаление живёт здесь же, а не отдельным файлом: завести себя и стереть себя —
+   про одну и ту же запись, и Vercel на бесплатном плане считает каждый файл
+   отдельной функцией, которых там всего двенадцать.
 
    При подтверждении:
    • аккаунта нет — заводится; это и есть регистрация, отдельной формы для неё нет;
@@ -24,9 +29,9 @@
      перестаёт работать: вернуть себе страницу и означает забрать её у устройства,
      где её больше нет. */
 
-const { store } = require('./_store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('./_util');
-const { sendMail } = require('./_mail');
+const { store } = require('../lib/store');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
+const { sendMail } = require('../lib/mail');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -51,6 +56,90 @@ const publicTrainer = t => ({
   years: t.years == null ? null : t.years, links: t.links || ''
 });
 
+// Что именно считается «сведениями о тренере». Список один на всё: расходясь с
+// тем, что показывает страница, он оставил бы на ней то, что человек стёр.
+const FACE = ['name', 'photo', 'about', 'years', 'links'];
+
+async function forget(req, res, body){
+  if(!(await rateOk(req, 'forget', 20))) return fail(res, 429, 'rate_limited');
+
+  const all = (body && body.scope) === 'all';
+  const email = String((body && body.email) || '').trim().toLowerCase().slice(0, 120);
+  const mh = email ? sha(email).slice(0, 32) : '';
+
+  let handle = String((body && body.handle) || '').slice(0, 40);
+  if(handle && handle[0] !== '@') handle = '@' + handle;
+  const okHandle = /^@[\wа-яё.\-]{1,39}$/i.test(handle);
+
+  let wiped = false;
+
+  /* ---- лицо тренера ---- */
+  if(okHandle){
+    const raw = await store.get(`t:${handle}`);
+    if(raw){
+      let t;
+      try{ t = JSON.parse(raw); }catch(e){ t = null; }
+      if(!t) return fail(res, 500, 'corrupt');
+      if(!sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '')){
+        return fail(res, 403, 'not_yours');
+      }
+      FACE.forEach(k => { delete t[k]; });
+      t.wiped = new Date().toISOString();
+      /* При удалении аккаунта ник остаётся закреплённым, но управлять им больше
+         нечем: ключ снимается, привязка к почте снимается. Освободить ник нельзя —
+         его носят программы, уже лежащие в каталоге, и чужой человек, назвавшись
+         так же, унаследовал бы их автора. */
+      if(all){ t.keyHash = ''; delete t.mailHash; }
+      await store.set(`t:${handle}`, JSON.stringify(t));
+      wiped = true;
+    }
+  }
+
+  if(!all) return send(res, 200, {ok: true, wiped});
+
+  /* ---- аккаунт ---- */
+  // Ключа у аккаунта отдельного нет: им и служит ключ тренера, а если тренера не
+  // было, то удалять на сервере нечего, кроме самой записи, — и её сноса просит
+  // тот, кто может подтвердить, что это его почта. Для этого хватает и того, что
+  // запрос пришёл от телефона, на котором эта почта уже подтверждена кодом:
+  // ключ аккаунта лежит там же.
+  let links = 0, account = false;
+  if(mh){
+    const araw = await store.get(`a:${mh}`);
+    if(araw){
+      let acc = null;
+      try{ acc = JSON.parse(araw); }catch(e){}
+      // Аккаунт с ником стирается только вместе с доказанным владением ником —
+      // иначе чужую почту можно было бы «удалить», просто зная её.
+      if(acc && acc.handle && !wiped) return fail(res, 403, 'not_yours');
+      await store.del(`a:${mh}`);
+      account = true;
+    }
+  }
+
+  /* Ссылки, отправленные подопечным, вместе с отчётами и счётчиками открытий.
+     Их список знает только телефон тренера — на сервере он нигде не собран,
+     и собирать его ради одного удаления значило бы завести ещё одно место,
+     где хранится «кто кому что отправил». */
+  const want = (Array.isArray(body && body.links) ? body.links : [])
+    .map(x => String(x || '')).filter(x => /^[0-9a-z]{4,16}$/.test(x)).slice(0, 300);
+  for(const id of want){
+    const rec = await store.get(`p:${id}`);
+    if(!rec) continue;
+    let p;
+    try{ p = JSON.parse(rec); }catch(e){ continue; }
+    if(okHandle && p.by !== handle) continue;   // чужую ссылку своим ключом не удалить
+    await store.del(`p:${id}`);
+    await store.del(`p:${id}:reports`);
+    await store.del(`p:${id}:opens`);
+    await store.del(`p:${id}:first`);
+    await store.del(`p:${id}:last`);
+    links++;
+  }
+
+  send(res, 200, {ok: true, wiped, account, links});
+}
+
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
   if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
@@ -60,10 +149,16 @@ module.exports = async (req, res) => {
   let body;
   try{ body = await readBody(req); }catch(e){ return fail(res, 413, 'too_large'); }
 
+  const act = (body && body.action) || '';
+
+  /* Удаление разбираем ДО проверки адреса: стирать себя может и тот, у кого
+     аккаунта нет вовсе, — у него на сервере только страница тренера, и
+     доказывает он ключом от неё, а не почтой. */
+  if(act === 'forget') return forget(req, res, body);
+
   const email = normMail(body && body.email);
   if(!EMAIL.test(email)) return fail(res, 400, 'bad_email');
   const mh = sha(email).slice(0, 32);   // по хешу ищем, сам адрес лежит в записи
-  const act = (body && body.action) || '';
 
   /* ---- прислать код ---- */
   if(act === 'send'){

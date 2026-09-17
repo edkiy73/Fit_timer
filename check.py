@@ -317,6 +317,38 @@ def check_css(css, markup, js):
         warn('оформление', 'класс «.%s» описан, но в разметке не встречается' % name)
 
 
+# Бесплатный план Vercel: не больше двенадцати функций на деплой. Тринадцатая
+# роняет СБОРКУ целиком — не эндпоинт, а весь выкат, — и узнаётся это только из
+# журнала Vercel, уже после того как человек не увидел своих изменений. Запас в
+# две штуки оставлен нарочно: упереться в предел ровно на границе значит узнать
+# о нём в момент, когда добавляешь нужное.
+API_LIMIT = 12
+API_WARN = 10
+
+
+def check_api():
+    root = os.path.join(os.path.dirname(os.path.abspath(SRC)), 'api')
+    if not os.path.isdir(root):
+        return
+    funcs = []
+    for base, dirs, files in os.walk(root):
+        for name in files:
+            if name.endswith('.js'):
+                funcs.append(os.path.relpath(os.path.join(base, name), root))
+    n = len(funcs)
+    if n > API_LIMIT:
+        err('сервер', 'функций в api/ — %d, а Vercel на бесплатном плане собирает '
+                      'не больше %d: сборка упадёт целиком' % (n, API_LIMIT))
+    elif n >= API_WARN:
+        warn('сервер', 'функций в api/ — %d из %d; дальше сборка упадёт' % (n, API_LIMIT))
+    # Вспомогательным файлам в api/ не место: Vercel считает функцией каждый .js,
+    # и один общий модуль съедает место наравне с настоящим эндпоинтом.
+    for f in funcs:
+        if os.path.basename(f).startswith('_'):
+            err('сервер', 'вспомогательный файл api/%s занимает место функции — '
+                          'такому место в lib/' % f)
+
+
 def main():
     if not os.path.exists(SRC):
         print('не нашёл index.html рядом со скриптом')
@@ -329,6 +361,7 @@ def main():
     check_icons(whole, js, markup)
     check_storage(js)
     check_screens(js, markup)
+    check_api()
     check_css_structure(css)
     check_css(css, markup, js)
 

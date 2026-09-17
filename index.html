@@ -7565,7 +7565,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '17.09 · аккаунт, каталог, разбор (v12)';
+const BUILD = '17.09 · сервер в восемь функций (v13)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -9151,8 +9151,8 @@ function pushProfileSoon(){
 async function pushProfile(){
   if(!trainerOn()) return;
   try{
-    const r = await apiPost('/api/profile', {
-      handle: normHandle(trainer.handle),
+    // Правка и чтение страницы — один адрес, разные глаголы: страница одна.
+    const r = await apiPost('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)), {
       trainer: trainerProfile(),
       trainerKey: trainer.key || ''
     });
@@ -9216,7 +9216,7 @@ async function forgetMe(scope){
   }
   if(account && account.email) body.email = account.email;
   if(!body.handle && !body.email) return true;   // на сервере нас нет
-  await apiPost('/api/forget', body);
+  await apiPost('/api/auth', Object.assign({action: 'forget'}, body));
   return true;
 }
 
@@ -11178,7 +11178,8 @@ async function pullProgram(pr){
   if(!pr || !pr.link || !pr.link.id) return false;
   let d;
   try{
-    d = await apiFetch(`/api/link/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
+    // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
+    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
   }catch(e){
     pr.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
     return false;
@@ -12051,7 +12052,7 @@ async function doPublish(){
     return;
   }
   try{
-    const r = await apiPost('/api/catalog/submit', {
+    const r = await apiPost('/api/catalog', {
       by: normHandle(trainer.handle),
       trainerKey: trainer.key || '',
       item: {

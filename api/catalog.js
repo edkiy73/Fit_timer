@@ -1,18 +1,77 @@
-/* POST /api/catalog/submit — тренер предлагает свою программу в каталог.
+/* /api/catalog — витрина и заявки в неё.
 
-   Не «публикует», а ПРЕДЛАГАЕТ: всё проходит через проверку руками. Пока программ
-   единицы, это десять минут в неделю, а открытая публикация без модерации в первый
-   же месяц превращает каталог в помойку, из которой его уже не вытащить.
+   GET — что уже прошло проверку. Отдаём позиции ровно в том виде, в каком они
+   лежат в приложении: оно не должно знать, зашита программа или пришла с сервера.
+     ?item=<id>   — одна программа целиком, вместе с фото упражнений;
+     ?status=<id,id> — что стало с предложенными.
 
-   Позиция каталога складывается в том же виде, что и зашитые в приложение
-   (STORE_ITEMS): id, by, cat, level, min, name, gives, text. Тогда серверная
-   программа неотличима от своей, и ни витрина, ни страница программы, ни добавление
-   в библиотеку про сервер знать не должны. */
+   POST — тренер ПРЕДЛАГАЕТ свою программу. Не «публикует»: всё проходит через
+   проверку руками. Пока программ единицы, это десять минут в неделю, а открытая
+   публикация без модерации в первый же месяц превращает каталог в помойку, из
+   которой его уже не вытащить.
 
-const { store } = require('./../_store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('./../_util');
+   Раньше заявка была отдельным файлом. Разными их делал только глагол: список и
+   попадание в список — одно место, и Vercel на бесплатном плане считает каждый
+   файл отдельной функцией, которых там всего двенадцать. По той же причине ушла
+   страница проверки /api/catalog/review: её работу делает admin.html, где та же
+   очередь лежит рядом с каталогом, тренерами и картинками. */
+
+const { store } = require('../lib/store');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
+
+async function list(req, res){
+  if(!(await rateOk(req, 'catalog', 900))) return fail(res, 429, 'rate_limited');
+
+  /* Одна программа целиком, вместе с фото упражнений. Отдельным запросом, потому
+     что в общем списке фото сделали бы витрину неподъёмной: тридцать программ по
+     полмегабайта картинок — это пятнадцать мегабайт на открытие экрана, где
+     показывают одну строчку на программу. Фото нужны в момент добавления себе,
+     тогда за ними и идём. */
+  const one = String((req.query && req.query.item) || '').trim();
+  if(one){
+    if(!/^[ua][0-9a-z]{4,16}$/.test(one)) return fail(res, 400, 'bad_id');
+    const raw = await store.get(`c:${one}`);
+    if(!raw) return fail(res, 404, 'not_found');
+    let c;
+    try{ c = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
+    if(c.status !== 'approved') return fail(res, 404, 'not_found');
+    return send(res, 200, {item: {
+      id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min, name: c.name,
+      gives: c.gives, text: c.text, cover: c.cover || null, media: c.media || null
+    }});
+  }
+
+  const ask = String((req.query && req.query.status) || '').trim();
+  if(ask){
+    const ids = ask.split(',').filter(x => /^u[0-9a-z]{4,16}$/.test(x)).slice(0, 20);
+    const raws = await store.many(ids.map(id => `c:${id}`));
+    const out = {};
+    ids.forEach((id, i) => {
+      if(!raws[i]){ out[id] = 'gone'; return; }
+      try{ out[id] = JSON.parse(raws[i]).status || 'pending'; }catch(e){ out[id] = 'gone'; }
+    });
+    return send(res, 200, {status: out});
+  }
+
+  const ids = (await store.list('c:approved')).slice(-200);
+  // Один запрос на весь список. Обход по программе давал столько путей до базы,
+  // сколько программ в каталоге, — и витрина открывалась секундами.
+  const raws = await store.many(ids.map(id => `c:${id}`));
+  const items = [];
+  raws.forEach(raw => {
+    if(!raw) return;
+    let c;
+    try{ c = JSON.parse(raw); }catch(e){ return; }
+    if(c.status !== 'approved') return;
+    // media в списке НЕТ намеренно — см. выше. Обложка одна на программу и лёгкая.
+    items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
+                name: c.name, gives: c.gives, text: c.text,
+                cover: c.cover || null, hasMedia: !!(c.media && Object.keys(c.media).length)});
+  });
+  send(res, 200, {items});
+}
 
 // Ключи целей — те же, что в STORE_LOOK у приложения. Именно КЛЮЧ, а не название:
 // по нему витрина подбирает обложку и по нему работают фильтры.
@@ -20,10 +79,7 @@ const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back'
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
 const PER_DAY = 3;
 
-module.exports = async (req, res) => {
-  if(cors(req, res)) return;
-  if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
-  if(!store.configured()) return fail(res, 503, 'no_store');
+async function submit(req, res){
   if(!(await rateOk(req, 'submit', 30))) return fail(res, 429, 'rate_limited');
 
   let body;
@@ -110,4 +166,12 @@ module.exports = async (req, res) => {
   await store.set(dupKey, id);   // метка указывает на ПОСЛЕДНЮЮ заявку с этим названием
 
   send(res, 200, {ok: true, id, status: 'pending'});
+}
+
+module.exports = async (req, res) => {
+  if(cors(req, res)) return;
+  if(!store.configured()) return fail(res, 503, 'no_store');
+  if(req.method === 'GET')  return list(req, res);
+  if(req.method === 'POST') return submit(req, res);
+  fail(res, 405, 'method_not_allowed');
 };

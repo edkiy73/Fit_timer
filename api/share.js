@@ -10,8 +10,8 @@
    чтобы ЧИТАТЬ статистику и отчёты. Этого хватает, пока продавать нечего, и это
    не мешает завести настоящие аккаунты потом. */
 
-const { store } = require('./_store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('./_util');
+const { store } = require('../lib/store');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;

@@ -104,7 +104,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
   // ---- повтор того же названия не принимается ----
   const dup = await page.evaluate(async ({nick, name}) => {
     try{
-      await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
+      await apiPost('/api/catalog', {by: nick, trainerKey: trainer.key, item: {
         name, gives: 'то же самое, но ещё раз, двадцать символов точно',
         cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
       return 'принято';
@@ -116,7 +116,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
   // ---- чужой ник ----
   const alien = await page.evaluate(async (nick) => {
     try{
-      await apiPost('/api/catalog/submit', {by: nick, trainerKey: 'не-мой-ключ', item: {
+      await apiPost('/api/catalog', {by: nick, trainerKey: 'не-мой-ключ', item: {
         name: 'Подделка', gives: 'двадцать символов здесь точно наберётся, поверь',
         cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
       return 'принято';
@@ -124,17 +124,23 @@ const prog = (name) => `ПРОГРАММА: ${name}
   }, NICK);
   ok('с чужим ключом не принимает', alien === 'not_yours', alien);
 
-  // ---- проверка руками ----
-  const rev = await fetch(`${BASE}/api/catalog/review?key=${ADMIN}`).then(r => r.text());
-  ok('заявка видна в очереди', rev.includes(NAME) && rev.includes(NICK));
-  ok('страница проверки — с кнопками, а не простыня текста',
-     rev.includes('Взять в каталог') && rev.includes('<!doctype html'));
-  // Кнопка «взять» именно НАШЕЙ заявки: в очереди могут висеть чужие.
-  const block = rev.split('<div class="card">').find(x => x.includes(NAME)) || '';
-  const m = block.match(/href="([^"]*do=approve[^"]*)"/);
-  ok('в очереди есть ссылка «взять»', !!m);
-  const took = await fetch(BASE + m[1].replace(/&amp;/g, '&')).then(r => r.text());
-  ok('заявку взяли', took.includes('В каталоге') && took.includes(NAME), 'ок');
+  /* ---- проверка руками ----
+     Отдельной страницы /api/catalog/review больше нет: ту же очередь показывает
+     admin.html, где она лежит рядом с каталогом, тренерами и картинками. Здесь
+     ходим тем же путём, каким ходит админка. */
+  const admin = (action, extra) => fetch(BASE + '/api/admin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
+    body: JSON.stringify(Object.assign({action}, extra || {}))
+  }).then(r => r.json());
+
+  const queue = await admin('overview');
+  const asked = (queue.pending || []).find(x => x.name === NAME && x.by === NICK);
+  ok('заявка видна в очереди', !!asked, asked ? asked.id : '(не нашлась)');
+  ok('и несёт всё, по чему решают', !!(asked && asked.gives && asked.text && asked.cat),
+     asked ? `${asked.cat} · ${(asked.gives || '').slice(0, 24)}…` : '');
+  const took = await admin('approve', {id: asked.id});
+  ok('заявку взяли', took.status === 'approved', took.status || took.error);
   const fromApi = await fetch(BASE + '/api/catalog').then(r => r.json());
   ok('сервер отдаёт её в каталоге', (fromApi.items || []).some(x => x.name === NAME),
      (fromApi.items || []).length + ' позиций');
@@ -170,7 +176,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
     const out = [];
     for(let i = 0; i < 4; i++){
       try{
-        await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
+        await apiPost('/api/catalog', {by: nick, trainerKey: trainer.key, item: {
           name: NAME + ' вариант ' + i, gives: 'двадцать символов здесь точно наберётся, поверь',
           cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
         out.push('ok');
@@ -206,17 +212,17 @@ const prog = (name) => `ПРОГРАММА: ${name}
   const again = await page.evaluate(async ({base, admin}) => {
     // Свой ник: у прежнего уже выбран суточный предел проверкой выше.
     const nick = '@rej.' + Math.random().toString(36).slice(2, 7);
-    const pr = await apiPost('/api/profile', {handle: nick, trainer: {name: 'Т'}});
+    const pr = await apiPost('/api/trainer/' + encodeURIComponent(nick), {trainer: {name: 'Т'}});
     const key = pr.trainerKey;
     const name = 'Отклонённая ' + Math.random().toString(36).slice(2, 6);
     const item = {name, gives: 'двадцать символов здесь точно наберётся, поверь мне',
                   cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)};
-    const first = await apiPost('/api/catalog/submit', {by: nick, trainerKey: key, item});
+    const first = await apiPost('/api/catalog', {by: nick, trainerKey: key, item});
     await fetch(base + '/api/admin', {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(admin)},
       body: JSON.stringify({action: 'reject', id: first.id})});
     try{
-      await apiPost('/api/catalog/submit', {by: nick, trainerKey: key, item});
+      await apiPost('/api/catalog', {by: nick, trainerKey: key, item});
       return 'принято';
     }catch(e){ return e.code; }
   }, {base: BASE, admin: ADMIN});

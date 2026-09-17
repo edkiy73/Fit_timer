@@ -7,8 +7,8 @@
    Ключ — ADMIN_KEY в переменных окружения, передаётся заголовком, а не в адресе:
    адрес попадает в историю браузера и в журналы, заголовок — нет. */
 
-const { store } = require('./_store');
-const { send, fail, readBody, rndId, sameSecret, cors } = require('./_util');
+const { store } = require('../lib/store');
+const { send, fail, readBody, rndId, sameSecret, cors } = require('../lib/util');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
@@ -178,7 +178,7 @@ module.exports = async (req, res) => {
      Нужно ровно один раз, чтобы каталогу было чем открыться. Повторный вызов
      ничего не портит: программы с теми же id перезаписываются, а не двоятся. */
   if(a === 'seed'){
-    const { SEED_ITEMS, SEED_TRAINERS } = require('./_seed');
+    const { SEED_ITEMS, SEED_TRAINERS } = require('../lib/seed');
     const now = new Date().toISOString();
     for(const [handle, t] of Object.entries(SEED_TRAINERS)){
       if(await store.get(`t:${handle}`)) continue;

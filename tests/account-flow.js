@@ -89,7 +89,7 @@ async function boot(b, label, errs, url){
   // Заявка в каталог — чтобы проверить, что удаление уносит и её.
   const sub = await one.evaluate(async () => {
     const p = customPrograms.find(x => x.id === 'm1');
-    return await apiPost('/api/catalog/submit', {
+    return await apiPost('/api/catalog', {
       by: normHandle(trainer.handle), trainerKey: trainer.key,
       item: {name: p.name, gives: 'Короткая программа на каждый день без инвентаря.',
              cat: 'tone', level: 'Новичок', min: 20, exCount: 3, text: programToText(p)}
@@ -134,8 +134,8 @@ async function boot(b, label, errs, url){
 
   const old = await one.evaluate(async () => {
     try{
-      await apiPost('/api/profile', {handle: normHandle(trainer.handle),
-                                     trainer: trainerProfile(), trainerKey: trainer.key});
+      await apiPost('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)),
+                    {trainer: trainerProfile(), trainerKey: trainer.key});
       return 'прошло';
     }catch(e){ return e.code || String(e); }
   });
@@ -202,8 +202,8 @@ async function boot(b, label, errs, url){
 
   const retake = await two.evaluate(async () => {
     try{
-      await apiPost('/api/profile', {handle: trainer.handle,
-                                     trainer: {name: 'Самозванец'}, trainerKey: ''});
+      await apiPost('/api/trainer/' + encodeURIComponent(trainer.handle),
+                    {trainer: {name: 'Самозванец'}, trainerKey: ''});
       return 'прошло';
     }catch(e){ return e.code; }
   });

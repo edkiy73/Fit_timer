@@ -8,8 +8,8 @@
    Отчёт привязан к ССЫЛКЕ, а не к человеку: сервер не знает, кто такой клиент, и
    ему незачем. Имя в отчёте — то, что человек сам написал у себя в профиле. */
 
-const { store } = require('./_store');
-const { send, fail, readBody, rateOk, cors } = require('./_util');
+const { store } = require('../lib/store');
+const { send, fail, readBody, rateOk, cors } = require('../lib/util');
 
 const MAX_REPORTS = 200;
 

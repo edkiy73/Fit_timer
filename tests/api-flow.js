@@ -39,17 +39,22 @@ const ok = (name, cond, extra) => {
   ok('отчёт в никуда — 404', (await post('/api/report', {link: 'zzzzzzzz', report: rep})).s === 404);
   ok('отчёт без числа тренировок — 400', (await post('/api/report', {link: id, report: {who: 'х'}})).s === 400);
 
-  const st = await get(`/api/link/${id}?key=${key}`);
+  const st = await get(`/api/p/${id}?key=${key}`);
   ok('тренер видит открытия', st.s === 200 && st.j.opens === 2, st.j.opens);
   ok('тренер видит отчёт', st.j.reports.length === 1 && st.j.reports[0].ex[0].b === '14-17');
   ok('первое открытие отмечено', !!st.j.firstOpen);
 
-  ok('без ключа не пускает', (await get('/api/link/' + id)).s === 403);
-  ok('с чужим ключом не пускает', (await get(`/api/link/${id}?key=aaaaaaaaaaaaaaaaaaaaaaaa`)).s === 403);
+  /* Адрес один, а видно по нему разное. Без ключа — программа (её и должен получить
+     тот, кому переслали ссылку), с ключом — отметки и отчёты. Ключ в ссылку не
+     кладётся: ссылку пересылают дальше, а доступ к отчётам пересылаться не должен. */
+  const plain = await get('/api/p/' + id);
+  ok('без ключа отдаётся программа, а не отчёты',
+     plain.s === 200 && !!plain.j.program && plain.j.reports === undefined);
+  ok('с чужим ключом не пускает', (await get(`/api/p/${id}?key=aaaaaaaaaaaaaaaaaaaaaaaa`)).s === 403);
 
   // лишние поля из клиента на сервер не едут
   await post('/api/report', {link: id, report: Object.assign({}, rep, {secret: 'нельзя', n: 4})});
-  const st2 = await get(`/api/link/${id}?key=${key}`);
+  const st2 = await get(`/api/p/${id}?key=${key}`);
   ok('лишние поля отброшены', st2.j.reports[1].secret === undefined);
   ok('длинные строки обрезаны', true);
 
