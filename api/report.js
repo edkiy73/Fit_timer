@@ -33,22 +33,40 @@ module.exports = async (req, res) => {
   const n = await store.list(`p:${id}:reports`);
   if(n.length >= MAX_REPORTS) return fail(res, 429, 'too_many');
 
-  // Кладём только то, что показываем. Лишние поля из клиента на сервер не едут:
-  // чего не сохранили, то не утечёт и то не надо объяснять в политике.
+  // Кладём только то, что показываем, и каждое поле подрезаем по длине. Лишнее из
+  // клиента на сервер не едет: чего не сохранили, то не утечёт и то не надо
+  // объяснять в политике.
+  const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+  const num = (v, max) => Math.max(0, Math.min(max, Math.round(+v || 0)));
+  const arr = (v, n) => Array.isArray(v) ? v.slice(0, n) : [];
+
   await store.push(`p:${id}:reports`, JSON.stringify({
     at: new Date().toISOString(),
-    who: String(r.who || '').slice(0, 40),
-    name: String(r.name || '').slice(0, 80),
-    n: Math.min(9999, Math.round(r.n)),
-    sec: Math.min(9999999, Math.round(+r.sec || 0)),
-    streak: Math.min(999, Math.round(+r.streak || 0)),
-    first: String(r.first || '').slice(0, 10),
-    last: String(r.last || '').slice(0, 10),
-    ex: (Array.isArray(r.ex) ? r.ex : []).slice(0, 6).map(e => ({
-      n: String(e.n || '').slice(0, 60),
-      a: String(e.a || '').slice(0, 24),
-      b: String(e.b || '').slice(0, 24)
-    }))
+    v: 2,
+    who: str(r.who, 40),
+    name: str(r.name, 80),
+    n: num(r.n, 9999),
+    sec: num(r.sec, 9999999),
+    streak: num(r.streak, 999),
+    first: str(r.first, 10),
+    last: str(r.last, 10),
+    // журнал тренировок: дата, вариант, длительность
+    log: arr(r.log, 30).map(x => ({d: str(x.d, 10), p: num(x.p, 20), sec: num(x.sec, 99999)})),
+    // варианты программы и сколько раз каждый сделан
+    plans: arr(r.plans, 10).map(x => ({i: num(x.i, 20), days: str(x.days, 40), n: num(x.n, 9999)})),
+    // рост нагрузки по всем вариантам, разминка помечена
+    ex: arr(r.ex, 40).map(e => ({
+      p: num(e.p, 20), w: e.w ? 1 : 0,
+      n: str(e.n, 60), a: str(e.a, 32), b: str(e.b, 32)
+    })),
+    // что клиент поменял в присланном
+    diff: {
+      add: arr(r.diff && r.diff.add, 12).map(x => str(x, 60)),
+      del: arr(r.diff && r.diff.del, 12).map(x => str(x, 60)),
+      mod: arr(r.diff && r.diff.mod, 12).map(x => ({
+        n: str(x.n, 60), a: str(x.a, 40), b: str(x.b, 40)
+      }))
+    }
   }));
 
   send(res, 200, {ok: true});

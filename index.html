@@ -1362,9 +1362,30 @@
   .cls-sum b{font-family:var(--font-display);font-size:22px;line-height:1.1}
   .cls-sum small{color:var(--muted);font-size:13px}
   /* Рост нагрузки в отчёте: слева упражнение, справа «было → стало». */
-  .cl-grow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
-  .cl-grow span{color:var(--muted);font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cl-grow b{flex:none;font-size:14px;color:var(--ok)}
+  /* Строка переносится, а не обрезается: у правки значение бывает длинным
+     («10 × 12 кг × 3 подх. → 15 × 12 кг × 3 подх.»), и при жёсткой строке оно
+     съедало название упражнения целиком — оставалась цифра без ответа на «чего». */
+  .cl-grow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+           gap:2px 12px;padding:8px 0;border-top:1px solid var(--line)}
+  .cl-grow span{color:var(--muted);font-size:13.5px;flex:1 1 45%;min-width:0}
+  .cl-grow b{flex:0 1 auto;font-size:14px;color:var(--ink);text-align:right;min-width:0}
+  .cl-grow b.ok{color:var(--ok)}
+  .cl-grow b.warn{color:var(--warn)}
+  .cl-grow b.muted{color:var(--muted);font-weight:400}
+  /* Подпись блока внутри отчёта: отделяет «поменял» от «растёт», иначе строки
+     читаются одним списком и смысл каждой теряется. */
+  .cls-label{font-family:var(--font-display);font-weight:600;font-size:11px;
+             letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+             margin-top:6px}
+  .cls-label.warn{color:var(--warn)}
+  /* Четыре недели подряд: провал должен быть виден глазом, а не вычитаться из чисел. */
+  .cl-weeks{display:flex;gap:6px}
+  .cw{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+      border:1px solid var(--line);border-radius:10px;padding:8px 2px;background:var(--card)}
+  .cw.on{border-color:var(--accent-line)}
+  .cw b{font-family:var(--font-display);font-size:18px;line-height:1}
+  .cw:not(.on) b{color:var(--muted)}
+  .cw small{color:var(--muted);font-size:10.5px}
   /* столбики по неделям: высоту диктует viewBox, поэтому подписи не мельчают */
   #weekBars{width:100%;height:auto;display:block;font-family:var(--font-display)}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
@@ -1536,7 +1557,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -10267,6 +10288,8 @@ async function importProgramLink(id){
   prog.stats = {completions: 0};
   prog.cover = prog.cover || null;
   prog.src = id;
+  // Снимок присланного — чтобы потом было видно, что клиент в нём поменял.
+  prog.origEx = snapshotEx(prog);
   if(d.by) prog.by = d.by;
   if(d.byLink) prog.byLink = d.byLink;
   draft = prog;
@@ -10541,25 +10564,99 @@ function renderClientReports(){
     box.appendChild(h);
     return;
   }
-  const rest = [];
-  if(r.last) rest.push(`последняя ${humanDay(r.last)}`);
-  if(r.streak > 1) rest.push(`серия ${r.streak}`);
-  const head = document.createElement('div');
-  head.className = 'cls-sum';
-  head.innerHTML = '<b></b><small></small>';
-  head.querySelector('b').textContent = `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
-  head.querySelector('small').textContent = rest.join(' · ');
-  box.appendChild(head);
-  // Рост нагрузки показываем там, где он есть: упражнение, которое не выросло,
-  // в отчёте только шумит.
-  (r.ex || []).forEach(e => {
-    const row = document.createElement('div');
-    row.className = 'cl-grow';
-    row.innerHTML = '<span></span><b></b>';
-    row.querySelector('span').textContent = e.n;
-    row.querySelector('b').textContent = e.a === e.b ? e.b : `${e.a} → ${e.b}`;
-    box.appendChild(row);
-  });
+
+  const add = (cls, html) => {
+    const el = document.createElement('div');
+    el.className = cls;
+    el.innerHTML = html;
+    box.appendChild(el);
+    return el;
+  };
+  const line = (label, value, tone) => {
+    const el = add('cl-grow', '<span></span><b></b>');
+    el.querySelector('span').textContent = label;
+    const b = el.querySelector('b');
+    b.textContent = value;
+    if(tone) b.className = tone;
+  };
+
+  // ---- 1. Сколько и когда ----
+  const head = add('tr-sum cls-sum', '<b></b><small></small>');
+  head.querySelector('b').textContent =
+    `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
+  const bits = [];
+  if(r.last) bits.push(`последняя ${humanDay(r.last)}`);
+  if(r.streak > 1) bits.push(`серия ${r.streak}`);
+  if(r.sec > 0){
+    const m = Math.round(r.sec / 60);
+    // Часы, когда их уже много: «166667 мин» человек не читает, он спотыкается.
+    bits.push(m >= 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин всего` : `${m} мин всего`);
+  }
+  head.querySelector('small').textContent = bits.join(' · ');
+
+  /* ---- 2. Последние четыре недели ----
+     Главное число не «сколько всего», а «сколько за последние недели»: двенадцать
+     тренировок за полгода и двенадцать за месяц — это два разных человека, и без
+     срока их не отличить. Показываем по неделям, чтобы провал был виден глазом. */
+  const log = r.log || [];
+  if(log.length){
+    const now = new Date();
+    const weeks = [0, 0, 0, 0];
+    log.forEach(x => {
+      const d = daysSince(x.d);
+      if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
+    });
+    const wrap = add('cl-weeks', '');
+    weeks.slice().reverse().forEach((n, i) => {
+      const w = document.createElement('div');
+      w.className = 'cw' + (n ? ' on' : '');
+      w.innerHTML = `<b>${n}</b><small>${i === 3 ? 'эта' : (4 - i - 1) + ' нед.'}</small>`;
+      wrap.appendChild(w);
+    });
+    const hint = add('field-hint', '');
+    const last4 = weeks.reduce((a, b) => a + b, 0);
+    hint.textContent = last4
+      ? `${last4} ${plural(last4, 'тренировка', 'тренировки', 'тренировок')} за четыре недели`
+      : 'За последние четыре недели тренировок не было';
+    hint.classList.toggle('warn', !last4);
+  }
+
+  /* ---- 3. Какие дни делает ----
+     У программы бывает несколько вариантов, и «делает только лёгкий, тяжёлый
+     пропускает» — разговор, который без этой разбивки просто не состоится. */
+  const plans = (r.plans || []).filter(x => x.days || x.n);
+  if(plans.length > 1){
+    add('cls-label', 'По дням');
+    plans.forEach(pl => line(pl.days || `вариант ${pl.i + 1}`,
+      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}` : 'ни разу',
+      pl.n ? '' : 'muted'));
+  }
+
+  /* ---- 4. Что клиент поменял в программе ----
+     Самое важное и самое неочевидное. Тренер, уверенный, что человек делает
+     присланное, а тот выкинул половину, — худший вид слепоты. Поэтому блок стоит
+     ВЫШЕ роста нагрузки: рост по выброшенному упражнению не значит ничего. */
+  const d = r.diff || {};
+  const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
+  if(changed){
+    add('cls-label warn', 'Поменял в программе');
+    (d.del || []).forEach(n => line(n, 'убрал', 'warn'));
+    (d.add || []).forEach(n => line(n, 'добавил', 'warn'));
+    (d.mod || []).forEach(m => line(m.n, `${m.a} → ${m.b}`, 'warn'));
+  }
+
+  // ---- 5. Рост нагрузки ----
+  const ex = r.ex || [];
+  if(ex.length){
+    add('cls-label', 'Растёт');
+    const many = plans.length > 1;
+    ex.forEach(e => {
+      const pl = plans.find(x => x.i === e.p);
+      const tag = [e.w ? 'разминка' : '', many && pl && pl.days ? pl.days : ''].filter(Boolean).join(' · ');
+      line(e.n + (tag ? ` (${tag})` : ''), `${e.a} → ${e.b}`, 'ok');
+    });
+  }
+
   const note = document.createElement('p');
   note.className = 'field-hint';
   note.textContent = `Отчёт от ${humanDay(r.at)}`
@@ -10640,7 +10737,8 @@ async function pullClient(c){
   // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
   // иначе после переустановки у тренера задвоится всё, что уже было.
   c.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
-    streak: r.streak, first: r.first, last: r.last, ex: r.ex || []}));
+    streak: r.streak, first: r.first, last: r.last, ex: r.ex || [],
+    log: r.log || [], plans: r.plans || [], diff: r.diff || null}));
   await saveClients();
   return true;
 }
@@ -10695,31 +10793,98 @@ function pickClientFor(p){
    Отчёт собирает и отправляет САМ человек, кнопкой. Приложение не следит за ним и не
    отсылает ничего без ведома — иначе «тренер видит мои тренировки» превращается в то,
    на что никто не соглашался. */
+/* ЧТО ТРЕНЕР ДОЛЖЕН ВИДЕТЬ.
+
+   Первая версия отчёта показывала четыре упражнения из ПЕРВОГО варианта без
+   разминки — то есть отвечала на вопрос «что-то растёт?» и ни на один из
+   настоящих. Тренер ведёт человека и должен понимать четыре вещи:
+
+   1. ДЕРЖИТ ЛИ РАСПИСАНИЕ. Не «сколько всего», а сколько за последние недели и
+      попадает ли в назначенные дни. «12 тренировок» без срока не значит ничего.
+   2. ЧТО ИМЕННО ДЕЛАЕТ. У программы бывает несколько вариантов по дням, и
+      «делает только лёгкий, тяжёлый пропускает» — это разговор, который надо
+      завести. Без разбивки по вариантам он невозможен.
+   3. КАК РАСТЁТ. По ВСЕМ вариантам и с разминкой: разминка не растёт сама, но
+      человек мог поменять её руками, и это тоже сведения.
+   4. НЕ ПЕРЕДЕЛАЛ ЛИ ПРОГРАММУ. Упражнения можно править, выбрасывать и
+      добавлять. Тренер, уверенный, что клиент делает присланное, а тот выкинул
+      половину, — худший вид слепоты, и раньше отчёт о ней молчал.
+
+   Отчёт по-прежнему НАКОПИТЕЛЬНЫЙ: всё состояние целиком, поэтому неудачная
+   отправка ничего не теряет. */
+
+// Снимок присланного: с чем сравнивать правки клиента. Снимается один раз, при
+// получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
+function snapshotEx(p){
+  const out = [];
+  normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach(e => {
+    out.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
+              v: String(e.value == null ? '' : e.value),
+              s: +e.sets || 1, kg: +e.weight || 0});
+  }));
+  return out;
+}
+
+// Ключ упражнения — вариант плюс название: одно и то же движение в разных днях
+// это разные строки программы, и путать их нельзя.
+const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
+const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' кг' : '') + (x.s > 1 ? ' × ' + x.s + ' подх.' : '');
+
 function buildReport(p){
   const mine = stats.history.filter(h => h.pid === p.id);
   const me = users.find(u => u.id === currentUser);
+  const plans = normPlans(p);
+
+  // 1. Журнал: что и когда. Тридцати тренировок хватает на два месяца занятий —
+  // дальше тренеру интересна не история, а то, что происходит сейчас.
+  const log = mine.slice(-30).map(h => ({d: h.d, p: +h.plan || 0, sec: h.sec || 0}));
+
+  // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
+  const planStats = plans.map((pl, i) => ({
+    i, days: (pl.days || []).join('·'),
+    n: mine.filter(h => (+h.plan || 0) === i).length
+  }));
+
+  // 3. Рост — по всем вариантам, разминка помечена отдельно.
   const ex = [];
-  normPlans(p).forEach(pl => (pl.exercises || []).forEach(e => {
-    // поля упражнения — type и warmup (не kind/warm: те у ШАГА тренировки, а не у
-    // упражнения). Разминку в отчёт не берём: она не растёт (progAxis → none).
-    if(ex.length >= 4 || e.warmup || e.type === 'time') return;
-    const now = progressedRepsRange(p.id, e, p);
+  plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
+    if(ex.length >= 40) return;
     const was = String(e.value == null ? '' : e.value);
-    const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
+    const now = e.warmup ? was : progressedRepsRange(p.id, e, p);
     const kgWas = hasWeight(e) ? (+e.weight || 0) : 0;
-    if(now === was && kgNow === kgWas) return;
-    ex.push({n: e.name || 'Упражнение',
+    const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
+    if(now === was && kgNow === kgWas) return;      // не выросло — не шумим
+    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || 'Упражнение',
              a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} кг` : ''),
              b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
   }));
+
+  // 4. Правки: что клиент убрал, добавил и поменял руками.
+  const diff = {add: [], del: [], mod: []};
+  if(Array.isArray(p.origEx)){
+    const now = snapshotEx(p);
+    const byKey = new Map(now.map(x => [exKey(x), x]));
+    const wasKeys = new Set();
+    p.origEx.forEach(o => {
+      wasKeys.add(exKey(o));
+      const cur = byKey.get(exKey(o));
+      if(!cur){ if(diff.del.length < 12) diff.del.push(o.n); return; }
+      // Поправку от прогрессии за правку не считаем: она и так в списке роста.
+      if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg){
+        if(diff.mod.length < 12) diff.mod.push({n: o.n, a: exVal(o), b: exVal(cur)});
+      }
+    });
+    now.forEach(x => { if(!wasKeys.has(exKey(x)) && diff.add.length < 12) diff.add.push(x.n); });
+  }
+
   return {
-    v: 1, by: p.by || '', who: (me && me.name) || '', name: p.name,
+    v: 2, by: p.by || '', who: (me && me.name) || '', name: p.name,
     n: mine.length,
     sec: mine.reduce((a, h) => a + (h.sec || 0), 0),
     first: mine.length ? mine[0].d : null,
     last: mine.length ? mine[mine.length - 1].d : null,
     streak: calcStreakInfo().n,
-    ex
+    log, plans: planStats, ex, diff
   };
 }
 
