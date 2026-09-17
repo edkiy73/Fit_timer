@@ -172,13 +172,13 @@ module.exports = async (req, res) => {
     await store.set(`mail:${mh}`, JSON.stringify({h: sha(code), tries: 0, at: Date.now()}), CODE_TTL);
 
     const text = `Код для входа: ${code}\n\n`
-      + `Введи его в приложении, в разделе «Ещё» → «Аккаунт».\n`
+      + `Введи его в приложении, в разделе «Другое» → «Аккаунт».\n`
       + `Код действует 15 минут.\n\n`
       + `Если ты этого не просил — просто удали письмо, ничего не произошло.`;
     const html = `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630">`
       + `<p>Код для входа:</p>`
       + `<p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p>`
-      + `<p>Введи его в приложении, в разделе «Ещё» → «Аккаунт». Код действует 15 минут.</p>`
+      + `<p>Введи его в приложении, в разделе «Другое» → «Аккаунт». Код действует 15 минут.</p>`
       + `<p style="color:#6C6785;font-size:14px">Если ты этого не просил — просто удали письмо, ничего не произошло.</p>`
       + `</div>`;
 

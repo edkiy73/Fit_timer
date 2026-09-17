@@ -2,7 +2,7 @@
 
    «Подопечные» появляются вместе с режимом тренера и исчезают вместе с ним: пока его
    нет, кнопка занимала бы место под раздел, в который незачем заходить. «Аккаунт» и
-   «Настройки» слиты в «Ещё» — они делились не по смыслу, а по истории, и человек
+   «Настройки» слиты в «Другое» — они делились не по смыслу, а по истории, и человек
    искал нужное в двух местах по очереди. Каталог не в доке: туда заходят три раза
    за всё время, а место в доке постоянное.
 
@@ -37,11 +37,11 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   // ---- обычный человек ----
   const plain = await tabs(page);
   ok('четыре раздела без режима тренера', plain.length === 4, plain.join(' · '));
-  ok('«Ещё» вместо «Аккаунта» и «Настроек»',
-     plain.includes('Ещё') && !plain.includes('Настройки') && !plain.includes('Аккаунт'));
+  ok('«Другое» вместо «Аккаунта» и «Настроек»',
+     plain.includes('Другое') && !plain.includes('Настройки') && !plain.includes('Аккаунт'));
   ok('«Подопечных» не видно', !plain.includes('Подопечные'));
 
-  // всё из настроек доехало в «Ещё»
+  // всё из настроек доехало в «Другое»
   await page.evaluate(() => goTab('scrAccount'));
   await page.waitForTimeout(600);
   const more = await page.evaluate(() => ({
@@ -51,7 +51,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
     hasPlan: !!document.getElementById('btnPlanCard'),
     visible: !document.getElementById('hfSeg').closest('.screen').classList.contains('hidden')
   }));
-  ok('раздел называется «Ещё»', more.title === 'Ещё', more.title);
+  ok('раздел называется «Другое»', more.title === 'Другое', more.title);
   ok('звук, профили и тариф — в одном месте',
      more.hasSound && more.hasProfiles && more.hasPlan && more.visible);
 
@@ -91,12 +91,12 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   await page.waitForTimeout(300);
   ok('с заявкой строка появляется', await page.isVisible('#btnMyCatalog'));
 
-  // «Ещё» разделено вкладками — иначе одиннадцать карточек подряд читаются как свалка
+  // «Другое» разделено вкладками — иначе одиннадцать карточек подряд читаются как свалка
   await page.evaluate(() => goTab('scrAccount'));
   await page.waitForTimeout(500);
   const moreTabs = await page.evaluate(() =>
     [...document.querySelectorAll('#moreTabs .tab')].map(b => b.textContent.trim()));
-  ok('«Ещё» поделено вкладками', moreTabs.length === 4, moreTabs.join(' · '));
+  ok('«Другое» поделено вкладками', moreTabs.length === 4, moreTabs.join(' · '));
   ok('открывается на первой', await page.evaluate(() =>
     !document.getElementById('morePane_me').classList.contains('hidden')
     && document.getElementById('morePane_acc').classList.contains('hidden')));

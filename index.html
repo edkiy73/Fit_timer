@@ -1585,7 +1585,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow):not(.cl-stats),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -2353,6 +2353,18 @@
   /* Три числа в ряд: стаж, программы, сколько раз их взяли. Ряд, а не список —
      их читают одним взглядом, как ответ на «стоит ли доверять». Пустых клеток
      здесь не бывает: чего не знаем, то не рисуем вовсе. */
+  /* Сводка по подопечным: три плитки в ряд, число крупно, подпись под ним.
+     Ряд, а не строка через точку: три числа про разное, и читаются они взглядом,
+     а не чтением. Ширина поровну — иначе на «17» и «2» плитки разъезжаются. */
+  .cl-stats{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
+  .cl-stat{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:var(--bg-2);border-radius:var(--r-sm);padding:12px 6px;text-align:center;
+  }
+  .cl-stat b{font-family:var(--font-display);font-size:24px;line-height:1.05;color:var(--accent-ink)}
+  .cl-stat small{color:var(--muted);font-size:12px;line-height:1.25}
+  /* Ноль — это тоже ответ, но приглушённый: он не новость, а «ещё не начиналось». */
+  .cl-stat.zero b{color:var(--muted)}
   .tp-stats{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4)}
   .tp-stat{display:flex;flex-direction:column;gap:2px;min-width:74px}
   .tp-stat b{font-family:var(--font-display);font-size:22px;line-height:1.1}
@@ -4107,7 +4119,7 @@
   <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
        Раньше это был попап поверх главной — теперь полноценная страница. -->
   <section class="screen root" id="scrAccount">
-    <div class="page-head"><h1>Ещё</h1></div>
+    <div class="page-head"><h1>Другое</h1></div>
 
     <!-- Раздел собрал всё, что настраивают редко, и стал слишком длинным, чтобы
          в нём что-то находить: одиннадцать карточек подряд читаются как свалка.
@@ -4411,7 +4423,12 @@
     <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
          идёт. Список — уже подробности. -->
     <div class="card-block" id="clsSumCard">
-      <div class="tr-sum" id="clsSum"></div>
+      <!-- Три числа в ряд, и у каждого подпись ПОД числом. Раньше это была строка
+           «3 подопечного · 2 занимаются · 17 тренировок всего»: число управляло
+           падежом, и на двойке-тройке выходило «подопечного», а на нуле занятий
+           строка наполовину исчезала. Подпись, стоящая отдельно, от числа не
+           зависит вовсе — и склонять нечего. -->
+      <div class="cl-stats" id="clsSum"></div>
     </div>
 
     <div class="card-block">
@@ -4743,8 +4760,11 @@
         <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — остальное готово само</small></span></button>
         <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Собрать вручную</b><small>Добавляешь упражнения по одному</small></span></button>
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Вставь ссылку на тренировку</small></span></button>
-        <button class="choice ico" id="chStore"><span class="ch-ico" data-icon="book"></span><span class="ch-txt"><b>Готовая программа</b><small>Готовые планы от тренеров — каталог</small></span></button>
-        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или коду</b><small>Если программу прислали или сохраняли в файл</small></span></button>
+        <!-- Каталога здесь НЕТ намеренно. Он не способ собрать программу, а место, куда
+             ходят за чужой готовой, и вход в него стоит на самом экране «Тренировки»
+             отдельной кнопкой. В этом попапе он был вторым входом в то же место и
+             занимал строку среди четырёх, которые про другое. -->
+        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или файлом</b><small>Если программу прислали или сохраняли себе</small></span></button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -4892,11 +4912,16 @@
     <div class="modal" id="importModal">
       <div class="modal-card">
         <span class="mini-label">Импорт программы</span>
-        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:110px" placeholder="Вставь код (FIT1…) или ссылку, которой поделились"></textarea></div>
-        <button class="btn-primary" id="btnDoImport" style="padding:15px">Импортировать</button>
+        <!-- Кода программы приложение больше не выдаёт: адрес с программой внутри
+             отбивался хостингом, и остались два пути — короткая ссылка и файл.
+             Поэтому и спрашиваем про них, а не про «FIT1…», которого человеку
+             взять уже негде. Старые коды из чужих переписок поле по-прежнему
+             понимает — ломать их задним числом незачем. -->
+        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились"></textarea></div>
+        <button class="btn-primary" id="btnDoImport" style="padding:15px">Открыть по ссылке</button>
         <div class="imp-or"><span>или</span></div>
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
-        <p class="field-hint" style="margin-top:8px">Файл несёт программу целиком, с картинками. Ссылка и код — без них.</p>
+        <p class="field-hint" style="margin-top:8px">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
@@ -4914,7 +4939,7 @@
          бы место под раздел, в который человеку незачем заходить. -->
     <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Подопечные</span></button>
     <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Ещё</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Другое</span></button>
   </div>
 </nav>
 
@@ -6048,7 +6073,7 @@ async function loadData(){
   await loadProgWeights();
   await loadTrainer();
   // Док должен знать про режим тренера СРАЗУ. Раньше кнопку показывал только
-  // renderTrainerCard(), а он зовётся при входе в «Ещё», — и до первого захода
+  // renderTrainerCard(), а он зовётся при входе в «Другое», — и до первого захода
   // туда у тренера было четыре раздела вместо пяти.
   syncDockTabs();
   migrateProgWeightsToDeltas();
@@ -7579,7 +7604,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '17.09 · состав по вариантам, премиум, оплата (v15)';
+const BUILD = '17.09 · «Другое», сводка, резервная копия (v16)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -8180,18 +8205,47 @@ async function shareCompare(){
 }
 
 /* ================= ЭКСПОРТ / ИМПОРТ ВСЕХ ДАННЫХ ================= */
+/* Что в резервную копию НЕ кладём, и почему именно это.
+
+   Список исключений, а не список включений, — принципиально. Копия собиралась
+   перечислением четырёх полей руками, и за ней не уследили: мимо прошли ручные
+   правки веса (progWeights), режим тренера с его ником и ключом, вся картотека
+   подопечных, пол с датой рождения и — хуже всего — аккаунт с подпиской. Человек
+   восстанавливался из копии и терял оплаченное, не узнав об этом.
+
+   Теперь копия берёт ВСЁ, что перечислено в PROFILE_KEYS и GLOBAL_KEYS (те же
+   списки, по которым идёт удаление — заводя ключ, его вписывают туда по 152-ФЗ),
+   кроме вот этого: */
+const NO_BACKUP = [
+  // «прямо сейчас», а не данные: восстанавливать недоигранный подход из копии,
+  // снятой месяц назад, — это вернуть человека в тренировку, которой не было
+  'workoutSession',
+  // служебное для обмена с сервером: восстановив очередь, телефон полезет
+  // доотправлять то, чего на сервере уже нет
+  'docMeta', 'outbox',
+  // про устройство, а не про человека: два телефона с одним id — это два
+  // телефона, притворяющиеся одним
+  'deviceId'
+];
+const backupProfileKeys = () => PROFILE_KEYS.filter(k => !NO_BACKUP.includes(k));
+const backupGlobalKeys  = () => GLOBAL_KEYS.filter(k => !NO_BACKUP.includes(k));
+
 async function exportAllData(){
-  const dump = {app: 'fittimer', version: 1, exportedAt: new Date().toISOString(), users, currentUser, data: {}, settings: {}};
+  const dump = {app: 'fittimer', version: 2, exportedAt: new Date().toISOString(),
+                users, currentUser, data: {}, settings: {}};
   for(const u of users){
-    dump.data[u.id] = {
-      programs: JSON.parse((await kvGet('customPrograms_' + u.id)) || '[]'),
-      stats: JSON.parse((await kvGet('stats_' + u.id)) || '{}'),
-      photos: JSON.parse((await kvGet('photos_' + u.id)) || '[]'),
-      warmupAdded: (await kvGet('warmupAdded_' + u.id)) === '1'
-    };
+    // Складываем СЫРЫЕ строки, как они лежат в хранилище: копия не должна знать,
+    // что внутри каждого ключа, — иначе она устареет вместе с первым же полем.
+    const d = {};
+    for(const k of backupProfileKeys()){
+      const v = await kvGet(k + '_' + u.id);
+      if(v != null) d[k] = v;
+    }
+    dump.data[u.id] = d;
   }
-  for(const k of ['voiceCtl', 'soundOff', 'voiceURI', 'musicMode', 'seenHelp', 'voiceHint']){
-    dump.settings[k] = await kvGet(k);
+  for(const k of backupGlobalKeys()){
+    const v = await kvGet(k);
+    if(v != null) dump.settings[k] = v;
   }
   const blob = new Blob([JSON.stringify(dump, null, 1)], {type: 'application/json'});
   const a = document.createElement('a');
@@ -8199,7 +8253,7 @@ async function exportAllData(){
   a.download = 'fittimer-backup-' + localISO(new Date()) + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  appAlert('Резервная копия сохранена в загрузки. В ней все профили, программы и статистика.');
+  appAlert('Резервная копия сохранена в загрузки. В ней всё: профили, программы, статистика, вес, замеры, фото, аккаунт с подпиской и — если ты тренер — ник и подопечные.');
 }
 
 async function importAllData(file){
@@ -8227,23 +8281,77 @@ async function importAllData(file){
 
   await kvSet('users', JSON.stringify(users));
   await kvSet('currentUser', dump.currentUser || users[0].id);
+
+  /* Копии первой версии складывали четыре поля разобранными объектами
+     (programs/stats/photos/warmupAdded), вторая кладёт ВСЕ ключи сырыми строками.
+     Читаем оба: файлы первой версии лежат у людей на диске, и ломать их задним
+     числом значит отобрать у человека его же копию. */
+  const OLD = {programs: 'customPrograms', stats: 'stats', photos: 'photos',
+               warmupAdded: 'warmupAdded'};
+  const raw = (v, k) => {
+    if(v == null) return null;
+    if(typeof v === 'string') return v;               // вторая версия
+    if(k === 'warmupAdded') return v ? '1' : '0';     // первая: булево
+    try{ return JSON.stringify(v); }catch(e){ return null; }
+  };
+
   for(const [uid, d] of Object.entries(dump.data || {})){
-    const progs = (Array.isArray(d.programs) ? d.programs : []).map(sanitizeProgram);
-    // Фото прогресса — те же data-адреса, что и у упражнений, и та же проверка.
-    const photos = (Array.isArray(d.photos) ? d.photos : [])
-      .map(ph => (ph && typeof ph === 'object' && cleanPic(ph.img)) ? {...ph, img: cleanPic(ph.img)} : null)
-      .filter(Boolean);
-    await kvSet('customPrograms_' + uid, JSON.stringify(progs));
-    await kvSet('stats_' + uid, JSON.stringify(d.stats || {}));
-    await kvSet('photos_' + uid, JSON.stringify(photos));
-    await kvSet('warmupAdded_' + uid, d.warmupAdded ? '1' : '0');
+    const got = {};
+    for(const [oldName, key] of Object.entries(OLD)){
+      if(d[oldName] !== undefined) got[key] = raw(d[oldName], oldName);
+    }
+    for(const k of backupProfileKeys()){
+      if(d[k] !== undefined) got[k] = raw(d[k], k);
+    }
+    for(const [k, v] of Object.entries(got)){
+      if(v == null) continue;
+      await kvSet(k + '_' + uid, sanitizeBackupValue(k, v));
+    }
   }
   for(const [k, v] of Object.entries(dump.settings || {})){
     // Кладём только известные ключи: файл не должен уметь завести в хранилище
     // то, чего приложение не заводит само.
-    if(v !== null && v !== undefined && GLOBAL_KEYS.includes(k)) await kvSet(k, v);
+    if(v == null || !backupGlobalKeys().includes(k)) continue;
+    await kvSet(k, sanitizeBackupValue(k, raw(v, k)));
   }
   location.reload();
+}
+
+/* Значения из копии проходят те же пределы, что и всё пришедшее снаружи: файл
+   пересылают, правят в блокноте, собирают заново. Чистим по смыслу ключа, а что
+   не узнали — кладём как есть: это ключи, которые приложение пишет само, и трогать
+   их содержимое здесь значило бы повторять их разбор во втором месте. */
+function sanitizeBackupValue(key, str){
+  const parse = () => { try{ return JSON.parse(str); }catch(e){ return null; } };
+  if(key === 'customPrograms'){
+    const list = parse();
+    return JSON.stringify((Array.isArray(list) ? list : []).map(sanitizeProgram));
+  }
+  if(key === 'photos'){
+    // Фото прогресса — те же data-адреса, что и у упражнений, и та же проверка.
+    const list = parse();
+    return JSON.stringify((Array.isArray(list) ? list : [])
+      .map(ph => (ph && typeof ph === 'object' && cleanPic(ph.img)) ? {...ph, img: cleanPic(ph.img)} : null)
+      .filter(Boolean));
+  }
+  if(key === 'trainer'){
+    const t = parse() || {};
+    t.name = clampLine(t.name, LIM.coachName);
+    t.about = clampText(t.about, LIM.coachAbout);
+    t.photo = cleanPic(t.photo) || '';
+    t.links = cleanLink(t.links) || '';
+    return JSON.stringify(t);
+  }
+  if(key === 'clients'){
+    const list = parse();
+    return JSON.stringify((Array.isArray(list) ? list : []).slice(0, 500).map(c => {
+      if(!c || typeof c !== 'object') return null;
+      c.name = clampLine(c.name, LIM.clientName);
+      c.note = clampLine(c.note, LIM.clientNote);
+      return c;
+    }).filter(Boolean));
+  }
+  return str;
 }
 
 /* ================= КАРТИНКА ДЛЯ ШЕРИНГА =================
@@ -10823,15 +10931,34 @@ async function importProgramLink(id){
   }
 }
 
+/* Разбор вставленного. Приложение выдаёт КОРОТКУЮ ссылку (?p=<id>) — и именно её
+   поле не понимало вовсе: человек вставлял то, что ему прислали, и получал «это не
+   похоже на код программы». Проверять надо то, что приходит, а не то, что мы когда-то
+   выдавали.
+
+   Три случая, и все три встречаются:
+   • короткая ссылка ?p=<id> — программу забираем с сервера;
+   • старая ссылка ?import=FIT1… — приложение таких больше не делает, но они лежат
+     в чужих переписках, и ломать их задним числом незачем;
+   • голый код FIT1… — то же самое, вставленное без адреса. */
 function importProgramCode(code){
   code = (code || '').trim();
-  // Ссылки вида ?import=FIT1... приложение больше не выдаёт (адрес с программой
-  // внутри отбивался хостингом), но разбирать их продолжаем: такие ссылки лежат в
-  // чужих переписках, и ломать их задним числом незачем.
+
+  const short = code.match(/[?&]p=([0-9a-z]{4,16})\b/i)
+    || (/^[0-9a-z]{4,16}$/i.test(code) && !/^FIT1/i.test(code) ? [null, code] : null);
+  if(short){
+    $('importModal').classList.remove('open');
+    importProgramLink(short[1]);
+    return;
+  }
+
   if(code.includes('import=')){
     try{ code = decodeURIComponent(code.split('import=')[1].split('&')[0]); }catch(e){}
   }
-  if(!code.startsWith('FIT1.')){ appAlert('Это не похоже на код программы — он начинается с FIT1. Можно вставить и целую ссылку.'); return; }
+  if(!code.startsWith('FIT1.')){
+    appAlert('Это не похоже на ссылку на программу. Вставь ссылку целиком — ту, что прислали, — или загрузи файл программы.');
+    return;
+  }
   let prog;
   try{
     prog = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
@@ -11025,11 +11152,17 @@ function renderClients(){
   setShown('clsSumCard', n > 0);
   if(n){
     const sum = $('clsSum');
-    sum.innerHTML = '<b></b><small></small>';
-    sum.querySelector('b').textContent = `${n} ${plural(n, 'подопечный', 'подопечного', 'подопечных')}`;
-    sum.querySelector('small').textContent =
-      (live ? `${live} ${live === 1 ? 'занимается' : 'занимаются'} · ` : '')
-      + `${total} ${plural(total, 'тренировка', 'тренировки', 'тренировок')} всего`;
+    sum.innerHTML = '';
+    // Подпись под числом, а не после него: тогда она не зависит от числа и её не
+    // надо согласовывать. Заодно все три видны сразу, а не через точку в строке.
+    [['Подопечных', n], ['Занимаются', live], ['Тренировок', total]].forEach(([label, v]) => {
+      const el = document.createElement('div');
+      el.className = 'cl-stat' + (v ? '' : ' zero');
+      el.innerHTML = '<b></b><small></small>';
+      el.querySelector('b').textContent = v;
+      el.querySelector('small').textContent = label;
+      sum.appendChild(el);
+    });
   }
   const box = $('clsList');
   box.innerHTML = '';
@@ -16636,7 +16769,6 @@ $('storeClear').onclick = ()=>{
 };
 
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
-$('chStore').onclick = ()=>{ $('createModal').classList.remove('open'); openStore('scrPrograms'); };
 $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
 $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(); openAI('text'); };
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
@@ -17064,7 +17196,7 @@ function switchStatsTab(tab){
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
 
-/* Вкладки раздела «Ещё». Выбранная НЕ запоминается между заходами: человек приходит
+/* Вкладки раздела «Другое». Выбранная НЕ запоминается между заходами: человек приходит
    сюда за разным, и «где я был в прошлый раз» — не тот вопрос, на который надо
    отвечать. Открываем всегда на первой. */
 function switchMoreTab(key){
