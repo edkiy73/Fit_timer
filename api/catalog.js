@@ -40,7 +40,8 @@ async function list(req, res){
     if(c.status !== 'approved') return fail(res, 404, 'not_found');
     return send(res, 200, {item: {
       id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min, name: c.name,
-      gives: c.gives, text: c.text, cover: c.cover || null, media: c.media || null
+      gives: c.gives, text: c.text, pro: !!c.pro,
+      cover: c.cover || null, media: c.media || null
     }});
   }
 
@@ -68,7 +69,7 @@ async function list(req, res){
     if(c.status !== 'approved') return;
     // media в списке НЕТ намеренно — см. выше. Обложка одна на программу и лёгкая.
     items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
-                name: c.name, gives: c.gives, text: c.text,
+                name: c.name, gives: c.gives, text: c.text, pro: !!c.pro,
                 cover: c.cover || null, hasMedia: !!(c.media && Object.keys(c.media).length)});
   });
   send(res, 200, {items});

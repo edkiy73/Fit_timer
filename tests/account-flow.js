@@ -266,6 +266,70 @@ async function boot(b, label, errs, url){
   await three.waitForTimeout(300);
   ok('напоминание про аккаунт пропало', !(await three.isVisible('#coachNoAcc')));
 
+  /* ---- покупка подписки требует кода на почту ----
+
+     Раньше почту просто набирали в поле. На новом телефоне человек вводил тот же
+     адрес, получал пустой аккаунт без подписки и был прав, считая, что у него
+     отобрали оплаченное; опечатка в адресе давала то же самое. */
+  const MAIL3 = 'pay.' + Math.random().toString(36).slice(2, 8) + '@example.com';
+  const four = await boot(b, 'телефон 4', errs);
+
+  await four.evaluate((mail) => {
+    pmPlan = 'month';
+    $('payEmail').value = mail;
+    $('payModal').classList.add('open');
+  }, MAIL3);
+  await four.click('#payGo');
+  await four.waitForTimeout(700);
+  ok('вместо «куплено» просят подтвердить почту',
+     await four.isVisible('#loginEmail')
+     && (await four.textContent('#loginLabel')) === 'Подтверждение почты',
+     await four.textContent('#loginLabel'));
+  ok('и адрес уже подставлен', (await four.inputValue('#loginEmail')) === MAIL3,
+     await four.inputValue('#loginEmail'));
+  ok('пока код не введён, подписки нет',
+     await four.evaluate(() => !isPremium()), await four.evaluate(() => String(isPremium())));
+
+  await four.click('#loginGo');
+  await four.waitForTimeout(700);
+  ok('второй шаг — код', await four.isVisible('#loginCode'));
+  ok('и на нём подписки всё ещё нет',
+     await four.evaluate(() => !isPremium()), await four.evaluate(() => String(isPremium())));
+
+  // бросил на шаге кода — премиума не случилось
+  await four.click('#loginCancel');
+  await four.waitForTimeout(300);
+  ok('отменил — подписки не появилось',
+     await four.evaluate(() => !isPremium() && !account.sub),
+     await four.evaluate(() => JSON.stringify(account.sub)));
+
+  // теперь по-настоящему
+  await four.evaluate((mail) => {
+    pmPlan = 'month';
+    $('payEmail').value = mail;
+    $('payModal').classList.add('open');
+  }, MAIL3);
+  await four.click('#payGo');
+  await four.waitForTimeout(700);
+  await four.click('#loginGo');          // прислать код
+  await four.waitForTimeout(700);
+  await four.click('#loginGo');          // код подставлен локальным запуском
+  await four.waitForTimeout(900);
+  if(await four.isVisible('#dlgOk')){ await four.click('#dlgOk'); await four.waitForTimeout(300); }
+  ok('с кодом подписка оформлена',
+     await four.evaluate((m) => isPremium() && account.email === m, MAIL3),
+     await four.evaluate(() => `${isPremium()} / ${account.email}`));
+
+  // и она возвращается на другом телефоне — ради этого код и спрашивали
+  const five = await boot(b, 'телефон 5', errs);
+  const restored = await five.evaluate(async (email) => {
+    const s = await apiPost('/api/auth', {action: 'send', email});
+    return await apiPost('/api/auth', {action: 'verify', email, code: s.devCode});
+  }, MAIL3);
+  ok('подписка вернулась на другом телефоне',
+     !!(restored.sub && restored.sub.plan === 'month'),
+     JSON.stringify(restored.sub));
+
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;
   await b.close();

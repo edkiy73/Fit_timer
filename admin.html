@@ -68,6 +68,21 @@
   .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;
         padding:2px 9px;font-size:11.5px;color:var(--muted);margin-left:6px}
   .pill.ban{color:var(--danger);border-color:var(--danger)}
+  .pill.pro{color:var(--accent);border-color:var(--accent)}
+  /* Флажок с пояснением: «только по подписке» решает, увидит ли человек состав
+     вообще, и одного слова тут мало. */
+  /* Общее правило для label делает подписи капсом — здесь это обычная строка,
+     а не заголовок поля, поэтому перебиваем: и регистр, и цвет, и раскладку. */
+  label.check{
+    display:grid;grid-template-columns:20px 1fr;gap:4px 10px;align-items:center;
+    margin:14px 0 2px;font-size:15px;color:var(--ink);font-weight:500;
+    letter-spacing:0;text-transform:none;cursor:pointer;line-height:1.35;
+  }
+  label.check input{width:20px;height:20px;margin:0;accent-color:var(--accent)}
+  label.check small{
+    grid-column:2;font-weight:400;color:var(--muted);font-size:12.5px;
+    letter-spacing:0;text-transform:none;line-height:1.4;
+  }
   .gate{max-width:380px;margin:80px auto;padding:0 16px}
   /* Картинки. Правка каталога без них — полдела: обложка решает, откроют ли строку,
      а фото упражнения объясняет движение быстрее любого описания. */
@@ -185,7 +200,7 @@ function itemCard(c){
     <div class="top">
       ${c.cover ? `<img class="cover" src="${esc(c.cover)}" alt="">` : ''}
       <div style="flex:1;min-width:0">
-        <p class="name">${esc(c.name)}</p>
+        <p class="name">${esc(c.name)}${c.pro ? '<span class="pill pro">премиум</span>' : ''}</p>
         ${c.by ? `<a class="who" href="/api/trainer/${encodeURIComponent(c.by)}" target="_blank" rel="noopener">${esc(c.by)}</a>` : '<span class="muted">от нас</span>'}
         <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}${
           c.media && Object.keys(c.media).length ? ' · ' + Object.keys(c.media).length + ' фото' : ''}</p>
@@ -204,9 +219,15 @@ function itemCard(c){
     return x;
   };
   if(pending){
-    btn('Взять в каталог', 'ok', () => act('approve', {id: c.id}));
+    /* Доступ выбирается В МОМЕНТ решения, а не потом: «взять» и «взять в премиум» —
+       это два разных решения об одной программе, и принимают их одновременно,
+       глядя на её состав. Отдельный переключатель после «взять» означал бы, что
+       программа успела побывать в открытом каталоге. */
+    btn('Взять в каталог', 'ok', () => act('approve', {id: c.id, pro: false}));
+    btn('Взять в премиум', 'ok', () => act('approve', {id: c.id, pro: true}));
     btn('Отклонить', 'no', () => act('reject', {id: c.id}));
   } else {
+    btn(c.pro ? 'Открыть всем' : 'Сделать премиум', '', () => act('pro', {id: c.id, pro: !c.pro}));
     btn('Изменить', '', () => { tab = 'add'; render(); fillForm(c); });
     btn('Убрать из каталога', 'no', () => {
       if(confirm(`Убрать «${c.name}» из каталога?`)) act('remove', {id: c.id});
@@ -328,6 +349,8 @@ function renderAdd(b){
       <div><label>Минут</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
     </div>
     <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
+    <label class="check"><input type="checkbox" id="fPro"> Только по подписке
+      <small>Состав будет закрыт заглушкой, добавить себе — только с Премиумом</small></label>
     <label>Что она даёт</label><textarea id="fGives" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
     <label>Текст программы</label><textarea id="fText" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
     <label>Обложка</label>
@@ -344,6 +367,7 @@ function renderAdd(b){
   </div>`;
   $('fSave').onclick = saveForm;
   $('fClear').onclick = () => { editing = null; form = {cover: null, media: {}}; render(); };
+  if(editing == null) $('fPro').checked = false;
   // Места под фото пересобираются, пока правишь текст: добавил упражнение — сразу
   // видно, куда класть картинку.
   $('fText').oninput = renderPics;
@@ -367,6 +391,7 @@ function fillForm(c){
   $('fBy').value = c.by || '';
   $('fGives').value = c.gives || '';
   $('fText').value = c.text || '';
+  $('fPro').checked = !!c.pro;
   renderPics();
 }
 
@@ -376,6 +401,7 @@ async function saveForm(){
     min: +$('fMin').value, by: $('fBy').value.trim(), gives: $('fGives').value.trim(),
     text: $('fText').value,
     exCount: exNames().length,
+    pro: $('fPro').checked,
     cover: form.cover, media: form.media
   };
   try{

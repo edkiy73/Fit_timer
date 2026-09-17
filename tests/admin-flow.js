@@ -146,6 +146,32 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
   await page.screenshot({path: __dirname + '/shot-admin.png', fullPage: true});
 
+  /* ---- доступ по подписке: решают здесь, а не тренер в заявке ---- */
+  const made = await api('add', {item: {
+    name: 'Платная ' + Math.random().toString(36).slice(2, 6),
+    gives: 'Программа для проверки доступа по подписке, двадцать символов есть.',
+    cat: 'power', level: 'Средний', min: 30, exCount: 3,
+    text: 'ПРОГРАММА: Платная\nДНИ: Пн\nКРУГИ: 3\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
+    pro: true
+  }});
+  ok('программа добавляется сразу премиумной', made.s === 200, made.j.id || made.j.error);
+
+  const fromCat = await fetch(BASE + '/api/catalog').then(r => r.json());
+  const proRow = (fromCat.items || []).find(x => x.id === made.j.id);
+  ok('и каталог отдаёт метку', proRow && proRow.pro === true, String(proRow && proRow.pro));
+
+  const opened = await api('pro', {id: made.j.id, pro: false});
+  ok('её можно открыть всем одним действием', opened.s === 200 && opened.j.pro === false,
+     String(opened.j.pro));
+  const back = await fetch(BASE + '/api/catalog').then(r => r.json());
+  ok('и каталог это видит',
+     (back.items || []).find(x => x.id === made.j.id).pro === false);
+
+  const edited = await api('edit', {id: made.j.id, item: {pro: true}});
+  ok('правкой тоже переключается', edited.s === 200);
+  const solo = await fetch(BASE + '/api/catalog?item=' + made.j.id).then(r => r.json());
+  ok('и по одной программе метка приезжает', solo.item.pro === true, String(solo.item.pro));
+
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');

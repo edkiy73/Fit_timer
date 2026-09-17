@@ -109,9 +109,25 @@ module.exports = async (req, res) => {
     if(!raw) return fail(res, 404, 'not_found');
     const c = JSON.parse(raw);
     c.status = a === 'approve' ? 'approved' : 'rejected';
+    /* Доступ решается ЗДЕСЬ, а не тренером в заявке: «премиум» — это про то, что
+       мы продаём, и отдавать этот рычаг тому, кто программу прислал, значит
+       получить премиум-каталог из всего, что прислали. */
+    if(a === 'approve' && body.pro !== undefined) c.pro = !!body.pro;
     await store.set(`c:${id}`, JSON.stringify(c));
     if(a === 'approve') await store.push('c:approved', id);
-    return send(res, 200, {ok: true, status: c.status});
+    return send(res, 200, {ok: true, status: c.status, pro: !!c.pro});
+  }
+
+  /* ---- открыть или закрыть программу подпиской ----
+     Отдельным действием, а не только в правке: это решение принимают на витрине,
+     глядя на список, и ради одного переключателя открывать всю форму незачем. */
+  if(a === 'pro'){
+    const raw = await store.get(`c:${id}`);
+    if(!raw) return fail(res, 404, 'not_found');
+    const c = JSON.parse(raw);
+    c.pro = !!(body && body.pro);
+    await store.set(`c:${id}`, JSON.stringify(c));
+    return send(res, 200, {ok: true, pro: c.pro});
   }
 
   /* ---- закрыть или вернуть тренера ---- */
@@ -138,6 +154,7 @@ module.exports = async (req, res) => {
       text: clean(it.text, 60000), cover: cleanPic(it.cover, 90000) || null,
       media: pics(it.media),
       exCount: Math.max(0, Math.round(+it.exCount || 0)),
+      pro: !!it.pro,
       status: 'approved', at: new Date().toISOString(), mine: true
     }));
     await store.push('c:approved', newId);
@@ -162,6 +179,7 @@ module.exports = async (req, res) => {
     if(it.min != null) c.min = Math.max(1, Math.min(180, Math.round(+it.min || 20)));
     if(it.cover !== undefined) c.cover = cleanPic(it.cover, 90000) || null;
     if(it.exCount != null) c.exCount = Math.max(0, Math.round(+it.exCount || 0));
+    if(it.pro !== undefined) c.pro = !!it.pro;
     // Картинки правятся целиком: присланная карта заменяет прежнюю, поэтому убрать
     // фото можно тем же действием, каким его добавляют.
     if(it.media !== undefined) c.media = pics(it.media);

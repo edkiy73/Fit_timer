@@ -2404,6 +2404,18 @@
   .si-goal{margin:0;color:var(--accent-ink);font-size:13px;font-weight:500}
   /* состав премиум-программы виден только по подписке: вместо списка — заглушка,
      которая объясняет, что там, и открывает витрину подписки */
+  /* Подпись варианта в составе программы. Не карточка и не вкладка: это разделитель
+     внутри одного списка, и весить он должен меньше строк, которые разделяет. */
+  .si-plan{
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    margin:var(--sp-2) 0 0;font-family:var(--font-display);font-weight:600;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);
+  }
+  .si-plan:first-child{margin-top:0}
+  .si-plan span{
+    flex:none;font-family:var(--font-text);font-weight:400;font-size:12.5px;
+    letter-spacing:0;text-transform:none;color:var(--muted);
+  }
   .si-lock{
     display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
     padding:22px 18px;border:1px dashed var(--accent-line);border-radius:var(--r-lg);
@@ -7567,7 +7579,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '17.09 · пределы полей (v14)';
+const BUILD = '17.09 · состав по вариантам, премиум, оплата (v15)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -7609,16 +7621,41 @@ function renderPlan(){
   }
 }
 
+/* Подписка живёт на АККАУНТЕ, а аккаунт — на почте, и почта обязана быть
+   подтверждённой. Раньше её просто набирали в поле: на новом телефоне человек
+   вводил тот же адрес, получал пустой аккаунт без подписки и был прав, считая,
+   что у него отобрали оплаченное. Опечатка в адресе давала то же самое, только
+   без шанса догадаться.
+
+   Поэтому оформление проходит тот же код на почту, что и обычный вход, — и
+   отдельной «регистрации» тут по-прежнему нет: аккаунта с этой почтой не было —
+   он заводится этим же кодом. */
 async function completePurchase(){
   const email = ($('payEmail').value || '').trim().toLowerCase();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+  if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     appAlert('Проверь почту — похоже, в адресе опечатка.');
     return;
   }
   const cur = userCurrency(), pr = priceTable(), now = new Date().toISOString();
+  const sub = {plan: pmPlan, since: now, until: planUntil(pmPlan),
+               currency: cur, price: pr[pmPlan], autoRenew: true};
+
+  // Своя же подтверждённая почта — спрашивать код второй раз незачем.
+  if((account.email || '').toLowerCase() === email){ await grantSub(email, sub); return; }
+
+  $('payModal').classList.remove('open');
+  openLogin(async ()=> { await grantSub(email, sub); },
+    {email, sub, label: 'Подтверждение почты',
+     msg: 'Пришлём код на ' + email + '. Он подтвердит, что почта твоя, — с неё '
+        + 'подписка вернётся на любом телефоне.'});
+}
+
+async function grantSub(email, sub){
+  const now = new Date().toISOString();
   account.email = email;
   account.linkedAt = account.linkedAt || now;
-  account.sub = {plan: pmPlan, since: now, until: planUntil(pmPlan), currency: cur, price: pr[pmPlan], autoRenew: true};
+  account.sub = sub;
+  pendingSub = null;
   rememberAccount();
   await saveAccount();
   await saveKnown();
@@ -7648,14 +7685,23 @@ async function completePurchase(){
    неоплаченным месяцем. */
 let loginDone = null;
 let loginStep = 1;
+/* Подписка, которую оформляют прямо сейчас. Лежит ОТДЕЛЬНО от account.sub и на
+   диск не попадает: пока почта не подтверждена, подписки нет — ни на экране, ни
+   после перезапуска. Уходит на сервер тем же запросом, которым подтверждается
+   почта, и обнуляется, чем бы дело ни кончилось. */
+let pendingSub = null;
 
-function openLogin(after){
+function openLogin(after, opts){
+  opts = opts || {};
   loginDone = after || null;
+  pendingSub = opts.sub || null;
   loginStep = 1;
-  $('loginLabel').textContent = (account && account.email) ? 'Другой аккаунт' : 'Аккаунт';
-  $('loginMsg').textContent = 'Заведём или вернём аккаунт по почте. Он бесплатный: '
-    + 'в нём живут подписка и твой ник тренера, и с него всё вернётся на новом телефоне.';
-  $('loginEmail').value = (account && account.email) || '';
+  $('loginLabel').textContent = opts.label
+    || ((account && account.email) ? 'Другой аккаунт' : 'Аккаунт');
+  $('loginMsg').textContent = opts.msg
+    || ('Заведём или вернём аккаунт по почте. Он бесплатный: '
+        + 'в нём живут подписка и твой ник тренера, и с него всё вернётся на новом телефоне.');
+  $('loginEmail').value = opts.email || (account && account.email) || '';
   $('loginCode').value = '';
   $('loginErr').textContent = '';
   $('loginCodeHint').textContent = '';
@@ -7700,7 +7746,10 @@ async function doLogin(){
       // он привяжется к нему сразу, а не потребует второго действия.
       handle: (trainer && trainer.handle) ? normHandle(trainer.handle) : '',
       trainerKey: (trainer && trainer.key) || '',
-      sub: (account && account.sub) || null
+      // Оформляемая подписка уезжает тем же запросом: отдельного «сохрани подписку»
+      // нет и не нужно — почта подтверждается ровно затем, чтобы она к чему-то
+      // прицепилась.
+      sub: (account && account.sub) || pendingSub || null
     });
 
     const now = new Date().toISOString();
@@ -7732,6 +7781,7 @@ async function doLogin(){
     renderTrainerCard(); syncDockTabs();
     const done = loginDone; loginDone = null;
     if(done){ done(); return; }
+    pendingSub = null;
     appAlert(r.fresh
       ? 'Аккаунт заведён. Теперь с этой почты всё вернётся на любом телефоне.'
       : (r.handle && r.trainerKey
@@ -11810,7 +11860,10 @@ function openStoreItem(id){
   const plans = (program && program.plans) || [];
   const exs = plans.reduce((a, pl) => a.concat(pl.exercises || []), []);
   const rounds = (plans[0] && +plans[0].rounds) || 1;
-  const days = (plans[0] && (plans[0].days || [])).join(', ');
+  // Дни — СО ВСЕЙ программы, а не с первого варианта. У программы «Пн, Чт» плюс
+  // «Вт, Пт» в шапке значилось «Пн, Чт», и выходило, что занимаются два раза.
+  const days = (program && program.rotate)
+    ? '' : DAYS.filter(d => plans.some(pl => (pl.days || []).includes(d))).join(', ');
 
   const facts = $('siFacts'); facts.innerHTML = '';
   const fact = (txt, cls) => {
@@ -11824,11 +11877,21 @@ function openStoreItem(id){
   fact(`${it.min} мин`);
   if(rounds > 1) fact(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
   if(days) fact(days);
+  if(plans.length > 1){
+    fact(program.rotate
+      ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')} по очереди`
+      : `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+  }
 
   const own = storeOwned(it.id);
   $('siLabels').innerHTML = storeLabels(it, own);
 
-  $('siCount').textContent = `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
+  // При нескольких вариантах в заголовке — число ВАРИАНТОВ, а не сумма упражнений:
+  // сумма читалась как «столько делают за раз», а сколько в каждом — написано на
+  // самом варианте.
+  $('siCount').textContent = plans.length > 1
+    ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`
+    : `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
   // Состав премиум-программы — часть подписки: без неё показываем не пустоту и не
   // отказ, а что именно там лежит. Нажатие открывает витрину подписки.
   const locked = !!it.pro && !isPremium();
@@ -11839,23 +11902,52 @@ function openStoreItem(id){
       `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')} с техникой, ` +
       `частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.`;
   }
+  /* Состав — ПО ВАРИАНТАМ, а не одним списком.
+
+     Одним списком он врал в трёх местах сразу: упражнения разных дней шли подряд
+     и выглядели как одна тренировка, сквозная нумерация давала «12 упражнений»
+     там, где за раз делают четыре, а разминка, которая есть в каждом варианте,
+     повторялась столько раз, сколько вариантов, — и это читалось как ошибка в
+     программе. Человек смотрит сюда, чтобы понять, во что ввязывается, и понимать
+     он должен ОДНУ тренировку, а не сумму всех.
+
+     Вкладок здесь нет намеренно, хотя в редакторе они есть: там человек правит
+     один вариант и остальные ему мешают, а здесь он ВЫБИРАЕТ — и половина
+     состава, спрятанная за вкладкой, ровно то, чего не хватает для выбора. */
   const box = $('siList'); box.innerHTML = '';
-  if(!locked) exs.forEach((ex, i) => {
-    const row = document.createElement('div');
-    row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
-    const before = exs.slice(0, i).filter(e => !e.warmup).length;
-    row.innerHTML =
-      `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
-      `<div class="ex-info"><b></b><div class="ex-meta">` +
-      (ex.warmup ? '<span class="wm">Разминка</span>' : '') +
-      siBits(ex).map(t => `<span>${t}</span>`).join('') +
-      (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
-      `</div></div>`;
-    row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
-    // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
-    // её с рядами надо по тому же, по чему она собрана на сервере.
-    row.dataset.ex = (ex.name || '').trim();
-    box.appendChild(row);
+  if(!locked) plans.forEach((pl, pi) => {
+    if(plans.length > 1){
+      const head = document.createElement('p');
+      head.className = 'si-plan';
+      const list = (pl.days || []).join(', ');
+      head.textContent = (program.rotate || !list) ? `Вариант ${pi + 1}` : list;
+      const n = (pl.exercises || []).length;
+      const sub = document.createElement('span');
+      sub.textContent = `${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`
+        + (+pl.rounds > 1 ? ` · ${pl.rounds} ${plural(+pl.rounds, 'круг', 'круга', 'кругов')}` : '');
+      head.appendChild(sub);
+      box.appendChild(head);
+    }
+    // Номера СВОИ у каждого варианта: сквозные говорили бы, что за одну
+    // тренировку делают двенадцать упражнений.
+    const list = sortWarmFirst((pl.exercises || []).slice());
+    list.forEach((ex, i) => {
+      const row = document.createElement('div');
+      row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
+      const before = list.slice(0, i).filter(e => !e.warmup).length;
+      row.innerHTML =
+        `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
+        `<div class="ex-info"><b></b><div class="ex-meta">` +
+        (ex.warmup ? '<span class="wm">Разминка</span>' : '') +
+        siBits(ex).map(t => `<span>${t}</span>`).join('') +
+        (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
+        `</div></div>`;
+      row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
+      // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
+      // её с рядами надо по тому же, по чему она собрана на сервере.
+      row.dataset.ex = (ex.name || '').trim();
+      box.appendChild(row);
+    });
   });
 
   $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
@@ -16846,8 +16938,13 @@ $('tglRenew').onclick = async ()=>{
   renderPlan(); renderPremium();
 };
 $('loginGo').onclick = doLogin;
-$('loginCancel').onclick = ()=>{ loginDone = null; $('loginModal').classList.remove('open'); };
-$('loginModal').onclick = e => { if(e.target === $('loginModal')){ loginDone = null; $('loginModal').classList.remove('open'); } };
+const dropLogin = ()=>{
+  loginDone = null;
+  pendingSub = null;   // ушёл с шага кода — подписки не случилось
+  $('loginModal').classList.remove('open');
+};
+$('loginCancel').onclick = dropLogin;
+$('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
 $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
 $('btnLoginRow').onclick = ()=> openLogin();
 $('btnSignOut').onclick = signOut;
