@@ -102,6 +102,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
   }, {nick: NICK, name: NAME});
   ok('повтор того же названия отбит', dup === 'already_sent', dup);
 
+
   // ---- чужой ник ----
   const alien = await page.evaluate(async (nick) => {
     try{
@@ -187,6 +188,29 @@ const prog = (name) => `ПРОГРАММА: ${name}
   });
   ok('тренер может посмотреть свою страницу', own.screen === 'scrTrainerPage' && own.nick === NICK,
      own.nick);
+
+  /* Отклонённую программу можно прислать снова. Прежняя метка «такое название уже
+     было» стояла навсегда, и тренер видел «уже отправлена» про то, чего в каталоге
+     нет: заслон от двойного нажатия превращался в запрет на вторую попытку.
+     Проверяем в самом конце, чтобы не ломать порядок остального сценария. */
+  const again = await page.evaluate(async ({base, admin}) => {
+    // Свой ник: у прежнего уже выбран суточный предел проверкой выше.
+    const nick = '@rej.' + Math.random().toString(36).slice(2, 7);
+    const pr = await apiPost('/api/profile', {handle: nick, trainer: {name: 'Т'}});
+    const key = pr.trainerKey;
+    const name = 'Отклонённая ' + Math.random().toString(36).slice(2, 6);
+    const item = {name, gives: 'двадцать символов здесь точно наберётся, поверь мне',
+                  cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)};
+    const first = await apiPost('/api/catalog/submit', {by: nick, trainerKey: key, item});
+    await fetch(base + '/api/admin', {method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(admin)},
+      body: JSON.stringify({action: 'reject', id: first.id})});
+    try{
+      await apiPost('/api/catalog/submit', {by: nick, trainerKey: key, item});
+      return 'принято';
+    }catch(e){ return e.code; }
+  }, {base: BASE, admin: ADMIN});
+  ok('отклонённую можно прислать заново', again === 'принято', again);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

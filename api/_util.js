@@ -44,6 +44,11 @@ function ipHash(req){
 // и от скуки, но не от настоящей атаки — для неё нужен слой выше.
 async function rateOk(req, bucket, limit){
   try{
+    // На локальном запуске предел ослаблен: он защищает боевой сервер, а не машину
+    // разработчика, где сценарии прогоняются по кругу и упираются в него за минуту.
+    // Суточные пределы (сколько программ в каталог) это не трогает — они считаются
+    // отдельно и проверяются по-настоящему.
+    if(process.env.ALLOW_MEMORY_STORE === '1') limit *= 50;
     const hour = Math.floor(Date.now() / 3600000);
     const n = await store.incr(`rl:${bucket}:${ipHash(req)}:${hour}`, 3600);
     return n <= limit;

@@ -8877,17 +8877,61 @@ async function duplicateProgram(p){
    неё код или файл. Выдать адрес, который у получателя не откроется, хуже, чем
    честно сказать, что ссылка сейчас недоступна. */
 
-// Что уезжает получателю: без обложки, фото и чужой статистики.
+/* КАРТИНКИ ЕДУТ ВМЕСТЕ С ПРОГРАММОЙ.
+
+   Раньше и обложка, и фото упражнений выбрасывались: они не помещались в адрес,
+   куда программа паковалась целиком. Адреса больше нет — программа идёт на сервер
+   обычным JSON, и выбрасывать картинки стало не нужно, а вредно. Тренер их для
+   того и ставил: по фото человек понимает движение быстрее, чем по описанию.
+
+   Общий вес ограничен: хранилище не принимает сколь угодно большую запись, а
+   двадцать фото по сто килобайт — это уже не программа, а фотоальбом. Что не
+   влезло — отбрасывается с конца, и программа всё равно доезжает. */
+const MEDIA_BUDGET = 700 * 1024;
+
+// Карта «название упражнения → фото». Отдельно от текста программы, потому что в
+// каталоге программа лежит ТЕКСТОМ, а текст картинку в себе не носит. Одна карта
+// работает и для ссылки клиенту, и для каталога.
+function programMedia(p){
+  const out = {};
+  let left = MEDIA_BUDGET;
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+    const d = ex.media && ex.media.kind === 'img' ? ex.media.data : null;
+    const name = (ex.name || '').trim();
+    if(!d || !name || out[name]) return;
+    if(d.length > left) return;          // не влезло — молча пропускаем, программа важнее
+    out[name] = d;
+    left -= d.length;
+  }));
+  return out;
+}
+// Вернуть фото на места после разбора текста программы.
+function applyMedia(p, media){
+  if(!media) return p;
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+    const d = media[(ex.name || '').trim()];
+    if(d) ex.media = {kind: 'img', data: d};
+  }));
+  return p;
+}
+
+// Что уезжает получателю: без чужой статистики, но С картинками.
 function programPayload(p){
   const copy = JSON.parse(JSON.stringify(p));
-  copy.cover = null;
   delete copy.stats;
   delete copy.active;     // «отключена» — про мой список, а не про саму программу
   delete copy.src;        // метка чужой ссылки получателю не нужна
-  // фото не влезают в код — в ссылке и в тексте программы их нет
+  delete copy.origEx;     // снимок для сравнения — дело получателя, а не отправителя
+  delete copy.pub;        // заявка в каталог принадлежит оригиналу
+  // Обложка и фото остаются. Лишний вес срезает programMedia — здесь только то,
+  // что не влезло в общий предел.
+  const media = programMedia(p);
   copy.plans = normPlans(copy).map(pl => ({
     ...pl,
-    exercises: pl.exercises.map(ex => ({...ex, media: null}))
+    exercises: pl.exercises.map(ex => {
+      const keep = media[(ex.name || '').trim()];
+      return {...ex, media: keep ? {kind: 'img', data: keep} : null};
+    })
   }));
   delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
   // Штамп тренера. По нему приложение клиента поймёт, от кого программа, и покажет
@@ -11319,6 +11363,17 @@ async function addStoreItem(id){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  // Фото упражнений в списке каталога не лежат (иначе витрина весила бы мегабайты).
+  // Забираем их сейчас — в момент, когда программа становится своей.
+  if(it.hasMedia || it.media){
+    let media = it.media;
+    if(!media){
+      try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+      catch(e){ media = null; }        // без фото программа всё равно рабочая
+    }
+    applyMedia(program, media);
+  }
+  if(it.cover) program.cover = it.cover;
   program.storeId = it.id;             // метка каталога: по ней узнаём, что уже добавлено
   program.cover = storeCoverData(it);
   customPrograms.push(program);
@@ -11626,7 +11681,9 @@ async function doPublish(){
         level: pubDraft.level,
         min: estimateMinutes(p), exCount: ex, text: programToText(p),
         // Своя обложка, если тренер её задал. Рисованная по цели остаётся запасной.
-        cover: (p.cover && String(p.cover).length < 90000) ? p.cover : null
+        cover: (p.cover && String(p.cover).length < 90000) ? p.cover : null,
+        // Фото упражнений — отдельной картой: в тексте программы им места нет.
+        media: programMedia(p)
       }
     });
     p.pub = {id: r.id, status: r.status, draft: pubDraft};
@@ -11639,7 +11696,7 @@ async function doPublish(){
       not_yours: 'Этот ник закреплён за другим тренером.',
       banned: 'Приём программ с этого ника закрыт.',
       too_many_today: 'Сегодня уже отправлено три программы. Продолжим завтра.',
-      already_sent: 'Программа с таким названием уже отправлена.',
+      already_sent: 'Эта программа уже ждёт проверки или уже в каталоге.',
       no_store: 'На сервере не подключено хранилище — отправка пока не работает.',
       bad_item: 'Не хватает данных: ' + ((e.miss || []).join(', ') || 'проверь поля') + '.'
     }[e && e.code];

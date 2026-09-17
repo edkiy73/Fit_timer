@@ -54,6 +54,17 @@ module.exports = async (req, res) => {
   const level = String(it.level || '');
   const min   = Math.max(1, Math.min(180, Math.round(+it.min || 0)));
   const cover = String(it.cover || '').slice(0, 90000) || null;
+  // Фото упражнений: карта «название → картинка». Режем и по числу, и по общему
+  // весу — запись в хранилище не резиновая, а двадцать фото это уже фотоальбом.
+  const media = {};
+  let budget = 800 * 1024;
+  for(const [k, v] of Object.entries((it.media && typeof it.media === 'object') ? it.media : {})){
+    const key = String(k).slice(0, 60), val = String(v || '');
+    if(!key || !val.startsWith('data:image/') || val.length > budget) continue;
+    media[key] = val;
+    budget -= val.length;
+    if(Object.keys(media).length >= 30) break;
+  }
   const exCount = Math.round(+it.exCount || 0);
 
   const miss = [];
@@ -71,18 +82,32 @@ module.exports = async (req, res) => {
   const n = await store.incr(`sub:${handle}:${day}`, 2 * 24 * 3600);
   if(n > PER_DAY) return fail(res, 429, 'too_many_today');
 
-  // Одно и то же название от одного ника второй раз не принимаем: чаще всего это
-  // не спам, а человек, который жмёт кнопку повторно, не увидев результата.
+  /* Одно и то же название от одного ника второй раз не принимаем — но только пока
+     первая заявка ЖИВА. Прежняя проверка ставила метку навсегда, и отклонённую
+     программу нельзя было прислать снова даже после правок: тренер видел «уже
+     отправлена» про то, чего в каталоге нет. Заслон от двойного нажатия превращался
+     в запрет на вторую попытку.
+
+     Поэтому смотрим не на метку, а на состояние самой заявки. */
   const dupKey = `subname:${handle}:${sha(name).slice(0, 16)}`;
-  if(await store.get(dupKey)) return fail(res, 409, 'already_sent');
+  const prevId = await store.get(dupKey);
+  if(prevId){
+    const prevRaw = await store.get(`c:${prevId}`);
+    let prev = null;
+    try{ prev = prevRaw ? JSON.parse(prevRaw) : null; }catch(e){}
+    // жива — значит это повторное нажатие; отклонена, убрана или пропала — путь открыт
+    if(prev && (prev.status === 'pending' || prev.status === 'approved')){
+      return fail(res, 409, 'already_sent');
+    }
+  }
 
   const id = 'u' + rndId(7);
   await store.set(`c:${id}`, JSON.stringify({
-    id, by: handle, cat, level, min, name, gives, text, cover,
+    id, by: handle, cat, level, min, name, gives, text, cover, media,
     exCount, status: 'pending', at: new Date().toISOString()
   }));
   await store.push('c:pending', id);
-  await store.set(dupKey, id);
+  await store.set(dupKey, id);   // метка указывает на ПОСЛЕДНЮЮ заявку с этим названием
 
   send(res, 200, {ok: true, id, status: 'pending'});
 };
