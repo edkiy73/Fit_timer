@@ -22,14 +22,22 @@ module.exports = async (req, res) => {
   let rec;
   try{ rec = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
 
-  // Первое открытие отмечаем отдельно: «ссылку открыли через 6 дней» — это другой
-  // разговор с клиентом, чем «открыли сразу», и тренеру он нужен.
-  const opens = await store.incr(`p:${id}:opens`);
-  // Счётчик у тренера: «сколько раз брали мои программы». Один INCR вместо обхода
-  // всех его ссылок при каждом открытии страницы.
-  if(rec.by) await store.incr(`t:${rec.by}:opens`);
-  if(opens === 1) await store.set(`p:${id}:first`, new Date().toISOString());
-  await store.set(`p:${id}:last`, new Date().toISOString());
+  /* Отметки об открытии — одним пакетом. Первое открытие помечаем отдельно:
+     «ссылку открыли через 6 дней» — это другой разговор с клиентом, чем «открыли
+     сразу», и тренеру он нужен. Счётчик у тренера («сколько раз брали мои
+     программы») едет тем же пакетом.
+
+     NX у первой отметки заменяет «прочитать счётчик, потом решить»: так это одна
+     команда, а не два пути до базы. */
+  const now = new Date().toISOString();
+  const YEAR = String(365 * 24 * 3600);
+  const marks = [
+    ['INCR', `p:${id}:opens`],
+    ['SET', `p:${id}:first`, now, 'EX', YEAR, 'NX'],
+    ['SET', `p:${id}:last`, now, 'EX', YEAR]
+  ];
+  if(rec.by) marks.push(['INCR', `t:${rec.by}:opens`]);
+  await store.pipe(marks);
 
   send(res, 200, {program: rec.program, by: rec.by, byLink: rec.byLink, at: rec.at});
 };

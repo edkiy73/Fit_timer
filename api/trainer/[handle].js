@@ -19,7 +19,10 @@ module.exports = async (req, res) => {
   if(handle && handle[0] !== '@') handle = '@' + handle;
   if(!/^@[\wа-яё.\-]{1,39}$/i.test(handle)) return fail(res, 400, 'bad_handle');
 
-  const raw = await store.get(`t:${handle}`);
+  // Профиль и оба счётчика — одним обращением: по отдельности это три пути до
+  // базы, а она стоит не рядом с функцией.
+  const [raw, programs, opens] = await store.many(
+    [`t:${handle}`, `t:${handle}:programs`, `t:${handle}:opens`]);
   if(!raw) return fail(res, 404, 'not_found');
 
   let t;
@@ -33,7 +36,7 @@ module.exports = async (req, res) => {
     years: t.years == null ? null : t.years,
     links: t.links || '',
     since: t.since || null,
-    programs: +(await store.get(`t:${handle}:programs`)) || 0,
-    opens: +(await store.get(`t:${handle}:opens`)) || 0
+    programs: +programs || 0,
+    opens: +opens || 0
   });
 };

@@ -19,25 +19,27 @@ module.exports = async (req, res) => {
   const ask = String((req.query && req.query.status) || '').trim();
   if(ask){
     const ids = ask.split(',').filter(x => /^u[0-9a-z]{4,16}$/.test(x)).slice(0, 20);
+    const raws = await store.many(ids.map(id => `c:${id}`));
     const out = {};
-    for(const id of ids){
-      const raw = await store.get(`c:${id}`);
-      if(!raw){ out[id] = 'gone'; continue; }
-      try{ out[id] = JSON.parse(raw).status || 'pending'; }catch(e){ out[id] = 'gone'; }
-    }
+    ids.forEach((id, i) => {
+      if(!raws[i]){ out[id] = 'gone'; return; }
+      try{ out[id] = JSON.parse(raws[i]).status || 'pending'; }catch(e){ out[id] = 'gone'; }
+    });
     return send(res, 200, {status: out});
   }
 
-  const ids = await store.list('c:approved');
+  const ids = (await store.list('c:approved')).slice(-200);
+  // Один запрос на весь список. Обход по программе давал столько путей до базы,
+  // сколько программ в каталоге, — и витрина открывалась секундами.
+  const raws = await store.many(ids.map(id => `c:${id}`));
   const items = [];
-  for(const id of ids.slice(-200)){
-    const raw = await store.get(`c:${id}`);
-    if(!raw) continue;
+  raws.forEach(raw => {
+    if(!raw) return;
     let c;
-    try{ c = JSON.parse(raw); }catch(e){ continue; }
-    if(c.status !== 'approved') continue;
+    try{ c = JSON.parse(raw); }catch(e){ return; }
+    if(c.status !== 'approved') return;
     items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
-                name: c.name, gives: c.gives, text: c.text});
-  }
+                name: c.name, gives: c.gives, text: c.text, cover: c.cover || null});
+  });
   send(res, 200, {items});
 };

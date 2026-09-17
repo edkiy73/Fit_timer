@@ -27,14 +27,21 @@ module.exports = async (req, res) => {
   const { sameSecret } = require('./../_util');
   if(!sameSecret(given, rec.keyHash)) return fail(res, 403, 'bad_key');
 
-  const reports = (await store.list(`p:${id}:reports`)).map(s => {
+  // Отчёты и три отметки — одним пакетом вместо четырёх отдельных путей до базы.
+  const [list, opens, firstOpen, lastOpen] = await store.pipe([
+    ['LRANGE', `p:${id}:reports`, '0', '-1'],
+    ['GET', `p:${id}:opens`],
+    ['GET', `p:${id}:first`],
+    ['GET', `p:${id}:last`]
+  ]);
+  const reports = (list || []).map(s => {
     try{ return JSON.parse(s); }catch(e){ return null; }
   }).filter(Boolean);
 
   send(res, 200, {
-    opens: +(await store.get(`p:${id}:opens`)) || 0,
-    firstOpen: await store.get(`p:${id}:first`),
-    lastOpen: await store.get(`p:${id}:last`),
+    opens: +opens || 0,
+    firstOpen: firstOpen || null,
+    lastOpen: lastOpen || null,
     sentAt: rec.at,
     name: rec.program && rec.program.name,
     reports

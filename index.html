@@ -10318,6 +10318,23 @@ async function apiFetch(path, opts){
     return data;
   } finally { clearTimeout(t); }
 }
+/* Последний ответ сервера — чтобы экран не был пустым, пока идёт новый.
+
+   Показать вчерашние данные и через секунду заменить их свежими честнее, чем
+   держать пустоту: человек видит содержимое сразу, а не «сломалось». Хранится в
+   localStorage, потому что переживать перезапуск обязано, а ценности не имеет —
+   пропало, значит просто подождём ответа, как раньше. */
+function lastSeen(key, value){
+  try{
+    if(value === undefined){
+      const raw = localStorage.getItem('seen_' + key);
+      return raw ? JSON.parse(raw) : null;
+    }
+    localStorage.setItem('seen_' + key, JSON.stringify(value));
+  }catch(e){}
+  return null;
+}
+
 const apiPost = (path, body) => apiFetch(path, {
   method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
 });
@@ -10764,7 +10781,12 @@ async function loadStoreServer(){
   try{
     const d = await apiFetch('/api/catalog');
     storeServer = Array.isArray(d.items) ? d.items : [];
-  }catch(e){ storeServer = []; }   // каталог без сети — это просто зашитые программы
+    lastSeen('catalog', storeServer);
+  }catch(e){
+    // Каталог без сети — это то, что видели в прошлый раз, плюс зашитые программы.
+    // Пустая витрина вместо вчерашней — потеря без выигрыша.
+    storeServer = lastSeen('catalog') || [];
+  }
 }
 
 const STORE_ITEMS = [
@@ -11662,13 +11684,19 @@ function openTrainer(nick){
   if(!nick) return;
   tpFrom = show._last;
   const local = TRAINERS[nick] || null;
-  // Сразу рисуем то, что знаем без сети: экран не должен ждать сервера.
-  fillTrainerPage(nick, local ? {
+  // Сразу рисуем то, что знаем без сети: каталожного тренера — из таблицы, любого
+  // виденного раньше — из запомненного ответа. Пустой экран на пять секунд, пока
+  // идёт запрос, читается как поломка, хотя всё работает.
+  const seen = lastSeen('tr_' + nick);
+  fillTrainerPage(nick, seen || (local ? {
     name: local.name, about: local.about, photo: local.photo,
     programs: storeAll().filter(x => x.by === nick).length
-  } : null);
+  } : null));
   show('scrTrainerPage');
   apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
+    lastSeen('tr_' + nick, Object.assign({}, d, {
+      programs: Math.max(d.programs || 0, storeAll().filter(x => x.by === nick).length)
+    }));
     if(show._last !== 'scrTrainerPage') return;
     // Сервер знает больше, но имя и текст у тренера каталога уже есть — берём
     // серверное только там, где оно непустое.
@@ -11852,8 +11880,9 @@ async function doPublish(){
 
 function openStore(from){
   storeFrom = from || 'scrMenu';
+  if(!storeServer.length) storeServer = lastSeen('catalog') || [];
   // Свежие позиции подтягиваем при входе и дорисовываем, когда придут: витрина
-  // не должна ждать сеть, чтобы показать зашитые программы.
+  // не должна ждать сеть, чтобы показать то, что уже есть.
   loadStoreServer().then(()=>{ if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); } });
   storeFilter = {q: '', cat: '', level: ''};
   $('storeQuery').value = '';

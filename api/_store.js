@@ -33,15 +33,48 @@ const live = () => !!(URL_ && TOKEN);
 // делает вид, что сохранил.
 const memOk = () => process.env.ALLOW_MEMORY_STORE === '1';
 
-async function call(cmd){
-  const res = await fetch(URL_, {
+async function post(path, body){
+  const res = await fetch(URL_ + path, {
     method: 'POST',
     headers: {Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json'},
-    body: JSON.stringify(cmd)
+    body: JSON.stringify(body)
   });
   if(!res.ok) throw new Error('store ' + res.status);
-  const data = await res.json();
-  return data.result;
+  return res.json();
+}
+async function call(cmd){
+  return (await post('', cmd)).result;
+}
+/* Несколько команд ОДНИМ запросом.
+
+   Дело не в красоте: функция и база стоят в разных местах, и каждое обращение —
+   это полный путь туда и обратно. Пять команд подряд превращались в пять таких
+   путей, то есть в секунды ожидания на ровном месте. Здесь они едут вместе. */
+async function pipe(cmds){
+  if(!cmds.length) return [];
+  if(!live()){
+    const out = [];
+    for(const c of cmds) out.push(await memCmd(c));
+    return out;
+  }
+  const data = await post('/pipeline', cmds);
+  return (Array.isArray(data) ? data : []).map(x => x && x.result);
+}
+// то же самое в памяти — чтобы локальный запуск вёл себя так же, а не «почти так же»
+async function memCmd(c){
+  const [op, key, ...rest] = c;
+  if(op === 'GET') return memGet(key);
+  if(op === 'SET'){
+    if(rest.includes('NX') && memGet(key) != null) return null;   // уже было — не трогаем
+    mem.set(key, {v: rest[0], exp: Date.now() + (+rest[2] || YEAR) * 1000});
+    return 'OK';
+  }
+  if(op === 'INCR'){ const n = (+memGet(key) || 0) + 1; mem.set(key, {v: String(n), exp: Date.now() + YEAR * 1000}); return n; }
+  if(op === 'RPUSH'){ const a = JSON.parse(memGet(key) || '[]'); a.push(rest[0]); mem.set(key, {v: JSON.stringify(a), exp: Date.now() + YEAR * 1000}); return a.length; }
+  if(op === 'LRANGE') return JSON.parse(memGet(key) || '[]');
+  if(op === 'EXPIRE') return 1;
+  if(op === 'MGET') return [key].concat(rest).map(k => memGet(k));
+  return null;
 }
 
 function memGet(key){
@@ -166,6 +199,17 @@ const store = {
   async list(key){
     if(!live()) return JSON.parse(memGet(key) || '[]');
     return (await call(['LRANGE', key, '0', '-1'])) || [];
+  },
+
+  // Несколько команд одним обращением. Список пар [команда, ключ, …].
+  pipe,
+
+  // Прочитать много ключей разом. Список из ста программ — это один запрос,
+  // а не сто: обход в цикле и был причиной, по которой каталог открывался секундами.
+  async many(keys){
+    if(!keys.length) return [];
+    if(!live()) return keys.map(k => memGet(k));
+    return (await call(['MGET'].concat(keys))) || [];
   }
 };
 
