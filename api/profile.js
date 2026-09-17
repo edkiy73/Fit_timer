@@ -41,7 +41,11 @@ module.exports = async (req, res) => {
   if(!raw){
     const key = rndId(24);
     await store.set(`t:${handle}`, JSON.stringify(Object.assign(
-      {handle, since: new Date().toISOString(), keyHash: sha(key)}, fields)));
+      {handle, since: new Date().toISOString(), seen: new Date().toISOString(),
+       keyHash: sha(key)}, fields)));
+    // Отдельный список ников: пройти по всем ключам базы нельзя, а перечислить
+    // тренеров в админке надо.
+    await store.push('t:all', handle);
     return send(res, 200, {ok: true, trainerKey: key, claimed: true});
   }
 
@@ -52,6 +56,7 @@ module.exports = async (req, res) => {
     // а не оставлять в недоумении, почему страница не меняется.
     return fail(res, 409, 'handle_taken');
   }
+  cur.seen = new Date().toISOString();   // когда тренер последний раз давал о себе знать
   await store.set(`t:${handle}`, JSON.stringify(Object.assign(cur, fields)));
   send(res, 200, {ok: true});
 };

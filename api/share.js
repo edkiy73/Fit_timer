@@ -46,8 +46,9 @@ module.exports = async (req, res) => {
     const prof = body.trainer && typeof body.trainer === 'object' ? body.trainer : null;
     if(!raw){
       trainerKey = rndId(24);
+      await store.push('t:all', by);
       await store.set(`t:${by}`, JSON.stringify({
-        handle: by, since: now,
+        handle: by, since: now, seen: now,
         keyHash: require('crypto').createHash('sha256').update(trainerKey).digest('hex'),
         name: String((prof && prof.name) || '').slice(0, 40),
         photo: String((prof && prof.photo) || '').slice(0, 120000),
@@ -60,6 +61,7 @@ module.exports = async (req, res) => {
       try{ cur = JSON.parse(raw); }catch(e){}
       const given = require('crypto').createHash('sha256').update(String(body.trainerKey)).digest('hex');
       if(cur && sameSecret(given, cur.keyHash)){
+        cur.seen = now;
         cur.name  = String(prof.name || '').slice(0, 40);
         cur.photo = String(prof.photo || '').slice(0, 120000);
         cur.about = String(prof.about || '').slice(0, 400);

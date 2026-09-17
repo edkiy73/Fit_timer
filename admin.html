@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fit Timer — каталог</title>
+<!--
+  Админка каталога. Отдельная страница, а не часть приложения: у неё другой
+  зритель (один человек), другая задача (разбирать поток) и другой ключ. Внутри
+  приложения она была бы кодом, который никогда не выполняется у пользователей,
+  но всегда едет им в загрузке.
+
+  Ключ хранится в браузере и уходит заголовком, а не в адресе: адрес попадает
+  в историю и в журналы, заголовок — нет.
+-->
+<style>
+  :root{
+    color-scheme:light dark;
+    --bg:#F4F2FB; --card:#fff; --ink:#1B1630; --muted:#6C6785; --line:#E6E2F2;
+    --ok:#1F9D63; --danger:#C22F4C; --warn:#B8791B; --accent:#6B3FE0; --soft:#F0ECFB;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#141020;--card:#1E1930;--ink:#EEEAF7;--muted:#9A94B4;--line:#2E2745;
+          --ok:#3ED598;--danger:#FF6079;--warn:#F5B93B;--accent:#9C7BFF;--soft:#241E3A}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 0 60px;background:var(--bg);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
+  header{position:sticky;top:0;z-index:5;background:var(--bg);padding:18px 0 10px;
+         border-bottom:1px solid var(--line)}
+  h1{font-size:19px;margin:0 0 12px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--muted);
+       border-radius:999px;padding:7px 14px;font-size:13.5px;cursor:pointer}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:16px;margin:14px 0}
+  .card.ban{opacity:.6}
+  .top{display:flex;gap:12px;align-items:flex-start}
+  .name{font-size:17px;font-weight:600;margin:0}
+  .who{color:var(--accent);font-size:13px;text-decoration:none}
+  .tags{color:var(--muted);font-size:13px;margin:6px 0 10px}
+  .gives{margin:0 0 10px}
+  img.cover{width:60px;height:60px;border-radius:10px;object-fit:cover;flex:none}
+  details{border-top:1px solid var(--line);padding-top:10px;margin-top:8px}
+  summary{cursor:pointer;color:var(--muted);font-size:13px}
+  pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border-radius:8px;
+      padding:12px;font-size:12.5px;line-height:1.5;max-height:320px;overflow:auto;margin:10px 0 0}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  button.b,a.b{border:1px solid var(--line);border-radius:10px;padding:10px 14px;
+       font-size:14px;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;
+       text-decoration:none;display:inline-block}
+  .b.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .b.no{color:var(--danger);border-color:var(--danger)}
+  .b.quiet{font-weight:400;color:var(--muted)}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;
+        letter-spacing:.06em;text-transform:uppercase}
+  input,select,textarea{width:100%;background:var(--soft);border:1px solid var(--line);
+       border-radius:10px;padding:11px 12px;color:var(--ink);font:inherit}
+  textarea{min-height:120px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1 1 140px}
+  .empty{text-align:center;color:var(--muted);padding:48px 16px}
+  .err{color:var(--danger);font-size:13px;margin:8px 0 0}
+  .muted{color:var(--muted);font-size:13px}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;
+        padding:2px 9px;font-size:11.5px;color:var(--muted);margin-left:6px}
+  .pill.ban{color:var(--danger);border-color:var(--danger)}
+  .gate{max-width:380px;margin:80px auto;padding:0 16px}
+</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <h1>Каталог Fit Timer</h1>
+  <p class="muted">Введи ключ. Он хранится только в этом браузере.</p>
+  <label>Ключ</label>
+  <input id="key" type="password" autocomplete="off" placeholder="ADMIN_KEY">
+  <p class="err" id="gateErr"></p>
+  <div class="acts"><button class="b ok" id="enter">Войти</button></div>
+</div>
+
+<div id="app" hidden>
+  <header><div class="wrap">
+    <h1>Каталог Fit Timer</h1>
+    <div class="tabs">
+      <button class="tab on" data-tab="pending">На проверке <span id="nPending"></span></button>
+      <button class="tab" data-tab="approved">В каталоге <span id="nApproved"></span></button>
+      <button class="tab" data-tab="trainers">Тренеры <span id="nTrainers"></span></button>
+      <button class="tab" data-tab="add">Добавить</button>
+      <button class="tab" id="out" style="margin-left:auto">Выйти</button>
+    </div>
+  </div></header>
+  <div class="wrap" id="body"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const GOALS = [['slim','Похудеть'],['tone','Подтянуть всё тело'],['glut','Ягодицы и пресс'],
+  ['core','Плоский живот'],['power','Сила и выносливость'],['relief','Рельеф мышц'],
+  ['flex','Растяжка и гибкость'],['back','Осанка и спина'],['post','После родов'],
+  ['cardio','Кардио и энергия']];
+const LEVELS = ['Новичок','Средний','Продвинутый'];
+const goalName = id => (GOALS.find(g => g[0] === id) || [id, id])[1];
+
+let KEY = localStorage.getItem('adminKey') || '';
+let data = {pending: [], approved: [], trainers: []};
+let tab = 'pending';
+
+async function api(action, extra){
+  const res = await fetch('/api/admin', {
+    method: 'POST',
+    // Ключ кодируем: в заголовок можно положить только ASCII, и ключ с кириллицей
+    // или пробелом ронял САМ запрос — человек видел «нет связи» вместо «ключ не тот».
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(KEY)},
+    cache: 'no-store',
+    body: JSON.stringify(Object.assign({action}, extra || {}))
+  });
+  const j = await res.json().catch(() => ({}));
+  if(!res.ok) throw Object.assign(new Error(j.error || res.status), j);
+  return j;
+}
+
+function showGate(msg){
+  $('app').hidden = true; $('gate').hidden = false;
+  $('gateErr').textContent = msg || '';
+  $('key').value = '';
+}
+
+async function load(){
+  try{
+    data = await api('overview');
+  }catch(e){
+    if(e.message === 'bad_key') return showGate('Ключ не подошёл.');
+    if(e.message === 'no_admin_key') return showGate('На сервере не задана переменная ADMIN_KEY.');
+    if(e.message === 'no_store') return showGate('Хранилище не подключено — см. /api/health');
+    return showGate('Не получилось связаться с сервером.');
+  }
+  $('gate').hidden = true; $('app').hidden = false;
+  $('nPending').textContent = data.pending.length || '';
+  $('nApproved').textContent = data.approved.length || '';
+  $('nTrainers').textContent = data.trainers.length || '';
+  render();
+}
+
+function render(){
+  const b = $('body');
+  b.innerHTML = '';
+  if(tab === 'add') return renderAdd(b);
+  if(tab === 'trainers') return renderTrainers(b);
+  const list = tab === 'pending' ? data.pending : data.approved;
+  if(!list.length){
+    b.innerHTML = `<div class="empty">${tab === 'pending'
+      ? 'Пусто — всё разобрано.'
+      : 'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`;
+    const sd = document.getElementById('seed');
+    if(sd) sd.onclick = () => act('seed', {});
+    return;
+  }
+  list.slice().reverse().forEach(c => b.appendChild(itemCard(c)));
+}
+
+function itemCard(c){
+  const el = document.createElement('div');
+  el.className = 'card';
+  const pending = c.status === 'pending';
+  el.innerHTML = `
+    <div class="top">
+      ${c.cover ? `<img class="cover" src="${esc(c.cover)}" alt="">` : ''}
+      <div style="flex:1;min-width:0">
+        <p class="name">${esc(c.name)}</p>
+        ${c.by ? `<a class="who" href="/api/trainer/${encodeURIComponent(c.by)}" target="_blank" rel="noopener">${esc(c.by)}</a>` : '<span class="muted">от нас</span>'}
+        <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}</p>
+      </div>
+    </div>
+    <p class="gives">${esc(c.gives)}</p>
+    <details><summary>Что внутри</summary><pre>${esc(c.text)}</pre></details>
+    <div class="acts"></div>`;
+  const acts = el.querySelector('.acts');
+  const btn = (label, cls, fn) => {
+    const x = document.createElement('button');
+    x.className = 'b ' + (cls || '');
+    x.textContent = label;
+    x.onclick = fn;
+    acts.appendChild(x);
+    return x;
+  };
+  if(pending){
+    btn('Взять в каталог', 'ok', () => act('approve', {id: c.id}));
+    btn('Отклонить', 'no', () => act('reject', {id: c.id}));
+  } else {
+    btn('Изменить', '', () => { tab = 'add'; render(); fillForm(c); });
+    btn('Убрать из каталога', 'no', () => {
+      if(confirm(`Убрать «${c.name}» из каталога?`)) act('remove', {id: c.id});
+    });
+  }
+  if(c.by){
+    btn('Закрыть автора', 'quiet', () => {
+      if(confirm(`Закрыть ${c.by}? Его программы больше не будут приниматься.`))
+        act('ban', {handle: c.by});
+    });
+  }
+  return el;
+}
+
+function renderTrainers(b){
+  if(!data.trainers.length){
+    b.innerHTML = '<div class="empty">Тренеров пока нет.</div>';
+    return;
+  }
+  const day = v => v ? new Date(v).toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}) : '—';
+  data.trainers.slice().reverse().forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'card' + (t.banned ? ' ban' : '');
+    el.innerHTML = `
+      <p class="name">${esc(t.name || t.handle)}${t.banned ? '<span class="pill ban">закрыт</span>' : ''}</p>
+      <a class="who" href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">${esc(t.handle)}</a>
+      <p class="tags">${t.years ? t.years + ' лет стажа · ' : ''}${t.programs} программ · ${t.opens} взяли<br>
+        появился ${esc(day(t.since))} · последняя активность ${esc(day(t.seen))}</p>
+      ${t.about ? `<p class="gives">${esc(t.about)}</p>` : ''}
+      ${t.links ? `<p class="muted">${esc(t.links)}</p>` : ''}
+      <div class="acts"></div>`;
+    const x = document.createElement('button');
+    x.className = 'b ' + (t.banned ? '' : 'no');
+    x.textContent = t.banned ? 'Вернуть' : 'Закрыть приём программ';
+    x.onclick = () => act(t.banned ? 'unban' : 'ban', {handle: t.handle});
+    el.querySelector('.acts').appendChild(x);
+    b.appendChild(el);
+  });
+}
+
+let editing = null;
+function renderAdd(b){
+  b.innerHTML = `<div class="card">
+    <p class="name" id="formTitle">Новая программа</p>
+    <p class="muted">Программа задаётся тем же текстом, что приходит от нейросети и от тренеров.</p>
+    <label>Название</label><input id="fName" maxlength="60">
+    <div class="row">
+      <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
+      <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l => `<option>${l}</option>`).join('')}</select></div>
+      <div><label>Минут</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
+    </div>
+    <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
+    <label>Что она даёт</label><textarea id="fGives" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
+    <label>Текст программы</label><textarea id="fText" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
+    <p class="err" id="fErr"></p>
+    <div class="acts">
+      <button class="b ok" id="fSave">Сохранить</button>
+      <button class="b quiet" id="fClear">Очистить</button>
+    </div>
+  </div>`;
+  $('fSave').onclick = saveForm;
+  $('fClear').onclick = () => { editing = null; render(); };
+}
+
+function fillForm(c){
+  editing = c.id;
+  $('formTitle').textContent = 'Изменить: ' + c.name;
+  $('fName').value = c.name || '';
+  $('fCat').value = c.cat || 'tone';
+  $('fLevel').value = c.level || 'Новичок';
+  $('fMin').value = c.min || 20;
+  $('fBy').value = c.by || '';
+  $('fGives').value = c.gives || '';
+  $('fText').value = c.text || '';
+}
+
+async function saveForm(){
+  const item = {
+    name: $('fName').value.trim(), cat: $('fCat').value, level: $('fLevel').value,
+    min: +$('fMin').value, by: $('fBy').value.trim(), gives: $('fGives').value.trim(),
+    text: $('fText').value,
+    exCount: ($('fText').value.match(/^УПРАЖНЕНИЕ:/gmi) || []).length
+  };
+  try{
+    if(editing) await api('edit', {id: editing, item});
+    else await api('add', {item});
+    editing = null;
+    tab = 'approved';
+    await load();
+  }catch(e){
+    $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
+  }
+}
+
+async function act(action, extra){
+  try{ await api(action, extra); await load(); }
+  catch(e){ alert('Не получилось: ' + e.message); }
+}
+
+document.querySelectorAll('.tab[data-tab]').forEach(t => {
+  t.onclick = () => {
+    tab = t.dataset.tab;
+    document.querySelectorAll('.tab[data-tab]').forEach(x => x.classList.toggle('on', x === t));
+    render();
+  };
+});
+$('out').onclick = () => { localStorage.removeItem('adminKey'); KEY = ''; showGate(''); };
+$('enter').onclick = () => {
+  KEY = $('key').value.trim();
+  localStorage.setItem('adminKey', KEY);
+  load();
+};
+$('key').onkeydown = e => { if(e.key === 'Enter') $('enter').click(); };
+
+if(KEY) load(); else showGate('');
+</script>
+</body>
+</html>
