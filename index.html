@@ -3807,15 +3807,15 @@
        экрана: человек приходит сюда либо за одним конкретным разделом (тогда он
        открыт сразу), либо чтобы убедиться, что тексты вообще есть.
        Тексты написаны под то устройство, в котором приложение выходит: данные
-       живут в профиле на сервере, синхронизируются между устройствами и удаляются
-       вместе с профилем. Формулировки намеренно не привязаны ни к конкретному
+       тренировки с Премиумом синхронизируются между устройствами, а фотографии
+       прогресса остаются только локально. Формулировки намеренно не привязаны ни к конкретному
        способу входа, ни к платёжной системе — это меняется чаще, чем политика. -->
   <section class="screen builder" id="scrLegal">
     <div class="screen-head"><button class="back-chip" id="legalBackTop"></button><h2>Данные и правила</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="shield"></span>
-      <span>Храним только нужное для работы: имя, параметры тела, историю тренировок и фото. Без рекламы и трекеров. Данные не продаём. Платёжные реквизиты и отпечаток пальца к нам не попадают.</span>
+      <span>Храним только нужное для работы. Фото прогресса остаются на твоём устройстве и на наш сервер не загружаются. Без рекламы и трекеров. Данные не продаём.</span>
     </div>
 
     <div class="legal-list">
@@ -3831,7 +3831,7 @@
             <li><b>Имя, пол, дата рождения.</b> Имя — чтобы обращаться к тебе по имени. Пол и возраст влияют на подбор упражнений и нагрузки.</li>
             <li><b>Цель тренировок и ограничения</b> — в том числе «берегу поясницу», «берегу колени», «беременность». Это сведения о здоровье, и мы относимся к ним как к особо чувствительным.</li>
             <li><b>Вес, рост, обхваты талии, груди и бёдер</b> и рассчитанный по ним индекс массы тела — если ты их вводишь. Вводить их необязательно.</li>
-            <li><b>Фотографии прогресса</b> — если ты их делаешь. Это фото твоего тела, и мы понимаем, насколько это личное.</li>
+            <li><b>Фотографии прогресса</b> — если ты их делаешь. Они хранятся только на твоём устройстве. Если ты сам сохраняешь резервную копию, файл с фото попадёт в выбранное тобой хранилище.</li>
             <li><b>История тренировок:</b> даты, длительность, какие упражнения и с каким весом выполнены, заметки к тренировке.</li>
             <li><b>Твои программы</b> — собранные вручную, добавленные из каталога или полученные от нейросети.</li>
             <li><b>Настройки приложения:</b> тема, звук, голос, расписание напоминаний.</li>
@@ -3841,7 +3841,7 @@
           <p>Ровно для того, чтобы приложение работало: считало нагрузку и прогрессию, вело историю и календарь, показывало графики веса и замеров, напоминало о тренировке. Ни для чего другого эти данные не используются — ни для рекламы, ни для профилирования, ни для передачи кому-то ещё.</p>
 
           <h3>Где эти данные хранятся</h3>
-          <p>Данные привязаны к твоему профилю и хранятся в базе, физически расположенной <b>на территории Российской Федерации</b>, — этого требует закон для граждан России. Обмен с сервером идёт по защищённому соединению. Часть данных приложение держит и на самом устройстве — чтобы тренировка шла без интернета и ничего не терялось, если связь пропала посреди подхода.</p>
+          <p>При действующей подписке профили, программы, история тренировок, вес и замеры привязаны к аккаунту и хранятся в базе, физически расположенной <b>на территории Российской Федерации</b>. Обмен с сервером идёт по защищённому соединению. Фото прогресса на сервер приложения не загружаются. Локальная копия остальных данных остаётся на устройстве, чтобы тренировка работала без интернета.</p>
           <p>Доступ к данным на нашей стороне есть только у тех, кому он нужен для работы сервиса, и только в объёме, который для этой работы требуется.</p>
 
           <h3>Что уходит третьим лицам</h3>
@@ -3857,7 +3857,7 @@
           <p>Не показывает рекламу. Не содержит счётчиков, трекеров и рекламной аналитики. Не передаёт и не продаёт данные третьим лицам. Не запрашивает доступ к контактам, звонкам и переписке.</p>
 
           <h3>Сколько это хранится</h3>
-          <p>Пока существует твой профиль. Удалишь профиль — вместе с ним удаляются история, вес, замеры, фотографии и программы, и с наших серверов тоже. Отменить удаление нельзя.</p>
+          <p>Серверная копия хранится, пока существует аккаунт. Команда «Удалить аккаунт и все данные» удаляет с сервера профили, историю, вес, замеры и программы, а с телефона — ещё и локальные фотографии прогресса. Отменить удаление нельзя.</p>
 
           <h3>Твои права</h3>
           <p>Посмотреть свои данные можно прямо в приложении. Выгрузить их одним файлом — «Настройки → Резервная копия → Сохранить в файл». Удалить — удалить профиль. Исправить — в любом поле, где ты их вводила: имя, дата рождения, вес, замеры, заметки.</p>
@@ -4286,7 +4286,7 @@
       </div>
 
       <!-- аккаунт есть -->
-      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
+      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small><small id="accSync"></small></span></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
     </div>
@@ -6481,10 +6481,10 @@ async function saveWellHist(){
   renderWellness();
 }
 
-/* ================= ПОДГОТОВКА К ПЕРЕЕЗДУ НА СЕРВЕР =================
-   Сервера ещё нет и хостинг не оплачивается. Но форма данных уже должна быть такой,
-   чтобы включение синхронизации оказалось заменой одного адаптера, а не переписыванием
-   приложения. Всё, что заведено здесь, работает вхолостую и ничего не отправляет.
+/* ================= СИНХРОНИЗАЦИЯ С АККАУНТОМ =================
+   Локальная копия остаётся основной для тренировки без сети. После подтверждения
+   почты Премиум подключает серверный адаптер: сначала принимает изменения с других
+   устройств, затем отправляет локальные и оставляет очередь до следующей связи.
 
    Почему именно это и почему сейчас:
 
@@ -6494,11 +6494,10 @@ async function saveWellHist(){
    • ОТМЕТКА ВРЕМЕНИ И НОМЕР РЕДАКЦИИ. Правило «побеждает более поздняя запись»
      не работает, если никто не знает, когда запись сделана. Это тоже не
      восстанавливается задним числом — поэтому заводим до, а не после.
-   • ЖУРНАЛ ИЗМЕНЕНИЙ. Пока он никуда не уходит, но каждое сохранение в него уже
-     попадает. Когда появится сервер, надо будет разобрать очередь, а не гадать,
-     что изменилось за время без сети.
-   • ИДЕНТИФИКАТОРЫ устройства и аккаунта. Аккаунт пока анонимный и живёт только на
-     телефоне. Привязка к почте потом станет заполнением поля, а не миграцией.
+   • ЖУРНАЛ ИЗМЕНЕНИЙ. Каждое сохранение попадает в очередь и доезжает после
+     восстановления связи.
+   • ИДЕНТИФИКАТОРЫ устройства и профиля. Один аккаунт может содержать несколько
+     профилей, а каждое подтверждённое устройство получает собственный ключ доступа.
    • СОГЛАСИЯ С ДАТОЙ И ВЕРСИЕЙ. Когда человек согласился и с какой редакцией
      документа — единственное здесь, что не восстанавливается вообще никак.
 
@@ -6551,6 +6550,17 @@ async function loadIdentity(){
     identity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
     await kvSet(pk('identity'), JSON.stringify(identity));
   }
+  // Серверный id принадлежит профилю, а локальный id — лишь имя его ключей на этом
+  // устройстве. Запоминаем связь один раз; профиль, приехавший с сервера, наоборот,
+  // диктует identity свой уже существующий id.
+  const owner = curUser();
+  if(owner && owner.profileId && owner.profileId !== identity.profileId){
+    identity.profileId = owner.profileId;
+    await kvSet(pk('identity'), JSON.stringify(identity));
+  } else if(owner && !owner.profileId){
+    owner.profileId = identity.profileId;
+    await saveUsers();
+  }
   if(!identity.consents) identity.consents = {};
   identity.deviceId = dev;
   // отметки, поставленные до создания профиля, переносим на него — но не затираем
@@ -6585,6 +6595,7 @@ async function saveDoc(key, value){
   if(!isSyncKey(key)) return;
   bumpDoc(key);
   await flushMeta();
+  queueAccountSync();
 }
 
 // Что уедет на сервер под этим ключом. Программы лежат в памяти одним списком, поэтому
@@ -6600,8 +6611,8 @@ async function docValue(key){
   return await kvGet(pk(key));
 }
 
-// Единственный шов, в который встанет сервер. Сейчас адаптера нет, и это не ошибка,
-// а состояние «синхронизация не подключена»: приложение обязано работать без неё.
+// Единый шов обмена с сервером. Пока нет аккаунта, Премиума или сети, адаптера нет:
+// приложение продолжает работать локально, а очередь ждёт следующего подключения.
 // Переезд существующего пользователя на сервер. Руками ничего выгружать и заливать не
 // нужно и не будет нужно: при первом подключении всё, что уже лежит на телефоне,
 // помечается изменённым и уходит наверх обычной очередью — тем же путём, что и правки,
@@ -6616,9 +6627,10 @@ async function markAllForSync(){
 const SYNC = {
   adapter: null,
   get connected(){ return !!SYNC.adapter; },
-  // единственная точка входа для будущего сервера
+  // единственная точка входа для серверного адаптера
   async connect(adapter){
     SYNC.adapter = adapter;
+    if(adapter.pull) await adapter.pull();
     await markAllForSync();
     return SYNC.push();
   },
@@ -6650,6 +6662,318 @@ const SYNC = {
     return {sent: batch.length};
   }
 };
+
+/* Серверный адаптер аккаунта. Ключ выдаётся только после кода на почту и отдельный
+   для каждого устройства. Фото-прогресс здесь отсутствует даже как возможный ключ:
+   на сервер уходят только stats, progWeights, index и program:<id>. */
+let syncTimer = null;
+let syncBusy = null;
+let syncReplaceLocal = false;
+let syncState = 'idle';
+
+function showSyncState(state){
+  syncState = state;
+  const el = $('accSync');
+  if(!el) return;
+  if(!account || !account.email) el.textContent = '';
+  else if(!isPremium()) el.textContent = 'Синхронизация тренировок доступна в Премиум';
+  else if(state === 'busy') el.textContent = 'Синхронизируем данные…';
+  else if(state === 'ok') el.textContent = 'Данные сохранены на сервере · фото-прогресс только на этом телефоне';
+  else if(state === 'error') el.textContent = 'Нет связи с сервером · изменения отправятся позже';
+  else el.textContent = 'Данные синхронизируются с аккаунтом';
+}
+
+const syncAuth = action => ({
+  action,
+  email: (account && account.email) || '',
+  token: (account && account.syncToken) || '',
+  deviceId: (identity && identity.deviceId) || ''
+});
+const syncUser = u => ({id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', birth:u.birth || '', theme:u.theme || 'system'});
+const remoteWins = (remote, local) => {
+  if(!local) return true;
+  const a = Date.parse(remote.at || '') || 0, b = Date.parse(local.at || '') || 0;
+  if(a !== b) return a > b;
+  return String(remote.deviceId || '') > String(local.deviceId || '');
+};
+const parsed = (raw, fallback) => { try{ return raw == null ? fallback : JSON.parse(raw); }catch(e){ return fallback; } };
+
+function mergeStatsDocs(local, remote, preferRemote){
+  const a = local && typeof local === 'object' ? local : {};
+  const b = remote && typeof remote === 'object' ? remote : {};
+  const older = preferRemote ? a : b, newerDoc = preferRemote ? b : a;
+  const out = Object.assign({}, older, newerDoc);
+  const unite = (x, y, key) => {
+    const map = new Map();
+    (Array.isArray(x) ? x : []).concat(Array.isArray(y) ? y : []).forEach(v => {
+      const k = key(v);
+      if(k) map.set(k, v);
+    });
+    return [...map.values()];
+  };
+  out.history = unite(older.history, newerDoc.history, h => h && (h.id
+    ? 'id:' + h.id
+    : [h.d||'',h.t??'',h.pid||'',h.sec||0,h.plan||0].join('|')))
+    .sort((x,y) => String(x.d||'').localeCompare(String(y.d||'')) || (+x.t||0)-(+y.t||0));
+  out.weights = unite(older.weights, newerDoc.weights, x => x && (x.d || JSON.stringify(x)));
+  out.wellness = unite(older.wellness, newerDoc.wellness, x => x && (x.d || JSON.stringify(x)));
+  out.badges = [...new Set([].concat(b.badges || [], a.badges || []))];
+  out.totalSec = out.history.length ? out.history.reduce((n,h)=>n+(+h.sec||0),0) : Math.max(+a.totalSec||0,+b.totalSec||0);
+  out.count = out.history.length || Math.max(+a.count||0,+b.count||0);
+  out.bestStreak = Math.max(+a.bestStreak||0,+b.bestStreak||0);
+  out.totalKg = Math.max(+a.totalKg||0,+b.totalKg||0);
+  out.hfDone = Math.max(+a.hfDone||0,+b.hfDone||0);
+  return out;
+}
+
+async function applyRemoteSync(result){
+  const remote = Array.isArray(result && result.profiles) ? result.profiles : [];
+  if(!remote.length) return;
+  const active = remote.filter(r => !r.deleted);
+
+  if(syncReplaceLocal){
+    if(active.length){
+      users = active.map(r => Object.assign(syncUser(r.user || {}), {profileId:r.user.id, photo:null, syncAt:r.userAt || ''}));
+      currentUser = users[0].id;
+      await saveUsers();
+      await kvSet('currentUser', currentUser);
+    }
+    syncReplaceLocal = false;
+  } else {
+    // До первой серверной версии один и тот же человек мог получить разные
+    // profileId на двух телефонах. Единственное точное совпадение анкеты связываем
+    // с уже приехавшим id; неоднозначные совпадения оставляем разными профилями.
+    const claimed = new Set(users.map(u => u.profileId || u.id));
+    users.forEach(u => {
+      if(active.some(r => r.user && r.user.id === (u.profileId || u.id))) return;
+      const same = active.filter(r => !claimed.has(r.user.id)
+        && (r.user.name || '') === (u.name || '')
+        && (r.user.gender || '') === (u.gender || '')
+        && (r.user.birth || '') === (u.birth || ''));
+      if(same.length === 1){ u.profileId = same[0].user.id; claimed.add(u.profileId); }
+    });
+    active.forEach(r => {
+      const ru = r.user || {};
+      const i = users.findIndex(u => (u.profileId || u.id) === ru.id);
+      if(i < 0) users.push(Object.assign(syncUser(ru), {id:ru.id, profileId:ru.id, photo:null, syncAt:r.userAt || ''}));
+      else if(!users[i].syncAt || String(r.userAt || '') >= String(users[i].syncAt || '')){
+        const old = users[i], photo = old.photo || null;
+        users[i] = Object.assign({}, old, syncUser(ru), {id:old.id, profileId:ru.id, photo, syncAt:r.userAt || ''});
+      }
+    });
+    await saveUsers();
+  }
+
+  // Удаление профиля тоже синхронизируется. Сервер хранит надгробие, поэтому
+  // выключенный телефон не воскресит профиль старой копией при следующем входе.
+  for(const rp of remote.filter(r => r.deleted)){
+    const i = users.findIndex(u => (u.profileId || u.id) === (rp.user && rp.user.id));
+    if(i < 0 || users.length <= 1) continue;
+    if(users[i].syncAt && String(users[i].syncAt) > String(rp.userAt || '')) continue;
+    const id = users[i].id;
+    for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
+    users.splice(i, 1);
+  }
+  await saveUsers();
+
+  for(const rp of active){
+    const pid = rp.user && rp.user.id;
+    if(!pid) continue;
+    const localUser = users.find(u => (u.profileId || u.id) === pid);
+    const localId = localUser ? localUser.id : pid;
+    if((await kvGet('identity_' + localId)) === null){
+      await kvSet('identity_' + localId, JSON.stringify({profileId:pid, createdAt:new Date().toISOString(),
+        email:account.email, linkedAt:new Date().toISOString(), consents:{}}));
+    }
+    let meta = parsed(await kvGet('docMeta_' + localId), {});
+    let queue = parsed(await kvGet('outbox_' + localId), []);
+    let progs = parsed(await kvGet('customPrograms_' + localId), []);
+    let stat = parsed(await kvGet('stats_' + localId), null);
+    let weights = parsed(await kvGet('progWeights_' + localId), {});
+    let order = null, programsTouched = false, mergedStats = false;
+    const byId = new Map((Array.isArray(progs) ? progs : []).map(p => [String(p.id), p]));
+
+    for(const d of (rp.docs || [])){
+      if(!isSyncKey(d.key)) continue;
+      if(d.key === 'stats'){
+        const incoming = parsed(d.value, {totalSec:0});
+        if(stat && JSON.stringify(stat) !== JSON.stringify(incoming)){
+          stat = mergeStatsDocs(stat, incoming, remoteWins(d, meta[d.key])); mergedStats = true;
+        } else if(!stat || remoteWins(d, meta[d.key])) stat = incoming;
+        else continue;
+        await kvSet('stats_' + localId, JSON.stringify(stat));
+      } else {
+        if(!remoteWins(d, meta[d.key])) continue;
+        if(d.key === 'progWeights'){
+          weights = parsed(d.value, {});
+          await kvSet('progWeights_' + localId, JSON.stringify(weights));
+        } else if(d.key === 'index'){
+          order = parsed(d.value, {}).order || [];
+        } else if(d.key.startsWith('program:')){
+          const id = d.key.slice(8);
+          if(d.deleted) byId.delete(id);
+          else {
+            const p = parsed(d.value, null);
+            if(p) byId.set(id, p);
+          }
+          programsTouched = true;
+        }
+      }
+      meta[d.key] = {rev:+d.rev||1, at:d.at, schema:+d.schema||1,
+                     deviceId:d.deviceId||'', gone:!!d.deleted,
+                     h:d.value == null ? '' : docHash(String(d.value))};
+      queue = queue.filter(o => o.key !== d.key);
+    }
+
+    if(programsTouched || order){
+      const ids = Array.isArray(order) ? order.map(String) : [];
+      progs = ids.map(id => byId.get(id)).filter(Boolean);
+      byId.forEach((p,id) => { if(!ids.includes(id)) progs.push(p); });
+      // Счёт прохождений восстанавливаем из объединённой истории: две законченные
+      // тренировки на двух телефонах должны дать два повышения, а не победителя LWW.
+      const history = (stat && stat.history) || [];
+      progs.forEach(p => {
+        const n = history.filter(h => String(h.pid || '') === String(p.id)).length;
+        if(n){ p.stats = p.stats || {}; p.stats.completions = Math.max(+p.stats.completions||0, n); }
+      });
+      await kvSet('customPrograms_' + localId, JSON.stringify(progs));
+    }
+    if(mergedStats){
+      const at = new Date().toISOString();
+      meta.stats = {rev:(+meta.stats.rev||0)+1, at, schema:SCHEMA_VERSION};
+      queue = queue.filter(o => o.key !== 'stats').concat([{key:'stats',rev:meta.stats.rev,at}]);
+    }
+    await kvSet('docMeta_' + localId, JSON.stringify(meta));
+    await kvSet('outbox_' + localId, JSON.stringify(queue));
+  }
+
+  if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
+  await kvSet('currentUser', currentUser);
+  await loadIdentity();
+  identity.email = account.email;
+  await saveIdentity();
+  await loadData();
+  await loadPhotos();
+  await ensureWarmup();
+  applyProgressionAll();
+  renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+}
+
+async function profileSnapshot(uid){
+  const u = users.find(x => x.id === uid);
+  if(!u) return null;
+  const programs = parsed(await kvGet('customPrograms_' + uid), []);
+  const meta = parsed(await kvGet('docMeta_' + uid), {});
+  const ident = parsed(await kvGet('identity_' + uid), {});
+  const now = new Date().toISOString();
+  const serverId = u.profileId || u.id;
+  const docs = [];
+  const add = (key, value) => {
+    if(value == null) return;
+    const m = meta[key] || {rev:1, at:now, schema:SCHEMA_VERSION};
+    docs.push({key, profileId:serverId, rev:m.rev||1, at:m.at||now, schema:m.schema||SCHEMA_VERSION,
+               deleted:!!m.gone, value:m.gone ? null : JSON.stringify(value)});
+  };
+  add('stats', parsed(await kvGet('stats_' + uid), null));
+  add('progWeights', parsed(await kvGet('progWeights_' + uid), null));
+  (Array.isArray(programs) ? programs : []).forEach(p => add(PROGRAM_DOC(p.id), p));
+  add('index', {order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
+  return {profile:{user:syncUser(u), at:u.syncAt || ident.createdAt || '1970-01-01T00:00:00.000Z'}, docs};
+}
+
+const accountSyncAdapter = {
+  async push(payload){
+    const base = syncAuth('push');
+    const u = curUser();
+    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
+    // По одному документу: программа может содержать свои картинки и быть крупной;
+    // общий пакет тогда упирается в предел запроса, хотя каждый документ допустим.
+    for(const doc of payload) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    showSyncState('ok');
+  },
+  async pull(){
+    const result = await apiPost('/api/sync', syncAuth('pull'));
+    await applyRemoteSync(result);
+    return result;
+  }
+};
+
+async function pushAllProfiles(){
+  const base = syncAuth('push');
+  for(const u of users){
+    const snap = await profileSnapshot(u.id);
+    if(!snap) continue;
+    await apiPost('/api/sync', Object.assign(base, {profiles:[snap.profile], docs:[]}));
+    for(const doc of snap.docs) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+  }
+}
+
+async function pushDeletedProfiles(){
+  const list = Array.isArray(account.deletedProfiles) ? account.deletedProfiles.slice() : [];
+  if(!list.length) return;
+  const base = syncAuth('push');
+  for(const rec of list){
+    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
+  }
+  account.deletedProfiles = [];
+  await saveAccount();
+}
+
+async function connectAccountSync(opts){
+  if(!account || !account.email || !account.syncToken || !identity || !isPremium()){
+    showSyncState('idle');
+    return false;
+  }
+  if(syncBusy) return syncBusy;
+  syncReplaceLocal = !!(opts && opts.replaceLocal);
+  showSyncState('busy');
+  syncBusy = (async()=>{
+    try{
+      SYNC.adapter = accountSyncAdapter;
+      await pushDeletedProfiles();          // удаление должно дойти до pull, иначе профиль воскреснет
+      await accountSyncAdapter.pull();        // сначала вернуть серверное, потом отправлять местное
+      await pushAllProfiles();
+      await SYNC.push();                      // в том числе надгробия удалённых программ
+      await loadIdentity();
+      await loadData();
+      renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+      applyThemeFor(curUser());
+      showSyncState('ok');
+      return true;
+    }catch(e){ showSyncState('error'); return false; }
+    finally{ syncBusy = null; }
+  })();
+  return syncBusy;
+}
+
+function queueAccountSync(){
+  if(!account || !account.email || !account.syncToken || !isPremium()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>{
+    showSyncState('busy');
+    if(SYNC.adapter) SYNC.push().catch(()=> showSyncState('error'));
+    else connectAccountSync().catch(()=> showSyncState('error'));
+  }, 900);
+}
+
+// На новой установке загрузчик создаёт технический «Профиль 1», поэтому users.length
+// уже равен единице ещё до входа. Проверяем содержимое: только совершенно пустую
+// заглушку можно заменить серверными профилями. Реальные локальные данные объединяем.
+async function hasMeaningfulLocalData(){
+  if(users.length !== 1) return users.length > 0;
+  const u = users[0] || {};
+  if((u.name && u.name !== 'Профиль 1') || u.birth || u.photo) return true;
+  const uid = u.id;
+  const programs = parsed(await kvGet('customPrograms_' + uid), []);
+  const localStats = parsed(await kvGet('stats_' + uid), {});
+  const localWeights = parsed(await kvGet('progWeights_' + uid), {});
+  const localPhotos = parsed(await kvGet('photos_' + uid), []);
+  return (Array.isArray(programs) && programs.length > 0)
+    || (Array.isArray(localStats.history) && localStats.history.length > 0)
+    || (+localStats.count || +localStats.totalSec || 0) > 0
+    || Object.keys(localWeights || {}).length > 0
+    || (Array.isArray(localPhotos) && localPhotos.length > 0);
+}
 
 // Согласия: что именно, какой редакции и когда. Версию поднимаем при правке текстов —
 // иначе нельзя доказать, с какой редакцией человек соглашался.
@@ -6690,7 +7014,7 @@ async function savePrograms(){
   }
   const order = docHash(customPrograms.map(p => p.id).join(','));
   if(!docMeta.index || docMeta.index.h !== order){ bumpDoc('index', {h: order}); touched = true; }
-  if(touched) await flushMeta();
+  if(touched){ await flushMeta(); queueAccountSync(); }
 }
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ await saveDoc('progWeights', progWeights); }
@@ -7354,6 +7678,7 @@ async function saveUser(){
   // maxlength сторожит только набор с клавиатуры — вставка и перенос данных мимо него
   uDraft.name = clampLine($('ueName').value, NAME_MAX);
   uDraft.birth = $('ueBirth').value || '';
+  uDraft.syncAt = new Date().toISOString();
   readTimings();
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
   // пол и дата рождения — не украшение анкеты: они уходят в запрос к ИИ и определяют
@@ -7374,12 +7699,14 @@ async function saveUser(){
       applyThemeFor(uDraft);
     }
     renderUsers();
+    if(account && account.email) connectAccountSync().catch(()=>{});
     goTab('scrAccount');
   } else {
     uDraft.id = 'u' + Date.now();
     users.push(uDraft);
     await saveUsers();
     await switchUser(uDraft.id); // новый профиль сразу активен, со своей чистой статистикой
+    if(account && account.email) connectAccountSync().catch(()=>{});
     goTab('scrAccount');
   }
 }
@@ -7400,6 +7727,13 @@ async function deleteUser(){
   const msg = `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
   if(!(await appDialog(msg, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
   const id = uDraft.id;
+  const removed = users.find(x => x.id === id);
+  if(removed){
+    if(!Array.isArray(account.deletedProfiles)) account.deletedProfiles = [];
+    account.deletedProfiles = account.deletedProfiles.filter(x => x.id !== (removed.profileId || removed.id));
+    account.deletedProfiles.push({id:removed.profileId || removed.id, at:new Date().toISOString()});
+    await saveAccount();
+  }
   for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
   users = users.filter(x => x.id !== id);
   await saveUsers();
@@ -7409,6 +7743,7 @@ async function deleteUser(){
   } else {
     renderUsers();
   }
+  connectAccountSync().catch(()=>{});
   goTab('scrAccount');
 }
 
@@ -7478,7 +7813,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> ({email: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null});
+const blankAccount = ()=> ({email: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
 async function loadAccount(){
   try{ account = JSON.parse(await kvGet('account')) || null; }catch(e){ account = null; }
   if(!account) account = blankAccount();
@@ -7488,7 +7823,8 @@ async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
 function rememberAccount(){
   if(!account.email) return;
-  const rec = {email: account.email, sub: account.sub, biometry: account.biometry,
+  const rec = {email: account.email, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
+               deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
 }
@@ -7604,7 +7940,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '17.09 · «Другое», сводка, резервная копия (v16)';
+const BUILD = '17.09 · синхронизация аккаунта без фото (v17)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -7639,6 +7975,7 @@ function renderPlan(){
     : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
   if(has){
     $('accEmail').textContent = account.email;
+    showSyncState(syncState);
     // Подпись под переключателем не нужна: он переехал под строку тарифа, где уже
     // написано, какой тариф и до какого числа.
     if(on) $('tglRenew').classList.toggle('on', !!account.sub.autoRenew);
@@ -7666,7 +8003,7 @@ async function completePurchase(){
                currency: cur, price: pr[pmPlan], autoRenew: true};
 
   // Своя же подтверждённая почта — спрашивать код второй раз незачем.
-  if((account.email || '').toLowerCase() === email){ await grantSub(email, sub); return; }
+  if((account.email || '').toLowerCase() === email && account.syncToken){ await grantSub(email, sub); return; }
 
   $('payModal').classList.remove('open');
   openLogin(async ()=> { await grantSub(email, sub); },
@@ -7689,10 +8026,11 @@ async function grantSub(email, sub){
   recordConsent('offer');
   $('payModal').classList.remove('open');
   $('premiumModal').classList.remove('open');
-  $('pokLead').textContent = `Подписка действует до ${humanDate(account.sub.until)}. Аккаунт привязан к почте ${email} — с неё вернутся программы, статистика и фото на любом телефоне.`;
+  $('pokLead').textContent = `Подписка действует до ${humanDate(account.sub.until)}. Аккаунт привязан к почте ${email} — с неё вернутся программы, статистика, вес и замеры на любом телефоне. Фото-прогресс остаётся только на этом устройстве.`;
   setShown('pokBio', bioOK && !(account.biometry && account.biometry.enabled));
   $('premiumOkModal').classList.add('open');
   renderPlan(); renderPremium();
+  connectAccountSync().catch(()=>{});
 }
 
 /* ---- вход и выход ---- */
@@ -7725,7 +8063,7 @@ function openLogin(after, opts){
     || ((account && account.email) ? 'Другой аккаунт' : 'Аккаунт');
   $('loginMsg').textContent = opts.msg
     || ('Заведём или вернём аккаунт по почте. Он бесплатный: '
-        + 'в нём живут подписка и твой ник тренера, и с него всё вернётся на новом телефоне.');
+        + 'в нём живут подписка и твой ник тренера. С Премиумом вернутся программы, статистика, вес и замеры; фото-прогресс останется на этом телефоне.');
   $('loginEmail').value = opts.email || (account && account.email) || '';
   $('loginCode').value = '';
   $('loginErr').textContent = '';
@@ -7765,8 +8103,12 @@ async function doLogin(){
     }
 
     btn.textContent = 'Проверяем…';
+    const cleanInstall = !(await hasMeaningfulLocalData());
+    let loginDeviceId = await kvGet('deviceId');
+    if(!loginDeviceId){ loginDeviceId = newId(); await kvSet('deviceId', loginDeviceId); }
     const r = await apiPost('/api/auth', {
       action: 'verify', email, code: ($('loginCode').value || '').replace(/\D/g, ''),
+      deviceId: loginDeviceId,
       // Ник и ключ отдаём вместе с кодом: если человек завёл ник до аккаунта,
       // он привяжется к нему сразу, а не потребует второго действия.
       handle: (trainer && trainer.handle) ? normHandle(trainer.handle) : '',
@@ -7778,9 +8120,11 @@ async function doLogin(){
     });
 
     const now = new Date().toISOString();
+    if(account.email && account.email !== email) account.deletedProfiles = [];
     account.email = email;
     account.linkedAt = account.linkedAt || now;
     if(r.sub) account.sub = r.sub;
+    if(r.syncToken) account.syncToken = r.syncToken;
     rememberAccount();
     await saveAccount();
     await saveKnown();
@@ -7805,10 +8149,12 @@ async function doLogin(){
     renderPlan(); renderPremium(); syncGeminiBtns();
     renderTrainerCard(); syncDockTabs();
     const done = loginDone; loginDone = null;
-    if(done){ done(); return; }
+    if(done) await done();
+    await connectAccountSync({replaceLocal: cleanInstall && !r.fresh});
+    if(done) return;
     pendingSub = null;
     appAlert(r.fresh
-      ? 'Аккаунт заведён. Теперь с этой почты всё вернётся на любом телефоне.'
+      ? 'Аккаунт заведён. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте. Фото-прогресс останется на телефоне.'
       : (r.handle && r.trainerKey
           ? 'С возвращением. Ник ' + r.handle + ' снова твой — на прежнем телефоне страницу править больше нельзя.'
           : 'Готово — вход выполнен.'));
@@ -7831,6 +8177,8 @@ async function signOut(){
     `Выйти из аккаунта ${account.email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.`,
     {confirm: true, okText: 'Выйти', cancelText: 'Отмена'});
   if(!ok) return;
+  try{ if(SYNC.adapter) await SYNC.push(); }catch(e){}
+  SYNC.adapter = null;
   rememberAccount();
   await saveKnown();
   account = blankAccount();
@@ -9514,6 +9862,10 @@ async function forgetMe(scope){
     body.trainerKey = trainer.key;
   }
   if(account && account.email) body.email = account.email;
+  if(account && account.syncToken){
+    body.syncToken = account.syncToken;
+    body.deviceId = (identity && identity.deviceId) || '';
+  }
   if(!body.handle && !body.email) return true;   // на сервере нас нет
   await apiPost('/api/auth', Object.assign({action: 'forget'}, body));
   return true;
@@ -15435,6 +15787,7 @@ function finishWorkout(){
     stats.totalSec += totalSec;
     stats.count = (stats.count || 0) + 1;
     const histEntry = {
+      id: newId(),
       d: localISO(new Date()),
       // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
       // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
@@ -18133,6 +18486,9 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
+  // При обычном повторном запуске код снова не нужен: сохранённый ключ устройства
+  // возвращает свежие данные до того, как человек начнёт что-либо менять.
+  if(account.email && account.syncToken) await connectAccountSync();
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;

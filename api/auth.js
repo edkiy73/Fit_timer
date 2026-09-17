@@ -14,8 +14,8 @@
 
    Три действия:
      {action:'send',   email}
-     {action:'verify', email, code, handle, trainerKey, sub}
-     {action:'forget', email, handle, trainerKey, scope, links}
+     {action:'verify', email, code, deviceId, handle, trainerKey, sub}
+     {action:'forget', email, deviceId, syncToken, handle, trainerKey, scope, links}
 
    Удаление живёт здесь же, а не отдельным файлом: завести себя и стереть себя —
    про одну и ту же запись, и Vercel на бесплатном плане считает каждый файл
@@ -112,7 +112,25 @@ async function forget(req, res, body){
       // Аккаунт с ником стирается только вместе с доказанным владением ником —
       // иначе чужую почту можно было бы «удалить», просто зная её.
       if(acc && acc.handle && !wiped) return fail(res, 403, 'not_yours');
+      const deviceId = String((body && body.deviceId) || '').slice(0, 80);
+      const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
+      const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
+      if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
       await store.del(`a:${mh}`);
+      // Манифест знает все отдельные документы синхронизации. Сначала читаем его,
+      // затем удаляем сами документы и только после этого манифест: иначе список
+      // ключей потеряется, а данные останутся в базе без способа их найти.
+      const sraw = await store.get(`s:${mh}`);
+      if(sraw){
+        let sm = null;
+        try{ sm = JSON.parse(sraw); }catch(e){}
+        const keys = [];
+        Object.values((sm && sm.profiles) || {}).forEach(p => {
+          Object.values((p && p.docs) || {}).forEach(d => { if(d && d.storeKey) keys.push(d.storeKey); });
+        });
+        for(const key of keys) await store.del(key);
+        await store.del(`s:${mh}`);
+      }
       account = true;
     }
   }
@@ -226,6 +244,20 @@ module.exports = async (req, res) => {
     if(!acc) acc = {email, since: now, handle: '', sub: null};
     acc.seen = now;
 
+    // Код на почту выдаёт устройству отдельный ключ синхронизации. Почта сама по
+    // себе не секрет, поэтому использовать её как право читать данные нельзя.
+    // У каждого устройства свой ключ: новый вход не выкидывает остальные телефоны.
+    const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+    const syncToken = rndId(32);
+    if(!acc.syncDevices || typeof acc.syncDevices !== 'object') acc.syncDevices = {};
+    if(deviceId){
+      acc.syncDevices[deviceId] = {h: sha(syncToken), at: now};
+      const old = Object.entries(acc.syncDevices)
+        .sort((a, b) => String(b[1].at || '').localeCompare(String(a[1].at || '')))
+        .slice(8);
+      old.forEach(([id]) => { delete acc.syncDevices[id]; });
+    }
+
     /* Подписка. Пока покупка — заглушка на самом телефоне, поэтому сервер просто
        ХРАНИТ то, что ему прислали, и отдаёт обратно на новом телефоне. Когда
        появится настоящая оплата, писать сюда будет она, а не клиент, — и вот
@@ -288,7 +320,8 @@ module.exports = async (req, res) => {
       sub: acc.sub || null,
       handle: acc.handle || '',
       trainerKey,           // null — значит прежний ключ остаётся рабочим
-      trainer               // null — тренерской страницы у аккаунта нет
+      trainer,              // null — тренерской страницы у аккаунта нет
+      syncToken: deviceId ? syncToken : null
     });
   }
 
