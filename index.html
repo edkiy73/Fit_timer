@@ -1581,7 +1581,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -2325,17 +2325,9 @@
   }
   .store-count:empty{display:none}
 
-  /* состояние синхронизации: пока сервера нет, строка честно говорит «не подключена»,
-     но показывает, что учёт изменений уже идёт — иначе непонятно, работает ли подготовка */
-  .sync-row{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0 0}
-  .sync-dot{
     flex:none;width:10px;height:10px;border-radius:50%;
     background:var(--muted);box-shadow:0 0 0 4px var(--surface);
   }
-  .sync-row.on .sync-dot{background:var(--ok)}
-  .sync-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .sync-txt b{font-size:15px;font-weight:600}
-  .sync-txt small{color:var(--muted);font-size:13px;line-height:1.45}
 
   /* автор программы — нажимаемая строка, а не подпись: под ником живёт человек */
   .st-by{border:none;background:none;padding:0;cursor:pointer;text-align:left;font-family:var(--font-text)}
@@ -4166,10 +4158,28 @@
         <button class="switch" id="tglTrainer"></button>
       </div>
       <div class="stack hidden" id="coachFields">
+        <!-- Имя и фото у тренера СВОИ, а не подсмотренные из профиля. Профиль — это
+             «я в приложении»: там аватарка для себя и имя, которым человека зовут
+             дома. Страница тренера — это лицо для чужих людей, которые по ней решают,
+             доверять ли. Молча показывать чужим то, что заведено для себя, нельзя.
+             Поля предзаполняются из профиля — чтобы не набирать заново, — но дальше
+             живут отдельно. -->
+        <div class="ava-row">
+          <div class="field">
+            <label>Имя для подопечных</label>
+            <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить">
+          </div>
+          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера">
+            <span id="coachPhotoPrev"></span>
+          </button>
+        </div>
+        <input type="file" id="coachPhotoFile" accept="image/*" class="hidden">
+
         <div class="field">
           <label>Ник</label>
-          <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
-          <p class="field-hint">Подопечный увидит его рядом с программой — так он поймёт, от кого она.</p>
+          <input type="text" id="coachHandle" maxlength="30" inputmode="latin" autocapitalize="off"
+                 autocorrect="off" spellcheck="false" placeholder="@lena.doma">
+          <p class="field-hint">Подопечный увидит его рядом с программой — так он поймёт, от кого она. Латиница, цифры, точка и дефис.</p>
           <p class="field-hint" id="coachHandleErr"></p>
         </div>
         <!-- Сначала «кто ты», потом «где тебя найти». Подопечный открывает страницу
@@ -4182,7 +4192,7 @@
         </div>
         <div class="field">
           <label>Стаж, лет</label>
-          <input type="number" id="coachYears" min="0" max="60" inputmode="numeric" placeholder="—">
+          <input type="text" id="coachYears" inputmode="numeric" maxlength="2" placeholder="—">
         </div>
         <div class="field">
           <label>Ссылка на себя</label>
@@ -4208,6 +4218,9 @@
         <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
         <span class="nr-chev" data-icon="chevR"></span>
       </button>
+      <!-- Продление — про тариф, а не про аккаунт, и рядом с ним подпись не нужна:
+           над строкой уже написано, какой тариф и до какого числа. -->
+      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически</span><button class="switch" id="tglRenew"></button></div>
     </div>
 
     <div class="card-block">
@@ -4229,18 +4242,8 @@
 
       <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
-      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
-    </div>
-
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
-      <p class="field-hint">Пока всё на этом телефоне. Появится сервер — данные уедут сами.</p>
-      <div class="sync-row">
-        <span class="sync-dot"></span>
-        <span class="sync-txt"><b id="syncState">Не подключена</b><small id="syncSub"></small></span>
-      </div>
     </div>
 
     <div class="card-block">
@@ -6006,6 +6009,10 @@ async function loadData(){
   if(typeof stats.count !== 'number') stats.count = 0;
   await loadProgWeights();
   await loadTrainer();
+  // Док должен знать про режим тренера СРАЗУ. Раньше кнопку показывал только
+  // renderTrainerCard(), а он зовётся при входе в «Ещё», — и до первого захода
+  // туда у тренера было четыре раздела вместо пяти.
+  syncDockTabs();
   migrateProgWeightsToDeltas();
 }
 
@@ -6541,7 +6548,6 @@ async function markAllForSync(){
   for(const p of customPrograms) bumpDoc(PROGRAM_DOC(p.id), {h: docHash(JSON.stringify(p))});
   bumpDoc('index', {h: docHash(customPrograms.map(p => p.id).join(','))});
   await flushMeta();
-  if(typeof renderSyncRow === 'function') renderSyncRow();
 }
 
 const SYNC = {
@@ -7536,12 +7542,9 @@ function renderPlan(){
     : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
   if(has){
     $('accEmail').textContent = account.email;
-    if(on){
-      $('accRenewSub').textContent = account.sub.autoRenew
-        ? `${subPrice()} ${account.sub.plan === 'year' ? 'раз в год' : 'раз в месяц'}, следующее — ${humanDate(account.sub.until)}`
-        : `Выключено: премиум закончится ${humanDate(account.sub.until)}`;
-      $('tglRenew').classList.toggle('on', !!account.sub.autoRenew);
-    }
+    // Подпись под переключателем не нужна: он переехал под строку тарифа, где уже
+    // написано, какой тариф и до какого числа.
+    if(on) $('tglRenew').classList.toggle('on', !!account.sub.autoRenew);
     $('tglBio').classList.toggle('on', !!(account.biometry && account.biometry.enabled));
   }
 }
@@ -8989,10 +8992,12 @@ function programPayload(p){
    ссылкой, а не отдельным действием: отдельное «сохранить профиль» человек забудет
    нажать, и подопечный увидит пустую страницу. Здесь же профиль всегда свежий. */
 function trainerProfile(){
+  // Имя тренера своё, но пустым уезжать не должно: у тех, кто включил режим до
+  // появления поля, его просто нет, а страница без имени доверия не вызывает.
   const me = users.find(u => u.id === currentUser);
   return {
-    name: (me && me.name) || '',
-    photo: (me && me.photo) || '',      // уже сжато до 240px при загрузке
+    name: ((trainer.name || '').trim() || (me && me.name) || '').trim(),
+    photo: trainer.photo || '',         // сжато до 240px при загрузке
     about: (trainer.about || '').slice(0, 400),
     years: trainer.years == null ? null : trainer.years,
     links: (trainer.links || '').trim()
@@ -10579,6 +10584,9 @@ function renderTrainerCard(){
   $('tglTrainer').classList.toggle('on', !!(trainer && trainer.on));
   setShown('coachFields', !!(trainer && trainer.on));
   if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (trainer && trainer.handle) || '';
+  if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
+  const ph = trainer && trainer.photo;
+  $('coachPhotoPrev').innerHTML = ph ? `<img src="${esc(ph)}" alt="">` : icon('camera');
   if(document.activeElement !== $('coachLinks'))  $('coachLinks').value  = (trainer && trainer.links) || '';
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
@@ -15385,24 +15393,18 @@ let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
 
-// Что показать в строке синхронизации. Пока адаптера нет — говорим прямо, что
-// не подключена, но сообщаем, сколько изменений уже стоит в очереди: так видно,
-// что подготовка работает, а не лежит мёртвым кодом.
-function renderSyncRow(){
-  const row = document.querySelector('.sync-row');
-  if(!row || !identity) return;
-  const n = SYNC.pending();
-  row.classList.toggle('on', SYNC.connected);
-  $('syncState').textContent = SYNC.connected ? 'Подключена' : 'Не подключена';
-  $('syncSub').textContent = SYNC.connected
-    ? 'Данные уходят на сервер автоматически'
-    : (n
-        ? `${n} ${plural(n, 'изменение', 'изменения', 'изменений')} ждёт отправки · профиль ${identity.profileId.slice(0, 8)}`
-        : `Изменений пока нет · профиль ${identity.profileId.slice(0, 8)}`);
-}
+/* Карточки «Синхронизация» убраны с экрана.
+
+   Она показывала «Не подключена · 0 изменений ждёт отправки» — то есть счётчик
+   очереди для того, чего не существует: синхронизации профилей между устройствами
+   как не было, так и нет (SYNC.adapter по-прежнему null). Сервер у приложения
+   теперь есть, и строка «появится сервер» сбивала с толку вдвойне.
+
+   Сама машинерия (docMeta, outbox, SYNC) осталась нетронутой — это шов, в который
+   сервер встанет. Убран только рассказ о ней человеку: о том, чего он не может ни
+   включить, ни почувствовать, рассказывать незачем. */
 
 function syncPrefs(){
-  renderSyncRow();
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
@@ -16139,13 +16141,32 @@ $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
 /* ---- тренер: карточка на аккаунте, картотека, карточка подопечного ---- */
 $('tglTrainer').onclick = async ()=>{
   trainer.on = !trainer.on;
+  // Первое включение: подставляем имя и фото из профиля, чтобы не набирать заново.
+  // Дальше они живут отдельно — правка профиля лицо тренера не меняет.
+  if(trainer.on && !trainer.name){
+    const me = users.find(u => u.id === currentUser);
+    if(me){ trainer.name = me.name || ''; trainer.photo = me.photo || ''; }
+  }
   await saveTrainer();
   renderTrainerCard();
   // Ник спрашиваем сразу, но не окриком: поле уже открыто и ждёт, а объяснение
   // стоит под ним. Без ника режим не считается включённым (trainerOn).
   if(trainer.on && !(trainer.handle || '').trim()) setTimeout(()=> $('coachHandle').focus(), 120);
 };
-$('coachHandle').oninput = async e => { trainer.handle = e.target.value; await saveTrainer(); };
+// Чистим ПРЯМО ПРИ НАБОРЕ. Раньше лишнее убиралось только по уходу из поля, и
+// человек видел, как набранное вдруг меняется, — будто приложение спорит с ним.
+$('coachHandle').oninput = async e => {
+  const at = e.target.value.startsWith('@');
+  const body = e.target.value.replace(/^@+/, '').replace(/[^\w.\-]/g, '').slice(0, 29);
+  const next = (at || body) ? '@' + body : '';
+  if(e.target.value !== next){
+    const pos = e.target.selectionStart;
+    e.target.value = next;
+    try{ e.target.setSelectionRange(pos, pos); }catch(err){}
+  }
+  trainer.handle = next;
+  await saveTrainer();
+};
 $('coachHandle').onblur  = async e => {
   trainer.handle = normHandle(e.target.value);
   e.target.value = trainer.handle;
@@ -16154,9 +16175,26 @@ $('coachHandle').onblur  = async e => {
 };
 $('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); pushProfileSoon(); };
 $('coachAbout').oninput = async e => { trainer.about = e.target.value.slice(0, 400); await saveTrainer(); pushProfileSoon(); };
+$('coachName').oninput = async e => { trainer.name = e.target.value.slice(0, 40); await saveTrainer(); pushProfileSoon(); };
+$('coachPhotoBtn').onclick = ()=> $('coachPhotoFile').click();
+$('coachPhotoFile').onchange = e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  shrinkImage(file, 240, async data => {
+    if(!data){ appAlert('Не удалось загрузить фото.'); return; }
+    trainer.photo = data;
+    await saveTrainer();
+    renderTrainerCard();
+    pushProfileSoon();
+  });
+};
+// Только цифры и не больше двух: стаж — это «8» или «22», а не телефон.
+// Поле текстовое намеренно — у number maxlength не работает вовсе.
 $('coachYears').oninput = async e => {
-  const n = parseInt(e.target.value, 10);
-  trainer.years = (isFinite(n) && n >= 0 && n <= 60) ? n : null;
+  const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+  if(e.target.value !== digits) e.target.value = digits;
+  const n = parseInt(digits, 10);
+  trainer.years = (isFinite(n) && n > 0 && n <= 60) ? n : null;
   await saveTrainer();
   pushProfileSoon();
 };
