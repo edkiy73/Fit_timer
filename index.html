@@ -4324,6 +4324,41 @@
        него отвечают стаж, сколько человек с нами и сколько раз брали его программы,
        а попап такого объёма не держит. Пустых полей не показываем: выдуманное
        «стаж не указан» доверия не прибавляет. -->
+  <!-- ПРЕДЛОЖИТЬ В КАТАЛОГ. Не «опубликовать»: всё проходит проверку руками. Пока
+       программ единицы, это десять минут в неделю, а открытая публикация без
+       проверки в первый же месяц превращает каталог в помойку, из которой его уже
+       не вытащить. Человеку это сказано прямо — обещать мгновенную публикацию и
+       потом держать её сутки хуже, чем сразу назвать порядок. -->
+  <section class="screen builder" id="scrPublish">
+    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2>В каталог</h2></div>
+
+    <div class="card-block">
+      <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
+      <p class="field-hint" id="pubState"></p>
+    </div>
+
+    <div class="card-block" id="pubForm">
+      <div class="cb-head"><p class="cb-title">Как её найдут</p></div>
+      <div class="field">
+        <label>Цель</label>
+        <button type="button" class="filter-btn ph" id="pubCatBtn"><span id="pubCatVal">Цель</span><span class="fb-chev" id="pubCatChev"></span></button>
+      </div>
+      <div class="field">
+        <label>Уровень</label>
+        <button type="button" class="filter-btn ph" id="pubLevelBtn"><span id="pubLevelVal">Уровень</span><span class="fb-chev" id="pubLevelChev"></span></button>
+      </div>
+      <div class="field">
+        <label>Что она даёт</label>
+        <textarea id="pubGives" rows="3" maxlength="300" placeholder="Одна-две фразы: что человек получит и чем эта программа отличается"></textarea>
+        <p class="field-hint">Это единственное, что читают в списке перед тем, как открыть. От 20 символов.</p>
+      </div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnPublish">Отправить на проверку</button>
+    </div>
+  </section>
+
   <section class="screen builder" id="scrTrainerPage">
     <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2>Тренер</h2></div>
 
@@ -5345,7 +5380,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
 const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
-const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -5754,6 +5789,7 @@ function buildStartMenu(){
     }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     ...(trainerOn() ? [mk(icon('users') + 'Отправить клиенту', ()=> pickClientFor(p))] : []),
+    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + 'Предложить в каталог', ()=> openPublish(p))] : []),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
       if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
@@ -10269,7 +10305,10 @@ async function apiFetch(path, opts){
   const ctl = new AbortController();
   const t = setTimeout(()=> ctl.abort(), API_WAIT);
   try{
-    const res = await fetch(API_BASE + path, Object.assign({signal: ctl.signal}, opts || {}));
+    // cache: 'no-store' — второй рубеж к тому же правилу, что и в sw.js: ответы
+    // сервера живут минуты и кэшироваться не должны ни на одном уровне.
+    const res = await fetch(API_BASE + path,
+      Object.assign({signal: ctl.signal, cache: 'no-store'}, opts || {}));
     const data = await res.json().catch(()=> ({}));
     if(!res.ok){
       const err = new Error(data.error || ('http_' + res.status));
@@ -10692,7 +10731,7 @@ const storeCat = id => STORE_CATS.find(c => c.id === id) || STORE_CATS[0];
 // названия: хеш легко кладёт двух соседей в один вариант, и рядом стоящие
 // карточки выглядят близнецами. Порядковый номер такого не допускает.
 function storeVariant(it){
-  const n = STORE_ITEMS.filter(x => x.cat === it.cat).findIndex(x => x.id === it.id);
+  const n = storeAll().filter(x => x.cat === it.cat).findIndex(x => x.id === it.id);
   return (n < 0 ? 0 : n) % 3;
 }
 
@@ -10714,6 +10753,19 @@ const TRAINERS = {
   '@masha.walk':     {name: 'Маша', photo: '', about: 'Самый мягкий вход в тренировки. Мои программы для тех, кто давно ничего не делал и боится начать.'},
   '@olga.pilates':   {name: 'Оля', photo: '', about: 'Пилатес и дыхание. Медленно, осознанно и без единого прыжка.'}
 };
+
+/* Каталог — это зашитые программы ПЛЮС принятые с сервера. Серверная позиция
+   складывается в том же виде (id, by, cat, level, min, name, gives, text), поэтому
+   ни витрина, ни страница программы, ни добавление в библиотеку не знают, откуда
+   она взялась, — и знать не должны. */
+let storeServer = [];
+const storeAll = () => STORE_ITEMS.concat(storeServer);
+async function loadStoreServer(){
+  try{
+    const d = await apiFetch('/api/catalog');
+    storeServer = Array.isArray(d.items) ? d.items : [];
+  }catch(e){ storeServer = []; }   // каталог без сети — это просто зашитые программы
+}
 
 const STORE_ITEMS = [
   {id:"slim-tiho", by:"@lena.doma", cat:"cardio", level:"Новичок", min:18, name:"Кардио без прыжков",
@@ -11359,7 +11411,7 @@ function renderStoreFilters(){
   // Подписи над списками убраны: первый пункт и есть подпись — «Цель», «Уровень».
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
   // пункт в списке — обещание, которого каталог не выполняет.
-  const has = id => STORE_ITEMS.some(x => x.cat === id);
+  const has = id => storeAll().some(x => x.cat === id);
   fill('storeCatBtn', 'storeCatVal', 'storeCatChev', 'Цель',
     STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name]),
     storeFilter.cat, v => storeFilter.cat = v);
@@ -11392,7 +11444,7 @@ function storeLabels(it, own){
 
 function renderStore(){
   const box = $('storeList');
-  const list = STORE_ITEMS.filter(storeMatches);
+  const list = storeAll().filter(storeMatches);
   $('storeCount').textContent = list.length
     ? `${list.length} ${plural(list.length, 'программа', 'программы', 'программ')}`
     : '';
@@ -11436,7 +11488,7 @@ function siBits(ex){
   return b;
 }
 function openStoreItem(id){
-  const it = STORE_ITEMS.find(x => x.id === id);
+  const it = storeAll().find(x => x.id === id);
   if(!it) return;
   siItem = it;
   const c = storeCat(it.cat);
@@ -11506,7 +11558,7 @@ $('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
 $('siBackTop').onclick = ()=> goBackTo('scrStore');
 
 async function addStoreItem(id){
-  const it = STORE_ITEMS.find(x => x.id === id);
+  const it = storeAll().find(x => x.id === id);
   if(!it) return;
   const own = storeOwned(id);
   if(own){
@@ -11613,7 +11665,7 @@ function openTrainer(nick){
   // Сразу рисуем то, что знаем без сети: экран не должен ждать сервера.
   fillTrainerPage(nick, local ? {
     name: local.name, about: local.about, photo: local.photo,
-    programs: STORE_ITEMS.filter(x => x.by === nick).length
+    programs: storeAll().filter(x => x.by === nick).length
   } : null);
   show('scrTrainerPage');
   apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
@@ -11625,7 +11677,7 @@ function openTrainer(nick){
       about: d.about || (local && local.about) || '',
       photo: d.photo || (local && local.photo) || '',
       years: d.years, since: d.since, links: d.links,
-      programs: Math.max(d.programs || 0, local ? STORE_ITEMS.filter(x => x.by === nick).length : 0),
+      programs: Math.max(d.programs || 0, storeAll().filter(x => x.by === nick).length),
       opens: d.opens
     }));
   }).catch(()=>{});
@@ -11679,8 +11731,130 @@ function fillTrainerPage(nick, t){
   }
 }
 
+/* ПРЕДЛОЖИТЬ В КАТАЛОГ */
+let pubProg = null;
+let pubDraft = {cat: '', level: '', gives: ''};
+
+// Минуты для витрины. Точность здесь не нужна и невозможна — человек читает это
+// как «влезет ли в обед», а не как обещание. Считаем грубо и честно округляем.
+function estimateMinutes(p){
+  let sec = 0;
+  const plans = normPlans(p);
+  const pl = plans[0] || {exercises: []};
+  (pl.exercises || []).forEach(ex => {
+    const sets = Math.max(1, +ex.sets || 1);
+    const one = ex.type === 'time' ? (+parseValue(ex.value).max || 30)
+                                   : (parseValue(ex.value).max || 12) * 3;
+    sec += sets * one + (sets - 1) * (+ex.rest || 30) + exRestAfter(ex);
+  });
+  const rounds = Math.max(1, +pl.rounds || 1);
+  sec = sec * rounds + (rounds - 1) * (+pl.roundRest || 60);
+  return Math.max(1, Math.round(sec / 60));
+}
+
+function openPublish(p){
+  pubProg = p;
+  pubDraft = Object.assign({cat: '', level: '', gives: ''}, p.pub && p.pub.draft || {});
+  fillPublish();
+  show('scrPublish');
+  refreshPubStatus();
+}
+
+function fillPublish(){
+  const p = pubProg;
+  if(!p) return;
+  const ex = (normPlans(p)[0].exercises || []).length;
+  $('pubName').textContent = p.name;
+  $('pubSub').textContent = `${ex} ${plural(ex, 'упражнение', 'упражнения', 'упражнений')} · примерно ${estimateMinutes(p)} мин`;
+
+  const st = p.pub && p.pub.status;
+  const shown = {
+    pending:  'На проверке. Обычно это занимает день-другой — программы смотрит человек.',
+    approved: 'Программа в каталоге. Её видят все.',
+    rejected: 'Не взяли. Можно поправить и предложить заново.',
+    gone:     'Заявка не нашлась. Можно отправить заново.'
+  }[st] || '';
+  $('pubState').textContent = shown;
+  $('pubState').classList.toggle('warn', st === 'rejected' || st === 'gone');
+  setShown('pubForm', st !== 'pending' && st !== 'approved');
+  setShown($('btnPublish').parentElement, st !== 'pending' && st !== 'approved');
+
+  const fill = (btnId, valId, chevId, ph, opts, cur, onPick) => {
+    const cho = opts.find(([v]) => v === cur);
+    $(valId).textContent = cho ? cho[1] : ph;
+    $(btnId).classList.toggle('ph', !cho);
+    $(chevId).innerHTML = icon('chevD');
+    $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); fillPublish(); });
+  };
+  fill('pubCatBtn', 'pubCatVal', 'pubCatChev', 'Цель',
+       OPT_GOAL.map(g => [g, g]), pubDraft.cat, v => pubDraft.cat = v);
+  fill('pubLevelBtn', 'pubLevelVal', 'pubLevelChev', 'Уровень',
+       OPT_LEVEL.map(l => [l, l]), pubDraft.level, v => pubDraft.level = v);
+  if(document.activeElement !== $('pubGives')) $('pubGives').value = pubDraft.gives || '';
+}
+
+// Что стало с заявкой. Спрашиваем сервер, а не помним своё: «на проверке» навсегда
+// — это ровно то, из-за чего человек жмёт кнопку повторно.
+async function refreshPubStatus(){
+  const p = pubProg;
+  if(!p || !p.pub || !p.pub.id) return;
+  try{
+    const d = await apiFetch('/api/catalog?status=' + encodeURIComponent(p.pub.id));
+    const st = d.status && d.status[p.pub.id];
+    if(st && st !== p.pub.status){
+      p.pub.status = st;
+      await savePrograms();
+      if(show._last === 'scrPublish') fillPublish();
+    }
+  }catch(e){}
+}
+
+async function doPublish(){
+  const p = pubProg;
+  if(!p) return;
+  pubDraft.gives = $('pubGives').value.trim();
+  const miss = [];
+  if(!pubDraft.cat) miss.push('цель');
+  if(!pubDraft.level) miss.push('уровень');
+  if(pubDraft.gives.length < 20) miss.push('«что она даёт» — хотя бы 20 символов');
+  const ex = (normPlans(p)[0].exercises || []).length;
+  if(ex < 3) miss.push('хотя бы три упражнения в программе');
+  if(miss.length){
+    appAlert('Не хватает: ' + miss.join(', ') + '.');
+    return;
+  }
+  try{
+    const r = await apiPost('/api/catalog/submit', {
+      by: normHandle(trainer.handle),
+      trainerKey: trainer.key || '',
+      item: {
+        name: p.name, gives: pubDraft.gives, cat: pubDraft.cat, level: pubDraft.level,
+        min: estimateMinutes(p), exCount: ex, text: programToText(p)
+      }
+    });
+    p.pub = {id: r.id, status: r.status, draft: pubDraft};
+    await savePrograms();
+    fillPublish();
+    appAlert('Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.');
+  }catch(e){
+    const why = {
+      no_trainer: 'Сначала отправь хоть одну программу клиенту или заполни профиль — ник должен быть закреплён за тобой.',
+      not_yours: 'Этот ник закреплён за другим тренером.',
+      banned: 'Приём программ с этого ника закрыт.',
+      too_many_today: 'Сегодня уже отправлено три программы. Продолжим завтра.',
+      already_sent: 'Программа с таким названием уже отправлена.',
+      no_store: 'На сервере не подключено хранилище — отправка пока не работает.',
+      bad_item: 'Не хватает данных: ' + ((e.miss || []).join(', ') || 'проверь поля') + '.'
+    }[e && e.code];
+    appAlert(why || 'Не получилось отправить — похоже, нет связи с сервером.');
+  }
+}
+
 function openStore(from){
   storeFrom = from || 'scrMenu';
+  // Свежие позиции подтягиваем при входе и дорисовываем, когда придут: витрина
+  // не должна ждать сеть, чтобы показать зашитые программы.
+  loadStoreServer().then(()=>{ if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); } });
   storeFilter = {q: '', cat: '', level: ''};
   $('storeQuery').value = '';
   setShown('storeClear', false);
@@ -15928,6 +16102,9 @@ $('clsBackTop').onclick = ()=> goBackTo('scrAccount');
 // получивший программу по ссылке, хочет знать, от кого она.
 $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
 $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
+$('pubBackTop').onclick = ()=> goBackTo('scrPrograms');
+$('pubGives').oninput = e => { pubDraft.gives = e.target.value; };
+$('btnPublish').onclick = ()=> doPublish();
 $('btnAddClient').onclick = async ()=>{
   const c = await addClient();
   renderClients();

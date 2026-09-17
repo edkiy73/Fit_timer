@@ -32,7 +32,10 @@ function routes(){
       if(fs.statSync(full).isDirectory()){ walk(full, prefix + '/' + name); continue; }
       if(!name.endsWith('.js') || name.startsWith('_')) continue;
       const base = name.slice(0, -3);
-      const parts = (prefix + '/' + base).split('/').filter(Boolean);
+      // index.js отвечает за саму папку: api/catalog/index.js → /api/catalog.
+      // Так же это делает Vercel, и расходиться с ним здесь нельзя.
+      const path_ = base === 'index' ? prefix : (prefix + '/' + base);
+      const parts = path_.split('/').filter(Boolean);
       const params = [];
       const re = '^/' + parts.map(p => {
         const m = p.match(/^\[(.+)\]$/);

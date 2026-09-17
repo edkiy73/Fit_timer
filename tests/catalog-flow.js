@@ -1,0 +1,174 @@
+/* Предложение программы в каталог: отправка, проверка руками, появление в витрине.
+
+   Публикации без проверки нет намеренно — разбор в docs/trainer-ui.md. Здесь
+   проверяем весь путь и заодно минимальные заслоны: чужой ник, три программы в
+   сутки, повтор того же названия, недобор полей.
+
+   Запуск:  ADMIN_KEY=... node tests/dev-server.js 8124
+            node tests/catalog-flow.js */
+
+let chromium;
+try{ chromium = require('playwright-core').chromium; }
+catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
+
+const BASE = process.env.FIT_URL || 'http://localhost:8124';
+const ADMIN = process.env.ADMIN_KEY || 'testadminkey123456';
+const CHROME = process.env.FIT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+
+let bad = 0;
+const ok = (name, cond, extra) => { if(!cond) bad++;
+  console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
+
+const prog = (name) => `ПРОГРАММА: ${name}
+ДНИ: Пн, Чт
+КРУГИ: 3
+ОТДЫХ МЕЖДУ КРУГАМИ: 60
+ПРОГРЕССИЯ: 4
+` + ['Приседания', 'Отжимания', 'Планка'].map(n => `
+УПРАЖНЕНИЕ: ${n}
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12
+ПОДХОДЫ: 3
+ОТДЫХ: 45`).join('');
+
+(async () => {
+  const b = await chromium.launch({executablePath: CHROME});
+  const errs = [];
+  const NICK = '@pub.' + Math.random().toString(36).slice(2, 8);
+  // Хранилище между прогонами не чистится, поэтому и ник, и название — свои на
+  // каждый запуск. Иначе тест проверяет остатки прошлого раза, а не себя.
+  const NAME = 'Силовая база ' + Math.random().toString(36).slice(2, 6);
+
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(BASE + '/index.html', {waitUntil: 'load'});
+  await page.waitForTimeout(2000);
+  if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
+
+  // ник закрепляем через правку профиля
+  await page.evaluate(async (nick) => {
+    const me = users.find(u => u.id === currentUser); me.name = 'Лена';
+    trainer = {on: true, handle: nick, about: 'Домашний фитнес.', years: 5, links: ''};
+    await saveTrainer();
+    await pushProfile();
+  }, NICK);
+  ok('ник закреплён', await page.evaluate(() => !!trainer.key));
+
+  const add = (name) => page.evaluate(async ({txt, name}) => {
+    const r = parseProgramText(txt);
+    const p = r.program || r; p.id = 'p' + Math.random().toString(36).slice(2, 8); p.name = name;
+    customPrograms.push(p); await savePrograms();
+    return p.id;
+  }, {txt: prog(name), name});
+
+  // ---- недобор полей ловится ДО отправки ----
+  const id1 = await add(NAME);
+  const miss = await page.evaluate(async (pid) => {
+    openPublish(customPrograms.find(p => p.id === pid));
+    await doPublish();                       // ничего не заполнено
+    return document.getElementById('dlgMsg').textContent;
+  }, id1);
+  ok('пустую заявку не пускает', /Не хватает/.test(miss), miss.slice(0, 52));
+  await page.click('#dlgOk'); await page.waitForTimeout(300);
+
+  // ---- нормальная отправка ----
+  const sent = await page.evaluate(async () => {
+    pubDraft.cat = 'Сила и выносливость';
+    pubDraft.level = 'Средний';
+    pubDraft.gives = 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.';
+    document.getElementById('pubGives').value = pubDraft.gives;
+    await doPublish();
+    return {status: pubProg.pub && pubProg.pub.status, msg: document.getElementById('dlgMsg').textContent};
+  });
+  ok('заявка ушла и ждёт проверки', sent.status === 'pending', sent.status);
+  ok('человеку сказано, что смотрит человек', /посмотрит человек/.test(sent.msg));
+  await page.click('#dlgOk'); await page.waitForTimeout(300);
+
+  // ---- в каталоге её ещё нет ----
+  const before = await page.evaluate(async (name) => {
+    await loadStoreServer();
+    return storeAll().some(x => x.name === name);
+  }, NAME);
+  ok('до проверки в каталоге не появляется', before === false, String(before));
+
+  // ---- повтор того же названия не принимается ----
+  const dup = await page.evaluate(async ({nick, name}) => {
+    try{
+      await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
+        name, gives: 'то же самое, но ещё раз, двадцать символов точно',
+        cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+      return 'принято';
+    }catch(e){ return e.code; }
+  }, {nick: NICK, name: NAME});
+  ok('повтор того же названия отбит', dup === 'already_sent', dup);
+
+  // ---- чужой ник ----
+  const alien = await page.evaluate(async (nick) => {
+    try{
+      await apiPost('/api/catalog/submit', {by: nick, trainerKey: 'не-мой-ключ', item: {
+        name: 'Подделка', gives: 'двадцать символов здесь точно наберётся, поверь',
+        cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+      return 'принято';
+    }catch(e){ return e.code; }
+  }, NICK);
+  ok('с чужим ключом не принимает', alien === 'not_yours', alien);
+
+  // ---- проверка руками ----
+  const rev = await fetch(`${BASE}/api/catalog/review?key=${ADMIN}`).then(r => r.text());
+  ok('заявка видна в очереди', rev.includes(NAME) && rev.includes(NICK));
+  // Ссылка «взять» именно НАШЕЙ заявки: в очереди могут висеть чужие.
+  const block = rev.split('─'.repeat(52)).find(x => x.includes(NAME)) || '';
+  const m = block.match(/взять:\s+(\S+)/);
+  ok('в очереди есть ссылка «взять»', !!m);
+  const took = await fetch(BASE + m[1]).then(r => r.text());
+  ok('заявку взяли', took.includes('В каталоге') && took.includes(NAME), took.split('\n')[0]);
+  const fromApi = await fetch(BASE + '/api/catalog').then(r => r.json());
+  ok('сервер отдаёт её в каталоге', (fromApi.items || []).some(x => x.name === NAME),
+     (fromApi.items || []).length + ' позиций');
+
+  // ---- и вот теперь она в каталоге ----
+  const after = await page.evaluate(async (name) => {
+    await loadStoreServer();
+    const it = storeServer.find(x => x.name === name);
+    return {found: !!it, by: it && it.by, inAll: storeAll().some(x => x.name === name),
+            all: storeAll().length};
+  }, NAME);
+  ok('после проверки появилась в каталоге', after.found, after.by || '(не нашлась)');
+  ok('и лежит вместе с зашитыми в одном списке', after.inAll && after.all > 12, after.all + ' программ');
+
+  // ---- статус у тренера обновился сам ----
+  const st = await page.evaluate(async () => { await refreshPubStatus(); return pubProg.pub.status; });
+  ok('тренер видит, что программу взяли', st === 'approved', st);
+
+  // ---- её можно добавить себе, как любую другую ----
+  const added = await page.evaluate(async (name) => {
+    const it = storeAll().find(x => x.name === name);
+    if(!it) return {found: false};
+    openStoreItem(it.id);
+    return {found: true, screen: (document.querySelector('.screen.on') || {}).id,
+            title: (document.getElementById('siName') || {}).textContent};
+  }, NAME);
+  ok('страница программы из каталога открывается',
+     added.found && added.screen === 'scrStoreItem', added.screen);
+
+  // ---- лимит в сутки ----
+  const limit = await page.evaluate(async ({nick, NAME}) => {
+    const out = [];
+    for(let i = 0; i < 4; i++){
+      try{
+        await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
+          name: NAME + ' вариант ' + i, gives: 'двадцать символов здесь точно наберётся, поверь',
+          cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+        out.push('ok');
+      }catch(e){ out.push(e.code); }
+    }
+    return out;
+  }, {nick: NICK, NAME});
+  ok('больше трёх в сутки не принимает', limit.includes('too_many_today'), limit.join(', '));
+
+  console.log('\npageerror:', errs.length ? errs : 'нет');
+  if(errs.length) bad++;
+  console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');
+  await b.close();
+  process.exit(bad ? 1 : 0);
+})();
