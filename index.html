@@ -361,7 +361,12 @@
 
   /* Своя обложка программы вместо рисованной по цели. Форму держит тот же
      контейнер, что и у рисованной, — иначе строка витрины поедет. */
-  .st-photo{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+  /* Своя обложка вместо рисованной. НЕ position:absolute: контейнеры обложек
+     (.sr-cover, .si-cover) своего контекста наложения не создают, и картинка
+     уезжала к ближайшему позиционированному предку — то есть разворачивалась на
+     весь экран поверх каталога. Размер держит сам контейнер, обычного блока
+     на всю его ширину и высоту достаточно. */
+  .st-photo{width:100%;height:100%;overflow:hidden;border-radius:inherit;line-height:0}
   .st-photo img{width:100%;height:100%;object-fit:cover;display:block}
 
   /* ---------- конструктор ---------- */
@@ -2993,6 +2998,22 @@
          два: незаметный «＋» в шапке и бледная пунктирная кнопка под списком, до которой
          на длинном списке ещё надо было доскроллить. -->
     <button class="btn-primary add-prog" id="btnAddProgram"><span data-icon="plus"></span>Добавить программу</button>
+
+    <!-- Каталог ищут здесь, а не на главной: за готовой программой идут тогда, когда
+         смотрят на свои и понимают, что надоели. Отдельной кнопкой в доке он не стоит
+         — туда заходят три раза за всё время, а место в доке постоянное. -->
+    <button type="button" class="way-row" id="btnToStore">
+      <span class="wr-ico" data-icon="sparkle"></span>
+      <span class="wr-txt"><b>Готовые программы</b><small id="storeRowSub">Каталог: подобрать под цель и уровень</small></span>
+    </button>
+
+    <!-- Заявки в каталог — про программы, а не про людей, поэтому лежат здесь, а не
+         у клиентов. Появляются вместе с режимом тренера. -->
+    <button type="button" class="way-row hidden" id="btnMyCatalog">
+      <span class="wr-ico" data-icon="crown"></span>
+      <span class="wr-txt"><b>Мои в каталоге</b><small id="coachCatSub">Ничего не отправлено</small></span>
+    </button>
+
     <div id="mineList"></div>
   </section>
 
@@ -4070,7 +4091,7 @@
   <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
        Раньше это был попап поверх главной — теперь полноценная страница. -->
   <section class="screen root" id="scrAccount">
-    <div class="page-head"><h1>Аккаунт</h1></div>
+    <div class="page-head"><h1>Ещё</h1></div>
 
     <!-- Профили — первое, за чем сюда приходят: чаще меняют профиль, чем читают
          про подписку. Все строки одинаковые, активная помечена — раньше текущий
@@ -4132,18 +4153,12 @@
           <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
           <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
         </div>
-        <button type="button" class="pref-row row-link" id="btnClients">
-          <span><span>Клиенты</span><small id="coachClientsSub">Пока никого</small></span>
-          <span class="nr-chev" data-icon="chevR"></span>
-        </button>
         <!-- Своя страница глазами клиента. Тренер правит поля вслепую, если не видит
-             результата, — а именно по этой странице его и выбирают. -->
+             результата, — а именно по этой странице его и выбирают.
+             Клиенты и заявки в каталог отсюда ушли: клиенты стали разделом в доке,
+             заявки — частью «Тренировок», где и лежат сами программы. -->
         <button type="button" class="pref-row row-link" id="btnMyPage">
-          <span><span>Моя страница</span><small>Как её видит клиент</small></span>
-          <span class="nr-chev" data-icon="chevR"></span>
-        </button>
-        <button type="button" class="pref-row row-link" id="btnMyCatalog">
-          <span><span>В каталоге</span><small id="coachCatSub">Ничего не отправлено</small></span>
+          <span><span>Моя страница</span><small id="coachClientsSub">Как её видит клиент</small></span>
           <span class="nr-chev" data-icon="chevR"></span>
         </button>
       </div>
@@ -4183,12 +4198,12 @@
         <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
       </div>
     </div>
-  </section>
 
-  <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
-       Сохранения здесь нет намеренно: каждое изменение применяется сразу, поэтому
-       на корневом экране не нужна нижняя панель действий — внизу только док. -->
-  <section class="screen root" id="scrSettings">
+    <!-- ПЕРЕЕХАЛО ИЗ «НАСТРОЕК». Экраны разделили не по смыслу, а по истории:
+         тема жила в профиле, звук в настройках, профили в аккаунте — и человек
+         искал нужное в двух местах по очереди. Теперь один раздел «Ещё»: всё, что
+         настраивают редко, лежит вместе, а освободившееся место в доке ушло
+         «Клиентам». -->
     <div class="page-head"><h1>Настройки</h1></div>
 
     <!-- Звук и управление без рук стоят первыми и открыты сразу. Раньше они жили на
@@ -4291,6 +4306,10 @@
     </div>
   </section>
 
+  <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
+       Сохранения здесь нет намеренно: каждое изменение применяется сразу, поэтому
+       на корневом экране не нужна нижняя панель действий — внизу только док. -->
+
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
     <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
@@ -4355,8 +4374,8 @@
   <!-- КЛИЕНТЫ ТРЕНЕРА. Сервера нет: картотека локальная, а связь с клиентом держится
        на ссылках, которые в приложении уже работают — программа уезжает ссылкой FIT1,
        отчёт возвращается ссылкой FITR1. Подробности — docs/trainer-ui.md. -->
-  <section class="screen builder" id="scrTrainer">
-    <div class="screen-head"><button class="back-chip" id="clsBackTop">‹</button><h2>Клиенты</h2></div>
+  <section class="screen root" id="scrTrainer">
+    <div class="page-head"><h1>Клиенты</h1></div>
 
     <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
          идёт. Список — уже подробности. -->
@@ -4859,9 +4878,11 @@
   <div class="dock-in">
     <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
     <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
+    <!-- «Клиенты» появляются вместе с режимом тренера: пока его нет, кнопка занимала
+         бы место под раздел, в который человеку незачем заходить. -->
+    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Клиенты</span></button>
     <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="user"></span><span>Аккаунт</span></button>
-    <button class="dock-btn" data-scr="scrSettings"><span class="db-ico" data-icon="gear"></span><span>Настройки</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Ещё</span></button>
   </div>
 </nav>
 
@@ -5439,9 +5460,13 @@ const appAlert = (m, o) => appDialog(m, o);
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
 const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
-const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
-// Пять корневых разделов: только у них внизу док и нет собственной панели действий.
-const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
+/* Корневые разделы: только у них внизу док и нет собственной панели действий.
+
+   «Клиенты» — раздел, который есть не у всех: он появляется вместе с режимом
+   тренера и исчезает вместе с ним. Держать его в списке всегда можно и нужно —
+   иначе show() не узнает в нём корневой экран, — а прячет кнопку сам док. */
+const ROOT_TABS = ['scrMenu','scrPrograms','scrTrainer','scrStats','scrAccount'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
 // переживает и системную кнопку «назад», и перезаход по истории.
 let navDepth = 0;
@@ -5666,14 +5691,16 @@ function prepTab(id){
   try{
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
-    else if(id === 'scrAccount'){ renderUsers(); renderTrainerCard(); }
-    else if(id === 'scrSettings'){
+    else if(id === 'scrAccount'){
+      renderUsers();
+      renderTrainerCard();
+      // звук и управление без рук переехали сюда из «Настроек»
       syncSettingsForm();
-      // звук и управление без рук живут здесь, поэтому состояние подтягиваем при входе
       fillLiveSoundCascade('st');
       $('hfHint').textContent = HF_HINTS[hfMode] || '';
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
+    else if(id === 'scrTrainer'){ renderClients(); pullAll(); }
     else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
   }catch(e){}
 }
@@ -5687,6 +5714,14 @@ function kbFocused(){
   const el = document.activeElement;
   return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea,select'));
 }
+// Кнопка «Клиенты» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
+// перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после
+// перезапуска.
+function syncDockTabs(){
+  const b = document.querySelector('.dock-btn[data-scr="scrTrainer"]');
+  if(b) setShown(b, trainerOn());
+}
+
 function syncDock(){
   setShown('dock', ROOT_TABS.includes(show._last) && !kbFocused());
 }
@@ -10547,6 +10582,7 @@ function clientSum(c){
 
 /* ---- экран аккаунта: карточка «Тренер» ---- */
 function renderTrainerCard(){
+  syncDockTabs();
   if(!$('tglTrainer')) return;
   $('tglTrainer').classList.toggle('on', !!(trainer && trainer.on));
   setShown('coachFields', !!(trainer && trainer.on));
@@ -10555,22 +10591,13 @@ function renderTrainerCard(){
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
   $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
-  const pub = pubbed();
-  const byStatus = st => pub.filter(p => p.pub.status === st).length;
-  $('coachCatSub').textContent = !pub.length ? 'Ничего не отправлено'
-    : [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
-       [byStatus('rejected'), 'не взяли']]
-      .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`).join(' · ');
-  const n = clients.length;
-  const live = clients.filter(c => clientSum(c).n > 0).length;
-  $('coachClientsSub').textContent = !n ? 'Пока никого'
-    : `${n} ${plural(n, 'человек', 'человека', 'человек')}` + (live ? ` · ${live} занимаются` : '');
+  $('coachClientsSub').textContent = 'Как её видит клиент';
 }
 
 /* ---- экран «Клиенты» ---- */
 function openClients(){
   renderClients();
-  show('scrTrainer');
+  goTab('scrTrainer');
   // Тренер открывает список, чтобы одним взглядом понять, всё ли идёт. Если
   // свежие данные приезжают только внутри карточки, этот взгляд врёт.
   pullAll();
@@ -11874,7 +11901,25 @@ function openStore(from){
   window.scrollTo(0, 0);
 }
 
+// Строка «Мои в каталоге» на экране тренировок: видна тренеру и говорит, что с
+// заявками, не заставляя открывать раздел ради «ничего не изменилось».
+function renderCatalogRow(){
+  if(!$('btnMyCatalog')) return;
+  const n = storeAll().length;
+  $('storeRowSub').textContent = n
+    ? `${n} ${plural(n, 'программа', 'программы', 'программ')} — подобрать под цель и уровень`
+    : 'Подобрать под цель и уровень';
+  setShown('btnMyCatalog', trainerOn());
+  const pub = pubbed();
+  const byStatus = st => pub.filter(p => p.pub.status === st).length;
+  $('coachCatSub').textContent = !pub.length ? 'Ничего не отправлено'
+    : [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
+       [byStatus('rejected'), 'не взяли']]
+      .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`).join(' · ');
+}
+
 function renderMine(){
+  renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
   const own = customPrograms.length;
   $('progCount').textContent = own
@@ -16120,18 +16165,17 @@ $('coachYears').oninput = async e => {
   await saveTrainer();
   pushProfileSoon();
 };
-$('btnClients').onclick = ()=> openClients();
 
-$('clsBackTop').onclick = ()=> goBackTo('scrAccount');
 // Ник над программой — это вход на страницу тренера, а не украшение: клиент,
 // получивший программу по ссылке, хочет знать, от кого она.
 $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
 $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
 $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
-$('mcBackTop').onclick = ()=> goBackTo('scrAccount');
-$('btnMyCatalog').onclick = ()=> openMyCatalog();
+$('mcBackTop').onclick = ()=> goBackTo('scrPrograms');
 // Своя страница — ровно тем же экраном, каким её видит клиент. Отдельный «просмотр
 // профиля» разошёлся бы с настоящим через месяц.
+$('btnToStore').onclick = ()=> openStore('scrPrograms');
+$('btnMyCatalog').onclick = ()=> openMyCatalog();
 $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
   : appAlert('Сначала включи режим тренера и укажи ник.');
 $('pubGives').oninput = e => { pubDraft.gives = e.target.value; };
