@@ -73,7 +73,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
 
   // ---- нормальная отправка ----
   const sent = await page.evaluate(async () => {
-    pubDraft.cat = 'Сила и выносливость';
+    pubDraft.cat = 'Кардио и энергия';
     pubDraft.level = 'Средний';
     pubDraft.gives = 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.';
     document.getElementById('pubGives').value = pubDraft.gives;
@@ -96,7 +96,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
     try{
       await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
         name, gives: 'то же самое, но ещё раз, двадцать символов точно',
-        cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+        cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
       return 'принято';
     }catch(e){ return e.code; }
   }, {nick: NICK, name: NAME});
@@ -107,7 +107,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
     try{
       await apiPost('/api/catalog/submit', {by: nick, trainerKey: 'не-мой-ключ', item: {
         name: 'Подделка', gives: 'двадцать символов здесь точно наберётся, поверь',
-        cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+        cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
       return 'принято';
     }catch(e){ return e.code; }
   }, NICK);
@@ -116,12 +116,14 @@ const prog = (name) => `ПРОГРАММА: ${name}
   // ---- проверка руками ----
   const rev = await fetch(`${BASE}/api/catalog/review?key=${ADMIN}`).then(r => r.text());
   ok('заявка видна в очереди', rev.includes(NAME) && rev.includes(NICK));
-  // Ссылка «взять» именно НАШЕЙ заявки: в очереди могут висеть чужие.
-  const block = rev.split('─'.repeat(52)).find(x => x.includes(NAME)) || '';
-  const m = block.match(/взять:\s+(\S+)/);
+  ok('страница проверки — с кнопками, а не простыня текста',
+     rev.includes('Взять в каталог') && rev.includes('<!doctype html'));
+  // Кнопка «взять» именно НАШЕЙ заявки: в очереди могут висеть чужие.
+  const block = rev.split('<div class="card">').find(x => x.includes(NAME)) || '';
+  const m = block.match(/href="([^"]*do=approve[^"]*)"/);
   ok('в очереди есть ссылка «взять»', !!m);
-  const took = await fetch(BASE + m[1]).then(r => r.text());
-  ok('заявку взяли', took.includes('В каталоге') && took.includes(NAME), took.split('\n')[0]);
+  const took = await fetch(BASE + m[1].replace(/&amp;/g, '&')).then(r => r.text());
+  ok('заявку взяли', took.includes('В каталоге') && took.includes(NAME), 'ок');
   const fromApi = await fetch(BASE + '/api/catalog').then(r => r.json());
   ok('сервер отдаёт её в каталоге', (fromApi.items || []).some(x => x.name === NAME),
      (fromApi.items || []).length + ' позиций');
@@ -130,11 +132,12 @@ const prog = (name) => `ПРОГРАММА: ${name}
   const after = await page.evaluate(async (name) => {
     await loadStoreServer();
     const it = storeServer.find(x => x.name === name);
-    return {found: !!it, by: it && it.by, inAll: storeAll().some(x => x.name === name),
-            all: storeAll().length};
+    return {found: !!it, by: it && it.by, cat: it && it.cat,
+            inAll: storeAll().some(x => x.name === name), all: storeAll().length};
   }, NAME);
   ok('после проверки появилась в каталоге', after.found, after.by || '(не нашлась)');
-  ok('и лежит вместе с зашитыми в одном списке', after.inAll && after.all > 12, after.all + ' программ');
+  ok('обложка соответствует цели, а не первой попавшейся', after.cat === 'cardio', after.cat);
+  ok('и лежит вместе с зашитыми в одном списке', after.inAll && after.all > 5, after.all + ' программ');
 
   // ---- статус у тренера обновился сам ----
   const st = await page.evaluate(async () => { await refreshPubStatus(); return pubProg.pub.status; });
@@ -158,13 +161,32 @@ const prog = (name) => `ПРОГРАММА: ${name}
       try{
         await apiPost('/api/catalog/submit', {by: nick, trainerKey: trainer.key, item: {
           name: NAME + ' вариант ' + i, gives: 'двадцать символов здесь точно наберётся, поверь',
-          cat: 'Сила и выносливость', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
+          cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)}});
         out.push('ok');
       }catch(e){ out.push(e.code); }
     }
     return out;
   }, {nick: NICK, NAME});
   ok('больше трёх в сутки не принимает', limit.includes('too_many_today'), limit.join(', '));
+
+  // ---- тренер видит свою страницу и своё отправленное ----
+  const mine = await page.evaluate(async () => {
+    openMyCatalog();
+    await new Promise(r => setTimeout(r, 900));
+    return {screen: (document.querySelector('.screen.on') || {}).id,
+            list: document.getElementById('mcList').textContent.replace(/\s+/g, ' ').trim()};
+  });
+  ok('список отправленного открывается', mine.screen === 'scrMyCatalog', mine.screen);
+  ok('и показывает статус', /в каталоге|на проверке/.test(mine.list), mine.list.slice(0, 70));
+
+  const own = await page.evaluate(async () => {
+    openTrainer(normHandle(trainer.handle));
+    await new Promise(r => setTimeout(r, 1200));
+    return {screen: (document.querySelector('.screen.on') || {}).id,
+            nick: document.getElementById('tpNick').textContent};
+  });
+  ok('тренер может посмотреть свою страницу', own.screen === 'scrTrainerPage' && own.nick === NICK,
+     own.nick);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

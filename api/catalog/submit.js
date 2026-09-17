@@ -14,9 +14,9 @@ const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('./../
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
-const GOALS = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот',
-  'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина',
-  'Восстановиться после родов', 'Кардио и энергия'];
+// Ключи целей — те же, что в STORE_LOOK у приложения. Именно КЛЮЧ, а не название:
+// по нему витрина подбирает обложку и по нему работают фильтры.
+const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
 const PER_DAY = 3;
 
@@ -53,6 +53,7 @@ module.exports = async (req, res) => {
   const cat   = String(it.cat || '');
   const level = String(it.level || '');
   const min   = Math.max(1, Math.min(180, Math.round(+it.min || 0)));
+  const cover = String(it.cover || '').slice(0, 90000) || null;
   const exCount = Math.round(+it.exCount || 0);
 
   const miss = [];
@@ -77,7 +78,7 @@ module.exports = async (req, res) => {
 
   const id = 'u' + rndId(7);
   await store.set(`c:${id}`, JSON.stringify({
-    id, by: handle, cat, level, min, name, gives, text,
+    id, by: handle, cat, level, min, name, gives, text, cover,
     exCount, status: 'pending', at: new Date().toISOString()
   }));
   await store.push('c:pending', id);
