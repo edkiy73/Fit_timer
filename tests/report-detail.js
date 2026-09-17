@@ -150,6 +150,24 @@ async function boot(b, label, errs, url){
   ok('на экране есть блок про правки', /Поменял в программе/.test(card));
   ok('на экране есть недели', /за четыре недели|эта/.test(card));
   ok('на экране есть разбивка по дням', /По дням/.test(card));
+  ok('видно, сколько длится вариант', /мин/.test(card), (card.match(/Пн[^А-Я]*/)||[''])[0].slice(0, 40));
+  ok('недели подписаны датами, а не «3 нед.»', /эта неделя/.test(card) && !/\d нед\./.test(card));
+
+  // Ложного роста быть не должно: при двойной прогрессии диапазон схлопывается в
+  // одно число уже на нулевом шаге, и раньше это попадало в отчёт как изменение.
+  const fake = await cp.evaluate(() => {
+    // Свежая программа: ни одного пройденного повышения, значит вырасти не могло
+    // ничего. Строка всё равно появлялась, потому что двойная прогрессия
+    // схлопывает диапазон в одно число уже на нулевом шаге.
+    const p = {id: 'fresh1', name: 'Свежая', progression: 2, stats: {completions: 0},
+      plans: [{days: ['Пн'], rounds: 1, roundRest: 60, exercises: [
+        {name: 'Двойная', type: 'reps', value: '12-15', sets: 3, weight: 6,
+         trackWeight: true, progOn: true, dualProg: true, repsCeil: 15, wStep: 2}]}]};
+    const r = buildReport(p);
+    return (r.ex || []).filter(x => x.n === 'Двойная');
+  });
+  ok('диапазон, схлопнутый прогрессией, не считается ростом', fake.length === 0,
+     fake.map(x => `${x.a}→${x.b}`).join() || 'нет строки');
 
   await tp.screenshot({path: __dirname + '/shot-report.png', fullPage: true});
   console.log('\npageerror:', errs.length ? errs : 'нет');

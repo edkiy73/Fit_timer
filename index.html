@@ -1372,6 +1372,9 @@
   .cl-grow b.ok{color:var(--ok)}
   .cl-grow b.warn{color:var(--warn)}
   .cl-grow b.muted{color:var(--muted);font-weight:400}
+  /* Было → стало: старое перечёркнуто и приглушено, новое — цветом блока. */
+  .cl-grow b s{color:var(--muted);font-weight:400;text-decoration-thickness:1px;opacity:.85}
+  .cl-grow b i{font-style:normal}
   /* Подпись блока внутри отчёта: отделяет «поменял» от «растёт», иначе строки
      читаются одним списком и смысл каждой теряется. */
   .cls-label{font-family:var(--font-display);font-weight:600;font-size:11px;
@@ -5832,6 +5835,12 @@ function buildStartMenu(){
       renderMine();         // список под ним уже перерисован к возврату
       if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
     }),
+    // Порядок пунктов тот же, что в меню карточки списка: одно и то же меню в двух
+    // местах обязано читаться одинаково, иначе рука промахивается.
+    mk(icon('copy') + 'Дублировать', async ()=>{
+      const c = await duplicateProgram(p);
+      openBuilder(c.id);
+    }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
     ...(trainerOn() ? [mk(icon('users') + 'Отправить клиенту', ()=> pickClientFor(p))] : []),
     ...(trainerOn() && !p.storeId ? [mk(icon('crown') + 'Предложить в каталог', ()=> openPublish(p))] : []),
@@ -8834,6 +8843,27 @@ function renderToday(){
   }
 }
 
+/* Дублировать программу. Обычный способ начать новую от готовой: у тренера —
+   вариант той же программы под другого клиента, у человека — «то же, но легче».
+   Всё, что привязано к ПРОЙДЕННОМУ, копия не наследует: статистика, счётчик
+   повышений, метка каталога, метка чужой ссылки. Копия — новая программа,
+   а не продолжение старой. */
+async function duplicateProgram(p){
+  const copy = JSON.parse(JSON.stringify(p));
+  copy.id = 'p' + Date.now();
+  copy.name = (p.name || 'Программа') + ' — копия';
+  copy.stats = {completions: 0};
+  delete copy.progStepsAdj; delete copy.progLast;
+  delete copy.storeId;      // не «из каталога»: это уже своя программа
+  delete copy.pub;          // заявка в каталог принадлежит оригиналу
+  delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны
+  delete copy.by; delete copy.byLink; delete copy.origEx;
+  customPrograms.push(copy);
+  await savePrograms();
+  renderMine();
+  return copy;
+}
+
 /* ================= ЭКСПОРТ / ИМПОРТ ПРОГРАММ ================= */
 /* ПРОГРАММУ В АДРЕС НЕ КЛАДЁМ. Раньше ссылка выглядела как ?import=FIT1.<вся
    программа в base64>, и на длинной программе это молча ломалось: Vercel отбивает
@@ -10579,6 +10609,16 @@ function renderClientReports(){
     b.textContent = value;
     if(tone) b.className = tone;
   };
+  // Было → стало. Старое перечёркнутым и приглушённым: стрелка между двумя
+  // одинаково яркими числами заставляет разбираться, где какое, а взгляд должен
+  // цепляться за то, что сейчас.
+  const change = (label, a, b, tone) => {
+    const el = add('cl-grow', '<span></span><b><s></s> <i></i></b>');
+    el.querySelector('span').textContent = label;
+    el.querySelector('s').textContent = a;
+    el.querySelector('i').textContent = b;
+    if(tone) el.querySelector('b').className = tone;
+  };
 
   // ---- 1. Сколько и когда ----
   const head = add('tr-sum cls-sum', '<b></b><small></small>');
@@ -10587,10 +10627,13 @@ function renderClientReports(){
   const bits = [];
   if(r.last) bits.push(`последняя ${humanDay(r.last)}`);
   if(r.streak > 1) bits.push(`серия ${r.streak}`);
-  if(r.sec > 0){
-    const m = Math.round(r.sec / 60);
-    // Часы, когда их уже много: «166667 мин» человек не читает, он спотыкается.
-    bits.push(m >= 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин всего` : `${m} мин всего`);
+  if(r.sec > 0 && r.n > 0){
+    // Средняя длительность тренировки. Раньше здесь стояло «всего» — сумма за все
+    // недели, число без применения: у тренера вопрос «сколько это у него занимает»,
+    // а не «сколько накопилось». У программы без вариантов это единственное место,
+    // где ответ вообще есть.
+    const m = Math.round(r.sec / r.n / 60);
+    if(m > 0 && m < 360) bits.push(`тренировка ~${m} мин`);
   }
   head.querySelector('small').textContent = bits.join(' · ');
 
@@ -10607,10 +10650,17 @@ function renderClientReports(){
       if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
     });
     const wrap = add('cl-weeks', '');
+    // Подписываем НАСТОЯЩИМИ числами, а не «3 нед.»: от какой точки отсчитывать
+    // эти недели, по надписи понять нельзя, и столбики читались как загадка.
+    const dm = t => t.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'}).replace('.', '');
     weeks.slice().reverse().forEach((n, i) => {
+      const back = 3 - i;                       // 3 недели назад … 0 = эта
+      const to = new Date(now); to.setDate(to.getDate() - back * 7);
+      const from = new Date(to); from.setDate(from.getDate() - 6);
       const w = document.createElement('div');
       w.className = 'cw' + (n ? ' on' : '');
-      w.innerHTML = `<b>${n}</b><small>${i === 3 ? 'эта' : (4 - i - 1) + ' нед.'}</small>`;
+      w.innerHTML = `<b>${n}</b><small></small>`;
+      w.querySelector('small').textContent = back === 0 ? 'эта неделя' : `${dm(from)} – ${dm(to)}`;
       wrap.appendChild(w);
     });
     const hint = add('field-hint', '');
@@ -10628,7 +10678,9 @@ function renderClientReports(){
   if(plans.length > 1){
     add('cls-label', 'По дням');
     plans.forEach(pl => line(pl.days || `вариант ${pl.i + 1}`,
-      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}` : 'ни разу',
+      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}`
+             + (pl.sec ? ` · ~${Math.round(pl.sec / 60)} мин` : '')
+           : 'ни разу',
       pl.n ? '' : 'muted'));
   }
 
@@ -10642,7 +10694,7 @@ function renderClientReports(){
     add('cls-label warn', 'Поменял в программе');
     (d.del || []).forEach(n => line(n, 'убрал', 'warn'));
     (d.add || []).forEach(n => line(n, 'добавил', 'warn'));
-    (d.mod || []).forEach(m => line(m.n, `${m.a} → ${m.b}`, 'warn'));
+    (d.mod || []).forEach(m => change(m.n, m.a, m.b, 'warn'));
   }
 
   // ---- 5. Рост нагрузки ----
@@ -10653,7 +10705,7 @@ function renderClientReports(){
     ex.forEach(e => {
       const pl = plans.find(x => x.i === e.p);
       const tag = [e.w ? 'разминка' : '', many && pl && pl.days ? pl.days : ''].filter(Boolean).join(' · ');
-      line(e.n + (tag ? ` (${tag})` : ''), `${e.a} → ${e.b}`, 'ok');
+      change(e.n + (tag ? ` (${tag})` : ''), e.a, e.b, 'ok');
     });
   }
 
@@ -10840,12 +10892,27 @@ function buildReport(p){
   const log = mine.slice(-30).map(h => ({d: h.d, p: +h.plan || 0, sec: h.sec || 0}));
 
   // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
-  const planStats = plans.map((pl, i) => ({
-    i, days: (pl.days || []).join('·'),
-    n: mine.filter(h => (+h.plan || 0) === i).length
-  }));
+  const planStats = plans.map((pl, i) => {
+    const own = mine.filter(h => (+h.plan || 0) === i);
+    // Сколько это занимает У КЛИЕНТА. Тренер планировал одно, а человек делает
+    // сорок минут вместо двадцати или пятнадцать вместо тридцати — и то и другое
+    // повод поговорить, но узнать об этом иначе неоткуда.
+    // Шесть часов — заведомо не тренировка, а забытый на ночь таймер или сбой.
+    // Одна такая запись сдвигает среднее так, что число перестаёт что-то значить.
+    const secs = own.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
+    return {
+      i, days: (pl.days || []).join('·'), n: own.length,
+      sec: secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
+    };
+  });
 
-  // 3. Рост — по всем вариантам, разминка помечена отдельно.
+  /* 3. Рост — по всем вариантам, разминка помечена отдельно.
+
+     Сравнивать СТРОКИ нельзя. При двойной прогрессии цель — одно число, а не
+     диапазон, поэтому «12-15» превращается в «12» уже на нулевом шаге: ничего не
+     выросло, а строки разные. В отчёт попадало «12-15 × 6 кг → 12 × 6 кг», и это
+     читалось как падение нагрузки там, где её вообще не трогали.
+     Сравниваем числа: выросла нижняя граница повторов или вес. */
   const ex = [];
   plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
     if(ex.length >= 40) return;
@@ -10853,7 +10920,8 @@ function buildReport(p){
     const now = e.warmup ? was : progressedRepsRange(p.id, e, p);
     const kgWas = hasWeight(e) ? (+e.weight || 0) : 0;
     const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
-    if(now === was && kgNow === kgWas) return;      // не выросло — не шумим
+    const grew = parseValue(now).min > parseValue(was).min || kgNow > kgWas;
+    if(!grew) return;
     ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || 'Упражнение',
              a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} кг` : ''),
              b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
@@ -11740,7 +11808,8 @@ async function refreshAllPubStatus(){
 
 function openPublish(p){
   pubProg = p;
-  pubFrom = show._last === 'scrMyCatalog' ? 'scrMyCatalog' : 'scrPrograms';
+  // Возврат туда, откуда пришли: из списка, со страницы программы или из «В каталоге».
+  pubFrom = ['scrMyCatalog', 'scrStart', 'scrPrograms'].includes(show._last) ? show._last : 'scrPrograms';
   pubDraft = Object.assign({cat: '', level: '', gives: ''}, p.pub && p.pub.draft || {});
   fillPublish();
   show('scrPublish');
@@ -11963,8 +12032,23 @@ function renderMine(){
       await savePrograms();
       renderMine();
     };
-    menu.append(bEdit, bOff, bShare);
+    // Копия и предложение в каталог — те же действия, что на экране программы.
+    // Действие, доступное в одном месте и недоступное в другом, человек считает
+    // сломанным, а не «не предусмотренным здесь».
+    const bCopy = document.createElement('button');
+    bCopy.innerHTML = icon('copy') + 'Дублировать';
+    bCopy.onclick = async ()=>{
+      closeAllMenus();
+      const c = await duplicateProgram(p);
+      openBuilder(c.id);
+    };
+    const bPub = document.createElement('button');
+    bPub.innerHTML = icon('crown') + 'Предложить в каталог';
+    bPub.onclick = ()=>{ closeAllMenus(); openPublish(p); };
+
+    menu.append(bEdit, bOff, bCopy, bShare);
     if(trainerOn()) menu.append(bClient);
+    if(trainerOn() && !p.storeId) menu.append(bPub);
     menu.append(bFile, bDel);
     more.onclick = e=>{ e.stopPropagation(); toggleMenu(menu); };
     const handle = document.createElement('button');

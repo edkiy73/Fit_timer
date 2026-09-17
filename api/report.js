@@ -53,7 +53,8 @@ module.exports = async (req, res) => {
     // журнал тренировок: дата, вариант, длительность
     log: arr(r.log, 30).map(x => ({d: str(x.d, 10), p: num(x.p, 20), sec: num(x.sec, 99999)})),
     // варианты программы и сколько раз каждый сделан
-    plans: arr(r.plans, 10).map(x => ({i: num(x.i, 20), days: str(x.days, 40), n: num(x.n, 9999)})),
+    plans: arr(r.plans, 10).map(x => ({i: num(x.i, 20), days: str(x.days, 40),
+                                       n: num(x.n, 9999), sec: num(x.sec, 99999)})),
     // рост нагрузки по всем вариантам, разминка помечена
     ex: arr(r.ex, 40).map(e => ({
       p: num(e.p, 20), w: e.w ? 1 : 0,
