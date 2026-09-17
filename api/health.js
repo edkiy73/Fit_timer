@@ -15,12 +15,34 @@
 const { store } = require('./_store');
 const { mailInfo } = require('./_mail');
 
+/* Метка сборки руками. Номер коммита Vercel подставляет сам, но на глаз он ничего
+   не говорит; дата и короткое имя правки говорят сразу, та ли это версия. Правится
+   вместе с номером кэша в sw.js — они про одно и то же. */
+const BUILT = '2026-09-17 · аккаунт с почтой, удаление не трогает каталог (кэш v11)';
+
 module.exports = async (req, res) => {
   const i = store.info();
   const m = mailInfo();
   const L = [];
 
   L.push('Fit Timer — состояние сервера');
+  L.push('');
+  /* Первым делом — ЧТО ЗАПУЩЕНО. Это первый вопрос при «я всё сделал, а ничего не
+     изменилось»: переменные и код попадают в функцию в момент сборки, поэтому
+     работающий деплой может ничего не знать о том, что уже лежит в репозитории.
+     Раньше это стояло в самом низу мелким шрифтом, и разбор начинался не с него. */
+  L.push(`Сейчас работает: ${i.build.onVercel
+    ? (i.build.commit ? 'коммит ' + i.build.commit : 'сборка без метки')
+      + (i.build.env ? ', ' + i.build.env : '')
+      + (i.build.region ? ', регион ' + i.build.region : '')
+    : 'локальный запуск (не Vercel)'}`);
+  L.push(`Собрано: ${BUILT}`);
+  L.push('');
+  L.push('Если коммит не тот, которого ты ждёшь, — Vercel ещё не пересобрал проект');
+  L.push('или собирает не ту ветку: Deployments, верхний деплой должен быть Ready');
+  L.push('и от нужной ветки. Settings → Git → Production Branch.');
+  L.push('');
+  L.push('— — — — — — — — — — — — — — — — —');
   L.push('');
 
   if(i.connected){
@@ -148,9 +170,6 @@ module.exports = async (req, res) => {
   L.push('— — — что видит сама функция — — —');
   L.push(`переменные про базу: ${i.seen.length ? i.seen.join(', ') : '(ни одной)'}`);
   L.push(`переменные про почту: ${m.seen.length ? m.seen.join(', ') : '(ни одной)'}`);
-  L.push(`сборка: ${i.build.onVercel ? (i.build.env || '?') : 'не Vercel'}`
-    + (i.build.commit ? `, коммит ${i.build.commit}` : '')
-    + (i.build.region ? `, регион ${i.build.region}` : ''));
   L.push('Значения переменных не показываются никогда — только имена.');
 
   res.statusCode = i.connected ? 200 : 503;

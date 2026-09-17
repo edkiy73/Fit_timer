@@ -1,25 +1,32 @@
-/* Почта тренера и удаление страницы.
+/* Аккаунт по почте и два объёма удаления.
 
-   Проверяем то, ради чего почта заведена: человек переставил приложение, ключа
-   правки у него больше нет, ник занят им же — и по коду с почты страница
-   возвращается вместе с полями. И второе: «удалить страницу» действительно
-   стирает её на СЕРВЕРЕ, а не только прячет на телефоне.
+   Аккаунт один, и ник тренера принадлежит ему: проверяем, что он привязывается
+   при входе, возвращается на пустом телефоне вместе с полями страницы и что
+   прежний ключ при переезде перестаёт работать.
+
+   И главное про удаление — что оно НЕ трогает каталог. «Убрать данные о себе»
+   очищает страницу и оставляет ник и программы; удаление аккаунта уносит ещё
+   аккаунт и ссылки подопечным, но программы в каталоге остаются и там.
 
    Запуск:  node tests/dev-server.js 8124
-            node tests/trainer-mail.js */
+            node tests/account-flow.js */
 
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
 
 const BASE = process.env.FIT_URL || 'http://localhost:8124';
+const ADMIN = process.env.ADMIN_KEY || 'testadminkey123456';
 const CHROME = process.env.FIT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const PROG = `ПРОГРАММА: Сила дома
+// Название своё на каждый прогон: хранилище между запусками не чистится, а
+// одобренная программа остаётся в каталоге — два прогона давали в нём двойника.
+const PNAME = 'Сила дома ' + Math.random().toString(36).slice(2, 6);
+const PROG = `ПРОГРАММА: ${PNAME}
 ДНИ: Пн
 КРУГИ: 1
 ОТДЫХ МЕЖДУ КРУГАМИ: 10
@@ -90,6 +97,16 @@ async function boot(b, label, errs, url){
   });
   ok('заявка в каталог ушла', sub.status === 'pending', sub.status);
 
+  // Берём её в каталог: удаление проверяем на том, что в каталоге УЖЕ лежит, —
+  // на заявке, которую никто не взял, доказывать нечего.
+  await fetch(BASE + '/api/admin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
+    body: JSON.stringify({action: 'approve', id: sub.id})
+  });
+  const live = await fetch(BASE + '/api/catalog').then(r => r.json());
+  ok('и лежит в каталоге', (live.items || []).some(x => x.id === sub.id));
+
   const bind = await one.evaluate(async (email) => {
     const s = await apiPost('/api/auth', {action: 'send', email});
     const v = await apiPost('/api/auth', {action: 'verify', email, code: s.devCode,
@@ -97,7 +114,8 @@ async function boot(b, label, errs, url){
     return {s, v};
   }, MAIL);
   ok('код пришёл', !!bind.s.devCode);
-  ok('почта привязана к своему нику', bind.v.linked === true && bind.v.handle === NICK, bind.v.handle);
+  ok('аккаунт заведён этим же кодом', bind.v.fresh === true);
+  ok('ник привязался к аккаунту', bind.v.handle === NICK, bind.v.handle);
   ok('ключ при этом НЕ менялся', !bind.v.trainerKey);
 
   /* ---- телефон второй: пусто, но почта та же ---- */
@@ -107,9 +125,10 @@ async function boot(b, label, errs, url){
     return await apiPost('/api/auth', {action: 'verify', email, code: s.devCode,
                                        handle: '', trainerKey: ''});
   }, MAIL);
-  ok('страница вернулась на новый телефон', back.restored === true && back.handle === NICK, back.handle);
+  ok('аккаунт не заводится второй раз', back.fresh === false);
+  ok('ник вернулся на новый телефон', back.handle === NICK, back.handle);
   ok('выдан новый ключ', !!back.trainerKey && back.trainerKey !== key1);
-  ok('поля приехали вместе с ником',
+  ok('поля страницы приехали вместе с ником',
      back.trainer && back.trainer.name === 'Лена' && back.trainer.years === 8,
      `${back.trainer && back.trainer.name}, стаж ${back.trainer && back.trainer.years}`);
 
@@ -123,37 +142,63 @@ async function boot(b, label, errs, url){
   ok('прежний ключ перестал работать', old === 'handle_taken', old);
 
   const wrong = await two.evaluate(async (email) => {
-    const s = await apiPost('/api/auth', {action: 'send', email});
+    await apiPost('/api/auth', {action: 'send', email});
     try{ await apiPost('/api/auth', {action: 'verify', email, code: '000000'}); return 'прошло'; }
     catch(e){ return e.code; }
   }, MAIL);
   ok('чужой код не пускает', wrong === 'bad_code' || wrong === 'code_expired', wrong);
 
-  /* ---- удаление страницы ---- */
+  /* ---- «убрать данные о себе»: страница пустеет, каталог цел ---- */
   await two.evaluate(async (r) => {
     trainer = {on: true, handle: r.handle, key: r.trainerKey, name: r.trainer.name,
-               about: r.trainer.about, years: r.trainer.years, links: r.trainer.links,
-               email: r.email};
+               about: r.trainer.about, years: r.trainer.years, links: r.trainer.links};
     await saveTrainer();
-    clients = [{id: 'c1', name: 'Марина', progs: [{pid: null, name: 'Сила дома',
+    account.email = r.email; await saveAccount();
+    clients = [{id: 'c1', name: 'Марина', progs: [{pid: null, name: 'программа',
                 link: {id: r.linkId, key: 'неважно'}, reports: []}]}];
     await saveClients();
   }, Object.assign({}, back, {email: MAIL, linkId}));
 
-  const gone = await two.evaluate(async () => {
-    await forgetTrainer();
+  const soft = await two.evaluate(async () => {
+    await forgetMe('trainer');
+    const page = await apiFetch('/api/trainer/' + encodeURIComponent(trainer.handle));
+    const cat = await apiFetch('/api/catalog');
+    let link = 'есть';
+    try{ await apiFetch('/api/p/' + encodeURIComponent(clients[0].progs[0].link.id)); }
+    catch(e){ link = e.code; }
+    return {name: page.name, about: page.about, years: page.years,
+            mine: cat.items.filter(x => x.by === trainer.handle).length, link};
+  });
+  ok('страница осталась, но пустая',
+     soft.name === '' && soft.about === '' && soft.years == null,
+     `имя «${soft.name}», стаж ${soft.years}`);
+  ok('программа из каталога НЕ удалена', soft.mine === 1, soft.mine + ' в каталоге');
+  ok('ссылка подопечному цела', soft.link === 'есть', soft.link);
+
+  const stillMine = await two.evaluate(async () => {
+    trainer.name = 'Лена снова';
+    try{ await pushProfile(); }catch(e){}
+    const page = await apiFetch('/api/trainer/' + encodeURIComponent(trainer.handle));
+    return page.name;
+  });
+  ok('ник остался за человеком — страницу можно заполнить заново',
+     stillMine === 'Лена снова', stillMine);
+
+  /* ---- удаление аккаунта: уносит аккаунт и ссылки, каталог не трогает ---- */
+  const hard = await two.evaluate(async () => {
+    await forgetMe('all');
     const out = {};
-    try{ await apiFetch('/api/trainer/' + encodeURIComponent(trainer.handle)); out.page = 'есть'; }
-    catch(e){ out.page = e.code; }
+    const page = await apiFetch('/api/trainer/' + encodeURIComponent(trainer.handle));
+    out.name = page.name;
     try{ await apiFetch('/api/p/' + encodeURIComponent(clients[0].progs[0].link.id)); out.link = 'есть'; }
     catch(e){ out.link = e.code; }
     const cat = await apiFetch('/api/catalog');
     out.mine = cat.items.filter(x => x.by === trainer.handle).length;
     return out;
   });
-  ok('страница тренера стёрта', gone.page === 'not_found', gone.page);
-  ok('отправленная ссылка стёрта', gone.link === 'not_found', gone.link);
-  ok('заявки в каталоге больше нет', gone.mine === 0, gone.mine);
+  ok('со страницы снова всё убрано', hard.name === '', hard.name);
+  ok('ссылка подопечному стёрта', hard.link === 'not_found', hard.link);
+  ok('и ТУТ программа из каталога осталась', hard.mine === 1, hard.mine + ' в каталоге');
 
   const retake = await two.evaluate(async () => {
     try{
@@ -166,12 +211,12 @@ async function boot(b, label, errs, url){
 
   const relogin = await two.evaluate(async (email) => {
     const s = await apiPost('/api/auth', {action: 'send', email});
-    try{ await apiPost('/api/auth', {action: 'verify', email, code: s.devCode}); return 'прошло'; }
-    catch(e){ return e.code; }
+    return await apiPost('/api/auth', {action: 'verify', email, code: s.devCode});
   }, MAIL);
-  ok('по стёртой почте не войти', relogin === 'no_handle' || relogin === 'not_found', relogin);
+  ok('аккаунт удалён — вход заводит его заново, без ника',
+     relogin.fresh === true && !relogin.handle, `fresh=${relogin.fresh}, ник «${relogin.handle}»`);
 
-  /* ---- то же самое руками, через попап ---- */
+  /* ---- то же самое руками, через попап входа ---- */
   const NICK2 = '@olga.' + Math.random().toString(36).slice(2, 8);
   const MAIL2 = 'olga.' + Math.random().toString(36).slice(2, 8) + '@example.com';
   const three = await boot(b, 'телефон 3', errs);
@@ -185,34 +230,41 @@ async function boot(b, label, errs, url){
   await three.waitForTimeout(500);
   await three.evaluate(()=> switchMoreTab('coach'));
   await three.waitForTimeout(300);
-  ok('строка почты видна в табе «Тренер»', await three.isVisible('#btnCoachMail'));
+  ok('без аккаунта тренеру про это сказано', await three.isVisible('#coachNoAcc'));
+  ok('отдельного входа для тренеров нет', !(await three.$('#btnCoachMail')));
 
-  await three.click('#btnCoachMail');
+  await three.evaluate(()=> switchMoreTab('acc'));
+  await three.waitForTimeout(300);
+  await three.click('#btnLoginRow');
   await three.waitForTimeout(400);
   ok('попап открылся на первом шаге',
-     await three.isVisible('#mailAddr') && !(await three.isVisible('#mailCode')));
+     await three.isVisible('#loginEmail') && !(await three.isVisible('#loginCode')));
 
-  await three.fill('#mailAddr', 'не почта');
-  await three.click('#mailGo');
+  await three.fill('#loginEmail', 'не почта');
+  await three.click('#loginGo');
   await three.waitForTimeout(400);
   ok('кривой адрес не отправляется',
-     /опечатка/.test(await three.textContent('#mailErr')), await three.textContent('#mailErr'));
+     /опечатка/.test(await three.textContent('#loginErr')), await three.textContent('#loginErr'));
 
-  await three.fill('#mailAddr', MAIL2);
-  await three.click('#mailGo');
+  await three.fill('#loginEmail', MAIL2);
+  await three.click('#loginGo');
   await three.waitForTimeout(700);
-  ok('второй шаг — код', await three.isVisible('#mailCode'));
-  ok('кнопка сменила подпись', (await three.textContent('#mailGo')) === 'Войти',
-     await three.textContent('#mailGo'));
+  ok('второй шаг — код', await three.isVisible('#loginCode'));
+  ok('кнопка сменила подпись', (await three.textContent('#loginGo')) === 'Войти',
+     await three.textContent('#loginGo'));
 
-  await three.click('#mailGo');
+  await three.click('#loginGo');
   await three.waitForTimeout(900);
   if(await three.isVisible('#dlgOk')){ await three.click('#dlgOk'); await three.waitForTimeout(400); }
-  const bound2 = await three.evaluate(()=> trainer.email || '');
-  ok('почта записалась в тренера', bound2 === MAIL2, bound2);
-  ok('попап закрылся', !(await three.isVisible('#mailCode')));
-  ok('подпись строки стала адресом',
-     (await three.textContent('#coachMailSub')) === MAIL2, await three.textContent('#coachMailSub'));
+  const bound2 = await three.evaluate(()=> account.email || '');
+  ok('аккаунт записался', bound2 === MAIL2, bound2);
+  ok('попап закрылся', !(await three.isVisible('#loginCode')));
+  const nickKept = await three.evaluate(()=> trainer.handle);
+  ok('ник тренера привязался к аккаунту', nickKept === NICK2, nickKept);
+
+  await three.evaluate(()=> switchMoreTab('coach'));
+  await three.waitForTimeout(300);
+  ok('напоминание про аккаунт пропало', !(await three.isVisible('#coachNoAcc')));
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;
