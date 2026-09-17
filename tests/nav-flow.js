@@ -1,6 +1,6 @@
 /* Навигация: четыре раздела у обычного человека, пять у тренера.
 
-   «Клиенты» появляются вместе с режимом тренера и исчезают вместе с ним: пока его
+   «Подопечные» появляются вместе с режимом тренера и исчезают вместе с ним: пока его
    нет, кнопка занимала бы место под раздел, в который незачем заходить. «Аккаунт» и
    «Настройки» слиты в «Ещё» — они делились не по смыслу, а по истории, и человек
    искал нужное в двух местах по очереди. Каталог не в доке: туда заходят три раза
@@ -39,7 +39,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   ok('четыре раздела без режима тренера', plain.length === 4, plain.join(' · '));
   ok('«Ещё» вместо «Аккаунта» и «Настроек»',
      plain.includes('Ещё') && !plain.includes('Настройки') && !plain.includes('Аккаунт'));
-  ok('«Клиентов» не видно', !plain.includes('Клиенты'));
+  ok('«Подопечных» не видно', !plain.includes('Подопечные'));
 
   // всё из настроек доехало в «Ещё»
   await page.evaluate(() => goTab('scrAccount'));
@@ -75,16 +75,39 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   await page.waitForTimeout(500);
   const coach = await tabs(page);
   ok('у тренера пять разделов', coach.length === 5, coach.join(' · '));
-  ok('появились «Клиенты»', coach.includes('Клиенты'));
+  ok('появились «Подопечные»', coach.includes('Подопечные'));
 
+  // Строка заявок показывается, только когда заявки ЕСТЬ: «ничего не отправлено»
+  // сообщает ровно то, что строку не надо было показывать.
   await page.evaluate(() => goTab('scrPrograms'));
   await page.waitForTimeout(400);
-  ok('и заявки в каталог на «Тренировках»', await page.isVisible('#btnMyCatalog'));
+  ok('без заявок строки нет даже у тренера', !(await page.isVisible('#btnMyCatalog')));
+  await page.evaluate(async () => {
+    const r = parseProgramText('ПРОГРАММА: Проба\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
+    const p = r.program || r; p.id = 'navp1'; p.pub = {id: 'u1', status: 'pending'};
+    customPrograms.push(p); await savePrograms();
+    renderMine();
+  });
+  await page.waitForTimeout(300);
+  ok('с заявкой строка появляется', await page.isVisible('#btnMyCatalog'));
 
-  // «Клиенты» — корневой раздел: док на месте, панели действий нет
+  // «Ещё» разделено вкладками — иначе одиннадцать карточек подряд читаются как свалка
+  await page.evaluate(() => goTab('scrAccount'));
+  await page.waitForTimeout(500);
+  const moreTabs = await page.evaluate(() =>
+    [...document.querySelectorAll('#moreTabs .tab')].map(b => b.textContent.trim()));
+  ok('«Ещё» поделено вкладками', moreTabs.length === 4, moreTabs.join(' · '));
+  ok('открывается на первой', await page.evaluate(() =>
+    !document.getElementById('morePane_me').classList.contains('hidden')
+    && document.getElementById('morePane_acc').classList.contains('hidden')));
+  await page.click('#moreTabs .tab[data-more="coach"]');
+  await page.waitForTimeout(250);
+  ok('вкладка тренера открывается', await page.isVisible('#coachHandle'));
+
+  // «Подопечные» — корневой раздел: док на месте, панели действий нет
   await page.evaluate(() => goTab('scrTrainer'));
   await page.waitForTimeout(600);
-  ok('«Клиенты» открываются из дока', (await screen(page)) === 'scrTrainer', await screen(page));
+  ok('«Подопечные» открываются из дока', (await screen(page)) === 'scrTrainer', await screen(page));
   ok('док на них виден', await page.isVisible('.dock'));
   ok('кнопки «назад» у корневого раздела нет', !(await page.isVisible('#clsBackTop')));
 
@@ -101,7 +124,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   });
   await page.waitForTimeout(300);
   const off = await tabs(page);
-  ok('без режима тренера «Клиенты» снова скрыты', !off.includes('Клиенты'), off.join(' · '));
+  ok('без режима тренера «Подопечные» снова скрыты', !off.includes('Подопечные'), off.join(' · '));
 
   await page.evaluate(() => goTab('scrPrograms'));
   await page.waitForTimeout(400);

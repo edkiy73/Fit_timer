@@ -1357,7 +1357,7 @@
   .user-row .ub b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .user-row .ub small{color:var(--muted);font-size:12.5px}
   .user-row .ue{flex:none;background:none;border:1px solid var(--line);border-radius:10px;width:36px;height:36px;color:var(--muted);cursor:pointer}
-  /* Клиент в картотеке. Форма та же, что у строки профиля: это тоже «человек в
+  /* Подопечный в картотеке. Форма та же, что у строки профиля: это тоже «человек в
      списке», и заводить для него второй визуальный язык незачем. Состояние —
      СЛОВОМ справа, а не одним оттенком: «молчит 12 дней» видно, серую строку нет. */
   .cl-row{
@@ -2675,8 +2675,11 @@
   .danger-zone .link-btn:active{background:var(--danger-soft)}
 
   /* главное действие экрана «Тренировки» */
-  .add-prog{margin-bottom:var(--sp-4)}
-  .add-prog svg{width:18px;height:18px}
+  /* Экран «Тренировки»: шапка, каталог, заявки, список. Ритм задаётся здесь, потому
+     что это не карточка и общего gap у экрана нет: .store-cta несёт свой отступ
+     сверху, а у строки заявок и у списка его не было — они слипались с каталогом. */
+  #btnMyCatalog{margin-top:var(--sp-2)}
+  #mineList{margin-top:var(--gap-main)}
 
 
   @media (prefers-reduced-motion:reduce){
@@ -2991,27 +2994,31 @@
 
   <!-- РАЗДЕЛ «ТРЕНИРОВКИ»: все программы и создание новой -->
   <section class="screen root" id="scrPrograms">
+    <!-- «Добавить» переехало в шапку той же кнопкой, что «＋» на «Прогрессе»: оно
+         нужно раз в несколько недель, а широкая кнопка сверху каждый раз отодвигала
+         вниз то, ради чего сюда заходят, — сам список программ. -->
     <div class="page-head">
       <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
+      <div class="ph-tools">
+        <button class="add-btn" id="btnAddProgram" title="Добавить программу"></button>
+      </div>
     </div>
-    <!-- Главное действие экрана стоит первым и выглядит как действие. Раньше их было
-         два: незаметный «＋» в шапке и бледная пунктирная кнопка под списком, до которой
-         на длинном списке ещё надо было доскроллить. -->
-    <button class="btn-primary add-prog" id="btnAddProgram"><span data-icon="plus"></span>Добавить программу</button>
 
     <!-- Каталог ищут здесь, а не на главной: за готовой программой идут тогда, когда
-         смотрят на свои и понимают, что надоели. Отдельной кнопкой в доке он не стоит
-         — туда заходят три раза за всё время, а место в доке постоянное. -->
-    <button type="button" class="way-row" id="btnToStore">
-      <span class="wr-ico" data-icon="sparkle"></span>
-      <span class="wr-txt"><b>Готовые программы</b><small id="storeRowSub">Каталог: подобрать под цель и уровень</small></span>
+         смотрят на свои и понимают, что надоели. Кнопка та же, что на главной, —
+         один вход, узнаваемый в двух местах. -->
+    <button class="store-cta" id="btnToStore">
+      <span class="sc-ico" id="storeIcoProg"></span>
+      <span class="sc-txt"><b>Каталог программ</b><small id="storeRowSub">Тренировки от тренеров</small></span>
+      <span class="sc-arrow" id="storeArrowProg"></span>
     </button>
 
     <!-- Заявки в каталог — про программы, а не про людей, поэтому лежат здесь, а не
-         у клиентов. Появляются вместе с режимом тренера. -->
+         у подопечных. Показываются, только когда заявки есть: строка «ничего не
+         отправлено» сообщает лишь о том, что её не надо было показывать. -->
     <button type="button" class="way-row hidden" id="btnMyCatalog">
       <span class="wr-ico" data-icon="crown"></span>
-      <span class="wr-txt"><b>Мои в каталоге</b><small id="coachCatSub">Ничего не отправлено</small></span>
+      <span class="wr-txt"><b>Заявки в каталог</b><small id="coachCatSub"></small></span>
     </button>
 
     <div id="mineList"></div>
@@ -3041,7 +3048,7 @@
              сокращением «Откл» — иначе рядом с «3 упражнения» и «3 круга» читалось
              как оборванное. Без чипа выключенную программу видно только по пункту меню. -->
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
-        <!-- от кого программа. Клиент тренера должен видеть это на самом видном месте:
+        <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
         <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
@@ -4093,122 +4100,28 @@
   <section class="screen root" id="scrAccount">
     <div class="page-head"><h1>Ещё</h1></div>
 
-    <!-- Профили — первое, за чем сюда приходят: чаще меняют профиль, чем читают
-         про подписку. Все строки одинаковые, активная помечена — раньше текущий
-         профиль был отдельной карточкой сверху и не читался как «выбранный». -->
+    <!-- Раздел собрал всё, что настраивают редко, и стал слишком длинным, чтобы
+         в нём что-то находить: одиннадцать карточек подряд читаются как свалка.
+         Вкладки делят его по тому, о чём человек в этот момент думает — «я»,
+         «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
+         внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
+    <div class="tabs seg" id="moreTabs">
+      <button class="tab act" data-more="me">Профиль</button>
+      <button class="tab" data-more="sound">Звук</button>
+      <button class="tab" data-more="coach">Тренер</button>
+      <button class="tab" data-more="acc">Аккаунт</button>
+    </div>
+
+    <div class="tab-pane" id="morePane_me">
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
       <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
       <p class="field-hint" id="usersHint"></p>
     </div>
-
-    <!-- Аккаунт и подписка в одной карточке. Она читается по-разному в двух состояниях,
-         и это важнее любой вёрстки: без аккаунта человек должен понять, что ничего не
-         сломано и регистрироваться не нужно — данные лежат на его телефоне, а аккаунт
-         появляется вместе с подпиской. Раньше карточка называлась «Данные аккаунта»
-         и показывала «Войти» и «Удалить аккаунт» человеку, у которого аккаунта нет. -->
-    <!-- Тариф — своя карточка. Раньше он был первой строкой «Аккаунта», и получалось,
-         что в одной карточке идут подряд четыре разговора: тариф, объяснение про
-         аккаунт, вход и удаление всех данных. Читалось это как склад несвязанных
-         кусков, а не как один блок. -->
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Тариф</p></div>
-      <button type="button" class="pref-row row-link" id="btnPlanCard">
-        <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
-        <span class="nr-chev" data-icon="chevR"></span>
-      </button>
     </div>
 
-    <!-- Тренер. Режим выключен по умолчанию: подавляющему большинству он не нужен,
-         и карточка не должна выглядеть как незаполненная анкета. Включил — появились
-         ник и вход в картотеку клиентов. -->
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Тренер</p></div>
-      <div class="pref-row">
-        <span>Я тренирую других<small>Отправлять свои программы клиентам по ссылке и видеть, кто занимается</small></span>
-        <button class="switch" id="tglTrainer"></button>
-      </div>
-      <div class="stack hidden" id="coachFields">
-        <div class="field">
-          <label>Ник</label>
-          <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
-          <p class="field-hint">Клиент увидит его рядом с программой — так он поймёт, от кого она.</p>
-          <p class="field-hint" id="coachHandleErr"></p>
-        </div>
-        <!-- Сначала «кто ты», потом «где тебя найти». Клиент открывает страницу
-             тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
-             на это в последнюю очередь. -->
-        <div class="field">
-          <label>О себе</label>
-          <textarea id="coachAbout" rows="3" maxlength="400" placeholder="С кем работаешь и в чём помогаешь"></textarea>
-          <p class="field-hint">Это увидит клиент на твоей странице. До 400 символов.</p>
-        </div>
-        <div class="field">
-          <label>Стаж, лет</label>
-          <input type="number" id="coachYears" min="0" max="60" inputmode="numeric" placeholder="—">
-        </div>
-        <div class="field">
-          <label>Ссылка на себя</label>
-          <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
-          <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
-        </div>
-        <!-- Своя страница глазами клиента. Тренер правит поля вслепую, если не видит
-             результата, — а именно по этой странице его и выбирают.
-             Клиенты и заявки в каталог отсюда ушли: клиенты стали разделом в доке,
-             заявки — частью «Тренировок», где и лежат сами программы. -->
-        <button type="button" class="pref-row row-link" id="btnMyPage">
-          <span><span>Моя страница</span><small id="coachClientsSub">Как её видит клиент</small></span>
-          <span class="nr-chev" data-icon="chevR"></span>
-        </button>
-      </div>
-    </div>
-
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
-
-      <!-- аккаунта нет: одна мысль обычным абзацем и один способ действия строкой.
-           Рамка-«заметка» вокруг объяснения делала из него отдельный объект, а
-           широкая кнопка «Войти» звала сильнее, чем того стоит вход для человека,
-           который аккаунт никогда не заводил. -->
-      <div class="stack hidden" id="accNone">
-        <p class="field-hint">Всё хранится на этом телефоне. Аккаунт нужен для подписки и переезда на новый.</p>
-        <div class="ways">
-          <button type="button" class="way-row" id="btnLoginRow">
-            <span class="wr-ico" data-icon="user"></span>
-            <span class="wr-txt"><b>Войти в аккаунт</b><small>Если он уже есть — с прошлого телефона или после переустановки</small></span>
-          </button>
-        </div>
-      </div>
-
-      <!-- аккаунт есть -->
-      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
-      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
-      <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
-      <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
-    </div>
-
-    <!-- Требование сторов и 152-ФЗ — стереть всё, не переустанавливая приложение.
-         Отдельной карточкой: удаление всех данных — не часть разговора про аккаунт,
-         особенно когда аккаунта нет и удалять предлагается тренировки. -->
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title" id="wipeCardTitle">Удаление данных</p></div>
-      <div class="danger-zone">
-        <p id="wipeNote"></p>
-        <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
-      </div>
-    </div>
-
-    <!-- ПЕРЕЕХАЛО ИЗ «НАСТРОЕК». Экраны разделили не по смыслу, а по истории:
-         тема жила в профиле, звук в настройках, профили в аккаунте — и человек
-         искал нужное в двух местах по очереди. Теперь один раздел «Ещё»: всё, что
-         настраивают редко, лежит вместе, а освободившееся место в доке ушло
-         «Клиентам». -->
-    <div class="page-head"><h1>Настройки</h1></div>
-
-    <!-- Звук и управление без рук стоят первыми и открыты сразу. Раньше они жили на
-         экране программы под сворачиваемыми заголовками: настраивать их приходилось
-         каждый раз перед стартом, хотя это настройки устройства, а не программы. -->
+    <div class="tab-pane hidden" id="morePane_sound">
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Звук и голос</p></div>
       <div class="prefs stack">
@@ -4243,6 +4156,83 @@
         <p class="field-hint" id="hfHint"></p>
       </div>
     </div>
+    </div>
+
+    <div class="tab-pane hidden" id="morePane_coach">
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Тренер</p></div>
+      <div class="pref-row">
+        <span>Я тренирую других<small>Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
+        <button class="switch" id="tglTrainer"></button>
+      </div>
+      <div class="stack hidden" id="coachFields">
+        <div class="field">
+          <label>Ник</label>
+          <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
+          <p class="field-hint">Подопечный увидит его рядом с программой — так он поймёт, от кого она.</p>
+          <p class="field-hint" id="coachHandleErr"></p>
+        </div>
+        <!-- Сначала «кто ты», потом «где тебя найти». Подопечный открывает страницу
+             тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
+             на это в последнюю очередь. -->
+        <div class="field">
+          <label>О себе</label>
+          <textarea id="coachAbout" rows="3" maxlength="400" placeholder="С кем работаешь и в чём помогаешь"></textarea>
+          <p class="field-hint">Это увидит подопечный на твоей странице. До 400 символов.</p>
+        </div>
+        <div class="field">
+          <label>Стаж, лет</label>
+          <input type="number" id="coachYears" min="0" max="60" inputmode="numeric" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Ссылка на себя</label>
+          <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
+          <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
+        </div>
+        <!-- Своя страница глазами подопечного. Тренер правит поля вслепую, если не видит
+             результата, — а именно по этой странице его и выбирают.
+             Подопечные и заявки в каталог отсюда ушли: подопечные стали разделом в доке,
+             заявки — частью «Тренировок», где и лежат сами программы. -->
+        <button type="button" class="pref-row row-link" id="btnMyPage">
+          <span><span>Моя страница</span><small id="coachClientsSub">Как её видит подопечный</small></span>
+          <span class="nr-chev" data-icon="chevR"></span>
+        </button>
+      </div>
+    </div>
+    </div>
+
+    <div class="tab-pane hidden" id="morePane_acc">
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Тариф</p></div>
+      <button type="button" class="pref-row row-link" id="btnPlanCard">
+        <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
+        <span class="nr-chev" data-icon="chevR"></span>
+      </button>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
+
+      <!-- аккаунта нет: одна мысль обычным абзацем и один способ действия строкой.
+           Рамка-«заметка» вокруг объяснения делала из него отдельный объект, а
+           широкая кнопка «Войти» звала сильнее, чем того стоит вход для человека,
+           который аккаунт никогда не заводил. -->
+      <div class="stack hidden" id="accNone">
+        <p class="field-hint">Всё хранится на этом телефоне. Аккаунт нужен для подписки и переезда на новый.</p>
+        <div class="ways">
+          <button type="button" class="way-row" id="btnLoginRow">
+            <span class="wr-ico" data-icon="user"></span>
+            <span class="wr-txt"><b>Войти в аккаунт</b><small>Если он уже есть — с прошлого телефона или после переустановки</small></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- аккаунт есть -->
+      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small></span></div>
+      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически<small id="accRenewSub"></small></span><button class="switch" id="tglRenew"></button></div>
+      <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+      <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
+    </div>
 
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Синхронизация</p></div>
@@ -4268,10 +4258,6 @@
       </div>
       <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
     </div>
-
-    <!-- Служебный блок на время, пока запросы к нейросети идут через ключ.
-         С серверным ИИ он исчезнет целиком, поэтому здесь только поле и две кнопки —
-         разворачивать инструкции в интерфейсе, который скоро удалят, незачем. -->
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Ключ ИИ</p></div>
       <div class="field">
@@ -4283,10 +4269,6 @@
         <button type="button" class="btn-quiet" id="ueGeminiDiag">Диагностика</button>
       </div>
     </div>
-
-    <!-- Обязательные тексты. Три отдельные строки, а не одна общая: и человеку
-         понятнее, куда он идёт, и в консолях магазинов на политику нужна прямая
-         ссылка, а не «где-то в настройках». -->
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Данные и правила</p></div>
       <div class="ways">
@@ -4304,6 +4286,15 @@
         </button>
       </div>
     </div>
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="wipeCardTitle">Удаление данных</p></div>
+      <div class="danger-zone">
+        <p id="wipeNote"></p>
+        <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
+      </div>
+    </div>
+    </div>
+
   </section>
 
   <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
@@ -4371,11 +4362,11 @@
     </div>
   </section>
 
-  <!-- КЛИЕНТЫ ТРЕНЕРА. Сервера нет: картотека локальная, а связь с клиентом держится
+  <!-- ПОДОПЕЧНЫЕ ТРЕНЕРА. Сервера нет: картотека локальная, а связь с подопечным держится
        на ссылках, которые в приложении уже работают — программа уезжает ссылкой FIT1,
        отчёт возвращается ссылкой FITR1. Подробности — docs/trainer-ui.md. -->
   <section class="screen root" id="scrTrainer">
-    <div class="page-head"><h1>Клиенты</h1></div>
+    <div class="page-head"><h1>Подопечные</h1></div>
 
     <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
          идёт. Список — уже подробности. -->
@@ -4386,13 +4377,13 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Список</p></div>
       <div class="list-rows" id="clsList"></div>
-      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b>Добавить клиента</b></button>
+      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b>Добавить подопечного</b></button>
       <p class="field-hint" id="clsHint"></p>
     </div>
 
   </section>
 
-  <!-- СТРАНИЦА ТРЕНЕРА глазами клиента. Раньше это был попап с одним абзацем: он
+  <!-- СТРАНИЦА ТРЕНЕРА глазами подопечного. Раньше это был попап с одним абзацем: он
        отвечал «кто это», но не отвечал на главный вопрос — стоит ли доверять. На
        него отвечают стаж, сколько человек с нами и сколько раз брали его программы,
        а попап такого объёма не держит. Пустых полей не показываем: выдуманное
@@ -4467,30 +4458,30 @@
   </section>
 
   <section class="screen builder" id="scrClient">
-    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Клиент</h2></div>
+    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Подопечный</h2></div>
 
     <div class="card-block">
       <div class="field"><label>Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать"></div>
       <div class="field"><label>Заметка</label><input type="text" id="clNote" maxlength="80" placeholder="Например: колено, без прыжков">
-        <p class="field-hint">Только для тебя. Клиенту не уходит.</p>
+        <p class="field-hint">Только для тебя. Подопечному не уходит.</p>
       </div>
     </div>
 
-    <!-- Программ у клиента бывает несколько: курс сменился, добавили второй день,
+    <!-- Программ у подопечного бывает несколько: курс сменился, добавили второй день,
          дали отдельную растяжку. Раньше запись хранила одну ссылку, и вторая
          отправка молча затирала первую вместе со всеми её занятиями. -->
     <div id="clProgs"></div>
 
     <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt">Отправить программу</b></button>
-    <p class="field-hint" id="clSendHint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.</p>
+    <p class="field-hint" id="clSendHint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
 
     <div class="card-block danger-zone">
-      <button type="button" class="link-btn" id="btnDelClient">Удалить клиента</button>
+      <button type="button" class="link-btn" id="btnDelClient">Удалить подопечного</button>
     </div>
   </section>
 
     <!-- Кому отправить программу. Список короткий и выбирается в один тап; завести
-         нового клиента можно прямо отсюда, не уходя на другой экран. -->
+         нового подопечного можно прямо отсюда, не уходя на другой экран. -->
     <div class="modal" id="pickClientModal">
       <div class="modal-card">
         <span class="mini-label">Кому отправить</span>
@@ -4878,9 +4869,9 @@
   <div class="dock-in">
     <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
     <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
-    <!-- «Клиенты» появляются вместе с режимом тренера: пока его нет, кнопка занимала
+    <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
          бы место под раздел, в который человеку незачем заходить. -->
-    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Клиенты</span></button>
+    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Подопечные</span></button>
     <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
     <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Ещё</span></button>
   </div>
@@ -5463,7 +5454,7 @@ const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтве�
 const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
 /* Корневые разделы: только у них внизу док и нет собственной панели действий.
 
-   «Клиенты» — раздел, который есть не у всех: он появляется вместе с режимом
+   «Подопечные» — раздел, который есть не у всех: он появляется вместе с режимом
    тренера и исчезает вместе с ним. Держать его в списке всегда можно и нужно —
    иначе show() не узнает в нём корневой экран, — а прячет кнопку сам док. */
 const ROOT_TABS = ['scrMenu','scrPrograms','scrTrainer','scrStats','scrAccount'];
@@ -5692,6 +5683,7 @@ function prepTab(id){
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){
+      switchMoreTab('me');
       renderUsers();
       renderTrainerCard();
       // звук и управление без рук переехали сюда из «Настроек»
@@ -5714,7 +5706,7 @@ function kbFocused(){
   const el = document.activeElement;
   return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea,select'));
 }
-// Кнопка «Клиенты» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
+// Кнопка «Подопечные» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
 // перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после
 // перезапуска.
 function syncDockTabs(){
@@ -5888,7 +5880,7 @@ function buildStartMenu(){
       openBuilder(c.id);
     }),
     mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
-    ...(trainerOn() ? [mk(icon('users') + 'Отправить клиенту', ()=> pickClientFor(p))] : []),
+    ...(trainerOn() ? [mk(icon('users') + 'Отправить подопечному', ()=> pickClientFor(p))] : []),
     ...(trainerOn() && !p.storeId ? [mk(icon('crown') + 'Предложить в каталог', ()=> openPublish(p))] : []),
     mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
     mk(icon('trash') + 'Удалить', async ()=>{
@@ -8890,7 +8882,7 @@ function renderToday(){
 }
 
 /* Дублировать программу. Обычный способ начать новую от готовой: у тренера —
-   вариант той же программы под другого клиента, у человека — «то же, но легче».
+   вариант той же программы под другого подопечного, у человека — «то же, но легче».
    Всё, что привязано к ПРОЙДЕННОМУ, копия не наследует: статистика, счётчик
    повышений, метка каталога, метка чужой ссылки. Копия — новая программа,
    а не продолжение старой. */
@@ -8937,7 +8929,7 @@ const MEDIA_BUDGET = 700 * 1024;
 
 // Карта «название упражнения → фото». Отдельно от текста программы, потому что в
 // каталоге программа лежит ТЕКСТОМ, а текст картинку в себе не носит. Одна карта
-// работает и для ссылки клиенту, и для каталога.
+// работает и для ссылки подопечному, и для каталога.
 function programMedia(p){
   const out = {};
   let left = MEDIA_BUDGET;
@@ -8980,7 +8972,7 @@ function programPayload(p){
     })
   }));
   delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
-  // Штамп тренера. По нему приложение клиента поймёт, от кого программа, и покажет
+  // Штамп тренера. По нему приложение подопечного поймёт, от кого программа, и покажет
   // кнопку отчёта. Поле by не новое: под этим же именем ник лежит у программ каталога.
   if(typeof trainerOn === 'function' && trainerOn()){
     copy.by = normHandle(trainer.handle);
@@ -8993,9 +8985,9 @@ function programPayload(p){
 // Ник тренера уходит и внутри программы, и отдельным полем — сервер показывает его
 // на своей стороне, приложение на своей. Берём оба значения ИЗ ОДНОГО места: пока
 // отдельное поле заполнялось само по себе, оно молча оставалось пустым.
-/* Кто такой тренер — то, что увидит клиент на его странице. Уезжает ВМЕСТЕ со
+/* Кто такой тренер — то, что увидит подопечный на его странице. Уезжает ВМЕСТЕ со
    ссылкой, а не отдельным действием: отдельное «сохранить профиль» человек забудет
-   нажать, и клиент увидит пустую страницу. Здесь же профиль всегда свежий. */
+   нажать, и подопечный увидит пустую страницу. Здесь же профиль всегда свежий. */
 function trainerProfile(){
   const me = users.find(u => u.id === currentUser);
   return {
@@ -10391,7 +10383,7 @@ async function createEditedProgram(){
 }
 
 /* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
-   программе — по ней потом уедет отчёт, и по ней же клиент понимает, что программа
+   программе — по ней потом уедет отчёт, и по ней же подопечный понимает, что программа
    пришла от тренера, а не собрана им самим. */
 async function importProgramLink(id){
   let d;
@@ -10408,7 +10400,7 @@ async function importProgramLink(id){
   prog.stats = {completions: 0};
   prog.cover = prog.cover || null;
   prog.src = id;
-  // Снимок присланного — чтобы потом было видно, что клиент в нём поменял.
+  // Снимок присланного — чтобы потом было видно, что подопечный в нём поменял.
   prog.origEx = snapshotEx(prog);
   if(d.by) prog.by = d.by;
   if(d.byLink) prog.byLink = d.byLink;
@@ -10506,31 +10498,31 @@ const apiPost = (path, body) => apiFetch(path, {
   method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
 });
 
-/* ================= ТРЕНЕР И ЕГО КЛИЕНТЫ =================
+/* ================= ТРЕНЕР И ЕГО ПОДОПЕЧНЫЕ =================
    Кабинет строится ДО бэкенда, потому что его задача — не хранить данные, а выяснить,
    пользуются ли тренеры каналом вообще. Поэтому v1 целиком локальная и держится на
-   том, что в приложении уже работает: программа уезжает клиенту ссылкой FIT1, отчёт
+   том, что в приложении уже работает: программа уезжает подопечному ссылкой FIT1, отчёт
    возвращается ссылкой FITR1. Ни аккаунта, ни регистрации, ни сети.
 
-   Когда появится сервер, экраны останутся те же — поменяется только источник клиентов
+   Когда появится сервер, экраны останутся те же — поменяется только источник подопечных
    и способ доставки отчётов. Разбор — docs/trainer-ui.md. */
 
 let trainer = null;    // {on, handle, links}
-/* Клиент: [{id, name, note, progs: [...]}]
+/* Подопечный: [{id, name, note, progs: [...]}]
    progs — программы, отправленные ЭТОМУ человеку, у каждой своя ссылка, свои
    отметки и свои занятия:
      {pid, name, sentAt, link:{id,key}, opens, firstOpen, reports:[], err, checkedAt}
-   Раньше ссылка была одна на клиента, и вторая отправка затирала первую вместе с
+   Раньше ссылка была одна на подопечного, и вторая отправка затирала первую вместе с
    её занятиями — тренер терял всё, что человек сделал по прошлому курсу. */
 let clients = [];
-let clientIdx = -1;    // какого клиента открыли на scrClient
+let clientIdx = -1;    // какого подопечного открыли на scrClient
 
 async function loadTrainer(){
   try{ trainer = JSON.parse(await kvGet(pk('trainer'))) || null; }catch(e){ trainer = null; }
   if(!trainer) trainer = {on: false, handle: '', links: ''};
   try{ clients = JSON.parse(await kvGet(pk('clients'))) || []; }catch(e){ clients = []; }
   if(!Array.isArray(clients)) clients = [];
-  // Прежняя запись: одна программа прямо на клиенте. Переносим её в список, ничего
+  // Прежняя запись: одна программа прямо на подопечном. Переносим её в список, ничего
   // не теряя, — у тех, кто уже отправлял, занятия должны остаться на месте.
   let moved = false;
   clients.forEach(c => {
@@ -10548,8 +10540,8 @@ async function loadTrainer(){
 }
 async function saveTrainer(){ await kvSet(pk('trainer'), JSON.stringify(trainer)); }
 async function saveClients(){ await kvSet(pk('clients'), JSON.stringify(clients)); }
-// Режим считается включённым только вместе с ником: без ника клиент не поймёт, от кого
-// пришла программа, а «Отправить клиенту» в меню без адресата — пункт в никуда.
+// Режим считается включённым только вместе с ником: без ника подопечный не поймёт, от кого
+// пришла программа, а «Отправить подопечному» в меню без адресата — пункт в никуда.
 const trainerOn = () => !!(trainer && trainer.on && (trainer.handle || '').trim());
 // ник приводим к одному виду: человек напишет и «@lena», и «lena», и «t.me/lena»
 function normHandle(v){
@@ -10568,7 +10560,7 @@ function daysSince(iso){
 }
 const lastReport = pr => (pr && pr.reports && pr.reports.length) ? pr.reports[pr.reports.length - 1] : null;
 const clProgs = c => (c && Array.isArray(c.progs)) ? c.progs : [];
-// Сводка по клиенту целиком: занятия по всем программам, самое свежее из них.
+// Сводка по подопечному целиком: занятия по всем программам, самое свежее из них.
 function clientSum(c){
   let n = 0, last = '', opens = 0, sent = 0;
   clProgs(c).forEach(pr => {
@@ -10591,10 +10583,10 @@ function renderTrainerCard(){
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
   $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
-  $('coachClientsSub').textContent = 'Как её видит клиент';
+  $('coachClientsSub').textContent = 'Как её видит подопечный';
 }
 
-/* ---- экран «Клиенты» ---- */
+/* ---- экран «Подопечные» ---- */
 function openClients(){
   renderClients();
   goTab('scrTrainer');
@@ -10618,7 +10610,7 @@ function renderClients(){
   if(n){
     const sum = $('clsSum');
     sum.innerHTML = '<b></b><small></small>';
-    sum.querySelector('b').textContent = `${n} ${plural(n, 'клиент', 'клиента', 'клиентов')}`;
+    sum.querySelector('b').textContent = `${n} ${plural(n, 'подопечный', 'подопечного', 'подопечных')}`;
     sum.querySelector('small').textContent =
       (live ? `${live} ${live === 1 ? 'занимается' : 'занимаются'} · ` : '')
       + `${total} ${plural(total, 'тренировка', 'тренировки', 'тренировок')} всего`;
@@ -10658,11 +10650,11 @@ function renderClients(){
     box.appendChild(row);
   });
   $('clsHint').textContent = n
-    ? 'Клиент занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.'
-    : 'Добавь клиента, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.';
+    ? 'Подопечный занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.'
+    : 'Добавь подопечного, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.';
 }
 
-/* ---- карточка клиента ---- */
+/* ---- карточка подопечного ---- */
 function openClient(i){
   clientIdx = i;
   fillClient();                 // сначала показываем что есть — экран не ждёт сети
@@ -10677,7 +10669,7 @@ const curClient = () => clients[clientIdx] || null;
 function fillClient(){
   const c = curClient();
   if(!c) return;
-  $('clTitle').textContent = c.name || 'Клиент';
+  $('clTitle').textContent = c.name || 'Подопечный';
   if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
   if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
 
@@ -10686,8 +10678,8 @@ function fillClient(){
   const list = clProgs(c);
   $('btnClSendTxt').textContent = list.length ? 'Отправить ещё программу' : 'Отправить программу';
   $('clSendHint').textContent = list.length
-    ? 'У клиента может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.'
-    : 'Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для клиента и не защищает от пересылки.';
+    ? 'У подопечного может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.'
+    : 'Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.';
 
   if(!list.length){
     const empty = document.createElement('div');
@@ -10750,7 +10742,7 @@ function progCard(c, pr){
   drop.className = 'link-btn';
   drop.textContent = 'Убрать эту программу';
   drop.onclick = async ()=>{
-    if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у клиента программа останется.`,
+    if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.`,
       {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
     c.progs = clProgs(c).filter(x => x !== pr);
     await saveClients();
@@ -10770,7 +10762,7 @@ function renderReport(box, pr){
   if(!r){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Занятий пока нет. Отчёт придёт сам, как только клиент закончит первую тренировку.';
+    h.textContent = 'Занятий пока нет. Отчёт придёт сам, как только подопечный закончит первую тренировку.';
     box.appendChild(h);
     return;
   }
@@ -10868,7 +10860,7 @@ function renderReport(box, pr){
     if(log.length > 8) add('field-hint', '').textContent = `и ещё ${log.length - 8} раньше`;
   }
 
-  /* ---- что клиент поменял ---- */
+  /* ---- что подопечный поменял ---- */
   const d = r.diff || {};
   const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
   if(changed){
@@ -10894,15 +10886,15 @@ function renderReport(box, pr){
     + (pr.reports.length > 1 ? ` · всего отчётов ${pr.reports.length}` : '');
 }
 
-/* ---- отправка программы клиенту ----
+/* ---- отправка программы подопечному ----
    Программа уходит короткой ссылкой через сервер: по ней видно, открыл ли её
-   клиент, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
-   клиента, от кого она пришла. */
+   подопечный, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
+   подопечного, от кого она пришла. */
 async function sendProgramToClient(c, p){
-  if(!p){ appAlert('Сначала выбери программу: пункт «Отправить клиенту» есть в меню любой программы в списке тренировок.'); return; }
+  if(!p){ appAlert('Сначала выбери программу: пункт «Отправить подопечному» есть в меню любой программы в списке тренировок.'); return; }
 
   // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
-  // иначе у клиента в карточке две одинаковые строки с разными половинами занятий.
+  // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
   let pr = clProgs(c).find(x => x.pid === p.id);
   let link = null, failed = null;
   try{ link = await programLink(p, {to: c.name}); }
@@ -10947,8 +10939,8 @@ async function shareLink(url, who, what){
   }
   try{
     await navigator.clipboard.writeText(url);
-    appAlert('Ссылка скопирована — отправь её клиенту любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
-  }catch(e){ appAlert('Скопируй ссылку и отправь клиенту:', {code: url}); }
+    appAlert('Ссылка скопирована — отправь её подопечному любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
+  }catch(e){ appAlert('Скопируй ссылку и отправь подопечному:', {code: url}); }
 }
 
 /* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
@@ -10956,7 +10948,7 @@ async function shareLink(url, who, what){
 
    Ошибку ЗАПОМИНАЕМ и показываем. Раньше здесь стоял пустой catch, и тренер видел
    ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
-   в порядке, но клиент ещё не занимался»: пустую карточку. */
+   в порядке, но подопечный ещё не занимался»: пустую карточку. */
 const PULL_ERR = {
   no_store: 'На сервере не подключено хранилище — отметки и отчёты не сохраняются.',
   not_found: 'Ссылка на сервере не найдена. Отправь программу заново.',
@@ -10983,7 +10975,7 @@ async function pullProgram(pr){
     log: r.log || [], plans: r.plans || [], diff: r.diff || null}));
   return true;
 }
-// Обновить все программы клиента разом.
+// Обновить все программы подопечного разом.
 async function pullClient(c){
   let any = false;
   for(const pr of clProgs(c)){ if(await pullProgram(pr)) any = true; }
@@ -10992,14 +10984,14 @@ async function pullClient(c){
 }
 
 async function addClient(){
-  const c = {id: 'c' + Date.now(), name: 'Клиент ' + (clients.length + 1), note: '',
+  const c = {id: 'c' + Date.now(), name: 'Подопечный ' + (clients.length + 1), note: '',
              programId: null, programName: '', sentAt: null, reports: []};
   clients.push(c);
   await saveClients();
   return c;
 }
 
-// «Отправить клиенту» из меню программы: выбрать, кому, — и сразу отправить.
+// «Отправить подопечному» из меню программы: выбрать, кому, — и сразу отправить.
 function pickClientFor(p){
   const box = $('pickClientList');
   box.innerHTML = '';
@@ -11024,7 +11016,7 @@ function pickClientFor(p){
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'choice add-row';
-  add.innerHTML = icon('plus') + '<b>Новый клиент</b>';
+  add.innerHTML = icon('plus') + '<b>Новый подопечный</b>';
   add.onclick = async ()=>{
     $('pickClientModal').classList.remove('open');
     const c = await addClient();
@@ -11034,7 +11026,7 @@ function pickClientFor(p){
   $('pickClientModal').classList.add('open');
 }
 
-/* ---- сторона клиента: отчёт тренеру ----
+/* ---- сторона подопечного: отчёт тренеру ----
    Отчёт собирает и отправляет САМ человек, кнопкой. Приложение не следит за ним и не
    отсылает ничего без ведома — иначе «тренер видит мои тренировки» превращается в то,
    на что никто не соглашался. */
@@ -11052,13 +11044,13 @@ function pickClientFor(p){
    3. КАК РАСТЁТ. По ВСЕМ вариантам и с разминкой: разминка не растёт сама, но
       человек мог поменять её руками, и это тоже сведения.
    4. НЕ ПЕРЕДЕЛАЛ ЛИ ПРОГРАММУ. Упражнения можно править, выбрасывать и
-      добавлять. Тренер, уверенный, что клиент делает присланное, а тот выкинул
+      добавлять. Тренер, уверенный, что подопечный делает присланное, а тот выкинул
       половину, — худший вид слепоты, и раньше отчёт о ней молчал.
 
    Отчёт по-прежнему НАКОПИТЕЛЬНЫЙ: всё состояние целиком, поэтому неудачная
    отправка ничего не теряет. */
 
-// Снимок присланного: с чем сравнивать правки клиента. Снимается один раз, при
+// Снимок присланного: с чем сравнивать правки подопечного. Снимается один раз, при
 // получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
 function snapshotEx(p){
   const out = [];
@@ -11087,7 +11079,7 @@ function buildReport(p){
   // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
   const planStats = plans.map((pl, i) => {
     const own = mine.filter(h => (+h.plan || 0) === i);
-    // Сколько это занимает У КЛИЕНТА. Тренер планировал одно, а человек делает
+    // Сколько это занимает У ПОДОПЕЧНОГО. Тренер планировал одно, а человек делает
     // сорок минут вместо двадцати или пятнадцать вместо тридцати — и то и другое
     // повод поговорить, но узнать об этом иначе неоткуда.
     // Шесть часов — заведомо не тренировка, а забытый на ночь таймер или сбой.
@@ -11120,7 +11112,7 @@ function buildReport(p){
              b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
   }));
 
-  // 4. Правки: что клиент убрал, добавил и поменял руками.
+  // 4. Правки: что подопечный убрал, добавил и поменял руками.
   const diff = {add: [], del: [], mod: []};
   if(Array.isArray(p.origEx)){
     const now = snapshotEx(p);
@@ -11874,7 +11866,7 @@ async function doPublish(){
     appAlert('Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.');
   }catch(e){
     const why = {
-      no_trainer: 'Сначала отправь хоть одну программу клиенту или заполни профиль — ник должен быть закреплён за тобой.',
+      no_trainer: 'Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.',
       not_yours: 'Этот ник закреплён за другим тренером.',
       banned: 'Приём программ с этого ника закрыт.',
       too_many_today: 'Сегодня уже отправлено три программы. Продолжим завтра.',
@@ -11907,15 +11899,18 @@ function renderCatalogRow(){
   if(!$('btnMyCatalog')) return;
   const n = storeAll().length;
   $('storeRowSub').textContent = n
-    ? `${n} ${plural(n, 'программа', 'программы', 'программ')} — подобрать под цель и уровень`
-    : 'Подобрать под цель и уровень';
-  setShown('btnMyCatalog', trainerOn());
+    ? `${n} ${plural(n, 'программа', 'программы', 'программ')} от тренеров`
+    : 'Тренировки от тренеров';
+  // Строку заявок показываем, только когда заявки есть: «ничего не отправлено»
+  // сообщает ровно то, что строку не надо было показывать.
   const pub = pubbed();
+  setShown('btnMyCatalog', trainerOn() && pub.length > 0);
+  if(!pub.length) return;
   const byStatus = st => pub.filter(p => p.pub.status === st).length;
-  $('coachCatSub').textContent = !pub.length ? 'Ничего не отправлено'
-    : [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
-       [byStatus('rejected'), 'не взяли']]
-      .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`).join(' · ');
+  $('coachCatSub').textContent =
+    [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
+     [byStatus('rejected'), 'не взяли']]
+      .filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(' · ');
 }
 
 function renderMine(){
@@ -12005,10 +12000,10 @@ function renderMine(){
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
-    // «Отправить клиенту» — то же действие, но с адресатом: отправка запоминается,
+    // «Отправить подопечному» — то же действие, но с адресатом: отправка запоминается,
     // и потом видно, кому что уходило. Пункт есть только у тренера.
     const bClient = document.createElement('button');
-    bClient.innerHTML = icon('users') + 'Отправить клиенту';
+    bClient.innerHTML = icon('users') + 'Отправить подопечному';
     bClient.onclick = ()=>{ closeAllMenus(); pickClientFor(p); };
     const bFile = document.createElement('button');
     bFile.innerHTML = icon('download') + 'Сохранить в файл';
@@ -16141,7 +16136,7 @@ $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('impo
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
 
-/* ---- тренер: карточка на аккаунте, картотека, карточка клиента ---- */
+/* ---- тренер: карточка на аккаунте, картотека, карточка подопечного ---- */
 $('tglTrainer').onclick = async ()=>{
   trainer.on = !trainer.on;
   await saveTrainer();
@@ -16166,13 +16161,13 @@ $('coachYears').oninput = async e => {
   pushProfileSoon();
 };
 
-// Ник над программой — это вход на страницу тренера, а не украшение: клиент,
+// Ник над программой — это вход на страницу тренера, а не украшение: подопечный,
 // получивший программу по ссылке, хочет знать, от кого она.
 $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
 $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
 $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
 $('mcBackTop').onclick = ()=> goBackTo('scrPrograms');
-// Своя страница — ровно тем же экраном, каким её видит клиент. Отдельный «просмотр
+// Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
 // профиля» разошёлся бы с настоящим через месяц.
 $('btnToStore').onclick = ()=> openStore('scrPrograms');
 $('btnMyCatalog').onclick = ()=> openMyCatalog();
@@ -16194,7 +16189,7 @@ $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
 $('clName').oninput = async e => {
   const c = curClient(); if(!c) return;
   c.name = e.target.value;
-  $('clTitle').textContent = c.name || 'Клиент';
+  $('clTitle').textContent = c.name || 'Подопечный';
   await saveClients();
 };
 $('clNote').oninput = async e => {
@@ -16210,7 +16205,7 @@ $('btnClSend').onclick = ()=>{
 };
 $('btnDelClient').onclick = async ()=>{
   const c = curClient(); if(!c) return;
-  if(!(await appDialog(`Убрать «${c.name || 'клиента'}» из списка? Программа у него останется — ссылка уже отправлена.`,
+  if(!(await appDialog(`Убрать «${c.name || 'подопечного'}» из списка? Программа у него останется — ссылка уже отправлена.`,
        {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
   clients = clients.filter(x => x.id !== c.id);
   clientIdx = -1;
@@ -16220,8 +16215,8 @@ $('btnDelClient').onclick = async ()=>{
   goBackTo('scrTrainer');
 };
 
-// Выбор программы для клиента, когда её ещё нет. Тот же попап, что и «кому отправить»,
-// только наоборот: клиент известен, выбирают программу.
+// Выбор программы для подопечного, когда её ещё нет. Тот же попап, что и «кому отправить»,
+// только наоборот: подопечный известен, выбирают программу.
 function pickProgramForClient(c){
   const box = $('pickClientList');
   box.innerHTML = '';
@@ -16500,6 +16495,15 @@ function switchStatsTab(tab){
   setShown('tabPhoto', tab === 'photo');
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
+
+/* Вкладки раздела «Ещё». Выбранная НЕ запоминается между заходами: человек приходит
+   сюда за разным, и «где я был в прошлый раз» — не тот вопрос, на который надо
+   отвечать. Открываем всегда на первой. */
+function switchMoreTab(key){
+  document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
+  ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
+}
+document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
 document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
 $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 'Изменения профиля');
@@ -17293,8 +17297,9 @@ document.addEventListener('visibilitychange', ()=>{
 $('btnPause').innerHTML = icon('pause');
 $('btnMicW').innerHTML = icon('mic');
 // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
-$('storeIcoMenu').innerHTML = icon('book');
-$('storeArrowMenu').innerHTML = icon('chevR');
+$('storeIcoMenu').innerHTML = $('storeIcoProg').innerHTML = icon('book');
+$('storeArrowMenu').innerHTML = $('storeArrowProg').innerHTML = icon('chevR');
+$('btnAddProgram').innerHTML = icon('plus');
 $('storeBackTop').innerHTML = icon('chevL');
 $('siBackTop').innerHTML = icon('chevL');
 $('storeSearchIco').innerHTML = icon('search');

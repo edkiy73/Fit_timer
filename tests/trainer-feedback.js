@@ -54,7 +54,7 @@ async function boot(b, label, errs, url){
     trainer = {on: true, handle: nick, links: '', about: '', years: null};
     await saveTrainer();
   }, NICK);
-  await tp.evaluate(() => goTab('scrAccount'));
+  await tp.evaluate(() => { goTab('scrAccount'); switchMoreTab('coach'); });
   await tp.waitForTimeout(600);
   await tp.fill('#coachAbout', 'Домашний фитнес, только коврик.');
   await tp.fill('#coachYears', '8');
