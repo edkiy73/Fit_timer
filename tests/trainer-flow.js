@@ -1,7 +1,9 @@
-/* Сквозной сценарий «тренер → клиент → отчёт → тренер».
-   Единственное место, где весь круг проверяется целиком: отдельные куски работают
-   и по отдельности, а ломается стык — ник в ссылке, поля упражнения в отчёте, поиск
-   клиента по имени. Скриншоты пишет рядом с собой.
+/* Сквозной сценарий «тренер → клиент → отчёт → тренер» БЕЗ СЕРВЕРА.
+   Запускается на статике без api/ — так проверяется запасной путь: программа
+   уходит КОДОМ (не адресом: адрес с программой внутри отбивался хостингом,
+   см. tests/link-length.js), отчёт возвращается ссылкой-копипастом, и тренер
+   вставляет его руками. Этот путь обязан работать: сервер бывает недоступен.
+   Сетевой круг проверяет tests/trainer-online.js. Скриншоты пишет рядом с собой.
 
    Запуск:  python3 -m http.server 8123   (из корня репозитория)
             npm i playwright-core            (один раз, куда угодно)
@@ -105,21 +107,18 @@ const screen = p => p.evaluate(() => (document.querySelector('.screen.on') || {}
     return captured;
   });
   await tp.waitForTimeout(500);
-  console.log('ссылка получена:', !!link && link.includes('?import=FIT1.'));
+  console.log('без сервера уходит код, а не адрес:', !!link && link.startsWith('FIT1.') && !/^https?:/.test(link));
   console.log('клиенту записана программа:', await tp.evaluate(() => clients[0].programName + ' · ' + clients[0].sentAt));
-  console.log('в ссылке есть ник тренера:', await tp.evaluate(l => {
-    const code = decodeURIComponent(l.split('import=')[1]);
-    return JSON.parse(decodeURIComponent(escape(atob(code.slice(5))))).by;
-  }, link));
+  console.log('в коде есть ник тренера:', await tp.evaluate(c =>
+    JSON.parse(decodeURIComponent(escape(atob(c.slice(5))))).by, link));
 
   // ---------- КЛИЕНТ ----------
   const C = await boot(b, 'клиент'); allErrs.push(...C.errs);
   const cp = C.page;
   await cp.evaluate(() => { const u = users.find(x => x.id === currentUser); u.name = 'Марина'; });
-  await cp.goto(link, { waitUntil: 'load' });
-  await cp.waitForTimeout(2200);
-  if (await cp.isVisible('#obStart')) { await cp.click('#obStart'); await cp.waitForTimeout(1500); }
-  console.log('\nклиент: экран после ссылки:', await screen(cp));
+  await cp.evaluate(c => importProgramCode(c), link);
+  await cp.waitForTimeout(1200);
+  console.log('\nклиент: экран после вставки кода:', await screen(cp));
 
   const got = await cp.evaluate(async () => {
     // сохраняем импортированную программу и подделываем три тренировки по ней

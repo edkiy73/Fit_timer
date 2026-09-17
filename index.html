@@ -8724,11 +8724,25 @@ function renderToday(){
 }
 
 /* ================= ЭКСПОРТ / ИМПОРТ ПРОГРАММ ================= */
-async function exportProgram(p){
+/* ПРОГРАММУ В АДРЕС НЕ КЛАДЁМ. Раньше ссылка выглядела как ?import=FIT1.<вся
+   программа в base64>, и на длинной программе это молча ломалось: Vercel отбивает
+   такой запрос на границе (URI_TOO_LONG, предел около 14 КБ) — до приложения он
+   вообще не доходит, и получатель видит ошибку хостинга вместо программы.
+   Три упражнения каталога дают 4 КБ, а у тренера их бывает десять, плюс разминка,
+   описания и замены. То есть ломалось ровно на настоящих программах.
+
+   Ссылка теперь одна и только через сервер: короткая, с любой программой, и по ней
+   видно, открыл ли её человек. Когда сервера нет, ссылки НЕ БУДЕТ вовсе — вместо
+   неё код или файл. Выдать адрес, который у получателя не откроется, хуже, чем
+   честно сказать, что ссылка сейчас недоступна. */
+
+// Что уезжает получателю: без обложки, фото и чужой статистики.
+function programPayload(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.cover = null;
   delete copy.stats;
   delete copy.active;     // «отключена» — про мой список, а не про саму программу
+  delete copy.src;        // метка чужой ссылки получателю не нужна
   // фото не влезают в код — в ссылке и в тексте программы их нет
   copy.plans = normPlans(copy).map(pl => ({
     ...pl,
@@ -8741,23 +8755,58 @@ async function exportProgram(p){
     copy.by = normHandle(trainer.handle);
     if((trainer.links || '').trim()) copy.byLink = trainer.links.trim();
   }
-  const code = 'FIT1.' + btoa(unescape(encodeURIComponent(JSON.stringify(copy))));
-  // если приложение на хостинге — делимся ссылкой: подруга просто тапает и получает программу
-  const hosted = location.protocol.startsWith('http');
-  const link = hosted ? location.origin + location.pathname + '?import=' + encodeURIComponent(code) : null;
-  if(link && navigator.share){
-    try{
-      await navigator.share({title: 'Fit Timer', text: `Программа тренировки «${p.name}» — открой ссылку, и она добавится в Fit Timer:`, url: link});
-      return;
-    }catch(e){ if(e && e.name === 'AbortError') return; }
+  return copy;
+}
+
+const programCode = p => 'FIT1.' + btoa(unescape(encodeURIComponent(JSON.stringify(programPayload(p)))));
+
+// Короткая ссылка через сервер. Бросает — значит ссылки нет, и это надо сказать.
+// Ник тренера уходит и внутри программы, и отдельным полем — сервер показывает его
+// на своей стороне, приложение на своей. Берём оба значения ИЗ ОДНОГО места: пока
+// отдельное поле заполнялось само по себе, оно молча оставалось пустым.
+async function programLink(p, extra){
+  const program = programPayload(p);
+  const r = await apiPost('/api/share', Object.assign(
+    {program, by: program.by || '', byLink: program.byLink || ''}, extra || {}));
+  return {url: location.origin + location.pathname + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
+}
+
+// Почему ссылки не вышло — человеку. «Не настроено хранилище» и «нет интернета» —
+// это две разные новости, и вторая проходит сама, а первая нет.
+function linkFailNote(e){
+  if(e && e.code === 'no_store') return 'Ссылки пока не работают: на сервере не подключено хранилище.';
+  if(e && e.code === 'rate_limited') return 'Слишком много ссылок подряд. Попробуй через несколько минут.';
+  return 'Ссылку сделать не удалось — похоже, нет связи с сервером.';
+}
+
+// Запасной путь без ссылки: код в буфер. В поле «По коду» он вставляется целиком и
+// длины не боится — предел был только у адреса.
+async function offerProgramCode(p, why){
+  const code = programCode(p);
+  const tail = '\n\nПрограмму можно передать кодом: получатель откроет «Добавить программу» → «По коду» и вставит его. Со всеми картинками — «Сохранить в файл».';
+  try{
+    await navigator.clipboard.writeText(code);
+    appAlert(why + ' Код программы скопирован.' + tail);
+  }catch(e){
+    appAlert(why + tail, {code});
+  }
+}
+
+async function exportProgram(p){
+  let link;
+  try{ link = await programLink(p); }
+  catch(e){ await offerProgramCode(p, linkFailNote(e)); return; }
+
+  const text = `Программа тренировки «${p.name}» — открой ссылку, и она добавится в Fit Timer:`;
+  if(navigator.share){
+    try{ await navigator.share({title: 'Fit Timer', text, url: link.url}); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
   }
   try{
-    await navigator.clipboard.writeText(link || code);
-    appAlert(link
-      ? 'Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nКартинки в ссылку не помещаются. Чтобы передать всё целиком — «Сохранить в файл».'
-      : 'Код программы скопирован — отправь его любым мессенджером.\n\nКартинки в код не помещаются. Чтобы передать всё целиком — «Сохранить в файл».');
+    await navigator.clipboard.writeText(link.url);
+    appAlert('Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nКартинки в ссылку не помещаются. Чтобы передать всё целиком — «Сохранить в файл».');
   }catch(e){
-    appAlert('Не удалось скопировать автоматически. Выдели и скопируй вручную:', {code: link || code});
+    appAlert('Не удалось скопировать автоматически. Выдели и скопируй вручную:', {code: link.url});
   }
 }
 
@@ -10099,7 +10148,9 @@ async function importProgramLink(id){
 
 function importProgramCode(code){
   code = (code || '').trim();
-  // принимаем и полную ссылку вида ...?import=FIT1...
+  // Ссылки вида ?import=FIT1... приложение больше не выдаёт (адрес с программой
+  // внутри отбивался хостингом), но разбирать их продолжаем: такие ссылки лежат в
+  // чужих переписках, и ломать их задним числом незачем.
   if(code.includes('import=')){
     try{ code = decodeURIComponent(code.split('import=')[1].split('&')[0]); }catch(e){}
   }
@@ -10131,6 +10182,11 @@ function importProgramCode(code){
    рядом со страницей (api/ в репозитории). */
 const API_BASE = location.protocol.startsWith('http') ? '' : null;
 const API_WAIT = 7000;
+/* Потолок длины адреса, который мы соглашаемся выдать человеку. Настоящий предел
+   выше (хостинг отбивает около 14 КБ), но запас нужен: ссылку пересылают, к ней
+   дописывают метки переходов, а мессенджеры её оборачивают. Всё, что не влезло,
+   уходит не ссылкой, а кодом или файлом — см. exportProgram. */
+const URL_SAFE = 1800;
 
 async function apiFetch(path, opts){
   if(API_BASE === null) throw new Error('offline');
@@ -10243,6 +10299,8 @@ function renderClients(){
       // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
       // и тренеру нужно видеть, какой из них его.
       if(c.opens > 0) state = 'открыл, занятий нет';
+      // без ссылки открытие не отследить, и обещать «ждёт» нечестно
+      else if(!c.link) state = d === 0 ? 'отправлено сегодня' : 'отправлено кодом';
       else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
     } else state = 'не отправлено';
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
@@ -10284,6 +10342,7 @@ function fillClient(){
   if(c.link) bits.push(c.opens > 0
     ? (c.firstOpen ? `открыл ${humanDay((c.firstOpen || '').slice(0, 10))}` : 'открыл')
     : 'ещё не открывал');
+  else if(c.sentAt) bits.push('кодом, без отметок');
   if(c.sentAt && !prog) bits.push('программы уже нет в списке');
   $('clSentSub').textContent = bits.length ? bits.join(' · ') : 'ещё не отправлена';
   $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
@@ -10336,24 +10395,17 @@ async function sendProgramToClient(c){
   if(!p){ appAlert('Сначала выбери программу: пункт «Отправить клиенту» есть в меню любой программы в списке тренировок.'); return; }
 
   // Через сервер ссылка получается короткой, и — главное — по ней видно, открыл ли
-  // её клиент, а его отчёты приезжают сами. Не вышло (нет сети, сервер не отвечает,
-  // база не настроена) — уходим прежним путём: программа целиком внутри ссылки.
-  // Второй путь обязан оставаться рабочим: тренер не должен зависеть от нашей связи.
-  let link = null;
+  // её клиент, а его отчёты приезжают сами. Не вышло — ссылки НЕ БУДЕТ: адрес с
+  // программой внутри хостинг отбивает на длинной программе, и получатель увидит
+  // ошибку вместо тренировки. Тогда остаётся код или файл, и об этом сказано прямо.
+  let link = null, failed = null;
   try{
-    const copy = JSON.parse(JSON.stringify(p));
-    copy.cover = null;
-    delete copy.stats; delete copy.active; delete copy.src;
-    copy.plans = normPlans(copy).map(pl => ({...pl, exercises: pl.exercises.map(ex => ({...ex, media: null}))}));
-    delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
-    const r = await apiPost('/api/share', {
-      program: copy, to: c.name,
-      by: normHandle(trainer.handle), byLink: (trainer.links || '').trim()
-    });
-    link = location.origin + location.pathname + '?p=' + encodeURIComponent(r.id);
-    c.link = {id: r.id, key: r.key};
-  }catch(e){ link = null; }
+    link = await programLink(p, {to: c.name});
+    c.link = {id: link.id, key: link.key};
+  }catch(e){ failed = e; }
 
+  // Отправка состоялась и тогда, когда ушла не ссылка, а код: тренер своё сделал.
+  // Разное здесь только одно — по коду не узнать, открыл ли клиент программу.
   c.sentAt = localISO(new Date());
   c.programName = p.name;
   await saveClients();
@@ -10361,7 +10413,12 @@ async function sendProgramToClient(c){
   renderClients();
   renderTrainerCard();
 
-  if(!link){ await exportProgram(p); return; }
+  if(!link){
+    await offerProgramCode(p, linkFailNote(failed)
+      + ' Пока ссылки нет, отметку «открыл» и отчёты клиента показать будет нечем.');
+    return;
+  }
+  link = link.url;
 
   const text = `Программа «${p.name}»${c.name ? ' для ' + c.name : ''} — открой ссылку, и она добавится в Fit Timer:`;
   if(navigator.share){
@@ -10489,7 +10546,10 @@ async function sendReport(p){
   }
   const code = 'FITR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(rep))));
   const hosted = location.protocol.startsWith('http');
-  const link = hosted ? location.origin + location.pathname + '?report=' + encodeURIComponent(code) : null;
+  let link = hosted ? location.origin + location.pathname + '?report=' + encodeURIComponent(code) : null;
+  // Отчёт короткий (имя, числа, до четырёх строк роста), но правило одно на всё
+  // приложение: длинный адрес не выдаём — он не откроется у получателя.
+  if(link && link.length > URL_SAFE) link = null;
   const text = (rep.who ? rep.who + ': ' : '')
     + `${rep.n} ${plural(rep.n, 'тренировка', 'тренировки', 'тренировок')} по программе «${p.name}»`;
   if(link && navigator.share){
