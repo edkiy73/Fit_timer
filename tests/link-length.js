@@ -80,17 +80,18 @@ async function capture(page, fn){
 
   const size = await (async () => {
     const page = await boot(b, NO_API, errs);
-    const n = await page.evaluate(() => programCode(customPrograms.find(p => p.id === 'big')).length);
+    const n = await page.evaluate(() => btoa(unescape(encodeURIComponent(
+      JSON.stringify(programPayload(customPrograms.find(p => p.id === 'big')))))).length);
     // ---- сервера нет ----
     const r = await capture(page, `exportProgram(customPrograms.find(p => p.id === 'big'))`);
     const text = (r.out && r.out.text) || '';
-    ok('без сервера адрес не выдаётся', !/^https?:/.test(text), text.slice(0, 48) + '…');
-    ok('вместо него код', text.startsWith('FIT1.'));
-    ok('человеку объяснили, почему', /ссылк/i.test(r.dlg), r.dlg.slice(0, 54) + '…');
+    ok('без сервера ничего не отдаётся', !text, text ? text.slice(0, 48) : '(пусто)');
+    ok('человеку объяснили, почему', /ссылк/i.test(r.dlg), r.dlg.slice(0, 50) + '…');
+    ok('и подсказали файл', /файл/i.test(r.dlg));
     await page.close();
     return n;
   })();
-  console.log(`      (код такой программы: ${size} символов — в адрес он не помещается)`);
+  console.log(`      (программа в base64: ${size} символов — в адрес она не помещается)`);
 
   // ---- сервер есть ----
   const page = await boot(b, WITH_API, errs);

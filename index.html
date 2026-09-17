@@ -8758,8 +8758,6 @@ function programPayload(p){
   return copy;
 }
 
-const programCode = p => 'FIT1.' + btoa(unescape(encodeURIComponent(JSON.stringify(programPayload(p)))));
-
 // Короткая ссылка через сервер. Бросает — значит ссылки нет, и это надо сказать.
 // Ник тренера уходит и внутри программы, и отдельным полем — сервер показывает его
 // на своей стороне, приложение на своей. Берём оба значения ИЗ ОДНОГО места: пока
@@ -8771,31 +8769,28 @@ async function programLink(p, extra){
   return {url: location.origin + location.pathname + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
 }
 
-// Почему ссылки не вышло — человеку. «Не настроено хранилище» и «нет интернета» —
-// это две разные новости, и вторая проходит сама, а первая нет.
-function linkFailNote(e){
-  if(e && e.code === 'no_store') return 'Ссылки пока не работают: на сервере не подключено хранилище.';
-  if(e && e.code === 'rate_limited') return 'Слишком много ссылок подряд. Попробуй через несколько минут.';
-  return 'Ссылку сделать не удалось — похоже, нет связи с сервером.';
-}
+/* Почему ссылки не вышло — человеку, и без запасного пути.
 
-// Запасной путь без ссылки: код в буфер. В поле «По коду» он вставляется целиком и
-// длины не боится — предел был только у адреса.
-async function offerProgramCode(p, why){
-  const code = programCode(p);
-  const tail = '\n\nПрограмму можно передать кодом: получатель откроет «Добавить программу» → «По коду» и вставит его. Со всеми картинками — «Сохранить в файл».';
-  try{
-    await navigator.clipboard.writeText(code);
-    appAlert(why + ' Код программы скопирован.' + tail);
-  }catch(e){
-    appAlert(why + tail, {code});
+   Раньше здесь в буфер уходил код программы. Он длины не боялся, но и смысла не
+   имел: отправлять простыню в мессенджер человек всё равно не станет, а объяснять
+   получателю, куда её вставлять, — тем более. Остался один запасной путь, который
+   люди действительно понимают: файл. Он и так есть в меню, и он лучше — уходит
+   целиком, вместе с картинками. */
+function linkFailNote(e){
+  if(e && e.code === 'no_store'){
+    return 'Ссылки пока не работают: на сервере не подключено хранилище.';
   }
+  if(e && e.code === 'rate_limited'){
+    return 'Слишком много ссылок подряд. Попробуй через несколько минут.';
+  }
+  return 'Ссылку сделать не удалось — нет связи с сервером. Попробуй ещё раз, когда появится интернет.';
 }
+const FILE_HINT = '\n\nПередать программу прямо сейчас можно файлом: «Сохранить в файл» в том же меню. В файл входит всё, включая картинки.';
 
 async function exportProgram(p){
   let link;
   try{ link = await programLink(p); }
-  catch(e){ await offerProgramCode(p, linkFailNote(e)); return; }
+  catch(e){ appAlert(linkFailNote(e) + FILE_HINT); return; }
 
   const text = `Программа тренировки «${p.name}» — открой ссылку, и она добавится в Fit Timer:`;
   if(navigator.share){
@@ -10299,8 +10294,6 @@ function renderClients(){
       // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
       // и тренеру нужно видеть, какой из них его.
       if(c.opens > 0) state = 'открыл, занятий нет';
-      // без ссылки открытие не отследить, и обещать «ждёт» нечестно
-      else if(!c.link) state = d === 0 ? 'отправлено сегодня' : 'отправлено кодом';
       else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
     } else state = 'не отправлено';
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
@@ -10342,7 +10335,6 @@ function fillClient(){
   if(c.link) bits.push(c.opens > 0
     ? (c.firstOpen ? `открыл ${humanDay((c.firstOpen || '').slice(0, 10))}` : 'открыл')
     : 'ещё не открывал');
-  else if(c.sentAt) bits.push('кодом, без отметок');
   if(c.sentAt && !prog) bits.push('программы уже нет в списке');
   $('clSentSub').textContent = bits.length ? bits.join(' · ') : 'ещё не отправлена';
   $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
@@ -10404,9 +10396,7 @@ async function sendProgramToClient(c){
     c.link = {id: link.id, key: link.key};
   }catch(e){ failed = e; }
 
-  // Отправка состоялась и тогда, когда ушла не ссылка, а код: тренер своё сделал.
-  // Разное здесь только одно — по коду не узнать, открыл ли клиент программу.
-  c.sentAt = localISO(new Date());
+  c.sentAt = link ? localISO(new Date()) : c.sentAt;
   c.programName = p.name;
   await saveClients();
   fillClient();
@@ -10414,8 +10404,7 @@ async function sendProgramToClient(c){
   renderTrainerCard();
 
   if(!link){
-    await offerProgramCode(p, linkFailNote(failed)
-      + ' Пока ссылки нет, отметку «открыл» и отчёты клиента показать будет нечем.');
+    appAlert(linkFailNote(failed) + FILE_HINT);
     return;
   }
   link = link.url;

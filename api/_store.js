@@ -11,8 +11,18 @@
    • память процесса — для локального запуска и тестов. На serverless она живёт
      ровно до конца холодного старта, поэтому в бою это НЕ хранилище. */
 
-const URL_ = process.env.KV_REST_API_URL || '';
-const TOKEN = process.env.KV_REST_API_TOKEN || '';
+/* Имена переменных зависят от того, ЧЕМ подключили базу, и это ровно та грабля, на
+   которой всё встаёт молча: интеграция Upstash кладёт UPSTASH_REDIS_REST_*, прежнее
+   Vercel KV клало KV_REST_API_*. Человек всё подключил правильно, а сервер отвечает
+   «базы нет». Поэтому принимаем оба набора и не заставляем никого угадывать. */
+const PAIRS = [
+  ['KV_REST_API_URL', 'KV_REST_API_TOKEN'],
+  ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
+  ['REDIS_REST_URL', 'REDIS_REST_TOKEN']
+];
+const found = PAIRS.find(([u, t]) => process.env[u] && process.env[t]) || [];
+const URL_ = found[0] ? process.env[found[0]] : '';
+const TOKEN = found[1] ? process.env[found[1]] : '';
 const mem = new Map();                 // локальный запуск: ключ -> {v, exp}
 const YEAR = 365 * 24 * 3600;
 
@@ -44,6 +54,30 @@ function memGet(key){
 const store = {
   // хранилище не настроено — это не ошибка запроса, а состояние «сервер без базы»
   configured: () => live() || memOk(),
+
+  // Что видно снаружи: какими переменными подключено и подключено ли вообще.
+  // Значения не отдаём никогда — только имена, иначе токен уедет в ответ.
+  info(){
+    return {
+      connected: live(),
+      vars: found.length ? found : null,
+      memory: !live() && memOk(),
+      // подсказка для частого случая: базу подключили, но строкой подключения для
+      // обычного клиента, а функции ходят по HTTP и такой адрес использовать не могут
+      redisUrlOnly: !live() && !!(process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL)
+    };
+  },
+
+  // Настоящая проверка: записать, прочитать, стереть. Наличие переменных ничего не
+  // доказывает — токен бывает просроченным, а база выключенной.
+  async selfTest(){
+    const key = 'healthcheck:' + Date.now();
+    const val = 'ok-' + Math.random().toString(36).slice(2);
+    await store.set(key, val, 60);
+    const back = await store.get(key);
+    if(back !== val) throw new Error('записали одно, прочитали другое');
+    return true;
+  },
 
   async get(key){
     if(!live()) return memGet(key);
