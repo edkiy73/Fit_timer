@@ -25,6 +25,9 @@ module.exports = async (req, res) => {
   // Первое открытие отмечаем отдельно: «ссылку открыли через 6 дней» — это другой
   // разговор с клиентом, чем «открыли сразу», и тренеру он нужен.
   const opens = await store.incr(`p:${id}:opens`);
+  // Счётчик у тренера: «сколько раз брали мои программы». Один INCR вместо обхода
+  // всех его ссылок при каждом открытии страницы.
+  if(rec.by) await store.incr(`t:${rec.by}:opens`);
   if(opens === 1) await store.set(`p:${id}:first`, new Date().toISOString());
   await store.set(`p:${id}:last`, new Date().toISOString());
 

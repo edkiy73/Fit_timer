@@ -1529,7 +1529,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.sync-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -2290,18 +2290,24 @@
   .st-by:active{opacity:.7}
 
   /* попап тренера */
-  .tr-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)}
-  .tr-photo{
+  .tp-head{display:flex;align-items:center;gap:var(--sp-3)}
+  .tp-photo{
     flex:none;width:64px;height:64px;border-radius:50%;overflow:hidden;
     display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);color:var(--accent-ink);
   }
-  .tr-photo img{width:100%;height:100%;object-fit:cover;display:block}
-  .tr-photo svg{width:30px;height:30px}
-  .tr-id{display:flex;flex-direction:column;gap:3px;min-width:0}
-  .tr-id b{font-family:var(--font-display);font-size:19px;letter-spacing:.03em;text-transform:uppercase}
-  .tr-id small{color:var(--muted);font-size:13.5px}
-  .tr-about{font-size:14.5px;line-height:1.6;color:var(--ink);white-space:pre-line;margin:0 0 var(--sp-2)}
+  .tp-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .tp-photo svg{width:30px;height:30px}
+  .tp-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .tp-id b{font-family:var(--font-display);font-size:19px;letter-spacing:.03em;text-transform:uppercase}
+  .tp-id small{color:var(--muted);font-size:13.5px}
+  /* Три числа в ряд: стаж, программы, сколько раз их взяли. Ряд, а не список —
+     их читают одним взглядом, как ответ на «стоит ли доверять». Пустых клеток
+     здесь не бывает: чего не знаем, то не рисуем вовсе. */
+  .tp-stats{display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4)}
+  .tp-stat{display:flex;flex-direction:column;gap:2px;min-width:74px}
+  .tp-stat b{font-family:var(--font-display);font-size:22px;line-height:1.1}
+  .tp-stat small{color:var(--muted);font-size:12.5px}
 
   /* Витрина — СПИСОК, а не сетка из карточек. В половину ширины экрана помещались
      только название и минуты; цель и ник тренера — то, по чему программу вообще
@@ -2969,7 +2975,7 @@
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
         <!-- от кого программа. Клиент тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
-        <div class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></div>
+        <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
       </div>
@@ -4061,6 +4067,18 @@
           <input type="text" id="coachHandle" maxlength="30" placeholder="@lena.doma">
           <p class="field-hint">Клиент увидит его рядом с программой — так он поймёт, от кого она.</p>
         </div>
+        <!-- Сначала «кто ты», потом «где тебя найти». Клиент открывает страницу
+             тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
+             на это в последнюю очередь. -->
+        <div class="field">
+          <label>О себе</label>
+          <textarea id="coachAbout" rows="3" maxlength="400" placeholder="С кем работаешь и в чём помогаешь"></textarea>
+          <p class="field-hint">Это увидит клиент на твоей странице. До 400 символов.</p>
+        </div>
+        <div class="field">
+          <label>Стаж, лет</label>
+          <input type="number" id="coachYears" min="0" max="60" inputmode="numeric" placeholder="—">
+        </div>
         <div class="field">
           <label>Ссылка на себя</label>
           <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
@@ -4297,6 +4315,35 @@
 
   </section>
 
+  <!-- СТРАНИЦА ТРЕНЕРА глазами клиента. Раньше это был попап с одним абзацем: он
+       отвечал «кто это», но не отвечал на главный вопрос — стоит ли доверять. На
+       него отвечают стаж, сколько человек с нами и сколько раз брали его программы,
+       а попап такого объёма не держит. Пустых полей не показываем: выдуманное
+       «стаж не указан» доверия не прибавляет. -->
+  <section class="screen builder" id="scrTrainerPage">
+    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2>Тренер</h2></div>
+
+    <div class="card-block">
+      <div class="tp-head">
+        <span class="tp-photo" id="tpPhoto"></span>
+        <span class="tp-id">
+          <b id="tpName"></b>
+          <small id="tpNick"></small>
+        </span>
+      </div>
+      <p class="field-hint hidden" id="tpAbout"></p>
+    </div>
+
+    <div class="card-block hidden" id="tpStatsCard">
+      <div class="tp-stats" id="tpStats"></div>
+    </div>
+
+    <div class="card-block hidden" id="tpLinkCard">
+      <div class="cb-head"><p class="cb-title">Где его найти</p></div>
+      <a class="choice ico-row" id="tpLink" target="_blank" rel="noopener"><span data-icon="share"></span><b id="tpLinkTxt"></b></a>
+    </div>
+  </section>
+
   <section class="screen builder" id="scrClient">
     <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Клиент</h2></div>
 
@@ -4372,19 +4419,6 @@
   <!-- Кто составил программу. Ник в карточке не ссылка: каталог не должен уводить из
        приложения. Здесь фото, имя и обычный текст о человеке — в тексте могут быть и
        контакты. Фото нет — рисуем заглушку из набора иконок. -->
-    <div class="modal" id="trainerModal">
-    <div class="modal-card">
-      <div class="tr-head">
-        <span class="tr-photo" id="trPhoto"></span>
-        <span class="tr-id">
-          <b id="trName"></b>
-          <small id="trNick"></small>
-        </span>
-      </div>
-      <p class="tr-about" id="trAbout"></p>
-      <button class="modal-btn" data-act="closeModal">Закрыть</button>
-    </div>
-  </div>
 
     <!-- Пол и дата рождения. На первом экране их не спрашивают: анкета не должна
          стоять между человеком и первой тренировкой. Спрашиваем в момент, когда данные
@@ -5306,7 +5340,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
 const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
-const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrOnboard'];
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrSettings','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrOnboard'];
 // Пять корневых разделов: только у них внизу док и нет собственной панели действий.
 const ROOT_TABS = ['scrMenu','scrPrograms','scrStats','scrAccount','scrSettings'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
@@ -8753,10 +8787,28 @@ function programPayload(p){
 // Ник тренера уходит и внутри программы, и отдельным полем — сервер показывает его
 // на своей стороне, приложение на своей. Берём оба значения ИЗ ОДНОГО места: пока
 // отдельное поле заполнялось само по себе, оно молча оставалось пустым.
+/* Кто такой тренер — то, что увидит клиент на его странице. Уезжает ВМЕСТЕ со
+   ссылкой, а не отдельным действием: отдельное «сохранить профиль» человек забудет
+   нажать, и клиент увидит пустую страницу. Здесь же профиль всегда свежий. */
+function trainerProfile(){
+  const me = users.find(u => u.id === currentUser);
+  return {
+    name: (me && me.name) || '',
+    photo: (me && me.photo) || '',      // уже сжато до 240px при загрузке
+    about: (trainer.about || '').slice(0, 400),
+    years: trainer.years == null ? null : trainer.years,
+    links: (trainer.links || '').trim()
+  };
+}
+
 async function programLink(p, extra){
   const program = programPayload(p);
   const r = await apiPost('/api/share', Object.assign(
-    {program, by: program.by || '', byLink: program.byLink || ''}, extra || {}));
+    {program, by: program.by || '', byLink: program.byLink || '',
+     trainer: trainerProfile(), trainerKey: trainer.key || ''}, extra || {}));
+  // Ник закрепляется за первым, кто им воспользовался: ключ приходит один раз и
+  // дальше подтверждает, что профиль правит его хозяин.
+  if(r.trainerKey && !trainer.key){ trainer.key = r.trainerKey; saveTrainer(); }
   return {url: location.origin + location.pathname + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
 }
 
@@ -10247,6 +10299,8 @@ function renderTrainerCard(){
   setShown('coachFields', !!(trainer && trainer.on));
   if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (trainer && trainer.handle) || '';
   if(document.activeElement !== $('coachLinks'))  $('coachLinks').value  = (trainer && trainer.links) || '';
+  if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
+  if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
   const n = clients.length;
   const live = clients.filter(c => lastReport(c)).length;
   $('coachClientsSub').textContent = !n ? 'Пока никого'
@@ -11476,16 +11530,82 @@ async function saveSchedule(){
 let storeFrom = 'scrMenu';
 // Карточка тренера. Ник может не найтись в справочнике — тогда показываем сам ник и
 // честную строку вместо выдуманного описания, а не пустой попап.
+/* Страница тренера. Источников два, и они дополняют друг друга: каталог знает
+   своих тренеров (TRAINERS), сервер — тех, кто прислал программу ссылкой. Что знаем
+   — показываем, чего не знаем — не выдумываем. */
+let tpFrom = 'scrMenu';
+
 function openTrainer(nick){
   if(!nick) return;
-  const t = TRAINERS[nick] || null;
-  $('trPhoto').innerHTML = (t && t.photo)
-    ? `<img src="${t.photo}" alt="">`
-    : icon('user');
-  $('trName').textContent = (t && t.name) ? t.name : nick.replace(/^@/, '');
-  $('trNick').textContent = nick + ' · тренер';
-  $('trAbout').textContent = (t && t.about) ? t.about : 'Тренер каталога Fit Timer.';
-  $('trainerModal').classList.add('open');
+  tpFrom = show._last;
+  const local = TRAINERS[nick] || null;
+  // Сразу рисуем то, что знаем без сети: экран не должен ждать сервера.
+  fillTrainerPage(nick, local ? {
+    name: local.name, about: local.about, photo: local.photo,
+    programs: STORE_ITEMS.filter(x => x.by === nick).length
+  } : null);
+  show('scrTrainerPage');
+  apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
+    if(show._last !== 'scrTrainerPage') return;
+    // Сервер знает больше, но имя и текст у тренера каталога уже есть — берём
+    // серверное только там, где оно непустое.
+    fillTrainerPage(nick, Object.assign({}, local ? {name: local.name, about: local.about, photo: local.photo} : {}, {
+      name: d.name || (local && local.name) || '',
+      about: d.about || (local && local.about) || '',
+      photo: d.photo || (local && local.photo) || '',
+      years: d.years, since: d.since, links: d.links,
+      programs: Math.max(d.programs || 0, local ? STORE_ITEMS.filter(x => x.by === nick).length : 0),
+      opens: d.opens
+    }));
+  }).catch(()=>{});
+}
+
+function fillTrainerPage(nick, t){
+  t = t || {};
+  $('tpPhoto').innerHTML = t.photo ? `<img src="${esc(t.photo)}" alt="">` : icon('user');
+  $('tpName').textContent = t.name || nick.replace(/^@/, '');
+  $('tpNick').textContent = nick;
+  const about = t.about || '';
+  setShown('tpAbout', !!about);
+  $('tpAbout').textContent = about;
+
+  // Три числа, и каждое показывается, только если оно есть. «0 программ» и
+  // «стаж не указан» доверия не добавляют, а место занимают.
+  const cells = [];
+  if(t.years != null && t.years > 0){
+    cells.push([t.years, plural(t.years, 'год', 'года', 'лет') + ' стажа']);
+  }
+  if(t.programs > 0){
+    cells.push([t.programs, plural(t.programs, 'программа', 'программы', 'программ')]);
+  }
+  if(t.opens > 0){
+    cells.push([t.opens, plural(t.opens, 'человек взял', 'человека взяли', 'человек взяли')]);
+  }
+  if(t.since){
+    const d = daysSince((t.since || '').slice(0, 10));
+    if(d != null){
+      const m = Math.floor(d / 30);
+      cells.push(m >= 1 ? [m, plural(m, 'месяц', 'месяца', 'месяцев') + ' с нами']
+                        : [Math.max(1, d), plural(Math.max(1, d), 'день', 'дня', 'дней') + ' с нами']);
+    }
+  }
+  setShown('tpStatsCard', cells.length > 0);
+  $('tpStats').innerHTML = '';
+  cells.forEach(([n, label]) => {
+    const el = document.createElement('div');
+    el.className = 'tp-stat';
+    el.innerHTML = '<b></b><small></small>';
+    el.querySelector('b').textContent = n;
+    el.querySelector('small').textContent = label;
+    $('tpStats').appendChild(el);
+  });
+
+  const link = (t.links || '').trim();
+  setShown('tpLinkCard', !!link);
+  if(link){
+    $('tpLink').href = /^https?:/.test(link) ? link : 'https://' + link;
+    $('tpLinkTxt').textContent = link.replace(/^https?:\/\//, '');
+  }
 }
 
 function openStore(from){
@@ -15722,9 +15842,19 @@ $('coachHandle').onblur  = async e => {
   await saveTrainer();
 };
 $('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); };
+$('coachAbout').oninput = async e => { trainer.about = e.target.value.slice(0, 400); await saveTrainer(); };
+$('coachYears').oninput = async e => {
+  const n = parseInt(e.target.value, 10);
+  trainer.years = (isFinite(n) && n >= 0 && n <= 60) ? n : null;
+  await saveTrainer();
+};
 $('btnClients').onclick = ()=> openClients();
 
 $('clsBackTop').onclick = ()=> goBackTo('scrAccount');
+// Ник над программой — это вход на страницу тренера, а не украшение: клиент,
+// получивший программу по ссылке, хочет знать, от кого она.
+$('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
+$('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
 $('btnAddClient').onclick = async ()=>{
   const c = await addClient();
   renderClients();
@@ -15884,7 +16014,6 @@ $('btnSaveWeight').onclick = async ()=>{
 // навигация по календарю
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
-$('trainerModal').onclick = e => { if(e.target === $('trainerModal')) $('trainerModal').classList.remove('open'); };
 function openPremium(){ renderPremium(); $('premiumModal').classList.add('open'); }
 $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;

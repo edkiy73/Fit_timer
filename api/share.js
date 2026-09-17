@@ -11,7 +11,7 @@
    не мешает завести настоящие аккаунты потом. */
 
 const { store } = require('./_store');
-const { send, fail, readBody, rateOk, rndId, cors } = require('./_util');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('./_util');
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
@@ -31,17 +31,56 @@ module.exports = async (req, res) => {
   const id = rndId(8);
   const key = rndId(24);
   const now = new Date().toISOString();
+  const by = String(body.by || '').slice(0, 40);
+
+  /* Профиль тренера и его счётчики.
+
+     Ник закрепляется за ПЕРВЫМ, кто им воспользовался, и дальше правки профиля
+     требуют ключа. Аккаунтов пока нет, и это единственная защита, которая без них
+     возможна: иначе кто угодно переписал бы чужую страницу, назвавшись тем же ником.
+     Ссылку при этом мы создаём в любом случае — чужой ник не повод ломать человеку
+     отправку программы, просто его профиль на страницу не попадёт. */
+  let trainerKey = null;
+  if(by){
+    const raw = await store.get(`t:${by}`);
+    const prof = body.trainer && typeof body.trainer === 'object' ? body.trainer : null;
+    if(!raw){
+      trainerKey = rndId(24);
+      await store.set(`t:${by}`, JSON.stringify({
+        handle: by, since: now,
+        keyHash: require('crypto').createHash('sha256').update(trainerKey).digest('hex'),
+        name: String((prof && prof.name) || '').slice(0, 40),
+        photo: String((prof && prof.photo) || '').slice(0, 120000),
+        about: String((prof && prof.about) || '').slice(0, 400),
+        years: (prof && typeof prof.years === 'number') ? Math.max(0, Math.min(60, Math.round(prof.years))) : null,
+        links: String((prof && prof.links) || body.byLink || '').slice(0, 120)
+      }));
+    } else if(prof && body.trainerKey){
+      let cur = null;
+      try{ cur = JSON.parse(raw); }catch(e){}
+      const given = require('crypto').createHash('sha256').update(String(body.trainerKey)).digest('hex');
+      if(cur && sameSecret(given, cur.keyHash)){
+        cur.name  = String(prof.name || '').slice(0, 40);
+        cur.photo = String(prof.photo || '').slice(0, 120000);
+        cur.about = String(prof.about || '').slice(0, 400);
+        cur.years = typeof prof.years === 'number' ? Math.max(0, Math.min(60, Math.round(prof.years))) : null;
+        cur.links = String(prof.links || '').slice(0, 120);
+        await store.set(`t:${by}`, JSON.stringify(cur));
+      }
+    }
+    await store.incr(`t:${by}:programs`);
+  }
   // Ключ храним хешем: дамп базы не должен раздавать доступ к отчётам.
   const keyHash = require('crypto').createHash('sha256').update(key).digest('hex');
 
   await store.set(`p:${id}`, JSON.stringify({
     program: prog,
-    by: body.by || '',
+    by,
     byLink: body.byLink || '',
     to: body.to || '',          // подпись «для кого» — её пишет тренер у себя
     at: now,
     keyHash
   }));
 
-  send(res, 200, {id, key, at: now});
+  send(res, 200, Object.assign({id, key, at: now}, trainerKey ? {trainerKey} : {}));
 };
