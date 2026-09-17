@@ -91,6 +91,7 @@ module.exports = async (req, res) => {
       if(!raw) return;
       try{
         const t = JSON.parse(raw);
+        if(t.deleted) return;   // надгробие: полей нет, показывать в списке нечего
         trainers.push({handle: t.handle, name: t.name || '', about: t.about || '',
                        years: t.years == null ? null : t.years, links: t.links || '',
                        since: t.since || null, seen: t.seen || null, banned: !!t.banned,

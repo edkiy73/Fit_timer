@@ -39,6 +39,16 @@ const prog = (name) => `ПРОГРАММА: ${name}
   // каждый запуск. Иначе тест проверяет остатки прошлого раза, а не себя.
   const NAME = 'Силовая база ' + Math.random().toString(36).slice(2, 6);
 
+  /* Стартовый набор заливаем сами. Каталог целиком живёт на сервере, зашитых в
+     приложение программ больше нет — и на чистом хранилище «лежит вместе с
+     остальными» проверять было не с чем. Прогон не должен зависеть от того, что
+     до него запускали что-то ещё. */
+  await fetch(BASE + '/api/admin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
+    body: JSON.stringify({action: 'seed'})
+  }).catch(()=>{});
+
   const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
@@ -138,7 +148,7 @@ const prog = (name) => `ПРОГРАММА: ${name}
   }, NAME);
   ok('после проверки появилась в каталоге', after.found, after.by || '(не нашлась)');
   ok('обложка соответствует цели, а не первой попавшейся', after.cat === 'cardio', after.cat);
-  ok('и лежит вместе с зашитыми в одном списке', after.inAll && after.all > 5, after.all + ' программ');
+  ok('и лежит вместе с остальными в одном списке', after.inAll && after.all > 5, after.all + ' программ');
 
   // ---- статус у тренера обновился сам ----
   const st = await page.evaluate(async () => { await refreshPubStatus(); return pubProg.pub.status; });

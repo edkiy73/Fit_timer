@@ -27,6 +27,9 @@ module.exports = async (req, res) => {
 
   let t;
   try{ t = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
+  // Человек попросил себя забыть — запись осталась только для того, чтобы ник
+  // не достался другому. Показывать по ней нечего, и «пусто» честнее «не найдено».
+  if(t.deleted) return fail(res, 404, 'not_found');
 
   send(res, 200, {
     handle: t.handle,

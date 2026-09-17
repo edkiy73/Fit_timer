@@ -72,6 +72,7 @@ async function memCmd(c){
   if(op === 'INCR'){ const n = (+memGet(key) || 0) + 1; mem.set(key, {v: String(n), exp: Date.now() + YEAR * 1000}); return n; }
   if(op === 'RPUSH'){ const a = JSON.parse(memGet(key) || '[]'); a.push(rest[0]); mem.set(key, {v: JSON.stringify(a), exp: Date.now() + YEAR * 1000}); return a.length; }
   if(op === 'LRANGE') return JSON.parse(memGet(key) || '[]');
+  if(op === 'DEL'){ const had = mem.has(key); mem.delete(key); return had ? 1 : 0; }
   if(op === 'EXPIRE') return 1;
   if(op === 'MGET') return [key].concat(rest).map(k => memGet(k));
   return null;
@@ -194,6 +195,14 @@ const store = {
     const n = await call(['RPUSH', key, value]);
     await call(['EXPIRE', key, String(ttl)]);
     return n;
+  },
+
+  /* Стереть насовсем. Нужно ровно там, где человек попросил себя забыть: пометка
+     «удалено» на записи с именем и фотографией — это не удаление, а обещание не
+     показывать. 152-ФЗ требует первого, а не второго. */
+  async del(key){
+    if(!live()){ const had = mem.has(key); mem.delete(key); return had ? 1 : 0; }
+    return await call(['DEL', key]);
   },
 
   async list(key){

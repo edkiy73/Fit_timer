@@ -4207,6 +4207,22 @@
           <span><span>Моя страница</span><small id="coachClientsSub">Как её видит подопечный</small></span>
           <span class="nr-chev" data-icon="chevR"></span>
         </button>
+        <!-- Почта — единственный способ вернуться к своей странице. Ник и ключ правки
+             живут в телефоне; переставил приложение — и страница со всеми программами
+             в каталоге осталась ничьей, а ник занят навсегда. Поэтому строка стоит
+             рядом с ником, а не в «Аккаунте»: она про страницу тренера, а не про
+             подписку. Заводится ради возврата, а не ради писем. -->
+        <button type="button" class="pref-row row-link" id="btnCoachMail">
+          <span><span>Почта для возврата</span><small id="coachMailSub">Чтобы не потерять страницу при смене телефона</small></span>
+          <span class="nr-chev" data-icon="chevR"></span>
+        </button>
+        <!-- Удаление страницы стоит здесь, а не только внутри «Удалить все данные»:
+             перестать быть тренером можно, не стирая свои тренировки. Вид тот же,
+             что у «Удалить все данные», — одинаковое по смыслу выглядит одинаково. -->
+        <div class="danger-zone">
+          <p>Уберёт с сервера страницу, программы из каталога и отправленные ссылки. Тренировки на телефоне останутся.</p>
+          <button type="button" class="link-btn" id="btnCoachWipe">Удалить страницу тренера</button>
+        </div>
       </div>
     </div>
     </div>
@@ -4847,6 +4863,32 @@
         <span class="mini-label">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="wellHistSave" style="padding:14px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Почта тренера. Два шага в одном попапе, а не два экрана: между «прислать
+         код» и «ввести код» человек уходит в почту и возвращается, и возвращаться
+         он должен ровно туда, откуда ушёл. Пароля нет намеренно — его пришлось бы
+         заводить, помнить и восстанавливать, то есть завести вторую такую же
+         задачу поверх первой. -->
+    <div class="modal" id="mailModal">
+      <div class="modal-card">
+        <span class="mini-label">Почта для возврата</span>
+        <p class="dlg-msg" id="mailMsg"></p>
+        <div class="field" id="mailStep1">
+          <label>Почта</label>
+          <input type="email" id="mailAddr" inputmode="email" autocapitalize="off" autocorrect="off"
+                 spellcheck="false" maxlength="120" placeholder="lena@example.com">
+          <p class="field-hint">Пришлём код. Писем, кроме кода, не будет.</p>
+        </div>
+        <div class="field hidden" id="mailStep2">
+          <label>Код из письма</label>
+          <input type="text" id="mailCode" inputmode="numeric" maxlength="6" placeholder="6 цифр">
+          <p class="field-hint" id="mailCodeHint"></p>
+        </div>
+        <p class="field-err" id="mailErr"></p>
+        <button class="btn-primary" id="mailGo" style="padding:14px;font-size:16px">Прислать код</button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>
@@ -7365,12 +7407,32 @@ const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profil
 // на отправку — иначе после подключения сервера удалённое уехало бы туда из очереди.
 async function wipeAccount(){
   const linked = !!(account && account.email);
+  // Страница тренера лежит НЕ на телефоне, и стереть её заодно нельзя — её надо
+  // стереть отдельно и на сервере. Пока этого не было, «удалить всё» оставляло
+  // висеть имя, фотографию и программы в каталоге под ником, которым после
+  // удаления не мог управлять уже никто, включая самого человека.
+  const coach = !!(trainer && trainer.key && (trainer.handle || '').trim());
   const ok = await appDialog(
     (linked ? 'Удалить аккаунт и все данные? ' : 'Удалить все данные? ')
-      + 'Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.',
+      + 'Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.'
+      + (coach ? ' Страница тренера, программы в каталоге и отправленные ссылки уйдут с сервера. '
+                 + 'Программы, которые люди уже добавили себе, останутся у них — это копии.' : ''),
     {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена', type: 'подтверждаю удаление'}
   );
   if(!ok) return;
+  if(coach){
+    try{ await forgetTrainer(); }
+    catch(e){
+      // Молча стереть телефон нельзя: ключ уйдёт вместе с ним, и страницу на
+      // сервере не сможет удалить уже никто. Решение за человеком.
+      const anyway = await appDialog(
+        'Сервер не ответил, и страница тренера осталась на нём. Если стереть телефон сейчас, '
+        + 'удалить её потом будет нельзя: ключ хранится только здесь. Стереть всё равно?',
+        {confirm: true, okText: 'Стереть всё равно', cancelText: 'Подождать'}
+      );
+      if(!anyway) return;
+    }
+  }
   for(const u of users){
     for(const k of PROFILE_KEYS){ try{ await kvDel(k + '_' + u.id); }catch(e){} }
   }
@@ -9031,6 +9093,155 @@ async function pushProfile(){
   renderTrainerCard();
 }
 
+/* ---- почта тренера: возврат к своей странице ---- */
+
+/* Ссылки, которые тренер отправлял. Нужны ровно в одном месте — когда он просит
+   себя забыть: на сервере список «кто кому что отправил» нигде не собран, и
+   собирать его ради одного удаления значило бы завести ещё одно место, где такое
+   хранится. Знает его только этот телефон. */
+function coachLinkIds(){
+  const out = [];
+  (clients || []).forEach(c => clProgs(c).forEach(pr => {
+    if(pr.link && pr.link.id) out.push(pr.link.id);
+  }));
+  return out;
+}
+
+// Человеческие названия отказов сервера. Код вроде mail_failed сам по себе не
+// говорит человеку ничего, а разбираться ему придётся самому.
+const MAIL_ERRS = {
+  no_mail:        'Отправка писем на сервере пока не включена.',
+  no_store:       'Сервер сейчас недоступен. Попробуй позже.',
+  bad_email:      'Проверь адрес — похоже, в нём опечатка.',
+  too_many_today: 'Сегодня уже отправляли код на этот адрес пять раз. Попробуй завтра.',
+  rate_limited:   'Слишком часто. Подожди немного.',
+  code_expired:   'Код устарел. Запроси новый.',
+  too_many_tries: 'Слишком много попыток. Запроси новый код.',
+  no_handle:      'За этой почтой ника нет. Сначала придумай ник, потом привяжи почту.',
+  mail_taken:     'Эта почта уже привязана к другому нику.',
+  not_found:      'За этой почтой ника нет.'
+};
+const mailErrText = e => (e && MAIL_ERRS[e.code])
+  || (e && e.code === 'mail_failed'
+      ? 'Письмо не ушло: ' + ((e.detail || '').slice(0, 120) || 'почтовая служба отказала.')
+      : 'Не вышло. Проверь связь и попробуй ещё раз.');
+
+let mailStep = 1;
+function openMailModal(){
+  mailStep = 1;
+  const has = (trainer.email || '').trim();
+  $('mailMsg').textContent = has
+    ? 'Почта привязана: ' + has + '. Можно привязать другую — код придёт на новый адрес.'
+    : 'Ник и право править свою страницу живут в этом телефоне. Почта — единственный способ вернуть их на новом.';
+  $('mailAddr').value = has;
+  $('mailCode').value = '';
+  $('mailErr').textContent = '';
+  setShown('mailStep1', true);
+  setShown('mailStep2', false);
+  $('mailGo').textContent = 'Прислать код';
+  $('mailModal').classList.add('open');
+  setTimeout(()=> $('mailAddr').focus(), 150);
+}
+
+async function mailGo(){
+  const btn = $('mailGo');
+  const email = ($('mailAddr').value || '').trim().toLowerCase();
+  $('mailErr').textContent = '';
+  if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
+    $('mailErr').textContent = 'Проверь адрес — похоже, в нём опечатка.';
+    return;
+  }
+  btn.disabled = true;
+  try{
+    if(mailStep === 1){
+      btn.textContent = 'Отправляем…';
+      const r = await apiPost('/api/auth', {action: 'send', email});
+      mailStep = 2;
+      setShown('mailStep1', false);
+      setShown('mailStep2', true);
+      $('mailMsg').textContent = 'Письмо ушло на ' + email + '. Код действует 15 минут.';
+      // Локальный запуск письма не шлёт — код приходит прямо в ответе, иначе
+      // сценарий нельзя прогнать, не заведя настоящий ящик.
+      $('mailCodeHint').textContent = r.devCode ? ('Локальный запуск, код: ' + r.devCode) : '';
+      if(r.devCode) $('mailCode').value = r.devCode;
+      btn.textContent = 'Войти';
+      setTimeout(()=> $('mailCode').focus(), 120);
+    } else {
+      btn.textContent = 'Проверяем…';
+      const r = await apiPost('/api/auth', {
+        action: 'verify', email, code: ($('mailCode').value || '').replace(/\D/g, ''),
+        handle: trainer.handle ? normHandle(trainer.handle) : '',
+        trainerKey: trainer.key || ''
+      });
+      trainer.email = email;
+      if(r.restored){
+        /* Возврат: ник и НОВЫЙ ключ. Прежний перестаёт работать — вернуть себе
+           страницу и означает забрать её у устройства, где её уже нет. Поля
+           подтягиваем с сервера: человек пришёл на пустой телефон. */
+        trainer.on = true;
+        trainer.handle = r.handle;
+        trainer.key = r.trainerKey;
+        const t = r.trainer || {};
+        trainer.name = t.name || trainer.name || '';
+        trainer.photo = t.photo || trainer.photo || '';
+        trainer.about = t.about || trainer.about || '';
+        trainer.years = t.years == null ? trainer.years : t.years;
+        trainer.links = t.links || trainer.links || '';
+        trainer.pageErr = null;
+      }
+      await saveTrainer();
+      $('mailModal').classList.remove('open');
+      renderTrainerCard();
+      syncDockTabs();
+      appAlert(r.restored
+        ? 'Страница ' + r.handle + ' вернулась на этот телефон. На прежнем её править больше нельзя.'
+        : 'Готово. Теперь по этой почте можно вернуть страницу на другом телефоне.');
+    }
+  }catch(e){
+    $('mailErr').textContent = mailErrText(e);
+    if(e && e.code === 'bad_code' && e.status === 403) $('mailCode').value = '';
+  } finally {
+    btn.disabled = false;
+    if(btn.textContent === 'Отправляем…') btn.textContent = 'Прислать код';
+    if(btn.textContent === 'Проверяем…')  btn.textContent = 'Войти';
+  }
+}
+
+/* Удаление страницы тренера. Отдельно от «Удалить все данные», потому что это
+   разные желания: перестать быть тренером можно, не стирая свои тренировки.
+   Возвращает true, если сервер подтвердил, — по этому wipeAccount решает,
+   стирать ли телефон, когда сервер не ответил. */
+async function forgetTrainer(){
+  if(!(trainer && trainer.key && (trainer.handle || '').trim())) return true;
+  await apiPost('/api/forget', {
+    handle: normHandle(trainer.handle),
+    trainerKey: trainer.key,
+    links: coachLinkIds()
+  });
+  return true;
+}
+
+async function wipeTrainerPage(){
+  const ok = await appDialog(
+    'Удалить страницу тренера? С сервера уйдут имя, фото, «о себе», все программы, '
+    + 'предложенные в каталог, и все ссылки, отправленные подопечным, вместе с их отчётами. '
+    + 'Программы, которые люди уже добавили себе, останутся у них — это копии. '
+    + 'Ник больше не достанется никому, но и вернуть его будет нельзя.',
+    {confirm: true, okText: 'Удалить', cancelText: 'Отмена'}
+  );
+  if(!ok) return;
+  try{ await forgetTrainer(); }
+  catch(e){
+    appAlert('Сервер не ответил, и страница осталась на месте. Попробуй позже — стирать её надо именно на сервере.');
+    return;
+  }
+  trainer = {on: false, handle: '', links: ''};
+  await saveTrainer();
+  renderTrainerCard();
+  syncDockTabs();
+  appAlert('Страница удалена.');
+}
+
 async function programLink(p, extra){
   const program = programPayload(p);
   const r = await apiPost('/api/share', Object.assign(
@@ -10592,6 +10803,8 @@ function renderTrainerCard(){
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
   $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
   $('coachClientsSub').textContent = 'Как её видит подопечный';
+  const mail = (trainer && trainer.email || '').trim();
+  $('coachMailSub').textContent = mail || 'Чтобы не потерять страницу при смене телефона';
 }
 
 /* ---- экран «Подопечные» ---- */
@@ -16209,6 +16422,14 @@ $('mcBackTop').onclick = ()=> goBackTo('scrPrograms');
 // профиля» разошёлся бы с настоящим через месяц.
 $('btnToStore').onclick = ()=> openStore('scrPrograms');
 $('btnMyCatalog').onclick = ()=> openMyCatalog();
+$('btnCoachMail').onclick = openMailModal;
+$('mailGo').onclick = mailGo;
+// Enter в поле — то же, что нажать кнопку: код набирают с цифровой клавиатуры,
+// и тянуться мимо неё к кнопке незачем.
+$('mailAddr').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); mailGo(); } };
+$('mailCode').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); mailGo(); } };
+$('mailCode').oninput = e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); };
+$('btnCoachWipe').onclick = wipeTrainerPage;
 $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
   : appAlert('Сначала включи режим тренера и укажи ник.');
 $('pubGives').oninput = e => { pubDraft.gives = e.target.value; };
