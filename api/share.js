@@ -11,7 +11,18 @@
    не мешает завести настоящие аккаунты потом. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
+        clampText, clampLine, cleanPic, cleanLink } = require('../lib/util');
+
+// Профиль тренера — то, что увидят чужие люди. Пределы одни на все двери, через
+// которые он сюда попадает: и через /api/trainer, и вместе со ссылкой отсюда.
+const faceOf = prof => ({
+  name:  clampLine(prof && prof.name, 40),
+  photo: cleanPic(prof && prof.photo, 120000),
+  about: clampText(prof && prof.about, 400),
+  years: (prof && typeof prof.years === 'number') ? Math.max(0, Math.min(60, Math.round(prof.years))) : null,
+  links: cleanLink(prof && prof.links, 120)
+});
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
@@ -47,27 +58,19 @@ module.exports = async (req, res) => {
     if(!raw){
       trainerKey = rndId(24);
       await store.push('t:all', by);
-      await store.set(`t:${by}`, JSON.stringify({
+      const face = faceOf(prof);
+      if(!face.links) face.links = cleanLink(body.byLink, 120);
+      await store.set(`t:${by}`, JSON.stringify(Object.assign({
         handle: by, since: now, seen: now,
-        keyHash: require('crypto').createHash('sha256').update(trainerKey).digest('hex'),
-        name: String((prof && prof.name) || '').slice(0, 40),
-        photo: String((prof && prof.photo) || '').slice(0, 120000),
-        about: String((prof && prof.about) || '').slice(0, 400),
-        years: (prof && typeof prof.years === 'number') ? Math.max(0, Math.min(60, Math.round(prof.years))) : null,
-        links: String((prof && prof.links) || body.byLink || '').slice(0, 120)
-      }));
+        keyHash: require('crypto').createHash('sha256').update(trainerKey).digest('hex')
+      }, face)));
     } else if(prof && body.trainerKey){
       let cur = null;
       try{ cur = JSON.parse(raw); }catch(e){}
       const given = require('crypto').createHash('sha256').update(String(body.trainerKey)).digest('hex');
       if(cur && sameSecret(given, cur.keyHash)){
         cur.seen = now;
-        cur.name  = String(prof.name || '').slice(0, 40);
-        cur.photo = String(prof.photo || '').slice(0, 120000);
-        cur.about = String(prof.about || '').slice(0, 400);
-        cur.years = typeof prof.years === 'number' ? Math.max(0, Math.min(60, Math.round(prof.years))) : null;
-        cur.links = String(prof.links || '').slice(0, 120);
-        await store.set(`t:${by}`, JSON.stringify(cur));
+        await store.set(`t:${by}`, JSON.stringify(Object.assign(cur, faceOf(prof))));
       }
     }
     await store.incr(`t:${by}:programs`);
@@ -78,8 +81,8 @@ module.exports = async (req, res) => {
   await store.set(`p:${id}`, JSON.stringify({
     program: prog,
     by,
-    byLink: body.byLink || '',
-    to: body.to || '',          // подпись «для кого» — её пишет тренер у себя
+    byLink: cleanLink(body.byLink, 120),
+    to: clampLine(body.to, 40), // подпись «для кого» — её пишет тренер у себя
     at: now,
     keyHash
   }));

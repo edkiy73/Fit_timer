@@ -2932,7 +2932,7 @@
 
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
-      <input type="search" id="storeQuery" placeholder="Название программы" autocomplete="off">
+      <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" autocomplete="off">
       <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить"></button>
     </div>
 
@@ -3366,10 +3366,10 @@
            в этом же ряду, и добраться до «время и вес» было нечем. -->
       <div class="pref-row"><span>Упражнение с доп. весом<small>снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
       <div class="row2">
-        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" inputmode="numeric" placeholder="Например: 12-15"></div>
+        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15"></div>
         <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
       </div>
-      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" inputmode="decimal" placeholder="Например: 8"></div>
+      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8"></div>
       <p class="field-hint hidden" id="exNowHint"></p>
       <!-- Два разных отдыха: между подходами ОДНОГО упражнения обычно короче, чем
            после него целиком — например, дальше идёт совсем другая группа мышц,
@@ -3408,12 +3408,12 @@
                главная ось упражнения должна стоять выше своей добавки. Раньше
                весовая пара лежала между повторениями и временем, и на формате
                «время и вес» вес оказывался НАД секундами. -->
-          <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" inputmode="numeric" placeholder="Например: 1"></div>
-          <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" inputmode="numeric" placeholder="Например: 15"></div>
-          <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" inputmode="numeric" placeholder="Например: 5"></div>
-          <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" inputmode="numeric" placeholder="Например: 60"></div>
-          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" inputmode="decimal" placeholder="Например: 2"></div>
-          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" inputmode="decimal" placeholder="Например: 24"></div>
+          <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" maxlength="4" inputmode="numeric" placeholder="Например: 1"></div>
+          <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" maxlength="4" inputmode="numeric" placeholder="Например: 15"></div>
+          <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" maxlength="5" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" maxlength="5" inputmode="numeric" placeholder="Например: 60"></div>
+          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" maxlength="6" inputmode="decimal" placeholder="Например: 2"></div>
+          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" maxlength="6" inputmode="decimal" placeholder="Например: 24"></div>
         </div>
         <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
         <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
@@ -3434,10 +3434,10 @@
     </button>
 
     <div id="exDetailsBox" class="stack hidden">
-      <div class="field"><label>Как выполнять</label><textarea id="exDesc" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
-      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
+      <div class="field"><label>Как выполнять</label><textarea id="exDesc" maxlength="600" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
+      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" maxlength="300" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
       <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
-      <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" placeholder="https://youtube.com/..."></div>
+      <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
       <div class="field"><label>Картинка</label>
         <div class="media-row">
           <button type="button" id="exMediaBtn">Выбрать фото</button>
@@ -3512,24 +3512,24 @@
 
     <div class="ai-pane hidden" id="aiPaneVideo">
       <div class="field">
-        <input type="url" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
+        <input type="url" id="ytUrl" maxlength="300" placeholder="https://youtube.com/watch?v=...">
         <p class="field-hint" id="ytHint">Обычная ссылка или короткая youtu.be.</p>
       </div>
       <div class="field"><label>Пожелания (необязательно)</label>
-        <textarea id="ytWish" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
+        <textarea id="ytWish" maxlength="600" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
       </div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneEdit">
       <div class="field">
-        <textarea id="eaWish" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
+        <textarea id="eaWish" maxlength="600" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
         <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём просишь.</p>
       </div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneExNew">
       <div class="field">
-        <textarea id="exaWish" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
+        <textarea id="exaWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
         <p class="field-hint">Назови упражнение или опиши, что нужно, — подберётся само.</p>
       </div>
       <div class="field"><label>Сколько упражнений</label><select id="exaCount"></select></div>
@@ -3543,7 +3543,7 @@
 
     <div class="ai-pane hidden" id="aiPaneExEdit">
       <div class="field">
-        <textarea id="exeWish" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
+        <textarea id="exeWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
       </div>
     </div>
     </div>
@@ -3588,7 +3588,7 @@
     <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
     <p class="field-hint" id="aiAnswerHint"></p>
     <div class="field">
-      <textarea id="aiResult" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
+      <textarea id="aiResult" maxlength="80000" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
     </div>
     </div>
 
@@ -4201,8 +4201,10 @@
         </div>
         <div class="field">
           <label>Ссылка на себя</label>
-          <input type="text" id="coachLinks" maxlength="120" placeholder="t.me/lena.doma">
+          <input type="text" id="coachLinks" maxlength="120" inputmode="url" autocapitalize="off"
+                 autocorrect="off" spellcheck="false" placeholder="t.me/lena.doma">
           <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
+          <p class="field-err" id="coachLinksErr"></p>
         </div>
         <!-- Своя страница глазами подопечного. Тренер правит поля вслепую, если не видит
              результата, — а именно по этой странице его и выбирают.
@@ -4283,7 +4285,7 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Ключ ИИ</p></div>
       <div class="field">
-        <input type="password" id="ueGeminiKey" placeholder="Ключ Google AI" autocomplete="off" spellcheck="false">
+        <input type="password" id="ueGeminiKey" maxlength="120" placeholder="Ключ Google AI" autocomplete="off" spellcheck="false">
         <p class="field-hint" id="ueGeminiState"></p>
       </div>
       <div class="key-actions">
@@ -4623,7 +4625,7 @@
         <p class="dlg-msg" id="payWhat"></p>
         <div class="field">
           <label>Почта</label>
-          <input type="email" id="payEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+          <input type="email" id="payEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
           <p class="field-hint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
         </div>
         <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px">Оплатить</button>
@@ -4682,7 +4684,7 @@
         <p class="pm-lead" id="lockMsg">Приложи палец или посмотри на камеру — и продолжим.</p>
         <div class="field hidden" id="lockMailBox" style="text-align:left">
           <label>Почта аккаунта</label>
-          <input type="email" id="lockEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+          <input type="email" id="lockEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
         </div>
         <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px">Разблокировать</button>
         <button type="button" class="link-btn" id="lockMail">Войти по почте</button>
@@ -4697,7 +4699,7 @@
              промахнуться пальцем можно, случайно напечатать слово — нет. -->
         <div class="field hidden" id="dlgTypeBox">
           <label id="dlgTypeLabel"></label>
-          <input type="text" id="dlgType" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <input type="text" id="dlgType" maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
         <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
         <button class="modal-btn" id="dlgCancel">Отмена</button>
@@ -4878,7 +4880,7 @@
     <div class="modal" id="importModal">
       <div class="modal-card">
         <span class="mini-label">Импорт программы</span>
-        <div class="field"><textarea id="importCode" style="min-height:110px" placeholder="Вставь код (FIT1…) или ссылку, которой поделились"></textarea></div>
+        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:110px" placeholder="Вставь код (FIT1…) или ссылку, которой поделились"></textarea></div>
         <button class="btn-primary" id="btnDoImport" style="padding:15px">Импортировать</button>
         <div class="imp-or"><span>или</span></div>
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
@@ -6095,7 +6097,7 @@ function renderUsers(){
     const act = u.id === currentUser;
     const row = document.createElement('div');
     row.className = 'user-row' + (act ? ' act' : '');
-    const ua = u.photo ? `<img src="${u.photo}" alt="">` : esc((u.name || '?')[0].toUpperCase());
+    const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
     if(u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
     const a = ageOf(u.birth);
@@ -7308,12 +7310,12 @@ function syncUserForm(){
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
-    ? `<img src="${uDraft.photo}" alt="">`
+    ? `<img src="${esc(uDraft.photo)}" alt="">`
     : (nm ? `<span class="ava-let">${nm[0].toUpperCase()}</span>` : icon('camera'));
 }
 async function saveUser(){
   // maxlength сторожит только набор с клавиатуры — вставка и перенос данных мимо него
-  uDraft.name = $('ueName').value.trim().slice(0, NAME_MAX);
+  uDraft.name = clampLine($('ueName').value, NAME_MAX);
   uDraft.birth = $('ueBirth').value || '';
   readTimings();
   if(!uDraft.name){ appAlert('Укажи имя.'); return; }
@@ -7565,7 +7567,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '17.09 · сервер в восемь функций (v13)';
+const BUILD = '17.09 · пределы полей (v14)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -7926,7 +7928,7 @@ function renderPhotos(){
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ph-item';
-    b.innerHTML = `<img src="${p.img}" alt=""><small>${shortD(p.d)}</small>`;
+    b.innerHTML = `<img src="${esc(p.img)}" alt=""><small>${shortD(p.d)}</small>`;
     b.onclick = ()=> openCompare(i);
     strip.appendChild(b);
   });
@@ -7980,8 +7982,8 @@ function fillCmpSel(sel, idx){
 }
 function renderCmp(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
-  $('cmpImgA').innerHTML = a ? `<img src="${a.img}" alt="">` : '';
-  $('cmpImgB').innerHTML = b ? `<img src="${b.img}" alt="">` : '';
+  $('cmpImgA').innerHTML = a ? `<img src="${esc(a.img)}" alt="">` : '';
+  $('cmpImgB').innerHTML = b ? `<img src="${esc(b.img)}" alt="">` : '';
   if(a && b){
     const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
     $('cmpDays').textContent = days ? `${days} ${plural(days, 'день', 'дня', 'дней')} между фото` : 'Фото за один день';
@@ -8158,16 +8160,38 @@ async function importAllData(file){
     appAlert('Это не файл резервной копии Fit Timer.'); return;
   }
   if(!(await appConfirm('Заменить ВСЕ данные приложения данными из файла? Текущие данные будут перезаписаны.'))) return;
-  await kvSet('users', JSON.stringify(dump.users));
-  await kvSet('currentUser', dump.currentUser || dump.users[0].id);
+
+  /* Файл резервной копии — обычный JSON, и до сюда он мог доехать откуда угодно:
+     его пересылают, правят в блокноте, собирают заново. Поэтому проходим по нему
+     теми же пределами, что и по всему остальному. Раньше содержимое клалось в
+     хранилище как есть, и имя профиля в мегабайт или строка вместо адреса
+     фотографии приезжали прямо на экран. */
+  const users = dump.users.filter(u => u && typeof u === 'object').slice(0, 20).map(u => {
+    u.name = clampLine(u.name, NAME_MAX) || DEFAULT_NAME;
+    u.photo = cleanPic(u.photo);
+    if(u.gender && u.gender !== 'm' && u.gender !== 'f') u.gender = '';
+    if(u.theme && !['system', 'light', 'dark'].includes(u.theme)) u.theme = 'system';
+    return u;
+  });
+  if(!users.length){ appAlert('В файле нет ни одного профиля.'); return; }
+
+  await kvSet('users', JSON.stringify(users));
+  await kvSet('currentUser', dump.currentUser || users[0].id);
   for(const [uid, d] of Object.entries(dump.data || {})){
-    await kvSet('customPrograms_' + uid, JSON.stringify(d.programs || []));
+    const progs = (Array.isArray(d.programs) ? d.programs : []).map(sanitizeProgram);
+    // Фото прогресса — те же data-адреса, что и у упражнений, и та же проверка.
+    const photos = (Array.isArray(d.photos) ? d.photos : [])
+      .map(ph => (ph && typeof ph === 'object' && cleanPic(ph.img)) ? {...ph, img: cleanPic(ph.img)} : null)
+      .filter(Boolean);
+    await kvSet('customPrograms_' + uid, JSON.stringify(progs));
     await kvSet('stats_' + uid, JSON.stringify(d.stats || {}));
-    await kvSet('photos_' + uid, JSON.stringify(d.photos || []));
+    await kvSet('photos_' + uid, JSON.stringify(photos));
     await kvSet('warmupAdded_' + uid, d.warmupAdded ? '1' : '0');
   }
   for(const [k, v] of Object.entries(dump.settings || {})){
-    if(v !== null && v !== undefined) await kvSet(k, v);
+    // Кладём только известные ключи: файл не должен уметь завести в хранилище
+    // то, чего приложение не заводит само.
+    if(v !== null && v !== undefined && GLOBAL_KEYS.includes(k)) await kvSet(k, v);
   }
   location.reload();
 }
@@ -8415,6 +8439,118 @@ async function saveWeightHist(){
 }
 
 /* ================= ПЕРВЫЙ ЗАПУСК (ОНБОРДИНГ) ================= */
+/* ================= ПРЕДЕЛЫ ПОЛЕЙ =================
+
+   Одно место на всё приложение, и это не вкусовщина: длина поля решается дважды —
+   когда человек печатает и когда ТО ЖЕ САМОЕ приезжает снаружи. Снаружи приезжает
+   много: программа по ссылке от тренера, программа из каталога, файл программы,
+   код FIT1, резервная копия. Там `maxlength` не действует, и ровно там встречается
+   и миллион символов, и кавычка посреди адреса картинки.
+
+   Поэтому правило одно, а применяется в трёх местах: атрибут в разметке (чтобы
+   нельзя было напечатать), обрезка при сохранении (чтобы нельзя было вставить) и
+   разбор всего, что пришло снаружи (`sanitizeProgram`).
+
+   Числа взяты не с потолка: столько помещается там, где поле показывают. Имя
+   программы — в карточку, «о себе» — на страницу тренера, описание упражнения —
+   в свёрнутый блок на экране упражнения. */
+const LIM = {
+  progName: 60, progDesc: 1000,
+  exName: 60, exDesc: 600, exMistakes: 300, exSwapName: 60, exSwapDesc: 600,
+  exValue: 16,               // «12-15», «01:30» — больше там быть нечему
+  link: 120, video: 300,
+  userName: 20, clientName: 40, clientNote: 80,
+  coachName: 40, coachAbout: 400, coachHandle: 30,
+  gives: 300, note: 500, wish: 600,
+  aiAnswer: 80000,           // ответ нейросети — это целая программа, он правда длинный
+  pic: 900 * 1024            // картинка в строке base64
+};
+
+/* Управляющие символы из текста убираем ВСЕГДА. Перевод строки и табуляция —
+   это текст, остальное — нет: невидимые символы ломают разметку, сортировку и
+   поиск, а человек их не видит и не может убрать. */
+const CTRL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\uFEFF]/g;
+// Разделители строк из юникода — это ПЕРЕНОС, а не мусор: выбросив их молча,
+// склеишь два слова в одно («…ния» + «тут» → «ниятут»). Сводим к обычному \n,
+// а дальше с ним поступают по правилам поля.
+const NL = /[\u2028\u2029\r]/g;
+
+// Многострочный текст: описания, заметки, «о себе».
+function clampText(v, max){
+  return String(v == null ? '' : v).replace(NL, '\n').replace(CTRL, '').trim().slice(0, max);
+}
+// Однострочный: имена, названия. Перенос строки в названии программы — это
+// две строки в карточке там, где место под одну.
+function clampLine(v, max){
+  return String(v == null ? '' : v).replace(NL, '\n').replace(CTRL, '')
+    .replace(/\s+/g, ' ').trim().slice(0, max);
+}
+const clampNum = (v, min, max, dflt) => {
+  const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
+  if(!isFinite(n)) return dflt;
+  return Math.max(min, Math.min(max, n));
+};
+
+/* Картинка. Всё, что мы показываем через <img src>, обязано быть data-адресом
+   картинки и ничем другим. Чужая программа приносит это поле как обычную строку,
+   и строка вида  x" onerror="…  превращается в чужой код на экране: браузер
+   читает атрибут, а не наше намерение. Проверяем ФОРМУ, а не доверяем источнику. */
+const PIC_RE = /^data:image\/(png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/]+=*$/;
+function cleanPic(v){
+  const s = String(v == null ? '' : v).trim();
+  return (s.length <= LIM.pic && PIC_RE.test(s)) ? s : null;
+}
+
+/* Ссылка на себя. «Где меня найти» — это адрес, а не слово: «хуй» в этом поле
+   уезжает на страницу тренера и делается ссылкой https://хуй, по которой человек
+   нажимает и попадает в никуда. Поэтому требуем то, что вообще может быть адресом:
+   имя узла с точкой. Схему дописываем сами — её не набирают.
+
+   Возвращает нормализованный адрес или null. Ругаться и объяснять — дело того,
+   кто вызвал: в одном месте это надпись под полем, в другом молчаливый пропуск. */
+const HOST_RE = /^[a-zа-яё0-9]([a-zа-яё0-9-]*[a-zа-яё0-9])?(\.[a-zа-яё0-9-]+)+$/i;
+function cleanLink(v, max){
+  let s = clampLine(v, max || LIM.link);
+  if(!s) return '';
+  s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//i, m => /^https?:\/\//i.test(m) ? m : '');
+  // Схемы вроде javascript: и data: не начинаются с //, поэтому их ловим отдельно.
+  if(/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https?:\/\//i.test(s)) return null;
+  const bare = s.replace(/^https?:\/\//i, '');
+  const host = bare.split(/[/?#]/)[0];
+  if(!HOST_RE.test(host)) return null;
+  return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+}
+
+/* Всё, что приехало снаружи, чистится ОДНОЙ функцией: программа по ссылке, из
+   каталога, из файла, из кода FIT1 и из резервной копии проходят один и тот же
+   путь. Разводить их по местам нельзя — каждый забытый путь и есть дыра. */
+function sanitizeProgram(p){
+  if(!p || typeof p !== 'object') return p;
+  p.name = clampLine(p.name, LIM.progName) || 'Программа';
+  if(p.desc != null) p.desc = clampText(p.desc, LIM.progDesc);
+  p.cover = cleanPic(p.cover);
+  if(p.by != null) p.by = clampLine(p.by, 40);
+  if(p.byLink != null) p.byLink = cleanLink(p.byLink) || '';
+  (Array.isArray(p.plans) ? p.plans : []).forEach(pl => {
+    if(!pl || typeof pl !== 'object') return;
+    (Array.isArray(pl.exercises) ? pl.exercises : []).forEach(sanitizeExercise);
+  });
+  (Array.isArray(p.exercises) ? p.exercises : []).forEach(sanitizeExercise);
+  return p;
+}
+function sanitizeExercise(ex){
+  if(!ex || typeof ex !== 'object') return;
+  ex.name = clampLine(ex.name, LIM.exName);
+  if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
+  if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
+  if(ex.swapName != null) ex.swapName = clampLine(ex.swapName, LIM.exSwapName);
+  if(ex.swapDesc != null) ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
+  if(ex.video != null)    ex.video = cleanLink(ex.video, LIM.video) || '';
+  if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
+  const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
+  ex.media = pic ? {kind: 'img', data: pic} : null;
+}
+
 // Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.
 // «Гость» здесь не годится: гость — это чужой и ненадолго, а человек у себя дома
 // и надолго. Имя профиля, в отличие от аккаунта, ничего не адресует — уникальность
@@ -8582,7 +8718,7 @@ function renderGreeting(){
   $('greetName').textContent = hi;
   // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
   $('greetAva').innerHTML = (u && u.photo)
-    ? `<img src="${u.photo}" alt="">`
+    ? `<img src="${esc(u.photo)}" alt="">`
     : (name ? esc(name[0].toUpperCase()) : icon('user'));
   const box = $('greetChips');
   box.innerHTML = '';
@@ -9086,7 +9222,10 @@ function programMedia(p){
 function applyMedia(p, media){
   if(!media) return p;
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const d = media[(ex.name || '').trim()];
+    // cleanPic, а не «есть значит есть»: карта фото приходит с сервера обычным
+    // JSON, и строка в ней может быть любой — в том числе такой, что уедет в
+    // атрибут <img src> и станет там не адресом.
+    const d = cleanPic(media[(ex.name || '').trim()]);
     if(d) ex.media = {kind: 'img', data: d};
   }));
   return p;
@@ -9131,12 +9270,14 @@ function trainerProfile(){
   // Имя тренера своё, но пустым уезжать не должно: у тех, кто включил режим до
   // появления поля, его просто нет, а страница без имени доверия не вызывает.
   const me = users.find(u => u.id === currentUser);
+  // Те же пределы, что и на входе. Поля правятся не только через форму — их
+  // переносит вход по почте, и тогда `maxlength` в разметке не при чём.
   return {
-    name: ((trainer.name || '').trim() || (me && me.name) || '').trim(),
-    photo: trainer.photo || '',         // сжато до 240px при загрузке
-    about: (trainer.about || '').slice(0, 400),
-    years: trainer.years == null ? null : trainer.years,
-    links: (trainer.links || '').trim()
+    name: clampLine(trainer.name, LIM.coachName) || clampLine(me && me.name, LIM.coachName),
+    photo: cleanPic(trainer.photo) || '',   // сжато до 240px при загрузке
+    about: clampText(trainer.about, LIM.coachAbout),
+    years: clampNum(trainer.years, 0, 60, null),
+    links: cleanLink(trainer.links) || ''
   };
 }
 
@@ -9332,6 +9473,7 @@ async function importProgramFile(file){
     prog.stats = {completions: 0};
     delete prog.rotIdx; delete prog.progLast;
     prog.plans = normPlans(prog);
+    sanitizeProgram(prog);      // файл мог написать кто угодно и чем угодно
     customPrograms.push(prog);
     await savePrograms();
     renderMine();
@@ -10046,7 +10188,7 @@ function renderTray(){
   imgTray.forEach((data, i)=>{
     const el = document.createElement('div');
     el.className = 'tray-item' + (used.has(data) ? ' used' : '');
-    el.innerHTML = `<img src="${data}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
+    el.innerHTML = `<img src="${esc(data)}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
     el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
     el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку. Одну картинку можно поставить в несколько мест.');
     box.appendChild(el);
@@ -10087,7 +10229,7 @@ function renderSlots(){
     const row = document.createElement('div');
     row.className = 'slot-row';
     row.innerHTML =
-      `<div class="sl-thumb">${cur ? `<img src="${cur}" alt="">` : DUMBBELL_ICON}</div>` +
+      `<div class="sl-thumb">${cur ? `<img src="${esc(cur)}" alt="">` : DUMBBELL_ICON}</div>` +
       `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : 'нет картинки'}</small></div>`;
     row.querySelector('b').textContent = s.title;
     row.onclick = ()=> openSlotPicker(i);
@@ -10106,7 +10248,7 @@ function openSlotPicker(i){
   imgTray.forEach(data =>{
     const el = document.createElement('div');
     el.className = 'tray-item' + (data === cur ? ' act' : '');
-    el.innerHTML = `<img src="${data}" alt="">`;
+    el.innerHTML = `<img src="${esc(data)}" alt="">`;
     el.onclick = ()=>{
       s.set(data);                       // копируем, лоток не трогаем
       $('slotModal').classList.remove('open');
@@ -10252,7 +10394,7 @@ const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
 
 function exePrompt(){
   const ex = curPlan().exercises[exeIdx];
-  const wish = ($('exeWish').value || '').trim();
+  const wish = clampText($('exeWish').value, LIM.wish);
   return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
     'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
     'ДЛЯ КОГО: ' + userForAI() + '\n' +
@@ -10333,7 +10475,7 @@ function openExAI(){
 }
 
 function exaPrompt(){
-  const wish = ($('exaWish').value || '').trim();
+  const wish = clampText($('exaWish').value, LIM.wish);
   const given = [], free = [];
   const fmtMap = {'Повторения':'повторения','С весом':'повторения и вес','Время':'время'};
   if(exa.format) given.push(`Формат: ${fmtMap[exa.format] || exa.format.toLowerCase()}.`);
@@ -10430,7 +10572,7 @@ function parseYouTubeUrl(raw){
 
 function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
-  const wish = ($('ytWish').value || '').trim();
+  const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
   return AI_PROMPT +
     '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
@@ -10515,7 +10657,7 @@ function programToText(p){
 }
 
 function editAIPrompt(){
-  const wish = ($('eaWish').value || '').trim();
+  const wish = clampText($('eaWish').value, LIM.wish);
   return AI_PROMPT +
     '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
     'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
@@ -10611,8 +10753,9 @@ async function importProgramLink(id){
   if(!prog || !prog.name){ appAlert('По ссылке нет программы с упражнениями.'); return; }
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
-  prog.cover = prog.cover || null;
   prog.src = id;
+  prog.plans = normPlans(prog);
+  sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым
   // Снимок присланного — чтобы потом было видно, что подопечный в нём поменял.
   prog.origEx = snapshotEx(prog);
   if(d.by) prog.by = d.by;
@@ -10648,7 +10791,8 @@ function importProgramCode(code){
   }
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
-  prog.cover = prog.cover || null;
+  prog.plans = normPlans(prog);
+  sanitizeProgram(prog);        // код можно собрать руками, и собирают
   draft = prog;
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
@@ -10795,7 +10939,10 @@ function renderTrainerCard(){
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
   $('coachPhotoPrev').innerHTML = ph ? `<img src="${esc(ph)}" alt="">` : icon('camera');
-  if(document.activeElement !== $('coachLinks'))  $('coachLinks').value  = (trainer && trainer.links) || '';
+  if(document.activeElement !== $('coachLinks')){
+    $('coachLinks').value = ((trainer && trainer.links) || '').replace(/^https?:\/\//i, '');
+    $('coachLinksErr').textContent = '';
+  }
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
   $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
@@ -12040,7 +12187,7 @@ async function refreshPubStatus(){
 async function doPublish(){
   const p = pubProg;
   if(!p) return;
-  pubDraft.gives = $('pubGives').value.trim();
+  pubDraft.gives = clampText($('pubGives').value, LIM.gives);
   const miss = [];
   if(!pubDraft.cat) miss.push('цель');
   if(!pubDraft.level) miss.push('уровень');
@@ -12155,7 +12302,7 @@ function renderMine(){
     const schedule = [daysU.length ? daysU.join(' · ') : '', p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
-    const cover = p.cover ? `<img src="${p.cover}" alt="">` : DUMBBELL_ICON;
+    const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
     const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
     const volOne = (plans[0].rounds > 1 || setsOne <= plans[0].exercises.length)
       ? `${plans[0].rounds} ${plural(plans[0].rounds, 'круг', 'круга', 'кругов')}`
@@ -12356,7 +12503,18 @@ function blankExercise(){
 // приводит поля упражнения к валидным значениям: и после ручного ввода, и после ответа ИИ,
 // который может прислать что угодно. Меняет объект на месте и возвращает его же.
 function normalizeExercise(ex){
-  ex.name  = (ex.name || '').trim();
+  /* Пределы полей — здесь же. Эта функция и есть место, где «что угодно»
+     становится упражнением: через неё проходит и набранное руками, и ответ
+     нейросети, и чужая программа. Раньше длина названия и описаний тут не
+     проверялась вовсе, и название в мегабайт доезжало до карточки как есть. */
+  ex.name  = clampLine(ex.name, LIM.exName);
+  ex.desc  = clampText(ex.desc, LIM.exDesc);
+  ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
+  // Мышцы — только известные: чужой список уезжает в подписи и в промт к ИИ.
+  ex.muscles = (Array.isArray(ex.muscles) ? ex.muscles : [])
+    .filter(id => MUSCLES.some(([m]) => m === id)).slice(0, MUSCLES.length);
+  const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
+  ex.media = pic ? {kind: 'img', data: pic} : null;
   ex.value = normValue(ex.value, ex.type);
   // Подходы у разминки принудительно сбрасывались в единицу, а поле в форме пряталось.
   // Разминка отличается от обычного упражнения ровно одним — она идёт в начале,
@@ -12364,7 +12522,9 @@ function normalizeExercise(ex){
   ex.sets  = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
   ex.perSide = !!ex.perSide;
   ex.warmup  = !!ex.warmup;
-  ex.rest  = Math.max(0, parseInt(ex.rest) || 0);
+  // Верхняя граница была только у отдыха ПОСЛЕ упражнения, а у этого не было
+  // вовсе: «ОТДЫХ: 99999» из ответа ИИ давал шаг тренировки на сутки.
+  ex.rest  = Math.max(0, Math.min(600, parseInt(ex.rest) || 0));
   // отдых после ВСЕГО упражнения (перед следующим) — своё число, независимое от
   // отдыха между подходами. null = не задан явно: кто читает это поле, берёт
   // rest как запасной вариант (см. exRestAfter() и paint в buildSteps)
@@ -12391,11 +12551,12 @@ function normalizeExercise(ex){
   ex.weightMax = parseKg(ex.weightMax);
   ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
   ex.dualProg = !!ex.dualProg && hasWeight(ex) && ex.repsMax > 0;
-  ex.swapName = (ex.swapName || '').trim().slice(0, 60);
-  ex.swapDesc = (ex.swapDesc || '').trim().slice(0, 600);
+  ex.swapName = clampLine(ex.swapName, LIM.exSwapName);
+  ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
   ex.swapOn = !!ex.swapName;
-  ex.video = (ex.video || '').trim();
-  if(ex.video && !/^https?:\/\//i.test(ex.video)) ex.video = 'https://' + ex.video;
+  // Тот же разбор, что у ссылки тренера: схему дописываем сами, а непохожее на
+  // адрес не сохраняем. Кнопка «смотреть» на непонятной строке ведёт в никуда.
+  ex.video = cleanLink(ex.video, LIM.video) || '';
   return ex;
 }
 
@@ -12954,7 +13115,7 @@ function fillPlanFields(){
 function syncCover(){
   $('bCoverBtn').classList.toggle('act', !!draft.cover);
   $('bCoverNone').classList.toggle('act', !draft.cover);
-  $('bCoverPrev').innerHTML = draft.cover ? `<img src="${draft.cover}" alt="">` : '';
+  $('bCoverPrev').innerHTML = draft.cover ? `<img src="${esc(draft.cover)}" alt="">` : '';
 }
 
 // дни недели текущего варианта — множественный выбор
@@ -13341,7 +13502,7 @@ $('restModalDone').onclick = ()=>{
 function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
-  if(m && m.kind === 'img') box.innerHTML = `<img src="${m.data}" alt="">`;
+  if(m && m.kind === 'img') box.innerHTML = `<img src="${esc(m.data)}" alt="">`;
   else box.innerHTML = '<span class="mp-empty">Нет картинки</span>';
 }
 function syncExDetailsSum(){
@@ -13487,7 +13648,7 @@ function exSummary(ex){ return exBits(ex).join(' · '); }
 // Номер считаем только по основным упражнениям: разминка идёт один раз до кругов,
 // где бы она ни лежала в списке, и сквозная нумерация врала бы о порядке.
 function exThumb(ex, i){
-  if(ex.media && ex.media.kind === 'img') return `<img src="${ex.media.data}" alt="">`;
+  if(ex.media && ex.media.kind === 'img') return `<img src="${esc(ex.media.data)}" alt="">`;
   if(ex.warmup) return icon('flame');
   const before = curPlan().exercises.slice(0, i).filter(e => !e.warmup).length;
   return String(before + 1);
@@ -14015,6 +14176,12 @@ function parseProgramText(txt){
   // хватило; на деле они только пугали. Теперь объясняем смысл, а не синтаксис.
   if(!p.name) errors.push('в тексте нет названия программы');
   if(!p.plans.length) errors.push('в тексте не найдено ни одного упражнения');
+  /* Пределы полей — здесь, а не в каждом разборе отдельно. Через эту функцию
+     проходит ВСЁ, что становится программой из текста: ответ нейросети, позиция
+     каталога, обмен через programToText. Название в мегабайт приезжает ровно так
+     же, как приезжает нормальное, и обрезать его надо там, где текст становится
+     программой. */
+  sanitizeProgram(p);
   return {program:p, errors};
 }
 
@@ -14128,7 +14295,7 @@ function initAIForm(){
   $('qNote').value = q.note || '';
   if(aiWaysReset.scrAI) aiWaysReset.scrAI();
 }
-$('qNote').oninput = e => q.note = e.target.value;
+$('qNote').oninput = e => q.note = clampText(e.target.value, 300);
 $('qSplit').onclick = ()=>{
   q.split = !q.split;
   $('qSplit').classList.toggle('on', q.split);
@@ -14234,8 +14401,8 @@ function importFromText(){
 
 async function saveProgram(){
   commitPlanFields();
-  draft.name = $('bName').value.trim();
-  draft.desc = $('bDesc').value.trim().slice(0, 1000);
+  draft.name = clampLine($('bName').value, LIM.progName);
+  draft.desc = clampText($('bDesc').value, LIM.progDesc);
   draft.time = $('bTime').value || '';
   // ротация имеет смысл только при нескольких вариантах
   if((draft.plans || []).length < 2) draft.rotate = false;
@@ -14674,7 +14841,7 @@ function renderStep(){
   // Иллюстрация внутри скролл-блока; на отдыхе скрыта через CSS
   const box = $('illoBox');
   if(step.media && step.media.kind === 'img'){
-    box.innerHTML = `<img src="${step.media.data}" alt="">`;
+    box.innerHTML = `<img src="${esc(step.media.data)}" alt="">`;
   } else {
     box.innerHTML = ILLO[step.illo] || '';
   }
@@ -14960,7 +15127,7 @@ function renderNextUp(step){
   if(!nxt){ setShown(nu, false); nu.innerHTML=''; return; }
 
   const media = (nxt.media && nxt.media.kind === 'img')
-    ? `<img src="${nxt.media.data}" alt="">`
+    ? `<img src="${esc(nxt.media.data)}" alt="">`
     : DUMBBELL_ICON;
   // рабочий вес — часть задания: на отдыхе по нему решают, что нести к коврику
   const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} кг` : '';
@@ -16419,9 +16586,29 @@ $('coachHandle').onblur  = async e => {
   await saveTrainer();
   pushProfileSoon();
 };
-$('coachLinks').oninput = async e => { trainer.links = e.target.value.trim(); await saveTrainer(); pushProfileSoon(); };
-$('coachAbout').oninput = async e => { trainer.about = e.target.value.slice(0, 400); await saveTrainer(); pushProfileSoon(); };
-$('coachName').oninput = async e => { trainer.name = e.target.value.slice(0, 40); await saveTrainer(); pushProfileSoon(); };
+/* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
+   «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
+   состояний, и ругаться на каждое — значит мешать набирать.
+
+   Непохожее на адрес не сохраняем вовсе. Раньше сюда писали что угодно, и это
+   уезжало на страницу тренера, где превращалось в ссылку «https://хуй»: человек
+   по ней нажимал и попадал в никуда. Лучше пусто, чем ссылка, которая врёт. */
+$('coachLinks').onblur = async e => {
+  const raw = e.target.value.trim();
+  const ok = raw ? cleanLink(raw) : '';
+  $('coachLinksErr').textContent = (raw && !ok)
+    ? 'Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.'
+    : '';
+  if(raw && !ok) return;                 // оставляем набранное в поле, но не сохраняем
+  // Схему в поле не показываем: её не набирали, и «https://» перед ником только
+  // мешает прочитать, что там написано.
+  e.target.value = (ok || '').replace(/^https?:\/\//i, '');
+  trainer.links = ok || '';
+  await saveTrainer();
+  pushProfileSoon();
+};
+$('coachAbout').oninput = async e => { trainer.about = clampText(e.target.value, LIM.coachAbout); await saveTrainer(); pushProfileSoon(); };
+$('coachName').oninput = async e => { trainer.name = clampLine(e.target.value, LIM.coachName); await saveTrainer(); pushProfileSoon(); };
 $('coachPhotoBtn').onclick = ()=> $('coachPhotoFile').click();
 $('coachPhotoFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
@@ -16460,7 +16647,7 @@ $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin
 $('btnCoachWipe').onclick = wipeTrainerInfo;
 $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
   : appAlert('Сначала включи режим тренера и укажи ник.');
-$('pubGives').oninput = e => { pubDraft.gives = e.target.value; };
+$('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
 $('btnPublish').onclick = ()=> doPublish();
 $('btnAddClient').onclick = async ()=>{
   const c = await addClient();
@@ -16475,13 +16662,13 @@ $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
 // снимает весь разговор о несохранённом при выходе жестом.
 $('clName').oninput = async e => {
   const c = curClient(); if(!c) return;
-  c.name = e.target.value;
+  c.name = clampLine(e.target.value, LIM.clientName);
   $('clTitle').textContent = c.name || 'Подопечный';
   await saveClients();
 };
 $('clNote').oninput = async e => {
   const c = curClient(); if(!c) return;
-  c.note = e.target.value;
+  c.note = clampLine(e.target.value, LIM.clientNote);
   await saveClients();
 };
 // Кнопка всегда спрашивает, КАКУЮ программу отправить: их может быть несколько,
@@ -16837,7 +17024,7 @@ $('videoLink').addEventListener('click', ()=>{
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
 $('btnShareResult').innerHTML = icon('share') + '<span>Поделиться</span>';
 $('btnShareResult').onclick = shareResult;
-$('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = e.target.value.slice(0, 500); };
+$('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
 $('finNoteToggle').innerHTML = icon('pencil') + '<span>Добавить заметку</span>';
@@ -17491,8 +17678,8 @@ $('bSettingsToggle').onclick = ()=>{
 };
 function closeProgSettings(){
   commitPlanFields();
-  draft.desc = $('bDesc').value.trim().slice(0, 1000);
-  draft.name = $('bName').value.trim() || draft.name;
+  draft.desc = clampText($('bDesc').value, LIM.progDesc);
+  draft.name = clampLine($('bName').value, LIM.progName) || draft.name;
   syncSettingsSum();
   renderExList();
   goBackTo('scrBuilder');
@@ -17533,7 +17720,7 @@ function syncSettingsSum(){
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
 $('bDesc').oninput = e => {
-  draft.desc = e.target.value.slice(0, 1000);
+  draft.desc = clampText(e.target.value, LIM.progDesc);
   $('bDescCount').textContent = draft.desc.length;
 };
 $('btnSaveProgram').onclick = ()=>{ if(numFieldsOk('scrBuilder')) saveProgram(); };

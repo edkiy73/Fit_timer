@@ -17,7 +17,8 @@
    очередь лежит рядом с каталогом, тренерами и картинками. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
+        clampText, clampLine, cleanPic } = require('../lib/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -103,20 +104,25 @@ async function submit(req, res){
   if(t.banned) return fail(res, 403, 'banned');
 
   const it = (body && body.item) || {};
-  const name  = String(it.name || '').trim().slice(0, 60);
-  const gives = String(it.gives || '').trim().slice(0, 300);
+  // Название и «что даёт» встанут в витрину и на страницу программы, поэтому
+  // здесь не просто обрезка по длине: невидимые символы и переносы строк в них
+  // ломают ряд там, где место под одну строку.
+  const name  = clampLine(it.name, 60);
+  const gives = clampText(it.gives, 300);
   const text  = String(it.text || '');
   const cat   = String(it.cat || '');
   const level = String(it.level || '');
   const min   = Math.max(1, Math.min(180, Math.round(+it.min || 0)));
-  const cover = String(it.cover || '').slice(0, 90000) || null;
+  // Обложка уедет в атрибут <img src> у каждого, кто откроет каталог: проверяем
+  // форму, а не длину.
+  const cover = cleanPic(it.cover, 90000) || null;
   // Фото упражнений: карта «название → картинка». Режем и по числу, и по общему
   // весу — запись в хранилище не резиновая, а двадцать фото это уже фотоальбом.
   const media = {};
   let budget = 800 * 1024;
   for(const [k, v] of Object.entries((it.media && typeof it.media === 'object') ? it.media : {})){
-    const key = String(k).slice(0, 60), val = String(v || '');
-    if(!key || !val.startsWith('data:image/') || val.length > budget) continue;
+    const key = clampLine(k, 60), val = cleanPic(v, budget);
+    if(!key || !val) continue;
     media[key] = val;
     budget -= val.length;
     if(Object.keys(media).length >= 30) break;

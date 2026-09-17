@@ -15,11 +15,11 @@
    отдельной функцией, которых там всего двенадцать. */
 
 const { store } = require('../../lib/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../../lib/util');
+const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
+        clampText, clampLine, cleanPic, cleanLink } = require('../../lib/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
-const clean = (v, n) => String(v == null ? '' : v).slice(0, n);
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
@@ -71,13 +71,16 @@ module.exports = async (req, res) => {
   let body;
   try{ body = await readBody(req); }catch(e){ return fail(res, 413, 'too_large'); }
 
+  /* Поля чистим ЗДЕСЬ, а не полагаемся на приложение: запрос приходит не только
+     из него. Страницу тренера читают чужие люди — отдавать им строку в мегабайт,
+     невидимые символы посреди имени или «ссылку» javascript: мы не будем. */
   const p = (body && body.trainer) || {};
   const fields = {
-    name:  clean(p.name, 40),
-    photo: clean(p.photo, 120000),
-    about: clean(p.about, 400),
+    name:  clampLine(p.name, 40),
+    photo: cleanPic(p.photo, 120000),
+    about: clampText(p.about, 400),
     years: typeof p.years === 'number' ? Math.max(0, Math.min(60, Math.round(p.years))) : null,
-    links: clean(p.links, 120)
+    links: cleanLink(p.links, 120)
   };
 
   const raw = await store.get(`t:${handle}`);

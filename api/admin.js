@@ -8,7 +8,8 @@
    адрес попадает в историю браузера и в журналы, заголовок — нет. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rndId, sameSecret, cors } = require('../lib/util');
+const { send, fail, readBody, rndId, sameSecret, cors,
+        clampText, clampLine, cleanPic } = require('../lib/util');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
@@ -20,8 +21,10 @@ function pics(src){
   const out = {};
   let budget = 800 * 1024;
   for(const [k, v] of Object.entries((src && typeof src === 'object') ? src : {})){
-    const key = clean(k, 60), val = String(v || '');
-    if(!key || !val.startsWith('data:image/') || val.length > budget) continue;
+    // Проверяем ФОРМУ: картинка уедет в атрибут <img src> у каждого, кто откроет
+    // страницу программы, и «начинается на data:image/» этого не гарантирует.
+    const key = clampLine(k, 60), val = cleanPic(v, budget);
+    if(!key || !val) continue;
     out[key] = val;
     budget -= val.length;
     if(Object.keys(out).length >= 30) break;
@@ -131,8 +134,8 @@ module.exports = async (req, res) => {
     await store.set(`c:${newId}`, JSON.stringify({
       id: newId, by: clean(it.by, 40), cat: it.cat, level: it.level,
       min: Math.max(1, Math.min(180, Math.round(+it.min || 20))),
-      name: clean(it.name, 60), gives: clean(it.gives, 300),
-      text: clean(it.text, 60000), cover: clean(it.cover, 90000) || null,
+      name: clampLine(it.name, 60), gives: clampText(it.gives, 300),
+      text: clean(it.text, 60000), cover: cleanPic(it.cover, 90000) || null,
       media: pics(it.media),
       exCount: Math.max(0, Math.round(+it.exCount || 0)),
       status: 'approved', at: new Date().toISOString(), mine: true
@@ -149,11 +152,15 @@ module.exports = async (req, res) => {
     const it = Object.assign({}, c, (body && body.item) || {});
     const miss = checkItem(it);
     if(miss.length) return fail(res, 400, 'bad_item', {miss});
-    ['name', 'gives', 'cat', 'level', 'text', 'by'].forEach(k => {
-      if(it[k] != null) c[k] = clean(it[k], k === 'text' ? 60000 : 300);
-    });
+    // Правка идёт теми же пределами, что и добавление: разойдясь, они дают
+    // каталог, в который через правку попадает то, что не прошло бы при добавлении.
+    if(it.name  != null) c.name  = clampLine(it.name, 60);
+    if(it.gives != null) c.gives = clampText(it.gives, 300);
+    if(it.by    != null) c.by    = clampLine(it.by, 40);
+    ['cat', 'level'].forEach(k => { if(it[k] != null) c[k] = clean(it[k], 40); });
+    if(it.text  != null) c.text  = clean(it.text, 60000);
     if(it.min != null) c.min = Math.max(1, Math.min(180, Math.round(+it.min || 20)));
-    if(it.cover !== undefined) c.cover = clean(it.cover, 90000) || null;
+    if(it.cover !== undefined) c.cover = cleanPic(it.cover, 90000) || null;
     if(it.exCount != null) c.exCount = Math.max(0, Math.round(+it.exCount || 0));
     // Картинки правятся целиком: присланная карта заменяет прежнюю, поэтому убрать
     // фото можно тем же действием, каким его добавляют.
