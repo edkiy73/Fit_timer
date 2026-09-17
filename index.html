@@ -4297,7 +4297,7 @@
 
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Отчёт от клиента</p></div>
-      <p class="field-hint">Клиент жмёт «Отправить отчёт тренеру» и присылает ссылку. Вставь её — занятия появятся в его карточке.</p>
+      <p class="field-hint">Обычно отчёты приходят сами — открой карточку клиента. Это поле нужно, когда клиент отправлял отчёт без интернета: тогда он получается ссылкой, и её надо вставить сюда.</p>
       <div class="field"><input type="text" id="clsReportCode" placeholder="Ссылка или код FITR1…"></div>
       <button type="button" class="choice" id="btnTakeReport"><b>Добавить отчёт</b></button>
     </div>
@@ -10070,6 +10070,33 @@ async function createEditedProgram(){
     (carried ? `\nПеренесено картинок: ${carried}.` : ''));
 }
 
+/* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
+   программе — по ней потом уедет отчёт, и по ней же клиент понимает, что программа
+   пришла от тренера, а не собрана им самим. */
+async function importProgramLink(id){
+  let d;
+  try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
+  catch(e){
+    appAlert(e.status === 404
+      ? 'Ссылка не открывается: её уже нет. Попроси тренера прислать новую.'
+      : 'Не получилось загрузить программу — похоже, нет связи. Попробуй ещё раз, когда появится интернет.');
+    return;
+  }
+  const prog = d.program;
+  if(!prog || !prog.name){ appAlert('По ссылке нет программы с упражнениями.'); return; }
+  prog.id = 'p' + Date.now();
+  prog.stats = {completions: 0};
+  prog.cover = prog.cover || null;
+  prog.src = id;
+  if(d.by) prog.by = d.by;
+  if(d.byLink) prog.byLink = d.byLink;
+  draft = prog;
+  draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
+  delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
+  planIdx = 0;
+  fillBuilder('Проверь и сохрани');
+}
+
 function importProgramCode(code){
   code = (code || '').trim();
   // принимаем и полную ссылку вида ...?import=FIT1...
@@ -10094,6 +10121,35 @@ function importProgramCode(code){
   $('importModal').classList.remove('open');
   fillBuilder('Проверь и сохрани');
 }
+
+/* ================= СЕРВЕРНАЯ ЧАСТЬ =================
+   Приложение работает без сети и обязано продолжать: сервер тут ДОБАВЛЯЕТ, а не
+   заменяет. Поэтому у каждого вызова есть запасной путь, а сам вызов короткий —
+   если сервера нет (офлайн, открыли файлом, ещё не задеплоено), ждать его нечего.
+
+   База по умолчанию — тот же адрес, откуда открыто приложение: функции лежат
+   рядом со страницей (api/ в репозитории). */
+const API_BASE = location.protocol.startsWith('http') ? '' : null;
+const API_WAIT = 7000;
+
+async function apiFetch(path, opts){
+  if(API_BASE === null) throw new Error('offline');
+  const ctl = new AbortController();
+  const t = setTimeout(()=> ctl.abort(), API_WAIT);
+  try{
+    const res = await fetch(API_BASE + path, Object.assign({signal: ctl.signal}, opts || {}));
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok){
+      const err = new Error(data.error || ('http_' + res.status));
+      err.code = data.error; err.status = res.status;
+      throw err;
+    }
+    return data;
+  } finally { clearTimeout(t); }
+}
+const apiPost = (path, body) => apiFetch(path, {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+});
 
 /* ================= ТРЕНЕР И ЕГО КЛИЕНТЫ =================
    Кабинет строится ДО бэкенда, потому что его задача — не хранить данные, а выяснить,
@@ -10184,7 +10240,10 @@ function renderClients(){
       if(d != null && d > 10) state += ` · молчит ${d} ${plural(d, 'день', 'дня', 'дней')}`;
     } else if(c.sentAt){
       const d = daysSince(c.sentAt);
-      state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
+      // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
+      // и тренеру нужно видеть, какой из них его.
+      if(c.opens > 0) state = 'открыл, занятий нет';
+      else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
     } else state = 'не отправлено';
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
@@ -10203,8 +10262,12 @@ function renderClients(){
 /* ---- карточка клиента ---- */
 function openClient(i){
   clientIdx = i;
-  fillClient();
+  fillClient();                 // сначала показываем что есть — экран не ждёт сети
   show('scrClient');
+  const c = curClient();
+  if(c && c.link) pullClient(c).then(got => {
+    if(got && curClient() === c){ fillClient(); renderClients(); renderTrainerCard(); }
+  });
 }
 const curClient = () => clients[clientIdx] || null;
 
@@ -10216,8 +10279,13 @@ function fillClient(){
   if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
   const prog = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
   $('clProgName').textContent = c.programName || 'Программа не выбрана';
-  $('clSentSub').textContent = !c.sentAt ? 'ещё не отправлена'
-    : `отправлена ${humanDay(c.sentAt)}` + (prog ? '' : ' · программы уже нет в списке');
+  const bits = [];
+  if(c.sentAt) bits.push(`отправлена ${humanDay(c.sentAt)}`);
+  if(c.link) bits.push(c.opens > 0
+    ? (c.firstOpen ? `открыл ${humanDay((c.firstOpen || '').slice(0, 10))}` : 'открыл')
+    : 'ещё не открывал');
+  if(c.sentAt && !prog) bits.push('программы уже нет в списке');
+  $('clSentSub').textContent = bits.length ? bits.join(' · ') : 'ещё не отправлена';
   $('btnClSendTxt').textContent = c.sentAt ? 'Отправить ссылку ещё раз' : 'Отправить ссылку';
   renderClientReports();
 }
@@ -10266,13 +10334,61 @@ function renderClientReports(){
 async function sendProgramToClient(c){
   const p = c.programId ? customPrograms.find(x => x.id === c.programId) : null;
   if(!p){ appAlert('Сначала выбери программу: пункт «Отправить клиенту» есть в меню любой программы в списке тренировок.'); return; }
+
+  // Через сервер ссылка получается короткой, и — главное — по ней видно, открыл ли
+  // её клиент, а его отчёты приезжают сами. Не вышло (нет сети, сервер не отвечает,
+  // база не настроена) — уходим прежним путём: программа целиком внутри ссылки.
+  // Второй путь обязан оставаться рабочим: тренер не должен зависеть от нашей связи.
+  let link = null;
+  try{
+    const copy = JSON.parse(JSON.stringify(p));
+    copy.cover = null;
+    delete copy.stats; delete copy.active; delete copy.src;
+    copy.plans = normPlans(copy).map(pl => ({...pl, exercises: pl.exercises.map(ex => ({...ex, media: null}))}));
+    delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
+    const r = await apiPost('/api/share', {
+      program: copy, to: c.name,
+      by: normHandle(trainer.handle), byLink: (trainer.links || '').trim()
+    });
+    link = location.origin + location.pathname + '?p=' + encodeURIComponent(r.id);
+    c.link = {id: r.id, key: r.key};
+  }catch(e){ link = null; }
+
   c.sentAt = localISO(new Date());
   c.programName = p.name;
   await saveClients();
   fillClient();
   renderClients();
   renderTrainerCard();
-  await exportProgram(p);
+
+  if(!link){ await exportProgram(p); return; }
+
+  const text = `Программа «${p.name}»${c.name ? ' для ' + c.name : ''} — открой ссылку, и она добавится в Fit Timer:`;
+  if(navigator.share){
+    try{ await navigator.share({title: 'Fit Timer', text, url: link}); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  try{
+    await navigator.clipboard.writeText(link);
+    appAlert('Ссылка скопирована — отправь её клиенту любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
+  }catch(e){ appAlert('Скопируй ссылку и отправь клиенту:', {code: link}); }
+}
+
+/* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
+   в саму ссылку он не попадает, иначе доступ к отчётам пересылался бы вместе с ней. */
+async function pullClient(c){
+  if(!c || !c.link || !c.link.id) return false;
+  let d;
+  try{ d = await apiFetch(`/api/link/${encodeURIComponent(c.link.id)}?key=${encodeURIComponent(c.link.key)}`); }
+  catch(e){ return false; }
+  c.opens = d.opens || 0;
+  c.firstOpen = d.firstOpen || null;
+  // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
+  // иначе после переустановки у тренера задвоится всё, что уже было.
+  c.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
+    streak: r.streak, first: r.first, last: r.last, ex: r.ex || []}));
+  await saveClients();
+  return true;
 }
 
 async function addClient(){
@@ -10358,6 +10474,18 @@ async function sendReport(p){
   if(!rep.n){
     appAlert('Отчёт пока пустой: по этой программе ещё нет ни одной законченной тренировки.');
     return;
+  }
+  // Программа пришла по короткой ссылке — отчёт уезжает сам, одним нажатием. Это и
+  // была главная потеря прежней схемы: копипаст туда и обратно на каждый отчёт
+  // рвал связь между тренером и клиентом надёжнее любой технической причины.
+  if(p.src){
+    try{
+      await apiPost('/api/report', {link: p.src, report: rep});
+      appAlert('Отправлено. Тренер увидит: сколько тренировок, когда была последняя и как выросла нагрузка.');
+      return;
+    }catch(e){
+      // сеть или сервер подвели — не тупик: остаётся прежний путь ссылкой
+    }
   }
   const code = 'FITR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(rep))));
   const hosted = location.protocol.startsWith('http');
@@ -15891,6 +16019,12 @@ async function leaveOnboarding(){
     pendingImport = null;
     return;
   }
+  if(pendingLink){
+    const id = pendingLink;
+    pendingLink = null;
+    importProgramLink(id);
+    return;
+  }
   goTab('scrMenu');
 }
 $('obStart').onclick = ()=> leaveOnboarding();
@@ -16771,6 +16905,7 @@ show('scrMenu', false);
 
 // параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
 let pendingImport = null;
+let pendingLink = null;     // короткая ссылка ?p=<id> — программа лежит на сервере
 let pendingReport = null;   // ссылка с отчётом от клиента
 let pendingAction = null;
 try{
@@ -16779,9 +16914,11 @@ try{
   if(q && q.startsWith('FIT1.')) pendingImport = q;
   const r = sp.get('report');
   if(r && r.startsWith('FITR1.')) pendingReport = r;
+  const sp_p = sp.get('p');
+  if(sp_p && /^[0-9a-z]{4,16}$/.test(sp_p)) pendingLink = sp_p;
   if(sp.has('today')) pendingAction = 'today';
   if(sp.has('create')) pendingAction = 'create';
-  if(pendingImport || pendingReport || pendingAction){
+  if(pendingImport || pendingLink || pendingReport || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', location.pathname); // чистим адрес
   }
 }catch(e){}
@@ -16846,6 +16983,12 @@ try{
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
+    return;
+  }
+  if(pendingLink){
+    const id = pendingLink;
+    pendingLink = null;
+    importProgramLink(id);
     return;
   }
   // Отчёт от клиента. Открываем сразу картотеку: тренер перешёл по ссылке именно
