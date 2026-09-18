@@ -1663,75 +1663,6 @@
     letter-spacing:.1em;text-transform:uppercase;
   }
 
-  /* Обзор перед стартом. В строке одна мысль: название → сегодняшнее задание →
-     отличие от прошлого раза. Значение не зажимаем справа от длинного названия,
-     а ставим отдельной строкой — на узком телефоне так быстрее сканировать список. */
-  .start-overview{gap:0}
-  .start-overview > .so-head{
-    display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;
-    gap:12px;padding-bottom:14px;
-  }
-  .so-head > div{min-width:0}
-  .so-head .cb-title{
-    font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--muted);margin:0 0 5px;
-  }
-  .so-summary{margin:0;color:var(--ink);font-size:14px;line-height:1.35}
-  .so-duration{
-    flex:none;padding:7px 10px;border-radius:10px;background:var(--surface);
-    color:var(--accent-ink);font-family:var(--font-display);font-weight:600;
-    font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;
-  }
-  .start-overview > .so-change{
-    display:flex;flex-direction:row;align-items:flex-start;gap:9px;margin:0 0 6px;
-    padding:11px 12px;border-radius:12px;background:var(--bg);color:var(--muted);
-    font-size:13px;line-height:1.4;
-  }
-  .so-change-mark{
-    flex:none;width:22px;height:22px;border-radius:7px;background:var(--line);
-    color:var(--muted);display:flex;align-items:center;justify-content:center;
-  }
-  .so-change-mark svg{width:13px;height:13px}
-  .so-change.up{background:var(--accent-soft);color:var(--ink)}
-  .so-change.up .so-change-mark,.so-change.first .so-change-mark{background:var(--work);color:var(--on-accent)}
-  .so-change.down{background:var(--rest-soft);color:var(--ink)}
-  .so-change.down .so-change-mark{background:var(--rest);color:var(--on-accent)}
-  .start-overview > .so-list{display:flex;flex-direction:column;gap:0}
-  .so-row{
-    display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;
-    padding:13px 0;border-top:1px solid var(--line);
-  }
-  .so-row:first-child{border-top:none}
-  .so-order{
-    width:34px;height:34px;border-radius:10px;background:var(--bg);
-    display:flex;align-items:center;justify-content:center;color:var(--muted);
-    font-family:var(--font-display);font-weight:600;font-size:12px;
-    font-variant-numeric:tabular-nums;
-  }
-  .so-row.warm .so-order{border:1px dashed var(--accent-line);color:var(--accent-ink)}
-  .so-main{min-width:0}
-  .so-name-line{display:flex;align-items:baseline;gap:7px;min-width:0;flex-wrap:wrap}
-  .so-name{font-size:14.5px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
-  .so-warm{font-size:10px;color:var(--accent-ink);text-transform:uppercase;letter-spacing:.08em}
-  .so-target{margin-top:4px;font-size:15px;line-height:1.3;color:var(--ink);font-variant-numeric:tabular-nums}
-  .so-meta{margin-top:4px;font-size:11.5px;line-height:1.35;color:var(--muted)}
-  .so-delta{
-    display:inline-block;margin-top:8px;padding:5px 8px;border-radius:8px;
-    background:var(--accent-soft);color:var(--accent-ink);font-size:12px;
-    line-height:1.35;font-variant-numeric:tabular-nums;
-  }
-  .so-delta.down{background:var(--rest-soft);color:var(--rest-ink)}
-  .so-manual{display:block;margin-top:5px;color:var(--muted);font-size:11.5px}
-  .so-more{
-    width:100%;border:none;border-top:1px solid var(--line);background:none;
-    color:var(--accent-ink);font-family:var(--font-text);font-size:13px;
-    cursor:pointer;padding:13px 0 0;margin-top:0;
-  }
-  @media(max-width:360px){
-    .start-overview > .so-head{align-items:flex-start}
-    .so-duration{font-size:12px;padding:6px 8px}
-  }
-
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--accent-ink);animation:aiSpin .9s linear infinite}
   @keyframes aiSpin{to{transform:rotate(360deg)}}
@@ -3158,31 +3089,23 @@
         <div class="load-row" id="planRow"></div>
       </div>
 
-      <!-- Перед стартом человек должен видеть не устройство программы, а саму
-           сегодняшнюю тренировку: сколько времени заложить, что делать по порядку
-           и где нагрузка стала выше прошлого раза. -->
-      <div class="card-block start-overview">
-        <div class="so-head">
-          <div>
-            <p class="cb-title">Сегодня</p>
-            <p class="so-summary" id="startOverviewSummary"></p>
-          </div>
-          <span class="so-duration" id="startDuration"></span>
-        </div>
-        <div class="so-change" id="startLoadChange"></div>
-        <div class="so-list" id="startOverviewList"></div>
-        <button type="button" class="so-more hidden" id="startOverviewMore"></button>
-      </div>
-
       <div class="card-block hidden" id="progStepsBlock">
-        <p class="cb-title">Настроить нагрузку</p>
+        <p class="cb-title">Нагрузка сегодня</p>
         <p class="field-hint" id="progStepsInfo"></p>
         <div class="ps-row">
           <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
           <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
           <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
         </div>
-        <p class="field-hint">Кнопки сразу пересчитают вес, повторы и время в обзоре выше. Базовые значения программы не изменятся.</p>
+      </div>
+
+      <!-- Сегодняшние упражнения — те же знакомые строки, что в редакторе.
+           Меняются только метки: здесь уже показаны рабочие значения. -->
+      <div class="card-block">
+        <p class="cb-title">Сегодня</p>
+        <p class="field-hint" id="startOverviewSummary"></p>
+        <p class="field-hint" id="startLoadChange"></p>
+        <div class="list-rows" id="startOverviewList"></div>
       </div>
 
     </div>
@@ -5917,7 +5840,6 @@ function openStart(raw){
   applyProgressionAll();
   applyAudioFromUser(curUser());
   state.raw = raw;
-  startOverviewExpanded = false;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans, raw);
   $('startNum').textContent = '';
@@ -5961,8 +5883,6 @@ function renderPlanRow(){
     row.appendChild(b);
   });
 }
-
-let startOverviewExpanded = false;
 
 // Нагрузка одного упражнения в том же виде, в каком она появится на тренировке.
 // Отдельная функция не даёт обзору и таймеру разойтись в формулах прогрессии.
@@ -6082,37 +6002,30 @@ function renderStartOverview(){
 
   const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
     * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
-  $('startOverviewSummary').textContent = `${exercises.length} ${plural(exercises.length, 'упражнение', 'упражнения', 'упражнений')} по порядку · ${workSets} ${plural(workSets, 'подход', 'подхода', 'подходов')}`;
   const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
-  $('startDuration').textContent = (dur.samples === 1 ? 'в прошлый раз ' : dur.history ? 'обычно ' : '≈ ') + dur.n + ' мин';
+  $('startOverviewSummary').textContent = `${exercises.length} ${plural(exercises.length, 'упражнение', 'упражнения', 'упражнений')} · ${workSets} ${plural(workSets, 'подход', 'подхода', 'подходов')} · `
+    + (dur.samples === 1 ? `в прошлый раз ${dur.n} мин` : dur.history ? `обычно ${dur.n} мин` : `≈ ${dur.n} мин`);
 
   const change = $('startLoadChange');
-  change.className = 'so-change';
-  const changeText = (ico, text) => {
-    change.innerHTML = `<span class="so-change-mark">${icon(ico)}</span><span></span>`;
-    change.lastElementChild.textContent = text;
-  };
+  const changeText = text => { change.textContent = text; };
   if(previous.first){
-    change.classList.add('first');
-    changeText('sparkle', 'Первая тренировка по этой программе. Начни с комфортного темпа — нагрузку можно поправить прямо во время подхода.');
+    changeText('Первая тренировка: начни с комфортного темпа.');
   } else if(changes.length){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
     if(direction === 'up'){
-      change.classList.add('up');
-      changeText('chart', `Сегодня нагрузка выросла в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. Конкретные значения выделены в списке.`);
+      changeText(`Выше прошлого раза: ${changes.length} ${plural(changes.length, 'упражнение', 'упражнения', 'упражнений')}.`);
     } else if(direction === 'down'){
-      change.classList.add('down');
-      changeText('chevD', `Сегодня нагрузка снижена в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. Конкретные значения выделены в списке.`);
+      changeText(`Ниже прошлого раза: ${changes.length} ${plural(changes.length, 'упражнение', 'упражнения', 'упражнений')}.`);
     } else {
-      changeText('reset', `Сегодня нагрузка изменилась в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. Конкретные значения выделены в списке.`);
+      changeText(`Изменения в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}.`);
     }
   } else if(p.progression){
     const done = (p.stats && p.stats.completions) || 0;
     const left = p.progression - (done % p.progression);
-    changeText('reset', `Нагрузка как в прошлый раз. Следующее автоматическое повышение — через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`);
+    changeText(`Без изменений · следующее повышение через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`);
   } else {
-    changeText('reset', 'Нагрузка как в прошлый раз. Автоматическое повышение для этой программы выключено.');
+    changeText('Без изменений · автоматическое повышение выключено.');
   }
 
   const box = $('startOverviewList');
@@ -6122,34 +6035,24 @@ function renderStartOverview(){
     if(!ex.warmup) mainNo++;
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
-    const meta = [];
-    if(ex.warmup) meta.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
+    const meta = [loadTargetText(ex, current[i])];
+    if(ex.warmup) meta.push('Разминка');
     else if(rounds > 1) meta.push(sets > 1 ? `${sets} подх. × ${rounds} кр.` : `${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
     else meta.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
-    if(+ex.rest > 0 && sets > 1) meta.push(`между подходами ${ex.rest} сек`);
-    if(exRestAfter(ex) > 0) meta.push(`после упражнения ${exRestAfter(ex)} сек`);
+    if(+ex.rest > 0 && sets > 1) meta.push(`отдых ${ex.rest} сек`);
     const delta = changes.find(x => x.i === i);
     const manual = hasWeight(ex) ? progDelta(p.id, ex, 'weight') : 0;
     const row = document.createElement('div');
-    row.className = 'so-row' + (ex.warmup ? ' warm' : '') + (i >= 5 && !startOverviewExpanded ? ' hidden' : '');
-    row.innerHTML =
-      `<span class="so-order">${ex.warmup ? 'Р' : mainNo}</span>` +
-      `<div class="so-main"><div class="so-name-line"><span class="so-name">${esc(ex.name || 'Упражнение')}</span>` +
-      (ex.warmup ? '<span class="so-warm">разминка</span>' : '') + `</div>` +
-      `<div class="so-target">${esc(loadTargetText(ex, current[i]))}</div>` +
-      `<div class="so-meta">${esc(meta.join(' · '))}</div>` +
-      (delta ? `<div class="so-delta${delta.dir === 'down' ? ' down' : ''}">${esc(delta.text)}</div>` : '') +
-      (manual ? `<small class="so-manual">Ручная поправка веса: ${manual > 0 ? '+' : ''}${fmtKg(manual)} кг</small>` : '') +
-      `</div>`;
+    row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
+    row.innerHTML = `<div class="ex-thumb">${ex.warmup ? icon('flame') : mainNo}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
+    row.querySelector('b').textContent = ex.name || 'Упражнение';
+    const tags = row.querySelector('.ex-meta');
+    const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
+    meta.forEach((text, n) => tag(text, ex.warmup && n === 1 ? 'wm' : ''));
+    if(delta) tag(delta.text, 'grow');
+    if(manual) tag(`вес вручную ${manual > 0 ? '+' : ''}${fmtKg(manual)} кг`);
     box.appendChild(row);
   });
-
-  const more = $('startOverviewMore');
-  setShown(more, exercises.length > 5);
-  if(exercises.length > 5){
-    more.textContent = startOverviewExpanded ? 'Свернуть список' : `Показать все упражнения (${exercises.length})`;
-    more.onclick = ()=>{ startOverviewExpanded = !startOverviewExpanded; renderStartOverview(); };
-  }
 }
 
 // показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
@@ -6168,11 +6071,8 @@ function renderProgSteps(){
   // прогрессия теперь считается по пройденным тренировкам, а не по календарю
   const done = (p.stats && p.stats.completions) || 0;
   const left = p.progression - (done % p.progression);
-  const nextTxt = `Следующая через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`;
-  $('progStepsInfo').textContent =
-    (steps === 0 ? 'Сейчас базовая нагрузка.'
-                 : `Сейчас действует ${steps}-й шаг повышения.`)
-    + ` Нагрузка меняется ${progPeriodLabel(p.progression)}. ` + nextTxt;
+  $('progStepsInfo').textContent = (steps === 0 ? 'Базовая нагрузка' : `${steps}-й шаг повышения`)
+    + ` · следующая через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}`;
 }
 // кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
 // пройденных тренировок и пересчитался бы заново, затерев ручное изменение
@@ -8220,7 +8120,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '18.09 · обзор тренировки и изменения нагрузки (v18)';
+const BUILD = '18.09 · компактный обзор тренировки (v19)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;

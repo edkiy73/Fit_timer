@@ -46,25 +46,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const before = await page.evaluate(() => ({
     summary:$('startOverviewSummary').textContent,
-    duration:$('startDuration').textContent,
     change:$('startLoadChange').textContent.trim(),
-    target:document.querySelector('.so-row .so-target').textContent,
-    delta:document.querySelector('.so-row .so-delta')?.textContent || '',
-    hidden:document.querySelectorAll('.so-row.hidden').length,
-    more:$('startOverviewMore').textContent
+    first:document.querySelector('#startOverviewList .ex-row')?.textContent || '',
+    rows:document.querySelectorAll('#startOverviewList .ex-row').length
   }));
-  ok('сразу виден состав и объём', /6 упражнений/.test(before.summary) && /18 подходов/.test(before.summary), before.summary);
-  ok('время берётся из прошлой тренировки', before.duration === 'в прошлый раз 31 мин', before.duration);
-  ok('изменение нагрузки объяснено', /выросла в 1 упражнении/.test(before.change), before.change);
-  ok('показана сегодняшняя цель', /12 повторений/.test(before.target), before.target);
-  ok('показано точное «было → сегодня»', /11 → 12/.test(before.delta), before.delta);
-  ok('длинный список свёрнут', before.hidden === 1 && /6/.test(before.more), `${before.hidden} · ${before.more}`);
-
-  await page.click('#startOverviewMore');
-  ok('весь список раскрывается', await page.evaluate(() => document.querySelectorAll('.so-row.hidden').length === 0));
+  ok('сразу виден состав, объём и время', /6 упражнений/.test(before.summary) && /18 подходов/.test(before.summary) && /31 мин/.test(before.summary), before.summary);
+  ok('изменение нагрузки объяснено', /Выше прошлого раза: 1 упражнение/.test(before.change), before.change);
+  ok('используются строки упражнений редактора', before.rows === 6 && /Приседания/.test(before.first), before.first);
+  ok('показана сегодняшняя цель и «было → сегодня»', /12 повторений/.test(before.first) && /11 → 12/.test(before.first), before.first);
 
   await page.click('#psPlus');
-  const after = await page.locator('.so-row .so-target').first().textContent();
+  const after = await page.locator('#startOverviewList .ex-row').first().textContent();
   ok('кнопка повышения сразу обновляет обзор', /13 повторений/.test(after), after);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
