@@ -33,6 +33,8 @@ index.html + mobile.js + app.config.js
 | Файл | Назначение |
 |---|---|
 | `capacitor.config.json` | App ID, имя, `webDir`, splash и плагины |
+| `assets/icon.svg` | Редактируемый мастер новой иконки; плоский знак таймера без текста и персонажей |
+| `assets/icon.png` | Растровый мастер 1024×1024 для генератора Capacitor Assets |
 | `app.config.js` | Публичные runtime-настройки Web; без секретов |
 | `mobile.js` | Мост уведомлений, haptics, TTS, распознавания речи и микрофона |
 | `android/.../FitAudioPlugin.java` | Android TTS, SpeechRecognizer и runtime-разрешение микрофона |
@@ -56,8 +58,12 @@ npm run check:mobile
 ```
 
 `mobile:sync` собирает `dist/`, копирует frontend, обновляет нативные плагины и
-генерирует все размеры иконок/splash из `assets/icon.png`. Производные картинки
-намеренно не хранятся в Git.
+генерирует все размеры иконок/splash из `assets/icon.png`. Цвет фона иконки и
+splash должен оставаться одинаковым (`#0C0916`), чтобы холодный запуск выглядел
+как продолжение иконки. Если меняется знак, сначала править `assets/icon.svg`,
+затем экспортировать из него `assets/icon.png`, `icon-512.png`,
+`icon-512-maskable.png` и `icon-192.png`. Производные нативные картинки намеренно
+не хранятся в Git.
 Запускать после каждого изменения `index.html`, `mobile.js`, иконок или Capacitor.
 
 Production-адреса по умолчанию:
@@ -188,4 +194,6 @@ node --check scripts/build-web.mjs
 - После изменения frontend запускать `npm run mobile:sync` и проверки.
 - Не синхронизировать фото/аватары без отдельного продуктового решения.
 - Не класть секреты в JavaScript, Capacitor config или Git.
+- Не возвращать старую иконку с человеком: текущий знак — кольцо таймера с
+  диагональным акцентом, мастер лежит в `assets/icon.svg`.
 - `legacy/android-twa/` — справочная копия; текущая платформа — `android/`.
