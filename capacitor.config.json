@@ -1,0 +1,26 @@
+{
+  "appId": "ru.fittimer.app",
+  "appName": "Fit Timer",
+  "webDir": "dist",
+  "backgroundColor": "#0C0916",
+  "android": {
+    "backgroundColor": "#0C0916",
+    "allowMixedContent": false
+  },
+  "ios": {
+    "backgroundColor": "#0C0916",
+    "contentInset": "automatic",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_fittimer",
+      "iconColor": "#7047EB"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0C0916",
+      "showSpinner": false
+    }
+  }
+}

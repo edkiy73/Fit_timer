@@ -1,0 +1,50 @@
+name: iOS — проверка сборки
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: &mobile_paths
+      - 'ios/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'mobile.js'
+      - 'app.config.js'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths: *mobile_paths
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    env:
+      FIT_TIMER_API_URL: ${{ vars.FIT_TIMER_API_URL || 'https://fittimer99.vercel.app' }}
+      FIT_TIMER_PUBLIC_URL: ${{ vars.FIT_TIMER_PUBLIC_URL || 'https://fittimer99.vercel.app' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Установить зависимости и синхронизировать Capacitor
+        run: |
+          npm ci
+          npm run mobile:sync
+          npm run check:mobile
+
+      - name: Собрать для iOS Simulator без подписи
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build

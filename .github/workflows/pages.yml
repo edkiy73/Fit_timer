@@ -29,7 +29,7 @@ jobs:
       - name: Собрать то, что отдаём
         run: |
           mkdir -p _site/.well-known
-          cp index.html manifest.webmanifest sw.js icon-*.png _site/
+          cp index.html app.config.js mobile.js manifest.webmanifest sw.js icon-*.png _site/
           cp .well-known/assetlinks.json _site/.well-known/
           ls -R _site
 

@@ -6,6 +6,8 @@
 <title>Fit Timer — домашние тренировки</title>
 <meta name="theme-color" content="#0C0916">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="app.config.js"></script>
+<script src="mobile.js"></script>
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5273,7 +5275,10 @@ let state = {
 const $ = id => document.getElementById(id);
 
 // лёгкая тактильная отдача на нажатия (где поддерживается)
-function haptic(ms){ try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){} }
+function haptic(ms){
+  if(window.FitNative && window.FitNative.haptic && window.FitNative.haptic()) return;
+  try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){}
+}
 document.addEventListener('pointerdown', e => {
   const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
   if(t && !t.disabled) haptic(8);
@@ -10083,7 +10088,7 @@ async function programLink(p, extra){
   // Ник закрепляется за первым, кто им воспользовался: ключ приходит один раз и
   // дальше подтверждает, что профиль правит его хозяин.
   if(r.trainerKey && !trainer.key){ trainer.key = r.trainerKey; saveTrainer(); }
-  return {url: location.origin + location.pathname + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
+  return {url: PUBLIC_APP_URL + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
 }
 
 /* Почему ссылки не вышло — человеку, и без запасного пути.
@@ -11522,7 +11527,13 @@ function importProgramCode(code){
 
    База по умолчанию — тот же адрес, откуда открыто приложение: функции лежат
    рядом со страницей (api/ в репозитории). */
-const API_BASE = location.protocol.startsWith('http') ? '' : null;
+const RUNTIME_CONFIG = window.FIT_TIMER_CONFIG || {};
+const API_BASE = RUNTIME_CONFIG.apiBase
+  ? String(RUNTIME_CONFIG.apiBase).replace(/\/$/, '')
+  : (location.protocol.startsWith('http') ? '' : null);
+const PUBLIC_APP_URL = RUNTIME_CONFIG.publicAppUrl
+  ? String(RUNTIME_CONFIG.publicAppUrl).replace(/\/$/, '') + '/'
+  : (location.origin + location.pathname);
 const API_WAIT = 7000;
 /* Потолок длины адреса, который мы соглашаемся выдать человеку. Настоящий предел
    выше (хостинг отбивает около 14 КБ), но запас нужен: ссылку пересылают, к ней
@@ -12013,7 +12024,7 @@ async function resendProgram(c, pr){
     appAlert('Этой программы уже нет в твоём списке — отправь любую другую.');
     return;
   }
-  await shareLink(location.origin + location.pathname + '?p=' + encodeURIComponent(pr.link.id),
+  await shareLink(PUBLIC_APP_URL + '?p=' + encodeURIComponent(pr.link.id),
                   c.name, pr.name);
 }
 
@@ -15381,9 +15392,16 @@ function setPause(p, silent){
   if(p){
     state.paused = true;
     state.pausedAt = Date.now();
+    if(window.FitNative) window.FitNative.cancelRest();
   } else {
-    state.pausedTotal += Date.now() - state.pausedAt;
+    const pausedFor = Date.now() - state.pausedAt;
+    state.pausedTotal += pausedFor;
+    if(state.stepDeadline) state.stepDeadline += pausedFor;
     state.paused = false;
+    const step = state.steps[state.stepIdx];
+    if(step && step.phase === 'rest' && state.remaining > 0 && window.FitNative){
+      window.FitNative.scheduleRest(state.remaining);
+    }
   }
   // Голосом отмечаем только ВХОД в паузу: на выходе и так идёт отсчёт, а второе
   // слово поверх него только мешает. silent — когда пауза не новость: мы её и не
@@ -15414,6 +15432,7 @@ function paintPause(){
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
 function startWorkout(fromIdx, elapsed){
   initAudio(); keepAwake();
+  if(window.FitNative) window.FitNative.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
@@ -15457,6 +15476,8 @@ function startWorkout(fromIdx, elapsed){
 
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
+  state.stepDeadline = 0;
+  if(window.FitNative) window.FitNative.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
 }
@@ -15689,19 +15710,25 @@ function renderStep(){
     state.remaining = step.seconds;
     cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
-    const launch = ()=> state.stepTimer = setInterval(()=>{
-      if(state.paused) return;
-      state.remaining--;
-      if(state.remaining <= 0){
-        clearStepTimer();
-        if(step.phase === 'work') endSignal(); // после отдыха вместо сигнала прозвучит гонг нового упражнения
-        nextStep();
-        return;
+    const launch = ()=>{
+      state.stepDeadline = Date.now() + state.remaining * 1000;
+      if(step.phase === 'rest' && window.FitNative){
+        window.FitNative.scheduleRest(state.remaining);
       }
-      cd.innerHTML = tnum(fmt(state.remaining));
-      if([60,45,30,15].includes(state.remaining)) announceRemaining(state.remaining);
-      if(state.remaining <= 3){ cd.classList.add('warn'); tick(); }
-    }, 1000);
+      state.stepTimer = setInterval(()=>{
+        if(state.paused) return;
+        state.remaining = Math.max(0, Math.ceil((state.stepDeadline - Date.now()) / 1000));
+        if(state.remaining <= 0){
+          clearStepTimer();
+          if(step.phase === 'work') endSignal(); // после отдыха вместо сигнала прозвучит гонг нового упражнения
+          nextStep();
+          return;
+        }
+        cd.innerHTML = tnum(fmt(state.remaining));
+        if([60,45,30,15].includes(state.remaining)) announceRemaining(state.remaining);
+        if(state.remaining <= 3){ cd.classList.add('warn'); tick(); }
+      }, 1000);
+    };
     if(step.phase === 'work'){
       // упражнение: ждём озвучку → старт-сигнал → отсчёт (запустит цепочка выше)
       state.beginTimer = ()=>{ state.beginTimer = null; launch(); };

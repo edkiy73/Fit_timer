@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Fit Timer</string>
+  <string name="shortcut_today_long">Тренировка дня</string>
+  <string name="shortcut_today_short">Сегодня</string>
+  <string name="shortcut_create_long">Создать программу</string>
+  <string name="shortcut_create_short">Создать</string>
+</resources>

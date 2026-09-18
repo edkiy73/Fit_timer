@@ -1,73 +1,112 @@
-name: Сборка APK
+name: Android — проверка и сборка
 
-# Собираем вручную кнопкой и на каждый пуш в main, чтобы всегда был свежий APK.
 on:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Целый versionCode (должен расти для Google Play)"
+        required: true
+        default: "1"
+      version_name:
+        description: "Версия для пользователя"
+        required: true
+        default: "1.0.0"
   push:
     branches: [main]
-    paths:
+    paths: &mobile_paths
       - 'android/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'mobile.js'
+      - 'app.config.js'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/android.yml'
+  pull_request:
+    paths: *mobile_paths
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FIT_TIMER_API_URL: ${{ vars.FIT_TIMER_API_URL || 'https://fittimer99.vercel.app' }}
+      FIT_TIMER_PUBLIC_URL: ${{ vars.FIT_TIMER_PUBLIC_URL || 'https://fittimer99.vercel.app' }}
+      VERSION_CODE: ${{ inputs.version_code || '1' }}
+      VERSION_NAME: ${{ inputs.version_name || '1.0.0' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Java 17
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
-      # Android SDK на раннере уже стоит — отдельно ставить нечего
-      - name: Gradle
+      - name: Установить зависимости и синхронизировать Capacitor
+        run: |
+          npm ci
+          npm run mobile:sync
+          npm run check:mobile
+
+      - name: Настроить Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Ключ подписи приезжает из секрета. Нет секрета — соберём debug-вариант:
-      # он ставится на телефон так же, но отпечаток не совпадёт с assetlinks.json,
-      # и TWA покажет адресную строку вместо полноэкранного режима.
       - name: Разобрать ключ подписи
         id: keystore
+        if: github.event_name == 'workflow_dispatch'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/fittimer.keystore"
-            echo "path=$RUNNER_TEMP/fittimer.keystore" >> "$GITHUB_OUTPUT"
-            echo "signed=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "Секрета KEYSTORE_BASE64 нет — собираю debug-вариант"
-            echo "signed=no" >> "$GITHUB_OUTPUT"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Для release-сборки не задан KEYSTORE_BASE64" >&2
+            exit 1
           fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/fittimer.keystore"
+          echo "path=$RUNNER_TEMP/fittimer.keystore" >> "$GITHUB_OUTPUT"
 
-      - name: Собрать release APK
-        if: steps.keystore.outputs.signed == 'yes'
+      - name: Проверочная debug-сборка
+        if: github.event_name != 'workflow_dispatch'
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Release AAB и APK
+        if: github.event_name == 'workflow_dispatch'
         working-directory: android
         env:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle assembleRelease --no-daemon
+        run: ./gradlew bundleRelease assembleRelease --no-daemon
 
-      - name: Собрать debug APK
-        if: steps.keystore.outputs.signed == 'no'
-        working-directory: android
-        run: gradle assembleDebug --no-daemon
-
-      - name: Проверить, что APK действительно подписан
-        if: steps.keystore.outputs.signed == 'yes'
+      - name: Проверить подпись APK
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
-          echo "APK: $APK"
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -r | head -1)
-          "$APKSIGNER" verify --print-certs "$APK" | grep -i 'SHA-256 digest' || true
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
 
-      - name: Выложить APK
+      - name: Выложить debug APK
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: fittimer-apk
-          path: android/app/build/outputs/apk/**/*.apk
+          name: fittimer-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Выложить файлы для Google Play
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fittimer-android-${{ env.VERSION_NAME }}
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
