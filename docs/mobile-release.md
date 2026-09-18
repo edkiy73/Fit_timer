@@ -34,7 +34,8 @@ index.html + mobile.js + app.config.js
 |---|---|
 | `capacitor.config.json` | App ID, имя, `webDir`, splash и плагины |
 | `app.config.js` | Публичные runtime-настройки Web; без секретов |
-| `mobile.js` | Нативные уведомления и haptics с web fallback |
+| `mobile.js` | Мост уведомлений, haptics, TTS, распознавания речи и микрофона |
+| `android/.../FitAudioPlugin.java` | Android TTS, SpeechRecognizer и runtime-разрешение микрофона |
 | `scripts/build-web.mjs` | Собирает локальный frontend в `dist/` |
 | `scripts/check-mobile.mjs` | Проверяет структуру обеих платформ |
 | `android/` | Текущий проект Android Studio, API 36 |
@@ -131,6 +132,13 @@ Team, distribution certificate и provisioning profile создать невоз
 - Android `compileSdk/targetSdk 36`, iOS deployment target 15.
 - Иконки и splash для обеих платформ.
 - Нативная тактильная отдача.
+- Вибрация только на основных действиях тренировки: старт, пауза/продолжение,
+  готово, пропуск, шаг назад и завершение. Не возвращать глобальный обработчик
+  `pointerdown`: он вибрирует при начале скролла по нажимаемому элементу.
+- Android использует системные `TextToSpeech` и `SpeechRecognizer` через
+  `FitAudioPlugin`, потому что браузерные API в WebView могут отсутствовать.
+- Перед режимом хлопков Android явно запрашивает runtime-доступ к микрофону;
+  `getUserMedia` повторяется с простыми constraints, если WebView отверг расширенные.
 - Уведомление «Отдых закончен» при свёрнутом приложении.
 - Добавлены системные описания доступа к микрофону и распознаванию речи.
 - Таймер считается по абсолютному времени и после сворачивания догоняет часы.

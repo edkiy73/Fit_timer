@@ -4,7 +4,10 @@
   const cap = window.Capacitor;
   const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
   const plugins = (cap && cap.Plugins) || {};
+  const fitAudio = plugins.FitAudio;
   const REST_NOTIFICATION_ID = 901001;
+  let speechResultHandle = null;
+  let speechErrorHandle = null;
 
   async function requestNotifications(){
     if(!native || !plugins.LocalNotifications) return false;
@@ -52,11 +55,61 @@
     try{ plugins.Haptics.impact({style:'LIGHT'}); return true; }catch(_){ return false; }
   }
 
+  async function requestMicrophone(){
+    if(!native) return true;
+    if(!fitAudio) return false;
+    try{
+      const result = await fitAudio.requestMicrophone();
+      return result.granted === true;
+    }catch(_){ return false; }
+  }
+
+  async function speak(text){
+    if(!native || !fitAudio) return false;
+    try{
+      const result = await fitAudio.speak({text: String(text || ''), locale: 'ru-RU'});
+      return result.spoken === true;
+    }catch(_){ return false; }
+  }
+
+  async function stopVoiceRecognition(){
+    if(!native || !fitAudio) return;
+    try{ await fitAudio.stopRecognition(); }catch(_){}
+    try{ if(speechResultHandle){ await speechResultHandle.remove(); speechResultHandle = null; } }catch(_){}
+    try{ if(speechErrorHandle){ await speechErrorHandle.remove(); speechErrorHandle = null; } }catch(_){}
+  }
+
+  async function startVoiceRecognition(onResult, onError){
+    if(!native || !fitAudio) return false;
+    await stopVoiceRecognition();
+    if(!(await requestMicrophone())){
+      if(onError) onError('permission');
+      return false;
+    }
+    try{
+      speechResultHandle = await fitAudio.addListener('speechResult', event=>{
+        if(onResult && event && event.text) onResult(event.text);
+      });
+      speechErrorHandle = await fitAudio.addListener('speechError', event=>{
+        if(onError) onError((event && event.error) || 'recognition');
+      });
+      await fitAudio.startRecognition({locale: 'ru-RU'});
+      return true;
+    }catch(_){
+      if(onError) onError('recognition');
+      return false;
+    }
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
     requestNotifications,
     scheduleRest,
     cancelRest,
-    haptic
+    haptic,
+    requestMicrophone,
+    speak,
+    startVoiceRecognition,
+    stopVoiceRecognition
   });
 })();

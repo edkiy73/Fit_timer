@@ -4,6 +4,7 @@ const required = [
   'dist/index.html',
   'dist/app.config.js',
   'android/app/src/main/AndroidManifest.xml',
+  'android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java',
   'ios/App/App/Info.plist'
 ];
 for(const file of required) await access(file);
