@@ -1551,6 +1551,14 @@
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
   /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
   .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
+  /* На старте вариант, нагрузка и состав — одна сущность, поэтому одна карточка.
+     Строки упражнений сохраняют знакомую внутренность .ex-row, но разделяются
+     линиями вместо собственных рамок и скруглений. */
+  #startWorkoutCard > .start-section{display:flex;flex-direction:column;gap:10px}
+  #startWorkoutCard > .start-section:not(.hidden) ~ .start-section:not(.hidden){padding-top:14px;border-top:1px solid var(--line)}
+  .start-ex-list{display:flex;flex-direction:column}
+  .start-ex-list .ex-row{min-height:0;padding:12px 0;background:none;border:0;border-radius:0}
+  .start-ex-list .ex-row + .ex-row{border-top:1px solid var(--line)}
   .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
 
 
@@ -3084,28 +3092,28 @@
         </div>
       </div>
 
-      <div class="card-block hidden" id="planBlock">
-        <p class="cb-title">Вариант тренировки</p>
-        <div class="load-row" id="planRow"></div>
-      </div>
-
-      <div class="card-block hidden" id="progStepsBlock">
-        <p class="cb-title">Нагрузка сегодня</p>
-        <p class="field-hint" id="progStepsInfo"></p>
-        <div class="ps-row">
-          <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
-          <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
-          <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
+      <div class="card-block" id="startWorkoutCard">
+        <div class="start-section hidden" id="planBlock">
+          <p class="cb-title">Вариант тренировки</p>
+          <div class="load-row" id="planRow"></div>
         </div>
-      </div>
 
-      <!-- Сегодняшние упражнения — те же знакомые строки, что в редакторе.
-           Меняются только метки: здесь уже показаны рабочие значения. -->
-      <div class="card-block">
-        <p class="cb-title">Сегодня</p>
-        <p class="field-hint" id="startOverviewSummary"></p>
-        <p class="field-hint" id="startLoadChange"></p>
-        <div class="list-rows" id="startOverviewList"></div>
+        <div class="start-section hidden" id="progStepsBlock">
+          <p class="cb-title">Нагрузка сегодня</p>
+          <p class="field-hint" id="progStepsInfo"></p>
+          <div class="ps-row">
+            <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
+            <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
+            <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
+          </div>
+        </div>
+
+        <div class="start-section">
+          <p class="cb-title">Упражнения</p>
+          <p class="field-hint" id="startOverviewSummary"></p>
+          <p class="field-hint" id="startLoadChange"></p>
+          <div class="start-ex-list" id="startOverviewList"></div>
+        </div>
       </div>
 
     </div>
@@ -5942,15 +5950,15 @@ function loadDelta(a, b){
   const bits = [];
   const moves = [];
   if(String(a.reps || '') !== String(b.reps || '')){
-    bits.push(`повторы ${a.reps} → ${b.reps}`);
+    bits.push(`Повторы: было ${a.reps} → сегодня ${b.reps}`);
     const av = parseValue(a.reps), bv = parseValue(b.reps);
     moves.push(bv.min - av.min, bv.max - av.max);
   }
   if((+a.sec || 0) !== (+b.sec || 0)){
-    bits.push(`время ${a.sec} → ${b.sec} сек`); moves.push((+b.sec || 0) - (+a.sec || 0));
+    bits.push(`Время: было ${a.sec} → сегодня ${b.sec} сек`); moves.push((+b.sec || 0) - (+a.sec || 0));
   }
   if((+a.kg || 0) !== (+b.kg || 0)){
-    bits.push(`вес ${fmtKg(a.kg)} → ${fmtKg(b.kg)} кг`); moves.push((+b.kg || 0) - (+a.kg || 0));
+    bits.push(`Вес: было ${fmtKg(a.kg)} → сегодня ${fmtKg(b.kg)} кг`); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
   const dir = directional.length && directional.every(x => x > 0) ? 'up'
@@ -6014,11 +6022,11 @@ function renderStartOverview(){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
     if(direction === 'up'){
-      changeText(`Выше прошлого раза: ${changes.length} ${plural(changes.length, 'упражнение', 'упражнения', 'упражнений')}.`);
+      changeText(`Нагрузка выше в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
     } else if(direction === 'down'){
-      changeText(`Ниже прошлого раза: ${changes.length} ${plural(changes.length, 'упражнение', 'упражнения', 'упражнений')}.`);
+      changeText(`Нагрузка ниже в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
     } else {
-      changeText(`Изменения в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}.`);
+      changeText(`Нагрузка изменилась в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
     }
   } else if(p.progression){
     const done = (p.stats && p.stats.completions) || 0;
@@ -6035,20 +6043,23 @@ function renderStartOverview(){
     if(!ex.warmup) mainNo++;
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
-    const meta = [loadTargetText(ex, current[i])];
-    if(ex.warmup) meta.push('Разминка');
-    else if(rounds > 1) meta.push(sets > 1 ? `${sets} подх. × ${rounds} кр.` : `${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
-    else meta.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
-    if(+ex.rest > 0 && sets > 1) meta.push(`отдых ${ex.rest} сек`);
+    const meta = [];
+    if(ex.warmup) meta.push({text:'Разминка', cls:'wm'});
+    meta.push({text:loadTargetText(ex, current[i]), cls:''});
+    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} подх. × ${rounds} кр.` : `${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`, cls:''});
+    else meta.push({text:`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`, cls:''});
     const delta = changes.find(x => x.i === i);
     const manual = hasWeight(ex) ? progDelta(p.id, ex, 'weight') : 0;
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
-    row.innerHTML = `<div class="ex-thumb">${ex.warmup ? icon('flame') : mainNo}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
+    const thumb = ex.media && ex.media.kind === 'img'
+      ? `<img src="${esc(ex.media.data)}" alt="">`
+      : (ex.warmup ? icon('flame') : mainNo);
+    row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
     row.querySelector('b').textContent = ex.name || 'Упражнение';
     const tags = row.querySelector('.ex-meta');
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
-    meta.forEach((text, n) => tag(text, ex.warmup && n === 1 ? 'wm' : ''));
+    meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
     if(manual) tag(`вес вручную ${manual > 0 ? '+' : ''}${fmtKg(manual)} кг`);
     box.appendChild(row);
@@ -8120,7 +8131,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '18.09 · компактный обзор тренировки (v19)';
+const BUILD = '18.09 · единая карточка тренировки (v20)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;

@@ -32,15 +32,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {
       id:'overview1', name:'Проверка обзора', active:true, progression:1,
       stats:{completions:2}, plans:[{days:['Пн'], rounds:1, roundRest:60, exercises:[
+        ex('Суставная разминка', 8, {warmup:true, sets:1,
+          media:{kind:'img', data:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='}}),
         ex('Приседания', 10),
         ex('Жим гантелей', 8, {trackWeight:true, weight:6, wStep:1, repsStep:0}),
-        ex('Тяга в наклоне', 10), ex('Выпады', 8), ex('Планка', 30, {type:'time', timeStep:5}),
+        ex('Тяга в наклоне', 10), ex('Планка', 30, {type:'time', timeStep:5}),
         ex('Скручивания', 12)
       ]}]
     };
     customPrograms.push(p);
     stats.history.push({pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
-      load:[{i:0, n:'Приседания', reps:'11', sec:0, kg:0}]});
+      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]});
     openStart(p);
   });
 
@@ -48,15 +50,21 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     summary:$('startOverviewSummary').textContent,
     change:$('startLoadChange').textContent.trim(),
     first:document.querySelector('#startOverviewList .ex-row')?.textContent || '',
+    second:document.querySelectorAll('#startOverviewList .ex-row')[1]?.textContent || '',
+    warmFirst:document.querySelector('#startOverviewList .ex-row .ex-meta span')?.textContent,
+    photos:document.querySelectorAll('#startOverviewList .ex-thumb img').length,
+    rests:[...document.querySelectorAll('#startOverviewList .ex-meta span')].some(x => /отдых/i.test(x.textContent)),
     rows:document.querySelectorAll('#startOverviewList .ex-row').length
   }));
-  ok('сразу виден состав, объём и время', /6 упражнений/.test(before.summary) && /18 подходов/.test(before.summary) && /31 мин/.test(before.summary), before.summary);
-  ok('изменение нагрузки объяснено', /Выше прошлого раза: 1 упражнение/.test(before.change), before.change);
-  ok('используются строки упражнений редактора', before.rows === 6 && /Приседания/.test(before.first), before.first);
-  ok('показана сегодняшняя цель и «было → сегодня»', /12 повторений/.test(before.first) && /11 → 12/.test(before.first), before.first);
+  ok('сразу виден состав, объём и время', /6 упражнений/.test(before.summary) && /16 подходов/.test(before.summary) && /31 мин/.test(before.summary), before.summary);
+  ok('изменение нагрузки объяснено', /Нагрузка выше в 1 упражнении/.test(before.change) && /было → сегодня/.test(before.change), before.change);
+  ok('используются строки упражнений редактора', before.rows === 6 && /Приседания/.test(before.second), before.second);
+  ok('разминка стоит первой и фото загружено', before.warmFirst === 'Разминка' && before.photos === 1, `${before.warmFirst} · ${before.photos}`);
+  ok('отдых в строках не показывается', !before.rests);
+  ok('показана сегодняшняя цель и точное изменение', /12 повторений/.test(before.second) && /было 11 → сегодня 12/.test(before.second), before.second);
 
   await page.click('#psPlus');
-  const after = await page.locator('#startOverviewList .ex-row').first().textContent();
+  const after = await page.locator('#startOverviewList .ex-row').nth(1).textContent();
   ok('кнопка повышения сразу обновляет обзор', /13 повторений/.test(after), after);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
