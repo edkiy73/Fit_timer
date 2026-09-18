@@ -3100,7 +3100,7 @@
 
         <div class="start-section hidden" id="progStepsBlock">
           <p class="cb-title">Нагрузка сегодня</p>
-          <p class="field-hint" id="progStepsInfo"></p>
+          <p class="field-hint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
           <div class="ps-row">
             <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
             <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
@@ -6078,12 +6078,6 @@ function renderProgSteps(){
   const steps = progSteps(p);
   $('psCount').textContent = steps;
   $('psMinus').disabled = steps <= 0;
-
-  // прогрессия теперь считается по пройденным тренировкам, а не по календарю
-  const done = (p.stats && p.stats.completions) || 0;
-  const left = p.progression - (done % p.progression);
-  $('progStepsInfo').textContent = (steps === 0 ? 'Базовая нагрузка' : `${steps}-й шаг повышения`)
-    + ` · следующая через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}`;
 }
 // кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
 // пройденных тренировок и пересчитался бы заново, затерев ручное изменение
@@ -8131,7 +8125,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '18.09 · единая карточка тренировки (v20)';
+const BUILD = '18.09 · понятные шаги нагрузки (v21)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
