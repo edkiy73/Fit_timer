@@ -167,7 +167,6 @@
   .icon-btn.btn-mic{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1;filter:grayscale(1);opacity:.65}
   .icon-btn.btn-mic.on{display:block}
   .icon-btn.btn-mic.listening{filter:none;opacity:1;border-color:var(--accent-line);animation:micPulse 1.6s infinite}
-  .icon-btn.btn-mic.clap-hit{background:var(--work);color:var(--on-accent);transform:scale(1.15)}
   @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,61,.35)}50%{box-shadow:0 0 0 6px rgba(255,77,61,0)}}
   .icon-btn.btn-sound{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1}
   .icon-btn.btn-sound.on{display:block}
@@ -3786,19 +3785,17 @@
     <div id="obHello">
       <div class="ob-hero">
         <div class="ob-mark">FIT<i>/</i>TIMER</div>
-        <h2 class="ob-title">Тренируйся<br>без ограничений</h2>
-        <p class="ob-lead">Своя программа, своя нагрузка, свой темп. Всё на телефоне.</p>
+        <h2 class="ob-title">Тренируйся<br>по своим правилам</h2>
+        <p class="ob-lead">Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по каждому этапу и поможет постепенно повышать нагрузку.</p>
       </div>
 
-      <!-- Шесть плиток вместо абзаца: что умеет приложение, видно за один взгляд.
-           Выбраны не все функции, а те, которых у соседей по полке нет. -->
+      <!-- Четыре главных сценария вместо полного перечня функций: первый экран
+           должен объяснять ценность, а не пересказывать всё приложение. -->
       <ul class="ob-grid">
-        <li><span class="obg-ico" data-icon="chart"></span><b>Нагрузка растёт сама</b><small>Вес и повторы прибавляются по мере занятий</small></li>
-        <li><span class="obg-ico" data-icon="grip"></span><b>Любая программа</b><small>Круги, подходы, время — собирается под себя</small></li>
-        <li><span class="obg-ico" data-icon="book"></span><b>Готовые программы</b><small>Каталог от тренеров, добавляется в один тап</small></li>
-        <li><span class="obg-ico" data-icon="sparkle"></span><b>Соберёт нейросеть</b><small>По описанию, по видео или из твоей программы</small></li>
-        <li><span class="obg-ico" data-icon="mic"></span><b>Без рук</b><small>Голос, хлопок или кнопка на гарнитуре</small></li>
-        <li><span class="obg-ico" data-icon="shield"></span><b>Работает без сети</b><small>Данные остаются на телефоне</small></li>
+        <li><span class="obg-ico" data-icon="grip"></span><b>Программа под тебя</b><small>Собери сам или создай с ИИ по описанию и видео</small></li>
+        <li><span class="obg-ico" data-icon="book"></span><b>Связь с тренером</b><small>Получи программу, занимайся по ней и отправляй отчёты</small></li>
+        <li><span class="obg-ico" data-icon="chart"></span><b>Прогресс без расчётов</b><small>Приложение вовремя увеличит вес, повторы или время</small></li>
+        <li><span class="obg-ico" data-icon="mic"></span><b>Тренировка без рук</b><small>Голосовые команды, гарнитура и озвучка каждого этапа</small></li>
       </ul>
 
       <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
@@ -4189,7 +4186,6 @@
         <div class="hf-seg" id="hfSeg">
           <button type="button" data-hf="off" class="act">Выкл</button>
           <button type="button" data-hf="voice">Голос</button>
-          <button type="button" data-hf="clap">Хлопок</button>
           <button type="button" data-hf="headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
@@ -4570,7 +4566,6 @@
         <span class="mini-label">Управление без рук</span>
         <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
         <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Отключи звук уведомлений, чтобы микрофон не щёлкал</small></button>
-        <button class="choice" data-hf="clap"><b>Хлопок</b><small>2 хлопка — дальше, 3 — пауза. Без системных звуков, офлайн</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
         <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>
@@ -4976,7 +4971,7 @@ const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15"
 
 /* ================= ЗВУК ================= */
 let soundOn = true; // общий выключатель звука
-let lastAppSoundT = 0; // когда приложение само издавало звук (для детектора хлопка)
+let lastAppSoundT = 0; // когда приложение само издавало звук — не принимаем его за голосовую команду
 let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
 let readySec = 5;  // подготовка перед упражнением на время
 let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
@@ -7945,7 +7940,7 @@ const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmu
                       'trainer', 'clients'];
 const GLOBAL_KEYS = ['account', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
-                     'voiceHint', 'voiceURI', 'clapHint',
+                     'voiceHint', 'voiceURI',
                      'wantSvg']; // wantSvg больше не пишется — строка нужна, чтобы стереть его у тех, кто успел его сохранить
 
 // Полное удаление аккаунта. Требование и сторов, и 152-ФЗ: человек должен уметь
@@ -15294,7 +15289,7 @@ function startGlobal(){
   $('globalClock').classList.add('on');
   $('globalClock').textContent = '00:00';
   state.globalInterval = setInterval(()=>{
-    if(state.paused) return;
+    if(state.paused || document.hidden) return;
     $('globalClock').textContent = fmt(globalElapsed());
   }, 1000);
 }
@@ -15716,7 +15711,7 @@ function renderStep(){
         window.FitNative.scheduleRest(state.remaining);
       }
       state.stepTimer = setInterval(()=>{
-        if(state.paused) return;
+        if(state.paused || document.hidden) return;
         state.remaining = Math.max(0, Math.ceil((state.stepDeadline - Date.now()) / 1000));
         if(state.remaining <= 0){
           clearStepTimer();
@@ -15967,7 +15962,10 @@ document.addEventListener('input', e => {
 window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); } });
 
 /* ================= ФИНАЛ ================= */
-function stopSpeech(){ try{ speechSynthesis.cancel(); }catch(e){} }
+function stopSpeech(){
+  if(window.FitNative && window.FitNative.stopSpeaking) window.FitNative.stopSpeaking();
+  try{ speechSynthesis.cancel(); }catch(e){}
+}
 
 function estimateKcal(sec, load){
   const ws = stats.weights;
@@ -16040,7 +16038,7 @@ function finishWorkout(){
       if(reps > 0) lifted += s.weight * reps;
     });
     if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
-    // тренировка без рук: голос, хлопок или гарнитура — считаем сам факт, не режим
+    // тренировка без рук: голос или гарнитура — считаем сам факт, не режим
     if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
   }
   // сколько разных упражнений пройдено — третья цифра карточки результата (текущая
@@ -16447,7 +16445,7 @@ const BADGES = [
   // час НАЧАЛА тренировки пишется в историю с этого обновления: у старых записей
   // поля нет вовсе, и они просто не участвуют в проверке
   {id: 'early', ico: 'sparkle',  name: 'Раннее утро',         desc: 'Тренировка начата до 7 утра',        test: () => (stats.history || []).some(h => h.t != null && h.t < 7)},
-  {id: 'hands', ico: 'mic',      name: 'Без рук',             desc: 'Тренировка с голосом или хлопком',   test: () => (stats.hfDone || 0) >= 1},
+  {id: 'hands', ico: 'mic',      name: 'Без рук',             desc: 'Тренировка с голосом или гарнитурой', test: () => (stats.hfDone || 0) >= 1},
   {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => (stats.history || []).some(h => (h.sec || 0) >= 2700)},
   {id: 's7',    ico: 'flame',    name: 'Серия',               desc: '7 тренировок подряд по плану',       test: () => calcStreak() >= 7},
   // Рекорд не выдаётся один раз с застывшим числом: он живёт вместе с stats.bestStreak
@@ -16619,7 +16617,7 @@ function syncPrefs(){
   $('btnSoundW').classList.toggle('muted', !anyAudio);
   $('btnSoundW').title = 'Настройки звука';
   $('btnMicW').classList.toggle('listening', hfMode !== 'off');
-  $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', clap:'хлопок', headset:'гарнитура'}[hfMode] || 'выкл');
+  $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', headset:'гарнитура'}[hfMode] || 'выкл');
   // держим три каскада («старт», «тренировка», «профиль») в согласованном состоянии
   ['st', 'snd'].forEach(p => {
     const btn = $(p + 'SoundOn');
@@ -16673,12 +16671,11 @@ function applyVoiceCommand(text){
 }
 
 /* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
-let hfMode = 'off'; // off | voice | clap | headset
+let hfMode = 'off'; // off | voice | headset
 
 const HF_HINTS = {
   off: 'Переключай этапы кнопками на экране.',
   voice: 'Команды: «дальше», «пауза», «продолжить». Нужен интернет. Чтобы не было звука активации микрофона — отключи звук уведомлений в системе на время тренировки.',
-  clap: 'Два хлопка — следующий этап. Три хлопка — пауза/продолжить. Работает офлайн, без звуков системы.',
   headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
 };
 
@@ -16691,126 +16688,16 @@ function setHfMode(mode){
   syncPrefs();
   // если уже на тренировке — переключаем на лету
   if($('scrWork').classList.contains('on')){
-    stopListening(); stopClap(); stopHeadset();
+    stopListening(); stopHeadset();
     startHandsFree();
   }
 }
 function startHandsFree(){
   if(hfMode === 'voice') startListening();
-  else if(hfMode === 'clap') startClap();
   else if(hfMode === 'headset') startHeadset();
 }
 function stopHandsFree(){
-  stopListening(); stopClap(); stopHeadset();
-}
-
-/* ---- ХЛОПОК: один поток микрофона, без системного распознавания — не пиликает ---- */
-let clapStream = null, clapCtx = null, clapRAF = 0, lastClap = 0, clapCount = 0, clapTimer = null;
-async function startClap(){
-  try{
-    // сырой звук: шумодав и автогейн давят импульсные звуки (хлопки); свои звуки отсекаем меткой lastAppSoundT
-    clapStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
-    clapCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if(clapCtx.state === 'suspended') clapCtx.resume();
-    const src = clapCtx.createMediaStreamSource(clapStream);
-    const an = clapCtx.createAnalyser();
-    an.fftSize = 512;
-    an.smoothingTimeConstant = 0.1; // без инерции — хлопок виден в спектре мгновенно
-    src.connect(an);
-    const tbuf = new Uint8Array(an.fftSize);
-    const fbuf = new Uint8Array(an.frequencyBinCount);
-    let noise = 8;      // адаптивный фон по громкости
-    let prevPeak = 0;
-    let lastAction = 0; // когда сработало последнее действие (защита от каскада шума)
-
-    const loop = ()=>{
-      if(!clapStream) return;
-      if(clapCtx.state === 'suspended') clapCtx.resume(); // Android любит усыплять контекст
-      an.getByteTimeDomainData(tbuf);
-      let peak = 0;
-      for(let i = 0; i < tbuf.length; i++){
-        const v = Math.abs(tbuf[i] - 128);
-        if(v > peak) peak = v;
-      }
-      const now = Date.now();
-      // пока приложение само звучит — детект выключен
-      const appSpeaking = now < lastAppSoundT; // только метки времени: флаг speechSynthesis.speaking залипает на Android
-      if(appSpeaking || now - lastAction < 900){
-        prevPeak = peak;
-        clapRAF = requestAnimationFrame(loop);
-        return;
-      }
-      noise = noise * 0.995 + peak * 0.005;
-      const th = Math.max(48, noise * 2.6);
-      const inSeries = clapCount > 0 && now - lastClap < 900; // уже идёт серия хлопков
-      const sharp = inSeries || prevPeak < th * 0.6; // резкий фронт нужен только первому
-      prevPeak = peak;
-      const effTh = inSeries ? th * 0.85 : th; // в серии порог чуть мягче
-
-      if(peak > effTh && sharp && now - lastClap > 150){
-        // частотный фильтр: хлопок — широкополосный щелчок с сильными верхами;
-        // топот, прыжки и удары об пол — низкочастотные, верхов почти нет
-        an.getByteFrequencyData(fbuf);
-        const n = fbuf.length;
-        let lo = 0, hi = 0;
-        const split = Math.floor(n * 0.3); // ~выше 3–4 кГц при 44.1к
-        for(let i = 2; i < split; i++) lo += fbuf[i];
-        for(let i = split; i < n; i++) hi += fbuf[i];
-        lo /= (split - 2); hi /= (n - split);
-        const isClapSpectrum = inSeries ? (hi > 14) : (hi > 22 && hi > lo * 0.45);
-        if(!isClapSpectrum){
-          clapRAF = requestAnimationFrame(loop);
-          return; // низкочастотный удар — не хлопок
-        }
-
-        lastClap = now;
-        clapCount++;
-        clearTimeout(clapTimer);
-        // визуальный отклик: видно, что хлопок пойман
-        try{
-          $('btnMicW').classList.add('clap-hit');
-          setTimeout(()=> $('btnMicW').classList.remove('clap-hit'), 180);
-          haptic(12);
-        }catch(e){}
-        if(clapCount >= 3){
-          // тройной — пауза/продолжить, срабатывает сразу
-          clapCount = 0;
-          lastAction = now;
-          setPause(!state.paused);
-          beep(990, .1);
-        } else {
-          clapTimer = setTimeout(()=>{
-            const n = clapCount;
-            clapCount = 0;
-            if(n === 2){
-              // двойной — следующий этап
-              lastAction = Date.now();
-              const step = state.steps[state.stepIdx];
-              if(step){
-                if(state.paused) setPause(false);
-                if(step.kind === 'click') $('btnDone').click();
-                else { beep(990, .1); nextStep(); }
-              }
-            }
-            // одиночный хлопок игнорируем — слишком много ложных срабатываний от бытовых звуков
-          }, 650); // окно ожидания следующего хлопка
-        }
-      }
-      clapRAF = requestAnimationFrame(loop);
-    };
-    loop();
-  }catch(e){
-    appAlert('Нет доступа к микрофону для режима «Хлопок». Разреши микрофон в настройках браузера.');
-    setHfMode('off');
-  }
-}
-function stopClap(){
-  cancelAnimationFrame(clapRAF);
-  clearTimeout(clapTimer);
-  clapCount = 0;
-  try{ if(clapStream){ clapStream.getTracks().forEach(t => t.stop()); } }catch(e){}
-  try{ if(clapCtx){ clapCtx.close(); } }catch(e){}
-  clapStream = null; clapCtx = null;
+  stopListening(); stopHeadset();
 }
 
 /* ---- ГАРНИТУРА: беззвучный луп + Media Session перехватывает кнопку наушников ---- */
@@ -16995,6 +16882,7 @@ async function showNotification(title, body){
   try{ new Notification(title, {body, icon:'icon-192.png'}); }catch(e){}
 }
 function checkSchedules(){
+  if(document.hidden) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
   const today = DAYS[(now.getDay() + 6) % 7]; // JS: 0=Вс -> наш индекс 6
@@ -17194,17 +17082,13 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{
     const mode = b.dataset.hf;
     if(mode === 'voice' && !SR){
-      appAlert('Распознавание речи не поддерживается этим браузером. Попробуй «Хлопок» — он работает везде.');
+      appAlert('Распознавание речи не поддерживается этим браузером. Можно использовать кнопку на гарнитуре.');
       return;
     }
     setHfMode(mode);
     if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
       kvSet('voiceHint', '1');
-      appAlert('Команды: «дальше», «готово», «пропустить» — следующий этап; «пауза» / «продолжить».\n\nНа некоторых телефонах система подаёт короткий сигнал при активации микрофона — это особенность ОС. Если мешает — попробуй режим «Хлопок».');
-    }
-    if(mode === 'clap' && (await kvGet('clapHint')) !== '1'){
-      kvSet('clapHint', '1');
-      appAlert('Два хлопка подряд — следующий этап.\nТри хлопка — пауза/продолжить.\nОдиночные хлопки и случайные звуки игнорируются.\n\nБраузер спросит доступ к микрофону при старте тренировки. Никаких системных звуков — микрофон открывается один раз на всю тренировку.');
+      appAlert('Команды: «дальше», «готово», «пропустить» — следующий этап; «пауза» / «продолжить».\n\nНа некоторых телефонах система подаёт короткий сигнал при активации микрофона — это особенность ОС.');
     }
   };
 });
@@ -17312,7 +17196,7 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
   c.onclick = ()=>{
     const mode = c.dataset.hf;
     if(mode === 'voice' && !SR){
-      appAlert('Распознавание речи не поддерживается этим браузером. Попробуй «Хлопок».');
+      appAlert('Распознавание речи не поддерживается этим браузером. Можно использовать кнопку на гарнитуре.');
       return;
     }
     setHfMode(mode);
@@ -18017,6 +17901,7 @@ function aiRunOpen(title, onCancel){
   aiRunT0 = Date.now();
   clearInterval(aiRunTick);
   aiRunTick = setInterval(()=>{
+    if(document.hidden) return;
     const s = Math.floor((Date.now() - aiRunT0) / 1000);
     $('aiRunTimer').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
   }, 1000);
@@ -18556,15 +18441,20 @@ $('btnResetTotal').onclick = async ()=>{
 
 document.addEventListener('visibilitychange', ()=>{
   const inWorkout = $('scrWork').classList.contains('on');
-  if(document.visibilityState === 'visible' && inWorkout){
-    keepAwake();
-    // после сворачивания браузер может «подвесить» доступ к микрофону —
-    // переоткрываем поток заново, чтобы не требовалось лезть в системные настройки
-    if(hfMode === 'clap'){ stopClap(); startClap(); }
-    else if(hfMode === 'voice' && voiceWanted && !voiceActive){ startListening(); }
+  if(document.visibilityState !== 'visible'){
+    releaseWake();
+    stopHandsFree();
+    try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(e){}
+    stopSpeech();
+    return;
   }
-  // при сворачивании тренировку не останавливаем: таймер должен идти дальше,
-  // чтобы отдых и упражнения на время не «замирали», пока смотришь в другое приложение
+  if(inWorkout){
+    keepAwake();
+    try{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }catch(e){}
+    startHandsFree();
+  }
+  // Сами таймеры считают по Date.now и дедлайнам. В фоне ресурсы освобождаем, а
+  // при возврате первый тик сразу догонит прошедшее время.
 });
 
 // статичные иконки
@@ -18696,6 +18586,11 @@ try{
   renderPhotos();
   checkSchedules();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
+  // Удалённый режим мог остаться в старой резервной копии или localStorage.
+  if(!['off', 'voice', 'headset'].includes(hfMode)){
+    hfMode = 'off';
+    kvSet('hfMode', 'off');
+  }
   voiceWanted = hfMode === 'voice';
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = HF_HINTS[hfMode] || '';

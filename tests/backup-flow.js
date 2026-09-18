@@ -112,7 +112,7 @@ async function restore(page, dump){
                    currency: 'RUB', price: 1990, autoRenew: true};
     await saveAccount();
 
-    await kvSet('hfMode', 'clap');
+    await kvSet('hfMode', 'voice');
     await kvSet('soundOff', '0');
   }, PROG);
 
@@ -145,7 +145,7 @@ async function restore(page, dump){
   ok('и фото прогресса', inFile.includes('photos'));
   ok('аккаунт с подпиской — в настройках', !!dump.settings.account,
      Object.keys(dump.settings).join(', '));
-  ok('и управление без рук', dump.settings.hfMode === 'clap', dump.settings.hfMode);
+  ok('и управление без рук', dump.settings.hfMode === 'voice', dump.settings.hfMode);
 
   // Того, что переносить нельзя, в копии быть не должно вовсе.
   ok('очередь отправки в копию НЕ попадает', !inFile.includes('outbox'));
@@ -214,7 +214,7 @@ async function restore(page, dump){
   ok('АККАУНТ И ПОДПИСКА вернулись',
      got.email === 'lena@example.com' && got.sub === 'year' && got.premium === true,
      `${got.email} · ${got.sub} · премиум ${got.premium}`);
-  ok('управление без рук вернулось', got.hf === 'clap', got.hf);
+  ok('управление без рук вернулось', got.hf === 'voice', got.hf);
 
   /* ---- старый файл первой версии продолжает открываться ---- */
   const three = await boot(b, errs, 'телефон 3');

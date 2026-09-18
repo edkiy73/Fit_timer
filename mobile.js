@@ -79,6 +79,11 @@
     }catch(_){ return false; }
   }
 
+  async function stopSpeaking(){
+    if(!native || !fitAudio) return;
+    try{ await fitAudio.stopSpeaking(); }catch(_){}
+  }
+
   async function stopVoiceRecognition(){
     if(!native || !fitAudio) return;
     try{ await fitAudio.stopRecognition(); }catch(_){}
@@ -110,29 +115,6 @@
 
   function installNativeOverrides(){
     if(!native || !fitAudio) return;
-
-    // WebView может отказать getUserMedia из-за расширенных constraints даже при
-    // выданном Android-разрешении. Сначала подтверждаем runtime permission, затем
-    // повторяем запрос с audio:true.
-    try{
-      const media = navigator.mediaDevices;
-      if(media && media.getUserMedia && !media.__fitTimerWrapped){
-        const originalGetUserMedia = media.getUserMedia.bind(media);
-        media.getUserMedia = async constraints=>{
-          if(constraints && constraints.audio && !(await requestMicrophone())){
-            throw new DOMException('Microphone permission denied', 'NotAllowedError');
-          }
-          try{ return await originalGetUserMedia(constraints); }
-          catch(error){
-            if(constraints && constraints.audio !== true){
-              return originalGetUserMedia({audio:true});
-            }
-            throw error;
-          }
-        };
-        media.__fitTimerWrapped = true;
-      }
-    }catch(_){}
 
     // Системный Android TTS вместо ненадёжного speechSynthesis внутри WebView.
     window.speak = function(text, fallback, onDone){
@@ -175,6 +157,10 @@
       stopVoiceRecognition();
       if(typeof resetVoiceDedup === 'function') resetVoiceDedup();
     };
+    window.stopSpeech = function(){
+      stopSpeaking();
+      try{ if('speechSynthesis' in window) speechSynthesis.cancel(); }catch(_){}
+    };
 
     // Автозавершение не связано с кнопкой, поэтому добавляем отдачу обёрткой.
     if(typeof window.finishWorkout === 'function'){
@@ -206,6 +192,30 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installNativeOverrides, {once:true});
   else installNativeOverrides();
 
+  // visibilitychange в WebView бывает запоздалым. Нативное событие приложения
+  // немедленно освобождает микрофон, TTS, media loop, AudioContext и wake lock.
+  if(native && plugins.App && plugins.App.addListener){
+    plugins.App.addListener('appStateChange', event=>{
+      const active = !!(event && event.isActive);
+      if(!active){
+        if(typeof window.stopListening === 'function') window.stopListening();
+        else stopVoiceRecognition();
+        stopSpeaking();
+        try{ if(typeof stopHeadset === 'function') stopHeadset(); }catch(_){}
+        try{ if(typeof releaseWake === 'function') releaseWake(); }catch(_){}
+        try{ if(typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
+        return;
+      }
+      try{
+        const work = document.getElementById('scrWork');
+        if(work && work.classList.contains('on')){
+          if(typeof keepAwake === 'function') keepAwake();
+          if(typeof startHandsFree === 'function') startHandsFree();
+        }
+      }catch(_){}
+    });
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
     requestNotifications,
@@ -215,6 +225,7 @@
     workoutHaptic,
     requestMicrophone,
     speak,
+    stopSpeaking,
     startVoiceRecognition,
     stopVoiceRecognition
   });

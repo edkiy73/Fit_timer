@@ -101,6 +101,12 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     }
 
     @PluginMethod
+    public void stopSpeaking(PluginCall call) {
+        if (tts != null) tts.stop();
+        call.resolve();
+    }
+
+    @PluginMethod
     public void startRecognition(PluginCall call) {
         if (getPermissionState("microphone") != PermissionState.GRANTED) {
             call.reject("Microphone permission is required");
