@@ -26,11 +26,26 @@ async function bodyOf(req){
   return chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
 }
 
+const cleanAge = v => {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 5 && n <= 100 ? n : null;
+};
+// Старые клиенты могли прислать точную дату. Сервер преобразует её в полные годы
+// и сохраняет только возраст, чтобы после первого обмена точная дата исчезла.
+const legacyAge = v => {
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))) return null;
+  const d = new Date(v), now = new Date();
+  if(isNaN(d)) return null;
+  let n = now.getUTCFullYear() - d.getUTCFullYear();
+  if(now.getUTCMonth() < d.getUTCMonth()
+    || (now.getUTCMonth() === d.getUTCMonth() && now.getUTCDate() < d.getUTCDate())) n--;
+  return cleanAge(n);
+};
 const cleanUser = u => ({
   id: String((u && u.id) || '').slice(0, 80),
   name: String((u && u.name) || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 20),
   gender: (u && (u.gender === 'f' || u.gender === 'm')) ? u.gender : '',
-  birth: /^\d{4}-\d{2}-\d{2}$/.test(String(u && u.birth || '')) ? u.birth : '',
+  age: cleanAge(u && u.age) || legacyAge(u && u.birth),
   theme: ['system','light','dark'].includes(u && u.theme) ? u.theme : 'system'
 });
 const newer = (a, b) => {

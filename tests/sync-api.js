@@ -21,7 +21,8 @@ async function login(deviceId, sub){
 (async()=>{
   const sub = {plan:'year',since:'2026-09-17',until:'2099-09-17',currency:'RUB',price:2990,autoRenew:true};
   const a = await login('device-a', sub);
-  const profile = {id:'profile-one',name:'Лена',gender:'f',birth:'1992-05-10',theme:'dark',photo:'data:image/png;base64,bm8='};
+  const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',photo:'data:image/png;base64,bm8='};
+  const legacyProfile = {id:'profile-legacy',name:'Старый',gender:'m',birth:'1990-05-01',theme:'light'};
   const docs = [
     {profileId:profile.id,key:'stats',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({count:1,history:[{id:'h1',d:'2026-09-17',sec:600}]})},
     {profileId:profile.id,key:'program:p1',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({id:'p1',name:'Сила'})},
@@ -30,12 +31,17 @@ async function login(deviceId, sub){
     {profileId:profile.id,key:'photos',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:'[{"img":"secret"}]'}
   ];
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,
-    profiles:[{user:profile,at:'2026-09-17T10:00:00.000Z'}],docs});
+    profiles:[{user:profile,at:'2026-09-17T10:00:00.000Z'},
+      {user:legacyProfile,at:'2026-09-17T10:00:00.000Z'}],docs});
 
   const b = await login('device-b');
   const pulled = await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-b',token:b.syncToken});
-  const p = pulled.profiles[0];
+  const p = pulled.profiles.find(x=>x.user.id===profile.id);
+  const legacy = pulled.profiles.find(x=>x.user.id===legacyProfile.id);
   ok('профиль доступен на втором устройстве', p && p.user.name === 'Лена');
+  ok('сервер хранит только полные годы', p && p.user.age === 34 && !('birth' in p.user), JSON.stringify(p && p.user));
+  ok('старый профиль мигрирован без точной даты', legacy && legacy.user.age >= 36 && !('birth' in legacy.user),
+     JSON.stringify(legacy && legacy.user));
   ok('фото профиля не сохранено', p && !p.user.photo, JSON.stringify(p && p.user));
   ok('программа и статистика вернулись', p.docs.some(d=>d.key==='stats') && p.docs.some(d=>d.key==='program:p1'));
   ok('фото-прогресс сервер не принял', !p.docs.some(d=>d.key==='photos'), p.docs.map(d=>d.key).join(','));

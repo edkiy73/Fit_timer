@@ -2,7 +2,7 @@
 
    Копия собиралась перечислением четырёх полей руками, и за ней не уследили: мимо
    прошли ручные правки веса, режим тренера с ником и ключом, вся картотека
-   подопечных, пол с датой рождения и аккаунт с подпиской. Человек восстанавливался
+   подопечных, пол с возрастом и аккаунт с подпиской. Человек восстанавливался
    из копии и терял оплаченное, не узнав об этом.
 
    Проверяем не «работает ли выгрузка», а РОВНО ЭТО: что в файле лежит всё, что
@@ -73,10 +73,10 @@ async function restore(page, dump){
     me.prepSec = 7;
     await saveUsers();
 
-    // Пол и дата рождения живут в самом профиле, а не в identity: identity —
+    // Пол и возраст живут в самом профиле, а не в identity: identity —
     // это «кто я для сервера» (profileId, почта, согласия).
     me.gender = 'f';
-    me.birth = '1990-05-01';
+    me.age = 36;
     await saveUsers();
 
     const r = parseProgramText(txt);
@@ -138,7 +138,7 @@ async function restore(page, dump){
   const inFile = Object.keys(dump.data[uid]);
   ok('в копии есть программы', inFile.includes('customPrograms'), inFile.join(', '));
   ok('и ручные правки веса', inFile.includes('progWeights'));
-  ok('и пол с датой рождения', inFile.includes('identity'));
+  ok('и пол с возрастом', inFile.includes('identity'));
   ok('и режим тренера', inFile.includes('trainer'));
   ok('и картотека подопечных', inFile.includes('clients'));
   ok('и статистика с весом тела', inFile.includes('stats'));
@@ -171,7 +171,7 @@ async function restore(page, dump){
     const me = users.find(u => u.id === currentUser) || {};
     return {
       name: me.name, theme: me.theme, prep: me.prepSec,
-      gender: me.gender, birth: me.birth, profileId: !!(identity && identity.profileId),
+      gender: me.gender, age: me.age, profileId: !!(identity && identity.profileId),
       // Ищем по имени: при первом запуске приложение само кладёт стартовую
       // программу, и наша в списке не первая.
       prog: (customPrograms.find(p => p.name === 'Сила дома') || {}).name,
@@ -196,8 +196,8 @@ async function restore(page, dump){
 
   ok('профиль вернулся', got.name === 'Лена' && got.theme === 'light' && got.prep === 7,
      `${got.name} · ${got.theme} · ${got.prep}`);
-  ok('пол и дата рождения вернулись', got.gender === 'f' && got.birth === '1990-05-01',
-     `${got.gender} ${got.birth}`);
+  ok('пол и возраст вернулись', got.gender === 'f' && got.age === 36,
+     `${got.gender} ${got.age}`);
   ok('и «кто я для сервера» на месте', got.profileId);
   ok('программа вернулась', got.prog === 'Сила дома' && got.weightStep === 2,
      `${got.prog}, шаг ${got.weightStep}`);
@@ -219,7 +219,7 @@ async function restore(page, dump){
   /* ---- старый файл первой версии продолжает открываться ---- */
   const three = await boot(b, errs, 'телефон 3');
   await restore(three, {app: 'fittimer', version: 1,
-    users: [{id: 'u1', name: 'Старый'}], currentUser: 'u1',
+    users: [{id: 'u1', name: 'Старый', birth: '1990-05-01'}], currentUser: 'u1',
     data: {u1: {
       programs: [{id: 'old1', name: 'Из старой копии', plans: [{days: ['Ср'], rounds: 2,
         roundRest: 60, exercises: [{name: 'Планка', type: 'time', value: 40, sets: 2, rest: 30}]}]}],
@@ -231,13 +231,16 @@ async function restore(page, dump){
   const oldGot = await three.evaluate(async () => ({
     prog: (customPrograms[0] || {}).name, count: stats.count,
     // булево из копии первой версии должно лечь в хранилище строкой '1'
-    warm: await kvGet(pk('warmupAdded')), sound: await kvGet('soundOff')
+    warm: await kvGet(pk('warmupAdded')), sound: await kvGet('soundOff'),
+    age: curUser().age, hasBirth: Object.prototype.hasOwnProperty.call(curUser(), 'birth')
   }));
   ok('копия первой версии тоже открывается',
      oldGot.prog === 'Из старой копии' && oldGot.count === 5,
      `${oldGot.prog}, ${oldGot.count} тренировок`);
   ok('и её булевы поля поняты верно', oldGot.warm === '1' && oldGot.sound === '1',
      `warmupAdded=${oldGot.warm}, soundOff=${oldGot.sound}`);
+  ok('старая дата преобразована в возраст и удалена', oldGot.age >= 36 && !oldGot.hasBirth,
+     `age=${oldGot.age}, точная дата осталась: ${oldGot.hasBirth}`);
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;

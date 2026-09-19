@@ -35,7 +35,7 @@ async function boot(browser, label, errors){
     const u = curUser();
     u.name = 'Лена';
     u.gender = 'f';
-    u.birth = '1992-05-10';
+    u.age = 34;
     u.photo = 'data:image/png;base64,aGVsbG8=';
     u.syncAt = new Date().toISOString();
     await saveUsers();

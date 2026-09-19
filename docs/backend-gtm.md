@@ -149,10 +149,9 @@ CREATE TABLE profiles (
   id            uuid PRIMARY KEY,           -- id генерирует клиент (newId), сервер его принимает
   account_id    uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   name          text NOT NULL,
-  -- пол и дата рождения нужны только для подбора нагрузки; при желании их можно
-  -- вообще не хранить на сервере, а передавать в запрос к ИИ и забывать
+  -- точная дата рождения не нужна: храним только указанный возраст в полных годах
   gender        text CHECK (gender IN ('m','f','')),
-  birth_date    date,
+  age           smallint CHECK (age BETWEEN 5 AND 100),
   created_at    timestamptz NOT NULL DEFAULT now(),
   deleted_at    timestamptz
 );
