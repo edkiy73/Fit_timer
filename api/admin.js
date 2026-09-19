@@ -11,6 +11,7 @@ const { store } = require('../lib/store');
 const { send, fail, readBody, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
 const { getSettings, sanitizeSettings, providerStatus, generate } = require('../lib/ai');
+const { handleAI } = require('../lib/ai-endpoint');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
@@ -60,6 +61,7 @@ function checkItem(it){
 }
 
 module.exports = async (req, res) => {
+  if(req.query && (req.query.ai_endpoint === '1' || req.query.public_config === '1')) return handleAI(req, res);
   if(cors(req, res)) return;
   if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
   if(!store.configured()) return fail(res, 503, 'no_store');
