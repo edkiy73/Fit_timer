@@ -17,6 +17,14 @@ async function bodyOf(req){
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
+
+  // Публичная конфигурация живёт в этой же функции, чтобы не превышать лимит
+  // количества Serverless Functions на Vercel. /api/config переписывается сюда.
+  if(req.method === 'GET' && req.query && req.query.public_config === '1'){
+    const s = await getSettings();
+    return send(res, 200, {ai:{enabled:s.enabled}, prices:s.prices, payment:s.payment});
+  }
+
   if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
   if(!store.configured()) return fail(res, 503, 'no_store');
   if(!(await rateOk(req, 'ai', 120))) return fail(res, 429, 'rate_limited');

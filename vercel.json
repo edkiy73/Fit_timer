@@ -4,6 +4,9 @@
   "functions": {
     "api/**/*.js": { "maxDuration": 10 }
   },
+  "rewrites": [
+    { "source": "/api/config", "destination": "/api/ai?public_config=1" }
+  ],
   "headers": [
     {
       "source": "/",
