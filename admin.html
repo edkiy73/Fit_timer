@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Fit Timer — каталог</title>
+<title>Fit Timer — админка</title>
 <!--
   Админка каталога. Отдельная страница, а не часть приложения: у неё другой
   зритель (один человек), другая задача (разбирать поток) и другой ключ. Внутри
@@ -101,7 +101,7 @@
 </head>
 <body>
 <div id="gate" class="gate" hidden>
-  <h1>Каталог Fit Timer</h1>
+  <h1>Админка Fit Timer</h1>
   <p class="muted">Введи ключ. Он хранится только в этом браузере.</p>
   <label>Ключ</label>
   <input id="key" type="password" autocomplete="off" placeholder="ADMIN_KEY">
@@ -111,12 +111,13 @@
 
 <div id="app" hidden>
   <header><div class="wrap">
-    <h1>Каталог Fit Timer</h1>
+    <h1>Админка Fit Timer</h1>
     <div class="tabs">
       <button class="tab on" data-tab="pending">На проверке <span id="nPending"></span></button>
       <button class="tab" data-tab="approved">В каталоге <span id="nApproved"></span></button>
       <button class="tab" data-tab="trainers">Тренеры <span id="nTrainers"></span></button>
       <button class="tab" data-tab="add">Добавить</button>
+      <button class="tab" data-tab="settings">ИИ и тариф</button>
       <button class="tab" id="out" style="margin-left:auto">Выйти</button>
     </div>
   </div></header>
@@ -136,7 +137,7 @@ const LEVELS = ['Новичок','Средний','Продвинутый'];
 const goalName = id => (GOALS.find(g => g[0] === id) || [id, id])[1];
 
 let KEY = localStorage.getItem('adminKey') || '';
-let data = {pending: [], approved: [], trainers: []};
+let data = {pending: [], approved: [], trainers: [], settings: null, providers: {}};
 let tab = 'pending';
 
 async function api(action, extra){
@@ -180,6 +181,7 @@ function render(){
   b.innerHTML = '';
   if(tab === 'add') return renderAdd(b);
   if(tab === 'trainers') return renderTrainers(b);
+  if(tab === 'settings') return renderSettings(b);
   const list = tab === 'pending' ? data.pending : data.approved;
   if(!list.length){
     b.innerHTML = `<div class="empty">${tab === 'pending'
@@ -266,6 +268,71 @@ function renderTrainers(b){
     el.querySelector('.acts').appendChild(x);
     b.appendChild(el);
   });
+}
+
+function renderSettings(b){
+  const s = data.settings || {}, lim = s.limits || {}, pay = s.payment || {};
+  const route = (type, which, label) => {
+    const x = (s[type] && s[type][which]) || {};
+    return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
+      ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
+      </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
+  };
+  const status = p => data.providers && data.providers[p] ? '✓ ключ подключён' : '✗ ключ не задан на сервере';
+  const currencies = Object.entries(s.prices || {}).map(([cur,p]) => `<div class="row">
+    <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
+    <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div></div>`).join('');
+  b.innerHTML = `<div class="card">
+    <p class="name">ИИ для Premium</p>
+    <p class="muted">Ключи не показываются и не сохраняются здесь: GEMINI_API_KEY и OPENAI_API_KEY задаются на сервере.</p>
+    <p class="muted">Gemini: ${status('gemini')} · OpenAI: ${status('openai')}</p>
+    <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled !== false ? ' checked' : ''}> Генерация включена</label>
+    <div class="row">${route('text','primary','Текст · основной')}</div>
+    <div class="row">${route('text','backup','Текст · резервный')}</div>
+    <div class="row">${route('image','primary','Картинки · основной')}</div>
+    <div class="row">${route('image','backup','Картинки · резервный')}</div>
+    <div class="row">
+      <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+      <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+      <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+      <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays || 30)}"></div>
+    </div>
+    <div class="acts"><button class="b" id="testText">Проверить текстовый ИИ</button><button class="b" id="testImage">Проверить картинки</button></div>
+    <p class="err" id="aiResult"></p>
+  </div>
+  <div class="card"><p class="name">Цена Premium</p>${currencies}</div>
+  <div class="card"><p class="name">Платёжная система</p>
+    <p class="muted">Поля уже готовы для подключения стора. Само списание включается только после серверной проверки покупки.</p>
+    <label>Статус / провайдер</label><input id="payProvider" value="${esc(pay.provider || 'not_connected')}" maxlength="40">
+    <div class="row"><div><label>Android · месяц</label><input id="androidMonth" value="${esc(pay.androidMonth || '')}"></div><div><label>Android · год</label><input id="androidYear" value="${esc(pay.androidYear || '')}"></div></div>
+    <div class="row"><div><label>iOS · месяц</label><input id="iosMonth" value="${esc(pay.iosMonth || '')}"></div><div><label>iOS · год</label><input id="iosYear" value="${esc(pay.iosYear || '')}"></div></div>
+    <p class="err" id="settingsErr"></p><div class="acts"><button class="b ok" id="saveSettings">Сохранить настройки</button></div>
+  </div>`;
+  $('saveSettings').onclick = saveSettings;
+  $('testText').onclick = () => testAI('text');
+  $('testImage').onclick = () => testAI('image');
+}
+
+function settingsFromForm(){
+  const s = JSON.parse(JSON.stringify(data.settings || {}));
+  s.enabled = $('aiEnabled').checked;
+  ['text','image'].forEach(type => ['primary','backup'].forEach(which => {
+    s[type][which] = {provider:$(`${type}_${which}_provider`).value, model:$(`${type}_${which}_model`).value.trim()};
+  }));
+  s.limits = {heavy:+$('limHeavy').value, light:+$('limLight').value, image:+$('limImage').value};
+  s.retentionDays = +$('retention').value;
+  Object.keys(s.prices || {}).forEach(cur => { s.prices[cur] = {month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value}; });
+  s.payment = {provider:$('payProvider').value.trim(),androidMonth:$('androidMonth').value.trim(),androidYear:$('androidYear').value.trim(),iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()};
+  return s;
+}
+async function saveSettings(){
+  try{ const r = await api('save_settings',{settings:settingsFromForm()}); data.settings = r.settings; $('settingsErr').textContent = '✓ Сохранено'; }
+  catch(e){ $('settingsErr').textContent = 'Не сохранилось: ' + e.message; }
+}
+async function testAI(type){
+  const el = $('aiResult'); el.textContent = 'Проверяю…';
+  try{ await api('save_settings',{settings:settingsFromForm()}); const r = await api('test_ai',{type}); el.textContent = `✓ ${r.provider} / ${r.model}${r.fallback ? ' (резерв)' : ''}: ${r.result}`; }
+  catch(e){ el.textContent = '✗ ' + (e.detail || e.message); }
 }
 
 let editing = null;

@@ -3861,7 +3861,7 @@
 
           <h3>Что уходит третьим лицам</h3>
           <ul>
-            <li><b>Запрос к нейросети.</b> Только тогда, когда ты просишь собрать программу или упражнение. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь и выбранные ограничения — включая «беременность», если ты её отметила. Имени и контактов в запросе нет. Сервис генерации находится за пределами России, то есть это трансграничная передача, и делается она только по твоему отдельному согласию — приложение спрашивает его перед первой генерацией.</li>
+            <li><b>Запрос к нейросети.</b> Только тогда, когда ты просишь собрать программу, упражнение или картинку. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь и выбранные ограничения — включая «беременность», если ты её отметила. Имени, почты и других контактов в запросе нет. Запрос передаётся выбранному нами сервису генерации; он может находиться за пределами России, поэтому приложение спрашивает отдельное согласие перед первой генерацией.</li>
             <li><b>Имя, вес, замеры, фотографии и история тренировок в запрос к нейросети не попадают никогда.</b></li>
             <li><b>Шрифты</b> подгружаются с Google Fonts, поэтому Google видит факт обращения и твой IP-адрес. Без интернета приложение возьмёт системный шрифт и продолжит работать.</li>
             <li><b>Оплата подписки.</b> Деньги принимает магазин приложений — App Store или Google Play. Номера карт и другие платёжные реквизиты в приложение не попадают и у нас не хранятся: мы узнаём только то, что подписка оплачена и до какого числа она действует.</li>
@@ -3872,7 +3872,7 @@
           <p>Не показывает рекламу. Не содержит счётчиков, трекеров и рекламной аналитики. Не передаёт и не продаёт данные третьим лицам. Не запрашивает доступ к контактам, звонкам и переписке.</p>
 
           <h3>Сколько это хранится</h3>
-          <p>Серверная копия хранится, пока существует аккаунт. Команда «Удалить аккаунт и все данные» удаляет с сервера профили, историю, вес, замеры и программы, а с телефона — ещё и локальные фотографии прогресса. Отменить удаление нельзя.</p>
+          <p>Серверная копия профиля хранится, пока существует аккаунт. Обезличенный текст запроса к нейросети и её ответа хранится не более <b>30 дней</b> для разбора ошибок и улучшения качества, затем удаляется автоматически. Команда «Удалить аккаунт и все данные» удаляет с сервера профили, историю, вес, замеры и программы, а с телефона — ещё и локальные фотографии прогресса. Отменить удаление нельзя.</p>
 
           <h3>Твои права</h3>
           <p>Посмотреть свои данные можно прямо в приложении. Выгрузить их одним файлом — «Настройки → Резервная копия → Сохранить в файл». Удалить — удалить профиль. Исправить — в любом поле, где ты их вводила: имя, возраст, вес, замеры, заметки.</p>
@@ -3917,8 +3917,8 @@
           <h3>Содержимое каталога и ответы нейросети</h3>
           <p>Программы в каталоге составляют их авторы, а не мы, и мы не проверяем каждую из них на пригодность лично тебе. Ответы нейросети создаются автоматически и могут содержать ошибки, бессмыслицу и небезопасные рекомендации. Проверяй и то и другое здравым смыслом, а при сомнениях — с врачом или тренером.</p>
 
-          <h3>Свой ключ Google AI</h3>
-          <p>Если ты подключаешь собственный ключ Google AI, ты делаешь это по своей воле: за соблюдение условий Google и за расход квоты по этому ключу отвечаешь ты. Ключ хранится на твоём устройстве и уходит только на серверы Google.</p>
+          <h3>Генерация с ИИ</h3>
+          <p>Встроенная генерация доступна с Premium. Провайдера и модель выбираем мы; ключи сервисов находятся только на сервере и в приложение не передаются. Созданную программу или упражнение проверяет пользователь до начала тренировки.</p>
 
           <h3>Возраст</h3>
           <p>Приложение не предназначено для детей младше 12 лет: в нём есть дневник веса, расчёт индекса массы тела и материалы о снижении веса.</p>
@@ -4319,17 +4319,6 @@
         </button>
       </div>
       <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
-    </div>
-    <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Ключ ИИ</p></div>
-      <div class="field">
-        <input type="password" id="ueGeminiKey" maxlength="120" placeholder="Ключ Google AI" autocomplete="off" spellcheck="false">
-        <p class="field-hint" id="ueGeminiState"></p>
-      </div>
-      <div class="key-actions">
-        <button type="button" class="btn-quiet" id="ueGeminiTest">Проверить</button>
-        <button type="button" class="btn-quiet" id="ueGeminiDiag">Диагностика</button>
-      </div>
     </div>
     <div class="card-block">
       <div class="cb-head"><p class="cb-title">Данные и правила</p></div>
@@ -8045,6 +8034,7 @@ const PRICES = {
   TRY: {month: 169,   year: 1290},
   PLN: {month: 21.99, year: 169}
 };
+let REMOTE_PRICES = null;
 const CUR_BY_REGION = {RU:'RUB', BY:'BYN', KZ:'KZT', UA:'UAH', TR:'TRY', PL:'PLN', GB:'GBP',
                        US:'USD', CA:'USD', AU:'USD', NZ:'USD', IL:'USD', AE:'USD'};
 const EURO_REGIONS = 'AT BE HR CY EE FI FR DE GR IE IT LV LT LU MT NL PT SK SI ES'.split(' ');
@@ -8079,7 +8069,16 @@ function money(v, cur){
       {style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac}).format(v);
   }catch(e){ return v + ' ' + cur; }
 }
-const priceTable = ()=> PRICES[userCurrency()] || PRICES.USD;
+const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
+async function loadPublicConfig(){
+  try{
+    const res = await fetch(API_BASE + '/api/config', {cache:'no-store'});
+    if(!res.ok) return;
+    const cfg = await res.json();
+    if(cfg && cfg.prices && cfg.prices.USD) REMOTE_PRICES = cfg.prices;
+    renderPlan(); renderPremium();
+  }catch(e){}
+}
 function planUntil(plan, from){
   const d = new Date(from || Date.now());
   if(plan === 'year') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
@@ -10371,6 +10370,36 @@ async function callGemini(prompt, signal){
   throw new Error(msg);
 }
 
+/* Встроенная генерация идёт через наш сервер. Ключи провайдеров не попадают в
+   HTML/APK, а основной и резервный провайдер выбираются в админке. Эта функция
+   объявлена после прежнего клиента намеренно: старые профили продолжают
+   открываться, но пользовательский Gemini-ключ больше нигде не используется. */
+function aiAuth(){
+  return {email:(account && account.email) || '', token:(account && account.syncToken) || '',
+          deviceId:(identity && identity.deviceId) || ''};
+}
+async function callServerAI(prompt, signal, kind){
+  const auth = aiAuth();
+  if(!auth.email || !auth.token || !auth.deviceId)
+    throw new Error('Для генерации войди в Premium-аккаунт в разделе «Аккаунт».');
+  const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
+    body:JSON.stringify(Object.assign({prompt,kind}, auth))});
+  const j = await res.json().catch(()=> ({}));
+  if(!res.ok){
+    if(j.error === 'ai_limit') throw new Error(`Лимит генераций на этот месяц исчерпан (${j.used}/${j.limit}).`);
+    if(j.error === 'premium_required') throw new Error('Для генерации нужна активная подписка Premium.');
+    if(j.error === 'ai_disabled') throw new Error('Генерация временно отключена. Попробуй позже.');
+    throw new Error(j.detail || 'Сервис ИИ сейчас не ответил. Попробуй ещё раз.');
+  }
+  return j;
+}
+
+// Более позднее присваивание заменяет прежний прямой вызов Gemini во всех
+// обработчиках, включая те, которые были объявлены выше по файлу.
+callGemini = async function(prompt, signal, kind){
+  return (await callServerAI(prompt, signal, kind || 'program.create')).text;
+};
+
 // Единая дверь ко всему платному. Отказов вида «недоступно» в приложении нет:
 // нажатие либо работает, либо показывает, что даёт подписка и сколько стоит.
 function premiumGate(){
@@ -10430,6 +10459,7 @@ function flashDone(btn, text){
 let aiSrc = null;                 // ключ текущего источника
 const AI_SOURCES = {
   text: {
+    kind: 'program.create',
     title: 'Новая программа',
     tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
     lead: ['sparkle', 'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.'],
@@ -10449,6 +10479,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   video: {
+    kind: 'video.parse',
     title: 'Новая программа',
     tabs: [['manual','Вручную'], ['text','Через ИИ'], ['video','Из видео']],
     lead: ['video', 'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.'],
@@ -10469,6 +10500,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   edit: {
+    kind: 'program.modify',
     title: 'Редактирование',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
@@ -10490,6 +10522,7 @@ const AI_SOURCES = {
     back:  ()=> goTab('scrPrograms')
   },
   exNew: {
+    kind: 'exercise.create',
     title: 'Упражнение',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     lead: ['sparkle', 'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.'],
@@ -10509,6 +10542,7 @@ const AI_SOURCES = {
     back:  ()=> show('scrBuilder')
   },
   exEdit: {
+    kind: 'exercise.modify',
     title: 'Упражнение',
     tabs: [['manual','Вручную'], ['ai','Через ИИ']],
     subject: true,
@@ -10643,7 +10677,7 @@ function dropExMedia(ex){
   ex.media = null;
 }
 
-/* ================= ГЕНЕРАЦИЯ КАРТИНОК ЧЕРЕЗ GEMINI ================= */
+/* ================= ГЕНЕРАЦИЯ КАРТИНОК ЧЕРЕЗ PREMIUM AI ================= */
 // модель с выводом изображений — платная, в отличие от текстовой модели, которую приложение
 // использует для остального ИИ. У неё нет бесплатной квоты, поэтому предупреждаем перед тратой денег.
 const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
@@ -10688,6 +10722,10 @@ async function callGeminiImage(prompt, signal){
   return `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
 }
 
+callGeminiImage = async function(prompt, signal, kind){
+  return (await callServerAI(prompt, signal, kind || 'image.exercise')).image;
+};
+
 // сжимает готовую картинку (data URL) так же, как сжимаются загруженные с телефона фото
 function shrinkDataUrl(dataUrl, maxSide, cb){
   const img = new Image();
@@ -10723,10 +10761,6 @@ let imgGenCancelled = false;
 
 async function generateAllImagesViaAI(){
   if(!premiumGate()) return;
-  if(!hasGemini()){
-    appAlert('Нейросеть не подключена: ключа ИИ нет. Добавь его в настройках — или скопируй задание и нарисуй картинки в чате с ИИ (задание лежит рядом с кнопкой).');
-    return;
-  }
   const exList = uniqueProgramExercises();
   const total = 1 + exList.length; // обложка + упражнения
   const ok = await appDialog(
@@ -10746,7 +10780,8 @@ async function generateAllImagesViaAI(){
     $('aiRunTitle').textContent = `Картинка ${done + 1} из ${total}`;
     $('aiRunText').textContent = kind === 'cover' ? 'Обложка программы' : item.name;
     try{
-      const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined);
+      const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
+        kind === 'cover' ? 'image.cover' : 'image.exercise');
       await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? 'Обложка' : item.name); res(); }));
       renderSlots(); // видно прогресс по мере генерации
     }catch(e){
@@ -15850,10 +15885,6 @@ function refreshLiveSteps(oldName, ex){
 
 async function swapViaAI(){
   if(!premiumGate()) return;
-  if(!hasGemini()){
-    appAlert('Нейросеть не подключена: ключа ИИ нет. Добавь его в настройках — и попробуй ещё раз.');
-    return;
-  }
   const src = swapSourceExercise();
   if(!src || !src.step.swap){
     appAlert('Не получилось найти это упражнение в программе — замени его через редактор программы.');
@@ -15864,7 +15895,7 @@ async function swapViaAI(){
   aiRunOpen('Подбираю замену');
   let text;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined);
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
@@ -17053,12 +17084,8 @@ $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
    внизу остаётся только док, а не вторая закреплённая полоса. */
-// в «Настройках» остался только служебный ключ ИИ — всё остальное переехало в профиль
 function syncSettingsForm(){
-  const u = curUser();
-  if(!u) return;
-  if(document.activeElement !== $('ueGeminiKey')) $('ueGeminiKey').value = u.geminiKey || '';
-  $('ueGeminiState').textContent = u.geminiKey ? 'Ключ сохранён.' : 'Ключа пока нет.';
+  // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
 }
 let settingsSaveT = 0;
 function saveSettingsSoon(){
@@ -17077,13 +17104,6 @@ function readTimings(){
   uDraft.readySec = num('ueReadySec', 5, 0, 30);
   uDraft.sideSec = num('ueSideSec', 10, 3, 60);
 }
-$('ueGeminiKey').oninput = e => {
-  const u = curUser(); if(!u) return;
-  u.geminiKey = (e.target.value || '').trim();
-  $('ueGeminiState').textContent = u.geminiKey ? 'Ключ сохранён.' : 'Ключа пока нет.';
-  syncGeminiBtns();
-  saveSettingsSoon();
-};
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{
     const mode = b.dataset.hf;
@@ -17828,72 +17848,6 @@ $('addExModal').onclick = e=>{ if(e.target === $('addExModal')) $('addExModal').
 $('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
 $('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 
-/* ---- ИИ внутри приложения (Gemini) ---- */
-
-// пошагово проверяем, где рвётся связь: интернет вообще → домен Google → сам ключ
-$('ueGeminiDiag').onclick = async ()=>{
-  const btn = $('ueGeminiDiag'), restore = btnBusy(btn, 'Проверяю…');
-  const lines = [];
-  lines.push(location.protocol === 'file:'
-    ? '✗ Приложение открыто как файл (file://) — браузер запретит запросы к Google. Открой по адресу http/https или установи как PWA.'
-    : `✓ Приложение открыто по ${location.protocol.replace(':','')}`);
-  lines.push(navigator.onLine === false ? '✗ Браузер сообщает: интернета нет' : '✓ Браузер видит интернет');
-  // 1) доступен ли домен вообще (простой GET — без предварительной проверки CORS)
-  try{
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {method: 'GET'});
-    lines.push(`✓ Домен Google отвечает (код ${r.status}${r.status === 403 || r.status === 401 ? ' — это нормально без ключа' : ''})`);
-  }catch(e){
-    lines.push('✗ Домен недоступен совсем — запрос не дошёл. Обычно это блокировка провайдером или регионом: поможет VPN.');
-    restore();
-    appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
-    return;
-  }
-  // 2) проходит ли рабочий POST — именно им отправляются запросы к нейросети.
-  // Проверяем оба способа: без предварительной проверки CORS и с ней.
-  const probe = {contents: [{parts: [{text: 'ping'}]}]};
-  const purl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-  let simpleOk = false, headerOk = false;
-  try{ await geminiFetch(purl, probe, undefined, true); simpleOk = true; }catch(e){}
-  try{ await geminiFetch(purl, probe, undefined, false); headerOk = true; }catch(e){}
-  if(simpleOk || headerOk){
-    lines.push(`✓ Запросы к нейросети проходят (способ: ${simpleOk ? 'ключ в адресе' : 'заголовок'})`);
-    // 3) реальный рабочий запрос: большой промпт — именно на таких падало,
-    // хотя короткая проверка проходила
-    try{
-      const big = 'Повтори ровно одно слово: готово.\n\n' + 'Тестовый текст для проверки объёма. '.repeat(400);
-      const out = await callGemini(big);
-      lines.push('✓ Большой запрос проходит (ответ: ' + out.slice(0, 30) + ')');
-    }catch(e){
-      lines.push('✗ Большой запрос НЕ проходит, хотя короткий работает:\n   ' + (e && e.message ? e.message.slice(0, 300) : 'нет описания'));
-    }
-  } else {
-    lines.push('✗ POST-запросы не проходят, хотя домен отвечает.\n   Скорее всего режется предварительный запрос OPTIONS — так бывает у некоторых провайдеров и в корпоративных сетях. Помогает VPN или другая сеть.');
-  }
-  restore();
-  appAlert('Диагностика соединения:\n\n' + lines.join('\n\n'));
-};
-
-$('ueGeminiTest').onclick = async ()=>{
-  const key = ($('ueGeminiKey').value || '').trim();
-  if(!key){ $('ueGeminiState').textContent = 'Сначала вставь ключ.'; return; }
-  const btn = $('ueGeminiTest'), restore = btnBusy(btn, 'Проверяю…');
-  // проверяем на самом коротком запросе
-  const savedUser = curUser();
-  const prevKey = savedUser ? savedUser.geminiKey : '';
-  if(savedUser) savedUser.geminiKey = key;
-  try{
-    const out = await callGemini('Ответь одним словом: работает');
-    let used = '';
-    try{ used = localStorage.getItem('geminiModel') || ''; }catch(e){}
-    $('ueGeminiState').textContent = '✓ Ключ работает' + (used ? ` (модель: ${used})` : '') + '. Ответ: ' + out.slice(0, 30);
-  }catch(e){
-    $('ueGeminiState').textContent = '✗ ' + (e && e.message ? e.message : 'не удалось проверить');
-  }finally{
-    if(savedUser) savedUser.geminiKey = prevKey;
-    restore();
-  }
-};
-
 /* ---- окно ожидания генерации ---- */
 let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
 // title — заголовок; onCancel — необязательный колбэк для многошаговых задач (генерация картинок)
@@ -17931,17 +17885,13 @@ $('aiRunCancel').onclick = ()=>{
 };
 
 // собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
-async function runSelfAI(promptFn, targetId, applyFn, title){
+async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
-  if(!hasGemini()){
-    appAlert('Не удалось выполнить запрос. Попробуй ещё раз через минуту — или собери в чате с ИИ: способы ниже на этом же экране.');
-    return;
-  }
   let prompt;
   try{ prompt = promptFn(); }catch(e){ appAlert('Не удалось собрать запрос.'); return; }
   aiRunOpen(title);
   try{
-    const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined);
+    const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
     aiRunClose();
     if($(targetId)){ $(targetId).value = text; autoGrow($(targetId)); }
     await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
@@ -17959,7 +17909,7 @@ $('aiSelf').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(c.guard && !(await c.guard())) return;
-  runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle);
+  runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle, c.kind);
 };
 $('aiCopy').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
@@ -18555,6 +18505,7 @@ try{
   }catch(e){}
   // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
   await loadAccount();
+  loadPublicConfig();
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
   // пользователи: миграция со старой схемы профилей f/m

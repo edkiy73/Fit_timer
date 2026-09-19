@@ -42,7 +42,7 @@ index.html + mobile.js + app.config.js
 | `scripts/check-mobile.mjs` | Проверяет структуру обеих платформ |
 | `android/` | Текущий проект Android Studio, API 36 |
 | `ios/` | Текущий проект Xcode, iOS 15+ |
-| `.github/workflows/android.yml` | Debug APK и подписанные AAB/APK |
+| `.github/workflows/android.yml` | Проверка PR и подписанные update-совместимые AAB/APK на каждом push |
 | `.github/workflows/ios.yml` | Проверочная сборка iOS Simulator |
 | `legacy/android-twa/` | Архив прежней TWA, не редактировать |
 
@@ -97,9 +97,16 @@ cd android
 ./gradlew assembleDebug
 ```
 
-Для Google Play в GitHub открыть **Actions → Android — проверка и сборка → Run
-workflow**, задать `version_code` (строго больше прошлого) и `version_name`.
-Workflow выдаёт подписанные `.aab` и `.apk`.
+Обычный push в любую ветку выдаёт release `.aab` и `.apk`, подписанные постоянным
+upload key. `versionCode` берётся из растущего `github.run_number`, поэтому APK
+можно ставить поверх предыдущей сборки. Ручной запуск позволяет задать собственные
+`version_code` и `version_name`. Pull request без push собирает только проверочный
+debug APK с явным именем `not-for-update`.
+
+Android устанавливает обновление только при одинаковых applicationId и подписи и
+при не меньшем versionCode. Если на телефоне уже стоит старый debug APK или APK,
+подписанный другим ключом, переход на постоянный ключ требует одного удаления.
+После установки первого release APK все следующие обновляются поверх него.
 
 Один раз нужны GitHub Actions Secrets:
 

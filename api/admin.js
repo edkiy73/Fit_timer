@@ -10,6 +10,7 @@
 const { store } = require('../lib/store');
 const { send, fail, readBody, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
+const { getSettings, sanitizeSettings, providerStatus, generate } = require('../lib/ai');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
@@ -78,9 +79,10 @@ module.exports = async (req, res) => {
 
   /* ---- что происходит в каталоге ---- */
   if(a === 'overview'){
-    const [pending, approved] = await Promise.all([
+    const [pending, approved, settings] = await Promise.all([
       readItems('c:pending', 'pending'),
-      readItems('c:approved', 'approved')
+      readItems('c:approved', 'approved'),
+      getSettings()
     ]);
     // Тренеры: те, кто хоть раз отметился. Список ников лежит отдельно, потому что
     // пройти по всем ключам базы нельзя — и не нужно.
@@ -100,7 +102,30 @@ module.exports = async (req, res) => {
                        programs: +counts[i * 2] || 0, opens: +counts[i * 2 + 1] || 0});
       }catch(e){}
     });
-    return send(res, 200, {pending, approved, trainers});
+    return send(res, 200, {pending, approved, trainers, settings, providers:providerStatus()});
+  }
+
+  /* ---- ИИ, тариф и платёжные идентификаторы ----
+     Секретных ключей здесь нет: они остаются в окружении сервера. Админка меняет
+     только маршрутизацию, модели, лимиты и отображаемую цену. */
+  if(a === 'save_settings'){
+    const settings = sanitizeSettings(body && body.settings);
+    await store.set('settings:ai', JSON.stringify(settings));
+    return send(res, 200, {ok:true, settings});
+  }
+
+  if(a === 'test_ai'){
+    const type = body && body.type === 'image' ? 'image' : 'text';
+    const settings = await getSettings();
+    try{
+      const out = await generate(type, settings, type === 'image'
+        ? 'Minimal flat fitness app icon, violet on dark background, no text'
+        : 'Ответь ровно одним словом: работает');
+      return send(res, 200, {ok:true, provider:out.provider, model:out.model,
+        fallback:out.fallback, result:type === 'text' ? out.text.slice(0,100) : 'image'});
+    }catch(e){
+      return fail(res, 502, 'ai_test_failed', {detail:String(e.message || e).slice(0,500)});
+    }
   }
 
   /* ---- решение по заявке ---- */
