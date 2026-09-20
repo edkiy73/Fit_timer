@@ -1354,7 +1354,11 @@
         <p class="field-hint" id="hfHint"></p>
         <div class="voice-pack hidden" id="voicePackBox">
           <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
-          <div class="voice-pack-status"><span id="voicePackStatus">Проверяем…</span><button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack">Скачать</button></div>
+          <div class="voice-pack-status">
+            <span id="voicePackStatus">Проверяем…</span>
+            <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
+            <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack">Скачать</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1712,7 +1716,11 @@
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
         <div class="voice-pack hidden" id="hfVoicePackBox">
           <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="hfVoiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
-          <div class="voice-pack-status"><span id="hfVoicePackStatus">Проверяем…</span><button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack">Скачать</button></div>
+          <div class="voice-pack-status">
+            <span id="hfVoicePackStatus">Проверяем…</span>
+            <div class="voice-pack-progress hidden" id="hfVoicePackProgress"><i id="hfVoicePackProgressBar"></i></div>
+            <button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack">Скачать</button>
+          </div>
         </div>
         <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>

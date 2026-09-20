@@ -3,6 +3,7 @@
 (function(){
   const cap = window.Capacitor;
   const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+  if(native) document.documentElement.classList.add('native-app');
   const plugins = (cap && cap.Plugins) || {};
   const fitAudio = plugins.FitAudio;
   const fitSystem = plugins.FitSystem;
@@ -201,16 +202,20 @@
 
   async function downloadVoiceModel(language, onStatus){
     if(!native || !fitAudio) return false;
-    let handle = null;
     try{
-      handle = await fitAudio.addListener('speechStatus', event=>{
-        if(onStatus && event && (!event.language || event.language === language)) onStatus(event);
-        try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:event || {}})); }catch(_){}
-      });
+      // Android WorkManager owns the transfer, so it keeps going when this screen
+      // closes or the app goes to background. JS only observes status.
+      try{ await requestNotifications(); }catch(_){}
       const result = await fitAudio.prepareRecognitionModel({language: language || 'ru'});
-      return !!(result && result.installed);
+      if(onStatus) onStatus({
+        language: language || 'ru',
+        status: result && result.installed ? 'ready' : 'queued',
+        progress: result && result.installed ? 100 : 0,
+        installed: !!(result && result.installed),
+        sizeMb: result && result.sizeMb
+      });
+      return !!result;
     }catch(_){ return false; }
-    finally{ try{ if(handle) await handle.remove(); }catch(_){} }
   }
 
   async function deleteVoiceModel(language){

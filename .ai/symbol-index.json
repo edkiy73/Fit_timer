@@ -685,8 +685,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 450,
-      "chars": 21205,
+      "lines": 453,
+      "chars": 21523,
       "symbols": [
         "advance",
         "applyTheme",
@@ -711,8 +711,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1778,
-      "chars": 75952,
+      "lines": 1798,
+      "chars": 76818,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -1184,8 +1184,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 362,
-      "chars": 19581,
+      "lines": 366,
+      "chars": 19733,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1290,6 +1290,8 @@
         "usersHint",
         "usersList",
         "voicePackBox",
+        "voicePackProgress",
+        "voicePackProgressBar",
         "voicePackStatus",
         "voiceRecLang",
         "weekBars",
@@ -1316,8 +1318,8 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 607,
-      "chars": 35116,
+      "lines": 611,
+      "chars": 35272,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1373,6 +1375,8 @@
         "heightInput",
         "hfModal",
         "hfVoicePackBox",
+        "hfVoicePackProgress",
+        "hfVoicePackProgressBar",
         "hfVoicePackStatus",
         "hfVoiceRecLang",
         "hipsInput",

@@ -690,7 +690,9 @@
 
   /* ---- локальные голосовые команды ---- */
   .voice-pack{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
-  .voice-pack-status{display:flex;align-items:center;gap:10px;margin-top:8px}
-  .voice-pack-status > span{flex:1;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.4}
-  .voice-pack-btn{width:auto;min-height:38px;padding:8px 13px;border-radius:10px;font-family:var(--font-text);font-size:12.5px;letter-spacing:0;text-transform:none}
-  .voice-pack-btn[disabled]{opacity:.55;cursor:default;transform:none}
+  .voice-pack-status{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;min-width:0}
+  .voice-pack-status > span{display:block;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.45;overflow-wrap:anywhere}
+  .voice-pack-progress{width:100%;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+  .voice-pack-progress i{display:block;width:0;height:100%;border-radius:inherit;background:var(--work);transition:width .2s ease}
+  .voice-pack-btn{width:100%;min-height:42px;padding:8px 13px;border-radius:10px;font-family:var(--font-text);font-size:13px;letter-spacing:0;text-transform:none}
+  .voice-pack-btn[disabled]{opacity:.7;cursor:default;transform:none}

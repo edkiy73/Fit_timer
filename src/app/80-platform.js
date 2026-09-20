@@ -76,12 +76,15 @@ function applyVoiceCommand(text){
   if(!$('scrWork').classList.contains('on')) return false;
   const step = state.steps[state.stepIdx];
   if(!step) return false;
-  const t = text.toLowerCase().trim();
+  const t = text.toLowerCase().trim().replace(/\s+/g, ' ');
+  const pause = new Set(['пауза','на паузу','поставь на паузу','стоп','подожди','остановись','pause','stop','wait']);
+  const resume = new Set(['продолжить','продолжай','продолжаем','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
+  const next = new Set(['дальше','готово','готов','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
 
   let kind = '';
-  if(/продолж|дальше пошл|поехали|continue|resume|go on/.test(t)) kind = 'resume';
-  else if(/пауз|стоп|подожд|pause|stop|wait/.test(t)) kind = 'pause';
-  else if(/готов|пропус|заверш|дальше|сделал|next|некст|done|skip|finished/.test(t)) kind = 'next';
+  if(resume.has(t)) kind = 'resume';
+  else if(pause.has(t)) kind = 'pause';
+  else if(next.has(t)) kind = 'next';
   if(!kind) return false;
 
   // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло

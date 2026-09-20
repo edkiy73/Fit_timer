@@ -17,6 +17,15 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -30,6 +39,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -69,36 +79,6 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         return l.startsWith("en") ? "en" : "ru";
     }
 
-    private String modelName(String language) {
-        return "en".equals(cleanLanguage(language))
-            ? "vosk-model-small-en-us-0.15"
-            : "vosk-model-small-ru-0.22";
-    }
-
-    private String modelUrl(String language) {
-        return "https://alphacephei.com/vosk/models/" + modelName(language) + ".zip";
-    }
-
-    private int modelSizeMb(String language) {
-        return "en".equals(cleanLanguage(language)) ? 40 : 45;
-    }
-
-    private String commandGrammar(String language) {
-        if ("en".equals(cleanLanguage(language))) {
-            return "[\"next\",\"done\",\"skip\",\"pause\",\"continue\",\"resume\",\"stop\",\"wait\",\"go on\",\"finished\",\"[unk]\"]";
-        }
-        return "[\"дальше\",\"готово\",\"пропустить\",\"пауза\",\"продолжить\",\"стоп\",\"подожди\",\"поехали\",\"завершить\",\"сделал\",\"[unk]\"]";
-    }
-
-    private File modelDir(String language) {
-        return new File(new File(getContext().getFilesDir(), "voice"), modelName(language));
-    }
-
-    private boolean isModelReady(String language) {
-        File dir = modelDir(language);
-        return new File(dir, "am/final.mdl").isFile() && new File(dir, "conf/model.conf").isFile();
-    }
-
     @PluginMethod
     public void requestMicrophone(PluginCall call) {
         if (getPermissionState("microphone") == PermissionState.GRANTED) resolveMicrophone(call, true);
@@ -118,48 +98,88 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
 
     @PluginMethod
     public void getRecognitionModelStatus(PluginCall call) {
-        String language = cleanLanguage(call.getString("language", "ru"));
-        JSObject result = new JSObject();
-        result.put("language", language);
-        result.put("installed", isModelReady(language));
-        result.put("sizeMb", modelSizeMb(language));
-        result.put("active", language.equals(loadedModelLanguage) && voskModel != null);
-        call.resolve(result);
+        final String language = cleanLanguage(call.getString("language", "ru"));
+        io.execute(() -> {
+            JSObject result = new JSObject();
+            result.put("language", language);
+            result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
+            result.put("active", language.equals(loadedModelLanguage) && voskModel != null);
+
+            boolean installed = VoiceModelWorker.isModelReady(getContext(), language);
+            result.put("installed", installed);
+            String status = installed ? "ready" : "idle";
+            int progress = installed ? 100 : 0;
+
+            if (!installed) {
+                try {
+                    List<WorkInfo> infos = WorkManager.getInstance(getContext())
+                        .getWorkInfosForUniqueWork(VoiceModelWorker.workName(language)).get();
+                    if (!infos.isEmpty()) {
+                        WorkInfo info = infos.get(infos.size() - 1);
+                        if (info.getState() == WorkInfo.State.RUNNING) {
+                            status = info.getProgress().getString(VoiceModelWorker.KEY_STATUS);
+                            if (status == null || status.isEmpty()) status = "downloading";
+                            progress = info.getProgress().getInt(VoiceModelWorker.KEY_PROGRESS, 0);
+                        } else if (info.getState() == WorkInfo.State.ENQUEUED || info.getState() == WorkInfo.State.BLOCKED) {
+                            status = "queued";
+                        } else if (info.getState() == WorkInfo.State.FAILED || info.getState() == WorkInfo.State.CANCELLED) {
+                            status = "error";
+                        } else if (info.getState() == WorkInfo.State.SUCCEEDED) {
+                            installed = VoiceModelWorker.isModelReady(getContext(), language);
+                            result.put("installed", installed);
+                            status = installed ? "ready" : "error";
+                            progress = installed ? 100 : 0;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            result.put("status", status);
+            result.put("progress", progress);
+            main.post(() -> call.resolve(result));
+        });
     }
 
     @PluginMethod
     public void prepareRecognitionModel(PluginCall call) {
         final String language = cleanLanguage(call.getString("language", "ru"));
-        if (isModelReady(language)) {
+        if (VoiceModelWorker.isModelReady(getContext(), language)) {
             JSObject result = new JSObject();
             result.put("installed", true);
+            result.put("queued", false);
             result.put("language", language);
-            result.put("sizeMb", modelSizeMb(language));
+            result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
             call.resolve(result);
             return;
         }
 
-        io.execute(() -> {
-            try {
-                emitStatus("downloading", language, 0);
-                downloadAndExtractModel(language);
-                emitStatus("ready", language, 100);
-                JSObject result = new JSObject();
-                result.put("installed", true);
-                result.put("language", language);
-                result.put("sizeMb", modelSizeMb(language));
-                call.resolve(result);
-            } catch (Exception e) {
-                emitStatus("error", language, 0);
-                call.reject("Could not download voice model", e);
-            }
-        });
+        Constraints constraints = new Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build();
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(VoiceModelWorker.class)
+            .setConstraints(constraints)
+            .setInputData(new Data.Builder().putString(VoiceModelWorker.KEY_LANGUAGE, language).build())
+            .build();
+
+        WorkManager.getInstance(getContext()).enqueueUniqueWork(
+            VoiceModelWorker.workName(language),
+            ExistingWorkPolicy.KEEP,
+            request
+        );
+
+        JSObject result = new JSObject();
+        result.put("installed", false);
+        result.put("queued", true);
+        result.put("language", language);
+        result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
+        call.resolve(result);
     }
 
     @PluginMethod
     public void deleteRecognitionModel(PluginCall call) {
         final String language = cleanLanguage(call.getString("language", "ru"));
         recognitionWanted = false;
+        WorkManager.getInstance(getContext()).cancelUniqueWork(VoiceModelWorker.workName(language));
         main.post(this::stopSpeechService);
         io.execute(() -> {
             try {
@@ -168,7 +188,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                     voskModel = null;
                     loadedModelLanguage = "";
                 }
-                deleteRecursively(modelDir(language));
+                deleteRecursively(VoiceModelWorker.modelDir(getContext(), language));
                 JSObject result = new JSObject();
                 result.put("deleted", true);
                 call.resolve(result);
@@ -267,12 +287,12 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
 
         final String language = cleanLanguage(call.getString("language", "ru"));
-        if (!isModelReady(language)) {
+        if (!VoiceModelWorker.isModelReady(getContext(), language)) {
             JSObject result = new JSObject();
             result.put("started", false);
             result.put("missingModel", true);
             result.put("language", language);
-            result.put("sizeMb", modelSizeMb(language));
+            result.put("sizeMb", VoiceModelWorker.modelSizeMb(language));
             call.resolve(result);
             return;
         }
@@ -290,11 +310,11 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                     }
                     stopSpeechService();
                     try {
-                        Recognizer recognizer = new Recognizer(voskModel, 16000.0f, commandGrammar(language));
+                        Recognizer recognizer = new Recognizer(voskModel, 16000.0f);
+                        recognizer.setWords(true);
                         speechService = new SpeechService(recognizer, 16000.0f);
                         commandFiredForUtterance = false;
                         speechService.startListening(this);
-                        emitStatus("listening", language, 100);
                         JSObject result = new JSObject();
                         result.put("started", true);
                         result.put("offline", true);
@@ -327,77 +347,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             voskModel.close();
             voskModel = null;
         }
-        voskModel = new Model(modelDir(language).getAbsolutePath());
+        voskModel = new Model(VoiceModelWorker.modelDir(getContext(), language).getAbsolutePath());
         loadedModelLanguage = language;
-    }
-
-    private void downloadAndExtractModel(String language) throws Exception {
-        File targetDir = modelDir(language);
-        File parent = targetDir.getParentFile();
-        if (parent == null) throw new IllegalStateException("Voice model path is unavailable");
-        if (!parent.exists() && !parent.mkdirs()) throw new IllegalStateException("Could not create voice model folder");
-
-        File zipFile = new File(getContext().getCacheDir(), modelName(language) + ".zip");
-        HttpURLConnection connection = (HttpURLConnection) new URL(modelUrl(language)).openConnection();
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(45000);
-        connection.setInstanceFollowRedirects(true);
-        connection.connect();
-
-        int total = connection.getContentLength();
-        if (connection.getResponseCode() < 200 || connection.getResponseCode() >= 300) {
-            throw new IllegalStateException("Voice model download failed: HTTP " + connection.getResponseCode());
-        }
-
-        long copied = 0;
-        int lastProgress = -10;
-        try (InputStream in = new BufferedInputStream(connection.getInputStream());
-             FileOutputStream out = new FileOutputStream(zipFile)) {
-            byte[] buffer = new byte[64 * 1024];
-            int n;
-            while ((n = in.read(buffer)) >= 0) {
-                if (n == 0) continue;
-                out.write(buffer, 0, n);
-                copied += n;
-                if (total > 0) {
-                    int progress = Math.min(99, (int) ((copied * 100L) / total));
-                    if (progress >= lastProgress + 5) {
-                        lastProgress = progress;
-                        emitStatus("downloading", language, progress);
-                    }
-                }
-            }
-        } finally {
-            connection.disconnect();
-        }
-
-        File canonicalParent = parent.getCanonicalFile();
-        try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)))) {
-            ZipEntry entry;
-            byte[] buffer = new byte[64 * 1024];
-            while ((entry = zin.getNextEntry()) != null) {
-                File outFile = new File(parent, entry.getName()).getCanonicalFile();
-                if (!outFile.getPath().startsWith(canonicalParent.getPath() + File.separator)) {
-                    throw new IllegalStateException("Unsafe voice model archive");
-                }
-                if (entry.isDirectory()) {
-                    if (!outFile.exists() && !outFile.mkdirs()) throw new IllegalStateException("Could not create model directory");
-                } else {
-                    File dir = outFile.getParentFile();
-                    if (dir != null && !dir.exists() && !dir.mkdirs()) throw new IllegalStateException("Could not create model directory");
-                    try (FileOutputStream fout = new FileOutputStream(outFile)) {
-                        int n;
-                        while ((n = zin.read(buffer)) >= 0) if (n > 0) fout.write(buffer, 0, n);
-                    }
-                }
-                zin.closeEntry();
-            }
-        } finally {
-            //noinspection ResultOfMethodCallIgnored
-            zipFile.delete();
-        }
-
-        if (!isModelReady(language)) throw new IllegalStateException("Downloaded voice model is incomplete");
     }
 
     private void deleteRecursively(File file) {
@@ -416,23 +367,52 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         catch (Exception ignored) { return ""; }
     }
 
-    private void emitCommand(String text) {
-        if (text == null || text.isEmpty() || commandFiredForUtterance) return;
-        String normalized = text.toLowerCase(Locale.ROOT).trim();
-        if ("[unk]".equals(normalized)) return;
-        commandFiredForUtterance = true;
-        JSObject event = new JSObject();
-        event.put("text", normalized);
-        notifyListeners("speechResult", event);
+    private double hypothesisConfidence(String json) {
+        if (json == null || json.isEmpty()) return 0.0;
+        try {
+            JSONArray words = new JSONObject(json).optJSONArray("result");
+            if (words == null || words.length() == 0) return 0.0;
+            double sum = 0.0;
+            for (int i = 0; i < words.length(); i++) sum += words.getJSONObject(i).optDouble("conf", 0.0);
+            return sum / words.length();
+        } catch (Exception ignored) { return 0.0; }
     }
 
-    private void emitStatus(String status, String language, int progress) {
+    private String commandKind(String text) {
+        String t = text == null ? "" : text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
+        switch (t) {
+            case "пауза": case "на паузу": case "поставь на паузу": case "стоп":
+            case "подожди": case "остановись":
+            case "pause": case "stop": case "wait":
+                return "pause";
+            case "продолжить": case "продолжай": case "продолжаем": case "поехали":
+            case "можно продолжать": case "дальше пошли":
+            case "continue": case "resume": case "go on": case "keep going":
+                return "resume";
+            case "дальше": case "готово": case "готов": case "пропустить": case "пропусти":
+            case "следующее": case "следующий": case "сделал": case "закончил": case "завершить":
+            case "next": case "done": case "skip": case "finished":
+                return "next";
+            default:
+                return "";
+        }
+    }
+
+    private void emitFinalCommand(String hypothesis) {
+        if (hypothesis == null || hypothesis.isEmpty()) return;
+        String text = hypothesisText(hypothesis, "text");
+        String kind = commandKind(text);
+        if (kind.isEmpty()) return;
+
+        double confidence = hypothesisConfidence(hypothesis);
+        double threshold = "next".equals(kind) ? 0.74 : 0.56;
+        if (confidence > 0.0 && confidence < threshold) return;
+
         JSObject event = new JSObject();
-        event.put("status", status);
-        event.put("language", cleanLanguage(language));
-        event.put("progress", progress);
-        event.put("offline", true);
-        notifyListeners("speechStatus", event);
+        event.put("text", text.toLowerCase(Locale.ROOT).trim());
+        event.put("confidence", confidence);
+        event.put("kind", kind);
+        notifyListeners("speechResult", event);
     }
 
     private void emitSpeechError(String error) {
@@ -450,14 +430,15 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         commandFiredForUtterance = false;
     }
 
-    @Override public void onPartialResult(String hypothesis) { emitCommand(hypothesisText(hypothesis, "partial")); }
+    @Override public void onPartialResult(String hypothesis) {
+        // Partial hypotheses are intentionally ignored. With a tiny command vocabulary
+        // short sounds such as "про" or "го" were promoted into full commands.
+    }
     @Override public void onResult(String hypothesis) {
-        emitCommand(hypothesisText(hypothesis, "text"));
-        commandFiredForUtterance = false;
+        emitFinalCommand(hypothesis);
     }
     @Override public void onFinalResult(String hypothesis) {
-        emitCommand(hypothesisText(hypothesis, "text"));
-        commandFiredForUtterance = false;
+        emitFinalCommand(hypothesis);
     }
     @Override public void onError(Exception exception) {
         if (recognitionWanted) emitSpeechError("recognition");

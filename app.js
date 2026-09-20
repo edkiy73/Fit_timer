@@ -11967,12 +11967,15 @@ function applyVoiceCommand(text){
   if(!$('scrWork').classList.contains('on')) return false;
   const step = state.steps[state.stepIdx];
   if(!step) return false;
-  const t = text.toLowerCase().trim();
+  const t = text.toLowerCase().trim().replace(/\s+/g, ' ');
+  const pause = new Set(['пауза','на паузу','поставь на паузу','стоп','подожди','остановись','pause','stop','wait']);
+  const resume = new Set(['продолжить','продолжай','продолжаем','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
+  const next = new Set(['дальше','готово','готов','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
 
   let kind = '';
-  if(/продолж|дальше пошл|поехали|continue|resume|go on/.test(t)) kind = 'resume';
-  else if(/пауз|стоп|подожд|pause|stop|wait/.test(t)) kind = 'pause';
-  else if(/готов|пропус|заверш|дальше|сделал|next|некст|done|skip|finished/.test(t)) kind = 'next';
+  if(resume.has(t)) kind = 'resume';
+  else if(pause.has(t)) kind = 'pause';
+  else if(next.has(t)) kind = 'next';
   if(!kind) return false;
 
   // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло
@@ -12621,6 +12624,7 @@ async function setVoiceLanguage(lang){
   await fillVoiceChoices();
 }
 
+let voicePackPollTimer = 0;
 async function refreshVoicePackUI(progressEvent){
   const native = !!(window.FitNative && window.FitNative.offlineVoice);
   ['voicePackBox','hfVoicePackBox'].forEach(id=>setShown(id,native));
@@ -12636,18 +12640,38 @@ async function refreshVoicePackUI(progressEvent){
   let label = status && status.installed ? 'Готово к работе офлайн' : `Нужно скачать один раз · около ${size} МБ`;
   let button = status && status.installed ? 'Скачано' : 'Скачать';
   let disabled = !!(status && status.installed);
-  if(status && status.status === 'downloading'){
-    label = `Скачиваем… ${Math.max(0,Math.min(100,status.progress||0))}%`;
-    button = `${Math.max(0,Math.min(100,status.progress||0))}%`;
+  if(status && status.status === 'queued'){
+    label = 'Загрузка поставлена в очередь. Можно выйти с этого экрана.';
+    button = 'В очереди';
+    disabled = true;
+  }else if(status && status.status === 'downloading'){
+    label = `Скачиваем… ${Math.max(0,Math.min(100,status.progress||0))}% · можно пользоваться приложением`;
+    button = 'Скачивается';
+    disabled = true;
+  }else if(status && status.status === 'extracting'){
+    label = 'Готовим пакет…';
+    button = 'Почти готово';
     disabled = true;
   }else if(status && status.status === 'error'){
     label='Не удалось скачать. Проверь интернет и попробуй ещё раз.';
     button='Повторить';
     disabled=false;
   }
-  for(const pair of [['voicePackStatus','btnVoicePack'],['hfVoicePackStatus','btnHfVoicePack']]){
-    const s=$(pair[0]), b=$(pair[1]); if(!s||!b) continue;
+  const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
+  for(const row of [
+    ['voicePackStatus','btnVoicePack','voicePackProgress','voicePackProgressBar'],
+    ['hfVoicePackStatus','btnHfVoicePack','hfVoicePackProgress','hfVoicePackProgressBar']
+  ]){
+    const s=$(row[0]), b=$(row[1]), p=$(row[2]), bar=$(row[3]); if(!s||!b) continue;
     s.textContent=label; b.textContent=button; b.disabled=disabled;
+    const running = !!(status && ['queued','downloading','extracting'].includes(status.status));
+    if(p) setShown(row[2], running);
+    if(bar) bar.style.width = (status && status.status === 'queued' ? 3 : pct) + '%';
+  }
+
+  clearTimeout(voicePackPollTimer);
+  if(status && ['queued','downloading','extracting'].includes(status.status)){
+    voicePackPollTimer = setTimeout(()=>refreshVoicePackUI(), 800);
   }
 }
 
@@ -12656,8 +12680,7 @@ async function downloadSelectedVoicePack(){
   for(const id of ['btnVoicePack','btnHfVoicePack']) if($(id)) $(id).disabled=true;
   const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
-  if(ok) appAlert('Голосовой пакет готов. Теперь команды работают прямо на телефоне и без интернета.');
-  else appAlert('Не удалось скачать голосовой пакет. Проверь интернет и попробуй ещё раз.');
+  if(!ok) appAlert('Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.');
 }
 
 function openHfModal(){
