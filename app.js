@@ -189,6 +189,269 @@ const I18N_RU = {
   'create.youtubeSub': "Вставь ссылку на тренировку",
   'create.import': "По ссылке или файлом",
   'create.importSub': "Если программу прислали или сохраняли себе",
+  'builder.schedule': "Когда тренироваться",
+  'builder.scheduleByDays': "По дням недели",
+  'builder.scheduleSequence': "По очереди",
+  'builder.trainingDays': "Дни тренировок",
+  'builder.trainingTime': "Время тренировки",
+  'builder.reminderHint': "Напомним за 15 минут и в момент старта. Нужно разрешить уведомления.",
+  'builder.variants': "Варианты тренировки",
+  'builder.variantDays': "Дни этого варианта",
+  'builder.rounds': "Кругов",
+  'builder.restRounds': "Отдых между кругами, сек",
+  'builder.progressionTitle': "Со временем сложнее",
+  'builder.progressionSub': "повторения и вес станут чуть больше по мере занятий",
+  'builder.progressionFrequency': "Как часто повышать",
+  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.",
+  'builder.descriptionCover': "Описание и обложка",
+  'builder.descriptionOptional': "Описание (необязательно)",
+  'builder.coverOptional': "Обложка (необязательно)",
+  'builder.choosePhoto': "Выбрать фото",
+  'builder.noCover': "Без обложки",
+  'builder.exercise': "Упражнение",
+  'builder.name': "Название",
+  'builder.countMode': "Как считать",
+  'builder.reps': "Повторения",
+  'builder.time': "Время",
+  'builder.weightedSub': "снаряды, утяжелители и тп",
+  'builder.repsCount': "Повторений",
+  'builder.sets': "Подходов подряд",
+  'builder.weightKg': "Вес, кг",
+  'builder.restSets': "Отдых между подходами, сек",
+  'builder.restSetsHint': "Между каждым подходом, если их больше одного.",
+  'builder.restAfter': "Отдых после упражнения, сек",
+  'builder.restAfterHint': "После всего упражнения, перед следующим.",
+  'builder.warmupSub': "делается один раз в начале, до кругов",
+  'builder.eachSideSub': "выпады, боковая планка — считаем и левую, и правую как один подход",
+  'builder.stepReps': "Прибавка, повт.",
+  'builder.maxReps': "Максимум, повт.",
+  'builder.stepTime': "Прибавка, сек",
+  'builder.maxTime': "Максимум, сек",
+  'builder.stepWeight': "Прибавка, кг",
+  'builder.maxWeight': "Максимум, кг",
+  'builder.stepHint': "«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.",
+  'builder.resetRepsAddWeight': "повторения вернутся к началу, вес вырастет на прибавку",
+  'builder.swapSub': "подскажем на тренировке, когда дорастёшь до максимума",
+  'builder.swapWith': "Чем заменить",
+  'builder.swapHow': "Как выполнять замену",
+  'builder.swapHint': "Дойдёт до максимума — на тренировке появится значок «можно усложнить».",
+  'builder.details': "Детали",
+  'builder.howTo': "Как выполнять",
+  'builder.mistakesOptional': "Частые ошибки (необязательно)",
+  'builder.muscles': "Работающие мышцы",
+  'builder.videoOptional': "Ссылка на видео (необязательно)",
+  'ai.step1': "Шаг 1",
+  'ai.onlyImportant': "Отмечай только важное — остальное подберётся само.",
+  'ai.goal': "Цель",
+  'ai.level': "Уровень",
+  'ai.weekdays': "Дни недели",
+  'ai.duration': "Длительность",
+  'ai.bodyFocus': "Акцент на части тела",
+  'ai.equipment': "Инвентарь",
+  'ai.limitations': "Ограничения",
+  'ai.customRequestOptional': "Свой запрос (необязательно)",
+  'ai.exerciseOrder': "Порядок упражнений",
+  'ai.warmup': "Разминка",
+  'ai.splitDaysSub': "например, ноги в понедельник, спина в четверг",
+  'ai.rotateSub': "сначала первый, потом второй, потом снова первый",
+  'ai.youtubeHint': "Обычная ссылка или короткая youtu.be.",
+  'ai.wishesOptional': "Пожелания (необязательно)",
+  'ai.editProgramHint': "Нейросеть получит программу целиком и поправит только то, о чём просишь.",
+  'ai.exerciseRequestHint': "Назови упражнение или опиши, что нужно, — подберётся само.",
+  'ai.exerciseCount': "Сколько упражнений",
+  'ai.formatOptional': "Формат (необязательно)",
+  'ai.levelOptional': "Уровень (необязательно)",
+  'ai.musclesOptional': "Целевые мышцы (необязательно)",
+  'ai.equipmentOptional': "Инвентарь (необязательно)",
+  'ai.autoPickHint': "Что не выберешь — подберётся само, исходя из описания.",
+  'ai.step2': "Шаг 2",
+  'ai.doForMe': "Сделать за меня",
+  'ai.appDoesIt': "Приложение сделает это само",
+  'ai.inChat': "Сделать в чате с ИИ",
+  'ai.copyProgram': "Скопировать саму программу",
+  'ai.copyProgramSub': "Вся программа текстом — обсудить где угодно и вернуть ответ сюда",
+  'ai.step3': "Шаг 3 · Ответ из чата",
+  'ai.build': "Собрать",
+  'builder.lessProgress': "Меньше повышений",
+  'builder.moreProgress': "Больше повышений",
+  'builder.programNameExample': "Например: Утренний блиц",
+  'builder.secondsExample': "Например: 120",
+  'builder.descriptionExample': "Для кого программа, чего ждать, как часто заниматься",
+  'builder.exerciseNameExample': "Например: Приседания",
+  'builder.repsExample': "Например: 12-15",
+  'builder.setsExample': "Например: 3",
+  'builder.weightExample': "Например: 8",
+  'builder.stepRepsExample': "Например: 1",
+  'builder.maxRepsExample': "Например: 15",
+  'builder.stepTimeExample': "Например: 5",
+  'builder.maxTimeExample': "Например: 60",
+  'builder.stepWeightExample': "Например: 2",
+  'builder.maxWeightExample': "Например: 24",
+  'builder.swapNameExample': "Например: отжимания с ногами на возвышении",
+  'builder.swapDescExample': "Техника более сложного варианта: исходное положение, движение, на что следить",
+  'builder.howToExample': "Опиши технику: исходное положение, движение, дыхание",
+  'builder.mistakesExample': "Чего избегать при выполнении",
+  'ai.customRequestExample': "Например: люблю планку, добавь растяжку в конце, без музыки на полу",
+  'ai.youtubeWishExample': "Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку",
+  'ai.editWishExample': "Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей",
+  'ai.exerciseWishExample': "Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»",
+  'ai.exerciseEditWishExample': "Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений",
+  'ai.resultPlaceholder': "Скопируй ответ нейросети целиком и вставь сюда",
+  'builder.exercisesSuffix': "упражнений",
+  'builder.roundsSuffix': "кругов",
+  'builder.showFull': "Показать полностью",
+  'builder.exercisesTitle': "Упражнения",
+  'builder.exerciseImagesTitle': "Картинки упражнений",
+  'builder.imagesIntro': "У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.",
+  'builder.imagesSource': "Откуда взять картинки",
+  'builder.chooseFromPhone': "Выбрать с телефона",
+  'builder.uploadAndAssign': "Загружаем и раскладываем",
+  'common.or': "или",
+  'builder.generateWithAI': "Нарисовать нейросетью",
+  'builder.generateAllSub': "Все картинки разом, в одном стиле — приложение сделает это само",
+  'builder.generateInChat': "Нарисовать в чате с ИИ",
+  'builder.generateInChatSub': "Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.",
+  'builder.copyPrompt': "Скопировать задание",
+  'builder.copyPromptSub': "Дальше его нужно вставить в любой чат",
+  'builder.uploaded': "Загружено",
+  'builder.remove': "Убрать",
+  'builder.assignOrder': "Разложить по порядку",
+  'builder.assignWhere': "Куда подставить",
+  'builder.assignHint': "Нажми на место — предложим картинку из загруженных или с телефона.",
+  'workout.interrupt': "Прервать тренировку",
+  'workout.saveExit': "Сохранить и выйти",
+  'workout.saveExitSub': "В следующий раз продолжишь с этого места",
+  'workout.finishCompletely': "Завершить полностью",
+  'workout.finishCompletelySub': "Прогресс этой тренировки сбросится",
+  'workout.startFrom': "С чего начать",
+  'workout.chooseExercise': "Выбрать упражнение",
+  'workout.chooseExerciseSub': "Начать с любого места программы",
+  'workout.continue': "Продолжить",
+  'workout.startOver': "Начать сначала",
+  'workout.startOverSub': "С первого упражнения",
+  'workout.startExerciseTitle': "С какого упражнения начать",
+  'ai.working': "Нейросеть работает",
+  'ai.workingHint': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
+  'common.abort': "Отменить",
+  'builder.image': "Картинка",
+  'builder.noUploadedImages': "Загруженных картинок пока нет — выбери их с телефона.",
+  'builder.removeImage': "Убрать картинку",
+  'option.level.beginner': "Новичок",
+  'option.level.intermediate': "Средний",
+  'option.level.advanced': "Продвинутый",
+  'option.goal.loseWeight': "Похудеть",
+  'option.goal.tone': "Подтянуть всё тело",
+  'option.goal.glutesCore': "Ягодицы и пресс",
+  'option.goal.flatStomach': "Плоский живот",
+  'option.goal.strength': "Сила и выносливость",
+  'option.goal.definition': "Рельеф мышц",
+  'option.goal.flexibility': "Растяжка и гибкость",
+  'option.goal.posture': "Осанка и спина",
+  'option.goal.postpartum': "Восстановиться после родов",
+  'option.goal.cardio': "Кардио и энергия",
+  'option.equip.none': "Без инвентаря",
+  'option.equip.mat': "Коврик",
+  'option.equip.dumbbells': "Гантели",
+  'option.equip.bands': "Резинки",
+  'option.equip.chair': "Стул",
+  'option.equip.ball': "Фитбол",
+  'option.equip.weights': "Утяжелители",
+  'option.equip.bar': "Турник",
+  'option.limit.none': "Без ограничений",
+  'option.limit.noJump': "Без прыжков",
+  'option.limit.quiet': "Тихо (соседи снизу)",
+  'option.limit.knees': "Берегу колени",
+  'option.limit.lowerBack': "Берегу поясницу",
+  'option.limit.wrists': "Берегу запястья",
+  'option.limit.neck': "Берегу шею",
+  'option.limit.pregnancy': "Беременность",
+  'option.style.circuit': "Круговая",
+  'option.style.strength': "Силовая",
+  'option.style.mixed': "Смешанная",
+  'option.warm.with': "С разминкой",
+  'option.warm.without': "Без разминки",
+  'option.format.reps': "Повторения",
+  'option.format.weight': "С весом",
+  'option.format.time': "Время",
+  'muscle.neck': "Шея",
+  'muscle.shoulders': "Плечи",
+  'muscle.chest': "Грудь",
+  'muscle.arms': "Руки",
+  'muscle.core': "Пресс",
+  'muscle.back': "Спина",
+  'muscle.glutes': "Ягодицы",
+  'muscle.quads': "Квадрицепс",
+  'muscle.hamstrings': "Задняя бедра",
+  'muscle.calves': "Икры",
+  'day.mon': "Пн",
+  'day.tue': "Вт",
+  'day.wed': "Ср",
+  'day.thu': "Чт",
+  'day.fri': "Пт",
+  'day.sat': "Сб",
+  'day.sun': "Вс",
+  'option.desc.circuit': "Проходишь весь список по разу и возвращаешься к началу: A, B, C → A, B, C. Пульс выше, скучать некогда.",
+  'option.desc.strength': "Сначала все подходы одного упражнения, потом следующее: A, A, A → B, B, B. Мышца устаёт сильнее.",
+  'option.desc.mixed': "Несколько упражнений идут блоком, и этот блок повторяется кругами.",
+  'option.desc.warm': "Пара лёгких упражнений в начале — один раз, до кругов.",
+  'option.desc.noWarm': "Сразу к основной части: если разминка уже сделана или это продолжение другой тренировки.",
+  'ai.createLead': "Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.",
+  'ai.stepAbout': "Шаг 1 · О тебе и тренировке",
+  'ai.stepBuild': "Шаг 2 · Как собрать",
+  'ai.buildForMe': "Собрать за меня",
+  'ai.preparingProgram': "Собираю программу",
+  'ai.chatTaskNote': "Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.",
+  'ai.answerProgramHint': "Вставь ответ нейросети целиком — программа откроется в конструкторе.",
+  'ai.buildFromAnswer': "Собрать программу из ответа",
+  'ai.videoLead': "Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.",
+  'ai.stepVideo': "Шаг 1 · Ссылка на видео",
+  'ai.stepParse': "Шаг 2 · Как разобрать",
+  'ai.parseForMe': "Разобрать за меня",
+  'ai.parsingVideo': "Разбираю видео",
+  'ai.videoChatNote': "Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.",
+  'ai.editTitle': "Редактирование",
+  'ai.stepWhatFix': "Шаг 1 · Что поправить",
+  'ai.stepHowApply': "Шаг 2 · Как внести правки",
+  'ai.changeForMe': "Изменить за меня",
+  'ai.applyingChanges': "Вношу изменения",
+  'ai.editCopyNote': "Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.",
+  'ai.chatProgramNote': "Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.",
+  'ai.answerEditedHint': "Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.",
+  'ai.createEdited': "Создать изменённую программу",
+  'ai.exerciseLead': "Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.",
+  'ai.stepExerciseNeed': "Шаг 1 · Какое упражнение нужно",
+  'ai.stepPickExercise': "Шаг 2 · Как подобрать упражнение",
+  'ai.pickingExercise': "Подбираю упражнение",
+  'ai.chatExerciseNote': "Приложение подготовит задание. Передай его в чат, ответ вставь сюда.",
+  'ai.answerExerciseHint': "Вставь ответ нейросети целиком — упражнение добавится в конец программы.",
+  'ai.addToProgram': "Добавить в программу",
+  'ai.stepWhatChange': "Шаг 1 · Что поменять",
+  'ai.stepApply': "Шаг 2 · Как применить",
+  'ai.changingExercise': "Меняю упражнение",
+  'ai.keepImageNote': "Картинка упражнения останется на месте.",
+  'ai.answerApplyHint': "Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.",
+  'ai.applyChanges': "Применить изменения",
+  'ai.pickOneExercise': "Подобрать упражнение",
+  'ai.pickExercises': "Подобрать {count} упражнений",
+  'handsfree.unavailable': "На этом устройстве голосовое управление недоступно. Можно использовать кнопку на гарнитуре.",
+  'handsfree.packFirst': "Сначала скачай голосовой пакет для выбранного языка. После загрузки команды будут работать без интернета.",
+  'handsfree.readyNative': "Готово. Во время тренировки скажи «дальше», «готово» или «пропустить», чтобы перейти дальше. «Пауза» остановит тренировку, «продолжить» — продолжит.",
+  'handsfree.readyWeb': "Голосовое управление включено. Скажи «дальше», «пауза» или «продолжить».",
+  'audio.voiceFallback': "Голос {count}",
+  'audio.online': "онлайн",
+  'voicepack.ready': "Готово к работе офлайн",
+  'voicepack.downloadOnce': "Нужно скачать один раз · около {size} МБ",
+  'voicepack.downloaded': "Скачано",
+  'voicepack.download': "Скачать",
+  'voicepack.queued': "Загрузка поставлена в очередь. Можно выйти с этого экрана.",
+  'voicepack.inQueue': "В очереди",
+  'voicepack.downloading': "Скачиваем… {progress}% · можно пользоваться приложением",
+  'voicepack.downloadingBtn': "Скачивается",
+  'voicepack.extracting': "Готовим пакет…",
+  'voicepack.almostReady': "Почти готово",
+  'voicepack.error': "Не удалось скачать. Проверь интернет и попробуй ещё раз.",
+  'voicepack.retry': "Повторить",
+  'voicepack.startError': "Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -381,6 +644,269 @@ const I18N_EN = {
   'create.youtubeSub': "Paste a workout video link",
   'create.import': "From a link or file",
   'create.importSub': "For a program someone shared with you or one you saved",
+  'builder.schedule': "When to train",
+  'builder.scheduleByDays': "By weekdays",
+  'builder.scheduleSequence': "In sequence",
+  'builder.trainingDays': "Training days",
+  'builder.trainingTime': "Workout time",
+  'builder.reminderHint': "We’ll remind you 15 minutes before and when it starts. Notifications must be allowed.",
+  'builder.variants': "Workout variants",
+  'builder.variantDays': "Days for this variant",
+  'builder.rounds': "Rounds",
+  'builder.restRounds': "Rest between rounds, sec",
+  'builder.progressionTitle': "Progress over time",
+  'builder.progressionSub': "reps and weight will gradually increase as you train",
+  'builder.progressionFrequency': "How often to progress",
+  'builder.progressionHint': "Load increases based on completed workouts, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. Before starting, you can see and adjust how many progressions have happened.",
+  'builder.descriptionCover': "Description & cover",
+  'builder.descriptionOptional': "Description (optional)",
+  'builder.coverOptional': "Cover (optional)",
+  'builder.choosePhoto': "Choose photo",
+  'builder.noCover': "No cover",
+  'builder.exercise': "Exercise",
+  'builder.name': "Name",
+  'builder.countMode': "Tracking mode",
+  'builder.reps': "Reps",
+  'builder.time': "Time",
+  'builder.weightedSub': "equipment, weights, etc.",
+  'builder.repsCount': "Reps",
+  'builder.sets': "Sets",
+  'builder.weightKg': "Weight, kg",
+  'builder.restSets': "Rest between sets, sec",
+  'builder.restSetsHint': "Between each set when there is more than one.",
+  'builder.restAfter': "Rest after exercise, sec",
+  'builder.restAfterHint': "After the whole exercise, before the next one.",
+  'builder.warmupSub': "done once at the start, before rounds",
+  'builder.eachSideSub': "lunges, side plank — count left and right together as one set",
+  'builder.stepReps': "Increase, reps",
+  'builder.maxReps': "Maximum, reps",
+  'builder.stepTime': "Increase, sec",
+  'builder.maxTime': "Maximum, sec",
+  'builder.stepWeight': "Increase, kg",
+  'builder.maxWeight': "Maximum, kg",
+  'builder.stepHint': "“Increase” is how much gets added each time; “maximum” is the growth limit. Without a maximum, values can become unrealistic over time.",
+  'builder.resetRepsAddWeight': "reps return to the starting value and weight increases by the increment",
+  'builder.swapSub': "we’ll suggest it during the workout when you reach the maximum",
+  'builder.swapWith': "Replace with",
+  'builder.swapHow': "How to perform the replacement",
+  'builder.swapHint': "When you reach the maximum, the workout will show a “ready to progress” badge.",
+  'builder.details': "Details",
+  'builder.howTo': "How to perform",
+  'builder.mistakesOptional': "Common mistakes (optional)",
+  'builder.muscles': "Target muscles",
+  'builder.videoOptional': "Video link (optional)",
+  'ai.step1': "Step 1",
+  'ai.onlyImportant': "Select only what matters — the rest will be chosen automatically.",
+  'ai.goal': "Goal",
+  'ai.level': "Level",
+  'ai.weekdays': "Weekdays",
+  'ai.duration': "Duration",
+  'ai.bodyFocus': "Body focus",
+  'ai.equipment': "Equipment",
+  'ai.limitations': "Limitations",
+  'ai.customRequestOptional': "Custom request (optional)",
+  'ai.exerciseOrder': "Exercise order",
+  'ai.warmup': "Warm-up",
+  'ai.splitDaysSub': "for example, legs on Monday and back on Thursday",
+  'ai.rotateSub': "first one, then the second, then the first again",
+  'ai.youtubeHint': "A regular YouTube link or short youtu.be link.",
+  'ai.wishesOptional': "Preferences (optional)",
+  'ai.editProgramHint': "AI will receive the full program and change only what you ask for.",
+  'ai.exerciseRequestHint': "Name an exercise or describe what you need — AI will choose one.",
+  'ai.exerciseCount': "Number of exercises",
+  'ai.formatOptional': "Format (optional)",
+  'ai.levelOptional': "Level (optional)",
+  'ai.musclesOptional': "Target muscles (optional)",
+  'ai.equipmentOptional': "Equipment (optional)",
+  'ai.autoPickHint': "Anything you don’t choose will be selected automatically from your description.",
+  'ai.step2': "Step 2",
+  'ai.doForMe': "Do it for me",
+  'ai.appDoesIt': "The app will do it automatically",
+  'ai.inChat': "Do it in an AI chat",
+  'ai.copyProgram': "Copy the program itself",
+  'ai.copyProgramSub': "The full program as text — discuss it anywhere and paste the result back here",
+  'ai.step3': "Step 3 · Response from chat",
+  'ai.build': "Build",
+  'builder.lessProgress': "Fewer progression steps",
+  'builder.moreProgress': "More progression steps",
+  'builder.programNameExample': "For example: Morning Blitz",
+  'builder.secondsExample': "For example: 120",
+  'builder.descriptionExample': "Who the program is for, what to expect, how often to train",
+  'builder.exerciseNameExample': "For example: Squats",
+  'builder.repsExample': "For example: 12-15",
+  'builder.setsExample': "For example: 3",
+  'builder.weightExample': "For example: 8",
+  'builder.stepRepsExample': "For example: 1",
+  'builder.maxRepsExample': "For example: 15",
+  'builder.stepTimeExample': "For example: 5",
+  'builder.maxTimeExample': "For example: 60",
+  'builder.stepWeightExample': "For example: 2",
+  'builder.maxWeightExample': "For example: 24",
+  'builder.swapNameExample': "For example: decline push-ups",
+  'builder.swapDescExample': "Technique for the harder variation: starting position, movement, what to watch for",
+  'builder.howToExample': "Describe the technique: starting position, movement, breathing",
+  'builder.mistakesExample': "What to avoid while performing the exercise",
+  'ai.customRequestExample': "For example: I like planks, add stretching at the end, no floor music",
+  'ai.youtubeWishExample': "For example: make it easier for a beginner, remove jumps, split it into two days, add a warm-up",
+  'ai.editWishExample': "Describe it in your own words. For example: remove jumps, add more glute work, make it about 15 minutes shorter, replace squats with something gentler on the knees",
+  'ai.exerciseWishExample': "Describe it in your own words: “Bulgarian split squats using a chair”, “a gentle core exercise without neck strain”, “a hamstring stretch”",
+  'ai.exerciseEditWishExample': "For example: make it gentler on the knees, add a supported variation, explain the technique in more detail, switch from reps to time",
+  'ai.resultPlaceholder': "Copy the full AI response and paste it here",
+  'builder.exercisesSuffix': "exercises",
+  'builder.roundsSuffix': "rounds",
+  'builder.showFull': "Show full",
+  'builder.exercisesTitle': "Exercises",
+  'builder.exerciseImagesTitle': "Exercise images",
+  'builder.imagesIntro': "The cover and each exercise can have their own image. Upload them in bulk and assign them to the right places.",
+  'builder.imagesSource': "Where to get images",
+  'builder.chooseFromPhone': "Choose from phone",
+  'builder.uploadAndAssign': "Upload and assign",
+  'common.or': "or",
+  'builder.generateWithAI': "Generate with AI",
+  'builder.generateAllSub': "Generate all images at once in one style — the app will do it automatically",
+  'builder.generateInChat': "Generate in an AI chat",
+  'builder.generateInChatSub': "The app will prepare a prompt for an image-generating chat. Save the generated images to your phone, then upload them with the button above.",
+  'builder.copyPrompt': "Copy prompt",
+  'builder.copyPromptSub': "Then paste it into any AI chat",
+  'builder.uploaded': "Uploaded",
+  'builder.remove': "Remove",
+  'builder.assignOrder': "Assign in order",
+  'builder.assignWhere': "Where to place",
+  'builder.assignHint': "Tap a slot to choose from uploaded images or from your phone.",
+  'workout.interrupt': "Stop workout",
+  'workout.saveExit': "Save and exit",
+  'workout.saveExitSub': "Next time you’ll continue from this point",
+  'workout.finishCompletely': "Finish completely",
+  'workout.finishCompletelySub': "Progress for this workout will be reset",
+  'workout.startFrom': "Where to start",
+  'workout.chooseExercise': "Choose exercise",
+  'workout.chooseExerciseSub': "Start from any point in the program",
+  'workout.continue': "Continue",
+  'workout.startOver': "Start over",
+  'workout.startOverSub': "From the first exercise",
+  'workout.startExerciseTitle': "Which exercise to start with",
+  'ai.working': "AI is working",
+  'ai.workingHint': "Your request is being processed — usually from a few seconds to three minutes. Keep the app open.",
+  'common.abort': "Cancel",
+  'builder.image': "Image",
+  'builder.noUploadedImages': "No uploaded images yet — choose some from your phone.",
+  'builder.removeImage': "Remove image",
+  'option.level.beginner': "Beginner",
+  'option.level.intermediate': "Intermediate",
+  'option.level.advanced': "Advanced",
+  'option.goal.loseWeight': "Lose weight",
+  'option.goal.tone': "Tone whole body",
+  'option.goal.glutesCore': "Glutes & core",
+  'option.goal.flatStomach': "Flatter stomach",
+  'option.goal.strength': "Strength & endurance",
+  'option.goal.definition': "Muscle definition",
+  'option.goal.flexibility': "Stretching & flexibility",
+  'option.goal.posture': "Posture & back",
+  'option.goal.postpartum': "Postpartum recovery",
+  'option.goal.cardio': "Cardio & energy",
+  'option.equip.none': "No equipment",
+  'option.equip.mat': "Mat",
+  'option.equip.dumbbells': "Dumbbells",
+  'option.equip.bands': "Resistance bands",
+  'option.equip.chair': "Chair",
+  'option.equip.ball': "Stability ball",
+  'option.equip.weights': "Wearable weights",
+  'option.equip.bar': "Pull-up bar",
+  'option.limit.none': "No limitations",
+  'option.limit.noJump': "No jumping",
+  'option.limit.quiet': "Quiet / low-impact",
+  'option.limit.knees': "Protect knees",
+  'option.limit.lowerBack': "Protect lower back",
+  'option.limit.wrists': "Protect wrists",
+  'option.limit.neck': "Protect neck",
+  'option.limit.pregnancy': "Pregnancy",
+  'option.style.circuit': "Circuit",
+  'option.style.strength': "Strength",
+  'option.style.mixed': "Mixed",
+  'option.warm.with': "With warm-up",
+  'option.warm.without': "No warm-up",
+  'option.format.reps': "Reps",
+  'option.format.weight': "Weighted",
+  'option.format.time': "Time",
+  'muscle.neck': "Neck",
+  'muscle.shoulders': "Shoulders",
+  'muscle.chest': "Chest",
+  'muscle.arms': "Arms",
+  'muscle.core': "Core",
+  'muscle.back': "Back",
+  'muscle.glutes': "Glutes",
+  'muscle.quads': "Quadriceps",
+  'muscle.hamstrings': "Hamstrings",
+  'muscle.calves': "Calves",
+  'day.mon': "Mon",
+  'day.tue': "Tue",
+  'day.wed': "Wed",
+  'day.thu': "Thu",
+  'day.fri': "Fri",
+  'day.sat': "Sat",
+  'day.sun': "Sun",
+  'option.desc.circuit': "Go through the whole list once, then return to the start: A, B, C → A, B, C. Faster pace, less downtime.",
+  'option.desc.strength': "Finish all sets of one exercise before moving on: A, A, A → B, B, B. More focused muscle fatigue.",
+  'option.desc.mixed': "Several exercises form a block, and that block repeats for multiple rounds.",
+  'option.desc.warm': "A few light exercises at the start, done once before the rounds.",
+  'option.desc.noWarm': "Go straight to the main workout if you already warmed up or this continues another session.",
+  'ai.createLead': "Answer a few questions and the program is ready: exercises, reps, rounds, and days. You can edit everything.",
+  'ai.stepAbout': "Step 1 · About you and the workout",
+  'ai.stepBuild': "Step 2 · How to build it",
+  'ai.buildForMe': "Build it for me",
+  'ai.preparingProgram': "Building your program",
+  'ai.chatTaskNote': "The app will prepare a prompt for an AI chat. Send it there, then paste the response here. It takes longer, but it’s free.",
+  'ai.answerProgramHint': "Paste the full AI response — the program will open in the builder.",
+  'ai.buildFromAnswer': "Build program from response",
+  'ai.videoLead': "Paste a YouTube workout link and AI will turn the video into exercises with timestamps.",
+  'ai.stepVideo': "Step 1 · Video link",
+  'ai.stepParse': "Step 2 · How to process it",
+  'ai.parseForMe': "Process it for me",
+  'ai.parsingVideo': "Processing video",
+  'ai.videoChatNote': "Not every AI chat can access videos — use one with internet access.",
+  'ai.editTitle': "Editing",
+  'ai.stepWhatFix': "Step 1 · What to change",
+  'ai.stepHowApply': "Step 2 · How to apply changes",
+  'ai.changeForMe': "Change it for me",
+  'ai.applyingChanges': "Applying changes",
+  'ai.editCopyNote': "The original program stays. An edited copy will appear next to it, and images will carry over automatically.",
+  'ai.chatProgramNote': "The app will prepare a prompt containing your program. Send it to an AI chat, then paste the response here.",
+  'ai.answerEditedHint': "Paste the full AI response to create an edited copy. The original program will remain.",
+  'ai.createEdited': "Create edited program",
+  'ai.exerciseLead': "Describe the exercise in your own words — AI will add technique, target muscles, and common mistakes.",
+  'ai.stepExerciseNeed': "Step 1 · What exercise you need",
+  'ai.stepPickExercise': "Step 2 · How to choose it",
+  'ai.pickingExercise': "Choosing exercise",
+  'ai.chatExerciseNote': "The app will prepare a prompt. Send it to an AI chat, then paste the response here.",
+  'ai.answerExerciseHint': "Paste the full AI response — the exercise will be added to the end of the program.",
+  'ai.addToProgram': "Add to program",
+  'ai.stepWhatChange': "Step 1 · What to change",
+  'ai.stepApply': "Step 2 · How to apply it",
+  'ai.changingExercise': "Changing exercise",
+  'ai.keepImageNote': "The exercise image will stay in place.",
+  'ai.answerApplyHint': "Paste the full AI response — the app will apply everything it can extract.",
+  'ai.applyChanges': "Apply changes",
+  'ai.pickOneExercise': "Choose an exercise",
+  'ai.pickExercises': "Choose {count} exercises",
+  'handsfree.unavailable': "Voice control is not available on this device. You can use the headset button instead.",
+  'handsfree.packFirst': "Download the voice pack for the selected language first. After that, commands will work offline.",
+  'handsfree.readyNative': "Ready. During a workout, say “next”, “done”, or “skip” to move on. “Pause” pauses the workout and “continue” resumes it.",
+  'handsfree.readyWeb': "Voice control is on. Say “next”, “pause”, or “continue”.",
+  'audio.voiceFallback': "Voice {count}",
+  'audio.online': "online",
+  'voicepack.ready': "Ready for offline use",
+  'voicepack.downloadOnce': "One-time download · about {size} MB",
+  'voicepack.downloaded': "Downloaded",
+  'voicepack.download': "Download",
+  'voicepack.queued': "Download queued. You can leave this screen.",
+  'voicepack.inQueue': "Queued",
+  'voicepack.downloading': "Downloading… {progress}% · you can keep using the app",
+  'voicepack.downloadingBtn': "Downloading",
+  'voicepack.extracting': "Preparing voice pack…",
+  'voicepack.almostReady': "Almost ready",
+  'voicepack.error': "Download failed. Check your connection and try again.",
+  'voicepack.retry': "Retry",
+  'voicepack.startError': "Couldn’t start the download. Check your connection and try again.",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -440,6 +966,65 @@ async function setAppLocale(value, opts){
   return appLocale;
 }
 function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
+function aiOutputLanguage(){ return appLocale === 'ru' ? 'Russian' : 'English'; }
+
+function aiCanonicalEnglish(value){
+  const map = {
+    'Новичок':'beginner','Средний':'intermediate','Продвинутый':'advanced',
+    'Похудеть':'lose weight','Подтянуть всё тело':'tone the whole body','Ягодицы и пресс':'glutes and core',
+    'Плоский живот':'flatter stomach','Сила и выносливость':'strength and endurance','Рельеф мышц':'muscle definition',
+    'Растяжка и гибкость':'stretching and flexibility','Осанка и спина':'posture and back',
+    'Восстановиться после родов':'postpartum recovery','Кардио и энергия':'cardio and energy',
+    'Без инвентаря':'no equipment','Коврик':'mat','Гантели':'dumbbells','Резинки':'resistance bands',
+    'Стул':'chair','Фитбол':'stability ball','Утяжелители':'wearable weights','Турник':'pull-up bar',
+    'Без ограничений':'no stated limitations','Без прыжков':'no jumping','Тихо (соседи снизу)':'quiet / low-impact',
+    'Берегу колени':'protect knees','Берегу поясницу':'protect lower back','Берегу запястья':'protect wrists',
+    'Берегу шею':'protect neck','Беременность':'pregnancy',
+    'Круговая':'circuit','Силовая':'strength','Смешанная':'mixed','С разминкой':'with warm-up','Без разминки':'without warm-up',
+    'Шея':'neck','Плечи':'shoulders','Грудь':'chest','Руки':'arms','Пресс':'core','Спина':'back',
+    'Ягодицы':'glutes','Квадрицепс':'quadriceps','Задняя бедра':'hamstrings','Икры':'calves',
+    'Повторения':'reps','С весом':'weighted reps','Время':'time'
+  };
+  return map[String(value || '')] || String(value || '');
+}
+function aiCanonicalListEnglish(values){
+  return (values || []).map(aiCanonicalEnglish).join(', ');
+}
+
+const CANONICAL_LABEL_KEYS = {
+  'Новичок':'option.level.beginner','Средний':'option.level.intermediate','Продвинутый':'option.level.advanced',
+  'Похудеть':'option.goal.loseWeight','Подтянуть всё тело':'option.goal.tone','Ягодицы и пресс':'option.goal.glutesCore',
+  'Плоский живот':'option.goal.flatStomach','Сила и выносливость':'option.goal.strength','Рельеф мышц':'option.goal.definition',
+  'Растяжка и гибкость':'option.goal.flexibility','Осанка и спина':'option.goal.posture',
+  'Восстановиться после родов':'option.goal.postpartum','Кардио и энергия':'option.goal.cardio',
+  'Без инвентаря':'option.equip.none','Коврик':'option.equip.mat','Гантели':'option.equip.dumbbells','Резинки':'option.equip.bands',
+  'Стул':'option.equip.chair','Фитбол':'option.equip.ball','Утяжелители':'option.equip.weights','Турник':'option.equip.bar',
+  'Без ограничений':'option.limit.none','Без прыжков':'option.limit.noJump','Тихо (соседи снизу)':'option.limit.quiet',
+  'Берегу колени':'option.limit.knees','Берегу поясницу':'option.limit.lowerBack','Берегу запястья':'option.limit.wrists',
+  'Берегу шею':'option.limit.neck','Беременность':'option.limit.pregnancy',
+  'Круговая':'option.style.circuit','Силовая':'option.style.strength','Смешанная':'option.style.mixed',
+  'С разминкой':'option.warm.with','Без разминки':'option.warm.without',
+  'Повторения':'option.format.reps','С весом':'option.format.weight','Время':'option.format.time',
+  'Шея':'muscle.neck','Плечи':'muscle.shoulders','Грудь':'muscle.chest','Руки':'muscle.arms','Пресс':'muscle.core',
+  'Спина':'muscle.back','Ягодицы':'muscle.glutes','Квадрицепс':'muscle.quads','Задняя бедра':'muscle.hamstrings','Икры':'muscle.calves',
+  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun'
+};
+const CANONICAL_DESC_KEYS = {
+  'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
+  'С разминкой':'option.desc.warm','Без разминки':'option.desc.noWarm'
+};
+function canonicalLabel(value){
+  const raw=String(value == null ? '' : value);
+  const key=CANONICAL_LABEL_KEYS[raw];
+  if(key) return t(key);
+  const m=raw.match(/^(\d+)(\+?)\s*мин$/);
+  if(m) return appLocale === 'ru' ? raw : (m[1] + m[2] + ' min');
+  return raw;
+}
+function canonicalDescription(value){
+  const key=CANONICAL_DESC_KEYS[String(value || '')];
+  return key ? t(key) : '';
+}
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -574,6 +1159,10 @@ function clicks(n){
 // команд: можно слушать один голос и распознавать команды на другом языке.
 let savedVoiceURI = '';
 let voiceLang = 'ru-RU';
+function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
+function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
+  return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
+}
 function voicesForLang(lang){
   const prefix = String(lang || 'ru-RU').toLowerCase().split('-')[0];
   try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith(prefix)); }
@@ -611,16 +1200,19 @@ function speak(text, fallback, onDone){
 
 // «Осталось N секунд» на отметках 60/45/30/15
 function announceRemaining(sec){
-  speak(`Осталось ${sec} секунд`, ()=> clicks(sec/15));
+  speak(voiceIsEnglish() ? `${sec} seconds remaining` : `Осталось ${sec} секунд`, ()=> clicks(sec/15));
 }
 
 // круг завершён — голосом с временем отдыха и следующим упражнением
 function roundDone(seconds, nxt){
-  let text = seconds
-    ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`
-    : 'Круг завершён';
+  let text;
+  if(voiceIsEnglish()){
+    text = seconds ? `Round complete. Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}` : 'Round complete';
+  } else {
+    text = seconds ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}` : 'Круг завершён';
+  }
   const nd = nextStepSpeech(nxt);
-  if(nd) text += `. Далее — ${nd}`;
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
   speak(text, ()=>{ gong(); setTimeout(gong, 550); });
 }
 
@@ -628,16 +1220,22 @@ function roundDone(seconds, nxt){
 // описание следующего шага для озвучки: «Планка, подход 2 из 3, сторона 1 из 2»
 function nextStepSpeech(nxt){
   if(!nxt) return '';
-  let s = nxt.title;
-  if(nxt.setsTotal > 1) s += `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
-  if(nxt.side) s += `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
-  return s;
+  let out = nxt.title;
+  if(nxt.setsTotal > 1) out += voiceIsEnglish()
+    ? `, set ${nxt.setNo} of ${nxt.setsTotal}`
+    : `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
+  if(nxt.side) out += voiceIsEnglish()
+    ? `, side ${nxt.side} of ${nxt.sidesTotal || 2}`
+    : `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
+  return out;
 }
 function announceRest(seconds, nxt){
-  let text = `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
+  let text = voiceIsEnglish()
+    ? `Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}`
+    : `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
   const nd = nextStepSpeech(nxt);
-  if(nd) text += `. Далее — ${nd}`;
-  speak(text, ()=> beep(520, .18, 0, .2)); // в режиме музыки — мягкий сигнал
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
+  speak(text, ()=> beep(520, .18, 0, .2));
 }
 
 // склонение: 1 повторение, 2 повторения, 5 повторений
@@ -653,27 +1251,38 @@ function plural(n, one, few, many){
 // озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
 function announceExercise(step, onDone){
   let text = step.title;
-  if(step.setsTotal > 1) text += `, подход ${step.setNo} из ${step.setsTotal}`;
+  if(step.setsTotal > 1) text += voiceIsEnglish()
+    ? `, set ${step.setNo} of ${step.setsTotal}`
+    : `, подход ${step.setNo} из ${step.setsTotal}`;
   if(step.kind === 'click'){
     const r = parseValue(step.reps);
-    if(r.min === r.max) text += `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
-    else text += `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
-    if(step.perSide) text += ', на каждую сторону';
+    if(r.min === r.max){
+      text += voiceIsEnglish()
+        ? `, ${r.min} ${voicePlural(r.min,'повторение','повторения','повторений','rep','reps')}`
+        : `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
+    } else {
+      text += voiceIsEnglish()
+        ? `, ${r.min} to ${r.max} reps`
+        : `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
+    }
+    if(step.perSide) text += voiceIsEnglish() ? ', on each side' : ', на каждую сторону';
   } else if(step.seconds){
-    text += `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
+    text += voiceIsEnglish()
+      ? `, ${step.seconds} ${voicePlural(step.seconds,'секунда','секунды','секунд','second','seconds')}`
+      : `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
     if(step.perSide){
-      text += step.side ? `, сторона ${step.side} из ${step.sidesTotal || 2}` : ', на каждую сторону';
+      text += step.side
+        ? (voiceIsEnglish() ? `, side ${step.side} of ${step.sidesTotal || 2}` : `, сторона ${step.side} из ${step.sidesTotal || 2}`)
+        : (voiceIsEnglish() ? ', on each side' : ', на каждую сторону');
     }
   }
-  // рабочий вес — часть задания, без него упражнение непонятно. По step.weight,
-  // а не по step.progAxis === 'weight': при формате «время и вес» ось прогрессии
-  // — 'time' (секунды растут своим шагом), но вес всё равно на снаряде и должен
-  // прозвучать.
   if(step.weight > 0){
-    const kg = fmtKg(step.weight).replace('.', ',');
-    text += `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
+    const kg = voiceIsEnglish() ? fmtKg(step.weight) : fmtKg(step.weight).replace('.', ',');
+    text += voiceIsEnglish()
+      ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
+      : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
   }
-  speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
+  speak(text, null, onDone);
 }
 
 // мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
@@ -5948,10 +6557,11 @@ function userForAI(){
   const u = curUser();
   if(!u) return '';
   const bits = [];
-  bits.push(u.gender === 'm' ? 'Пол: мужской' : 'Пол: женский');
+  bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
-  if(a) bits.push(`Возраст: ${a} ${plural(a, 'год', 'года', 'лет')}`);
-  return bits.join('. ') + '. Учитывай это при подборе упражнений, нагрузки и времени на восстановление.';
+  if(a) bits.push(`Age: ${a}`);
+  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
+  return bits.join('. ') + '. Use this information when choosing exercises, load, progression, and recovery.';
 }
 
 /* ================= GEMINI API ================= */
@@ -6190,6 +6800,34 @@ function flashDone(btn, text){
 
    Формат обмена с нейросетью таблица НЕ трогает: prompt и apply — те же самые
    функции, что были на прежних экранах, просто названы по имени. */
+const AI_UI_KEYS = {
+  'Новая программа':'programs.newProgram','Вручную':'common.manual','Через ИИ':'common.viaAI','Из видео':'common.fromVideo',
+  'Упражнение':'builder.exercise','Редактирование':'ai.editTitle',
+  'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.':'ai.createLead',
+  'Шаг 1 · О тебе и тренировке':'ai.stepAbout','Шаг 2 · Как собрать':'ai.stepBuild','Собрать за меня':'ai.buildForMe',
+  'Собираю программу':'ai.preparingProgram',
+  'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.':'ai.chatTaskNote',
+  'Вставь ответ нейросети целиком — программа откроется в конструкторе.':'ai.answerProgramHint','Собрать программу из ответа':'ai.buildFromAnswer',
+  'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.':'ai.videoLead',
+  'Шаг 1 · Ссылка на видео':'ai.stepVideo','Шаг 2 · Как разобрать':'ai.stepParse','Разобрать за меня':'ai.parseForMe','Разбираю видео':'ai.parsingVideo',
+  'Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.':'ai.videoChatNote',
+  'Шаг 1 · Что поправить':'ai.stepWhatFix','Шаг 2 · Как внести правки':'ai.stepHowApply','Изменить за меня':'ai.changeForMe','Вношу изменения':'ai.applyingChanges',
+  'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.':'ai.editCopyNote',
+  'Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.':'ai.chatProgramNote',
+  'Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.':'ai.answerEditedHint','Создать изменённую программу':'ai.createEdited',
+  'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.':'ai.exerciseLead',
+  'Шаг 1 · Какое упражнение нужно':'ai.stepExerciseNeed','Шаг 2 · Как подобрать упражнение':'ai.stepPickExercise','Подбираю упражнение':'ai.pickingExercise',
+  'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.':'ai.chatExerciseNote',
+  'Вставь ответ нейросети целиком — упражнение добавится в конец программы.':'ai.answerExerciseHint','Добавить в программу':'ai.addToProgram',
+  'Шаг 1 · Что поменять':'ai.stepWhatChange','Шаг 2 · Как применить':'ai.stepApply','Меняю упражнение':'ai.changingExercise',
+  'Картинка упражнения останется на месте.':'ai.keepImageNote','Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.':'ai.answerApplyHint',
+  'Применить изменения':'ai.applyChanges'
+};
+function aiUiText(value){
+  const raw=String(value == null ? '' : value);
+  const key=AI_UI_KEYS[raw];
+  return key ? t(key) : raw;
+}
 let aiSrc = null;                 // ключ текущего источника
 const AI_SOURCES = {
   text: {
@@ -6314,12 +6952,12 @@ function openAI(key){
   const c = AI_SOURCES[key];
   if(!c) return;
   aiSrc = key;
-  $('aiTitle').textContent = c.title;
-  $('aiStep1Title').textContent = c.step1;
-  $('aiStep2Title').textContent = c.step2;
-  $('aiSelfLabel').textContent = typeof c.self === 'function' ? c.self() : c.self;
-  $('aiApply').textContent = c.action;
-  $('aiAnswerHint').textContent = c.answerHint;
+  $('aiTitle').textContent = aiUiText(c.title);
+  $('aiStep1Title').textContent = aiUiText(c.step1);
+  $('aiStep2Title').textContent = aiUiText(c.step2);
+  $('aiSelfLabel').textContent = typeof c.self === 'function' ? c.self() : aiUiText(c.self);
+  $('aiApply').textContent = aiUiText(c.action);
+  $('aiAnswerHint').textContent = aiUiText(c.answerHint);
   $('aiResult').value = '';
 
   // вкладки режима: у программы их три, у упражнения две
@@ -6329,7 +6967,7 @@ function openAI(key){
     const b = document.createElement('button');
     b.className = 'tab' + (m === key || (m === 'ai' && key !== 'manual' && c.tabs.length === 2) ? ' act' : '');
     b.dataset.m = m;
-    b.textContent = label;
+    b.textContent = aiUiText(label);
     tabs.appendChild(b);
   });
   markAITab();
@@ -6339,7 +6977,7 @@ function openAI(key){
     setShown(box, !!val);
     if(!val) return;
     $(ico).innerHTML = icon(val[0]);
-    $(txt).textContent = val[1];
+    $(txt).textContent = aiUiText(val[1]);
   };
   note('aiLead', 'aiLeadIco', 'aiLeadTxt', c.lead);
   note('aiSelfNote', 'aiSelfNoteIco', 'aiSelfNoteTxt', c.selfNote);
@@ -6478,16 +7116,16 @@ function shrinkDataUrl(dataUrl, maxSide, cb){
 // промт под ОДНО конкретное изображение (в отличие от промта для копирования — там просят весь набор разом)
 function singleImagePrompt(kind, item){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
-  const name = (draft.name || '').trim() || 'Программа тренировок';
-  const styleLine = `Стиль: стилизованная реалистичная 3D-иллюстрация тела человека, тело в приглушённых серых тонах, а работающие мышцы выделены тёплым оранжевым свечением. Направление движения — белыми стрелками. Фон чистый, слегка размытый, нейтральный или спортзал. Персонаж: ${genderTxt}. Никакого текста, логотипов и водяных знаков на изображении.`;
+  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const name = (draft.name || '').trim() || 'Workout program';
+  const styleLine = `Style: a stylized realistic 3D illustration of a human body. Use muted gray tones for the body and a warm orange glow for the working muscles. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Character: ${genderTxt}. No text, logos, captions, or watermarks inside the image.`;
   if(kind === 'cover'){
-    return `Сгенерируй обложку для карточки фитнес-программы «${name}» в приложении.\n${styleLine}\nОбщий кадр по сути программы, без фокуса на одном упражнении.\nФормат кадра: квадрат 1:1.`;
+    return `Create a square 1:1 cover image for the fitness-program card "${name}".\n${styleLine}\nShow the overall theme of the program rather than one specific exercise.`;
   }
-  const bits = [`Сгенерируй иллюстрацию к упражнению «${item.name}» для фитнес-приложения.`, styleLine];
-  if(item.desc) bits.push(`Техника: ${item.desc}`);
-  if(item.muscles && item.muscles.length) bits.push(`Выделить подсветкой мышцы: ${item.muscles.join(', ').toLowerCase()}.`);
-  bits.push('Поза — самая характерная фаза движения. Формат кадра: широкий 16:9.');
+  const bits = [`Create a wide 16:9 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
+  if(item.desc) bits.push(`Technique context: ${item.desc}`);
+  if(item.muscles && item.muscles.length) bits.push(`Highlight these working muscles: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  bits.push('Show the most characteristic phase of the movement.');
   return bits.join('\n');
 }
 
@@ -6573,30 +7211,30 @@ function uniqueProgramExercises(){
 
 function imagesPromptText(){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
-  const name = (draft.name || '').trim() || 'Программа тренировок';
+  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const name = (draft.name || '').trim() || 'Workout program';
   const desc = (draft.desc || '').trim();
   const exList = uniqueProgramExercises();
 
   const L = [];
-  L.push('Сгенерируй набор изображений для карточек фитнес-приложения: одну обложку программы и по одной картинке на каждое упражнение из списка ниже. Все изображения должны выглядеть как единая серия — один визуальный стиль, один и тот же персонаж, одинаковый фон и цветовая гамма во всём наборе.');
+  L.push('Generate a complete image set for a fitness app: one program cover and one image for every exercise listed below. The whole set must look like one coherent series: the same visual style, same character, same clothing, similar background, and consistent color palette.');
   L.push('');
-  L.push('СТИЛЬ (ориентируйся на этот образ): стилизованная реалистичная 3D-иллюстрация тела человека, само тело — в приглушённых серых тонах, а работающие в упражнении мышцы выделены тёплым оранжевым свечением. Направление движения показано белыми стрелками. Фон — чистый, слегка размытый, нейтральный или спортзал. Никакого текста, логотипов и водяных знаков на самих изображениях — подписи нужны только между картинками, не на них.');
-  L.push(`Персонаж на всех изображениях: ${genderTxt}, один и тот же человек и одна и та же спортивная форма на протяжении всего набора.`);
+  L.push('STYLE: stylized realistic 3D human-body illustration. Keep the body in muted gray tones and highlight the working muscles with a warm orange glow. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Do not put text, logos, captions, or watermarks inside the images.');
+  L.push(`Character in every image: ${genderTxt}, the same person and the same sportswear throughout the set.`);
   L.push('');
-  L.push(`ПРОГРАММА: ${name}`);
-  if(desc) L.push(`ОПИСАНИЕ: ${desc}`);
+  L.push(`PROGRAM: ${name}`);
+  if(desc) L.push(`DESCRIPTION: ${desc}`);
   L.push('');
-  L.push('1. ОБЛОЖКА ПРОГРАММЫ — квадрат 1:1. Общий кадр, отражающий суть программы и её название, без фокуса на одном конкретном упражнении.');
+  L.push('1. PROGRAM COVER — square 1:1. Show the overall idea of the program without focusing on one specific exercise.');
   exList.forEach((ex, i) => {
     L.push('');
-    L.push(`${i + 2}. УПРАЖНЕНИЕ «${ex.name}» — широкий кадр 16:9. Поза — самая характерная фаза движения.`);
-    if(ex.desc) L.push(`   Техника: ${ex.desc}`);
-    if(ex.muscles.length) L.push(`   Выделить подсветкой мышцы: ${ex.muscles.join(', ').toLowerCase()}.`);
+    L.push(`${i + 2}. EXERCISE "${ex.name}" — wide 16:9. Show the most characteristic phase of the movement.`);
+    if(ex.desc) L.push(`   Technique context: ${ex.desc}`);
+    if(ex.muscles.length) L.push(`   Highlight these working muscles: ${ex.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   });
   L.push('');
-  L.push('ПОРЯДОК ОТВЕТА: если умеешь возвращать несколько изображений за один раз — сгенерируй весь набор сразу, в том же порядке, что и список выше. Если нет — генерируй по одной картинке за раз, начиная с обложки.');
-  L.push('ВАЖНО: перед каждой картинкой коротко подпиши текстом, что это — «Обложка» или точное название упражнения из списка — чтобы потом не перепутать, какую картинку куда вставлять.');
+  L.push('OUTPUT ORDER: if you can return multiple images in one response, generate the entire set in exactly the order above. Otherwise generate them one by one, starting with the cover.');
+  L.push('Before each generated image, add a short text label outside the image saying either "Cover" or the exact exercise name, so the images can be assigned correctly later.');
   return L.join('\n');
 }
 
@@ -6838,39 +7476,48 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
-УПРАЖНЕНИЕ: название на русском
-ОПИСАНИЕ: техника на «ты», 3–5 предложений
-МЫШЦЫ: группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1–2 частые ошибки (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
-ЗНАЧЕНИЕ: число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
-ПОДХОДЫ: число от 1 до 5
-СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
-РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
-ОТДЫХ: секунды между подходами одного упражнения
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку: возьмётся то же число). Обычно больше — смена движения или группы мышц требует времени.
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
-ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
-ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на технику (или пропусти строку)`;
+function exAnswerFormat(){
+  return `=== OUTPUT FORMAT ===
+Use the exact Russian protocol keys and enum tokens below because the app parser expects them. Write user-visible values (exercise name, description, mistakes, replacement name/description) in ${aiOutputLanguage()}.
+
+УПРАЖНЕНИЕ: exercise name
+ОПИСАНИЕ: technique, 3-5 practical sentences
+МЫШЦЫ: comma-separated tokens STRICTLY from: ${MUSCLES.map(m => m[1]).join(', ')}
+ОШИБКИ: 1-2 common mistakes (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 10-12; time formats use seconds
+ВЕС: starting kg for weighted formats
+ПОДХОДЫ: integer 1-5
+СТОРОНА: "да" if counted separately per side; omit otherwise
+РАЗМИНКА: "да" for a warm-up exercise; omit otherwise
+ОТДЫХ: seconds between sets
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, and breathing drills
+ШАГ: progression increment for unweighted reps/time
+ШАГ ПОВТОРОВ: optional reps increment for weighted reps
+ШАГ ВРЕМЕНИ: optional seconds increment for weighted time
+ШАГ ВЕСА: optional kg increment for weighted formats
+ПОТОЛОК: REQUIRED progression ceiling for unweighted formats when УСЛОЖНЯТЬ: да
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
+ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps, "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
+ЗАМЕНА: harder next-level exercise name when the ceiling is reached (optional)
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences describing that replacement, only when ЗАМЕНА exists
+ВИДЕО: real technique URL only if confident it exists; otherwise omit
+
+Return only the exercise block, with no Markdown and no explanation before or after it.`;
+}
 
 function exePrompt(){
   const ex = curPlan().exercises[exeIdx];
   const wish = clampText($('exeWish').value, LIM.wish);
-  return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
-    'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
-    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    EX_ANSWER_FORMAT;
+  return 'Edit this home-workout exercise and return the COMPLETE updated exercise in the protocol below. ' +
+    'Keep fields that the request does not affect unchanged. Return only the exercise block.\n\n' +
+    'USER: ' + userForAI() + '\n' +
+    'REQUEST: ' + (wish || '(No specific request. Improve clarity and technique guidance while preserving the exercise intent.)') + '\n\n' +
+    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
+    exAnswerFormat();
 }
 
 async function applyExEdit(){
@@ -6917,7 +7564,10 @@ const exa = {count: 1, format: '', level: '', muscles: [], equip: []};
 // прямо, и число упражнений в кнопке следует за выбором в «Сколько упражнений»
 function exaSelfLabel(){
   const n = exa.count || 1;
-  return n === 1 ? 'Подобрать упражнение' : `Подобрать ${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`;
+  if(n === 1) return t('ai.pickOneExercise');
+  return appLocale === 'ru'
+    ? `Подобрать ${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`
+    : t('ai.pickExercises', {count:n});
 }
 
 function exaChips(){
@@ -6947,57 +7597,28 @@ function openExAI(){
 function exaPrompt(){
   const wish = clampText($('exaWish').value, LIM.wish);
   const given = [], free = [];
-  const fmtMap = {'Повторения':'повторения','С весом':'повторения и вес','Время':'время'};
-  if(exa.format) given.push(`Формат: ${fmtMap[exa.format] || exa.format.toLowerCase()}.`);
-  else free.push('формат — повторения, с весом или время (выбери, что естественнее для этого упражнения)');
-  if(exa.level) given.push(`Уровень: ${exa.level.toLowerCase()}.`);
-  else free.push('уровень сложности');
-  if(exa.muscles.length) given.push(`Целевые мышцы: ${exa.muscles.join(', ').toLowerCase()}.`);
-  else free.push('какие мышцы работают');
-  if(exa.equip.length) given.push(`Инвентарь: ${exa.equip.join(', ').toLowerCase()}.`);
-  else free.push('нужен ли инвентарь (по умолчанию считай, что дома ничего нет)');
+  const fmtMap = {'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
+  if(exa.format) given.push(`Preferred format: ${fmtMap[exa.format] || aiCanonicalEnglish(exa.format)}.`);
+  else free.push('choose the most natural format: reps, weighted reps, time, or weighted time');
+  if(exa.level) given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
+  else free.push('difficulty level');
+  if(exa.muscles.length) given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  else free.push('working muscles');
+  if(exa.equip.length) given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
+  else free.push('equipment; assume no special home equipment unless the exercise needs it');
 
   const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
   const many = cnt > 1;
-  const howMany = many
-    ? `РОВНО ${cnt} ${plural(cnt, 'упражнение', 'упражнения', 'упражнений')}`
-    : 'ОДНО упражнение';
-
-  let s = `Опиши ${howMany} для домашней тренировки в строгом формате ниже. `;
-  s += many
-    ? 'Каждое упражнение — отдельный блок, начинающийся со строки «УПРАЖНЕНИЕ:». Блоки разделяй пустой строкой. Упражнения не должны дублировать друг друга. Верни только блоки, без пояснений до и после.\n\n'
-    : 'Верни только блок упражнения, без пояснений до и после.\n\n';
-  s += 'ДЛЯ КОГО: ' + userForAI() + '\n';
-  s += 'ЗАПРОС: ' + (wish || '(не указан — предложи полезное упражнение на своё усмотрение)') + '\n';
-  if(given.length) s += given.join(' ') + '\n';
-  if(free.length) s += 'Не указано — реши сам(а): ' + free.join('; ') + '.\n';
-  s += `
-ФОРМАТ ОТВЕТА${many ? ' ДЛЯ КАЖДОГО УПРАЖНЕНИЯ' : ''} (каждый параметр с новой строки, ключи ровно как здесь):
-
-УПРАЖНЕНИЕ: название на русском, коротко и понятно
-ОПИСАНИЕ: техника выполнения на «ты», 3–5 предложений: исходное положение, само движение, дыхание, на что следить. Без воды и без ссылок.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1–2 частые ошибки и чем они опасны (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
-ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
-ПОДХОДЫ: разумное число подходов от 1 до 5
-СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
-ОТДЫХ: секунды между подходами одного упражнения
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку). Обычно больше — смена движения или группы мышц требует времени.
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
-ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
-ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
-
-Ничего кроме этих строк не пиши.`;
-  return s;
+  let out = `Create exactly ${cnt} ${many ? 'different exercises' : 'exercise'} for a home workout. `;
+  out += many
+    ? 'Each exercise must be a separate block beginning with "УПРАЖНЕНИЕ:". Separate blocks with a blank line. Do not duplicate exercises. Return only those blocks.\n\n'
+    : 'Return only one exercise block.\n\n';
+  out += 'USER: ' + userForAI() + '\n';
+  out += 'REQUEST: ' + (wish || '(No specific request. Suggest a useful exercise that fits the user.)') + '\n';
+  if(given.length) out += given.join(' ') + '\n';
+  if(free.length) out += 'Decide these unspecified items yourself: ' + free.join('; ') + '.\n\n';
+  out += exAnswerFormat();
+  return out;
 }
 
 async function exaAddExercise(){
@@ -7044,24 +7665,21 @@ function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return AI_PROMPT +
-    '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
-    'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
-    'ССЫЛКА: ' + link + '\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n\n' +
-    'Что важно:\n' +
-    '· Возьми упражнения в том же порядке, что в ролике, с теми же повторениями или длительностью и паузами отдыха.\n' +
-    '· Если в видео есть разминка — отметь эти упражнения строкой РАЗМИНКА: да.\n' +
-    '· Если ролик проходит список несколько раз — поставь соответствующее число КРУГОВ; если каждое упражнение делается подряд несколько раз — используй ПОДХОДЫ.\n' +
-    '· Названия упражнений переведи на русский и приведи к общепринятым.\n' +
-    '· ВАЖНО: в строке ВИДЕО у КАЖДОГО упражнения дай ссылку на этот же ролик, но С ТАЙМКОДОМ момента, где упражнение начинается. ' +
-    'Формат: https://youtu.be/ID?t=СЕКУНДЫ или https://www.youtube.com/watch?v=ID&t=СЕКУНДЫs — секунды считай от начала ролика. ' +
-    'Не ставь всем упражнениям одну и ту же ссылку без таймкода: смысл в том, чтобы по тапу открывался нужный фрагмент. ' +
-    'Если точное время определить не удалось — укажи ближайшее приблизительное, а не начало ролика.\n' +
-    '· Описание техники пиши своими словами, не цитируя автора ролика дословно.\n' +
-    '· В ОПИСАНИЕ ПРОГРАММЫ добавь, из какого это видео и на что ролик рассчитан.\n' +
-    '· Если видео недоступно или это не тренировка — так и напиши, не выдумывай программу.\n' +
-    (wish ? ('\nПОЖЕЛАНИЯ ПОЛЬЗОВАТЕЛЯ: ' + wish + '\n') : '');
+  return aiPrompt() +
+    '\n\n=== TASK: BUILD A PROGRAM FROM A VIDEO ===\n' +
+    'Analyze the workout at the link and convert it into the protocol above.\n' +
+    'VIDEO URL: ' + link + '\n' +
+    'USER: ' + userForAI() + '\n\n' +
+    'Requirements:\n' +
+    '- Keep exercises in the same order as the video, with the same reps/durations and rest when they can be determined.\n' +
+    '- Mark warm-up exercises with the exact token "РАЗМИНКА: да".\n' +
+    '- If the video repeats the whole exercise list, represent that with КРУГИ. If one exercise is repeated in consecutive sets, use ПОДХОДЫ.\n' +
+    '- Write user-visible exercise names and descriptions in ' + aiOutputLanguage() + '.\n' +
+    '- For ВИДЕО on EACH exercise, use the same video URL with a timestamp for the moment that exercise starts. Prefer an approximate timestamp over linking to the beginning when exact timing is uncertain.\n' +
+    '- Describe technique in your own words; do not quote the creator verbatim.\n' +
+    '- In ОПИСАНИЕ ПРОГРАММЫ mention the source video and what type of workout it is.\n' +
+    '- If the video is unavailable or is not a workout, say so instead of inventing a program.\n' +
+    (wish ? ('\nADDITIONAL USER REQUEST: ' + wish + '\n') : '');
 }
 
 function openYouTube(){
@@ -7128,13 +7746,12 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = clampText($('eaWish').value, LIM.wish);
-  return AI_PROMPT +
-    '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
-    'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
-    'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'ЗАПРОС ПОЛЬЗОВАТЕЛЯ: ' + (wish || '(не указан — просто улучши программу на своё усмотрение)') + '\n\n' +
-    '=== ТЕКУЩАЯ ПРОГРАММА ===\n' + programToText(editAIProg);
+  return aiPrompt() +
+    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
+    'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
+    'USER: ' + userForAI() + '\n' +
+    'USER REQUEST: ' + (wish || '(No specific request. Improve the program while preserving its purpose and sensible load.)') + '\n\n' +
+    '=== CURRENT PROGRAM ===\n' + programToText(editAIProg);
 }
 
 function openEditAI(p){
@@ -10333,137 +10950,80 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-const AI_PROMPT = `Ты — помощник по составлению домашних тренировок. Составь программу по моему запросу и выведи её СТРОГО в текстовом формате ниже, без пояснений, без markdown, без лишнего текста до и после.
+const AI_PROMPT = `You are a fitness-program assistant for home workouts. Build a safe, practical program from the user's request and return ONLY the plain-text protocol below: no Markdown, no commentary before or after it.
 
-=== ФОРМАТ ОТВЕТА ===
+IMPORTANT LANGUAGE RULE:
+- All instructions in this prompt are in English.
+- User-visible content values (program name, program description, exercise names, exercise descriptions, mistakes, replacement names/descriptions) must be written in {{OUTPUT_LANGUAGE}}.
+- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens listed below are machine-readable constants. Keep those exact Russian tokens unchanged even when the user-visible content is English.
 
-Общие поля (в самом начале, каждое с новой строки "КЛЮЧ: значение"):
+=== OUTPUT PROTOCOL ===
 
-ПРОГРАММА: название программы
-ОПИСАНИЕ ПРОГРАММЫ: до 1000 символов В ОДНУ СТРОКУ (без переносов) — для кого программа, какого результата ждать и когда, как часто заниматься, на что обращать внимание, когда снизить нагрузку. На «ты», по делу. Это единственное место, где можно объяснить логику всей тренировки.
-ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
-ПРОГРЕССИЯ: число от 1 до 15 или «нет» — раз во сколько ПРОЙДЕННЫХ тренировок повышать нагрузку там, где стоит УСЛОЖНЯТЬ: да. Считаются выполненные тренировки, а не дни календаря: недели и месяцы не указывай. Новичку 3–6, опытным 2–4.
-ЧЕРЕДОВАНИЕ: да / нет — варианты идут по очереди (A, B, снова A) независимо от дней недели. Для сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки привязаны к дням — «нет» и укажи ДЕНЬ у каждого.
-ДНИ ТРЕНИРОВОК: дни через запятую (Пн, Ср, Пт) — общее расписание. Только при ЧЕРЕДОВАНИЕ: да: дни говорят когда тренироваться, а какой вариант выпадет — решает очередь.
+General fields, one per line as "KEY: value":
 
-Дальше — ВАРИАНТЫ тренировки: свой набор упражнений для своих дней. Одинаковая тренировка во все дни — ровно один вариант. Разные упражнения в разные дни (Пн/Чт — верх, Вт/Пт — ноги) — несколько. Один день не может быть в двух вариантах. Максимум 7.
+ПРОГРАММА: program name
+ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line; explain who it is for, expected result, frequency, what to watch, and when to reduce load
+ВРЕМЯ: HH:MM, for example 07:30 (optional)
+ПРОГРЕССИЯ: integer 1-15 or "нет"; increase load after this many COMPLETED workouts, not calendar days. Beginners usually 3-6, experienced users 2-4.
+ЧЕРЕДОВАНИЕ: "да" or "нет"; use "да" when workout variants rotate A-B-A independently of weekdays
+ДНИ ТРЕНИРОВОК: comma-separated canonical weekday tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only needed as the shared schedule when ЧЕРЕДОВАНИЕ: да
 
-Каждый вариант начинается со строки "ДЕНЬ:" и содержит:
+Workout variants:
+- Same workout every training day = one variant.
+- Different exercise sets for different days = multiple variants, maximum 7.
+- Each variant starts with ДЕНЬ:.
 
-ДЕНЬ: дни недели этого варианта через запятую (из списка: Пн, Вт, Ср, Чт, Пт, Сб, Вс). При ЧЕРЕДОВАНИЕ: да оставь значение пустым — просто строка «ДЕНЬ:» открывает новый вариант.
-КРУГИ: число от 1 до 10 — сколько раз повторяется ВЕСЬ список упражнений подряд (A, B, C → A, B, C).
-ВАЖНО: КРУГИ и ПОДХОДЫ — две независимые настройки, они задают разный ПОРЯДОК выполнения:
-  · круговая тренировка → КРУГИ 2–5, ПОДХОДЫ 1 (прошёл весь список, вернулся к началу);
-  · силовая тренировка → КРУГИ 1, ПОДХОДЫ 3–4 (все подходы одного упражнения подряд, потом следующее);
-  · смешанная → КРУГИ 2–3 и ПОДХОДЫ 2–3 вместе (блок с подходами повторяется кругами).
-Общий объём каждого упражнения = КРУГИ × ПОДХОДЫ, следи, чтобы он был разумным.
-ОТДЫХ МЕЖДУ КРУГАМИ: секунды (0–600)
+ДЕНЬ: canonical weekday tokens for this variant, comma-separated. When ЧЕРЕДОВАНИЕ: да, leave the value empty.
+КРУГИ: 1-10; how many times the ENTIRE exercise list repeats
+ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
 
-Затем упражнения варианта, каждое начинается со строки "УПРАЖНЕНИЕ:" (до 20 разминочных и до 20 основных на вариант; сколько именно — реши сам исходя из длительности и цели):
+КРУГИ and ПОДХОДЫ are independent:
+- circuit: КРУГИ 2-5, usually ПОДХОДЫ 1
+- strength: КРУГИ 1, usually ПОДХОДЫ 3-4
+- mixed: both may be >1, but keep total volume sensible
 
-УПРАЖНЕНИЕ: название
-ОПИСАНИЕ: техника, 3–4 предложения: исходное положение, движение, что напрячь и чего избегать. Понятно даже без видео. До 600 символов.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
-ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка).
-ЗНАЧЕНИЕ: число или диапазон 12-15; для «время» и «время и вес» — секунды.
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес» (новичку 5–8 кг тяги/жимы, 3–5 кг махи).
-ПОДХОДЫ: сколько ПОДРЯД перед следующим упражнением, 1–10 (силовые 3–4, круговые 1).
-СТОРОНА: да — считается отдельно на каждую сторону (иначе пропусти строку).
-РАЗМИНКА: да — для 2–4 первых упражнений, если нужна (иначе пропусти строку).
-ОТДЫХ: секунды между подходами одного упражнения (0 — без отдыха).
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — пиши, только если отличается от ОТДЫХ (иначе пропусти строку, возьмётся то же число). Обычно больше, когда следующее упражнение — совсем другая группа мышц или движение; для лёгких упражнений может быть и меньше.
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — пиши одну ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста, в тех же единицах, что ЗНАЧЕНИЕ: повторения (15-25) или секунды (60-120). При формате с весом вместо ПОТОЛОК пиши ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, дома обычно 10-24). Без потолка за год значения станут нереальными.
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с заданным ПОТОЛОК ПОВТОРОВ. «да» — дойдя до потолка повторений, они возвращаются к началу диапазона, а вес растёт на ШАГ ВЕСА (двойная прогрессия). Для гантельных упражнений обычно «да».
-ЗАМЕНА: более сложное упражнение — на что перейти, когда потолок достигнут (отжимания с колен → классические, приседания → с гантелями). Только при УСЛОЖНЯТЬ: да.
-ОПИСАНИЕ ЗАМЕНЫ: техника этого более сложного упражнения, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на YouTube с реальным разбором техники, если уверен, что видео существует. Не выдумывай — иначе пропусти строку.
+Each exercise starts with УПРАЖНЕНИЕ:.
 
-=== ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
+УПРАЖНЕНИЕ: user-visible exercise name in {{OUTPUT_LANGUAGE}}
+ОПИСАНИЕ: 3-4 practical sentences in {{OUTPUT_LANGUAGE}} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
+МЫШЦЫ: comma-separated tokens STRICTLY from this canonical list: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
+ОШИБКИ: 1-2 common mistakes in {{OUTPUT_LANGUAGE}}, max 300 characters (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
+ВЕС: starting kilograms for weighted formats (optional otherwise)
+ПОДХОДЫ: consecutive sets before the next exercise, 1-10
+СТОРОНА: "да" if the value is performed separately per side; omit otherwise
+РАЗМИНКА: "да" for warm-up exercises; omit otherwise
+ОТДЫХ: seconds between sets of this exercise
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the LAST set before the next exercise; only include when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, or breathing drills
+ШАГ: for progressive unweighted formats only; reps increment for "повторения", seconds increment for "время"
+ШАГ ПОВТОРОВ: optional reps increment for "повторения и вес"
+ШАГ ВРЕМЕНИ: optional seconds increment for "время и вес"
+ШАГ ВЕСА: optional kg increment for weighted formats
+ПОТОЛОК: REQUIRED when УСЛОЖНЯТЬ: да for unweighted formats; realistic maximum in the same unit as ЗНАЧЕНИЕ
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted-reps format
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted-time format
+ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps only. "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
+ЗАМЕНА: a harder next-level exercise name in {{OUTPUT_LANGUAGE}} when the ceiling is reached (optional)
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in {{OUTPUT_LANGUAGE}} describing that harder variation; only when ЗАМЕНА exists
+ВИДЕО: a real YouTube technique link only if you are confident it exists; never invent a URL
 
-ПРОГРАММА: Неделя тонуса
-ПРОГРЕССИЯ: 4
-ОПИСАНИЕ ПРОГРАММЫ: Программа для тех, кто начинает с нуля и хочет мягко втянуться в регулярные тренировки. Первые две недели тело привыкает к нагрузке — не гонись за скоростью, следи за техникой. Заниматься лучше через день, чтобы мышцы успевали восстанавливаться. Если после тренировки болят суставы, а не мышцы — убавь вес прямо на тренировке кнопкой «минус». Через месяц станет заметно легче держать планку и приседать глубже.
-ВРЕМЯ: 07:30
+Safety and quality:
+- Match exercise selection, volume, intensity, progression, and recovery to the user's age, sex, experience, equipment, and stated limitations.
+- Do not diagnose or claim medical safety. Respect stated restrictions.
+- Keep progression realistic for home training.
+- Warm-up exercises should not progressively overload.
+- Do not add impossible equipment.
+- Return only the protocol.
 
-ДЕНЬ: Пн, Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 120
+=== USER REQUEST ===
+`;
 
-УПРАЖНЕНИЕ: Суставная разминка
-ОПИСАНИЕ: Встань прямо, ноги на ширине плеч. Сделай плавные круговые движения плечами назад, затем локтями и кистями. Дальше — наклоны головы в стороны и вращения тазом. Двигайся мягко, без рывков, дыши свободно.
-МЫШЦЫ: Шея, Плечи
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 60
-РАЗМИНКА: да
-ОТДЫХ: 10
-
-УПРАЖНЕНИЕ: Классические отжимания
-ОПИСАНИЕ: Ладони на полу чуть шире плеч, тело вытянуто в прямую линию от макушки до пят. Согни руки и медленно опусти грудь почти до пола, затем мощно выжми себя вверх. Держи пресс и ягодицы в напряжении, не прогибай поясницу. Если тяжело — опустись на колени.
-МЫШЦЫ: Грудь, Руки, Пресс
-ОШИБКИ: Провисающая поясница и локти, разведённые строго в стороны, — держи их под углом 45 градусов к корпусу.
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10-12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-УСЛОЖНЯТЬ: да
-ШАГ: 2
-ПОТОЛОК: 20
-ЗАМЕНА: Отжимания с ногами на возвышении
-ОПИСАНИЕ ЗАМЕНЫ: Поставь стопы на диван или стул, ладони на полу чуть шире плеч. Тело держи прямой линией, опускайся грудью к полу и выжимай себя вверх. Чем выше опора для ног, тем больше нагрузка уходит на грудь и плечи.
-
-УПРАЖНЕНИЕ: Планка на локтях
-ОПИСАНИЕ: Встань в упор на предплечья, локти строго под плечами. Вытяни тело в одну прямую линию, взгляд в пол. Напряги пресс и ягодицы, не поднимай таз вверх и не провисай в пояснице. Дыши ровно через нос.
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 45
-ПОДХОДЫ: 3
-ОТДЫХ: 30
-УСЛОЖНЯТЬ: да
-ШАГ: 10
-ПОТОЛОК: 120
-ЗАМЕНА: Планка с подъёмом руки
-ОПИСАНИЕ ЗАМЕНЫ: Из планки на локтях медленно вытяни одну руку вперёд, удерживая таз неподвижным. Задержись на пару секунд и вернись, затем повтори другой рукой. Чем меньше корпус качается, тем лучше работает пресс.
-
-УПРАЖНЕНИЕ: Тяга гантели в наклоне
-ОПИСАНИЕ: Обопрись коленом и рукой на скамью, во второй руке гантель. Держа спину прямой, потяни гантель к поясу, сводя лопатку. Медленно опусти обратно, не скручивая корпус.
-МЫШЦЫ: Спина, Руки
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 10-12
-ВЕС: 8
-ПОДХОДЫ: 3
-СТОРОНА: да
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ ПОВТОРОВ: 1
-ШАГ ВЕСА: 2
-ПОТОЛОК ПОВТОРОВ: 15
-ПОТОЛОК ВЕСА: 16
-ПРИ ПОТОЛКЕ: да
-
-ДЕНЬ: Вт, Пт
-КРУГИ: 4
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
-
-УПРАЖНЕНИЕ: Приседания
-ОПИСАНИЕ: Ноги на ширине плеч, носки слегка развёрнуты. Отводя таз назад, присядь до параллели бёдер с полом, колени направлены в сторону носков. Вес на пятках, спина прямая, взгляд вперёд. Поднимаясь, сожми ягодицы в верхней точке.
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 20
-ОТДЫХ: 30
-УСЛОЖНЯТЬ: да
-ШАГ: 3
-ПОТОЛОК: 35
-ЗАМЕНА: Приседания с гантелями
-ОПИСАНИЕ ЗАМЕНЫ: Возьми по гантели в каждую руку и держи их вдоль тела. Приседай до параллели бёдер с полом, спина прямая, колени в сторону носков. Вставай, отталкиваясь пятками и сжимая ягодицы наверху.
-
-=== ШАБЛОН МОЕГО ЗАПРОСА ===
-Цель, уровень, сколько раз в неделю и в какие дни, длительность, инвентарь, ограничения, время начала, одинаковая тренировка во все дни или разные. Чего нет в запросе — реши сам.
-
-Мой запрос: `;
+function aiPrompt(){
+  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', appLocale === 'ru' ? 'Russian' : 'English');
+}
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -10785,7 +11345,7 @@ function qChips(boxId, opts, isMulti, get, set){
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip'; b.textContent = o;
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(o);
     const sel = get();
     b.classList.toggle('act', isMulti ? sel.includes(o) : sel === o);
     b.onclick = ()=>{
@@ -10822,8 +11382,8 @@ function qCards(boxId, opts, get, set){
     b.type = 'button'; b.className = 'opt-card';
     b.classList.toggle('act', get() === o);
     b.innerHTML = `<span class="oc-mark">${icon('check')}</span><span class="oc-txt"><b></b><small></small></span>`;
-    b.querySelector('b').textContent = o;
-    b.querySelector('small').textContent = Q_DESC[o] || '';
+    b.querySelector('b').textContent = canonicalLabel(o);
+    b.querySelector('small').textContent = canonicalDescription(o) || Q_DESC[o] || '';
     b.onclick = ()=>{ set(get() === o ? '' : o); qCards(boxId, opts, get, set); };
     box.appendChild(b);
   });
@@ -10848,7 +11408,7 @@ function initAIForm(){
   const db = $('qDays'); db.innerHTML = '';
   DAYS.forEach(d => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip'; b.textContent = d;
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(d);
     b.classList.toggle('act', q.days.includes(d));
     b.onclick = ()=>{
       q.days = q.days.includes(d) ? q.days.filter(x => x !== d) : DAYS.filter(x => q.days.includes(x) || x === d);
@@ -10871,67 +11431,77 @@ $('qSplit').onclick = ()=>{
 };
 $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
 
+function aiChoiceEnglish(v){
+  const map = {
+    'Новичок':'beginner', 'Средний':'intermediate', 'Продвинутый':'advanced',
+    'Круговая':'circuit', 'Силовая':'strength', 'Смешанная':'mixed',
+    'С разминкой':'with warm-up', 'Без разминки':'without warm-up',
+    'Без ограничений':'no stated limitations', 'Без прыжков':'no jumping',
+    'Тихо (соседи снизу)':'quiet / low-impact for downstairs neighbors',
+    'Берегу колени':'protect knees', 'Берегу поясницу':'protect lower back',
+    'Берегу запястья':'protect wrists', 'Берегу шею':'protect neck',
+    'Беременность':'pregnancy'
+  };
+  return map[v] || String(v || '');
+}
+function aiListEnglish(arr){
+  return (arr || []).map(aiChoiceEnglish).join(', ');
+}
 function composeRequest(){
-  // всё, что не выбрано, отдаём на усмотрение ИИ — и говорим об этом прямо
   const parts = [];
   const free = [];
 
-  if(q.goal.length) parts.push(`Цель: ${q.goal.join(', ').toLowerCase()}.`);
-  else free.push('цель');
+  if(q.goal.length) parts.push(`Goal: ${aiListEnglish(q.goal)}.`);
+  else free.push('goal');
 
-  if(q.level) parts.push(`Уровень: ${q.level.toLowerCase()}.`);
-  else free.push('уровень подготовки');
+  if(q.level) parts.push(`Level: ${aiChoiceEnglish(q.level)}.`);
+  else free.push('fitness level');
 
-  if(q.days.length) parts.push(`Дни: ${q.days.join(', ')}.`);
-  else free.push('дни недели и количество тренировок');
+  if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
+  else free.push('training days and weekly frequency');
 
-  if(q.dur) parts.push(`Длительность: около ${q.dur}.`);
-  else free.push('длительность');
+  if(q.dur) parts.push(`Target duration: about ${String(q.dur).replace('мин', 'minutes')}.`);
+  else free.push('workout duration');
 
-  if(q.focus.length) parts.push(`Особый акцент на: ${q.focus.join(', ').toLowerCase()}.`);
+  if(q.focus.length) parts.push(`Extra focus: ${aiListEnglish(q.focus)}.`);
 
-  if(q.equip.length) parts.push(`Инвентарь: ${q.equip.join(', ').toLowerCase()}.`);
-  else free.push('инвентарь (исходи из домашних условий)');
+  if(q.equip.length) parts.push(`Available equipment: ${aiListEnglish(q.equip)}.`);
+  else free.push('equipment; assume a normal home setting if unspecified');
 
-  if(q.limit.length) parts.push(`Ограничения: ${q.limit.join(', ').toLowerCase()}.`);
+  if(q.limit.length) parts.push(`Limitations/preferences: ${aiListEnglish(q.limit)}.`);
 
-  // формат тренировки
   if(q.style === 'Круговая'){
-    parts.push('Формат: круговая тренировка — весь список упражнений проходится подряд и повторяется целиком. Поставь КРУГИ 2–5, а ПОДХОДЫ у упражнений оставь 1.');
+    parts.push('Structure: circuit. Repeat the whole exercise list; use КРУГИ 2-5 and usually ПОДХОДЫ 1.');
   } else if(q.style === 'Силовая'){
-    parts.push('Формат: силовая тренировка — все подходы одного упражнения выполняются подряд, потом переход к следующему. Поставь КРУГИ: 1, объём задай полем ПОДХОДЫ (обычно 3–4) и диапазоном повторений в ЗНАЧЕНИИ, например 10-12.');
+    parts.push('Structure: strength. Complete all sets of one exercise before moving on; use КРУГИ: 1 and usually ПОДХОДЫ 3-4.');
   } else if(q.style === 'Смешанная'){
-    parts.push('Формат: смешанная тренировка — блок упражнений с подходами повторяется кругами. Поставь КРУГИ 2–3 и ПОДХОДЫ 2–3 одновременно, но следи за общим объёмом: каждое упражнение выполнится КРУГИ × ПОДХОДЫ раз.');
+    parts.push('Structure: mixed. A block with multiple sets repeats for multiple rounds; usually КРУГИ 2-3 and ПОДХОДЫ 2-3, while keeping total volume sensible.');
   } else {
-    free.push('формат — круговая (список повторяется кругами), силовая (подходы подряд у каждого упражнения) или смешанная');
+    free.push('workout structure: circuit, strength, or mixed');
   }
 
-  // разминка
   if(q.warm === 'С разминкой'){
-    parts.push('Добавь в начало разминочные упражнения со строкой РАЗМИНКА: да — они выполняются один раз и не повторяются каждый круг.');
+    parts.push('Include warm-up exercises at the beginning and mark each with РАЗМИНКА: да. They run once before the rounds.');
   } else if(q.warm === 'Без разминки'){
-    parts.push('Разминочные упражнения не добавляй.');
+    parts.push('Do not add warm-up exercises.');
   } else {
-    free.push('нужна ли разминка и сколько в ней упражнений');
+    free.push('whether a warm-up is needed and how long it should be');
   }
 
-  // варианты по дням
   if(q.split){
-    parts.push('Сделай разные упражнения в разные дни — раздели программу по группам мышц.');
-    if(q.rotate) parts.push('Поставь ЧЕРЕДОВАНИЕ: да, не указывай дни у вариантов, а общее расписание задай строкой ДНИ ТРЕНИРОВОК.');
-    else parts.push('Поставь ЧЕРЕДОВАНИЕ: нет и укажи конкретные дни недели у каждого варианта.');
+    parts.push('Use different exercise sets on different workout days, split logically by muscle groups or training focus.');
+    if(q.rotate) parts.push('Use ЧЕРЕДОВАНИЕ: да, leave ДЕНЬ values empty for variants, and put the shared schedule in ДНИ ТРЕНИРОВОК.');
+    else parts.push('Use ЧЕРЕДОВАНИЕ: нет and assign canonical weekday tokens to each variant.');
   } else {
-    free.push('делить ли программу на разные дни или сделать одинаковой');
+    free.push('whether to split into different day variants or keep one repeating workout');
   }
 
-  let s = 'Составь программу тренировок. ' + userForAI() + ' ' + parts.join(' ');
-  if(free.length){
-    s += ` Не указано — реши сам(а), исходя из программы и здравого смысла: ${free.join('; ')}.`;
-  }
-  if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
-  return s.trim();
+  let out = 'Build a home-workout program. ' + userForAI() + ' ' + parts.join(' ');
+  if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
+  if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
+  return out.trim();
 }
-const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
+const fullAIPrompt = ()=> aiPrompt() + '\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
@@ -11204,7 +11774,7 @@ function setPause(p, silent){
   // Голосом отмечаем только ВХОД в паузу: на выходе и так идёт отсчёт, а второе
   // слово поверх него только мешает. silent — когда пауза не новость: мы её и не
   // снимали, просто вернулись из редактора упражнения.
-  if(p && !silent) speak('Пауза');
+  if(p && !silent) speak(voiceIsEnglish() ? 'Paused' : 'Пауза');
   paintPause();
 }
 // Красная плашка и кнопка ВСЕГДА рисуются по state.paused и никогда — мимо него.
@@ -11408,7 +11978,11 @@ function renderStep(){
     setTimeout(()=>{
       if(state.stepToken !== myToken) return;
       const n2 = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
-      speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
+      if(voiceIsEnglish()){
+        speak('Switch sides' + (n2 && n2.side ? `. Side ${n2.side} of ${n2.sidesTotal || 2}` : ''));
+      } else {
+        speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
+      }
     }, 260);
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
@@ -11614,15 +12188,15 @@ function swapSourceExercise(){
 }
 
 function swapAIPrompt(ex, swap){
-  return 'Замени упражнение домашней тренировки на более сложное и верни НОВОЕ упражнение целиком в формате ниже. ' +
-    'Верни только блок упражнения, без пояснений до и после.\n\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'НА ЧТО ЗАМЕНИТЬ: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
-    'ПОЧЕМУ: текущее упражнение доросло до своего потолка, дальше нагрузка не растёт. Нужен следующий уровень того же движения.\n' +
-    'ВАЖНО: подбери НОВЫЕ стартовые значения под возросшую сложность (обычно меньше повторений или секунд, чем в старом упражнении), свой ШАГ и свой ПОТОЛОК. ' +
-    'Число подходов и отдых сохрани близкими к текущим. Если у нового упражнения тоже есть следующий уровень сложности — укажи его в строках ЗАМЕНА и ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
-    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    EX_ANSWER_FORMAT;
+  return 'Replace this home-workout exercise with the specified harder progression and return the COMPLETE NEW exercise using the protocol below. ' +
+    'Return only the new exercise block, with no explanation before or after it.\n\n' +
+    'USER: ' + userForAI() + '\n' +
+    'TARGET REPLACEMENT: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
+    'WHY: the current exercise has reached its progression ceiling, so the next level of the same movement pattern is needed.\n' +
+    'IMPORTANT: choose NEW starting values appropriate for the harder exercise, usually fewer reps or seconds than the old exercise, plus a sensible new progression increment and ceiling. ' +
+    'Keep set count and rest reasonably close to the current exercise. If the new exercise also has a clear harder next step, include it in ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
+    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
+    exAnswerFormat();
 }
 
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
@@ -12408,9 +12982,9 @@ function syncPrefs(){
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
-  $('btnSoundW').title = 'Настройки звука';
+  $('btnSoundW').title = t('top.soundTitle');
   $('btnMicW').classList.toggle('listening', hfMode !== 'off');
-  $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', headset:'гарнитура'}[hfMode] || 'выкл');
+  $('btnMicW').title = t('top.voiceTitle') + ': ' + ({off:t('common.off'), voice:t('common.voice'), headset:t('common.headset')}[hfMode] || t('common.off'));
   // держим три каскада («старт», «тренировка», «профиль») в согласованном состоянии
   ['st', 'snd'].forEach(p => {
     const btn = $(p + 'SoundOn');
@@ -12471,13 +13045,13 @@ function applyVoiceCommand(input){
 /* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
 let hfMode = 'off'; // off | voice | headset
 
-const HF_HINTS = {
-  off: 'Переключай этапы кнопками на экране.',
-  voice: (window.FitNative && window.FitNative.offlineVoice)
-    ? 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.'
-    : 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
-  headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
-};
+function hfHintText(mode){
+  if(mode === 'voice'){
+    return t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
+  }
+  if(mode === 'headset') return t('handsfree.headsetHint');
+  return t('handsfree.offHint');
+}
 
 function setHfMode(mode){
   hfMode = mode;
@@ -12924,21 +13498,19 @@ async function nativeVoiceReady(){
 async function chooseHandsFree(mode){
   if(mode === 'voice'){
     if(!(window.FitNative && window.FitNative.offlineVoice) && !SR){
-      appAlert('На этом устройстве голосовое управление недоступно. Можно использовать кнопку на гарнитуре.');
+      appAlert(t('handsfree.unavailable'));
       return false;
     }
     if(window.FitNative && window.FitNative.offlineVoice && !(await nativeVoiceReady())){
       await refreshVoicePackUI();
-      appAlert('Сначала скачай голосовой пакет для выбранного языка. После загрузки команды будут работать без интернета.');
+      appAlert(t('handsfree.packFirst'));
       return false;
     }
   }
   setHfMode(mode);
   if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
-    appAlert((window.FitNative && window.FitNative.offlineVoice)
-      ? 'Готово. Во время тренировки скажи «дальше», «готово» или «пропустить», чтобы перейти дальше. «Пауза» остановит тренировку, «продолжить» — продолжит.'
-      : 'Голосовое управление включено. Скажи «дальше», «пауза» или «продолжить».');
+    appAlert(t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
   }
   return true;
 }
@@ -13091,7 +13663,7 @@ async function fillVoiceChoices(){
     list.forEach((v,i)=>{
       const o=document.createElement('option');
       o.value=v.id;
-      o.textContent=(v.name || ('Голос '+(i+1))) + (v.network ? ' · онлайн' : '');
+      o.textContent=(v.name || t('audio.voiceFallback',{count:i+1})) + (v.network ? ' · ' + t('audio.online') : '');
       sel.appendChild(o);
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
@@ -13121,24 +13693,24 @@ async function refreshVoicePackUI(progressEvent){
   else status = await window.FitNative.getVoiceModelStatus(recognitionLang);
 
   const size = (status && status.sizeMb) || (recognitionLang==='en' ? 40 : 45);
-  let label = status && status.installed ? 'Готово к работе офлайн' : `Нужно скачать один раз · около ${size} МБ`;
-  let button = status && status.installed ? 'Скачано' : 'Скачать';
+  let label = status && status.installed ? t('voicepack.ready') : t('voicepack.downloadOnce',{size});
+  let button = status && status.installed ? t('voicepack.downloaded') : t('voicepack.download');
   let disabled = !!(status && status.installed);
   if(status && status.status === 'queued'){
-    label = 'Загрузка поставлена в очередь. Можно выйти с этого экрана.';
-    button = 'В очереди';
+    label = t('voicepack.queued');
+    button = t('voicepack.inQueue');
     disabled = true;
   }else if(status && status.status === 'downloading'){
-    label = `Скачиваем… ${Math.max(0,Math.min(100,status.progress||0))}% · можно пользоваться приложением`;
-    button = 'Скачивается';
+    label = t('voicepack.downloading',{progress:Math.max(0,Math.min(100,status.progress||0))});
+    button = t('voicepack.downloadingBtn');
     disabled = true;
   }else if(status && status.status === 'extracting'){
-    label = 'Готовим пакет…';
-    button = 'Почти готово';
+    label = t('voicepack.extracting');
+    button = t('voicepack.almostReady');
     disabled = true;
   }else if(status && status.status === 'error'){
-    label='Не удалось скачать. Проверь интернет и попробуй ещё раз.';
-    button='Повторить';
+    label=t('voicepack.error');
+    button=t('voicepack.retry');
     disabled=false;
   }
   const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
@@ -13164,7 +13736,7 @@ async function downloadSelectedVoicePack(){
   for(const id of ['btnVoicePack','btnHfVoicePack']) if($(id)) $(id).disabled=true;
   const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
-  if(!ok) appAlert('Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.');
+  if(!ok) appAlert(t('voicepack.startError'));
 }
 
 function openHfModal(){
