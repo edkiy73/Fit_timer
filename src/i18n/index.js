@@ -80,3 +80,38 @@ function aiCanonicalEnglish(value){
 function aiCanonicalListEnglish(values){
   return (values || []).map(aiCanonicalEnglish).join(', ');
 }
+
+const CANONICAL_LABEL_KEYS = {
+  'Новичок':'option.level.beginner','Средний':'option.level.intermediate','Продвинутый':'option.level.advanced',
+  'Похудеть':'option.goal.loseWeight','Подтянуть всё тело':'option.goal.tone','Ягодицы и пресс':'option.goal.glutesCore',
+  'Плоский живот':'option.goal.flatStomach','Сила и выносливость':'option.goal.strength','Рельеф мышц':'option.goal.definition',
+  'Растяжка и гибкость':'option.goal.flexibility','Осанка и спина':'option.goal.posture',
+  'Восстановиться после родов':'option.goal.postpartum','Кардио и энергия':'option.goal.cardio',
+  'Без инвентаря':'option.equip.none','Коврик':'option.equip.mat','Гантели':'option.equip.dumbbells','Резинки':'option.equip.bands',
+  'Стул':'option.equip.chair','Фитбол':'option.equip.ball','Утяжелители':'option.equip.weights','Турник':'option.equip.bar',
+  'Без ограничений':'option.limit.none','Без прыжков':'option.limit.noJump','Тихо (соседи снизу)':'option.limit.quiet',
+  'Берегу колени':'option.limit.knees','Берегу поясницу':'option.limit.lowerBack','Берегу запястья':'option.limit.wrists',
+  'Берегу шею':'option.limit.neck','Беременность':'option.limit.pregnancy',
+  'Круговая':'option.style.circuit','Силовая':'option.style.strength','Смешанная':'option.style.mixed',
+  'С разминкой':'option.warm.with','Без разминки':'option.warm.without',
+  'Повторения':'option.format.reps','С весом':'option.format.weight','Время':'option.format.time',
+  'Шея':'muscle.neck','Плечи':'muscle.shoulders','Грудь':'muscle.chest','Руки':'muscle.arms','Пресс':'muscle.core',
+  'Спина':'muscle.back','Ягодицы':'muscle.glutes','Квадрицепс':'muscle.quads','Задняя бедра':'muscle.hamstrings','Икры':'muscle.calves',
+  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun'
+};
+const CANONICAL_DESC_KEYS = {
+  'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
+  'С разминкой':'option.desc.warm','Без разминки':'option.desc.noWarm'
+};
+function canonicalLabel(value){
+  const raw=String(value == null ? '' : value);
+  const key=CANONICAL_LABEL_KEYS[raw];
+  if(key) return t(key);
+  const m=raw.match(/^(\d+)(\+?)\s*мин$/);
+  if(m) return appLocale === 'ru' ? raw : (m[1] + m[2] + ' min');
+  return raw;
+}
+function canonicalDescription(value){
+  const key=CANONICAL_DESC_KEYS[String(value || '')];
+  return key ? t(key) : '';
+}
