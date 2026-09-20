@@ -16,5 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Проверить собранные исходники
-        run: npm run check:sources
+      - name: Проверить собранные исходники и AI-индекс
+        run: |
+          npm run check:sources
+          npm run check:ai-index

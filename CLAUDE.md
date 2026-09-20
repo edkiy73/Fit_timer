@@ -9,9 +9,10 @@ For every coding task:
 
 1. Read `AGENTS.md`.
 2. Read `.ai/project-map.md`.
-3. Identify the feature area.
-4. Search for the exact symbol, selector, UI text, route, or test before opening large files.
-5. Read only the relevant source ranges and targeted docs.
+3. Search `.ai/symbol-index.json` for the symbol, element id, action, or likely owner file.
+4. Identify the feature area.
+5. Search source text only if the index is insufficient.
+6. Read only the relevant source chunk and targeted docs.
 
 Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
@@ -155,12 +156,13 @@ Repo-wide reading is justified only for architecture, broad refactors, migration
 
 Use the cheapest relevant verification first:
 
-1. Targeted syntax/static check
-2. Relevant `tests/*.js`
-3. `python3 check.py`
-4. `npm run build`
-5. `npm run check:mobile`
-6. Native Android/iOS build only when native code/config changed or a package build is explicitly required
+1. After frontend edits: `npm run ai:index`, `npm run check:sources`, `npm run check:ai-index`
+2. Targeted syntax/static check
+3. Relevant `tests/*.js`
+4. `python3 check.py`
+5. `npm run build`
+6. `npm run check:mobile`
+7. Native Android/iOS build only when native code/config changed or a package build is explicitly required
 
 Do not repeatedly run expensive full builds while a cheaper failing check remains unresolved.
 

@@ -8,9 +8,10 @@ Goal: make the smallest correct change with the least repository reading and the
 Before editing:
 1. Read this file.
 2. Read `.ai/project-map.md`.
-3. Identify the feature area and read only the mapped files.
-4. Search for the exact UI text / function / selector / endpoint before opening large files.
-5. Read `docs/why.md` or a feature doc only when the task touches that feature.
+3. Search `.ai/symbol-index.json` for the function, element id, `data-act`, or likely owner file.
+4. Identify the feature area and read only the mapped files.
+5. Search source text only if the index is insufficient.
+6. Read `docs/why.md` or a feature doc only when the task touches that feature.
 
 Do **not** read all of `CLAUDE.md`, `app.js`, `style.css`, or `index.html` by default.
 They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed product history/reference, not the normal first read.
@@ -78,7 +79,7 @@ Use `.ai/project-map.md` to choose files. Typical routing:
 
 For a normal bug or UI task:
 - First pass: at most 2–5 relevant source files plus targeted tests.
-- Search before fetching a large file.
+- Search `.ai/symbol-index.json` before fetching source files; fall back to repository search only when needed.
 - For `app.js` / `style.css` / `index.html`, fetch only the surrounding range of matched symbols/selectors.
 - Do not reread unchanged files during the same task.
 - Do not open broad docs “for context” unless the task maps to them.
@@ -90,7 +91,7 @@ Repo-wide reading is appropriate only for architecture, migrations, broad refact
 
 Run the cheapest relevant verification first:
 
-1. `npm run check:sources` after source edits, then targeted syntax/static checks when available.
+1. After frontend source edits run `npm run ai:index`, then `npm run check:sources` and `npm run check:ai-index`; continue with targeted checks only after both pass.
 2. Relevant targeted `tests/*.js`.
 3. `python3 check.py` for broad frontend/API invariants.
 4. `npm run build` when shared web/mobile source changed.

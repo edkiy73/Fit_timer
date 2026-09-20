@@ -11,7 +11,9 @@
     "mobile:ios": "npm run mobile:sync && cap open ios",
     "check:mobile": "node scripts/check-mobile.mjs",
     "build:sources": "node scripts/build-sources.mjs",
-    "check:sources": "node scripts/build-sources.mjs --check"
+    "check:sources": "node scripts/build-sources.mjs --check",
+    "ai:index": "node scripts/generate-ai-index.mjs",
+    "check:ai-index": "node scripts/generate-ai-index.mjs --check"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
