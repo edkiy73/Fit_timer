@@ -75,7 +75,7 @@ $('workMore').onclick = e => { e.stopPropagation(); toggleMenu($('workMenu')); }
 (function buildWorkMenu(){
   const box = $('workMenu');
   const b = document.createElement('button');
-  b.innerHTML = icon('pencil') + 'Изменить упражнение';
+  b.innerHTML = icon('pencil') + t('workout.editExercise');
   b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); editExerciseFromWorkout(); };
   box.appendChild(b);
 })();
@@ -84,7 +84,7 @@ function editExerciseFromWorkout(){
   const step = state.steps[state.stepIdx];
   const src = step && liveExercise(step.exName);
   if(!src){
-    appAlert('Это упражнение не из сохранённой программы — менять нечего.');
+    appAlert(t('workout.editUnavailable'));
     return;
   }
   setPause(true);
@@ -177,11 +177,11 @@ function paintPause(){
   document.body.classList.toggle('paused', p);
   const btn = $('btnPause');
   btn.innerHTML = icon(p ? 'play' : 'pause');
-  btn.title = p ? 'Продолжить' : 'Пауза';
+  btn.title = p ? t('workout.resume') : t('workout.pause');
   btn.classList.toggle('paused', p);
   const step = state.steps[state.stepIdx];
   if(step){
-    $('phaseTag').textContent = p ? 'Пауза' : (step.phase==='rest' ? 'Отдых' : 'Упражнение');
+    $('phaseTag').textContent = p ? t('workout.pause') : (step.phase==='rest' ? t('workout.rest') : t('workout.exercise'));
   }
 }
 
@@ -284,7 +284,7 @@ function exerciseProgressLabel(step){
   const idx = step.round === 0
     ? warmupOrder.indexOf(step.exName) + 1
     : warmupOrder.length + mainOrder.indexOf(step.exName) + 1;
-  return `Упражнение ${idx} / ${total}`;
+  return t('workout.exerciseProgress',{idx,total});
 }
 
 function renderStep(){
@@ -306,12 +306,12 @@ function renderStep(){
   if(labelStep.round === 0){
     // в разминке кругов нет — вместо них показываем, какое это упражнение разминки по счёту
     const w = warmupPosition(labelStep);
-    rl = w ? `Разминка ${w.idx} / ${w.total}` : 'Разминка';
+    rl = w ? t('workout.warmupProgress',{idx:w.idx,total:w.total}) : t('workout.warmup');
   } else {
     // круг всего один — «Круг 1 / 1» ничего не сообщает, только занимает строку
-    rl = state.current.rounds > 1 ? `Круг ${labelStep.round} / ${state.current.rounds}` : '';
+    rl = state.current.rounds > 1 ? t('workout.roundProgress',{idx:labelStep.round,total:state.current.rounds}) : '';
   }
-  if(labelStep.setsTotal > 1) rl += (rl ? ' · ' : '') + `Подход ${labelStep.setNo} / ${labelStep.setsTotal}`;
+  if(labelStep.setsTotal > 1) rl += (rl ? ' · ' : '') + t('workout.setProgress',{idx:labelStep.setNo,total:labelStep.setsTotal});
   $('roundLabel').textContent = rl;
   $('stepLabel').textContent = exerciseProgressLabel(labelStep);
   $('btnPrev').disabled = state.stepIdx === 0;
@@ -327,7 +327,7 @@ function renderStep(){
   const mus = (step.phase === 'work' && step.muscles && step.muscles.length) ? step.muscles : null;
   if(mus){
     $('stepMuscles').innerHTML =
-      `<div class="m-chips">${mus.map(id => `<span class="m-chip">${M_LABEL[id] || id}</span>`).join('')}</div>`;
+      `<div class="m-chips">${mus.map(id => `<span class="m-chip">${canonicalLabel(M_LABEL[id] || id)}</span>`).join('')}</div>`;
     setShown('stepMuscles', true);
   } else {
     setShown('stepMuscles', false);
@@ -439,7 +439,7 @@ function renderStep(){
       + (step.repsNote ? `<span class="v-unit">${step.repsNote}</span> ` : '') + kgTxt;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
-    if(step.perSide){ snR.textContent = 'на каждую сторону'; setShown(snR, true); }
+    if(step.perSide){ snR.textContent = t('workout.eachSide'); setShown(snR, true); }
     else setShown(snR, false);
     setShown('countdown', false);
     setShown('btnDone', true);
@@ -459,11 +459,11 @@ function renderStep(){
     $('countRow').classList.toggle('with-kg', withKg);
     setShown('btnDone', false);
     setShown('btnSkip', true);
-    $('btnSkip').textContent = 'Пропустить';
+    $('btnSkip').textContent = t('workout.skip');
     // подпись для упражнений «на каждую сторону» — как у повторений
     const sn = $('sideNote');
     if(step.phase === 'work' && step.perSide){
-      sn.innerHTML = 'на каждую сторону' + (step.side ? ` · <b>сторона ${step.side} из ${step.sidesTotal || 2}</b>` : '');
+      sn.innerHTML = t('workout.eachSide') + (step.side ? ` · <b>${t('workout.sideProgress',{idx:step.side,total:step.sidesTotal || 2})}</b>` : '');
       setShown(sn, true);
     } else setShown(sn, false);
 
@@ -555,15 +555,15 @@ function nextStep(){
 function openSwapHint(){
   const step = state.steps[state.stepIdx];
   if(!step || !step.swap) return;
-  $('swapIntro').textContent = `«${step.title}» дошло до своего максимума — дальше нагрузка не растёт. Вот что можно делать вместо него:`;
+  $('swapIntro').textContent = t('workout.swapIntro',{title:step.title});
   $('swapName').textContent = step.swap.name;
-  $('swapDesc').textContent = step.swap.desc || 'Описание не задано.';
-  $('swapCopy').textContent = 'Скопировать название и описание';
+  $('swapDesc').textContent = step.swap.desc || t('workout.noDescription');
+  $('swapCopy').textContent = t('workout.copyNameDesc');
   // замена нейросетью входит в подписку, но кнопку видно всегда: без подписки она
   // ведёт на витрину, а не притворяется, что функции не существует
   setShown('swapAI', true);
   $('swapOk').className = 'btn-ghost';
-  $('swapHint').textContent = 'Нейросеть подберёт технику и новые значения — упражнение заменится сразу.';
+  $('swapHint').textContent = t('workout.swapAIHint');
   $('swapModal').classList.add('open');
 }
 function closeSwapHint(){ $('swapModal').classList.remove('open'); }
@@ -613,20 +613,19 @@ async function swapViaAI(){
   if(!premiumGate()) return;
   const src = swapSourceExercise();
   if(!src || !src.step.swap){
-    appAlert('Не получилось найти это упражнение в программе — замени его через редактор программы.');
+    appAlert(t('workout.swapNotFound'));
     return;
   }
   const oldName = src.ex.name;
   closeSwapHint();
-  aiRunOpen('Подбираю замену');
+  aiRunOpen(t('workout.swapPicking'));
   let text;
   try{
     text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
-    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
-      '\n\nМожно попробовать ещё раз или заменить упражнение вручную после тренировки.');
+    appAlert(t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}));
     return;
   }
   aiRunClose();
@@ -634,7 +633,7 @@ async function swapViaAI(){
   const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + text);
   const got = (program.plans[0] && program.plans[0].exercises[0]) || null;
   if(!got || !(got.name || '').trim()){
-    appAlert('В ответе нейросети не нашлось упражнения. Попробуй ещё раз.');
+    appAlert(t('workout.aiNoExercise'));
     return;
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
@@ -652,7 +651,7 @@ async function swapViaAI(){
   const onCurrent = refreshLiveSteps(oldName, got);
   if(onCurrent) renderStep();               // это же упражнение прямо сейчас — показываем новое
   else renderNextUp(state.steps[state.stepIdx]);
-  appAlert(`Теперь это «${got.name}». Подходы и отдых до конца тренировки останутся прежними, дальше программа пойдёт уже с новым упражнением.`);
+  appAlert(t('workout.swapReplaced',{name:got.name}));
 }
 
 // шаг назад — если пропустил случайно или хочешь переделать подход
@@ -677,18 +676,18 @@ function renderNextUp(step){
     ? `<img src="${esc(nxt.media.data)}" alt="">`
     : DUMBBELL_ICON;
   // рабочий вес — часть задания: на отдыхе по нему решают, что нести к коврику
-  const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} кг` : '';
+  const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}` : '';
   let val = nxt.kind === 'click'
-    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || 'повторений')}${kg}${nxt.perSide ? ' на каждую сторону' : ''}`.trim()
-    : `${nxt.seconds} сек${kg}${nxt.perSide ? ' на каждую сторону' : ''}`;
+    ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || t('workout.repsShort'))}${kg}${nxt.perSide ? ' ' + t('workout.eachSide') : ''}`.trim()
+    : `${nxt.seconds} ${t('workout.secShort')}${kg}${nxt.perSide ? ' ' + t('workout.eachSide') : ''}`;
   // подход и сторона — чтобы было видно, что именно предстоит
   const meta = [];
-  if(nxt.setsTotal > 1) meta.push(`подход ${nxt.setNo}/${nxt.setsTotal}`);
-  if(nxt.side) meta.push(`сторона ${nxt.side}/${nxt.sidesTotal || 2}`);
+  if(nxt.setsTotal > 1) meta.push(`${t('workout.setLower')} ${nxt.setNo}/${nxt.setsTotal}`);
+  if(nxt.side) meta.push(`${t('workout.sideLower')} ${nxt.side}/${nxt.sidesTotal || 2}`);
   if(meta.length) val += ` · ${meta.join(' · ')}`;
 
   nu.innerHTML =
-    `<div class="nu-label">Дальше</div>` +
+    `<div class="nu-label">${esc(t('workout.next'))}</div>` +
     `<div class="nu-row">` +
       `<div class="nu-media">${media}</div>` +
       `<div class="nu-body"><h4>${esc(nxt.title)}</h4>` +
@@ -898,7 +897,7 @@ async function shareResult(){
   // заголовок
   x.fillStyle = col('--ink');
   x.font = '500 46px Rubik, sans-serif';
-  x.fillText('Тренировка завершена!', W / 2, 208);
+  x.fillText(t('workout.finishedCanvas'), W / 2, 208);
 
   // разомкнутое кольцо + время
   x.strokeStyle = col('--work');
@@ -911,7 +910,7 @@ async function shareResult(){
   x.fillText(fmt(state.lastTotalSec || 0), W / 2, 520);
   x.fillStyle = col('--muted');
   x.font = '500 34px Rubik, sans-serif';
-  x.fillText('минуты : секунды', W / 2, 578);
+  x.fillText(t('workout.timeFormat'), W / 2, 578);
 
   // название программы
   x.fillStyle = col('--work');
@@ -923,9 +922,11 @@ async function shareResult(){
   // чипы статистики
   const streak = calcStreak();
   const chips = [];
-  if(state.lastKcal) chips.push(`🔥 ≈${state.lastKcal} ккал`);
+  if(state.lastKcal) chips.push(`🔥 ≈${state.lastKcal} ${t('workout.kcal')}`);
   if(streak > 1) chips.push(`⚡ ${streak} ${streakWord(streak, calcStreakInfo().byPlan)}`);
-  chips.push(`💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`);
+  chips.push(appLocale === 'ru'
+    ? `💪 ${stats.count} ${plural(stats.count, 'тренировка', 'тренировки', 'тренировок')}`
+    : `💪 ${stats.count} ${stats.count === 1 ? 'workout' : 'workouts'}`);
   x.font = '500 36px Rubik, sans-serif';
   const pad = 34, gap = 20, ch = 84, maxW = W - 80;
   const widths = chips.map(t => Math.min(maxW, x.measureText(t).width + pad * 2));
@@ -956,15 +957,14 @@ async function shareResult(){
   const dateY = Math.max(1180, cy0 + 60);
   x.fillStyle = col('--muted');
   x.font = '500 36px Rubik, sans-serif';
-  x.fillText(`${now.getDate()} ${MONTH_OF[now.getMonth()]} ${now.getFullYear()}`, W / 2, dateY);
+  x.fillText(new Intl.DateTimeFormat(localeTag(), {day:'numeric',month:'long',year:'numeric'}).format(now), W / 2, dateY);
   x.fillStyle = col('--muted');
   x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, dateY + 60);
 
   c.toBlob(async blob => {
-    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    await shareGeneratedFile(blob, 'fittimer-result.png', 'Результат тренировки — Fit Timer',
-      'Картинка сохранена в загрузки — отправь её из галереи.');
+    if(!blob){ appAlert(t('workout.imageError')); return; }
+    await shareGeneratedFile(blob, 'fittimer-result.png', t('workout.shareTitle'), t('workout.shareFallback'));
   }, 'image/png');
 }
 
