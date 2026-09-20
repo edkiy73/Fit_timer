@@ -57,7 +57,7 @@ const I18N_RU = {
   'handsfree.offHint': 'Переключай этапы кнопками на экране.',
   'handsfree.voiceHintNative': 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.',
   'handsfree.voiceHintWeb': 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
-  'handsfree.headsetHint': 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
+  'handsfree.headsetHint': 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.',
   'common.cancel': "Отмена",
   'common.done': "Готово",
   'common.save': "Сохранить",
@@ -249,7 +249,7 @@ const I18N_EN = {
   'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',
   'handsfree.voiceHintNative': 'Choose a command language and download its voice pack. After that Fit Timer listens on your phone — offline and without system microphone tones.',
   'handsfree.voiceHintWeb': 'Say “next”, “pause”, or “continue”. In the browser, recognition depends on your phone and may require internet.',
-  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.'
+  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.',
   'common.cancel': "Cancel",
   'common.done': "Done",
   'common.save': "Save",

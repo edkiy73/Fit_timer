@@ -57,7 +57,7 @@ const I18N_EN = {
   'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',
   'handsfree.voiceHintNative': 'Choose a command language and download its voice pack. After that Fit Timer listens on your phone — offline and without system microphone tones.',
   'handsfree.voiceHintWeb': 'Say “next”, “pause”, or “continue”. In the browser, recognition depends on your phone and may require internet.',
-  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.'
+  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.',
   'common.cancel': "Cancel",
   'common.done': "Done",
   'common.save': "Save",
