@@ -30,6 +30,10 @@ Production web/API: `https://fittimer99.vercel.app`
 Mobile app id: `ru.fittimer.app`
 Production branch: `main`
 
+## Feature router
+
+`.ai/feature-router.json` maps natural-language task categories to the smallest likely source files, tests, docs and verification commands. Use `npm run ai:route -- "task description"` before source search when the task is described in product language rather than by a known symbol.
+
 ## AI lookup index
 
 `.ai/symbol-index.json` is a generated lookup table for canonical frontend sources. It maps files to function names, HTML element ids and `data-act` actions. Search it before opening source files. Regenerate after frontend source changes with `npm run ai:index`; verify with `npm run check:ai-index`.

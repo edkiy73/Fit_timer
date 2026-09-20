@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "description": "Natural-language task router for FitTimer. Choose the closest feature before searching source code.",
+  "routes": [
+    {
+      "id": "share-mobile",
+      "keywords": [
+        "поделиться",
+        "шеринг",
+        "share",
+        "apk",
+        "android share",
+        "ios share",
+        "галерея",
+        "сохранить картинку",
+        "результат тренировки",
+        "фотосравнение"
+      ],
+      "files": [
+        "mobile.js",
+        "src/app/70-workout.js",
+        "src/html/20-workout-finish.html",
+        "src/styles/20-finish.css"
+      ],
+      "tests": [
+        "tests/media-flow.js",
+        "tests/api-flow.js"
+      ],
+      "docs": [
+        "docs/mobile-release.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "npm run build",
+        "npm run check:mobile"
+      ],
+      "notes": "First distinguish browser Web Share from Capacitor native Share/Filesystem behavior."
+    },
+    {
+      "id": "auth-account",
+      "keywords": [
+        "аккаунт",
+        "логин",
+        "войти",
+        "регистрация",
+        "почта",
+        "код",
+        "email",
+        "auth",
+        "nickname",
+        "никнейм",
+        "удалить аккаунт"
+      ],
+      "files": [
+        "src/app/20-account.js",
+        "api/auth.js",
+        "lib/store.js",
+        "lib/mail.js",
+        "src/html/30-onboarding-account.html",
+        "src/html/40-profiles.html"
+      ],
+      "tests": [
+        "tests/account-flow.js",
+        "tests/api-flow.js",
+        "tests/sync-flow.js"
+      ],
+      "docs": [
+        "docs/setup-vercel.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "python3 check.py"
+      ]
+    },
+    {
+      "id": "trainer",
+      "keywords": [
+        "тренер",
+        "подопечный",
+        "подопечные",
+        "trainer",
+        "coach",
+        "handle",
+        "ник тренера",
+        "страница тренера"
+      ],
+      "files": [
+        "src/app/50-trainer-catalog.js",
+        "api/trainer/[handle].js",
+        "src/html/30-onboarding-account.html",
+        "src/html/50-profile-progress.html"
+      ],
+      "tests": [
+        "tests/trainer-page.js",
+        "tests/trainer-feedback.js",
+        "tests/account-flow.js"
+      ],
+      "docs": [
+        "docs/trainer-ui.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "python3 check.py"
+      ]
+    },
+    {
+      "id": "catalog",
+      "keywords": [
+        "каталог",
+        "store",
+        "catalog",
+        "заявка в каталог",
+        "публикация программы",
+        "программа в каталоге",
+        "админка каталога"
+      ],
+      "files": [
+        "src/app/50-trainer-catalog.js",
+        "api/catalog.js",
+        "api/admin.js",
+        "admin.html",
+        "lib/seed.js"
+      ],
+      "tests": [
+        "tests/catalog-flow.js",
+        "tests/store-page.js",
+        "tests/admin-flow.js"
+      ],
+      "docs": [
+        "docs/trainer-ui.md",
+        "docs/setup-vercel.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "python3 check.py"
+      ]
+    },
+    {
+      "id": "sync-storage",
+      "keywords": [
+        "синхронизация",
+        "sync",
+        "upstash",
+        "redis",
+        "storage",
+        "данные не синхронизируются",
+        "другой телефон",
+        "серверные данные"
+      ],
+      "files": [
+        "src/app/10-data-sync.js",
+        "api/sync.js",
+        "lib/store.js",
+        "api/health.js"
+      ],
+      "tests": [
+        "tests/sync-api.js",
+        "tests/sync-flow.js"
+      ],
+      "docs": [
+        "docs/setup-vercel.md",
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run check:sources",
+        "python3 check.py"
+      ]
+    },
+    {
+      "id": "ai-generation",
+      "keywords": [
+        "ии",
+        "ai",
+        "генерация",
+        "gemini",
+        "openai",
+        "модель",
+        "провайдер",
+        "fallback",
+        "цена ии",
+        "лимит ии",
+        "промпт"
+      ],
+      "files": [
+        "src/app/40-programs-ai.js",
+        "src/app/60-builder.js",
+        "lib/ai.js",
+        "lib/ai-endpoint.js",
+        "api/admin.js",
+        "admin.html"
+      ],
+      "tests": [
+        "tests/ai-api.js",
+        "tests/parse-flat.js"
+      ],
+      "docs": [
+        "docs/ai-runtime.md",
+        "docs/ai-generation-plan.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "python3 check.py"
+      ]
+    },
+    {
+      "id": "program-builder",
+      "keywords": [
+        "конструктор",
+        "builder",
+        "упражнение",
+        "редактор упражнения",
+        "создать программу",
+        "настройки программы",
+        "вариант тренировки",
+        "разминка"
+      ],
+      "files": [
+        "src/app/60-builder.js",
+        "src/html/10-programs-builder.html",
+        "src/styles/00-foundation.css",
+        "src/styles/50-components-trainer.css"
+      ],
+      "tests": [
+        "tests/program-actions.js",
+        "tests/parse-flat.js",
+        "tests/start-overview.js"
+      ],
+      "docs": [
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index"
+      ]
+    },
+    {
+      "id": "progression",
+      "keywords": [
+        "прогрессия",
+        "нагрузка",
+        "шаг прогрессии",
+        "повторы",
+        "вес",
+        "время",
+        "увеличение нагрузки",
+        "progression"
+      ],
+      "files": [
+        "src/app/40-programs-ai.js",
+        "src/app/60-builder.js",
+        "src/app/70-workout.js",
+        "src/html/10-programs-builder.html"
+      ],
+      "tests": [
+        "tests/program-actions.js",
+        "tests/start-overview.js"
+      ],
+      "docs": [
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index"
+      ]
+    },
+    {
+      "id": "workout-runtime",
+      "keywords": [
+        "тренировка",
+        "таймер",
+        "пауза",
+        "отдых",
+        "следующее упражнение",
+        "workout",
+        "timer",
+        "finish",
+        "завершение тренировки"
+      ],
+      "files": [
+        "src/app/70-workout.js",
+        "src/app/00-core.js",
+        "src/html/20-workout-finish.html",
+        "src/styles/10-start-workout.css",
+        "src/styles/20-finish.css"
+      ],
+      "tests": [
+        "tests/start-overview.js",
+        "tests/nav-flow.js",
+        "tests/report-auto.js"
+      ],
+      "docs": [
+        "docs/mobile-release.md",
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "npm run build"
+      ]
+    },
+    {
+      "id": "progress-stats",
+      "keywords": [
+        "прогресс",
+        "статистика",
+        "вес",
+        "фото",
+        "фотопрогресс",
+        "история веса",
+        "достижения",
+        "график"
+      ],
+      "files": [
+        "src/app/30-progress-media.js",
+        "src/app/10-data-sync.js",
+        "src/html/50-profile-progress.html",
+        "src/styles/60-progress.css"
+      ],
+      "tests": [
+        "tests/report-detail.js",
+        "tests/media-flow.js"
+      ],
+      "docs": [
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index"
+      ]
+    },
+    {
+      "id": "mobile-release-update",
+      "keywords": [
+        "apk",
+        "aab",
+        "ios",
+        "android",
+        "обновление не ставится",
+        "versioncode",
+        "versionname",
+        "подпись",
+        "keystore",
+        "google play",
+        "app store",
+        "capacitor"
+      ],
+      "files": [
+        "capacitor.config.json",
+        ".github/workflows/android.yml",
+        ".github/workflows/ios.yml",
+        "android/",
+        "ios/",
+        "scripts/check-mobile.mjs",
+        "scripts/build-web.mjs"
+      ],
+      "tests": [],
+      "docs": [
+        "docs/mobile-release.md"
+      ],
+      "checks": [
+        "npm run build",
+        "npm run check:mobile"
+      ],
+      "notes": "Do not replace signing material. Check package id, signing certificate, versionCode/versionName and install source."
+    },
+    {
+      "id": "notifications-audio-handsfree",
+      "keywords": [
+        "уведомления",
+        "notification",
+        "звук",
+        "audio",
+        "голос",
+        "voice",
+        "гарнитура",
+        "наушники",
+        "hands free",
+        "тактильная",
+        "haptics"
+      ],
+      "files": [
+        "src/app/80-platform.js",
+        "src/app/00-core.js",
+        "mobile.js",
+        "android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java",
+        "android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java"
+      ],
+      "tests": [],
+      "docs": [
+        "docs/mobile-release.md",
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index",
+        "npm run build",
+        "npm run check:mobile"
+      ]
+    },
+    {
+      "id": "vercel-infra",
+      "keywords": [
+        "vercel",
+        "region",
+        "регион",
+        "functions",
+        "deploy",
+        "deployment",
+        "env",
+        "environment variable",
+        "upstash",
+        "redis",
+        "storage",
+        "сервер"
+      ],
+      "files": [
+        "vercel.json",
+        "api/health.js",
+        "lib/store.js"
+      ],
+      "tests": [],
+      "docs": [
+        "docs/setup-vercel.md"
+      ],
+      "checks": [
+        "python3 check.py"
+      ],
+      "notes": "Inspect dashboard/runtime state when the issue can differ from repository configuration."
+    },
+    {
+      "id": "navigation-ui",
+      "keywords": [
+        "навигация",
+        "назад",
+        "back",
+        "dock",
+        "вкладка",
+        "tab",
+        "modal",
+        "попап",
+        "экран",
+        "ui",
+        "верстка",
+        "layout"
+      ],
+      "files": [
+        "src/app/00-core.js",
+        "src/app/90-events.js",
+        "src/html/00-shell-home.html",
+        "src/styles/00-foundation.css"
+      ],
+      "tests": [
+        "tests/nav-flow.js"
+      ],
+      "docs": [
+        "docs/why.md"
+      ],
+      "checks": [
+        "npm run ai:index",
+        "npm run check:sources",
+        "npm run check:ai-index"
+      ]
+    }
+  ]
+}

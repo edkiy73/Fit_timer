@@ -9,10 +9,11 @@ For every coding task:
 
 1. Read `AGENTS.md`.
 2. Read `.ai/project-map.md`.
-3. Search `.ai/symbol-index.json` for the symbol, element id, action, or likely owner file.
-4. Identify the feature area.
-5. Search source text only if the index is insufficient.
-6. Read only the relevant source chunk and targeted docs.
+3. Route natural-language tasks through `.ai/feature-router.json` or `npm run ai:route -- "task"`.
+4. Search `.ai/symbol-index.json` for the symbol, element id, action, or likely owner file.
+5. Identify the feature area.
+6. Search source text only if the router/index are insufficient.
+7. Read only the relevant source chunk and targeted docs.
 
 Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
