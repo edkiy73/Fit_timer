@@ -6,7 +6,8 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 
 ```text
 Web/PWA
-  index.html + style.css + app.js
+  src/html/* + src/styles/* + src/app/*
+  -> generated index.html + style.css + app.js
           |
           +--> local state: kvGet/kvSet (IndexedDB -> localStorage fallback)
           |
@@ -33,16 +34,29 @@ Production branch: `main`
 
 | File | Owns | Read when |
 |---|---|---|
-| `index.html` | screen/modal markup and structure | adding/moving UI, finding element IDs |
-| `style.css` | shared visual system and screen styling | layout/spacing/visual bugs |
-| `app.js` | main application behavior/state/workouts/programs/account/trainer/catalog/sync | behavior changes; search symbol first |
+| `src/html/*.html` | canonical screen/modal markup chunks | adding/moving UI, finding element IDs |
+| `src/styles/*.css` | canonical style chunks | layout/spacing/visual bugs |
+| `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
+| `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
 | `app.config.js` | runtime public config bootstrap | API/public URL behavior |
 | `sw.js` | PWA service worker/cache | stale assets/update behavior |
 | `manifest.webmanifest` | PWA metadata | install/PWA metadata |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
-Large-file rule: never fetch all of `app.js`, `style.css`, or `index.html` when a search/range is enough.
+Canonical JS chunks:
+- `src/app/00-core.js` — shared core/navigation/start helpers.
+- `src/app/10-data-sync.js` — users, persistence, sync/calendar foundations.
+- `src/app/20-account.js` — profile/account/subscription/login/biometrics.
+- `src/app/30-progress-media.js` — warmup, photos, export/import, onboarding.
+- `src/app/40-programs-ai.js` — progression, home/programs, sharing, AI/images.
+- `src/app/50-trainer-catalog.js` — trainer/trainees/catalog.
+- `src/app/60-builder.js` — program builder/exercise editor/text+AI creation.
+- `src/app/70-workout.js` — steps, timer/engine, finish/result sharing.
+- `src/app/80-platform.js` — theme, voice/hands-free, notifications.
+- `src/app/90-events.js` — event/action wiring.
+
+Large-file rule: search `src/**` and open only the matching chunk. Root `app.js`, `style.css`, and `index.html` are generated outputs.
 
 ## Backend
 

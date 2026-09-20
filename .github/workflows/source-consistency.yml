@@ -1,0 +1,20 @@
+name: Source parts — consistency
+
+on:
+  pull_request:
+    paths: ['src/**', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Проверить собранные исходники
+        run: npm run check:sources

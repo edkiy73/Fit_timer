@@ -1,0 +1,367 @@
+<!-- Профили -->
+  <!-- СТАТИСТИКА.
+       Экран отвечает на три вопроса, и в этом порядке: «я вообще занимаюсь?»
+       (неделя и серия), «стало лучше?» (тело и фото), «что изменилось за месяц?»
+       (сравнение месяцев в календаре). Большого h1 здесь нет специально: экран
+       подписан в доке, а 180 px пустой шапки на телефоне дороже любой типографики. -->
+  <section class="screen root" id="scrStats">
+    <div class="page-head"><h1>Прогресс</h1></div>
+    <div class="tabs seg" id="statsTabs">
+      <button class="tab act" data-tab="workouts">Тренировки</button>
+      <button class="tab" data-tab="weight">Тело</button>
+      <button class="tab" data-tab="photo">Фото</button>
+    </div>
+
+    <div class="tab-pane" id="tabWorkouts">
+      <!-- «Эта неделя» отсюда убрана: тот же блок и в том же виде живёт на «Сегодня»,
+           а два одинаковых ответа на один вопрос в разной вёрстке путали сильнее,
+           чем помогали. Календарь поднят наверх — за месяцем сюда и приходят. -->
+      <div class="mc-empty empty-state hidden" id="workEmpty">
+        <span class="es-ico" data-icon="chart"></span>
+        <b>Тренировок пока нет</b>
+        <p>Пройди первую — здесь появятся календарь, недели и достижения.</p>
+      </div>
+
+      <div class="metric-card" id="calCard">
+        <div class="cal-head">
+          <button class="cal-nav" id="calPrev" title="Прошлый месяц"></button>
+          <b id="calTitle"></b>
+          <button class="cal-nav" id="calNext" title="Следующий месяц"></button>
+        </div>
+        <p class="cal-sub" id="calSub"></p>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <div class="metric-card" id="weeksCard">
+        <div class="sec-head"><b>Последние 8 недель</b></div>
+        <svg id="weekBars" viewBox="0 0 300 96"></svg>
+      </div>
+
+      <!-- Итог за всё время. Пока тренировок нет, нули показывать незачем —
+           на экране остаётся только «Тренировок пока нет». -->
+      <div class="metric-card hidden" id="totalCard">
+        <div class="tot-row tot-plain">
+          <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
+          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
+          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику"></button>
+        </div>
+      </div>
+
+      <!-- Достижения раньше жили только на финале и исчезали через минуту.
+           Здесь их можно пересматривать, и видно, что будет следующим. -->
+      <div class="metric-card hidden" id="badgeCard">
+        <div class="sec-head"><b>Достижения</b><small id="badgeNote"></small></div>
+        <div class="bdg-row" id="statBadges"></div>
+        <p class="bdg-next" id="badgeNext"></p>
+      </div>
+    </div>
+
+    <div class="tab-pane hidden" id="tabWeight">
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Вес и объёмы</span>
+            <div class="mc-now" id="weightNowRow"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
+          </div>
+          <button class="add-btn" id="btnAddWeight" title="Записать"></button>
+        </div>
+        <div class="mc-meta hidden" id="weightMeta"></div>
+        <div class="mc-empty empty-state" id="weightEmpty">
+          <span class="es-ico" data-icon="weight"></span>
+          <b>Записей пока нет</b>
+          <p>Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.</p>
+        </div>
+        <!-- Раньше здесь стояли три одинаковых графика подряд (полэкрана).
+             Теперь метрики — переключатель: значения всех видны сразу,
+             а график один, зато крупный и читаемый. -->
+        <div class="wm-switch hidden" id="weightSwitch"></div>
+        <div class="mc-charts hidden" id="weightCharts"></div>
+        <div class="mc-actions hidden" id="weightActions">
+          <button class="mc-act" id="btnWeightHist"></button>
+          <button class="mc-act" id="btnShareWeight"></button>
+        </div>
+      </div>
+
+      <!-- САМОЧУВСТВИЕ. Отдельная карточка, а не ещё четыре чипа к весу: это другие
+           данные и другая частота — вес записывают раз в неделю, давление и сон
+           бывают важны каждый день. Записи живут в stats.wellness, внутри уже
+           перечисленного ключа stats: нового ключа хранилища не заводим. -->
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Самочувствие</span>
+            <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
+          </div>
+          <button class="add-btn" id="btnAddWell" title="Записать"></button>
+        </div>
+        <div class="mc-empty empty-state" id="wellEmpty">
+          <span class="es-ico" data-icon="heart"></span>
+          <!-- не «Записей пока нет»: ровно та же строка стоит в карточке выше, и две
+               одинаковые шапки подряд читаются как одна пустая страница -->
+          <b>Самочувствие не записано</b>
+          <p>Давление, пульс и сон. Рядом с тренировками видно, чем отзывается нагрузка.</p>
+        </div>
+        <div class="wm-switch hidden" id="wellSwitch"></div>
+        <div class="mc-charts hidden" id="wellCharts"></div>
+        <div class="mc-actions hidden" id="wellActions">
+          <button class="mc-act" id="btnWellHist"></button>
+          <button class="mc-act" id="btnShareWell"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane hidden" id="tabPhoto">
+      <div class="metric-card">
+        <div class="mc-head">
+          <div>
+            <span class="ts-label">Фото-прогресс</span>
+            <div class="mc-now" id="photoNowRow"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
+          </div>
+        </div>
+        <div class="mc-empty empty-state" id="photoEmpty">
+          <span class="es-ico" data-icon="camera"></span>
+          <b>Фотографий пока нет</b>
+          <p>Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
+        </div>
+        <!-- Крупная пара «было / стало» с вкладки убрана: снимки тела не должны
+             раскрываться во весь экран сами по себе — их открывают, когда захотят,
+             кнопкой «Сравнить». -->
+        <div class="mc-actions hidden" id="photoActions">
+          <button class="mc-act primary" id="btnCompare">Показать «было / стало»</button>
+        </div>
+        <div class="ph-grid hidden" id="photoStrip"></div>
+        <!-- «Добавить» — обычная кнопка рядом с удалением, а не «плюс» в углу карточки:
+             маленький значок в шапке не читался как главное действие вкладки. -->
+        <div class="ph-tools">
+          <button type="button" class="btn-ghost" id="btnAddPhoto">Добавить фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos">Удалить все фото</button>
+        </div>
+        <input type="file" id="photoFile" accept="image/*" class="hidden">
+      </div>
+    </div>
+  </section>
+
+  <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
+       Раньше это был попап поверх главной — теперь полноценная страница. -->
+  <section class="screen root" id="scrAccount">
+    <div class="page-head"><h1>Другое</h1></div>
+
+    <!-- Раздел собрал всё, что настраивают редко, и стал слишком длинным, чтобы
+         в нём что-то находить: одиннадцать карточек подряд читаются как свалка.
+         Вкладки делят его по тому, о чём человек в этот момент думает — «я»,
+         «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
+         внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
+    <div class="tabs seg" id="moreTabs">
+      <button class="tab act" data-more="me">Профиль</button>
+      <button class="tab" data-more="sound">Звук</button>
+      <button class="tab" data-more="coach">Тренер</button>
+      <button class="tab" data-more="acc">Аккаунт</button>
+    </div>
+
+    <div class="tab-pane" id="morePane_me">
+    <div class="card-block" id="accProfiles">
+      <div class="cb-head"><p class="cb-title">Профили</p></div>
+      <div class="list-rows" id="usersList"></div>
+      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b>Добавить профиль</b></button>
+      <p class="field-hint" id="usersHint"></p>
+    </div>
+    </div>
+
+    <div class="tab-pane hidden" id="morePane_sound">
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Звук и голос</p></div>
+      <div class="prefs stack">
+        <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
+        <div class="stack" id="stSoundBox">
+          <div class="snd-group">
+            <p class="snd-label">Голос</p>
+            <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+            <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="stMusic"></button></div>
+          </div>
+          <div class="snd-group">
+            <p class="snd-label">Звуки</p>
+            <div class="pref-row"><span>Гонг и отсчёт<small>сигналы начала, конца и последних секунд</small></span><button class="switch" id="stFxOn"></button></div>
+            <div class="vol-field" id="stFxField">
+              <div class="vol-label"><span>Громкость</span><b id="stFxVolVal">100%</b></div>
+              <input type="range" id="stFxVol" min="0" max="100" step="5" class="vol-range">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Управление без рук</p></div>
+      <div class="hf-block">
+        <div class="hf-seg" id="hfSeg">
+          <button type="button" data-hf="off" class="act">Выкл</button>
+          <button type="button" data-hf="voice">Голос</button>
+          <button type="button" data-hf="headset">Гарнитура</button>
+        </div>
+        <p class="field-hint" id="hfHint"></p>
+      </div>
+    </div>
+    </div>
+
+    <div class="tab-pane hidden" id="morePane_coach">
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Тренер</p></div>
+      <div class="pref-row">
+        <span>Я тренирую других<small>Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
+        <button class="switch" id="tglTrainer"></button>
+      </div>
+      <button type="button" class="way-row hidden" id="coachNoAcc">
+        <span class="wr-ico" data-icon="user"></span>
+        <span class="wr-txt"><b>Сначала создай аккаунт</b><small>Без основного аккаунта по почте режим тренера недоступен</small></span>
+      </button>
+      <div class="stack hidden" id="coachFields">
+        <!-- Имя и фото у тренера СВОИ, а не подсмотренные из профиля. Профиль — это
+             «я в приложении»: там аватарка для себя и имя, которым человека зовут
+             дома. Страница тренера — это лицо для чужих людей, которые по ней решают,
+             доверять ли. Молча показывать чужим то, что заведено для себя, нельзя.
+             Поля предзаполняются из профиля — чтобы не набирать заново, — но дальше
+             живут отдельно. -->
+        <div class="ava-row">
+          <div class="field">
+            <label>Имя для подопечных</label>
+            <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить">
+          </div>
+          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера">
+            <span id="coachPhotoPrev"></span>
+          </button>
+        </div>
+        <input type="file" id="coachPhotoFile" accept="image/*" class="hidden">
+
+        <div class="field">
+          <label>Ник</label>
+          <input type="text" id="coachHandle" maxlength="30" inputmode="latin" autocapitalize="off"
+                 autocorrect="off" spellcheck="false" placeholder="@lena.doma">
+          <p class="field-hint" id="coachHandleHint">Подопечный увидит его рядом с программой — так он поймёт, от кого она. Латиница, цифры, точка и дефис.</p>
+          <p class="field-hint" id="coachHandleErr"></p>
+        </div>
+        <!-- Сначала «кто ты», потом «где тебя найти». Подопечный открывает страницу
+             тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
+             на это в последнюю очередь. -->
+        <div class="field">
+          <label>О себе</label>
+          <textarea id="coachAbout" rows="3" maxlength="400" placeholder="С кем работаешь и в чём помогаешь"></textarea>
+          <p class="field-hint">Это увидит подопечный на твоей странице. До 400 символов.</p>
+        </div>
+        <div class="field">
+          <label>Стаж, лет</label>
+          <input type="text" id="coachYears" inputmode="numeric" maxlength="2" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Ссылка на себя</label>
+          <input type="text" id="coachLinks" maxlength="120" inputmode="url" autocapitalize="off"
+                 autocorrect="off" spellcheck="false" placeholder="t.me/lena.doma">
+          <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
+          <p class="field-err" id="coachLinksErr"></p>
+        </div>
+        <button type="button" class="btn-primary" id="btnSaveCoach">Сохранить</button>
+        <!-- Своя страница глазами подопечного. Тренер правит поля вслепую, если не видит
+             результата, — а именно по этой странице его и выбирают.
+             Подопечные и заявки в каталог отсюда ушли: подопечные стали разделом в доке,
+             заявки — частью «Тренировок», где и лежат сами программы. -->
+        <button type="button" class="pref-row row-link" id="btnMyPage">
+          <span><span>Моя страница</span><small id="coachClientsSub">Как её видит подопечный</small></span>
+          <span class="nr-chev" data-icon="chevR"></span>
+        </button>
+        <!-- Убрать сведения о себе — не то же самое, что перестать быть тренером.
+             Ник остаётся, программы в каталоге остаются, пустеет только страница. -->
+        <div class="danger-zone">
+          <p>Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.</p>
+          <button type="button" class="link-btn" id="btnCoachWipe">Удалить данные о себе</button>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="tab-pane hidden" id="morePane_acc">
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Тариф</p></div>
+      <button type="button" class="pref-row row-link" id="btnPlanCard">
+        <span><span id="planTitle">Бесплатный тариф</span><small id="planSub"></small></span>
+        <span class="nr-chev" data-icon="chevR"></span>
+      </button>
+      <!-- Продление — про тариф, а не про аккаунт, и рядом с ним подпись не нужна:
+           над строкой уже написано, какой тариф и до какого числа. -->
+      <div class="pref-row hidden" id="rowRenew"><span>Продлевать автоматически</span><button class="switch" id="tglRenew"></button></div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
+
+      <!-- аккаунта нет: одна мысль обычным абзацем и один способ действия строкой.
+           Рамка-«заметка» вокруг объяснения делала из него отдельный объект, а
+           широкая кнопка «Войти» звала сильнее, чем того стоит вход для человека,
+           который аккаунт никогда не заводил. -->
+      <div class="stack hidden" id="accNone">
+        <p class="field-hint">Сейчас всё хранится только на этом телефоне. Аккаунт бесплатный: он помнит подписку и твой ник тренера, и с него всё вернётся на новом телефоне. Синхронизация тренировок — по подписке.</p>
+        <div class="ways">
+          <button type="button" class="way-row" id="btnLoginRow">
+            <span class="wr-ico" data-icon="user"></span>
+            <span class="wr-txt"><b>Завести или войти</b><small>По коду на почту. Пароля нет — придумывать и вспоминать нечего</small></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- аккаунт есть -->
+      <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small><small id="accSync"></small></span></div>
+      <div class="pref-row hidden" id="rowHandle"><span>Ник аккаунта<small id="accHandle"></small></span></div>
+      <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+      <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Резервная копия</p></div>
+      <p class="field-hint">Профили, программы, статистика, вес, замеры и фото — одним файлом.</p>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnExportAll">
+          <span class="wr-ico" data-icon="download"></span>
+          <span class="wr-txt"><b>Сохранить в файл</b><small>Телефон предложит, куда его положить</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnImportAll">
+          <span class="wr-ico" data-icon="reset"></span>
+          <span class="wr-txt"><b>Восстановить из файла</b><small>Всё, что сейчас в приложении, заменится содержимым файла</small></span>
+        </button>
+      </div>
+      <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
+    </div>
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Данные и правила</p></div>
+      <div class="ways">
+        <button type="button" class="way-row" id="btnLegalPrivacy">
+          <span class="wr-ico" data-icon="shield"></span>
+          <span class="wr-txt"><b>Политика конфиденциальности</b><small>Что собирается, где хранится, что уходит наружу</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnLegalTerms">
+          <span class="wr-ico" data-icon="doc"></span>
+          <span class="wr-txt"><b>Пользовательское соглашение</b><small>Что это за приложение и кто за что отвечает</small></span>
+        </button>
+        <button type="button" class="way-row" id="btnLegalHealth">
+          <span class="wr-ico" data-icon="heart"></span>
+          <span class="wr-txt"><b>Здоровье и безопасность</b><small>Когда сначала к врачу и когда остановиться</small></span>
+        </button>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title" id="wipeCardTitle">Удаление данных</p></div>
+      <div class="danger-zone">
+        <p id="wipeNote"></p>
+        <button type="button" class="link-btn" id="btnWipeAccount">Удалить все данные</button>
+      </div>
+    </div>
+    <!-- Какая версия сейчас на телефоне. Без этой строки «я не вижу изменений»
+         нечем проверить: приложение обновляется само и молча, и отличить «не
+         выкатилось» от «выкатилось, но я смотрю на старое» нельзя было вовсе. -->
+    <p class="build-line" id="buildLine"></p>
+    </div>
+
+  </section>
+
+  <!-- РАЗДЕЛ «НАСТРОЙКИ»: всё, что настраивается один раз и работает всегда.
+       Сохранения здесь нет намеренно: каждое изменение применяется сразу, поэтому
+       на корневом экране не нужна нижняя панель действий — внизу только док. -->
+
+  

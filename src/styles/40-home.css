@@ -1,0 +1,209 @@
+/* ---------- приветствие на главной ---------- */
+  .greet{margin:0}
+  /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)
+     даже там, где перенос по пробелу был возможен */
+  .greet-name{font-size:clamp(30px,8.4vw,40px);line-height:1.04;font-weight:700;margin:0;overflow-wrap:break-word}
+  /* аватарка встаёт по центру блока «приветствие + имя», а не по его верхнему краю:
+     прижатая к верху, она висела выше строки приветствия и выглядела съехавшей */
+  .greet-top{display:flex;align-items:center;gap:var(--sp-3)}
+  .greet-id{flex:1;min-width:0}
+  .greet-ava{
+    flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;cursor:pointer;
+    background:var(--card);border:2px solid var(--line-2);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;padding:0;
+    font-family:var(--font-display);font-weight:700;font-size:20px;
+  }
+  .greet-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .greet-ava svg{width:22px;height:22px}
+  .greet-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)}
+  /* Чип не рвёт свой текст: flex-wrap должен переносить ЧИП ЦЕЛИКОМ на новую
+     строку, а не сжимать его до двух строк внутри. По умолчанию флекс-элемент
+     сжимается, и «можно отработать» рядом с соседом ломалось пополам. */
+  .g-chip{
+    display:inline-flex;align-items:center;gap:6px;flex:none;white-space:nowrap;
+    border:1px solid var(--line);border-radius:var(--r-pill);
+    padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);background:var(--card);
+  }
+  /* чип, который умеет объяснить себя, — кнопка. Сам он остаётся мелким (иначе
+     ряд чипов начинает спорить с заголовком), а под палец область нажатия
+     дотягивается невидимым псевдоэлементом до 44 точек по высоте */
+  button.g-chip{font-family:var(--font-text);cursor:pointer;position:relative;text-align:left}
+  button.g-chip::after{content:'';position:absolute;inset:-7px -3px}
+  .g-chip b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .g-chip svg{width:14px;height:14px;flex:none;color:var(--accent-ink)}
+  .g-chip.hot{border-color:var(--accent-line);background:var(--accent-soft)}
+  .g-chip.hot svg{color:var(--accent-ink)}
+  /* серия под угрозой — янтарный, не красный: долг ещё можно закрыть, это не провал */
+  .g-chip.warn{border-color:var(--warn-line);background:var(--warn-soft)}
+  .g-chip.warn svg{color:var(--warn)}
+
+  /* ---------- план на сегодня ----------
+     Строка целиком — кнопка. Никаких «текстов, похожих на ссылку»: если написано
+     название программы, по нему можно нажать и попасть на её экран старта. */
+  .today-card{
+    position:relative;overflow:hidden;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:var(--sp-4);box-shadow:var(--sh-1);
+  }
+  .today-card.has-plan{border-color:var(--accent-line)}
+  /* акцентная полоска сверху: тот же градиент, но втрое шире карточки и медленно
+     ползущий. Перерисовывается полоса 3px высотой — на батарее это не видно,
+     а карточка перестаёт быть статичной картинкой. */
+  /* Полоса гаснет к краям маской: без неё она шла ровной чертой поверх скруглений
+     и упиралась в углы прямыми торцами — карточка выглядела надломленной. */
+  .today-card.has-plan::before{
+    content:'';position:absolute;inset:0 0 auto 0;height:3px;z-index:2;
+    background:var(--grad-accent);background-size:300% 100%;
+    animation:tcLine 16s linear infinite;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);
+  }
+  @keyframes tcLine{from{background-position:0% 50%}to{background-position:300% 50%}}
+  /* ---- живой фон карточки плана ----
+     Единственная анимация на «Сегодня»: карточка плана — единственное, что зовёт
+     к действию.
+     Было два подхода, оба провалились по-своему. Поворот пары пятен вокруг центра
+     не читался вовсе: пятна лежали почти симметрично, и поворот переводил картинку
+     саму в себя. Замена на равномерный проезд слева направо двигалась, но выдавала
+     себя механикой — постоянная скорость, постоянный размер, одна прямая.
+     Сейчас движение задают два независимых пятна:
+       • у каждого свой период (19 и 26 с) — общий рисунок повторяется раз в восемь
+         минут, на глаз никогда;
+       • каждое одновременно едет и дышит масштабом (0.86…1.3), причём быстрее
+         всего в середине пути и почти замирая на краях — за это отвечает
+         cubic-bezier, а не linear;
+       • пятна идут навстречу друг другу по разным дугам, поэтому яркое место
+         карточки то расходится, то сходится.
+     alternate вместо повтора: слой не отматывается назад скачком, а разворачивается
+     в той же точке — шва не бывает в принципе, и период удваивается бесплатно.
+     Двигаются только transform двух слоёв — работа композитора, без перерисовки и
+     без filter, телефон не греется. Слой лежит ПОД содержимым (z-index 0 против 1):
+     на контраст текста не влияет, непрозрачность подобрана по темам отдельно. */
+  .tc-aura{
+    position:absolute;inset:0;z-index:0;pointer-events:none;
+    opacity:var(--aura-op,0);
+  }
+  .tc-aura::before,.tc-aura::after{
+    content:'';position:absolute;
+    background:radial-gradient(closest-side,var(--blob) 0%,transparent 76%);
+  }
+  .tc-aura::before{
+    --blob:var(--aura-a);
+    width:82%;aspect-ratio:1.3;left:-16%;top:-52%;
+  }
+  .tc-aura::after{
+    --blob:var(--aura-b);
+    width:70%;aspect-ratio:1.15;right:-12%;bottom:-58%;
+  }
+  /* слои промотируем в композитор только когда они реально едут */
+  .today-card.has-plan .tc-aura::before{
+    animation:tcBlobA 19s cubic-bezier(.5,0,.5,1) infinite alternate;will-change:transform;
+  }
+  .today-card.has-plan .tc-aura::after{
+    animation:tcBlobB 26s cubic-bezier(.42,0,.4,1) infinite alternate;will-change:transform;
+  }
+  /* нечего делать — карточка спокойная: ни свечения, ни движения */
+  .today-card:not(.has-plan) .tc-aura{opacity:0}
+  @keyframes tcBlobA{
+    0%  {transform:translate3d(-8%,  6%,0) scale(1)}
+    38% {transform:translate3d(26%, -9%,0) scale(1.3)}
+    71% {transform:translate3d(52%,  8%,0) scale(1.02)}
+    100%{transform:translate3d(78%, -3%,0) scale(.88)}
+  }
+  @keyframes tcBlobB{
+    0%  {transform:translate3d(10%, -5%,0) scale(1.12)}
+    44% {transform:translate3d(-22%, 9%,0) scale(.86)}
+    78% {transform:translate3d(-50%,-7%,0) scale(1.18)}
+    100%{transform:translate3d(-68%, 4%,0) scale(.96)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    /* движение выключено — но пятна остаются там, где картинка самая живая */
+    .today-card.has-plan .tc-aura::before{animation:none;transform:translate3d(26%,-9%,0) scale(1.2);will-change:auto}
+    .today-card.has-plan .tc-aura::after{animation:none;transform:translate3d(-22%,9%,0) scale(1.05);will-change:auto}
+    .today-card.has-plan::before{animation:none}
+  }
+  /* содержимое карточки — над слоем фона */
+  .today-card > *:not(.tc-aura){position:relative;z-index:1}
+  .today-card .ts-label{margin-bottom:var(--sp-3)}
+  .today-row{
+    display:flex;align-items:center;gap:var(--sp-3);width:100%;
+    padding:var(--sp-3) 0;background:none;border:none;text-align:left;cursor:pointer;
+    color:var(--ink);font-family:var(--font-text);
+  }
+  .today-row + .today-row{border-top:1px solid var(--line)}
+  .today-row:first-child{padding-top:0}
+  .today-row:last-child{padding-bottom:0}
+  .today-row:active{transform:scale(.99)}
+  .tr-ico{
+    flex:none;width:44px;height:44px;border-radius:var(--r-md);
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .today-row.rest .tr-ico{background:var(--rest-soft);color:var(--rest-ink)}
+  .today-row.done .tr-ico{background:var(--ok-soft);color:var(--ok)}
+  .tr-ico svg{width:21px;height:21px}
+  .today-row .ti{flex:1;min-width:0}
+  .today-row .ti b{display:block;font-size:var(--fs-md);font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  /* у служебных строк заголовок не имя программы, обрезать его нечестно */
+  .today-row.info .ti b{white-space:normal;overflow:visible}
+  .today-row .ti small{display:block;color:var(--muted);font-size:var(--fs-sm);line-height:1.35}
+  .tr-go{
+    flex:none;display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;
+    border-radius:var(--r-sm);background:var(--accent);color:var(--on-accent);
+    font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .today-row.rest .tr-go,.today-row.done .tr-go{background:var(--surface);color:var(--muted);border:1px solid var(--line)}
+  .today-note{color:var(--muted);font-size:var(--fs-sm);line-height:1.5;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--line)}
+    /* ===== нижняя панель кнопок =====
+     Панель липкая, значит при прокрутке она проходит НАД содержимым. Чтобы до
+     последнего поля можно было честно добраться, экран получает запас прокрутки
+     ровно в высоту панели, а сама панель — непрозрачный фон и мягкий градиент
+     сверху вместо полупрозрачной плашки, сквозь которую просвечивал текст. */
+  .builder-actions{
+    position:sticky;bottom:0;z-index:10;margin-top:var(--sp-4);
+    padding:var(--sp-3) 0 calc(var(--sp-2) + env(safe-area-inset-bottom));
+    background:var(--bg);
+  }
+  body.phase-rest .builder-actions{background:var(--bg-rest)}
+  .builder-actions::before{
+    content:'';position:absolute;left:0;right:0;bottom:100%;height:22px;pointer-events:none;
+    background:linear-gradient(to top, var(--bg), transparent);
+  }
+  /* Запаса под панель кнопок здесь БЫТЬ НЕ ДОЛЖНО. Панель (.builder-actions) —
+     последний элемент в потоке экрана, место она занимает сама; sticky только
+     поднимает её к низу окна, пока страница длиннее экрана. Отдельные 78 точек
+     padding-bottom считали тот же запас второй раз, и на коротком экране кнопка
+     вставала на сто точек выше низа — «как будто запас под док, которого нет».
+     Возвращать этот отступ нельзя. */
+  .wh-row{padding:12px 0;border-bottom:1px solid var(--line)}
+  .wh-row:last-child{border-bottom:none}
+  .wh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .wh-top b{font-size:14px}
+  /* колонок ровно столько, сколько влезает: с процентами состава тела замеров стало
+     шесть, и жёсткие четыре колонки давали вторую строку из двух ячеек враскоряку */
+  .wh-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:7px}
+  /* самочувствие — ровно три показателя в ряд; давлению шире, в нём два поля */
+  .wh-cells.wh-well{grid-template-columns:1.4fr 1fr 1fr}
+  .whc{display:flex;flex-direction:column;gap:3px}
+  /* форма новой записи берёт ту же сетку, но стоит отдельным блоком под заголовком,
+     а не строкой внутри списка — отступ сверху ей нужен свой */
+  #wellModal .wh-cells{margin:12px 0 10px}
+  .whp{display:flex;align-items:center;gap:3px;min-width:0}
+  .whp input{min-width:0;padding-left:9px;padding-right:9px;text-align:center}
+  .whp i{flex:none;color:var(--muted);font-style:normal}
+  .whc label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .wh-row.del{opacity:.4}
+  .wh-row.del input{text-decoration:line-through}
+  .wh-del{flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .wh-row.del .wh-del{color:var(--accent-ink);border-color:var(--accent-line)}
+  .wh-del svg{width:15px;height:15px}
+  .btn-share-res{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--ink)}
+  .btn-share-res svg{width:18px;height:18px;color:var(--accent-ink)}
+  .actions.act-row{display:flex;gap:10px;align-items:stretch}
+  .actions.act-row .btn-share-res{flex:0 0 auto;width:auto;padding:0 16px;margin:0}
+  .actions.act-row .btn-primary{flex:1;margin:0}
+  @media (max-width:359px){.actions.act-row .btn-share-res span{display:none}}
+  .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 22px;color:var(--ink)}
+  #dlgCode{width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:monospace;font-size:12px;padding:10px;margin-bottom:12px;resize:vertical}
+
+  

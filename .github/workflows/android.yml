@@ -16,6 +16,10 @@ on:
     paths: &mobile_paths
       - 'android/**'
       - 'scripts/**'
+      - 'src/**'
+      - 'app.js'
+      - 'style.css'
+      - 'sw.js'
       - 'index.html'
       - 'mobile.js'
       - 'app.config.js'

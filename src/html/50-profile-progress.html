@@ -1,0 +1,600 @@
+<!-- Редактор профиля -->
+  <section class="screen builder" id="scrUserEdit">
+    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
+
+    <!-- Профиль -->
+    <div class="ue-pane">
+      <div class="card-block">
+        <div class="ava-row">
+          <div class="field">
+            <label>Имя</label>
+            <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?">
+          </div>
+          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
+            <span id="uePhotoPrev"></span>
+          </button>
+          <div class="ctx-menu" id="uePhotoMenu"></div>
+        </div>
+        <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
+        <div class="field"><label>Пол</label>
+          <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
+        </div>
+        <div class="field"><label>Возраст, полных лет</label><input type="number" id="ueAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32">
+          <p class="field-hint">От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.</p>
+        </div>
+      </div>
+
+      <!-- Тема у каждого профиля своя: телефон один, а вкусы у людей разные.
+           «Как в системе» — вариант по умолчанию: приложение просто не спорит с телефоном. -->
+      <div class="card-block">
+        <div class="cb-head"><p class="cb-title">Оформление</p></div>
+        <div class="field"><label>Тема</label>
+          <div class="seg seg3" id="ueThemeSeg">
+            <button type="button" data-theme="system">Как в системе</button>
+            <button type="button" data-theme="light">Светлая</button>
+            <button type="button" data-theme="dark">Тёмная</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Отсчёты жили в «Настройках», хотя всегда были у каждого профиля свои:
+           человек менял их «для приложения», а менял только для себя. -->
+      <div class="card-block">
+        <div class="cb-head"><p class="cb-title">Отсчёты и паузы</p></div>
+        <div class="row2">
+          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+        </div>
+        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
+        <p class="field-hint">Всё в секундах. Ноль выключает отсчёт.</p>
+      </div>
+
+      <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
+           внизу страницы, а закреплённая панель осталась в одну строку -->
+      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)">Удалить профиль</button>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnSaveUser">Сохранить</button>
+    </div>
+  </section>
+
+  <!-- ПОДОПЕЧНЫЕ ТРЕНЕРА. Сервера нет: картотека локальная, а связь с подопечным держится
+       на ссылках, которые в приложении уже работают — программа уезжает ссылкой FIT1,
+       отчёт возвращается ссылкой FITR1. Подробности — docs/trainer-ui.md. -->
+  <section class="screen root" id="scrTrainer">
+    <div class="page-head"><h1>Подопечные</h1></div>
+
+    <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
+         идёт. Список — уже подробности. -->
+    <div class="card-block" id="clsSumCard">
+      <!-- Три числа в ряд, и у каждого подпись ПОД числом. Раньше это была строка
+           «3 подопечного · 2 занимаются · 17 тренировок всего»: число управляло
+           падежом, и на двойке-тройке выходило «подопечного», а на нуле занятий
+           строка наполовину исчезала. Подпись, стоящая отдельно, от числа не
+           зависит вовсе — и склонять нечего. -->
+      <div class="cl-stats" id="clsSum"></div>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Список</p></div>
+      <div class="list-rows" id="clsList"></div>
+      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b>Добавить подопечного</b></button>
+      <p class="field-hint" id="clsHint"></p>
+    </div>
+
+  </section>
+
+  <!-- СТРАНИЦА ТРЕНЕРА глазами подопечного. Раньше это был попап с одним абзацем: он
+       отвечал «кто это», но не отвечал на главный вопрос — стоит ли доверять. На
+       него отвечают стаж, сколько человек с нами и сколько раз брали его программы,
+       а попап такого объёма не держит. Пустых полей не показываем: выдуманное
+       «стаж не указан» доверия не прибавляет. -->
+  <!-- ПРЕДЛОЖИТЬ В КАТАЛОГ. Не «опубликовать»: всё проходит проверку руками. Пока
+       программ единицы, это десять минут в неделю, а открытая публикация без
+       проверки в первый же месяц превращает каталог в помойку, из которой его уже
+       не вытащить. Человеку это сказано прямо — обещать мгновенную публикацию и
+       потом держать её сутки хуже, чем сразу назвать порядок. -->
+  <!-- ОТПРАВЛЕННОЕ В КАТАЛОГ. Тренер должен видеть, что с его программами: без
+       этого он не знает, дошло ли вообще, и отправляет повторно. -->
+  <section class="screen builder" id="scrMyCatalog">
+    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2>В каталоге</h2></div>
+    <div class="card-block">
+      <div class="list-rows" id="mcList"></div>
+      <p class="field-hint" id="mcHint"></p>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scrPublish">
+    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2>В каталог</h2></div>
+
+    <div class="card-block">
+      <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
+      <p class="field-hint" id="pubState"></p>
+    </div>
+
+    <div class="card-block" id="pubForm">
+      <div class="cb-head"><p class="cb-title">Как её найдут</p></div>
+      <div class="field">
+        <label>Цель</label>
+        <button type="button" class="filter-btn ph" id="pubCatBtn"><span id="pubCatVal">Цель</span><span class="fb-chev" id="pubCatChev"></span></button>
+      </div>
+      <div class="field">
+        <label>Уровень</label>
+        <button type="button" class="filter-btn ph" id="pubLevelBtn"><span id="pubLevelVal">Уровень</span><span class="fb-chev" id="pubLevelChev"></span></button>
+      </div>
+      <div class="field">
+        <label>Что она даёт</label>
+        <textarea id="pubGives" rows="3" maxlength="300" placeholder="Одна-две фразы: что человек получит и чем эта программа отличается"></textarea>
+        <p class="field-hint">Это единственное, что читают в списке перед тем, как открыть. От 20 символов.</p>
+      </div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnPublish">Отправить на проверку</button>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scrTrainerPage">
+    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2>Тренер</h2></div>
+
+    <div class="card-block">
+      <div class="tp-head">
+        <span class="tp-photo" id="tpPhoto"></span>
+        <span class="tp-id">
+          <b id="tpName"></b>
+          <small id="tpNick"></small>
+        </span>
+      </div>
+      <p class="field-hint hidden" id="tpAbout"></p>
+    </div>
+
+    <div class="card-block hidden" id="tpStatsCard">
+      <div class="tp-stats" id="tpStats"></div>
+    </div>
+
+    <div class="card-block hidden" id="tpLinkCard">
+      <div class="cb-head"><p class="cb-title">Где его найти</p></div>
+      <a class="choice ico-row" id="tpLink" target="_blank" rel="noopener"><span data-icon="share"></span><b id="tpLinkTxt"></b></a>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scrClient">
+    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Подопечный</h2></div>
+
+    <div class="card-block">
+      <div class="field"><label>Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать"></div>
+      <div class="field"><label>Заметка</label><input type="text" id="clNote" maxlength="80" placeholder="Например: колено, без прыжков">
+        <p class="field-hint">Только для тебя. Подопечному не уходит.</p>
+      </div>
+    </div>
+
+    <!-- Программ у подопечного бывает несколько: курс сменился, добавили второй день,
+         дали отдельную растяжку. Раньше запись хранила одну ссылку, и вторая
+         отправка молча затирала первую вместе со всеми её занятиями. -->
+    <div id="clProgs"></div>
+
+    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt">Отправить программу</b></button>
+    <p class="field-hint" id="clSendHint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
+
+    <div class="card-block danger-zone">
+      <button type="button" class="link-btn" id="btnDelClient">Удалить подопечного</button>
+    </div>
+  </section>
+
+    <!-- Кому отправить программу. Список короткий и выбирается в один тап; завести
+         нового подопечного можно прямо отсюда, не уходя на другой экран. -->
+    <div class="modal" id="pickClientModal">
+      <div class="modal-card">
+        <span class="mini-label">Кому отправить</span>
+        <div class="stack" id="pickClientList"></div>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="hfModal">
+      <div class="modal-card">
+        <span class="mini-label">Управление без рук</span>
+        <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
+        <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Отключи звук уведомлений, чтобы микрофон не щёлкал</small></button>
+        <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+      </div>
+    </div>
+
+    <div class="modal" id="soundModal">
+      <div class="modal-card">
+        <span class="mini-label">Звук тренировки</span>
+        <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
+        <div class="stack" id="sndSoundBox">
+          <div class="snd-group">
+            <p class="snd-label">Голос</p>
+            <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
+            <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
+          </div>
+          <div class="snd-group">
+            <p class="snd-label">Звуки</p>
+            <div class="pref-row"><span>Гонг и отсчёт<small>сигналы начала, конца и последних секунд</small></span><button class="switch" id="sndFxOn"></button></div>
+            <div class="vol-field" id="sndFxField">
+              <div class="vol-label"><span>Громкость</span><b id="sndFxVolVal">100%</b></div>
+              <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
+            </div>
+          </div>
+        </div>
+        <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
+        <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px">Готово</button>
+      </div>
+    </div>
+
+  <!-- Кто составил программу. Ник в карточке не ссылка: каталог не должен уводить из
+       приложения. Здесь фото, имя и обычный текст о человеке — в тексте могут быть и
+       контакты. Фото нет — рисуем заглушку из набора иконок. -->
+
+    <!-- Пол и возраст. На первом экране их не спрашивают: анкета не должна
+         стоять между человеком и первой тренировкой. Спрашиваем в момент, когда данные
+         правда идут в дело — перед составлением программы. Пропустить нельзя: без пола
+         и возраста нейросеть выдаёт упражнения наугад, а это хуже, чем лишний вопрос.
+         «Отмена» поэтому не пропускает вопрос, а возвращает с экрана назад. -->
+    <div class="modal" id="whoModal">
+      <div class="modal-card">
+        <span class="mini-label">Пара уточнений</span>
+        <p class="dlg-msg" id="whoMsg"></p>
+        <div class="field"><label>Пол</label>
+          <div class="seg"><button type="button" id="whoF">Женский</button><button type="button" id="whoM">Мужской</button></div>
+        </div>
+        <div class="field"><label>Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32"></div>
+        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Замок биометрии. Закрыть жестом нельзя (data-locked), иначе замок не замок,
+         но запасной вход обязателен: отпечаток может не сработать, палец — быть
+         занят, а данные внутри принадлежат человеку, а не устройству. -->
+    <!-- Попапы подписки живут на верхнем уровне, а не внутри «Сегодня»: попап,
+         лежащий внутри секции экрана, невидим со всех остальных экранов — секция
+         скрыта целиком вместе с ним. -->
+    <!-- Подписка. Цена показывается в валюте покупателя и до нажатия «оформить»:
+         сторы этого требуют, и человек не должен узнавать сумму на последнем шаге.
+         Срок выбирается здесь же, годовой подсвечен и показывает выгоду числом. -->
+    <div class="modal" id="premiumModal">
+      <!-- Карточка поделена надвое: список преимуществ прокручивается, а выбор срока,
+           цена и обе кнопки закреплены внизу. Иначе на маленьком экране человек видел
+           витрину без цены и без кнопки — то есть рекламу вместо предложения. -->
+      <div class="modal-card pm-card">
+        <div class="pm-scroll">
+          <div class="pm-crown" data-icon="crown"></div>
+          <h3 class="pm-title">Fit Timer Премиум</h3>
+          <p class="pm-lead">Всё, что стоит денег каждый раз, — без ключей, настроек и ограничений.</p>
+          <!-- Список нарочно в одну строку на пункт: с описаниями он занимал полтора
+               экрана и выталкивал цену за край. -->
+          <ul class="pm-list pm-short">
+            <li><span class="pm-li-ico" data-icon="sparkle"></span><b>Программы и упражнения собирает нейросеть</b></li>
+            <li><span class="pm-li-ico" data-icon="book"></span><b>Весь каталог программ от тренеров</b></li>
+            <li><span class="pm-li-ico" data-icon="image"></span><b>Картинки и обложки к упражнениям</b></li>
+            <li><span class="pm-li-ico" data-icon="shield"></span><b>Аккаунт: данные переезжают на новый телефон</b></li>
+          </ul>
+          <div class="pm-state hidden" id="pmState">
+            <span class="ps-ico" data-icon="check"></span>
+            <span><b id="pmStateTitle">Премиум активен</b><small id="pmStateSub"></small></span>
+          </div>
+        </div>
+
+        <div class="pm-foot">
+          <div class="pm-plans" id="pmPlans"></div>
+          <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px">Оформить</button>
+          <p class="pm-fine" id="pmFine"></p>
+          <button class="modal-btn" data-act="closeModal">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Оформление. Почта здесь не формальность: это единственное, по чему аккаунт
+         и оплаченная подписка находятся на новом телефоне. Пароль не спрашиваем —
+         вход по ссылке из письма и по биометрии на самом устройстве. -->
+    <div class="modal" id="payModal">
+      <div class="modal-card">
+        <span class="mini-label">Оформление подписки</span>
+        <p class="dlg-msg" id="payWhat"></p>
+        <div class="field">
+          <label>Почта</label>
+          <input type="email" id="payEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
+          <p class="field-hint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
+        </div>
+        <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px">Оплатить</button>
+        <p class="pm-fine">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Подписка оформлена. Здесь же предлагаем биометрию: это единственный момент,
+         когда аккаунт только что появился и защищать стало что. -->
+    <div class="modal" id="premiumOkModal">
+      <div class="modal-card" style="text-align:center">
+        <div class="pm-crown" data-icon="crown"></div>
+        <h3 class="pm-title">Премиум активен</h3>
+        <p class="pm-lead" id="pokLead"></p>
+        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px">Включить вход по биометрии</button>
+        <p class="pm-fine">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
+        <button class="modal-btn" data-act="closeModal">Готово</button>
+      </div>
+    </div>
+
+    <!-- Вход в аккаунт. Пароля нет и не будет: вход по почте — на неё приходит письмо,
+         а на самом телефоне работает биометрия. -->
+    <!-- Вход в аккаунт. Два шага в одном попапе, а не два экрана: между «прислать
+         код» и «ввести код» человек уходит в почту и возвращается, и возвращаться
+         он должен ровно туда, откуда ушёл. Пароля нет намеренно — его пришлось бы
+         заводить, помнить и восстанавливать, то есть завести вторую такую же
+         задачу поверх первой. Регистрации отдельной тоже нет: если аккаунта с этой
+         почтой не было, он заводится тем же кодом. -->
+    <div class="modal" id="loginModal">
+      <div class="modal-card">
+        <span class="mini-label" id="loginLabel">Вход в аккаунт</span>
+        <p class="dlg-msg" id="loginMsg"></p>
+        <div class="field" id="loginStep1">
+          <label>Почта</label>
+          <input type="email" id="loginEmail" inputmode="email" autocomplete="email"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120"
+                 placeholder="you@example.com">
+          <p class="field-hint">Пришлём код. Писем, кроме кода, не будет.</p>
+        </div>
+        <div class="field hidden" id="loginStep2">
+          <label>Код из письма</label>
+          <input type="text" id="loginCode" inputmode="numeric" maxlength="6" placeholder="6 цифр">
+          <p class="field-hint" id="loginCodeHint"></p>
+        </div>
+        <div class="field hidden" id="loginStep3">
+          <label>Ник аккаунта</label>
+          <input type="text" id="loginHandle" maxlength="30" inputmode="latin"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="@sergey">
+          <p class="field-hint">Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.</p>
+        </div>
+        <p class="field-err" id="loginErr"></p>
+        <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px">Прислать код</button>
+        <button class="modal-btn" id="loginCancel">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="lockModal" data-locked="1">
+      <div class="modal-card" style="text-align:center">
+        <div class="pm-crown" data-icon="fingerprint"></div>
+        <h3 class="pm-title">Вход в Fit Timer</h3>
+        <p class="pm-lead" id="lockMsg">Приложи палец или посмотри на камеру — и продолжим.</p>
+        <div class="field hidden" id="lockMailBox" style="text-align:left">
+          <label>Почта аккаунта</label>
+          <input type="email" id="lockEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        </div>
+        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail">Войти по почте</button>
+      </div>
+    </div>
+
+    <div class="modal" id="dlg">
+      <div class="modal-card">
+        <p class="dlg-msg" id="dlgMsg"></p>
+        <textarea id="dlgCode" readonly class="hidden"></textarea>
+        <!-- Необратимое действие подтверждается не нажатием, а набранной фразой:
+             промахнуться пальцем можно, случайно напечатать слово — нет. -->
+        <div class="field hidden" id="dlgTypeBox">
+          <label id="dlgTypeLabel"></label>
+          <input type="text" id="dlgType" maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
+        <button class="modal-btn" id="dlgCancel">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="swapModal">
+      <div class="modal-card">
+        <span class="mini-label">Можно усложнить</span>
+        <p class="dlg-msg" id="swapIntro"></p>
+        <div class="swap-card">
+          <h4 id="swapName"></h4>
+          <p id="swapDesc"></p>
+        </div>
+        <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px">Заменить через ИИ сейчас</button>
+        <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
+        <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
+        <button class="modal-btn" id="swapCopy">Скопировать название и описание</button>
+      </div>
+    </div>
+
+    <div class="modal" id="createModal">
+      <div class="modal-card">
+        <span class="mini-label">Новая программа</span>
+        <!-- Подписи здесь — не объяснения, а различители: человек выбирает путь за
+             секунду и читает их одним взглядом, а не абзацем. Самые частые пути —
+             «Через ИИ» и «Собрать вручную» — стоят первыми. Тексты обращаются на «ты»
+             и НЕ согласуются по роду: «собрать вручную», а не «собрать самой». -->
+        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — остальное готово само</small></span></button>
+        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Собрать вручную</b><small>Добавляешь упражнения по одному</small></span></button>
+        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Вставь ссылку на тренировку</small></span></button>
+        <!-- Каталога здесь НЕТ намеренно. Он не способ собрать программу, а место, куда
+             ходят за чужой готовой, и вход в него стоит на самом экране «Тренировки»
+             отдельной кнопкой. В этом попапе он был вторым входом в то же место и
+             занимал строку среди четырёх, которые про другое. -->
+        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или файлом</b><small>Если программу прислали или сохраняли себе</small></span></button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Список для «обычного» выбора одного из вариантов — вместо системной шторки
+         select, чей вид и место всплытия приложение не контролирует. Переиспользуется
+         фильтрами каталога; заголовок и строки собирает openOptPicker(). -->
+    <div class="modal" id="optModal">
+      <div class="modal-card">
+        <span class="mini-label" id="optTitle"></span>
+        <div id="optList"></div>
+        <button type="button" class="link-btn hidden" id="optReset">Сбросить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Выбор способа для нового упражнения: вручную заводит пустую строку и
+         открывает её в редакторе, через ИИ ведёт сразу на экран подбора с чипами
+         (формат, уровень, мышцы, инвентарь) — без промежуточной пустышки. -->
+    <div class="modal" id="addExModal">
+      <div class="modal-card">
+        <span class="mini-label">Новое упражнение</span>
+        <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши, что нужно, — подберёт нейросеть</small></span></button>
+        <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Задаёшь название, формат и подходы</small></span></button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Свой отдых — общий попап на оба чип-ряда (между подходами / после
+         упражнения): какой из них открыт, помнит restModalKey. -->
+    <div class="modal" id="restModal">
+      <div class="modal-card">
+        <span class="mini-label" id="restModalTitle">Свой отдых</span>
+        <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20"></div>
+        <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px">Готово</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="cmpModal">
+      <div class="modal-card">
+        <span class="mini-label">Сравнение прогресса</span>
+        <div class="cmp-row">
+          <div class="cmp-col">
+            <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
+            <div class="cmp-img" id="cmpImgA"></div>
+            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0">Удалить это фото</button>
+          </div>
+          <div class="cmp-col">
+            <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
+            <div class="cmp-img" id="cmpImgB"></div>
+            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0">Удалить это фото</button>
+          </div>
+        </div>
+        <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
+        <p class="field-hint" style="text-align:center;margin:0 0 10px">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
+        <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+      </div>
+    </div>
+
+    <!-- Снимок во весь экран. Отдельный попап, а не увеличенная карточка: смотреть
+         на себя человек приходит намеренно, и в этот момент на экране не должно быть
+         ничего, кроме фотографии. -->
+    <div class="modal photo-full" id="photoFullModal">
+      <div class="pf-wrap">
+        <img id="pfImg" alt="">
+        <p class="pf-cap" id="pfCap"></p>
+      </div>
+      <button class="modal-btn" data-act="closeModal">Закрыть</button>
+    </div>
+
+    <!-- Что было сделано: за день, за неделю — где угодно. Раньше это был appAlert
+         с текстовой простынёй: тренировки слипались в один абзац, а длинный список
+         просто не помещался на экран и обрезался. -->
+    <div class="modal" id="sessModal">
+      <div class="modal-card">
+        <span class="mini-label" id="sessLabel">Тренировки</span>
+        <p class="dlg-msg" id="sessTitle"></p>
+        <div class="sess-list" id="sessList"></div>
+        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+      </div>
+    </div>
+
+    <div class="modal" id="waModal">
+      <div class="modal-card">
+        <span class="mini-label">Новая запись</span>
+        <div class="w-add on">
+          <div class="wf"><label>Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
+          <div class="wf"><label>Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
+          <!-- жир и мышцы показывают умные весы; поля необязательные, как и обхваты -->
+          <div class="wf"><label>Жир, %</label><input type="number" id="fatInput" step="0.1" min="3" max="70" inputmode="decimal"></div>
+          <div class="wf"><label>Мышцы, %</label><input type="number" id="muscInput" step="0.1" min="10" max="80" inputmode="decimal"></div>
+          <div class="wf"><label>Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label>Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+        </div>
+        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="whModal">
+      <div class="modal-card">
+        <span class="mini-label">История веса</span>
+        <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
+        <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Запись самочувствия. Все поля необязательные — как и обхваты у веса:
+         человек меряет давление не каждый день и не всегда помнит, сколько спал. -->
+    <div class="modal" id="wellModal">
+      <div class="modal-card">
+        <span class="mini-label">Как ты сегодня</span>
+        <!-- Те же три ячейки в ряд, что и в истории (.wh-cells.wh-well): «Давление»
+             одним полем из двух половин через косую, «Пульс», «Сон». Четыре
+             отдельных поля укладывались по два в ряд, «Нижнее» отрывалось от
+             «Давление, верхнее» и читалось как самостоятельный показатель, а
+             форма записи и форма правки выглядели разными местами. -->
+        <div class="wh-cells wh-well">
+          <div class="whc"><label>Давление</label>
+            <span class="whp">
+              <input type="number" id="sysInput" min="70" max="250" inputmode="numeric" aria-label="Давление, верхнее"><i>/</i><input type="number" id="diaInput" min="40" max="160" inputmode="numeric" aria-label="Давление, нижнее">
+            </span>
+          </div>
+          <div class="whc"><label>Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
+          <div class="whc"><label>Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
+        </div>
+        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="wellHistModal">
+      <div class="modal-card">
+        <span class="mini-label">История самочувствия</span>
+        <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
+        <button class="btn-primary" id="wellHistSave" style="padding:14px">Сохранить</button>
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+    <div class="modal" id="importModal">
+      <div class="modal-card">
+        <span class="mini-label">Импорт программы</span>
+        <!-- Кода программы приложение больше не выдаёт: адрес с программой внутри
+             отбивался хостингом, и остались два пути — короткая ссылка и файл.
+             Поэтому и спрашиваем про них, а не про «FIT1…», которого человеку
+             взять уже негде. Старые коды из чужих переписок поле по-прежнему
+             понимает — ломать их задним числом незачем. -->
+        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились"></textarea></div>
+        <button class="btn-primary" id="btnDoImport" style="padding:15px">Открыть по ссылке</button>
+        <div class="imp-or"><span>или</span></div>
+        <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
+        <p class="field-hint" style="margin-top:8px">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
+        <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
+        <button class="modal-btn" data-act="closeModal">Отмена</button>
+      </div>
+    </div>
+
+</div>
+
+<!-- Нижняя навигация. Видна только на пяти корневых разделах и прячется, пока
+     открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
+<nav class="dock hidden" id="dock" aria-label="Разделы">
+  <div class="dock-in">
+    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
+    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
+    <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
+         бы место под раздел, в который человеку незачем заходить. -->
+    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Подопечные</span></button>
+    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Другое</span></button>
+  </div>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>
+<!-- Ок ок ок -->
+<!-- Ок1 ок1 ок1 -->

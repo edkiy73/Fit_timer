@@ -1,0 +1,617 @@
+<!-- РАЗДЕЛ «ТРЕНИРОВКИ»: все программы и создание новой -->
+  <section class="screen root" id="scrPrograms">
+    <!-- «Добавить» переехало в шапку той же кнопкой, что «＋» на «Прогрессе»: оно
+         нужно раз в несколько недель, а широкая кнопка сверху каждый раз отодвигала
+         вниз то, ради чего сюда заходят, — сам список программ. -->
+    <div class="page-head">
+      <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
+      <div class="ph-tools">
+        <button class="add-btn" id="btnAddProgram" title="Добавить программу"></button>
+      </div>
+    </div>
+
+    <!-- Каталог ищут здесь, а не на главной: за готовой программой идут тогда, когда
+         смотрят на свои и понимают, что надоели. Кнопка та же, что на главной, —
+         один вход, узнаваемый в двух местах. -->
+    <button class="store-cta" id="btnToStore">
+      <span class="sc-ico" id="storeIcoProg"></span>
+      <span class="sc-txt"><b>Каталог программ</b><small id="storeRowSub">Тренировки от тренеров</small></span>
+      <span class="sc-arrow" id="storeArrowProg"></span>
+    </button>
+
+    <!-- Заявки в каталог — про программы, а не про людей, поэтому лежат здесь, а не
+         у подопечных. Показываются, только когда заявки есть: строка «ничего не
+         отправлено» сообщает лишь о том, что её не надо было показывать. -->
+    <button type="button" class="way-row hidden" id="btnMyCatalog">
+      <span class="wr-ico" data-icon="crown"></span>
+      <span class="wr-txt"><b>Заявки в каталог</b><small id="coachCatSub"></small></span>
+    </button>
+
+    <div id="mineList"></div>
+  </section>
+
+  <!-- ШАГ 2: экран старта -->
+  <section class="screen" id="scrStart">
+    <div class="screen-head start-head">
+      <button class="back-chip" id="startBackTop"></button>
+      <span class="sh-kicker">Программа</span>
+      <div class="prog-menu-wrap">
+        <button class="more-btn" id="startMore" title="Действия"></button>
+        <div class="ctx-menu" id="startMenu"></div>
+      </div>
+    </div>
+    <div class="start-wrap">
+      <div class="start-hero">
+        <div class="sh-cover hidden" id="startCover"></div>
+        <div class="sh-body">
+          <div class="num" id="startNum"></div>
+          <h2 id="startTitle"></h2>
+          <p class="desc" id="startDesc"></p>
+        </div>
+      </div>
+      <div class="start-meta">
+        <!-- состояние программы — первым: это важнее объёма, и полным словом, а не
+             сокращением «Откл» — иначе рядом с «3 упражнения» и «3 круга» читалось
+             как оборванное. Без чипа выключенную программу видно только по пункту меню. -->
+        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
+        <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
+             он пришёл заниматься к конкретному человеку, а не «в приложение». -->
+        <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
+        <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
+        <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
+      </div>
+
+      <div class="card-block hidden" id="progDescBox">
+        <p class="cb-title">О программе</p>
+        <div class="prog-desc">
+          <p id="progDescText"></p>
+          <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
+        </div>
+      </div>
+
+      <div class="card-block" id="startWorkoutCard">
+        <div class="start-section hidden" id="planBlock">
+          <p class="cb-title">Вариант тренировки</p>
+          <div class="load-row" id="planRow"></div>
+        </div>
+
+        <div class="start-section hidden" id="progStepsBlock">
+          <p class="cb-title">Нагрузка сегодня</p>
+          <p class="field-hint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
+          <div class="ps-row">
+            <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
+            <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
+            <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
+          </div>
+        </div>
+
+        <div class="start-section">
+          <p class="cb-title">Упражнения</p>
+          <p class="field-hint" id="startOverviewSummary"></p>
+          <p class="field-hint" id="startLoadChange"></p>
+          <div class="start-ex-list" id="startOverviewList"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnStart">Начать тренировку</button>
+    </div>
+  </section>
+
+  <!-- Конструктор программ -->
+  <section class="screen builder" id="scrBuilder">
+    <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
+    <div class="tabs" id="bModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="text">Через ИИ</button>
+      <button class="tab" data-m="video">Из видео</button>
+    </div>
+
+    <div class="card-block">
+      <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+      <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
+        <span class="nr-ico" data-icon="calendar"></span>
+        <div class="nr-body">
+          <b>Настройки программы</b>
+          <small id="bSettingsSum"></small>
+        </div>
+        <span class="nr-chev" id="bSettingsChev"></span>
+      </button>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head">
+        <p class="cb-title" id="bVariantTitle">Упражнения</p>
+        <span class="cb-count" id="exCountNote"></span>
+      </div>
+      <p class="field-hint" id="bVariantHint"></p>
+      <div class="plan-tabs" id="planTabsTop"></div>
+      <!-- Картинки — про упражнения, поэтому лежат в их блоке и НАД списком: внизу,
+           после кнопок добавления, строка терялась совсем. -->
+      <button type="button" class="nav-row nr-flat" id="bImagesRow">
+        <span class="nr-ico" data-icon="image"></span>
+        <div class="nr-body">
+          <b>Картинки упражнений</b>
+          <small id="bImagesSum">Загрузить пачкой</small>
+        </div>
+        <span class="nr-chev" id="bImagesChev"></span>
+      </button>
+      <div class="list-rows" id="bExList"></div>
+      <!-- Кнопки «Подобрать через ИИ» здесь нет: путь к нейросети — вкладка сверху,
+           и второй вход в него из середины экрана только дробил внимание. -->
+      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
+    </div>
+  </section>
+
+  <!-- Создание из текста -->
+  <!-- Правка упражнения через ИИ -->
+
+  <!-- Картинки программы: массовая загрузка -->
+  <section class="screen builder" id="scrImages">
+    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки упражнений</h2></div>
+
+    <div class="note">
+      <span class="n-ico" data-icon="image"></span>
+      <span>У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.</span>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Откуда взять картинки</p></div>
+
+      <button type="button" class="hero-action" id="imgPick">
+        <span class="ha-ico" data-icon="camera"></span>
+        <span class="ha-txt"><b>Выбрать с телефона</b><small>Загружаем и раскладываем</small></span>
+        <span class="ha-go" data-icon="chevR"></span>
+      </button>
+      <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
+
+      <div class="or-line">или</div>
+
+      <button type="button" class="hero-action calm ai-self" id="imgSelfGen">
+        <span class="ha-ico" data-icon="sparkle"></span>
+        <span class="ha-txt"><b>Нарисовать нейросетью</b><small class="ha-sub">Все картинки разом, в одном стиле — приложение сделает это само</small></span>
+        <span class="ha-go" data-icon="chevR"></span>
+      </button>
+
+      <p class="ways-head">Нарисовать в чате с ИИ</p>
+    <div class="stack">
+        <div class="note">
+          <span class="n-ico" data-icon="chat"></span>
+          <span>Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.</span>
+        </div>
+        <div class="ways">
+          <button type="button" class="way-row" id="imgPromptCopy">
+            <span class="wr-ico" data-icon="copy"></span>
+            <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block hidden" id="trayBox">
+      <div class="cb-head">
+        <p class="cb-title">Загружено</p>
+        <span class="cb-count" id="trayCount"></span>
+        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto">Убрать</button>
+      </div>
+      <p class="field-hint" id="trayLeft"></p>
+      <div class="tray" id="tray"></div>
+      <button type="button" class="btn-ghost" id="trayAuto">Разложить по порядку</button>
+    </div>
+
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Куда подставить</p></div>
+      <p class="field-hint">Нажми на место — предложим картинку из загруженных или с телефона.</p>
+      <div class="list-rows" id="slotList"></div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-secondary" id="imgDone">Готово</button>
+    </div>
+  </section>
+
+  <!-- Выбор картинки для места -->
+  <div class="modal" id="exitModal">
+    <div class="modal-card">
+      <span class="mini-label">Прервать тренировку</span>
+      <p class="field-hint" id="exitProgress"></p>
+      <button class="choice" id="exitSave"><b>Сохранить и выйти</b><small>В следующий раз продолжишь с этого места</small></button>
+      <button class="choice primary" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="startModal">
+    <div class="modal-card">
+      <span class="mini-label">С чего начать</span>
+      <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
+           стоит последним, у самого пальца, и единственный выделен -->
+      <button class="choice" id="startPick"><b>Выбрать упражнение</b><small>Начать с любого места программы</small></button>
+      <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
+      <button class="choice primary" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="pickStepModal">
+    <div class="modal-card">
+      <span class="mini-label">С какого упражнения начать</span>
+      <div class="pick-list" id="pickList"></div>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="aiRunModal" data-locked="1">
+    <div class="modal-card" style="text-align:center">
+      <div class="ai-spin"></div>
+      <b class="ai-run-title" id="aiRunTitle">Нейросеть работает</b>
+      <p class="ai-run-text" id="aiRunText">Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.</p>
+      <p class="ai-run-timer" id="aiRunTimer">0:00</p>
+      <button class="btn-skip" id="aiRunCancel" style="margin-top:14px">Отменить</button>
+    </div>
+  </div>
+
+  <div class="modal" id="slotModal">
+    <div class="modal-card">
+      <span class="mini-label" id="slotTitle">Картинка</span>
+      <div class="tray" id="slotTray"></div>
+      <p class="field-hint hidden" id="slotEmptyHint">Загруженных картинок пока нет — выбери их с телефона.</p>
+      <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
+      <input type="file" id="slotFile" accept="image/*" class="hidden">
+      <button type="button" class="modal-btn danger" id="slotRemove">Убрать картинку</button>
+      <button class="modal-btn" data-act="closeModal">Отмена</button>
+    </div>
+  </div>
+
+  <!-- Добавление упражнения через ИИ -->
+
+  <!-- Создание программы из видео -->
+
+  <!-- Доработка программы через ИИ -->
+
+  <!-- Настройки программы -->
+  <section class="screen builder" id="scrProgSettings">
+    <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
+    <!-- Порядок карточек — по важности: расписание, потом круги и отдых, потом рост
+         нагрузки, и только в конце оформление. Раньше первой стояла обложка с описанием,
+         а дни приходилось искать третьей карточкой — притом что карточка «Когда
+         тренироваться» дней как раз и не содержала: у программы с единственным вариантом
+         они лежали ниже, в «Вариантах тренировки». Теперь дни рисуются здесь всегда,
+         кроме случая «несколько вариантов, у каждого свои дни» (см. renderDays). -->
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
+    <div class="sched-mode hidden" id="schedModeRow">
+      <div class="hf-seg" id="schedSeg">
+        <button type="button" data-mode="days">По дням недели</button>
+        <button type="button" data-mode="rot">По очереди</button>
+      </div>
+      <p class="field-hint" id="schedHint"></p>
+    </div>
+    <div class="field hidden" id="bDaysFieldTop"><label>Дни тренировок</label><div class="days" id="bDaysTop"></div>
+      <p class="field-hint" id="bDaysTopHint"></p>
+    </div>
+    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
+      <p class="field-hint">Напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title" id="variantsLabel">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
+    <p class="field-hint" id="variantsHint"></p>
+    <div class="plan-tabs" id="planTabs"></div>
+
+    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+      <p class="field-hint" id="bDaysHint"></p>
+    </div>
+    <div class="row2">
+      <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
+      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
+    </div>
+    <p class="field-hint" id="bVolHint"></p>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Со временем сложнее</p></div>
+    <div class="pref-row"><span>Автоматически добавлять нагрузку<small>повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
+    <div id="bProgOpts" class="stack hidden">
+      <div class="field">
+        <label>Как часто повышать</label>
+        <select id="bProgEvery"></select>
+      </div>
+      <div class="note">
+        <span class="n-ico" data-icon="chart"></span>
+        <span>Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.</span>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title">Описание и обложка</p></div>
+    <!-- Описание стоит выше картинки: его читают перед стартом, а обложка — только
+         оформление списка. -->
+    <div class="field"><label>Описание (необязательно)</label>
+      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, как часто заниматься"></textarea>
+      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется перед стартом.</p>
+    </div>
+    <div class="field"><label>Обложка (необязательно)</label>
+      <div class="media-row">
+        <button type="button" id="bCoverBtn">Выбрать фото</button>
+        <button type="button" id="bCoverNone">Без обложки</button>
+      </div>
+      <input type="file" id="bCoverFile" accept="image/*" class="hidden">
+      <div class="media-preview" id="bCoverPrev"></div>
+    </div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnPsDone">Готово</button>
+    </div>
+  </section>
+
+  <!-- Редактор одного упражнения -->
+  <section class="screen builder" id="scrExercise">
+    <div class="screen-head">
+      <button class="back-chip" id="exBackTop"></button>
+      <h2>Упражнение</h2>
+      <div class="prog-menu-wrap" id="exMoreWrap">
+        <button class="more-btn" id="exMore" title="Действия"></button>
+        <div class="ctx-menu" id="exMenu"></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="exModeTabs">
+      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab" data-m="ai">Через ИИ</button>
+    </div>
+
+    <div class="card-block">
+      <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
+      <div class="field"><label>Как считать</label>
+        <div class="seg">
+          <button type="button" id="exTypeReps">Повторения</button>
+          <button type="button" id="exTypeTime">Время</button>
+        </div>
+        <p class="field-hint" id="exTypeHint"></p>
+      </div>
+      <!-- Вес — отдельный тумблер, а не третий вариант «как считать»: он сочетается
+           и с повторениями (снаряд), и со временем (удержание или перенос с грузом —
+           планка с блином, фермерская прогулка). Раньше «С весом» был третьей кнопкой
+           в этом же ряду, и добраться до «время и вес» было нечем. -->
+      <div class="pref-row"><span>Упражнение с доп. весом<small>снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
+      <div class="row2">
+        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15"></div>
+        <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
+      </div>
+      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8"></div>
+      <p class="field-hint hidden" id="exNowHint"></p>
+      <!-- Два разных отдыха: между подходами ОДНОГО упражнения обычно короче, чем
+           после него целиком — например, дальше идёт совсем другая группа мышц,
+           или наоборот, лёгкое упражнение и ждать незачем. У каждого свой чип-ряд;
+           число вводится через попап #restModal, лишнего инпута в разметке нет. -->
+      <div class="field"><label>Отдых между подходами, сек</label>
+        <div class="load-row" id="exRestChips"></div>
+        <p class="field-hint">Между каждым подходом, если их больше одного.</p>
+      </div>
+      <div class="field"><label>Отдых после упражнения, сек</label>
+        <div class="load-row" id="exRestAfterChips"></div>
+        <p class="field-hint">После всего упражнения, перед следующим.</p>
+      </div>
+      <div class="pref-row"><span>Разминка<small>делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
+      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
+    </div>
+
+    <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
+         делают по 15 повторений, здесь нечего настраивать, а раньше эти девять
+         контролов стояли посреди экрана открытыми. В заголовке — сводка.
+         Пары «прибавка + максимум» лежат ОДНИМ рядом: ось известна из формата,
+         лишние пары просто скрыты. Раньше это были три почти одинаковых блока,
+         которые приходилось держать в синхроне руками. -->
+    <div class="card-block">
+      <button type="button" class="collapse-head" id="exProgToggle">
+        <span>Со временем сложнее</span>
+        <span class="st-sum" id="exProgSum"></span>
+        <span class="st-chev" id="exProgChev"></span>
+      </button>
+
+      <div id="exProgBox" class="stack hidden">
+        <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
+        <div class="step-grid hidden" id="exStepRow">
+          <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
+               он сочетается и с повторениями, и со временем, и в обоих случаях
+               главная ось упражнения должна стоять выше своей добавки. Раньше
+               весовая пара лежала между повторениями и временем, и на формате
+               «время и вес» вес оказывался НАД секундами. -->
+          <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" maxlength="4" inputmode="numeric" placeholder="Например: 1"></div>
+          <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" maxlength="4" inputmode="numeric" placeholder="Например: 15"></div>
+          <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" maxlength="5" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" maxlength="5" inputmode="numeric" placeholder="Например: 60"></div>
+          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" maxlength="6" inputmode="decimal" placeholder="Например: 2"></div>
+          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" maxlength="6" inputmode="decimal" placeholder="Например: 24"></div>
+        </div>
+        <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
+        <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
+        <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+        <div class="stack hidden" id="exSwapBox">
+          <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
+          <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
+          <p class="field-hint">Дойдёт до максимума — на тренировке появится значок «можно усложнить».</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+    <button type="button" class="collapse-head" id="exDetailsToggle">
+      <span>Детали</span>
+      <span class="st-sum" id="exDetailsSum"></span>
+      <span class="st-chev" id="exDetailsChev"></span>
+    </button>
+
+    <div id="exDetailsBox" class="stack hidden">
+      <div class="field"><label>Как выполнять</label><textarea id="exDesc" maxlength="600" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
+      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" maxlength="300" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
+      <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
+      <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
+      <div class="field"><label>Картинка</label>
+        <div class="media-row">
+          <button type="button" id="exMediaBtn">Выбрать фото</button>
+          <button type="button" id="exMediaNone">Убрать</button>
+        </div>
+        <input type="file" id="exMediaFile" accept="image/*" class="hidden">
+        <div class="media-preview" id="exMediaPrev"></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="builder-actions">
+      <button class="btn-primary" id="btnSaveEx">Готово</button>
+    </div>
+  </section>
+
+  <!-- ЕДИНЫЙ ЭКРАН ЗАПРОСА К ИИ.
+       Раньше здесь стояли пять почти одинаковых экранов: программа по описанию,
+       программа из видео, доработка программы, новое упражнение и доработка
+       упражнения. Отличались они ровно одним — что человек вводит на первом шаге
+       и что уходит в промт. Всё остальное (кто это сделает, поле для ответа из
+       чата, кнопка внизу) дублировалось пять раз и успело разойтись: пять разных
+       формулировок одной мысли, три разных подписи у одинаковой кнопки.
+       Теперь экран один, а различия описаны таблицей AI_SOURCES в скрипте.
+       Первый шаг у каждого источника свой, поэтому он остался отдельной панелью —
+       ИМЕНА ПОЛЕЙ В ПАНЕЛЯХ НЕ МЕНЯЛИСЬ, весь код сборки промтов работает как
+       работал. Формат обмена с нейросетью не тронут вообще. -->
+  <section class="screen builder" id="scrAI">
+    <div class="screen-head">
+      <button class="back-chip" id="aiBackTop"></button>
+      <h2 id="aiTitle">Через ИИ</h2>
+      <!-- Те же действия над упражнением, что и на вкладке «Вручную»: вкладка
+           меняет способ, а не то, с чем человек работает. -->
+      <div class="prog-menu-wrap hidden" id="aiMenuWrap">
+        <button class="more-btn" id="aiMore" title="Действия"></button>
+        <div class="ctx-menu" id="aiMenu"></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="aiTabs"></div>
+
+    <div class="note hidden" id="aiLead">
+      <span class="n-ico" id="aiLeadIco"></span>
+      <span id="aiLeadTxt"></span>
+    </div>
+
+    <!-- что именно правим: программа или упражнение. Нужен только режимам доработки -->
+    <div class="nav-row hidden" id="aiSubject" style="cursor:default">
+      <div class="nr-body"><b id="aiSubjName"></b><small id="aiSubjSum"></small></div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title" id="aiStep1Title">Шаг 1</p></div>
+
+    <div class="ai-pane hidden" id="aiPaneText">
+      <p class="field-hint">Отмечай только важное — остальное подберётся само.</p>
+      <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
+      <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
+      <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
+      <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
+      <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
+      <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
+      <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
+      <div class="field"><label>Свой запрос (необязательно)</label>
+        <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
+      </div>
+      <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
+      <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
+      <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneVideo">
+      <div class="field">
+        <input type="url" id="ytUrl" maxlength="300" placeholder="https://youtube.com/watch?v=...">
+        <p class="field-hint" id="ytHint">Обычная ссылка или короткая youtu.be.</p>
+      </div>
+      <div class="field"><label>Пожелания (необязательно)</label>
+        <textarea id="ytWish" maxlength="600" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneEdit">
+      <div class="field">
+        <textarea id="eaWish" maxlength="600" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
+        <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём просишь.</p>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneExNew">
+      <div class="field">
+        <textarea id="exaWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
+        <p class="field-hint">Назови упражнение или опиши, что нужно, — подберётся само.</p>
+      </div>
+      <div class="field"><label>Сколько упражнений</label><select id="exaCount"></select></div>
+      <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
+      <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
+      <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
+      <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
+        <p class="field-hint">Что не выберешь — подберётся само, исходя из описания.</p>
+      </div>
+    </div>
+
+    <div class="ai-pane hidden" id="aiPaneExEdit">
+      <div class="field">
+        <textarea id="exeWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block">
+    <div class="cb-head"><p class="cb-title" id="aiStep2Title">Шаг 2</p></div>
+
+    <button type="button" class="hero-action ai-self" id="aiSelf">
+      <span class="ha-ico" data-icon="sparkle"></span>
+      <span class="ha-txt"><b id="aiSelfLabel">Сделать за меня</b><small class="ha-sub">Приложение сделает это само</small></span>
+      <span class="ha-go" data-icon="chevR"></span>
+    </button>
+
+
+    <div class="note hidden" id="aiSelfNote">
+      <span class="n-ico" id="aiSelfNoteIco"></span>
+      <span id="aiSelfNoteTxt"></span>
+    </div>
+
+    <div class="or-line">или</div>
+
+    <p class="ways-head">Сделать в чате с ИИ</p>
+    <div class="stack">
+      <div class="note hidden" id="aiChatNote">
+        <span class="n-ico" id="aiChatNoteIco"></span>
+        <span id="aiChatNoteTxt"></span>
+      </div>
+      <div class="ways">
+        <button type="button" class="way-row" id="aiCopy">
+          <span class="wr-ico" data-icon="copy"></span>
+          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
+        </button>
+        <button type="button" class="way-row hidden" id="aiCopyFull">
+          <span class="wr-ico" data-icon="download"></span>
+          <span class="wr-txt"><b>Скопировать саму программу</b><small>Вся программа текстом — обсудить где угодно и вернуть ответ сюда</small></span>
+        </button>
+      </div>
+    </div>
+    </div>
+
+    <div class="card-block hidden" id="aiAnswer">
+    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <p class="field-hint" id="aiAnswerHint"></p>
+    <div class="field">
+      <textarea id="aiResult" maxlength="80000" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
+    </div>
+    </div>
+
+    <div class="builder-actions" id="aiActions">
+      <button class="btn-secondary" id="aiApply">Собрать</button>
+    </div>
+  </section>
+
+  

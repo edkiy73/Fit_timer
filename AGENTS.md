@@ -22,7 +22,8 @@ They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed produ
 - Admin: `/admin.html`.
 - Mobile: Capacitor 8, app id `ru.fittimer.app`.
 - Web UI is plain HTML/CSS/JS; no React/Vue framework.
-- Shared frontend sources: `index.html`, `style.css`, `app.js`.
+- Canonical frontend sources: `src/html/`, `src/styles/`, `src/app/`.
+- Generated compatibility files: `index.html`, `style.css`, `app.js`; rebuild with `npm run build:sources` and do not edit them directly.
 - Mobile bridge/runtime helpers: `mobile.js`.
 - Mobile build copies web sources to `dist/`; never edit `dist/` directly.
 - Serverless API: `api/`; shared server code: `lib/`.
@@ -34,8 +35,8 @@ They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed produ
 
 Use `.ai/project-map.md` to choose files. Typical routing:
 
-- UI/layout/copy -> search `index.html` + `style.css`; add `app.js` only for behavior.
-- App behavior/state/workouts/programs/progression -> targeted symbols in `app.js`.
+- UI/layout/copy -> search `src/html/` + `src/styles/`; add the mapped `src/app/` part only for behavior.
+- App behavior/state/workouts/programs/progression -> search `src/app/` and open only the matching part.
 - Android/iOS bridge, share, haptics, notifications -> `mobile.js`, then native files only if bridge code requires it.
 - Auth/account -> `api/auth.js`, `lib/store.js`, relevant account code in `app.js`.
 - Trainer -> `api/trainer/[handle].js`, trainer-related `app.js`, targeted trainer tests.
@@ -66,7 +67,7 @@ Use `.ai/project-map.md` to choose files. Typical routing:
 - Diagnose before editing. Find the owner function/selector/API first.
 - Prefer the smallest patch. Do not refactor neighboring code unless it is required for correctness.
 - Do not create duplicate UI components/styles when an existing pattern can be reused.
-- Do not edit generated `dist/`.
+- Do not edit generated `dist/`, root `index.html`, root `style.css`, or root `app.js`; edit `src/**` and rebuild.
 - For ordinary UI changes, do not edit `android/` or `ios/`; change shared frontend first.
 - Shared server helpers belong in `lib/`, not `api/`.
 - Keep Vercel function count within the project limit checked by `check.py`.
@@ -89,7 +90,7 @@ Repo-wide reading is appropriate only for architecture, migrations, broad refact
 
 Run the cheapest relevant verification first:
 
-1. Targeted syntax/static check for changed files when available.
+1. `npm run check:sources` after source edits, then targeted syntax/static checks when available.
 2. Relevant targeted `tests/*.js`.
 3. `python3 check.py` for broad frontend/API invariants.
 4. `npm run build` when shared web/mobile source changed.

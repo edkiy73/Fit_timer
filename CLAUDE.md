@@ -13,7 +13,7 @@ For every coding task:
 4. Search for the exact symbol, selector, UI text, route, or test before opening large files.
 5. Read only the relevant source ranges and targeted docs.
 
-Do **not** read all of `app.js`, `style.css`, `index.html`, or the archived context by default.
+Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
 The previous full project context is preserved verbatim in:
 `docs/claude-context-archive.md`
@@ -29,7 +29,8 @@ Fit Timer is a Russian-first workout timer / training app.
 - Production: `https://fittimer99.vercel.app`
 - Production branch: `main`
 - App id: `ru.fittimer.app`
-- Shared frontend: `index.html`, `style.css`, `app.js`
+- Canonical frontend: `src/html/`, `src/styles/`, `src/app/`
+- Generated frontend outputs: root `index.html`, `style.css`, `app.js` — never edit directly
 - Mobile runtime/bridge: `mobile.js`
 - Serverless backend: `api/`
 - Shared backend code: `lib/`
@@ -82,8 +83,8 @@ These are invariants unless the user explicitly changes them.
 
 Use `.ai/project-map.md` for the full map. Common paths:
 
-- UI/layout/copy → targeted `index.html` + `style.css`
-- App behavior/workouts/programs/progression → targeted `app.js`
+- UI/layout/copy → targeted `src/html/` + `src/styles/`
+- App behavior/workouts/programs/progression → targeted `src/app/` chunk
 - Native share/haptics/notifications/mobile-only behavior → `mobile.js`, then native code only if required
 - Auth/account → `api/auth.js`, `lib/store.js`, relevant account code in `app.js`
 - Trainer → `api/trainer/[handle].js`, trainer-related frontend code, trainer tests

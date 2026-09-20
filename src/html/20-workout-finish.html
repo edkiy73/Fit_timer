@@ -1,0 +1,133 @@
+<!-- Тренировка -->
+  <section class="screen" id="scrWork">
+    <div class="prep" id="prepOverlay">
+      <div class="prep-title" id="prepTitle"></div>
+      <div class="prep-num" id="prepNum">5</div>
+      <div class="prep-sub">Приготовься</div>
+    </div>
+    <div class="pause-overlay">
+      <div class="po-text">Пауза<span class="po-sub">Таймер стоит. Описание можно читать и листать</span></div>
+      <button class="btn-resume" id="btnResume" title="Продолжить"></button>
+    </div>
+    <div class="progress">
+      <div class="labels">
+        <span id="roundLabel">Круг 1 / 4</span>
+        <span id="stepLabel"></span>
+      </div>
+      <div class="bar"><div class="fill" id="progressFill"></div></div>
+    </div>
+    <div class="stage">
+      <div class="stage-head">
+        <div class="phase-tag" id="phaseTag"></div>
+        <h2 id="stepTitle"></h2>
+        <!-- Главная цифра шага и всё, что читается вместе с ней, — ОДНА строка по
+             базовой линии: таймер, повторения и рабочий вес. Раньше вес на формате
+             «время и вес» вставал отдельной строкой такого же огромного кегля НАД
+             таймером и спорил с ним за внимание.
+             Кольцо подготовки висит сбоку абсолютом, поэтому появляется и исчезает,
+             не сдвигая саму цифру ни на пиксель. -->
+        <div class="count-row" id="countRow">
+          <div class="count" id="countdown"></div>
+          <div class="reps" id="stepReps"></div>
+          <span class="ready-ring hidden" id="readyRing" aria-hidden="true">
+            <svg viewBox="0 0 40 40"><circle class="rr-bg" cx="20" cy="20" r="17"/><circle class="rr-arc" id="readyArc" cx="20" cy="20" r="17"/></svg>
+            <b id="readyNum">5</b>
+          </span>
+        </div>
+        <div class="side-note hidden" id="sideNote"></div>
+      </div>
+      <div class="details" id="stepDetails">
+        <!-- запасной дом значка «можно усложнить»: картинки нет — значок стоит здесь,
+             по центру и без отступов. Живёт вне карточки, потому что карточки может
+             не быть совсем (нет ни описания, ни мышц, ни ошибок) -->
+        <div class="swap-slot hidden" id="swapSlot"></div>
+        <div class="wk-card" id="exCard">
+          <div class="illo-wrap" id="illoWrap">
+            <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
+            <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
+            <div class="illo" id="illoBox"></div>
+          </div>
+          <div class="wk-body">
+            <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
+            <div class="muscle-row hidden" id="stepMuscles"></div>
+            <div class="instruction-card">
+              <p class="instruction" id="stepInstruction"></p>
+            </div>
+            <p class="mistakes hidden" id="stepMistakes"></p>
+          </div>
+        </div>
+        <div class="next-up hidden" id="nextUp"></div>
+      </div>
+      <div class="scroll-cue hidden" id="scrollCue"></div>
+    </div>
+    <div class="actions">
+      <div class="act-row">
+        <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
+        <button class="btn-prev" id="btnPause" title="Пауза"></button>
+        <button class="btn-done" id="btnDone"><span>Готово</span><span data-icon="check"></span></button>
+        <button class="btn-skip" id="btnSkip">Пропустить</button>
+        <!-- Правка упражнения прямо с тренировки. Попап «Как ощущался вес?» после
+             последнего подхода убран: он спрашивал про одну ось из трёх, выскакивал
+             сам и уезжал по таймеру. Здесь — обычный редактор упражнения. -->
+        <div class="work-menu-wrap" id="workMenuWrap">
+          <button class="btn-prev" id="workMore" title="Действия"></button>
+          <div class="ctx-menu" id="workMenu"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ШАГ 3: финал -->
+  <section class="screen" id="scrFinish">
+    <!-- Живой фон финала: три больших размытых пятна, которые медленно расходятся.
+         Двигается только transform — это целиком на компоновщике и не греет процессор. -->
+    <div class="fin-aura" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="finish">
+      <!-- Медаль в кольце: кольцо замыкается по мере того, как искры долетают до неё. -->
+      <div class="fin-crest" id="finCrest">
+        <svg class="fin-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="finRingGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop class="frg-a" offset="0"></stop>
+              <stop class="frg-b" offset="1"></stop>
+            </linearGradient>
+          </defs>
+          <circle class="fr-track" cx="60" cy="60" r="55"></circle>
+          <circle class="fr-arc" id="finArc" cx="60" cy="60" r="55"></circle>
+          <g class="fr-head" id="finHead">
+            <circle class="fr-halo" cx="60" cy="5" r="7.5"></circle>
+            <circle class="fr-dot" cx="60" cy="5" r="3"></circle>
+          </g>
+        </svg>
+        <span class="fin-bloom" aria-hidden="true"></span>
+        <div class="medal" data-icon="medal"></div>
+      </div>
+      <h2 class="fin-rise">Отличная работа!</h2>
+      <div class="result-card fin-rise">
+        <div class="rc-main">
+          <div class="rc-time" id="finalTime">0:00</div>
+          <div class="rc-sub">время тренировки</div>
+        </div>
+        <div class="rc-stats">
+          <div class="rc-stat"><b id="finKcal">—</b><small>ккал</small></div>
+          <div class="rc-stat"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
+          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord">подряд</small></div>
+        </div>
+        <div class="badge-row" id="badgeRow"></div>
+      </div>
+      <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
+      <div class="field fin-note hidden" id="finNoteField">
+        <label>Заметка о тренировке</label>
+        <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
+      </div>
+    </div>
+    <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую
+         часть экрана, хотя оба действия помещаются рядом -->
+    <div class="actions act-row fin-rise">
+      <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться"></button>
+      <button class="btn-primary" id="btnAgain">Готово</button>
+    </div>
+    <canvas id="finFx" aria-hidden="true"></canvas>
+  </section>
+
+  

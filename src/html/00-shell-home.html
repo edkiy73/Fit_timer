@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
+<title>Fit Timer — домашние тренировки</title>
+<meta name="theme-color" content="#0C0916">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="app.config.js"></script>
+<script src="mobile.js"></script>
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitTimer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Верхняя полоса осталась ровно одному экрану — тренировке: там нужны звук,
+       микрофон и «Выйти». На корневых разделах её роль играют док снизу и
+       собственный заголовок страницы, поэтому там она скрыта целиком. -->
+  <div class="topbar hidden" id="topBar">
+    <div class="brand">FIT<b>/</b>TIMER</div>
+    <div class="global-clock" id="globalClock">00:00</div>
+    <div class="top-tools">
+      <button class="icon-btn btn-sound" id="btnSoundW" title="Звук" data-icon="vol"></button>
+      <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление" data-icon="mic"></button>
+            <button class="btn-exit" id="btnExit">Выйти</button>
+    </div>
+  </div>
+
+  <!-- ШАГ 1: «Сегодня». Экран начинается с содержания: ни логотипа, ни аватарки —
+       логотип есть в иконке приложения и на знакомстве, профиль живёт во вкладке
+       «Аккаунт». Первое, что видит человек, — своё имя и что делать сегодня. -->
+  <section class="screen root on" id="scrMenu">
+    <!-- живое приветствие: имя из знакомства + серия и суммарное время -->
+    <div class="showcase">
+      <div class="sc-glow" id="scGlow"></div>
+      <div class="greet">
+        <div class="greet-top">
+          <div class="greet-id">
+            <h1 class="greet-name" id="greetName"></h1>
+          </div>
+          <!-- аватарка ведёт в свой профиль: на «Сегодня» это единственное место,
+               где видно, чей это экран, — а на устройстве профилей может быть несколько -->
+          <button type="button" class="greet-ava" id="greetAva" title="Профиль"></button>
+        </div>
+        <div class="greet-chips" id="greetChips"></div>
+      </div>
+    </div>
+
+    <!-- ПЛАН НА СЕГОДНЯ. Каждая строка целиком — кнопка: раньше название программы
+         выглядело ссылкой, но не нажималось, и это читалось как зависание. -->
+    <div class="today-card hidden" id="todayBox">
+      <span class="tc-aura" aria-hidden="true"></span>
+      <span class="ts-label">План на сегодня · <span id="todayDayName"></span></span>
+      <div id="todayList"></div>
+    </div>
+    <!-- вход в каталог: готовые программы от тренеров для тех, кому не хочется
+         собирать свою. Не «магазин»: денег здесь нет и не будет — программу
+         добавляют в библиотеку, а не покупают. -->
+    <button class="store-cta" id="btnStoreMenu">
+      <span class="sc-ico" id="storeIcoMenu"></span>
+      <span class="sc-txt"><b>Каталог программ</b><small>Тренировки от тренеров</small></span>
+      <span class="sc-arrow" id="storeArrowMenu"></span>
+    </button>
+
+    <!-- Неделя и прогресс — такие же карточки, как «План на сегодня»: раньше это
+         были голые блоки на фоне страницы с подписью-заголовком сбоку, и экран
+         распадался на две разные системы. Заголовок внутри карточки — тот же .ts-label. -->
+    <!-- «Сколько закрыто» и «что ещё можно закрыть» — два числа, ради которых сюда
+         смотрят. Раньше оба лежали в одной серой строке через « · » и переносились
+         в две строки мелким текстом. Теперь счёт стоит в шапке карточки, доля
+         выполненного видна полосой, а незакрытое — янтарным чипом, тем же, что и
+         «серия под угрозой»: одно незакрытое дело — один цвет по всему экрану. -->
+    <div class="panel week-card">
+      <div class="wk-head">
+        <span class="ts-label">Эта неделя</span>
+        <span class="wk-score hidden" id="weekScore"><b id="weekDone">0</b><span id="weekOf"></span></span>
+      </div>
+      <div class="week-strip" id="weekStrip"></div>
+      <div class="wk-bar hidden" id="weekBar"><i id="weekBarFill"></i></div>
+      <div class="wk-chips" id="weekChips"></div>
+      <p class="field-hint" id="weekStripHint"></p>
+    </div>
+
+    <!-- Баннер подписки стоит выше прогресса: прогресс — итог экрана, после него
+         читать предложение уже некому. Когда премиум оформлен, баннер прячется. -->
+    <button class="premium-banner" id="btnPremium">
+      <span class="pb-glow" aria-hidden="true"></span>
+      <span class="pb-ico" data-icon="crown"></span>
+      <span class="pb-txt">
+        <b>Fit Timer Премиум</b>
+        <small id="pbSub">Тренировку соберёт ИИ. И весь каталог программ от тренеров.</small>
+      </span>
+    </button>
+
+    <div class="panel progress-card">
+      <span class="ts-label">Прогресс</span>
+      <div class="quick-stats">
+        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
+        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
+        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
+      </div>
+      <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
+           есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
+           пульс и сон прочерками, как вес, нельзя: вес записывают почти все, а
+           тонометр дома есть у немногих — три тусклых «—» захламили бы главный блок
+           экрана вместо того, чтобы что-то сообщить. -->
+      <div class="quick-stats hidden" id="qsWell"></div>
+    </div>
+  </section>
+
+  <!-- КАТАЛОГ ПРОГРАММ. Не магазин: оплаты нет и в этой версии не появится —
+       программа добавляется в библиотеку, а не покупается. У каждой программы есть
+       автор — ник тренера. Программы описаны
+       тем же текстовым форматом, что и ответы нейросети, и при добавлении проходят
+       через тот же parseProgramText — программа из каталога ничем не отличается от
+       собранной руками. Программы приходят с сервера, обложки рисуются на месте. -->
+  <section class="screen" id="scrStore">
+    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2>Каталог</h2></div>
+
+    <div class="store-search">
+      <span class="ss-ico" id="storeSearchIco"></span>
+      <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" autocomplete="off">
+      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить"></button>
+    </div>
+
+    <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
+         если пролистать, а сколько ещё за краем — не видно вообще. Обычный список
+         показывает весь набор сразу и занимает одну строку на двоих. Список — не
+         нативный select: его системная шторка (белый фон, синее выделение) не
+         похожа на остальное приложение и на разных экранах всплывает в разных
+         местах. Вместо неё — свой попап #optModal с тем же списком. -->
+    <div class="row2 store-filters">
+      <button type="button" class="filter-btn ph" id="storeCatBtn"><span id="storeCatVal">Цель</span><span class="fb-chev" id="storeCatChev"></span></button>
+      <button type="button" class="filter-btn ph" id="storeLevelBtn"><span id="storeLevelVal">Уровень</span><span class="fb-chev" id="storeLevelChev"></span></button>
+    </div>
+
+    <p class="store-count" id="storeCount"></p>
+    <div class="store-list" id="storeList"></div>
+  </section>
+
+  <!-- Страница программы каталога. Витрина показывает обложку, название, цель,
+       минуты, уровень и тренера; подробности живут здесь: состав, расписание,
+       описание. Обложка здесь та же квадратная, что и в списке, и стоит рядом с
+       названием: во всю ширину квадрат съедал пол-экрана. Состав премиум-программы
+       открыт только по подписке — вместо него заглушка, ведущая в витрину подписки. -->
+  <section class="screen" id="scrStoreItem">
+    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2>Программа</h2></div>
+    <div class="card-block">
+      <div class="si-hero">
+        <div class="si-cover" id="siCover"></div>
+        <div class="si-id">
+          <h3 class="si-name" id="siName"></h3>
+          <p class="si-goal" id="siGoal"></p>
+          <div class="st-labels" id="siLabels"></div>
+        </div>
+      </div>
+      <div class="ex-meta" id="siFacts"></div>
+      <p class="st-gives" id="siGives"></p>
+      <button type="button" class="st-by" id="siBy">
+        <span class="st-ava" data-icon="user"></span>
+        <span class="st-nick" id="siNick"></span>
+        <span class="st-role">тренер</span>
+      </button>
+    </div>
+    <div class="card-block">
+      <div class="cb-head"><p class="cb-title">Что внутри</p><span class="cb-count" id="siCount"></span></div>
+      <div class="list-rows" id="siList"></div>
+      <button type="button" class="si-lock hidden" id="siLock">
+        <span class="sl-ico" data-icon="crown"></span>
+        <b>Состав открыт по подписке</b>
+        <p id="siLockTxt"></p>
+      </button>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="siBuy">Добавить</button>
+    </div>
+  </section>
+
+  

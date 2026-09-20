@@ -28,6 +28,7 @@ jobs:
 
       - name: Собрать то, что отдаём
         run: |
+          node scripts/build-sources.mjs
           mkdir -p _site/.well-known
           cp index.html style.css app.js app.config.js mobile.js manifest.webmanifest sw.js icon-*.png _site/
           cp .well-known/assetlinks.json _site/.well-known/

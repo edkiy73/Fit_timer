@@ -1,0 +1,459 @@
+  :root{
+    /* Шрифты грузятся с Google Fonts. Если сеть недоступна (офлайн, PWA без интернета,
+       заблокированный домен), браузер обязан взять системный ГРОТЕСК, а не сваливаться
+       в шрифт с засечками по умолчанию — поэтому fallback-стек задан один раз здесь
+       и подставляется переменной везде, где раньше стояло голое имя шрифта. */
+    --font-display:'Oswald','Arial Narrow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --font-text:'Rubik',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+
+    /* ======================= ТЁМНАЯ ТЕМА — ОСНОВНАЯ =======================
+       Одна шкала на всё приложение. Правило простое:
+         --accent      — заливка (кнопки, активные чипы). Текст на ней всегда --on-accent.
+         --accent-ink  — тот же акцент, но как ТЕКСТ на фоне страницы: светлее, чтобы
+                         читался. Именно из-за смешения этих двух ролей раньше
+                         акцентные цифры на тёмном фоне были тусклыми.
+         --accent-soft — акцент как подложка (8–16% прозрачности).
+       Акцент дорогой: заливкой красим ровно одно главное действие на экране. */
+    --bg:#0C0916;
+    --bg-2:#120D1F;          /* полосы и подложки чуть светлее фона */
+    --card:#171126;          /* поверхность-карточка */
+    --surface:#1F1733;       /* поверхность внутри карточки (поля, миниатюры) */
+    --line:#2B2142;
+    --line-2:#3B2F58;        /* заметная граница: фокус-контур, разделители в шапке */
+    --ink:#F4F1FB;
+    --muted:#A99FC4;
+    --on-accent:#FFFFFF;
+
+    --accent:#7C56F5;
+    --accent-2:#9273FF;      /* наведение / светлее */
+    --accent-ink:#B7A0FF;
+    --accent-soft:rgba(124,86,245,.16);
+    --accent-line:rgba(140,105,255,.42);
+
+    /* отдых — прохладный циан: соседний violet-у оттенок, но ни с чем не путается */
+    --rest:#3FD3E6;
+    --rest-ink:#63DEEE;
+    --rest-soft:rgba(63,211,230,.10);
+    --rest-line:rgba(63,211,230,.32);
+    --bg-rest:#06161F;
+    --card-rest:#0D2733;
+
+    --ok:#3ED598;
+    --ok-soft:rgba(62,213,152,.12);
+    --ok-line:rgba(62,213,152,.38);
+    --warn:#F5B93B;
+    --warn-soft:rgba(245,185,59,.11);
+    --warn-line:rgba(245,185,59,.36);
+    --danger:#FF6079;
+    --danger-soft:rgba(255,96,121,.12);
+    --danger-line:rgba(255,96,121,.38);
+
+    --grad-accent:linear-gradient(135deg,#7E58F6 0%,#6134DE 52%,#9E3FD0 100%);
+    --grad-rest:linear-gradient(135deg,#4FDCEC 0%,#3B8FE0 100%);
+    --sh-1:0 2px 10px rgba(0,0,0,.35);
+    --sh-2:0 16px 40px rgba(0,0,0,.55);
+    --sh-accent:0 10px 26px rgba(108,58,232,.42);
+    --scrim:rgba(6,4,12,.62);
+    --glass:rgba(23,17,38,.88);
+    --bg-0:rgba(12,9,22,0);   /* тот же --bg с нулевой прозрачностью: без него
+                                 градиент затухания даёт серую кромку */
+
+    /* совместимость: --work остаётся именем акцента, --rest — фазы отдыха */
+    --work:var(--accent);
+
+    /* ---- шкала отступов ---- */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:26px; --sp-7:34px;
+    /* Шаг между крупными блоками «Сегодня». Ровно такой же, как между карточками на
+       остальных корневых экранах (.card-block: margin-bottom 14px), — иначе главная
+       выглядит разреженной рядом с «Тренировками» и «Настройками». Был 34, потом 24;
+       и то и другое всё ещё выбивалось из общего ритма. */
+    --gap-main:14px;
+    /* ---- шкала радиусов ---- */
+    --r-xs:8px; --r-sm:11px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
+    --radius:var(--r-lg);
+    /* ---- типографическая шкала ---- */
+    --fs-xs:11.5px; --fs-sm:13px; --fs-md:15px; --fs-lg:17px; --fs-xl:21px; --fs-2xl:27px;
+    /* панели, которые остаются тёмными в обеих темах (пауза, попап веса) */
+    --panel-dark:rgba(22,16,38,.95);
+    --panel-dark-line:rgba(255,255,255,.10);
+    /* подложка под «Дальше» на отдыхе: светлая иконка на тёмном */
+    --plate-dark:#241A3C;
+    /* высота плавающего дока вместе с полем под ним (без безопасной зоны) —
+       под неё резервируем прокрутку корневых экранов */
+    --dock-h:74px;
+    --dock-line:rgba(255,255,255,.10);
+    --sh-dock:0 10px 30px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.34);
+    --sh-dock-act:0 0 16px rgba(124,86,245,.34);
+    /* пятна живого фона карточки плана */
+    --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.42;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
+  button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active{transform:scale(.96)}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+  /* Горизонтальной прокрутки в приложении не бывает никогда: экран телефона —
+     единственный сценарий, и любой вылезший за край декоративный слой уводит
+     страницу вбок вместе с фиксированным доком. clip (а не hidden) — чтобы не
+     появлялся контейнер прокрутки и не ломался position:sticky внутри экранов. */
+  html,body{height:100%;overflow-x:clip}
+  body{
+    font-family:var(--font-text);
+    background:var(--bg);
+    color:var(--ink);
+    transition:background .6s ease;
+    display:flex;flex-direction:column;
+    min-height:100dvh;
+    /* ничто декоративное не должно создавать горизонтальную прокрутку: свечение за
+       заголовком шире колонки специально. clip (а не hidden) не делает body
+       контейнером прокрутки, поэтому липкие панели продолжают работать */
+    overflow-x:clip;
+  }
+  body.phase-rest{background:var(--bg-rest)}
+
+  body.light .actions{background:linear-gradient(to top, var(--bg) 72%, rgba(250,245,241,0))}
+  body.light.phase-rest .actions{background:linear-gradient(to top, var(--bg-rest) 72%, rgba(233,243,238,0))}
+  body.light .mc-cover{background:var(--surface);color:var(--accent-ink)}
+  body.light .nu-media{background:var(--plate-dark);color:#CBBEE6}
+  .app{
+    width:100%;max-width:520px;margin:0 auto;
+    flex:1;display:flex;flex-direction:column;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+  /* ---- полоса прокрутки ----
+     Chrome на телефоне её не рисует, а браузер Samsung рисует — и она оставалась
+     светло-серой поверх тёмной темы. Красим сами и делаем узкой. Цвета берём из
+     переменных, заданных прямо на html (см. applyTheme): пседоэлемент полосы у
+     страницы принадлежит html, а не body, и переменных темы с body он не видит. */
+  html{scrollbar-width:thin;scrollbar-color:var(--sb-thumb,#3B2F58) transparent}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--sb-thumb,#3B2F58);border-radius:99px}
+  ::-webkit-scrollbar-corner{background:transparent}
+
+  h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;position:relative;z-index:50}
+  .topbar .brand{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .topbar .brand b{color:var(--accent-ink)}
+  body.phase-rest .topbar .brand b{color:var(--rest-ink)}
+  .global-clock{font-family:var(--font-display);font-size:15px;letter-spacing:.08em;color:var(--muted);font-variant-numeric:tabular-nums;display:none}
+  .global-clock.on{display:block}
+  .btn-exit{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;height:34px;padding:0 12px;font-family:var(--font-text);font-size:13px;cursor:pointer;display:none;align-items:center}
+  .btn-exit.on{display:flex}
+  .top-tools .icon-btn{width:34px;height:34px;border-radius:10px;padding:0;line-height:1;display:none;align-items:center;justify-content:center}
+  .top-tools .icon-btn.on{display:flex}
+  .top-tools .icon-btn svg{width:17px;height:17px}
+  .top-tools{display:flex;align-items:center;gap:8px}
+  .icon-btn.btn-mic{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1;filter:grayscale(1);opacity:.65}
+  .icon-btn.btn-mic.on{display:block}
+  .icon-btn.btn-mic.listening{filter:none;opacity:1;border-color:var(--accent-line);animation:micPulse 1.6s infinite}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,61,.35)}50%{box-shadow:0 0 0 6px rgba(255,77,61,0)}}
+  .icon-btn.btn-sound{display:none;width:34px;height:34px;border-radius:10px;font-size:14px;padding:0;line-height:1}
+  .icon-btn.btn-sound.on{display:block}
+  .icon-btn.btn-sound.muted{filter:grayscale(1);opacity:.55}
+  /* пауза — «остров» прямо на хедере, а не оверлей на весь экран: весь контент
+     под ним остаётся видимым и скроллится точно так же, как без паузы.
+     Ширина и верхний отступ — те же, что у контента страницы (.app: 20px, max 480px). */
+  .screen{position:relative}
+  .pause-overlay{
+    position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    width:calc(100% - 40px);max-width:480px;z-index:60;display:none;
+    align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 12px;border-radius:14px;box-sizing:border-box;
+    /* Плашка была тёмно-серой на тёмном экране — её просто не замечали и думали,
+       что тренировка идёт. Пауза — состояние, из которого надо выйти, поэтому
+       цвет тревожный, а не нейтральный. */
+    background:var(--danger);
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  /* панель паузы выезжает снизу. Своя анимация, а не общая sheetUp: панель
+     центрируется через translateX(-50%), и общий кадр «transform:none» сбросил бы
+     центровку — панель прыгала бы к левому краю. */
+  body.paused .pause-overlay{display:flex;animation:pauseIn .24s cubic-bezier(.2,.8,.2,1)}
+  @keyframes pauseIn{
+    from{opacity:0;transform:translateX(-50%) translateY(18px)}
+    to{opacity:1;transform:translateX(-50%)}
+  }
+  .pause-overlay .po-text{
+    color:#fff;font-family:var(--font-display);font-weight:600;letter-spacing:.06em;
+    font-size:13.5px;text-transform:uppercase;
+  }
+  .pause-overlay .po-sub{
+    display:block;color:rgba(255,255,255,.88);font-size:12px;margin-top:2px;
+    font-family:var(--font-text);font-weight:400;text-transform:none;letter-spacing:0;line-height:1.4;
+  }
+  .btn-resume{
+    flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
+    background:#fff;color:var(--danger);display:flex;align-items:center;justify-content:center;
+  }
+  .btn-resume:active{transform:scale(.94)}
+
+  /* ---------- screens ---------- */
+  .screen{display:none;flex:1;flex-direction:column;min-width:0}
+  .screen.on{display:flex}
+  /* Переход между экранами. Раньше вся страница целиком мигала прозрачностью — это
+     читалось как перерисовка, а не как движение. Теперь всплывает каждая карточка
+     со своей задержкой: экран собирается на глазах. Тренировка исключена — там
+     таймер, и любое движение рядом с ним отвлекает от счёта. */
+  /* fill-mode именно backwards, а НЕ both. При both анимация продолжает влиять на
+     элемент и после конца: transform остаётся единичной матрицей вместо none, а это
+     уже контекст наложения. Из-за него контекстное меню в шапке экрана (z-index:30)
+     оказывалось заперто внутри шапки, и весь контент ниже рисовался поверх него —
+     на экране программы нельзя было нажать ни один пункт меню. backwards держит
+     начальный кадр до старта (ради этого fill и нужен) и отпускает элемент в конце. */
+  .screen.on:not(#scrWork):not(#scrFinish) > *{animation:cardIn .3s cubic-bezier(.22,.7,.2,1) backwards}
+  .screen.on:not(#scrWork) > *:nth-child(2){animation-delay:.04s}
+  .screen.on:not(#scrWork) > *:nth-child(3){animation-delay:.08s}
+  .screen.on:not(#scrWork) > *:nth-child(4){animation-delay:.12s}
+  .screen.on:not(#scrWork) > *:nth-child(5){animation-delay:.16s}
+  .screen.on:not(#scrWork) > *:nth-child(n+6){animation-delay:.2s}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* ---------- экран тренировки: кнопки всегда на одном месте ----------
+     min-height у body задаёт только минимум, поэтому при длинном описании вся колонка
+     росла вниз и панель управления уезжала за нижний край — до неё приходилось
+     доскроллить. На тренировке это недопустимо: кнопки нужны мгновенно и вслепую.
+     Здесь высота становится ОПРЕДЕЛЁННОЙ, и лишнее берёт на себя блок описания. */
+  body.screen-work{height:100dvh;overflow:hidden}
+  body.screen-work .app{min-height:0}
+  body.screen-work #scrWork{min-height:0}
+  body.screen-work .details{flex:0 1 auto}
+  body.screen-work .actions{flex:none;position:static}
+
+  /* ---------- menu ---------- */
+  .month-card{
+    display:flex;align-items:flex-start;gap:var(--sp-3);width:100%;text-align:left;cursor:pointer;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:var(--sp-3);margin-bottom:var(--sp-3);color:var(--ink);
+    box-shadow:var(--sh-1);
+    transition:transform .12s ease,border-color .12s ease;
+  }
+  .month-card:active{transform:scale(.985)}
+  .mc-cover{
+    flex:none;width:60px;height:60px;border-radius:var(--r-md);overflow:hidden;
+    background:var(--accent-soft);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mc-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .mc-cover svg{width:36px;height:36px}
+  /* Обложка стоит по верху всегда. Центрируется только текст и только когда его
+     мало: min-height по высоте обложки плюс justify-content:center — две строки
+     встают вровень с её серединой, а если текста больше, блок растёт вниз и
+     начинается с той же линии, что и обложка. */
+  .mc-body{flex:1;min-width:0;min-height:60px;display:flex;flex-direction:column;justify-content:center}
+  .month-card .num{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--accent-ink)}
+  .month-card h3{
+    font-size:15px;line-height:1.2;margin:0 0 5px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .month-card p{color:var(--muted);font-size:var(--fs-sm);line-height:1.4}
+  .month-card .sched svg{width:12px;height:12px;flex:none}
+  .month-card .sched{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:500;white-space:nowrap}
+  /* расписание и очередь — отдельные чипы: если не влезают в строку, переносится
+     чип целиком, а не разрывается фраза посередине */
+  .mc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+
+  /* ---------- мои программы ---------- */
+  .mine-card{position:relative;margin-bottom:12px}
+  /* Справа в карточке живут «⋮» сверху и ручка перетаскивания снизу — обе шириной
+     34 px и в 6 px от края, то есть занимают 40 px. 66 px оставляли им лишних 26,
+     и на 360 чип «Откл» с чипом расписания «Пн · Ср · Пт» не влезали в строку из-за
+     этого запаса. 58 px держат 18 px просвета — кнопок текст по-прежнему не
+     касается, а чипы встают в одну строку. */
+  .mine-card .month-card{margin-bottom:0;padding-right:58px}
+  /* Отключённая программа остаётся в списке, но выглядит тише соседних ЦЕЛИКОМ, а
+     не одной обложкой: приглушённая картинка при названии в полном контрасте
+     читалась как «картинка не загрузилась», а не как «программа выключена».
+     Гасим обложку и опускаем название до цвета обычного текста карточки — это
+     всё ещё выше 4.5:1, название остаётся читаемым. Общий opacity на карточку не
+     ставим: он утопил бы и сам чип состояния, ради которого всё затевалось.
+     Само состояние сказано СЛОВОМ в чипе «Откл», не одним лишь цветом. */
+  .mine-card.off .mc-cover{opacity:.45}
+  .mine-card.off .month-card h3{color:var(--muted)}
+  /* строку с чипами исключаем: opacity родителя дочерним :1 не отменить, и чип
+     «Откл» потускнел бы вместе со всем остальным */
+  .mine-card.off .month-card p:not(.mc-chips){opacity:.72}
+  .mine-card.off .sched{background:var(--bg-2);color:var(--muted)}
+  .mine-card.off .sched.off{background:var(--line);color:var(--ink);opacity:1}
+  .more-btn{
+    position:absolute;top:8px;right:6px;z-index:5;
+    width:34px;height:34px;border-radius:10px;border:none;background:none;
+    color:var(--muted);font-size:18px;cursor:pointer;line-height:1;
+  }
+  .more-btn:active{background:var(--line)}
+  /* Ширина меню — ПО СОДЕРЖИМОМУ, и это приходится говорить явно. Меню
+     позиционируется абсолютно от ближайшего relative-предка, а у экранов это
+     `.prog-menu-wrap` — обёртка шириной ровно в кнопку «⋮», 38 px. Свободное
+     место слева от неё браузер в расчёт не берёт: доступная ширина для
+     shrink-to-fit равна 38 px, поэтому ширина схлопывалась до min-content, то
+     есть до самого длинного СЛОВА, и «Поделиться ссылкой» вставало в две строки
+     (min-width:170px только маскировал это у коротких пунктов). `max-content`
+     считает ширину по самой длинной СТРОКЕ, min-width по-прежнему держит нижнюю
+     границу, а max-width не даёт меню уехать за край экрана, если пункт когда-то
+     окажется очень длинным. */
+  .ctx-menu{
+    position:absolute;right:8px;top:44px;z-index:30;display:none;
+    width:max-content;min-width:170px;max-width:calc(100vw - 48px);
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
+    box-shadow:var(--sh-2);
+  }
+  .ctx-menu.open{display:block;animation:menuIn .16s cubic-bezier(.22,.7,.2,1)}
+  /* внизу списка меню не помещается — раскрываем вверх от кнопки */
+  .ctx-menu.up{top:auto;bottom:calc(100% + 6px);animation:menuUp .16s cubic-bezier(.22,.7,.2,1)}
+  @keyframes menuUp{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+  .ctx-menu button{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    padding:13px 16px;background:none;border:none;color:var(--ink);
+    font-family:var(--font-text);font-size:14px;cursor:pointer;
+  }
+  .ctx-menu button + button{border-top:1px solid var(--line)}
+  .ctx-menu button:active{background:var(--line)}
+  .ctx-menu .danger{color:var(--accent-ink)}
+  .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer}
+  .icon-btn:active{transform:scale(.95)}
+  .btn-ghost{
+    width:100%;min-height:52px;border:1px dashed var(--line);background:none;color:var(--muted);
+    border-radius:14px;padding:0 16px;font-family:var(--font-text);font-size:14.5px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .btn-ghost:active{transform:scale(.985)}
+  .btn-ghost svg{width:18px;height:18px;margin-right:8px;flex:none}
+  /* «＋ Добавить профиль» — строка выбора с иконкой по центру, а не с плюсом-символом */
+  .choice.add-row, .choice.ico-row{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+  .choice.add-row b, .choice.ico-row b{margin:0}
+  .choice.add-row svg, .choice.ico-row svg{width:18px;height:18px;color:var(--muted);flex:none}
+  .ts-label{display:block;font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .field-hint{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
+  .field-hint:empty{display:none}
+  /* Подсказка, которая сообщает о неполадке, — янтарная: тем же цветом в приложении
+     помечен незакрытый долг. Одно незакрытое дело должно читаться одинаково. */
+  .field-hint.warn{color:var(--warn)}
+  /* ЗАГЛУШКА НА ВРЕМЯ ЗАГРУЗКИ. Раньше экран сначала рисовал одну раскладку, потом
+     заменял её другой — и это читалось как сбой, хотя всё работало. Серые полосы
+     той же формы, что и будущее содержимое, говорят «сейчас будет» и не врут: их
+     нельзя перепутать с данными, и раскладка не прыгает.
+     Мерцание намеренно медленное — быстрое само по себе выглядит тревожно. */
+  .sk{background:var(--line);border-radius:8px;animation:skPulse 1.6s ease-in-out infinite}
+  @keyframes skPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.sk{animation:none}}
+  .sk-line{height:13px;margin:9px 0}
+
+  /* Своя обложка программы вместо рисованной по цели. Форму держит тот же
+     контейнер, что и у рисованной, — иначе строка витрины поедет. */
+  /* Своя обложка вместо рисованной. НЕ position:absolute: контейнеры обложек
+     (.sr-cover, .si-cover) своего контекста наложения не создают, и картинка
+     уезжала к ближайшему позиционированному предку — то есть разворачивалась на
+     весь экран поверх каталога. Размер держит сам контейнер, обычного блока
+     на всю его ширину и высоту достаточно. */
+  .st-photo{width:100%;height:100%;overflow:hidden;border-radius:inherit;line-height:0}
+  .st-photo img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* ---------- конструктор ---------- */
+  .builder h2{margin:18px 0 16px}
+  /* ======== КОМПОНЕНТ «ПОЛЕ» — единственный источник правды ========
+     поле = колонка: подпись, контрол, подсказка. Шаг внутри 6px.
+     Между полями расстояние задаёт контейнер (карточка через gap). */
+  .field{display:flex;flex-direction:column;gap:6px;margin:0 0 16px}
+  .field > *{margin:0}
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-display);color:var(--muted)}
+
+  /* все элементы управления выглядят одинаково */
+  .field input,.field textarea,.field select,
+  input[type=text],input[type=url],input[type=number],input[type=time],input[type=date],input[type=password],
+  textarea,select{
+    width:100%;box-sizing:border-box;
+    background-color:var(--bg);border:1px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:var(--font-text);font-size:15px;
+    padding:13px 14px;min-height:48px;text-align:left;
+  }
+  textarea{min-height:90px;line-height:1.5;resize:vertical}
+  /* подсказка в пустом поле заметно бледнее текста — иначе её путают с заполненным значением */
+  ::placeholder{color:var(--muted);opacity:.55}
+  ::-webkit-input-placeholder{color:var(--muted);opacity:.55}
+  input[type=range]{padding:0;min-height:0;border:none}
+  input[type=file]{display:none}
+  /* селект — со стрелкой */
+  select{
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A99FC4' stroke-width='2.2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
+    padding-right:38px;
+  }
+  .field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-display);color:var(--muted);margin:0 0 6px}
+  .field textarea{resize:vertical;min-height:64px}
+  /* фокус видно: акцентная рамка и мягкое кольцо вместо системного чёрного контура */
+  .field input:focus,.field textarea:focus,.field select:focus,
+  input:focus,textarea:focus,select:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .field.bad input:focus,.field.bad textarea:focus,.field.bad select:focus{
+    border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft);
+  }
+  /* клавиатурный фокус на кнопках и ссылках */
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--accent-ink);outline-offset:2px;border-radius:var(--r-xs);
+  }
+  .field input[type=date],.field input[type=time]{min-height:47px;-webkit-appearance:none;appearance:none;color-scheme:light}
+  body:not(.light) .field input[type=date],body:not(.light) .field input[type=time]{color-scheme:dark}
+  .row2{display:flex;gap:10px;margin:0 0 16px;align-items:flex-end}
+  /* пары «прибавка + максимум»: у формата с весом их две, поэтому не flex-строка,
+     а сетка — иначе четыре поля встают в один ряд и подписи наезжают друг на друга */
+  .step-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+  .row2 .field{flex:1;min-width:0}
+  .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
+  .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
+  .seg button.act{background:var(--work);color:var(--on-accent)}
+  .media-row{display:flex;gap:8px}
+  .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
+  .media-row button.act{border-color:var(--accent-line);color:var(--ink)}
+  /* семь дней недели — всегда одна строка: перенос одного дня на вторую строку
+     выглядел как сбой вёрстки. Чипы ужимаются, а не переносятся. */
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  #bDays,#bDaysTop,#qDays{flex-wrap:nowrap}
+  #bDays .day-chip,#bDaysTop .day-chip,#qDays .day-chip{min-width:0;padding:0 4px}
+  /* чипы чуть ниже и теснее: в ряд помещается больше, но палец ещё попадает */
+  .day-chip{
+    flex:1;min-width:38px;background-color:var(--card);border:1px solid var(--line);border-radius:11px;
+    color:var(--muted);padding:0 7px;min-height:33px;font-size:13px;font-family:var(--font-text);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+  }
+  .day-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
+  .media-preview{margin-top:10px}
+  .mp-empty{font-size:12.5px;color:var(--muted)}
+  .tray{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+  .tray-item{flex:none;width:76px;height:76px;border-radius:12px;overflow:hidden;border:2px solid var(--line);background:var(--card);position:relative;cursor:pointer}
+  .tray-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .tray-item .ti-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;line-height:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .tray-item .ti-x svg{width:11px;height:11px;stroke-width:2.6}
+  /* картинка уже где-то стоит: она остаётся в списке — её можно поставить ещё раз */
+  .tray-item.used img{opacity:.42}
+  .tray-item.used::after{
+    content:'';position:absolute;inset:auto 0 0 0;height:4px;background:var(--accent);
+  }
+  .tray-item.act{border-color:var(--accent)}
+  .slot-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}
+  .slot-row .sl-thumb{flex:none;width:52px;height:52px;border-radius:11px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  .slot-row .sl-thumb img{width:100%;height:100%;object-fit:cover}
+  .slot-row .sl-thumb svg{width:24px;height:24px;color:var(--muted)}
+  .slot-row .sl-body{flex:1;min-width:0}
+  .slot-row .sl-body b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot-row .sl-body small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .slot-row .sl-body small.has{color:var(--rest-ink)}
+  .slot-group{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:8px 0 0}
+  /* поле растёт под текст; когда упирается в предел высоты — скроллится внутри себя,
+     поэтому overflow задаётся из autoGrow(), а не жёстко здесь */
+  textarea.auto-grow{resize:none;min-height:90px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+  textarea{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+  .prog-desc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:2px 0 16px;text-align:left}
+  .prog-desc p{font-size:14px;line-height:1.55;color:var(--muted);white-space:pre-line;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+  .prog-desc.open p,.open .prog-desc p{-webkit-line-clamp:unset;display:block}
+  .pd-more{background:none;border:none;color:var(--accent-ink);font-family:var(--font-text);font-size:13px;padding:8px 0 0;cursor:pointer}
+  .media-preview img{max-width:150px;border-radius:10px;display:block}
+  .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
+
+  
