@@ -7,10 +7,14 @@
    он не переустанавливается — то есть офлайн-копия остаётся той, что была
    девять правок назад. Ещё это единственный способ выбросить старый кэш целиком:
    при активации удаляются все кэши с другим именем. */
-const CACHE = 'fittimer-v21';
+const CACHE = 'fittimer-v22';
 const ASSETS = [
   './',
   './index.html',
+  './style.css',
+  './app.js',
+  './app.config.js',
+  './mobile.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
