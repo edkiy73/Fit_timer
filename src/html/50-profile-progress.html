@@ -194,16 +194,16 @@
 
     <div class="modal" id="hfModal">
       <div class="modal-card">
-        <span class="mini-label">Управление без рук</span>
-        <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
-        <button class="choice" data-hf="voice"><b>Голос</b><small>Команды без рук. В приложении работают офлайн после загрузки голосового пакета</small></button>
-        <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
+        <span class="mini-label" data-i18n="handsfree.title">Управление без рук</span>
+        <button class="choice" data-hf="off"><b data-i18n="common.off">Выкл</b><small data-i18n="handsfree.offSub">Переключение кнопками на экране</small></button>
+        <button class="choice" data-hf="voice"><b data-i18n="common.voice">Голос</b><small data-i18n="handsfree.voiceSub">Команды без рук. В приложении работают офлайн после загрузки голосового пакета</small></button>
+        <button class="choice" data-hf="headset"><b data-i18n="common.headset">Гарнитура</b><small data-i18n="handsfree.headsetSub">Кнопка play/pause на наушниках — следующий этап</small></button>
         <div class="voice-pack hidden" id="hfVoicePackBox">
-          <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="hfVoiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div class="pref-row"><span data-i18n="settings.commandLanguage">Язык команд</span><select class="voice-sel" id="hfVoiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
           <div class="voice-pack-status">
-            <span id="hfVoicePackStatus">Проверяем…</span>
+            <span id="hfVoicePackStatus" data-i18n="common.checking">Проверяем…</span>
             <div class="voice-pack-progress hidden" id="hfVoicePackProgress"><i id="hfVoicePackProgressBar"></i></div>
-            <button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack">Скачать</button>
+            <button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack" data-i18n="common.download">Скачать</button>
           </div>
         </div>
         <button class="modal-btn" data-act="closeModal">Закрыть</button>
@@ -212,27 +212,27 @@
 
     <div class="modal" id="soundModal">
       <div class="modal-card">
-        <span class="mini-label">Звук тренировки</span>
-        <div class="pref-row"><span>Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
+        <span class="mini-label" data-i18n="sound.title">Звук тренировки</span>
+        <div class="pref-row"><span data-i18n="sound.use">Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
         <div class="stack" id="sndSoundBox">
           <div class="snd-group">
-            <p class="snd-label">Голос</p>
-            <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
-            <div class="pref-row"><span>Язык озвучки</span><select class="voice-sel" id="sndVoiceLang"><option value="ru-RU">Русский</option><option value="en-US">English</option></select></div>
-            <div class="pref-row"><span>Голос</span><select class="voice-sel" id="sndVoiceChoice"></select></div>
-            <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
+            <p class="snd-label" data-i18n="common.voice">Голос</p>
+            <div class="pref-row"><span><span data-i18n="settings.speak">Озвучивать</span><small data-i18n="settings.speakSub">названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
+            <div class="pref-row"><span data-i18n="settings.voiceLanguage">Язык озвучки</span><select class="voice-sel" id="sndVoiceLang"><option value="ru-RU">Русский</option><option value="en-US">English</option></select></div>
+            <div class="pref-row"><span data-i18n="common.voice">Голос</span><select class="voice-sel" id="sndVoiceChoice"></select></div>
+            <div class="pref-row"><span><span data-i18n="settings.music">Не прерывать музыку</span><small data-i18n="settings.musicSub">вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
           </div>
           <div class="snd-group">
-            <p class="snd-label">Звуки</p>
-            <div class="pref-row"><span>Гонг и отсчёт<small>сигналы начала, конца и последних секунд</small></span><button class="switch" id="sndFxOn"></button></div>
+            <p class="snd-label" data-i18n="common.sounds">Звуки</p>
+            <div class="pref-row"><span><span data-i18n="settings.gong">Гонг и отсчёт</span><small data-i18n="settings.gongSub">сигналы начала, конца и последних секунд</small></span><button class="switch" id="sndFxOn"></button></div>
             <div class="vol-field" id="sndFxField">
-              <div class="vol-label"><span>Громкость</span><b id="sndFxVolVal">100%</b></div>
+              <div class="vol-label"><span data-i18n="common.volume">Громкость</span><b id="sndFxVolVal">100%</b></div>
               <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
             </div>
           </div>
         </div>
-        <p class="field-hint">Громкость голоса — кнопками громкости телефона.</p>
-        <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px">Готово</button>
+        <p class="field-hint" data-i18n="sound.voiceVolume">Громкость голоса — кнопками громкости телефона.</p>
+        <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px" data-i18n="common.done">Готово</button>
       </div>
     </div>
 
@@ -274,25 +274,25 @@
       <div class="modal-card pm-card">
         <div class="pm-scroll">
           <div class="pm-crown" data-icon="crown"></div>
-          <h3 class="pm-title">Fit Timer Премиум</h3>
-          <p class="pm-lead">Тренируйся проще: получай помощь с программой, выбирай готовые планы и сохраняй свой прогресс при смене телефона.</p>
+          <h3 class="pm-title" data-i18n="premium.title">Fit Timer Премиум</h3>
+          <p class="pm-lead" data-i18n="premium.lead">Тренируйся проще: получай помощь с программой, выбирай готовые планы и сохраняй свой прогресс при смене телефона.</p>
           <!-- Список нарочно в одну строку на пункт: с описаниями он занимал полтора
                экрана и выталкивал цену за край. -->
           <ul class="pm-list pm-short">
-            <li><span class="pm-li-ico" data-icon="sparkle"></span><b>ИИ поможет собрать программу и упражнения под твою цель</b></li>
-            <li><span class="pm-li-ico" data-icon="book"></span><b>Выбирай любые программы из каталога тренеров</b></li>
-            <li><span class="pm-li-ico" data-icon="image"></span><b>Добавляй понятные картинки к упражнениям</b></li>
-            <li><span class="pm-li-ico" data-icon="shield"></span><b>Продолжай с того же места на новом телефоне</b></li>
+            <li><span class="pm-li-ico" data-icon="sparkle"></span><b data-i18n="premium.ai">ИИ поможет собрать программу и упражнения под твою цель</b></li>
+            <li><span class="pm-li-ico" data-icon="book"></span><b data-i18n="premium.catalog">Выбирай любые программы из каталога тренеров</b></li>
+            <li><span class="pm-li-ico" data-icon="image"></span><b data-i18n="premium.images">Добавляй понятные картинки к упражнениям</b></li>
+            <li><span class="pm-li-ico" data-icon="shield"></span><b data-i18n="premium.sync">Продолжай с того же места на новом телефоне</b></li>
           </ul>
           <div class="pm-state hidden" id="pmState">
             <span class="ps-ico" data-icon="check"></span>
-            <span><b id="pmStateTitle">Премиум активен</b><small id="pmStateSub"></small></span>
+            <span><b id="pmStateTitle" data-i18n="premium.active">Премиум активен</b><small id="pmStateSub"></small></span>
           </div>
         </div>
 
         <div class="pm-foot">
           <div class="pm-plans" id="pmPlans"></div>
-          <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px">Оформить</button>
+          <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
           <p class="pm-fine" id="pmFine"></p>
           <button class="modal-btn" data-act="closeModal">Закрыть</button>
         </div>
@@ -307,7 +307,7 @@
         <span class="mini-label">Оформление подписки</span>
         <p class="dlg-msg" id="payWhat"></p>
         <div class="field">
-          <label>Почта</label>
+          <label data-i18n="common.email">Почта</label>
           <input type="email" id="payEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
           <p class="field-hint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
         </div>
@@ -340,29 +340,29 @@
          почтой не было, он заводится тем же кодом. -->
     <div class="modal" id="loginModal">
       <div class="modal-card">
-        <span class="mini-label" id="loginLabel">Вход в аккаунт</span>
+        <span class="mini-label" id="loginLabel" data-i18n="login.title">Вход в аккаунт</span>
         <p class="dlg-msg" id="loginMsg"></p>
         <div class="field" id="loginStep1">
-          <label>Почта</label>
+          <label data-i18n="common.email">Почта</label>
           <input type="email" id="loginEmail" inputmode="email" autocomplete="email"
                  autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120"
                  placeholder="you@example.com">
-          <p class="field-hint">Пришлём код. Писем, кроме кода, не будет.</p>
+          <p class="field-hint" data-i18n="login.codeHint">Пришлём код. Писем, кроме кода, не будет.</p>
         </div>
         <div class="field hidden" id="loginStep2">
-          <label>Код из письма</label>
-          <input type="text" id="loginCode" inputmode="numeric" maxlength="6" placeholder="6 цифр">
+          <label data-i18n="login.code">Код из письма</label>
+          <input type="text" id="loginCode" inputmode="numeric" maxlength="6" placeholder="6 цифр" data-i18n-placeholder="login.codePlaceholder">
           <p class="field-hint" id="loginCodeHint"></p>
         </div>
         <div class="field hidden" id="loginStep3">
-          <label>Ник аккаунта</label>
+          <label data-i18n="login.nick">Ник аккаунта</label>
           <input type="text" id="loginHandle" maxlength="30" inputmode="latin"
                  autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="@sergey">
-          <p class="field-hint">Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.</p>
+          <p class="field-hint" data-i18n="login.nickHint">Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.</p>
         </div>
         <p class="field-err" id="loginErr"></p>
-        <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px">Прислать код</button>
-        <button class="modal-btn" id="loginCancel">Отмена</button>
+        <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px" data-i18n="login.sendCode">Прислать код</button>
+        <button class="modal-btn" id="loginCancel" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -412,19 +412,19 @@
 
     <div class="modal" id="createModal">
       <div class="modal-card">
-        <span class="mini-label">Новая программа</span>
+        <span class="mini-label" data-i18n="create.title">Новая программа</span>
         <!-- Подписи здесь — не объяснения, а различители: человек выбирает путь за
              секунду и читает их одним взглядом, а не абзацем. Самые частые пути —
              «Через ИИ» и «Собрать вручную» — стоят первыми. Тексты обращаются на «ты»
              и НЕ согласуются по роду: «собрать вручную», а не «собрать самой». -->
-        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Ответь на пару вопросов — остальное готово само</small></span></button>
-        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Собрать вручную</b><small>Добавляешь упражнения по одному</small></span></button>
-        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b>Из видео с YouTube</b><small>Вставь ссылку на тренировку</small></span></button>
+        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="create.aiSub">Ответь на пару вопросов — остальное готово само</small></span></button>
+        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="create.manual">Собрать вручную</b><small data-i18n="create.manualSub">Добавляешь упражнения по одному</small></span></button>
+        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b data-i18n="create.youtube">Из видео с YouTube</b><small data-i18n="create.youtubeSub">Вставь ссылку на тренировку</small></span></button>
         <!-- Каталога здесь НЕТ намеренно. Он не способ собрать программу, а место, куда
              ходят за чужой готовой, и вход в него стоит на самом экране «Тренировки»
              отдельной кнопкой. В этом попапе он был вторым входом в то же место и
              занимал строку среди четырёх, которые про другое. -->
-        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b>По ссылке или файлом</b><small>Если программу прислали или сохраняли себе</small></span></button>
+        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b data-i18n="create.import">По ссылке или файлом</b><small data-i18n="create.importSub">Если программу прислали или сохраняли себе</small></span></button>
         <button class="modal-btn" data-act="closeModal">Отмена</button>
       </div>
     </div>

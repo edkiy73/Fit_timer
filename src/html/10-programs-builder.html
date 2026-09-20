@@ -4,9 +4,9 @@
          нужно раз в несколько недель, а широкая кнопка сверху каждый раз отодвигала
          вниз то, ради чего сюда заходят, — сам список программ. -->
     <div class="page-head">
-      <h1>Тренировки<span class="ph-sub" id="progCount"></span></h1>
+      <h1><span data-i18n="programs.title">Тренировки</span><span class="ph-sub" id="progCount"></span></h1>
       <div class="ph-tools">
-        <button class="add-btn" id="btnAddProgram" title="Добавить программу"></button>
+        <button class="add-btn" id="btnAddProgram" title="Добавить программу" data-i18n-title="programs.addTitle"></button>
       </div>
     </div>
 
@@ -15,7 +15,7 @@
          один вход, узнаваемый в двух местах. -->
     <button class="store-cta" id="btnToStore">
       <span class="sc-ico" id="storeIcoProg"></span>
-      <span class="sc-txt"><b>Каталог программ</b><small id="storeRowSub">Тренировки от тренеров</small></span>
+      <span class="sc-txt"><b data-i18n="home.catalogTitle">Каталог программ</b><small id="storeRowSub" data-i18n="home.catalogSub">Тренировки от тренеров</small></span>
       <span class="sc-arrow" id="storeArrowProg"></span>
     </button>
 
@@ -24,7 +24,7 @@
          отправлено» сообщает лишь о том, что её не надо было показывать. -->
     <button type="button" class="way-row hidden" id="btnMyCatalog">
       <span class="wr-ico" data-icon="crown"></span>
-      <span class="wr-txt"><b>Заявки в каталог</b><small id="coachCatSub"></small></span>
+      <span class="wr-txt"><b data-i18n="programs.catalogRequests">Заявки в каталог</b><small id="coachCatSub"></small></span>
     </button>
 
     <div id="mineList"></div>
@@ -34,9 +34,9 @@
   <section class="screen" id="scrStart">
     <div class="screen-head start-head">
       <button class="back-chip" id="startBackTop"></button>
-      <span class="sh-kicker">Программа</span>
+      <span class="sh-kicker" data-i18n="programs.programKicker">Программа</span>
       <div class="prog-menu-wrap">
-        <button class="more-btn" id="startMore" title="Действия"></button>
+        <button class="more-btn" id="startMore" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="startMenu"></div>
       </div>
     </div>
@@ -53,7 +53,7 @@
         <!-- состояние программы — первым: это важнее объёма, и полным словом, а не
              сокращением «Откл» — иначе рядом с «3 упражнения» и «3 круга» читалось
              как оборванное. Без чипа выключенную программу видно только по пункту меню. -->
-        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> Отключена</div>
+        <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> <span data-i18n="programs.disabled">Отключена</span></div>
         <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
         <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
@@ -62,7 +62,7 @@
       </div>
 
       <div class="card-block hidden" id="progDescBox">
-        <p class="cb-title">О программе</p>
+        <p class="cb-title" data-i18n="programs.about">О программе</p>
         <div class="prog-desc">
           <p id="progDescText"></p>
           <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
@@ -71,22 +71,22 @@
 
       <div class="card-block" id="startWorkoutCard">
         <div class="start-section hidden" id="planBlock">
-          <p class="cb-title">Вариант тренировки</p>
+          <p class="cb-title" data-i18n="programs.variant">Вариант тренировки</p>
           <div class="load-row" id="planRow"></div>
         </div>
 
         <div class="start-section hidden" id="progStepsBlock">
-          <p class="cb-title">Нагрузка сегодня</p>
-          <p class="field-hint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
+          <p class="cb-title" data-i18n="programs.loadToday">Нагрузка сегодня</p>
+          <p class="field-hint" data-i18n="programs.loadHint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
           <div class="ps-row">
             <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
-            <div class="ps-val"><b id="psCount">0</b><small>текущий шаг</small></div>
+            <div class="ps-val"><b id="psCount">0</b><small data-i18n="programs.currentStep">текущий шаг</small></div>
             <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
           </div>
         </div>
 
         <div class="start-section">
-          <p class="cb-title">Упражнения</p>
+          <p class="cb-title" data-i18n="programs.exercises">Упражнения</p>
           <p class="field-hint" id="startOverviewSummary"></p>
           <p class="field-hint" id="startLoadChange"></p>
           <div class="start-ex-list" id="startOverviewList"></div>
@@ -95,25 +95,25 @@
 
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="btnStart">Начать тренировку</button>
+      <button class="btn-primary" id="btnStart" data-i18n="programs.startWorkout">Начать тренировку</button>
     </div>
   </section>
 
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
-    <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle">Новая программа</h2></div>
+    <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle" data-i18n="programs.newProgram">Новая программа</h2></div>
     <div class="tabs" id="bModeTabs">
-      <button class="tab act" data-m="manual">Вручную</button>
-      <button class="tab" data-m="text">Через ИИ</button>
-      <button class="tab" data-m="video">Из видео</button>
+      <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
+      <button class="tab" data-m="text" data-i18n="common.viaAI">Через ИИ</button>
+      <button class="tab" data-m="video" data-i18n="common.fromVideo">Из видео</button>
     </div>
 
     <div class="card-block">
-      <div class="field"><label>Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+      <div class="field"><label data-i18n="programs.programName">Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
         <span class="nr-ico" data-icon="calendar"></span>
         <div class="nr-body">
-          <b>Настройки программы</b>
+          <b data-i18n="programs.settings">Настройки программы</b>
           <small id="bSettingsSum"></small>
         </div>
         <span class="nr-chev" id="bSettingsChev"></span>
@@ -132,18 +132,18 @@
       <button type="button" class="nav-row nr-flat" id="bImagesRow">
         <span class="nr-ico" data-icon="image"></span>
         <div class="nr-body">
-          <b>Картинки упражнений</b>
-          <small id="bImagesSum">Загрузить пачкой</small>
+          <b data-i18n="programs.exerciseImages">Картинки упражнений</b>
+          <small id="bImagesSum" data-i18n="programs.uploadBatch">Загрузить пачкой</small>
         </div>
         <span class="nr-chev" id="bImagesChev"></span>
       </button>
       <div class="list-rows" id="bExList"></div>
       <!-- Кнопки «Подобрать через ИИ» здесь нет: путь к нейросети — вкладка сверху,
            и второй вход в него из середины экрана только дробил внимание. -->
-      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span>Добавить упражнение</button>
+      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span><span data-i18n="programs.addExercise">Добавить упражнение</span></button>
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveProgram">Сохранить программу</button>
+      <button class="btn-primary" id="btnSaveProgram" data-i18n="programs.saveProgram">Сохранить программу</button>
     </div>
   </section>
 
@@ -364,7 +364,7 @@
     </div>
 
     <div class="tabs" id="exModeTabs">
-      <button class="tab act" data-m="manual">Вручную</button>
+      <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
       <button class="tab" data-m="ai">Через ИИ</button>
     </div>
 

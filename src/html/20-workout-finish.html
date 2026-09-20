@@ -3,11 +3,11 @@
     <div class="prep" id="prepOverlay">
       <div class="prep-title" id="prepTitle"></div>
       <div class="prep-num" id="prepNum">5</div>
-      <div class="prep-sub">Приготовься</div>
+      <div class="prep-sub" data-i18n="workout.getReady">Приготовься</div>
     </div>
     <div class="pause-overlay">
-      <div class="po-text">Пауза<span class="po-sub">Таймер стоит. Описание можно читать и листать</span></div>
-      <button class="btn-resume" id="btnResume" title="Продолжить"></button>
+      <div class="po-text"><span data-i18n="workout.pause">Пауза</span><span class="po-sub" data-i18n="workout.pauseSub">Таймер стоит. Описание можно читать и листать</span></div>
+      <button class="btn-resume" id="btnResume" title="Продолжить" data-i18n-title="workout.resume"></button>
     </div>
     <div class="progress">
       <div class="labels">
@@ -43,12 +43,12 @@
         <div class="swap-slot hidden" id="swapSlot"></div>
         <div class="wk-card" id="exCard">
           <div class="illo-wrap" id="illoWrap">
-            <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span>Можно усложнить</button>
-            <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
+            <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span><span data-i18n="workout.canProgress">Можно усложнить</span></button>
+            <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео" data-i18n-title="workout.watchVideo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
             <div class="illo" id="illoBox"></div>
           </div>
           <div class="wk-body">
-            <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> Смотреть видео</a>
+            <a class="video-cta" id="videoCta" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg> <span data-i18n="workout.watchVideo">Смотреть видео</span></a>
             <div class="muscle-row hidden" id="stepMuscles"></div>
             <div class="instruction-card">
               <p class="instruction" id="stepInstruction"></p>
@@ -62,15 +62,15 @@
     </div>
     <div class="actions">
       <div class="act-row">
-        <button class="btn-prev" id="btnPrev" title="Предыдущий этап"></button>
-        <button class="btn-prev" id="btnPause" title="Пауза"></button>
-        <button class="btn-done" id="btnDone"><span>Готово</span><span data-icon="check"></span></button>
-        <button class="btn-skip" id="btnSkip">Пропустить</button>
+        <button class="btn-prev" id="btnPrev" title="Предыдущий этап" data-i18n-title="workout.previous"></button>
+        <button class="btn-prev" id="btnPause" title="Пауза" data-i18n-title="workout.pause"></button>
+        <button class="btn-done" id="btnDone"><span data-i18n="workout.done">Готово</span><span data-icon="check"></span></button>
+        <button class="btn-skip" id="btnSkip" data-i18n="workout.skip">Пропустить</button>
         <!-- Правка упражнения прямо с тренировки. Попап «Как ощущался вес?» после
              последнего подхода убран: он спрашивал про одну ось из трёх, выскакивал
              сам и уезжал по таймеру. Здесь — обычный редактор упражнения. -->
         <div class="work-menu-wrap" id="workMenuWrap">
-          <button class="btn-prev" id="workMore" title="Действия"></button>
+          <button class="btn-prev" id="workMore" title="Действия" data-i18n-title="common.actions"></button>
           <div class="ctx-menu" id="workMenu"></div>
         </div>
       </div>
@@ -102,14 +102,14 @@
         <span class="fin-bloom" aria-hidden="true"></span>
         <div class="medal" data-icon="medal"></div>
       </div>
-      <h2 class="fin-rise">Отличная работа!</h2>
+      <h2 class="fin-rise" data-i18n="workout.great">Отличная работа!</h2>
       <div class="result-card fin-rise">
         <div class="rc-main">
           <div class="rc-time" id="finalTime">0:00</div>
-          <div class="rc-sub">время тренировки</div>
+          <div class="rc-sub" data-i18n="workout.time">время тренировки</div>
         </div>
         <div class="rc-stats">
-          <div class="rc-stat"><b id="finKcal">—</b><small>ккал</small></div>
+          <div class="rc-stat"><b id="finKcal">—</b><small data-i18n="workout.kcal">ккал</small></div>
           <div class="rc-stat"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
           <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord">подряд</small></div>
         </div>
@@ -117,8 +117,8 @@
       </div>
       <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
       <div class="field fin-note hidden" id="finNoteField">
-        <label>Заметка о тренировке</label>
-        <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня"></textarea>
+        <label data-i18n="workout.note">Заметка о тренировке</label>
+        <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня" data-i18n-placeholder="workout.notePlaceholder"></textarea>
       </div>
     </div>
     <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую

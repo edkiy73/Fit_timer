@@ -846,7 +846,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 617,
-      "chars": 33578,
+      "chars": 34424,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1101,7 +1101,7 @@
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 133,
-      "chars": 7381,
+      "chars": 7936,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1186,7 +1186,7 @@
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 378,
-      "chars": 20480,
+      "chars": 22445,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1322,7 +1322,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 611,
-      "chars": 35435,
+      "chars": 36889,
       "ids": [
         "addExModal",
         "aemAI",
