@@ -102,7 +102,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         io.execute(() -> {
             JSObject result = new JSObject();
             result.put("language", language);
-            result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
+            result.put("sizeMb", VoiceModelWorker.modelSizeMb(language));
             result.put("active", language.equals(loadedModelLanguage) && voskModel != null);
 
             boolean installed = VoiceModelWorker.isModelReady(getContext(), language);
@@ -148,7 +148,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             result.put("installed", true);
             result.put("queued", false);
             result.put("language", language);
-            result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
+            result.put("sizeMb", VoiceModelWorker.modelSizeMb(language));
             call.resolve(result);
             return;
         }
@@ -171,7 +171,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         result.put("installed", false);
         result.put("queued", true);
         result.put("language", language);
-        result.put("sizeMb", VoiceModelWorker.VoiceModelWorker.modelSizeMb(language));
+        result.put("sizeMb", VoiceModelWorker.modelSizeMb(language));
         call.resolve(result);
     }
 
