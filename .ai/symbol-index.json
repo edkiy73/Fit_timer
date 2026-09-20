@@ -685,8 +685,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 447,
-      "chars": 20878,
+      "lines": 449,
+      "chars": 21041,
       "symbols": [
         "advance",
         "applyTheme",
@@ -711,8 +711,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1654,
-      "chars": 70582,
+      "lines": 1657,
+      "chars": 70890,
       "symbols": [
         "addExManual",
         "aiRunClose",

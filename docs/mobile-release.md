@@ -204,3 +204,10 @@ node --check scripts/build-web.mjs
 - Не возвращать старую иконку с человеком: текущий знак — кольцо таймера с
   диагональным акцентом, мастер лежит в `assets/icon.svg`.
 - `legacy/android-twa/` — справочная копия; текущая платформа — `android/`.
+
+
+## Offline voice commands on Android
+
+The Android Capacitor shell uses Vosk for continuous hands-free commands instead of Android SpeechRecognizer. The small Russian model (`vosk-model-small-ru-0.22`, about 45 MB) is downloaded from the official Vosk model host on first use and stored in app-private storage. After that, recognition is fully on-device and needs no network.
+
+The recognizer uses a narrow FitTimer command grammar and keeps one continuous microphone capture session, avoiding repeated Android SpeechRecognizer start/stop tones. Browser/PWA builds keep the Web Speech fallback.

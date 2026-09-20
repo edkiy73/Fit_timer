@@ -11,6 +11,7 @@
   const PLAN_NOTIFICATION_MAX = 902999;
   let speechResultHandle = null;
   let speechErrorHandle = null;
+  let speechStatusHandle = null;
 
   async function requestNotifications(){
     if(!native || !plugins.LocalNotifications) return false;
@@ -157,9 +158,10 @@
     try{ await fitAudio.stopRecognition(); }catch(_){}
     try{ if(speechResultHandle){ await speechResultHandle.remove(); speechResultHandle = null; } }catch(_){}
     try{ if(speechErrorHandle){ await speechErrorHandle.remove(); speechErrorHandle = null; } }catch(_){}
+    try{ if(speechStatusHandle){ await speechStatusHandle.remove(); speechStatusHandle = null; } }catch(_){}
   }
 
-  async function startVoiceRecognition(onResult, onError){
+  async function startVoiceRecognition(onResult, onError, onStatus){
     if(!native || !fitAudio) return false;
     await stopVoiceRecognition();
     if(!(await requestMicrophone())){
@@ -173,8 +175,11 @@
       speechErrorHandle = await fitAudio.addListener('speechError', event=>{
         if(onError) onError((event && event.error) || 'recognition');
       });
-      await fitAudio.startRecognition({locale: 'ru-RU'});
-      return true;
+      speechStatusHandle = await fitAudio.addListener('speechStatus', event=>{
+        if(onStatus) onStatus(event || {});
+      });
+      const started = await fitAudio.startRecognition({locale: 'ru-RU'});
+      return !!(started && started.started);
     }catch(_){
       if(onError) onError('recognition');
       return false;
@@ -215,7 +220,17 @@
             if(typeof voiceWanted !== 'undefined') voiceWanted = false;
             if(typeof syncPrefs === 'function') syncPrefs();
             if(typeof appAlert === 'function') appAlert('Нет доступа к микрофону. Разреши микрофон для Fit Timer в настройках приложения.');
+          }else if(error === 'model'){
+            if(typeof appAlert === 'function') appAlert('Не удалось подготовить голосовое управление. Проверь интернет и попробуй ещё раз.');
           }
+        },
+        status=>{
+          if(!status || status.status !== 'downloading') return;
+          Promise.resolve(typeof kvGet === 'function' ? kvGet('offlineVoiceDownloadHint') : '0').then(seen=>{
+            if(seen === '1') return;
+            if(typeof kvSet === 'function') kvSet('offlineVoiceDownloadHint', '1');
+            if(typeof appAlert === 'function') appAlert('При первом включении Fit Timer загрузит голосовой пакет — около 45 МБ. Потом команды работают прямо на телефоне, без интернета и без системных сигналов микрофона.');
+          });
         }
       ).then(ok=>{ if(!ok && typeof voiceActive !== 'undefined') voiceActive = false; });
     };
@@ -299,6 +314,7 @@
     speak,
     stopSpeaking,
     startVoiceRecognition,
-    stopVoiceRecognition
+    stopVoiceRecognition,
+    offlineVoice: native && !!fitAudio
   });
 })();
