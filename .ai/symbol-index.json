@@ -1177,8 +1177,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 363,
-      "chars": 19188,
+      "lines": 356,
+      "chars": 18830,
       "ids": [
         "accCardTitle",
         "accEmail",
