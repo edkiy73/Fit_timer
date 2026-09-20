@@ -574,15 +574,15 @@ function swapSourceExercise(){
 }
 
 function swapAIPrompt(ex, swap){
-  return 'Замени упражнение домашней тренировки на более сложное и верни НОВОЕ упражнение целиком в формате ниже. ' +
-    'Верни только блок упражнения, без пояснений до и после.\n\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'НА ЧТО ЗАМЕНИТЬ: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
-    'ПОЧЕМУ: текущее упражнение доросло до своего потолка, дальше нагрузка не растёт. Нужен следующий уровень того же движения.\n' +
-    'ВАЖНО: подбери НОВЫЕ стартовые значения под возросшую сложность (обычно меньше повторений или секунд, чем в старом упражнении), свой ШАГ и свой ПОТОЛОК. ' +
-    'Число подходов и отдых сохрани близкими к текущим. Если у нового упражнения тоже есть следующий уровень сложности — укажи его в строках ЗАМЕНА и ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
-    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    EX_ANSWER_FORMAT;
+  return 'Replace this home-workout exercise with the specified harder progression and return the COMPLETE NEW exercise using the protocol below. ' +
+    'Return only the new exercise block, with no explanation before or after it.\n\n' +
+    'USER: ' + userForAI() + '\n' +
+    'TARGET REPLACEMENT: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
+    'WHY: the current exercise has reached its progression ceiling, so the next level of the same movement pattern is needed.\n' +
+    'IMPORTANT: choose NEW starting values appropriate for the harder exercise, usually fewer reps or seconds than the old exercise, plus a sensible new progression increment and ceiling. ' +
+    'Keep set count and rest reasonably close to the current exercise. If the new exercise also has a clear harder next step, include it in ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
+    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
+    exAnswerFormat();
 }
 
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
