@@ -202,7 +202,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 742,
-      "chars": 34997,
+      "chars": 35046,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -1304,7 +1304,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 601,
-      "chars": 34284,
+      "chars": 34347,
       "ids": [
         "addExModal",
         "aemAI",
