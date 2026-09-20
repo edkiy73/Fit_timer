@@ -188,7 +188,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> ({email: '', handle: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
+const blankAccount = ()=> ({email: '', handle: '', locale: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
 async function readAccountData(){
   return parsed(await kvGet('accountData'), {});
 }
@@ -217,9 +217,23 @@ async function loadAccount(){
 }
 async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+
+async function syncAccountLocale(locale){
+  const next = normalizeLocale(locale);
+  if(!account) return;
+  account.locale = next;
+  rememberAccount();
+  await saveAccount();
+  await saveKnown();
+  if(account.email && account.syncToken){
+    let deviceId = await kvGet('deviceId');
+    if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
+    try{ await apiPost('/api/auth', {action:'set_locale', email:account.email, deviceId, syncToken:account.syncToken, locale:next}); }catch(_){}
+  }
+}
 function rememberAccount(){
   if(!account.email) return;
-  const rec = {email: account.email, handle: account.handle || '', sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
+  const rec = {email: account.email, handle: account.handle || '', locale: account.locale || appLocale, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
                deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
@@ -493,9 +507,11 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(switchingAccount) account.deletedProfiles = [];
   account.email = email;
   account.handle = r.handle || '';
+  account.locale = r.locale || account.locale || appLocale;
   account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
   if(r.sub) account.sub = r.sub;
   if(r.syncToken) account.syncToken = r.syncToken;
+  if(r.locale) await setAppLocale(r.locale, {persist:true});
   rememberAccount();
   await saveAccount();
   await saveKnown();
@@ -573,7 +589,7 @@ async function doLogin(){
     }
     if(loginStep === 1){
       btn.textContent = 'Отправляем…';
-      const r = await apiPost('/api/auth', {action: 'send', email});
+      const r = await apiPost('/api/auth', {action: 'send', email, locale: appLocale});
       loginStep = 2;
       setShown('loginStep1', false);
       setShown('loginStep2', true);
@@ -603,7 +619,8 @@ async function doLogin(){
       // Оформляемая подписка уезжает тем же запросом: отдельного «сохрани подписку»
       // нет и не нужно — почта подтверждается ровно затем, чтобы она к чему-то
       // прицепилась.
-      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null)
+      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null),
+      locale: appLocale
     });
     if(r.needsHandle || !r.handle){
       loginPending = {r, email, cleanInstall, switchingAccount, deviceId:loginDeviceId};

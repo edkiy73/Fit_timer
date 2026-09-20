@@ -144,7 +144,7 @@
   <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
        Раньше это был попап поверх главной — теперь полноценная страница. -->
   <section class="screen root" id="scrAccount">
-    <div class="page-head"><h1>Другое</h1></div>
+    <div class="page-head"><h1 data-i18n="settings.pageTitle">Другое</h1></div>
 
     <!-- Раздел собрал всё, что настраивают редко, и стал слишком длинным, чтобы
          в нём что-то находить: одиннадцать карточек подряд читаются как свалка.
@@ -152,13 +152,25 @@
          «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
          внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
     <div class="tabs seg" id="moreTabs">
-      <button class="tab act" data-more="me">Профиль</button>
-      <button class="tab" data-more="sound">Звук</button>
-      <button class="tab" data-more="coach">Тренер</button>
-      <button class="tab" data-more="acc">Аккаунт</button>
+      <button class="tab act" data-more="me" data-i18n="common.profile">Профиль</button>
+      <button class="tab" data-more="sound" data-i18n="common.sound">Звук</button>
+      <button class="tab" data-more="coach" data-i18n="common.trainer">Тренер</button>
+      <button class="tab" data-more="acc" data-i18n="common.account">Аккаунт</button>
     </div>
 
     <div class="tab-pane" id="morePane_me">
+    <div class="card-block" id="appLanguageCard">
+      <div class="cb-head"><p class="cb-title" data-i18n="settings.languageTitle">Язык</p></div>
+      <div class="pref-row">
+        <span data-i18n="settings.appLanguage">Язык приложения</span>
+        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.</p>
+    </div>
+
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title">Профили</p></div>
       <div class="list-rows" id="usersList"></div>

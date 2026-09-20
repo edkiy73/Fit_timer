@@ -1,3 +1,183 @@
+const I18N_RU = {
+  'app.title': 'Fit Timer — домашние тренировки',
+  'common.start': 'Начать',
+  'common.loginOrRegister': 'Вход или регистрация',
+  'common.rules': 'правила',
+  'common.exit': 'Выйти',
+  'common.profile': 'Профиль',
+  'common.sound': 'Звук',
+  'common.trainer': 'Тренер',
+  'common.account': 'Аккаунт',
+  'common.today': 'Сегодня',
+  'common.workouts': 'Тренировки',
+  'common.trainees': 'Подопечные',
+  'common.progress': 'Прогресс',
+  'common.more': 'Другое',
+  'common.catalog': 'Каталог',
+  'common.program': 'Программа',
+  'common.weight': 'Вес',
+  'common.photo': 'Фото',
+  'common.goal': 'Цель',
+  'common.level': 'Уровень',
+  'common.add': 'Добавить',
+  'nav.sections': 'Разделы',
+  'top.soundTitle': 'Звук',
+  'top.voiceTitle': 'Голосовое управление',
+  'home.catalogTitle': 'Каталог программ',
+  'home.catalogSub': 'Тренировки от тренеров',
+  'home.week': 'Эта неделя',
+  'home.premiumSub': 'Тренировку соберёт ИИ. И весь каталог программ от тренеров.',
+  'home.progressWorkouts': 'Тренировки',
+  'home.progressWeight': 'Вес',
+  'home.progressPhoto': 'Фото',
+  'store.searchPlaceholder': 'Название программы',
+  'store.clearTitle': 'Очистить',
+  'store.roleTrainer': 'тренер',
+  'store.inside': 'Что внутри',
+  'store.locked': 'Состав открыт по подписке',
+  'onboarding.title': 'Тренируйся<br>по своим правилам',
+  'onboarding.lead': 'Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.',
+  'onboarding.programTitle': 'Программа под тебя',
+  'onboarding.programBody': 'Собери сам или доверь программу ИИ',
+  'onboarding.trainerTitle': 'Тренер на связи',
+  'onboarding.trainerBody': 'Получай программы и отправляй отчёты',
+  'onboarding.progressTitle': 'Прогресс без расчётов',
+  'onboarding.progressBody': 'Вес, повторы и время растут по плану',
+  'onboarding.handsfreeTitle': 'Свободные руки',
+  'onboarding.handsfreeBody': 'Управляй голосом или кнопкой гарнитуры',
+  'onboarding.health': 'Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.',
+  'onboarding.legalPrefix': 'Продолжая, ты принимаешь',
+  'onboarding.legalSuffix': ' приложения.',
+  'settings.pageTitle': 'Другое',
+  'settings.languageTitle': 'Язык',
+  'settings.appLanguage': 'Язык приложения',
+  'settings.languageHint': 'Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.',
+  'audio.systemVoice': 'Системный голос',
+  'audio.voiceSelected': 'Голос выбран',
+  'handsfree.offHint': 'Переключай этапы кнопками на экране.',
+  'handsfree.voiceHintNative': 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.',
+  'handsfree.voiceHintWeb': 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
+  'handsfree.headsetHint': 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
+};
+const I18N_EN = {
+  'app.title': 'Fit Timer — home workouts',
+  'common.start': 'Start',
+  'common.loginOrRegister': 'Sign in or register',
+  'common.rules': 'rules',
+  'common.exit': 'Exit',
+  'common.profile': 'Profile',
+  'common.sound': 'Sound',
+  'common.trainer': 'Trainer',
+  'common.account': 'Account',
+  'common.today': 'Today',
+  'common.workouts': 'Workouts',
+  'common.trainees': 'Clients',
+  'common.progress': 'Progress',
+  'common.more': 'More',
+  'common.catalog': 'Catalog',
+  'common.program': 'Program',
+  'common.weight': 'Weight',
+  'common.photo': 'Photos',
+  'common.goal': 'Goal',
+  'common.level': 'Level',
+  'common.add': 'Add',
+  'nav.sections': 'Sections',
+  'top.soundTitle': 'Sound',
+  'top.voiceTitle': 'Voice control',
+  'home.catalogTitle': 'Program catalog',
+  'home.catalogSub': 'Workouts from trainers',
+  'home.week': 'This week',
+  'home.premiumSub': 'Let AI build your workout and unlock the full trainer catalog.',
+  'home.progressWorkouts': 'Workouts',
+  'home.progressWeight': 'Weight',
+  'home.progressPhoto': 'Photos',
+  'store.searchPlaceholder': 'Program name',
+  'store.clearTitle': 'Clear',
+  'store.roleTrainer': 'trainer',
+  'store.inside': 'What’s inside',
+  'store.locked': 'Program details are available with Premium',
+  'onboarding.title': 'Train<br>your way',
+  'onboarding.lead': 'Choose a ready-made program, get one from your trainer, or build your own. Fit Timer guides you through the workout and tells you when it’s time to progress.',
+  'onboarding.programTitle': 'A program for you',
+  'onboarding.programBody': 'Build it yourself or let AI create it',
+  'onboarding.trainerTitle': 'Stay connected to your trainer',
+  'onboarding.trainerBody': 'Get programs and send workout reports',
+  'onboarding.progressTitle': 'Progress without calculations',
+  'onboarding.progressBody': 'Weight, reps and time increase according to plan',
+  'onboarding.handsfreeTitle': 'Hands-free workouts',
+  'onboarding.handsfreeBody': 'Use voice commands or your headset button',
+  'onboarding.health': 'Pregnancy, heart conditions, injuries, or a long break? Check with a doctor first. Stop if you feel unwell.',
+  'onboarding.legalPrefix': 'By continuing, you accept the app',
+  'onboarding.legalSuffix': '.',
+  'settings.pageTitle': 'More',
+  'settings.languageTitle': 'Language',
+  'settings.appLanguage': 'App language',
+  'settings.languageHint': 'Changes the app interface. Voice and voice commands can be configured separately.',
+  'audio.systemVoice': 'System voice',
+  'audio.voiceSelected': 'Voice selected',
+  'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',
+  'handsfree.voiceHintNative': 'Choose a command language and download its voice pack. After that Fit Timer listens on your phone — offline and without system microphone tones.',
+  'handsfree.voiceHintWeb': 'Say “next”, “pause”, or “continue”. In the browser, recognition depends on your phone and may require internet.',
+  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.'
+};
+/* ================= ЛОКАЛИЗАЦИЯ ================= */
+const I18N = {ru: I18N_RU, en: I18N_EN};
+let appLocale = 'ru';
+let appLocaleStored = false;
+
+function normalizeLocale(value){
+  return String(value || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+function systemLocale(){
+  try{
+    const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+    return langs.some(x => String(x).toLowerCase().startsWith('ru')) ? 'ru' : 'en';
+  }catch(_){ return 'en'; }
+}
+function t(key, vars){
+  const dict = I18N[appLocale] || I18N.en;
+  const fallback = I18N.en[key] != null ? I18N.en[key] : I18N.ru[key];
+  let out = dict[key] != null ? dict[key] : (fallback != null ? fallback : key);
+  if(vars && typeof out === 'string'){
+    Object.keys(vars).forEach(k => { out = out.replaceAll('{' + k + '}', String(vars[k])); });
+  }
+  return out;
+}
+function applyI18n(root){
+  root = root || document;
+  document.documentElement.lang = appLocale;
+  document.title = t('app.title');
+  root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  root.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder)); });
+  root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  const select = document.getElementById('appLocaleSelect');
+  if(select) select.value = appLocale;
+}
+async function loadAppLocale(){
+  let saved = null;
+  try{ saved = await kvGet('appLocale'); }catch(_){}
+  appLocaleStored = saved === 'ru' || saved === 'en';
+  appLocale = appLocaleStored ? saved : systemLocale();
+  applyI18n();
+  return appLocale;
+}
+async function setAppLocale(value, opts){
+  const next = normalizeLocale(value);
+  const changed = next !== appLocale;
+  appLocale = next;
+  if(!opts || opts.persist !== false){
+    appLocaleStored = true;
+    try{ await kvSet('appLocale', appLocale); }catch(_){}
+  }
+  applyI18n();
+  if(changed){
+    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale}})); }catch(_){}
+  }
+  return appLocale;
+}
+function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -3176,7 +3356,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> ({email: '', handle: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
+const blankAccount = ()=> ({email: '', handle: '', locale: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
 async function readAccountData(){
   return parsed(await kvGet('accountData'), {});
 }
@@ -3205,9 +3385,23 @@ async function loadAccount(){
 }
 async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+
+async function syncAccountLocale(locale){
+  const next = normalizeLocale(locale);
+  if(!account) return;
+  account.locale = next;
+  rememberAccount();
+  await saveAccount();
+  await saveKnown();
+  if(account.email && account.syncToken){
+    let deviceId = await kvGet('deviceId');
+    if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
+    try{ await apiPost('/api/auth', {action:'set_locale', email:account.email, deviceId, syncToken:account.syncToken, locale:next}); }catch(_){}
+  }
+}
 function rememberAccount(){
   if(!account.email) return;
-  const rec = {email: account.email, handle: account.handle || '', sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
+  const rec = {email: account.email, handle: account.handle || '', locale: account.locale || appLocale, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
                deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
@@ -3481,9 +3675,11 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(switchingAccount) account.deletedProfiles = [];
   account.email = email;
   account.handle = r.handle || '';
+  account.locale = r.locale || account.locale || appLocale;
   account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
   if(r.sub) account.sub = r.sub;
   if(r.syncToken) account.syncToken = r.syncToken;
+  if(r.locale) await setAppLocale(r.locale, {persist:true});
   rememberAccount();
   await saveAccount();
   await saveKnown();
@@ -3561,7 +3757,7 @@ async function doLogin(){
     }
     if(loginStep === 1){
       btn.textContent = 'Отправляем…';
-      const r = await apiPost('/api/auth', {action: 'send', email});
+      const r = await apiPost('/api/auth', {action: 'send', email, locale: appLocale});
       loginStep = 2;
       setShown('loginStep1', false);
       setShown('loginStep2', true);
@@ -3591,7 +3787,8 @@ async function doLogin(){
       // Оформляемая подписка уезжает тем же запросом: отдельного «сохрани подписку»
       // нет и не нужно — почта подтверждается ровно затем, чтобы она к чему-то
       // прицепилась.
-      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null)
+      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null),
+      locale: appLocale
     });
     if(r.needsHandle || !r.handle){
       loginPending = {r, email, cleanInstall, switchingAccount, deviceId:loginDeviceId};
@@ -12022,7 +12219,7 @@ function setHfMode(mode){
   hfMode = mode;
   kvSet('hfMode', mode);
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === mode));
-  $('hfHint').textContent = HF_HINTS[mode] || '';
+  $('hfHint').textContent = hfHintText(mode);
   voiceWanted = (mode === 'voice');
   syncPrefs();
   // если уже на тренировке — переключаем на лету
@@ -12482,6 +12679,29 @@ async function chooseHandsFree(mode){
   return true;
 }
 
+if($('appLocaleSelect')){
+  $('appLocaleSelect').onchange = async e=>{
+    const next = normalizeLocale(e.target.value);
+    await setAppLocale(next, {persist:true});
+    await syncAccountLocale(next);
+    if((await kvGet('voiceLangManual')) !== '1'){
+      voiceLang = next === 'en' ? 'en-US' : 'ru-RU';
+      savedVoiceURI = '';
+      await kvSet('voiceLang', voiceLang);
+      await kvSet('voiceURI', '');
+      await fillVoiceChoices();
+    }
+    if((await kvGet('recognitionLangManual')) !== '1'){
+      recognitionLang = next;
+      await kvSet('recognitionLang', recognitionLang);
+      if(hfMode === 'voice') setHfMode('off');
+      await refreshVoicePackUI();
+    }
+    $('hfHint').textContent = hfHintText(hfMode);
+  };
+}
+window.addEventListener('appLocaleChanged', ()=>{ if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode); });
+
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
@@ -12601,7 +12821,7 @@ async function fillVoiceChoices(){
     const sel=$(id); if(!sel) continue;
     sel.innerHTML='';
     if(!list.length){
-      const o=document.createElement('option'); o.value=''; o.textContent='Системный голос'; sel.appendChild(o);
+      const o=document.createElement('option'); o.value=''; o.textContent=t('audio.systemVoice'); sel.appendChild(o);
       continue;
     }
     list.forEach((v,i)=>{
@@ -12698,20 +12918,21 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 
 for(const id of ['stVoiceLang','sndVoiceLang']){
-  if($(id)) $(id).onchange = async e=>{ await setVoiceLanguage(e.target.value); };
+  if($(id)) $(id).onchange = async e=>{ kvSet('voiceLangManual','1'); await setVoiceLanguage(e.target.value); };
 }
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
   if($(id)) $(id).onchange = e=>{
     savedVoiceURI=e.target.value || '';
     kvSet('voiceURI',savedVoiceURI);
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
-    speak(voiceLang==='en-US' ? 'Voice selected' : 'Голос выбран');
+    speak(t('audio.voiceSelected'));
   };
 }
 for(const id of ['voiceRecLang','hfVoiceRecLang']){
   if($(id)) $(id).onchange = async e=>{
     recognitionLang = e.target.value === 'en' ? 'en' : 'ru';
     kvSet('recognitionLang',recognitionLang);
+    kvSet('recognitionLangManual','1');
     if(hfMode==='voice') setHfMode('off');
     await refreshVoicePackUI();
   };
@@ -14033,8 +14254,13 @@ try{
     const raw = localStorage.getItem('account');
     if(raw && JSON.parse(raw).biometry) $('lockModal').classList.add('open');
   }catch(e){}
+  // Язык нужен до онбординга и первой отрисовки экранов.
+  await loadAppLocale();
   // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
   await loadAccount();
+  if(!appLocaleStored && account && (account.locale === 'ru' || account.locale === 'en')){
+    await setAppLocale(account.locale, {persist:true});
+  }
   loadPublicConfig();
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
@@ -14088,11 +14314,11 @@ try{
   }
   voiceWanted = hfMode === 'voice';
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
-  $('hfHint').textContent = HF_HINTS[hfMode] || '';
+  $('hfHint').textContent = hfHintText(hfMode);
   soundOn = (await kvGet('soundOff')) !== '1';
-  voiceLang = (await kvGet('voiceLang')) || 'ru-RU';
+  voiceLang = (await kvGet('voiceLang')) || (appLocale === 'en' ? 'en-US' : 'ru-RU');
   savedVoiceURI = (await kvGet('voiceURI')) || '';
-  recognitionLang = (await kvGet('recognitionLang')) || 'ru';
+  recognitionLang = (await kvGet('recognitionLang')) || appLocale;
   if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
   await fillVoiceChoices();
   await refreshVoicePackUI();

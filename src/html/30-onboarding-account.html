@@ -13,33 +13,33 @@
     <div id="obHello">
       <div class="ob-hero">
         <div class="ob-mark">FIT<i>/</i>TIMER</div>
-        <h2 class="ob-title">Тренируйся<br>по своим правилам</h2>
-        <p class="ob-lead">Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.</p>
+        <h2 class="ob-title" data-i18n-html="onboarding.title">Тренируйся<br>по своим правилам</h2>
+        <p class="ob-lead" data-i18n="onboarding.lead">Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.</p>
       </div>
 
       <!-- Четыре главных сценария вместо полного перечня функций: первый экран
            должен объяснять ценность, а не пересказывать всё приложение. -->
       <ul class="ob-grid">
-        <li><span class="obg-ico" data-icon="grip"></span><b>Программа под тебя</b><small>Собери сам или доверь программу ИИ</small></li>
-        <li><span class="obg-ico" data-icon="book"></span><b>Тренер на связи</b><small>Получай программы и отправляй отчёты</small></li>
-        <li><span class="obg-ico" data-icon="chart"></span><b>Прогресс без расчётов</b><small>Вес, повторы и время растут по плану</small></li>
-        <li><span class="obg-ico" data-icon="mic"></span><b>Свободные руки</b><small>Управляй голосом или кнопкой гарнитуры</small></li>
+        <li><span class="obg-ico" data-icon="grip"></span><b data-i18n="onboarding.programTitle">Программа под тебя</b><small data-i18n="onboarding.programBody">Собери сам или доверь программу ИИ</small></li>
+        <li><span class="obg-ico" data-icon="book"></span><b data-i18n="onboarding.trainerTitle">Тренер на связи</b><small data-i18n="onboarding.trainerBody">Получай программы и отправляй отчёты</small></li>
+        <li><span class="obg-ico" data-icon="chart"></span><b data-i18n="onboarding.progressTitle">Прогресс без расчётов</b><small data-i18n="onboarding.progressBody">Вес, повторы и время растут по плану</small></li>
+        <li><span class="obg-ico" data-icon="mic"></span><b data-i18n="onboarding.handsfreeTitle">Свободные руки</b><small data-i18n="onboarding.handsfreeBody">Управляй голосом или кнопкой гарнитуры</small></li>
       </ul>
 
       <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
            стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
       <div class="note ob-health">
         <span class="n-ico" data-icon="heart"></span>
-        <span>Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.</span>
+        <span data-i18n="onboarding.health">Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.</span>
       </div>
     </div>
 
     <!-- Кнопки закреплены у нижнего края: это единственное, ради чего сюда пришли,
          и они не должны зависеть от того, докрутил человек экран или нет. -->
     <div class="ob-actions">
-      <button class="btn-primary" id="obStart">Начать</button>
-      <button type="button" class="btn-secondary" id="obLogin">Вход или регистрация</button>
-      <p class="ob-legal">Продолжая, ты принимаешь <button type="button" class="ob-legal-link" id="obLegal1">правила</button> приложения.</p>
+      <button class="btn-primary" id="obStart" data-i18n="common.start">Начать</button>
+      <button type="button" class="btn-secondary" id="obLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
+      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
     </div>
   </section>
 

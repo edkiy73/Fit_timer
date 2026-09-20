@@ -16,6 +16,7 @@
      {action:'send',   email}
      {action:'verify', email, code, deviceId, handle, trainerKey, sub}
      {action:'set_handle', email, deviceId, syncToken, handle, trainerKey}
+     {action:'set_locale', email, deviceId, syncToken, locale}
      {action:'forget', email, deviceId, syncToken, handle, trainerKey, scope, links}
 
    Удаление живёт здесь же, а не отдельным файлом: завести себя и стереть себя —
@@ -220,6 +221,19 @@ module.exports = async (req, res) => {
     return send(res, 200, {ok:true, handle});
   }
 
+  if(act === 'set_locale'){
+    const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+    const token = String((body && body.syncToken) || '');
+    const locale = (body && body.locale) === 'en' ? 'en' : 'ru';
+    let acc = null;
+    try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+    const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
+    if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+    acc.locale = locale;
+    await store.set(`a:${mh}`, JSON.stringify(acc));
+    return send(res, 200, {ok:true, locale});
+  }
+
   /* ---- прислать код ---- */
   if(act === 'send'){
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается
@@ -231,16 +245,13 @@ module.exports = async (req, res) => {
     const code = digits(6);
     await store.set(`mail:${mh}`, JSON.stringify({h: sha(code), tries: 0, at: Date.now()}), CODE_TTL);
 
-    const text = `Код для входа: ${code}\n\n`
-      + `Введи его в приложении, в разделе «Другое» → «Аккаунт».\n`
-      + `Код действует 15 минут.\n\n`
-      + `Если ты этого не просил — просто удали письмо, ничего не произошло.`;
-    const html = `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630">`
-      + `<p>Код для входа:</p>`
-      + `<p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p>`
-      + `<p>Введи его в приложении, в разделе «Другое» → «Аккаунт». Код действует 15 минут.</p>`
-      + `<p style="color:#6C6785;font-size:14px">Если ты этого не просил — просто удали письмо, ничего не произошло.</p>`
-      + `</div>`;
+    const locale = (body && body.locale) === 'en' ? 'en' : 'ru';
+    const text = locale === 'en'
+      ? `Your Fit Timer sign-in code: ${code}\n\nEnter it in the app under More → Account.\nThe code is valid for 15 minutes.\n\nIf you didn’t request this, you can ignore this email.`
+      : `Код для входа: ${code}\n\nВведи его в приложении, в разделе «Другое» → «Аккаунт».\nКод действует 15 минут.\n\nЕсли ты этого не просил — просто удали письмо, ничего не произошло.`;
+    const html = locale === 'en'
+      ? `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>Your Fit Timer sign-in code:</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p>Enter it in the app under More → Account. The code is valid for 15 minutes.</p><p style="color:#6C6785;font-size:14px">If you didn’t request this, you can ignore this email.</p></div>`
+      : `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>Код для входа:</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p>Введи его в приложении, в разделе «Другое» → «Аккаунт». Код действует 15 минут.</p><p style="color:#6C6785;font-size:14px">Если ты этого не просил — просто удали письмо, ничего не произошло.</p></div>`;
 
     /* На локальном запуске письмо не отправляется, а код возвращается в ответе.
        Иначе ни один сценарий нельзя прогнать, не заведя настоящий почтовый ящик, —
@@ -248,7 +259,7 @@ module.exports = async (req, res) => {
        В боевом режиме этой ветки нет: там ALLOW_MEMORY_STORE не ставят. */
     const local = process.env.ALLOW_MEMORY_STORE === '1';
     try{
-      await sendMail({to: email, subject: `Код ${code} — Fit Timer`, text, html});
+      await sendMail({to: email, subject: locale === 'en' ? `Fit Timer code: ${code}` : `Код ${code} — Fit Timer`, text, html});
     }catch(e){
       if(e.code === 'no_mail_key'){
         if(!local) return fail(res, 503, 'no_mail');
@@ -283,7 +294,8 @@ module.exports = async (req, res) => {
     const araw = await store.get(`a:${mh}`);
     if(araw){ try{ acc = JSON.parse(araw); }catch(e){ acc = null; } }
     const fresh = !acc;
-    if(!acc) acc = {email, since: now, handle: '', sub: null};
+    if(!acc) acc = {email, since: now, handle: '', sub: null, locale: (body && body.locale) === 'en' ? 'en' : 'ru'};
+    if(acc.locale !== 'ru' && acc.locale !== 'en') acc.locale = (body && body.locale) === 'en' ? 'en' : 'ru';
     acc.seen = now;
 
     // Код на почту выдаёт устройству отдельный ключ синхронизации. Почта сама по
@@ -365,6 +377,7 @@ module.exports = async (req, res) => {
       needsHandle: !acc.handle,
       trainerKey,           // null — значит прежний ключ остаётся рабочим
       trainer,              // null — тренерской страницы у аккаунта нет
+      locale: acc.locale || 'ru',
       syncToken: deviceId ? syncToken : null
     });
   }

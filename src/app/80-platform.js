@@ -131,7 +131,7 @@ function setHfMode(mode){
   hfMode = mode;
   kvSet('hfMode', mode);
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === mode));
-  $('hfHint').textContent = HF_HINTS[mode] || '';
+  $('hfHint').textContent = hfHintText(mode);
   voiceWanted = (mode === 'voice');
   syncPrefs();
   // если уже на тренировке — переключаем на лету

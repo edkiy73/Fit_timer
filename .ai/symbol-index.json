@@ -201,8 +201,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 742,
-      "chars": 35046,
+      "lines": 759,
+      "chars": 35769,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -242,6 +242,7 @@
         "saveUser",
         "signOut",
         "subPrice",
+        "syncAccountLocale",
         "syncUserForm",
         "toB64",
         "tryUnlock",
@@ -686,7 +687,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 453,
-      "chars": 21523,
+      "chars": 21519,
       "symbols": [
         "advance",
         "applyTheme",
@@ -711,8 +712,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1798,
-      "chars": 76818,
+      "lines": 1827,
+      "chars": 77979,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -777,7 +778,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 187,
-      "chars": 9876,
+      "chars": 10488,
       "ids": [
         "btnExit",
         "btnMicW",
@@ -1164,7 +1165,7 @@
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
       "lines": 218,
-      "chars": 17193,
+      "chars": 17756,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
@@ -1184,8 +1185,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 366,
-      "chars": 19733,
+      "lines": 378,
+      "chars": 20480,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1193,6 +1194,8 @@
         "accNone",
         "accProfiles",
         "accSync",
+        "appLanguageCard",
+        "appLocaleSelect",
         "badgeCard",
         "badgeNext",
         "badgeNote",
@@ -1319,7 +1322,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 611,
-      "chars": 35272,
+      "chars": 35435,
       "ids": [
         "addExModal",
         "aemAI",

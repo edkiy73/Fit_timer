@@ -139,6 +139,29 @@ async function chooseHandsFree(mode){
   return true;
 }
 
+if($('appLocaleSelect')){
+  $('appLocaleSelect').onchange = async e=>{
+    const next = normalizeLocale(e.target.value);
+    await setAppLocale(next, {persist:true});
+    await syncAccountLocale(next);
+    if((await kvGet('voiceLangManual')) !== '1'){
+      voiceLang = next === 'en' ? 'en-US' : 'ru-RU';
+      savedVoiceURI = '';
+      await kvSet('voiceLang', voiceLang);
+      await kvSet('voiceURI', '');
+      await fillVoiceChoices();
+    }
+    if((await kvGet('recognitionLangManual')) !== '1'){
+      recognitionLang = next;
+      await kvSet('recognitionLang', recognitionLang);
+      if(hfMode === 'voice') setHfMode('off');
+      await refreshVoicePackUI();
+    }
+    $('hfHint').textContent = hfHintText(hfMode);
+  };
+}
+window.addEventListener('appLocaleChanged', ()=>{ if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode); });
+
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
@@ -258,7 +281,7 @@ async function fillVoiceChoices(){
     const sel=$(id); if(!sel) continue;
     sel.innerHTML='';
     if(!list.length){
-      const o=document.createElement('option'); o.value=''; o.textContent='Системный голос'; sel.appendChild(o);
+      const o=document.createElement('option'); o.value=''; o.textContent=t('audio.systemVoice'); sel.appendChild(o);
       continue;
     }
     list.forEach((v,i)=>{
@@ -355,20 +378,21 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 
 for(const id of ['stVoiceLang','sndVoiceLang']){
-  if($(id)) $(id).onchange = async e=>{ await setVoiceLanguage(e.target.value); };
+  if($(id)) $(id).onchange = async e=>{ kvSet('voiceLangManual','1'); await setVoiceLanguage(e.target.value); };
 }
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
   if($(id)) $(id).onchange = e=>{
     savedVoiceURI=e.target.value || '';
     kvSet('voiceURI',savedVoiceURI);
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
-    speak(voiceLang==='en-US' ? 'Voice selected' : 'Голос выбран');
+    speak(t('audio.voiceSelected'));
   };
 }
 for(const id of ['voiceRecLang','hfVoiceRecLang']){
   if($(id)) $(id).onchange = async e=>{
     recognitionLang = e.target.value === 'en' ? 'en' : 'ru';
     kvSet('recognitionLang',recognitionLang);
+    kvSet('recognitionLangManual','1');
     if(hfMode==='voice') setHfMode('off');
     await refreshVoicePackUI();
   };
@@ -1690,8 +1714,13 @@ try{
     const raw = localStorage.getItem('account');
     if(raw && JSON.parse(raw).biometry) $('lockModal').classList.add('open');
   }catch(e){}
+  // Язык нужен до онбординга и первой отрисовки экранов.
+  await loadAppLocale();
   // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
   await loadAccount();
+  if(!appLocaleStored && account && (account.locale === 'ru' || account.locale === 'en')){
+    await setAppLocale(account.locale, {persist:true});
+  }
   loadPublicConfig();
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
@@ -1745,11 +1774,11 @@ try{
   }
   voiceWanted = hfMode === 'voice';
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
-  $('hfHint').textContent = HF_HINTS[hfMode] || '';
+  $('hfHint').textContent = hfHintText(hfMode);
   soundOn = (await kvGet('soundOff')) !== '1';
-  voiceLang = (await kvGet('voiceLang')) || 'ru-RU';
+  voiceLang = (await kvGet('voiceLang')) || (appLocale === 'en' ? 'en-US' : 'ru-RU');
   savedVoiceURI = (await kvGet('voiceURI')) || '';
-  recognitionLang = (await kvGet('recognitionLang')) || 'ru';
+  recognitionLang = (await kvGet('recognitionLang')) || appLocale;
   if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
   await fillVoiceChoices();
   await refreshVoicePackUI();

@@ -591,15 +591,15 @@
 
 <!-- Нижняя навигация. Видна только на пяти корневых разделах и прячется, пока
      открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
-<nav class="dock hidden" id="dock" aria-label="Разделы">
+<nav class="dock hidden" id="dock" aria-label="Разделы" data-i18n-aria="nav.sections">
   <div class="dock-in">
-    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
-    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
+    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
+    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
     <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
          бы место под раздел, в который человеку незачем заходить. -->
-    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Подопечные</span></button>
-    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Другое</span></button>
+    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
+    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
   </div>
 </nav>
 

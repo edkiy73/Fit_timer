@@ -28,9 +28,9 @@
     <div class="brand">FIT<b>/</b>TIMER</div>
     <div class="global-clock" id="globalClock">00:00</div>
     <div class="top-tools">
-      <button class="icon-btn btn-sound" id="btnSoundW" title="Звук" data-icon="vol"></button>
-      <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление" data-icon="mic"></button>
-            <button class="btn-exit" id="btnExit">Выйти</button>
+      <button class="icon-btn btn-sound" id="btnSoundW" title="Звук" data-i18n-title="top.soundTitle" data-icon="vol"></button>
+      <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление" data-i18n-title="top.voiceTitle" data-icon="mic"></button>
+            <button class="btn-exit" id="btnExit" data-i18n="common.exit">Выйти</button>
     </div>
   </div>
 
@@ -66,7 +66,7 @@
          добавляют в библиотеку, а не покупают. -->
     <button class="store-cta" id="btnStoreMenu">
       <span class="sc-ico" id="storeIcoMenu"></span>
-      <span class="sc-txt"><b>Каталог программ</b><small>Тренировки от тренеров</small></span>
+      <span class="sc-txt"><b data-i18n="home.catalogTitle">Каталог программ</b><small data-i18n="home.catalogSub">Тренировки от тренеров</small></span>
       <span class="sc-arrow" id="storeArrowMenu"></span>
     </button>
 
@@ -80,7 +80,7 @@
          «серия под угрозой»: одно незакрытое дело — один цвет по всему экрану. -->
     <div class="panel week-card">
       <div class="wk-head">
-        <span class="ts-label">Эта неделя</span>
+        <span class="ts-label" data-i18n="home.week">Эта неделя</span>
         <span class="wk-score hidden" id="weekScore"><b id="weekDone">0</b><span id="weekOf"></span></span>
       </div>
       <div class="week-strip" id="weekStrip"></div>
@@ -96,16 +96,16 @@
       <span class="pb-ico" data-icon="crown"></span>
       <span class="pb-txt">
         <b>Fit Timer Премиум</b>
-        <small id="pbSub">Тренировку соберёт ИИ. И весь каталог программ от тренеров.</small>
+        <small id="pbSub" data-i18n="home.premiumSub">Тренировку соберёт ИИ. И весь каталог программ от тренеров.</small>
       </span>
     </button>
 
     <div class="panel progress-card">
-      <span class="ts-label">Прогресс</span>
+      <span class="ts-label" data-i18n="common.progress">Прогресс</span>
       <div class="quick-stats">
-        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span>Тренировки</span></button>
-        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span>Вес</span></button>
-        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span>Фото</span></button>
+        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
+        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
+        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
       </div>
       <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
            есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
@@ -123,12 +123,12 @@
        через тот же parseProgramText — программа из каталога ничем не отличается от
        собранной руками. Программы приходят с сервера, обложки рисуются на месте. -->
   <section class="screen" id="scrStore">
-    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2>Каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2 data-i18n="common.catalog">Каталог</h2></div>
 
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
-      <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" autocomplete="off">
-      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить"></button>
+      <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" data-i18n-placeholder="store.searchPlaceholder" autocomplete="off">
+      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить" data-i18n-title="store.clearTitle"></button>
     </div>
 
     <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
@@ -138,8 +138,8 @@
          похожа на остальное приложение и на разных экранах всплывает в разных
          местах. Вместо неё — свой попап #optModal с тем же списком. -->
     <div class="row2 store-filters">
-      <button type="button" class="filter-btn ph" id="storeCatBtn"><span id="storeCatVal">Цель</span><span class="fb-chev" id="storeCatChev"></span></button>
-      <button type="button" class="filter-btn ph" id="storeLevelBtn"><span id="storeLevelVal">Уровень</span><span class="fb-chev" id="storeLevelChev"></span></button>
+      <button type="button" class="filter-btn ph" id="storeCatBtn"><span id="storeCatVal" data-i18n="common.goal">Цель</span><span class="fb-chev" id="storeCatChev"></span></button>
+      <button type="button" class="filter-btn ph" id="storeLevelBtn"><span id="storeLevelVal" data-i18n="common.level">Уровень</span><span class="fb-chev" id="storeLevelChev"></span></button>
     </div>
 
     <p class="store-count" id="storeCount"></p>
@@ -152,7 +152,7 @@
        названием: во всю ширину квадрат съедал пол-экрана. Состав премиум-программы
        открыт только по подписке — вместо него заглушка, ведущая в витрину подписки. -->
   <section class="screen" id="scrStoreItem">
-    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2>Программа</h2></div>
+    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2 data-i18n="common.program">Программа</h2></div>
     <div class="card-block">
       <div class="si-hero">
         <div class="si-cover" id="siCover"></div>
@@ -167,20 +167,20 @@
       <button type="button" class="st-by" id="siBy">
         <span class="st-ava" data-icon="user"></span>
         <span class="st-nick" id="siNick"></span>
-        <span class="st-role">тренер</span>
+        <span class="st-role" data-i18n="store.roleTrainer">тренер</span>
       </button>
     </div>
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Что внутри</p><span class="cb-count" id="siCount"></span></div>
+      <div class="cb-head"><p class="cb-title" data-i18n="store.inside">Что внутри</p><span class="cb-count" id="siCount"></span></div>
       <div class="list-rows" id="siList"></div>
       <button type="button" class="si-lock hidden" id="siLock">
         <span class="sl-ico" data-icon="crown"></span>
-        <b>Состав открыт по подписке</b>
+        <b data-i18n="store.locked">Состав открыт по подписке</b>
         <p id="siLockTxt"></p>
       </button>
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="siBuy">Добавить</button>
+      <button class="btn-primary" id="siBuy" data-i18n="common.add">Добавить</button>
     </div>
   </section>
 
@@ -947,33 +947,33 @@
     <div id="obHello">
       <div class="ob-hero">
         <div class="ob-mark">FIT<i>/</i>TIMER</div>
-        <h2 class="ob-title">Тренируйся<br>по своим правилам</h2>
-        <p class="ob-lead">Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.</p>
+        <h2 class="ob-title" data-i18n-html="onboarding.title">Тренируйся<br>по своим правилам</h2>
+        <p class="ob-lead" data-i18n="onboarding.lead">Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.</p>
       </div>
 
       <!-- Четыре главных сценария вместо полного перечня функций: первый экран
            должен объяснять ценность, а не пересказывать всё приложение. -->
       <ul class="ob-grid">
-        <li><span class="obg-ico" data-icon="grip"></span><b>Программа под тебя</b><small>Собери сам или доверь программу ИИ</small></li>
-        <li><span class="obg-ico" data-icon="book"></span><b>Тренер на связи</b><small>Получай программы и отправляй отчёты</small></li>
-        <li><span class="obg-ico" data-icon="chart"></span><b>Прогресс без расчётов</b><small>Вес, повторы и время растут по плану</small></li>
-        <li><span class="obg-ico" data-icon="mic"></span><b>Свободные руки</b><small>Управляй голосом или кнопкой гарнитуры</small></li>
+        <li><span class="obg-ico" data-icon="grip"></span><b data-i18n="onboarding.programTitle">Программа под тебя</b><small data-i18n="onboarding.programBody">Собери сам или доверь программу ИИ</small></li>
+        <li><span class="obg-ico" data-icon="book"></span><b data-i18n="onboarding.trainerTitle">Тренер на связи</b><small data-i18n="onboarding.trainerBody">Получай программы и отправляй отчёты</small></li>
+        <li><span class="obg-ico" data-icon="chart"></span><b data-i18n="onboarding.progressTitle">Прогресс без расчётов</b><small data-i18n="onboarding.progressBody">Вес, повторы и время растут по плану</small></li>
+        <li><span class="obg-ico" data-icon="mic"></span><b data-i18n="onboarding.handsfreeTitle">Свободные руки</b><small data-i18n="onboarding.handsfreeBody">Управляй голосом или кнопкой гарнитуры</small></li>
       </ul>
 
       <!-- предупреждение о здоровье на первом запуске: отдельным экраном оно бы
            стоило ещё одного шага, а здесь его видно ровно перед первой тренировкой -->
       <div class="note ob-health">
         <span class="n-ico" data-icon="heart"></span>
-        <span>Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.</span>
+        <span data-i18n="onboarding.health">Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.</span>
       </div>
     </div>
 
     <!-- Кнопки закреплены у нижнего края: это единственное, ради чего сюда пришли,
          и они не должны зависеть от того, докрутил человек экран или нет. -->
     <div class="ob-actions">
-      <button class="btn-primary" id="obStart">Начать</button>
-      <button type="button" class="btn-secondary" id="obLogin">Вход или регистрация</button>
-      <p class="ob-legal">Продолжая, ты принимаешь <button type="button" class="ob-legal-link" id="obLegal1">правила</button> приложения.</p>
+      <button class="btn-primary" id="obStart" data-i18n="common.start">Начать</button>
+      <button type="button" class="btn-secondary" id="obLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
+      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
     </div>
   </section>
 
@@ -1295,7 +1295,7 @@
   <!-- РАЗДЕЛ «АККАУНТ»: активный профиль и переключение между профилями.
        Раньше это был попап поверх главной — теперь полноценная страница. -->
   <section class="screen root" id="scrAccount">
-    <div class="page-head"><h1>Другое</h1></div>
+    <div class="page-head"><h1 data-i18n="settings.pageTitle">Другое</h1></div>
 
     <!-- Раздел собрал всё, что настраивают редко, и стал слишком длинным, чтобы
          в нём что-то находить: одиннадцать карточек подряд читаются как свалка.
@@ -1303,13 +1303,25 @@
          «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
          внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
     <div class="tabs seg" id="moreTabs">
-      <button class="tab act" data-more="me">Профиль</button>
-      <button class="tab" data-more="sound">Звук</button>
-      <button class="tab" data-more="coach">Тренер</button>
-      <button class="tab" data-more="acc">Аккаунт</button>
+      <button class="tab act" data-more="me" data-i18n="common.profile">Профиль</button>
+      <button class="tab" data-more="sound" data-i18n="common.sound">Звук</button>
+      <button class="tab" data-more="coach" data-i18n="common.trainer">Тренер</button>
+      <button class="tab" data-more="acc" data-i18n="common.account">Аккаунт</button>
     </div>
 
     <div class="tab-pane" id="morePane_me">
+    <div class="card-block" id="appLanguageCard">
+      <div class="cb-head"><p class="cb-title" data-i18n="settings.languageTitle">Язык</p></div>
+      <div class="pref-row">
+        <span data-i18n="settings.appLanguage">Язык приложения</span>
+        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.</p>
+    </div>
+
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
@@ -2107,15 +2119,15 @@
 
 <!-- Нижняя навигация. Видна только на пяти корневых разделах и прячется, пока
      открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
-<nav class="dock hidden" id="dock" aria-label="Разделы">
+<nav class="dock hidden" id="dock" aria-label="Разделы" data-i18n-aria="nav.sections">
   <div class="dock-in">
-    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span>Сегодня</span></button>
-    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span>Тренировки</span></button>
+    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
+    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
     <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
          бы место под раздел, в который человеку незачем заходить. -->
-    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span>Подопечные</span></button>
-    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span>Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span>Другое</span></button>
+    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
+    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
+    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
   </div>
 </nav>
 
