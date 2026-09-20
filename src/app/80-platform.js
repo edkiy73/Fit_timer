@@ -58,9 +58,9 @@ function syncPrefs(){
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
-  $('btnSoundW').title = 'Настройки звука';
+  $('btnSoundW').title = t('top.soundTitle');
   $('btnMicW').classList.toggle('listening', hfMode !== 'off');
-  $('btnMicW').title = 'Управление: ' + ({off:'выкл', voice:'голос', headset:'гарнитура'}[hfMode] || 'выкл');
+  $('btnMicW').title = t('top.voiceTitle') + ': ' + ({off:t('common.off'), voice:t('common.voice'), headset:t('common.headset')}[hfMode] || t('common.off'));
   // держим три каскада («старт», «тренировка», «профиль») в согласованном состоянии
   ['st', 'snd'].forEach(p => {
     const btn = $(p + 'SoundOn');
@@ -121,13 +121,13 @@ function applyVoiceCommand(input){
 /* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
 let hfMode = 'off'; // off | voice | headset
 
-const HF_HINTS = {
-  off: 'Переключай этапы кнопками на экране.',
-  voice: (window.FitNative && window.FitNative.offlineVoice)
-    ? 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.'
-    : 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
-  headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
-};
+function hfHintText(mode){
+  if(mode === 'voice'){
+    return t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
+  }
+  if(mode === 'headset') return t('handsfree.headsetHint');
+  return t('handsfree.offHint');
+}
 
 function setHfMode(mode){
   hfMode = mode;
