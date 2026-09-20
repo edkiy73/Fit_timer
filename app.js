@@ -1910,12 +1910,12 @@ function showSyncState(state){
   else el.textContent = 'Данные синхронизируются с аккаунтом';
 }
 
-const syncAuth = action => ({
-  action,
+const accountAuth = () => ({
   email: (account && account.email) || '',
   token: (account && account.syncToken) || '',
   deviceId: (identity && identity.deviceId) || ''
 });
+const syncAuth = action => Object.assign({action}, accountAuth());
 const syncUser = u => ({id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u), theme:u.theme || 'system'});
 const remoteWins = (remote, local) => {
   if(!local) return true;
@@ -5199,20 +5199,42 @@ function trainerProfile(){
 
 /* Отправка профиля на сервер происходит только по явной кнопке «Сохранить». */
 async function pushProfile(){
-  if(!trainerOn()) return;
+  if(!trainerAccountReady()){
+    trainer.pageErr = 'Сначала заведи аккаунт — страница тренера привязана к нему.';
+    return false;
+  }
+  if(!trainerOn()) return false;
   try{
     // Правка и чтение страницы — один адрес, разные глаголы: страница одна.
-    const r = await apiPost('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)), {
+    const r = await apiPost('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)), Object.assign({
       trainer: trainerProfile(),
       trainerKey: trainer.key || ''
-    });
-    if(r.trainerKey){ trainer.key = r.trainerKey; await saveTrainer(); }
+    }, accountAuth()));
+    if(r.trainerKey) trainer.key = r.trainerKey;
     trainer.pageErr = null;
     return true;
   }catch(e){
     trainer.pageErr = e && e.code === 'handle_taken'
       ? 'Этот ник уже занят другим тренером — возьми другой.'
       : 'Не удалось сохранить. Проверь связь и попробуй ещё раз.';
+    return false;
+  }
+}
+
+// Публичная страница — серверный источник данных тренера. Подтягиваем её при
+// входе в раздел и при запуске даже без Premium: аккаунт тренера бесплатный, а
+// его имя и описание не должны зависеть от синхронизации тренировок.
+async function refreshTrainerProfile(){
+  if(!trainerAccountReady() || !(trainer && trainer.handle)) return false;
+  try{
+    const remote = await apiFetch('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)));
+    ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = remote[k] || ''; });
+    trainer.years = remote.years == null ? null : remote.years;
+    trainer.pageErr = null;
+    await saveTrainer({remote:true});
+    if(show._last === 'scrAccount') renderTrainerCard();
+    return true;
+  }catch(e){
     return false;
   }
 }
@@ -6886,7 +6908,7 @@ async function saveTrainer(opts){
     rec.bucket.trainer = trainer;
     if(!(opts && opts.remote)) bumpAccountMeta(rec.bucket, 'trainer');
     await writeAccountBucket(rec);
-    if(!(opts && opts.remote)) queueAccountSync();
+    if(!(opts && (opts.remote || opts.deferSync))) queueAccountSync();
   } else await kvSet(pk('trainer'), JSON.stringify(trainer));
 }
 async function saveClients(opts){
@@ -6900,7 +6922,8 @@ async function saveClients(opts){
 }
 // Режим считается включённым только вместе с ником: без ника подопечный не поймёт, от кого
 // пришла программа, а «Отправить подопечному» в меню без адресата — пункт в никуда.
-const trainerOn = () => !!(trainer && trainer.on && (trainer.handle || '').trim());
+const trainerAccountReady = () => !!(account && account.email && account.syncToken);
+const trainerOn = () => !!(trainerAccountReady() && trainer && trainer.on && (trainer.handle || '').trim());
 // ник приводим к одному виду: человек напишет и «@lena», и «lena», и «t.me/lena»
 function normHandle(v){
   let h = String(v || '').trim().replace(/^https?:\/\//, '').replace(/^(t\.me|instagram\.com)\//, '');
@@ -6934,8 +6957,10 @@ function clientSum(c){
 function renderTrainerCard(){
   syncDockTabs();
   if(!$('tglTrainer')) return;
-  $('tglTrainer').classList.toggle('on', !!(trainer && trainer.on));
-  setShown('coachFields', !!(trainer && trainer.on));
+  const accountReady = trainerAccountReady();
+  const modeOn = !!(accountReady && trainer && trainer.on);
+  $('tglTrainer').classList.toggle('on', modeOn);
+  setShown('coachFields', modeOn);
   if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (trainer && trainer.handle) || '';
   const handleLocked = !!(trainer && trainer.handle && trainer.key);
   $('coachHandle').readOnly = handleLocked;
@@ -6957,7 +6982,7 @@ function renderTrainerCard(){
   $('coachClientsSub').textContent = 'Как её видит подопечный';
   // Ник принадлежит аккаунту, и без аккаунта он уйдёт вместе с телефоном. Говорим
   // об этом там, где ник заводят, а не постфактум.
-  setShown('coachNoAcc', !(account && account.email));
+  setShown('coachNoAcc', !accountReady);
 }
 
 /* ---- экран «Подопечные» ---- */
@@ -12545,19 +12570,33 @@ $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
 
 /* ---- тренер: карточка на аккаунте, картотека, карточка подопечного ---- */
-$('tglTrainer').onclick = async ()=>{
-  trainer.on = !trainer.on;
+async function enableTrainerMode(){
+  trainer.on = true;
   // Первое включение: подставляем имя и фото из профиля, чтобы не набирать заново.
   // Дальше они живут отдельно — правка профиля лицо тренера не меняет.
-  if(trainer.on && !trainer.name){
+  if(!trainer.name){
     const me = users.find(u => u.id === currentUser);
     if(me){ trainer.name = me.name || ''; trainer.photo = me.photo || ''; }
   }
   await saveTrainer();
   renderTrainerCard();
-  // Ник спрашиваем сразу, но не окриком: поле уже открыто и ждёт, а объяснение
-  // стоит под ним. Без ника режим не считается включённым (trainerOn).
-  if(trainer.on && !(trainer.handle || '').trim()) setTimeout(()=> $('coachHandle').focus(), 120);
+  if(!(trainer.handle || '').trim()) setTimeout(()=> $('coachHandle').focus(), 120);
+}
+$('tglTrainer').onclick = async ()=>{
+  if(!trainerAccountReady()){
+    openLogin(enableTrainerMode, {
+      label:'Аккаунт тренера',
+      msg:'Страница тренера работает через интернет и принадлежит аккаунту. Заведи или верни бесплатный аккаунт по почте — после входа режим тренера включится.'
+    });
+    return;
+  }
+  if(trainer.on){
+    trainer.on = false;
+    await saveTrainer();
+    renderTrainerCard();
+    return;
+  }
+  await enableTrainerMode();
 };
 // Чистим ПРЯМО ПРИ НАБОРЕ. Раньше лишнее убиралось только по уходу из поля, и
 // человек видел, как набранное вдруг меняется, — будто приложение спорит с ним.
@@ -12611,6 +12650,13 @@ $('coachYears').oninput = async e => {
 };
 
 $('btnSaveCoach').onclick = async ()=>{
+  if(!trainerAccountReady()){
+    openLogin(enableTrainerMode, {
+      label:'Аккаунт тренера',
+      msg:'Чтобы сохранить и обновлять страницу тренера, сначала заведи или верни бесплатный аккаунт по почте.'
+    });
+    return;
+  }
   const btn = $('btnSaveCoach');
   const rawLink = $('coachLinks').value.trim();
   const link = rawLink ? cleanLink(rawLink) : '';
@@ -12635,13 +12681,18 @@ $('btnSaveCoach').onclick = async ()=>{
   });
   btn.disabled = true;
   btn.textContent = 'Сохраняем…';
-  const ok = !trainerOn() || await pushProfile();
+  showSyncState('busy');
+  await saveTrainer({deferSync:true});
+  const ok = await pushProfile();
   if(ok){
-    await saveTrainer();
+    await saveTrainer({deferSync:true});
+    if(isPremium()) queueAccountSync();
+    showSyncState('ok');
     renderTrainerCard();
     btn.textContent = 'Сохранено';
     setTimeout(()=>{ if(btn.textContent === 'Сохранено') btn.textContent = 'Сохранить'; }, 1500);
   } else {
+    showSyncState('error');
     $('coachHandleErr').textContent = trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.';
     btn.textContent = 'Сохранить';
   }
@@ -12994,6 +13045,7 @@ document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switc
 function switchMoreTab(key){
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
   ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
+  if(key === 'coach') refreshTrainerProfile();
 }
 document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
@@ -13877,7 +13929,10 @@ try{
   syncSettingsForm();
   // При обычном повторном запуске код снова не нужен: сохранённый ключ устройства
   // возвращает свежие данные до того, как человек начнёт что-либо менять.
-  if(account.email && account.syncToken) await connectAccountSync();
+  if(account.email && account.syncToken){
+    await connectAccountSync();
+    await refreshTrainerProfile();
+  }
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;

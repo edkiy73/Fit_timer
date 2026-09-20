@@ -1362,6 +1362,10 @@
         <span>Я тренирую других<small>Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
         <button class="switch" id="tglTrainer"></button>
       </div>
+      <button type="button" class="way-row hidden" id="coachNoAcc">
+        <span class="wr-ico" data-icon="user"></span>
+        <span class="wr-txt"><b>Заведи аккаунт тренера</b><small>Страница работает через интернет и принадлежит аккаунту</small></span>
+      </button>
       <div class="stack hidden" id="coachFields">
         <!-- Имя и фото у тренера СВОИ, а не подсмотренные из профиля. Профиль — это
              «я в приложении»: там аватарка для себя и имя, которым человека зовут
@@ -1414,14 +1418,6 @@
         <button type="button" class="pref-row row-link" id="btnMyPage">
           <span><span>Моя страница</span><small id="coachClientsSub">Как её видит подопечный</small></span>
           <span class="nr-chev" data-icon="chevR"></span>
-        </button>
-        <!-- Ник и право править страницу принадлежат АККАУНТУ, а не телефону.
-             Отдельного «входа для тренеров» здесь нет намеренно: получалось два
-             входа, две почты и два места, где можно потерять себя. Поэтому здесь
-             только напоминание, а сам вход — в соседней вкладке. -->
-        <button type="button" class="way-row hidden" id="coachNoAcc">
-          <span class="wr-ico" data-icon="user"></span>
-          <span class="wr-txt"><b>Заведи аккаунт</b><small>Без него ник и страница потеряются вместе с телефоном</small></span>
         </button>
         <!-- Убрать сведения о себе — не то же самое, что перестать быть тренером.
              Ник остаётся, программы в каталоге остаются, пустеет только страница. -->

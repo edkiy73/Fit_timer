@@ -13,13 +13,43 @@ async function post(path, body){
   if(!r.ok) throw Object.assign(new Error(j.error), j, {status:r.status});
   return j;
 }
-async function login(deviceId, sub){
-  const sent = await post('/api/auth',{action:'send',email:MAIL});
-  return post('/api/auth',{action:'verify',email:MAIL,code:sent.devCode,deviceId,sub});
+async function get(path){
+  const r = await fetch(BASE + path);
+  const j = await r.json();
+  if(!r.ok) throw Object.assign(new Error(j.error), j, {status:r.status});
+  return j;
+}
+async function login(deviceId, sub, email = MAIL){
+  const sent = await post('/api/auth',{action:'send',email});
+  return post('/api/auth',{action:'verify',email,code:sent.devCode,deviceId,sub});
 }
 
 (async()=>{
   const sub = {plan:'year',since:'2026-09-17',until:'2099-09-17',currency:'RUB',price:2990,autoRenew:true};
+
+  // Страница тренера — часть аккаунта, а не локальная сущность телефона.
+  const trainerMail = 'trainer-api-' + Math.random().toString(36).slice(2,8) + '@example.com';
+  const trainerDevice = 'trainer-device';
+  const ta = await login(trainerDevice, null, trainerMail);
+  const nick = '@account.' + Math.random().toString(36).slice(2,8);
+  const claimed = await post('/api/trainer/' + encodeURIComponent(nick), {
+    email:trainerMail, deviceId:trainerDevice, token:ta.syncToken,
+    trainer:{name:'Лена', about:'Первая версия', years:7}
+  });
+  ok('страница тренера создаётся только через аккаунт', !!claimed.trainerKey);
+  await post('/api/trainer/' + encodeURIComponent(nick), {
+    email:trainerMail, deviceId:trainerDevice, token:ta.syncToken,
+    trainerKey:claimed.trainerKey, trainer:{name:'Лена', about:'Обновлено сразу', years:8}
+  });
+  const trainerPage = await get('/api/trainer/' + encodeURIComponent(nick));
+  ok('повторное сохранение сразу меняет публичную страницу',
+     trainerPage.about === 'Обновлено сразу' && trainerPage.years === 8,
+     `${trainerPage.about}, стаж ${trainerPage.years}`);
+  let accountRequired = false;
+  try{ await post('/api/trainer/' + encodeURIComponent('@no.account'), {trainer:{name:'Без аккаунта'}}); }
+  catch(e){ accountRequired = e.status === 401 && e.error === 'account_required'; }
+  ok('без аккаунта тренерскую страницу завести нельзя', accountRequired);
+
   const a = await login('device-a', sub);
   const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',photo:'data:image/png;base64,bm8='};
   const legacyProfile = {id:'profile-legacy',name:'Старый',gender:'m',birth:'1990-05-01',theme:'light'};

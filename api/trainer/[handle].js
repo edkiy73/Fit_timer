@@ -5,10 +5,10 @@
    сколько раз брали его программы. Ничего из этого не является тайной — страницу
    для того и открывают. Секреты (ключ правки) наружу не уходят никогда.
 
-   POST — тренер правит её у себя. Ник закрепляется за ПЕРВЫМ, кто им
-   воспользовался; дальше правки требуют ключа, выданного при закреплении. Это
-   единственная защита, возможная без аккаунтов, а с аккаунтом ключ возвращается
-   по почте.
+   POST — тренер правит её у себя. Страница тренера существует только вместе с
+   подтверждённым аккаунтом: устройство доказывает вход отдельным syncToken.
+   Старый trainerKey сохраняем для ссылок и каталога, но он больше не заменяет
+   аккаунт при сохранении страницы.
 
    Раньше правка жила отдельным файлом /api/profile. Разными их делал только
    глагол: страница одна, и Vercel на бесплатном плане считает каждый файл
@@ -71,6 +71,19 @@ module.exports = async (req, res) => {
   let body;
   try{ body = await readBody(req); }catch(e){ return fail(res, 413, 'too_large'); }
 
+  const email = String((body && body.email) || '').trim().toLowerCase().slice(0, 120);
+  const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+  const token = String((body && body.token) || '');
+  if(!/^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/.test(email) || !deviceId || !token){
+    return fail(res, 401, 'account_required');
+  }
+  const mailHash = sha(email).slice(0, 32);
+  let account = null;
+  try{ account = JSON.parse(await store.get(`a:${mailHash}`)); }catch(e){}
+  const device = account && account.syncDevices && account.syncDevices[deviceId];
+  if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+  if(account.handle && account.handle !== handle) return fail(res, 403, 'not_yours');
+
   /* Поля чистим ЗДЕСЬ, а не полагаемся на приложение: запрос приходит не только
      из него. Страницу тренера читают чужие люди — отдавать им строку в мегабайт,
      невидимые символы посреди имени или «ссылку» javascript: мы не будем. */
@@ -88,7 +101,9 @@ module.exports = async (req, res) => {
     const key = rndId(24);
     await store.set(`t:${handle}`, JSON.stringify(Object.assign(
       {handle, since: new Date().toISOString(), seen: new Date().toISOString(),
-       keyHash: sha(key)}, fields)));
+       keyHash: sha(key), mailHash}, fields)));
+    account.handle = handle;
+    await store.set(`a:${mailHash}`, JSON.stringify(account));
     // Отдельный список ников: пройти по всем ключам базы нельзя, а перечислить
     // тренеров в админке надо.
     await store.push('t:all', handle);
@@ -97,11 +112,16 @@ module.exports = async (req, res) => {
 
   let cur;
   try{ cur = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
-  if(!sameSecret(sha(body.trainerKey || ''), cur.keyHash || '')){
-    // Ник занят кем-то другим. Это не ошибка ввода, и человеку надо сказать прямо,
-    // а не оставлять в недоумении, почему страница не меняется.
-    return fail(res, 409, 'handle_taken');
+  if(!account.handle){
+    const legacyKeyOk = sameSecret(sha(body.trainerKey || ''), cur.keyHash || '');
+    if((cur.mailHash && cur.mailHash !== mailHash) || (!cur.mailHash && !legacyKeyOk)){
+      return fail(res, 409, 'handle_taken');
+    }
+    account.handle = handle;
+    await store.set(`a:${mailHash}`, JSON.stringify(account));
   }
+  if(cur.mailHash && cur.mailHash !== mailHash) return fail(res, 409, 'handle_taken');
+  cur.mailHash = mailHash;
   cur.seen = new Date().toISOString();   // когда тренер последний раз давал о себе знать
   delete cur.wiped;                      // снова заполнил — значит, уже не пусто
   await store.set(`t:${handle}`, JSON.stringify(Object.assign(cur, fields)));
