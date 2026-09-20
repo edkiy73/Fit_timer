@@ -428,7 +428,7 @@ function renderStep(){
     // у форматов с весом, и при выключенной автопрогрессии там лежит зафиксированная
     // база. По старому условию (progAxis === 'weight') такой вес не показывался вовсе —
     // человек вписал 12 кг, а на тренировке их не видел.
-    const kgTxt = step.weight > 0 ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>` : '';
+    const kgTxt = step.weight > 0 ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>` : '';
     // здесь у строки есть своя цифра: слот главной цифры нужен целиком, а место
     // справа от неё ничем не занято — кольцу подготовки на этом шаге и не нужно
     $('stepReps').classList.remove('kg-side');
@@ -451,7 +451,7 @@ function renderStep(){
     // отдельной строкой он занимал весь слот главной цифры и весил столько же,
     // сколько сам отсчёт. Класс kg-side снимает этот слот.
     const withKg = step.phase === 'work' && step.weight > 0;
-    if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} кг</span>`;
+    if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`;
     $('stepReps').classList.toggle('kg-side', withKg);
     setShown('stepReps', withKg);
     // класс нужен только вёрстке слота (.reps.kg-side чуть выше) — на позицию кольца
