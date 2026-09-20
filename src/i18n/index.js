@@ -56,3 +56,4 @@ async function setAppLocale(value, opts){
   return appLocale;
 }
 function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
+function aiOutputLanguage(){ return appLocale === 'ru' ? 'Russian' : 'English'; }
