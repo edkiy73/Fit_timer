@@ -1343,137 +1343,80 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-const AI_PROMPT = `Ты — помощник по составлению домашних тренировок. Составь программу по моему запросу и выведи её СТРОГО в текстовом формате ниже, без пояснений, без markdown, без лишнего текста до и после.
+const AI_PROMPT = `You are a fitness-program assistant for home workouts. Build a safe, practical program from the user's request and return ONLY the plain-text protocol below: no Markdown, no commentary before or after it.
 
-=== ФОРМАТ ОТВЕТА ===
+IMPORTANT LANGUAGE RULE:
+- All instructions in this prompt are in English.
+- User-visible content values (program name, program description, exercise names, exercise descriptions, mistakes, replacement names/descriptions) must be written in {{OUTPUT_LANGUAGE}}.
+- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens listed below are machine-readable constants. Keep those exact Russian tokens unchanged even when the user-visible content is English.
 
-Общие поля (в самом начале, каждое с новой строки "КЛЮЧ: значение"):
+=== OUTPUT PROTOCOL ===
 
-ПРОГРАММА: название программы
-ОПИСАНИЕ ПРОГРАММЫ: до 1000 символов В ОДНУ СТРОКУ (без переносов) — для кого программа, какого результата ждать и когда, как часто заниматься, на что обращать внимание, когда снизить нагрузку. На «ты», по делу. Это единственное место, где можно объяснить логику всей тренировки.
-ВРЕМЯ: время тренировки в формате ЧЧ:ММ, например 07:30 (или пропусти строку)
-ПРОГРЕССИЯ: число от 1 до 15 или «нет» — раз во сколько ПРОЙДЕННЫХ тренировок повышать нагрузку там, где стоит УСЛОЖНЯТЬ: да. Считаются выполненные тренировки, а не дни календаря: недели и месяцы не указывай. Новичку 3–6, опытным 2–4.
-ЧЕРЕДОВАНИЕ: да / нет — варианты идут по очереди (A, B, снова A) независимо от дней недели. Для сплитов на 2–3 варианта ставь «да» и НЕ указывай дни у вариантов. Если тренировки привязаны к дням — «нет» и укажи ДЕНЬ у каждого.
-ДНИ ТРЕНИРОВОК: дни через запятую (Пн, Ср, Пт) — общее расписание. Только при ЧЕРЕДОВАНИЕ: да: дни говорят когда тренироваться, а какой вариант выпадет — решает очередь.
+General fields, one per line as "KEY: value":
 
-Дальше — ВАРИАНТЫ тренировки: свой набор упражнений для своих дней. Одинаковая тренировка во все дни — ровно один вариант. Разные упражнения в разные дни (Пн/Чт — верх, Вт/Пт — ноги) — несколько. Один день не может быть в двух вариантах. Максимум 7.
+ПРОГРАММА: program name
+ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line; explain who it is for, expected result, frequency, what to watch, and when to reduce load
+ВРЕМЯ: HH:MM, for example 07:30 (optional)
+ПРОГРЕССИЯ: integer 1-15 or "нет"; increase load after this many COMPLETED workouts, not calendar days. Beginners usually 3-6, experienced users 2-4.
+ЧЕРЕДОВАНИЕ: "да" or "нет"; use "да" when workout variants rotate A-B-A independently of weekdays
+ДНИ ТРЕНИРОВОК: comma-separated canonical weekday tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only needed as the shared schedule when ЧЕРЕДОВАНИЕ: да
 
-Каждый вариант начинается со строки "ДЕНЬ:" и содержит:
+Workout variants:
+- Same workout every training day = one variant.
+- Different exercise sets for different days = multiple variants, maximum 7.
+- Each variant starts with ДЕНЬ:.
 
-ДЕНЬ: дни недели этого варианта через запятую (из списка: Пн, Вт, Ср, Чт, Пт, Сб, Вс). При ЧЕРЕДОВАНИЕ: да оставь значение пустым — просто строка «ДЕНЬ:» открывает новый вариант.
-КРУГИ: число от 1 до 10 — сколько раз повторяется ВЕСЬ список упражнений подряд (A, B, C → A, B, C).
-ВАЖНО: КРУГИ и ПОДХОДЫ — две независимые настройки, они задают разный ПОРЯДОК выполнения:
-  · круговая тренировка → КРУГИ 2–5, ПОДХОДЫ 1 (прошёл весь список, вернулся к началу);
-  · силовая тренировка → КРУГИ 1, ПОДХОДЫ 3–4 (все подходы одного упражнения подряд, потом следующее);
-  · смешанная → КРУГИ 2–3 и ПОДХОДЫ 2–3 вместе (блок с подходами повторяется кругами).
-Общий объём каждого упражнения = КРУГИ × ПОДХОДЫ, следи, чтобы он был разумным.
-ОТДЫХ МЕЖДУ КРУГАМИ: секунды (0–600)
+ДЕНЬ: canonical weekday tokens for this variant, comma-separated. When ЧЕРЕДОВАНИЕ: да, leave the value empty.
+КРУГИ: 1-10; how many times the ENTIRE exercise list repeats
+ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
 
-Затем упражнения варианта, каждое начинается со строки "УПРАЖНЕНИЕ:" (до 20 разминочных и до 20 основных на вариант; сколько именно — реши сам исходя из длительности и цели):
+КРУГИ and ПОДХОДЫ are independent:
+- circuit: КРУГИ 2-5, usually ПОДХОДЫ 1
+- strength: КРУГИ 1, usually ПОДХОДЫ 3-4
+- mixed: both may be >1, but keep total volume sensible
 
-УПРАЖНЕНИЕ: название
-ОПИСАНИЕ: техника, 3–4 предложения: исходное положение, движение, что напрячь и чего избегать. Понятно даже без видео. До 600 символов.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
-ОШИБКИ: 1–2 самые частые ошибки выполнения, коротко (до 300 символов)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка).
-ЗНАЧЕНИЕ: число или диапазон 12-15; для «время» и «время и вес» — секунды.
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес» (новичку 5–8 кг тяги/жимы, 3–5 кг махи).
-ПОДХОДЫ: сколько ПОДРЯД перед следующим упражнением, 1–10 (силовые 3–4, круговые 1).
-СТОРОНА: да — считается отдельно на каждую сторону (иначе пропусти строку).
-РАЗМИНКА: да — для 2–4 первых упражнений, если нужна (иначе пропусти строку).
-ОТДЫХ: секунды между подходами одного упражнения (0 — без отдыха).
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — пиши, только если отличается от ОТДЫХ (иначе пропусти строку, возьмётся то же число). Обычно больше, когда следующее упражнение — совсем другая группа мышц или движение; для лёгких упражнений может быть и меньше.
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — пиши одну ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста, в тех же единицах, что ЗНАЧЕНИЕ: повторения (15-25) или секунды (60-120). При формате с весом вместо ПОТОЛОК пиши ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, дома обычно 10-24). Без потолка за год значения станут нереальными.
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с заданным ПОТОЛОК ПОВТОРОВ. «да» — дойдя до потолка повторений, они возвращаются к началу диапазона, а вес растёт на ШАГ ВЕСА (двойная прогрессия). Для гантельных упражнений обычно «да».
-ЗАМЕНА: более сложное упражнение — на что перейти, когда потолок достигнут (отжимания с колен → классические, приседания → с гантелями). Только при УСЛОЖНЯТЬ: да.
-ОПИСАНИЕ ЗАМЕНЫ: техника этого более сложного упражнения, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на YouTube с реальным разбором техники, если уверен, что видео существует. Не выдумывай — иначе пропусти строку.
+Each exercise starts with УПРАЖНЕНИЕ:.
 
-=== ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА (два разных дня) ===
+УПРАЖНЕНИЕ: user-visible exercise name in {{OUTPUT_LANGUAGE}}
+ОПИСАНИЕ: 3-4 practical sentences in {{OUTPUT_LANGUAGE}} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
+МЫШЦЫ: comma-separated tokens STRICTLY from this canonical list: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
+ОШИБКИ: 1-2 common mistakes in {{OUTPUT_LANGUAGE}}, max 300 characters (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
+ВЕС: starting kilograms for weighted formats (optional otherwise)
+ПОДХОДЫ: consecutive sets before the next exercise, 1-10
+СТОРОНА: "да" if the value is performed separately per side; omit otherwise
+РАЗМИНКА: "да" for warm-up exercises; omit otherwise
+ОТДЫХ: seconds between sets of this exercise
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the LAST set before the next exercise; only include when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, or breathing drills
+ШАГ: for progressive unweighted formats only; reps increment for "повторения", seconds increment for "время"
+ШАГ ПОВТОРОВ: optional reps increment for "повторения и вес"
+ШАГ ВРЕМЕНИ: optional seconds increment for "время и вес"
+ШАГ ВЕСА: optional kg increment for weighted formats
+ПОТОЛОК: REQUIRED when УСЛОЖНЯТЬ: да for unweighted formats; realistic maximum in the same unit as ЗНАЧЕНИЕ
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted-reps format
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted-time format
+ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps only. "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
+ЗАМЕНА: a harder next-level exercise name in {{OUTPUT_LANGUAGE}} when the ceiling is reached (optional)
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in {{OUTPUT_LANGUAGE}} describing that harder variation; only when ЗАМЕНА exists
+ВИДЕО: a real YouTube technique link only if you are confident it exists; never invent a URL
 
-ПРОГРАММА: Неделя тонуса
-ПРОГРЕССИЯ: 4
-ОПИСАНИЕ ПРОГРАММЫ: Программа для тех, кто начинает с нуля и хочет мягко втянуться в регулярные тренировки. Первые две недели тело привыкает к нагрузке — не гонись за скоростью, следи за техникой. Заниматься лучше через день, чтобы мышцы успевали восстанавливаться. Если после тренировки болят суставы, а не мышцы — убавь вес прямо на тренировке кнопкой «минус». Через месяц станет заметно легче держать планку и приседать глубже.
-ВРЕМЯ: 07:30
+Safety and quality:
+- Match exercise selection, volume, intensity, progression, and recovery to the user's age, sex, experience, equipment, and stated limitations.
+- Do not diagnose or claim medical safety. Respect stated restrictions.
+- Keep progression realistic for home training.
+- Warm-up exercises should not progressively overload.
+- Do not add impossible equipment.
+- Return only the protocol.
 
-ДЕНЬ: Пн, Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 120
+=== USER REQUEST ===
+`;
 
-УПРАЖНЕНИЕ: Суставная разминка
-ОПИСАНИЕ: Встань прямо, ноги на ширине плеч. Сделай плавные круговые движения плечами назад, затем локтями и кистями. Дальше — наклоны головы в стороны и вращения тазом. Двигайся мягко, без рывков, дыши свободно.
-МЫШЦЫ: Шея, Плечи
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 60
-РАЗМИНКА: да
-ОТДЫХ: 10
-
-УПРАЖНЕНИЕ: Классические отжимания
-ОПИСАНИЕ: Ладони на полу чуть шире плеч, тело вытянуто в прямую линию от макушки до пят. Согни руки и медленно опусти грудь почти до пола, затем мощно выжми себя вверх. Держи пресс и ягодицы в напряжении, не прогибай поясницу. Если тяжело — опустись на колени.
-МЫШЦЫ: Грудь, Руки, Пресс
-ОШИБКИ: Провисающая поясница и локти, разведённые строго в стороны, — держи их под углом 45 градусов к корпусу.
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10-12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-УСЛОЖНЯТЬ: да
-ШАГ: 2
-ПОТОЛОК: 20
-ЗАМЕНА: Отжимания с ногами на возвышении
-ОПИСАНИЕ ЗАМЕНЫ: Поставь стопы на диван или стул, ладони на полу чуть шире плеч. Тело держи прямой линией, опускайся грудью к полу и выжимай себя вверх. Чем выше опора для ног, тем больше нагрузка уходит на грудь и плечи.
-
-УПРАЖНЕНИЕ: Планка на локтях
-ОПИСАНИЕ: Встань в упор на предплечья, локти строго под плечами. Вытяни тело в одну прямую линию, взгляд в пол. Напряги пресс и ягодицы, не поднимай таз вверх и не провисай в пояснице. Дыши ровно через нос.
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 45
-ПОДХОДЫ: 3
-ОТДЫХ: 30
-УСЛОЖНЯТЬ: да
-ШАГ: 10
-ПОТОЛОК: 120
-ЗАМЕНА: Планка с подъёмом руки
-ОПИСАНИЕ ЗАМЕНЫ: Из планки на локтях медленно вытяни одну руку вперёд, удерживая таз неподвижным. Задержись на пару секунд и вернись, затем повтори другой рукой. Чем меньше корпус качается, тем лучше работает пресс.
-
-УПРАЖНЕНИЕ: Тяга гантели в наклоне
-ОПИСАНИЕ: Обопрись коленом и рукой на скамью, во второй руке гантель. Держа спину прямой, потяни гантель к поясу, сводя лопатку. Медленно опусти обратно, не скручивая корпус.
-МЫШЦЫ: Спина, Руки
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 10-12
-ВЕС: 8
-ПОДХОДЫ: 3
-СТОРОНА: да
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ ПОВТОРОВ: 1
-ШАГ ВЕСА: 2
-ПОТОЛОК ПОВТОРОВ: 15
-ПОТОЛОК ВЕСА: 16
-ПРИ ПОТОЛКЕ: да
-
-ДЕНЬ: Вт, Пт
-КРУГИ: 4
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
-
-УПРАЖНЕНИЕ: Приседания
-ОПИСАНИЕ: Ноги на ширине плеч, носки слегка развёрнуты. Отводя таз назад, присядь до параллели бёдер с полом, колени направлены в сторону носков. Вес на пятках, спина прямая, взгляд вперёд. Поднимаясь, сожми ягодицы в верхней точке.
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 20
-ОТДЫХ: 30
-УСЛОЖНЯТЬ: да
-ШАГ: 3
-ПОТОЛОК: 35
-ЗАМЕНА: Приседания с гантелями
-ОПИСАНИЕ ЗАМЕНЫ: Возьми по гантели в каждую руку и держи их вдоль тела. Приседай до параллели бёдер с полом, спина прямая, колени в сторону носков. Вставай, отталкиваясь пятками и сжимая ягодицы наверху.
-
-=== ШАБЛОН МОЕГО ЗАПРОСА ===
-Цель, уровень, сколько раз в неделю и в какие дни, длительность, инвентарь, ограничения, время начала, одинаковая тренировка во все дни или разные. Чего нет в запросе — реши сам.
-
-Мой запрос: `;
+function aiPrompt(){
+  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', appLocale === 'ru' ? 'Russian' : 'English');
+}
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -1881,67 +1824,77 @@ $('qSplit').onclick = ()=>{
 };
 $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
 
+function aiChoiceEnglish(v){
+  const map = {
+    'Новичок':'beginner', 'Средний':'intermediate', 'Продвинутый':'advanced',
+    'Круговая':'circuit', 'Силовая':'strength', 'Смешанная':'mixed',
+    'С разминкой':'with warm-up', 'Без разминки':'without warm-up',
+    'Без ограничений':'no stated limitations', 'Без прыжков':'no jumping',
+    'Тихо (соседи снизу)':'quiet / low-impact for downstairs neighbors',
+    'Берегу колени':'protect knees', 'Берегу поясницу':'protect lower back',
+    'Берегу запястья':'protect wrists', 'Берегу шею':'protect neck',
+    'Беременность':'pregnancy'
+  };
+  return map[v] || String(v || '');
+}
+function aiListEnglish(arr){
+  return (arr || []).map(aiChoiceEnglish).join(', ');
+}
 function composeRequest(){
-  // всё, что не выбрано, отдаём на усмотрение ИИ — и говорим об этом прямо
   const parts = [];
   const free = [];
 
-  if(q.goal.length) parts.push(`Цель: ${q.goal.join(', ').toLowerCase()}.`);
-  else free.push('цель');
+  if(q.goal.length) parts.push(`Goal: ${aiListEnglish(q.goal)}.`);
+  else free.push('goal');
 
-  if(q.level) parts.push(`Уровень: ${q.level.toLowerCase()}.`);
-  else free.push('уровень подготовки');
+  if(q.level) parts.push(`Level: ${aiChoiceEnglish(q.level)}.`);
+  else free.push('fitness level');
 
-  if(q.days.length) parts.push(`Дни: ${q.days.join(', ')}.`);
-  else free.push('дни недели и количество тренировок');
+  if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
+  else free.push('training days and weekly frequency');
 
-  if(q.dur) parts.push(`Длительность: около ${q.dur}.`);
-  else free.push('длительность');
+  if(q.dur) parts.push(`Target duration: about ${String(q.dur).replace('мин', 'minutes')}.`);
+  else free.push('workout duration');
 
-  if(q.focus.length) parts.push(`Особый акцент на: ${q.focus.join(', ').toLowerCase()}.`);
+  if(q.focus.length) parts.push(`Extra focus: ${aiListEnglish(q.focus)}.`);
 
-  if(q.equip.length) parts.push(`Инвентарь: ${q.equip.join(', ').toLowerCase()}.`);
-  else free.push('инвентарь (исходи из домашних условий)');
+  if(q.equip.length) parts.push(`Available equipment: ${aiListEnglish(q.equip)}.`);
+  else free.push('equipment; assume a normal home setting if unspecified');
 
-  if(q.limit.length) parts.push(`Ограничения: ${q.limit.join(', ').toLowerCase()}.`);
+  if(q.limit.length) parts.push(`Limitations/preferences: ${aiListEnglish(q.limit)}.`);
 
-  // формат тренировки
   if(q.style === 'Круговая'){
-    parts.push('Формат: круговая тренировка — весь список упражнений проходится подряд и повторяется целиком. Поставь КРУГИ 2–5, а ПОДХОДЫ у упражнений оставь 1.');
+    parts.push('Structure: circuit. Repeat the whole exercise list; use КРУГИ 2-5 and usually ПОДХОДЫ 1.');
   } else if(q.style === 'Силовая'){
-    parts.push('Формат: силовая тренировка — все подходы одного упражнения выполняются подряд, потом переход к следующему. Поставь КРУГИ: 1, объём задай полем ПОДХОДЫ (обычно 3–4) и диапазоном повторений в ЗНАЧЕНИИ, например 10-12.');
+    parts.push('Structure: strength. Complete all sets of one exercise before moving on; use КРУГИ: 1 and usually ПОДХОДЫ 3-4.');
   } else if(q.style === 'Смешанная'){
-    parts.push('Формат: смешанная тренировка — блок упражнений с подходами повторяется кругами. Поставь КРУГИ 2–3 и ПОДХОДЫ 2–3 одновременно, но следи за общим объёмом: каждое упражнение выполнится КРУГИ × ПОДХОДЫ раз.');
+    parts.push('Structure: mixed. A block with multiple sets repeats for multiple rounds; usually КРУГИ 2-3 and ПОДХОДЫ 2-3, while keeping total volume sensible.');
   } else {
-    free.push('формат — круговая (список повторяется кругами), силовая (подходы подряд у каждого упражнения) или смешанная');
+    free.push('workout structure: circuit, strength, or mixed');
   }
 
-  // разминка
   if(q.warm === 'С разминкой'){
-    parts.push('Добавь в начало разминочные упражнения со строкой РАЗМИНКА: да — они выполняются один раз и не повторяются каждый круг.');
+    parts.push('Include warm-up exercises at the beginning and mark each with РАЗМИНКА: да. They run once before the rounds.');
   } else if(q.warm === 'Без разминки'){
-    parts.push('Разминочные упражнения не добавляй.');
+    parts.push('Do not add warm-up exercises.');
   } else {
-    free.push('нужна ли разминка и сколько в ней упражнений');
+    free.push('whether a warm-up is needed and how long it should be');
   }
 
-  // варианты по дням
   if(q.split){
-    parts.push('Сделай разные упражнения в разные дни — раздели программу по группам мышц.');
-    if(q.rotate) parts.push('Поставь ЧЕРЕДОВАНИЕ: да, не указывай дни у вариантов, а общее расписание задай строкой ДНИ ТРЕНИРОВОК.');
-    else parts.push('Поставь ЧЕРЕДОВАНИЕ: нет и укажи конкретные дни недели у каждого варианта.');
+    parts.push('Use different exercise sets on different workout days, split logically by muscle groups or training focus.');
+    if(q.rotate) parts.push('Use ЧЕРЕДОВАНИЕ: да, leave ДЕНЬ values empty for variants, and put the shared schedule in ДНИ ТРЕНИРОВОК.');
+    else parts.push('Use ЧЕРЕДОВАНИЕ: нет and assign canonical weekday tokens to each variant.');
   } else {
-    free.push('делить ли программу на разные дни или сделать одинаковой');
+    free.push('whether to split into different day variants or keep one repeating workout');
   }
 
-  let s = 'Составь программу тренировок. ' + userForAI() + ' ' + parts.join(' ');
-  if(free.length){
-    s += ` Не указано — реши сам(а), исходя из программы и здравого смысла: ${free.join('; ')}.`;
-  }
-  if(q.note && q.note.trim()) s += ` Дополнительно: ${q.note.trim()}`;
-  return s.trim();
+  let out = 'Build a home-workout program. ' + userForAI() + ' ' + parts.join(' ');
+  if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
+  if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
+  return out.trim();
 }
-const fullAIPrompt = ()=> AI_PROMPT + composeRequest();
+const fullAIPrompt = ()=> aiPrompt() + '\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
