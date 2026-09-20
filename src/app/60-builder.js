@@ -1738,7 +1738,7 @@ function qChips(boxId, opts, isMulti, get, set){
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip'; b.textContent = o;
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(o);
     const sel = get();
     b.classList.toggle('act', isMulti ? sel.includes(o) : sel === o);
     b.onclick = ()=>{
@@ -1775,8 +1775,8 @@ function qCards(boxId, opts, get, set){
     b.type = 'button'; b.className = 'opt-card';
     b.classList.toggle('act', get() === o);
     b.innerHTML = `<span class="oc-mark">${icon('check')}</span><span class="oc-txt"><b></b><small></small></span>`;
-    b.querySelector('b').textContent = o;
-    b.querySelector('small').textContent = Q_DESC[o] || '';
+    b.querySelector('b').textContent = canonicalLabel(o);
+    b.querySelector('small').textContent = canonicalDescription(o) || Q_DESC[o] || '';
     b.onclick = ()=>{ set(get() === o ? '' : o); qCards(boxId, opts, get, set); };
     box.appendChild(b);
   });
@@ -1801,7 +1801,7 @@ function initAIForm(){
   const db = $('qDays'); db.innerHTML = '';
   DAYS.forEach(d => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'day-chip'; b.textContent = d;
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(d);
     b.classList.toggle('act', q.days.includes(d));
     b.onclick = ()=>{
       q.days = q.days.includes(d) ? q.days.filter(x => x !== d) : DAYS.filter(x => q.days.includes(x) || x === d);
