@@ -128,22 +128,22 @@ function renderUsers(){
     row.className = 'user-row' + (act ? ' act' : '');
     const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
-    if(u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
+    if(u.gender) bits.push(t(u.gender === 'm' ? 'common.male' : 'common.female'));
     const a = profileAge(u);
-    if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
-    if(!act) bits.push('переключиться');
+    if(a) bits.push(t('profile.ageYears',{count:a,years:appLocale === 'ru' ? plural(a,t('profile.yearOne'),t('profile.yearFew'),t('profile.yearMany')) : (a === 1 ? t('profile.yearOne') : t('profile.yearFew'))}));
+    if(!act) bits.push(t('profile.switch'));
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div>`
-      + (act ? '<span class="u-now">сейчас</span>' : '')
-      + `<button class="ue" title="Изменить">${icon('pencil')}</button>`;
-    row.querySelector('b').textContent = u.name || 'Без имени';
+      + (act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '')
+      + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
+    row.querySelector('b').textContent = u.name || t('profile.noName');
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
     // нажатие по строке активного профиля переключать некуда — открываем его правку
     row.onclick = ()=> act ? openUserEdit(u.id) : switchUser(u.id);
     box.appendChild(row);
   });
   $('usersHint').textContent = users.length > 1
-    ? 'У каждого профиля свои программы, статистика, вес и фото.'
-    : 'Второй профиль — например, для близкого человека. У каждого свои программы и статистика.';
+    ? t('profile.multiHint')
+    : t('profile.singleHint');
   renderAccount();
 }
 
@@ -152,20 +152,25 @@ function renderAccount(){ renderPlan(); }
 // Метрики тела: вес всегда есть, остальное — если человек это записывает.
 // Жир и мышцы в процентах показывают умные весы, и без них вес врёт: минус два
 // килограмма мышц и минус два килограмма жира на графике веса выглядят одинаково.
-const W_SERIES = [
-  {k: 'w',     color: 'var(--accent-ink)', label: 'Вес',   unit: 'кг'},
-  {k: 'fat',   color: 'var(--danger)',     label: 'Жир',   unit: '%'},
-  {k: 'musc',  color: 'var(--ok)',         label: 'Мышцы', unit: '%'},
-  {k: 'waist', color: 'var(--accent-ink)', label: 'Талия', unit: 'см'},
-  {k: 'hips',  color: 'var(--rest-ink)',   label: 'Бёдра', unit: 'см'},
-  {k: 'chest', color: 'var(--warn)',       label: 'Грудь', unit: 'см'}
-];
+function weightSeries(){
+  return [
+    {k:'w',color:'var(--accent-ink)',label:t('progress.weight'),unit:t('progress.kg')},
+    {k:'fat',color:'var(--danger)',label:t('progress.fatShort'),unit:'%'},
+    {k:'musc',color:'var(--ok)',label:t('progress.muscleShort'),unit:'%'},
+    {k:'waist',color:'var(--accent-ink)',label:t('progress.waistShort'),unit:t('progress.cm')},
+    {k:'hips',color:'var(--rest-ink)',label:t('progress.hipsShort'),unit:t('progress.cm')},
+    {k:'chest',color:'var(--warn)',label:t('progress.chestShort'),unit:t('progress.cm')}
+  ];
+}
+function fmtMeasure(v){
+  return new Intl.NumberFormat(localeTag(), {maximumFractionDigits:1}).format(Number(v));
+}
 let weightMetric = 'w';
 
 function renderWeight(){
   const ws = stats.weights;
-  $('btnWeightHist').innerHTML = icon('pencil') + 'История';
-  $('btnShareWeight').innerHTML = icon('share') + 'Поделиться';
+  $('btnWeightHist').innerHTML = icon('pencil') + t('progress.history');
+  $('btnShareWeight').innerHTML = icon('share') + t('progress.share');
 
   if(!ws.length){
     $('weightDelta').textContent = '';
@@ -182,10 +187,12 @@ function renderWeight(){
   setShown('weightNowRow', true);
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
-  $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
+  $('weightNow').textContent = fmtMeasure(last.w) + ' ' + t('progress.kg');
   if(prev){
     const d = Math.round((last.w - prev.w) * 10) / 10;
-    $('weightDelta').textContent = d === 0 ? 'без изменений' : (d > 0 ? '+' : '−') + String(Math.abs(d)).replace('.', ',') + ' кг с прошлого раза';
+    $('weightDelta').textContent = d === 0
+      ? t('progress.noChange')
+      : t('progress.sinceLast',{delta:(d > 0 ? '+' : '−') + fmtMeasure(Math.abs(d)),unit:t('progress.kg')});
     $('weightDelta').style.color = d > 0 ? 'var(--warn)' : (d < 0 ? 'var(--ok)' : 'var(--muted)');
   } else $('weightDelta').textContent = '';
 
@@ -193,20 +200,20 @@ function renderWeight(){
   // где у каждого и значение, и свой график — раньше они дублировались дважды
   const meta = [];
   if(stats.height){
-    meta.push(`<span class="chip">Рост <b>${stats.height}</b> см</span>`);
-    meta.push(`<span class="chip">ИМТ <b>${(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10).toString().replace('.',',')}</b></span>`);
+    meta.push(`<span class="chip">${esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${esc(t('progress.cm'))}</span>`);
+    meta.push(`<span class="chip">${esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
   }
   $('weightMeta').innerHTML = meta.join('');
   setShown('weightMeta', meta.length);
 
   // ---- переключатель метрик вместо трёх одинаковых графиков подряд ----
-  const avail = W_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  const avail = weightSeries().filter(s => ws.some(p => p[s.k] != null));
   if(!avail.some(s => s.k === weightMetric)) weightMetric = avail.length ? avail[0].k : 'w';
   $('weightSwitch').innerHTML = avail.map(s => {
     const pts = ws.filter(p => p[s.k] != null);
     const v = pts[pts.length - 1][s.k];
     return `<button type="button" class="wm-chip${s.k === weightMetric ? ' act' : ''}" data-k="${s.k}">
-      <span>${s.label}</span><b>${String(v).replace('.', ',')}<small>${s.unit}</small></b></button>`;
+      <span>${s.label}</span><b>${fmtMeasure(v)}<small>${s.unit}</small></b></button>`;
   }).join('');
   setShown('weightSwitch', avail.length > 1);
 
@@ -227,7 +234,7 @@ function metricGraph(s, have, have2){
   const d = Math.round((lastv - first) * 10) / 10;
   const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
   const du = s.unit;
-  const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${du || ''}`.trim();
+  const dTxt = d === 0 ? t('progress.noChange') : `${d > 0 ? '+' : '−'}${fmtMeasure(Math.abs(d))} ${du || ''}`.trim();
 
   let min = Math.min(...vals), max = Math.max(...vals);
   const pad = Math.max((max - min) * 0.15, 0.5);
@@ -266,7 +273,7 @@ function metricGraph(s, have, have2){
 
   // подписи значений у концов. У парной метрики подписываем обе половины сразу
   // («120/80»): нижнюю линию без числа рядом всё равно не прочитать.
-  const num = v => String(v).replace('.', ',');
+  const num = v => fmtMeasure(v);
   const capA = pair ? num(first) + '/' + num(pair[0][1]) : num(first);
   const capB = pair ? num(lastv) + '/' + num(pair[pair.length - 1][1]) : num(lastv);
   let labels = '';
@@ -284,7 +291,7 @@ function metricGraph(s, have, have2){
   return `<div class="metric-graph">
     <div class="mg-head">
       <span class="mg-delta ${dCls}">${dTxt}</span>
-      <small>${s.label} · ${have.length} ${plural(have.length, 'запись', 'записи', 'записей')}</small>
+      <small>${s.label} · ${t('progress.records',{count:have.length,records:appLocale === 'ru' ? plural(have.length,t('progress.recordOne'),t('progress.recordFew'),t('progress.recordMany')) : (have.length === 1 ? t('progress.recordOne') : t('progress.recordFew'))})}</small>
     </div>
     <svg viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -314,11 +321,13 @@ function metricGraph(s, have, have2){
    же шкалой не является: сегодняшняя четвёрка и прошлогодняя — разные четвёрки,
    а график из них выглядит как измерение. Поле mood в уже сохранённых записях
    остаётся нетронутым — данные не трогаем, просто больше не показываем. */
-const WELL_SERIES = [
-  {k: 'sys',   pair: 'dia', color: 'var(--danger)',    label: 'Давление', unit: ''},
-  {k: 'pulse',              color: 'var(--accent-ink)', label: 'Пульс',    unit: 'уд/мин'},
-  {k: 'sleep',              color: 'var(--rest-ink)',   label: 'Сон',      unit: 'ч'}
-];
+function wellSeries(){
+  return [
+    {k:'sys',pair:'dia',color:'var(--danger)',label:t('progress.pressureShort'),unit:''},
+    {k:'pulse',color:'var(--accent-ink)',label:t('progress.pulseShort'),unit:t('progress.bpm')},
+    {k:'sleep',color:'var(--rest-ink)',label:t('progress.sleepShort'),unit:t('progress.hoursShort')}
+  ];
+}
 const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16]};
 let wellMetric = 'sys';
 
@@ -326,8 +335,8 @@ const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.we
 // как метрика читается одной строкой: давление всегда парой, остальное — число с единицей
 function wellValue(en, s){
   if(en[s.k] == null) return '';
-  const v = String(en[s.k]).replace('.', ',');
-  return s.pair && en[s.pair] != null ? v + '/' + String(en[s.pair]).replace('.', ',') : v;
+  const v = fmtMeasure(en[s.k]);
+  return s.pair && en[s.pair] != null ? v + '/' + fmtMeasure(en[s.pair]) : v;
 }
 
 // Средние за последние 30 дней — то, что показывает главная. Именно среднее, а не
@@ -348,8 +357,8 @@ function wellAvg(){
 
 function renderWellness(){
   const ws = wellList();
-  $('btnWellHist').innerHTML = icon('pencil') + 'История';
-  $('btnShareWell').innerHTML = icon('share') + 'Поделиться';
+  $('btnWellHist').innerHTML = icon('pencil') + t('progress.history');
+  $('btnShareWell').innerHTML = icon('share') + t('progress.share');
   if(!ws.length){
     setShown('wellNowRow', false);
     setShown('wellSwitch', false);
@@ -363,7 +372,7 @@ function renderWellness(){
   setShown('wellNowRow', true);
 
   // доступна метрика, которую хоть раз записали, — как у веса с обхватами
-  const avail = WELL_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  const avail = wellSeries().filter(s => ws.some(p => p[s.k] != null));
   if(!avail.length){ setShown('wellNowRow', false); setShown('wellSwitch', false); setShown('wellCharts', false); return; }
   if(!avail.some(s => s.k === wellMetric)) wellMetric = avail[0].k;
   const cur = avail.find(s => s.k === wellMetric);
@@ -380,7 +389,7 @@ function renderWellness(){
   const pts = ws.filter(p => p[cur.k] != null);
   const lastEn = pts[pts.length - 1];
   $('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
-  $('wellWhen').textContent = 'запись от ' + shortD(lastEn.d);
+  $('wellWhen').textContent = t('progress.recordedOn',{date:shortD(lastEn.d)});
   $('wellWhen').style.color = 'var(--muted)';
 
   const have = pts.map(p => [p.d, p[cur.k]]).slice(-30);
@@ -411,8 +420,8 @@ async function saveWell(){
   const sys = num('sysInput', 'sys'), dia = num('diaInput', 'dia');
   const pulse = num('pulseInput', 'pulse'), sleep = num('sleepInput', 'sleep');
   // половина давления бессмысленна: «верхнее 130» без нижнего не читается
-  if((sys && !dia) || (dia && !sys)){ appAlert('Давление записывают парой: верхнее и нижнее.'); return; }
-  if(!sys && !pulse && sleep == null){ appAlert('Заполни хотя бы одно поле.'); return; }
+  if((sys && !dia) || (dia && !sys)){ appAlert(t('well.pressurePair')); return; }
+  if(!sys && !pulse && sleep == null){ appAlert(t('well.fillOne')); return; }
   // пульс и давление — сведения о здоровье, как вес и обхваты
   if(!hasConsent('health')) recordConsent('health');
   const ws = wellList();
@@ -440,11 +449,11 @@ function openWellHist(){
     // порознь выглядели как два разных показателя, и строка ехала в две ячейки враскоряку
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
       `<div class="wh-cells wh-well" data-d="${en.d}">` +
-        `<div class="whc"><label>Давление</label>` +
+        `<div class="whc"><label>${esc(t('progress.pressureShort'))}</label>` +
           `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
-        cell('pulse', 'Пульс') + cell('sleep', 'Сон, ч', 0.5) +
+        cell('pulse', t('progress.pulseShort')) + cell('sleep', t('well.sleepHours'), 0.5) +
       `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
@@ -668,11 +677,11 @@ function showSyncState(state){
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
-  else if(!isPremium()) el.textContent = 'Синхронизация тренировок доступна в Премиум';
-  else if(state === 'busy') el.textContent = 'Синхронизируем данные…';
-  else if(state === 'ok') el.textContent = 'Данные сохранены на сервере · фото-прогресс только на этом телефоне';
-  else if(state === 'error') el.textContent = 'Нет связи с сервером · изменения отправятся позже';
-  else el.textContent = 'Данные синхронизируются с аккаунтом';
+  else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  else if(state === 'busy') el.textContent = t('sync.busy');
+  else if(state === 'ok') el.textContent = t('sync.ok');
+  else if(state === 'error') el.textContent = t('sync.error');
+  else el.textContent = t('sync.account');
 }
 
 const accountAuth = () => ({
