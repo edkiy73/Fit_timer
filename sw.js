@@ -7,7 +7,7 @@
    он не переустанавливается — то есть офлайн-копия остаётся той, что была
    девять правок назад. Ещё это единственный способ выбросить старый кэш целиком:
    при активации удаляются все кэши с другим именем. */
-const CACHE = 'fittimer-v22';
+const CACHE = 'fittimer-v23';
 const ASSETS = [
   './',
   './index.html',
@@ -70,13 +70,29 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // Критичные файлы приложения должны обновляться вместе со свежим HTML.
+  // Иначе новый index.html может загрузить старый app.js из cache-first и упасть
+  // на уже удалённом элементе/обработчике. Сеть первая, старый кэш — только офлайн.
+  const url = new URL(e.request.url);
+  const critical = ['/app.js','/style.css','/mobile.js','/app.config.js'];
+  if (url.origin === self.location.origin && critical.includes(url.pathname)) {
+    e.respondWith(
+      fetch(e.request, {cache:'reload'}).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   // остальное (иконки, шрифты): кэш, потом сеть
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(res => {
-        const url = e.request.url;
-        if (res.ok && (url.startsWith(self.location.origin) || url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com'))) {
+        const reqUrl = e.request.url;
+        if (res.ok && (reqUrl.startsWith(self.location.origin) || reqUrl.includes('fonts.googleapis.com') || reqUrl.includes('fonts.gstatic.com'))) {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, copy));
         }

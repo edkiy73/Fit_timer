@@ -1383,6 +1383,13 @@
           </button>
         </div>
         <input type="file" id="coachPhotoFile" accept="image/*" class="hidden">
+        <!-- Совместимость с уже закэшированным JS прошлой версии. Старый код обращался
+             к этим id при старте страницы тренера; держим невидимые заглушки один
+             релизный цикл, чтобы обновление HTML не могло уронить всё приложение. -->
+        <input type="hidden" id="coachHandle">
+        <span class="hidden" id="coachHandleHint"></span>
+        <span class="hidden" id="coachHandleErr"></span>
+        <span class="hidden" id="coachClientsSub"></span>
 
         <!-- Сначала «кто ты», потом «где тебя найти». Подопечный открывает страницу
              тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает

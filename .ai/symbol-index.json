@@ -1177,8 +1177,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 356,
-      "chars": 18710,
+      "lines": 363,
+      "chars": 19188,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1220,8 +1220,12 @@
         "calSub",
         "calTitle",
         "coachAbout",
+        "coachClientsSub",
         "coachDeleteBlock",
         "coachFields",
+        "coachHandle",
+        "coachHandleErr",
+        "coachHandleHint",
         "coachLinks",
         "coachLinksErr",
         "coachName",
