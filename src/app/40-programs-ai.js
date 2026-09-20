@@ -873,10 +873,11 @@ function userForAI(){
   const u = curUser();
   if(!u) return '';
   const bits = [];
-  bits.push(u.gender === 'm' ? 'Пол: мужской' : 'Пол: женский');
+  bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
-  if(a) bits.push(`Возраст: ${a} ${plural(a, 'год', 'года', 'лет')}`);
-  return bits.join('. ') + '. Учитывай это при подборе упражнений, нагрузки и времени на восстановление.';
+  if(a) bits.push(`Age: ${a}`);
+  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
+  return bits.join('. ') + '. Use this information when choosing exercises, load, progression, and recovery.';
 }
 
 /* ================= GEMINI API ================= */
@@ -1403,16 +1404,16 @@ function shrinkDataUrl(dataUrl, maxSide, cb){
 // промт под ОДНО конкретное изображение (в отличие от промта для копирования — там просят весь набор разом)
 function singleImagePrompt(kind, item){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
-  const name = (draft.name || '').trim() || 'Программа тренировок';
-  const styleLine = `Стиль: стилизованная реалистичная 3D-иллюстрация тела человека, тело в приглушённых серых тонах, а работающие мышцы выделены тёплым оранжевым свечением. Направление движения — белыми стрелками. Фон чистый, слегка размытый, нейтральный или спортзал. Персонаж: ${genderTxt}. Никакого текста, логотипов и водяных знаков на изображении.`;
+  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const name = (draft.name || '').trim() || 'Workout program';
+  const styleLine = `Style: a stylized realistic 3D illustration of a human body. Use muted gray tones for the body and a warm orange glow for the working muscles. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Character: ${genderTxt}. No text, logos, captions, or watermarks inside the image.`;
   if(kind === 'cover'){
-    return `Сгенерируй обложку для карточки фитнес-программы «${name}» в приложении.\n${styleLine}\nОбщий кадр по сути программы, без фокуса на одном упражнении.\nФормат кадра: квадрат 1:1.`;
+    return `Create a square 1:1 cover image for the fitness-program card "${name}".\n${styleLine}\nShow the overall theme of the program rather than one specific exercise.`;
   }
-  const bits = [`Сгенерируй иллюстрацию к упражнению «${item.name}» для фитнес-приложения.`, styleLine];
-  if(item.desc) bits.push(`Техника: ${item.desc}`);
-  if(item.muscles && item.muscles.length) bits.push(`Выделить подсветкой мышцы: ${item.muscles.join(', ').toLowerCase()}.`);
-  bits.push('Поза — самая характерная фаза движения. Формат кадра: широкий 16:9.');
+  const bits = [`Create a wide 16:9 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
+  if(item.desc) bits.push(`Technique context: ${item.desc}`);
+  if(item.muscles && item.muscles.length) bits.push(`Highlight these working muscles: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  bits.push('Show the most characteristic phase of the movement.');
   return bits.join('\n');
 }
 
@@ -1498,30 +1499,30 @@ function uniqueProgramExercises(){
 
 function imagesPromptText(){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'мужчина' : 'женщина';
-  const name = (draft.name || '').trim() || 'Программа тренировок';
+  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const name = (draft.name || '').trim() || 'Workout program';
   const desc = (draft.desc || '').trim();
   const exList = uniqueProgramExercises();
 
   const L = [];
-  L.push('Сгенерируй набор изображений для карточек фитнес-приложения: одну обложку программы и по одной картинке на каждое упражнение из списка ниже. Все изображения должны выглядеть как единая серия — один визуальный стиль, один и тот же персонаж, одинаковый фон и цветовая гамма во всём наборе.');
+  L.push('Generate a complete image set for a fitness app: one program cover and one image for every exercise listed below. The whole set must look like one coherent series: the same visual style, same character, same clothing, similar background, and consistent color palette.');
   L.push('');
-  L.push('СТИЛЬ (ориентируйся на этот образ): стилизованная реалистичная 3D-иллюстрация тела человека, само тело — в приглушённых серых тонах, а работающие в упражнении мышцы выделены тёплым оранжевым свечением. Направление движения показано белыми стрелками. Фон — чистый, слегка размытый, нейтральный или спортзал. Никакого текста, логотипов и водяных знаков на самих изображениях — подписи нужны только между картинками, не на них.');
-  L.push(`Персонаж на всех изображениях: ${genderTxt}, один и тот же человек и одна и та же спортивная форма на протяжении всего набора.`);
+  L.push('STYLE: stylized realistic 3D human-body illustration. Keep the body in muted gray tones and highlight the working muscles with a warm orange glow. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Do not put text, logos, captions, or watermarks inside the images.');
+  L.push(`Character in every image: ${genderTxt}, the same person and the same sportswear throughout the set.`);
   L.push('');
-  L.push(`ПРОГРАММА: ${name}`);
-  if(desc) L.push(`ОПИСАНИЕ: ${desc}`);
+  L.push(`PROGRAM: ${name}`);
+  if(desc) L.push(`DESCRIPTION: ${desc}`);
   L.push('');
-  L.push('1. ОБЛОЖКА ПРОГРАММЫ — квадрат 1:1. Общий кадр, отражающий суть программы и её название, без фокуса на одном конкретном упражнении.');
+  L.push('1. PROGRAM COVER — square 1:1. Show the overall idea of the program without focusing on one specific exercise.');
   exList.forEach((ex, i) => {
     L.push('');
-    L.push(`${i + 2}. УПРАЖНЕНИЕ «${ex.name}» — широкий кадр 16:9. Поза — самая характерная фаза движения.`);
-    if(ex.desc) L.push(`   Техника: ${ex.desc}`);
-    if(ex.muscles.length) L.push(`   Выделить подсветкой мышцы: ${ex.muscles.join(', ').toLowerCase()}.`);
+    L.push(`${i + 2}. EXERCISE "${ex.name}" — wide 16:9. Show the most characteristic phase of the movement.`);
+    if(ex.desc) L.push(`   Technique context: ${ex.desc}`);
+    if(ex.muscles.length) L.push(`   Highlight these working muscles: ${ex.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   });
   L.push('');
-  L.push('ПОРЯДОК ОТВЕТА: если умеешь возвращать несколько изображений за один раз — сгенерируй весь набор сразу, в том же порядке, что и список выше. Если нет — генерируй по одной картинке за раз, начиная с обложки.');
-  L.push('ВАЖНО: перед каждой картинкой коротко подпиши текстом, что это — «Обложка» или точное название упражнения из списка — чтобы потом не перепутать, какую картинку куда вставлять.');
+  L.push('OUTPUT ORDER: if you can return multiple images in one response, generate the entire set in exactly the order above. Otherwise generate them one by one, starting with the cover.');
+  L.push('Before each generated image, add a short text label outside the image saying either "Cover" or the exact exercise name, so the images can be assigned correctly later.');
   return L.join('\n');
 }
 
@@ -1763,39 +1764,48 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-const EX_ANSWER_FORMAT = `=== ФОРМАТ ОТВЕТА ===
-УПРАЖНЕНИЕ: название на русском
-ОПИСАНИЕ: техника на «ты», 3–5 предложений
-МЫШЦЫ: группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1–2 частые ошибки (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
-ЗНАЧЕНИЕ: число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
-ПОДХОДЫ: число от 1 до 5
-СТОРОНА: да — если считается на каждую сторону (иначе пропусти строку)
-РАЗМИНКА: да — если это разминочное упражнение (иначе пропусти строку)
-ОТДЫХ: секунды между подходами одного упражнения
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку: возьмётся то же число). Обычно больше — смена движения или группы мышц требует времени.
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
-ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
-ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на технику (или пропусти строку)`;
+function exAnswerFormat(){
+  return `=== OUTPUT FORMAT ===
+Use the exact Russian protocol keys and enum tokens below because the app parser expects them. Write user-visible values (exercise name, description, mistakes, replacement name/description) in ${aiOutputLanguage()}.
+
+УПРАЖНЕНИЕ: exercise name
+ОПИСАНИЕ: technique, 3-5 practical sentences
+МЫШЦЫ: comma-separated tokens STRICTLY from: ${MUSCLES.map(m => m[1]).join(', ')}
+ОШИБКИ: 1-2 common mistakes (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 10-12; time formats use seconds
+ВЕС: starting kg for weighted formats
+ПОДХОДЫ: integer 1-5
+СТОРОНА: "да" if counted separately per side; omit otherwise
+РАЗМИНКА: "да" for a warm-up exercise; omit otherwise
+ОТДЫХ: seconds between sets
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, and breathing drills
+ШАГ: progression increment for unweighted reps/time
+ШАГ ПОВТОРОВ: optional reps increment for weighted reps
+ШАГ ВРЕМЕНИ: optional seconds increment for weighted time
+ШАГ ВЕСА: optional kg increment for weighted formats
+ПОТОЛОК: REQUIRED progression ceiling for unweighted formats when УСЛОЖНЯТЬ: да
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
+ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps, "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
+ЗАМЕНА: harder next-level exercise name when the ceiling is reached (optional)
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences describing that replacement, only when ЗАМЕНА exists
+ВИДЕО: real technique URL only if confident it exists; otherwise omit
+
+Return only the exercise block, with no Markdown and no explanation before or after it.`;
+}
 
 function exePrompt(){
   const ex = curPlan().exercises[exeIdx];
   const wish = clampText($('exeWish').value, LIM.wish);
-  return 'Измени описание упражнения для домашней тренировки и верни его ЦЕЛИКОМ в том же формате. ' +
-    'Верни только блок упражнения, без пояснений до и после. Поля, которых правка не касается, оставь как есть.\n\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'ЗАПРОС: ' + (wish || '(не указан — улучши описание и технику на своё усмотрение)') + '\n\n' +
-    '=== ТЕКУЩЕЕ УПРАЖНЕНИЕ ===\n' + exerciseToText(ex) + '\n\n' +
-    EX_ANSWER_FORMAT;
+  return 'Edit this home-workout exercise and return the COMPLETE updated exercise in the protocol below. ' +
+    'Keep fields that the request does not affect unchanged. Return only the exercise block.\n\n' +
+    'USER: ' + userForAI() + '\n' +
+    'REQUEST: ' + (wish || '(No specific request. Improve clarity and technique guidance while preserving the exercise intent.)') + '\n\n' +
+    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
+    exAnswerFormat();
 }
 
 async function applyExEdit(){
@@ -1872,57 +1882,28 @@ function openExAI(){
 function exaPrompt(){
   const wish = clampText($('exaWish').value, LIM.wish);
   const given = [], free = [];
-  const fmtMap = {'Повторения':'повторения','С весом':'повторения и вес','Время':'время'};
-  if(exa.format) given.push(`Формат: ${fmtMap[exa.format] || exa.format.toLowerCase()}.`);
-  else free.push('формат — повторения, с весом или время (выбери, что естественнее для этого упражнения)');
-  if(exa.level) given.push(`Уровень: ${exa.level.toLowerCase()}.`);
-  else free.push('уровень сложности');
-  if(exa.muscles.length) given.push(`Целевые мышцы: ${exa.muscles.join(', ').toLowerCase()}.`);
-  else free.push('какие мышцы работают');
-  if(exa.equip.length) given.push(`Инвентарь: ${exa.equip.join(', ').toLowerCase()}.`);
-  else free.push('нужен ли инвентарь (по умолчанию считай, что дома ничего нет)');
+  const fmtMap = {'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
+  if(exa.format) given.push(`Preferred format: ${fmtMap[exa.format] || aiCanonicalEnglish(exa.format)}.`);
+  else free.push('choose the most natural format: reps, weighted reps, time, or weighted time');
+  if(exa.level) given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
+  else free.push('difficulty level');
+  if(exa.muscles.length) given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  else free.push('working muscles');
+  if(exa.equip.length) given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
+  else free.push('equipment; assume no special home equipment unless the exercise needs it');
 
   const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
   const many = cnt > 1;
-  const howMany = many
-    ? `РОВНО ${cnt} ${plural(cnt, 'упражнение', 'упражнения', 'упражнений')}`
-    : 'ОДНО упражнение';
-
-  let s = `Опиши ${howMany} для домашней тренировки в строгом формате ниже. `;
-  s += many
-    ? 'Каждое упражнение — отдельный блок, начинающийся со строки «УПРАЖНЕНИЕ:». Блоки разделяй пустой строкой. Упражнения не должны дублировать друг друга. Верни только блоки, без пояснений до и после.\n\n'
-    : 'Верни только блок упражнения, без пояснений до и после.\n\n';
-  s += 'ДЛЯ КОГО: ' + userForAI() + '\n';
-  s += 'ЗАПРОС: ' + (wish || '(не указан — предложи полезное упражнение на своё усмотрение)') + '\n';
-  if(given.length) s += given.join(' ') + '\n';
-  if(free.length) s += 'Не указано — реши сам(а): ' + free.join('; ') + '.\n';
-  s += `
-ФОРМАТ ОТВЕТА${many ? ' ДЛЯ КАЖДОГО УПРАЖНЕНИЯ' : ''} (каждый параметр с новой строки, ключи ровно как здесь):
-
-УПРАЖНЕНИЕ: название на русском, коротко и понятно
-ОПИСАНИЕ: техника выполнения на «ты», 3–5 предложений: исходное положение, само движение, дыхание, на что следить. Без воды и без ссылок.
-МЫШЦЫ: работающие группы через запятую, СТРОГО из списка: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1–2 частые ошибки и чем они опасны (или пропусти строку)
-ФОРМАТ: повторения (свой вес) / повторения и вес (снаряд) / время (удержания) / время и вес (удержание или перенос с грузом — планка с блином, фермерская прогулка)
-ЗНАЧЕНИЕ: для повторений число или диапазон через дефис (10-12); для «время» и «время и вес» — секунды
-ПОДХОДЫ: разумное число подходов от 1 до 5
-СТОРОНА: да — если значение считается на каждую сторону отдельно (выпады, боковая планка, тяга одной рукой). Иначе пропусти строку.
-ОТДЫХ: секунды между подходами одного упражнения
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: секунды после ПОСЛЕДНЕГО подхода, перед следующим упражнением — только если отличается от ОТДЫХ (иначе пропусти строку). Обычно больше — смена движения или группы мышц требует времени.
-ВЕС: стартовый кг — при ФОРМАТ «повторения и вес» или «время и вес»
-УСЛОЖНЯТЬ: да/нет — растёт ли со временем. Нет — разминка, растяжка, техника, дыхание.
-ШАГ: только если УСЛОЖНЯТЬ да и формат без веса. При «повторения» — на сколько сдвинуть диапазон (1-2). При «время» — секунды за раз (5-10).
-  При формате с весом («повторения и вес» или «время и вес») вместо ШАГ пиши ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ и/или ШАГ ВЕСА — можно оба, можно один:
-  растёт только вес (обычное дело) — одна ШАГ ВЕСА (2 кг, 1 кг для мелких мышц);
-  растут оба — обе строки; растёт только счётчик — одна ШАГ ПОВТОРОВ/ШАГ ВРЕМЕНИ.
-ПОТОЛОК: ОБЯЗАТЕЛЬНО при УСЛОЖНЯТЬ: да и формате без веса — предел роста в тех же единицах, что и ЗНАЧЕНИЕ (повторения 15-25, секунды 60-120). При формате с весом вместо него — ПОТОЛОК ПОВТОРОВ/ПОТОЛОК ВРЕМЕНИ и ПОТОЛОК ВЕСА (кг, для дома 10-24).
-ПРИ ПОТОЛКЕ: да/нет — только при «повторения и вес» с ПОТОЛОК ПОВТОРОВ: дошли до потолка повторений → повторения к началу диапазона, вес +ШАГ ВЕСА.
-ЗАМЕНА: название более сложного упражнения на замену, когда потолок достигнут (или пропусти строку)
-ОПИСАНИЕ ЗАМЕНЫ: техника замены, 2-4 предложения. Только если есть строка ЗАМЕНА.
-ВИДЕО: ссылка на понятный ролик с техникой (или пропусти строку, если не уверен в ссылке)
-
-Ничего кроме этих строк не пиши.`;
-  return s;
+  let out = `Create exactly ${cnt} ${many ? 'different exercises' : 'exercise'} for a home workout. `;
+  out += many
+    ? 'Each exercise must be a separate block beginning with "УПРАЖНЕНИЕ:". Separate blocks with a blank line. Do not duplicate exercises. Return only those blocks.\n\n'
+    : 'Return only one exercise block.\n\n';
+  out += 'USER: ' + userForAI() + '\n';
+  out += 'REQUEST: ' + (wish || '(No specific request. Suggest a useful exercise that fits the user.)') + '\n';
+  if(given.length) out += given.join(' ') + '\n';
+  if(free.length) out += 'Decide these unspecified items yourself: ' + free.join('; ') + '.\n\n';
+  out += exAnswerFormat();
+  return out;
 }
 
 async function exaAddExercise(){
@@ -1969,24 +1950,21 @@ function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return AI_PROMPT +
-    '\n\n=== ЗАДАЧА: СОБРАТЬ ПРОГРАММУ ПО ВИДЕО ===\n' +
-    'Посмотри тренировку по ссылке и переведи её в программу в формате выше.\n' +
-    'ССЫЛКА: ' + link + '\n' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n\n' +
-    'Что важно:\n' +
-    '· Возьми упражнения в том же порядке, что в ролике, с теми же повторениями или длительностью и паузами отдыха.\n' +
-    '· Если в видео есть разминка — отметь эти упражнения строкой РАЗМИНКА: да.\n' +
-    '· Если ролик проходит список несколько раз — поставь соответствующее число КРУГОВ; если каждое упражнение делается подряд несколько раз — используй ПОДХОДЫ.\n' +
-    '· Названия упражнений переведи на русский и приведи к общепринятым.\n' +
-    '· ВАЖНО: в строке ВИДЕО у КАЖДОГО упражнения дай ссылку на этот же ролик, но С ТАЙМКОДОМ момента, где упражнение начинается. ' +
-    'Формат: https://youtu.be/ID?t=СЕКУНДЫ или https://www.youtube.com/watch?v=ID&t=СЕКУНДЫs — секунды считай от начала ролика. ' +
-    'Не ставь всем упражнениям одну и ту же ссылку без таймкода: смысл в том, чтобы по тапу открывался нужный фрагмент. ' +
-    'Если точное время определить не удалось — укажи ближайшее приблизительное, а не начало ролика.\n' +
-    '· Описание техники пиши своими словами, не цитируя автора ролика дословно.\n' +
-    '· В ОПИСАНИЕ ПРОГРАММЫ добавь, из какого это видео и на что ролик рассчитан.\n' +
-    '· Если видео недоступно или это не тренировка — так и напиши, не выдумывай программу.\n' +
-    (wish ? ('\nПОЖЕЛАНИЯ ПОЛЬЗОВАТЕЛЯ: ' + wish + '\n') : '');
+  return aiPrompt() +
+    '\n\n=== TASK: BUILD A PROGRAM FROM A VIDEO ===\n' +
+    'Analyze the workout at the link and convert it into the protocol above.\n' +
+    'VIDEO URL: ' + link + '\n' +
+    'USER: ' + userForAI() + '\n\n' +
+    'Requirements:\n' +
+    '- Keep exercises in the same order as the video, with the same reps/durations and rest when they can be determined.\n' +
+    '- Mark warm-up exercises with the exact token "РАЗМИНКА: да".\n' +
+    '- If the video repeats the whole exercise list, represent that with КРУГИ. If one exercise is repeated in consecutive sets, use ПОДХОДЫ.\n' +
+    '- Write user-visible exercise names and descriptions in ' + aiOutputLanguage() + '.\n' +
+    '- For ВИДЕО on EACH exercise, use the same video URL with a timestamp for the moment that exercise starts. Prefer an approximate timestamp over linking to the beginning when exact timing is uncertain.\n' +
+    '- Describe technique in your own words; do not quote the creator verbatim.\n' +
+    '- In ОПИСАНИЕ ПРОГРАММЫ mention the source video and what type of workout it is.\n' +
+    '- If the video is unavailable or is not a workout, say so instead of inventing a program.\n' +
+    (wish ? ('\nADDITIONAL USER REQUEST: ' + wish + '\n') : '');
 }
 
 function openYouTube(){
@@ -2053,13 +2031,12 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = clampText($('eaWish').value, LIM.wish);
-  return AI_PROMPT +
-    '\n\n=== ЗАДАЧА: ИЗМЕНИТЬ ГОТОВУЮ ПРОГРАММУ ===\n' +
-    'Ниже текущая программа. Внеси в неё правки по запросу пользователя и верни программу ЦЕЛИКОМ в том же формате, ' +
-    'включая упражнения, которых правки не касаются. Не сокращай и не выбрасывай ничего лишнего. ' +
-    'ДЛЯ КОГО: ' + userForAI() + '\n' +
-    'ЗАПРОС ПОЛЬЗОВАТЕЛЯ: ' + (wish || '(не указан — просто улучши программу на своё усмотрение)') + '\n\n' +
-    '=== ТЕКУЩАЯ ПРОГРАММА ===\n' + programToText(editAIProg);
+  return aiPrompt() +
+    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
+    'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
+    'USER: ' + userForAI() + '\n' +
+    'USER REQUEST: ' + (wish || '(No specific request. Improve the program while preserving its purpose and sensible load.)') + '\n\n' +
+    '=== CURRENT PROGRAM ===\n' + programToText(editAIProg);
 }
 
 function openEditAI(p){
