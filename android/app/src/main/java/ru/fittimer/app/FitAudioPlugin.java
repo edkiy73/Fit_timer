@@ -65,6 +65,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private SpeechService speechService;
     private volatile boolean recognitionWanted = false;
     private boolean commandFiredForUtterance = false;
+    private String pendingPartialText = "";
+    private String pendingPartialKind = "";
+    private int pendingPartialHits = 0;
+    private Runnable pendingPartialRunnable = null;
 
     @Override
     public void load() {
@@ -385,11 +389,12 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             case "подожди": case "остановись":
             case "pause": case "stop": case "wait":
                 return "pause";
-            case "продолжить": case "продолжай": case "продолжаем": case "поехали":
-            case "можно продолжать": case "дальше пошли":
+            case "продолжить": case "продолжай": case "продолжаем": case "продолжи":
+            case "можно продолжать": case "поехали": case "дальше пошли":
             case "continue": case "resume": case "go on": case "keep going":
                 return "resume";
-            case "дальше": case "готово": case "готов": case "пропустить": case "пропусти":
+            case "дальше": case "готово": case "готов": case "готова": case "готовы":
+            case "пропустить": case "пропусти":
             case "следующее": case "следующий": case "сделал": case "закончил": case "завершить":
             case "next": case "done": case "skip": case "finished":
                 return "next";
@@ -398,21 +403,76 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
     }
 
-    private void emitFinalCommand(String hypothesis) {
-        if (hypothesis == null || hypothesis.isEmpty()) return;
-        String text = hypothesisText(hypothesis, "text");
-        String kind = commandKind(text);
-        if (kind.isEmpty()) return;
+    private void cancelPendingPartial() {
+        if (pendingPartialRunnable != null) main.removeCallbacks(pendingPartialRunnable);
+        pendingPartialRunnable = null;
+        pendingPartialText = "";
+        pendingPartialKind = "";
+        pendingPartialHits = 0;
+    }
 
-        double confidence = hypothesisConfidence(hypothesis);
-        double threshold = "next".equals(kind) ? 0.74 : 0.56;
-        if (confidence > 0.0 && confidence < threshold) return;
+    private void emitCommand(String text, String kind, double confidence, String source) {
+        if (commandFiredForUtterance || kind == null || kind.isEmpty()) return;
+        commandFiredForUtterance = true;
+        cancelPendingPartial();
 
         JSObject event = new JSObject();
         event.put("text", text.toLowerCase(Locale.ROOT).trim());
         event.put("confidence", confidence);
         event.put("kind", kind);
+        event.put("source", source);
         notifyListeners("speechResult", event);
+    }
+
+    private void considerPartialCommand(String hypothesis) {
+        if (commandFiredForUtterance || hypothesis == null || hypothesis.isEmpty()) return;
+        String text = hypothesisText(hypothesis, "partial");
+        String kind = commandKind(text);
+        if (kind.isEmpty()) {
+            cancelPendingPartial();
+            return;
+        }
+
+        String normalized = text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
+        if (normalized.equals(pendingPartialText) && kind.equals(pendingPartialKind)) {
+            pendingPartialHits++;
+            // Два одинаковых точных partial подряд — уже достаточно. Это даёт
+            // быстрый отклик без ожидания длинной паузы после слова.
+            if (pendingPartialHits >= 2) emitCommand(normalized, kind, 0.0, "partial");
+            return;
+        }
+
+        cancelPendingPartial();
+        pendingPartialText = normalized;
+        pendingPartialKind = kind;
+        pendingPartialHits = 1;
+
+        // Пауза/продолжение должны ощущаться моментально. Переход на следующий этап
+        // чуть строже, потому что случайный next наиболее разрушителен.
+        long delay = "next".equals(kind) ? 260L : 160L;
+        pendingPartialRunnable = () -> {
+            if (!commandFiredForUtterance
+                && normalized.equals(pendingPartialText)
+                && kind.equals(pendingPartialKind)) {
+                emitCommand(normalized, kind, 0.0, "partial_stable");
+            }
+        };
+        main.postDelayed(pendingPartialRunnable, delay);
+    }
+
+    private void emitFinalCommand(String hypothesis) {
+        if (hypothesis == null || hypothesis.isEmpty() || commandFiredForUtterance) return;
+        String text = hypothesisText(hypothesis, "text");
+        String kind = commandKind(text);
+        if (kind.isEmpty()) return;
+
+        double confidence = hypothesisConfidence(hypothesis);
+        // Финальный результат уже обязан совпасть с целой командой. Поэтому порог
+        // ниже прежнего: высокий 0.74 отбрасывал нормальное "готово" при обычной речи.
+        double threshold = "next".equals(kind) ? 0.58 : 0.45;
+        if (confidence > 0.0 && confidence < threshold) return;
+
+        emitCommand(text, kind, confidence, "final");
     }
 
     private void emitSpeechError(String error) {
@@ -428,17 +488,23 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             speechService = null;
         }
         commandFiredForUtterance = false;
+        cancelPendingPartial();
     }
 
     @Override public void onPartialResult(String hypothesis) {
-        // Partial hypotheses are intentionally ignored. With a tiny command vocabulary
-        // short sounds such as "про" or "го" were promoted into full commands.
+        // Реагируем только если partial целиком совпал с реальной командой и
+        // удержался достаточно долго. Фрагменты вроде "про" / "го" не проходят.
+        considerPartialCommand(hypothesis);
     }
     @Override public void onResult(String hypothesis) {
+        cancelPendingPartial();
         emitFinalCommand(hypothesis);
+        commandFiredForUtterance = false;
     }
     @Override public void onFinalResult(String hypothesis) {
+        cancelPendingPartial();
         emitFinalCommand(hypothesis);
+        commandFiredForUtterance = false;
     }
     @Override public void onError(Exception exception) {
         if (recognitionWanted) emitSpeechError("recognition");
