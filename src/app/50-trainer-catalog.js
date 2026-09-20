@@ -6,10 +6,7 @@ function renderTrainerCard(){
   const modeOn = !!(accountReady && trainer && trainer.on);
   $('tglTrainer').classList.toggle('on', modeOn);
   setShown('coachFields', modeOn);
-  if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (account && account.handle) || '';
-  $('coachHandle').readOnly = true;
-  $('coachHandle').classList.add('locked');
-  $('coachHandleHint').textContent = 'Это единый ник основного аккаунта. Он задаётся при регистрации и не меняется.';
+  setShown('coachDeleteBlock', modeOn);
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
   coachPhotoDraft = ph || '';
@@ -20,8 +17,6 @@ function renderTrainerCard(){
   }
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
-  $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
-  $('coachClientsSub').textContent = 'Как её видит подопечный';
   // Ник принадлежит аккаунту, и без аккаунта он уйдёт вместе с телефоном. Говорим
   // об этом там, где ник заводят, а не постфактум.
   setShown('coachNoAcc', !accountReady);

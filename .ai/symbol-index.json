@@ -440,8 +440,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1531,
-      "chars": 70435,
+      "lines": 1526,
+      "chars": 70031,
       "symbols": [
         "add",
         "addClient",
@@ -711,8 +711,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1670,
-      "chars": 71204,
+      "lines": 1654,
+      "chars": 70488,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -1177,8 +1177,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 367,
-      "chars": 19619,
+      "lines": 356,
+      "chars": 18710,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1220,11 +1220,8 @@
         "calSub",
         "calTitle",
         "coachAbout",
-        "coachClientsSub",
+        "coachDeleteBlock",
         "coachFields",
-        "coachHandle",
-        "coachHandleErr",
-        "coachHandleHint",
         "coachLinks",
         "coachLinksErr",
         "coachName",

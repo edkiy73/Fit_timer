@@ -296,22 +296,6 @@ $('tglTrainer').onclick = async ()=>{
   }
   await enableTrainerMode();
 };
-// Чистим ПРЯМО ПРИ НАБОРЕ. Раньше лишнее убиралось только по уходу из поля, и
-// человек видел, как набранное вдруг меняется, — будто приложение спорит с ним.
-$('coachHandle').oninput = async e => {
-  if(e.target.readOnly) return;
-  const at = e.target.value.startsWith('@');
-  const body = e.target.value.replace(/^@+/, '').replace(/[^\w.\-]/g, '').slice(0, 29);
-  const next = (at || body) ? '@' + body : '';
-  if(e.target.value !== next){
-    const pos = e.target.selectionStart;
-    e.target.value = next;
-    try{ e.target.setSelectionRange(pos, pos); }catch(err){}
-  }
-};
-$('coachHandle').onblur  = async e => {
-  if(!e.target.readOnly) e.target.value = normHandle(e.target.value);
-};
 /* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
    «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
    состояний, и ругаться на каждое — значит мешать набирать.
@@ -389,7 +373,7 @@ $('btnSaveCoach').onclick = async ()=>{
     setTimeout(()=>{ if(btn.textContent === 'Сохранено') btn.textContent = 'Сохранить'; }, 1500);
   } else {
     showSyncState('error');
-    $('coachHandleErr').textContent = trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.';
+    appAlert(trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.');
     btn.textContent = 'Сохранить';
   }
   btn.disabled = false;

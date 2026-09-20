@@ -223,7 +223,7 @@
              живут отдельно. -->
         <div class="ava-row">
           <div class="field">
-            <label>Имя для подопечных</label>
+            <label>Имя в профиле</label>
             <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить">
           </div>
           <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера">
@@ -232,20 +232,12 @@
         </div>
         <input type="file" id="coachPhotoFile" accept="image/*" class="hidden">
 
-        <div class="field">
-          <label>Ник</label>
-          <input type="text" id="coachHandle" maxlength="30" inputmode="latin" autocapitalize="off"
-                 autocorrect="off" spellcheck="false" placeholder="@lena.doma">
-          <p class="field-hint" id="coachHandleHint">Подопечный увидит его рядом с программой — так он поймёт, от кого она. Латиница, цифры, точка и дефис.</p>
-          <p class="field-hint" id="coachHandleErr"></p>
-        </div>
         <!-- Сначала «кто ты», потом «где тебя найти». Подопечный открывает страницу
              тренера, чтобы понять, стоит ли доверять, и ссылка на соцсети отвечает
              на это в последнюю очередь. -->
         <div class="field">
           <label>О себе</label>
           <textarea id="coachAbout" rows="3" maxlength="400" placeholder="С кем работаешь и в чём помогаешь"></textarea>
-          <p class="field-hint">Это увидит подопечный на твоей странице. До 400 символов.</p>
         </div>
         <div class="field">
           <label>Стаж, лет</label>
@@ -255,24 +247,21 @@
           <label>Ссылка на себя</label>
           <input type="text" id="coachLinks" maxlength="120" inputmode="url" autocapitalize="off"
                  autocorrect="off" spellcheck="false" placeholder="t.me/lena.doma">
-          <p class="field-hint">Необязательно. Уезжает вместе с программой.</p>
           <p class="field-err" id="coachLinksErr"></p>
         </div>
         <button type="button" class="btn-primary" id="btnSaveCoach">Сохранить</button>
-        <!-- Своя страница глазами подопечного. Тренер правит поля вслепую, если не видит
-             результата, — а именно по этой странице его и выбирают.
-             Подопечные и заявки в каталог отсюда ушли: подопечные стали разделом в доке,
-             заявки — частью «Тренировок», где и лежат сами программы. -->
-        <button type="button" class="pref-row row-link" id="btnMyPage">
-          <span><span>Моя страница</span><small id="coachClientsSub">Как её видит подопечный</small></span>
-          <span class="nr-chev" data-icon="chevR"></span>
-        </button>
-        <!-- Убрать сведения о себе — не то же самое, что перестать быть тренером.
-             Ник остаётся, программы в каталоге остаются, пустеет только страница. -->
-        <div class="danger-zone">
-          <p>Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.</p>
-          <button type="button" class="link-btn" id="btnCoachWipe">Удалить данные о себе</button>
-        </div>
+        <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
+        <button type="button" class="btn-secondary" id="btnMyPage">Предпросмотр моего профиля</button>
+      </div>
+    </div>
+
+    <!-- Удаление данных тренера отделено от редактирования профиля так же, как удаление
+         аккаунта: это редкое и потенциально разрушительное действие. -->
+    <div class="card-block hidden" id="coachDeleteBlock">
+      <div class="cb-head"><p class="cb-title">Удаление данных</p></div>
+      <div class="danger-zone">
+        <p>Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.</p>
+        <button type="button" class="link-btn" id="btnCoachWipe">Удалить данные о себе</button>
       </div>
     </div>
     </div>

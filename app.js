@@ -7013,10 +7013,7 @@ function renderTrainerCard(){
   const modeOn = !!(accountReady && trainer && trainer.on);
   $('tglTrainer').classList.toggle('on', modeOn);
   setShown('coachFields', modeOn);
-  if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (account && account.handle) || '';
-  $('coachHandle').readOnly = true;
-  $('coachHandle').classList.add('locked');
-  $('coachHandleHint').textContent = 'Это единый ник основного аккаунта. Он задаётся при регистрации и не меняется.';
+  setShown('coachDeleteBlock', modeOn);
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
   coachPhotoDraft = ph || '';
@@ -7027,8 +7024,6 @@ function renderTrainerCard(){
   }
   if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
   if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
-  $('coachHandleErr').textContent = (trainer && trainer.pageErr) || '';
-  $('coachClientsSub').textContent = 'Как её видит подопечный';
   // Ник принадлежит аккаунту, и без аккаунта он уйдёт вместе с телефоном. Говорим
   // об этом там, где ник заводят, а не постфактум.
   setShown('coachNoAcc', !accountReady);
@@ -12639,22 +12634,6 @@ $('tglTrainer').onclick = async ()=>{
   }
   await enableTrainerMode();
 };
-// Чистим ПРЯМО ПРИ НАБОРЕ. Раньше лишнее убиралось только по уходу из поля, и
-// человек видел, как набранное вдруг меняется, — будто приложение спорит с ним.
-$('coachHandle').oninput = async e => {
-  if(e.target.readOnly) return;
-  const at = e.target.value.startsWith('@');
-  const body = e.target.value.replace(/^@+/, '').replace(/[^\w.\-]/g, '').slice(0, 29);
-  const next = (at || body) ? '@' + body : '';
-  if(e.target.value !== next){
-    const pos = e.target.selectionStart;
-    e.target.value = next;
-    try{ e.target.setSelectionRange(pos, pos); }catch(err){}
-  }
-};
-$('coachHandle').onblur  = async e => {
-  if(!e.target.readOnly) e.target.value = normHandle(e.target.value);
-};
 /* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
    «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
    состояний, и ругаться на каждое — значит мешать набирать.
@@ -12732,7 +12711,7 @@ $('btnSaveCoach').onclick = async ()=>{
     setTimeout(()=>{ if(btn.textContent === 'Сохранено') btn.textContent = 'Сохранить'; }, 1500);
   } else {
     showSyncState('error');
-    $('coachHandleErr').textContent = trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.';
+    appAlert(trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.');
     btn.textContent = 'Сохранить';
   }
   btn.disabled = false;
