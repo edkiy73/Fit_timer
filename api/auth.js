@@ -128,6 +128,9 @@ async function forget(req, res, body){
         Object.values((sm && sm.profiles) || {}).forEach(p => {
           Object.values((p && p.docs) || {}).forEach(d => { if(d && d.storeKey) keys.push(d.storeKey); });
         });
+        Object.values((sm && sm.accountDocs) || {}).forEach(d => {
+          if(d && d.storeKey) keys.push(d.storeKey);
+        });
         for(const key of keys) await store.del(key);
         await store.del(`s:${mh}`);
       }

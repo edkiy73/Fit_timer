@@ -27,6 +27,10 @@ async function login(deviceId, sub){
     {profileId:profile.id,key:'stats',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({count:1,history:[{id:'h1',d:'2026-09-17',sec:600}]})},
     {profileId:profile.id,key:'program:p1',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({id:'p1',name:'Сила'})},
     {profileId:profile.id,key:'index',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({order:['p1']})},
+    {profileId:'__account__',key:'trainer',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,
+      value:JSON.stringify({on:true,handle:'@lena',name:'Лена'})},
+    {profileId:'__account__',key:'clients',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,
+      value:JSON.stringify([{id:'c1',name:'Маша',progs:[]}])},
     // Клиент такой документ не создаёт; сервер всё равно обязан его отфильтровать.
     {profileId:profile.id,key:'photos',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:'[{"img":"secret"}]'}
   ];
@@ -45,6 +49,12 @@ async function login(deviceId, sub){
   ok('фото профиля не сохранено', p && !p.user.photo, JSON.stringify(p && p.user));
   ok('программа и статистика вернулись', p.docs.some(d=>d.key==='stats') && p.docs.some(d=>d.key==='program:p1'));
   ok('фото-прогресс сервер не принял', !p.docs.some(d=>d.key==='photos'), p.docs.map(d=>d.key).join(','));
+  const trainerDoc = (pulled.accountDocs || []).find(d=>d.key==='trainer');
+  const clientsDoc = (pulled.accountDocs || []).find(d=>d.key==='clients');
+  ok('режим тренера синхронизируется на уровне аккаунта',
+     trainerDoc && JSON.parse(trainerDoc.value).handle === '@lena');
+  ok('подопечные синхронизируются на уровне аккаунта',
+     clientsDoc && JSON.parse(clientsDoc.value)[0].name === 'Маша');
 
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,
     profiles:[{user:{id:profile.id},at:'2026-09-17T12:00:00.000Z',deleted:true}],docs:[]});

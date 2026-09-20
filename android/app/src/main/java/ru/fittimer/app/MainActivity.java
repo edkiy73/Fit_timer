@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FitAudioPlugin.class);
+        registerPlugin(FitSystemPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

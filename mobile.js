@@ -5,7 +5,10 @@
   const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
   const plugins = (cap && cap.Plugins) || {};
   const fitAudio = plugins.FitAudio;
+  const fitSystem = plugins.FitSystem;
   const REST_NOTIFICATION_ID = 901001;
+  const PLAN_NOTIFICATION_MIN = 902000;
+  const PLAN_NOTIFICATION_MAX = 902999;
   let speechResultHandle = null;
   let speechErrorHandle = null;
 
@@ -48,6 +51,41 @@
   async function cancelRest(){
     if(!native || !plugins.LocalNotifications) return;
     try{ await plugins.LocalNotifications.cancel({notifications:[{id:REST_NOTIFICATION_ID}]}); }catch(_){}
+  }
+
+  async function syncWorkoutNotifications(items){
+    if(!native || !plugins.LocalNotifications) return false;
+    try{
+      const permission = await plugins.LocalNotifications.checkPermissions();
+      if(permission.display !== 'granted') return false;
+      const pending = await plugins.LocalNotifications.getPending();
+      const old = ((pending && pending.notifications) || [])
+        .filter(n => n.id >= PLAN_NOTIFICATION_MIN && n.id <= PLAN_NOTIFICATION_MAX)
+        .map(n => ({id:n.id}));
+      if(old.length) await plugins.LocalNotifications.cancel({notifications:old});
+      let exact = true;
+      if(cap.getPlatform && cap.getPlatform() === 'android'){
+        const setting = await plugins.LocalNotifications.checkExactNotificationSetting();
+        exact = setting.exact_alarm === 'granted';
+      }
+      const list = (Array.isArray(items) ? items : []).slice(0, 60).map((item, i) => ({
+        id: PLAN_NOTIFICATION_MIN + i,
+        title: String(item.title || 'Fit Timer'),
+        body: String(item.body || ''),
+        schedule: {at:new Date(item.at), allowWhileIdle:true},
+        isExactNotification: exact,
+        smallIcon: 'ic_stat_fittimer',
+        iconColor: '#7047EB',
+        extra: Object.assign({kind:'workout-reminder'}, item.extra || {})
+      })).filter(n => !isNaN(n.schedule.at.getTime()) && n.schedule.at.getTime() > Date.now() + 10000);
+      if(list.length) await plugins.LocalNotifications.schedule({notifications:list});
+      return true;
+    }catch(_){ return false; }
+  }
+
+  async function setSystemTheme(light){
+    if(!native || !fitSystem) return false;
+    try{ await fitSystem.setTheme({light:!!light}); return true; }catch(_){ return false; }
   }
 
   // index.html исторически вызывает haptic на pointerdown почти всех кнопок.
@@ -212,6 +250,7 @@
           if(typeof keepAwake === 'function') keepAwake();
           if(typeof startHandsFree === 'function') startHandsFree();
         }
+        if(typeof window.syncNativeNotifications === 'function') window.syncNativeNotifications();
       }catch(_){}
     });
   }
@@ -221,6 +260,8 @@
     requestNotifications,
     scheduleRest,
     cancelRest,
+    syncWorkoutNotifications,
+    setSystemTheme,
     haptic,
     workoutHaptic,
     requestMicrophone,

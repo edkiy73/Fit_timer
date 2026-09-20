@@ -1,5 +1,5 @@
-/* Сквозная синхронизация аккаунта: устройство A сохраняет профиль, программу,
-   статистику и рабочие веса; устройство B входит по той же почте и получает их.
+/* Сквозная синхронизация аккаунта: устройство A сохраняет профиль, программу
+   и статистику; устройство B входит по той же почте и получает их.
    Фото-прогресс и аватар профиля на сервер не уходят.
 
    Запуск: node tests/dev-server.js 8124
@@ -47,7 +47,8 @@ async function boot(browser, label, errors){
     }];
     stats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
              weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
-    progWeights = {'w_sync-program_приседания':2};
+    // Старая скрытая поправка веса должна быть отброшена и не синхронизироваться.
+    progWeights = {'w_sync-program_приседания':-2};
     photos = [{d:'2026-09-17',img:'data:image/png;base64,cGhvdG8='}];
     await savePrograms(); await saveStats(); await saveProgWeights();
     await kvSet(pk('photos'), JSON.stringify(photos));
@@ -80,7 +81,7 @@ async function boot(browser, label, errors){
   ok('профиль вернулся без аватара', got.users.length === 1 && got.users[0].name === 'Лена' && !got.users[0].photo, JSON.stringify(got.users));
   ok('программа подтянулась', got.programs.includes('Синхронная сила'), got.programs.join(', '));
   ok('история и замеры подтянулись', got.count === 1 && got.history === 1 && got.weight === 61.2, JSON.stringify(got));
-  ok('рабочий вес подтянулся', got.prog === 2, got.prog);
+  ok('скрытая ручная поправка веса не вернулась', got.prog == null, got.prog);
   ok('фото-прогресс не ушёл на сервер', got.photos === 0, got.photos);
   ok('интерфейс прямо говорит о серверной копии', /сохранены на сервере/i.test(got.state), got.state);
 

@@ -14,6 +14,8 @@ const MAX_DOC = 3 * 1024 * 1024;
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROFILE = /^[a-z0-9_-]{1,80}$/i;
 const DOC = /^(stats|progWeights|index|program:[a-z0-9_-]{1,100})$/i;
+const ACCOUNT_PROFILE = '__account__';
+const ACCOUNT_DOC = /^(trainer|clients)$/;
 
 async function bodyOf(req){
   if(req.body && typeof req.body === 'object') return req.body;
@@ -76,9 +78,10 @@ module.exports = async (req, res) => {
   if(paidUntil < Date.now()) return fail(res, 402, 'premium_required');
 
   const manifestKey = `s:${mh}`;
-  let manifest = {v: 1, profiles: {}};
+  let manifest = {v: 2, profiles: {}, accountDocs: {}};
   try{ manifest = JSON.parse(await store.get(manifestKey)) || manifest; }catch(e){}
   if(!manifest.profiles || typeof manifest.profiles !== 'object') manifest.profiles = {};
+  if(!manifest.accountDocs || typeof manifest.accountDocs !== 'object') manifest.accountDocs = {};
 
   if(body.action === 'push'){
     const profiles = Array.isArray(body.profiles) ? body.profiles.slice(0, 20) : [];
@@ -104,6 +107,20 @@ module.exports = async (req, res) => {
     for(const d of docs){
       const pid = String(d && d.profileId || '');
       const key = String(d && d.key || '');
+      if(pid === ACCOUNT_PROFILE && ACCOUNT_DOC.test(key)){
+        const value = d.value == null ? null : String(d.value);
+        if(value && Buffer.byteLength(value, 'utf8') > MAX_DOC) return fail(res, 413, 'doc_too_large', {key});
+        const prev = manifest.accountDocs[key];
+        const meta = {rev: Math.max(1, +d.rev || 1), at: d.at || now,
+                      schema: Math.max(1, +d.schema || 1), deviceId,
+                      deleted: !!d.deleted};
+        if(prev && !newer(meta, prev)) continue;
+        const storeKey = `sa:${mh}:${key}`;
+        if(meta.deleted) await store.del(storeKey);
+        else await store.set(storeKey, value || '', YEAR);
+        manifest.accountDocs[key] = Object.assign(meta, {storeKey});
+        continue;
+      }
       if(!PROFILE.test(pid) || !DOC.test(key)) continue;
       const value = d.value == null ? null : String(d.value);
       if(value && Buffer.byteLength(value, 'utf8') > MAX_DOC) return fail(res, 413, 'doc_too_large', {key});
@@ -134,6 +151,9 @@ module.exports = async (req, res) => {
     }));
     const vals = await store.many(keys);
     const byStore = new Map(keys.map((k, i) => [k, vals[i]]));
+    const accountKeys = Object.values(manifest.accountDocs).filter(d => d && !d.deleted && d.storeKey).map(d => d.storeKey);
+    const accountVals = await store.many(accountKeys);
+    const accountByStore = new Map(accountKeys.map((k, i) => [k, accountVals[i]]));
     const out = profiles.map(([id, p]) => ({
       user: cleanUser(Object.assign({}, p.user || {}, {id})),
       userAt: p.userAt || '',
@@ -143,7 +163,11 @@ module.exports = async (req, res) => {
         deleted: !!d.deleted, value: d.deleted ? null : (byStore.get(d.storeKey) ?? null)
       }))
     }));
-    return send(res, 200, {ok: true, profiles: out});
+    const accountDocs = Object.entries(manifest.accountDocs).map(([key, d]) => ({
+      key, rev:d.rev, at:d.at, schema:d.schema, deviceId:d.deviceId,
+      deleted:!!d.deleted, value:d.deleted ? null : (accountByStore.get(d.storeKey) ?? null)
+    }));
+    return send(res, 200, {ok: true, profiles: out, accountDocs});
   }
 
   fail(res, 400, 'unknown_action');
