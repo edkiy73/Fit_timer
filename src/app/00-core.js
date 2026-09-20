@@ -132,6 +132,10 @@ function clicks(n){
 // команд: можно слушать один голос и распознавать команды на другом языке.
 let savedVoiceURI = '';
 let voiceLang = 'ru-RU';
+function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
+function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
+  return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
+}
 function voicesForLang(lang){
   const prefix = String(lang || 'ru-RU').toLowerCase().split('-')[0];
   try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith(prefix)); }
@@ -169,16 +173,19 @@ function speak(text, fallback, onDone){
 
 // «Осталось N секунд» на отметках 60/45/30/15
 function announceRemaining(sec){
-  speak(`Осталось ${sec} секунд`, ()=> clicks(sec/15));
+  speak(voiceIsEnglish() ? `${sec} seconds remaining` : `Осталось ${sec} секунд`, ()=> clicks(sec/15));
 }
 
 // круг завершён — голосом с временем отдыха и следующим упражнением
 function roundDone(seconds, nxt){
-  let text = seconds
-    ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`
-    : 'Круг завершён';
+  let text;
+  if(voiceIsEnglish()){
+    text = seconds ? `Round complete. Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}` : 'Round complete';
+  } else {
+    text = seconds ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}` : 'Круг завершён';
+  }
   const nd = nextStepSpeech(nxt);
-  if(nd) text += `. Далее — ${nd}`;
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
   speak(text, ()=>{ gong(); setTimeout(gong, 550); });
 }
 
@@ -186,16 +193,22 @@ function roundDone(seconds, nxt){
 // описание следующего шага для озвучки: «Планка, подход 2 из 3, сторона 1 из 2»
 function nextStepSpeech(nxt){
   if(!nxt) return '';
-  let s = nxt.title;
-  if(nxt.setsTotal > 1) s += `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
-  if(nxt.side) s += `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
-  return s;
+  let out = nxt.title;
+  if(nxt.setsTotal > 1) out += voiceIsEnglish()
+    ? `, set ${nxt.setNo} of ${nxt.setsTotal}`
+    : `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
+  if(nxt.side) out += voiceIsEnglish()
+    ? `, side ${nxt.side} of ${nxt.sidesTotal || 2}`
+    : `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
+  return out;
 }
 function announceRest(seconds, nxt){
-  let text = `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
+  let text = voiceIsEnglish()
+    ? `Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}`
+    : `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
   const nd = nextStepSpeech(nxt);
-  if(nd) text += `. Далее — ${nd}`;
-  speak(text, ()=> beep(520, .18, 0, .2)); // в режиме музыки — мягкий сигнал
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
+  speak(text, ()=> beep(520, .18, 0, .2));
 }
 
 // склонение: 1 повторение, 2 повторения, 5 повторений
@@ -211,27 +224,38 @@ function plural(n, one, few, many){
 // озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
 function announceExercise(step, onDone){
   let text = step.title;
-  if(step.setsTotal > 1) text += `, подход ${step.setNo} из ${step.setsTotal}`;
+  if(step.setsTotal > 1) text += voiceIsEnglish()
+    ? `, set ${step.setNo} of ${step.setsTotal}`
+    : `, подход ${step.setNo} из ${step.setsTotal}`;
   if(step.kind === 'click'){
     const r = parseValue(step.reps);
-    if(r.min === r.max) text += `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
-    else text += `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
-    if(step.perSide) text += ', на каждую сторону';
+    if(r.min === r.max){
+      text += voiceIsEnglish()
+        ? `, ${r.min} ${voicePlural(r.min,'повторение','повторения','повторений','rep','reps')}`
+        : `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
+    } else {
+      text += voiceIsEnglish()
+        ? `, ${r.min} to ${r.max} reps`
+        : `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
+    }
+    if(step.perSide) text += voiceIsEnglish() ? ', on each side' : ', на каждую сторону';
   } else if(step.seconds){
-    text += `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
+    text += voiceIsEnglish()
+      ? `, ${step.seconds} ${voicePlural(step.seconds,'секунда','секунды','секунд','second','seconds')}`
+      : `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
     if(step.perSide){
-      text += step.side ? `, сторона ${step.side} из ${step.sidesTotal || 2}` : ', на каждую сторону';
+      text += step.side
+        ? (voiceIsEnglish() ? `, side ${step.side} of ${step.sidesTotal || 2}` : `, сторона ${step.side} из ${step.sidesTotal || 2}`)
+        : (voiceIsEnglish() ? ', on each side' : ', на каждую сторону');
     }
   }
-  // рабочий вес — часть задания, без него упражнение непонятно. По step.weight,
-  // а не по step.progAxis === 'weight': при формате «время и вес» ось прогрессии
-  // — 'time' (секунды растут своим шагом), но вес всё равно на снаряде и должен
-  // прозвучать.
   if(step.weight > 0){
-    const kg = fmtKg(step.weight).replace('.', ',');
-    text += `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
+    const kg = voiceIsEnglish() ? fmtKg(step.weight) : fmtKg(step.weight).replace('.', ',');
+    text += voiceIsEnglish()
+      ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
+      : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
   }
-  speak(text, null, onDone); // без фолбэка: если голоса нет, гонга достаточно
+  speak(text, null, onDone);
 }
 
 // мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
