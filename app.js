@@ -486,6 +486,176 @@ const I18N_RU = {
   'workout.switchSide': "Смените сторону",
   'workout.switchSideInstruction': "Поменяй сторону и займи исходное положение.",
   'workout.restInstruction': "Восстанови дыхание.",
+  'profile.title': "Профиль",
+  'profile.new': "Новый профиль",
+  'profile.nameRequired': "Укажи имя.",
+  'profile.genderRequired': "Выбери пол — от него зависит подбор упражнений и нагрузка.",
+  'profile.onlyOne': "Это единственный профиль — без него приложению не с чем работать. Чтобы стереть всё, открой «Аккаунт» и выбери «Удалить все данные».",
+  'profile.deleteQuestion': "Удалить профиль «{name}» вместе со всеми его программами и статистикой?",
+  'common.delete': "Удалить",
+  'common.keep': "Оставить",
+  'common.wait': "Подождать",
+  'account.deleteAccountQuestion': "Удалить аккаунт и все данные? ",
+  'account.deleteDataQuestion': "Удалить все данные? ",
+  'account.deleteLocalWarning': "Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.",
+  'account.deleteCoachWarning': " Со страницы тренера уйдут сведения о тебе, отправленные подопечным ссылки перестанут открываться. Программы, отданные в каталог, там останутся: их уже взяли себе люди, и забирать сделанное задним числом — не то же самое, что стереть данные о себе.",
+  'account.deleteAll': "Удалить всё",
+  'account.deleteConfirmPhrase': "подтверждаю удаление",
+  'account.serverDeleteFailed': "Сервер не ответил, и на нём всё осталось. Если стереть телефон сейчас, удалить это потом будет нельзя: ключ хранится только здесь. Стереть всё равно?",
+  'account.eraseAnyway': "Стереть всё равно",
+  'premium.until': "Премиум до {date}",
+  'premium.autoYear': "Продлится сам — {price} в год",
+  'premium.autoMonth': "Продлится сам — {price} в месяц",
+  'premium.renewOff': "Продление выключено: после этой даты вернётся бесплатный тариф",
+  'premium.manageAccount': "Управление подпиской — в разделе «Аккаунт».",
+  'premium.month': "Месяц",
+  'premium.year': "Год",
+  'premium.perMonth': "{price} в месяц",
+  'premium.monthlyCharge': "списание раз в месяц",
+  'premium.saveBadge': "выгода {percent}%",
+  'premium.buyFor': "Оформить за {price}",
+  'premium.yearFine': "Списание сразу, дальше — раз в год по {price}. Отменить можно в любой момент.",
+  'premium.monthFine': "Списание сразу, дальше — раз в месяц по {price}. Отменить можно в любой момент.",
+  'account.version': "Версия",
+  'account.buildNote': "единый аккаунт и нативный обмен",
+  'premium.freePlan': "Бесплатный тариф",
+  'premium.untilShort': "До {date}",
+  'premium.renews': "продлится сам",
+  'premium.renewDisabled': "продление выключено",
+  'premium.freePitch': "ИИ, весь каталог тренеров и синхронизация — от {price} в месяц",
+  'premium.bannerPitch': "Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От {price} в месяц.",
+  'account.dataTitle': "Данные аккаунта",
+  'account.deleteAccountTitle': "Удаление аккаунта",
+  'account.deleteDataTitle': "Удаление данных",
+  'account.deleteAccountButton': "Удалить аккаунт и все данные",
+  'account.deleteAllButton': "Удалить все данные",
+  'account.deleteAccountNote': "Удалится всё, включая аккаунт и подписку. Вернуть можно только из резервной копии — если она сохранена. Программы, отданные в каталог, там останутся.",
+  'account.deleteLocalNote': "Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.",
+  'login.emailTypo': "Проверь почту — похоже, в адресе опечатка.",
+  'login.emailVerification': "Подтверждение почты",
+  'login.verificationMsg': "Пришлём код на {email}. Он подтвердит, что почта твоя, — с неё подписка вернётся на любом телефоне.",
+  'premium.purchaseSuccess': "Подписка действует до {date}. Аккаунт привязан к почте {email} — с неё вернутся программы, статистика, вес и замеры на любом телефоне. Фото-прогресс остаётся только на этом устройстве.",
+  'login.otherAccount': "Другой аккаунт",
+  'login.intro': "Вход и регистрация — один быстрый сценарий по почте. Аккаунт бесплатный: в нём хранятся твой ник и подписка. С Премиумом синхронизируются программы, статистика, вес и замеры между устройствами. Фото-прогресс остаётся только на этом телефоне.",
+  'login.syncing': "Синхронизируем…",
+  'login.syncingMsg': "Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.",
+  'login.syncPending': "Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.",
+  'login.created': "Аккаунт заведён. Ник {handle} закреплён за ним. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте.",
+  'login.welcomeTrainer': "С возвращением. Ник {handle} снова твой — на прежнем телефоне страницу править больше нельзя.",
+  'login.done': "Готово — вход выполнен.",
+  'login.addressTypo': "Проверь адрес — похоже, в нём опечатка.",
+  'login.handleRule': "Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.",
+  'login.savingHandle': "Сохраняем ник…",
+  'login.sending': "Отправляем…",
+  'login.sent': "Письмо ушло на {email}. Код действует 15 минут.",
+  'login.devCode': "Локальный запуск, код: {code}",
+  'login.signIn': "Войти",
+  'login.checking': "Проверяем…",
+  'login.createTitle': "Создание аккаунта",
+  'login.chooseHandle': "Почта подтверждена. Осталось выбрать единый ник — он будет у аккаунта и у страницы тренера.",
+  'login.createAccount': "Создать аккаунт",
+  'login.handleTaken': "Этот ник уже занят. Попробуй другой.",
+  'account.signOutQuestion': "Выйти из аккаунта {email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.",
+  'account.signOut': "Выйти",
+  'bio.cancelled': "запрос отменён или истёк.",
+  'bio.exists': "на этом устройстве ключ уже заведён.",
+  'bio.unsupported': "устройство не умеет проверять отпечаток или лицо.",
+  'bio.security': "приложение открыто не по защищённому адресу.",
+  'bio.refused': "устройство отказало.",
+  'bio.needAccount': "Биометрия привязывается к аккаунту — сначала нужна почта.",
+  'bio.enableFailed': "Не получилось включить биометрию: {error}",
+  'bio.disableQuestion': "Выключить вход по биометрии? Приложение будет открываться сразу.",
+  'lock.prompt': "Приложи палец или посмотри на камеру — и продолжим.",
+  'lock.unlock': "Разблокировать",
+  'lock.email': "Войти по почте",
+  'lock.wrongEmail': "Такая почта к этому аккаунту не привязана. Проверь адрес.",
+  'lock.failed': "Не получилось узнать. Попробуй ещё раз или войди по почте.",
+  'progress.photoCount': "{count} фото",
+  'progress.photoUpdate': "пора обновить",
+  'progress.deleteAllPhotos': "Удалить все фото ({count})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.",
+  'progress.deleteConfirmPhrase': "подтверждаю удаление",
+  'progress.todayReplace': "Снимок за сегодня уже есть. Новый заменит его — вернуть старый будет неоткуда.",
+  'common.replace': "Заменить",
+  'progress.daysBetween': "{count} {days} между фото",
+  'progress.sameDay': "Фото за один день",
+  'progress.photoPosition': "{current} из {total}",
+  'progress.deletePhoto': "Удалить фото от {date}?",
+  'share.openFailed': "Не удалось открыть системное меню «Поделиться». Попробуй ещё раз.",
+  'share.savedDownloads': "Файл сохранён в загрузки.",
+  'progress.preparePhotoFailed': "Не удалось подготовить фото.",
+  'progress.myProgress': "Мой прогресс",
+  'progress.daysWork': "{count} {days} РАБОТЫ НАД СОБОЙ",
+  'progress.journeyStart': "НАЧАЛО ПУТИ",
+  'progress.imageFailed': "Не удалось создать картинку.",
+  'progress.shareTitle': "Мой прогресс — Fit Timer",
+  'progress.shareFallback': "Картинка сохранена в загрузки — отправь её из галереи.",
+  'backup.saved': "Резервная копия сохранена в загрузки. В ней всё: профили, программы, статистика, вес, замеры, фото, аккаунт с подпиской и — если ты тренер — ник и подопечные.",
+  'backup.readFailed': "Не удалось прочитать файл.",
+  'backup.invalid': "Это не файл резервной копии Fit Timer.",
+  'backup.replaceAll': "Заменить ВСЕ данные приложения данными из файла? Текущие данные будут перезаписаны.",
+  'backup.noProfiles': "В файле нет ни одного профиля.",
+  'progress.bodyWeight': "ВЕС",
+  'progress.bodyFat': "ЖИР",
+  'progress.bodyMuscle': "МЫШЦЫ",
+  'progress.waist': "ТАЛИЯ",
+  'progress.hips': "БЁДРА",
+  'progress.chest': "ГРУДЬ",
+  'progress.kg': "кг",
+  'progress.cm': "см",
+  'progress.pressure': "ДАВЛЕНИЕ",
+  'progress.pulse': "ПУЛЬС",
+  'progress.sleep': "СОН",
+  'progress.bpm': "уд/мин",
+  'progress.hoursShort': "ч",
+  'progress.addMetricFirst': "Сначала запиши хотя бы одну метрику.",
+  'progress.myChanges': "Мои изменения",
+  'progress.addWellnessFirst': "Сначала запиши хотя бы одно измерение.",
+  'progress.myWellness': "Моё самочувствие",
+  'progress.deleteEntry': "Удалить запись",
+  'progress.fat': "Жир %",
+  'progress.muscle': "Мышцы %",
+  'progress.waistLabel': "Талия",
+  'progress.hipsLabel': "Бёдра",
+  'progress.chestLabel': "Грудь",
+  'progress.shareSaved': "Картинка сохранена в загрузки.",
+  'profile.switch': "переключиться",
+  'profile.now': "сейчас",
+  'profile.edit': "Изменить",
+  'profile.noName': "Без имени",
+  'profile.multiHint': "У каждого профиля свои программы, статистика, вес и фото.",
+  'profile.singleHint': "Второй профиль — например, для близкого человека. У каждого свои программы и статистика.",
+  'profile.ageYears': "{count} {years}",
+  'profile.yearOne': "год",
+  'profile.yearFew': "года",
+  'profile.yearMany': "лет",
+  'progress.history': "История",
+  'progress.share': "Поделиться",
+  'progress.noChange': "без изменений",
+  'progress.sinceLast': "{delta} {unit} с прошлого раза",
+  'progress.height': "Рост",
+  'progress.bmi': "ИМТ",
+  'progress.weight': "Вес",
+  'progress.fatShort': "Жир",
+  'progress.muscleShort': "Мышцы",
+  'progress.waistShort': "Талия",
+  'progress.hipsShort': "Бёдра",
+  'progress.chestShort': "Грудь",
+  'progress.records': "{count} {records}",
+  'progress.recordOne': "запись",
+  'progress.recordFew': "записи",
+  'progress.recordMany': "записей",
+  'progress.pressureShort': "Давление",
+  'progress.pulseShort': "Пульс",
+  'progress.sleepShort': "Сон",
+  'progress.recordedOn': "запись от {date}",
+  'well.pressurePair': "Давление записывают парой: верхнее и нижнее.",
+  'well.fillOne': "Заполни хотя бы одно поле.",
+  'well.sleepHours': "Сон, ч",
+  'sync.premiumOnly': "Синхронизация тренировок доступна в Премиум",
+  'sync.busy': "Синхронизируем данные…",
+  'sync.ok': "Данные сохранены на сервере · фото-прогресс только на этом телефоне",
+  'sync.error': "Нет связи с сервером · изменения отправятся позже",
+  'sync.account': "Данные синхронизируются с аккаунтом",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -975,6 +1145,176 @@ const I18N_EN = {
   'workout.switchSide': "Switch sides",
   'workout.switchSideInstruction': "Switch sides and get into the starting position.",
   'workout.restInstruction': "Catch your breath.",
+  'profile.title': "Profile",
+  'profile.new': "New profile",
+  'profile.nameRequired': "Enter a name.",
+  'profile.genderRequired': "Choose a gender — it affects exercise selection and training load.",
+  'profile.onlyOne': "This is the only profile. To erase everything, open Account and choose “Delete all data”.",
+  'profile.deleteQuestion': "Delete profile “{name}” together with all its programs and statistics?",
+  'common.delete': "Delete",
+  'common.keep': "Keep",
+  'common.wait': "Wait",
+  'account.deleteAccountQuestion': "Delete the account and all data? ",
+  'account.deleteDataQuestion': "Delete all data? ",
+  'account.deleteLocalWarning': "Profiles, programs, statistics, weight, measurements, and photos will be erased from this phone and cannot be restored.",
+  'account.deleteCoachWarning': " Your trainer-page information will be removed and links sent to clients will stop opening. Programs already published in the catalog will remain there because other people may already be using them.",
+  'account.deleteAll': "Delete everything",
+  'account.deleteConfirmPhrase': "confirm deletion",
+  'account.serverDeleteFailed': "The server did not respond, so the server copy was not deleted. If you erase this phone now, you may not be able to remove that data later because the key exists only here. Erase anyway?",
+  'account.eraseAnyway': "Erase anyway",
+  'premium.until': "Premium until {date}",
+  'premium.autoYear': "Renews automatically — {price} per year",
+  'premium.autoMonth': "Renews automatically — {price} per month",
+  'premium.renewOff': "Auto-renew is off. The free plan returns after this date.",
+  'premium.manageAccount': "Manage your subscription in Account.",
+  'premium.month': "Month",
+  'premium.year': "Year",
+  'premium.perMonth': "{price} / month",
+  'premium.monthlyCharge': "charged monthly",
+  'premium.saveBadge': "save {percent}%",
+  'premium.buyFor': "Subscribe for {price}",
+  'premium.yearFine': "Charged now, then {price} once a year. Cancel anytime.",
+  'premium.monthFine': "Charged now, then {price} once a month. Cancel anytime.",
+  'account.version': "Version",
+  'account.buildNote': "unified account and native sharing",
+  'premium.freePlan': "Free plan",
+  'premium.untilShort': "Until {date}",
+  'premium.renews': "renews automatically",
+  'premium.renewDisabled': "auto-renew off",
+  'premium.freePitch': "AI, the full trainer catalog, and sync — from {price} / month",
+  'premium.bannerPitch': "AI can build your workout, with the full trainer catalog and sync. From {price} / month.",
+  'account.dataTitle': "Account details",
+  'account.deleteAccountTitle': "Delete account",
+  'account.deleteDataTitle': "Delete data",
+  'account.deleteAccountButton': "Delete account and all data",
+  'account.deleteAllButton': "Delete all data",
+  'account.deleteAccountNote': "Everything will be deleted, including the account and subscription. It can only be restored from a backup if you have one. Programs already published in the catalog will remain there.",
+  'account.deleteLocalNote': "All data on this phone will be deleted. It can only be restored from a backup if you have one.",
+  'login.emailTypo': "Check the email address — it looks like there may be a typo.",
+  'login.emailVerification': "Verify email",
+  'login.verificationMsg': "We’ll send a code to {email}. It confirms the address is yours, so your subscription can be restored on another phone.",
+  'premium.purchaseSuccess': "Your subscription is active until {date}. The account is linked to {email}; programs, statistics, weight, and measurements can be restored on another phone. Progress photos stay only on this device.",
+  'login.otherAccount': "Another account",
+  'login.intro': "Sign-in and registration use the same quick email flow. The account is free and stores your username and subscription. Premium syncs programs, statistics, weight, and measurements between devices. Progress photos stay only on this phone.",
+  'login.syncing': "Syncing…",
+  'login.syncingMsg': "Signed in. Loading profiles, programs, and statistics — keep the app open.",
+  'login.syncPending': "Signed in, but sync has not finished yet. Data will upload automatically when a connection is available.",
+  'login.created': "Account created. Username {handle} is now attached to it. With Premium, programs, statistics, weight, and measurements can be restored through this email.",
+  'login.welcomeTrainer': "Welcome back. Username {handle} is yours again; the trainer page can no longer be edited from the previous phone.",
+  'login.done': "Done — you’re signed in.",
+  'login.addressTypo': "Check the address — it looks like there may be a typo.",
+  'login.handleRule': "Username: at least 2 characters after @. Letters, numbers, periods, and hyphens are allowed.",
+  'login.savingHandle': "Saving username…",
+  'login.sending': "Sending…",
+  'login.sent': "Email sent to {email}. The code is valid for 15 minutes.",
+  'login.devCode': "Local run, code: {code}",
+  'login.signIn': "Sign in",
+  'login.checking': "Checking…",
+  'login.createTitle': "Create account",
+  'login.chooseHandle': "Email verified. Choose one username for both your account and trainer page.",
+  'login.createAccount': "Create account",
+  'login.handleTaken': "That username is already taken. Try another one.",
+  'account.signOutQuestion': "Sign out of {email}? Programs, statistics, weight, and photos will stay on this phone. The subscription and biometric sign-in will be detached and return when you sign in again.",
+  'account.signOut': "Sign out",
+  'bio.cancelled': "the request was cancelled or timed out.",
+  'bio.exists': "a key already exists on this device.",
+  'bio.unsupported': "this device does not support fingerprint or face verification.",
+  'bio.security': "the app is not running in a secure context.",
+  'bio.refused': "the device rejected the request.",
+  'bio.needAccount': "Biometrics are linked to an account, so sign in with email first.",
+  'bio.enableFailed': "Couldn’t enable biometrics: {error}",
+  'bio.disableQuestion': "Turn off biometric sign-in? The app will open without verification.",
+  'lock.prompt': "Use your fingerprint or look at the camera to continue.",
+  'lock.unlock': "Unlock",
+  'lock.email': "Sign in with email",
+  'lock.wrongEmail': "That email is not linked to this account. Check the address.",
+  'lock.failed': "Couldn’t verify you. Try again or sign in with email.",
+  'progress.photoCount': "{count} photos",
+  'progress.photoUpdate': "time for a new photo",
+  'progress.deleteAllPhotos': "Delete all {count} photos? Progress photos are not stored anywhere else and cannot be recovered.",
+  'progress.deleteConfirmPhrase': "confirm deletion",
+  'progress.todayReplace': "There is already a photo for today. The new one will replace it and the old one cannot be recovered.",
+  'common.replace': "Replace",
+  'progress.daysBetween': "{count} {days} between photos",
+  'progress.sameDay': "Photos from the same day",
+  'progress.photoPosition': "{current} of {total}",
+  'progress.deletePhoto': "Delete the photo from {date}?",
+  'share.openFailed': "Couldn’t open the system Share menu. Try again.",
+  'share.savedDownloads': "File saved to Downloads.",
+  'progress.preparePhotoFailed': "Couldn’t prepare the photos.",
+  'progress.myProgress': "My progress",
+  'progress.daysWork': "{count} {days} OF PROGRESS",
+  'progress.journeyStart': "THE START",
+  'progress.imageFailed': "Couldn’t create the image.",
+  'progress.shareTitle': "My progress — Fit Timer",
+  'progress.shareFallback': "Image saved to Downloads — share it from your gallery.",
+  'backup.saved': "Backup saved to Downloads. It includes profiles, programs, statistics, weight, measurements, photos, account and subscription, and trainer data if you use trainer mode.",
+  'backup.readFailed': "Couldn’t read the file.",
+  'backup.invalid': "This is not a Fit Timer backup file.",
+  'backup.replaceAll': "Replace ALL app data with the data from this file? Current data will be overwritten.",
+  'backup.noProfiles': "The backup contains no profiles.",
+  'progress.bodyWeight': "WEIGHT",
+  'progress.bodyFat': "BODY FAT",
+  'progress.bodyMuscle': "MUSCLE",
+  'progress.waist': "WAIST",
+  'progress.hips': "HIPS",
+  'progress.chest': "CHEST",
+  'progress.kg': "kg",
+  'progress.cm': "cm",
+  'progress.pressure': "BLOOD PRESSURE",
+  'progress.pulse': "PULSE",
+  'progress.sleep': "SLEEP",
+  'progress.bpm': "bpm",
+  'progress.hoursShort': "h",
+  'progress.addMetricFirst': "Add at least one body metric first.",
+  'progress.myChanges': "My changes",
+  'progress.addWellnessFirst': "Add at least one wellness measurement first.",
+  'progress.myWellness': "My wellness",
+  'progress.deleteEntry': "Delete entry",
+  'progress.fat': "Body fat %",
+  'progress.muscle': "Muscle %",
+  'progress.waistLabel': "Waist",
+  'progress.hipsLabel': "Hips",
+  'progress.chestLabel': "Chest",
+  'progress.shareSaved': "Image saved to Downloads.",
+  'profile.switch': "switch",
+  'profile.now': "current",
+  'profile.edit': "Edit",
+  'profile.noName': "Unnamed",
+  'profile.multiHint': "Each profile has its own programs, statistics, weight, and photos.",
+  'profile.singleHint': "Add a second profile, for example for a family member. Each profile has its own programs and statistics.",
+  'profile.ageYears': "{count} {years}",
+  'profile.yearOne': "year",
+  'profile.yearFew': "years",
+  'profile.yearMany': "years",
+  'progress.history': "History",
+  'progress.share': "Share",
+  'progress.noChange': "no change",
+  'progress.sinceLast': "{delta} {unit} since last time",
+  'progress.height': "Height",
+  'progress.bmi': "BMI",
+  'progress.weight': "Weight",
+  'progress.fatShort': "Body fat",
+  'progress.muscleShort': "Muscle",
+  'progress.waistShort': "Waist",
+  'progress.hipsShort': "Hips",
+  'progress.chestShort': "Chest",
+  'progress.records': "{count} {records}",
+  'progress.recordOne': "entry",
+  'progress.recordFew': "entries",
+  'progress.recordMany': "entries",
+  'progress.pressureShort': "Blood pressure",
+  'progress.pulseShort': "Pulse",
+  'progress.sleepShort': "Sleep",
+  'progress.recordedOn': "recorded {date}",
+  'well.pressurePair': "Blood pressure needs both values: systolic and diastolic.",
+  'well.fillOne': "Fill in at least one field.",
+  'well.sleepHours': "Sleep, h",
+  'sync.premiumOnly': "Workout sync is available with Premium",
+  'sync.busy': "Syncing data…",
+  'sync.ok': "Data saved to the server · progress photos stay only on this phone",
+  'sync.error': "No server connection · changes will upload later",
+  'sync.account': "Data syncs with your account",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -2481,22 +2821,22 @@ function renderUsers(){
     row.className = 'user-row' + (act ? ' act' : '');
     const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((u.name || '?')[0].toUpperCase());
     const bits = [];
-    if(u.gender) bits.push(u.gender === 'm' ? 'Мужской' : 'Женский');
+    if(u.gender) bits.push(t(u.gender === 'm' ? 'common.male' : 'common.female'));
     const a = profileAge(u);
-    if(a) bits.push(`${a} ${plural(a, 'год', 'года', 'лет')}`);
-    if(!act) bits.push('переключиться');
+    if(a) bits.push(t('profile.ageYears',{count:a,years:appLocale === 'ru' ? plural(a,t('profile.yearOne'),t('profile.yearFew'),t('profile.yearMany')) : (a === 1 ? t('profile.yearOne') : t('profile.yearFew'))}));
+    if(!act) bits.push(t('profile.switch'));
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div>`
-      + (act ? '<span class="u-now">сейчас</span>' : '')
-      + `<button class="ue" title="Изменить">${icon('pencil')}</button>`;
-    row.querySelector('b').textContent = u.name || 'Без имени';
+      + (act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '')
+      + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
+    row.querySelector('b').textContent = u.name || t('profile.noName');
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
     // нажатие по строке активного профиля переключать некуда — открываем его правку
     row.onclick = ()=> act ? openUserEdit(u.id) : switchUser(u.id);
     box.appendChild(row);
   });
   $('usersHint').textContent = users.length > 1
-    ? 'У каждого профиля свои программы, статистика, вес и фото.'
-    : 'Второй профиль — например, для близкого человека. У каждого свои программы и статистика.';
+    ? t('profile.multiHint')
+    : t('profile.singleHint');
   renderAccount();
 }
 
@@ -2505,20 +2845,25 @@ function renderAccount(){ renderPlan(); }
 // Метрики тела: вес всегда есть, остальное — если человек это записывает.
 // Жир и мышцы в процентах показывают умные весы, и без них вес врёт: минус два
 // килограмма мышц и минус два килограмма жира на графике веса выглядят одинаково.
-const W_SERIES = [
-  {k: 'w',     color: 'var(--accent-ink)', label: 'Вес',   unit: 'кг'},
-  {k: 'fat',   color: 'var(--danger)',     label: 'Жир',   unit: '%'},
-  {k: 'musc',  color: 'var(--ok)',         label: 'Мышцы', unit: '%'},
-  {k: 'waist', color: 'var(--accent-ink)', label: 'Талия', unit: 'см'},
-  {k: 'hips',  color: 'var(--rest-ink)',   label: 'Бёдра', unit: 'см'},
-  {k: 'chest', color: 'var(--warn)',       label: 'Грудь', unit: 'см'}
-];
+function weightSeries(){
+  return [
+    {k:'w',color:'var(--accent-ink)',label:t('progress.weight'),unit:t('progress.kg')},
+    {k:'fat',color:'var(--danger)',label:t('progress.fatShort'),unit:'%'},
+    {k:'musc',color:'var(--ok)',label:t('progress.muscleShort'),unit:'%'},
+    {k:'waist',color:'var(--accent-ink)',label:t('progress.waistShort'),unit:t('progress.cm')},
+    {k:'hips',color:'var(--rest-ink)',label:t('progress.hipsShort'),unit:t('progress.cm')},
+    {k:'chest',color:'var(--warn)',label:t('progress.chestShort'),unit:t('progress.cm')}
+  ];
+}
+function fmtMeasure(v){
+  return new Intl.NumberFormat(localeTag(), {maximumFractionDigits:1}).format(Number(v));
+}
 let weightMetric = 'w';
 
 function renderWeight(){
   const ws = stats.weights;
-  $('btnWeightHist').innerHTML = icon('pencil') + 'История';
-  $('btnShareWeight').innerHTML = icon('share') + 'Поделиться';
+  $('btnWeightHist').innerHTML = icon('pencil') + t('progress.history');
+  $('btnShareWeight').innerHTML = icon('share') + t('progress.share');
 
   if(!ws.length){
     $('weightDelta').textContent = '';
@@ -2535,10 +2880,12 @@ function renderWeight(){
   setShown('weightNowRow', true);
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
-  $('weightNow').textContent = String(last.w).replace('.', ',') + ' кг';
+  $('weightNow').textContent = fmtMeasure(last.w) + ' ' + t('progress.kg');
   if(prev){
     const d = Math.round((last.w - prev.w) * 10) / 10;
-    $('weightDelta').textContent = d === 0 ? 'без изменений' : (d > 0 ? '+' : '−') + String(Math.abs(d)).replace('.', ',') + ' кг с прошлого раза';
+    $('weightDelta').textContent = d === 0
+      ? t('progress.noChange')
+      : t('progress.sinceLast',{delta:(d > 0 ? '+' : '−') + fmtMeasure(Math.abs(d)),unit:t('progress.kg')});
     $('weightDelta').style.color = d > 0 ? 'var(--warn)' : (d < 0 ? 'var(--ok)' : 'var(--muted)');
   } else $('weightDelta').textContent = '';
 
@@ -2546,20 +2893,20 @@ function renderWeight(){
   // где у каждого и значение, и свой график — раньше они дублировались дважды
   const meta = [];
   if(stats.height){
-    meta.push(`<span class="chip">Рост <b>${stats.height}</b> см</span>`);
-    meta.push(`<span class="chip">ИМТ <b>${(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10).toString().replace('.',',')}</b></span>`);
+    meta.push(`<span class="chip">${esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${esc(t('progress.cm'))}</span>`);
+    meta.push(`<span class="chip">${esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
   }
   $('weightMeta').innerHTML = meta.join('');
   setShown('weightMeta', meta.length);
 
   // ---- переключатель метрик вместо трёх одинаковых графиков подряд ----
-  const avail = W_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  const avail = weightSeries().filter(s => ws.some(p => p[s.k] != null));
   if(!avail.some(s => s.k === weightMetric)) weightMetric = avail.length ? avail[0].k : 'w';
   $('weightSwitch').innerHTML = avail.map(s => {
     const pts = ws.filter(p => p[s.k] != null);
     const v = pts[pts.length - 1][s.k];
     return `<button type="button" class="wm-chip${s.k === weightMetric ? ' act' : ''}" data-k="${s.k}">
-      <span>${s.label}</span><b>${String(v).replace('.', ',')}<small>${s.unit}</small></b></button>`;
+      <span>${s.label}</span><b>${fmtMeasure(v)}<small>${s.unit}</small></b></button>`;
   }).join('');
   setShown('weightSwitch', avail.length > 1);
 
@@ -2580,7 +2927,7 @@ function metricGraph(s, have, have2){
   const d = Math.round((lastv - first) * 10) / 10;
   const dCls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
   const du = s.unit;
-  const dTxt = d === 0 ? 'без изменений' : `${d > 0 ? '+' : '−'}${String(Math.abs(d)).replace('.', ',')} ${du || ''}`.trim();
+  const dTxt = d === 0 ? t('progress.noChange') : `${d > 0 ? '+' : '−'}${fmtMeasure(Math.abs(d))} ${du || ''}`.trim();
 
   let min = Math.min(...vals), max = Math.max(...vals);
   const pad = Math.max((max - min) * 0.15, 0.5);
@@ -2619,7 +2966,7 @@ function metricGraph(s, have, have2){
 
   // подписи значений у концов. У парной метрики подписываем обе половины сразу
   // («120/80»): нижнюю линию без числа рядом всё равно не прочитать.
-  const num = v => String(v).replace('.', ',');
+  const num = v => fmtMeasure(v);
   const capA = pair ? num(first) + '/' + num(pair[0][1]) : num(first);
   const capB = pair ? num(lastv) + '/' + num(pair[pair.length - 1][1]) : num(lastv);
   let labels = '';
@@ -2637,7 +2984,7 @@ function metricGraph(s, have, have2){
   return `<div class="metric-graph">
     <div class="mg-head">
       <span class="mg-delta ${dCls}">${dTxt}</span>
-      <small>${s.label} · ${have.length} ${plural(have.length, 'запись', 'записи', 'записей')}</small>
+      <small>${s.label} · ${t('progress.records',{count:have.length,records:appLocale === 'ru' ? plural(have.length,t('progress.recordOne'),t('progress.recordFew'),t('progress.recordMany')) : (have.length === 1 ? t('progress.recordOne') : t('progress.recordFew'))})}</small>
     </div>
     <svg viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -2667,11 +3014,13 @@ function metricGraph(s, have, have2){
    же шкалой не является: сегодняшняя четвёрка и прошлогодняя — разные четвёрки,
    а график из них выглядит как измерение. Поле mood в уже сохранённых записях
    остаётся нетронутым — данные не трогаем, просто больше не показываем. */
-const WELL_SERIES = [
-  {k: 'sys',   pair: 'dia', color: 'var(--danger)',    label: 'Давление', unit: ''},
-  {k: 'pulse',              color: 'var(--accent-ink)', label: 'Пульс',    unit: 'уд/мин'},
-  {k: 'sleep',              color: 'var(--rest-ink)',   label: 'Сон',      unit: 'ч'}
-];
+function wellSeries(){
+  return [
+    {k:'sys',pair:'dia',color:'var(--danger)',label:t('progress.pressureShort'),unit:''},
+    {k:'pulse',color:'var(--accent-ink)',label:t('progress.pulseShort'),unit:t('progress.bpm')},
+    {k:'sleep',color:'var(--rest-ink)',label:t('progress.sleepShort'),unit:t('progress.hoursShort')}
+  ];
+}
 const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16]};
 let wellMetric = 'sys';
 
@@ -2679,8 +3028,8 @@ const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.we
 // как метрика читается одной строкой: давление всегда парой, остальное — число с единицей
 function wellValue(en, s){
   if(en[s.k] == null) return '';
-  const v = String(en[s.k]).replace('.', ',');
-  return s.pair && en[s.pair] != null ? v + '/' + String(en[s.pair]).replace('.', ',') : v;
+  const v = fmtMeasure(en[s.k]);
+  return s.pair && en[s.pair] != null ? v + '/' + fmtMeasure(en[s.pair]) : v;
 }
 
 // Средние за последние 30 дней — то, что показывает главная. Именно среднее, а не
@@ -2701,8 +3050,8 @@ function wellAvg(){
 
 function renderWellness(){
   const ws = wellList();
-  $('btnWellHist').innerHTML = icon('pencil') + 'История';
-  $('btnShareWell').innerHTML = icon('share') + 'Поделиться';
+  $('btnWellHist').innerHTML = icon('pencil') + t('progress.history');
+  $('btnShareWell').innerHTML = icon('share') + t('progress.share');
   if(!ws.length){
     setShown('wellNowRow', false);
     setShown('wellSwitch', false);
@@ -2716,7 +3065,7 @@ function renderWellness(){
   setShown('wellNowRow', true);
 
   // доступна метрика, которую хоть раз записали, — как у веса с обхватами
-  const avail = WELL_SERIES.filter(s => ws.some(p => p[s.k] != null));
+  const avail = wellSeries().filter(s => ws.some(p => p[s.k] != null));
   if(!avail.length){ setShown('wellNowRow', false); setShown('wellSwitch', false); setShown('wellCharts', false); return; }
   if(!avail.some(s => s.k === wellMetric)) wellMetric = avail[0].k;
   const cur = avail.find(s => s.k === wellMetric);
@@ -2733,7 +3082,7 @@ function renderWellness(){
   const pts = ws.filter(p => p[cur.k] != null);
   const lastEn = pts[pts.length - 1];
   $('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
-  $('wellWhen').textContent = 'запись от ' + shortD(lastEn.d);
+  $('wellWhen').textContent = t('progress.recordedOn',{date:shortD(lastEn.d)});
   $('wellWhen').style.color = 'var(--muted)';
 
   const have = pts.map(p => [p.d, p[cur.k]]).slice(-30);
@@ -2764,8 +3113,8 @@ async function saveWell(){
   const sys = num('sysInput', 'sys'), dia = num('diaInput', 'dia');
   const pulse = num('pulseInput', 'pulse'), sleep = num('sleepInput', 'sleep');
   // половина давления бессмысленна: «верхнее 130» без нижнего не читается
-  if((sys && !dia) || (dia && !sys)){ appAlert('Давление записывают парой: верхнее и нижнее.'); return; }
-  if(!sys && !pulse && sleep == null){ appAlert('Заполни хотя бы одно поле.'); return; }
+  if((sys && !dia) || (dia && !sys)){ appAlert(t('well.pressurePair')); return; }
+  if(!sys && !pulse && sleep == null){ appAlert(t('well.fillOne')); return; }
   // пульс и давление — сведения о здоровье, как вес и обхваты
   if(!hasConsent('health')) recordConsent('health');
   const ws = wellList();
@@ -2793,11 +3142,11 @@ function openWellHist(){
     // порознь выглядели как два разных показателя, и строка ехала в две ячейки враскоряку
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
       `<div class="wh-cells wh-well" data-d="${en.d}">` +
-        `<div class="whc"><label>Давление</label>` +
+        `<div class="whc"><label>${esc(t('progress.pressureShort'))}</label>` +
           `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
-        cell('pulse', 'Пульс') + cell('sleep', 'Сон, ч', 0.5) +
+        cell('pulse', t('progress.pulseShort')) + cell('sleep', t('well.sleepHours'), 0.5) +
       `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
@@ -3021,11 +3370,11 @@ function showSyncState(state){
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
-  else if(!isPremium()) el.textContent = 'Синхронизация тренировок доступна в Премиум';
-  else if(state === 'busy') el.textContent = 'Синхронизируем данные…';
-  else if(state === 'ok') el.textContent = 'Данные сохранены на сервере · фото-прогресс только на этом телефоне';
-  else if(state === 'error') el.textContent = 'Нет связи с сервером · изменения отправятся позже';
-  else el.textContent = 'Данные синхронизируются с аккаунтом';
+  else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  else if(state === 'busy') el.textContent = t('sync.busy');
+  else if(state === 'ok') el.textContent = t('sync.ok');
+  else if(state === 'error') el.textContent = t('sync.error');
+  else el.textContent = t('sync.account');
 }
 
 const accountAuth = () => ({
@@ -4121,7 +4470,7 @@ function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
   const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
-  $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
+  $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
   $('ueAge').value = profileAge(uDraft) || '';
   setTimeout(()=> takeSnap('user', userState()), 0);
@@ -4162,10 +4511,10 @@ async function saveUser(){
   uDraft.age = validAge($('ueAge').value);
   uDraft.syncAt = new Date().toISOString();
   readTimings();
-  if(!uDraft.name){ appAlert('Укажи имя.'); return; }
+  if(!uDraft.name){ appAlert(t('profile.nameRequired')); return; }
   // пол и возраст — не украшение анкеты: они уходят в запрос к ИИ и определяют
   // подбор упражнений, нагрузку и восстановление. Пустыми их оставлять нельзя
-  if(!uDraft.gender){ appAlert('Выбери пол — от него зависит подбор упражнений и нагрузка.'); return; }
+  if(!uDraft.gender){ appAlert(t('profile.genderRequired')); return; }
   const aErr = ageError($('ueAge').value, true);
   if(aErr){
     appAlert(aErr);
@@ -4202,12 +4551,11 @@ async function saveUser(){
 async function deleteUser(){
   if(!uDraft.id) return;
   if(users.length <= 1){
-    await appAlert('Это единственный профиль — без него приложению не с чем работать. '
-      + 'Чтобы стереть всё, открой «Аккаунт» и выбери «Удалить все данные».');
+    await appAlert(t('profile.onlyOne'));
     return;
   }
-  const msg = `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
-  if(!(await appDialog(msg, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  const msg = t('profile.deleteQuestion',{name:uDraft.name});
+  if(!(await appDialog(msg, {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   const id = uDraft.id;
   const removed = users.find(x => x.id === id);
   if(removed){
@@ -4252,13 +4600,10 @@ async function wipeAccount(){
   const coach = !!(trainer && trainer.key && (trainer.handle || '').trim());
   const server = coach || linked;
   const ok = await appDialog(
-    (linked ? 'Удалить аккаунт и все данные? ' : 'Удалить все данные? ')
-      + 'Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.'
-      + (coach ? ' Со страницы тренера уйдут сведения о тебе, отправленные подопечным ссылки '
-                 + 'перестанут открываться. Программы, отданные в каталог, там останутся: '
-                 + 'их уже взяли себе люди, и забирать сделанное задним числом — не то же самое, '
-                 + 'что стереть данные о себе.' : ''),
-    {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    (linked ? t('account.deleteAccountQuestion') : t('account.deleteDataQuestion'))
+      + t('account.deleteLocalWarning')
+      + (coach ? t('account.deleteCoachWarning') : ''),
+    {confirm: true, okText: t('account.deleteAll'), cancelText: t('common.cancel'), type: t('account.deleteConfirmPhrase')}
   );
   if(!ok) return;
   if(server){
@@ -4267,9 +4612,8 @@ async function wipeAccount(){
       // Молча стереть телефон нельзя: ключ уйдёт вместе с ним, и данные на сервере
       // не сможет удалить уже никто. Решение за человеком.
       const anyway = await appDialog(
-        'Сервер не ответил, и на нём всё осталось. Если стереть телефон сейчас, удалить это '
-        + 'потом будет нельзя: ключ хранится только здесь. Стереть всё равно?',
-        {confirm: true, okText: 'Стереть всё равно', cancelText: 'Подождать'}
+        t('account.serverDeleteFailed'),
+        {confirm: true, okText: t('account.eraseAnyway'), cancelText: t('common.wait')}
       );
       if(!anyway) return;
     }
@@ -4391,7 +4735,7 @@ function userCurrency(){
 function money(v, cur){
   const frac = (Math.round(v * 100) % 100) ? 2 : 0;
   try{
-    return new Intl.NumberFormat(navigator.language || 'ru-RU',
+    return new Intl.NumberFormat(localeTag(),
       {style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac}).format(v);
   }catch(e){ return v + ' ' + cur; }
 }
@@ -4411,9 +4755,7 @@ function planUntil(plan, from){
   return d.toISOString();
 }
 // «10 сентября 2027 г.» в конце фразы даёт двойную точку и лишний хвост — убираем «г.»
-const humanDate = iso => new Date(iso)
-  .toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})
-  .replace(/\s*г\.$/, '');
+const humanDate = iso => new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'long', year:'numeric'}).format(new Date(iso));
 // цена за месяц при годовой оплате: округляем до точности самой цены, иначе
 // в рублях получается «249,17 ₽», чего не бывает ни в одном ценнике
 function perMonth(pr, cur){
@@ -4432,22 +4774,22 @@ function renderPremium(){
   setShown('pmPlans', !on);
   setShown('pmBuy', !on);
   if(on){
-    $('pmStateTitle').textContent = `Премиум до ${humanDate(account.sub.until)}`;
+    $('pmStateTitle').textContent = t('premium.until',{date:humanDate(account.sub.until)});
     $('pmStateSub').textContent = account.sub.autoRenew
-      ? `Продлится сам — ${subPrice()} ${account.sub.plan === 'year' ? 'в год' : 'в месяц'}`
-      : 'Продление выключено: после этой даты вернётся бесплатный тариф';
-    $('pmFine').textContent = 'Управление подпиской — в разделе «Аккаунт».';
+      ? t(account.sub.plan === 'year' ? 'premium.autoYear' : 'premium.autoMonth',{price:subPrice()})
+      : t('premium.renewOff');
+    $('pmFine').textContent = t('premium.manageAccount');
     return;
   }
   const save = Math.round((1 - pr.year / (pr.month * 12)) * 100);
   const box = $('pmPlans');
   box.innerHTML = '';
-  [['month', 'Месяц'], ['year', 'Год']].forEach(([k, label]) => {
+  [['month', t('premium.month')], ['year', t('premium.year')]].forEach(([k, label]) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'pm-plan' + (pmPlan === k ? ' act' : '');
-    const per = k === 'year' ? `${perMonth(pr, cur)} в месяц` : 'списание раз в месяц';
-    b.innerHTML = (k === 'year' && save > 0 ? `<span class="pp-badge">выгода ${save}%</span>` : '')
+    const per = k === 'year' ? t('premium.perMonth',{price:perMonth(pr, cur)}) : t('premium.monthlyCharge');
+    b.innerHTML = (k === 'year' && save > 0 ? `<span class="pp-badge">${t('premium.saveBadge',{percent:save})}</span>` : '')
       + `<b></b><span class="pp-price"></span><small></small>`;
     b.querySelector('b').textContent = label;
     b.querySelector('.pp-price').textContent = money(pr[k], cur);
@@ -4455,10 +4797,10 @@ function renderPremium(){
     b.onclick = ()=>{ pmPlan = k; renderPremium(); };
     box.appendChild(b);
   });
-  $('pmBuy').textContent = `Оформить за ${money(pr[pmPlan], cur)}`;
+  $('pmBuy').textContent = t('premium.buyFor',{price:money(pr[pmPlan], cur)});
   $('pmFine').textContent = pmPlan === 'year'
-    ? `Списание сразу, дальше — раз в год по ${money(pr.year, cur)}. Отменить можно в любой момент.`
-    : `Списание сразу, дальше — раз в месяц по ${money(pr.month, cur)}. Отменить можно в любой момент.`;
+    ? t('premium.yearFine',{price:money(pr.year, cur)})
+    : t('premium.monthFine',{price:money(pr.month, cur)});
 }
 
 // Тариф на «Аккаунте», данные аккаунта и баннер на главной — одно состояние,
@@ -4467,40 +4809,40 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '20.09 · единый аккаунт и нативный обмен (v22)';
+const BUILD = '20.09 · v22';
 function renderBuild(){
   const el = $('buildLine');
-  if(el) el.textContent = 'Версия ' + BUILD;
+  if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
 }
 
 function renderPlan(){
   renderBuild();
   if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
   const on = isPremium(), pr = priceTable(), cur = userCurrency();
-  $('planTitle').textContent = on ? 'Fit Timer Премиум' : 'Бесплатный тариф';
+  $('planTitle').textContent = on ? t('premium.title') : t('premium.freePlan');
   $('planSub').textContent = on
-    ? `До ${humanDate(account.sub.until)}` + (account.sub.autoRenew ? ' · продлится сам' : ' · продление выключено')
-    : `ИИ, весь каталог тренеров и синхронизация — от ${perMonth(pr, cur)} в месяц`;
+    ? t('premium.untilShort',{date:humanDate(account.sub.until)}) + ' · ' + t(account.sub.autoRenew ? 'premium.renews' : 'premium.renewDisabled')
+    : t('premium.freePitch',{price:perMonth(pr, cur)});
   // купленное больше не продаём: баннер уходит с главной
   setShown('btnPremium', !on);
-  $('pbSub').textContent = `Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От ${perMonth(pr, cur)} в месяц.`;
+  $('pbSub').textContent = t('premium.bannerPitch',{price:perMonth(pr, cur)});
 
   // Два состояния карточки. Без аккаунта на экране не должно быть ни «Данных
   // аккаунта», ни «Удалить аккаунт»: удалять нечего, а название пугает человека,
   // который ничего не заводил.
   const has = !!(account && account.email);
-  $('accCardTitle').textContent = has ? 'Данные аккаунта' : 'Аккаунт';
-  $('wipeCardTitle').textContent = has ? 'Удаление аккаунта' : 'Удаление данных';
+  $('accCardTitle').textContent = has ? t('account.dataTitle') : t('common.account');
+  $('wipeCardTitle').textContent = has ? t('account.deleteAccountTitle') : t('account.deleteDataTitle');
   setShown('accNone', !has);
   setShown('rowEmail', has);
   setShown('rowHandle', has && !!account.handle);
   setShown('btnSignOut', has);
   setShown('rowRenew', has && on);
   setShown('rowBio', has && bioOK);
-  $('btnWipeAccount').textContent = has ? 'Удалить аккаунт и все данные' : 'Удалить все данные';
+  $('btnWipeAccount').textContent = has ? t('account.deleteAccountButton') : t('account.deleteAllButton');
   $('wipeNote').textContent = has
-    ? 'Удалится всё, включая аккаунт и подписку. Вернуть можно только из резервной копии — если она сохранена. Программы, отданные в каталог, там останутся.'
-    : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
+    ? t('account.deleteAccountNote')
+    : t('account.deleteLocalNote');
   if(has){
     $('accEmail').textContent = account.email;
     $('accHandle').textContent = account.handle || '';
@@ -4524,7 +4866,7 @@ function renderPlan(){
 async function completePurchase(){
   const email = ($('payEmail').value || '').trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
-    appAlert('Проверь почту — похоже, в адресе опечатка.');
+    appAlert(t('login.emailTypo'));
     return;
   }
   const cur = userCurrency(), pr = priceTable(), now = new Date().toISOString();
@@ -4536,9 +4878,8 @@ async function completePurchase(){
 
   $('payModal').classList.remove('open');
   openLogin(async ()=> { await grantSub(email, sub); },
-    {email, sub, label: 'Подтверждение почты',
-     msg: 'Пришлём код на ' + email + '. Он подтвердит, что почта твоя, — с неё '
-        + 'подписка вернётся на любом телефоне.'});
+    {email, sub, label: t('login.emailVerification'),
+     msg: t('login.verificationMsg',{email})});
 }
 
 async function grantSub(email, sub){
@@ -4555,7 +4896,7 @@ async function grantSub(email, sub){
   recordConsent('offer');
   $('payModal').classList.remove('open');
   $('premiumModal').classList.remove('open');
-  $('pokLead').textContent = `Подписка действует до ${humanDate(account.sub.until)}. Аккаунт привязан к почте ${email} — с неё вернутся программы, статистика, вес и замеры на любом телефоне. Фото-прогресс остаётся только на этом устройстве.`;
+  $('pokLead').textContent = t('premium.purchaseSuccess',{date:humanDate(account.sub.until),email});
   setShown('pokBio', bioOK && !(account.biometry && account.biometry.enabled));
   $('premiumOkModal').classList.add('open');
   renderPlan(); renderPremium();
@@ -4591,10 +4932,9 @@ function openLogin(after, opts){
   loginPending = null;
   loginStep = 1;
   $('loginLabel').textContent = opts.label
-    || ((account && account.email) ? 'Другой аккаунт' : 'Аккаунт');
+    || ((account && account.email) ? t('login.otherAccount') : t('common.account'));
   $('loginMsg').textContent = opts.msg
-    || ('Вход и регистрация — один быстрый сценарий по почте. Аккаунт бесплатный: '
-        + 'в нём хранятся твой ник и подписка. С Премиумом синхронизируются программы, статистика, вес и замеры между устройствами. Фото-прогресс остаётся только на этом телефоне.');
+    || t('login.intro');
   $('loginEmail').value = opts.email || (account && account.email) || '';
   $('loginCode').value = '';
   $('loginHandle').value = '';
@@ -4603,7 +4943,7 @@ function openLogin(after, opts){
   setShown('loginStep1', true);
   setShown('loginStep2', false);
   setShown('loginStep3', false);
-  $('loginGo').textContent = 'Прислать код';
+  $('loginGo').textContent = t('login.sendCode');
   $('loginModal').classList.add('open');
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
@@ -4646,8 +4986,8 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   renderTrainerCard(); syncDockTabs();
   let synced = true;
   if(isPremium()){
-    btn.textContent = 'Синхронизируем…';
-    $('loginMsg').textContent = 'Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.';
+    btn.textContent = t('login.syncing');
+    $('loginMsg').textContent = t('login.syncingMsg');
     synced = await connectAccountSync({replaceLocal: cleanInstall && !r.fresh});
   }
   $('loginModal').classList.remove('open');
@@ -4657,12 +4997,12 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(done) return;
   pendingSub = null;
   appAlert(!synced
-    ? 'Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.'
+    ? t('login.syncPending')
     : r.fresh
-    ? 'Аккаунт заведён. Ник ' + r.handle + ' закреплён за ним. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте.'
+    ? t('login.created',{handle:r.handle})
     : (r.trainerKey
-        ? 'С возвращением. Ник ' + r.handle + ' снова твой — на прежнем телефоне страницу править больше нельзя.'
-        : 'Готово — вход выполнен.'));
+        ? t('login.welcomeTrainer',{handle:r.handle})
+        : t('login.done')));
 }
 
 async function doLogin(){
@@ -4670,7 +5010,7 @@ async function doLogin(){
   const email = loginPending ? loginPending.email : ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
-    $('loginErr').textContent = 'Проверь адрес — похоже, в нём опечатка.';
+    $('loginErr').textContent = t('login.addressTypo');
     return;
   }
   btn.disabled = true;
@@ -4679,10 +5019,10 @@ async function doLogin(){
     if(loginStep === 3){
       const handle = normHandle($('loginHandle').value);
       if(!/^@[\wа-яё.\-]{2,29}$/i.test(handle)){
-        $('loginErr').textContent = 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.';
+        $('loginErr').textContent = t('login.handleRule');
         return;
       }
-      btn.textContent = 'Сохраняем ник…';
+      btn.textContent = t('login.savingHandle');
       const p = loginPending;
       const claimed = await apiPost('/api/auth', {
         action:'set_handle', email:p.email, deviceId:p.deviceId,
@@ -4695,22 +5035,22 @@ async function doLogin(){
       return;
     }
     if(loginStep === 1){
-      btn.textContent = 'Отправляем…';
+      btn.textContent = t('login.sending');
       const r = await apiPost('/api/auth', {action: 'send', email, locale: appLocale});
       loginStep = 2;
       setShown('loginStep1', false);
       setShown('loginStep2', true);
-      $('loginMsg').textContent = 'Письмо ушло на ' + email + '. Код действует 15 минут.';
+      $('loginMsg').textContent = t('login.sent',{email});
       // Локальный запуск письма не шлёт — код приходит прямо в ответе, иначе
       // сценарий нельзя прогнать, не заведя настоящий ящик.
-      $('loginCodeHint').textContent = r.devCode ? ('Локальный запуск, код: ' + r.devCode) : '';
+      $('loginCodeHint').textContent = r.devCode ? t('login.devCode',{code:r.devCode}) : '';
       if(r.devCode) $('loginCode').value = r.devCode;
-      btn.textContent = 'Войти';
+      btn.textContent = t('login.signIn');
       setTimeout(()=> $('loginCode').focus(), 120);
       return;
     }
 
-    btn.textContent = 'Проверяем…';
+    btn.textContent = t('login.checking');
     const cleanInstall = !(await hasMeaningfulLocalData());
     const previousEmail = String((account && account.email) || '').toLowerCase();
     const switchingAccount = !!previousEmail && previousEmail !== email;
@@ -4734,25 +5074,25 @@ async function doLogin(){
       loginStep = 3;
       setShown('loginStep2', false);
       setShown('loginStep3', true);
-      $('loginLabel').textContent = 'Создание аккаунта';
-      $('loginMsg').textContent = 'Почта подтверждена. Осталось выбрать единый ник — он будет у аккаунта и у страницы тренера.';
-      btn.textContent = 'Создать аккаунт';
+      $('loginLabel').textContent = t('login.createTitle');
+      $('loginMsg').textContent = t('login.chooseHandle');
+      btn.textContent = t('login.createAccount');
       setTimeout(()=> $('loginHandle').focus(), 120);
       return;
     }
     await finishVerifiedLogin(r, email, cleanInstall, switchingAccount);
   }catch(e){
     $('loginErr').textContent = e && e.code === 'handle_taken'
-      ? 'Этот ник уже занят. Попробуй другой.'
+      ? t('login.handleTaken')
       : e && e.code === 'bad_handle'
-      ? 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.'
+      ? t('login.handleRule')
       : mailErrText(e);
     if(e && e.code === 'bad_code') $('loginCode').value = '';
-    btn.textContent = loginStep === 1 ? 'Прислать код' : loginStep === 3 ? 'Создать аккаунт' : 'Войти';
+    btn.textContent = loginStep === 1 ? t('login.sendCode') : loginStep === 3 ? t('login.createAccount') : t('login.signIn');
     return;
   } finally {
     btn.disabled = false;
-    if(btn.textContent === 'Отправляем…' || btn.textContent === 'Проверяем…' || btn.textContent === 'Сохраняем ник…') btn.textContent = back;
+    if(btn.textContent === t('login.sending') || btn.textContent === t('login.checking') || btn.textContent === t('login.savingHandle')) btn.textContent = back;
   }
 }
 
@@ -4761,8 +5101,8 @@ async function doLogin(){
 async function signOut(){
   if(!account.email) return;
   const ok = await appDialog(
-    `Выйти из аккаунта ${account.email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.`,
-    {confirm: true, okText: 'Выйти', cancelText: 'Отмена'});
+    t('account.signOutQuestion',{email:account.email}),
+    {confirm: true, okText: t('account.signOut'), cancelText: t('common.cancel')});
   if(!ok) return;
   try{ if(SYNC.adapter) await Promise.all([SYNC.push(), pushAccountDocs()]); }catch(e){}
   SYNC.adapter = null;
@@ -4793,14 +5133,14 @@ const toB64 = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
 const fromB64 = s64 => Uint8Array.from(atob(s64), c => c.charCodeAt(0));
 function bioErr(e){
   const n = (e && e.name) || '';
-  if(n === 'NotAllowedError') return 'запрос отменён или истёк.';
-  if(n === 'InvalidStateError') return 'на этом устройстве ключ уже заведён.';
-  if(n === 'NotSupportedError') return 'устройство не умеет проверять отпечаток или лицо.';
-  if(n === 'SecurityError') return 'приложение открыто не по защищённому адресу.';
-  return 'устройство отказало.';
+  if(n === 'NotAllowedError') return t('bio.cancelled');
+  if(n === 'InvalidStateError') return t('bio.exists');
+  if(n === 'NotSupportedError') return t('bio.unsupported');
+  if(n === 'SecurityError') return t('bio.security');
+  return t('bio.refused');
 }
 async function bioEnable(){
-  if(!account.email){ appAlert('Биометрия привязывается к аккаунту — сначала нужна почта.'); return false; }
+  if(!account.email){ appAlert(t('bio.needAccount')); return false; }
   try{
     const cred = await navigator.credentials.create({publicKey: {
       challenge: rndBytes(32),
@@ -4816,12 +5156,12 @@ async function bioEnable(){
     renderPlan();
     return true;
   }catch(e){
-    appAlert('Не получилось включить биометрию: ' + bioErr(e));
+    appAlert(t('bio.enableFailed',{error:bioErr(e)}));
     return false;
   }
 }
 async function bioDisable(){
-  if(!(await appConfirm('Выключить вход по биометрии? Приложение будет открываться сразу.'))) return;
+  if(!(await appConfirm(t('bio.disableQuestion')))) return;
   account.biometry = null;
   await saveAccount();
   renderPlan();
@@ -4844,9 +5184,9 @@ function openLock(){
   lockMode = 'bio';
   setShown('lockMailBox', false);
   $('lockEmail').value = '';
-  $('lockMsg').textContent = 'Приложи палец или посмотри на камеру — и продолжим.';
-  $('lockGo').textContent = 'Разблокировать';
-  $('lockMail').textContent = 'Войти по почте';
+  $('lockMsg').textContent = t('lock.prompt');
+  $('lockGo').textContent = t('lock.unlock');
+  $('lockMail').textContent = t('lock.email');
   $('lockModal').classList.add('open');
   tryUnlock();   // сразу, чтобы не заставлять нажимать лишний раз
 }
@@ -4854,13 +5194,13 @@ async function tryUnlock(){
   if(lockMode === 'mail'){
     const v = ($('lockEmail').value || '').trim().toLowerCase();
     if(v && v === (account.email || '').toLowerCase()){ $('lockModal').classList.remove('open'); return; }
-    $('lockMsg').textContent = 'Такая почта к этому аккаунту не привязана. Проверь адрес.';
+    $('lockMsg').textContent = t('lock.wrongEmail');
     return;
   }
   if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
   // отказ бывает и от системы, и от человека («отмена» в окне отпечатка) — в обоих
   // случаях врать «приложи палец» уже нельзя, палец он приложил
-  $('lockMsg').textContent = 'Не получилось узнать. Попробуй ещё раз или войди по почте.';
+  $('lockMsg').textContent = t('lock.failed');
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -4911,24 +5251,23 @@ async function loadPhotos(){
 async function savePhotos(){ await kvSet(pk('photos'), JSON.stringify(photos)); }
 
 function fmtD(iso){
-  const [y, m, d] = iso.split('-');
-  return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)} ${y.slice(2)}`;
+  const d = new Date(iso + 'T12:00:00');
+  return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short', year:'2-digit'}).format(d);
 }
-// то же без года — для подписей осей и миниатюр, где год только шумит
 function shortD(iso){
-  const [, m, d] = iso.split('-');
-  return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)}`;
+  const d = new Date(iso + 'T12:00:00');
+  return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short'}).format(d);
 }
 
 function renderPhotos(){
   const n = photos.length;
-  $('photoCount').textContent = n ? `${n} фото` : '';
+  $('photoCount').textContent = n ? t('progress.photoCount',{count:n}) : '';
   setShown('photoNowRow', !!n);
   const hint = $('photoHint');
   if(n){
     const last = new Date(photos[photos.length - 1].d);
     const days = Math.floor((new Date() - last) / 86400000);
-    hint.textContent = days >= 7 ? 'пора обновить' : '';
+    hint.textContent = days >= 7 ? t('progress.photoUpdate') : '';
     hint.style.color = 'var(--danger)';
   } else hint.textContent = '';
 
@@ -4953,8 +5292,8 @@ function renderPhotos(){
 async function deleteAllPhotos(){
   if(!photos.length) return;
   const ok = await appDialog(
-    `Удалить все фото (${photos.length})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.`,
-    {confirm: true, okText: 'Удалить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    t('progress.deleteAllPhotos',{count:photos.length}),
+    {confirm: true, okText: t('common.delete'), cancelText: t('common.cancel'), type: t('progress.deleteConfirmPhrase')}
   );
   if(!ok) return;
   photos = [];
@@ -4968,8 +5307,8 @@ async function addPhoto(file){
   const today = localISO(new Date());
   if(photos.some(p => p.d === today)){
     const ok = await appDialog(
-      'Снимок за сегодня уже есть. Новый заменит его — вернуть старый будет неоткуда.',
-      {confirm: true, okText: 'Заменить', cancelText: 'Отмена'}
+      t('progress.todayReplace'),
+      {confirm: true, okText: t('common.replace'), cancelText: t('common.cancel')}
     );
     if(!ok) return;
   }
@@ -4998,7 +5337,9 @@ function renderCmp(){
   $('cmpImgB').innerHTML = b ? `<img src="${esc(b.img)}" alt="">` : '';
   if(a && b){
     const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
-    $('cmpDays').textContent = days ? `${days} ${plural(days, 'день', 'дня', 'дней')} между фото` : 'Фото за один день';
+    $('cmpDays').textContent = days
+      ? t('progress.daysBetween',{count:days,days:appLocale === 'ru' ? plural(days,'день','дня','дней') : (days === 1 ? 'day' : 'days')})
+      : t('progress.sameDay');
   }
 }
 // нажатие на снимок в сетке открывает сравнение сразу с ним справа,
@@ -5036,7 +5377,7 @@ function renderPhotoFull(){
   const p = photos[pfIdx];
   if(!p) return;
   $('pfImg').src = p.img;
-  $('pfCap').textContent = fmtD(p.d) + (photos.length > 1 ? ` · ${pfIdx + 1} из ${photos.length}` : '');
+  $('pfCap').textContent = fmtD(p.d) + (photos.length > 1 ? ' · ' + t('progress.photoPosition',{current:pfIdx+1,total:photos.length}) : '');
 }
 function pfStep(d){
   const n = pfIdx + d;
@@ -5072,7 +5413,7 @@ async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
   if(!p) return;
-  if(!(await appConfirm(`Удалить фото от ${fmtD(p.d)}?`))) return;
+  if(!(await appConfirm(t('progress.deletePhoto',{date:fmtD(p.d)})))) return;
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
@@ -5097,7 +5438,7 @@ function drawCover(x, img, dx, dy, dw, dh, r){
 async function shareGeneratedFile(blob, fname, title, savedText){
   if(window.FitNative && window.FitNative.isNative){
     const ok = await window.FitNative.shareFile(blob, fname, title || 'Fit Timer');
-    if(!ok) appAlert('Не удалось открыть системное меню «Поделиться». Попробуй ещё раз.');
+    if(!ok) appAlert(t('share.openFailed'));
     return ok;
   }
   const file = new File([blob], fname, {type:blob.type || 'application/octet-stream'});
@@ -5110,14 +5451,14 @@ async function shareGeneratedFile(blob, fname, title, savedText){
   link.download = fname;
   link.click();
   setTimeout(()=> URL.revokeObjectURL(link.href), 5000);
-  appAlert(savedText || 'Файл сохранён в загрузки.');
+  appAlert(savedText || t('share.savedDownloads'));
   return true;
 }
 async function shareCompare(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
   if(!a || !b) return;
   const [ia, ib] = await Promise.all([loadImg(a.img), loadImg(b.img)]);
-  if(!ia || !ib){ appAlert('Не удалось подготовить фото.'); return; }
+  if(!ia || !ib){ appAlert(t('progress.preparePhotoFailed')); return; }
   const cs = getComputedStyle(document.body);
   const col = n => cs.getPropertyValue(n).trim();
   const W = 1080, H = 1350;
@@ -5129,7 +5470,7 @@ async function shareCompare(){
   x.fillStyle = col('--muted'); x.font = '600 44px Oswald, sans-serif';
   x.fillText('F I T  /  T I M E R', W / 2, 110);
   x.fillStyle = col('--ink'); x.font = '500 46px Rubik, sans-serif';
-  x.fillText('Мой прогресс', W / 2, 190);
+  x.fillText(t('progress.myProgress'), W / 2, 190);
   // два фото
   const pw = 486, ph = 760, gy = 240;
   drawCover(x, ia, 34, gy, pw, ph, 26);
@@ -5142,13 +5483,14 @@ async function shareCompare(){
   x.fillText(fmtD(b.d), W - 34 - pw / 2, gy + ph + 58);
   const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
   x.fillStyle = col('--work'); x.font = '600 52px Oswald, sans-serif';
-  x.fillText(days ? `${days} ${plural(days, 'ДЕНЬ', 'ДНЯ', 'ДНЕЙ')} РАБОТЫ НАД СОБОЙ` : 'НАЧАЛО ПУТИ', W / 2, 1180);
+  x.fillText(days
+    ? t('progress.daysWork',{count:days,days:appLocale === 'ru' ? plural(days,'ДЕНЬ','ДНЯ','ДНЕЙ') : (days === 1 ? 'DAY' : 'DAYS')})
+    : t('progress.journeyStart'), W / 2, 1180);
   x.fillStyle = col('--muted'); x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, 1256);
   c.toBlob(async blob => {
-    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    await shareGeneratedFile(blob, 'fittimer-progress.png', 'Мой прогресс — Fit Timer',
-      'Картинка сохранена в загрузки — отправь её из галереи.');
+    if(!blob){ appAlert(t('progress.imageFailed')); return; }
+    await shareGeneratedFile(blob, 'fittimer-progress.png', t('progress.shareTitle'), t('progress.shareFallback'));
   }, 'image/png');
 }
 
@@ -5201,17 +5543,17 @@ async function exportAllData(){
   a.download = 'fittimer-backup-' + localISO(new Date()) + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  appAlert('Резервная копия сохранена в загрузки. В ней всё: профили, программы, статистика, вес, замеры, фото, аккаунт с подпиской и — если ты тренер — ник и подопечные.');
+  appAlert(t('backup.saved'));
 }
 
 async function importAllData(file){
   let dump;
   try{ dump = JSON.parse(await file.text()); }
-  catch(e){ appAlert('Не удалось прочитать файл.'); return; }
+  catch(e){ appAlert(t('backup.readFailed')); return; }
   if(!dump || dump.app !== 'fittimer' || !Array.isArray(dump.users)){
-    appAlert('Это не файл резервной копии Fit Timer.'); return;
+    appAlert(t('backup.invalid')); return;
   }
-  if(!(await appConfirm('Заменить ВСЕ данные приложения данными из файла? Текущие данные будут перезаписаны.'))) return;
+  if(!(await appConfirm(t('backup.replaceAll')))) return;
 
   /* Файл резервной копии — обычный JSON, и до сюда он мог доехать откуда угодно:
      его пересылают, правят в блокноте, собирают заново. Поэтому проходим по нему
@@ -5225,7 +5567,7 @@ async function importAllData(file){
     if(u.theme && !['system', 'light', 'dark'].includes(u.theme)) u.theme = 'system';
     return migrateUserAge(u);
   });
-  if(!users.length){ appAlert('В файле нет ни одного профиля.'); return; }
+  if(!users.length){ appAlert(t('backup.noProfiles')); return; }
 
   await kvSet('users', JSON.stringify(users));
   await kvSet('currentUser', dump.currentUser || users[0].id);
@@ -5332,7 +5674,7 @@ async function sharePng(title, lanes, fname){
     const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(c0).trim());
     return m ? `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})` : c0;
   };
-  const num = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  const num = v => new Intl.NumberFormat(localeTag(), {maximumFractionDigits:1}).format(Math.round(v * 10) / 10);
 
   // Полосу сначала подгоняем под привычные 1080×1350, потом зажимаем в границы
   // читаемости — и уже от неё считаем высоту холста. Так картинка с шестью
@@ -5437,8 +5779,8 @@ async function sharePng(title, lanes, fname){
   x.fillText('F I T   T I M E R', W / 2, H - 44);
 
   c.toBlob(async blob => {
-    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    await shareGeneratedFile(blob, fname, title + ' — Fit Timer', 'Картинка сохранена в загрузки.');
+    if(!blob){ appAlert(t('progress.imageFailed')); return; }
+    await shareGeneratedFile(blob, fname, title + ' — Fit Timer', t('progress.shareSaved'));
   }, 'image/png');
   return c;
 }
@@ -5447,16 +5789,16 @@ async function sharePng(title, lanes, fname){
 function shareBodyLanes(){
   const ws = stats.weights || [];
   const defs = [
-    {k: 'w',     v: '--work',       label: 'ВЕС',    unit: 'кг'},
-    {k: 'fat',   v: '--danger',     label: 'ЖИР',    unit: '%'},
-    {k: 'musc',  v: '--ok',         label: 'МЫШЦЫ',  unit: '%'},
-    {k: 'waist', v: '--accent-ink', label: 'ТАЛИЯ',  unit: 'см'},
-    {k: 'hips',  v: '--rest-ink',   label: 'БЁДРА',  unit: 'см'},
-    {k: 'chest', v: '--warn',       label: 'ГРУДЬ',  unit: 'см'}
+    {k:'w',v:'--work',label:t('progress.bodyWeight'),unit:t('progress.kg')},
+    {k:'fat',v:'--danger',label:t('progress.bodyFat'),unit:'%'},
+    {k:'musc',v:'--ok',label:t('progress.bodyMuscle'),unit:'%'},
+    {k:'waist',v:'--accent-ink',label:t('progress.waist'),unit:t('progress.cm')},
+    {k:'hips',v:'--rest-ink',label:t('progress.hips'),unit:t('progress.cm')},
+    {k:'chest',v:'--warn',label:t('progress.chest'),unit:t('progress.cm')}
   ];
-  return defs.map(s => {
-    s.have = ws.map(p => p[s.k]).filter(v => v != null).slice(-30);
-    return s;
+  return defs.map(item => {
+    item.have = ws.map(p => p[item.k]).filter(v => v != null).slice(-30);
+    return item;
   }).filter(L => L.have.length);
 }
 
@@ -5464,28 +5806,28 @@ function shareBodyLanes(){
 function shareWellLanes(){
   const ws = wellList();
   const defs = [
-    {k: 'sys', pair: 'dia', v: '--danger',     label: 'ДАВЛЕНИЕ', unit: ''},
-    {k: 'pulse',            v: '--accent-ink', label: 'ПУЛЬС',    unit: 'уд/мин'},
-    {k: 'sleep',            v: '--rest-ink',   label: 'СОН',      unit: 'ч'}
+    {k:'sys',pair:'dia',v:'--danger',label:t('progress.pressure'),unit:''},
+    {k:'pulse',v:'--accent-ink',label:t('progress.pulse'),unit:t('progress.bpm')},
+    {k:'sleep',v:'--rest-ink',label:t('progress.sleep'),unit:t('progress.hoursShort')}
   ];
-  return defs.map(s => {
-    const pts = ws.filter(p => p[s.k] != null).slice(-30);
-    s.have = pts.map(p => p[s.k]);
-    s.have2 = (s.pair && pts.length && pts.every(p => p[s.pair] != null)) ? pts.map(p => p[s.pair]) : null;
-    return s;
+  return defs.map(item => {
+    const pts = ws.filter(p => p[item.k] != null).slice(-30);
+    item.have = pts.map(p => p[item.k]);
+    item.have2 = (item.pair && pts.length && pts.every(p => p[item.pair] != null)) ? pts.map(p => p[item.pair]) : null;
+    return item;
   }).filter(L => L.have.length);
 }
 
 async function shareWeightChart(){
   const lanes = shareBodyLanes();
-  if(!lanes.length){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
-  await sharePng('Мои изменения', lanes, 'fittimer-progress.png');
+  if(!lanes.length){ appAlert(t('progress.addMetricFirst')); return; }
+  await sharePng(t('progress.myChanges'), lanes, 'fittimer-progress.png');
 }
 
 async function shareWellChart(){
   const lanes = shareWellLanes();
-  if(!lanes.length){ appAlert('Сначала запиши хотя бы одно измерение.'); return; }
-  await sharePng('Моё самочувствие', lanes, 'fittimer-wellness.png');
+  if(!lanes.length){ appAlert(t('progress.addWellnessFirst')); return; }
+  await sharePng(t('progress.myWellness'), lanes, 'fittimer-wellness.png');
 }
 
 /* ================= ИСТОРИЯ ВЕСА (правка задним числом) ================= */
@@ -5499,11 +5841,11 @@ function openWeightHist(){
     const cell = (k, lbl, v, st) => `<div class="whc"><label>${lbl}</label><input type="number" step="${st || 0.5}" inputmode="decimal" value="${v || ''}" data-k="${k}"></div>`;
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
       `<div class="wh-cells">` +
-        `<div class="whc"><label>Вес</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
-        cell('fat', 'Жир %', en.fat, 0.1) + cell('musc', 'Мышцы %', en.musc, 0.1) +
-        cell('waist', 'Талия', en.waist) + cell('hips', 'Бёдра', en.hips) + cell('chest', 'Грудь', en.chest) +
+        `<div class="whc"><label>${esc(t('common.weight'))}</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
+        cell('fat', t('progress.fat'), en.fat, 0.1) + cell('musc', t('progress.muscle'), en.musc, 0.1) +
+        cell('waist', t('progress.waistLabel'), en.waist) + cell('hips', t('progress.hipsLabel'), en.hips) + cell('chest', t('progress.chestLabel'), en.chest) +
       `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
