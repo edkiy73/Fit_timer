@@ -483,4 +483,7 @@ const I18N_EN = {
   'workout.shareTitle': "Workout result — Fit Timer",
   'workout.shareFallback': "Image saved to Downloads — share it from your gallery.",
   'workout.imageError': "Couldn’t create the image.",
+  'workout.switchSide': "Switch sides",
+  'workout.switchSideInstruction': "Switch sides and get into the starting position.",
+  'workout.restInstruction': "Catch your breath.",
 };
