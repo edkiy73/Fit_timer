@@ -1116,6 +1116,34 @@ function flashDone(btn, text){
 
    Формат обмена с нейросетью таблица НЕ трогает: prompt и apply — те же самые
    функции, что были на прежних экранах, просто названы по имени. */
+const AI_UI_KEYS = {
+  'Новая программа':'programs.newProgram','Вручную':'common.manual','Через ИИ':'common.viaAI','Из видео':'common.fromVideo',
+  'Упражнение':'builder.exercise','Редактирование':'ai.editTitle',
+  'Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.':'ai.createLead',
+  'Шаг 1 · О тебе и тренировке':'ai.stepAbout','Шаг 2 · Как собрать':'ai.stepBuild','Собрать за меня':'ai.buildForMe',
+  'Собираю программу':'ai.preparingProgram',
+  'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.':'ai.chatTaskNote',
+  'Вставь ответ нейросети целиком — программа откроется в конструкторе.':'ai.answerProgramHint','Собрать программу из ответа':'ai.buildFromAnswer',
+  'Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.':'ai.videoLead',
+  'Шаг 1 · Ссылка на видео':'ai.stepVideo','Шаг 2 · Как разобрать':'ai.stepParse','Разобрать за меня':'ai.parseForMe','Разбираю видео':'ai.parsingVideo',
+  'Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.':'ai.videoChatNote',
+  'Шаг 1 · Что поправить':'ai.stepWhatFix','Шаг 2 · Как внести правки':'ai.stepHowApply','Изменить за меня':'ai.changeForMe','Вношу изменения':'ai.applyingChanges',
+  'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.':'ai.editCopyNote',
+  'Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.':'ai.chatProgramNote',
+  'Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.':'ai.answerEditedHint','Создать изменённую программу':'ai.createEdited',
+  'Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.':'ai.exerciseLead',
+  'Шаг 1 · Какое упражнение нужно':'ai.stepExerciseNeed','Шаг 2 · Как подобрать упражнение':'ai.stepPickExercise','Подбираю упражнение':'ai.pickingExercise',
+  'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.':'ai.chatExerciseNote',
+  'Вставь ответ нейросети целиком — упражнение добавится в конец программы.':'ai.answerExerciseHint','Добавить в программу':'ai.addToProgram',
+  'Шаг 1 · Что поменять':'ai.stepWhatChange','Шаг 2 · Как применить':'ai.stepApply','Меняю упражнение':'ai.changingExercise',
+  'Картинка упражнения останется на месте.':'ai.keepImageNote','Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.':'ai.answerApplyHint',
+  'Применить изменения':'ai.applyChanges'
+};
+function aiUiText(value){
+  const raw=String(value == null ? '' : value);
+  const key=AI_UI_KEYS[raw];
+  return key ? t(key) : raw;
+}
 let aiSrc = null;                 // ключ текущего источника
 const AI_SOURCES = {
   text: {
@@ -1240,12 +1268,12 @@ function openAI(key){
   const c = AI_SOURCES[key];
   if(!c) return;
   aiSrc = key;
-  $('aiTitle').textContent = c.title;
-  $('aiStep1Title').textContent = c.step1;
-  $('aiStep2Title').textContent = c.step2;
-  $('aiSelfLabel').textContent = typeof c.self === 'function' ? c.self() : c.self;
-  $('aiApply').textContent = c.action;
-  $('aiAnswerHint').textContent = c.answerHint;
+  $('aiTitle').textContent = aiUiText(c.title);
+  $('aiStep1Title').textContent = aiUiText(c.step1);
+  $('aiStep2Title').textContent = aiUiText(c.step2);
+  $('aiSelfLabel').textContent = typeof c.self === 'function' ? c.self() : aiUiText(c.self);
+  $('aiApply').textContent = aiUiText(c.action);
+  $('aiAnswerHint').textContent = aiUiText(c.answerHint);
   $('aiResult').value = '';
 
   // вкладки режима: у программы их три, у упражнения две
@@ -1255,7 +1283,7 @@ function openAI(key){
     const b = document.createElement('button');
     b.className = 'tab' + (m === key || (m === 'ai' && key !== 'manual' && c.tabs.length === 2) ? ' act' : '');
     b.dataset.m = m;
-    b.textContent = label;
+    b.textContent = aiUiText(label);
     tabs.appendChild(b);
   });
   markAITab();
@@ -1265,7 +1293,7 @@ function openAI(key){
     setShown(box, !!val);
     if(!val) return;
     $(ico).innerHTML = icon(val[0]);
-    $(txt).textContent = val[1];
+    $(txt).textContent = aiUiText(val[1]);
   };
   note('aiLead', 'aiLeadIco', 'aiLeadTxt', c.lead);
   note('aiSelfNote', 'aiSelfNoteIco', 'aiSelfNoteTxt', c.selfNote);
@@ -1852,7 +1880,10 @@ const exa = {count: 1, format: '', level: '', muscles: [], equip: []};
 // прямо, и число упражнений в кнопке следует за выбором в «Сколько упражнений»
 function exaSelfLabel(){
   const n = exa.count || 1;
-  return n === 1 ? 'Подобрать упражнение' : `Подобрать ${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`;
+  if(n === 1) return t('ai.pickOneExercise');
+  return appLocale === 'ru'
+    ? `Подобрать ${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`
+    : t('ai.pickExercises', {count:n});
 }
 
 function exaChips(){
