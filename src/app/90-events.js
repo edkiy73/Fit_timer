@@ -120,21 +120,19 @@ async function nativeVoiceReady(){
 async function chooseHandsFree(mode){
   if(mode === 'voice'){
     if(!(window.FitNative && window.FitNative.offlineVoice) && !SR){
-      appAlert('На этом устройстве голосовое управление недоступно. Можно использовать кнопку на гарнитуре.');
+      appAlert(t('handsfree.unavailable'));
       return false;
     }
     if(window.FitNative && window.FitNative.offlineVoice && !(await nativeVoiceReady())){
       await refreshVoicePackUI();
-      appAlert('Сначала скачай голосовой пакет для выбранного языка. После загрузки команды будут работать без интернета.');
+      appAlert(t('handsfree.packFirst'));
       return false;
     }
   }
   setHfMode(mode);
   if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
-    appAlert((window.FitNative && window.FitNative.offlineVoice)
-      ? 'Готово. Во время тренировки скажи «дальше», «готово» или «пропустить», чтобы перейти дальше. «Пауза» остановит тренировку, «продолжить» — продолжит.'
-      : 'Голосовое управление включено. Скажи «дальше», «пауза» или «продолжить».');
+    appAlert(t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
   }
   return true;
 }
@@ -287,7 +285,7 @@ async function fillVoiceChoices(){
     list.forEach((v,i)=>{
       const o=document.createElement('option');
       o.value=v.id;
-      o.textContent=(v.name || ('Голос '+(i+1))) + (v.network ? ' · онлайн' : '');
+      o.textContent=(v.name || t('audio.voiceFallback',{count:i+1})) + (v.network ? ' · ' + t('audio.online') : '');
       sel.appendChild(o);
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
@@ -317,24 +315,24 @@ async function refreshVoicePackUI(progressEvent){
   else status = await window.FitNative.getVoiceModelStatus(recognitionLang);
 
   const size = (status && status.sizeMb) || (recognitionLang==='en' ? 40 : 45);
-  let label = status && status.installed ? 'Готово к работе офлайн' : `Нужно скачать один раз · около ${size} МБ`;
-  let button = status && status.installed ? 'Скачано' : 'Скачать';
+  let label = status && status.installed ? t('voicepack.ready') : t('voicepack.downloadOnce',{size});
+  let button = status && status.installed ? t('voicepack.downloaded') : t('voicepack.download');
   let disabled = !!(status && status.installed);
   if(status && status.status === 'queued'){
-    label = 'Загрузка поставлена в очередь. Можно выйти с этого экрана.';
-    button = 'В очереди';
+    label = t('voicepack.queued');
+    button = t('voicepack.inQueue');
     disabled = true;
   }else if(status && status.status === 'downloading'){
-    label = `Скачиваем… ${Math.max(0,Math.min(100,status.progress||0))}% · можно пользоваться приложением`;
-    button = 'Скачивается';
+    label = t('voicepack.downloading',{progress:Math.max(0,Math.min(100,status.progress||0))});
+    button = t('voicepack.downloadingBtn');
     disabled = true;
   }else if(status && status.status === 'extracting'){
-    label = 'Готовим пакет…';
-    button = 'Почти готово';
+    label = t('voicepack.extracting');
+    button = t('voicepack.almostReady');
     disabled = true;
   }else if(status && status.status === 'error'){
-    label='Не удалось скачать. Проверь интернет и попробуй ещё раз.';
-    button='Повторить';
+    label=t('voicepack.error');
+    button=t('voicepack.retry');
     disabled=false;
   }
   const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
@@ -360,7 +358,7 @@ async function downloadSelectedVoicePack(){
   for(const id of ['btnVoicePack','btnHfVoicePack']) if($(id)) $(id).disabled=true;
   const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
-  if(!ok) appAlert('Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.');
+  if(!ok) appAlert(t('voicepack.startError'));
 }
 
 function openHfModal(){
