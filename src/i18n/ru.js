@@ -483,4 +483,7 @@ const I18N_RU = {
   'workout.shareTitle': "Результат тренировки — Fit Timer",
   'workout.shareFallback': "Картинка сохранена в загрузки — отправь её из галереи.",
   'workout.imageError': "Не удалось создать картинку.",
+  'workout.switchSide': "Смените сторону",
+  'workout.switchSideInstruction': "Поменяй сторону и займи исходное положение.",
+  'workout.restInstruction': "Восстанови дыхание.",
 };
