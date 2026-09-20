@@ -243,15 +243,15 @@
         <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
         <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
-        <div class="chip"><b id="startExCount"></b> <span id="startExLabel">упражнений</span></div>
-        <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel">кругов</span></div>
+        <div class="chip"><b id="startExCount"></b> <span id="startExLabel" data-i18n="builder.exercisesSuffix">упражнений</span></div>
+        <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel" data-i18n="builder.roundsSuffix">кругов</span></div>
       </div>
 
       <div class="card-block hidden" id="progDescBox">
         <p class="cb-title" data-i18n="programs.about">О программе</p>
         <div class="prog-desc">
           <p id="progDescText"></p>
-          <button type="button" class="pd-more" id="progDescMore">Показать полностью</button>
+          <button type="button" class="pd-more" id="progDescMore" data-i18n="builder.showFull">Показать полностью</button>
         </div>
       </div>
 
@@ -265,9 +265,9 @@
           <p class="cb-title" data-i18n="programs.loadToday">Нагрузка сегодня</p>
           <p class="field-hint" data-i18n="programs.loadHint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
           <div class="ps-row">
-            <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений">−</button>
+            <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений" data-i18n-title="builder.lessProgress">−</button>
             <div class="ps-val"><b id="psCount">0</b><small data-i18n="programs.currentStep">текущий шаг</small></div>
-            <button type="button" class="ps-btn" id="psPlus" title="Больше повышений">+</button>
+            <button type="button" class="ps-btn" id="psPlus" title="Больше повышений" data-i18n-title="builder.moreProgress">+</button>
           </div>
         </div>
 
@@ -295,7 +295,7 @@
     </div>
 
     <div class="card-block">
-      <div class="field"><label data-i18n="programs.programName">Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц"></div>
+      <div class="field"><label data-i18n="programs.programName">Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц" data-i18n-placeholder="builder.programNameExample"></div>
       <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
         <span class="nr-ico" data-icon="calendar"></span>
         <div class="nr-body">
@@ -308,7 +308,7 @@
 
     <div class="card-block">
       <div class="cb-head">
-        <p class="cb-title" id="bVariantTitle">Упражнения</p>
+        <p class="cb-title" id="bVariantTitle" data-i18n="builder.exercisesTitle">Упражнения</p>
         <span class="cb-count" id="exCountNote"></span>
       </div>
       <p class="field-hint" id="bVariantHint"></p>
@@ -338,41 +338,41 @@
 
   <!-- Картинки программы: массовая загрузка -->
   <section class="screen builder" id="scrImages">
-    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2>Картинки упражнений</h2></div>
+    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2 data-i18n="builder.exerciseImagesTitle">Картинки упражнений</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="image"></span>
-      <span>У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.</span>
+      <span data-i18n="builder.imagesIntro">У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.</span>
     </div>
 
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Откуда взять картинки</p></div>
+      <div class="cb-head"><p class="cb-title" data-i18n="builder.imagesSource">Откуда взять картинки</p></div>
 
       <button type="button" class="hero-action" id="imgPick">
         <span class="ha-ico" data-icon="camera"></span>
-        <span class="ha-txt"><b>Выбрать с телефона</b><small>Загружаем и раскладываем</small></span>
+        <span class="ha-txt"><b data-i18n="builder.chooseFromPhone">Выбрать с телефона</b><small data-i18n="builder.uploadAndAssign">Загружаем и раскладываем</small></span>
         <span class="ha-go" data-icon="chevR"></span>
       </button>
       <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
 
-      <div class="or-line">или</div>
+      <div class="or-line" data-i18n="common.or">или</div>
 
       <button type="button" class="hero-action calm ai-self" id="imgSelfGen">
         <span class="ha-ico" data-icon="sparkle"></span>
-        <span class="ha-txt"><b>Нарисовать нейросетью</b><small class="ha-sub">Все картинки разом, в одном стиле — приложение сделает это само</small></span>
+        <span class="ha-txt"><b data-i18n="builder.generateWithAI">Нарисовать нейросетью</b><small class="ha-sub" data-i18n="builder.generateAllSub">Все картинки разом, в одном стиле — приложение сделает это само</small></span>
         <span class="ha-go" data-icon="chevR"></span>
       </button>
 
-      <p class="ways-head">Нарисовать в чате с ИИ</p>
+      <p class="ways-head" data-i18n="builder.generateInChat">Нарисовать в чате с ИИ</p>
     <div class="stack">
         <div class="note">
           <span class="n-ico" data-icon="chat"></span>
-          <span>Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.</span>
+          <span data-i18n="builder.generateInChatSub">Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.</span>
         </div>
         <div class="ways">
           <button type="button" class="way-row" id="imgPromptCopy">
             <span class="wr-ico" data-icon="copy"></span>
-            <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
+            <span class="wr-txt"><b data-i18n="builder.copyPrompt">Скопировать задание</b><small data-i18n="builder.copyPromptSub">Дальше его нужно вставить в любой чат</small></span>
           </button>
         </div>
       </div>
@@ -380,76 +380,76 @@
 
     <div class="card-block hidden" id="trayBox">
       <div class="cb-head">
-        <p class="cb-title">Загружено</p>
+        <p class="cb-title" data-i18n="builder.uploaded">Загружено</p>
         <span class="cb-count" id="trayCount"></span>
-        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto">Убрать</button>
+        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto" data-i18n="builder.remove">Убрать</button>
       </div>
       <p class="field-hint" id="trayLeft"></p>
       <div class="tray" id="tray"></div>
-      <button type="button" class="btn-ghost" id="trayAuto">Разложить по порядку</button>
+      <button type="button" class="btn-ghost" id="trayAuto" data-i18n="builder.assignOrder">Разложить по порядку</button>
     </div>
 
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Куда подставить</p></div>
-      <p class="field-hint">Нажми на место — предложим картинку из загруженных или с телефона.</p>
+      <div class="cb-head"><p class="cb-title" data-i18n="builder.assignWhere">Куда подставить</p></div>
+      <p class="field-hint" data-i18n="builder.assignHint">Нажми на место — предложим картинку из загруженных или с телефона.</p>
       <div class="list-rows" id="slotList"></div>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-secondary" id="imgDone">Готово</button>
+      <button class="btn-secondary" id="imgDone" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
   <!-- Выбор картинки для места -->
   <div class="modal" id="exitModal">
     <div class="modal-card">
-      <span class="mini-label">Прервать тренировку</span>
+      <span class="mini-label" data-i18n="workout.interrupt">Прервать тренировку</span>
       <p class="field-hint" id="exitProgress"></p>
-      <button class="choice" id="exitSave"><b>Сохранить и выйти</b><small>В следующий раз продолжишь с этого места</small></button>
-      <button class="choice primary" id="exitDrop"><b>Завершить полностью</b><small>Прогресс этой тренировки сбросится</small></button>
-      <button class="modal-btn" data-act="closeModal">Отмена</button>
+      <button class="choice" id="exitSave"><b data-i18n="workout.saveExit">Сохранить и выйти</b><small data-i18n="workout.saveExitSub">В следующий раз продолжишь с этого места</small></button>
+      <button class="choice primary" id="exitDrop"><b data-i18n="workout.finishCompletely">Завершить полностью</b><small data-i18n="workout.finishCompletelySub">Прогресс этой тренировки сбросится</small></button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
 
   <div class="modal" id="startModal">
     <div class="modal-card">
-      <span class="mini-label">С чего начать</span>
+      <span class="mini-label" data-i18n="workout.startFrom">С чего начать</span>
       <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
            стоит последним, у самого пальца, и единственный выделен -->
-      <button class="choice" id="startPick"><b>Выбрать упражнение</b><small>Начать с любого места программы</small></button>
-      <button class="choice" id="startResume"><b>Продолжить</b><small id="startResumeSub"></small></button>
-      <button class="choice primary" id="startFresh"><b>Начать сначала</b><small>С первого упражнения</small></button>
-      <button class="modal-btn" data-act="closeModal">Отмена</button>
+      <button class="choice" id="startPick"><b data-i18n="workout.chooseExercise">Выбрать упражнение</b><small data-i18n="workout.chooseExerciseSub">Начать с любого места программы</small></button>
+      <button class="choice" id="startResume"><b data-i18n="workout.continue">Продолжить</b><small id="startResumeSub"></small></button>
+      <button class="choice primary" id="startFresh"><b data-i18n="workout.startOver">Начать сначала</b><small data-i18n="workout.startOverSub">С первого упражнения</small></button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
 
   <div class="modal" id="pickStepModal">
     <div class="modal-card">
-      <span class="mini-label">С какого упражнения начать</span>
+      <span class="mini-label" data-i18n="workout.startExerciseTitle">С какого упражнения начать</span>
       <div class="pick-list" id="pickList"></div>
-      <button class="modal-btn" data-act="closeModal">Отмена</button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
 
   <div class="modal" id="aiRunModal" data-locked="1">
     <div class="modal-card" style="text-align:center">
       <div class="ai-spin"></div>
-      <b class="ai-run-title" id="aiRunTitle">Нейросеть работает</b>
-      <p class="ai-run-text" id="aiRunText">Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.</p>
+      <b class="ai-run-title" id="aiRunTitle" data-i18n="ai.working">Нейросеть работает</b>
+      <p class="ai-run-text" id="aiRunText" data-i18n="ai.workingHint">Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.</p>
       <p class="ai-run-timer" id="aiRunTimer">0:00</p>
-      <button class="btn-skip" id="aiRunCancel" style="margin-top:14px">Отменить</button>
+      <button class="btn-skip" id="aiRunCancel" style="margin-top:14px" data-i18n="common.abort">Отменить</button>
     </div>
   </div>
 
   <div class="modal" id="slotModal">
     <div class="modal-card">
-      <span class="mini-label" id="slotTitle">Картинка</span>
+      <span class="mini-label" id="slotTitle" data-i18n="builder.image">Картинка</span>
       <div class="tray" id="slotTray"></div>
-      <p class="field-hint hidden" id="slotEmptyHint">Загруженных картинок пока нет — выбери их с телефона.</p>
-      <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px">Выбрать с телефона</button>
+      <p class="field-hint hidden" id="slotEmptyHint" data-i18n="builder.noUploadedImages">Загруженных картинок пока нет — выбери их с телефона.</p>
+      <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px" data-i18n="builder.chooseFromPhone">Выбрать с телефона</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
-      <button type="button" class="modal-btn danger" id="slotRemove">Убрать картинку</button>
-      <button class="modal-btn" data-act="closeModal">Отмена</button>
+      <button type="button" class="modal-btn danger" id="slotRemove" data-i18n="builder.removeImage">Убрать картинку</button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
 
@@ -461,7 +461,7 @@
 
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
-    <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2>Настройки программы</h2></div>
+    <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2 data-i18n="programs.settings">Настройки программы</h2></div>
     <!-- Порядок карточек — по важности: расписание, потом круги и отдых, потом рост
          нагрузки, и только в конце оформление. Раньше первой стояла обложка с описанием,
          а дни приходилось искать третьей карточкой — притом что карточка «Когда
@@ -469,64 +469,64 @@
          они лежали ниже, в «Вариантах тренировки». Теперь дни рисуются здесь всегда,
          кроме случая «несколько вариантов, у каждого свои дни» (см. renderDays). -->
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Когда тренироваться</p></div>
+    <div class="cb-head"><p class="cb-title" data-i18n="builder.schedule">Когда тренироваться</p></div>
     <div class="sched-mode hidden" id="schedModeRow">
       <div class="hf-seg" id="schedSeg">
-        <button type="button" data-mode="days">По дням недели</button>
-        <button type="button" data-mode="rot">По очереди</button>
+        <button type="button" data-mode="days" data-i18n="builder.scheduleByDays">По дням недели</button>
+        <button type="button" data-mode="rot" data-i18n="builder.scheduleSequence">По очереди</button>
       </div>
       <p class="field-hint" id="schedHint"></p>
     </div>
-    <div class="field hidden" id="bDaysFieldTop"><label>Дни тренировок</label><div class="days" id="bDaysTop"></div>
+    <div class="field hidden" id="bDaysFieldTop"><label data-i18n="builder.trainingDays">Дни тренировок</label><div class="days" id="bDaysTop"></div>
       <p class="field-hint" id="bDaysTopHint"></p>
     </div>
-    <div class="field"><label>Время тренировки</label><input type="time" id="bTime">
-      <p class="field-hint">Напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
+    <div class="field"><label data-i18n="builder.trainingTime">Время тренировки</label><input type="time" id="bTime">
+      <p class="field-hint" data-i18n="builder.reminderHint">Напомним за 15 минут и в момент старта. Нужно разрешить уведомления.</p>
     </div>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title" id="variantsLabel">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
+    <div class="cb-head"><p class="cb-title" id="variantsLabel" data-i18n="builder.variants">Варианты тренировки</p><span class="cb-count" id="stVariantNote"></span></div>
     <p class="field-hint" id="variantsHint"></p>
     <div class="plan-tabs" id="planTabs"></div>
 
-    <div class="field" id="bDaysField"><label id="bDaysLabel">Дни этого варианта</label><div class="days" id="bDays"></div>
+    <div class="field" id="bDaysField"><label id="bDaysLabel" data-i18n="builder.variantDays">Дни этого варианта</label><div class="days" id="bDays"></div>
       <p class="field-hint" id="bDaysHint"></p>
     </div>
     <div class="row2">
-      <div class="field grow"><label>Кругов</label><select id="bRounds"></select></div>
-      <div class="field fit"><label>Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120"></div>
+      <div class="field grow"><label data-i18n="builder.rounds">Кругов</label><select id="bRounds"></select></div>
+      <div class="field fit"><label data-i18n="builder.restRounds">Отдых между кругами, сек</label><input type="number" id="bRoundRest" min="0" max="600" inputmode="numeric" placeholder="Например: 120" data-i18n-placeholder="builder.secondsExample"></div>
     </div>
     <p class="field-hint" id="bVolHint"></p>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Со временем сложнее</p></div>
-    <div class="pref-row"><span>Автоматически добавлять нагрузку<small>повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="cb-head"><p class="cb-title" data-i18n="builder.progressionTitle">Со временем сложнее</p></div>
+    <div class="pref-row"><span>Автоматически добавлять нагрузку<small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
-        <label>Как часто повышать</label>
+        <label data-i18n="builder.progressionFrequency">Как часто повышать</label>
         <select id="bProgEvery"></select>
       </div>
       <div class="note">
         <span class="n-ico" data-icon="chart"></span>
-        <span>Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.</span>
+        <span data-i18n="builder.progressionHint">Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.</span>
       </div>
     </div>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title">Описание и обложка</p></div>
+    <div class="cb-head"><p class="cb-title" data-i18n="builder.descriptionCover">Описание и обложка</p></div>
     <!-- Описание стоит выше картинки: его читают перед стартом, а обложка — только
          оформление списка. -->
-    <div class="field"><label>Описание (необязательно)</label>
-      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, как часто заниматься"></textarea>
+    <div class="field"><label data-i18n="builder.descriptionOptional">Описание (необязательно)</label>
+      <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, как часто заниматься" data-i18n-placeholder="builder.descriptionExample"></textarea>
       <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется перед стартом.</p>
     </div>
-    <div class="field"><label>Обложка (необязательно)</label>
+    <div class="field"><label data-i18n="builder.coverOptional">Обложка (необязательно)</label>
       <div class="media-row">
-        <button type="button" id="bCoverBtn">Выбрать фото</button>
-        <button type="button" id="bCoverNone">Без обложки</button>
+        <button type="button" id="bCoverBtn" data-i18n="builder.choosePhoto">Выбрать фото</button>
+        <button type="button" id="bCoverNone" data-i18n="builder.noCover">Без обложки</button>
       </div>
       <input type="file" id="bCoverFile" accept="image/*" class="hidden">
       <div class="media-preview" id="bCoverPrev"></div>
@@ -534,7 +534,7 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPsDone">Готово</button>
+      <button class="btn-primary" id="btnPsDone" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
@@ -542,24 +542,24 @@
   <section class="screen builder" id="scrExercise">
     <div class="screen-head">
       <button class="back-chip" id="exBackTop"></button>
-      <h2>Упражнение</h2>
+      <h2 data-i18n="builder.exercise">Упражнение</h2>
       <div class="prog-menu-wrap" id="exMoreWrap">
-        <button class="more-btn" id="exMore" title="Действия"></button>
+        <button class="more-btn" id="exMore" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="exMenu"></div>
       </div>
     </div>
 
     <div class="tabs" id="exModeTabs">
       <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
-      <button class="tab" data-m="ai">Через ИИ</button>
+      <button class="tab" data-m="ai" data-i18n="common.viaAI">Через ИИ</button>
     </div>
 
     <div class="card-block">
-      <div class="field"><label>Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания"></div>
-      <div class="field"><label>Как считать</label>
+      <div class="field"><label data-i18n="builder.name">Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания" data-i18n-placeholder="builder.exerciseNameExample"></div>
+      <div class="field"><label data-i18n="builder.countMode">Как считать</label>
         <div class="seg">
-          <button type="button" id="exTypeReps">Повторения</button>
-          <button type="button" id="exTypeTime">Время</button>
+          <button type="button" id="exTypeReps" data-i18n="builder.reps">Повторения</button>
+          <button type="button" id="exTypeTime" data-i18n="builder.time">Время</button>
         </div>
         <p class="field-hint" id="exTypeHint"></p>
       </div>
@@ -567,27 +567,27 @@
            и с повторениями (снаряд), и со временем (удержание или перенос с грузом —
            планка с блином, фермерская прогулка). Раньше «С весом» был третьей кнопкой
            в этом же ряду, и добраться до «время и вес» было нечем. -->
-      <div class="pref-row"><span>Упражнение с доп. весом<small>снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
+      <div class="pref-row"><span>Упражнение с доп. весом<small data-i18n="builder.weightedSub">снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
       <div class="row2">
-        <div class="field"><label id="exValLabel">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15"></div>
-        <div class="field" id="exSetsField"><label>Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3"></div>
+        <div class="field"><label id="exValLabel" data-i18n="builder.repsCount">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15" data-i18n-placeholder="builder.repsExample"></div>
+        <div class="field" id="exSetsField"><label data-i18n="builder.sets">Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3" data-i18n-placeholder="builder.setsExample"></div>
       </div>
-      <div class="field hidden" id="exWeightRow"><label>Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8"></div>
+      <div class="field hidden" id="exWeightRow"><label data-i18n="builder.weightKg">Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
       <p class="field-hint hidden" id="exNowHint"></p>
       <!-- Два разных отдыха: между подходами ОДНОГО упражнения обычно короче, чем
            после него целиком — например, дальше идёт совсем другая группа мышц,
            или наоборот, лёгкое упражнение и ждать незачем. У каждого свой чип-ряд;
            число вводится через попап #restModal, лишнего инпута в разметке нет. -->
-      <div class="field"><label>Отдых между подходами, сек</label>
+      <div class="field"><label data-i18n="builder.restSets">Отдых между подходами, сек</label>
         <div class="load-row" id="exRestChips"></div>
-        <p class="field-hint">Между каждым подходом, если их больше одного.</p>
+        <p class="field-hint" data-i18n="builder.restSetsHint">Между каждым подходом, если их больше одного.</p>
       </div>
-      <div class="field"><label>Отдых после упражнения, сек</label>
+      <div class="field"><label data-i18n="builder.restAfter">Отдых после упражнения, сек</label>
         <div class="load-row" id="exRestAfterChips"></div>
-        <p class="field-hint">После всего упражнения, перед следующим.</p>
+        <p class="field-hint" data-i18n="builder.restAfterHint">После всего упражнения, перед следующим.</p>
       </div>
-      <div class="pref-row"><span>Разминка<small>делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
-      <div class="pref-row"><span>На каждую сторону<small>выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
+      <div class="pref-row"><span>Разминка<small data-i18n="builder.warmupSub">делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
+      <div class="pref-row"><span>На каждую сторону<small data-i18n="builder.eachSideSub">выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
     </div>
 
     <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
@@ -598,7 +598,7 @@
          которые приходилось держать в синхроне руками. -->
     <div class="card-block">
       <button type="button" class="collapse-head" id="exProgToggle">
-        <span>Со временем сложнее</span>
+        <span data-i18n="builder.progressionTitle">Со временем сложнее</span>
         <span class="st-sum" id="exProgSum"></span>
         <span class="st-chev" id="exProgChev"></span>
       </button>
@@ -611,40 +611,40 @@
                главная ось упражнения должна стоять выше своей добавки. Раньше
                весовая пара лежала между повторениями и временем, и на формате
                «время и вес» вес оказывался НАД секундами. -->
-          <div class="field hidden" id="exStepRepsRow"><label>Прибавка, повт.</label><input type="text" id="exStepReps" maxlength="4" inputmode="numeric" placeholder="Например: 1"></div>
-          <div class="field hidden" id="exStepMaxRepsRow"><label>Максимум, повт.</label><input type="text" id="exMaxReps" maxlength="4" inputmode="numeric" placeholder="Например: 15"></div>
-          <div class="field hidden" id="exStepTimeRow"><label>Прибавка, сек</label><input type="text" id="exStepTime" maxlength="5" inputmode="numeric" placeholder="Например: 5"></div>
-          <div class="field hidden" id="exStepMaxTimeRow"><label>Максимум, сек</label><input type="text" id="exMaxTime" maxlength="5" inputmode="numeric" placeholder="Например: 60"></div>
-          <div class="field hidden" id="exStepWeightRow"><label>Прибавка, кг</label><input type="text" id="exStepWeight" maxlength="6" inputmode="decimal" placeholder="Например: 2"></div>
-          <div class="field hidden" id="exStepMaxWeightRow"><label>Максимум, кг</label><input type="text" id="exMaxWeight" maxlength="6" inputmode="decimal" placeholder="Например: 24"></div>
+          <div class="field hidden" id="exStepRepsRow"><label data-i18n="builder.stepReps">Прибавка, повт.</label><input type="text" id="exStepReps" maxlength="4" inputmode="numeric" placeholder="Например: 1" data-i18n-placeholder="builder.stepRepsExample"></div>
+          <div class="field hidden" id="exStepMaxRepsRow"><label data-i18n="builder.maxReps">Максимум, повт.</label><input type="text" id="exMaxReps" maxlength="4" inputmode="numeric" placeholder="Например: 15" data-i18n-placeholder="builder.maxRepsExample"></div>
+          <div class="field hidden" id="exStepTimeRow"><label data-i18n="builder.stepTime">Прибавка, сек</label><input type="text" id="exStepTime" maxlength="5" inputmode="numeric" placeholder="Например: 5" data-i18n-placeholder="builder.stepTimeExample"></div>
+          <div class="field hidden" id="exStepMaxTimeRow"><label data-i18n="builder.maxTime">Максимум, сек</label><input type="text" id="exMaxTime" maxlength="5" inputmode="numeric" placeholder="Например: 60" data-i18n-placeholder="builder.maxTimeExample"></div>
+          <div class="field hidden" id="exStepWeightRow"><label data-i18n="builder.stepWeight">Прибавка, кг</label><input type="text" id="exStepWeight" maxlength="6" inputmode="decimal" placeholder="Например: 2" data-i18n-placeholder="builder.stepWeightExample"></div>
+          <div class="field hidden" id="exStepMaxWeightRow"><label data-i18n="builder.maxWeight">Максимум, кг</label><input type="text" id="exMaxWeight" maxlength="6" inputmode="decimal" placeholder="Например: 24" data-i18n-placeholder="builder.maxWeightExample"></div>
         </div>
-        <p class="field-hint hidden" id="exStepBothHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
-        <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small>повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
-        <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small>подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+        <p class="field-hint hidden" id="exStepBothHint" data-i18n="builder.stepHint">«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.</p>
+        <div class="pref-row hidden" id="exDualRow"><span>Дошли до максимума — добавить вес<small data-i18n="builder.resetRepsAddWeight">повторения вернутся к началу, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
+        <div class="pref-row hidden" id="exSwapRow"><span>Есть упражнение посложнее<small data-i18n="builder.swapSub">подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
         <div class="stack hidden" id="exSwapBox">
-          <div class="field"><label>Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении"></div>
-          <div class="field"><label>Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить"></textarea></div>
-          <p class="field-hint">Дойдёт до максимума — на тренировке появится значок «можно усложнить».</p>
+          <div class="field"><label data-i18n="builder.swapWith">Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении" data-i18n-placeholder="builder.swapNameExample"></div>
+          <div class="field"><label data-i18n="builder.swapHow">Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить" data-i18n-placeholder="builder.swapDescExample"></textarea></div>
+          <p class="field-hint" data-i18n="builder.swapHint">Дойдёт до максимума — на тренировке появится значок «можно усложнить».</p>
         </div>
       </div>
     </div>
 
     <div class="card-block">
     <button type="button" class="collapse-head" id="exDetailsToggle">
-      <span>Детали</span>
+      <span data-i18n="builder.details">Детали</span>
       <span class="st-sum" id="exDetailsSum"></span>
       <span class="st-chev" id="exDetailsChev"></span>
     </button>
 
     <div id="exDetailsBox" class="stack hidden">
-      <div class="field"><label>Как выполнять</label><textarea id="exDesc" maxlength="600" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание"></textarea></div>
-      <div class="field"><label>Частые ошибки (необязательно)</label><textarea id="exMistakes" maxlength="300" class="auto-grow" placeholder="Чего избегать при выполнении"></textarea></div>
-      <div class="field"><label>Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
-      <div class="field"><label>Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
-      <div class="field"><label>Картинка</label>
+      <div class="field"><label data-i18n="builder.howTo">Как выполнять</label><textarea id="exDesc" maxlength="600" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание" data-i18n-placeholder="builder.howToExample"></textarea></div>
+      <div class="field"><label data-i18n="builder.mistakesOptional">Частые ошибки (необязательно)</label><textarea id="exMistakes" maxlength="300" class="auto-grow" placeholder="Чего избегать при выполнении" data-i18n-placeholder="builder.mistakesExample"></textarea></div>
+      <div class="field"><label data-i18n="builder.muscles">Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
+      <div class="field"><label data-i18n="builder.videoOptional">Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
+      <div class="field"><label data-i18n="builder.image">Картинка</label>
         <div class="media-row">
-          <button type="button" id="exMediaBtn">Выбрать фото</button>
-          <button type="button" id="exMediaNone">Убрать</button>
+          <button type="button" id="exMediaBtn" data-i18n="builder.choosePhoto">Выбрать фото</button>
+          <button type="button" id="exMediaNone" data-i18n="builder.remove">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" class="hidden">
         <div class="media-preview" id="exMediaPrev"></div>
@@ -653,7 +653,7 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveEx">Готово</button>
+      <button class="btn-primary" id="btnSaveEx" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
@@ -671,11 +671,11 @@
   <section class="screen builder" id="scrAI">
     <div class="screen-head">
       <button class="back-chip" id="aiBackTop"></button>
-      <h2 id="aiTitle">Через ИИ</h2>
+      <h2 id="aiTitle" data-i18n="common.viaAI">Через ИИ</h2>
       <!-- Те же действия над упражнением, что и на вкладке «Вручную»: вкладка
            меняет способ, а не то, с чем человек работает. -->
       <div class="prog-menu-wrap hidden" id="aiMenuWrap">
-        <button class="more-btn" id="aiMore" title="Действия"></button>
+        <button class="more-btn" id="aiMore" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="aiMenu"></div>
       </div>
     </div>
@@ -693,70 +693,70 @@
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title" id="aiStep1Title">Шаг 1</p></div>
+    <div class="cb-head"><p class="cb-title" id="aiStep1Title" data-i18n="ai.step1">Шаг 1</p></div>
 
     <div class="ai-pane hidden" id="aiPaneText">
-      <p class="field-hint">Отмечай только важное — остальное подберётся само.</p>
-      <div class="field"><label>Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
-      <div class="field"><label>Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
-      <div class="field"><label>Дни недели</label><div class="days" id="qDays"></div></div>
-      <div class="field"><label>Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
-      <div class="field"><label>Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
-      <div class="field"><label>Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
-      <div class="field"><label>Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
-      <div class="field"><label>Свой запрос (необязательно)</label>
-        <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу"></textarea>
+      <p class="field-hint" data-i18n="ai.onlyImportant">Отмечай только важное — остальное подберётся само.</p>
+      <div class="field"><label data-i18n="ai.goal">Цель</label><div class="days chips-wrap" id="qGoal"></div></div>
+      <div class="field"><label data-i18n="ai.level">Уровень</label><div class="days chips-wrap" id="qLevel"></div></div>
+      <div class="field"><label data-i18n="ai.weekdays">Дни недели</label><div class="days" id="qDays"></div></div>
+      <div class="field"><label data-i18n="ai.duration">Длительность</label><div class="days chips-wrap" id="qDur"></div></div>
+      <div class="field"><label data-i18n="ai.bodyFocus">Акцент на части тела</label><div class="days chips-wrap" id="qFocus"></div></div>
+      <div class="field"><label data-i18n="ai.equipment">Инвентарь</label><div class="days chips-wrap" id="qEquip"></div></div>
+      <div class="field"><label data-i18n="ai.limitations">Ограничения</label><div class="days chips-wrap" id="qLimit"></div></div>
+      <div class="field"><label data-i18n="ai.customRequestOptional">Свой запрос (необязательно)</label>
+        <textarea id="qNote" class="auto-grow" maxlength="300" style="min-height:70px" placeholder="Например: люблю планку, добавь растяжку в конце, без музыки на полу" data-i18n-placeholder="ai.customRequestExample"></textarea>
       </div>
-      <div class="field"><label>Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
-      <div class="field"><label>Разминка</label><div class="opt-list" id="qWarm"></div></div>
-      <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small>например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
-      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small>сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
+      <div class="field"><label data-i18n="ai.exerciseOrder">Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
+      <div class="field"><label data-i18n="ai.warmup">Разминка</label><div class="opt-list" id="qWarm"></div></div>
+      <div class="pref-row" style="border-top:none;padding-top:2px"><span>Разные упражнения в разные дни<small data-i18n="ai.splitDaysSub">например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span>Чередовать варианты по очереди<small data-i18n="ai.rotateSub">сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneVideo">
       <div class="field">
         <input type="url" id="ytUrl" maxlength="300" placeholder="https://youtube.com/watch?v=...">
-        <p class="field-hint" id="ytHint">Обычная ссылка или короткая youtu.be.</p>
+        <p class="field-hint" id="ytHint" data-i18n="ai.youtubeHint">Обычная ссылка или короткая youtu.be.</p>
       </div>
-      <div class="field"><label>Пожелания (необязательно)</label>
-        <textarea id="ytWish" maxlength="600" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку"></textarea>
+      <div class="field"><label data-i18n="ai.wishesOptional">Пожелания (необязательно)</label>
+        <textarea id="ytWish" maxlength="600" class="auto-grow" style="min-height:90px" placeholder="Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку" data-i18n-placeholder="ai.youtubeWishExample"></textarea>
       </div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneEdit">
       <div class="field">
-        <textarea id="eaWish" maxlength="600" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей"></textarea>
-        <p class="field-hint">Нейросеть получит программу целиком и поправит только то, о чём просишь.</p>
+        <textarea id="eaWish" maxlength="600" class="auto-grow" style="min-height:120px" placeholder="Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей" data-i18n-placeholder="ai.editWishExample"></textarea>
+        <p class="field-hint" data-i18n="ai.editProgramHint">Нейросеть получит программу целиком и поправит только то, о чём просишь.</p>
       </div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneExNew">
       <div class="field">
-        <textarea id="exaWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»"></textarea>
-        <p class="field-hint">Назови упражнение или опиши, что нужно, — подберётся само.</p>
+        <textarea id="exaWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»" data-i18n-placeholder="ai.exerciseWishExample"></textarea>
+        <p class="field-hint" data-i18n="ai.exerciseRequestHint">Назови упражнение или опиши, что нужно, — подберётся само.</p>
       </div>
-      <div class="field"><label>Сколько упражнений</label><select id="exaCount"></select></div>
-      <div class="field"><label>Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
-      <div class="field"><label>Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
-      <div class="field"><label>Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
-      <div class="field"><label>Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
-        <p class="field-hint">Что не выберешь — подберётся само, исходя из описания.</p>
+      <div class="field"><label data-i18n="ai.exerciseCount">Сколько упражнений</label><select id="exaCount"></select></div>
+      <div class="field"><label data-i18n="ai.formatOptional">Формат (необязательно)</label><div class="days chips-wrap" id="exaFormat"></div></div>
+      <div class="field"><label data-i18n="ai.levelOptional">Уровень (необязательно)</label><div class="days chips-wrap" id="exaLevel"></div></div>
+      <div class="field"><label data-i18n="ai.musclesOptional">Целевые мышцы (необязательно)</label><div class="days chips-wrap" id="exaMuscles"></div></div>
+      <div class="field"><label data-i18n="ai.equipmentOptional">Инвентарь (необязательно)</label><div class="days chips-wrap" id="exaEquip"></div>
+        <p class="field-hint" data-i18n="ai.autoPickHint">Что не выберешь — подберётся само, исходя из описания.</p>
       </div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneExEdit">
       <div class="field">
-        <textarea id="exeWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений"></textarea>
+        <textarea id="exeWish" maxlength="600" class="auto-grow" style="min-height:100px" placeholder="Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений" data-i18n-placeholder="ai.exerciseEditWishExample"></textarea>
       </div>
     </div>
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title" id="aiStep2Title">Шаг 2</p></div>
+    <div class="cb-head"><p class="cb-title" id="aiStep2Title" data-i18n="ai.step2">Шаг 2</p></div>
 
     <button type="button" class="hero-action ai-self" id="aiSelf">
       <span class="ha-ico" data-icon="sparkle"></span>
-      <span class="ha-txt"><b id="aiSelfLabel">Сделать за меня</b><small class="ha-sub">Приложение сделает это само</small></span>
+      <span class="ha-txt"><b id="aiSelfLabel" data-i18n="ai.doForMe">Сделать за меня</b><small class="ha-sub" data-i18n="ai.appDoesIt">Приложение сделает это само</small></span>
       <span class="ha-go" data-icon="chevR"></span>
     </button>
 
@@ -766,9 +766,9 @@
       <span id="aiSelfNoteTxt"></span>
     </div>
 
-    <div class="or-line">или</div>
+    <div class="or-line" data-i18n="common.or">или</div>
 
-    <p class="ways-head">Сделать в чате с ИИ</p>
+    <p class="ways-head" data-i18n="ai.inChat">Сделать в чате с ИИ</p>
     <div class="stack">
       <div class="note hidden" id="aiChatNote">
         <span class="n-ico" id="aiChatNoteIco"></span>
@@ -777,26 +777,26 @@
       <div class="ways">
         <button type="button" class="way-row" id="aiCopy">
           <span class="wr-ico" data-icon="copy"></span>
-          <span class="wr-txt"><b>Скопировать задание</b><small>Дальше его нужно вставить в любой чат</small></span>
+          <span class="wr-txt"><b data-i18n="builder.copyPrompt">Скопировать задание</b><small data-i18n="builder.copyPromptSub">Дальше его нужно вставить в любой чат</small></span>
         </button>
         <button type="button" class="way-row hidden" id="aiCopyFull">
           <span class="wr-ico" data-icon="download"></span>
-          <span class="wr-txt"><b>Скопировать саму программу</b><small>Вся программа текстом — обсудить где угодно и вернуть ответ сюда</small></span>
+          <span class="wr-txt"><b data-i18n="ai.copyProgram">Скопировать саму программу</b><small data-i18n="ai.copyProgramSub">Вся программа текстом — обсудить где угодно и вернуть ответ сюда</small></span>
         </button>
       </div>
     </div>
     </div>
 
     <div class="card-block hidden" id="aiAnswer">
-    <div class="cb-head"><p class="cb-title">Шаг 3 · Ответ из чата</p></div>
+    <div class="cb-head"><p class="cb-title" data-i18n="ai.step3">Шаг 3 · Ответ из чата</p></div>
     <p class="field-hint" id="aiAnswerHint"></p>
     <div class="field">
-      <textarea id="aiResult" maxlength="80000" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда"></textarea>
+      <textarea id="aiResult" maxlength="80000" class="auto-grow" style="min-height:150px" placeholder="Скопируй ответ нейросети целиком и вставь сюда" data-i18n-placeholder="ai.resultPlaceholder"></textarea>
     </div>
     </div>
 
     <div class="builder-actions" id="aiActions">
-      <button class="btn-secondary" id="aiApply">Собрать</button>
+      <button class="btn-secondary" id="aiApply" data-i18n="ai.build">Собрать</button>
     </div>
   </section>
 
