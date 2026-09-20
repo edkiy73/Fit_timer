@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1235,
-      "chars": 59162,
+      "lines": 1259,
+      "chars": 60445,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -77,6 +77,8 @@
         "tag",
         "takeSnap",
         "tick",
+        "voiceIsEnglish",
+        "voicePlural",
         "voicesForLang",
         "workoutLoadSnapshot"
       ]
@@ -323,11 +325,12 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2391,
-      "chars": 112902,
+      "lines": 2399,
+      "chars": 112531,
       "symbols": [
         "ageError",
         "aiAuth",
+        "aiUiText",
         "apiFetch",
         "apiPost",
         "apply",
@@ -352,6 +355,7 @@
         "editAIPrompt",
         "exaAddExercise",
         "exaChips",
+        "exAnswerFormat",
         "exaPrompt",
         "exaSelfLabel",
         "exePrompt",
@@ -508,9 +512,12 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2051,
-      "chars": 97696,
+      "lines": 2004,
+      "chars": 93959,
       "symbols": [
+        "aiChoiceEnglish",
+        "aiListEnglish",
+        "aiPrompt",
         "applyFormTo",
         "axisAtCeiling",
         "blankExercise",
@@ -620,8 +627,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1311,
-      "chars": 61043,
+      "lines": 1315,
+      "chars": 61305,
       "symbols": [
         "afterExChange",
         "autoGrow",
@@ -687,7 +694,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 455,
-      "chars": 21798,
+      "chars": 21612,
       "symbols": [
         "advance",
         "applyTheme",
@@ -695,6 +702,7 @@
         "applyVoiceCommand",
         "buildRecog",
         "checkSchedules",
+        "hfHintText",
         "resetVoiceDedup",
         "setHfMode",
         "showNotification",
@@ -712,8 +720,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1827,
-      "chars": 77979,
+      "lines": 1825,
+      "chars": 77614,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -846,7 +854,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 617,
-      "chars": 34424,
+      "chars": 39862,
       "ids": [
         "aiActions",
         "aiAnswer",
