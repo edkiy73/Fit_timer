@@ -59,6 +59,13 @@ These are invariants unless the user explicitly changes them.
 - Account itself is free; paid features/subscription are separate.
 - Do not store date of birth; use full age where age is required.
 
+### Localization
+
+- App UI locale is `appLocale: 'ru' | 'en'`. New user-facing copy should use `t(key)` or `data-i18n*`, not new hardcoded RU/EN branches.
+- UI language, TTS language/voice, and voice-command recognition language are separate settings.
+- Keep RU and EN dictionaries in sync and run `npm run i18n:check`.
+- Follow `docs/i18n-plan.md` for the staged migration and AI/catalog localization model.
+
 ### Language and terminology
 
 - User-facing language is Russian unless the feature explicitly requires another language.

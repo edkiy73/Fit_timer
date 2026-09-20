@@ -49,12 +49,18 @@ Use `npm run ai:context -- "task description"` as the preferred first step for p
 | `src/html/*.html` | canonical screen/modal markup chunks | adding/moving UI, finding element IDs |
 | `src/styles/*.css` | canonical style chunks | layout/spacing/visual bugs |
 | `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
+| `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
 | `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
 | `app.config.js` | runtime public config bootstrap | API/public URL behavior |
 | `sw.js` | PWA service worker/cache | stale assets/update behavior |
 | `manifest.webmanifest` | PWA metadata | install/PWA metadata |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
+
+Localization:
+- `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
+- `src/i18n/index.js` — locale detection, persistence, `t()`, and `data-i18n*` application.
+- `npm run i18n:check` — verifies dictionary parity and HTML translation keys.
 
 Canonical JS chunks:
 - `src/app/00-core.js` — shared core/navigation/start helpers.
