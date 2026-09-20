@@ -14,7 +14,8 @@
     "check:sources": "node scripts/build-sources.mjs --check",
     "ai:index": "node scripts/generate-ai-index.mjs",
     "check:ai-index": "node scripts/generate-ai-index.mjs --check",
-    "ai:route": "node scripts/route-ai-task.mjs"
+    "ai:route": "node scripts/route-ai-task.mjs",
+    "ai:context": "node scripts/ai-context-pack.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",

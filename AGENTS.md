@@ -8,11 +8,12 @@ Goal: make the smallest correct change with the least repository reading and the
 Before editing:
 1. Read this file.
 2. Read `.ai/project-map.md`.
-3. Route the task through `.ai/feature-router.json` (or `npm run ai:route -- "task"`) to get the smallest likely file/test set.
-4. Search `.ai/symbol-index.json` for the function, element id, `data-act`, or likely owner file.
-5. Identify the feature area and read only the mapped files.
-6. Search source text only if the router/index are insufficient.
-7. Read `docs/why.md` or a feature doc only when the task touches that feature.
+3. Prefer one-shot context packaging: `npm run ai:context -- "task"`. It returns the route, likely files/tests/docs, targeted excerpts, symbol hints, recent commits and current diff.
+4. If needed, route the task through `.ai/feature-router.json` (or `npm run ai:route -- "task"`) to get the smallest likely file/test set.
+5. Search `.ai/symbol-index.json` only when the context pack is insufficient.
+6. Identify the feature area and read only the mapped files.
+7. Search source text only if the context pack/router/index are insufficient.
+8. Read `docs/why.md` or a feature doc only when the task touches that feature.
 
 Do **not** read all of `CLAUDE.md`, `app.js`, `style.css`, or `index.html` by default.
 They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed product history/reference, not the normal first read.

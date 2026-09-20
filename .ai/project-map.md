@@ -30,6 +30,10 @@ Production web/API: `https://fittimer99.vercel.app`
 Mobile app id: `ru.fittimer.app`
 Production branch: `main`
 
+## One-shot context pack
+
+Use `npm run ai:context -- "task description"` as the preferred first step for product-language tasks. It combines the feature route, likely files/tests/docs, matching source excerpts, symbol hints, recent commits and current diff into one compact response. Add `--write` to save it as `.ai/context-pack.md` for local agent sessions.
+
 ## Feature router
 
 `.ai/feature-router.json` maps natural-language task categories to the smallest likely source files, tests, docs and verification commands. Use `npm run ai:route -- "task description"` before source search when the task is described in product language rather than by a known symbol.
