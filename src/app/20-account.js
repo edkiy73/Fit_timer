@@ -14,7 +14,7 @@ function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
   const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
-  $('ueTitle').textContent = id ? 'Профиль' : 'Новый профиль';
+  $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
   $('ueAge').value = profileAge(uDraft) || '';
   setTimeout(()=> takeSnap('user', userState()), 0);
@@ -55,10 +55,10 @@ async function saveUser(){
   uDraft.age = validAge($('ueAge').value);
   uDraft.syncAt = new Date().toISOString();
   readTimings();
-  if(!uDraft.name){ appAlert('Укажи имя.'); return; }
+  if(!uDraft.name){ appAlert(t('profile.nameRequired')); return; }
   // пол и возраст — не украшение анкеты: они уходят в запрос к ИИ и определяют
   // подбор упражнений, нагрузку и восстановление. Пустыми их оставлять нельзя
-  if(!uDraft.gender){ appAlert('Выбери пол — от него зависит подбор упражнений и нагрузка.'); return; }
+  if(!uDraft.gender){ appAlert(t('profile.genderRequired')); return; }
   const aErr = ageError($('ueAge').value, true);
   if(aErr){
     appAlert(aErr);
@@ -95,12 +95,11 @@ async function saveUser(){
 async function deleteUser(){
   if(!uDraft.id) return;
   if(users.length <= 1){
-    await appAlert('Это единственный профиль — без него приложению не с чем работать. '
-      + 'Чтобы стереть всё, открой «Аккаунт» и выбери «Удалить все данные».');
+    await appAlert(t('profile.onlyOne'));
     return;
   }
-  const msg = `Удалить профиль «${uDraft.name}» вместе со всеми его программами и статистикой?`;
-  if(!(await appDialog(msg, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  const msg = t('profile.deleteQuestion',{name:uDraft.name});
+  if(!(await appDialog(msg, {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   const id = uDraft.id;
   const removed = users.find(x => x.id === id);
   if(removed){
@@ -145,13 +144,10 @@ async function wipeAccount(){
   const coach = !!(trainer && trainer.key && (trainer.handle || '').trim());
   const server = coach || linked;
   const ok = await appDialog(
-    (linked ? 'Удалить аккаунт и все данные? ' : 'Удалить все данные? ')
-      + 'Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.'
-      + (coach ? ' Со страницы тренера уйдут сведения о тебе, отправленные подопечным ссылки '
-                 + 'перестанут открываться. Программы, отданные в каталог, там останутся: '
-                 + 'их уже взяли себе люди, и забирать сделанное задним числом — не то же самое, '
-                 + 'что стереть данные о себе.' : ''),
-    {confirm: true, okText: 'Удалить всё', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    (linked ? t('account.deleteAccountQuestion') : t('account.deleteDataQuestion'))
+      + t('account.deleteLocalWarning')
+      + (coach ? t('account.deleteCoachWarning') : ''),
+    {confirm: true, okText: t('account.deleteAll'), cancelText: t('common.cancel'), type: t('account.deleteConfirmPhrase')}
   );
   if(!ok) return;
   if(server){
@@ -160,9 +156,8 @@ async function wipeAccount(){
       // Молча стереть телефон нельзя: ключ уйдёт вместе с ним, и данные на сервере
       // не сможет удалить уже никто. Решение за человеком.
       const anyway = await appDialog(
-        'Сервер не ответил, и на нём всё осталось. Если стереть телефон сейчас, удалить это '
-        + 'потом будет нельзя: ключ хранится только здесь. Стереть всё равно?',
-        {confirm: true, okText: 'Стереть всё равно', cancelText: 'Подождать'}
+        t('account.serverDeleteFailed'),
+        {confirm: true, okText: t('account.eraseAnyway'), cancelText: t('common.wait')}
       );
       if(!anyway) return;
     }
@@ -284,7 +279,7 @@ function userCurrency(){
 function money(v, cur){
   const frac = (Math.round(v * 100) % 100) ? 2 : 0;
   try{
-    return new Intl.NumberFormat(navigator.language || 'ru-RU',
+    return new Intl.NumberFormat(localeTag(),
       {style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac}).format(v);
   }catch(e){ return v + ' ' + cur; }
 }
@@ -304,9 +299,7 @@ function planUntil(plan, from){
   return d.toISOString();
 }
 // «10 сентября 2027 г.» в конце фразы даёт двойную точку и лишний хвост — убираем «г.»
-const humanDate = iso => new Date(iso)
-  .toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})
-  .replace(/\s*г\.$/, '');
+const humanDate = iso => new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'long', year:'numeric'}).format(new Date(iso));
 // цена за месяц при годовой оплате: округляем до точности самой цены, иначе
 // в рублях получается «249,17 ₽», чего не бывает ни в одном ценнике
 function perMonth(pr, cur){
@@ -325,22 +318,22 @@ function renderPremium(){
   setShown('pmPlans', !on);
   setShown('pmBuy', !on);
   if(on){
-    $('pmStateTitle').textContent = `Премиум до ${humanDate(account.sub.until)}`;
+    $('pmStateTitle').textContent = t('premium.until',{date:humanDate(account.sub.until)});
     $('pmStateSub').textContent = account.sub.autoRenew
-      ? `Продлится сам — ${subPrice()} ${account.sub.plan === 'year' ? 'в год' : 'в месяц'}`
-      : 'Продление выключено: после этой даты вернётся бесплатный тариф';
-    $('pmFine').textContent = 'Управление подпиской — в разделе «Аккаунт».';
+      ? t(account.sub.plan === 'year' ? 'premium.autoYear' : 'premium.autoMonth',{price:subPrice()})
+      : t('premium.renewOff');
+    $('pmFine').textContent = t('premium.manageAccount');
     return;
   }
   const save = Math.round((1 - pr.year / (pr.month * 12)) * 100);
   const box = $('pmPlans');
   box.innerHTML = '';
-  [['month', 'Месяц'], ['year', 'Год']].forEach(([k, label]) => {
+  [['month', t('premium.month')], ['year', t('premium.year')]].forEach(([k, label]) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'pm-plan' + (pmPlan === k ? ' act' : '');
-    const per = k === 'year' ? `${perMonth(pr, cur)} в месяц` : 'списание раз в месяц';
-    b.innerHTML = (k === 'year' && save > 0 ? `<span class="pp-badge">выгода ${save}%</span>` : '')
+    const per = k === 'year' ? t('premium.perMonth',{price:perMonth(pr, cur)}) : t('premium.monthlyCharge');
+    b.innerHTML = (k === 'year' && save > 0 ? `<span class="pp-badge">${t('premium.saveBadge',{percent:save})}</span>` : '')
       + `<b></b><span class="pp-price"></span><small></small>`;
     b.querySelector('b').textContent = label;
     b.querySelector('.pp-price').textContent = money(pr[k], cur);
@@ -348,10 +341,10 @@ function renderPremium(){
     b.onclick = ()=>{ pmPlan = k; renderPremium(); };
     box.appendChild(b);
   });
-  $('pmBuy').textContent = `Оформить за ${money(pr[pmPlan], cur)}`;
+  $('pmBuy').textContent = t('premium.buyFor',{price:money(pr[pmPlan], cur)});
   $('pmFine').textContent = pmPlan === 'year'
-    ? `Списание сразу, дальше — раз в год по ${money(pr.year, cur)}. Отменить можно в любой момент.`
-    : `Списание сразу, дальше — раз в месяц по ${money(pr.month, cur)}. Отменить можно в любой момент.`;
+    ? t('premium.yearFine',{price:money(pr.year, cur)})
+    : t('premium.monthFine',{price:money(pr.month, cur)});
 }
 
 // Тариф на «Аккаунте», данные аккаунта и баннер на главной — одно состояние,
@@ -360,40 +353,40 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '20.09 · единый аккаунт и нативный обмен (v22)';
+const BUILD = '20.09 · v22';
 function renderBuild(){
   const el = $('buildLine');
-  if(el) el.textContent = 'Версия ' + BUILD;
+  if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
 }
 
 function renderPlan(){
   renderBuild();
   if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
   const on = isPremium(), pr = priceTable(), cur = userCurrency();
-  $('planTitle').textContent = on ? 'Fit Timer Премиум' : 'Бесплатный тариф';
+  $('planTitle').textContent = on ? t('premium.title') : t('premium.freePlan');
   $('planSub').textContent = on
-    ? `До ${humanDate(account.sub.until)}` + (account.sub.autoRenew ? ' · продлится сам' : ' · продление выключено')
-    : `ИИ, весь каталог тренеров и синхронизация — от ${perMonth(pr, cur)} в месяц`;
+    ? t('premium.untilShort',{date:humanDate(account.sub.until)}) + ' · ' + t(account.sub.autoRenew ? 'premium.renews' : 'premium.renewDisabled')
+    : t('premium.freePitch',{price:perMonth(pr, cur)});
   // купленное больше не продаём: баннер уходит с главной
   setShown('btnPremium', !on);
-  $('pbSub').textContent = `Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От ${perMonth(pr, cur)} в месяц.`;
+  $('pbSub').textContent = t('premium.bannerPitch',{price:perMonth(pr, cur)});
 
   // Два состояния карточки. Без аккаунта на экране не должно быть ни «Данных
   // аккаунта», ни «Удалить аккаунт»: удалять нечего, а название пугает человека,
   // который ничего не заводил.
   const has = !!(account && account.email);
-  $('accCardTitle').textContent = has ? 'Данные аккаунта' : 'Аккаунт';
-  $('wipeCardTitle').textContent = has ? 'Удаление аккаунта' : 'Удаление данных';
+  $('accCardTitle').textContent = has ? t('account.dataTitle') : t('common.account');
+  $('wipeCardTitle').textContent = has ? t('account.deleteAccountTitle') : t('account.deleteDataTitle');
   setShown('accNone', !has);
   setShown('rowEmail', has);
   setShown('rowHandle', has && !!account.handle);
   setShown('btnSignOut', has);
   setShown('rowRenew', has && on);
   setShown('rowBio', has && bioOK);
-  $('btnWipeAccount').textContent = has ? 'Удалить аккаунт и все данные' : 'Удалить все данные';
+  $('btnWipeAccount').textContent = has ? t('account.deleteAccountButton') : t('account.deleteAllButton');
   $('wipeNote').textContent = has
-    ? 'Удалится всё, включая аккаунт и подписку. Вернуть можно только из резервной копии — если она сохранена. Программы, отданные в каталог, там останутся.'
-    : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
+    ? t('account.deleteAccountNote')
+    : t('account.deleteLocalNote');
   if(has){
     $('accEmail').textContent = account.email;
     $('accHandle').textContent = account.handle || '';
@@ -417,7 +410,7 @@ function renderPlan(){
 async function completePurchase(){
   const email = ($('payEmail').value || '').trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
-    appAlert('Проверь почту — похоже, в адресе опечатка.');
+    appAlert(t('login.emailTypo'));
     return;
   }
   const cur = userCurrency(), pr = priceTable(), now = new Date().toISOString();
@@ -429,9 +422,8 @@ async function completePurchase(){
 
   $('payModal').classList.remove('open');
   openLogin(async ()=> { await grantSub(email, sub); },
-    {email, sub, label: 'Подтверждение почты',
-     msg: 'Пришлём код на ' + email + '. Он подтвердит, что почта твоя, — с неё '
-        + 'подписка вернётся на любом телефоне.'});
+    {email, sub, label: t('login.emailVerification'),
+     msg: t('login.verificationMsg',{email})});
 }
 
 async function grantSub(email, sub){
@@ -448,7 +440,7 @@ async function grantSub(email, sub){
   recordConsent('offer');
   $('payModal').classList.remove('open');
   $('premiumModal').classList.remove('open');
-  $('pokLead').textContent = `Подписка действует до ${humanDate(account.sub.until)}. Аккаунт привязан к почте ${email} — с неё вернутся программы, статистика, вес и замеры на любом телефоне. Фото-прогресс остаётся только на этом устройстве.`;
+  $('pokLead').textContent = t('premium.purchaseSuccess',{date:humanDate(account.sub.until),email});
   setShown('pokBio', bioOK && !(account.biometry && account.biometry.enabled));
   $('premiumOkModal').classList.add('open');
   renderPlan(); renderPremium();
@@ -484,10 +476,9 @@ function openLogin(after, opts){
   loginPending = null;
   loginStep = 1;
   $('loginLabel').textContent = opts.label
-    || ((account && account.email) ? 'Другой аккаунт' : 'Аккаунт');
+    || ((account && account.email) ? t('login.otherAccount') : t('common.account'));
   $('loginMsg').textContent = opts.msg
-    || ('Вход и регистрация — один быстрый сценарий по почте. Аккаунт бесплатный: '
-        + 'в нём хранятся твой ник и подписка. С Премиумом синхронизируются программы, статистика, вес и замеры между устройствами. Фото-прогресс остаётся только на этом телефоне.');
+    || t('login.intro');
   $('loginEmail').value = opts.email || (account && account.email) || '';
   $('loginCode').value = '';
   $('loginHandle').value = '';
@@ -496,7 +487,7 @@ function openLogin(after, opts){
   setShown('loginStep1', true);
   setShown('loginStep2', false);
   setShown('loginStep3', false);
-  $('loginGo').textContent = 'Прислать код';
+  $('loginGo').textContent = t('login.sendCode');
   $('loginModal').classList.add('open');
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
@@ -539,8 +530,8 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   renderTrainerCard(); syncDockTabs();
   let synced = true;
   if(isPremium()){
-    btn.textContent = 'Синхронизируем…';
-    $('loginMsg').textContent = 'Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.';
+    btn.textContent = t('login.syncing');
+    $('loginMsg').textContent = t('login.syncingMsg');
     synced = await connectAccountSync({replaceLocal: cleanInstall && !r.fresh});
   }
   $('loginModal').classList.remove('open');
@@ -550,12 +541,12 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(done) return;
   pendingSub = null;
   appAlert(!synced
-    ? 'Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.'
+    ? t('login.syncPending')
     : r.fresh
-    ? 'Аккаунт заведён. Ник ' + r.handle + ' закреплён за ним. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте.'
+    ? t('login.created',{handle:r.handle})
     : (r.trainerKey
-        ? 'С возвращением. Ник ' + r.handle + ' снова твой — на прежнем телефоне страницу править больше нельзя.'
-        : 'Готово — вход выполнен.'));
+        ? t('login.welcomeTrainer',{handle:r.handle})
+        : t('login.done')));
 }
 
 async function doLogin(){
@@ -563,7 +554,7 @@ async function doLogin(){
   const email = loginPending ? loginPending.email : ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
-    $('loginErr').textContent = 'Проверь адрес — похоже, в нём опечатка.';
+    $('loginErr').textContent = t('login.addressTypo');
     return;
   }
   btn.disabled = true;
@@ -572,10 +563,10 @@ async function doLogin(){
     if(loginStep === 3){
       const handle = normHandle($('loginHandle').value);
       if(!/^@[\wа-яё.\-]{2,29}$/i.test(handle)){
-        $('loginErr').textContent = 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.';
+        $('loginErr').textContent = t('login.handleRule');
         return;
       }
-      btn.textContent = 'Сохраняем ник…';
+      btn.textContent = t('login.savingHandle');
       const p = loginPending;
       const claimed = await apiPost('/api/auth', {
         action:'set_handle', email:p.email, deviceId:p.deviceId,
@@ -588,22 +579,22 @@ async function doLogin(){
       return;
     }
     if(loginStep === 1){
-      btn.textContent = 'Отправляем…';
+      btn.textContent = t('login.sending');
       const r = await apiPost('/api/auth', {action: 'send', email, locale: appLocale});
       loginStep = 2;
       setShown('loginStep1', false);
       setShown('loginStep2', true);
-      $('loginMsg').textContent = 'Письмо ушло на ' + email + '. Код действует 15 минут.';
+      $('loginMsg').textContent = t('login.sent',{email});
       // Локальный запуск письма не шлёт — код приходит прямо в ответе, иначе
       // сценарий нельзя прогнать, не заведя настоящий ящик.
-      $('loginCodeHint').textContent = r.devCode ? ('Локальный запуск, код: ' + r.devCode) : '';
+      $('loginCodeHint').textContent = r.devCode ? t('login.devCode',{code:r.devCode}) : '';
       if(r.devCode) $('loginCode').value = r.devCode;
-      btn.textContent = 'Войти';
+      btn.textContent = t('login.signIn');
       setTimeout(()=> $('loginCode').focus(), 120);
       return;
     }
 
-    btn.textContent = 'Проверяем…';
+    btn.textContent = t('login.checking');
     const cleanInstall = !(await hasMeaningfulLocalData());
     const previousEmail = String((account && account.email) || '').toLowerCase();
     const switchingAccount = !!previousEmail && previousEmail !== email;
@@ -627,25 +618,25 @@ async function doLogin(){
       loginStep = 3;
       setShown('loginStep2', false);
       setShown('loginStep3', true);
-      $('loginLabel').textContent = 'Создание аккаунта';
-      $('loginMsg').textContent = 'Почта подтверждена. Осталось выбрать единый ник — он будет у аккаунта и у страницы тренера.';
-      btn.textContent = 'Создать аккаунт';
+      $('loginLabel').textContent = t('login.createTitle');
+      $('loginMsg').textContent = t('login.chooseHandle');
+      btn.textContent = t('login.createAccount');
       setTimeout(()=> $('loginHandle').focus(), 120);
       return;
     }
     await finishVerifiedLogin(r, email, cleanInstall, switchingAccount);
   }catch(e){
     $('loginErr').textContent = e && e.code === 'handle_taken'
-      ? 'Этот ник уже занят. Попробуй другой.'
+      ? t('login.handleTaken')
       : e && e.code === 'bad_handle'
-      ? 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.'
+      ? t('login.handleRule')
       : mailErrText(e);
     if(e && e.code === 'bad_code') $('loginCode').value = '';
-    btn.textContent = loginStep === 1 ? 'Прислать код' : loginStep === 3 ? 'Создать аккаунт' : 'Войти';
+    btn.textContent = loginStep === 1 ? t('login.sendCode') : loginStep === 3 ? t('login.createAccount') : t('login.signIn');
     return;
   } finally {
     btn.disabled = false;
-    if(btn.textContent === 'Отправляем…' || btn.textContent === 'Проверяем…' || btn.textContent === 'Сохраняем ник…') btn.textContent = back;
+    if(btn.textContent === t('login.sending') || btn.textContent === t('login.checking') || btn.textContent === t('login.savingHandle')) btn.textContent = back;
   }
 }
 
@@ -654,8 +645,8 @@ async function doLogin(){
 async function signOut(){
   if(!account.email) return;
   const ok = await appDialog(
-    `Выйти из аккаунта ${account.email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.`,
-    {confirm: true, okText: 'Выйти', cancelText: 'Отмена'});
+    t('account.signOutQuestion',{email:account.email}),
+    {confirm: true, okText: t('account.signOut'), cancelText: t('common.cancel')});
   if(!ok) return;
   try{ if(SYNC.adapter) await Promise.all([SYNC.push(), pushAccountDocs()]); }catch(e){}
   SYNC.adapter = null;
@@ -686,14 +677,14 @@ const toB64 = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
 const fromB64 = s64 => Uint8Array.from(atob(s64), c => c.charCodeAt(0));
 function bioErr(e){
   const n = (e && e.name) || '';
-  if(n === 'NotAllowedError') return 'запрос отменён или истёк.';
-  if(n === 'InvalidStateError') return 'на этом устройстве ключ уже заведён.';
-  if(n === 'NotSupportedError') return 'устройство не умеет проверять отпечаток или лицо.';
-  if(n === 'SecurityError') return 'приложение открыто не по защищённому адресу.';
-  return 'устройство отказало.';
+  if(n === 'NotAllowedError') return t('bio.cancelled');
+  if(n === 'InvalidStateError') return t('bio.exists');
+  if(n === 'NotSupportedError') return t('bio.unsupported');
+  if(n === 'SecurityError') return t('bio.security');
+  return t('bio.refused');
 }
 async function bioEnable(){
-  if(!account.email){ appAlert('Биометрия привязывается к аккаунту — сначала нужна почта.'); return false; }
+  if(!account.email){ appAlert(t('bio.needAccount')); return false; }
   try{
     const cred = await navigator.credentials.create({publicKey: {
       challenge: rndBytes(32),
@@ -709,12 +700,12 @@ async function bioEnable(){
     renderPlan();
     return true;
   }catch(e){
-    appAlert('Не получилось включить биометрию: ' + bioErr(e));
+    appAlert(t('bio.enableFailed',{error:bioErr(e)}));
     return false;
   }
 }
 async function bioDisable(){
-  if(!(await appConfirm('Выключить вход по биометрии? Приложение будет открываться сразу.'))) return;
+  if(!(await appConfirm(t('bio.disableQuestion')))) return;
   account.biometry = null;
   await saveAccount();
   renderPlan();
@@ -737,9 +728,9 @@ function openLock(){
   lockMode = 'bio';
   setShown('lockMailBox', false);
   $('lockEmail').value = '';
-  $('lockMsg').textContent = 'Приложи палец или посмотри на камеру — и продолжим.';
-  $('lockGo').textContent = 'Разблокировать';
-  $('lockMail').textContent = 'Войти по почте';
+  $('lockMsg').textContent = t('lock.prompt');
+  $('lockGo').textContent = t('lock.unlock');
+  $('lockMail').textContent = t('lock.email');
   $('lockModal').classList.add('open');
   tryUnlock();   // сразу, чтобы не заставлять нажимать лишний раз
 }
@@ -747,12 +738,12 @@ async function tryUnlock(){
   if(lockMode === 'mail'){
     const v = ($('lockEmail').value || '').trim().toLowerCase();
     if(v && v === (account.email || '').toLowerCase()){ $('lockModal').classList.remove('open'); return; }
-    $('lockMsg').textContent = 'Такая почта к этому аккаунту не привязана. Проверь адрес.';
+    $('lockMsg').textContent = t('lock.wrongEmail');
     return;
   }
   if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
   // отказ бывает и от системы, и от человека («отмена» в окне отпечатка) — в обоих
   // случаях врать «приложи палец» уже нельзя, палец он приложил
-  $('lockMsg').textContent = 'Не получилось узнать. Попробуй ещё раз или войди по почте.';
+  $('lockMsg').textContent = t('lock.failed');
 }
 
