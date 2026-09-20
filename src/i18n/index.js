@@ -57,3 +57,26 @@ async function setAppLocale(value, opts){
 }
 function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
 function aiOutputLanguage(){ return appLocale === 'ru' ? 'Russian' : 'English'; }
+
+function aiCanonicalEnglish(value){
+  const map = {
+    'Новичок':'beginner','Средний':'intermediate','Продвинутый':'advanced',
+    'Похудеть':'lose weight','Подтянуть всё тело':'tone the whole body','Ягодицы и пресс':'glutes and core',
+    'Плоский живот':'flatter stomach','Сила и выносливость':'strength and endurance','Рельеф мышц':'muscle definition',
+    'Растяжка и гибкость':'stretching and flexibility','Осанка и спина':'posture and back',
+    'Восстановиться после родов':'postpartum recovery','Кардио и энергия':'cardio and energy',
+    'Без инвентаря':'no equipment','Коврик':'mat','Гантели':'dumbbells','Резинки':'resistance bands',
+    'Стул':'chair','Фитбол':'stability ball','Утяжелители':'wearable weights','Турник':'pull-up bar',
+    'Без ограничений':'no stated limitations','Без прыжков':'no jumping','Тихо (соседи снизу)':'quiet / low-impact',
+    'Берегу колени':'protect knees','Берегу поясницу':'protect lower back','Берегу запястья':'protect wrists',
+    'Берегу шею':'protect neck','Беременность':'pregnancy',
+    'Круговая':'circuit','Силовая':'strength','Смешанная':'mixed','С разминкой':'with warm-up','Без разминки':'without warm-up',
+    'Шея':'neck','Плечи':'shoulders','Грудь':'chest','Руки':'arms','Пресс':'core','Спина':'back',
+    'Ягодицы':'glutes','Квадрицепс':'quadriceps','Задняя бедра':'hamstrings','Икры':'calves',
+    'Повторения':'reps','С весом':'weighted reps','Время':'time'
+  };
+  return map[String(value || '')] || String(value || '');
+}
+function aiCanonicalListEnglish(values){
+  return (values || []).map(aiCanonicalEnglish).join(', ');
+}
