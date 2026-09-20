@@ -1364,7 +1364,7 @@
       </div>
       <button type="button" class="way-row hidden" id="coachNoAcc">
         <span class="wr-ico" data-icon="user"></span>
-        <span class="wr-txt"><b>Заведи аккаунт тренера</b><small>Страница работает через интернет и принадлежит аккаунту</small></span>
+        <span class="wr-txt"><b>Сначала создай аккаунт</b><small>Без основного аккаунта по почте режим тренера недоступен</small></span>
       </button>
       <div class="stack hidden" id="coachFields">
         <!-- Имя и фото у тренера СВОИ, а не подсмотренные из профиля. Профиль — это
@@ -1460,6 +1460,7 @@
 
       <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span>Почта<small id="accEmail"></small><small id="accSync"></small></span></div>
+      <div class="pref-row hidden" id="rowHandle"><span>Ник аккаунта<small id="accHandle"></small></span></div>
       <div class="pref-row hidden" id="rowBio"><span>Вход по биометрии<small>Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut">Выйти из аккаунта</button>
     </div>
@@ -1860,6 +1861,12 @@
           <label>Код из письма</label>
           <input type="text" id="loginCode" inputmode="numeric" maxlength="6" placeholder="6 цифр">
           <p class="field-hint" id="loginCodeHint"></p>
+        </div>
+        <div class="field hidden" id="loginStep3">
+          <label>Ник аккаунта</label>
+          <input type="text" id="loginHandle" maxlength="30" inputmode="latin"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="@sergey">
+          <p class="field-hint">Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.</p>
         </div>
         <p class="field-err" id="loginErr"></p>
         <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px">Прислать код</button>

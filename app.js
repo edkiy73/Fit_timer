@@ -3177,7 +3177,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> ({email: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
+const blankAccount = ()=> ({email: '', handle: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
 async function readAccountData(){
   return parsed(await kvGet('accountData'), {});
 }
@@ -3208,7 +3208,7 @@ async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
 function rememberAccount(){
   if(!account.email) return;
-  const rec = {email: account.email, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
+  const rec = {email: account.email, handle: account.handle || '', sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
                deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
@@ -3335,7 +3335,7 @@ function renderPremium(){
    же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
    номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
    вопрос сразу. */
-const BUILD = '18.09 · понятные шаги нагрузки (v21)';
+const BUILD = '20.09 · единый аккаунт и нативный обмен (v22)';
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = 'Версия ' + BUILD;
@@ -3361,6 +3361,7 @@ function renderPlan(){
   $('wipeCardTitle').textContent = has ? 'Удаление аккаунта' : 'Удаление данных';
   setShown('accNone', !has);
   setShown('rowEmail', has);
+  setShown('rowHandle', has && !!account.handle);
   setShown('btnSignOut', has);
   setShown('rowRenew', has && on);
   setShown('rowBio', has && bioOK);
@@ -3370,6 +3371,7 @@ function renderPlan(){
     : 'Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.';
   if(has){
     $('accEmail').textContent = account.email;
+    $('accHandle').textContent = account.handle || '';
     showSyncState(syncState);
     // Подпись под переключателем не нужна: он переехал под строку тарифа, где уже
     // написано, какой тариф и до какого числа.
@@ -3443,6 +3445,7 @@ async function grantSub(email, sub){
    неоплаченным месяцем. */
 let loginDone = null;
 let loginStep = 1;
+let loginPending = null;
 /* Подписка, которую оформляют прямо сейчас. Лежит ОТДЕЛЬНО от account.sub и на
    диск не попадает: пока почта не подтверждена, подписки нет — ни на экране, ни
    после перезапуска. Уходит на сервер тем же запросом, которым подтверждается
@@ -3453,6 +3456,7 @@ function openLogin(after, opts){
   opts = opts || {};
   loginDone = after || null;
   pendingSub = opts.sub || null;
+  loginPending = null;
   loginStep = 1;
   $('loginLabel').textContent = opts.label
     || ((account && account.email) ? 'Другой аккаунт' : 'Аккаунт');
@@ -3461,18 +3465,75 @@ function openLogin(after, opts){
         + 'в нём живут подписка и твой ник тренера. С Премиумом вернутся программы, статистика, вес и замеры; фото-прогресс останется на этом телефоне.');
   $('loginEmail').value = opts.email || (account && account.email) || '';
   $('loginCode').value = '';
+  $('loginHandle').value = '';
   $('loginErr').textContent = '';
   $('loginCodeHint').textContent = '';
   setShown('loginStep1', true);
   setShown('loginStep2', false);
+  setShown('loginStep3', false);
   $('loginGo').textContent = 'Прислать код';
   $('loginModal').classList.add('open');
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
 
+async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
+  const btn = $('loginGo');
+  const now = new Date().toISOString();
+  if(switchingAccount) account.deletedProfiles = [];
+  account.email = email;
+  account.handle = r.handle || '';
+  account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
+  if(r.sub) account.sub = r.sub;
+  if(r.syncToken) account.syncToken = r.syncToken;
+  rememberAccount();
+  await saveAccount();
+  await saveKnown();
+  if(identity){ identity.email = email; await saveIdentity(); }
+  if(switchingAccount) await loadTrainer();
+
+  if(r.handle){
+    if(!trainer) trainer = {on: false, handle: '', links: ''};
+    trainer.handle = r.handle;
+    if(r.trainerKey) trainer.key = r.trainerKey;
+    const t = r.trainer || {};
+    // Сам ник ещё не делает человека тренером. Режим включён только если у
+    // аккаунта действительно существует сохранённая публичная страница.
+    trainer.on = !!r.trainer;
+    if(r.trainer){
+      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = t[k] || ''; });
+      trainer.years = t.years == null ? null : t.years;
+    }
+    trainer.pageErr = null;
+    await saveTrainer();
+    if(Array.isArray(clients) && clients.length) await saveClients();
+  }
+
+  renderPlan(); renderPremium(); syncGeminiBtns();
+  renderTrainerCard(); syncDockTabs();
+  let synced = true;
+  if(isPremium()){
+    btn.textContent = 'Синхронизируем…';
+    $('loginMsg').textContent = 'Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.';
+    synced = await connectAccountSync({replaceLocal: cleanInstall && !r.fresh});
+  }
+  $('loginModal').classList.remove('open');
+  loginPending = null;
+  const done = loginDone; loginDone = null;
+  if(done) await done();
+  if(done) return;
+  pendingSub = null;
+  appAlert(!synced
+    ? 'Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.'
+    : r.fresh
+    ? 'Аккаунт заведён. Ник ' + r.handle + ' закреплён за ним. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте.'
+    : (r.trainerKey
+        ? 'С возвращением. Ник ' + r.handle + ' снова твой — на прежнем телефоне страницу править больше нельзя.'
+        : 'Готово — вход выполнен.'));
+}
+
 async function doLogin(){
   const btn = $('loginGo');
-  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  const email = loginPending ? loginPending.email : ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     $('loginErr').textContent = 'Проверь адрес — похоже, в нём опечатка.';
@@ -3481,6 +3542,24 @@ async function doLogin(){
   btn.disabled = true;
   const back = btn.textContent;
   try{
+    if(loginStep === 3){
+      const handle = normHandle($('loginHandle').value);
+      if(!/^@[\wа-яё.\-]{2,29}$/i.test(handle)){
+        $('loginErr').textContent = 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.';
+        return;
+      }
+      btn.textContent = 'Сохраняем ник…';
+      const p = loginPending;
+      const claimed = await apiPost('/api/auth', {
+        action:'set_handle', email:p.email, deviceId:p.deviceId,
+        syncToken:p.r.syncToken, handle,
+        trainerKey: !p.switchingAccount && trainer ? (trainer.key || '') : ''
+      });
+      p.r.handle = claimed.handle;
+      p.r.needsHandle = false;
+      await finishVerifiedLogin(p.r, p.email, p.cleanInstall, p.switchingAccount);
+      return;
+    }
     if(loginStep === 1){
       btn.textContent = 'Отправляем…';
       const r = await apiPost('/api/auth', {action: 'send', email});
@@ -3515,65 +3594,30 @@ async function doLogin(){
       // прицепилась.
       sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null)
     });
-
-    const now = new Date().toISOString();
-    if(switchingAccount) account.deletedProfiles = [];
-    account.email = email;
-    account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
-    if(r.sub) account.sub = r.sub;
-    if(r.syncToken) account.syncToken = r.syncToken;
-    rememberAccount();
-    await saveAccount();
-    await saveKnown();
-    if(identity){ identity.email = email; await saveIdentity(); }
-    if(switchingAccount) await loadTrainer();
-
-    /* Ник тренера приезжает вместе с аккаунтом. Новый ключ сервер выдаёт только
-       тогда, когда прежний нерабочий, — то есть при переезде; на своём же
-       телефоне человек остаётся с тем, что было. */
-    if(r.handle){
-      if(!trainer) trainer = {on: true, handle: '', links: ''};
-      trainer.on = true;
-      trainer.handle = r.handle;
-      if(r.trainerKey) trainer.key = r.trainerKey;
-      const t = r.trainer || {};
-      if(r.trainer){
-        ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = t[k] || ''; });
-        trainer.years = t.years == null ? null : t.years;
-      }
-      trainer.pageErr = null;
-      await saveTrainer();
-      if(Array.isArray(clients) && clients.length) await saveClients();
+    if(r.needsHandle || !r.handle){
+      loginPending = {r, email, cleanInstall, switchingAccount, deviceId:loginDeviceId};
+      loginStep = 3;
+      setShown('loginStep2', false);
+      setShown('loginStep3', true);
+      $('loginLabel').textContent = 'Создание аккаунта';
+      $('loginMsg').textContent = 'Почта подтверждена. Осталось выбрать единый ник — он будет у аккаунта и у страницы тренера.';
+      btn.textContent = 'Создать аккаунт';
+      setTimeout(()=> $('loginHandle').focus(), 120);
+      return;
     }
-
-    renderPlan(); renderPremium(); syncGeminiBtns();
-    renderTrainerCard(); syncDockTabs();
-    let synced = true;
-    if(isPremium()){
-      btn.textContent = 'Синхронизируем…';
-      $('loginMsg').textContent = 'Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.';
-      synced = await connectAccountSync({replaceLocal: cleanInstall && !r.fresh});
-    }
-    $('loginModal').classList.remove('open');
-    const done = loginDone; loginDone = null;
-    if(done) await done();
-    if(done) return;
-    pendingSub = null;
-    appAlert(!synced
-      ? 'Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.'
-      : r.fresh
-      ? 'Аккаунт заведён. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте. Фото-прогресс останется на телефоне.'
-      : (r.handle && r.trainerKey
-          ? 'С возвращением. Ник ' + r.handle + ' снова твой — на прежнем телефоне страницу править больше нельзя.'
-          : 'Готово — вход выполнен.'));
+    await finishVerifiedLogin(r, email, cleanInstall, switchingAccount);
   }catch(e){
-    $('loginErr').textContent = mailErrText(e);
+    $('loginErr').textContent = e && e.code === 'handle_taken'
+      ? 'Этот ник уже занят. Попробуй другой.'
+      : e && e.code === 'bad_handle'
+      ? 'Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.'
+      : mailErrText(e);
     if(e && e.code === 'bad_code') $('loginCode').value = '';
-    btn.textContent = loginStep === 1 ? 'Прислать код' : 'Войти';
+    btn.textContent = loginStep === 1 ? 'Прислать код' : loginStep === 3 ? 'Создать аккаунт' : 'Войти';
     return;
   } finally {
     btn.disabled = false;
-    if(btn.textContent === 'Отправляем…' || btn.textContent === 'Проверяем…') btn.textContent = back;
+    if(btn.textContent === 'Отправляем…' || btn.textContent === 'Проверяем…' || btn.textContent === 'Сохраняем ник…') btn.textContent = back;
   }
 }
 
@@ -3915,6 +3959,25 @@ function drawCover(x, img, dx, dy, dw, dh, r){
   x.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, dx, dy, dw, dh);
   x.restore();
 }
+async function shareGeneratedFile(blob, fname, title, savedText){
+  if(window.FitNative && window.FitNative.isNative){
+    const ok = await window.FitNative.shareFile(blob, fname, title || 'Fit Timer');
+    if(!ok) appAlert('Не удалось открыть системное меню «Поделиться». Попробуй ещё раз.');
+    return ok;
+  }
+  const file = new File([blob], fname, {type:blob.type || 'application/octet-stream'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:title || 'Fit Timer'}); return true; }
+    catch(e){ if(e && e.name === 'AbortError') return true; }
+  }
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fname;
+  link.click();
+  setTimeout(()=> URL.revokeObjectURL(link.href), 5000);
+  appAlert(savedText || 'Файл сохранён в загрузки.');
+  return true;
+}
 async function shareCompare(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
   if(!a || !b) return;
@@ -3949,16 +4012,8 @@ async function shareCompare(){
   x.fillText('F I T   T I M E R', W / 2, 1256);
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    const file = new File([blob], 'fittimer-progress.png', {type: 'image/png'});
-    if(navigator.canShare && navigator.canShare({files: [file]})){
-      try{ await navigator.share({files: [file], title: 'Fit Timer'}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
-    }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'fittimer-progress.png';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 5000);
-    appAlert('Картинка сохранена в загрузки — отправь её из галереи.');
+    await shareGeneratedFile(blob, 'fittimer-progress.png', 'Мой прогресс — Fit Timer',
+      'Картинка сохранена в загрузки — отправь её из галереи.');
   }, 'image/png');
 }
 
@@ -4248,14 +4303,7 @@ async function sharePng(title, lanes, fname){
 
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    const file = new File([blob], fname, {type: 'image/png'});
-    if(navigator.canShare && navigator.canShare({files: [file]})){
-      try{ await navigator.share({files: [file]}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
-    }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = fname; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    appAlert('Картинка сохранена в загрузки.');
+    await shareGeneratedFile(blob, fname, title + ' — Fit Timer', 'Картинка сохранена в загрузки.');
   }, 'image/png');
   return c;
 }
@@ -5376,9 +5424,13 @@ async function exportProgramFile(p){
   const safeName = (p.name || 'program').replace(/[^\wа-яёА-ЯЁ\- ]+/g, '').trim().slice(0, 40) || 'program';
   const fname = `fittimer-${safeName}.json`;
   const blob = new Blob([json], {type: 'application/json'});
-  const file = new File([blob], fname, {type: 'application/json'});
 
   const sizeKb = Math.round(json.length / 1024);
+  if(window.FitNative && window.FitNative.isNative){
+    await shareGeneratedFile(blob, fname, `Программа «${p.name}»`);
+    return;
+  }
+  const file = new File([blob], fname, {type: 'application/json'});
   if(navigator.canShare && navigator.canShare({files: [file]})){
     try{
       await navigator.share({files: [file], title: `Программа «${p.name}»`});
@@ -6922,7 +6974,7 @@ async function saveClients(opts){
 }
 // Режим считается включённым только вместе с ником: без ника подопечный не поймёт, от кого
 // пришла программа, а «Отправить подопечному» в меню без адресата — пункт в никуда.
-const trainerAccountReady = () => !!(account && account.email && account.syncToken);
+const trainerAccountReady = () => !!(account && account.email && account.syncToken && account.handle);
 const trainerOn = () => !!(trainerAccountReady() && trainer && trainer.on && (trainer.handle || '').trim());
 // ник приводим к одному виду: человек напишет и «@lena», и «lena», и «t.me/lena»
 function normHandle(v){
@@ -6961,13 +7013,10 @@ function renderTrainerCard(){
   const modeOn = !!(accountReady && trainer && trainer.on);
   $('tglTrainer').classList.toggle('on', modeOn);
   setShown('coachFields', modeOn);
-  if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (trainer && trainer.handle) || '';
-  const handleLocked = !!(trainer && trainer.handle && trainer.key);
-  $('coachHandle').readOnly = handleLocked;
-  $('coachHandle').classList.toggle('locked', handleLocked);
-  $('coachHandleHint').textContent = handleLocked
-    ? 'Ник закреплён за аккаунтом и больше не меняется.'
-    : 'Ник задаётся один раз. Латиница, цифры, точка и дефис.';
+  if(document.activeElement !== $('coachHandle')) $('coachHandle').value = (account && account.handle) || '';
+  $('coachHandle').readOnly = true;
+  $('coachHandle').classList.add('locked');
+  $('coachHandleHint').textContent = 'Это единый ник основного аккаунта. Он задаётся при регистрации и не меняется.';
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
   coachPhotoDraft = ph || '';
@@ -11497,17 +11546,8 @@ async function shareResult(){
 
   c.toBlob(async blob => {
     if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    const file = new File([blob], 'fittimer-result.png', {type: 'image/png'});
-    if(navigator.canShare && navigator.canShare({files: [file]})){
-      try{ await navigator.share({files: [file], title: 'Fit Timer'}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
-    }
-    // фолбэк: скачиваем файл
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'fittimer-result.png';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    appAlert('Картинка сохранена в загрузки — отправь её из галереи.');
+    await shareGeneratedFile(blob, 'fittimer-result.png', 'Результат тренировки — Fit Timer',
+      'Картинка сохранена в загрузки — отправь её из галереи.');
   }, 'image/png');
 }
 
@@ -12571,6 +12611,8 @@ $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
 
 /* ---- тренер: карточка на аккаунте, картотека, карточка подопечного ---- */
 async function enableTrainerMode(){
+  if(!trainerAccountReady()) return;
+  trainer.handle = account.handle;
   trainer.on = true;
   // Первое включение: подставляем имя и фото из профиля, чтобы не набирать заново.
   // Дальше они живут отдельно — правка профиля лицо тренера не меняет.
@@ -12580,13 +12622,12 @@ async function enableTrainerMode(){
   }
   await saveTrainer();
   renderTrainerCard();
-  if(!(trainer.handle || '').trim()) setTimeout(()=> $('coachHandle').focus(), 120);
 }
 $('tglTrainer').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Аккаунт тренера',
-      msg:'Страница тренера работает через интернет и принадлежит аккаунту. Заведи или верни бесплатный аккаунт по почте — после входа режим тренера включится.'
+      label:'Нужен аккаунт',
+      msg:'Без основного аккаунта по почте нельзя быть тренером. Заведи или верни бесплатный аккаунт — его единый ник будет использоваться и на странице тренера.'
     });
     return;
   }
@@ -12652,8 +12693,8 @@ $('coachYears').oninput = async e => {
 $('btnSaveCoach').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Аккаунт тренера',
-      msg:'Чтобы сохранить и обновлять страницу тренера, сначала заведи или верни бесплатный аккаунт по почте.'
+      label:'Нужен аккаунт',
+      msg:'Без основного аккаунта по почте нельзя быть тренером. Сначала заведи или верни аккаунт, затем сохрани страницу тренера.'
     });
     return;
   }
@@ -12665,9 +12706,7 @@ $('btnSaveCoach').onclick = async ()=>{
     $('coachLinks').focus();
     return;
   }
-  const locked = !!(trainer && trainer.handle && trainer.key);
-  const handle = locked ? trainer.handle : normHandle($('coachHandle').value);
-  if(trainer.on && !handle){ $('coachHandleErr').textContent = 'Укажи ник.'; $('coachHandle').focus(); return; }
+  const handle = account.handle;
   const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
   const years = parseInt(yearsRaw, 10);
   trainer = Object.assign({}, trainer, {
@@ -12915,12 +12954,20 @@ $('tglRenew').onclick = async ()=>{
 $('loginGo').onclick = doLogin;
 const dropLogin = ()=>{
   loginDone = null;
+  loginPending = null;
   pendingSub = null;   // ушёл с шага кода — подписки не случилось
   $('loginModal').classList.remove('open');
 };
 $('loginCancel').onclick = dropLogin;
 $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
 $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+$('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+$('loginHandle').addEventListener('input', e => {
+  const at = e.target.value.startsWith('@');
+  const body = e.target.value.replace(/^@+/, '').replace(/[^\wа-яё.\-]/gi, '').slice(0, 29);
+  e.target.value = (at || body) ? '@' + body : '';
+});
+$('loginHandle').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
 $('btnLoginRow').onclick = ()=> openLogin();
 $('btnSignOut').onclick = signOut;
 // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому

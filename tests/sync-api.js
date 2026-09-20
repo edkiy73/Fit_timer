@@ -32,6 +32,16 @@ async function login(deviceId, sub, email = MAIL){
   const trainerDevice = 'trainer-device';
   const ta = await login(trainerDevice, null, trainerMail);
   const nick = '@account.' + Math.random().toString(36).slice(2,8);
+  ok('новый аккаунт просит единый ник', ta.needsHandle === true && !ta.handle);
+  const handle = await post('/api/auth', {
+    action:'set_handle', email:trainerMail, deviceId:trainerDevice,
+    syncToken:ta.syncToken, handle:nick
+  });
+  ok('ник закрепляется за основным аккаунтом', handle.handle === nick, handle.handle);
+  let noTrainerYet = false;
+  try{ await get('/api/trainer/' + encodeURIComponent(nick)); }
+  catch(e){ noTrainerYet = e.status === 404; }
+  ok('один ник ещё не создаёт тренера', noTrainerYet);
   const claimed = await post('/api/trainer/' + encodeURIComponent(nick), {
     email:trainerMail, deviceId:trainerDevice, token:ta.syncToken,
     trainer:{name:'Лена', about:'Первая версия', years:7}
@@ -49,6 +59,8 @@ async function login(deviceId, sub, email = MAIL){
   try{ await post('/api/trainer/' + encodeURIComponent('@no.account'), {trainer:{name:'Без аккаунта'}}); }
   catch(e){ accountRequired = e.status === 401 && e.error === 'account_required'; }
   ok('без аккаунта тренерскую страницу завести нельзя', accountRequired);
+  const again = await login('trainer-device-2', null, trainerMail);
+  ok('единый ник возвращается при входе', again.handle === nick && !again.needsHandle, again.handle);
 
   const a = await login('device-a', sub);
   const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',photo:'data:image/png;base64,bm8='};

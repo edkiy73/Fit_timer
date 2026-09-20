@@ -103,6 +103,7 @@ module.exports = async (req, res) => {
       {handle, since: new Date().toISOString(), seen: new Date().toISOString(),
        keyHash: sha(key), mailHash}, fields)));
     account.handle = handle;
+    await store.set(`h:${handle}`, mailHash);
     await store.set(`a:${mailHash}`, JSON.stringify(account));
     // Отдельный список ников: пройти по всем ключам базы нельзя, а перечислить
     // тренеров в админке надо.
@@ -118,6 +119,7 @@ module.exports = async (req, res) => {
       return fail(res, 409, 'handle_taken');
     }
     account.handle = handle;
+    await store.set(`h:${handle}`, mailHash);
     await store.set(`a:${mailHash}`, JSON.stringify(account));
   }
   if(cur.mailHash && cur.mailHash !== mailHash) return fail(res, 409, 'handle_taken');

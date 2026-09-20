@@ -12,9 +12,10 @@
    то есть завести вторую такую же задачу поверх первой. Код на почту доказывает
    ровно то же самое: человек имеет доступ к адресу.
 
-   Три действия:
+   Четыре действия:
      {action:'send',   email}
      {action:'verify', email, code, deviceId, handle, trainerKey, sub}
+     {action:'set_handle', email, deviceId, syncToken, handle, trainerKey}
      {action:'forget', email, deviceId, syncToken, handle, trainerKey, scope, links}
 
    Удаление живёт здесь же, а не отдельным файлом: завести себя и стереть себя —
@@ -41,7 +42,12 @@ const PER_DAY = 5;           // писем на адрес в сутки
 
 // Проверка адреса нарочно простая: настоящая проверка — само письмо.
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
+const HANDLE = /^@[\wа-яё.\-]{2,29}$/i;
 const normMail = v => String(v || '').trim().toLowerCase().slice(0, 120);
+const normHandle = v => {
+  let h = String(v || '').trim().replace(/^@+/, '').replace(/[^\wа-яё.\-]/gi, '').slice(0, 29);
+  return h ? '@' + h : '';
+};
 
 const digits = n => {
   const b = crypto.randomBytes(n);
@@ -181,6 +187,39 @@ module.exports = async (req, res) => {
   if(!EMAIL.test(email)) return fail(res, 400, 'bad_email');
   const mh = sha(email).slice(0, 32);   // по хешу ищем, сам адрес лежит в записи
 
+  /* Ник принадлежит основному аккаунту и задаётся один раз после подтверждения
+     почты. Тренерского аккаунта не существует: режим тренера лишь использует
+     этот же ник и при первом сохранении создаёт публичную страницу. */
+  if(act === 'set_handle'){
+    const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
+    const token = String((body && body.syncToken) || '');
+    let acc = null;
+    try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+    const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
+    if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+    if(acc.handle) return send(res, 200, {ok:true, handle:acc.handle});
+
+    const handle = normHandle(body && body.handle);
+    if(!HANDLE.test(handle)) return fail(res, 400, 'bad_handle');
+    const owner = await store.get(`h:${handle}`);
+    if(owner && owner !== mh) return fail(res, 409, 'handle_taken');
+    const traw = await store.get(`t:${handle}`);
+    if(traw){
+      let t = null;
+      try{ t = JSON.parse(traw); }catch(e){}
+      const legacyKeyOk = t && sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '');
+      if(!t || (t.mailHash && t.mailHash !== mh) || (!t.mailHash && !legacyKeyOk)){
+        return fail(res, 409, 'handle_taken');
+      }
+      t.mailHash = mh;
+      await store.set(`t:${handle}`, JSON.stringify(t));
+    }
+    acc.handle = handle;
+    await store.set(`h:${handle}`, mh);
+    await store.set(`a:${mh}`, JSON.stringify(acc));
+    return send(res, 200, {ok:true, handle});
+  }
+
   /* ---- прислать код ---- */
   if(act === 'send'){
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается
@@ -316,12 +355,14 @@ module.exports = async (req, res) => {
       }
     }
 
+    if(acc.handle) await store.set(`h:${acc.handle}`, mh);
     await store.set(`a:${mh}`, JSON.stringify(acc));
 
     return send(res, 200, {
       ok: true, email, fresh,
       sub: acc.sub || null,
       handle: acc.handle || '',
+      needsHandle: !acc.handle,
       trainerKey,           // null — значит прежний ключ остаётся рабочим
       trainer,              // null — тренерской страницы у аккаунта нет
       syncToken: deviceId ? syncToken : null

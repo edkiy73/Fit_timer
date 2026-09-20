@@ -88,6 +88,36 @@
     try{ await fitSystem.setTheme({light:!!light}); return true; }catch(_){ return false; }
   }
 
+  function blobBase64(blob){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(String(reader.result || '').split(',')[1] || '');
+      reader.onerror = ()=> reject(reader.error || new Error('file_read_failed'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // WebView не умеет надёжно передавать Blob через navigator.share. Кладём файл
+  // во временный Cache и отдаём его системному Android/iOS Share Sheet.
+  async function shareFile(blob, fileName, title, text){
+    if(!native || !plugins.Filesystem || !plugins.Share || !blob) return false;
+    try{
+      const safe = String(fileName || 'fittimer-file').replace(/[^\wа-яёА-ЯЁ.\-]+/g, '-').slice(-100);
+      const result = await plugins.Filesystem.writeFile({
+        path: `fittimer-share-${Date.now()}-${safe}`,
+        data: await blobBase64(blob),
+        directory: 'CACHE'
+      });
+      await plugins.Share.share({
+        title: title || 'Fit Timer',
+        text: text || '',
+        files: [result.uri],
+        dialogTitle: 'Поделиться'
+      });
+      return true;
+    }catch(_){ return false; }
+  }
+
   // index.html исторически вызывает haptic на pointerdown почти всех кнопок.
   // В нативной оболочке считаем событие обработанным, но не вибрируем: иначе
   // pointerdown срабатывает даже когда жест превращается в скролл.
@@ -262,6 +292,7 @@
     cancelRest,
     syncWorkoutNotifications,
     setSystemTheme,
+    shareFile,
     haptic,
     workoutHaptic,
     requestMicrophone,
