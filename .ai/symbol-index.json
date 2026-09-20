@@ -1156,8 +1156,8 @@
     },
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
-      "lines": 219,
-      "chars": 17281,
+      "lines": 218,
+      "chars": 17193,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
@@ -1304,7 +1304,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 601,
-      "chars": 34347,
+      "chars": 34360,
       "ids": [
         "addExModal",
         "aemAI",

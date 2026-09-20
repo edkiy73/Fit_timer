@@ -59,6 +59,7 @@ Use `.ai/project-map.md` to choose files. Typical routing:
 - Do not store date of birth; use full age where age is needed.
 - People managed by a trainer are called **«подопечные»**, not «клиенты», in user-facing Russian copy.
 - User-facing copy addresses the user informally but should avoid gendered wording.
+- Marketing, onboarding, paywall and explanatory copy must use plain language for non-technical users: lead with the benefit/outcome, not implementation. Avoid terms such as server, provider, runtime, sync, API or model unless the user genuinely needs that technical detail.
 - Existing catalog programs survive deletion of trainer/account personal data.
 - Do not bring back a visible “sync status” card; sync is automatic.
 - Reuse existing UI patterns, components/classes and visual language before inventing new ones.

@@ -154,8 +154,8 @@
   /* Экран обязан помещаться целиком: предупреждение о здоровье — обязательный текст,
      и человек должен видеть его ДО того, как нажмёт «Начать», а не после прокрутки.
      Поэтому отступы и кегли здесь подобраны под высоту, а не «на глаз». */
-  #obHello{display:flex;flex-direction:column;gap:var(--sp-4);flex:1}
-  .ob-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sp-2)}
+  #obHello{display:flex;flex-direction:column;gap:12px;flex:1}
+  .ob-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
   .ob-mark{
     font-family:var(--font-display);font-weight:700;
     font-size:clamp(22px,6vw,26px);letter-spacing:.14em;color:var(--ink);
@@ -171,7 +171,7 @@
   }
   .ob-grid li{
     display:flex;flex-direction:column;gap:4px;min-width:0;
-    padding:11px 12px;border-radius:var(--r-md);background:var(--bg-2);
+    padding:9px 11px;border-radius:var(--r-md);background:var(--bg-2);
   }
   .obg-ico{
     width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
@@ -187,10 +187,26 @@
      чтобы содержимое не просвечивало из-под кнопок. */
   .ob-actions{
     position:sticky;bottom:0;z-index:2;
-    display:flex;flex-direction:column;gap:10px;
-    margin-top:var(--sp-3);
-    padding:var(--sp-3) 0 calc(4px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;gap:8px;
+    margin-top:10px;
+    padding:10px 0 calc(2px + env(safe-area-inset-bottom));
     background:linear-gradient(to top,var(--bg) 76%,transparent);
+  }
+  #scrOnboard .btn-primary,#scrOnboard .btn-secondary{min-height:50px}
+  @media (max-height:760px){
+    #obHello{gap:8px}
+    #obHello .ob-title{font-size:clamp(23px,6.6vw,29px)}
+    #obHello .ob-lead{font-size:13.5px;line-height:1.4}
+    .ob-mark{font-size:clamp(19px,5.4vw,23px)}
+    .ob-grid{gap:6px}
+    .ob-grid li{padding:8px 10px}
+    .obg-ico{width:24px;height:24px}
+    .ob-grid b{font-size:12.8px}
+    .ob-grid small{font-size:11px;line-height:1.28}
+    .note.ob-health{padding:9px 11px;font-size:12px;line-height:1.4}
+    .ob-actions{gap:7px;margin-top:8px;padding-top:8px}
+    #scrOnboard .btn-primary,#scrOnboard .btn-secondary{min-height:46px}
+    .ob-legal{font-size:11.5px;line-height:1.35}
   }
 
   /* ---- заголовок карточки со счётчиком ---- */
@@ -283,11 +299,10 @@
   /* сноска о правилах на первом шаге знакомства */
   .ob-legal{font-size:12.5px;line-height:1.5;color:var(--muted);text-align:center;margin:14px 0 0}
   #obHello .ob-legal{margin:var(--sp-2) 0 0}
-  #obHello .ob-legal-link{min-height:40px;margin-top:calc(var(--sp-3) * -1)}
   .ob-legal-link{
-    display:block;width:100%;min-height:44px;background:none;border:none;cursor:pointer;
+    display:inline;padding:0;margin:0;background:none;border:none;cursor:pointer;
     color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px;
-    font-family:var(--font-text);font-size:13.5px;
+    font:inherit;
   }
 
   /* ================= КАТАЛОГ ПРОГРАММ =================

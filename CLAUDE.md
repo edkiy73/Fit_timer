@@ -63,6 +63,7 @@ These are invariants unless the user explicitly changes them.
 
 - User-facing language is Russian unless the feature explicitly requires another language.
 - Address the user informally ("ты") but avoid gendered wording.
+- Marketing, onboarding, paywall and explanatory copy must use plain language for non-technical users. Sell the user benefit/outcome first; avoid implementation terms such as server, provider, runtime, sync, API or model unless that detail is necessary.
 - People managed by a trainer are called **«подопечные»**, not «клиенты».
 - Reuse established wording before inventing new terminology.
 
