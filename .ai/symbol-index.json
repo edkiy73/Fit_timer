@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1236,
-      "chars": 59202,
+      "lines": 1235,
+      "chars": 59162,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -685,8 +685,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 449,
-      "chars": 21041,
+      "lines": 450,
+      "chars": 21205,
       "symbols": [
         "advance",
         "applyTheme",
@@ -711,8 +711,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1657,
-      "chars": 70890,
+      "lines": 1778,
+      "chars": 75952,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -1177,8 +1177,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 356,
-      "chars": 18830,
+      "lines": 362,
+      "chars": 19581,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1303,8 +1303,8 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 601,
-      "chars": 34360,
+      "lines": 607,
+      "chars": 35116,
       "ids": [
         "addExModal",
         "aemAI",

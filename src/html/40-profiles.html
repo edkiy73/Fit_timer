@@ -176,6 +176,8 @@
           <div class="snd-group">
             <p class="snd-label">Голос</p>
             <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+            <div class="pref-row"><span>Язык озвучки</span><select class="voice-sel" id="stVoiceLang"><option value="ru-RU">Русский</option><option value="en-US">English</option></select></div>
+            <div class="pref-row"><span>Голос</span><select class="voice-sel" id="stVoiceChoice"></select></div>
             <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="stMusic"></button></div>
           </div>
           <div class="snd-group">
@@ -199,6 +201,10 @@
           <button type="button" data-hf="headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
+        <div class="voice-pack hidden" id="voicePackBox">
+          <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div class="voice-pack-status"><span id="voicePackStatus">Проверяем…</span><button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack">Скачать</button></div>
+        </div>
       </div>
     </div>
     </div>

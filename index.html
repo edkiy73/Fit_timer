@@ -1327,6 +1327,8 @@
           <div class="snd-group">
             <p class="snd-label">Голос</p>
             <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="stVoiceOn"></button></div>
+            <div class="pref-row"><span>Язык озвучки</span><select class="voice-sel" id="stVoiceLang"><option value="ru-RU">Русский</option><option value="en-US">English</option></select></div>
+            <div class="pref-row"><span>Голос</span><select class="voice-sel" id="stVoiceChoice"></select></div>
             <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="stMusic"></button></div>
           </div>
           <div class="snd-group">
@@ -1350,6 +1352,10 @@
           <button type="button" data-hf="headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
+        <div class="voice-pack hidden" id="voicePackBox">
+          <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div class="voice-pack-status"><span id="voicePackStatus">Проверяем…</span><button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack">Скачать</button></div>
+        </div>
       </div>
     </div>
     </div>
@@ -1702,8 +1708,12 @@
       <div class="modal-card">
         <span class="mini-label">Управление без рук</span>
         <button class="choice" data-hf="off"><b>Выкл</b><small>Переключение кнопками на экране</small></button>
-        <button class="choice" data-hf="voice"><b>Голос</b><small>«Дальше», «пауза», «продолжить». Отключи звук уведомлений, чтобы микрофон не щёлкал</small></button>
+        <button class="choice" data-hf="voice"><b>Голос</b><small>Команды без рук. В приложении работают офлайн после загрузки голосового пакета</small></button>
         <button class="choice" data-hf="headset"><b>Гарнитура</b><small>Кнопка play/pause на наушниках — следующий этап</small></button>
+        <div class="voice-pack hidden" id="hfVoicePackBox">
+          <div class="pref-row"><span>Язык команд</span><select class="voice-sel" id="hfVoiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div class="voice-pack-status"><span id="hfVoicePackStatus">Проверяем…</span><button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack">Скачать</button></div>
+        </div>
         <button class="modal-btn" data-act="closeModal">Закрыть</button>
       </div>
     </div>
@@ -1716,6 +1726,8 @@
           <div class="snd-group">
             <p class="snd-label">Голос</p>
             <div class="pref-row"><span>Озвучивать<small>названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
+            <div class="pref-row"><span>Язык озвучки</span><select class="voice-sel" id="sndVoiceLang"><option value="ru-RU">Русский</option><option value="en-US">English</option></select></div>
+            <div class="pref-row"><span>Голос</span><select class="voice-sel" id="sndVoiceChoice"></select></div>
             <div class="pref-row"><span>Не прерывать музыку<small>вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
           </div>
           <div class="snd-group">

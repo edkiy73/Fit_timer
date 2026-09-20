@@ -128,18 +128,17 @@ function clicks(n){
   }
 }
 
-// список русских голосов + сохранённый выбор
+// Язык и вариант озвучки выбираются пользователем. Это отдельно от языка голосовых
+// команд: можно слушать один голос и распознавать команды на другом языке.
 let savedVoiceURI = '';
-function ruVoices(){
-  try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ru')); }
+let voiceLang = 'ru-RU';
+function voicesForLang(lang){
+  const prefix = String(lang || 'ru-RU').toLowerCase().split('-')[0];
+  try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith(prefix)); }
   catch(e){ return []; }
 }
-// Выбора голоса в интерфейсе нет: на части телефонов русский голос в системе ровно
-// один, и список из одного пункта только занимает место и вызывает вопросы. Берём
-// первый доступный русский голос. Сохранённый ранее выбор (savedVoiceURI) продолжает
-// работать — у тех, кто успел его сделать.
 
-// русская речь; если голоса нет или ошибка — фолбэк-звук
+// если голоса нет или ошибка — фолбэк-звук
 let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
 function speak(text, fallback, onDone){
   const done = ()=>{ if(onDone){ const f = onDone; onDone = null; f(); } };
@@ -149,13 +148,13 @@ function speak(text, fallback, onDone){
   try{
     if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
     const voices = speechSynthesis.getVoices();
-    const ru = ruVoices();
-    if(voices.length && !ru.length){ if(fallback) fallback(); done(); return; }
+    const matching = voicesForLang(voiceLang);
+    if(voices.length && !matching.length){ if(fallback) fallback(); done(); return; }
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU';
+    u.lang = voiceLang || 'ru-RU';
     u.rate = 1.05;
     u.volume = 1;
-    const chosen = ru.find(v => v.voiceURI === savedVoiceURI) || ru[0];
+    const chosen = matching.find(v => v.voiceURI === savedVoiceURI) || matching[0];
     if(chosen) u.voice = chosen;
     let started = false;
     u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 8000; }; // потолок на случай зависания
@@ -11933,6 +11932,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
+let recognitionLang = 'ru'; // ru | en; в APK выбирает локальный пакет Vosk
 
 /* Карточки «Синхронизация» убраны с экрана.
 
@@ -11970,9 +11970,9 @@ function applyVoiceCommand(text){
   const t = text.toLowerCase().trim();
 
   let kind = '';
-  if(/продолж|дальше пошл|поехали/.test(t)) kind = 'resume';
-  else if(/пауз|стоп|подожд/.test(t)) kind = 'pause';
-  else if(/готов|пропус|заверш|дальше|сделал|next|некст/.test(t)) kind = 'next';
+  if(/продолж|дальше пошл|поехали|continue|resume|go on/.test(t)) kind = 'resume';
+  else if(/пауз|стоп|подожд|pause|stop|wait/.test(t)) kind = 'pause';
+  else if(/готов|пропус|заверш|дальше|сделал|next|некст|done|skip|finished/.test(t)) kind = 'next';
   if(!kind) return false;
 
   // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло
@@ -12010,7 +12010,7 @@ let hfMode = 'off'; // off | voice | headset
 const HF_HINTS = {
   off: 'Переключай этапы кнопками на экране.',
   voice: (window.FitNative && window.FitNative.offlineVoice)
-    ? 'Скажи «дальше», «пауза» или «продолжить». Команды работают прямо на телефоне — без интернета после первой загрузки и без системных сигналов.'
+    ? 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.'
     : 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
   headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
 };
@@ -12088,7 +12088,7 @@ let recogSeq = 0;               // номер сессии распознава�
 let firedSeq = -1, firedIdx = -1; // какая фраза какой сессии уже дала команду
 function buildRecog(){
   const r = new SR();
-  r.lang = 'ru-RU';
+  r.lang = recognitionLang === 'en' ? 'en-US' : 'ru-RU';
   r.continuous = true;
   r.interimResults = true; // промежуточные результаты — команда ловится быстрее, не дожидаясь паузы
   r.maxAlternatives = 3;
@@ -12451,22 +12451,36 @@ function readTimings(){
   uDraft.readySec = num('ueReadySec', 5, 0, 30);
   uDraft.sideSec = num('ueSideSec', 10, 3, 60);
 }
+async function nativeVoiceReady(){
+  if(!(window.FitNative && window.FitNative.offlineVoice)) return !!SR;
+  const s = await window.FitNative.getVoiceModelStatus(recognitionLang);
+  return !!(s && s.installed);
+}
+
+async function chooseHandsFree(mode){
+  if(mode === 'voice'){
+    if(!(window.FitNative && window.FitNative.offlineVoice) && !SR){
+      appAlert('На этом устройстве голосовое управление недоступно. Можно использовать кнопку на гарнитуре.');
+      return false;
+    }
+    if(window.FitNative && window.FitNative.offlineVoice && !(await nativeVoiceReady())){
+      await refreshVoicePackUI();
+      appAlert('Сначала скачай голосовой пакет для выбранного языка. После загрузки команды будут работать без интернета.');
+      return false;
+    }
+  }
+  setHfMode(mode);
+  if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
+    kvSet('voiceHint', '1');
+    appAlert((window.FitNative && window.FitNative.offlineVoice)
+      ? 'Готово. Во время тренировки скажи «дальше», «готово» или «пропустить», чтобы перейти дальше. «Пауза» остановит тренировку, «продолжить» — продолжит.'
+      : 'Голосовое управление включено. Скажи «дальше», «пауза» или «продолжить».');
+  }
+  return true;
+}
+
 document.querySelectorAll('#hfSeg button').forEach(b => {
-  b.onclick = async ()=>{
-    const mode = b.dataset.hf;
-    if(mode === 'voice' && !SR){
-      appAlert('Распознавание речи не поддерживается этим браузером. Можно использовать кнопку на гарнитуре.');
-      return;
-    }
-    setHfMode(mode);
-    if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
-      kvSet('voiceHint', '1');
-      const nativeOffline = window.FitNative && window.FitNative.offlineVoice;
-      appAlert(nativeOffline
-        ? 'Голосовое управление включено. Скажи «дальше», «готово» или «пропустить», чтобы перейти к следующему этапу. «Пауза» остановит тренировку, «продолжить» — запустит снова.\n\nВ приложении команды распознаются прямо на телефоне. После первой загрузки интернет не нужен, системных сигналов микрофона тоже нет.'
-        : 'Голосовое управление включено. Скажи «дальше», «готово» или «пропустить», чтобы перейти к следующему этапу. «Пауза» остановит тренировку, «продолжить» — запустит снова.');
-    }
-  };
+  b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
 $('btnResume').onclick = ()=> setPause(false);
 $('psMinus').onclick = ()=> bumpProgSteps(-1);
@@ -12564,22 +12578,124 @@ function wireLiveSoundCascade(p){
 }
 wireLiveSoundCascade('st');
 wireLiveSoundCascade('snd');
+
+async function availableTtsVoices(){
+  if(window.FitNative && window.FitNative.listTtsVoices){
+    const list = await window.FitNative.listTtsVoices();
+    return list.map(v=>({id:v.name,name:v.name,lang:v.language || '',network:!!v.network}));
+  }
+  try{
+    return speechSynthesis.getVoices().map(v=>({id:v.voiceURI,name:v.name,lang:v.lang || '',network:!v.localService}));
+  }catch(_){ return []; }
+}
+
+async function fillVoiceChoices(){
+  ['stVoiceLang','sndVoiceLang'].forEach(id=>{ if($(id)) $(id).value = voiceLang; });
+  const all = await availableTtsVoices();
+  const prefix = voiceLang.toLowerCase().split('-')[0];
+  const list = all.filter(v=>String(v.lang).toLowerCase().startsWith(prefix));
+  for(const id of ['stVoiceChoice','sndVoiceChoice']){
+    const sel=$(id); if(!sel) continue;
+    sel.innerHTML='';
+    if(!list.length){
+      const o=document.createElement('option'); o.value=''; o.textContent='Системный голос'; sel.appendChild(o);
+      continue;
+    }
+    list.forEach((v,i)=>{
+      const o=document.createElement('option');
+      o.value=v.id;
+      o.textContent=(v.name || ('Голос '+(i+1))) + (v.network ? ' · онлайн' : '');
+      sel.appendChild(o);
+    });
+    const exists=list.some(v=>v.id===savedVoiceURI);
+    sel.value=exists ? savedVoiceURI : list[0].id;
+    if(!exists){ savedVoiceURI=sel.value; kvSet('voiceURI',savedVoiceURI); }
+  }
+}
+
+async function setVoiceLanguage(lang){
+  voiceLang = lang === 'en-US' ? 'en-US' : 'ru-RU';
+  savedVoiceURI='';
+  kvSet('voiceLang',voiceLang);
+  kvSet('voiceURI','');
+  await fillVoiceChoices();
+}
+
+async function refreshVoicePackUI(progressEvent){
+  const native = !!(window.FitNative && window.FitNative.offlineVoice);
+  ['voicePackBox','hfVoicePackBox'].forEach(id=>setShown(id,native));
+  if(!native) return;
+  if($('voiceRecLang')) $('voiceRecLang').value=recognitionLang;
+  if($('hfVoiceRecLang')) $('hfVoiceRecLang').value=recognitionLang;
+
+  let status = null;
+  if(progressEvent && progressEvent.language === recognitionLang) status=progressEvent;
+  else status = await window.FitNative.getVoiceModelStatus(recognitionLang);
+
+  const size = (status && status.sizeMb) || (recognitionLang==='en' ? 40 : 45);
+  let label = status && status.installed ? 'Готово к работе офлайн' : `Нужно скачать один раз · около ${size} МБ`;
+  let button = status && status.installed ? 'Скачано' : 'Скачать';
+  let disabled = !!(status && status.installed);
+  if(status && status.status === 'downloading'){
+    label = `Скачиваем… ${Math.max(0,Math.min(100,status.progress||0))}%`;
+    button = `${Math.max(0,Math.min(100,status.progress||0))}%`;
+    disabled = true;
+  }else if(status && status.status === 'error'){
+    label='Не удалось скачать. Проверь интернет и попробуй ещё раз.';
+    button='Повторить';
+    disabled=false;
+  }
+  for(const pair of [['voicePackStatus','btnVoicePack'],['hfVoicePackStatus','btnHfVoicePack']]){
+    const s=$(pair[0]), b=$(pair[1]); if(!s||!b) continue;
+    s.textContent=label; b.textContent=button; b.disabled=disabled;
+  }
+}
+
+async function downloadSelectedVoicePack(){
+  if(!(window.FitNative && window.FitNative.downloadVoiceModel)) return;
+  for(const id of ['btnVoicePack','btnHfVoicePack']) if($(id)) $(id).disabled=true;
+  const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
+  await refreshVoicePackUI();
+  if(ok) appAlert('Голосовой пакет готов. Теперь команды работают прямо на телефоне и без интернета.');
+  else appAlert('Не удалось скачать голосовой пакет. Проверь интернет и попробуй ещё раз.');
+}
+
 function openHfModal(){
   document.querySelectorAll('#hfModal .choice').forEach(c => c.classList.toggle('act', c.dataset.hf === hfMode));
+  if($('hfVoiceRecLang')) $('hfVoiceRecLang').value = recognitionLang;
+  refreshVoicePackUI();
   $('hfModal').classList.add('open');
 }
 document.querySelectorAll('#hfModal .choice').forEach(c => {
-  c.onclick = ()=>{
-    const mode = c.dataset.hf;
-    if(mode === 'voice' && !SR){
-      appAlert('Распознавание речи не поддерживается этим браузером. Можно использовать кнопку на гарнитуре.');
-      return;
-    }
-    setHfMode(mode);
-    $('hfModal').classList.remove('open');
+  c.onclick = async ()=>{
+    const ok = await chooseHandsFree(c.dataset.hf);
+    if(ok) $('hfModal').classList.remove('open');
   };
 });
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
+
+for(const id of ['stVoiceLang','sndVoiceLang']){
+  if($(id)) $(id).onchange = async e=>{ await setVoiceLanguage(e.target.value); };
+}
+for(const id of ['stVoiceChoice','sndVoiceChoice']){
+  if($(id)) $(id).onchange = e=>{
+    savedVoiceURI=e.target.value || '';
+    kvSet('voiceURI',savedVoiceURI);
+    for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
+    speak(voiceLang==='en-US' ? 'Voice selected' : 'Голос выбран');
+  };
+}
+for(const id of ['voiceRecLang','hfVoiceRecLang']){
+  if($(id)) $(id).onchange = async e=>{
+    recognitionLang = e.target.value === 'en' ? 'en' : 'ru';
+    kvSet('recognitionLang',recognitionLang);
+    if(hfMode==='voice') setHfMode('off');
+    await refreshVoicePackUI();
+  };
+}
+if($('btnVoicePack')) $('btnVoicePack').onclick=downloadSelectedVoicePack;
+if($('btnHfVoicePack')) $('btnHfVoicePack').onclick=downloadSelectedVoicePack;
+window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
 $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
@@ -13951,7 +14067,12 @@ try{
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = HF_HINTS[hfMode] || '';
   soundOn = (await kvGet('soundOff')) !== '1';
+  voiceLang = (await kvGet('voiceLang')) || 'ru-RU';
   savedVoiceURI = (await kvGet('voiceURI')) || '';
+  recognitionLang = (await kvGet('recognitionLang')) || 'ru';
+  if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
+  await fillVoiceChoices();
+  await refreshVoicePackUI();
   musicMode = (await kvGet('musicMode')) === '1';
   applyAudioFromUser(curUser());
   syncPrefs();

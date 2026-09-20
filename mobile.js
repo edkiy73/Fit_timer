@@ -143,7 +143,9 @@
   async function speak(text){
     if(!native || !fitAudio) return false;
     try{
-      const result = await fitAudio.speak({text: String(text || ''), locale: 'ru-RU'});
+      const locale = (typeof voiceLang !== 'undefined' && voiceLang) ? voiceLang : 'ru-RU';
+      const voice = (typeof savedVoiceURI !== 'undefined' && savedVoiceURI) ? savedVoiceURI : '';
+      const result = await fitAudio.speak({text: String(text || ''), locale, voice});
       return result.spoken === true;
     }catch(_){ return false; }
   }
@@ -178,12 +180,49 @@
       speechStatusHandle = await fitAudio.addListener('speechStatus', event=>{
         if(onStatus) onStatus(event || {});
       });
-      const started = await fitAudio.startRecognition({locale: 'ru-RU'});
+      const language = (typeof recognitionLang !== 'undefined' && recognitionLang) ? recognitionLang : 'ru';
+      const started = await fitAudio.startRecognition({language});
+      if(started && started.missingModel){
+        if(onError) onError('model_missing');
+        return false;
+      }
       return !!(started && started.started);
     }catch(_){
       if(onError) onError('recognition');
       return false;
     }
+  }
+
+  async function getVoiceModelStatus(language){
+    if(!native || !fitAudio) return {installed:false, unavailable:true, language};
+    try{ return await fitAudio.getRecognitionModelStatus({language: language || 'ru'}); }
+    catch(_){ return {installed:false, unavailable:true, language}; }
+  }
+
+  async function downloadVoiceModel(language, onStatus){
+    if(!native || !fitAudio) return false;
+    let handle = null;
+    try{
+      handle = await fitAudio.addListener('speechStatus', event=>{
+        if(onStatus && event && (!event.language || event.language === language)) onStatus(event);
+        try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:event || {}})); }catch(_){}
+      });
+      const result = await fitAudio.prepareRecognitionModel({language: language || 'ru'});
+      return !!(result && result.installed);
+    }catch(_){ return false; }
+    finally{ try{ if(handle) await handle.remove(); }catch(_){} }
+  }
+
+  async function deleteVoiceModel(language){
+    if(!native || !fitAudio) return false;
+    try{ const r = await fitAudio.deleteRecognitionModel({language:language || 'ru'}); return !!(r && r.deleted); }
+    catch(_){ return false; }
+  }
+
+  async function listTtsVoices(){
+    if(!native || !fitAudio) return [];
+    try{ const r = await fitAudio.listVoices(); return (r && Array.isArray(r.voices)) ? r.voices : []; }
+    catch(_){ return []; }
   }
 
   function installNativeOverrides(){
@@ -220,17 +259,14 @@
             if(typeof voiceWanted !== 'undefined') voiceWanted = false;
             if(typeof syncPrefs === 'function') syncPrefs();
             if(typeof appAlert === 'function') appAlert('Нет доступа к микрофону. Разреши микрофон для Fit Timer в настройках приложения.');
+          }else if(error === 'model_missing'){
+            if(typeof refreshVoicePackUI === 'function') refreshVoicePackUI();
           }else if(error === 'model'){
-            if(typeof appAlert === 'function') appAlert('Не удалось подготовить голосовое управление. Проверь интернет и попробуй ещё раз.');
+            if(typeof appAlert === 'function') appAlert('Не удалось запустить голосовое управление. Попробуй заново скачать голосовой пакет в настройках.');
           }
         },
         status=>{
-          if(!status || status.status !== 'downloading') return;
-          Promise.resolve(typeof kvGet === 'function' ? kvGet('offlineVoiceDownloadHint') : '0').then(seen=>{
-            if(seen === '1') return;
-            if(typeof kvSet === 'function') kvSet('offlineVoiceDownloadHint', '1');
-            if(typeof appAlert === 'function') appAlert('При первом включении Fit Timer загрузит голосовой пакет — около 45 МБ. Потом команды работают прямо на телефоне, без интернета и без системных сигналов микрофона.');
-          });
+          try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:status || {}})); }catch(_){}
         }
       ).then(ok=>{ if(!ok && typeof voiceActive !== 'undefined') voiceActive = false; });
     };
@@ -257,19 +293,6 @@
     if(!native) return;
     const target = event.target.closest('#startResume, #startFresh, .pick-item, #btnDone, #btnSkip, #btnPrev, #btnPause, #btnResume');
     if(target && !target.disabled) workoutHaptic();
-  }, true);
-
-  // Два старых обработчика считают голос недоступным, если Web Speech API нет.
-  // В capture-фазе пропускаем их и включаем нативный режим сами.
-  document.addEventListener('click', event=>{
-    if(!native || !fitAudio) return;
-    const target = event.target.closest('[data-hf="voice"]');
-    if(!target) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if(typeof setHfMode === 'function') setHfMode('voice');
-    const modal = document.getElementById('hfModal');
-    if(modal && target.closest('#hfModal')) modal.classList.remove('open');
   }, true);
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installNativeOverrides, {once:true});
@@ -315,6 +338,10 @@
     stopSpeaking,
     startVoiceRecognition,
     stopVoiceRecognition,
+    getVoiceModelStatus,
+    downloadVoiceModel,
+    deleteVoiceModel,
+    listTtsVoices,
     offlineVoice: native && !!fitAudio
   });
 })();

@@ -211,3 +211,6 @@ node --check scripts/build-web.mjs
 The Android Capacitor shell uses Vosk for continuous hands-free commands instead of Android SpeechRecognizer. The small Russian model (`vosk-model-small-ru-0.22`, about 45 MB) is downloaded from the official Vosk model host on first use and stored in app-private storage. After that, recognition is fully on-device and needs no network.
 
 The recognizer uses a narrow FitTimer command grammar and keeps one continuous microphone capture session, avoiding repeated Android SpeechRecognizer start/stop tones. Browser/PWA builds keep the Web Speech fallback.
+
+
+The voice model is explicitly downloaded by the user from the hands-free settings. The UI exposes Russian (~45 MB) and English (~40 MB), shows download progress, and will not enable native voice mode until the selected model is installed. TTS language/voice and command-recognition language are separate settings.

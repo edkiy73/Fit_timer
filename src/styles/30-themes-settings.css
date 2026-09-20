@@ -687,3 +687,10 @@
   .btn-resume svg{width:20px;height:20px}
   .ctx-menu svg{margin-right:8px;flex:none}
   
+
+  /* ---- локальные голосовые команды ---- */
+  .voice-pack{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .voice-pack-status{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .voice-pack-status > span{flex:1;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.4}
+  .voice-pack-btn{width:auto;min-height:38px;padding:8px 13px;border-radius:10px;font-family:var(--font-text);font-size:12.5px;letter-spacing:0;text-transform:none}
+  .voice-pack-btn[disabled]{opacity:.55;cursor:default;transform:none}

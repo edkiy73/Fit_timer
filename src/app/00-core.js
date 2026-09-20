@@ -128,18 +128,17 @@ function clicks(n){
   }
 }
 
-// список русских голосов + сохранённый выбор
+// Язык и вариант озвучки выбираются пользователем. Это отдельно от языка голосовых
+// команд: можно слушать один голос и распознавать команды на другом языке.
 let savedVoiceURI = '';
-function ruVoices(){
-  try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ru')); }
+let voiceLang = 'ru-RU';
+function voicesForLang(lang){
+  const prefix = String(lang || 'ru-RU').toLowerCase().split('-')[0];
+  try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith(prefix)); }
   catch(e){ return []; }
 }
-// Выбора голоса в интерфейсе нет: на части телефонов русский голос в системе ровно
-// один, и список из одного пункта только занимает место и вызывает вопросы. Берём
-// первый доступный русский голос. Сохранённый ранее выбор (savedVoiceURI) продолжает
-// работать — у тех, кто успел его сделать.
 
-// русская речь; если голоса нет или ошибка — фолбэк-звук
+// если голоса нет или ошибка — фолбэк-звук
 let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
 function speak(text, fallback, onDone){
   const done = ()=>{ if(onDone){ const f = onDone; onDone = null; f(); } };
@@ -149,13 +148,13 @@ function speak(text, fallback, onDone){
   try{
     if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
     const voices = speechSynthesis.getVoices();
-    const ru = ruVoices();
-    if(voices.length && !ru.length){ if(fallback) fallback(); done(); return; }
+    const matching = voicesForLang(voiceLang);
+    if(voices.length && !matching.length){ if(fallback) fallback(); done(); return; }
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU';
+    u.lang = voiceLang || 'ru-RU';
     u.rate = 1.05;
     u.volume = 1;
-    const chosen = ru.find(v => v.voiceURI === savedVoiceURI) || ru[0];
+    const chosen = matching.find(v => v.voiceURI === savedVoiceURI) || matching[0];
     if(chosen) u.voice = chosen;
     let started = false;
     u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 8000; }; // потолок на случай зависания

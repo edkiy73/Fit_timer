@@ -41,6 +41,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
+let recognitionLang = 'ru'; // ru | en; в APK выбирает локальный пакет Vosk
 
 /* Карточки «Синхронизация» убраны с экрана.
 
@@ -78,9 +79,9 @@ function applyVoiceCommand(text){
   const t = text.toLowerCase().trim();
 
   let kind = '';
-  if(/продолж|дальше пошл|поехали/.test(t)) kind = 'resume';
-  else if(/пауз|стоп|подожд/.test(t)) kind = 'pause';
-  else if(/готов|пропус|заверш|дальше|сделал|next|некст/.test(t)) kind = 'next';
+  if(/продолж|дальше пошл|поехали|continue|resume|go on/.test(t)) kind = 'resume';
+  else if(/пауз|стоп|подожд|pause|stop|wait/.test(t)) kind = 'pause';
+  else if(/готов|пропус|заверш|дальше|сделал|next|некст|done|skip|finished/.test(t)) kind = 'next';
   if(!kind) return false;
 
   // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло
@@ -118,7 +119,7 @@ let hfMode = 'off'; // off | voice | headset
 const HF_HINTS = {
   off: 'Переключай этапы кнопками на экране.',
   voice: (window.FitNative && window.FitNative.offlineVoice)
-    ? 'Скажи «дальше», «пауза» или «продолжить». Команды работают прямо на телефоне — без интернета после первой загрузки и без системных сигналов.'
+    ? 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.'
     : 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
   headset: 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.'
 };
@@ -196,7 +197,7 @@ let recogSeq = 0;               // номер сессии распознава�
 let firedSeq = -1, firedIdx = -1; // какая фраза какой сессии уже дала команду
 function buildRecog(){
   const r = new SR();
-  r.lang = 'ru-RU';
+  r.lang = recognitionLang === 'en' ? 'en-US' : 'ru-RU';
   r.continuous = true;
   r.interimResults = true; // промежуточные результаты — команда ловится быстрее, не дожидаясь паузы
   r.maxAlternatives = 3;
