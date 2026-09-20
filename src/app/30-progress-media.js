@@ -46,24 +46,23 @@ async function loadPhotos(){
 async function savePhotos(){ await kvSet(pk('photos'), JSON.stringify(photos)); }
 
 function fmtD(iso){
-  const [y, m, d] = iso.split('-');
-  return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)} ${y.slice(2)}`;
+  const d = new Date(iso + 'T12:00:00');
+  return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short', year:'2-digit'}).format(d);
 }
-// то же без года — для подписей осей и миниатюр, где год только шумит
 function shortD(iso){
-  const [, m, d] = iso.split('-');
-  return `${+d} ${MONTH_NAMES[+m - 1].toLowerCase().slice(0, 3)}`;
+  const d = new Date(iso + 'T12:00:00');
+  return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short'}).format(d);
 }
 
 function renderPhotos(){
   const n = photos.length;
-  $('photoCount').textContent = n ? `${n} фото` : '';
+  $('photoCount').textContent = n ? t('progress.photoCount',{count:n}) : '';
   setShown('photoNowRow', !!n);
   const hint = $('photoHint');
   if(n){
     const last = new Date(photos[photos.length - 1].d);
     const days = Math.floor((new Date() - last) / 86400000);
-    hint.textContent = days >= 7 ? 'пора обновить' : '';
+    hint.textContent = days >= 7 ? t('progress.photoUpdate') : '';
     hint.style.color = 'var(--danger)';
   } else hint.textContent = '';
 
@@ -88,8 +87,8 @@ function renderPhotos(){
 async function deleteAllPhotos(){
   if(!photos.length) return;
   const ok = await appDialog(
-    `Удалить все фото (${photos.length})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.`,
-    {confirm: true, okText: 'Удалить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    t('progress.deleteAllPhotos',{count:photos.length}),
+    {confirm: true, okText: t('common.delete'), cancelText: t('common.cancel'), type: t('progress.deleteConfirmPhrase')}
   );
   if(!ok) return;
   photos = [];
@@ -103,8 +102,8 @@ async function addPhoto(file){
   const today = localISO(new Date());
   if(photos.some(p => p.d === today)){
     const ok = await appDialog(
-      'Снимок за сегодня уже есть. Новый заменит его — вернуть старый будет неоткуда.',
-      {confirm: true, okText: 'Заменить', cancelText: 'Отмена'}
+      t('progress.todayReplace'),
+      {confirm: true, okText: t('common.replace'), cancelText: t('common.cancel')}
     );
     if(!ok) return;
   }
@@ -133,7 +132,9 @@ function renderCmp(){
   $('cmpImgB').innerHTML = b ? `<img src="${esc(b.img)}" alt="">` : '';
   if(a && b){
     const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
-    $('cmpDays').textContent = days ? `${days} ${plural(days, 'день', 'дня', 'дней')} между фото` : 'Фото за один день';
+    $('cmpDays').textContent = days
+      ? t('progress.daysBetween',{count:days,days:appLocale === 'ru' ? plural(days,'день','дня','дней') : (days === 1 ? 'day' : 'days')})
+      : t('progress.sameDay');
   }
 }
 // нажатие на снимок в сетке открывает сравнение сразу с ним справа,
@@ -171,7 +172,7 @@ function renderPhotoFull(){
   const p = photos[pfIdx];
   if(!p) return;
   $('pfImg').src = p.img;
-  $('pfCap').textContent = fmtD(p.d) + (photos.length > 1 ? ` · ${pfIdx + 1} из ${photos.length}` : '');
+  $('pfCap').textContent = fmtD(p.d) + (photos.length > 1 ? ' · ' + t('progress.photoPosition',{current:pfIdx+1,total:photos.length}) : '');
 }
 function pfStep(d){
   const n = pfIdx + d;
@@ -207,7 +208,7 @@ async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
   if(!p) return;
-  if(!(await appConfirm(`Удалить фото от ${fmtD(p.d)}?`))) return;
+  if(!(await appConfirm(t('progress.deletePhoto',{date:fmtD(p.d)})))) return;
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
@@ -232,7 +233,7 @@ function drawCover(x, img, dx, dy, dw, dh, r){
 async function shareGeneratedFile(blob, fname, title, savedText){
   if(window.FitNative && window.FitNative.isNative){
     const ok = await window.FitNative.shareFile(blob, fname, title || 'Fit Timer');
-    if(!ok) appAlert('Не удалось открыть системное меню «Поделиться». Попробуй ещё раз.');
+    if(!ok) appAlert(t('share.openFailed'));
     return ok;
   }
   const file = new File([blob], fname, {type:blob.type || 'application/octet-stream'});
@@ -245,14 +246,14 @@ async function shareGeneratedFile(blob, fname, title, savedText){
   link.download = fname;
   link.click();
   setTimeout(()=> URL.revokeObjectURL(link.href), 5000);
-  appAlert(savedText || 'Файл сохранён в загрузки.');
+  appAlert(savedText || t('share.savedDownloads'));
   return true;
 }
 async function shareCompare(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
   if(!a || !b) return;
   const [ia, ib] = await Promise.all([loadImg(a.img), loadImg(b.img)]);
-  if(!ia || !ib){ appAlert('Не удалось подготовить фото.'); return; }
+  if(!ia || !ib){ appAlert(t('progress.preparePhotoFailed')); return; }
   const cs = getComputedStyle(document.body);
   const col = n => cs.getPropertyValue(n).trim();
   const W = 1080, H = 1350;
@@ -264,7 +265,7 @@ async function shareCompare(){
   x.fillStyle = col('--muted'); x.font = '600 44px Oswald, sans-serif';
   x.fillText('F I T  /  T I M E R', W / 2, 110);
   x.fillStyle = col('--ink'); x.font = '500 46px Rubik, sans-serif';
-  x.fillText('Мой прогресс', W / 2, 190);
+  x.fillText(t('progress.myProgress'), W / 2, 190);
   // два фото
   const pw = 486, ph = 760, gy = 240;
   drawCover(x, ia, 34, gy, pw, ph, 26);
@@ -277,13 +278,14 @@ async function shareCompare(){
   x.fillText(fmtD(b.d), W - 34 - pw / 2, gy + ph + 58);
   const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
   x.fillStyle = col('--work'); x.font = '600 52px Oswald, sans-serif';
-  x.fillText(days ? `${days} ${plural(days, 'ДЕНЬ', 'ДНЯ', 'ДНЕЙ')} РАБОТЫ НАД СОБОЙ` : 'НАЧАЛО ПУТИ', W / 2, 1180);
+  x.fillText(days
+    ? t('progress.daysWork',{count:days,days:appLocale === 'ru' ? plural(days,'ДЕНЬ','ДНЯ','ДНЕЙ') : (days === 1 ? 'DAY' : 'DAYS')})
+    : t('progress.journeyStart'), W / 2, 1180);
   x.fillStyle = col('--muted'); x.font = '600 32px Oswald, sans-serif';
   x.fillText('F I T   T I M E R', W / 2, 1256);
   c.toBlob(async blob => {
-    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    await shareGeneratedFile(blob, 'fittimer-progress.png', 'Мой прогресс — Fit Timer',
-      'Картинка сохранена в загрузки — отправь её из галереи.');
+    if(!blob){ appAlert(t('progress.imageFailed')); return; }
+    await shareGeneratedFile(blob, 'fittimer-progress.png', t('progress.shareTitle'), t('progress.shareFallback'));
   }, 'image/png');
 }
 
@@ -336,17 +338,17 @@ async function exportAllData(){
   a.download = 'fittimer-backup-' + localISO(new Date()) + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  appAlert('Резервная копия сохранена в загрузки. В ней всё: профили, программы, статистика, вес, замеры, фото, аккаунт с подпиской и — если ты тренер — ник и подопечные.');
+  appAlert(t('backup.saved'));
 }
 
 async function importAllData(file){
   let dump;
   try{ dump = JSON.parse(await file.text()); }
-  catch(e){ appAlert('Не удалось прочитать файл.'); return; }
+  catch(e){ appAlert(t('backup.readFailed')); return; }
   if(!dump || dump.app !== 'fittimer' || !Array.isArray(dump.users)){
-    appAlert('Это не файл резервной копии Fit Timer.'); return;
+    appAlert(t('backup.invalid')); return;
   }
-  if(!(await appConfirm('Заменить ВСЕ данные приложения данными из файла? Текущие данные будут перезаписаны.'))) return;
+  if(!(await appConfirm(t('backup.replaceAll')))) return;
 
   /* Файл резервной копии — обычный JSON, и до сюда он мог доехать откуда угодно:
      его пересылают, правят в блокноте, собирают заново. Поэтому проходим по нему
@@ -360,7 +362,7 @@ async function importAllData(file){
     if(u.theme && !['system', 'light', 'dark'].includes(u.theme)) u.theme = 'system';
     return migrateUserAge(u);
   });
-  if(!users.length){ appAlert('В файле нет ни одного профиля.'); return; }
+  if(!users.length){ appAlert(t('backup.noProfiles')); return; }
 
   await kvSet('users', JSON.stringify(users));
   await kvSet('currentUser', dump.currentUser || users[0].id);
@@ -467,7 +469,7 @@ async function sharePng(title, lanes, fname){
     const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(c0).trim());
     return m ? `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})` : c0;
   };
-  const num = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  const num = v => new Intl.NumberFormat(localeTag(), {maximumFractionDigits:1}).format(Math.round(v * 10) / 10);
 
   // Полосу сначала подгоняем под привычные 1080×1350, потом зажимаем в границы
   // читаемости — и уже от неё считаем высоту холста. Так картинка с шестью
@@ -572,8 +574,8 @@ async function sharePng(title, lanes, fname){
   x.fillText('F I T   T I M E R', W / 2, H - 44);
 
   c.toBlob(async blob => {
-    if(!blob){ appAlert('Не удалось создать картинку.'); return; }
-    await shareGeneratedFile(blob, fname, title + ' — Fit Timer', 'Картинка сохранена в загрузки.');
+    if(!blob){ appAlert(t('progress.imageFailed')); return; }
+    await shareGeneratedFile(blob, fname, title + ' — Fit Timer', t('progress.shareSaved'));
   }, 'image/png');
   return c;
 }
@@ -582,16 +584,16 @@ async function sharePng(title, lanes, fname){
 function shareBodyLanes(){
   const ws = stats.weights || [];
   const defs = [
-    {k: 'w',     v: '--work',       label: 'ВЕС',    unit: 'кг'},
-    {k: 'fat',   v: '--danger',     label: 'ЖИР',    unit: '%'},
-    {k: 'musc',  v: '--ok',         label: 'МЫШЦЫ',  unit: '%'},
-    {k: 'waist', v: '--accent-ink', label: 'ТАЛИЯ',  unit: 'см'},
-    {k: 'hips',  v: '--rest-ink',   label: 'БЁДРА',  unit: 'см'},
-    {k: 'chest', v: '--warn',       label: 'ГРУДЬ',  unit: 'см'}
+    {k:'w',v:'--work',label:t('progress.bodyWeight'),unit:t('progress.kg')},
+    {k:'fat',v:'--danger',label:t('progress.bodyFat'),unit:'%'},
+    {k:'musc',v:'--ok',label:t('progress.bodyMuscle'),unit:'%'},
+    {k:'waist',v:'--accent-ink',label:t('progress.waist'),unit:t('progress.cm')},
+    {k:'hips',v:'--rest-ink',label:t('progress.hips'),unit:t('progress.cm')},
+    {k:'chest',v:'--warn',label:t('progress.chest'),unit:t('progress.cm')}
   ];
-  return defs.map(s => {
-    s.have = ws.map(p => p[s.k]).filter(v => v != null).slice(-30);
-    return s;
+  return defs.map(item => {
+    item.have = ws.map(p => p[item.k]).filter(v => v != null).slice(-30);
+    return item;
   }).filter(L => L.have.length);
 }
 
@@ -599,28 +601,28 @@ function shareBodyLanes(){
 function shareWellLanes(){
   const ws = wellList();
   const defs = [
-    {k: 'sys', pair: 'dia', v: '--danger',     label: 'ДАВЛЕНИЕ', unit: ''},
-    {k: 'pulse',            v: '--accent-ink', label: 'ПУЛЬС',    unit: 'уд/мин'},
-    {k: 'sleep',            v: '--rest-ink',   label: 'СОН',      unit: 'ч'}
+    {k:'sys',pair:'dia',v:'--danger',label:t('progress.pressure'),unit:''},
+    {k:'pulse',v:'--accent-ink',label:t('progress.pulse'),unit:t('progress.bpm')},
+    {k:'sleep',v:'--rest-ink',label:t('progress.sleep'),unit:t('progress.hoursShort')}
   ];
-  return defs.map(s => {
-    const pts = ws.filter(p => p[s.k] != null).slice(-30);
-    s.have = pts.map(p => p[s.k]);
-    s.have2 = (s.pair && pts.length && pts.every(p => p[s.pair] != null)) ? pts.map(p => p[s.pair]) : null;
-    return s;
+  return defs.map(item => {
+    const pts = ws.filter(p => p[item.k] != null).slice(-30);
+    item.have = pts.map(p => p[item.k]);
+    item.have2 = (item.pair && pts.length && pts.every(p => p[item.pair] != null)) ? pts.map(p => p[item.pair]) : null;
+    return item;
   }).filter(L => L.have.length);
 }
 
 async function shareWeightChart(){
   const lanes = shareBodyLanes();
-  if(!lanes.length){ appAlert('Сначала запиши хотя бы одну метрику.'); return; }
-  await sharePng('Мои изменения', lanes, 'fittimer-progress.png');
+  if(!lanes.length){ appAlert(t('progress.addMetricFirst')); return; }
+  await sharePng(t('progress.myChanges'), lanes, 'fittimer-progress.png');
 }
 
 async function shareWellChart(){
   const lanes = shareWellLanes();
-  if(!lanes.length){ appAlert('Сначала запиши хотя бы одно измерение.'); return; }
-  await sharePng('Моё самочувствие', lanes, 'fittimer-wellness.png');
+  if(!lanes.length){ appAlert(t('progress.addWellnessFirst')); return; }
+  await sharePng(t('progress.myWellness'), lanes, 'fittimer-wellness.png');
 }
 
 /* ================= ИСТОРИЯ ВЕСА (правка задним числом) ================= */
@@ -634,11 +636,11 @@ function openWeightHist(){
     const cell = (k, lbl, v, st) => `<div class="whc"><label>${lbl}</label><input type="number" step="${st || 0.5}" inputmode="decimal" value="${v || ''}" data-k="${k}"></div>`;
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="Удалить запись">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
       `<div class="wh-cells">` +
-        `<div class="whc"><label>Вес</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
-        cell('fat', 'Жир %', en.fat, 0.1) + cell('musc', 'Мышцы %', en.musc, 0.1) +
-        cell('waist', 'Талия', en.waist) + cell('hips', 'Бёдра', en.hips) + cell('chest', 'Грудь', en.chest) +
+        `<div class="whc"><label>${esc(t('common.weight'))}</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
+        cell('fat', t('progress.fat'), en.fat, 0.1) + cell('musc', t('progress.muscle'), en.musc, 0.1) +
+        cell('waist', t('progress.waistLabel'), en.waist) + cell('hips', t('progress.hipsLabel'), en.hips) + cell('chest', t('progress.chestLabel'), en.chest) +
       `</div>`;
     row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
     list.appendChild(row);
