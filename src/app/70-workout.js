@@ -164,7 +164,7 @@ function setPause(p, silent){
   // Голосом отмечаем только ВХОД в паузу: на выходе и так идёт отсчёт, а второе
   // слово поверх него только мешает. silent — когда пауза не новость: мы её и не
   // снимали, просто вернулись из редактора упражнения.
-  if(p && !silent) speak('Пауза');
+  if(p && !silent) speak(voiceIsEnglish() ? 'Paused' : 'Пауза');
   paintPause();
 }
 // Красная плашка и кнопка ВСЕГДА рисуются по state.paused и никогда — мимо него.
@@ -368,7 +368,11 @@ function renderStep(){
     setTimeout(()=>{
       if(state.stepToken !== myToken) return;
       const n2 = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
-      speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
+      if(voiceIsEnglish()){
+        speak('Switch sides' + (n2 && n2.side ? `. Side ${n2.side} of ${n2.sidesTotal || 2}` : ''));
+      } else {
+        speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
+      }
     }, 260);
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
