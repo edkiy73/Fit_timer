@@ -1633,7 +1633,7 @@ function customToProgram(p, planIdx = 0){
       step.kind = 'timer';
       step.seconds = tGrows ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min;
     } else {
-      step.kind = 'click'; step.repsNote = 'повторений';
+      step.kind = 'click'; step.repsNote = t('workout.repsShort');
       // диапазон повторов сдвигается целиком (и низ, и верх), если повторы растут —
       // не зависит от того, растёт ли ОДНОВРЕМЕННО вес у этого же упражнения
       step.reps = rGrows ? progressedRepsRange(p.id, ex, p) : normValue(ex.value, 'reps');
@@ -1642,10 +1642,10 @@ function customToProgram(p, planIdx = 0){
   };
   // короткая пауза на смену стороны между половинами упражнения
   const mkSideSwitch = ()=> ({
-    kind:'timer', phase:'rest', title:'Смените сторону', seconds: Math.max(3, sideSec),
-    instruction:'Поменяй сторону и займи исходное положение.', illo:'rest', sideSwitch:true
+    kind:'timer', phase:'rest', title:t('workout.switchSide'), seconds: Math.max(3, sideSec),
+    instruction:t('workout.switchSideInstruction'), illo:'rest', sideSwitch:true
   });
-  const mkRest = sec => ({kind:'timer', phase:'rest', title:'Отдых', seconds:sec, instruction:'Восстанови дыхание.', illo:'rest'});
+  const mkRest = sec => ({kind:'timer', phase:'rest', title:t('workout.rest'), seconds:sec, instruction:t('workout.restInstruction'), illo:'rest'});
 
   const list = plan.exercises || [];
   const warmEx = list.filter(e => e.warmup);
