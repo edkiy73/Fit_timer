@@ -316,6 +316,11 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                     try {
                         Recognizer recognizer = new Recognizer(voskModel, 16000.0f);
                         recognizer.setWords(true);
+                        recognizer.setPartialWords(true);
+                        // Workout commands are one or two short words. The default endpoint
+                        // waits too long for trailing silence and makes "готово" feel laggy.
+                        recognizer.setEndpointerMode(Recognizer.EndpointerMode.SHORT);
+                        recognizer.setEndpointerDelays(4.0f, 0.28f, 8.0f);
                         speechService = new SpeechService(recognizer, 16000.0f);
                         commandFiredForUtterance = false;
                         speechService.startListening(this);
@@ -403,6 +408,25 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
     }
 
+    private String commandKindFlexible(String text) {
+        String t = text == null ? "" : text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
+        String exact = commandKind(t);
+        if (!exact.isEmpty()) return exact;
+
+        // Vosk often returns a grammatical variant before the exact word. Accept only
+        // distinctive stems long enough that random speech like "го" / "про" cannot match.
+        if (t.length() >= 4 && (t.startsWith("пауз") || t.startsWith("останов"))) return "pause";
+        if (t.length() >= 7 && t.startsWith("продолж")) return "resume";
+        if (t.length() >= 5 && t.startsWith("готов")) return "next";
+        if (t.length() >= 6 && (t.startsWith("пропуст") || t.startsWith("следующ") || t.startsWith("закончил"))) return "next";
+        if (t.length() >= 7 && t.startsWith("заверш")) return "next";
+
+        if (t.length() >= 4 && ("pause".startsWith(t) || "stop".equals(t))) return "pause";
+        if (t.length() >= 5 && ("continue".startsWith(t) || "resume".startsWith(t))) return "resume";
+        if (t.length() >= 4 && ("next".equals(t) || "done".equals(t) || "skip".equals(t))) return "next";
+        return "";
+    }
+
     private void cancelPendingPartial() {
         if (pendingPartialRunnable != null) main.removeCallbacks(pendingPartialRunnable);
         pendingPartialRunnable = null;
@@ -427,18 +451,24 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private void considerPartialCommand(String hypothesis) {
         if (commandFiredForUtterance || hypothesis == null || hypothesis.isEmpty()) return;
         String text = hypothesisText(hypothesis, "partial");
-        String kind = commandKind(text);
+        String kind = commandKindFlexible(text);
         if (kind.isEmpty()) {
-            cancelPendingPartial();
+            // Do not cancel a valid candidate just because the decoder briefly emits
+            // an empty/intermediate partial while the same word is still being spoken.
             return;
         }
 
         String normalized = text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
-        if (normalized.equals(pendingPartialText) && kind.equals(pendingPartialKind)) {
+
+        // If the decoder refines "готов" -> "готово", that is still one command.
+        // Previously we reset the timer on every refinement, which created the
+        // "say it ten times until you hit the right rhythm" behaviour.
+        if (kind.equals(pendingPartialKind)) {
             pendingPartialHits++;
-            // Два одинаковых точных partial подряд — уже достаточно. Это даёт
-            // быстрый отклик без ожидания длинной паузы после слова.
-            if (pendingPartialHits >= 2) emitCommand(normalized, kind, 0.0, "partial");
+            pendingPartialText = normalized;
+            if (pendingPartialHits >= 2) {
+                emitCommand(normalized, kind, 0.0, "partial_fast");
+            }
             return;
         }
 
@@ -447,14 +477,12 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         pendingPartialKind = kind;
         pendingPartialHits = 1;
 
-        // Пауза/продолжение должны ощущаться моментально. Переход на следующий этап
-        // чуть строже, потому что случайный next наиболее разрушителен.
-        long delay = "next".equals(kind) ? 260L : 160L;
+        // One short debounce protects against a single unstable hypothesis, but does
+        // not require the user to pause or pronounce the command slowly.
+        long delay = "next".equals(kind) ? 110L : 70L;
         pendingPartialRunnable = () -> {
-            if (!commandFiredForUtterance
-                && normalized.equals(pendingPartialText)
-                && kind.equals(pendingPartialKind)) {
-                emitCommand(normalized, kind, 0.0, "partial_stable");
+            if (!commandFiredForUtterance && kind.equals(pendingPartialKind)) {
+                emitCommand(pendingPartialText, kind, 0.0, "partial_debounced");
             }
         };
         main.postDelayed(pendingPartialRunnable, delay);
@@ -463,13 +491,13 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private void emitFinalCommand(String hypothesis) {
         if (hypothesis == null || hypothesis.isEmpty() || commandFiredForUtterance) return;
         String text = hypothesisText(hypothesis, "text");
-        String kind = commandKind(text);
+        String kind = commandKindFlexible(text);
         if (kind.isEmpty()) return;
 
         double confidence = hypothesisConfidence(hypothesis);
         // Финальный результат уже обязан совпасть с целой командой. Поэтому порог
         // ниже прежнего: высокий 0.74 отбрасывал нормальное "готово" при обычной речи.
-        double threshold = "next".equals(kind) ? 0.58 : 0.45;
+        double threshold = "next".equals(kind) ? 0.42 : 0.34;
         if (confidence > 0.0 && confidence < threshold) return;
 
         emitCommand(text, kind, confidence, "final");

@@ -173,7 +173,7 @@
     }
     try{
       speechResultHandle = await fitAudio.addListener('speechResult', event=>{
-        if(onResult && event && event.text) onResult(event.text);
+        if(onResult && event && event.text) onResult(event.text, event);
       });
       speechErrorHandle = await fitAudio.addListener('speechError', event=>{
         if(onError) onError((event && event.error) || 'recognition');
@@ -253,9 +253,9 @@
       if(typeof stopRequested !== 'undefined') stopRequested = false;
       if(typeof voiceActive !== 'undefined') voiceActive = true;
       startVoiceRecognition(
-        text=>{
+        (text,event)=>{
           if(typeof lastAppSoundT === 'undefined' || Date.now() >= lastAppSoundT){
-            if(typeof applyVoiceCommand === 'function') applyVoiceCommand(text);
+            if(typeof applyVoiceCommand === 'function') applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
           }
         },
         error=>{

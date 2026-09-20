@@ -686,8 +686,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 453,
-      "chars": 21519,
+      "lines": 455,
+      "chars": 21798,
       "symbols": [
         "advance",
         "applyTheme",
