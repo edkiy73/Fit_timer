@@ -808,7 +808,7 @@ function finishWorkout(){
   const exNames = new Set();
   (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
   state.lastExCount = exNames.size;
-  $('finExLabel').textContent = plural(exNames.size, 'упражнение', 'упражнения', 'упражнений');
+  $('finExLabel').textContent = storeCountText(exNames.size,'exercise').replace(/^\d+\s+/,'');
   $('finNote').value = '';
   setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
   setShown('finNoteToggle', countsToStats); // нечего комментировать у того, что не сохранится
