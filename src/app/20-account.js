@@ -513,13 +513,13 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
     if(!trainer) trainer = {on: false, handle: '', links: ''};
     trainer.handle = r.handle;
     if(r.trainerKey) trainer.key = r.trainerKey;
-    const t = r.trainer || {};
+    const trainerRemote = r.trainer || {};
     // Сам ник ещё не делает человека тренером. Режим включён только если у
     // аккаунта действительно существует сохранённая публичная страница.
     trainer.on = !!r.trainer;
     if(r.trainer){
-      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = t[k] || ''; });
-      trainer.years = t.years == null ? null : t.years;
+      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = trainerRemote[k] || ''; });
+      trainer.years = trainerRemote.years == null ? null : trainerRemote.years;
     }
     trainer.pageErr = null;
     await saveTrainer();
