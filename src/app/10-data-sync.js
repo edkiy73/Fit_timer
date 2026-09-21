@@ -70,6 +70,15 @@ async function loadData(){
     kvSet('migrated', '1');
   }
   try{ customPrograms = JSON.parse(progRaw) || []; }catch(e){ customPrograms = []; }
+  // Старые личные программы появились до поля locale. Они всё равно одноязычные,
+  // поэтому один раз определяем их язык по авторскому тексту. Исторически почти
+  // все такие программы русские; латиница без кириллицы считается английской.
+  customPrograms.forEach(p => {
+    if(!p || p.id === 'warmup' || p.locale === 'ru' || p.locale === 'en') return;
+    const plans = Array.isArray(p.plans) ? p.plans : [];
+    const sample = [p.name, p.desc].concat(plans.flatMap(pl => (pl.exercises || []).flatMap(ex => [ex.name, ex.desc, ex.mistakes, ex.swapName, ex.swapDesc]))).join(' ');
+    p.locale = /[А-Яа-яЁё]/.test(sample) ? 'ru' : 'en';
+  });
   try{ stats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ stats = {totalSec:0}; }
   if(typeof stats.totalSec !== 'number') stats.totalSec = 0;
   if(!Array.isArray(stats.weights)) stats.weights = [];
