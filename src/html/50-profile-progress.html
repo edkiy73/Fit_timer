@@ -1,38 +1,38 @@
 <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
-    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle">Профиль</h2></div>
+    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
 
     <!-- Профиль -->
     <div class="ue-pane">
       <div class="card-block">
         <div class="ava-row">
           <div class="field">
-            <label>Имя</label>
-            <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?">
+            <label data-i18n="profile.name">Имя</label>
+            <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?" data-i18n-placeholder="profile.namePlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля">
+          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля" data-i18n-title="profile.photoTitle">
             <span id="uePhotoPrev"></span>
           </button>
           <div class="ctx-menu" id="uePhotoMenu"></div>
         </div>
         <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
-        <div class="field"><label>Пол</label>
-          <div class="seg"><button type="button" id="ueGenderF">Ж</button><button type="button" id="ueGenderM">М</button></div>
+        <div class="field"><label data-i18n="profile.gender">Пол</label>
+          <div class="seg"><button type="button" id="ueGenderF" data-i18n="profile.femaleShort">Ж</button><button type="button" id="ueGenderM" data-i18n="profile.maleShort">М</button></div>
         </div>
-        <div class="field"><label>Возраст, полных лет</label><input type="number" id="ueAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32">
-          <p class="field-hint">От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.</p>
+        <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="ueAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample">
+          <p class="field-hint" data-i18n="profile.ageHint">От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.</p>
         </div>
       </div>
 
       <!-- Тема у каждого профиля своя: телефон один, а вкусы у людей разные.
            «Как в системе» — вариант по умолчанию: приложение просто не спорит с телефоном. -->
       <div class="card-block">
-        <div class="cb-head"><p class="cb-title">Оформление</p></div>
-        <div class="field"><label>Тема</label>
+        <div class="cb-head"><p class="cb-title" data-i18n="profile.appearance">Оформление</p></div>
+        <div class="field"><label data-i18n="profile.theme">Тема</label>
           <div class="seg seg3" id="ueThemeSeg">
-            <button type="button" data-theme="system">Как в системе</button>
-            <button type="button" data-theme="light">Светлая</button>
-            <button type="button" data-theme="dark">Тёмная</button>
+            <button type="button" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
+            <button type="button" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
           </div>
         </div>
       </div>
@@ -40,22 +40,22 @@
       <!-- Отсчёты жили в «Настройках», хотя всегда были у каждого профиля свои:
            человек менял их «для приложения», а менял только для себя. -->
       <div class="card-block">
-        <div class="cb-head"><p class="cb-title">Отсчёты и паузы</p></div>
+        <div class="cb-head"><p class="cb-title" data-i18n="profile.timers">Отсчёты и паузы</p></div>
         <div class="row2">
-          <div class="field"><label>Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
-          <div class="field"><label>Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5"></div>
+          <div class="field"><label data-i18n="profile.beforeStart">Перед стартом</label><input type="number" id="uePrepSec" min="0" max="30" inputmode="numeric" placeholder="Например: 5" data-i18n-placeholder="builder.secondsExample"></div>
+          <div class="field"><label data-i18n="profile.beforeExercise">Перед упражнением</label><input type="number" id="ueReadySec" min="0" max="30" inputmode="numeric" placeholder="Например: 5" data-i18n-placeholder="builder.secondsExample"></div>
         </div>
-        <div class="field"><label>Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
-        <p class="field-hint">Всё в секундах. Ноль выключает отсчёт.</p>
+        <div class="field"><label data-i18n="profile.switchSide">Смена стороны</label><input type="number" id="ueSideSec" min="3" max="60" inputmode="numeric" placeholder="Например: 10"></div>
+        <p class="field-hint" data-i18n="profile.secondsHint">Всё в секундах. Ноль выключает отсчёт.</p>
       </div>
 
       <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
            внизу страницы, а закреплённая панель осталась в одну строку -->
-      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)">Удалить профиль</button>
+      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveUser">Сохранить</button>
+      <button class="btn-primary" id="btnSaveUser" data-i18n="common.save">Сохранить</button>
     </div>
   </section>
 
@@ -63,7 +63,7 @@
        на ссылках, которые в приложении уже работают — программа уезжает ссылкой FIT1,
        отчёт возвращается ссылкой FITR1. Подробности — docs/trainer-ui.md. -->
   <section class="screen root" id="scrTrainer">
-    <div class="page-head"><h1>Подопечные</h1></div>
+    <div class="page-head"><h1 data-i18n="clients.title">Подопечные</h1></div>
 
     <!-- Сводка первой: тренер открывает кабинет, чтобы за две секунды понять, всё ли
          идёт. Список — уже подробности. -->
@@ -77,9 +77,9 @@
     </div>
 
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title">Список</p></div>
+      <div class="cb-head"><p class="cb-title" data-i18n="clients.list">Список</p></div>
       <div class="list-rows" id="clsList"></div>
-      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b>Добавить подопечного</b></button>
+      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b data-i18n="clients.add">Добавить подопечного</b></button>
       <p class="field-hint" id="clsHint"></p>
     </div>
 
@@ -98,7 +98,7 @@
   <!-- ОТПРАВЛЕННОЕ В КАТАЛОГ. Тренер должен видеть, что с его программами: без
        этого он не знает, дошло ли вообще, и отправляет повторно. -->
   <section class="screen builder" id="scrMyCatalog">
-    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2>В каталоге</h2></div>
+    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
     <div class="card-block">
       <div class="list-rows" id="mcList"></div>
       <p class="field-hint" id="mcHint"></p>
@@ -106,7 +106,7 @@
   </section>
 
   <section class="screen builder" id="scrPublish">
-    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2>В каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
 
     <div class="card-block">
       <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
@@ -114,29 +114,29 @@
     </div>
 
     <div class="card-block" id="pubForm">
-      <div class="cb-head"><p class="cb-title">Как её найдут</p></div>
+      <div class="cb-head"><p class="cb-title" data-i18n="publish.discovery">Как её найдут</p></div>
       <div class="field">
-        <label>Цель</label>
-        <button type="button" class="filter-btn ph" id="pubCatBtn"><span id="pubCatVal">Цель</span><span class="fb-chev" id="pubCatChev"></span></button>
+        <label data-i18n="ai.goal">Цель</label>
+        <button type="button" class="filter-btn ph" id="pubCatBtn"><span id="pubCatVal" data-i18n="ai.goal">Цель</span><span class="fb-chev" id="pubCatChev"></span></button>
       </div>
       <div class="field">
-        <label>Уровень</label>
-        <button type="button" class="filter-btn ph" id="pubLevelBtn"><span id="pubLevelVal">Уровень</span><span class="fb-chev" id="pubLevelChev"></span></button>
+        <label data-i18n="ai.level">Уровень</label>
+        <button type="button" class="filter-btn ph" id="pubLevelBtn"><span id="pubLevelVal" data-i18n="ai.level">Уровень</span><span class="fb-chev" id="pubLevelChev"></span></button>
       </div>
       <div class="field">
-        <label>Что она даёт</label>
-        <textarea id="pubGives" rows="3" maxlength="300" placeholder="Одна-две фразы: что человек получит и чем эта программа отличается"></textarea>
-        <p class="field-hint">Это единственное, что читают в списке перед тем, как открыть. От 20 символов.</p>
+        <label data-i18n="publish.gives">Что она даёт</label>
+        <textarea id="pubGives" rows="3" maxlength="300" placeholder="Одна-две фразы: что человек получит и чем эта программа отличается" data-i18n-placeholder="publish.givesPlaceholder"></textarea>
+        <p class="field-hint" data-i18n="publish.givesHint">Это единственное, что читают в списке перед тем, как открыть. От 20 символов.</p>
       </div>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPublish">Отправить на проверку</button>
+      <button class="btn-primary" id="btnPublish" data-i18n="publish.submit">Отправить на проверку</button>
     </div>
   </section>
 
   <section class="screen builder" id="scrTrainerPage">
-    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2>Тренер</h2></div>
+    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
 
     <div class="card-block">
       <div class="tp-head">
@@ -154,18 +154,18 @@
     </div>
 
     <div class="card-block hidden" id="tpLinkCard">
-      <div class="cb-head"><p class="cb-title">Где его найти</p></div>
+      <div class="cb-head"><p class="cb-title" data-i18n="trainer.find">Где его найти</p></div>
       <a class="choice ico-row" id="tpLink" target="_blank" rel="noopener"><span data-icon="share"></span><b id="tpLinkTxt"></b></a>
     </div>
   </section>
 
   <section class="screen builder" id="scrClient">
-    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle">Подопечный</h2></div>
+    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
 
     <div class="card-block">
-      <div class="field"><label>Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать"></div>
-      <div class="field"><label>Заметка</label><input type="text" id="clNote" maxlength="80" placeholder="Например: колено, без прыжков">
-        <p class="field-hint">Только для тебя. Подопечному не уходит.</p>
+      <div class="field"><label>Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать" data-i18n-placeholder="clients.namePlaceholder"></div>
+      <div class="field"><label data-i18n="clients.note">Заметка</label><input type="text" id="clNote" maxlength="80" placeholder="Например: колено, без прыжков" data-i18n-placeholder="clients.notePlaceholder">
+        <p class="field-hint" data-i18n="clients.noteHint">Только для тебя. Подопечному не уходит.</p>
       </div>
     </div>
 
@@ -174,11 +174,11 @@
          отправка молча затирала первую вместе со всеми её занятиями. -->
     <div id="clProgs"></div>
 
-    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt">Отправить программу</b></button>
-    <p class="field-hint" id="clSendHint">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
+    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt" data-i18n="clients.send">Отправить программу</b></button>
+    <p class="field-hint" id="clSendHint" data-i18n="clients.sendHintFirst">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
 
     <div class="card-block danger-zone">
-      <button type="button" class="link-btn" id="btnDelClient">Удалить подопечного</button>
+      <button type="button" class="link-btn" id="btnDelClient" data-i18n="clients.delete">Удалить подопечного</button>
     </div>
   </section>
 
@@ -186,9 +186,9 @@
          нового подопечного можно прямо отсюда, не уходя на другой экран. -->
     <div class="modal" id="pickClientModal">
       <div class="modal-card">
-        <span class="mini-label">Кому отправить</span>
+        <span class="mini-label" data-i18n="clients.sendTo">Кому отправить</span>
         <div class="stack" id="pickClientList"></div>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -206,7 +206,7 @@
             <button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack" data-i18n="common.download">Скачать</button>
           </div>
         </div>
-        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
 
@@ -247,14 +247,14 @@
          «Отмена» поэтому не пропускает вопрос, а возвращает с экрана назад. -->
     <div class="modal" id="whoModal">
       <div class="modal-card">
-        <span class="mini-label">Пара уточнений</span>
+        <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
         <div class="field"><label>Пол</label>
-          <div class="seg"><button type="button" id="whoF">Женский</button><button type="button" id="whoM">Мужской</button></div>
+          <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
         </div>
-        <div class="field"><label>Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32"></div>
-        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px">Сохранить и продолжить</button>
-        <button class="modal-btn" id="whoSkip">Отмена</button>
+        <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
+        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -294,7 +294,7 @@
           <div class="pm-plans" id="pmPlans"></div>
           <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
           <p class="pm-fine" id="pmFine"></p>
-          <button class="modal-btn" data-act="closeModal">Закрыть</button>
+          <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
         </div>
       </div>
     </div>
@@ -304,16 +304,16 @@
          вход по ссылке из письма и по биометрии на самом устройстве. -->
     <div class="modal" id="payModal">
       <div class="modal-card">
-        <span class="mini-label">Оформление подписки</span>
+        <span class="mini-label" data-i18n="premium.checkout">Оформление подписки</span>
         <p class="dlg-msg" id="payWhat"></p>
         <div class="field">
           <label data-i18n="common.email">Почта</label>
           <input type="email" id="payEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
-          <p class="field-hint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
+          <p class="field-hint" data-i18n="premium.emailHint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
         </div>
-        <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px">Оплатить</button>
-        <p class="pm-fine">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px" data-i18n="premium.payBtn">Оплатить</button>
+        <p class="pm-fine" data-i18n="premium.termsHint">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -322,10 +322,10 @@
     <div class="modal" id="premiumOkModal">
       <div class="modal-card" style="text-align:center">
         <div class="pm-crown" data-icon="crown"></div>
-        <h3 class="pm-title">Премиум активен</h3>
+        <h3 class="pm-title" data-i18n="premium.active">Премиум активен</h3>
         <p class="pm-lead" id="pokLead"></p>
-        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px">Включить вход по биометрии</button>
-        <p class="pm-fine">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
+        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
+        <p class="pm-fine" data-i18n="bio.enableHint">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
         <button class="modal-btn" data-act="closeModal">Готово</button>
       </div>
     </div>
@@ -369,10 +369,10 @@
     <div class="modal" id="lockModal" data-locked="1">
       <div class="modal-card" style="text-align:center">
         <div class="pm-crown" data-icon="fingerprint"></div>
-        <h3 class="pm-title">Вход в Fit Timer</h3>
+        <h3 class="pm-title" data-i18n="lock.title">Вход в Fit Timer</h3>
         <p class="pm-lead" id="lockMsg">Приложи палец или посмотри на камеру — и продолжим.</p>
         <div class="field hidden" id="lockMailBox" style="text-align:left">
-          <label>Почта аккаунта</label>
+          <label data-i18n="lock.accountEmail">Почта аккаунта</label>
           <input type="email" id="lockEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
         </div>
         <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px">Разблокировать</button>
@@ -425,7 +425,7 @@
              отдельной кнопкой. В этом попапе он был вторым входом в то же место и
              занимал строку среди четырёх, которые про другое. -->
         <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b data-i18n="create.import">По ссылке или файлом</b><small data-i18n="create.importSub">Если программу прислали или сохраняли себе</small></span></button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -437,7 +437,7 @@
         <span class="mini-label" id="optTitle"></span>
         <div id="optList"></div>
         <button type="button" class="link-btn hidden" id="optReset">Сбросить</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -449,7 +449,7 @@
         <span class="mini-label">Новое упражнение</span>
         <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши, что нужно, — подберёт нейросеть</small></span></button>
         <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Задаёшь название, формат и подходы</small></span></button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -460,7 +460,7 @@
         <span class="mini-label" id="restModalTitle">Свой отдых</span>
         <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20"></div>
         <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px">Готово</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -482,7 +482,7 @@
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
         <p class="field-hint" style="text-align:center;margin:0 0 10px">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
         <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
-        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
 
@@ -494,7 +494,7 @@
         <img id="pfImg" alt="">
         <p class="pf-cap" id="pfCap"></p>
       </div>
-      <button class="modal-btn" data-act="closeModal">Закрыть</button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
     </div>
 
     <!-- Что было сделано: за день, за неделю — где угодно. Раньше это был appAlert
@@ -505,7 +505,7 @@
         <span class="mini-label" id="sessLabel">Тренировки</span>
         <p class="dlg-msg" id="sessTitle"></p>
         <div class="sess-list" id="sessList"></div>
-        <button class="modal-btn" data-act="closeModal">Закрыть</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
 
@@ -523,7 +523,7 @@
           <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
         <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -532,7 +532,7 @@
         <span class="mini-label">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -556,7 +556,7 @@
           <div class="whc"><label>Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
         <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -565,7 +565,7 @@
         <span class="mini-label">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
         <button class="btn-primary" id="wellHistSave" style="padding:14px">Сохранить</button>
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -583,7 +583,7 @@
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
-        <button class="modal-btn" data-act="closeModal">Отмена</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
