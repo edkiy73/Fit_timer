@@ -888,10 +888,13 @@ function switchStatsTab(tab){
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
 
-/* Вкладки раздела «Другое». Выбранная НЕ запоминается между заходами: человек приходит
-   сюда за разным, и «где я был в прошлый раз» — не тот вопрос, на который надо
-   отвечать. Открываем всегда на первой. */
+/* Вкладки раздела «Другое». Запоминаем выбранную вкладку, пока приложение
+   открыто: если человек ушёл из «Аккаунта» в правила, «назад» должен вернуть его
+   именно в «Аккаунт», а не каждый раз сбрасывать на «Профиль». */
+let moreTab = 'me';
 function switchMoreTab(key){
+  if(!['me','sound','coach','acc'].includes(key)) key = 'me';
+  moreTab = key;
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
   ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
   if(key === 'coach') refreshTrainerProfile();
