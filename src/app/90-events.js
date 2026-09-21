@@ -4,7 +4,7 @@ $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu'));
 $('progDescMore').onclick = ()=>{
   const box = $('progDescBox'), open = !box.classList.contains('open');
   box.classList.toggle('open', open);
-  $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
+  $('progDescMore').textContent = open ? t('common.collapse') : t('builder.showFull');
 };
 $('btnStart').onclick = async ()=>{
   // Отключённая программа не запрещена (её всё ещё можно запустить), но результат
@@ -12,8 +12,8 @@ $('btnStart').onclick = async ()=>{
   // выбора способа, а не после сорока минут тренировки.
   if(!progActive(state.raw)){
     const go = await appConfirm(
-      'Программа отключена. Результат никуда не попадёт: ни в статистику, ни в достижения.',
-      {okText: 'Всё равно начать'}
+      t('programs.disabledStart'),
+      {okText: t('programs.startAnyway')}
     );
     if(!go) return;
   }
@@ -29,7 +29,7 @@ $('btnStart').onclick = async ()=>{
     const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
     const workAll = steps.filter(s => s.phase === 'work').length;
     $('startResumeSub').textContent =
-      `Остановились на ${workDone} из ${workAll} упражнений · ${sessionAgeText(sess.at)}`;
+      t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
   }
   window.__pendingSession = sess || null;
   $('startModal').classList.add('open');
@@ -80,7 +80,7 @@ $('exitSave').onclick = async ()=>{
   $('exitModal').classList.remove('open');
   await saveSession();
   tearDownWorkout();
-  appAlert('Место сохранено. В следующий раз сможешь продолжить отсюда.');
+  appAlert(t('workout.sessionSaved'));
 };
 $('exitDrop').onclick = async ()=>{
   $('exitModal').classList.remove('open');
@@ -444,8 +444,8 @@ async function enableTrainerMode(){
 $('tglTrainer').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Нужен аккаунт',
-      msg:'Без основного аккаунта по почте нельзя быть тренером. Заведи или верни бесплатный аккаунт — его единый ник будет использоваться и на странице тренера.'
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountMsg')
     });
     return;
   }
@@ -468,7 +468,7 @@ $('coachLinks').onblur = async e => {
   const raw = e.target.value.trim();
   const ok = raw ? cleanLink(raw) : '';
   $('coachLinksErr').textContent = (raw && !ok)
-    ? 'Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.'
+    ? t('trainer.badLink')
     : '';
   if(raw && !ok) return;                 // оставляем набранное в поле, но не сохраняем
   // Схему в поле не показываем: её не набирали, и «https://» перед ником только
@@ -480,7 +480,7 @@ $('coachPhotoFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   shrinkImage(file, 240, async data => {
-    if(!data){ appAlert('Не удалось загрузить фото.'); return; }
+    if(!data){ appAlert(t('trainer.photoFailed')); return; }
     coachPhotoDraft = data;
     $('coachPhotoPrev').innerHTML = `<img src="${esc(data)}" alt="">`;
   });
@@ -495,8 +495,8 @@ $('coachYears').oninput = async e => {
 $('btnSaveCoach').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Нужен аккаунт',
-      msg:'Без основного аккаунта по почте нельзя быть тренером. Сначала заведи или верни аккаунт, затем сохрани страницу тренера.'
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountSaveMsg')
     });
     return;
   }
@@ -504,7 +504,7 @@ $('btnSaveCoach').onclick = async ()=>{
   const rawLink = $('coachLinks').value.trim();
   const link = rawLink ? cleanLink(rawLink) : '';
   if(rawLink && !link){
-    $('coachLinksErr').textContent = 'Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.';
+    $('coachLinksErr').textContent = t('trainer.badLink');
     $('coachLinks').focus();
     return;
   }
@@ -521,7 +521,7 @@ $('btnSaveCoach').onclick = async ()=>{
     pageErr:null
   });
   btn.disabled = true;
-  btn.textContent = 'Сохраняем…';
+  btn.textContent = t('common.saving');
   showSyncState('busy');
   await saveTrainer({deferSync:true});
   const ok = await pushProfile();
@@ -530,12 +530,12 @@ $('btnSaveCoach').onclick = async ()=>{
     if(isPremium()) queueAccountSync();
     showSyncState('ok');
     renderTrainerCard();
-    btn.textContent = 'Сохранено';
-    setTimeout(()=>{ if(btn.textContent === 'Сохранено') btn.textContent = 'Сохранить'; }, 1500);
+    btn.textContent = t('common.saved');
+    setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
   } else {
     showSyncState('error');
-    appAlert(trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.');
-    btn.textContent = 'Сохранить';
+    appAlert(trainer.pageErr || t('trainer.saveFailed'));
+    btn.textContent = t('common.save');
   }
   btn.disabled = false;
 };
@@ -554,7 +554,7 @@ $('btnMyCatalog').onclick = ()=> openMyCatalog();
 $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin(), 250); };
 $('btnCoachWipe').onclick = wipeTrainerInfo;
 $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
-  : appAlert('Сначала включи режим тренера и укажи ник.');
+  : appAlert(t('trainer.enableFirst'));
 $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
 $('btnPublish').onclick = ()=> doPublish();
 $('btnAddClient').onclick = async ()=>{
@@ -571,7 +571,7 @@ $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
 $('clName').oninput = async e => {
   const c = curClient(); if(!c) return;
   c.name = clampLine(e.target.value, LIM.clientName);
-  $('clTitle').textContent = c.name || 'Подопечный';
+  $('clTitle').textContent = c.name || t('clients.default');
   await saveClients();
 };
 $('clNote').oninput = async e => {
@@ -587,8 +587,8 @@ $('btnClSend').onclick = ()=>{
 };
 $('btnDelClient').onclick = async ()=>{
   const c = curClient(); if(!c) return;
-  if(!(await appDialog(`Убрать «${c.name || 'подопечного'}» из списка? Программа у него останется — ссылка уже отправлена.`,
-       {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
+       {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
   clients = clients.filter(x => x.id !== c.id);
   clientIdx = -1;
   await saveClients();
@@ -606,7 +606,7 @@ function pickProgramForClient(c){
   if(!list.length){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Сначала собери программу на экране «Тренировки» — её и отправим.';
+    h.textContent = t('clients.buildFirst');
     box.appendChild(h);
   }
   list.forEach(p => {
@@ -617,21 +617,21 @@ function pickProgramForClient(c){
     b.querySelector('b').textContent = p.name;
     const has = clProgs(c).find(x => x.pid === p.id);
     b.querySelector('small').textContent = has
-      ? 'уже отправлена — пошлём ссылку заново'
-      : `${(normPlans(p)[0].exercises || []).length} упражнений`;
+      ? t('clients.sentAgain')
+      : t('clients.exerciseCount',{count:(normPlans(p)[0].exercises || []).length});
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
       await sendProgramToClient(c, p);
     };
     box.appendChild(b);
   });
-  $('pickClientModal').querySelector('.mini-label').textContent = 'Какую программу отправить';
+  $('pickClientModal').querySelector('.mini-label').textContent = t('clients.chooseWhichProgram');
   $('pickClientModal').classList.add('open');
 }
 async function delCurrentPlan(){
   if(draft.plans.length <= 1) return;
-  if(!(await appDialog('Удалить этот вариант вместе с его упражнениями?',
-    {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('builder.deleteVariant'),
+    {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   draft.plans.splice(planIdx, 1);
   planIdx = Math.max(0, planIdx - 1);
   if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
@@ -683,7 +683,7 @@ $('btnAddWeight').onclick = ()=>{
 $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
 $('btnSaveWeight').onclick = async ()=>{
   const w = parseFloat(String($('weightInput').value).replace(',', '.'));
-  if(!w || w < 20 || w > 300){ appAlert('Введи вес от 20 до 300 кг.'); return; }
+  if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
   const h = parseInt($('heightInput').value);
   if(h && h >= 100 && h <= 250) stats.height = h;
   const cm = id => {
@@ -724,9 +724,9 @@ $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premium
 $('pmBuy').onclick = ()=>{
   const pr = priceTable(), cur = userCurrency();
   $('payWhat').textContent = pmPlan === 'year'
-    ? `Премиум на год — ${money(pr.year, cur)}. Дальше столько же раз в год, пока не отменишь.`
-    : `Премиум на месяц — ${money(pr.month, cur)}. Дальше столько же каждый месяц, пока не отменишь.`;
-  $('payGo').textContent = `Оплатить ${money(pr[pmPlan], cur)}`;
+    ? t('premium.payYear',{price:money(pr.year,cur)})
+    : t('premium.payMonth',{price:money(pr.month,cur)});
+  $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
   $('payEmail').value = (account && account.email) || '';
   $('payModal').classList.add('open');
 };
@@ -745,8 +745,8 @@ $('tglRenew').onclick = async ()=>{
   if(!account.sub) return;
   if(account.sub.autoRenew){
     const ok = await appDialog(
-      `Отключить автопродление? Премиум останется до ${humanDate(account.sub.until)}, дальше вернётся бесплатный тариф. Программы и статистика никуда не денутся.`,
-      {confirm: true, okText: 'Отключить', cancelText: 'Оставить'});
+      t('premium.disableRenew',{date:humanDate(account.sub.until)}),
+      {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
     if(!ok) return;
   }
   account.sub.autoRenew = !account.sub.autoRenew;
@@ -783,10 +783,10 @@ $('lockMail').onclick = ()=>{
   const mail = lockMode === 'mail';
   setShown('lockMailBox', mail);
   $('lockMsg').textContent = mail
-    ? 'Введи почту, к которой привязан аккаунт.'
-    : 'Приложи палец или посмотри на камеру — и продолжим.';
-  $('lockGo').textContent = mail ? 'Войти' : 'Разблокировать';
-  $('lockMail').textContent = mail ? 'Вернуться к отпечатку' : 'Войти по почте';
+    ? t('lock.enterEmail')
+    : t('lock.prompt');
+  $('lockGo').textContent = mail ? t('login.signIn') : t('lock.unlock');
+  $('lockMail').textContent = mail ? t('lock.backBiometric') : t('lock.email');
   if(mail) $('lockEmail').focus();
 };
 
@@ -805,7 +805,7 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
-$('btnAddPhoto').innerHTML = icon('camera') + 'Добавить фото';
+$('btnAddPhoto').innerHTML = icon('camera') + t('progress.addPhoto');
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -899,7 +899,7 @@ function switchMoreTab(key){
 document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
 document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
-$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 'Изменения профиля');
+$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), t('profile.changes'));
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
@@ -926,8 +926,8 @@ $('uePhotoBtn').onclick = e => {
     return b;
   };
   menu.append(
-    mk(icon('camera') + 'Заменить фото', ()=> $('uePhotoFile').click()),
-    mk(icon('trash') + 'Удалить фото', ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
+    mk(icon('camera') + t('profile.replacePhoto'), ()=> $('uePhotoFile').click()),
+    mk(icon('trash') + t('profile.deletePhoto'), ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
   );
   menu.classList.add('open');
 };
@@ -944,12 +944,12 @@ $('videoLink').addEventListener('click', ()=>{
 });
 // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-$('btnShareResult').innerHTML = icon('share') + '<span>Поделиться</span>';
+$('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-$('finNoteToggle').innerHTML = icon('pencil') + '<span>Добавить заметку</span>';
+$('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
 $('finNoteToggle').onclick = ()=>{
   setShown('finNoteToggle', false);
   setShown('finNoteField', true);
@@ -970,11 +970,11 @@ $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube
 $('ytUrl').oninput = ytCheckUrl;
 async function ytGuard(){
   const v = ($('ytUrl').value || '').trim();
-  if(!v){ appAlert('Вставь ссылку на видео.'); return false; }
+  if(!v){ appAlert(t('video.addLink')); return false; }
   if(!ytCheckUrl()){
     const go = await appDialog(
-      'Ссылка не похожа на YouTube. Возможно, адрес скопирован не полностью или это другой сервис.',
-      {confirm: true, okText: 'Всё равно попробовать', cancelText: 'Проверить адрес'}
+      t('video.badUrl'),
+      {confirm: true, okText: t('video.tryAnyway'), cancelText: t('video.checkAddress')}
     );
     return !!go;
   }
@@ -985,30 +985,30 @@ async function ytCopyPrompt(){
   try{
     await navigator.clipboard.writeText(youtubePrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
-  program.name = versionedName(program.name || 'Программа из видео');
+  program.name = versionedName(program.name || t('video.defaultProgram'));
   // сохраняем ссылку на источник в описании, если ИИ её не упомянул
   const link = ($('ytUrl').value || '').trim();
   if(link && !(program.desc || '').includes('http')){
-    program.desc = ((program.desc || '') + ' Источник: ' + link).trim().slice(0, 1000);
+    program.desc = ((program.desc || '') + ' ' + t('video.source') + ': ' + link).trim().slice(0, 1000);
   }
   customPrograms.push(program);
   await savePrograms();
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(`Готово: добавлена «${program.name}».`);
+  appAlert(t('video.added',{name:program.name}));
 
 }
 
@@ -1018,14 +1018,14 @@ async function ytApplyResult(){
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = AI_PROMPT
-    + '\n\nВОТ МОЯ ТЕКУЩАЯ ПРОГРАММА В ЭТОМ ЖЕ ФОРМАТЕ:\n\n'
+  const text = aiPrompt()
+    + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
     + programToText(editAIProg)
-    + '\n\nЧТО НУЖНО СДЕЛАТЬ: опиши задачу здесь. Верни программу целиком в том же формате — её можно будет вставить обратно в приложение.';
+    + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
   try{
     await navigator.clipboard.writeText(text);
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Попробуй ещё раз.'); }
+  }catch(e){ appAlert(t('common.copyFailedRetry')); }
 };
 async function copyEditPrompt(){
   const btn = $('aiCopy');
@@ -1045,10 +1045,10 @@ $('swapCopy').onclick = async ()=>{
   const text = `${step.swap.name}\n${step.swap.desc || ''}`.trim();
   try{
     await navigator.clipboard.writeText(text);
-    $('swapCopy').textContent = '✓ Скопировано';
+    $('swapCopy').textContent = t('common.copied');
   }catch(e){
     closeSwapHint();
-    appAlert('Не удалось скопировать автоматически. Скопируй вручную:', {code: text});
+    appAlert(t('common.copyManual'), {code: text});
   }
 };
 
@@ -1063,8 +1063,8 @@ let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
 function aiRunOpen(title, onCancel){
   aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
   aiRunOnCancel = onCancel || null;
-  $('aiRunTitle').textContent = title || 'Нейросеть работает';
-  $('aiRunText').textContent = 'Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.';
+  $('aiRunTitle').textContent = title || t('ai.workingDefault');
+  $('aiRunText').textContent = t('ai.workingLong');
   $('aiRunTimer').textContent = '0:00';
   $('aiRunModal').classList.add('open');
   aiRunT0 = Date.now();
@@ -1097,7 +1097,7 @@ $('aiRunCancel').onclick = ()=>{
 async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
   let prompt;
-  try{ prompt = promptFn(); }catch(e){ appAlert('Не удалось собрать запрос.'); return; }
+  try{ prompt = promptFn(); }catch(e){ appAlert(t('ai.buildRequestFailed')); return; }
   aiRunOpen(title);
   try{
     const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
@@ -1108,8 +1108,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     aiRunClose();
     const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
     if(aborted) return; // отменили — молча
-    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
-      '\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».');
+    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
   }
 }
 // Один обработчик на все источники: чем собрать промт и чем применить ответ,
@@ -1118,7 +1117,7 @@ $('aiSelf').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(c.guard && !(await c.guard())) return;
-  runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle, c.kind);
+  runSelfAI(c.prompt, 'aiResult', c.apply, aiUiText(c.selfTitle), c.kind);
 };
 $('aiCopy').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
@@ -1147,8 +1146,8 @@ function buildAiMenu(){
   };
   // openBuilder() здесь звать НЕЛЬЗЯ: он перечитывает программу из сохранённых и
   // выбрасывает только что сделанную копию вместе со всей несохранённой правкой
-  mk(icon('plus') + 'Дублировать', ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
-  mk(icon('trash') + 'Удалить', async ()=>{
+  mk(icon('plus') + t('common.duplicate'), ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
+  mk(icon('trash') + t('common.delete'), async ()=>{
     await delExerciseAt(exeIdx);
     asTab(()=> show('scrBuilder'));
   }, 'danger');
@@ -1157,8 +1156,8 @@ $('aiBackTop').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(aiScreenDirty(c.dirty)){
-    const ok = await appDialog('Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'});
+    const ok = await appDialog(t('ai.unsavedRequest'),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')});
     if(!ok) return;
   }
   c.back();
