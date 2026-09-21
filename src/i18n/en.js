@@ -51,7 +51,7 @@ const I18N_EN = {
   'settings.pageTitle': 'More',
   'settings.languageTitle': 'Language',
   'settings.appLanguage': 'App language',
-  'settings.languageHint': 'Changes the app interface. Voice and voice commands can be configured separately.',
+  'settings.languageHint': 'Changes the interface and spoken voice language. Voice-command recognition can be configured separately.',
   'audio.systemVoice': 'System voice',
   'audio.voiceSelected': 'Voice selected',
   'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',

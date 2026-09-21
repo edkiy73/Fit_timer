@@ -140,6 +140,10 @@
     text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;
   }
   .btn-secondary:active{transform:scale(.98)}
+  .btn-secondary.btn-secondary-text{
+    min-height:44px;font-family:var(--font-text);font-size:14px;font-weight:500;
+    letter-spacing:0;text-transform:none;
+  }
 
   /* ---- знакомство ---- */
   .ob-title{font-size:clamp(26px,7.4vw,32px);line-height:1.08;margin:0 0 12px}

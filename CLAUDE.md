@@ -61,10 +61,10 @@ These are invariants unless the user explicitly changes them.
 
 ### Localization
 
-- App UI locale is `appLocale: 'ru' | 'en'`. New user-facing copy should use `t(key)` or `data-i18n*`, not new hardcoded RU/EN branches.
-- UI language, TTS language/voice, and voice-command recognition language are separate settings.
-- Keep RU and EN dictionaries in sync and run `npm run i18n:check`.
-- Follow `docs/i18n-plan.md` for the staged migration and AI/catalog localization model.
+- RU/EN localization is complete. New user-facing copy must use `t(key)` or `data-i18n*` and be added to every locale dictionary.
+- `appLocale` is the UI/content locale. TTS language follows it automatically; the user only chooses a concrete TTS voice. Voice-command recognition language remains a separate offline-pack setting.
+- Keep dictionaries in sync and run `npm run i18n:check`, `npm run check:sources`, and `npm run check:ai-index`.
+- For a new language, register its dictionary + `LOCALE_META`, add the selector option, and follow `docs/i18n-plan.md`. Do not duplicate catalog program IDs or fork canonical AI prompts by language.
 
 ### Language and terminology
 

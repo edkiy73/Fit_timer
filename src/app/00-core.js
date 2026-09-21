@@ -128,10 +128,10 @@ function clicks(n){
   }
 }
 
-// Язык и вариант озвучки выбираются пользователем. Это отдельно от языка голосовых
-// команд: можно слушать один голос и распознавать команды на другом языке.
+// Язык озвучки всегда следует языку приложения. Отдельно выбирается только голос;
+// язык распознавания голосовых команд остаётся самостоятельной настройкой.
 let savedVoiceURI = '';
-let voiceLang = 'ru-RU';
+let voiceLang = localeTag();
 function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
 function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
   return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
@@ -839,7 +839,7 @@ function prepTab(id){
       $('hfHint').textContent = hfHintText(hfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
-    else if(id === 'scrTrainer'){ renderClients(); pullAll(); }
+    else if(id === 'scrTrainer'){ refreshClientsScreen(); }
     else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
   }catch(e){}
 }
@@ -851,7 +851,7 @@ function prepTab(id){
    ввода, док уезжает, иначе он сядет поверх клавиатуры на «Настройках». */
 function kbFocused(){
   const el = document.activeElement;
-  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea,select'));
+  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea'));
 }
 // Кнопка «Подопечные» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
 // перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после

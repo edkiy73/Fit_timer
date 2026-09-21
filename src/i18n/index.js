@@ -1,16 +1,27 @@
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
+const LOCALE_META = Object.freeze({
+  ru: {tag:'ru-RU', ai:'Russian'},
+  en: {tag:'en-US', ai:'English'}
+});
+const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
 let appLocale = 'ru';
 let appLocaleStored = false;
 
 function normalizeLocale(value){
-  return String(value || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+  const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  const base = raw.split('-')[0];
+  return SUPPORTED_LOCALES.includes(base) ? base : 'en';
 }
 function systemLocale(){
   try{
     const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
-    return langs.some(x => String(x).toLowerCase().startsWith('ru')) ? 'ru' : 'en';
-  }catch(_){ return 'en'; }
+    for(const value of langs){
+      const base = String(value || '').trim().toLowerCase().replace(/_/g, '-').split('-')[0];
+      if(SUPPORTED_LOCALES.includes(base)) return base;
+    }
+  }catch(_){}
+  return 'en';
 }
 function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
@@ -36,7 +47,7 @@ function applyI18n(root){
 async function loadAppLocale(){
   let saved = null;
   try{ saved = await kvGet('appLocale'); }catch(_){}
-  appLocaleStored = saved === 'ru' || saved === 'en';
+  appLocaleStored = SUPPORTED_LOCALES.includes(saved);
   appLocale = appLocaleStored ? saved : systemLocale();
   applyI18n();
   return appLocale;
@@ -55,8 +66,14 @@ async function setAppLocale(value, opts){
   }
   return appLocale;
 }
-function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
-function aiOutputLanguage(){ return appLocale === 'ru' ? 'Russian' : 'English'; }
+function localeTag(value){
+  const code = value == null ? appLocale : normalizeLocale(value);
+  return (LOCALE_META[code] && LOCALE_META[code].tag) || code;
+}
+function aiOutputLanguage(){
+  const meta = LOCALE_META[appLocale] || LOCALE_META.en;
+  return meta.ai || 'English';
+}
 
 function aiCanonicalEnglish(value){
   const map = {

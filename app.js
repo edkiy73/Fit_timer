@@ -51,7 +51,7 @@ const I18N_RU = {
   'settings.pageTitle': 'Другое',
   'settings.languageTitle': 'Язык',
   'settings.appLanguage': 'Язык приложения',
-  'settings.languageHint': 'Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.',
+  'settings.languageHint': 'Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.',
   'audio.systemVoice': 'Системный голос',
   'audio.voiceSelected': 'Голос выбран',
   'handsfree.offHint': 'Переключай этапы кнопками на экране.',
@@ -1503,7 +1503,7 @@ const I18N_EN = {
   'settings.pageTitle': 'More',
   'settings.languageTitle': 'Language',
   'settings.appLanguage': 'App language',
-  'settings.languageHint': 'Changes the app interface. Voice and voice commands can be configured separately.',
+  'settings.languageHint': 'Changes the interface and spoken voice language. Voice-command recognition can be configured separately.',
   'audio.systemVoice': 'System voice',
   'audio.voiceSelected': 'Voice selected',
   'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',
@@ -2904,17 +2904,28 @@ const I18N_EN = {
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
+const LOCALE_META = Object.freeze({
+  ru: {tag:'ru-RU', ai:'Russian'},
+  en: {tag:'en-US', ai:'English'}
+});
+const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
 let appLocale = 'ru';
 let appLocaleStored = false;
 
 function normalizeLocale(value){
-  return String(value || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+  const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  const base = raw.split('-')[0];
+  return SUPPORTED_LOCALES.includes(base) ? base : 'en';
 }
 function systemLocale(){
   try{
     const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
-    return langs.some(x => String(x).toLowerCase().startsWith('ru')) ? 'ru' : 'en';
-  }catch(_){ return 'en'; }
+    for(const value of langs){
+      const base = String(value || '').trim().toLowerCase().replace(/_/g, '-').split('-')[0];
+      if(SUPPORTED_LOCALES.includes(base)) return base;
+    }
+  }catch(_){}
+  return 'en';
 }
 function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
@@ -2940,7 +2951,7 @@ function applyI18n(root){
 async function loadAppLocale(){
   let saved = null;
   try{ saved = await kvGet('appLocale'); }catch(_){}
-  appLocaleStored = saved === 'ru' || saved === 'en';
+  appLocaleStored = SUPPORTED_LOCALES.includes(saved);
   appLocale = appLocaleStored ? saved : systemLocale();
   applyI18n();
   return appLocale;
@@ -2959,8 +2970,14 @@ async function setAppLocale(value, opts){
   }
   return appLocale;
 }
-function localeTag(){ return appLocale === 'ru' ? 'ru-RU' : 'en-US'; }
-function aiOutputLanguage(){ return appLocale === 'ru' ? 'Russian' : 'English'; }
+function localeTag(value){
+  const code = value == null ? appLocale : normalizeLocale(value);
+  return (LOCALE_META[code] && LOCALE_META[code].tag) || code;
+}
+function aiOutputLanguage(){
+  const meta = LOCALE_META[appLocale] || LOCALE_META.en;
+  return meta.ai || 'English';
+}
 
 function aiCanonicalEnglish(value){
   const map = {
@@ -3150,10 +3167,10 @@ function clicks(n){
   }
 }
 
-// Язык и вариант озвучки выбираются пользователем. Это отдельно от языка голосовых
-// команд: можно слушать один голос и распознавать команды на другом языке.
+// Язык озвучки всегда следует языку приложения. Отдельно выбирается только голос;
+// язык распознавания голосовых команд остаётся самостоятельной настройкой.
 let savedVoiceURI = '';
-let voiceLang = 'ru-RU';
+let voiceLang = localeTag();
 function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
 function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
   return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
@@ -3861,7 +3878,7 @@ function prepTab(id){
       $('hfHint').textContent = hfHintText(hfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
-    else if(id === 'scrTrainer'){ renderClients(); pullAll(); }
+    else if(id === 'scrTrainer'){ refreshClientsScreen(); }
     else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
   }catch(e){}
 }
@@ -3873,7 +3890,7 @@ function prepTab(id){
    ввода, док уезжает, иначе он сядет поверх клавиатуры на «Настройках». */
 function kbFocused(){
   const el = document.activeElement;
-  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea,select'));
+  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea'));
 }
 // Кнопка «Подопечные» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
 // перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после
@@ -10127,12 +10144,27 @@ function renderTrainerCard(){
 }
 
 /* ---- экран «Подопечные» ---- */
-function openClients(){
+function renderClientsSkeleton(){
+  const box = $('clsList');
+  if(!box) return;
+  box.innerHTML = Array.from({length:3}, () =>
+    '<div class="cl-row cl-row-skeleton" aria-hidden="true">'
+      + '<div class="ua sk"></div>'
+      + '<div class="ub"><i class="sk cl-sk-name"></i><i class="sk cl-sk-sub"></i></div>'
+      + '<i class="sk cl-sk-state"></i>'
+    + '</div>'
+  ).join('');
+}
+async function refreshClientsScreen(){
+  const box = $('clsList');
+  if(box && !box.children.length) renderClientsSkeleton();
+  await loadTrainer();
   renderClients();
+  await pullAll();
+}
+function openClients(){
+  if(show._last === 'scrTrainer'){ refreshClientsScreen(); return; }
   goTab('scrTrainer');
-  // Тренер открывает список, чтобы одним взглядом понять, всё ли идёт. Если
-  // свежие данные приезжают только внутри карточки, этот взгляд врёт.
-  pullAll();
 }
 async function pullAll(){
   const list = clients.filter(c => clProgs(c).some(pr => pr.link && pr.link.id));
@@ -10192,7 +10224,7 @@ function renderClients(){
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
     row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
-      : sum.progs === 1 ? (newest ? newestrainerData.name : t('clients.programFallback'))
+      : sum.progs === 1 ? (newest ? (newest.name || t('clients.programFallback')) : t('clients.programFallback'))
       : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
@@ -15574,13 +15606,6 @@ if($('appLocaleSelect')){
     const next = normalizeLocale(e.target.value);
     await setAppLocale(next, {persist:true});
     await syncAccountLocale(next);
-    if((await kvGet('voiceLangManual')) !== '1'){
-      voiceLang = next === 'en' ? 'en-US' : 'ru-RU';
-      savedVoiceURI = '';
-      await kvSet('voiceLang', voiceLang);
-      await kvSet('voiceURI', '');
-      await fillVoiceChoices();
-    }
     if((await kvGet('recognitionLangManual')) !== '1'){
       recognitionLang = next;
       await kvSet('recognitionLang', recognitionLang);
@@ -15591,6 +15616,7 @@ if($('appLocaleSelect')){
   };
 }
 window.addEventListener('appLocaleChanged', ()=>{
+  syncTtsLocaleToApp(true);
   if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode);
   // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
   if(ROOT_TABS.includes(show._last)) prepTab(show._last);
@@ -15709,10 +15735,11 @@ async function availableTtsVoices(){
 }
 
 async function fillVoiceChoices(){
-  ['stVoiceLang','sndVoiceLang'].forEach(id=>{ if($(id)) $(id).value = voiceLang; });
   const all = await availableTtsVoices();
   const prefix = voiceLang.toLowerCase().split('-')[0];
-  const list = all.filter(v=>String(v.lang).toLowerCase().startsWith(prefix));
+  const matching = all.filter(v=>String(v.lang).toLowerCase().startsWith(prefix));
+  const local = matching.filter(v=>!v.network);
+  const list = local.length ? local : matching;
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     const sel=$(id); if(!sel) continue;
     sel.innerHTML='';
@@ -15728,15 +15755,23 @@ async function fillVoiceChoices(){
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
     sel.value=exists ? savedVoiceURI : list[0].id;
-    if(!exists){ savedVoiceURI=sel.value; kvSet('voiceURI',savedVoiceURI); }
+    if(!exists){ savedVoiceURI=sel.value; await kvSet('voiceURI',savedVoiceURI); }
+  }
+  const u = curUser();
+  if(u && u.voiceURI !== savedVoiceURI){
+    u.voiceURI = savedVoiceURI;
+    await saveUsers();
   }
 }
 
-async function setVoiceLanguage(lang){
-  voiceLang = lang === 'en-US' ? 'en-US' : 'ru-RU';
-  savedVoiceURI='';
-  kvSet('voiceLang',voiceLang);
-  kvSet('voiceURI','');
+async function syncTtsLocaleToApp(resetVoice){
+  voiceLang = localeTag();
+  await kvDel('voiceLangManual');
+  await kvSet('voiceLang', voiceLang);
+  if(resetVoice){
+    savedVoiceURI='';
+    await kvSet('voiceURI','');
+  }
   await fillVoiceChoices();
 }
 
@@ -15813,13 +15848,10 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 });
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 
-for(const id of ['stVoiceLang','sndVoiceLang']){
-  if($(id)) $(id).onchange = async e=>{ kvSet('voiceLangManual','1'); await setVoiceLanguage(e.target.value); };
-}
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
   if($(id)) $(id).onchange = e=>{
     savedVoiceURI=e.target.value || '';
-    kvSet('voiceURI',savedVoiceURI);
+    persistLiveSound();
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
     speak(t('audio.voiceSelected'));
   };
@@ -17156,7 +17188,7 @@ try{
   await loadAppLocale();
   // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
   await loadAccount();
-  if(!appLocaleStored && account && (account.locale === 'ru' || account.locale === 'en')){
+  if(!appLocaleStored && account && SUPPORTED_LOCALES.includes(account.locale)){
     await setAppLocale(account.locale, {persist:true});
   }
   loadPublicConfig();
@@ -17219,14 +17251,14 @@ try{
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = hfHintText(hfMode);
   soundOn = (await kvGet('soundOff')) !== '1';
-  voiceLang = (await kvGet('voiceLang')) || (appLocale === 'en' ? 'en-US' : 'ru-RU');
+  voiceLang = localeTag();
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   recognitionLang = (await kvGet('recognitionLang')) || appLocale;
   if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
-  await fillVoiceChoices();
-  await refreshVoicePackUI();
   musicMode = (await kvGet('musicMode')) === '1';
   applyAudioFromUser(curUser());
+  await syncTtsLocaleToApp(false);
+  await refreshVoicePackUI();
   syncPrefs();
   const u = curUser();
   applyThemeFor(u);

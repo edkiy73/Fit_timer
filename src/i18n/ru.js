@@ -51,7 +51,7 @@ const I18N_RU = {
   'settings.pageTitle': 'Другое',
   'settings.languageTitle': 'Язык',
   'settings.appLanguage': 'Язык приложения',
-  'settings.languageHint': 'Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.',
+  'settings.languageHint': 'Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.',
   'audio.systemVoice': 'Системный голос',
   'audio.voiceSelected': 'Голос выбран',
   'handsfree.offHint': 'Переключай этапы кнопками на экране.',

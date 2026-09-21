@@ -23,12 +23,27 @@ function renderTrainerCard(){
 }
 
 /* ---- экран «Подопечные» ---- */
-function openClients(){
+function renderClientsSkeleton(){
+  const box = $('clsList');
+  if(!box) return;
+  box.innerHTML = Array.from({length:3}, () =>
+    '<div class="cl-row cl-row-skeleton" aria-hidden="true">'
+      + '<div class="ua sk"></div>'
+      + '<div class="ub"><i class="sk cl-sk-name"></i><i class="sk cl-sk-sub"></i></div>'
+      + '<i class="sk cl-sk-state"></i>'
+    + '</div>'
+  ).join('');
+}
+async function refreshClientsScreen(){
+  const box = $('clsList');
+  if(box && !box.children.length) renderClientsSkeleton();
+  await loadTrainer();
   renderClients();
+  await pullAll();
+}
+function openClients(){
+  if(show._last === 'scrTrainer'){ refreshClientsScreen(); return; }
   goTab('scrTrainer');
-  // Тренер открывает список, чтобы одним взглядом понять, всё ли идёт. Если
-  // свежие данные приезжают только внутри карточки, этот взгляд врёт.
-  pullAll();
 }
 async function pullAll(){
   const list = clients.filter(c => clProgs(c).some(pr => pr.link && pr.link.id));
@@ -88,7 +103,7 @@ function renderClients(){
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
     row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
-      : sum.progs === 1 ? (newest ? newestrainerData.name : t('clients.programFallback'))
+      : sum.progs === 1 ? (newest ? (newest.name || t('clients.programFallback')) : t('clients.programFallback'))
       : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);

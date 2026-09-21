@@ -142,13 +142,6 @@ if($('appLocaleSelect')){
     const next = normalizeLocale(e.target.value);
     await setAppLocale(next, {persist:true});
     await syncAccountLocale(next);
-    if((await kvGet('voiceLangManual')) !== '1'){
-      voiceLang = next === 'en' ? 'en-US' : 'ru-RU';
-      savedVoiceURI = '';
-      await kvSet('voiceLang', voiceLang);
-      await kvSet('voiceURI', '');
-      await fillVoiceChoices();
-    }
     if((await kvGet('recognitionLangManual')) !== '1'){
       recognitionLang = next;
       await kvSet('recognitionLang', recognitionLang);
@@ -159,6 +152,7 @@ if($('appLocaleSelect')){
   };
 }
 window.addEventListener('appLocaleChanged', ()=>{
+  syncTtsLocaleToApp(true);
   if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode);
   // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
   if(ROOT_TABS.includes(show._last)) prepTab(show._last);
@@ -277,10 +271,11 @@ async function availableTtsVoices(){
 }
 
 async function fillVoiceChoices(){
-  ['stVoiceLang','sndVoiceLang'].forEach(id=>{ if($(id)) $(id).value = voiceLang; });
   const all = await availableTtsVoices();
   const prefix = voiceLang.toLowerCase().split('-')[0];
-  const list = all.filter(v=>String(v.lang).toLowerCase().startsWith(prefix));
+  const matching = all.filter(v=>String(v.lang).toLowerCase().startsWith(prefix));
+  const local = matching.filter(v=>!v.network);
+  const list = local.length ? local : matching;
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     const sel=$(id); if(!sel) continue;
     sel.innerHTML='';
@@ -296,15 +291,23 @@ async function fillVoiceChoices(){
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
     sel.value=exists ? savedVoiceURI : list[0].id;
-    if(!exists){ savedVoiceURI=sel.value; kvSet('voiceURI',savedVoiceURI); }
+    if(!exists){ savedVoiceURI=sel.value; await kvSet('voiceURI',savedVoiceURI); }
+  }
+  const u = curUser();
+  if(u && u.voiceURI !== savedVoiceURI){
+    u.voiceURI = savedVoiceURI;
+    await saveUsers();
   }
 }
 
-async function setVoiceLanguage(lang){
-  voiceLang = lang === 'en-US' ? 'en-US' : 'ru-RU';
-  savedVoiceURI='';
-  kvSet('voiceLang',voiceLang);
-  kvSet('voiceURI','');
+async function syncTtsLocaleToApp(resetVoice){
+  voiceLang = localeTag();
+  await kvDel('voiceLangManual');
+  await kvSet('voiceLang', voiceLang);
+  if(resetVoice){
+    savedVoiceURI='';
+    await kvSet('voiceURI','');
+  }
   await fillVoiceChoices();
 }
 
@@ -381,13 +384,10 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 });
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 
-for(const id of ['stVoiceLang','sndVoiceLang']){
-  if($(id)) $(id).onchange = async e=>{ kvSet('voiceLangManual','1'); await setVoiceLanguage(e.target.value); };
-}
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
   if($(id)) $(id).onchange = e=>{
     savedVoiceURI=e.target.value || '';
-    kvSet('voiceURI',savedVoiceURI);
+    persistLiveSound();
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
     speak(t('audio.voiceSelected'));
   };
@@ -1724,7 +1724,7 @@ try{
   await loadAppLocale();
   // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
   await loadAccount();
-  if(!appLocaleStored && account && (account.locale === 'ru' || account.locale === 'en')){
+  if(!appLocaleStored && account && SUPPORTED_LOCALES.includes(account.locale)){
     await setAppLocale(account.locale, {persist:true});
   }
   loadPublicConfig();
@@ -1787,14 +1787,14 @@ try{
   document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
   $('hfHint').textContent = hfHintText(hfMode);
   soundOn = (await kvGet('soundOff')) !== '1';
-  voiceLang = (await kvGet('voiceLang')) || (appLocale === 'en' ? 'en-US' : 'ru-RU');
+  voiceLang = localeTag();
   savedVoiceURI = (await kvGet('voiceURI')) || '';
   recognitionLang = (await kvGet('recognitionLang')) || appLocale;
   if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
-  await fillVoiceChoices();
-  await refreshVoicePackUI();
   musicMode = (await kvGet('musicMode')) === '1';
   applyAudioFromUser(curUser());
+  await syncTtsLocaleToApp(false);
+  await refreshVoicePackUI();
   syncPrefs();
   const u = curUser();
   applyThemeFor(u);
