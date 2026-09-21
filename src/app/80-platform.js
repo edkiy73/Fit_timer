@@ -155,7 +155,7 @@ let hsAudio = null;
 function startHeadset(){
   try{
     if(!('mediaSession' in navigator)){
-      appAlert('Этот браузер не поддерживает управление с гарнитуры.');
+      appAlert(t('handsfree.headsetUnsupported'));
       setHfMode('off');
       return;
     }
@@ -180,7 +180,7 @@ function startHeadset(){
     navigator.mediaSession.setActionHandler('pause', advance);
     navigator.mediaSession.setActionHandler('nexttrack', advance);
     try{
-      navigator.mediaSession.metadata = new MediaMetadata({title: 'Fit Timer — тренировка', artist: 'Кнопка гарнитуры = следующий этап'});
+      navigator.mediaSession.metadata = new MediaMetadata({title:t('handsfree.mediaTitle'), artist:t('handsfree.mediaArtist')});
     }catch(e){}
   }catch(e){
     setHfMode('off');
@@ -286,7 +286,7 @@ function startListening(){
         voiceWanted = false;
         kvSet('voiceCtl', '0');
         syncPrefs();
-        appAlert('Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.');
+        appAlert(t('handsfree.micDenied'));
       }
     };
     r.start();
@@ -349,11 +349,11 @@ function checkSchedules(){
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
     if(cur === t - 15 && !notifiedKeys.has(preKey)){
       notifiedKeys.add(preKey);
-      showNotification('Тренировка через 15 минут', `«${p.name}» начнётся в ${useTime}. Приготовься!`);
+      showNotification(t('notify.beforeTitle'), t('notify.beforeBody',{name:p.name,time:useTime}));
     }
     if(cur === t && !notifiedKeys.has(goKey)){
       notifiedKeys.add(goKey);
-      showNotification('Наступило время тренировки', `Пора выполнить «${p.name}». Вперёд!`);
+      showNotification(t('notify.startTitle'), t('notify.startBody',{name:p.name}));
     }
   });
 }
