@@ -510,7 +510,7 @@ function renderToday(){
 async function duplicateProgram(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.id = 'p' + Date.now();
-  copy.name = (p.name || 'Программа') + ' — копия';
+  copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
   delete copy.storeId;      // не «из каталога»: это уже своя программа
@@ -1385,10 +1385,10 @@ async function callGeminiImage(prompt, signal){
       const j = await res.json();
       if(j && j.error && j.error.message) msg = j.error.message;
     }catch(e){}
-    if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью.';
-    if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
-    if(res.status === 403 || /billing|permission/i.test(msg)) msg = 'Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.';
-    if(res.status === 503 || /overloaded|high demand|unavailable/i.test(msg)) msg = 'Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.';
+    if(res.status === 400 && /API key/i.test(msg)) msg = t('images.keyRejected');
+    if(res.status === 429) msg = t('images.rateLimited');
+    if(res.status === 403 || /billing|permission/i.test(msg)) msg = t('images.billingRequired');
+    if(res.status === 503 || /overloaded|high demand|unavailable/i.test(msg)) msg = t('images.providerBusy');
     throw new Error(msg);
   }
   const data = await res.json();
@@ -1442,8 +1442,11 @@ async function generateAllImagesViaAI(){
   if(!premiumGate()) return;
   const exList = uniqueProgramExercises();
   const total = 1 + exList.length; // обложка + упражнения
+  const imageWord = appLocale === 'ru'
+    ? plural(total,t('images.imageOne'),t('images.imageFew'),t('images.imageMany'))
+    : t(total === 1 ? 'images.imageOne' : 'images.imageMany');
   const ok = await appDialog(
-    `Будет нарисовано ${total} ${plural(total, 'картинка', 'картинки', 'картинок')}: обложка программы и по одной на каждое упражнение — все в едином стиле. Это займёт пару минут. Продолжить?`,
+    t('images.generateConfirm',{count:total,images:imageWord}),
     {confirm:true,okText:t('images.draw'),cancelText:t('common.cancel')}
   );
   if(!ok) return;
@@ -2001,9 +2004,7 @@ function ytCheckUrl(){
   const v = ($('ytUrl').value || '').trim();
   const ok = !v || !!parseYouTubeUrl(v);
   $('ytHint').style.color = ok ? '' : 'var(--danger)';
-  $('ytHint').textContent = ok
-    ? 'Обычная ссылка или короткая youtu.be. Нейросеть разберёт видео в программу.'
-    : 'Не похоже на ссылку YouTube. Нужен youtube.com/watch?v=… или youtu.be/…';
+  $('ytHint').textContent = ok ? t('youtube.hint') : t('youtube.badLink');
   return ok;
 }
 
@@ -2210,7 +2211,7 @@ function importProgramCode(code){
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
   $('importModal').classList.remove('open');
-  fillBuilder('Проверь и сохрани');
+  fillBuilder(t('import.reviewSave'));
 }
 
 /* ================= СЕРВЕРНАЯ ЧАСТЬ =================
