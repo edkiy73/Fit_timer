@@ -238,10 +238,10 @@ function renderReport(box, pr){
 
   // ---- сколько и когда ----
   const head = add('tr-sum cls-sum', '<b></b><small></small>');
-  head.querySelector('b').textContent = `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
+  head.querySelector('b').textContent = r.n + ' ' + (appLocale === 'ru' ? plural(r.n,t('report.workoutOne'),t('report.workoutFew'),t('report.workoutMany')) : t(r.n === 1 ? 'report.workoutOne' : 'report.workoutFew'));
   const bits = [];
-  if(r.last) bits.push(`последняя ${humanDay(r.last)}`);
-  if(r.streak > 1) bits.push(`серия ${r.streak}`);
+  if(r.last) bits.push(t('report.last',{date:humanDay(r.last)}));
+  if(r.streak > 1) bits.push(t('report.streak',{count:r.streak}));
   head.querySelector('small').textContent = bits.join(' · ');
 
   /* ---- четыре недели ----
@@ -256,7 +256,7 @@ function renderReport(box, pr){
       if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
     });
     const top = Math.max(1, ...weeks);
-    add('cls-label', 'По неделям');
+    add('cls-label', t('report.byWeeks'));
     const wrap = add('cl-weeks', '');
     const dm = t => t.getDate() + '.' + String(t.getMonth() + 1).padStart(2, '0');
     weeks.slice().reverse().forEach((n, i) => {
@@ -268,7 +268,7 @@ function renderReport(box, pr){
       // Столбик, а не рамка с числом: провал должен читаться формой, а не чтением.
       w.innerHTML = `<b></b><span class="cw-bar"><i style="height:${Math.round(n / top * 100)}%"></i></span><small></small>`;
       w.querySelector('b').textContent = n;
-      w.querySelector('small').textContent = back === 0 ? 'сейчас' : dm(from);
+      w.querySelector('small').textContent = back === 0 ? t('report.now') : dm(from);
       wrap.appendChild(w);
     });
   }
@@ -276,9 +276,9 @@ function renderReport(box, pr){
   /* ---- какие дни делает ---- */
   const plans = (r.plans || []).filter(x => x.days || x.n);
   if(plans.length > 1){
-    add('cls-label', 'По дням');
-    plans.forEach(pl => line(pl.days || `вариант ${pl.i + 1}`,
-      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}` : 'ни разу',
+    add('cls-label', t('report.byDays'));
+    plans.forEach(pl => line(pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : (t('builder.variant') + ' ' + (pl.i + 1)),
+      pl.n ? String(pl.n) : t('report.never'),
       pl.n ? '' : 'muted'));
   }
 
@@ -286,49 +286,48 @@ function renderReport(box, pr){
      Средняя длительность скрывает то, ради чего её смотрят: одна тренировка на
      двадцать минут и одна на час дают «сорок минут», которых не было ни разу. */
   if(log.length){
-    add('cls-label', 'Тренировки');
-    const wd = ['вс','пн','вт','ср','чт','пт','сб'];
+    add('cls-label', t('report.workouts'));
+    const wd = null;
     // Сортируем сами: порядок записей в журнале — это порядок, в котором они легли,
     // а не порядок дней. Список тренировок, идущий вразнобой, нельзя читать вовсе.
     const sorted = log.slice().sort((a2, b2) => String(b2.d).localeCompare(String(a2.d)));
     sorted.slice(0, 8).forEach(x => {
       const pl = plans.find(y => y.i === x.p);
       let when = humanDay(x.d);
-      try{ when += ', ' + wd[new Date(x.d + 'T12:00:00').getDay()]; }catch(e){}
+      try{ when += ', ' + new Intl.DateTimeFormat(localeTag(),{weekday:'short'}).format(new Date(x.d + 'T12:00:00')); }catch(e){}
       // Вариант в скобках, как у упражнений. Через точку он читался как второй день
       // («17 сентября, чт · Пн» выглядит ошибкой), хотя говорит другое: человек
       // сделал понедельничную тренировку в четверг, и это как раз стоит заметить.
       if(plans.length > 1 && pl && pl.days) when += ` (${pl.days})`;
-      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' мин' : '';
+      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' ' + t('store.minuteShort') : '';
       line(when, mins || '—', mins ? '' : 'muted');
     });
-    if(log.length > 8) add('field-hint', '').textContent = `и ещё ${log.length - 8} раньше`;
+    if(log.length > 8) add('field-hint', '').textContent = t('report.moreEarlier',{count:log.length - 8});
   }
 
   /* ---- что подопечный поменял ---- */
   const d = r.diff || {};
   const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
   if(changed){
-    add('cls-label warn', 'Поменял в программе');
-    (d.del || []).forEach(n => line(n, 'убрал', 'warn'));
-    (d.add || []).forEach(n => line(n, 'добавил', 'warn'));
+    add('cls-label warn', t('report.changed'));
+    (d.del || []).forEach(n => line(n, t('report.removed'), 'warn'));
+    (d.add || []).forEach(n => line(n, t('report.added'), 'warn'));
     (d.mod || []).forEach(m => change(m.n, m.a, m.b, 'warn'));
   }
 
   // ---- рост нагрузки ----
   const ex = r.ex || [];
   if(ex.length){
-    add('cls-label', 'Растёт');
+    add('cls-label', t('report.growth'));
     const many = plans.length > 1;
     ex.forEach(e => {
       const pl = plans.find(x => x.i === e.p);
-      const tag = [e.w ? 'разминка' : '', many && pl && pl.days ? pl.days : ''].filter(Boolean).join(' · ');
+      const tag = [e.w ? t('report.warmup') : '', many && pl && pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : ''].filter(Boolean).join(' · ');
       change(e.n + (tag ? ` (${tag})` : ''), e.a, e.b, 'ok');
     });
   }
 
-  add('field-hint', '').textContent = `Отчёт от ${humanDay(r.at)}`
-    + (pr.reports.length > 1 ? ` · всего отчётов ${pr.reports.length}` : '');
+  add('field-hint', '').textContent = t('report.reportOn',{date:humanDay(r.at)}) + (pr.reports.length > 1 ? ' · ' + t('report.totalReports',{count:pr.reports.length}) : '');
 }
 
 /* ---- отправка программы подопечному ----
@@ -511,7 +510,7 @@ function snapshotEx(p){
 // Ключ упражнения — вариант плюс название: одно и то же движение в разных днях
 // это разные строки программы, и путать их нельзя.
 const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
-const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' кг' : '') + (x.s > 1 ? ' × ' + x.s + ' подх.' : '');
+const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
 
 function buildReport(p){
   const mine = stats.history.filter(h => h.pid === p.id);
@@ -553,9 +552,9 @@ function buildReport(p){
     const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
     const grew = parseValue(now).min > parseValue(was).min || kgNow > kgWas;
     if(!grew) return;
-    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || 'Упражнение',
-             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} кг` : ''),
-             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
+    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || t('common.exerciseFallback'),
+             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} ${t('progress.kg')}` : ''),
+             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} ${t('progress.kg')}` : '')});
   }));
 
   // 4. Правки: что подопечный убрал, добавил и поменял руками.
