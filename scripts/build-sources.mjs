@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const CHECK = process.argv.includes('--check');
+// This deterministic concatenation is also the CI consistency gate for generated sources.
 
 const targets = [
   {
