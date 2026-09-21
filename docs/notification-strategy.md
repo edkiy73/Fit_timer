@@ -276,12 +276,22 @@ Implemented in the client/native app:
 - notification taps can route Premium offers to the Premium screen;
 - notification/email preferences synchronize as account-level data, including for free accounts.
 
-Still requires a remote push transport:
-- trainer changes while the app is closed;
-- catalog approval/rejection while the app is closed;
-- server-initiated campaigns/news.
+Remote push transport is now implemented:
+- device push-token registration is tied to the confirmed account device;
+- Android uses Firebase Cloud Messaging HTTP v1;
+- iOS uses APNs token authentication;
+- catalog approval/rejection sends a remote push to the trainer account;
+- server-side delivery respects the notification category preference;
+- sign-out removes the current device from remote push delivery.
 
-These cannot be implemented reliably with Capacitor Local Notifications alone. They require device push-token registration plus FCM/APNs (or another push provider).
+Still to connect:
+- trainer assignment/change events that happen on the server;
+- server-initiated news/marketing campaigns;
+- delivery/open analytics and automatic invalid-token cleanup.
+
+Infrastructure required outside the repository:
+- Android: create Firebase for application id `ru.fittimer.app`; add GitHub Secret `GOOGLE_SERVICES_JSON_BASE64`; add Vercel `FIREBASE_SERVICE_ACCOUNT_JSON` (or `FIREBASE_SERVICE_ACCOUNT_BASE64`).
+- iOS: enable the Push Notifications capability for the App target; add Vercel `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`, and `APNS_BUNDLE_ID`. Set `APNS_USE_SANDBOX=1` only for development-device tokens.
 
 Email preference storage is implemented; actual campaign/news email sending should be added separately so server jobs respect `emailNews` / `emailOffers` and shared campaign cooldowns.
 
