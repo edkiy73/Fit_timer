@@ -1043,6 +1043,31 @@ async function accountDocsSnapshot(){
   return docs;
 }
 
+async function syncNotificationPrefsServer(action){
+  if(!account || !account.email || !account.syncToken) return false;
+  let deviceId = await kvGet('deviceId');
+  if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
+  const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
+  if(base.action === 'pull'){
+    const result = await apiPost('/api/sync', base);
+    await applyRemoteAccountDocs(result);
+    return true;
+  }
+  const rec = await readAccountBucket();
+  if(!rec.bucket.meta) rec.bucket.meta = {};
+  const key = 'notificationPrefs';
+  if(!rec.bucket.notificationPrefs && typeof getNotificationPrefs === 'function'){
+    rec.bucket.notificationPrefs = getNotificationPrefs();
+  }
+  if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
+  const m = rec.bucket.meta[key];
+  const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
+    schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
+  await writeAccountBucket(rec);
+  await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+  return true;
+}
+
 async function pushAccountDocs(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   const base = syncAuth('push');
@@ -1111,7 +1136,12 @@ async function pushDeletedProfiles(){
 }
 
 async function connectAccountSync(opts){
-  if(!account || !account.email || !account.syncToken || !identity || !isPremium()){
+  if(!account || !account.email || !account.syncToken || !identity){
+    showSyncState('idle');
+    return false;
+  }
+  if(!isPremium()){
+    try{ await syncNotificationPrefsServer('pull'); }catch(_){}
     showSyncState('idle');
     return false;
   }

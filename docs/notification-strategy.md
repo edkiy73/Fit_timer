@@ -1,6 +1,6 @@
 # Notification strategy
 
-Status: product notes only, not implemented yet.
+Status: local notification manager implemented; remote trainer/catalog push and campaign email delivery still require server transports.
 
 ## Goal
 
@@ -257,6 +257,33 @@ event -> eligibility -> priority -> suppression/cooldown -> timing -> push
 ```
 
 Features should request a notification; they should not independently decide that a push must be sent.
+
+---
+
+## Implementation status
+
+Implemented in the client/native app:
+- centralized candidate builder for local notifications;
+- category preferences;
+- scheduled workout reminders and missed-workout follow-up;
+- completed workouts cancel all remaining notifications for that workout on resync;
+- unfinished-workout reminder;
+- inactivity reminders anchored to the last completed workout (3 / 7 / 14 / 30 days);
+- progression information folded into the workout reminder instead of creating another competing push;
+- Premium promotional push only for non-Premium users with at least 3 completed workouts, at most every 14 days;
+- engagement anti-spam: max one engagement/promo notification per day and about three per week;
+- Premium promotions avoid scheduled workout days where possible;
+- notification taps can route Premium offers to the Premium screen;
+- notification/email preferences synchronize as account-level data, including for free accounts.
+
+Still requires a remote push transport:
+- trainer changes while the app is closed;
+- catalog approval/rejection while the app is closed;
+- server-initiated campaigns/news.
+
+These cannot be implemented reliably with Capacitor Local Notifications alone. They require device push-token registration plus FCM/APNs (or another push provider).
+
+Email preference storage is implemented; actual campaign/news email sending should be added separately so server jobs respect `emailNews` / `emailOffers` and shared campaign cooldowns.
 
 ---
 

@@ -15,7 +15,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROFILE = /^[a-z0-9_-]{1,80}$/i;
 const DOC = /^(stats|progWeights|index|program:[a-z0-9_-]{1,100})$/i;
 const ACCOUNT_PROFILE = '__account__';
-const ACCOUNT_DOC = /^(trainer|clients)$/;
+const ACCOUNT_DOC = /^(trainer|clients|notificationPrefs)$/;
 
 async function bodyOf(req){
   if(req.body && typeof req.body === 'object') return req.body;
@@ -85,7 +85,7 @@ module.exports = async (req, res) => {
   const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
   if(!dev || !sameSecret(sha(token), dev.h || '')) return fail(res, 403, 'bad_sync_token');
   const paidUntil = Date.parse((acc.sub && acc.sub.until) || '') || 0;
-  if(paidUntil < Date.now()) return fail(res, 402, 'premium_required');
+  const premium = paidUntil >= Date.now();
 
   const manifestKey = `s:${mh}`;
   let manifest = {v: 2, profiles: {}, accountDocs: {}};
@@ -96,6 +96,12 @@ module.exports = async (req, res) => {
   if(body.action === 'push'){
     const profiles = Array.isArray(body.profiles) ? body.profiles.slice(0, 20) : [];
     const docs = Array.isArray(body.docs) ? body.docs.slice(0, 80) : [];
+    // Бесплатному аккаунту разрешён только документ настроек уведомлений:
+    // маркетинговая отписка обязана работать независимо от тарифа.
+    if(!premium && (profiles.length || docs.some(d => String(d && d.key || '') !== 'notificationPrefs'
+      || String(d && d.profileId || '') !== ACCOUNT_PROFILE))){
+      return fail(res, 402, 'premium_required');
+    }
     const now = new Date().toISOString();
     for(const rec of profiles){
       const user = cleanUser(rec && rec.user);
@@ -154,7 +160,7 @@ module.exports = async (req, res) => {
   }
 
   if(body.action === 'pull'){
-    const profiles = Object.entries(manifest.profiles).slice(0, 20);
+    const profiles = premium ? Object.entries(manifest.profiles).slice(0, 20) : [];
     const keys = [];
     profiles.forEach(([, p]) => Object.values((p && p.docs) || {}).forEach(d => {
       if(d && !d.deleted && d.storeKey) keys.push(d.storeKey);
@@ -173,7 +179,9 @@ module.exports = async (req, res) => {
         deleted: !!d.deleted, value: d.deleted ? null : (byStore.get(d.storeKey) ?? null)
       }))
     }));
-    const accountDocs = Object.entries(manifest.accountDocs).map(([key, d]) => ({
+    const accountDocEntries = Object.entries(manifest.accountDocs)
+      .filter(([key]) => premium || key === 'notificationPrefs');
+    const accountDocs = accountDocEntries.map(([key, d]) => ({
       key, rev:d.rev, at:d.at, schema:d.schema, deviceId:d.deviceId,
       deleted:!!d.deleted, value:d.deleted ? null : (accountByStore.get(d.storeKey) ?? null)
     }));

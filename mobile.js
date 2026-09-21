@@ -78,7 +78,7 @@
         isExactNotification: exact,
         smallIcon: 'ic_stat_fittimer',
         iconColor: '#7047EB',
-        extra: Object.assign({kind:'workout-reminder'}, item.extra || {})
+        extra: Object.assign({kind:'fittimer-notification'}, item.extra || {})
       })).filter(n => !isNaN(n.schedule.at.getTime()) && n.schedule.at.getTime() > Date.now() + 10000);
       if(list.length) await plugins.LocalNotifications.schedule({notifications:list});
       return true;
@@ -231,6 +231,13 @@
   }
 
   function installNativeOverrides(){
+    if(native && plugins.LocalNotifications && plugins.LocalNotifications.addListener){
+      try{
+        plugins.LocalNotifications.addListener('localNotificationActionPerformed', event=>{
+          try{ window.dispatchEvent(new CustomEvent('fitNotificationAction', {detail:event || {}})); }catch(_){}
+        });
+      }catch(_){}
+    }
     if(!native || !fitAudio) return;
 
     // Системный Android TTS вместо ненадёжного speechSynthesis внутри WebView.

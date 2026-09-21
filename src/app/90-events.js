@@ -139,7 +139,8 @@ async function setNotificationPref(key, value){
       rec.bucket.notificationPrefs = Object.assign({}, NOTIFICATION_PREF_DEFAULTS, prefs);
       if(typeof bumpAccountMeta === 'function') bumpAccountMeta(rec.bucket, 'notificationPrefs');
       await writeAccountBucket(rec);
-      if(typeof queueAccountSync === 'function') queueAccountSync();
+      if(typeof syncNotificationPrefsServer === 'function') syncNotificationPrefsServer('push').catch(()=>{});
+      if(typeof queueAccountSync === 'function' && isPremium()) queueAccountSync();
     }
   }catch(_){}
   syncNotificationSettings();
@@ -149,6 +150,21 @@ function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
   syncNotificationSettings();
 }
+window.addEventListener('fitNotificationAction', e => {
+  const n = e && e.detail && e.detail.notification;
+  const extra = (n && n.extra) || (e && e.detail && e.detail.extra) || {};
+  if(extra.stage === 'premium'){
+    if(typeof openPremium === 'function') openPremium();
+    return;
+  }
+  if(extra.programId){
+    const p = customPrograms.find(x => x && x.id === extra.programId);
+    if(p){
+      if(typeof openProgram === 'function') openProgram(p.id);
+      else goTab('scrPrograms');
+    }
+  }
+});
 let settingsSaveT = 0;
 function saveSettingsSoon(){
   clearTimeout(settingsSaveT);
