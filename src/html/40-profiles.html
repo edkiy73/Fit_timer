@@ -333,6 +333,27 @@
       </div>
       <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
     </div>
+    <div class="card-block" id="notificationSettingsCard">
+      <div class="cb-head"><p class="cb-title" data-i18n="settings.notifications">Уведомления</p></div>
+      <div class="prefs">
+        <div class="pref-row">
+          <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
+          <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+        </div>
+        <div class="pref-row">
+          <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
+          <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+        </div>
+        <div class="pref-row">
+          <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
+          <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
+        </div>
+        <div class="pref-row">
+          <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
+          <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
+        </div>
+      </div>
+    </div>
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.dataRules">Данные и правила</p></div>
       <div class="ways">
