@@ -228,7 +228,7 @@ function wireLiveSoundCascade(p){
     $(p + 'VoiceOn').classList.toggle('on', on);
     syncSoundCascade(p);
     persistLiveSound();
-    if(on) speak('Голос включён');
+    if(on) speak(voiceIsEnglish() ? 'Voice enabled' : t('audio.voiceOn'));
   };
   $(p + 'FxOn').onclick = ()=>{
     const on = !$(p + 'FxOn').classList.contains('on');
@@ -1032,7 +1032,7 @@ async function copyEditPrompt(){
   try{
     await navigator.clipboard.writeText(editAIPrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 
 $('swapBadge').onclick = openSwapHint;
@@ -1179,19 +1179,19 @@ $('imgFiles').onchange = e => {
   const files = [...(e.target.files || [])];
   e.target.value = '';
   if(!files.length) return;
-  const btn = $('imgPick'), restore = btnBusy(btn, `Обработка… 0/${files.length}`);
+  const btn = $('imgPick'), restore = btnBusy(btn, t('images.processing',{done:0,total:files.length}));
   shrinkAll(files, 640, list => {
     imgTray = imgTray.concat(list);
     restore();
     renderTray();
-    if(list.length) appAlert(`Загружено картинок: ${list.length}. Теперь разложи их по местам или нажми «Разложить по порядку».`);
+    if(list.length) appAlert(t('images.uploaded',{count:list.length}));
   });
 };
 $('trayAuto').onclick = trayAutoAssign;
 $('trayClear').onclick = async ()=>{
   if(!imgTray.length) return;
-  if(!(await appDialog('Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.',
-    {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('images.removeQuestion'),
+    {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
   imgTray = []; renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
@@ -1207,7 +1207,7 @@ $('slotFile').onchange = e => {
   e.target.value = '';
   if(!f) return;
   shrinkImage(f, 640, data => {
-    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    if(!data){ appAlert(t('images.loadFailed')); return; }
     const s = imageSlots()[slotTarget];
     if(s) s.set(data);
     $('slotModal').classList.remove('open');
@@ -1257,8 +1257,8 @@ function buildExMenu(){
     b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
     box.appendChild(b);
   };
-  mk(icon('plus') + 'Дублировать', dupExercise);
-  mk(icon('trash') + 'Удалить', delExercise, 'danger');
+  mk(icon('plus') + t('common.duplicate'), dupExercise);
+  mk(icon('trash') + t('common.delete'), delExercise, 'danger');
 }
 
 // конструктор: вручную ⇄ через ИИ ⇄ из видео
@@ -1272,8 +1272,8 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
     const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
     if(programDirty()){
       const go = await appDialog(
-        'Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.',
-        {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+        t('builder.unsavedProgram'),
+        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
       );
       back();
       if(!go) return;
@@ -1300,8 +1300,8 @@ $('aiTabs').addEventListener('click', async e => {
   if(b.dataset.m === cur) return;
   if(aiScreenDirty(c.dirty)){
     const ok = await appDialog(
-      'Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.',
-      {confirm: true, okText: 'Переключиться', cancelText: 'Остаться'}
+      t('ai.unsavedSwitch'),
+      {confirm: true, okText: t('common.switch'), cancelText: t('common.stay')}
     );
     markAITab();   // подсветку возвращаем на месте, ушёл человек или нет
     if(!ok) return;
@@ -1329,7 +1329,7 @@ async function exeCopyPrompt(){
   try{
     await navigator.clipboard.writeText(exePrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать.'); }
+  }catch(e){ appAlert(t('common.copyFailedRetry')); }
 }
 
 /* ---- упражнение через ИИ ---- */
@@ -1347,7 +1347,7 @@ async function exaCopyPrompt(){
 function addExManual(){
   const list = curPlan().exercises;
   const nWarm = list.filter(e => e.warmup).length;
-  if(list.length - nWarm >= MAX_MAIN){ appAlert(`В основной части уже ${MAX_MAIN} упражнений — это предел. Удали что-нибудь, чтобы добавить новое.`); return; }
+  if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
@@ -1363,7 +1363,7 @@ function addExManual(){
 // в момент сохранения, а не молча подставляем «Упражнение 3».
 function exNameOk(){
   if($('exName').value.trim()) return true;
-  appAlert('Упражнению нужно название — иначе в списке будет пустая строка.');
+  appAlert(t('exercise.nameRequired'));
   $('exName').focus();
   return false;
 }
@@ -1384,8 +1384,8 @@ function dupExercise(){
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
     appAlert(exDraft.warmup
-      ? `В разминке уже ${MAX_WARM} упражнений — это предел. Дублировать не получится.`
-      : `В основной части уже ${MAX_MAIN} упражнений — это предел. Дублировать не получится.`);
+      ? t('exercise.warmLimitDuplicate',{count:MAX_WARM})
+      : t('exercise.mainLimitDuplicate',{count:MAX_MAIN}));
     return;
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
@@ -1396,8 +1396,8 @@ function dupExercise(){
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
-  const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
-  if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  const nameTxt = (exDraft.name || '').trim() || t('exercise.this');
+  if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   exIsNew = false;
   curPlan().exercises.splice(exIdx, 1);
   exDraft = null; exIdx = -1; exOrig = '';
@@ -1421,9 +1421,9 @@ async function leaveExercise(){
   if(exDirty()){
     const go = await appDialog(
       exIsNew
-        ? 'Упражнение ещё пустое. Если выйти сейчас, оно не добавится в список.'
-        : 'Изменения этого упражнения ещё не сохранены. Если выйти сейчас, они пропадут.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+        ? t('exercise.newUnsaved')
+        : t('exercise.unsaved'),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
     );
     if(!go) return;
   }
@@ -1486,8 +1486,8 @@ $('exWarm').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
   const nMain = list.filter((e, i) => !e.warmup && i !== exIdx).length;
-  if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(`В разминке можно до ${MAX_WARM} упражнений.`); return; }
-  if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(`В основной части можно до ${MAX_MAIN} упражнений.`); return; }
+  if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(t('exercise.warmMax',{count:MAX_WARM})); return; }
+  if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(t('exercise.mainMax',{count:MAX_MAIN})); return; }
   exDraft.warmup = !exDraft.warmup;
   $('exWarm').classList.toggle('on', exDraft.warmup);
   if(exDraft.warmup) exDraft.sets = 1;
@@ -1514,7 +1514,7 @@ $('exMediaFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   shrinkImage(file, 640, data => {
-    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    if(!data){ appAlert(t('images.loadFailed')); return; }
     setExImg(exDraft, data);
     renderExMedia(); syncExDetailsSum();
   });
@@ -1547,8 +1547,8 @@ function syncImagesSum(){
     if(ex.media && ex.media.kind === 'img') filled++;
   }));
   el.textContent = filled
-    ? `Есть ${filled} из ${total}`
-    : `Ни одной из ${total}`;
+    ? t('images.summaryFilled',{filled,total})
+    : t('images.summaryEmpty',{total});
 }
 // Сводка говорит, что НАСТРОЕНО, а не как называются поля внутри. Круги и отдых
 // между ними здесь обязательны: это первое, что человек хочет проверить перед
@@ -1558,16 +1558,16 @@ function syncSettingsSum(){
   const plans = draft.plans || [];
   const pl = curPlan();
   const daysU = programDaysUnion(draft);
-  if(daysU.length) bits.push(daysU.join('·'));
-  else if(draft.rotate) bits.push('по очереди');
-  else bits.push('по любым дням');
+  if(daysU.length) bits.push(daysU.map(canonicalLabel).join('·'));
+  else if(draft.rotate) bits.push(t('programs.sequence'));
+  else bits.push(t('builder.anyDays'));
   if(draft.time) bits.push(draft.time);
-  if(plans.length > 1) bits.push(`${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+  if(plans.length > 1) bits.push(storeCountText(plans.length,'variant'));
   const rounds = (pl && +pl.rounds) || 1;
-  bits.push(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
+  bits.push(storeCountText(rounds,'round'));
   const rr = (pl && +pl.roundRest) || 0;
-  if(rounds > 1 && rr > 0) bits.push('отдых ' + (rr % 60 === 0 ? (rr / 60) + ' мин' : rr + ' с'));
-  if(draft.progression) bits.push('нагрузка растёт сама');
+  if(rounds > 1 && rr > 0) bits.push(t('builder.restSummary',{time:(rr % 60 === 0 ? (rr / 60) + ' ' + t('store.minuteShort') : rr + ' ' + t('store.secShort'))}));
+  if(draft.progression) bits.push(t('builder.progressionAuto'));
   $('bSettingsSum').textContent = bits.join(' · ');
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
@@ -1576,7 +1576,7 @@ $('bDesc').oninput = e => {
   $('bDescCount').textContent = draft.desc.length;
 };
 $('btnSaveProgram').onclick = ()=>{ if(numFieldsOk('scrBuilder')) saveProgram(); };
-$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, 'Изменения программы');
+$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, t('builder.programChanges'));
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
@@ -1592,8 +1592,8 @@ $('bCoverFile').onchange = e=>{
 // и требует набрать фразу: восстановить это неоткуда.
 $('btnResetTotal').onclick = async ()=>{
   const ok = await appDialog(
-    'Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры, самочувствие и фото останутся.',
-    {confirm: true, okText: 'Очистить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    t('stats.clearQuestion'),
+    {confirm: true, okText: t('stats.clear'), cancelText: t('common.cancel'), type: t('account.deleteConfirmPhrase')}
   );
   if(!ok) return;
   stats.totalSec = 0;
@@ -1638,8 +1638,8 @@ $('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('image') + 'Показать «было / стало»';
-$('btnDeleteAllPhotos').innerHTML = icon('trash') + 'Удалить все фото';
+$('btnCompare').innerHTML = icon('image') + t('progress.comparePhotos');
+$('btnDeleteAllPhotos').innerHTML = icon('trash') + t('progress.deleteAllPhotosBtn');
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
