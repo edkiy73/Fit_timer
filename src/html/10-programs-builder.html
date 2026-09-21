@@ -335,7 +335,7 @@
          оформление списка. -->
     <div class="field"><label data-i18n="builder.descriptionOptional">Описание (необязательно)</label>
       <textarea id="bDesc" class="auto-grow" maxlength="1000" placeholder="Для кого программа, чего ждать, как часто заниматься" data-i18n-placeholder="builder.descriptionExample"></textarea>
-      <p class="field-hint"><span id="bDescCount">0</span>/1000 — покажется перед стартом.</p>
+      <p class="field-hint"><span id="bDescCount">0</span>/1000 — <span data-i18n="builder.descCounterHint">покажется перед стартом.</span></p>
     </div>
     <div class="field"><label data-i18n="builder.coverOptional">Обложка (необязательно)</label>
       <div class="media-row">
@@ -418,7 +418,7 @@
       </button>
 
       <div id="exProgBox" class="stack hidden">
-        <div class="pref-row"><span>Усложнять со временем<small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
+        <div class="pref-row"><span><span data-i18n="builder.progressOverTime">Усложнять со временем</span><small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
         <div class="step-grid hidden" id="exStepRow">
           <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
                он сочетается и с повторениями, и со временем, и в обоих случаях
