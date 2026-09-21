@@ -1177,11 +1177,11 @@ function renderExList(){
   // объясняем, к чему относится список упражнений
   const plans = draft.plans || [];
   const pl = curPlan();
-  const t = $('bVariantTitle'), h = $('bVariantHint');
+  const titleEl = $('bVariantTitle'), h = $('bVariantHint');
   if(plans.length > 1){
     const rot = !!draft.rotate;
     const days = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
-    t.textContent = t('builder.variantExercises',{current:planIdx+1,total:plans.length});
+    titleEl.textContent = t('builder.variantExercises',{current:planIdx+1,total:plans.length});
     h.textContent = rot
       ? t('builder.variantExercisesHint')
       : (days
@@ -1189,7 +1189,7 @@ function renderExList(){
           : t('builder.variantNoDays'));
     setShown(h, true);
   } else {
-    t.textContent = t('builder.exercisesTitle');
+    titleEl.textContent = t('builder.exercisesTitle');
     const d1 = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
     h.textContent = d1
       ? t('builder.scheduleExercises',{days:d1})
