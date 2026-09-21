@@ -51,11 +51,21 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
 
   // ---- добавить своими руками ----
   const NAME = 'От нас ' + Math.random().toString(36).slice(2, 6);
-  const добавь = (over) => api('add', {item: Object.assign({
-    name: NAME, cat: 'power', level: 'Средний', min: 25,
-    gives: 'Программа, добавленная прямо из админки, а не присланная тренером.',
-    text: 'ПРОГРАММА: ' + NAME + '\nДНИ: Пн\nКРУГИ: 2\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
-    exCount: 1}, over || {})});
+  const добавь = (over) => {
+    const item = Object.assign({
+      name: NAME, cat: 'power', level: 'Средний', min: 25,
+      gives: 'Программа, добавленная прямо из админки, а не присланная тренером.',
+      text: 'ПРОГРАММА: ' + NAME + '\nДНИ: Пн\nКРУГИ: 2\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
+      exCount: 1
+    }, over || {});
+    item.sourceLocale = 'ru';
+    item.locales = {
+      ru: {name:item.name, gives:item.gives, text:item.text},
+      en: {name:'EN ' + item.name, gives:'English version. ' + item.gives, text:item.text}
+    };
+    if(over && over.locales) item.locales = over.locales;
+    return api('add', {item});
+  };
 
   const bad1 = await добавь({gives: 'коротко'});
   ok('недобор полей не проходит', bad1.s === 400 && (bad1.j.miss || []).length > 0,
@@ -138,22 +148,24 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
      /последняя активность/.test(await page.textContent('#body')));
   await page.click('.tab[data-tab="add"]');
   await page.waitForTimeout(300);
-  await page.fill('#fText', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
+  await page.fill('#fTextRu', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
   await page.waitForTimeout(300);
   const slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
   ok('места под фото берутся из текста программы',
      slots.join(',') === 'Приседания,Планка', slots.join(', '));
   ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
+  ok('в админке есть отдельные RU и EN поля', await page.isVisible('#fNameRu') && await page.isVisible('#fNameEn'));
+  ok('есть ручная вставка перевода без ИИ', await page.isVisible('#fPasteToggle'));
   await page.screenshot({path: __dirname + '/shot-admin.png', fullPage: true});
 
   /* ---- доступ по подписке: решают здесь, а не тренер в заявке ---- */
-  const made = await api('add', {item: {
+  const made = await добавь({
     name: 'Платная ' + Math.random().toString(36).slice(2, 6),
     gives: 'Программа для проверки доступа по подписке, двадцать символов есть.',
     cat: 'power', level: 'Средний', min: 30, exCount: 3,
     text: 'ПРОГРАММА: Платная\nДНИ: Пн\nКРУГИ: 3\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
     pro: true
-  }});
+  });
   ok('программа добавляется сразу премиумной', made.s === 200, made.j.id || made.j.error);
 
   const fromCat = await fetch(BASE + '/api/catalog').then(r => r.json());
