@@ -43,12 +43,21 @@ const legacyAge = v => {
     || (now.getUTCMonth() === d.getUTCMonth() && now.getUTCDate() < d.getUTCDate())) n--;
   return cleanAge(n);
 };
+const cleanProfileInt = (value, def, lo, hi) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : def;
+};
 const cleanUser = u => ({
   id: String((u && u.id) || '').slice(0, 80),
   name: String((u && u.name) || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 20),
   gender: (u && (u.gender === 'f' || u.gender === 'm')) ? u.gender : '',
   age: cleanAge(u && u.age) || legacyAge(u && u.birth),
-  theme: ['system','light','dark'].includes(u && u.theme) ? u.theme : 'system'
+  theme: ['system','light','dark'].includes(u && u.theme) ? u.theme : 'system',
+  prepSec: cleanProfileInt(u && u.prepSec, 5, 0, 30),
+  readySec: cleanProfileInt(u && u.readySec, 5, 0, 30),
+  sideSec: cleanProfileInt(u && u.sideSec, 10, 3, 60),
+  voiceVol: cleanProfileInt(u && u.voiceVol, 100, 0, 100),
+  fxVol: cleanProfileInt(u && u.fxVol, 100, 0, 100)
 });
 const newer = (a, b) => {
   const ta = Date.parse((a && a.at) || '') || 0, tb = Date.parse((b && b.at) || '') || 0;

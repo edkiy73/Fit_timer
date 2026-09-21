@@ -1090,7 +1090,7 @@ const I18N_RU = {
   'profile.age': "Возраст, полных лет",
   'profile.ageExample': "Например, 32",
   'profile.ageHint': "От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.",
-  'profile.appearance': "Оформление",
+  'profile.appearance': "Оформление и язык",
   'profile.theme': "Тема",
   'profile.themeSystem': "Как в системе",
   'profile.themeLight': "Светлая",
@@ -2542,7 +2542,7 @@ const I18N_EN = {
   'profile.age': "Age, full years",
   'profile.ageExample': "For example, 32",
   'profile.ageHint': "Gender and age affect exercise selection and load. They are included in AI requests.",
-  'profile.appearance': "Appearance",
+  'profile.appearance': "Appearance & language",
   'profile.theme': "Theme",
   'profile.themeSystem': "System",
   'profile.themeLight': "Light",
@@ -2909,7 +2909,8 @@ const LOCALE_META = Object.freeze({
   en: {tag:'en-US', ai:'English'}
 });
 const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
-let appLocale = 'ru';
+let appLocalePreference = 'system'; // system | supported locale
+let appLocale = systemLocale();       // effective locale used by UI/TTS/API
 let appLocaleStored = false;
 
 function normalizeLocale(value){
@@ -2926,6 +2927,13 @@ function systemLocale(){
     }
   }catch(_){}
   return 'en';
+}
+function normalizeLocalePreference(value){
+  return String(value || '').toLowerCase() === 'system' ? 'system' : normalizeLocale(value);
+}
+function resolveLocalePreference(value){
+  const pref = normalizeLocalePreference(value);
+  return pref === 'system' ? systemLocale() : normalizeLocale(pref);
 }
 function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
@@ -2946,30 +2954,38 @@ function applyI18n(root){
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
   const select = document.getElementById('appLocaleSelect');
-  if(select) select.value = appLocale;
+  if(select) select.value = appLocalePreference;
 }
 async function loadAppLocale(){
   let saved = null;
   try{ saved = await kvGet('appLocale'); }catch(_){}
-  appLocaleStored = SUPPORTED_LOCALES.includes(saved);
-  appLocale = appLocaleStored ? saved : systemLocale();
+  appLocaleStored = saved === 'system' || SUPPORTED_LOCALES.includes(saved);
+  appLocalePreference = appLocaleStored ? normalizeLocalePreference(saved) : 'system';
+  appLocale = resolveLocalePreference(appLocalePreference);
   applyI18n();
   return appLocale;
 }
 async function setAppLocale(value, opts){
-  const next = normalizeLocale(value);
+  const pref = normalizeLocalePreference(value);
+  const next = resolveLocalePreference(pref);
   const changed = next !== appLocale;
+  appLocalePreference = pref;
   appLocale = next;
   if(!opts || opts.persist !== false){
     appLocaleStored = true;
-    try{ await kvSet('appLocale', appLocale); }catch(_){}
+    try{ await kvSet('appLocale', appLocalePreference); }catch(_){}
   }
   applyI18n();
   if(changed){
-    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale}})); }catch(_){}
+    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale, preference:appLocalePreference}})); }catch(_){}
   }
   return appLocale;
 }
+try{
+  window.addEventListener('languagechange', ()=>{
+    if(appLocalePreference === 'system') setAppLocale('system', {persist:false});
+  });
+}catch(_){}
 function localeTag(value){
   const code = value == null ? appLocale : normalizeLocale(value);
   return (LOCALE_META[code] && LOCALE_META[code].tag) || code;
@@ -4986,7 +5002,19 @@ const accountAuth = () => ({
   deviceId: (identity && identity.deviceId) || ''
 });
 const syncAuth = action => Object.assign({action}, accountAuth());
-const syncUser = u => ({id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u), theme:u.theme || 'system'});
+const syncProfileInt = (value, def, lo, hi) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : def;
+};
+const syncUser = u => ({
+  id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u),
+  theme:u.theme || 'system',
+  prepSec:syncProfileInt(u.prepSec, 5, 0, 30),
+  readySec:syncProfileInt(u.readySec, 5, 0, 30),
+  sideSec:syncProfileInt(u.sideSec, 10, 3, 60),
+  voiceVol:syncProfileInt(u.voiceVol, 100, 0, 100),
+  fxVol:syncProfileInt(u.fxVol, 100, 0, 100)
+});
 const remoteWins = (remote, local) => {
   if(!local) return true;
   const a = Date.parse(remote.at || '') || 0, b = Date.parse(local.at || '') || 0;
@@ -15009,10 +15037,10 @@ function tearDownWorkout(){
 }
 
 /* ================= ТЕМА ================= */
-let themeLight = true; // по умолчанию светлая
 // Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
 // разные, и спорить с системной настройкой без спроса приложению незачем.
 const sysDark = ()=> !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+let themeLight = !sysDark();
 const themeOf = u => (u && u.theme) || 'system';
 function applyThemeFor(u){
   const t = themeOf(u);
@@ -15139,12 +15167,19 @@ function hfHintText(mode){
   return t('handsfree.offHint');
 }
 
+function syncHandsFreeUI(){
+  document.querySelectorAll('#hfSeg [data-hf], #hfModal [data-hf]').forEach(b =>
+    b.classList.toggle('act', b.dataset.hf === hfMode));
+  ['hfHint','hfModalHint'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = hfHintText(hfMode);
+  });
+}
 function setHfMode(mode){
   hfMode = mode;
   kvSet('hfMode', mode);
-  document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === mode));
-  $('hfHint').textContent = hfHintText(mode);
   voiceWanted = (mode === 'voice');
+  syncHandsFreeUI();
   syncPrefs();
   // если уже на тренировке — переключаем на лету
   if($('scrWork').classList.contains('on')){
@@ -15603,11 +15638,11 @@ async function chooseHandsFree(mode){
 
 if($('appLocaleSelect')){
   $('appLocaleSelect').onchange = async e=>{
-    const next = normalizeLocale(e.target.value);
-    await setAppLocale(next, {persist:true});
-    await syncAccountLocale(next);
+    const pref = normalizeLocalePreference(e.target.value);
+    await setAppLocale(pref, {persist:true});
+    await syncAccountLocale(appLocale);
     if((await kvGet('recognitionLangManual')) !== '1'){
-      recognitionLang = next;
+      recognitionLang = appLocale;
       await kvSet('recognitionLang', recognitionLang);
       if(hfMode === 'voice') setHfMode('off');
       await refreshVoicePackUI();
@@ -15617,7 +15652,8 @@ if($('appLocaleSelect')){
 }
 window.addEventListener('appLocaleChanged', ()=>{
   syncTtsLocaleToApp(true);
-  if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode);
+  syncHandsFreeUI();
+  if(account && account.email) syncAccountLocale(appLocale);
   // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
   if(ROOT_TABS.includes(show._last)) prepTab(show._last);
   else if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); }
@@ -15721,6 +15757,29 @@ function wireLiveSoundCascade(p){
     syncPrefs();
   };
 }
+function cloneSettingsBlock(sourceId, targetId, ids){
+  const source=$(sourceId), target=$(targetId);
+  if(!source || !target) return;
+  target.innerHTML = source.innerHTML;
+  Object.entries(ids || {}).forEach(([from,to])=>{
+    const el=target.querySelector('#' + from);
+    if(el) el.id=to;
+  });
+}
+function mountWorkoutSettingsBlocks(){
+  cloneSettingsBlock('soundSettingsCard','soundModalContent',{
+    stSoundOn:'sndSoundOn', stSoundBox:'sndSoundBox', stVoiceOn:'sndVoiceOn',
+    stVoiceChoice:'sndVoiceChoice', stMusic:'sndMusic', stFxOn:'sndFxOn',
+    stFxField:'sndFxField', stFxVolVal:'sndFxVolVal', stFxVol:'sndFxVol'
+  });
+  cloneSettingsBlock('handsfreeSettingsCard','hfModalContent',{
+    hfSeg:'hfModalSeg', hfHint:'hfModalHint', voicePackBox:'hfVoicePackBox',
+    voiceRecLang:'hfVoiceRecLang', voicePackStatus:'hfVoicePackStatus',
+    voicePackProgress:'hfVoicePackProgress', voicePackProgressBar:'hfVoicePackProgressBar',
+    btnVoicePack:'btnHfVoicePack'
+  });
+}
+mountWorkoutSettingsBlocks();
 wireLiveSoundCascade('st');
 wireLiveSoundCascade('snd');
 
@@ -15835,12 +15894,12 @@ async function downloadSelectedVoicePack(){
 }
 
 function openHfModal(){
-  document.querySelectorAll('#hfModal .choice').forEach(c => c.classList.toggle('act', c.dataset.hf === hfMode));
+  syncHandsFreeUI();
   if($('hfVoiceRecLang')) $('hfVoiceRecLang').value = recognitionLang;
   refreshVoicePackUI();
   $('hfModal').classList.add('open');
 }
-document.querySelectorAll('#hfModal .choice').forEach(c => {
+document.querySelectorAll('#hfModal [data-hf]').forEach(c => {
   c.onclick = async ()=>{
     const ok = await chooseHandsFree(c.dataset.hf);
     if(ok) $('hfModal').classList.remove('open');
@@ -15848,12 +15907,28 @@ document.querySelectorAll('#hfModal .choice').forEach(c => {
 });
 $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
 
+async function previewSelectedVoice(){
+  const resumeRecognition = hfMode === 'voice' && $('scrWork').classList.contains('on');
+  if(resumeRecognition){
+    try{ await Promise.resolve(stopListening()); }catch(_){}
+    await new Promise(resolve=>setTimeout(resolve, 100));
+  }
+  speak(t('audio.voiceSelected'), null, ()=>{
+    if(!resumeRecognition) return;
+    setTimeout(()=>{
+      if(hfMode === 'voice' && $('scrWork').classList.contains('on')){
+        voiceWanted = true;
+        startListening();
+      }
+    }, 160);
+  });
+}
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
-  if($(id)) $(id).onchange = e=>{
+  if($(id)) $(id).onchange = async e=>{
     savedVoiceURI=e.target.value || '';
     persistLiveSound();
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
-    speak(t('audio.voiceSelected'));
+    await previewSelectedVoice();
   };
 }
 for(const id of ['voiceRecLang','hfVoiceRecLang']){
@@ -17186,11 +17261,9 @@ try{
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
-  // аккаунт (почта, подписка, биометрия) — один на устройство, читается раньше профилей
+  // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
+  // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
-  if(!appLocaleStored && account && SUPPORTED_LOCALES.includes(account.locale)){
-    await setAppLocale(account.locale, {persist:true});
-  }
   loadPublicConfig();
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
@@ -17211,9 +17284,9 @@ try{
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'light'}];
+    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system'}];
     if((await kvGet('customPrograms_m')) !== null){
-      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'dark'});
+      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system'});
     }
     await saveUsers();
   }
@@ -17248,8 +17321,7 @@ try{
     kvSet('hfMode', 'off');
   }
   voiceWanted = hfMode === 'voice';
-  document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
-  $('hfHint').textContent = hfHintText(hfMode);
+  syncHandsFreeUI();
   soundOn = (await kvGet('soundOff')) !== '1';
   voiceLang = localeTag();
   savedVoiceURI = (await kvGet('voiceURI')) || '';

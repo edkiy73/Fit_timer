@@ -278,8 +278,9 @@
     window.stopListening = function(){
       if(typeof stopRequested !== 'undefined') stopRequested = true;
       if(typeof voiceActive !== 'undefined') voiceActive = false;
-      stopVoiceRecognition();
+      const stopped = stopVoiceRecognition();
       if(typeof resetVoiceDedup === 'function') resetVoiceDedup();
+      return stopped;
     };
     window.stopSpeech = function(){
       stopSpeaking();

@@ -1090,7 +1090,7 @@ const I18N_RU = {
   'profile.age': "Возраст, полных лет",
   'profile.ageExample': "Например, 32",
   'profile.ageHint': "От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.",
-  'profile.appearance': "Оформление",
+  'profile.appearance': "Оформление и язык",
   'profile.theme': "Тема",
   'profile.themeSystem': "Как в системе",
   'profile.themeLight': "Светлая",

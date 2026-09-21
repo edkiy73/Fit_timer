@@ -1310,18 +1310,6 @@
     </div>
 
     <div class="tab-pane" id="morePane_me">
-    <div class="card-block" id="appLanguageCard">
-      <div class="cb-head"><p class="cb-title" data-i18n="settings.languageTitle">Язык</p></div>
-      <div class="pref-row">
-        <span data-i18n="settings.appLanguage">Язык приложения</span>
-        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
-          <option value="ru" data-i18n="settings.russian">Русский</option>
-          <option value="en">English</option>
-        </select>
-      </div>
-      <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.</p>
-    </div>
-
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.profiles">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
@@ -1331,7 +1319,7 @@
     </div>
 
     <div class="tab-pane hidden" id="morePane_sound">
-    <div class="card-block">
+    <div class="card-block" id="soundSettingsCard">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.soundVoice">Звук и голос</p></div>
       <div class="prefs stack">
         <div class="pref-row"><span data-i18n="settings.useSoundVoice">Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
@@ -1354,7 +1342,7 @@
       </div>
     </div>
 
-    <div class="card-block">
+    <div class="card-block" id="handsfreeSettingsCard">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.handsfree">Управление без рук</p></div>
       <div class="hf-block">
         <div class="hf-seg" id="hfSeg">
@@ -1554,13 +1542,22 @@
       <!-- Тема у каждого профиля своя: телефон один, а вкусы у людей разные.
            «Как в системе» — вариант по умолчанию: приложение просто не спорит с телефоном. -->
       <div class="card-block">
-        <div class="cb-head"><p class="cb-title" data-i18n="profile.appearance">Оформление</p></div>
+        <div class="cb-head"><p class="cb-title" data-i18n="profile.appearance">Оформление и язык</p></div>
         <div class="field"><label data-i18n="profile.theme">Тема</label>
           <div class="seg seg3" id="ueThemeSeg">
             <button type="button" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
             <button type="button" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
             <button type="button" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
           </div>
+        </div>
+        <div class="field">
+          <label data-i18n="settings.appLanguage">Язык приложения</label>
+          <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
+            <option value="system" data-i18n="profile.themeSystem">Как в системе</option>
+            <option value="ru" data-i18n="settings.russian">Русский</option>
+            <option value="en">English</option>
+          </select>
+          <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.</p>
         </div>
       </div>
 
@@ -1721,43 +1718,14 @@
 
     <div class="modal" id="hfModal">
       <div class="modal-card">
-        <span class="mini-label" data-i18n="handsfree.title">Управление без рук</span>
-        <button class="choice" data-hf="off"><b data-i18n="common.off">Выкл</b><small data-i18n="handsfree.offSub">Переключение кнопками на экране</small></button>
-        <button class="choice" data-hf="voice"><b data-i18n="common.voice">Голос</b><small data-i18n="handsfree.voiceSub">Команды без рук. В приложении работают офлайн после загрузки голосового пакета</small></button>
-        <button class="choice" data-hf="headset"><b data-i18n="common.headset">Гарнитура</b><small data-i18n="handsfree.headsetSub">Кнопка play/pause на наушниках — следующий этап</small></button>
-        <div class="voice-pack hidden" id="hfVoicePackBox">
-          <div class="pref-row"><span data-i18n="settings.commandLanguage">Язык команд</span><select class="voice-sel" id="hfVoiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
-          <div class="voice-pack-status">
-            <span id="hfVoicePackStatus" data-i18n="common.checking">Проверяем…</span>
-            <div class="voice-pack-progress hidden" id="hfVoicePackProgress"><i id="hfVoicePackProgressBar"></i></div>
-            <button type="button" class="btn-secondary voice-pack-btn" id="btnHfVoicePack" data-i18n="common.download">Скачать</button>
-          </div>
-        </div>
+        <div id="hfModalContent"></div>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
 
     <div class="modal" id="soundModal">
       <div class="modal-card">
-        <span class="mini-label" data-i18n="sound.title">Звук тренировки</span>
-        <div class="pref-row"><span data-i18n="sound.use">Использовать звуки и/или голос</span><button class="switch" id="sndSoundOn"></button></div>
-        <div class="stack" id="sndSoundBox">
-          <div class="snd-group">
-            <p class="snd-label" data-i18n="common.voice">Голос</p>
-            <div class="pref-row"><span><span data-i18n="settings.speak">Озвучивать</span><small data-i18n="settings.speakSub">названия упражнений, отдых и итог</small></span><button class="switch" id="sndVoiceOn"></button></div>
-            <div class="pref-row"><span data-i18n="common.voice">Голос</span><select class="voice-sel" id="sndVoiceChoice"></select></div>
-            <div class="pref-row"><span><span data-i18n="settings.music">Не прерывать музыку</span><small data-i18n="settings.musicSub">вместо голоса — короткие сигналы</small></span><button class="switch" id="sndMusic"></button></div>
-          </div>
-          <div class="snd-group">
-            <p class="snd-label" data-i18n="common.sounds">Звуки</p>
-            <div class="pref-row"><span><span data-i18n="settings.gong">Гонг и отсчёт</span><small data-i18n="settings.gongSub">сигналы начала, конца и последних секунд</small></span><button class="switch" id="sndFxOn"></button></div>
-            <div class="vol-field" id="sndFxField">
-              <div class="vol-label"><span data-i18n="common.volume">Громкость</span><b id="sndFxVolVal">100%</b></div>
-              <input type="range" id="sndFxVol" min="0" max="100" step="5" class="vol-range">
-            </div>
-          </div>
-        </div>
-        <p class="field-hint" data-i18n="sound.voiceVolume">Громкость голоса — кнопками громкости телефона.</p>
+        <div id="soundModalContent"></div>
         <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px" data-i18n="common.done">Готово</button>
       </div>
     </div>

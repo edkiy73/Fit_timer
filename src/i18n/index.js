@@ -5,7 +5,8 @@ const LOCALE_META = Object.freeze({
   en: {tag:'en-US', ai:'English'}
 });
 const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
-let appLocale = 'ru';
+let appLocalePreference = 'system'; // system | supported locale
+let appLocale = systemLocale();       // effective locale used by UI/TTS/API
 let appLocaleStored = false;
 
 function normalizeLocale(value){
@@ -22,6 +23,13 @@ function systemLocale(){
     }
   }catch(_){}
   return 'en';
+}
+function normalizeLocalePreference(value){
+  return String(value || '').toLowerCase() === 'system' ? 'system' : normalizeLocale(value);
+}
+function resolveLocalePreference(value){
+  const pref = normalizeLocalePreference(value);
+  return pref === 'system' ? systemLocale() : normalizeLocale(pref);
 }
 function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
@@ -42,30 +50,38 @@ function applyI18n(root){
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
   const select = document.getElementById('appLocaleSelect');
-  if(select) select.value = appLocale;
+  if(select) select.value = appLocalePreference;
 }
 async function loadAppLocale(){
   let saved = null;
   try{ saved = await kvGet('appLocale'); }catch(_){}
-  appLocaleStored = SUPPORTED_LOCALES.includes(saved);
-  appLocale = appLocaleStored ? saved : systemLocale();
+  appLocaleStored = saved === 'system' || SUPPORTED_LOCALES.includes(saved);
+  appLocalePreference = appLocaleStored ? normalizeLocalePreference(saved) : 'system';
+  appLocale = resolveLocalePreference(appLocalePreference);
   applyI18n();
   return appLocale;
 }
 async function setAppLocale(value, opts){
-  const next = normalizeLocale(value);
+  const pref = normalizeLocalePreference(value);
+  const next = resolveLocalePreference(pref);
   const changed = next !== appLocale;
+  appLocalePreference = pref;
   appLocale = next;
   if(!opts || opts.persist !== false){
     appLocaleStored = true;
-    try{ await kvSet('appLocale', appLocale); }catch(_){}
+    try{ await kvSet('appLocale', appLocalePreference); }catch(_){}
   }
   applyI18n();
   if(changed){
-    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale}})); }catch(_){}
+    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale, preference:appLocalePreference}})); }catch(_){}
   }
   return appLocale;
 }
+try{
+  window.addEventListener('languagechange', ()=>{
+    if(appLocalePreference === 'system') setAppLocale('system', {persist:false});
+  });
+}catch(_){}
 function localeTag(value){
   const code = value == null ? appLocale : normalizeLocale(value);
   return (LOCALE_META[code] && LOCALE_META[code].tag) || code;

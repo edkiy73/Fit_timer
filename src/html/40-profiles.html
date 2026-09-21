@@ -159,18 +159,6 @@
     </div>
 
     <div class="tab-pane" id="morePane_me">
-    <div class="card-block" id="appLanguageCard">
-      <div class="cb-head"><p class="cb-title" data-i18n="settings.languageTitle">Язык</p></div>
-      <div class="pref-row">
-        <span data-i18n="settings.appLanguage">Язык приложения</span>
-        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
-          <option value="ru" data-i18n="settings.russian">Русский</option>
-          <option value="en">English</option>
-        </select>
-      </div>
-      <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса. Озвучку и голосовые команды можно настроить отдельно.</p>
-    </div>
-
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.profiles">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
@@ -180,7 +168,7 @@
     </div>
 
     <div class="tab-pane hidden" id="morePane_sound">
-    <div class="card-block">
+    <div class="card-block" id="soundSettingsCard">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.soundVoice">Звук и голос</p></div>
       <div class="prefs stack">
         <div class="pref-row"><span data-i18n="settings.useSoundVoice">Использовать звуки и/или голос</span><button class="switch" id="stSoundOn"></button></div>
@@ -203,7 +191,7 @@
       </div>
     </div>
 
-    <div class="card-block">
+    <div class="card-block" id="handsfreeSettingsCard">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.handsfree">Управление без рук</p></div>
       <div class="hf-block">
         <div class="hf-seg" id="hfSeg">

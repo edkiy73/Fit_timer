@@ -1,8 +1,8 @@
 /* ================= ТЕМА ================= */
-let themeLight = true; // по умолчанию светлая
 // Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
 // разные, и спорить с системной настройкой без спроса приложению незачем.
 const sysDark = ()=> !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+let themeLight = !sysDark();
 const themeOf = u => (u && u.theme) || 'system';
 function applyThemeFor(u){
   const t = themeOf(u);
@@ -129,12 +129,19 @@ function hfHintText(mode){
   return t('handsfree.offHint');
 }
 
+function syncHandsFreeUI(){
+  document.querySelectorAll('#hfSeg [data-hf], #hfModal [data-hf]').forEach(b =>
+    b.classList.toggle('act', b.dataset.hf === hfMode));
+  ['hfHint','hfModalHint'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = hfHintText(hfMode);
+  });
+}
 function setHfMode(mode){
   hfMode = mode;
   kvSet('hfMode', mode);
-  document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === mode));
-  $('hfHint').textContent = hfHintText(mode);
   voiceWanted = (mode === 'voice');
+  syncHandsFreeUI();
   syncPrefs();
   // если уже на тренировке — переключаем на лету
   if($('scrWork').classList.contains('on')){

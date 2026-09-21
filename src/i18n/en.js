@@ -1090,7 +1090,7 @@ const I18N_EN = {
   'profile.age': "Age, full years",
   'profile.ageExample': "For example, 32",
   'profile.ageHint': "Gender and age affect exercise selection and load. They are included in AI requests.",
-  'profile.appearance': "Appearance",
+  'profile.appearance': "Appearance & language",
   'profile.theme': "Theme",
   'profile.themeSystem': "System",
   'profile.themeLight': "Light",

@@ -690,7 +690,19 @@ const accountAuth = () => ({
   deviceId: (identity && identity.deviceId) || ''
 });
 const syncAuth = action => Object.assign({action}, accountAuth());
-const syncUser = u => ({id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u), theme:u.theme || 'system'});
+const syncProfileInt = (value, def, lo, hi) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : def;
+};
+const syncUser = u => ({
+  id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u),
+  theme:u.theme || 'system',
+  prepSec:syncProfileInt(u.prepSec, 5, 0, 30),
+  readySec:syncProfileInt(u.readySec, 5, 0, 30),
+  sideSec:syncProfileInt(u.sideSec, 10, 3, 60),
+  voiceVol:syncProfileInt(u.voiceVol, 100, 0, 100),
+  fxVol:syncProfileInt(u.fxVol, 100, 0, 100)
+});
 const remoteWins = (remote, local) => {
   if(!local) return true;
   const a = Date.parse(remote.at || '') || 0, b = Date.parse(local.at || '') || 0;
