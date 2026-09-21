@@ -814,7 +814,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (itrainerData.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return ((it.name || '') + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
