@@ -601,34 +601,47 @@ function renderAdd(b){
 
 function fillForm(c){
   editing = c.id;
-  form = {cover: c.cover || null, media: Object.assign({}, c.media || {})};
-  $('formTitle').textContent = 'Изменить: ' + c.name;
-  $('fName').value = c.name || '';
+  editingStatus = c.status || null;
+  form = {
+    cover: c.cover || null,
+    media: Object.assign({}, c.media || {}),
+    sourceLocale: sourceLocaleOf(c)
+  };
+  $('formTitle').textContent = 'Изменить: ' + (c.name || localeBlock(c, form.sourceLocale).name || '');
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
   $('fBy').value = c.by || '';
-  $('fGives').value = c.gives || '';
-  $('fText').value = c.text || '';
   $('fPro').checked = !!c.pro;
+  setLocaleForm('ru', localeBlock(c, 'ru'));
+  setLocaleForm('en', localeBlock(c, 'en'));
+  const d = translationDirection();
+  $('fTranslate').textContent = 'Перевести ' + langName(d.from) + ' → ' + langName(d.to) + ' через ИИ';
+  $('fSourceHint').textContent = 'Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста не переводятся. Исходник заявки: ' + langName(form.sourceLocale) + '.';
+  updateLocaleStates();
   renderPics();
 }
 
 async function saveForm(){
+  const source = form.sourceLocale === 'en' ? 'en' : 'ru';
+  const locales = {ru: localeFromForm('ru'), en: localeFromForm('en')};
+  const src = locales[source];
   const item = {
-    name: $('fName').value.trim(), cat: $('fCat').value, level: $('fLevel').value,
-    min: +$('fMin').value, by: $('fBy').value.trim(), gives: $('fGives').value.trim(),
-    text: $('fText').value,
-    exCount: exNames().length,
-    pro: $('fPro').checked,
+    sourceLocale: source, locales,
+    // Верхний уровень оставляем для совместимости со старыми клиентами и записями.
+    name: src.name, gives: src.gives, text: src.text,
+    cat: $('fCat').value, level: $('fLevel').value,
+    min: +$('fMin').value, by: $('fBy').value.trim(),
+    exCount: exNames().length, pro: $('fPro').checked,
     cover: form.cover, media: form.media
   };
   try{
     if(editing) await api('edit', {id: editing, item});
     else await api('add', {item});
-    editing = null;
-    form = {cover: null, media: {}};
-    tab = 'approved';
+    const backTo = editingStatus === 'pending' ? 'pending' : 'approved';
+    editing = null; editingStatus = null;
+    form = {cover:null, media:{}, sourceLocale:'ru'};
+    tab = backTo;
     await load();
   }catch(e){
     $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
