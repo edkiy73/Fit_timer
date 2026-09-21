@@ -635,6 +635,20 @@ const STORE_LOOK = {
 const STORE_CATS = OPT_GOAL.map(name => Object.assign({name}, STORE_LOOK[name]));
 const STORE_LEVELS = OPT_LEVEL;
 const storeCat = id => STORE_CATS.find(c => c.id === id) || STORE_CATS[0];
+function storeCountText(n, type){
+  const forms = {
+    program:['store.programOne','store.programFew','store.programMany'],
+    set:['store.setOne','store.setFew','store.setMany'],
+    round:['store.roundOne','store.roundFew','store.roundMany'],
+    variant:['store.variantOne','store.variantFew','store.variantMany'],
+    exercise:['store.exerciseOne','store.exerciseFew','store.exerciseMany']
+  }[type];
+  if(!forms) return String(n);
+  const word = appLocale === 'ru'
+    ? plural(n, t(forms[0]), t(forms[1]), t(forms[2]))
+    : t(n === 1 ? forms[0] : forms[1]);
+  return n + ' ' + word;
+}
 // Расклад обложки берём по месту программы ВНУТРИ её категории, а не по хешу
 // названия: хеш легко кладёт двух соседей в один вариант, и рядом стоящие
 // карточки выглядят близнецами. Порядковый номер такого не допускает.
@@ -783,11 +797,11 @@ function renderStoreFilters(){
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
   // пункт в списке — обещание, которого каталог не выполняет.
   const has = id => storeAll().some(x => x.cat === id);
-  fill('storeCatBtn', 'storeCatVal', 'storeCatChev', 'Цель',
-    STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name]),
+  fill('storeCatBtn', 'storeCatVal', 'storeCatChev', t('ai.goal'),
+    STORE_CATS.filter(c => has(c.id)).map(c => [c.id, canonicalLabel(c.name)]),
     storeFilter.cat, v => storeFilter.cat = v);
-  fill('storeLevelBtn', 'storeLevelVal', 'storeLevelChev', 'Уровень',
-    STORE_LEVELS.map(l => [l, l]),
+  fill('storeLevelBtn', 'storeLevelVal', 'storeLevelChev', t('ai.level'),
+    STORE_LEVELS.map(l => [l, canonicalLabel(l)]),
     storeFilter.level, v => storeFilter.level = v);
 }
 
@@ -798,7 +812,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (it.name + ' ' + storeCat(it.cat).name + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return (it.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
@@ -808,8 +822,8 @@ function storeMatches(it){
 function storeLabels(it, own){
   if(!it.pro && !own) return '';
   return `<div class="st-labels">` +
-    (it.pro ? `<span class="st-tag pro">${icon('crown')}Премиум</span>` : '') +
-    (own ? `<span class="st-own">${icon('check')}Уже у вас</span>` : '') +
+    (it.pro ? `<span class="st-tag pro">${icon('crown')}${esc(t('premium.title'))}</span>` : '') +
+    (own ? `<span class="st-own">${icon('check')}${esc(t('store.alreadyOwned'))}</span>` : '') +
     `</div>`;
 }
 
@@ -829,13 +843,13 @@ function renderStore(){
   }
   const list = storeAll().filter(storeMatches);
   $('storeCount').textContent = list.length
-    ? `${list.length} ${plural(list.length, 'программа', 'программы', 'программ')}`
+    ? storeCountText(list.length, 'program')
     : '';
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      '<b>Ничего не нашлось</b>' +
-      '<p>Попробуй другое слово или сними фильтры — программ в каталоге пока немного.</p>' +
+      `<b>${esc(t('store.emptyTitle'))}</b>` +
+      `<p>${esc(t('store.emptyText'))}</p>` +
       '</div>';
     return;
   }
@@ -848,8 +862,8 @@ function renderStore(){
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
         <h3>${it.name}</h3>
-        <div class="sr-goal">${storeCat(it.cat).name}</div>
-        <div class="sr-meta"><span>${it.min} мин</span><span>${it.level}</span>${it.by ? `<span>${it.by}</span>` : ''}</div>
+        <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
+        <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
       </div>
     </article>`;
@@ -863,11 +877,11 @@ let siItem = null;
 // рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
 function siBits(ex){
   const b = [];
-  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`);
+  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} ${t('store.secShort')}` : `${valueText(ex.value)} ${t('store.repShort')}`);
   const sets = Math.max(1, parseInt(ex.sets) || 1);
-  if(sets > 1) b.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
-  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} кг`);
-  if(ex.perSide) b.push('на сторону');
+  if(sets > 1) b.push(storeCountText(sets, 'set'));
+  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} ${t('progress.kg')}`);
+  if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
 function openStoreItem(id){
@@ -877,7 +891,7 @@ function openStoreItem(id){
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
   $('siName').textContent = it.name;
-  $('siGoal').textContent = c.name;
+  $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
   setShown('siBy', !!it.by);
@@ -899,14 +913,14 @@ function openStoreItem(id){
     el.textContent = txt;
     facts.appendChild(el);
   };
-  fact(it.level);
-  fact(`${it.min} мин`);
-  if(rounds > 1) fact(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
-  if(days) fact(days);
+  fact(canonicalLabel(it.level));
+  fact(`${it.min} ${t('store.minuteShort')}`);
+  if(rounds > 1) fact(storeCountText(rounds, 'round'));
+  if(days) fact(days.split(',').map(x => canonicalLabel(x.trim())).join(', '));
   if(plans.length > 1){
     fact(program.rotate
-      ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')} по очереди`
-      : `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+      ? `${storeCountText(plans.length, 'variant')} ${t('store.inSequence')}`
+      : storeCountText(plans.length, 'variant'));
   }
 
   const own = storeOwned(it.id);
@@ -916,8 +930,8 @@ function openStoreItem(id){
   // сумма читалась как «столько делают за раз», а сколько в каждом — написано на
   // самом варианте.
   $('siCount').textContent = plans.length > 1
-    ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`
-    : `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
+    ? storeCountText(plans.length, 'variant')
+    : storeCountText(exs.length, 'exercise');
   // Состав премиум-программы — часть подписки: без неё показываем не пустоту и не
   // отказ, а что именно там лежит. Нажатие открывает витрину подписки.
   const locked = !!it.pro && !isPremium();
@@ -925,8 +939,7 @@ function openStoreItem(id){
   setShown('siLock', locked);
   if(locked){
     $('siLockTxt').textContent =
-      `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')} с техникой, ` +
-      `частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.`;
+      t('store.lockedText',{count:exs.length,exercises:appLocale === 'ru' ? plural(exs.length,t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : (exs.length === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
   }
   /* Состав — ПО ВАРИАНТАМ, а не одним списком.
 
@@ -946,11 +959,10 @@ function openStoreItem(id){
       const head = document.createElement('p');
       head.className = 'si-plan';
       const list = (pl.days || []).join(', ');
-      head.textContent = (program.rotate || !list) ? `Вариант ${pi + 1}` : list;
+      head.textContent = (program.rotate || !list) ? `${t('builder.variant')} ${pi + 1}` : list.split(',').map(x => canonicalLabel(x.trim())).join(', ');
       const n = (pl.exercises || []).length;
       const sub = document.createElement('span');
-      sub.textContent = `${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`
-        + (+pl.rounds > 1 ? ` · ${pl.rounds} ${plural(+pl.rounds, 'круг', 'круга', 'кругов')}` : '');
+      sub.textContent = storeCountText(n, 'exercise') + (+pl.rounds > 1 ? ` · ${storeCountText(+pl.rounds, 'round')}` : '');
       head.appendChild(sub);
       box.appendChild(head);
     }
@@ -964,11 +976,11 @@ function openStoreItem(id){
       row.innerHTML =
         `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
         `<div class="ex-info"><b></b><div class="ex-meta">` +
-        (ex.warmup ? '<span class="wm">Разминка</span>' : '') +
+        (ex.warmup ? `<span class="wm">${esc(t('store.warmup'))}</span>` : '') +
         siBits(ex).map(t => `<span>${t}</span>`).join('') +
         (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
         `</div></div>`;
-      row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
+      row.querySelector('b').textContent = (ex.name || '').trim() || t('store.untitled');
       // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
       // её с рядами надо по тому же, по чему она собрана на сервере.
       row.dataset.ex = (ex.name || '').trim();
@@ -976,7 +988,7 @@ function openStoreItem(id){
     });
   });
 
-  $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
+  $('siBuy').textContent = own ? t('store.open') : t('store.addMine');
   show('scrStoreItem');
   window.scrollTo(0, 0);
   if(!locked) siPaintMedia(it);
@@ -1033,7 +1045,7 @@ async function addStoreItem(id){
 
   const {program, errors} = parseProgramText(it.text);
   if(errors.length || !program.plans.length){
-    appAlert('Не удалось добавить программу. Попробуй ещё раз.');
+    appAlert(t('store.addFailed'));
     return;
   }
   program.id = 'p' + Date.now();
@@ -1059,7 +1071,7 @@ async function addStoreItem(id){
   // приходит уже после открытия попапа — а обработчик popstate закрывает верхний
   // попап. Остаёмся на странице программы, кнопка превращается в «Открыть».
   if(siItem && siItem.id === id){
-    $('siBuy').textContent = 'Открыть';
+    $('siBuy').textContent = t('store.open');
     // метку «Уже у вас» ставим тут же: уходить с экрана после добавления нельзя
     // (возврат по истории асинхронный и закрыл бы только что открытый попап)
     $('siLabels').innerHTML = storeLabels(siItem, true);
@@ -1069,7 +1081,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(`«${it.name}» в твоих тренировках.`);
+  appAlert(t('store.added',{name:it.name}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
