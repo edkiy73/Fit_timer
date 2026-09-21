@@ -368,11 +368,13 @@ function renderStep(){
     setTimeout(()=>{
       if(state.stepToken !== myToken) return;
       const n2 = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
-      if(voiceIsEnglish()){
-        speak('Switch sides' + (n2 && n2.side ? `. Side ${n2.side} of ${n2.sidesTotal || 2}` : ''));
-      } else {
-        speak('Смените сторону' + (n2 && n2.side ? `. Сторона ${n2.side} из ${n2.sidesTotal || 2}` : ''));
-      }
+      const base = voiceIsEnglish() ? 'Switch sides' : t('workout.switchSidesVoice');
+      const side = n2 && n2.side
+        ? (voiceIsEnglish()
+            ? `. Side ${n2.side} of ${n2.sidesTotal || 2}`
+            : '. ' + t('workout.sideVoice',{current:n2.side,total:n2.sidesTotal || 2}))
+        : '';
+      speak(base + side);
     }, 260);
   } else if(step.roundRest || (step.kind === 'timer' && step.seconds)){
     const nxt = state.steps.slice(state.stepIdx + 1).find(s => s.phase === 'work');
