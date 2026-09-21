@@ -1178,4 +1178,6 @@ const I18N_RU = {
   'legal.updated': "Обновлено 10 сентября 2026",
   'builder.descCounterHint': "покажется перед стартом.",
   'builder.progressOverTime': "Усложнять со временем",
+  'program.default': "Программа",
+  'profile.genderNeeded': "Выбери пол — от него зависит подбор упражнений.",
 };
