@@ -114,7 +114,8 @@ function checkItem(it, opts){
   if(!LEVELS.includes(it.level)) miss.push('уровень');
   const required = opts.requireBoth ? LANGS : [norm.sourceLocale];
   required.forEach(lang => miss.push(...localeMiss(norm.locales[lang], lang.toUpperCase())));
-  if(opts.requireBoth && norm.locales.ru && norm.locales.en){
+  const bothReady = LANGS.every(lang => localeMiss(norm.locales[lang], lang.toUpperCase()).length === 0);
+  if(bothReady){
     const ruShape = protocolShape(norm.locales.ru.text);
     const enShape = protocolShape(norm.locales.en.text);
     if(!ruShape.length || JSON.stringify(ruShape) !== JSON.stringify(enShape)){
