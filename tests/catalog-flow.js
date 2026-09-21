@@ -152,14 +152,17 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   ok('и несёт всё, по чему решают', !!(asked && asked.gives && asked.text && asked.cat),
      asked ? `${asked.cat} · ${(asked.gives || '').slice(0, 24)}…` : '');
   const blocked = await admin('approve', {id: asked.id});
-  ok('без второго языка публикация блокируется', blocked.error === 'missing_locales', blocked.error || blocked.status);
+  ok('без второго языка публикация блокируется', blocked.error === 'catalog_not_ready', blocked.error || blocked.status);
   // Перевод появляется только здесь, когда модератор решил готовить заявку.
   const ENAME = 'Strength Base ' + NAME.split(' ').pop();
   const prepared = await admin('edit', {id: asked.id, item: {
     sourceLocale: 'ru',
     locales: {
       ru: {name: asked.name, gives: asked.gives, text: asked.text},
-      en: {name: ENAME, gives: 'Three basic movements in a simple home circuit workout.', text: progEn(ENAME)}
+      en: {name: ENAME, gives: 'Three basic movements in a simple home circuit workout.',
+        // Даже если внешний переводчик полез в служебные строки, сервер должен
+        // восстановить протокол из оригинала и оставить только переведённый текст.
+        text: progEn(ENAME).replace(/УПРАЖНЕНИЕ:/g, 'EXERCISE:').replace(/ЗНАЧЕНИЕ: 12/g, 'VALUE: 999')}
     }
   }});
   ok('модератор добавил второй язык', prepared.ok === true, prepared.error || 'ok');
@@ -171,6 +174,10 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   const fromEn = await fetch(BASE + '/api/catalog?lang=en').then(r => r.json());
   ok('тот же id отдаётся на английском', (fromEn.items || []).some(x => x.id === asked.id && x.name === ENAME),
      ((fromEn.items || []).find(x => x.id === asked.id) || {}).name || 'нет');
+  const enFull = await fetch(BASE + '/api/catalog?item=' + asked.id + '&lang=en').then(r => r.json());
+  ok('механика перевода восстановлена из оригинала',
+     /УПРАЖНЕНИЕ: Squats/.test(enFull.item.text) && /ЗНАЧЕНИЕ: 12/.test(enFull.item.text) && !/999/.test(enFull.item.text),
+     (enFull.item.text || '').slice(0, 80));
 
   // ---- и вот теперь она в каталоге ----
   const after = await page.evaluate(async (name) => {
