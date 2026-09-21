@@ -519,10 +519,10 @@ function picBox(label, data, set){
   return el;
 }
 function renderAdd(b){
+  const d = translationDirection();
   b.innerHTML = `<div class="card">
     <p class="name" id="formTitle">Новая программа</p>
-    <p class="muted">Программа задаётся тем же текстом, что приходит от нейросети и от тренеров.</p>
-    <label>Название</label><input id="fName" maxlength="60">
+    <p class="muted" id="fSourceHint">Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста (ПРОГРАММА, УПРАЖНЕНИЕ, ФОРМАТ и т. п.) не переводятся.</p>
     <div class="row">
       <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
       <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l => `<option>${l}</option>`).join('')}</select></div>
@@ -531,12 +531,39 @@ function renderAdd(b){
     <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
     <label class="check"><input type="checkbox" id="fPro"> Только по подписке
       <small>Состав будет закрыт заглушкой, добавить себе — только с Премиумом</small></label>
-    <label>Что она даёт</label><textarea id="fGives" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
-    <label>Текст программы</label><textarea id="fText" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
+
+    <div class="lang-card">
+      <div class="lang-head"><b>Русский</b><span class="lang-state" id="fStateRu"></span></div>
+      <label>Название</label><input id="fNameRu" maxlength="60">
+      <label>Что она даёт</label><textarea id="fGivesRu" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
+      <label>Текст программы</label><textarea id="fTextRu" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
+    </div>
+
+    <div class="lang-card">
+      <div class="lang-head"><b>English</b><span class="lang-state" id="fStateEn"></span></div>
+      <label>Name</label><input id="fNameEn" maxlength="60">
+      <label>What it gives</label><textarea id="fGivesEn" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
+      <label>Program text</label><textarea id="fTextEn" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
+    </div>
+
+    <div class="translate-tools">
+      <p class="name" style="font-size:15px">Перевод для каталога</p>
+      <p class="muted">ИИ запускается только по кнопке ниже. Если он недоступен, скопируй исходник, переведи где угодно и вставь готовый JSON.</p>
+      <div class="acts">
+        <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)} через ИИ</button>
+        <button class="b quiet" id="fCopyTranslate">Скопировать для внешнего перевода</button>
+        <button class="b quiet" id="fPasteToggle">Вставить готовый JSON</button>
+      </div>
+      <div class="translate-box" id="fPasteWrap" hidden>
+        <textarea id="fPasteJson" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
+        <div class="acts"><button class="b ok" id="fPasteApply">Применить перевод</button></div>
+      </div>
+    </div>
+
     <label>Обложка</label>
     <div class="pics" id="fCoverBox"></div>
     <label>Фото упражнений</label>
-    <p class="muted" id="fPicsHint">Названия берутся из текста программы — впиши упражнения, и здесь появятся места под фото.</p>
+    <p class="muted" id="fPicsHint">Названия берутся из исходного языка программы — впиши упражнения, и здесь появятся места под фото.</p>
     <div class="pics" id="fPics"></div>
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
@@ -546,17 +573,29 @@ function renderAdd(b){
     </div>
   </div>`;
   $('fSave').onclick = saveForm;
-  $('fClear').onclick = () => { editing = null; form = {cover: null, media: {}}; render(); };
+  $('fClear').onclick = () => {
+    editing = null; editingStatus = null;
+    form = {cover:null, media:{}, sourceLocale:'ru'};
+    render();
+  };
   if(editing == null) $('fPro').checked = false;
-  // Места под фото пересобираются, пока правишь текст: добавил упражнение — сразу
-  // видно, куда класть картинку.
-  $('fText').oninput = renderPics;
+  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id => {
+    $(id).oninput = () => {
+      updateLocaleStates();
+      if(id === (form.sourceLocale === 'en' ? 'fTextEn' : 'fTextRu')) renderPics();
+    };
+  });
+  $('fTranslate').onclick = translateCatalogForm;
+  $('fCopyTranslate').onclick = copyTranslationSource;
+  $('fPasteToggle').onclick = () => { $('fPasteWrap').hidden = !$('fPasteWrap').hidden; };
+  $('fPasteApply').onclick = applyPastedTranslation;
   $('fFile').onchange = e => {
     const file = e.target.files && e.target.files[0];
     if(!file || !pickTo) return;
-    // Обложку режем крупнее: она показывается большим квадратом на странице программы.
-    shrinkPic(file, 640, d => { pickTo(d); pickTo = null; });
+    shrinkPic(file, 640, pic => { pickTo(pic); pickTo = null; });
   };
+  $('fSourceHint').textContent += ' Исходник: ' + langName(form.sourceLocale) + '.';
+  updateLocaleStates();
   renderPics();
 }
 
