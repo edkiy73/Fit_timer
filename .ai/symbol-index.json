@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 1792,
-      "chars": 84436,
+      "lines": 1795,
+      "chars": 84623,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -207,8 +207,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 750,
-      "chars": 33608,
+      "lines": 753,
+      "chars": 33842,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -263,7 +263,7 @@
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
       "lines": 909,
-      "chars": 40673,
+      "chars": 40691,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -736,8 +736,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1875,
-      "chars": 77979,
+      "lines": 1887,
+      "chars": 78531,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -1348,7 +1348,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 590,
-      "chars": 37967,
+      "chars": 37982,
       "ids": [
         "addExModal",
         "aemAI",

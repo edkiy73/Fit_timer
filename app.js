@@ -2935,6 +2935,9 @@ function resolveLocalePreference(value){
   const pref = normalizeLocalePreference(value);
   return pref === 'system' ? systemLocale() : normalizeLocale(pref);
 }
+function profileLocalePreference(u){
+  return normalizeLocalePreference(u && u.locale ? u.locale : 'system');
+}
 function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
   const fallback = I18N.en[key] != null ? I18N.en[key] : I18N.ru[key];
@@ -2953,15 +2956,11 @@ function applyI18n(root){
   root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder)); });
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
-  const select = document.getElementById('appLocaleSelect');
-  if(select) select.value = appLocalePreference;
 }
 async function loadAppLocale(){
-  let saved = null;
-  try{ saved = await kvGet('appLocale'); }catch(_){}
-  appLocaleStored = saved === 'system' || SUPPORTED_LOCALES.includes(saved);
-  appLocalePreference = appLocaleStored ? normalizeLocalePreference(saved) : 'system';
-  appLocale = resolveLocalePreference(appLocalePreference);
+  appLocaleStored = false;
+  appLocalePreference = 'system';
+  appLocale = systemLocale();
   applyI18n();
   return appLocale;
 }
@@ -2971,12 +2970,8 @@ async function setAppLocale(value, opts){
   const changed = next !== appLocale;
   appLocalePreference = pref;
   appLocale = next;
-  if(!opts || opts.persist !== false){
-    appLocaleStored = true;
-    try{ await kvSet('appLocale', appLocalePreference); }catch(_){}
-  }
   applyI18n();
-  if(changed){
+  if(changed && !(opts && opts.silent)){
     try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale, preference:appLocalePreference}})); }catch(_){}
   }
   return appLocale;
@@ -4412,6 +4407,7 @@ async function switchUser(id){
   if(currentUser === id) return;
   currentUser = id;
   kvSet('currentUser', id);
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   await loadData();
   await loadPhotos();
@@ -5009,6 +5005,7 @@ const syncProfileInt = (value, def, lo, hi) => {
 const syncUser = u => ({
   id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u),
   theme:u.theme || 'system',
+  locale:profileLocalePreference(u),
   prepSec:syncProfileInt(u.prepSec, 5, 0, 30),
   readySec:syncProfileInt(u.readySec, 5, 0, 30),
   sideSec:syncProfileInt(u.sideSec, 10, 3, 60),
@@ -5235,6 +5232,7 @@ async function applyRemoteSync(result){
 
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   identity.email = account.email;
   await saveIdentity();
@@ -6115,7 +6113,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system'};
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system', locale: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
@@ -6130,6 +6128,7 @@ function openUserEdit(id = null){
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
   if(!uDraft.theme) uDraft.theme = 'system';
+  uDraft.locale = profileLocalePreference(uDraft);
   $('uePrepSec').value = uDraft.prepSec;
   $('ueReadySec').value = uDraft.readySec;
   $('ueSideSec').value = uDraft.sideSec;
@@ -6146,6 +6145,7 @@ function syncUserForm(){
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   const th = themeOf(uDraft);
   document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
+  if($('appLocaleSelect')) $('appLocaleSelect').value = profileLocalePreference(uDraft);
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
@@ -6173,6 +6173,7 @@ async function saveUser(){
     users[i] = uDraft;
     await saveUsers();
     if(uDraft.id === currentUser){
+      await setAppLocale(profileLocalePreference(uDraft), {persist:false});
       applyAudioFromUser(uDraft);
       applyThemeFor(uDraft);
     }
@@ -7687,7 +7688,7 @@ async function finishOnboardingCreate(){
     id: 'u' + Date.now(),
     name: nextProfileName(),
     gender: '', age: null, photo: null,
-    theme: 'system'
+    theme: 'system', locale: 'system'
   };
   users = [u];
   await saveUsers();
@@ -15639,7 +15640,10 @@ async function chooseHandsFree(mode){
 if($('appLocaleSelect')){
   $('appLocaleSelect').onchange = async e=>{
     const pref = normalizeLocalePreference(e.target.value);
-    await setAppLocale(pref, {persist:true});
+    if(uDraft) uDraft.locale = pref;
+    // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
+    if(!uDraft || uDraft.id !== currentUser) return;
+    await setAppLocale(pref, {persist:false});
     await syncAccountLocale(appLocale);
     if((await kvGet('recognitionLangManual')) !== '1'){
       recognitionLang = appLocale;
@@ -15647,7 +15651,7 @@ if($('appLocaleSelect')){
       if(hfMode === 'voice') setHfMode('off');
       await refreshVoicePackUI();
     }
-    $('hfHint').textContent = hfHintText(hfMode);
+    syncHandsFreeUI();
   };
 }
 window.addEventListener('appLocaleChanged', ()=>{
@@ -17270,8 +17274,15 @@ try{
   // пользователи: миграция со старой схемы профилей f/m
   try{ users = JSON.parse(await kvGet('users')) || []; }catch(e){ users = []; }
   const hadLegacyBirth = users.some(u => u && Object.prototype.hasOwnProperty.call(u, 'birth'));
-  users.forEach(migrateUserAge);
-  if(hadLegacyBirth) await saveUsers();
+  let migratedProfilePrefs = false;
+  users.forEach(u => {
+    migrateUserAge(u);
+    if(!['system','ru','en'].includes(u && u.locale)){
+      u.locale = 'system';
+      migratedProfilePrefs = true;
+    }
+  });
+  if(hadLegacyBirth || migratedProfilePrefs) await saveUsers();
   if(!users.length){
     // старые данные есть — тихая миграция; совсем чистая установка — онбординг
     const hasLegacy = (await kvGet('customPrograms_f')) !== null
@@ -17284,14 +17295,16 @@ try{
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system'}];
+    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system', locale:'system'}];
     if((await kvGet('customPrograms_m')) !== null){
-      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system'});
+      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
     }
     await saveUsers();
   }
   currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
+  // До первой динамической отрисовки включаем язык именно активного профиля.
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
   await loadIdentity();
   await loadData();
   await loadPhotos();

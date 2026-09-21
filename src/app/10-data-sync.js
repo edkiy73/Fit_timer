@@ -100,6 +100,7 @@ async function switchUser(id){
   if(currentUser === id) return;
   currentUser = id;
   kvSet('currentUser', id);
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   await loadData();
   await loadPhotos();
@@ -697,6 +698,7 @@ const syncProfileInt = (value, def, lo, hi) => {
 const syncUser = u => ({
   id:u.profileId || u.id, name:u.name || '', gender:u.gender || '', age:profileAge(u),
   theme:u.theme || 'system',
+  locale:profileLocalePreference(u),
   prepSec:syncProfileInt(u.prepSec, 5, 0, 30),
   readySec:syncProfileInt(u.readySec, 5, 0, 30),
   sideSec:syncProfileInt(u.sideSec, 10, 3, 60),
@@ -923,6 +925,7 @@ async function applyRemoteSync(result){
 
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   identity.email = account.email;
   await saveIdentity();

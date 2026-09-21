@@ -140,7 +140,10 @@ async function chooseHandsFree(mode){
 if($('appLocaleSelect')){
   $('appLocaleSelect').onchange = async e=>{
     const pref = normalizeLocalePreference(e.target.value);
-    await setAppLocale(pref, {persist:true});
+    if(uDraft) uDraft.locale = pref;
+    // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
+    if(!uDraft || uDraft.id !== currentUser) return;
+    await setAppLocale(pref, {persist:false});
     await syncAccountLocale(appLocale);
     if((await kvGet('recognitionLangManual')) !== '1'){
       recognitionLang = appLocale;
@@ -148,7 +151,7 @@ if($('appLocaleSelect')){
       if(hfMode === 'voice') setHfMode('off');
       await refreshVoicePackUI();
     }
-    $('hfHint').textContent = hfHintText(hfMode);
+    syncHandsFreeUI();
   };
 }
 window.addEventListener('appLocaleChanged', ()=>{
@@ -1771,8 +1774,15 @@ try{
   // пользователи: миграция со старой схемы профилей f/m
   try{ users = JSON.parse(await kvGet('users')) || []; }catch(e){ users = []; }
   const hadLegacyBirth = users.some(u => u && Object.prototype.hasOwnProperty.call(u, 'birth'));
-  users.forEach(migrateUserAge);
-  if(hadLegacyBirth) await saveUsers();
+  let migratedProfilePrefs = false;
+  users.forEach(u => {
+    migrateUserAge(u);
+    if(!['system','ru','en'].includes(u && u.locale)){
+      u.locale = 'system';
+      migratedProfilePrefs = true;
+    }
+  });
+  if(hadLegacyBirth || migratedProfilePrefs) await saveUsers();
   if(!users.length){
     // старые данные есть — тихая миграция; совсем чистая установка — онбординг
     const hasLegacy = (await kvGet('customPrograms_f')) !== null
@@ -1785,14 +1795,16 @@ try{
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system'}];
+    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system', locale:'system'}];
     if((await kvGet('customPrograms_m')) !== null){
-      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system'});
+      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
     }
     await saveUsers();
   }
   currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
+  // До первой динамической отрисовки включаем язык именно активного профиля.
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
   await loadIdentity();
   await loadData();
   await loadPhotos();

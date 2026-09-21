@@ -670,6 +670,7 @@
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%23A99FC4' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat:no-repeat;background-position:right 10px center}
+  .app-locale-sel{display:block;width:100%;max-width:none;min-height:44px;margin-top:6px}
   /* достижения — нижняя секция карточки результата, а не отдельная плашка */
   .badge-row{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line)}
   .badge-row:empty{display:none}

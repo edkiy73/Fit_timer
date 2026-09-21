@@ -12,7 +12,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system'};
+  const u = id ? users.find(x => x.id === id) : {id: null, name: nextProfileName(), gender: '', age: null, photo: null, theme: 'system', locale: 'system'};
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
@@ -27,6 +27,7 @@ function openUserEdit(id = null){
   if(uDraft.voiceVol == null) uDraft.voiceVol = 100;
   if(uDraft.fxVol == null) uDraft.fxVol = 100;
   if(!uDraft.theme) uDraft.theme = 'system';
+  uDraft.locale = profileLocalePreference(uDraft);
   $('uePrepSec').value = uDraft.prepSec;
   $('ueReadySec').value = uDraft.readySec;
   $('ueSideSec').value = uDraft.sideSec;
@@ -43,6 +44,7 @@ function syncUserForm(){
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   const th = themeOf(uDraft);
   document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
+  if($('appLocaleSelect')) $('appLocaleSelect').value = profileLocalePreference(uDraft);
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
@@ -70,6 +72,7 @@ async function saveUser(){
     users[i] = uDraft;
     await saveUsers();
     if(uDraft.id === currentUser){
+      await setAppLocale(profileLocalePreference(uDraft), {persist:false});
       applyAudioFromUser(uDraft);
       applyThemeFor(uDraft);
     }

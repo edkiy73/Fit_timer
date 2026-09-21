@@ -53,6 +53,7 @@ const cleanUser = u => ({
   gender: (u && (u.gender === 'f' || u.gender === 'm')) ? u.gender : '',
   age: cleanAge(u && u.age) || legacyAge(u && u.birth),
   theme: ['system','light','dark'].includes(u && u.theme) ? u.theme : 'system',
+  locale: ['system','ru','en'].includes(u && u.locale) ? u.locale : 'system',
   prepSec: cleanProfileInt(u && u.prepSec, 5, 0, 30),
   readySec: cleanProfileInt(u && u.readySec, 5, 0, 30),
   sideSec: cleanProfileInt(u && u.sideSec, 10, 3, 60),

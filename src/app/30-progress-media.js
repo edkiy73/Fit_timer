@@ -835,7 +835,7 @@ async function finishOnboardingCreate(){
     id: 'u' + Date.now(),
     name: nextProfileName(),
     gender: '', age: null, photo: null,
-    theme: 'system'
+    theme: 'system', locale: 'system'
   };
   users = [u];
   await saveUsers();
