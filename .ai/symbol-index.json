@@ -451,7 +451,7 @@
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
       "lines": 1546,
-      "chars": 70784,
+      "chars": 70826,
       "symbols": [
         "add",
         "addClient",
@@ -732,8 +732,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1827,
-      "chars": 76403,
+      "lines": 1838,
+      "chars": 76946,
       "symbols": [
         "addExManual",
         "aiRunClose",
