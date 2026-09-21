@@ -830,7 +830,7 @@ function prepTab(id){
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){
-      switchMoreTab('me');
+      switchMoreTab(typeof moreTab === 'string' ? moreTab : 'me');
       renderUsers();
       renderTrainerCard();
       // звук и управление без рук переехали сюда из «Настроек»
