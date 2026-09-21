@@ -1378,6 +1378,30 @@ const I18N_RU = {
   'home.goodEvening': "Добрый вечер",
   'images.textInstead': "Модель ответила текстом вместо картинки: {text}",
   'images.noImage': "Модель не вернула изображение.",
+  'profile.defaultMine': "Мой профиль",
+  'who.programMsg': "Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужны пол и возраст. Спросим один раз — дальше это меняется в профиле.",
+  'who.aiMsg': "Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.",
+  'warmup.programName': "Разминка 10 минут",
+  'warmup.1.name': "Марш на месте",
+  'warmup.1.desc': "Шагай на месте в бодром темпе, высоко поднимая колени. Руки работают, как при ходьбе. Дыши ровно — задача разогреть тело, а не устать.",
+  'warmup.2.name': "Вращения плечами и руками",
+  'warmup.2.desc': "Сначала 20 секунд вращай плечами назад и вперёд, затем выпрями руки и рисуй ими большие круги. Двигайся плавно, с полной амплитудой.",
+  'warmup.3.name': "Наклоны корпуса в стороны",
+  'warmup.3.desc': "Ноги на ширине плеч, одна рука на поясе, вторая тянется над головой в сторону наклона. Наклоняйся строго вбок, не заваливаясь вперёд. Меняй стороны.",
+  'warmup.4.name': "Вращения тазом",
+  'warmup.4.desc': "Руки на пояс, ноги на ширине плеч. Рисуй тазом большие круги: сначала в одну сторону, на половине времени — в другую. Колени чуть согнуты.",
+  'warmup.5.name': "Приседания в лёгком темпе",
+  'warmup.5.desc': "Присядь до комфортной глубины, отводя таз назад, колени в сторону носков. Темп спокойный: это разогрев суставов, а не силовая работа.",
+  'warmup.6.name': "Выпады на месте попеременно",
+  'warmup.6.desc': "Шаг вперёд, заднее колено мягко опускается к полу, затем вернись и смени ногу. Корпус прямой, движение плавное, без рывков.",
+  'warmup.7.name': "Мельница",
+  'warmup.7.desc': "Ноги шире плеч, корпус наклонён вперёд, руки в стороны. Поочерёдно тянись рукой к противоположной стопе, вторая рука уходит вверх.",
+  'warmup.8.name': "Вращения коленями и стопами",
+  'warmup.8.desc': "Соедини колени, слегка присядь и повращай ими по кругу в обе стороны. Затем по очереди поставь стопы на носок и повращай голеностопом.",
+  'warmup.9.name': "Прыжки Jumping Jack",
+  'warmup.9.desc': "В прыжке разводи ноги и поднимай руки над головой, затем возвращайся. Если прыгать нельзя — шагай в стороны с подъёмом рук.",
+  'warmup.10.name': "Растяжка: наклон к стопам",
+  'warmup.10.desc': "Медленно наклонись вниз, расслабив спину и шею, и потянись к стопам. Колени можно слегка согнуть. Дыши глубоко и не пружинь.",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2759,6 +2783,30 @@ const I18N_EN = {
   'home.goodEvening': "Good evening",
   'images.textInstead': "The model returned text instead of an image: {text}",
   'images.noImage': "The model did not return an image.",
+  'profile.defaultMine': "My profile",
+  'who.programMsg': "To choose exercises, load, and recovery time correctly, we need your sex and age. We’ll ask once; you can change them later in your profile.",
+  'who.aiMsg': "AI needs to know who the program is for: sex and age affect exercises, load, and recovery.",
+  'warmup.programName': "10-minute warm-up",
+  'warmup.1.name': "March in place",
+  'warmup.1.desc': "March in place at a brisk pace, lifting your knees high. Let your arms move naturally as when walking. Breathe evenly; the goal is to warm up, not tire yourself out.",
+  'warmup.2.name': "Shoulder and arm circles",
+  'warmup.2.desc': "Roll your shoulders backward and forward for 20 seconds, then straighten your arms and make large circles. Move smoothly through a comfortable full range.",
+  'warmup.3.name': "Side bends",
+  'warmup.3.desc': "Stand with feet shoulder-width apart. Keep one hand on your hip and reach the other overhead toward the bend. Lean directly to the side without folding forward, alternating sides.",
+  'warmup.4.name': "Hip circles",
+  'warmup.4.desc': "Hands on hips, feet shoulder-width apart. Make large circles with your hips, switching direction halfway through. Keep your knees slightly bent.",
+  'warmup.5.name': "Easy squats",
+  'warmup.5.desc': "Squat to a comfortable depth, sending your hips back and keeping your knees in line with your toes. Keep an easy pace; this is joint warm-up, not strength work.",
+  'warmup.6.name': "Alternating stationary lunges",
+  'warmup.6.desc': "Step forward and gently lower the back knee toward the floor, then return and switch legs. Keep your torso upright and move smoothly without jerking.",
+  'warmup.7.name': "Windmill",
+  'warmup.7.desc': "Stand with feet wider than shoulder-width, hinge forward, and extend your arms to the sides. Reach each hand toward the opposite foot while the other arm points upward.",
+  'warmup.8.name': "Knee and ankle circles",
+  'warmup.8.desc': "Bring your knees together, bend slightly, and make gentle circles in both directions. Then place each foot on the toes in turn and circle the ankle.",
+  'warmup.9.name': "Jumping jacks",
+  'warmup.9.desc': "Jump your feet apart while raising your arms overhead, then return. If jumping is not suitable, step side to side while raising your arms.",
+  'warmup.10.name': "Forward fold stretch",
+  'warmup.10.desc': "Fold forward slowly, relaxing your back and neck, and reach toward your feet. You may bend your knees slightly. Breathe deeply and avoid bouncing.",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -6663,43 +6711,55 @@ async function tryUnlock(){
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
+const WARMUP_SPEC = [
+  {k:1,m:['le','ca'],type:'time',value:60,rest:10},
+  {k:2,m:['sh','ar'],type:'time',value:45,rest:10},
+  {k:3,m:['co','ba'],type:'time',value:45,rest:10},
+  {k:4,m:['co','gl'],type:'time',value:30,rest:10},
+  {k:5,m:['le','gl'],type:'reps',value:15,rest:15},
+  {k:6,m:['le','gl'],type:'reps',value:12,rest:15},
+  {k:7,m:['co','ba','le'],type:'time',value:30,rest:10},
+  {k:8,m:['le','ca'],type:'time',value:45,rest:10},
+  {k:9,m:['le','ca','sh'],type:'time',value:45,rest:10},
+  {k:10,m:['ba','le'],type:'time',value:40,rest:0}
+];
 function warmupProgram(){
-  const WMUS = {
-    'Марш на месте': ['le','ca'],
-    'Вращения плечами и руками': ['sh','ar'],
-    'Наклоны корпуса в стороны': ['co','ba'],
-    'Вращения тазом': ['co','gl'],
-    'Приседания в лёгком темпе': ['le','gl'],
-    'Выпады на месте попеременно': ['le','gl'],
-    'Мельница': ['co','ba','le'],
-    'Вращения коленями и стопами': ['le','ca'],
-    'Прыжки Jumping Jack': ['le','ca','sh'],
-    'Растяжка: наклон к стопам': ['ba','le']
-  };
-  const ex = (name, desc, type, value, rest) => ({name, desc, video:'', type, value, rest, media: null, muscles: WMUS[name] || [], mistakes: ''});
-  return {
-    id: 'warmup', name: 'Разминка 10 минут', time: '', cover: null, stats: {completions: 0},
-    plans: [{days: [], rounds: 1, roundRest: 0, exercises: [
-      ex('Марш на месте', 'Шагай на месте в бодром темпе, высоко поднимая колени. Руки работают, как при ходьбе. Дыши ровно — задача разогреть тело, а не устать.', 'time', 60, 10),
-      ex('Вращения плечами и руками', 'Сначала 20 секунд вращай плечами назад и вперёд, затем выпрями руки и рисуй ими большие круги. Двигайся плавно, с полной амплитудой.', 'time', 45, 10),
-      ex('Наклоны корпуса в стороны', 'Ноги на ширине плеч, одна рука на поясе, вторая тянется над головой в сторону наклона. Наклоняйся строго вбок, не заваливаясь вперёд. Меняй стороны.', 'time', 45, 10),
-      ex('Вращения тазом', 'Руки на пояс, ноги на ширине плеч. Рисуй тазом большие круги: сначала в одну сторону, на половине времени — в другую. Колени чуть согнуты.', 'time', 30, 10),
-      ex('Приседания в лёгком темпе', 'Присядь до комфортной глубины, отводя таз назад, колени в сторону носков. Темп спокойный: это разогрев суставов, а не силовая работа.', 'reps', 15, 15),
-      ex('Выпады на месте попеременно', 'Шаг вперёд, заднее колено мягко опускается к полу, затем вернись и смени ногу. Корпус прямой, движение плавное, без рывков.', 'reps', 12, 15),
-      ex('Мельница', 'Ноги шире плеч, корпус наклонён вперёд, руки в стороны. Поочерёдно тянись рукой к противоположной стопе, вторая рука уходит вверх.', 'time', 30, 10),
-      ex('Вращения коленями и стопами', 'Соедини колени, слегка присядь и повращай ими по кругу в обе стороны. Затем по очереди поставь стопы на носок и повращай голеностопом.', 'time', 45, 10),
-      ex('Прыжки Jumping Jack', 'В прыжке разводи ноги и поднимай руки над головой, затем возвращайся. Если прыгать нельзя — шагай в стороны с подъёмом рук.', 'time', 45, 10),
-      ex('Растяжка: наклон к стопам', 'Медленно наклонись вниз, расслабив спину и шею, и потянись к стопам. Колени можно слегка согнуть. Дыши глубоко и не пружинь.', 'time', 40, 0)
-    ]}]
-  };
+  const exercises = WARMUP_SPEC.map(x => ({
+    name:t('warmup.'+x.k+'.name'), desc:t('warmup.'+x.k+'.desc'), video:'',
+    type:x.type, value:x.value, rest:x.rest, media:null, muscles:x.m, mistakes:''
+  }));
+  return {id:'warmup',name:t('warmup.programName'),time:'',cover:null,stats:{completions:0},
+    plans:[{days:[],rounds:1,roundRest:0,exercises}]};
+}
+function localizeBuiltinWarmup(p){
+  if(!p || p.id !== 'warmup') return false;
+  const pl = normPlans(p)[0], list = (pl && pl.exercises) || [];
+  if(list.length !== WARMUP_SPEC.length) return false;
+  const untouched = WARMUP_SPEC.every((x,i)=>{
+    const ex=list[i], nk='warmup.'+x.k+'.name', dk='warmup.'+x.k+'.desc';
+    return ex && [I18N_RU[nk],I18N_EN[nk]].includes(ex.name)
+      && [I18N_RU[dk],I18N_EN[dk]].includes(ex.desc);
+  });
+  if(!untouched) return false;
+  let changed = p.name !== t('warmup.programName');
+  p.name = t('warmup.programName');
+  WARMUP_SPEC.forEach((x,i)=>{
+    const ex=list[i], name=t('warmup.'+x.k+'.name'), desc=t('warmup.'+x.k+'.desc');
+    if(ex.name !== name || ex.desc !== desc) changed = true;
+    ex.name=name; ex.desc=desc;
+  });
+  return changed;
 }
 async function ensureWarmup(){
-  if((await kvGet(pk('warmupAdded'))) === '1') return;
-  if(!customPrograms.some(p => p.id === 'warmup')){
-    customPrograms.unshift(warmupProgram());
-    await savePrograms();
+  const existing = customPrograms.find(p => p.id === 'warmup');
+  if(existing){
+    if(localizeBuiltinWarmup(existing)) await savePrograms();
+    if((await kvGet(pk('warmupAdded'))) !== '1') kvSet(pk('warmupAdded'),'1');
+    return;
   }
-  kvSet(pk('warmupAdded'), '1');
+  customPrograms.unshift(warmupProgram());
+  await savePrograms();
+  kvSet(pk('warmupAdded'),'1');
 }
 
 /* ================= ФОТО-ПРОГРЕСС ================= */
@@ -7457,12 +7517,13 @@ function sanitizeExercise(ex){
 // ему не нужна, поэтому первый профиль просто «Мой профиль», а следующие нумеруются,
 // чтобы их можно было различить в списке.
 const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
-const DEFAULT_NAME = 'Мой профиль';
+const DEFAULT_PROFILE_NAMES = ['Мой профиль','My profile'];
+const defaultProfileName = ()=> t('profile.defaultMine');
 function nextProfileName(){
-  if(!users.some(u => (u.name || '').trim() === DEFAULT_NAME)) return DEFAULT_NAME;
+  if(!users.some(u => DEFAULT_PROFILE_NAMES.includes((u.name || '').trim()))) return defaultProfileName();
   let n = 1;
   users.forEach(u => {
-    const m = /^Профиль\s+(\d+)$/.exec((u.name || '').trim());
+    const m = /^(?:Профиль|Profile)\s+(\d+)$/i.exec((u.name || '').trim());
     if(m) n = Math.max(n, +m[1]);
   });
   return t('profile.defaultNumber',{count:n+1});
@@ -7506,8 +7567,8 @@ async function finishOnboardingCreate(){
 // уходил в запрос к ИИ как настоящий ответ, и половина программ составлялась не для
 // того человека. Пропустить вопрос нельзя — «Отмена» возвращает туда, откуда пришли.
 const WHO_MSG = {
-  program: 'Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужны пол и возраст. Спросим один раз — дальше это меняется в профиле.',
-  ai: 'Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.'
+  program:'who.programMsg',
+  ai:'who.aiMsg'
 };
 let whoDraft = null, whoDone = null;
 const needWho = u => !!u && (!profileAge(u) || !u.gender);
@@ -7520,7 +7581,7 @@ function askWho(reason){
   const u = curUser();
   if(!u) return Promise.resolve(false);
   whoDraft = {gender: u.gender || ''};
-  $('whoMsg').textContent = WHO_MSG[reason] || WHO_MSG.program;
+  $('whoMsg').textContent = t(WHO_MSG[reason] || WHO_MSG.program);
   $('whoAge').value = profileAge(u) || '';
   whoSyncForm();
   $('whoModal').classList.add('open');
@@ -7551,6 +7612,12 @@ async function whoFinish(save){
   if(whoDone){ whoDone(!!save); whoDone = null; }
 }
 
+
+window.addEventListener('appLocaleChanged', async ()=>{
+  const p = customPrograms.find(x=>x.id==='warmup');
+  if(p && localizeBuiltinWarmup(p)) await savePrograms();
+  try{ renderMine(); renderToday(); }catch(_){}
+});
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
 // Раз в progression дней рабочие веса растут на свой шаг.
 // Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
