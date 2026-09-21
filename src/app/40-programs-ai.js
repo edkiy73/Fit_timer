@@ -432,8 +432,8 @@ function renderToday(){
       // силовая (подходы у упражнений) — показываем подходы, круговая — круги
       if(plan.rounds > 1) bits.push(storeCountText(plan.rounds,'round'));
       else if(setsTotal > plan.exercises.length) bits.push(storeCountText(setsTotal,'set'));
-      const t = plan.time || p.time;
-      if(t) bits.push(t);
+      const planTime = plan.time || p.time;
+      if(planTime) bits.push(planTime);
       list.appendChild(todayRow({
         cls: done ? 'done' : '',
         ico: done ? 'check' : 'play',
