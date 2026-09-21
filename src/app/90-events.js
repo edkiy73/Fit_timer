@@ -154,14 +154,20 @@ if($('appLocaleSelect')){
     syncHandsFreeUI();
   };
 }
-window.addEventListener('appLocaleChanged', ()=>{
+window.addEventListener('appLocaleChanged', async ()=>{
   syncTtsLocaleToApp(true);
   syncHandsFreeUI();
   if(account && account.email) syncAccountLocale(appLocale);
   // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
   if(ROOT_TABS.includes(show._last)) prepTab(show._last);
-  else if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); }
-  else if(show._last === 'scrStoreItem' && siItem) openStoreItem(siItem.id);
+  else if(show._last === 'scrStore'){
+    await loadStoreServer();
+    renderStoreFilters(); renderStore();
+  } else if(show._last === 'scrStoreItem' && siItem){
+    const id = siItem.id;
+    await loadStoreServer();
+    openStoreItem(id);
+  }
 });
 
 document.querySelectorAll('#hfSeg button').forEach(b => {
