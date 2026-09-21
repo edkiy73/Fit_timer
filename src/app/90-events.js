@@ -91,8 +91,42 @@ $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
    внизу остаётся только док, а не вторая закреплённая полоса. */
+const NOTIFICATION_PREFS_KEY = 'fitNotificationPrefsV1';
+const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
+  workouts:true,
+  trainer:true,
+  progress:true,
+  offers:true
+});
+function getNotificationPrefs(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(NOTIFICATION_PREFS_KEY) || '{}');
+    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS, raw && typeof raw === 'object' ? raw : {});
+  }catch(_){
+    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS);
+  }
+}
+function syncNotificationSettings(){
+  const prefs = getNotificationPrefs();
+  const ids = {workouts:'notifWorkouts', trainer:'notifTrainer', progress:'notifProgress', offers:'notifOffers'};
+  Object.keys(ids).forEach(key => {
+    const btn = $(ids[key]);
+    if(!btn) return;
+    const on = prefs[key] !== false;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+function setNotificationPref(key, value){
+  const prefs = getNotificationPrefs();
+  prefs[key] = !!value;
+  try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
+  syncNotificationSettings();
+  if(key === 'workouts' && typeof syncNativeNotifications === 'function') syncNativeNotifications();
+}
 function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
+  syncNotificationSettings();
 }
 let settingsSaveT = 0;
 function saveSettingsSoon(){
@@ -726,6 +760,10 @@ Object.keys(LEGAL_SECTIONS).forEach(k => {
 });
 $('legalBackTop').onclick = ()=> legalBack();
 $('btnLegalDone').onclick = ()=> legalBack();
+['workouts','trainer','progress','offers'].forEach(key => {
+  const btn = $({workouts:'notifWorkouts',trainer:'notifTrainer',progress:'notifProgress',offers:'notifOffers'}[key]);
+  if(btn) btn.onclick = ()=> setNotificationPref(key, !getNotificationPrefs()[key]);
+});
 $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
 $('btnLegalTerms').onclick   = ()=> openLegal('terms');
 $('btnLegalHealth').onclick  = ()=> openLegal('health');
@@ -1839,7 +1877,7 @@ try{
   checkSchedules();
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
-  if(hasScheduledWorkout && window.FitNative && window.FitNative.requestNotifications){
+  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false && window.FitNative && window.FitNative.requestNotifications){
     window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
