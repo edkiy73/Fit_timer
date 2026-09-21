@@ -902,4 +902,5 @@ const I18N_EN = {
   'stats.clear': "Clear",
   'progress.comparePhotos': "Show before / after",
   'progress.deleteAllPhotosBtn': "Delete all photos",
+  'profile.defaultNumber': "Profile {count}",
 };
