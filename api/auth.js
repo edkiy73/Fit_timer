@@ -234,6 +234,24 @@ module.exports = async (req, res) => {
     return send(res, 200, {ok:true, locale});
   }
 
+  if(act === 'push_device'){
+    const deviceId=String((body&&body.deviceId)||'').trim().slice(0,80), token=String((body&&body.syncToken)||'');
+    let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(e){}
+    const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
+    if(!device||!sameSecret(sha(token),device.h||''))return fail(res,403,'bad_sync_token');
+    if(!acc.pushDevices||typeof acc.pushDevices!=='object')acc.pushDevices={};
+    if(body&&body.enabled===false)delete acc.pushDevices[deviceId];
+    else{
+      const platform=body&&body.platform==='ios'?'ios':body&&body.platform==='android'?'android':'';
+      const pushToken=String((body&&body.token)||'').trim().slice(0,4096);
+      if(!platform||pushToken.length<16)return fail(res,400,'bad_push_token');
+      acc.pushDevices[deviceId]={platform,token:pushToken,at:new Date().toISOString()};
+      Object.keys(acc.pushDevices).forEach(id=>{if(!acc.syncDevices[id])delete acc.pushDevices[id];});
+    }
+    await store.set(`a:${mh}`,JSON.stringify(acc));
+    return send(res,200,{ok:true,enabled:!!acc.pushDevices[deviceId]});
+  }
+
   /* ---- прислать код ---- */
   if(act === 'send'){
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается

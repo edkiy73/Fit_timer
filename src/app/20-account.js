@@ -511,6 +511,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   await saveAccount();
   await saveKnown();
   if(identity){ identity.email = email; await saveIdentity(); }
+  if(typeof syncRemotePushRegistration === 'function') syncRemotePushRegistration(false).catch(()=>{});
   if(switchingAccount) await loadTrainer();
 
   if(r.handle){
@@ -653,6 +654,7 @@ async function signOut(){
     {confirm: true, okText: t('account.signOut'), cancelText: t('common.cancel')});
   if(!ok) return;
   try{ if(SYNC.adapter) await Promise.all([SYNC.push(), pushAccountDocs()]); }catch(e){}
+  try{ if(typeof unregisterRemotePushServer === 'function') await unregisterRemotePushServer(); }catch(e){}
   SYNC.adapter = null;
   rememberAccount();
   await saveKnown();

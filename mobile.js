@@ -7,12 +7,25 @@
   const plugins = (cap && cap.Plugins) || {};
   const fitAudio = plugins.FitAudio;
   const fitSystem = plugins.FitSystem;
+  const pushNotifications = plugins.PushNotifications;
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
   const PLAN_NOTIFICATION_MAX = 902999;
   let speechResultHandle = null;
   let speechErrorHandle = null;
   let speechStatusHandle = null;
+  let remotePushListenersInstalled = false;
+  function installRemotePushListeners(){
+    if(remotePushListenersInstalled||!native||!pushNotifications||!pushNotifications.addListener)return;
+    remotePushListenersInstalled=true;
+    pushNotifications.addListener('registration',token=>{try{window.dispatchEvent(new CustomEvent('fitRemotePushToken',{detail:{token:String((token&&token.value)||''),platform:(cap.getPlatform&&cap.getPlatform())||''}}));}catch(_){}});
+    pushNotifications.addListener('pushNotificationActionPerformed',event=>{const n=(event&&event.notification)||{};try{window.dispatchEvent(new CustomEvent('fitNotificationAction',{detail:{notification:{extra:n.data||{},data:n.data||{}},remote:true}}));}catch(_){}});
+  }
+  async function registerRemotePush(requestPermission){
+    if(!native||!pushNotifications)return false;
+    installRemotePushListeners();
+    try{let p=await pushNotifications.checkPermissions();if(p.receive==='prompt'&&requestPermission)p=await pushNotifications.requestPermissions();if(p.receive!=='granted')return false;await pushNotifications.register();return true;}catch(_){return false;}
+  }
 
   async function requestNotifications(){
     if(!native || !plugins.LocalNotifications) return false;
@@ -231,6 +244,7 @@
   }
 
   function installNativeOverrides(){
+    installRemotePushListeners();
     if(native && plugins.LocalNotifications && plugins.LocalNotifications.addListener){
       try{
         plugins.LocalNotifications.addListener('localNotificationActionPerformed', event=>{
@@ -339,6 +353,7 @@
   window.FitNative = Object.freeze({
     isNative: native,
     requestNotifications,
+    registerRemotePush,
     scheduleRest,
     cancelRest,
     syncWorkoutNotifications,

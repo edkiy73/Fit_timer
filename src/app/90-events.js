@@ -151,7 +151,26 @@ async function setNotificationPref(key, value){
   }
   if(['workouts','trainer','progress','offers'].includes(key)
     && typeof syncNativeNotifications === 'function') syncNativeNotifications();
+  if(['trainer','progress','offers'].includes(key)){
+    if(value) syncRemotePushRegistration(true).catch(()=>{});
+    else if(getNotificationPrefs().trainer===false&&getNotificationPrefs().progress===false&&getNotificationPrefs().offers===false) unregisterRemotePushServer().catch(()=>{});
+  }
 }
+async function syncRemotePushRegistration(requestPermission){
+  if(!(window.FitNative&&window.FitNative.registerRemotePush)||!account||!account.email||!account.syncToken)return false;
+  const p=getNotificationPrefs(); if(p.trainer===false&&p.progress===false&&p.offers===false)return false;
+  return window.FitNative.registerRemotePush(!!requestPermission);
+}
+async function unregisterRemotePushServer(){
+  if(!account||!account.email||!account.syncToken)return;
+  const deviceId=await kvGet('deviceId'); if(!deviceId)return;
+  try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,enabled:false});}catch(_){}
+}
+window.addEventListener('fitRemotePushToken',async e=>{
+  const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
+  let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
+  try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,token:d.token,platform:d.platform,enabled:true});}catch(_){}
+});
 function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
   syncNotificationSettings();
@@ -161,6 +180,10 @@ window.addEventListener('fitNotificationAction', e => {
   const extra = (n && n.extra) || (e && e.detail && e.detail.extra) || {};
   if(extra.stage === 'premium'){
     if(typeof openPremium === 'function') openPremium();
+    return;
+  }
+  if(extra.stage === 'catalog-status'){
+    goTab('scrTrainer');
     return;
   }
   if(extra.programId){
@@ -1872,6 +1895,7 @@ try{
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
   loadPublicConfig();
+  syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
   // пользователи: миграция со старой схемы профилей f/m

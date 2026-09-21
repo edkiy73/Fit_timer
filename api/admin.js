@@ -12,6 +12,7 @@ const { send, fail, readBody, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
 const { getSettings, sanitizeSettings, providerStatus, generate } = require('../lib/ai');
 const { handleAI } = require('../lib/ai-endpoint');
+const { sendPushToAccountHash } = require('../lib/push');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
@@ -279,6 +280,16 @@ module.exports = async (req, res) => {
     if(a === 'approve' && body.pro !== undefined) c.pro = !!body.pro;
     await store.set(`c:${id}`, JSON.stringify(c));
     if(a === 'approve') await store.push('c:approved', id);
+    try{
+      const traw=await store.get(`t:${c.by}`),tr=traw?JSON.parse(traw):null;
+      if(tr&&tr.mailHash){
+        const araw=await store.get(`a:${tr.mailHash}`),acc=araw?JSON.parse(araw):{},en=acc&&acc.locale==='en',ok=c.status==='approved';
+        await sendPushToAccountHash(tr.mailHash,{category:'trainer',
+          title:ok?(en?'Program approved':'Программа принята в каталог'):(en?'Catalog submission rejected':'Заявка в каталог отклонена'),
+          body:ok?(en?`“${c.name}” is now published in the catalog.`:`«${c.name}» опубликована в каталоге.`):(en?`“${c.name}” did not pass moderation. Open your submissions for details.`:`«${c.name}» не прошла модерацию. Открой заявки, чтобы проверить статус.`),
+          data:{stage:'catalog-status',catalogId:c.id,status:c.status,category:'trainer'}});
+      }
+    }catch(_){}
     return send(res, 200, {ok: true, status: c.status, pro: !!c.pro});
   }
 
