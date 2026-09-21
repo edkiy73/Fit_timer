@@ -256,6 +256,21 @@ module.exports = async (req, res) => {
     return send(res,200,{ok:true,enabled:!!acc.pushDevices[deviceId]});
   }
 
+  if(act === 'notification_event'){
+    const deviceId=String((body&&body.deviceId)||'').trim().slice(0,80), token=String((body&&body.syncToken)||'');
+    let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(e){}
+    const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
+    if(!device||!sameSecret(sha(token),device.h||''))return fail(res,403,'bad_sync_token');
+    const event=String((body&&body.event)||'open').replace(/[^a-z_-]/gi,'').slice(0,30)||'open';
+    const stage=String((body&&body.stage)||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,50)||'unknown';
+    const day=new Date().toISOString().slice(0,10);
+    await Promise.all([
+      store.incr(`notify:${event}:${stage}`,365*24*3600),
+      store.incr(`notify:${event}:${stage}:${day}`,90*24*3600)
+    ]);
+    return send(res,200,{ok:true});
+  }
+
   /* ---- прислать код ---- */
   if(act === 'send'){
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается

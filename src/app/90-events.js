@@ -177,7 +177,13 @@ function syncSettingsForm(){
 }
 window.addEventListener('fitNotificationAction', e => {
   const n = e && e.detail && e.detail.notification;
-  const extra = (n && n.extra) || (e && e.detail && e.detail.extra) || {};
+  const extra = (n && n.extra) || (n && n.data) || (e && e.detail && e.detail.extra) || {};
+  (async()=>{
+    if(!account||!account.email||!account.syncToken)return;
+    const deviceId=await kvGet('deviceId');if(!deviceId)return;
+    try{await apiPost('/api/auth',{action:'notification_event',email:account.email,deviceId,
+      syncToken:account.syncToken,event:'open',stage:String(extra.stage||extra.kind||'unknown')});}catch(_){}
+  })();
   if(extra.stage === 'premium'){
     if(typeof openPremium === 'function') openPremium();
     return;

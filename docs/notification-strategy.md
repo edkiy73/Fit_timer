@@ -326,3 +326,10 @@ Rules implemented:
 - Email is sent only to explicit `emailNews` / `emailOffers` opt-ins.
 - Campaign processing is batched (8 accounts/request) so it stays inside serverless execution limits.
 - Accounts enter the server campaign index after the next verified login or push-device registration; no database-wide key scan is required.
+
+
+### Push hygiene and analytics
+
+- FCM/APNs responses that indicate an unregistered or invalid device token automatically remove that token from the account.
+- Notification taps are recorded server-side by stage (for example `premium`, `catalog-status`, `start`) with total and daily counters.
+- Analytics stores aggregate counters only; notification text and workout content are not written to analytics.
