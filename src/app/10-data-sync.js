@@ -1432,14 +1432,14 @@ function renderStatBadges(){
     el.type = 'button';
     el.className = 'bdg';
     el.innerHTML = `<i>${icon(b.ico)}</i><span></span>`;
-    el.querySelector('span').textContent = b.name;
+    el.querySelector('span').textContent = badgeName(b);
     // за что выдано — не написано нигде, а название само по себе не объясняет
-    el.onclick = ()=> appAlert(`«${b.name}» — ${badgeDesc(b).toLowerCase()}.`);
+    el.onclick = ()=> appAlert(`«${badgeName(b)}» — ${badgeDesc(b).toLowerCase()}.`);
     box.appendChild(el);
   });
   const next = BADGES.find(b => !hasBadge(b.id));
   $('badgeNext').textContent = next
-    ? t('stats.nextBadge',{name:next.name,desc:badgeDesc(next).toLowerCase()})
+    ? t('stats.nextBadge',{name:badgeName(next),desc:badgeDesc(next).toLowerCase()})
     : t('stats.allBadges');
 }
 
