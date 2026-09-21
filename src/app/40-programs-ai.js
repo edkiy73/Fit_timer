@@ -2054,7 +2054,7 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = clampText($('eaWish').value, LIM.wish);
-  return aiPrompt() +
+  return aiPrompt((editAIProg && editAIProg.locale) || appLocale) +
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
     'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
     'USER: ' + userForAI() + '\n' +
