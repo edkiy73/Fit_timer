@@ -117,6 +117,16 @@ async function boot(b, label, errs, url){
   const mine = queue.pending.find(x => x.name === NAME);
   ok('заявка дошла с картинками', mine && mine.cover && Object.keys(mine.media || {}).length === 3,
      mine ? Object.keys(mine.media || {}).length + ' фото' : 'нет заявки');
+  const enName = 'With pictures ' + NAME.split(' ').pop();
+  const enText = mine.text
+    .replace('ПРОГРАММА: ' + NAME, 'ПРОГРАММА: ' + enName)
+    .replace('УПРАЖНЕНИЕ: Приседания', 'УПРАЖНЕНИЕ: Squats')
+    .replace('УПРАЖНЕНИЕ: Планка', 'УПРАЖНЕНИЕ: Plank')
+    .replace('УПРАЖНЕНИЕ: Отжимания', 'УПРАЖНЕНИЕ: Push-ups');
+  await api('edit', {id:mine.id, item:{sourceLocale:'ru', locales:{
+    ru:{name:mine.name, gives:mine.gives, text:mine.text},
+    en:{name:enName, gives:'Three exercises in a circuit, each with its own technique image.', text:enText}
+  }}});
   await api('approve', {id: mine.id});
 
   // ---- витрина лёгкая, фото приходят при добавлении ----
@@ -125,9 +135,13 @@ async function boot(b, label, errs, url){
   ok('в списке каталога фото НЕТ', row && row.media === undefined && row.hasMedia === true);
   ok('но обложка в списке есть', !!(row && row.cover));
 
-  const full = await fetch(BASE + '/api/catalog?item=' + row.id).then(r => r.json());
+  const full = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=ru').then(r => r.json());
   ok('отдельным запросом фото приходят', Object.keys(full.item.media || {}).length === 3,
      Object.keys(full.item.media || {}).length + '');
+  const fullEn = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=en').then(r => r.json());
+  ok('для английского фото перепривязаны к переведённым упражнениям',
+     ['Squats','Plank','Push-ups'].every(n => fullEn.item.media && fullEn.item.media[n]),
+     Object.keys(fullEn.item.media || {}).join(', '));
 
   /* ---- страница программы в каталоге показывает фото ----
      Их там нет в момент отрисовки: список каталога фото не несёт, и они доезжают
@@ -156,12 +170,13 @@ async function boot(b, label, errs, url){
     await addStoreItem(it.id);
     const p = customPrograms.find(x => x.storeId === it.id);
     if(!p) return {found: true, saved: false};
-    return {found: true, saved: true, cover: !!p.cover,
+    return {found: true, saved: true, cover: !!p.cover, locale:p.locale,
             withPic: normPlans(p)[0].exercises.filter(e => e.media && e.media.kind === 'img').length};
   }, NAME);
   ok('программа из каталога добавляется', added.found && added.saved, JSON.stringify(added));
   ok('и приносит фото упражнений', added.withPic === 3, added.withPic + '');
   ok('и обложку', added.cover === true);
+  ok('личная копия запоминает язык каталога', added.locale === 'ru', added.locale);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;
