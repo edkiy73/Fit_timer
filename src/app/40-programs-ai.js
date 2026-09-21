@@ -2115,6 +2115,8 @@ async function createEditedProgram(){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
+    ? editAIProg.locale : (appLocale === 'ru' ? 'ru' : 'en');
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
