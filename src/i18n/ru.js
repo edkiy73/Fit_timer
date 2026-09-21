@@ -902,4 +902,5 @@ const I18N_RU = {
   'stats.clear': "Очистить",
   'progress.comparePhotos': "Показать «было / стало»",
   'progress.deleteAllPhotosBtn': "Удалить все фото",
+  'profile.defaultNumber': "Профиль {count}",
 };
