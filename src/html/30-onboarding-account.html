@@ -53,21 +53,21 @@
        прогресса остаются только локально. Формулировки намеренно не привязаны ни к конкретному
        способу входа, ни к платёжной системе — это меняется чаще, чем политика. -->
   <section class="screen builder" id="scrLegal">
-    <div class="screen-head"><button class="back-chip" id="legalBackTop"></button><h2>Данные и правила</h2></div>
+    <div class="screen-head"><button class="back-chip" id="legalBackTop"></button><h2 data-i18n="legal.title">Данные и правила</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="shield"></span>
-      <span>Храним только нужное для работы. Фото прогресса остаются на твоём устройстве и на наш сервер не загружаются. Без рекламы и трекеров. Данные не продаём.</span>
+      <span data-i18n="legal.note">Храним только нужное для работы. Фото прогресса остаются на твоём устройстве и на наш сервер не загружаются. Без рекламы и трекеров. Данные не продаём.</span>
     </div>
 
     <div class="legal-list">
       <div class="legal-item">
         <button type="button" class="legal-head" id="legalHeadPrivacy" aria-expanded="false" aria-controls="legalPrivacy">
           <span class="lh-ico" data-icon="shield"></span>
-          <span class="lh-txt"><b>Политика конфиденциальности</b><small>Что собирается, где хранится, что уходит наружу</small></span>
+          <span class="lh-txt"><b data-i18n="legal.privacyTitle">Политика конфиденциальности</b><small data-i18n="legal.privacySub">Что собирается, где хранится, что уходит наружу</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
         </button>
-        <div class="legal-body hidden" id="legalPrivacy">
+        <div class="legal-body hidden" id="legalPrivacy" data-i18n-html="legal.privacyHtml">
           <h3>Какие данные приложение хранит</h3>
           <ul>
             <li><b>Имя, пол, возраст в полных годах.</b> Имя — чтобы обращаться к тебе по имени. Пол и возраст влияют на подбор упражнений и нагрузки. Точную дату рождения приложение не запрашивает и не хранит.</li>
@@ -128,10 +128,10 @@
       <div class="legal-item">
         <button type="button" class="legal-head" id="legalHeadTerms" aria-expanded="false" aria-controls="legalTerms">
           <span class="lh-ico" data-icon="doc"></span>
-          <span class="lh-txt"><b>Пользовательское соглашение</b><small>Что это за приложение и кто за что отвечает</small></span>
+          <span class="lh-txt"><b data-i18n="legal.termsTitle">Пользовательское соглашение</b><small data-i18n="legal.termsSub">Что это за приложение и кто за что отвечает</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
         </button>
-        <div class="legal-body hidden" id="legalTerms">
+        <div class="legal-body hidden" id="legalTerms" data-i18n-html="legal.termsHtml">
           <h3>Что это такое</h3>
           <p>Fit Timer — таймер и конструктор домашних тренировок. Он исполняет ту программу, которую собрали вручную, получили от нейросети, взяли из каталога или импортировали по ссылке. Пользоваться им можно бесплатно.</p>
 
@@ -170,10 +170,10 @@
       <div class="legal-item">
         <button type="button" class="legal-head" id="legalHeadHealth" aria-expanded="false" aria-controls="legalHealth">
           <span class="lh-ico" data-icon="heart"></span>
-          <span class="lh-txt"><b>Здоровье и безопасность</b><small>Когда нужно сначала к врачу и когда остановиться</small></span>
+          <span class="lh-txt"><b data-i18n="legal.healthTitle">Здоровье и безопасность</b><small data-i18n="legal.healthSub">Когда нужно сначала к врачу и когда остановиться</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
         </button>
-        <div class="legal-body hidden" id="legalHealth">
+        <div class="legal-body hidden" id="legalHealth" data-i18n-html="legal.healthHtml">
           <h3>Главное</h3>
           <p>Fit Timer — не медицинское изделие. Он не ставит диагнозов, не даёт медицинских рекомендаций и не заменяет консультацию врача.</p>
 
@@ -208,10 +208,10 @@
       </div>
     </div>
 
-    <p class="legal-upd">Обновлено 10 сентября 2026</p>
+    <p class="legal-upd" data-i18n="legal.updated">Обновлено 10 сентября 2026</p>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnLegalDone">Понятно</button>
+      <button class="btn-primary" id="btnLegalDone" data-i18n="common.ok">Понятно</button>
     </div>
   </section>
 
