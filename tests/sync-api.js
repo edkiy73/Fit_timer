@@ -63,7 +63,7 @@ async function login(deviceId, sub, email = MAIL){
   ok('единый ник возвращается при входе', again.handle === nick && !again.needsHandle, again.handle);
 
   const a = await login('device-a', sub);
-  const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',
+  const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',locale:'en',
     prepSec:7,readySec:4,sideSec:12,voiceVol:85,fxVol:65,
     photo:'data:image/png;base64,bm8='};
   const legacyProfile = {id:'profile-legacy',name:'Старый',gender:'m',birth:'1990-05-01',theme:'light'};
@@ -88,6 +88,7 @@ async function login(deviceId, sub, email = MAIL){
   const legacy = pulled.profiles.find(x=>x.user.id===legacyProfile.id);
   ok('профиль доступен на втором устройстве', p && p.user.name === 'Лена');
   ok('сервер хранит только полные годы', p && p.user.age === 34 && !('birth' in p.user), JSON.stringify(p && p.user));
+  ok('язык профиля не теряется при синхронизации', p && p.user.locale === 'en', JSON.stringify(p && p.user));
   ok('отсчёты и уровни звука профиля не теряются при синхронизации',
      p && p.user.prepSec === 7 && p.user.readySec === 4 && p.user.sideSec === 12
        && p.user.voiceVol === 85 && p.user.fxVol === 65,
