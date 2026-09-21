@@ -1070,7 +1070,7 @@ async function ytApplyResult(){
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = aiPrompt()
+  const text = aiPrompt((editAIProg && editAIProg.locale) || appLocale)
     + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
     + programToText(editAIProg)
     + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
