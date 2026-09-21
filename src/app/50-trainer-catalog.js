@@ -38,6 +38,9 @@ async function pullAll(){
   if(show._last === 'scrTrainer'){ renderClients(); renderTrainerCard(); }
   if(any && show._last === 'scrClient') fillClient();
 }
+function clientDayWord(n){
+  return appLocale === 'ru' ? plural(n, 'день', 'дня', 'дней') : (n === 1 ? 'day' : 'days');
+}
 function renderClients(){
   const n = clients.length;
   const live = clients.filter(c => clientSum(c).n > 0).length;
@@ -70,23 +73,23 @@ function renderClients(){
     let state, tone = 'wait';
     if(sum.n > 0){
       const d = daysSince(sum.last);
-      state = `${sum.n} ${plural(sum.n, 'занятие', 'занятия', 'занятий')}`;
+      state = sum.n + ' ' + (appLocale === 'ru' ? plural(sum.n, t('clients.sessionOne'), t('clients.sessionFew'), t('clients.sessionMany')) : t(sum.n === 1 ? 'clients.sessionOne' : 'clients.sessionFew'));
       tone = (d != null && d > 10) ? 'cold' : 'ok';
-      if(d != null && d > 10) state += ` · молчит ${d} ${plural(d, 'день', 'дня', 'дней')}`;
+      if(d != null && d > 10) state += ' · ' + t('clients.silent',{count:d,days:clientDayWord(d)});
     } else if(newest){
       const d = daysSince(newest.sentAt);
       // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
       // и тренеру нужно видеть, какой из них его.
-      if(sum.opens > 0) state = 'открыл, занятий нет';
-      else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
-    } else state = 'не отправлено';
+      if(sum.opens > 0) state = t('clients.openedNoSessions');
+      else state = d === 0 ? t('clients.sentToday') : t('clients.waiting',{count:d,days:clientDayWord(d)});
+    } else state = t('clients.notSent');
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
-    row.querySelector('.ub small').textContent = !sum.progs ? 'Программ пока нет'
-      : sum.progs === 1 ? (newest ? newest.name : 'Программа')
-      : `${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
+    row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
+      : sum.progs === 1 ? (newest ? newest.name : t('clients.programFallback'))
+      : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
     box.appendChild(row);
@@ -149,11 +152,11 @@ function progCard(c, pr){
   el.appendChild(head);
 
   const bits = [];
-  if(pr.sentAt) bits.push(`отправлена ${humanDay(pr.sentAt)}`);
+  if(pr.sentAt) bits.push(t('clients.sentOn',{date:humanDay(pr.sentAt)}));
   if(pr.link) bits.push(pr.opens > 0
-    ? (pr.firstOpen ? `открыл ${humanDay((pr.firstOpen || '').slice(0, 10))}` : 'открыл')
-    : 'ещё не открывал');
-  if(pr.sentAt && !prog) bits.push('программы уже нет в твоём списке');
+    ? (pr.firstOpen ? t('clients.openedOn',{date:humanDay((pr.firstOpen || '').slice(0, 10))}) : t('clients.opened'))
+    : t('clients.notOpened'));
+  if(pr.sentAt && !prog) bits.push(t('clients.localMissing'));
   const sub = document.createElement('p');
   sub.className = 'field-hint';
   sub.textContent = bits.join(' · ');
@@ -184,8 +187,8 @@ function progCard(c, pr){
   drop.className = 'link-btn';
   drop.textContent = t('clients.remove');
   drop.onclick = async ()=>{
-    if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.`,
-      {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+    if(!(await appDialog(t('clients.removeQuestion',{name:pr.name}),
+      {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
     c.progs = clProgs(c).filter(x => x !== pr);
     await saveClients();
     fillClient();
@@ -374,7 +377,7 @@ async function resendProgram(c, pr){
 }
 
 async function shareLink(url, who, what){
-  const text = `Программа «${what}»${who ? ' для ' + who : ''} — открой ссылку, и она добавится в Fit Timer:`;
+  const text = t('clients.shareText',{program:what,forClient:who ? t('clients.forClient',{name:who}) : ''});
   if(navigator.share){
     try{ await navigator.share({title: 'Fit Timer', text, url}); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
@@ -392,10 +395,10 @@ async function shareLink(url, who, what){
    ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
    в порядке, но подопечный ещё не занимался»: пустую карточку. */
 const PULL_ERR = {
-  no_store: 'На сервере не подключено хранилище — отметки и отчёты не сохраняются.',
-  not_found: 'Ссылка на сервере не найдена. Отправь программу заново.',
-  bad_key: 'Нет доступа к этой ссылке. Отправь программу заново.',
-  rate_limited: 'Слишком много проверок подряд. Загляни через пару минут.'
+  no_store: 'clients.pullNoStore',
+  not_found: 'clients.pullNotFound',
+  bad_key: 'clients.pullBadKey',
+  rate_limited: 'clients.pullRate'
 };
 async function pullProgram(pr){
   if(!pr || !pr.link || !pr.link.id) return false;
@@ -404,7 +407,7 @@ async function pullProgram(pr){
     // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
     d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
   }catch(e){
-    pr.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
+    pr.err = t(PULL_ERR[e && e.code] || 'clients.pullOffline');
     return false;
   }
   pr.err = null;
@@ -427,7 +430,7 @@ async function pullClient(c){
 }
 
 async function addClient(){
-  const c = {id: 'c' + Date.now(), name: 'Подопечный ' + (clients.length + 1), note: '',
+  const c = {id: 'c' + Date.now(), name: t('clients.defaultName',{count:clients.length + 1}), note: '',
              programId: null, programName: '', sentAt: null, reports: []};
   clients.push(c);
   await saveClients();
@@ -448,8 +451,8 @@ function pickClientFor(p){
     const has = clProgs(c).find(x => x.pid === p.id);
     const sum = clientSum(c);
     b.querySelector('small').textContent = has ? t('clients.alreadyHas')
-      : !sum.progs ? 'программ пока нет'
-      : `уже ${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
+      : !sum.progs ? t('clients.noPrograms').toLowerCase()
+      : t('clients.alreadyCount',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
       await sendProgramToClient(c, p);
