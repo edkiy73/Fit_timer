@@ -48,7 +48,7 @@ function renderClients(){
     sum.innerHTML = '';
     // Подпись под числом, а не после него: тогда она не зависит от числа и её не
     // надо согласовывать. Заодно все три видны сразу, а не через точку в строке.
-    [['Подопечных', n], ['Занимаются', live], ['Тренировок', total]].forEach(([label, v]) => {
+    [[t('clients.statClients'), n], [t('clients.statActive'), live], [t('clients.statWorkouts'), total]].forEach(([label, v]) => {
       const el = document.createElement('div');
       el.className = 'cl-stat' + (v ? '' : ' zero');
       el.innerHTML = '<b></b><small></small>';
@@ -83,7 +83,7 @@ function renderClients(){
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
       + `<span class="cl-state ${tone}"></span>`;
-    row.querySelector('b').textContent = c.name || 'Без имени';
+    row.querySelector('b').textContent = c.name || t('profile.noName');
     row.querySelector('.ub small').textContent = !sum.progs ? 'Программ пока нет'
       : sum.progs === 1 ? (newest ? newest.name : 'Программа')
       : `${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
@@ -92,8 +92,8 @@ function renderClients(){
     box.appendChild(row);
   });
   $('clsHint').textContent = n
-    ? 'Подопечный занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.'
-    : 'Добавь подопечного, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.';
+    ? t('clients.hintHas')
+    : t('clients.hintEmpty');
 }
 
 /* ---- карточка подопечного ---- */
@@ -111,22 +111,22 @@ const curClient = () => clients[clientIdx] || null;
 function fillClient(){
   const c = curClient();
   if(!c) return;
-  $('clTitle').textContent = c.name || 'Подопечный';
+  $('clTitle').textContent = c.name || t('clients.default');
   if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
   if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
 
   const box = $('clProgs');
   box.innerHTML = '';
   const list = clProgs(c);
-  $('btnClSendTxt').textContent = list.length ? 'Отправить ещё программу' : 'Отправить программу';
+  $('btnClSendTxt').textContent = list.length ? t('clients.sendMore') : t('clients.send');
   $('clSendHint').textContent = list.length
-    ? 'У подопечного может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.'
-    : 'Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.';
+    ? t('clients.sendHintMany')
+    : t('clients.sendHintFirst');
 
   if(!list.length){
     const empty = document.createElement('div');
     empty.className = 'card-block';
-    empty.innerHTML = '<p class="field-hint">Программ пока нет. Отправь первую — и здесь появятся её занятия.</p>';
+    empty.innerHTML = '<p class="field-hint">' + esc(t('clients.emptyCard')) + '</p>';
     box.appendChild(empty);
     return;
   }
@@ -145,7 +145,7 @@ function progCard(c, pr){
   const head = document.createElement('div');
   head.className = 'cb-head';
   head.innerHTML = '<p class="cb-title"></p>';
-  head.querySelector('.cb-title').textContent = pr.name || 'Программа';
+  head.querySelector('.cb-title').textContent = pr.name || t('clients.programFallback');
   el.appendChild(head);
 
   const bits = [];
@@ -165,7 +165,7 @@ function progCard(c, pr){
   if(pr.err || stale){
     const st = document.createElement('p');
     st.className = 'field-hint warn';
-    st.textContent = pr.err || 'Эта ссылка отправлена старой версией: отметок и отчётов по ней не будет. Отправь программу заново.';
+    st.textContent = pr.err || t('clients.oldLink');
     el.appendChild(st);
   }
 
@@ -176,13 +176,13 @@ function progCard(c, pr){
   const again = document.createElement('button');
   again.type = 'button';
   again.className = 'choice ico-row';
-  again.innerHTML = icon('share') + '<b>Отправить ссылку ещё раз</b>';
+  again.innerHTML = icon('share') + '<b>' + esc(t('clients.resend')) + '</b>';
   again.onclick = ()=> resendProgram(c, pr);
   acts.appendChild(again);
   const drop = document.createElement('button');
   drop.type = 'button';
   drop.className = 'link-btn';
-  drop.textContent = 'Убрать эту программу';
+  drop.textContent = t('clients.remove');
   drop.onclick = async ()=>{
     if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.`,
       {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
@@ -204,7 +204,7 @@ function renderReport(box, pr){
   if(!r){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Занятий пока нет. Отчёт придёт сам, как только подопечный закончит первую тренировку.';
+    h.textContent = t('report.none');
     box.appendChild(h);
     return;
   }
@@ -333,7 +333,7 @@ function renderReport(box, pr){
    подопечный, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
    подопечного, от кого она пришла. */
 async function sendProgramToClient(c, p){
-  if(!p){ appAlert('Сначала выбери программу: пункт «Отправить подопечному» есть в меню любой программы в списке тренировок.'); return; }
+  if(!p){ appAlert(t('clients.chooseProgram')); return; }
 
   // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
   // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
@@ -366,7 +366,7 @@ async function resendProgram(c, pr){
   if(!pr.link || !pr.link.id){
     const p = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
     if(p) return sendProgramToClient(c, p);
-    appAlert('Этой программы уже нет в твоём списке — отправь любую другую.');
+    appAlert(t('clients.programGone'));
     return;
   }
   await shareLink(PUBLIC_APP_URL + '?p=' + encodeURIComponent(pr.link.id),
@@ -381,8 +381,8 @@ async function shareLink(url, who, what){
   }
   try{
     await navigator.clipboard.writeText(url);
-    appAlert('Ссылка скопирована — отправь её подопечному любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
-  }catch(e){ appAlert('Скопируй ссылку и отправь подопечному:', {code: url}); }
+    appAlert(t('clients.linkCopied'));
+  }catch(e){ appAlert(t('clients.copyLink'), {code: url}); }
 }
 
 /* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
@@ -438,16 +438,16 @@ async function addClient(){
 function pickClientFor(p){
   const box = $('pickClientList');
   box.innerHTML = '';
-  $('pickClientModal').querySelector('.mini-label').textContent = 'Кому отправить';
+  $('pickClientModal').querySelector('.mini-label').textContent = t('clients.sendTo');
   clients.forEach(c => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'choice';
     b.innerHTML = '<b></b><small></small>';
-    b.querySelector('b').textContent = c.name || 'Без имени';
+    b.querySelector('b').textContent = c.name || t('profile.noName');
     const has = clProgs(c).find(x => x.pid === p.id);
     const sum = clientSum(c);
-    b.querySelector('small').textContent = has ? 'эта программа уже у него — отправим ссылку заново'
+    b.querySelector('small').textContent = has ? t('clients.alreadyHas')
       : !sum.progs ? 'программ пока нет'
       : `уже ${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
     b.onclick = async ()=>{
@@ -459,7 +459,7 @@ function pickClientFor(p){
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'choice add-row';
-  add.innerHTML = icon('plus') + '<b>Новый подопечный</b>';
+  add.innerHTML = icon('plus') + '<b>' + esc(t('clients.new')) + '</b>';
   add.onclick = async ()=>{
     $('pickClientModal').classList.remove('open');
     const c = await addClient();
