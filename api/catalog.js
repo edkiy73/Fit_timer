@@ -22,6 +22,60 @@ const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
+const LANGS = ['ru', 'en'];
+const normLocale = v => LANGS.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : 'ru';
+
+function cleanLocaleBlock(v){
+  if(!v || typeof v !== 'object') return null;
+  return {
+    name: clampLine(v.name, 60),
+    gives: clampText(v.gives, 300),
+    text: String(v.text || '').slice(0, 60000)
+  };
+}
+function rawLocale(c, lang){
+  const hit = cleanLocaleBlock(c && c.locales && c.locales[lang]);
+  if(hit && (hit.name || hit.gives || hit.text)) return hit;
+  const source = normLocale(c && c.sourceLocale);
+  if(lang === source && c && (c.name || c.gives || c.text)){
+    return cleanLocaleBlock({name:c.name, gives:c.gives, text:c.text});
+  }
+  // Старые записи не знали о языках: их верхний уровень — русский оригинал.
+  if(!c?.locales && lang === 'ru' && c && (c.name || c.gives || c.text)){
+    return cleanLocaleBlock({name:c.name, gives:c.gives, text:c.text});
+  }
+  return null;
+}
+function resolvedLocale(c, want){
+  const order = [normLocale(want), normLocale(c && c.sourceLocale), 'ru', 'en'];
+  for(const lang of order){
+    const block = rawLocale(c, lang);
+    if(block) return Object.assign({lang}, block);
+  }
+  return {lang:'ru', name:'', gives:'', text:''};
+}
+function exerciseNames(text){
+  const out = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const m = line.match(/^УПРАЖНЕНИЕ:\s*(.+)$/i);
+    if(m && m[1].trim()) out.push(m[1].trim());
+  });
+  return out;
+}
+function localizedMedia(c, locale){
+  const media = (c && c.media && typeof c.media === 'object') ? c.media : {};
+  const keys = Object.keys(media);
+  if(!keys.length) return null;
+  const source = resolvedLocale(c, normLocale(c && c.sourceLocale));
+  const target = resolvedLocale(c, locale);
+  if(source.lang === target.lang) return media;
+  const from = exerciseNames(source.text), to = exerciseNames(target.text);
+  if(!from.length || from.length !== to.length) return media;
+  const out = {};
+  from.forEach((name, i) => { if(media[name] && to[i]) out[to[i]] = media[name]; });
+  return Object.keys(out).length ? out : media;
+}
+
 async function list(req, res){
   if(!(await rateOk(req, 'catalog', 900))) return fail(res, 429, 'rate_limited');
 
@@ -38,10 +92,11 @@ async function list(req, res){
     let c;
     try{ c = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
     if(c.status !== 'approved') return fail(res, 404, 'not_found');
+    const loc = resolvedLocale(c, req.query && req.query.lang);
     return send(res, 200, {item: {
-      id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min, name: c.name,
-      gives: c.gives, text: c.text, pro: !!c.pro,
-      cover: c.cover || null, media: c.media || null
+      id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min, name: loc.name,
+      gives: loc.gives, text: loc.text, locale: loc.lang, pro: !!c.pro,
+      cover: c.cover || null, media: localizedMedia(c, loc.lang)
     }});
   }
 
@@ -68,8 +123,9 @@ async function list(req, res){
     try{ c = JSON.parse(raw); }catch(e){ return; }
     if(c.status !== 'approved') return;
     // media в списке НЕТ намеренно — см. выше. Обложка одна на программу и лёгкая.
+    const loc = resolvedLocale(c, req.query && req.query.lang);
     items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
-                name: c.name, gives: c.gives, text: c.text, pro: !!c.pro,
+                name: loc.name, gives: loc.gives, text: loc.text, locale: loc.lang, pro: !!c.pro,
                 cover: c.cover || null, hasMedia: !!(c.media && Object.keys(c.media).length)});
   });
   send(res, 200, {items});
@@ -108,9 +164,11 @@ async function submit(req, res){
   // Название и «что даёт» встанут в витрину и на страницу программы, поэтому
   // здесь не просто обрезка по длине: невидимые символы и переносы строк в них
   // ломают ряд там, где место под одну строку.
+  const sourceLocale = normLocale(it.sourceLocale || it.locale);
   const name  = clampLine(it.name, 60);
   const gives = clampText(it.gives, 300);
   const text  = String(it.text || '');
+  const sourceBlock = {name, gives, text};
   const cat   = String(it.cat || '');
   const level = String(it.level || '');
   const min   = Math.max(1, Math.min(180, Math.round(+it.min || 0)));
@@ -166,7 +224,8 @@ async function submit(req, res){
 
   const id = 'u' + rndId(7);
   await store.set(`c:${id}`, JSON.stringify({
-    id, by: handle, cat, level, min, name, gives, text, cover, media,
+    id, by: handle, cat, level, min, name, gives, text, sourceLocale,
+    locales: {[sourceLocale]: sourceBlock}, cover, media,
     exCount, status: 'pending', at: new Date().toISOString()
   }));
   await store.push('c:pending', id);
