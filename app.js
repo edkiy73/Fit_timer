@@ -10889,7 +10889,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (itrainerData.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return ((it.name || '') + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
@@ -10938,7 +10938,7 @@ function renderStore(){
     return `<article class="store-row" data-open="${it.id}">
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
-        <h3>${itrainerData.name}</h3>
+        <h3>${esc(it.name || t('store.untitled'))}</h3>
         <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
         <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
@@ -10967,7 +10967,7 @@ function openStoreItem(id){
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
-  $('siName').textContent = itrainerData.name;
+  $('siName').textContent = it.name || t('store.untitled');
   $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
@@ -11158,7 +11158,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(t('store.added',{name:itrainerData.name}));
+  appAlert(t('store.added',{name:it.name || t('store.untitled')}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
@@ -15563,7 +15563,13 @@ if($('appLocaleSelect')){
     $('hfHint').textContent = hfHintText(hfMode);
   };
 }
-window.addEventListener('appLocaleChanged', ()=>{ if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode); });
+window.addEventListener('appLocaleChanged', ()=>{
+  if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode);
+  // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
+  if(ROOT_TABS.includes(show._last)) prepTab(show._last);
+  else if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); }
+  else if(show._last === 'scrStoreItem' && siItem) openStoreItem(siItem.id);
+});
 
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
@@ -17165,6 +17171,11 @@ try{
   renderWeight();
   renderWellness();
   renderPhotos();
+  // scrMenu показывается ещё до асинхронной загрузки данных. После загрузки
+  // обязательно собираем его повторно, иначе на чистом/медленном старте часть
+  // карточек остаётся в состоянии до loadData().
+  renderGreeting();
+  renderToday();
   checkSchedules();
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
