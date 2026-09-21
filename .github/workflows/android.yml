@@ -1,4 +1,5 @@
 name: Android — проверка и сборка
+# Remote push smoke check
 
 on:
   workflow_dispatch:
