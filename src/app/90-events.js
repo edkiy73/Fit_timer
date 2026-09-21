@@ -1171,7 +1171,7 @@ $('imgPromptCopy').onclick = async ()=>{
   try{
     await navigator.clipboard.writeText(imagesPromptText());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 };
 $('imgDone').onclick = ()=> closeImages();
 $('imgPick').onclick = ()=> $('imgFiles').click();
@@ -1338,7 +1338,7 @@ async function exaCopyPrompt(){
   try{
     await navigator.clipboard.writeText(exaPrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 
 // Новая строка заводится с рабочими значениями (повторения, 10, один подход) и
@@ -1738,9 +1738,9 @@ try{
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:'Профиль 1', gender:'f', age:null, photo:null, theme:'light'}];
+    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'light'}];
     if((await kvGet('customPrograms_m')) !== null){
-      users.push({id:'m', name:'Профиль 2', gender:'m', age:null, photo:null, theme:'dark'});
+      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'dark'});
     }
     await saveUsers();
   }
