@@ -758,8 +758,8 @@ window.addEventListener('popstate', async e => {
       navDepth++;
       try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
-        g.what + ' ещё не сохранены. Если выйти сейчас, они пропадут.',
-        {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+        t('common.unsaved',{what:g.what}),
+        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
       );
       if(!ok) return;
       if(g.clean) g.clean();
