@@ -1244,4 +1244,9 @@ const I18N_RU = {
   'builder.validationTip': "Подсвеченные поля тоже подскажут, где проблема.",
   'builder.saveFailedOne': "Не получилось сохранить:\n— {item}.\n\n{tip}",
   'builder.saveFailedMany': "Не получилось сохранить — вот что нужно поправить:\n— {items}\n\n{tip}",
+  'builder.volumeHint': "{exercises}{rounds} — {sets} за тренировку.",
+  'builder.nowPrefix': "Сейчас {parts}",
+  'builder.startValuesHint': "В полях — стартовые числа.",
+  'workout.switchSidesVoice': "Смените сторону",
+  'workout.sideVoice': "Сторона {current} из {total}",
 };
