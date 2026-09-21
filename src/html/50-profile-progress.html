@@ -341,9 +341,10 @@
                  autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120"
                  placeholder="you@example.com">
           <p class="field-hint" data-i18n="login.codeHint">Пришлём код. Писем, кроме кода, не будет.</p>
+          <button type="button" class="link-btn" id="loginHaveCode" data-i18n="login.haveCode">У меня уже есть код</button>
         </div>
         <div class="field hidden" id="loginStep2">
-          <label data-i18n="login.code">Код из письма</label>
+          <label data-i18n="login.code">Код входа</label>
           <input type="text" id="loginCode" inputmode="numeric" maxlength="6" placeholder="6 цифр" data-i18n-placeholder="login.codePlaceholder">
           <p class="field-hint" id="loginCodeHint"></p>
         </div>

@@ -216,6 +216,27 @@ async function loadAccount(){
 }
 async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+async function refreshServerSubscription(force){
+  if(!account || !account.email || !account.syncToken) return false;
+  const now = Date.now();
+  if(!force && refreshServerSubscription._at && now - refreshServerSubscription._at < 15000) return false;
+  refreshServerSubscription._at = now;
+  let deviceId = await kvGet('deviceId');
+  if(!deviceId) return false;
+  try{
+    const r = await apiPost('/api/auth',{
+      action:'status', email:account.email, deviceId, syncToken:account.syncToken
+    });
+    account.sub = r.sub || null;
+    await saveAccount();
+    renderPlan();
+    if(typeof renderPremium === 'function') renderPremium();
+    if(typeof syncGeminiBtns === 'function') syncGeminiBtns();
+    return true;
+  }catch(_){
+    return false;
+  }
+}
 
 async function syncAccountLocale(locale){
   const next = normalizeLocale(locale);
@@ -496,6 +517,23 @@ function openLogin(after, opts){
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
 
+function loginUseExistingCode(){
+  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  $('loginErr').textContent = '';
+  if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
+    $('loginErr').textContent = t('login.addressTypo');
+    $('loginEmail').focus();
+    return;
+  }
+  loginStep = 2;
+  setShown('loginStep1', false);
+  setShown('loginStep2', true);
+  $('loginMsg').textContent = t('login.haveCodeMsg',{email});
+  $('loginCodeHint').textContent = t('login.haveCodeHint');
+  $('loginGo').textContent = t('login.signIn');
+  setTimeout(()=> $('loginCode').focus(), 80);
+}
+
 async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   const btn = $('loginGo');
   const now = new Date().toISOString();
@@ -504,7 +542,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   account.handle = r.handle || '';
   account.locale = r.locale || account.locale || appLocale;
   account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
-  if(r.sub) account.sub = r.sub;
+  account.sub = r.sub || null;
   if(r.syncToken) account.syncToken = r.syncToken;
   if(r.locale) await setAppLocale(r.locale, {persist:true});
   rememberAccount();

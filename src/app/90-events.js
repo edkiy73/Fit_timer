@@ -901,7 +901,10 @@ $('btnSaveWeight').onclick = async ()=>{
 // навигация по календарю
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
-function openPremium(){ renderPremium(); $('premiumModal').classList.add('open'); }
+function openPremium(){
+  renderPremium(); $('premiumModal').classList.add('open');
+  refreshServerSubscription(true).catch(()=>{});
+}
 $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
@@ -938,6 +941,7 @@ $('tglRenew').onclick = async ()=>{
   renderPlan(); renderPremium();
 };
 $('loginGo').onclick = doLogin;
+$('loginHaveCode').onclick = loginUseExistingCode;
 const dropLogin = ()=>{
   loginDone = null;
   loginPending = null;
@@ -1082,6 +1086,7 @@ function switchMoreTab(key){
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
   ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
   if(key === 'coach') refreshTrainerProfile();
+  if(key === 'acc') refreshServerSubscription(true).catch(()=>{});
 }
 document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
@@ -1904,6 +1909,7 @@ try{
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
+  await refreshServerSubscription(true);
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();

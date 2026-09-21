@@ -221,6 +221,20 @@ module.exports = async (req, res) => {
     return send(res, 200, {ok:true, handle});
   }
 
+  if(act === 'status'){
+    const deviceId = String((body && body.deviceId) || '').trim().slice(0,80);
+    const token = String((body && body.syncToken) || '');
+    let acc = null;
+    try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+    const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
+    if(!device || !sameSecret(sha(token), device.h || '')) return fail(res,403,'bad_sync_token');
+    return send(res,200,{
+      ok:true,
+      sub:acc.sub || null,
+      premium:!!(acc.sub && (Date.parse(acc.sub.until)||0) > Date.now())
+    });
+  }
+
   if(act === 'set_locale'){
     const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
     const token = String((body && body.syncToken) || '');
