@@ -305,8 +305,18 @@ module.exports = async (req, res) => {
     if(incoming.locales !== undefined){
       it.locales = Object.assign({}, c.locales || {}, incoming.locales || {});
     }
-    const touchesText = incoming.locales !== undefined || incoming.sourceLocale !== undefined
-      || incoming.name !== undefined || incoming.gives !== undefined || incoming.text !== undefined;
+    const touchesLegacyText = incoming.name !== undefined || incoming.gives !== undefined || incoming.text !== undefined;
+    if(incoming.locales === undefined && touchesLegacyText){
+      // Старый админ/API правил name/gives/text напрямую. Не игнорируем такую правку:
+      // она относится к исходному языку, а второй язык остаётся как был.
+      const base = normalizeCatalogText(c, c.sourceLocale || 'ru');
+      const srcLang = normLocale(incoming.sourceLocale || base.sourceLocale);
+      it.sourceLocale = srcLang;
+      it.locales = Object.assign({}, base.locales);
+      it.locales[srcLang] = Object.assign({}, it.locales[srcLang] || {});
+      ['name','gives','text'].forEach(k => { if(incoming[k] !== undefined) it.locales[srcLang][k] = incoming[k]; });
+    }
+    const touchesText = incoming.locales !== undefined || incoming.sourceLocale !== undefined || touchesLegacyText;
     const checked = checkItem(it, {
       requireBoth: c.status === 'approved' && touchesText,
       fallbackSource:c.sourceLocale || 'ru'
