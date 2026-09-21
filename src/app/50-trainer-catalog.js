@@ -1077,7 +1077,7 @@ async function addStoreItem(id){
   if(it.hasMedia || it.media){
     let media = it.media;
     if(!media){
-      try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+      try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
       catch(e){ media = null; }        // без фото программа всё равно рабочая
     }
     applyMedia(program, media);
