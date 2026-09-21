@@ -55,7 +55,7 @@ function makeChip({ico, val, label, cls, why}){
 function renderGreeting(){
   const u = curUser();
   const h = new Date().getHours();
-  const hi = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+  const hi = h < 5 ? t('home.goodNight') : h < 12 ? t('home.goodMorning') : h < 18 ? t('home.goodDay') : t('home.goodEvening');
   const name = (u && u.name || '').trim();
   // Имени на главной нет намеренно. Своё имя человек и так знает, а в крупном
   // начертании оно ведёт себя непредсказуемо: длинное переносится, короткое выглядит
@@ -1369,7 +1369,7 @@ const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
 
 async function callGeminiImage(prompt, signal){
   const key = geminiKey();
-  if(!key) throw new Error('Ключ Gemini не задан');
+  if(!key) throw new Error(t('ai.keyMissing'));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
   const body = {
     contents: [{parts: [{text: prompt}]}],
@@ -1402,7 +1402,7 @@ async function callGeminiImage(prompt, signal){
   const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
   if(!imgPart){
     const textPart = parts.find(p => p.text);
-    throw new Error(textPart ? 'Модель ответила текстом вместо картинки: ' + textPart.text.slice(0, 120) : 'Модель не вернула изображение.');
+    throw new Error(textPart ? t('images.textInstead',{text:textPart.text.slice(0,120)}) : t('images.noImage'));
   }
   return `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
 }
