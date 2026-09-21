@@ -96,7 +96,9 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   workouts:true,
   trainer:true,
   progress:true,
-  offers:true
+  offers:true,
+  emailNews:false,
+  emailOffers:false
 });
 function getNotificationPrefs(){
   try{
@@ -108,7 +110,14 @@ function getNotificationPrefs(){
 }
 function syncNotificationSettings(){
   const prefs = getNotificationPrefs();
-  const ids = {workouts:'notifWorkouts', trainer:'notifTrainer', progress:'notifProgress', offers:'notifOffers'};
+  const ids = {
+    workouts:'notifWorkouts',
+    trainer:'notifTrainer',
+    progress:'notifProgress',
+    offers:'notifOffers',
+    emailNews:'emailNews',
+    emailOffers:'emailOffers'
+  };
   Object.keys(ids).forEach(key => {
     const btn = $(ids[key]);
     if(!btn) return;
@@ -760,8 +769,15 @@ Object.keys(LEGAL_SECTIONS).forEach(k => {
 });
 $('legalBackTop').onclick = ()=> legalBack();
 $('btnLegalDone').onclick = ()=> legalBack();
-['workouts','trainer','progress','offers'].forEach(key => {
-  const btn = $({workouts:'notifWorkouts',trainer:'notifTrainer',progress:'notifProgress',offers:'notifOffers'}[key]);
+['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
+  const btn = $({
+    workouts:'notifWorkouts',
+    trainer:'notifTrainer',
+    progress:'notifProgress',
+    offers:'notifOffers',
+    emailNews:'emailNews',
+    emailOffers:'emailOffers'
+  }[key]);
   if(btn) btn.onclick = ()=> setNotificationPref(key, !getNotificationPrefs()[key]);
 });
 $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');

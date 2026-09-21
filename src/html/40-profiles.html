@@ -334,24 +334,46 @@
       <input type="file" id="importAllFile" accept="application/json,.json" class="hidden">
     </div>
     <div class="card-block" id="notificationSettingsCard">
-      <div class="cb-head"><p class="cb-title" data-i18n="settings.notifications">Уведомления</p></div>
-      <div class="prefs">
-        <div class="pref-row">
-          <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
-          <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+      <div class="cb-head">
+        <p class="cb-title" data-i18n="settings.notifications">Уведомления</p>
+        <small data-i18n="settings.notificationsSub">Выбери, какие события могут приходить на телефон и почту.</small>
+      </div>
+
+      <div class="notif-group">
+        <p class="snd-label" data-i18n="settings.pushNotifications">Push-уведомления</p>
+        <div class="prefs">
+          <div class="pref-row">
+            <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
+            <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+          </div>
+          <div class="pref-row">
+            <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
+            <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+          </div>
+          <div class="pref-row">
+            <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
+            <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
+          </div>
+          <div class="pref-row">
+            <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
+            <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
+          </div>
         </div>
-        <div class="pref-row">
-          <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
-          <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+      </div>
+
+      <div class="notif-group">
+        <p class="snd-label" data-i18n="settings.emailNotifications">По почте</p>
+        <div class="prefs">
+          <div class="pref-row">
+            <span><span data-i18n="settings.emailNews">Новости и обновления</span><small data-i18n="settings.emailNewsSub">Крупные обновления и новые возможности Fit Timer</small></span>
+            <button type="button" class="switch" id="emailNews" role="switch" aria-checked="false"></button>
+          </div>
+          <div class="pref-row">
+            <span><span data-i18n="settings.emailOffers">Акции и Premium</span><small data-i18n="settings.emailOffersSub">Редкие скидки, акции и предложения подписки</small></span>
+            <button type="button" class="switch" id="emailOffers" role="switch" aria-checked="false"></button>
+          </div>
         </div>
-        <div class="pref-row">
-          <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
-          <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
-        </div>
-        <div class="pref-row">
-          <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
-          <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
-        </div>
+        <p class="field-hint" data-i18n="settings.emailServiceNote">Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.</p>
       </div>
     </div>
     <div class="card-block">

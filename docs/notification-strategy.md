@@ -182,16 +182,22 @@ These are better surfaced as contextual in-app cards/messages. Use push only ver
 
 ## Notification settings
 
-Do not expose dozens of individual notification toggles.
+Keep notification settings grouped by **delivery channel** so the user understands both what can arrive and where it will arrive.
 
-A simpler settings structure is preferable:
-
+### Push notifications
 - **Workouts** — workout schedule, reminders, missed workouts, unfinished workouts.
 - **Trainer & programs** — trainer actions and catalog/program status.
 - **Achievements & progress** — progression and meaningful milestones.
 - **Offers & news** — Premium promotions, product news, marketing.
 
-Critical functional notifications may still require special treatment depending on platform behavior and permission model.
+### Email
+Email should stay much narrower than push:
+- **News & updates** — major product updates and meaningful new capabilities.
+- **Deals & Premium** — occasional promotions, discounts, and subscription offers.
+
+Both email marketing categories should be off by default until the user explicitly opts in. Transactional email such as sign-in codes, receipts, subscription/payment problems, security notices, or other important account messages is not marketing and may be sent independently of these marketing switches.
+
+Critical functional push notifications may still require special treatment depending on platform behavior and permission model.
 
 ---
 
@@ -200,11 +206,12 @@ Critical functional notifications may still require special treatment depending 
 Email should be much rarer than push notifications and should not duplicate routine workout reminders.
 
 Recommended use:
-- **Account/service messages** — sign-in codes, important security/account changes, payment receipts or subscription problems when applicable. These are transactional and separate from marketing preferences.
-- **News & offers** — the main optional email category: meaningful product news, launches, promotions, and occasional Premium offers.
-- Do **not** send workout reminders, missed-workout nudges, progression updates, achievements, or trainer activity by email in the normal flow. Push/in-app is a better channel for those.
+- **Transactional account/service messages** — sign-in codes, important security/account changes, payment receipts, subscription/payment problems. These are separate from marketing preferences.
+- **News & updates** — optional email for major product updates and meaningful launches.
+- **Deals & Premium** — optional email for occasional discounts, promotions, and Premium offers.
+- Do **not** send workout reminders, missed-workout nudges, progression updates, achievements, or routine trainer activity by email. Push/in-app is the better channel for those.
 
-Marketing email should require its own explicit preference/consent and include an unsubscribe mechanism. Frequency should remain low; avoid sending an email just because the 14-day Premium push slot became available. Push and email need a shared campaign cooldown so the same offer does not hit the user through both channels at nearly the same time.
+The two marketing email preferences are independent and default to off. Marketing email requires explicit opt-in and an unsubscribe mechanism. Frequency should remain low; an available 14-day Premium push slot is not a reason to send email. Push and email must share campaign cooldowns so the same promotion does not reach a user through both channels at nearly the same time.
 
 ---
 
