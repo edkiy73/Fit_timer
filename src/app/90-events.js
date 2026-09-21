@@ -80,6 +80,7 @@ $('exitSave').onclick = async ()=>{
   $('exitModal').classList.remove('open');
   await saveSession();
   tearDownWorkout();
+  if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
   appAlert(t('workout.sessionSaved'));
 };
 $('exitDrop').onclick = async ()=>{
@@ -144,7 +145,12 @@ async function setNotificationPref(key, value){
     }
   }catch(_){}
   syncNotificationSettings();
-  if(key === 'workouts' && typeof syncNativeNotifications === 'function') syncNativeNotifications();
+  if(['workouts','trainer','progress','offers'].includes(key) && value
+    && window.FitNative && window.FitNative.requestNotifications){
+    try{ await window.FitNative.requestNotifications(); }catch(_){}
+  }
+  if(['workouts','trainer','progress','offers'].includes(key)
+    && typeof syncNativeNotifications === 'function') syncNativeNotifications();
 }
 function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
