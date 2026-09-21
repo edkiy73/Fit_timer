@@ -76,16 +76,16 @@ function renderGreeting(){
   // себя рекорд, потому что собранное мы не отбираем.
   if(si.n) chip({
     ico: 'flame', val: si.n, cls: si.risk ? 'warn' : 'hot',
-    label: si.risk ? 'под угрозой' : streakWord(si.n, si.byPlan),
+    label: si.risk ? t('home.streakRisk') : streakWord(si.n, si.byPlan),
     // числа в подсказках стоят ПОСЛЕ двоеточия: «1 тренировка ещё не пройдены»
     // получалось само собой, стоило числу встать перед глаголом
     why: si.risk
-      ? `Серия не сгорела, в ней тренировок: ${si.n}. На этой неделе остался незакрытый день — пройди его программу до воскресенья, и серия продолжится.`
-      : `Тренировок подряд без пропусков: ${si.n}. Один пропуск серию не обнуляет — пока идёт та же неделя, его можно отработать.`
+      ? t('home.streakRiskWhy',{count:si.n})
+      : t('home.streakWhy',{count:si.n})
   });
   else if(si.best > 1) chip({
-    ico: 'flame', val: si.best, label: 'лучшая серия',
-    why: `Личный рекорд, тренировок подряд: ${si.best}. Рекорд остаётся навсегда, даже когда серия прервалась.`
+    ico: 'flame', val: si.best, label: t('home.bestStreak'),
+    why: t('home.bestStreakWhy',{count:si.best})
   });
   const n = stats.count || 0;
   // счётчик тренировок теперь крупной цифрой ниже, в «Прогрессе», — в чипах он был вторым разом
@@ -93,10 +93,10 @@ function renderGreeting(){
   if(mins) chip({
     ico: 'clock',
     val: mins < 60 ? mins : Math.round(mins / 60),
-    label: mins < 60 ? 'минут всего' : plural(Math.round(mins / 60), 'час всего', 'часа всего', 'часов всего'),
-    why: `Всё время тренировок вместе, с самой первой. Минут: ${mins}. Тренировок: ${n}.`
+    label: mins < 60 ? t('home.minutesTotal') : t(Math.round(mins/60)===1?'home.hourTotalOne':'home.hourTotalMany'),
+    why: t('home.totalTimeWhy',{minutes:mins,workouts:n})
   });
-  if(!box.children.length) chip({ico: 'sparkle', label: 'Первая тренировка ещё впереди'});
+  if(!box.children.length) chip({ico:'sparkle',label:t('home.firstAhead')});
   // крупные цифры под приветствием — они же кнопки в нужную вкладку статистики
   const last = stats.weights && stats.weights.length ? stats.weights[stats.weights.length - 1] : null;
   countTo('qsVal1', n);
@@ -116,9 +116,9 @@ function renderWellQuick(){
   // давление — одно число из двух половин, врозь «124» и «79» не читаются
   // «Ср.» стоит в самой подписи: отдельная строка-пояснение под плитками была лишним
   // текстом, а без неё среднее читалось как последнее измерение
-  if(a.sys != null && a.dia != null) cards.push({ico: 'gauge', val: r1(a.sys) + '/' + r1(a.dia), label: 'Ср. давление'});
-  if(a.pulse != null) cards.push({ico: 'heart', val: r1(a.pulse), label: 'Ср. пульс'});
-  if(a.sleep != null) cards.push({ico: 'moon', val: String(Math.round(a.sleep * 10) / 10).replace('.', ','), label: 'Ср. сон, ч'});
+  if(a.sys != null && a.dia != null) cards.push({ico: 'gauge', val: r1(a.sys) + '/' + r1(a.dia), label: t('home.avgPressure')});
+  if(a.pulse != null) cards.push({ico: 'heart', val: r1(a.pulse), label: t('home.avgPulse')});
+  if(a.sleep != null) cards.push({ico: 'moon', val: String(Math.round(a.sleep * 10) / 10).replace('.', ','), label: t('home.avgSleep')});
   box.innerHTML = '';
   cards.forEach(({ico, val, label}) => {
     const b = document.createElement('button');
@@ -728,21 +728,19 @@ async function forgetMe(scope){
 
 async function wipeTrainerInfo(){
   const ok = await appDialog(
-    'Убрать данные о себе со страницы тренера? Уйдут имя, фото, «о себе», стаж и ссылка. '
-    + 'Ник останется за тобой, программы из каталога никуда не денутся — на странице просто '
-    + 'не будет сведений о тебе.',
-    {confirm: true, okText: 'Убрать', cancelText: 'Отмена'}
+    t('trainer.removeInfoQuestion'),
+    {confirm:true,okText:t('clients.removeAction'),cancelText:t('common.cancel')}
   );
   if(!ok) return;
   try{ await forgetMe('trainer'); }
   catch(e){
-    appAlert('Сервер не ответил, и на странице всё осталось. Попробуй позже — убирать надо именно на сервере.');
+    appAlert(t('trainer.removeInfoFailed'));
     return;
   }
   ['name', 'photo', 'about', 'years', 'links'].forEach(k => { delete trainer[k]; });
   await saveTrainer();
   renderTrainerCard();
-  appAlert('Готово. На странице больше нет сведений о тебе.');
+  appAlert(t('trainer.removeInfoDone'));
 }
 
 async function programLink(p, extra){
@@ -860,11 +858,11 @@ function userAge(u){
 // уточнений»). В профиле пустое поле — законное состояние: на старте его больше не
 // спрашивают, и человек не должен упираться в ошибку, зайдя поменять имя.
 function ageError(v, required = false){
-  if(v === '' || v == null) return required ? 'Укажи возраст — от него зависит подбор упражнений и нагрузки.' : '';
+  if(v === '' || v == null) return required ? t('age.required') : '';
   const a = Number(v);
-  if(!Number.isInteger(a)) return 'Возраст нужно указать целым числом полных лет.';
-  if(a < 5) return 'Проверь возраст — приложение рассчитано на пользователей старше 5 лет.';
-  if(a > 100) return 'Проверь возраст — значение не может быть больше 100 лет.';
+  if(!Number.isInteger(a)) return t('age.integer');
+  if(a < 5) return t('age.tooYoung');
+  if(a > 100) return t('age.tooOld');
   return '';
 }
 // строка о человеке для запроса к ИИ
@@ -963,7 +961,7 @@ async function geminiTry(model, body, signal){
 
 async function callGemini(prompt, signal){
   const key = geminiKey();
-  if(!key) throw new Error('Ключ Gemini не задан');
+  if(!key) throw new Error(t('ai.keyMissing'));
   // ответ бывает большим (программа целиком с описаниями),
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
@@ -979,7 +977,7 @@ async function callGemini(prompt, signal){
     if(round > 0){
       // ждём перед новым кругом: 4с, потом 10с — обычно перегрузка проходит за это время
       const waitMs = round === 1 ? 4000 : 10000;
-      if(typeof aiRunNote === 'function') aiRunNote(`Серверы заняты. Повтор через ${Math.round(waitMs/1000)} с… (попытка ${round + 1} из ${ROUNDS})`);
+      if(typeof aiRunNote === 'function') aiRunNote(t('ai.busyRetry',{seconds:Math.round(waitMs/1000),attempt:round+1,total:ROUNDS}));
       await new Promise(res => setTimeout(res, waitMs));
       if(signal && signal.aborted) throw Object.assign(new Error('aborted'), {name: 'AbortError'});
     }
@@ -992,10 +990,10 @@ async function callGemini(prompt, signal){
       const text = parts.map(p => p.text || '').join('').trim();
       if(!text){
         const why = cand.finishReason || (r.data.promptFeedback && r.data.promptFeedback.blockReason) || '';
-        throw new Error('Модель вернула пустой ответ' + (why ? ` (причина: ${why})` : '') + '. Попробуй ещё раз или сформулируй запрос иначе.');
+        throw new Error(t('ai.emptyResponse',{reason:why?t('ai.reason',{reason:why}):''}));
       }
       if(cand.finishReason === 'MAX_TOKENS'){
-        throw new Error('Ответ не поместился в лимит модели — программа слишком большая. Попробуй дорабатывать по одному варианту или сократить описания упражнений.');
+        throw new Error(t('ai.tooLong'));
       }
       return text;
     }
@@ -1040,15 +1038,15 @@ function aiAuth(){
 async function callServerAI(prompt, signal, kind){
   const auth = aiAuth();
   if(!auth.email || !auth.token || !auth.deviceId)
-    throw new Error('Для генерации войди в Premium-аккаунт в разделе «Аккаунт».');
+    throw new Error(t('ai.signInPremium'));
   const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
     body:JSON.stringify(Object.assign({prompt,kind}, auth))});
   const j = await res.json().catch(()=> ({}));
   if(!res.ok){
-    if(j.error === 'ai_limit') throw new Error(`Лимит генераций на этот месяц исчерпан (${j.used}/${j.limit}).`);
-    if(j.error === 'premium_required') throw new Error('Для генерации нужна активная подписка Premium.');
-    if(j.error === 'ai_disabled') throw new Error('Генерация временно отключена. Попробуй позже.');
-    throw new Error(j.detail || 'Сервис ИИ сейчас не ответил. Попробуй ещё раз.');
+    if(j.error === 'ai_limit') throw new Error(t('ai.limitReached',{used:j.used,limit:j.limit}));
+    if(j.error === 'premium_required') throw new Error(t('ai.premiumRequired'));
+    if(j.error === 'ai_disabled') throw new Error(t('ai.disabled'));
+    throw new Error(j.detail || t('ai.serviceFailed'));
   }
   return j;
 }
@@ -1078,7 +1076,7 @@ function syncGeminiBtns(){
     if(!mark){
       mark = document.createElement('span');
       mark.className = 'ha-pro';
-      mark.innerHTML = icon('crown') + 'Премиум';
+      mark.innerHTML = icon('crown') + t('premium.title').replace(/^Fit Timer\s+/,'');
       txt.appendChild(mark);
     }
     setShown(mark, !on);
@@ -1102,7 +1100,7 @@ function flashDone(btn, text){
   const el = btn.querySelector('b') || btn;
   if(el.dataset.flash) return;
   el.dataset.flash = el.textContent;
-  el.textContent = text || '✓ Скопировано';
+  el.textContent = text || t('common.copied');
   setTimeout(()=>{ el.textContent = el.dataset.flash; delete el.dataset.flash; }, 1600);
 }
 
@@ -1452,28 +1450,28 @@ async function generateAllImagesViaAI(){
   const total = 1 + exList.length; // обложка + упражнения
   const ok = await appDialog(
     `Будет нарисовано ${total} ${plural(total, 'картинка', 'картинки', 'картинок')}: обложка программы и по одной на каждое упражнение — все в едином стиле. Это займёт пару минут. Продолжить?`,
-    {confirm: true, okText: 'Нарисовать', cancelText: 'Отмена'}
+    {confirm:true,okText:t('images.draw'),cancelText:t('common.cancel')}
   );
   if(!ok) return;
 
   imgGenCancelled = false;
-  aiRunOpen('Генерирую картинки', ()=>{ imgGenCancelled = true; });
+  aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
 
   const failed = [];
   let done = 0;
 
   const runOne = async (kind, item, applyFn)=>{
     if(imgGenCancelled) return false;
-    $('aiRunTitle').textContent = `Картинка ${done + 1} из ${total}`;
-    $('aiRunText').textContent = kind === 'cover' ? 'Обложка программы' : item.name;
+    $('aiRunTitle').textContent = t('images.progress',{current:done+1,total});
+    $('aiRunText').textContent = kind === 'cover' ? t('images.coverProgram') : item.name;
     try{
       const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
         kind === 'cover' ? 'image.cover' : 'image.exercise');
-      await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? 'Обложка' : item.name); res(); }));
+      await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? t('images.cover') : item.name); res(); }));
       renderSlots(); // видно прогресс по мере генерации
     }catch(e){
       if(imgGenCancelled) return false;
-      failed.push((kind === 'cover' ? 'Обложка' : item.name) + ': ' + (e && e.message ? e.message : 'ошибка'));
+      failed.push((kind === 'cover' ? t('images.cover') : item.name) + ': ' + (e && e.message ? e.message : t('images.error')));
     }
     done++;
     return !imgGenCancelled;
@@ -1496,13 +1494,13 @@ async function generateAllImagesViaAI(){
 function finishImgGen(done, total, failed){
   renderSlots();
   if(imgGenCancelled){
-    appAlert(`Остановлено. Успели сгенерировать: ${done} из ${total}. Уже готовые картинки на месте — можно продолжить позже.`);
+    appAlert(t('images.stopped',{done,total}));
     return;
   }
   if(!failed.length){
-    appAlert(`Готово: сгенерировано ${done} из ${total}.`);
+    appAlert(t('images.done',{done,total}));
   } else {
-    appAlert(`Готово: ${done - failed.length} из ${total} успешно.\n\nНе получилось:\n• ` + failed.join('\n• '));
+    appAlert(t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}));
   }
 }
 
@@ -1605,7 +1603,7 @@ function renderTray(){
   const left = imgTray.filter(d => !used.has(d)).length;
   $('trayCount').textContent = imgTray.length ? `· ${imgTray.length}` : '';
   $('trayLeft').textContent = imgTray.length
-    ? (left ? `Ещё не разложено: ${left}` : 'Все разложены — можно поставить любую ещё раз')
+    ? (left ? t('images.trayLeft',{count:left}) : t('images.trayAll'))
     : '';
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
@@ -1613,21 +1611,21 @@ function renderTray(){
     el.className = 'tray-item' + (used.has(data) ? ' used' : '');
     el.innerHTML = `<img src="${esc(data)}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
     el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
-    el.onclick = ()=> appAlert('Нажми на место в списке «Куда подставить» — и выбери туда эту картинку. Одну картинку можно поставить в несколько мест.');
+    el.onclick = ()=> appAlert(t('images.pickHint'));
     box.appendChild(el);
   });
 }
 
 // все места, куда можно подставить картинку
 function imageSlots(){
-  const slots = [{kind: 'cover', group: 'Обложка', title: 'Обложка программы', get: ()=> draft.cover, set: v => draft.cover = v}];
+  const slots = [{kind:'cover',group:t('images.cover'),title:t('images.coverProgram'),get:()=>draft.cover,set:v=>draft.cover=v}];
   const plans = draft.plans || [];
   plans.forEach((pl, pi)=>{
     (pl.exercises || []).forEach((ex, ei)=>{
       slots.push({
         kind: 'ex', plan: pi, idx: ei,
-        group: plans.length > 1 ? `Вариант ${pi + 1}` : 'Упражнения',
-        title: (ex.name || '').trim() || 'Без названия',
+        group: plans.length > 1 ? `${t('builder.variant')} ${pi + 1}` : t('images.exerciseGroup'),
+        title: (ex.name || '').trim() || t('store.untitled'),
         get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
         set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); }
       });
@@ -1685,10 +1683,10 @@ function openSlotPicker(i){
 
 // раскладывает лоток по местам без картинок, по порядку
 function trayAutoAssign(){
-  if(!imgTray.length){ appAlert('Сначала выбери картинки с телефона.'); return; }
+  if(!imgTray.length){ appAlert(t('images.pickFirst')); return; }
   const already = trayUsed();
   const free = imgTray.filter(d => !already.has(d));   // раскладываем ещё не пристроенные
-  if(!free.length){ appAlert('Все загруженные картинки уже стоят по местам. Нажми на нужное место, чтобы заменить картинку.'); return; }
+  if(!free.length){ appAlert(t('images.allPlaced')); return; }
   let n = 0;
   for(const s of imageSlots()){
     if(n >= free.length) break;
@@ -1698,8 +1696,8 @@ function trayAutoAssign(){
   renderTray(); renderSlots();
   const rest = free.length - n;
   appAlert(n
-    ? `Подставлено картинок: ${n}.` + (rest ? ` Свободных мест не хватило: осталось ${rest}.` : '')
-    : 'Свободных мест нет. Нажми на нужное место, чтобы заменить картинку.');
+    ? t('images.assigned',{count:n}) + (rest ? t('images.noRoom',{count:rest}) : '')
+    : t('images.noSlots'));
 }
 
 /* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
@@ -1782,7 +1780,7 @@ function openExEdAI(i){
   const ex = curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
-  $('aiSubjName').textContent = (ex.name || '').trim() || 'Упражнение';
+  $('aiSubjName').textContent = (ex.name || '').trim() || t('common.exerciseFallback');
   $('aiSubjSum').textContent = exSummary(ex);
   $('exeWish').value = '';
   autoGrow($('exeWish'));
@@ -1957,13 +1955,13 @@ async function exaAddExercise(){
     if(!ex.warmup) nMain++;
     added++;
   }
-  if(!added){ appAlert('Ничего не добавилось: в разминке бывает до 20, в основной части — тоже до 20 упражнений. Удали что-нибудь и попробуй ещё раз.'); return; }
+  if(!added){ appAlert(t('exercise.addLimit')); return; }
   $('aiResult').value = '';
   renderExList();
   show('scrBuilder');
   appAlert(added === 1
-    ? `Упражнение «${list[0].name}» добавлено. Открой его, чтобы поправить детали.`
-    : `Добавлено упражнений: ${added}.`);
+    ? t('exercise.addedOne',{name:list[0].name})
+    : t('exercise.addedMany',{count:added}));
 }
 
 /* ================= ПРОГРАММА ИЗ ВИДЕО ================= */
@@ -2071,10 +2069,10 @@ function editAIPrompt(){
 
 function openEditAI(p){
   editAIProg = p;
-  $('aiSubjName').textContent = p.name || 'Программа';
+  $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);
   const exN = plans.reduce((n, pl) => n + pl.exercises.length, 0);
-  $('aiSubjSum').textContent = `${plans.length > 1 ? plans.length + ' варианта · ' : ''}${exN} ${plural(exN, 'упражнение', 'упражнения', 'упражнений')}`;
+  $('aiSubjSum').textContent = (plans.length>1?storeCountText(plans.length,'variant')+' · ':'') + storeCountText(exN,'exercise');
   $('eaWish').value = '';
   autoGrow($('eaWish'));
   openAI('edit');
@@ -2082,16 +2080,16 @@ function openEditAI(p){
 
 // подбирает свободное имя: «Ягодицы (обновлённая)», «Ягодицы (обновлённая 2)»…
 function versionedName(base){
-  const clean = String(base || 'Программа').replace(/\s+\(обновлённая(\s+\d+)?\)$/i, '').trim();
+  const clean = String(base || t('program.fallback')).replace(/\s+\((?:обновлённая|updated)(?:\s+\d+)?\)$/i, '').trim();
   const taken = new Set(customPrograms.map(x => (x.name || '').trim().toLowerCase()));
   if(!taken.has(clean.toLowerCase())) return clean;
-  const cand = `${clean} (обновлённая)`;
+  const cand = `${clean} (${t('program.updated')})`;
   if(!taken.has(cand.toLowerCase())) return cand;
   for(let v = 2; v < 100; v++){
-    const cand2 = `${clean} (обновлённая ${v})`;
+    const cand2 = `${clean} (${t('program.updatedN',{count:v})})`;
     if(!taken.has(cand2.toLowerCase())) return cand2;
   }
-  return clean + ' (обновлённая ' + Date.now() + ')';
+  return clean + ' (' + t('program.updatedN',{count:Date.now()}) + ')';
 }
 
 // переносит картинки и обложку из исходной программы по совпадению названий
@@ -2117,7 +2115,7 @@ async function createEditedProgram(){
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
@@ -2135,8 +2133,7 @@ async function createEditedProgram(){
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(`Готово: создана «${program.name}».\n\nИсходная программа осталась без изменений.` +
-    (carried ? `\nПеренесено картинок: ${carried}.` : ''));
+  appAlert(t('program.createdEdited',{name:program.name}) + (carried?t('program.imagesCarried',{count:carried}):''));
 }
 
 /* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
@@ -2147,12 +2144,12 @@ async function importProgramLink(id){
   try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
   catch(e){
     appAlert(e.status === 404
-      ? 'Ссылка не открывается: её уже нет. Попроси тренера прислать новую.'
-      : 'Не получилось загрузить программу — похоже, нет связи. Попробуй ещё раз, когда появится интернет.');
+      ? t('import.linkExpired')
+      : t('import.linkOffline'));
     return;
   }
   const prog = d.program;
-  if(!prog || !prog.name){ appAlert('По ссылке нет программы с упражнениями.'); return; }
+  if(!prog || !prog.name){ appAlert(t('import.noProgram')); return; }
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
   prog.src = id;
@@ -2166,12 +2163,12 @@ async function importProgramLink(id){
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
-  fillBuilder('Проверь и сохрани');
+  fillBuilder(t('import.reviewSave'));
   // Говорим ОДИН РАЗ и ЗАРАНЕЕ: тренер будет видеть занятия по этой программе.
   // Отчёты уходят сами, и узнавать об этом постфактум человек не должен —
   // согласие на «за мной смотрят» даётся до, а не после.
   if(prog.by){
-    appAlert(`Программу прислал тренер ${prog.by}. Он будет видеть, как ты занимаешься именно по ней: сколько тренировок, когда была последняя и как растёт нагрузка.\n\nБольше ничего ему не видно — ни другие программы, ни вес, ни фото.`);
+    appAlert(t('import.trainerNotice',{trainer:prog.by}));
   }
 }
 
@@ -2200,15 +2197,15 @@ function importProgramCode(code){
     try{ code = decodeURIComponent(code.split('import=')[1].split('&')[0]); }catch(e){}
   }
   if(!code.startsWith('FIT1.')){
-    appAlert('Это не похоже на ссылку на программу. Вставь ссылку целиком — ту, что прислали, — или загрузи файл программы.');
+    appAlert(t('import.badLink'));
     return;
   }
   let prog;
   try{
     prog = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
-  }catch(e){ appAlert('Не удалось прочитать код. Проверь, что он скопирован целиком.'); return; }
+  }catch(e){ appAlert(t('import.badCode')); return; }
   if(!prog || !prog.name || !normPlans(prog).some(pl => pl.exercises && pl.exercises.length)){
-    appAlert('В коде нет программы с упражнениями.'); return;
+    appAlert(t('import.noProgramCode')); return;
   }
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
