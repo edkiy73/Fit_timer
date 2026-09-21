@@ -1402,6 +1402,39 @@ const I18N_RU = {
   'warmup.9.desc': "В прыжке разводи ноги и поднимай руки над головой, затем возвращайся. Если прыгать нельзя — шагай в стороны с подъёмом рук.",
   'warmup.10.name': "Растяжка: наклон к стопам",
   'warmup.10.desc': "Медленно наклонись вниз, расслабив спину и шею, и потянись к стопам. Колени можно слегка согнуть. Дыши глубоко и не пружинь.",
+  'common.details': "Подробнее",
+  'mail.noMail': "Отправка писем на сервере пока не включена.",
+  'mail.noStore': "Сервер сейчас недоступен. Попробуй позже.",
+  'mail.badEmail': "Проверь адрес — похоже, в нём опечатка.",
+  'mail.tooManyToday': "Сегодня уже отправляли код на этот адрес пять раз. Попробуй завтра.",
+  'mail.rateLimited': "Слишком часто. Подожди немного.",
+  'mail.codeExpired': "Код устарел. Запроси новый.",
+  'mail.tooManyTries': "Слишком много попыток. Запроси новый код.",
+  'mail.badCode': "Код не подошёл. Проверь, тот ли это код из письма.",
+  'mail.handleTaken': "Твой ник уже привязан к другому аккаунту.",
+  'mail.offline': "Нет связи с сервером. Проверь интернет.",
+  'mail.failed': "Письмо не ушло: {detail}",
+  'mail.serviceRefused': "почтовая служба отказала.",
+  'mail.generic': "Не вышло. Проверь связь и попробуй ещё раз.",
+  'ai.parseNoName': "в тексте нет названия программы",
+  'ai.parseNoExercises': "в тексте не найдено ни одного упражнения",
+  'ai.pregnancyWarning': "Беременность — не обычное ограничение.\n\nИ сам факт занятий, и упражнения, и нагрузку должен одобрить врач, который тебя наблюдает. Нейросеть не знает твоего срока и самочувствия — она просто составит программу.\n\nПрочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.",
+  'builder.daysRotateHint': "Дни говорят, когда тренироваться. Очередь вариантов они не сбивают.",
+  'builder.daysPlanHint': "В эти дни программа попадёт в план на сегодня.",
+  'builder.typeWeightedRepsHint': "Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.",
+  'builder.typeWeightedTimeHint': "Удержание или перенос с грузом — на тренировке рядом с секундами будут килограммы.",
+  'builder.typeRepsHint': "Считаем повторения — например «12-15».",
+  'builder.typeTimeHint': "Считаем время — например «45» секунд.",
+  'builder.progressAutoPeriod': "прибавляется автоматически: {period}",
+  'builder.progressProgramOff': "в настройках программы автоприбавка выключена — числа не растут",
+  'builder.summaryMax': "{value}, максимум {max}",
+  'day.monFull': "Понедельник",
+  'day.tueFull': "Вторник",
+  'day.wedFull': "Среда",
+  'day.thuFull': "Четверг",
+  'day.friFull': "Пятница",
+  'day.satFull': "Суббота",
+  'day.sunFull': "Воскресенье",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2807,6 +2840,39 @@ const I18N_EN = {
   'warmup.9.desc': "Jump your feet apart while raising your arms overhead, then return. If jumping is not suitable, step side to side while raising your arms.",
   'warmup.10.name': "Forward fold stretch",
   'warmup.10.desc': "Fold forward slowly, relaxing your back and neck, and reach toward your feet. You may bend your knees slightly. Breathe deeply and avoid bouncing.",
+  'common.details': "Learn more",
+  'mail.noMail': "Email delivery is not enabled on the server yet.",
+  'mail.noStore': "The server is unavailable right now. Try again later.",
+  'mail.badEmail': "Check the email address — it looks like there may be a typo.",
+  'mail.tooManyToday': "A code has already been sent to this address five times today. Try again tomorrow.",
+  'mail.rateLimited': "Too many attempts. Try again in a little while.",
+  'mail.codeExpired': "The code has expired. Request a new one.",
+  'mail.tooManyTries': "Too many attempts. Request a new code.",
+  'mail.badCode': "The code did not match. Check that you entered the code from the email.",
+  'mail.handleTaken': "Your username is already linked to another account.",
+  'mail.offline': "Can’t reach the server. Check your internet connection.",
+  'mail.failed': "The email could not be sent: {detail}",
+  'mail.serviceRefused': "the email service rejected the request.",
+  'mail.generic': "Something went wrong. Check your connection and try again.",
+  'ai.parseNoName': "the response does not contain a program name",
+  'ai.parseNoExercises': "the response does not contain any exercises",
+  'ai.pregnancyWarning': "Pregnancy is not an ordinary training limitation.\n\nWhether to exercise at all, which exercises to do, and what load to use should be approved by the doctor caring for you. AI does not know your stage of pregnancy or how you feel; it only generates a program.\n\nRead the whole program before your first workout and discuss it with your doctor.",
+  'builder.daysRotateHint': "Days control when you train. They do not change the workout-variant sequence.",
+  'builder.daysPlanHint': "On these days the program appears in Today’s plan.",
+  'builder.typeWeightedRepsHint': "Track both reps and kilograms; weight will have its own field during the workout.",
+  'builder.typeWeightedTimeHint': "For loaded holds or carries, kilograms will appear next to seconds during the workout.",
+  'builder.typeRepsHint': "Track repetitions, for example “12–15”.",
+  'builder.typeTimeHint': "Track time, for example 45 seconds.",
+  'builder.progressAutoPeriod': "increases automatically: {period}",
+  'builder.progressProgramOff': "automatic progression is off in program settings, so values do not increase",
+  'builder.summaryMax': "{value}, max {max}",
+  'day.monFull': "Monday",
+  'day.tueFull': "Tuesday",
+  'day.wedFull': "Wednesday",
+  'day.thuFull': "Thursday",
+  'day.friFull': "Friday",
+  'day.satFull': "Saturday",
+  'day.sunFull': "Sunday",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -2907,7 +2973,8 @@ const CANONICAL_LABEL_KEYS = {
   'Повторения':'option.format.reps','С весом':'option.format.weight','Время':'option.format.time',
   'Шея':'muscle.neck','Плечи':'muscle.shoulders','Грудь':'muscle.chest','Руки':'muscle.arms','Пресс':'muscle.core',
   'Спина':'muscle.back','Ягодицы':'muscle.glutes','Квадрицепс':'muscle.quads','Задняя бедра':'muscle.hamstrings','Икры':'muscle.calves',
-  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun'
+  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun',
+  'Понедельник':'day.monFull','Вторник':'day.tueFull','Среда':'day.wedFull','Четверг':'day.thuFull','Пятница':'day.friFull','Суббота':'day.satFull','Воскресенье':'day.sunFull'
 };
 const CANONICAL_DESC_KEYS = {
   'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
@@ -3757,7 +3824,7 @@ function prepTab(id){
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){
-      switchMoreTab('me');
+      switchMoreTab(typeof moreTab === 'string' ? moreTab : 'me');
       renderUsers();
       renderTrainerCard();
       // звук и управление без рук переехали сюда из «Настроек»
@@ -7893,7 +7960,7 @@ function renderWeekStrip(){
     else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
     else if(d.debt) mark = '<i class="ws-debt"></i>';
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
-    cell.innerHTML = `<b>${d.name}</b>` + mark;
+    cell.innerHTML = `<b>${canonicalLabel(d.name)}</b>` + mark;
     cell.onclick = ()=> openWeekDay(d);
     box.appendChild(cell);
   });
@@ -8306,21 +8373,15 @@ function coachLinkIds(){
 // Человеческие названия отказов сервера. Код вроде mail_failed сам по себе не
 // говорит человеку ничего, а разбираться ему придётся самому.
 const MAIL_ERRS = {
-  no_mail:        'Отправка писем на сервере пока не включена.',
-  no_store:       'Сервер сейчас недоступен. Попробуй позже.',
-  bad_email:      'Проверь адрес — похоже, в нём опечатка.',
-  too_many_today: 'Сегодня уже отправляли код на этот адрес пять раз. Попробуй завтра.',
-  rate_limited:   'Слишком часто. Подожди немного.',
-  code_expired:   'Код устарел. Запроси новый.',
-  too_many_tries: 'Слишком много попыток. Запроси новый код.',
-  bad_code:       'Код не подошёл. Проверь, тот ли это код из письма.',
-  handle_taken:   'Твой ник уже привязан к другому аккаунту.',
-  offline:        'Нет связи с сервером. Проверь интернет.'
+  no_mail:'mail.noMail', no_store:'mail.noStore', bad_email:'mail.badEmail',
+  too_many_today:'mail.tooManyToday', rate_limited:'mail.rateLimited',
+  code_expired:'mail.codeExpired', too_many_tries:'mail.tooManyTries',
+  bad_code:'mail.badCode', handle_taken:'mail.handleTaken', offline:'mail.offline'
 };
-const mailErrText = e => (e && MAIL_ERRS[e.code])
+const mailErrText = e => (e && MAIL_ERRS[e.code] ? t(MAIL_ERRS[e.code]) : null)
   || (e && e.code === 'mail_failed'
-      ? 'Письмо не ушло: ' + ((e.detail || '').slice(0, 120) || 'почтовая служба отказала.')
-      : 'Не вышло. Проверь связь и попробуй ещё раз.');
+      ? t('mail.failed',{detail:(e.detail || '').slice(0,120) || t('mail.serviceRefused')})
+      : t('mail.generic'));
 
 /* ---- удаление ----
 
@@ -12291,8 +12352,8 @@ function renderDays(){
   setShown('bDaysFieldTop', top);
   setShown('bDaysField', !top);
   $('bDaysTopHint').textContent = rotOn
-    ? 'Дни говорят, когда тренироваться. Очередь вариантов они не сбивают.'
-    : 'В эти дни программа попадёт в план на сегодня.';
+    ? t('builder.daysRotateHint')
+    : t('builder.daysPlanHint');
   const box = $(top ? 'bDaysTop' : 'bDays'); box.innerHTML='';
   const owner = rotOn ? draft : curPlan();
   if(!Array.isArray(owner.days)) owner.days = [];
@@ -12415,9 +12476,8 @@ function syncExType(){
   // не читалось как «повторения и килограммы вместе».
   if($('exTypeHint')){
     $('exTypeHint').textContent = withWeight
-      ? (reps ? 'Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.'
-              : 'Удержание или перенос с грузом — на тренировке рядом с секундами будут килограммы.')
-      : (reps ? 'Считаем повторения — например «12-15».' : 'Считаем время — например «45» секунд.');
+      ? t(reps ? 'builder.typeWeightedRepsHint' : 'builder.typeWeightedTimeHint')
+      : t(reps ? 'builder.typeRepsHint' : 'builder.typeTimeHint');
   }
   setShown('exWeightRow', withWeight);
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
@@ -12478,8 +12538,8 @@ function renderProgControls(){
   }
 
   $('exProgOnHint').textContent = period
-    ? `прибавляется автоматически: ${progPeriodLabel(period)}`
-    : 'в настройках программы автоприбавка выключена — числа не растут';
+    ? t('builder.progressAutoPeriod',{period:progPeriodLabel(period)})
+    : t('builder.progressProgramOff');
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
@@ -12573,17 +12633,17 @@ function syncExProgSum(){
     const st = num(stepId), mx = num(maxId);
     if(st == null || st <= 0) return '';
     const s = `+${fmtKg(st)} ${unit}`;
-    return withMax && mx > 0 ? `${s}, максимум ${fmtKg(mx)}` : s;
+    return withMax && mx > 0 ? t('builder.summaryMax',{value:s,max:fmtKg(mx)}) : s;
   };
   // осей может быть две (вес — независимо от повторений или времени) — тогда
   // предел в строку не влезает, и сводка говорит только про прибавку: подробности —
   // в раскрытом блоке
   const dual = hasWeight(exDraft);
   const bits = exDraft.type === 'time'
-    ? [part('exStepTime', 'exMaxTime', 'сек', !dual)]
-    : [part('exStepReps', 'exMaxReps', 'повт.', !dual)];
-  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', 'кг', !dual));
-  const txt = bits.filter(Boolean).join(' и ');
+    ? [part('exStepTime', 'exMaxTime', t('store.secShort'), !dual)]
+    : [part('exStepReps', 'exMaxReps', t('store.repShort'), !dual)];
+  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', t('progress.kg'), !dual));
+  const txt = bits.filter(Boolean).join(appLocale === 'ru' ? ' и ' : ' & ');
   $('exProgSum').textContent = txt || t('builder.emptyProgress');
 }
 
@@ -16233,10 +16293,13 @@ function switchStatsTab(tab){
 }
 document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
 
-/* Вкладки раздела «Другое». Выбранная НЕ запоминается между заходами: человек приходит
-   сюда за разным, и «где я был в прошлый раз» — не тот вопрос, на который надо
-   отвечать. Открываем всегда на первой. */
+/* Вкладки раздела «Другое». Запоминаем выбранную вкладку, пока приложение
+   открыто: если человек ушёл из «Аккаунта» в правила, «назад» должен вернуть его
+   именно в «Аккаунт», а не каждый раз сбрасывать на «Профиль». */
+let moreTab = 'me';
 function switchMoreTab(key){
+  if(!['me','sound','coach','acc'].includes(key)) key = 'me';
+  moreTab = key;
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
   ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
   if(key === 'coach') refreshTrainerProfile();
