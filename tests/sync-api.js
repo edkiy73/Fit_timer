@@ -63,7 +63,9 @@ async function login(deviceId, sub, email = MAIL){
   ok('единый ник возвращается при входе', again.handle === nick && !again.needsHandle, again.handle);
 
   const a = await login('device-a', sub);
-  const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',photo:'data:image/png;base64,bm8='};
+  const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',
+    prepSec:7,readySec:4,sideSec:12,voiceVol:85,fxVol:65,
+    photo:'data:image/png;base64,bm8='};
   const legacyProfile = {id:'profile-legacy',name:'Старый',gender:'m',birth:'1990-05-01',theme:'light'};
   const docs = [
     {profileId:profile.id,key:'stats',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({count:1,history:[{id:'h1',d:'2026-09-17',sec:600}]})},
@@ -86,6 +88,10 @@ async function login(deviceId, sub, email = MAIL){
   const legacy = pulled.profiles.find(x=>x.user.id===legacyProfile.id);
   ok('профиль доступен на втором устройстве', p && p.user.name === 'Лена');
   ok('сервер хранит только полные годы', p && p.user.age === 34 && !('birth' in p.user), JSON.stringify(p && p.user));
+  ok('отсчёты и уровни звука профиля не теряются при синхронизации',
+     p && p.user.prepSec === 7 && p.user.readySec === 4 && p.user.sideSec === 12
+       && p.user.voiceVol === 85 && p.user.fxVol === 65,
+     JSON.stringify(p && p.user));
   ok('старый профиль мигрирован без точной даты', legacy && legacy.user.age >= 36 && !('birth' in legacy.user),
      JSON.stringify(legacy && legacy.user));
   ok('фото профиля не сохранено', p && !p.user.photo, JSON.stringify(p && p.user));

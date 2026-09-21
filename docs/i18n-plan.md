@@ -6,7 +6,8 @@
 
 ## Что уже сделано
 
-- Язык приложения хранится в `appLocale`, сохраняется локально и синхронизируется с аккаунтом.
+- Выбор языка хранится как preference `system | <locale>`; по умолчанию — **как в системе**.
+- `appLocale` — вычисленный эффективный язык интерфейса, TTS и API. Аккаунт хранит эффективный locale для писем/серверных ответов, но не переопределяет системный выбор на новом устройстве.
 - Язык меняется без перезапуска.
 - Статические строки идут через `data-i18n*`, динамические — через `t(key, vars)`.
 - RU и EN словари лежат в `src/i18n/ru.js` и `src/i18n/en.js`; English остаётся fallback.
@@ -38,7 +39,7 @@
 
 1. Создать `src/i18n/id.js` с теми же ключами, что в `en.js`; константа — `I18N_ID`.
 2. Добавить `id: I18N_ID` в `I18N` и `LOCALE_META.id = {tag:'id-ID', ai:'Indonesian'}`.
-3. Добавить option в `#appLocaleSelect` в `src/html/40-profiles.html`.
+3. Добавить option в `#appLocaleSelect` в редакторе профиля (`src/html/50-profile-progress.html`), рядом с оформлением. Пункт `system` должен оставаться первым.
 4. Добавить locale-файл в `scripts/build-sources.mjs` и расширить `scripts/check-i18n.mjs`, пока эти скрипты перечисляют языки явно.
 5. Найти `appLocale ===` и проверить plural/date/number/unit branches: новый язык нельзя автоматически считать English.
 6. Расширить server-side locale allowlists, auth/email, public/server-rendered pages и notification payloads.
