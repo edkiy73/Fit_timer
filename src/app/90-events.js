@@ -1049,6 +1049,7 @@ async function ytApplyResult(){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  program.locale = appLocale === 'ru' ? 'ru' : 'en';
   program.name = versionedName(program.name || t('video.defaultProgram'));
   // сохраняем ссылку на источник в описании, если ИИ её не упомянул
   const link = ($('ytUrl').value || '').trim();
