@@ -42,7 +42,7 @@
       <div class="metric-card hidden" id="totalCard">
         <div class="tot-row tot-plain">
           <div class="tot"><b id="totalTime">0 мин</b><span data-i18n="progress.totalTime">общее время</span></div>
-          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
+          <div class="tot"><b id="totalCount">0</b><span id="totalCountWord" data-i18n="calendar.workoutMany">тренировок</span></div>
           <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику" data-i18n-title="progress.clearStatsTitle"></button>
         </div>
       </div>
@@ -246,7 +246,7 @@
         <div class="ava-row">
           <div class="field">
             <label data-i18n="settings.profileName">Имя в профиле</label>
-            <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить">
+            <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить" data-i18n-placeholder="trainer.presentPlaceholder">
           </div>
           <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера" data-i18n-title="trainer.photoTitle">
             <span id="coachPhotoPrev"></span>
