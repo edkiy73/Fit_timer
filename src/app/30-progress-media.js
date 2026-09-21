@@ -1,41 +1,53 @@
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
+const WARMUP_SPEC = [
+  {k:1,m:['le','ca'],type:'time',value:60,rest:10},
+  {k:2,m:['sh','ar'],type:'time',value:45,rest:10},
+  {k:3,m:['co','ba'],type:'time',value:45,rest:10},
+  {k:4,m:['co','gl'],type:'time',value:30,rest:10},
+  {k:5,m:['le','gl'],type:'reps',value:15,rest:15},
+  {k:6,m:['le','gl'],type:'reps',value:12,rest:15},
+  {k:7,m:['co','ba','le'],type:'time',value:30,rest:10},
+  {k:8,m:['le','ca'],type:'time',value:45,rest:10},
+  {k:9,m:['le','ca','sh'],type:'time',value:45,rest:10},
+  {k:10,m:['ba','le'],type:'time',value:40,rest:0}
+];
 function warmupProgram(){
-  const WMUS = {
-    'Марш на месте': ['le','ca'],
-    'Вращения плечами и руками': ['sh','ar'],
-    'Наклоны корпуса в стороны': ['co','ba'],
-    'Вращения тазом': ['co','gl'],
-    'Приседания в лёгком темпе': ['le','gl'],
-    'Выпады на месте попеременно': ['le','gl'],
-    'Мельница': ['co','ba','le'],
-    'Вращения коленями и стопами': ['le','ca'],
-    'Прыжки Jumping Jack': ['le','ca','sh'],
-    'Растяжка: наклон к стопам': ['ba','le']
-  };
-  const ex = (name, desc, type, value, rest) => ({name, desc, video:'', type, value, rest, media: null, muscles: WMUS[name] || [], mistakes: ''});
-  return {
-    id: 'warmup', name: 'Разминка 10 минут', time: '', cover: null, stats: {completions: 0},
-    plans: [{days: [], rounds: 1, roundRest: 0, exercises: [
-      ex('Марш на месте', 'Шагай на месте в бодром темпе, высоко поднимая колени. Руки работают, как при ходьбе. Дыши ровно — задача разогреть тело, а не устать.', 'time', 60, 10),
-      ex('Вращения плечами и руками', 'Сначала 20 секунд вращай плечами назад и вперёд, затем выпрями руки и рисуй ими большие круги. Двигайся плавно, с полной амплитудой.', 'time', 45, 10),
-      ex('Наклоны корпуса в стороны', 'Ноги на ширине плеч, одна рука на поясе, вторая тянется над головой в сторону наклона. Наклоняйся строго вбок, не заваливаясь вперёд. Меняй стороны.', 'time', 45, 10),
-      ex('Вращения тазом', 'Руки на пояс, ноги на ширине плеч. Рисуй тазом большие круги: сначала в одну сторону, на половине времени — в другую. Колени чуть согнуты.', 'time', 30, 10),
-      ex('Приседания в лёгком темпе', 'Присядь до комфортной глубины, отводя таз назад, колени в сторону носков. Темп спокойный: это разогрев суставов, а не силовая работа.', 'reps', 15, 15),
-      ex('Выпады на месте попеременно', 'Шаг вперёд, заднее колено мягко опускается к полу, затем вернись и смени ногу. Корпус прямой, движение плавное, без рывков.', 'reps', 12, 15),
-      ex('Мельница', 'Ноги шире плеч, корпус наклонён вперёд, руки в стороны. Поочерёдно тянись рукой к противоположной стопе, вторая рука уходит вверх.', 'time', 30, 10),
-      ex('Вращения коленями и стопами', 'Соедини колени, слегка присядь и повращай ими по кругу в обе стороны. Затем по очереди поставь стопы на носок и повращай голеностопом.', 'time', 45, 10),
-      ex('Прыжки Jumping Jack', 'В прыжке разводи ноги и поднимай руки над головой, затем возвращайся. Если прыгать нельзя — шагай в стороны с подъёмом рук.', 'time', 45, 10),
-      ex('Растяжка: наклон к стопам', 'Медленно наклонись вниз, расслабив спину и шею, и потянись к стопам. Колени можно слегка согнуть. Дыши глубоко и не пружинь.', 'time', 40, 0)
-    ]}]
-  };
+  const exercises = WARMUP_SPEC.map(x => ({
+    name:t('warmup.'+x.k+'.name'), desc:t('warmup.'+x.k+'.desc'), video:'',
+    type:x.type, value:x.value, rest:x.rest, media:null, muscles:x.m, mistakes:''
+  }));
+  return {id:'warmup',name:t('warmup.programName'),time:'',cover:null,stats:{completions:0},
+    plans:[{days:[],rounds:1,roundRest:0,exercises}]};
+}
+function localizeBuiltinWarmup(p){
+  if(!p || p.id !== 'warmup') return false;
+  const pl = normPlans(p)[0], list = (pl && pl.exercises) || [];
+  if(list.length !== WARMUP_SPEC.length) return false;
+  const untouched = WARMUP_SPEC.every((x,i)=>{
+    const ex=list[i], nk='warmup.'+x.k+'.name', dk='warmup.'+x.k+'.desc';
+    return ex && [I18N_RU[nk],I18N_EN[nk]].includes(ex.name)
+      && [I18N_RU[dk],I18N_EN[dk]].includes(ex.desc);
+  });
+  if(!untouched) return false;
+  let changed = p.name !== t('warmup.programName');
+  p.name = t('warmup.programName');
+  WARMUP_SPEC.forEach((x,i)=>{
+    const ex=list[i], name=t('warmup.'+x.k+'.name'), desc=t('warmup.'+x.k+'.desc');
+    if(ex.name !== name || ex.desc !== desc) changed = true;
+    ex.name=name; ex.desc=desc;
+  });
+  return changed;
 }
 async function ensureWarmup(){
-  if((await kvGet(pk('warmupAdded'))) === '1') return;
-  if(!customPrograms.some(p => p.id === 'warmup')){
-    customPrograms.unshift(warmupProgram());
-    await savePrograms();
+  const existing = customPrograms.find(p => p.id === 'warmup');
+  if(existing){
+    if(localizeBuiltinWarmup(existing)) await savePrograms();
+    if((await kvGet(pk('warmupAdded'))) !== '1') kvSet(pk('warmupAdded'),'1');
+    return;
   }
-  kvSet(pk('warmupAdded'), '1');
+  customPrograms.unshift(warmupProgram());
+  await savePrograms();
+  kvSet(pk('warmupAdded'),'1');
 }
 
 /* ================= ФОТО-ПРОГРЕСС ================= */
@@ -793,12 +805,13 @@ function sanitizeExercise(ex){
 // ему не нужна, поэтому первый профиль просто «Мой профиль», а следующие нумеруются,
 // чтобы их можно было различить в списке.
 const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
-const DEFAULT_NAME = 'Мой профиль';
+const DEFAULT_PROFILE_NAMES = ['Мой профиль','My profile'];
+const defaultProfileName = ()=> t('profile.defaultMine');
 function nextProfileName(){
-  if(!users.some(u => (u.name || '').trim() === DEFAULT_NAME)) return DEFAULT_NAME;
+  if(!users.some(u => DEFAULT_PROFILE_NAMES.includes((u.name || '').trim()))) return defaultProfileName();
   let n = 1;
   users.forEach(u => {
-    const m = /^Профиль\s+(\d+)$/.exec((u.name || '').trim());
+    const m = /^(?:Профиль|Profile)\s+(\d+)$/i.exec((u.name || '').trim());
     if(m) n = Math.max(n, +m[1]);
   });
   return t('profile.defaultNumber',{count:n+1});
@@ -842,8 +855,8 @@ async function finishOnboardingCreate(){
 // уходил в запрос к ИИ как настоящий ответ, и половина программ составлялась не для
 // того человека. Пропустить вопрос нельзя — «Отмена» возвращает туда, откуда пришли.
 const WHO_MSG = {
-  program: 'Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужны пол и возраст. Спросим один раз — дальше это меняется в профиле.',
-  ai: 'Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.'
+  program:'who.programMsg',
+  ai:'who.aiMsg'
 };
 let whoDraft = null, whoDone = null;
 const needWho = u => !!u && (!profileAge(u) || !u.gender);
@@ -856,7 +869,7 @@ function askWho(reason){
   const u = curUser();
   if(!u) return Promise.resolve(false);
   whoDraft = {gender: u.gender || ''};
-  $('whoMsg').textContent = WHO_MSG[reason] || WHO_MSG.program;
+  $('whoMsg').textContent = t(WHO_MSG[reason] || WHO_MSG.program);
   $('whoAge').value = profileAge(u) || '';
   whoSyncForm();
   $('whoModal').classList.add('open');
@@ -887,3 +900,9 @@ async function whoFinish(save){
   if(whoDone){ whoDone(!!save); whoDone = null; }
 }
 
+
+window.addEventListener('appLocaleChanged', async ()=>{
+  const p = customPrograms.find(x=>x.id==='warmup');
+  if(p && localizeBuiltinWarmup(p)) await savePrograms();
+  try{ renderMine(); renderToday(); }catch(_){}
+});
