@@ -97,7 +97,8 @@ const CANONICAL_LABEL_KEYS = {
   'Повторения':'option.format.reps','С весом':'option.format.weight','Время':'option.format.time',
   'Шея':'muscle.neck','Плечи':'muscle.shoulders','Грудь':'muscle.chest','Руки':'muscle.arms','Пресс':'muscle.core',
   'Спина':'muscle.back','Ягодицы':'muscle.glutes','Квадрицепс':'muscle.quads','Задняя бедра':'muscle.hamstrings','Икры':'muscle.calves',
-  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun'
+  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun',
+  'Понедельник':'day.monFull','Вторник':'day.tueFull','Среда':'day.wedFull','Четверг':'day.thuFull','Пятница':'day.friFull','Суббота':'day.satFull','Воскресенье':'day.sunFull'
 };
 const CANONICAL_DESC_KEYS = {
   'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
