@@ -151,6 +151,23 @@ const I18N_RU = {
   'settings.saveFileSub': "Телефон предложит, куда его положить",
   'settings.restoreFile': "Восстановить из файла",
   'settings.restoreFileSub': "Всё, что сейчас в приложении, заменится содержимым файла",
+  'settings.notifications': "Уведомления",
+  'settings.notificationsSub': "Выбери, какие события могут приходить на телефон и почту.",
+  'settings.pushNotifications': "Push-уведомления",
+  'settings.emailNotifications': "По почте",
+  'settings.emailNews': "Новости и обновления",
+  'settings.emailNewsSub': "Крупные обновления и новые возможности Fit Timer",
+  'settings.emailOffers': "Акции и Premium",
+  'settings.emailOffersSub': "Редкие скидки, акции и предложения подписки",
+  'settings.emailServiceNote': "Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.",
+  'settings.notifWorkouts': "Тренировки",
+  'settings.notifWorkoutsSub': "Расписание, начало и пропущенные тренировки",
+  'settings.notifTrainer': "Тренер и программы",
+  'settings.notifTrainerSub': "Изменения от тренера и статусы программ в каталоге",
+  'settings.notifProgress': "Достижения и прогресс",
+  'settings.notifProgressSub': "Важные этапы прогрессии и достижения",
+  'settings.notifOffers': "Предложения и новости",
+  'settings.notifOffersSub': "Редкие новости приложения и предложения Premium",
   'settings.dataRules': "Данные и правила",
   'settings.privacy': "Политика конфиденциальности",
   'settings.privacySub': "Что собирается, где хранится, что уходит наружу",
@@ -921,6 +938,12 @@ const I18N_RU = {
   'notify.dontForgetBody': "«{name}» ещё можно выполнить сегодня.",
   'notify.returnTitle': "Fit Timer ждёт",
   'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
+  'notify.progressTitle': "Сегодня нагрузка выше",
+  'notify.progressBody': "В «{name}» уже {steps} шагов прогрессии. Проверь новые повторы, время или вес перед стартом.",
+  'notify.unfinishedTitle': "Продолжить тренировку?",
+  'notify.unfinishedBody': "«{name}» осталась незавершённой. Можно вернуться с сохранённого места.",
+  'notify.premiumTitle': "Больше возможностей Fit Timer",
+  'notify.premiumBody': "Premium открывает расширенные функции тренировок и синхронизацию. Посмотри, что входит.",
   'common.changes': "Изменения",
   'common.unsaved': "{what} ещё не сохранены. Если выйти сейчас, они пропадут.",
   'num.int': "Только целое число, например 3",
@@ -1616,6 +1639,23 @@ const I18N_EN = {
   'settings.saveFileSub': "Your phone will ask where to save it",
   'settings.restoreFile': "Restore from file",
   'settings.restoreFileSub': "Everything currently in the app will be replaced by the file contents",
+  'settings.notifications': "Notifications",
+  'settings.notificationsSub': "Choose which events can reach you on your phone and by email.",
+  'settings.pushNotifications': "Push notifications",
+  'settings.emailNotifications': "By email",
+  'settings.emailNews': "News & updates",
+  'settings.emailNewsSub': "Major updates and new Fit Timer features",
+  'settings.emailOffers': "Deals & Premium",
+  'settings.emailOffersSub': "Occasional discounts, promotions, and subscription offers",
+  'settings.emailServiceNote': "Sign-in codes, receipts, and important account messages may be sent regardless of these settings.",
+  'settings.notifWorkouts': "Workouts",
+  'settings.notifWorkoutsSub': "Schedule, workout starts, and missed workouts",
+  'settings.notifTrainer': "Trainer & programs",
+  'settings.notifTrainerSub': "Trainer changes and catalog program status",
+  'settings.notifProgress': "Achievements & progress",
+  'settings.notifProgressSub': "Important progression milestones and achievements",
+  'settings.notifOffers': "Offers & news",
+  'settings.notifOffersSub': "Occasional app news and Premium offers",
   'settings.dataRules': "Data & rules",
   'settings.privacy': "Privacy policy",
   'settings.privacySub': "What is collected, where it is stored, and what leaves your device",
@@ -2386,6 +2426,12 @@ const I18N_EN = {
   'notify.dontForgetBody': "You still have time for “{name}” today.",
   'notify.returnTitle': "Fit Timer is waiting",
   'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
+  'notify.progressTitle': "Your load is higher today",
+  'notify.progressBody': "“{name}” is now at progression step {steps}. Check the new reps, time, or weight before you start.",
+  'notify.unfinishedTitle': "Continue your workout?",
+  'notify.unfinishedBody': "“{name}” is unfinished. You can continue from where you left off.",
+  'notify.premiumTitle': "Get more from Fit Timer",
+  'notify.premiumBody': "Premium unlocks advanced workout features and sync. See what’s included.",
   'common.changes': "Changes",
   'common.unsaved': "{what} have not been saved. If you leave now, they will be lost.",
   'num.int': "Whole number only, for example 3",
@@ -5310,7 +5356,7 @@ async function applyRemoteAccountDocs(result){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
-    if(!d || !['trainer','clients'].includes(d.key) || d.deleted) continue;
+    if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
     const localMeta = rec.bucket.meta[d.key];
     const takeRemote = !localMeta || remoteWins(d, localMeta);
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
@@ -5325,15 +5371,27 @@ async function applyRemoteAccountDocs(result){
       if(keep.on && keep.handle) rec.bucket.trainer.on = true;
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
-    } else {
+    } else if(d.key === 'clients'){
       rec.bucket.clients = mergeClientLists(rec.bucket.clients || clients, incoming, takeRemote);
       if(takeRemote) rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                                deviceId:d.deviceId || ''};
+    } else if(takeRemote){
+      rec.bucket.notificationPrefs = Object.assign({}, incoming || {});
+      rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
+                                deviceId:d.deviceId || ''};
+      try{
+        if(typeof NOTIFICATION_PREF_DEFAULTS !== 'undefined'){
+          localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(
+            Object.assign({}, NOTIFICATION_PREF_DEFAULTS, rec.bucket.notificationPrefs)
+          ));
+        }
+      }catch(_){}
     }
   }
   await writeAccountBucket(rec);
   trainer = rec.bucket.trainer || trainer;
   clients = Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients;
+  if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
 }
 
 async function accountDocsSnapshot(){
@@ -5341,10 +5399,20 @@ async function accountDocsSnapshot(){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const now = new Date().toISOString();
-  const values = {trainer:trainerSyncValue(rec.bucket.trainer || trainer),
-                  clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients};
+  let localNotificationPrefs = {};
+  try{
+    localNotificationPrefs = (typeof getNotificationPrefs === 'function')
+      ? getNotificationPrefs()
+      : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
+  }catch(_){}
+  if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
+  const values = {
+    trainer:trainerSyncValue(rec.bucket.trainer || trainer),
+    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients,
+    notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
+  };
   const docs = [];
-  for(const key of ['trainer','clients']){
+  for(const key of ['trainer','clients','notificationPrefs']){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -5352,6 +5420,31 @@ async function accountDocsSnapshot(){
   }
   await writeAccountBucket(rec);
   return docs;
+}
+
+async function syncNotificationPrefsServer(action){
+  if(!account || !account.email || !account.syncToken) return false;
+  let deviceId = await kvGet('deviceId');
+  if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
+  const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
+  if(base.action === 'pull'){
+    const result = await apiPost('/api/sync', base);
+    await applyRemoteAccountDocs(result);
+    return true;
+  }
+  const rec = await readAccountBucket();
+  if(!rec.bucket.meta) rec.bucket.meta = {};
+  const key = 'notificationPrefs';
+  if(!rec.bucket.notificationPrefs && typeof getNotificationPrefs === 'function'){
+    rec.bucket.notificationPrefs = getNotificationPrefs();
+  }
+  if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
+  const m = rec.bucket.meta[key];
+  const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
+    schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
+  await writeAccountBucket(rec);
+  await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+  return true;
 }
 
 async function pushAccountDocs(){
@@ -5422,7 +5515,12 @@ async function pushDeletedProfiles(){
 }
 
 async function connectAccountSync(opts){
-  if(!account || !account.email || !account.syncToken || !identity || !isPremium()){
+  if(!account || !account.email || !account.syncToken || !identity){
+    showSyncState('idle');
+    return false;
+  }
+  if(!isPremium()){
+    try{ await syncNotificationPrefsServer('pull'); }catch(_){}
     showSyncState('idle');
     return false;
   }
@@ -6669,6 +6767,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   await saveAccount();
   await saveKnown();
   if(identity){ identity.email = email; await saveIdentity(); }
+  if(typeof syncRemotePushRegistration === 'function') syncRemotePushRegistration(false).catch(()=>{});
   if(switchingAccount) await loadTrainer();
 
   if(r.handle){
@@ -6811,6 +6910,7 @@ async function signOut(){
     {confirm: true, okText: t('account.signOut'), cancelText: t('common.cancel')});
   if(!ok) return;
   try{ if(SYNC.adapter) await Promise.all([SYNC.push(), pushAccountDocs()]); }catch(e){}
+  try{ if(typeof unregisterRemotePushServer === 'function') await unregisterRemotePushServer(); }catch(e){}
   SYNC.adapter = null;
   rememberAccount();
   await saveKnown();
@@ -15453,6 +15553,7 @@ async function showNotification(title, body){
 }
 function checkSchedules(){
   if(document.hidden) return;
+  try{ if(typeof getNotificationPrefs === 'function' && getNotificationPrefs().workouts === false) return; }catch(_){}
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
   const today = DAYS[(now.getDay() + 6) % 7]; // JS: 0=Вс -> наш индекс 6
@@ -15482,48 +15583,180 @@ setInterval(checkSchedules, 20000);
 // Нативные напоминания переживают закрытие приложения. Планируем ближайшую неделю
 // заново при старте, правке расписания и завершении тренировки: так уведомление
 // «пропустил» исчезает, если занятие всё-таки выполнено.
+/* ================= МЕНЕДЖЕР УВЕДОМЛЕНИЙ =================
+   Фичи не планируют push каждая сама по себе. Здесь собираются кандидаты, применяются
+   категории, частотные ограничения и только потом готовый список отдаётся нативному
+   планировщику. При каждом пересчёте старый список заменяется целиком. */
+const NOTIFY_HORIZON_DAYS = 35;
+const NOTIFY_DAY = 86400000;
+
+function notifyDayKey(d){ return localISO(d); }
+function notifyAt(day, hour, minute){
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute || 0);
+}
+function notifyScheduledPlan(p, dayName){
+  const plans = normPlans(p);
+  const plan = plans.find(pl => (pl.days || []).includes(dayName));
+  if(plan) return {plan, time:plan.time || p.time || ''};
+  if(planDays(p).includes(dayName)) return {plan:null, time:p.time || ''};
+  return null;
+}
+function notifyProgressionChanged(p){
+  if(!p || !p.progression) return false;
+  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+  const every = Math.max(1, +p.progression || 1);
+  return done > 0 && done % every === 0 && typeof progSteps === 'function' && progSteps(p) > 0;
+}
+function notifyThirdWorkoutDate(){
+  const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
+  if(hs.length < 3) return null;
+  const d = new Date(hs[2].d + 'T12:00:00');
+  return isNaN(d) ? null : d;
+}
+function notifyHasWorkoutOn(date){
+  const dayName = DAYS[(date.getDay() + 6) % 7];
+  return customPrograms.some(p => p && p.id !== 'warmup' && progActive(p) && !!notifyScheduledPlan(p, dayName));
+}
+function notifyPremiumCandidate(anchor, now){
+  if(!anchor) return null;
+  let at = notifyAt(new Date(anchor), 18, 0);
+  at.setDate(at.getDate() + 14);
+  while(at <= now) at.setDate(at.getDate() + 14);
+  // Не продаём подписку в тот же день, когда человек должен тренироваться:
+  // предложение не должно спорить с основной задачей приложения.
+  for(let i=0; i<3 && notifyHasWorkoutOn(at); i++) at.setDate(at.getDate() + 1);
+  return at;
+}
+function limitNotificationCandidates(items){
+  const out = [];
+  const engagementDay = new Set();
+  const engagementWeek = new Map();
+  const workoutMissDays = new Set(items.filter(x => x.extra && x.extra.stage === 'missed').map(x => notifyDayKey(new Date(x.at))));
+  items.sort((a,b) => (+new Date(a.at) - +new Date(b.at)) || ((b.priority||0) - (a.priority||0)));
+  for(const item of items){
+    const at = new Date(item.at);
+    if(isNaN(at)) continue;
+    const day = notifyDayKey(at);
+    if(item.engagement){
+      if(engagementDay.has(day)) continue;
+      const monday = new Date(at); monday.setHours(0,0,0,0); monday.setDate(monday.getDate() - ((monday.getDay()+6)%7));
+      const week = notifyDayKey(monday);
+      const n = engagementWeek.get(week) || 0;
+      if(n >= 3) continue;
+      if(item.extra && item.extra.stage === 'premium' && workoutMissDays.has(day)) continue;
+      engagementDay.add(day);
+      engagementWeek.set(week, n + 1);
+    }
+    out.push(item);
+  }
+  return out;
+}
+
+// Нативные уведомления переживают закрытие приложения. Планируем ограниченный горизонт
+// и полностью пересобираем его при старте, правке расписания и завершении тренировки.
 async function syncNativeNotifications(){
   if(!window.FitNative || !window.FitNative.syncWorkoutNotifications) return;
+  const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
+    workouts:true, trainer:true, progress:true, offers:true
+  };
   const now = new Date();
-  const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
+  const horizon = new Date(now.getTime() + NOTIFY_HORIZON_DAYS * NOTIFY_DAY);
   const items = [];
-  for(let offset = 0; offset < 8; offset++){
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-    const iso = localISO(day);
-    const dayName = DAYS[(day.getDay() + 6) % 7];
-    customPrograms.filter(p => p && p.id !== 'warmup' && progActive(p)).forEach(p => {
-      const plans = normPlans(p);
-      const plan = plans.find(pl => (pl.days || []).includes(dayName));
-      if(!plan && !planDays(p).includes(dayName)) return;
-      const time = (plan && plan.time) || p.time || '';
-      const completed = done.has(iso + '|' + p.id);
-      if(time){
-        const hm = time.split(':').map(Number);
-        if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
-        const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hm[0], hm[1]);
-        const pre = new Date(start.getTime() - 15 * 60000);
-        const missed = new Date(start.getTime() + 2 * 3600000);
-        if(pre > now) items.push({at:pre.toISOString(), title:t('notify.beforeTitle'),
-          body:t('notify.beforeBody',{name:p.name,time}), extra:{programId:p.id, stage:'before'}});
-        if(start > now && !completed) items.push({at:start.toISOString(), title:t('notify.startTitleShort'),
-          body:t('notify.todayPlan',{name:p.name}), extra:{programId:p.id, stage:'start'}});
-        if(missed > now && !completed) items.push({at:missed.toISOString(), title:t('notify.waitingTitle'),
-          body:t('notify.waitingBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
-      } else if(!completed){
-        const morning = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0);
-        const evening = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 20, 0);
-        if(morning > now) items.push({at:morning.toISOString(), title:t('notify.todayTitle'),
-          body:t('notify.todayBody',{name:p.name}), extra:{programId:p.id, stage:'today'}});
-        if(evening > now) items.push({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
-          body:t('notify.dontForgetBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
+  const add = item => {
+    const at = new Date(item && item.at);
+    if(!item || isNaN(at) || at <= new Date(now.getTime() + 10000) || at > horizon) return;
+    items.push(item);
+  };
+  const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
+
+  if(prefs.workouts !== false){
+    for(let offset = 0; offset < 8; offset++){
+      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+      const iso = localISO(day);
+      const dayName = DAYS[(day.getDay() + 6) % 7];
+      customPrograms.filter(p => p && p.id !== 'warmup' && progActive(p)).forEach(p => {
+        const scheduled = notifyScheduledPlan(p, dayName);
+        if(!scheduled || done.has(iso + '|' + p.id)) return;
+        const time = scheduled.time;
+        const grew = prefs.progress !== false && notifyProgressionChanged(p);
+        if(time){
+          const hm = time.split(':').map(Number);
+          if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
+          const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hm[0], hm[1]);
+          const pre = new Date(start.getTime() - 15 * 60000);
+          const missed = new Date(start.getTime() + 2 * 3600000);
+          add({at:pre.toISOString(),
+            title:grew ? t('notify.progressTitle') : t('notify.beforeTitle'),
+            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.beforeBody',{name:p.name,time}),
+            priority:90, extra:{programId:p.id, stage:grew ? 'progress' : 'before', category:'workouts'}});
+          add({at:start.toISOString(), title:t('notify.startTitleShort'),
+            body:t('notify.todayPlan',{name:p.name}), priority:85,
+            extra:{programId:p.id, stage:'start', category:'workouts'}});
+          add({at:missed.toISOString(), title:t('notify.waitingTitle'),
+            body:t('notify.waitingBody',{name:p.name}), priority:70,
+            extra:{programId:p.id, stage:'missed', category:'workouts'}});
+        }else{
+          const morning = notifyAt(day, 9, 0);
+          const evening = notifyAt(day, 20, 0);
+          add({at:morning.toISOString(),
+            title:grew ? t('notify.progressTitle') : t('notify.todayTitle'),
+            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.todayBody',{name:p.name}),
+            priority:80, extra:{programId:p.id, stage:grew ? 'progress' : 'today', category:'workouts'}});
+          add({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
+            body:t('notify.dontForgetBody',{name:p.name}), priority:65,
+            extra:{programId:p.id, stage:'missed', category:'workouts'}});
+        }
+      });
+    }
+
+    // Незавершённая тренировка: один мягкий возврат через 2 часа, только в первые сутки.
+    try{
+      const session = (typeof loadSession === 'function') ? await loadSession() : null;
+      if(session && session.at){
+        const at = new Date(+session.at + 2 * 3600000);
+        if(+at > +now && +at - +new Date(session.at) < NOTIFY_DAY){
+          const p = customPrograms.find(x => x.id === session.pid);
+          add({at:at.toISOString(), title:t('notify.unfinishedTitle'),
+            body:t('notify.unfinishedBody',{name:(p && p.name) || t('sessions.workoutFallback')}),
+            priority:75, extra:{programId:session.pid, stage:'unfinished', category:'workouts'}});
+        }
       }
-    });
+    }catch(_){}
   }
-  items.push({at:new Date(Date.now() + 3 * 86400000).toISOString(), title:t('notify.returnTitle'),
-    body:t('notify.returnBody'),
-    extra:{stage:'inactive'}});
-  items.sort((a,b) => String(a.at).localeCompare(String(b.at)));
-  await window.FitNative.syncWorkoutNotifications(items);
+
+  // Возврат после паузы: интервалы привязаны к последней реальной тренировке, а не
+  // к моменту открытия приложения. Открытие приложения в день напоминания гасит его.
+  if(prefs.workouts !== false && (stats.history || []).length){
+    const last = (stats.history || []).filter(h=>h && h.d).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
+    if(last){
+      const base = new Date(last.d + 'T12:00:00');
+      [3,7,14,30].forEach(days => {
+        const day = new Date(base); day.setDate(day.getDate() + days);
+        const at = notifyAt(day, 19, 0);
+        if(notifyDayKey(day) === notifyDayKey(now)) return; // приложение уже открыто сегодня
+        add({at:at.toISOString(), title:t('notify.returnTitle'), body:t('notify.returnBody'),
+          priority:30, engagement:true, extra:{stage:'inactive', category:'workouts', days}});
+      });
+    }
+  }
+
+  // Premium: только после того, как человек уже получил пользу от приложения —
+  // минимум три завершённые тренировки. Повтор — не чаще одного раза в 14 дней.
+  if(prefs.offers !== false && !isPremium()){
+    const anchor = notifyThirdWorkoutDate();
+    let promo = notifyPremiumCandidate(anchor, now);
+    for(let i=0; promo && i<2; i++){
+      if(notifyDayKey(promo) !== notifyDayKey(now)){
+        add({at:promo.toISOString(), title:t('notify.premiumTitle'), body:t('notify.premiumBody'),
+          priority:10, engagement:true, extra:{stage:'premium', category:'offers'}});
+      }
+      promo = new Date(promo.getTime() + 14 * NOTIFY_DAY);
+      for(let j=0; j<3 && notifyHasWorkoutOn(promo); j++) promo.setDate(promo.getDate() + 1);
+    }
+  }
+
+  const finalItems = limitNotificationCandidates(items);
+  await window.FitNative.syncWorkoutNotifications(finalItems);
 }
 window.syncNativeNotifications = syncNativeNotifications;
 
@@ -15654,6 +15887,7 @@ $('exitSave').onclick = async ()=>{
   $('exitModal').classList.remove('open');
   await saveSession();
   tearDownWorkout();
+  if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
   appAlert(t('workout.sessionSaved'));
 };
 $('exitDrop').onclick = async ()=>{
@@ -15665,9 +15899,108 @@ $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
    внизу остаётся только док, а не вторая закреплённая полоса. */
+const NOTIFICATION_PREFS_KEY = 'fitNotificationPrefsV1';
+const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
+  workouts:true,
+  trainer:true,
+  progress:true,
+  offers:true,
+  emailNews:false,
+  emailOffers:false
+});
+function getNotificationPrefs(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(NOTIFICATION_PREFS_KEY) || '{}');
+    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS, raw && typeof raw === 'object' ? raw : {});
+  }catch(_){
+    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS);
+  }
+}
+function syncNotificationSettings(){
+  const prefs = getNotificationPrefs();
+  const ids = {
+    workouts:'notifWorkouts',
+    trainer:'notifTrainer',
+    progress:'notifProgress',
+    offers:'notifOffers',
+    emailNews:'emailNews',
+    emailOffers:'emailOffers'
+  };
+  Object.keys(ids).forEach(key => {
+    const btn = $(ids[key]);
+    if(!btn) return;
+    const on = prefs[key] !== false;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+async function setNotificationPref(key, value){
+  const prefs = getNotificationPrefs();
+  prefs[key] = !!value;
+  try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
+  // Настройки относятся ко всему аккаунту, а не к отдельному профилю.
+  // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта
+  // едет тем же account-level sync, что trainer/clients.
+  try{
+    if(account && account.email && typeof readAccountBucket === 'function'){
+      const rec = await readAccountBucket();
+      rec.bucket.notificationPrefs = Object.assign({}, NOTIFICATION_PREF_DEFAULTS, prefs);
+      if(typeof bumpAccountMeta === 'function') bumpAccountMeta(rec.bucket, 'notificationPrefs');
+      await writeAccountBucket(rec);
+      if(typeof syncNotificationPrefsServer === 'function') syncNotificationPrefsServer('push').catch(()=>{});
+      if(typeof queueAccountSync === 'function' && isPremium()) queueAccountSync();
+    }
+  }catch(_){}
+  syncNotificationSettings();
+  if(['workouts','trainer','progress','offers'].includes(key) && value
+    && window.FitNative && window.FitNative.requestNotifications){
+    try{ await window.FitNative.requestNotifications(); }catch(_){}
+  }
+  if(['workouts','trainer','progress','offers'].includes(key)
+    && typeof syncNativeNotifications === 'function') syncNativeNotifications();
+  if(['trainer','progress','offers'].includes(key)){
+    if(value) syncRemotePushRegistration(true).catch(()=>{});
+    else if(getNotificationPrefs().trainer===false&&getNotificationPrefs().progress===false&&getNotificationPrefs().offers===false) unregisterRemotePushServer().catch(()=>{});
+  }
+}
+async function syncRemotePushRegistration(requestPermission){
+  if(!(window.FitNative&&window.FitNative.registerRemotePush)||!account||!account.email||!account.syncToken)return false;
+  const p=getNotificationPrefs(); if(p.trainer===false&&p.progress===false&&p.offers===false)return false;
+  return window.FitNative.registerRemotePush(!!requestPermission);
+}
+async function unregisterRemotePushServer(){
+  if(!account||!account.email||!account.syncToken)return;
+  const deviceId=await kvGet('deviceId'); if(!deviceId)return;
+  try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,enabled:false});}catch(_){}
+}
+window.addEventListener('fitRemotePushToken',async e=>{
+  const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
+  let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
+  try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,token:d.token,platform:d.platform,enabled:true});}catch(_){}
+});
 function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
+  syncNotificationSettings();
 }
+window.addEventListener('fitNotificationAction', e => {
+  const n = e && e.detail && e.detail.notification;
+  const extra = (n && n.extra) || (e && e.detail && e.detail.extra) || {};
+  if(extra.stage === 'premium'){
+    if(typeof openPremium === 'function') openPremium();
+    return;
+  }
+  if(extra.stage === 'catalog-status'){
+    goTab('scrTrainer');
+    return;
+  }
+  if(extra.programId){
+    const p = customPrograms.find(x => x && x.id === extra.programId);
+    if(p){
+      if(typeof openProgram === 'function') openProgram(p.id);
+      else goTab('scrPrograms');
+    }
+  }
+});
 let settingsSaveT = 0;
 function saveSettingsSoon(){
   clearTimeout(settingsSaveT);
@@ -16300,6 +16633,17 @@ Object.keys(LEGAL_SECTIONS).forEach(k => {
 });
 $('legalBackTop').onclick = ()=> legalBack();
 $('btnLegalDone').onclick = ()=> legalBack();
+['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
+  const btn = $({
+    workouts:'notifWorkouts',
+    trainer:'notifTrainer',
+    progress:'notifProgress',
+    offers:'notifOffers',
+    emailNews:'emailNews',
+    emailOffers:'emailOffers'
+  }[key]);
+  if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
+});
 $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
 $('btnLegalTerms').onclick   = ()=> openLegal('terms');
 $('btnLegalHealth').onclick  = ()=> openLegal('health');
@@ -17358,6 +17702,7 @@ try{
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
   loadPublicConfig();
+  syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
   if(lockNeeded()) openLock();
   // пользователи: миграция со старой схемы профилей f/m
@@ -17413,7 +17758,7 @@ try{
   checkSchedules();
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
-  if(hasScheduledWorkout && window.FitNative && window.FitNative.requestNotifications){
+  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false && window.FitNative && window.FitNative.requestNotifications){
     window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
