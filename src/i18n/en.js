@@ -726,4 +726,5 @@ const I18N_EN = {
   'publish.errNetwork': "Couldn’t submit the program — the server may be unavailable.",
   'catalog.fromTrainers': "{count} {programs} from trainers",
   'catalog.trainerWorkouts': "Trainer workouts",
+  'builder.variant': "Variant",
 };
