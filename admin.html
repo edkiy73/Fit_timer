@@ -378,7 +378,8 @@ async function testAI(type){
 }
 
 let editing = null;
-let form = {cover: null, media: {}};   // картинки живут отдельно от полей ввода
+let editingStatus = null;
+let form = {cover: null, media: {}, sourceLocale:'ru'};   // картинки живут отдельно от полей ввода
 
 /* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
    запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
@@ -412,13 +413,83 @@ function pickPic(fn){
 // фото привязано к названию, и расходиться им нельзя.
 function exNames(){
   const out = [];
-  ($('fText').value.match(/^УПРАЖНЕНИЕ:\s*(.+)$/gmi) || []).forEach(l => {
+  const field = form.sourceLocale === 'en' ? $('fTextEn') : $('fTextRu');
+  const text = field ? field.value : '';
+  (text.match(/^УПРАЖНЕНИЕ:\s*(.+)$/gmi) || []).forEach(l => {
     const n = l.replace(/^УПРАЖНЕНИЕ:\s*/i, '').trim();
     if(n && !out.includes(n)) out.push(n);
   });
   return out;
 }
 
+function localeFromForm(lang){
+  const suf = lang === 'en' ? 'En' : 'Ru';
+  return {
+    name: $('fName' + suf).value.trim(),
+    gives: $('fGives' + suf).value.trim(),
+    text: $('fText' + suf).value
+  };
+}
+function setLocaleForm(lang, x){
+  const suf = lang === 'en' ? 'En' : 'Ru';
+  x = x || {};
+  $('fName' + suf).value = x.name || '';
+  $('fGives' + suf).value = x.gives || '';
+  $('fText' + suf).value = x.text || '';
+}
+function updateLocaleStates(){
+  LANGS.forEach(lang => {
+    const x = localeFromForm(lang);
+    const ok = x.name.length >= 3 && x.gives.length >= 20 && x.text.length >= 60;
+    const el = $('fState' + (lang === 'en' ? 'En' : 'Ru'));
+    el.textContent = ok ? 'готово ✓' : 'не заполнено';
+    el.className = 'lang-state' + (ok ? ' ok' : '');
+  });
+}
+function translationDirection(){
+  const from = form.sourceLocale === 'en' ? 'en' : 'ru';
+  return {from, to: from === 'ru' ? 'en' : 'ru'};
+}
+async function translateCatalogForm(){
+  const d = translationDirection();
+  $('fErr').textContent = 'Перевожу…';
+  try{
+    const r = await api('translate_catalog', {from:d.from, to:d.to, locale:localeFromForm(d.from)});
+    setLocaleForm(d.to, r.locale || {});
+    updateLocaleStates();
+    $('fErr').textContent = '✓ Перевод готов. Проверь текст перед сохранением.';
+  }catch(e){
+    $('fErr').textContent = 'ИИ не перевёл: ' + (e.detail || e.message) + '. Можно вставить перевод вручную.';
+  }
+}
+async function copyTranslationSource(){
+  const d = translationDirection();
+  const txt = translationPrompt(localeFromForm(d.from), d.from, d.to);
+  try{
+    await navigator.clipboard.writeText(txt);
+    $('fErr').textContent = '✓ Текст для внешнего перевода скопирован.';
+  }catch(e){
+    $('fPasteJson').value = txt;
+    $('fPasteWrap').hidden = false;
+    $('fErr').textContent = 'Буфер недоступен — текст показан ниже.';
+  }
+}
+function applyPastedTranslation(){
+  const d = translationDirection();
+  let raw = $('fPasteJson').value.trim();
+  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  try{
+    const x = JSON.parse(raw);
+    setLocaleForm(d.to, x);
+    $('fPasteWrap').hidden = true;
+    $('fPasteJson').value = '';
+    updateLocaleStates();
+    renderPics();
+    $('fErr').textContent = '✓ Перевод вставлен. Проверь его перед сохранением.';
+  }catch(e){
+    $('fErr').textContent = 'Не получилось прочитать JSON. Нужны поля name, gives и text.';
+  }
+}
 function renderPics(){
   const cover = $('fCoverBox');
   cover.innerHTML = '';
