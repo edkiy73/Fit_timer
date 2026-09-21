@@ -746,8 +746,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2014,
-      "chars": 84137,
+      "lines": 2020,
+      "chars": 84503,
       "symbols": [
         "addExManual",
         "aiRunClose",
