@@ -519,8 +519,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2004,
-      "chars": 93959,
+      "lines": 2005,
+      "chars": 93894,
       "symbols": [
         "aiChoiceEnglish",
         "aiListEnglish",
@@ -570,6 +570,9 @@
         "item",
         "liveExercise",
         "move",
+        "MSG_AI_EMPTY",
+        "MSG_AI_NOEX",
+        "MSG_AI_PARSE",
         "normalizeExercise",
         "normValue",
         "num",
@@ -634,14 +637,15 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1315,
-      "chars": 61374,
+      "lines": 1329,
+      "chars": 61863,
       "symbols": [
         "afterExChange",
         "autoGrow",
         "autoGrowMax",
         "backToWorkout",
         "badgeDesc",
+        "badgeName",
         "buildSteps",
         "buildWorkMenu",
         "clearStepTimer",
