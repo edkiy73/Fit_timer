@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1259,
-      "chars": 60445,
+      "lines": 1258,
+      "chars": 60400,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -700,7 +700,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 455,
-      "chars": 21612,
+      "chars": 21465,
       "symbols": [
         "advance",
         "applyTheme",
@@ -726,8 +726,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1825,
-      "chars": 77614,
+      "lines": 1824,
+      "chars": 76294,
       "symbols": [
         "addExManual",
         "aiRunClose",
