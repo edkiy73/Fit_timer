@@ -371,6 +371,13 @@ setInterval(checkSchedules, 20000);
 // «пропустил» исчезает, если занятие всё-таки выполнено.
 async function syncNativeNotifications(){
   if(!window.FitNative || !window.FitNative.syncWorkoutNotifications) return;
+  try{
+    const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : null;
+    if(prefs && prefs.workouts === false){
+      await window.FitNative.syncWorkoutNotifications([]);
+      return;
+    }
+  }catch(_){} 
   const now = new Date();
   const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
   const items = [];
