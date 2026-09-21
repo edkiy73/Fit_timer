@@ -612,10 +612,8 @@ async function doLogin(){
       // он привяжется к нему сразу, а не потребует второго действия.
       handle: !switchingAccount && trainer && trainer.handle ? normHandle(trainer.handle) : '',
       trainerKey: !switchingAccount && trainer ? (trainer.key || '') : '',
-      // Оформляемая подписка уезжает тем же запросом: отдельного «сохрани подписку»
-      // нет и не нужно — почта подтверждается ровно затем, чтобы она к чему-то
-      // прицепилась.
-      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null),
+      // Premium — только серверное право. Локальный account.sub является кэшем
+      // интерфейса и никогда не отправляется как доказательство подписки.
       locale: appLocale
     });
     if(r.needsHandle || !r.handle){
