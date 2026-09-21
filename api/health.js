@@ -14,6 +14,7 @@
 
 const { store } = require('../lib/store');
 const { mailInfo } = require('../lib/mail');
+const { pushInfo } = require('../lib/push');
 
 /* Метка сборки руками. Номер коммита Vercel подставляет сам, но на глаз он ничего
    не говорит; дата и короткое имя правки говорят сразу, та ли это версия. Правится
@@ -23,6 +24,7 @@ const BUILT = '2026-09-20 · единый аккаунт и нативный о�
 module.exports = async (req, res) => {
   const i = store.info();
   const m = mailInfo();
+  const p = pushInfo();
   const L = [];
 
   L.push('Fit Timer — состояние сервера');
@@ -126,9 +128,25 @@ module.exports = async (req, res) => {
     L.push('не создаются — программу можно передать только файлом.');
   }
 
+  L.push('');
+  L.push('— — — — — — — — — — — — — — — — —');
+  L.push('');
+  L.push(`PUSH ANDROID: ${p.android ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
+  L.push(`PUSH iOS: ${p.ios ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
+  if(!p.android){
+    L.push('Для Android нужен FIREBASE_SERVICE_ACCOUNT_JSON или FIREBASE_SERVICE_ACCOUNT_BASE64 в Vercel.');
+  }
+  if(!p.ios){
+    L.push('Для iOS нужны APNS_KEY_ID, APNS_TEAM_ID и APNS_PRIVATE_KEY в Vercel.');
+  }
+  L.push('');
+  L.push(`переменные Firebase: ${p.firebaseVars.length ? p.firebaseVars.join(', ') : '(ни одной)'}`);
+  L.push(`переменные APNs: ${p.apnsVars.length ? p.apnsVars.join(', ') : '(ни одной)'}`);
+  L.push('Значения ключей здесь не показываются.');
+  L.push('');
+
   /* Почта — вторая настройка, которую нельзя сделать из кода, и ломается она
      ровно так же молча: ключ есть, письма не идут. Поэтому она здесь рядом. */
-  L.push('');
   L.push('— — — — — — — — — — — — — — — — —');
   L.push('');
   if(!m.ready){
@@ -170,6 +188,8 @@ module.exports = async (req, res) => {
   L.push('— — — что видит сама функция — — —');
   L.push(`переменные про базу: ${i.seen.length ? i.seen.join(', ') : '(ни одной)'}`);
   L.push(`переменные про почту: ${m.seen.length ? m.seen.join(', ') : '(ни одной)'}`);
+  L.push(`переменные Firebase: ${p.firebaseVars.length ? p.firebaseVars.join(', ') : '(ни одной)'}`);
+  L.push(`переменные APNs: ${p.apnsVars.length ? p.apnsVars.join(', ') : '(ни одной)'}`);
   L.push('Значения переменных не показываются никогда — только имена.');
 
   res.statusCode = i.connected ? 200 : 503;
