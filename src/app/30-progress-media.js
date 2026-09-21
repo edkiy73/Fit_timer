@@ -762,7 +762,7 @@ function cleanLink(v, max){
    путь. Разводить их по местам нельзя — каждый забытый путь и есть дыра. */
 function sanitizeProgram(p){
   if(!p || typeof p !== 'object') return p;
-  p.name = clampLine(p.name, LIM.progName) || 'Программа';
+  p.name = clampLine(p.name, LIM.progName) || t('program.default');
   if(p.desc != null) p.desc = clampText(p.desc, LIM.progDesc);
   p.cover = cleanPic(p.cover);
   if(p.by != null) p.by = clampLine(p.by, 40);
@@ -801,7 +801,7 @@ function nextProfileName(){
     const m = /^Профиль\s+(\d+)$/.exec((u.name || '').trim());
     if(m) n = Math.max(n, +m[1]);
   });
-  return 'Профиль ' + (n + 1);
+  return t('profile.defaultNumber',{count:n+1});
 }
 
 function startOnboarding(){
@@ -877,7 +877,7 @@ async function whoFinish(save){
     const age = $('whoAge').value || '';
     const err = ageError(age, true);
     if(err){ appAlert(err); return; }
-    if(!whoDraft.gender){ appAlert('Выбери пол — от него зависит подбор упражнений.'); return; }
+    if(!whoDraft.gender){ appAlert(t('profile.genderNeeded')); return; }
     u.gender = whoDraft.gender;
     u.age = validAge(age);
     await saveUsers();
