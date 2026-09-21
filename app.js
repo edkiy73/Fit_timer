@@ -1435,6 +1435,20 @@ const I18N_RU = {
   'day.friFull': "Пятница",
   'day.satFull': "Суббота",
   'day.sunFull': "Воскресенье",
+  'program.copySuffix': "копия",
+  'parser.noName': "В тексте нет названия программы",
+  'parser.noExercises': "В тексте не найдено ни одного упражнения",
+  'pregnancy.warning': "Беременность — не обычное ограничение.\n\nИ сам факт занятий, и упражнения, и нагрузку должен одобрить врач, который тебя наблюдает. Нейросеть не знает твоего срока и самочувствия — она просто составит программу.\n\nПрочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.",
+  'images.imageOne': "картинка",
+  'images.imageFew': "картинки",
+  'images.imageMany': "картинок",
+  'images.generateConfirm': "Будет нарисовано {count} {images}: обложка программы и по одной на каждое упражнение — все в едином стиле. Продолжить?",
+  'images.keyRejected': "Ключ отклонён. Проверь, что скопирован полностью.",
+  'images.rateLimited': "Слишком много запросов — подожди немного и попробуй снова.",
+  'images.billingRequired': "Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.",
+  'images.providerBusy': "Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.",
+  'youtube.hint': "Обычная ссылка или короткая youtu.be. Нейросеть разберёт видео в программу.",
+  'youtube.badLink': "Не похоже на ссылку YouTube. Нужен youtube.com/watch?v=… или youtu.be/…",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2873,6 +2887,20 @@ const I18N_EN = {
   'day.friFull': "Friday",
   'day.satFull': "Saturday",
   'day.sunFull': "Sunday",
+  'program.copySuffix': "copy",
+  'parser.noName': "The text does not contain a program name",
+  'parser.noExercises': "No exercises were found in the text",
+  'pregnancy.warning': "Pregnancy is not a routine training limitation.\n\nWhether to exercise, which exercises to use, and what load is appropriate should be approved by the doctor caring for you. AI does not know your stage of pregnancy or how you feel; it only generates a program.\n\nRead the full program and discuss it with your doctor before the first workout.",
+  'images.imageOne': "image",
+  'images.imageFew': "images",
+  'images.imageMany': "images",
+  'images.generateConfirm': "Generate {count} {images}: one program cover and one image for each exercise, all in one consistent style. Continue?",
+  'images.keyRejected': "The key was rejected. Make sure it was copied completely.",
+  'images.rateLimited': "Too many requests. Try again shortly.",
+  'images.billingRequired': "Access denied. Gemini image generation requires billing to be enabled on the Google account.",
+  'images.providerBusy': "Google’s image model is currently overloaded. Try again in a few minutes.",
+  'youtube.hint': "Use a regular YouTube link or a short youtu.be link. AI will turn the video into a program.",
+  'youtube.badLink': "This does not look like a YouTube link. Use youtube.com/watch?v=… or youtu.be/…",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -8197,7 +8225,7 @@ function renderToday(){
 async function duplicateProgram(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.id = 'p' + Date.now();
-  copy.name = (p.name || 'Программа') + ' — копия';
+  copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
   delete copy.storeId;      // не «из каталога»: это уже своя программа
@@ -9072,10 +9100,10 @@ async function callGeminiImage(prompt, signal){
       const j = await res.json();
       if(j && j.error && j.error.message) msg = j.error.message;
     }catch(e){}
-    if(res.status === 400 && /API key/i.test(msg)) msg = 'Ключ отклонён. Проверь, что скопирован полностью.';
-    if(res.status === 429) msg = 'Слишком много запросов — подожди немного и попробуй снова.';
-    if(res.status === 403 || /billing|permission/i.test(msg)) msg = 'Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.';
-    if(res.status === 503 || /overloaded|high demand|unavailable/i.test(msg)) msg = 'Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.';
+    if(res.status === 400 && /API key/i.test(msg)) msg = t('images.keyRejected');
+    if(res.status === 429) msg = t('images.rateLimited');
+    if(res.status === 403 || /billing|permission/i.test(msg)) msg = t('images.billingRequired');
+    if(res.status === 503 || /overloaded|high demand|unavailable/i.test(msg)) msg = t('images.providerBusy');
     throw new Error(msg);
   }
   const data = await res.json();
@@ -9129,8 +9157,11 @@ async function generateAllImagesViaAI(){
   if(!premiumGate()) return;
   const exList = uniqueProgramExercises();
   const total = 1 + exList.length; // обложка + упражнения
+  const imageWord = appLocale === 'ru'
+    ? plural(total,t('images.imageOne'),t('images.imageFew'),t('images.imageMany'))
+    : t(total === 1 ? 'images.imageOne' : 'images.imageMany');
   const ok = await appDialog(
-    `Будет нарисовано ${total} ${plural(total, 'картинка', 'картинки', 'картинок')}: обложка программы и по одной на каждое упражнение — все в едином стиле. Это займёт пару минут. Продолжить?`,
+    t('images.generateConfirm',{count:total,images:imageWord}),
     {confirm:true,okText:t('images.draw'),cancelText:t('common.cancel')}
   );
   if(!ok) return;
@@ -9688,9 +9719,7 @@ function ytCheckUrl(){
   const v = ($('ytUrl').value || '').trim();
   const ok = !v || !!parseYouTubeUrl(v);
   $('ytHint').style.color = ok ? '' : 'var(--danger)';
-  $('ytHint').textContent = ok
-    ? 'Обычная ссылка или короткая youtu.be. Нейросеть разберёт видео в программу.'
-    : 'Не похоже на ссылку YouTube. Нужен youtube.com/watch?v=… или youtu.be/…';
+  $('ytHint').textContent = ok ? t('youtube.hint') : t('youtube.badLink');
   return ok;
 }
 
@@ -9897,7 +9926,7 @@ function importProgramCode(code){
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
   $('importModal').classList.remove('open');
-  fillBuilder('Проверь и сохрани');
+  fillBuilder(t('import.reviewSave'));
 }
 
 /* ================= СЕРВЕРНАЯ ЧАСТЬ =================
@@ -13314,8 +13343,8 @@ function parseProgramText(txt){
   // Ошибки — человеческим языком, без ключей формата. Ключи («ПРОГРАММА:»,
   // «УПРАЖНЕНИЕ:») жили в тексте ошибки нарочно, чтобы человек понял, чего не
   // хватило; на деле они только пугали. Теперь объясняем смысл, а не синтаксис.
-  if(!p.name) errors.push('в тексте нет названия программы');
-  if(!p.plans.length) errors.push('в тексте не найдено ни одного упражнения');
+  if(!p.name) errors.push(t('parser.noName'));
+  if(!p.plans.length) errors.push(t('parser.noExercises'));
   /* Пределы полей — здесь, а не в каждом разборе отдельно. Через эту функцию
      проходит ВСЁ, что становится программой из текста: ответ нейросети, позиция
      каталога, обмен через programToText. Название в мегабайт приезжает ровно так
@@ -13331,10 +13360,8 @@ function parseProgramText(txt){
 // прямым текстом и даём ход к разделу «Здоровье и безопасность».
 async function pregnancyWarning(){
   const go = await appDialog(
-    'Беременность — не обычное ограничение.\n\n' +
-    'И сам факт занятий, и упражнения, и нагрузку должен одобрить врач, который тебя наблюдает. Нейросеть не знает твоего срока и самочувствия — она просто составит программу.\n\n' +
-    'Прочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.',
-    {confirm: true, okText: 'Понятно', cancelText: 'Подробнее'}
+    t('pregnancy.warning'),
+    {confirm:true,okText:t('common.ok'),cancelText:t('common.details')}
   );
   if(!go) openLegal('health', ()=> openAI('text'));
 }
