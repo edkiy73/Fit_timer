@@ -158,7 +158,13 @@ if($('appLocaleSelect')){
     $('hfHint').textContent = hfHintText(hfMode);
   };
 }
-window.addEventListener('appLocaleChanged', ()=>{ if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode); });
+window.addEventListener('appLocaleChanged', ()=>{
+  if($('hfHint')) $('hfHint').textContent = hfHintText(hfMode);
+  // Статический текст меняет applyI18n(), динамические карточки надо собрать заново.
+  if(ROOT_TABS.includes(show._last)) prepTab(show._last);
+  else if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); }
+  else if(show._last === 'scrStoreItem' && siItem) openStoreItem(siItem.id);
+});
 
 document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
@@ -1760,6 +1766,11 @@ try{
   renderWeight();
   renderWellness();
   renderPhotos();
+  // scrMenu показывается ещё до асинхронной загрузки данных. После загрузки
+  // обязательно собираем его повторно, иначе на чистом/медленном старте часть
+  // карточек остаётся в состоянии до loadData().
+  renderGreeting();
+  renderToday();
   checkSchedules();
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
