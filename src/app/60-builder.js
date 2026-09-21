@@ -233,7 +233,9 @@ function clampProgEvery(n){
 }
 function progPeriodLabel(n){
   n = Math.max(1, Math.round(+n || 1));
-  return n === 1 ? 'каждую тренировку' : `каждые ${n} ${plural(n, 'тренировку', 'тренировки', 'тренировок')}`;
+  if(n === 1) return t('builder.everyWorkout');
+  const workouts = appLocale === 'ru' ? plural(n,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(n === 1 ? 'start.workoutOne' : 'start.workoutFew');
+  return t('builder.everyNWorkouts',{count:n,workouts});
 }
 // «как часто повышать» в настройках программы: 1–15 тренировок
 function fillProgEveryOptions(){
@@ -289,18 +291,18 @@ function progShort(ex){
   const bits = [];
   if(ex.type === 'time'){
     const st = progStepSize(ex, 'time');
-    if(st > 0) bits.push(`+${fmtKg(st)} сек`);
+    if(st > 0) bits.push(`+${fmtKg(st)} ${t('store.secShort')}`);
   } else {
     const r = progStepSize(ex, 'reps');
-    if(r > 0) bits.push(`+${fmtKg(r)} повт.`);
+    if(r > 0) bits.push(`+${fmtKg(r)} ${t('store.repShort')}`);
   }
   // вес — независимая ось что при повторениях, что при времени («время и вес»:
   // фермерская прогулка, планка с блином)
   if(hasWeight(ex)){
     const w = progStepSize(ex, 'weight');
-    if(w > 0) bits.push(`+${fmtKg(w)} кг`);
+    if(w > 0) bits.push(`+${fmtKg(w)} ${t('progress.kg')}`);
   }
-  return bits.length ? bits.join(' и ') : 'растёт';
+  return bits.length ? bits.join(appLocale === 'ru' ? ' и ' : ' & ') : t('builder.progressionAuto');
 }
 
 function progStepSize(ex, axis){
@@ -508,7 +510,7 @@ function openBuilder(id=null){
     draft = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, plans:[blankPlan()]};
   }
   planIdx = 0;
-  fillBuilder(id ? 'Редактирование' : 'Новая программа');
+  fillBuilder(id ? t('ai.editTitle') : t('programs.newProgram'));
   // вот здесь пол и возраст впервые нужны по делу: от них зависят подбор упражнений
   // и нагрузка
   requireWho('program', ()=> goTab('scrPrograms'));
@@ -525,26 +527,26 @@ function syncRotateUI(){
   document.querySelectorAll('#schedSeg button').forEach(b =>
     b.classList.toggle('act', (b.dataset.mode === 'rot') === rot));
   $('schedHint').textContent = rot
-    ? 'Варианты идут по очереди: первый, второй, снова первый. Пропуск дня очередь не сбивает.'
-    : 'У каждого варианта свои дни недели. В нужный день откроется именно он.';
+    ? t('builder.rotationHint')
+    : t('builder.weekdayHint');
 
   // дни варианта показываются только когда вариантов правда несколько
-  $('bDaysLabel').textContent = 'Дни этого варианта';
-  $('bDaysHint').textContent = 'В эти дни вариант попадёт в план на сегодня.';
+  $('bDaysLabel').textContent = t('builder.variantDaysLabel');
+  $('bDaysHint').textContent = t('builder.variantDaysHint');
 
   // подписи вариантов. У программы с одним вариантом карточка не про варианты:
   // в ней круги и отдых, и называться она должна тем, что в ней лежит.
   $('variantsLabel').textContent = !many
-    ? 'Круги и отдых'
-    : (rot ? 'Варианты (идут по очереди)' : 'Варианты тренировки');
+    ? t('builder.roundsRest')
+    : (rot ? t('builder.variantsRotate') : t('builder.variantsWorkout'));
   $('variantsHint').textContent = !many
-    ? 'Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни.'
+    ? t('builder.addVariantHint')
     : (rot
-        ? 'Всё ниже — про выбранный вариант. «Сейчас» — тот, что выпадет следующим.'
-        : 'Всё, что ниже, относится к выбранному варианту.');
+        ? t('builder.selectedVariantHint')
+        : t('builder.selectedVariantDaysHint'));
 
   // пометка у заголовка «Круги и отдых»
-  $('stVariantNote').textContent = many ? `вариант ${planIdx + 1}` : '';
+  $('stVariantNote').textContent = many ? `${t('builder.variant')} ${planIdx + 1}` : '';
 
   renderDays();
   renderPlanTabs();
@@ -628,9 +630,9 @@ function buildPlanTabs(boxId){
     if(rot){
       // при очереди дни варианта не имеют смысла — показываем номер и позицию в очереди
       const nextIdx = ((draft.rotIdx || 0) % draft.plans.length + draft.plans.length) % draft.plans.length;
-      lbl.textContent = `Вариант ${i+1}` + (i === nextIdx ? ' • сейчас' : '');
+      lbl.textContent = `${t('builder.variant')} ${i+1}` + (i === nextIdx ? ' • ' + t('builder.current') : '');
     } else {
-      lbl.textContent = (pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
+      lbl.textContent = (pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join('·') : `${t('builder.variant')} ${i+1}`;
     }
     b.appendChild(lbl);
     b.classList.toggle('act', i === planIdx);
@@ -641,7 +643,7 @@ function buildPlanTabs(boxId){
       x.type = 'button';
       x.className = 'pt-x';
       x.innerHTML = icon('close');
-      x.title = 'Удалить этот вариант';
+      x.title = t('builder.deleteVariantTitle');
       x.onclick = e => { e.stopPropagation(); delCurrentPlan(); };
       b.appendChild(x);
     }
@@ -651,7 +653,7 @@ function buildPlanTabs(boxId){
       planIdx = i;
       renderPlanTabs();
       fillPlanFields();
-      $('stVariantNote').textContent = draft.plans.length > 1 ? `вариант ${planIdx + 1}` : '';
+      $('stVariantNote').textContent = draft.plans.length > 1 ? `${t('builder.variant')} ${planIdx + 1}` : '';
     };
     box.appendChild(b);
   });
@@ -660,8 +662,8 @@ function buildPlanTabs(boxId){
       const add = document.createElement('button');
       add.type = 'button';
       add.className = 'plan-tab add';
-      add.innerHTML = icon('plus') + 'Добавить';
-      add.title = 'Добавить вариант';
+      add.innerHTML = icon('plus') + t('builder.add');
+      add.title = t('builder.addVariant');
       add.onclick = ()=>{
         commitPlanFields();
         draft.plans.push(blankPlan());
@@ -847,8 +849,8 @@ function syncExType(){
   $('exTypeReps').classList.toggle('act', reps);
   $('exTypeTime').classList.toggle('act', !reps);
   $('exWeightOn').classList.toggle('on', withWeight);
-  $('exValLabel').textContent = reps ? 'Повторений' : 'Секунд';
-  $('exValue').placeholder = reps ? 'Например: 12-15' : 'Например: 45';
+  $('exValLabel').textContent = reps ? t('builder.repsLabel') : t('builder.secondsLabel');
+  $('exValue').placeholder = reps ? t('builder.repsExample2') : t('builder.secondsExample2');
   // Подпись объясняет выбранный формат своими словами: «повт. + 8 кг» в списке
   // не читалось как «повторения и килограммы вместе».
   if($('exTypeHint')){
@@ -897,7 +899,7 @@ function renderProgControls(){
     $('exProgOn').classList.remove('on');
     $('exProgOn').classList.add('disabled');
     $('exProgOn').disabled = true;
-    $('exProgOnHint').textContent = 'недоступно для разминки';
+    $('exProgOnHint').textContent = t('builder.progressWarmupOff');
     ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     syncExProgSum(); syncExNowHints();
     return;
@@ -909,7 +911,7 @@ function renderProgControls(){
   const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
   $('exProgOn').classList.toggle('on', on);
   if(!on){
-    $('exProgOnHint').textContent = 'выключено — числа всегда одни и те же';
+    $('exProgOnHint').textContent = t('builder.progressOffHint');
     ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     syncExProgSum(); syncExNowHints();
     return;
@@ -1003,8 +1005,8 @@ function syncExNowHints(){
 // открывая его. Читаем поля формы, а не exDraft: вписанное только что число ещё
 // не перенесено в черновик (перенос делает applyFormTo при сохранении).
 function syncExProgSum(){
-  if(exDraft.warmup){ $('exProgSum').textContent = 'у разминки не растёт'; return; }
-  if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = 'не растёт'; return; }
+  if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
+  if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
   const num = id => parseStepNum($(id).value);
   // Читаем словами: «+2 повт., до 25» пугала, «+2 повт., максимум 25» — уже ближе.
   const part = (stepId, maxId, unit, withMax) => {
@@ -1022,7 +1024,7 @@ function syncExProgSum(){
     : [part('exStepReps', 'exMaxReps', 'повт.', !dual)];
   if(dual) bits.push(part('exStepWeight', 'exMaxWeight', 'кг', !dual));
   const txt = bits.filter(Boolean).join(' и ');
-  $('exProgSum').textContent = txt || 'настройки пустые';
+  $('exProgSum').textContent = txt || t('builder.emptyProgress');
 }
 
 
@@ -1041,7 +1043,7 @@ function renderRestChipsInto(boxId, key){
   REST_CHIPS.forEach(v=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'load-chip';
-    b.textContent = v === 0 ? 'без' : String(v);
+    b.textContent = v === 0 ? t('builder.none') : String(v);
     b.classList.toggle('act', !restCustom[key] && cur === v);
     b.onclick = ()=>{
       restCustom[key] = false;
@@ -1052,7 +1054,7 @@ function renderRestChipsInto(boxId, key){
   });
   const own = document.createElement('button');
   own.type = 'button'; own.className = 'load-chip';
-  own.textContent = restCustom[key] ? String(cur) : 'своё';
+  own.textContent = restCustom[key] ? String(cur) : t('builder.custom');
   own.classList.toggle('act', restCustom[key]);
   own.onclick = ()=> openRestModal(key, boxId);
   box.appendChild(own);
@@ -1064,7 +1066,7 @@ function renderExRestChips(){
 let restModalKey = null, restModalBoxId = null;
 function openRestModal(key, boxId){
   restModalKey = key; restModalBoxId = boxId;
-  $('restModalTitle').textContent = key === 'rest' ? 'Свой отдых между подходами' : 'Свой отдых после упражнения';
+  $('restModalTitle').textContent = key === 'rest' ? t('builder.customRestSets') : t('builder.customRestAfter');
   $('restModalInput').value = parseInt(exDraft[key]) || '';
   $('restModal').classList.add('open');
   $('restModalInput').focus();
@@ -1080,16 +1082,16 @@ function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
   if(m && m.kind === 'img') box.innerHTML = `<img src="${esc(m.data)}" alt="">`;
-  else box.innerHTML = '<span class="mp-empty">Нет картинки</span>';
+  else box.innerHTML = `<span class="mp-empty">${esc(t('builder.noImage'))}</span>`;
 }
 function syncExDetailsSum(){
   const bits = [];
-  if((exDraft.desc || '').trim()) bits.push('описание');
-  if((exDraft.mistakes || '').trim()) bits.push('ошибки');
-  if((exDraft.muscles || []).length) bits.push('мышцы');
-  if(exDraft.media) bits.push('картинка');
-  if((exDraft.video || '').trim()) bits.push('видео');
-  $('exDetailsSum').textContent = bits.length ? bits.join(', ') : 'не заполнено';
+  if((exDraft.desc || '').trim()) bits.push(t('builder.detailDescription'));
+  if((exDraft.mistakes || '').trim()) bits.push(t('builder.detailMistakes'));
+  if((exDraft.muscles || []).length) bits.push(t('builder.detailMuscles'));
+  if(exDraft.media) bits.push(t('builder.detailImage'));
+  if((exDraft.video || '').trim()) bits.push(t('builder.detailVideo'));
+  $('exDetailsSum').textContent = bits.length ? bits.join(', ') : t('builder.notFilled');
 }
 
 // переносит текущее состояние формы в объект упражнения (черновик или его снимок) —
@@ -1158,8 +1160,8 @@ function renderExList(){
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('dumbbell')}</span>` +
-      '<b>Упражнений пока нет</b>' +
-      '<p>Добавь первое: хватит названия и того, сколько делать — повторения или время. Остальное по желанию.</p>' +
+      `<b>${esc(t('builder.noExercisesTitle'))}</b>` +
+      `<p>${esc(t('builder.noExercisesText'))}</p>` +
       '</div>';
   }
   list.forEach((ex, i)=> box.appendChild(exRow(ex, i)));
@@ -1168,9 +1170,7 @@ function renderExList(){
   const nMain = list.length - nWarm;
   const full = nWarm >= MAX_WARM && nMain >= MAX_MAIN;
   setShown('btnAddEx', !full);
-  const note = list.length
-    ? `${list.length} ${plural(list.length, 'упражнение', 'упражнения', 'упражнений')}`
-    : '';
+  const note = list.length ? storeCountText(list.length,'exercise') : '';
   $('exCountNote').textContent = note;
   syncImagesSum();
   // объясняем, к чему относится список упражнений
@@ -1179,20 +1179,20 @@ function renderExList(){
   const t = $('bVariantTitle'), h = $('bVariantHint');
   if(plans.length > 1){
     const rot = !!draft.rotate;
-    const days = (pl.days || []).length ? pl.days.join(', ') : '';
-    t.textContent = `Упражнения · вариант ${planIdx + 1} из ${plans.length}`;
+    const days = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
+    t.textContent = t('builder.variantExercises',{current:planIdx+1,total:plans.length});
     h.textContent = rot
-      ? 'Упражнения выбранного варианта. Переключай вкладками.'
+      ? t('builder.variantExercisesHint')
       : (days
-          ? `Упражнения варианта на ${days}. Переключай вкладками.`
-          : 'Этому варианту можно добавить дни — иначе он будет просто запасным.');
+          ? t('builder.variantOnDays',{days})
+          : t('builder.variantNoDays'));
     setShown(h, true);
   } else {
-    t.textContent = 'Упражнения';
-    const d1 = (pl.days || []).length ? pl.days.join(', ') : '';
+    t.textContent = t('builder.exercisesTitle');
+    const d1 = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
     h.textContent = d1
-      ? `Тренировка по расписанию: ${d1}.`
-      : 'Можно тренироваться в любой день. Выбери дни в настройках — будут напоминания.';
+      ? t('builder.scheduleExercises',{days:d1})
+      : t('builder.anyDayExercises');
     setShown(h, true);
   }
 }
@@ -1208,16 +1208,16 @@ function exBits(ex){
   // аргумента), а значит без её шагов — то есть всегда по базе.
   const p = (typeof draft !== 'undefined' && draft && draft.id) ? draft : null;
   bits.push(ex.type === 'time'
-    ? `${p ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min} сек`
-    : `${(p ? progressedRepsRange(p.id, ex, p) : valueText(ex.value)).replace('-', '–')} повт.`);
+    ? `${p ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min} ${t('store.secShort')}`
+    : `${(p ? progressedRepsRange(p.id, ex, p) : valueText(ex.value)).replace('-', '–')} ${t('store.repShort')}`);
   const sets = Math.max(1, parseInt(ex.sets) || 1);
-  if(sets > 1) bits.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
+  if(sets > 1) bits.push(storeCountText(sets,'set'));
   if(hasWeight(ex)){
     const w = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
-    if(w) bits.push(`${fmtKg(w)} кг`);
+    if(w) bits.push(`${fmtKg(w)} ${t('progress.kg')}`);
   }
-  if(ex.perSide) bits.push('на сторону');
-  if(+ex.rest > 0) bits.push(`отдых ${ex.rest} с`);
+  if(ex.perSide) bits.push(t('store.perSide'));
+  if(+ex.rest > 0) bits.push(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`);
   return bits;
 }
 function exSummary(ex){ return exBits(ex).join(' · '); }
@@ -1240,8 +1240,8 @@ function dupExerciseAt(i){
   const nWarm = list.filter(x => x.warmup).length;
   if(ex.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
     appAlert(ex.warmup
-      ? `В разминке уже ${MAX_WARM} упражнений — это предел.`
-      : `В основной части уже ${MAX_MAIN} упражнений — это предел.`);
+      ? t('builder.warmLimit',{count:MAX_WARM})
+      : t('builder.mainLimit',{count:MAX_MAIN}));
     return;
   }
   list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
@@ -1251,8 +1251,8 @@ async function delExerciseAt(i){
   const list = curPlan().exercises;
   const ex = list[i];
   if(!ex) return;
-  const nameTxt = (ex.name || '').trim() || 'это упражнение';
-  if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  const nameTxt = (ex.name || '').trim() || t('exercise.this');
+  if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   list.splice(i, 1);
   renderExList();
 }
@@ -1269,7 +1269,7 @@ function exRow(ex, i){
   const info = document.createElement('div');
   info.className = 'ex-info';
   const name = document.createElement('b');
-  name.textContent = (ex.name || '').trim() || 'Без названия';
+  name.textContent = (ex.name || '').trim() || t('store.untitled');
   const meta = document.createElement('div');
   meta.className = 'ex-meta';
   const tag = (txt, cls) => {
@@ -1278,7 +1278,7 @@ function exRow(ex, i){
     el.textContent = txt;
     meta.appendChild(el);
   };
-  if(ex.warmup) tag('Разминка', 'wm');
+  if(ex.warmup) tag(t('store.warmup'), 'wm');
   exBits(ex).forEach(txt => tag(txt));
   const grow = progShort(ex);
   if(grow) tag(grow, 'grow');
@@ -1289,7 +1289,7 @@ function exRow(ex, i){
   more.type = 'button';
   more.className = 'more-btn';
   more.innerHTML = icon('more');
-  more.title = 'Действия';
+  more.title = t('common.actions');
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   const item = (html, fn, cls) => {
@@ -1300,14 +1300,14 @@ function exRow(ex, i){
     b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
     menu.appendChild(b);
   };
-  item(icon('plus') + 'Дублировать', ()=> dupExerciseAt(i));
-  item(icon('trash') + 'Удалить', ()=> delExerciseAt(i), 'danger');
+  item(icon('plus') + t('common.duplicate'), ()=> dupExerciseAt(i));
+  item(icon('trash') + t('common.delete'), ()=> delExerciseAt(i), 'danger');
   more.onclick = e => { e.stopPropagation(); toggleMenu(menu); };
 
   const grip = document.createElement('div');
   grip.className = 'ex-grip';
   grip.innerHTML = icon('grip');
-  grip.title = 'Перетащить';
+  grip.title = t('programs.drag');
 
   row.append(thumb, info, more, grip, menu);
   // Нажатие на саму строку открывает редактор; перетаскивание начинается только
@@ -1338,7 +1338,7 @@ function shrinkImage(file, maxSide, cb){
     cb(c.toDataURL('image/jpeg', .8));
     URL.revokeObjectURL(img.src);
   };
-  img.onerror = ()=> appAlert('Не удалось прочитать файл изображения.');
+  img.onerror = ()=> appAlert(t('builder.imageReadFailed'));
   img.src = URL.createObjectURL(file);
 }
 
@@ -1903,7 +1903,7 @@ async function copyPrompt(){
     await navigator.clipboard.writeText(fullAIPrompt());
     flashDone(btn);
   }catch(e){
-    appAlert('Не удалось скопировать автоматически. Выдели текст вручную:', {code: fullAIPrompt()});
+    appAlert(t('common.copyManual'), {code: fullAIPrompt()});
   }
 }
 
@@ -1911,22 +1911,22 @@ async function copyPrompt(){
 // объясняется («чат с нейросетью — ChatGPT, Gemini и т.п.»), а формулировка
 // подсказывает и лёгкий путь («за меня»), и что именно делать («вставь ответ
 // целиком»).
-const MSG_AI_EMPTY = 'Поле с ответом нейросети пустое.\n\nЕсли запрос делали в чате (ChatGPT, Gemini — неважно каком), скопируй весь ответ и вставь его сюда. Проще всего — нажать «Сделать за меня» выше: приложение сделает всё само.';
-const MSG_AI_PARSE = 'Из вставленного текста не получилось собрать программу. Скорее всего, скопировано не всё: нужен весь ответ чата целиком, от первой до последней строки.';
-const MSG_AI_NOEX = 'В тексте ответа не нашлось ни одного упражнения. Скорее всего, скопировано не всё — вернись в чат и скопируй ответ целиком.';
+const MSG_AI_EMPTY = ()=> t('ai.emptyAnswer');
+const MSG_AI_PARSE = ()=> t('ai.parseProgramFailed');
+const MSG_AI_NOEX = ()=> t('ai.noExerciseResponse');
 
 function importFromText(){
   const txt = ($('aiResult').value || '').trim();
-  if(!txt){ appAlert('Вставь текст программы в поле.'); return; }
+  if(!txt){ appAlert(t('ai.pasteProgram')); return; }
   const {program, errors} = parseProgramText(txt);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.problemList') + '\n— ' + errors.join('\n— '));
     return;
   }
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
   draft = program;
   planIdx = 0;
-  fillBuilder('Проверь и сохрани');
+  fillBuilder(t('ai.reviewSave'));
 }
 
 async function saveProgram(){
@@ -1952,19 +1952,19 @@ async function saveProgram(){
   // проблема — отдельный попап, и пять нажатий «Сохранить» давали пять попапов.
   const many = draft.plans.length > 1;
   const miss = [];
-  if(!draft.name) miss.push('название программы');
+  if(!draft.name) miss.push(t('builder.needProgramName'));
   // один день не может быть в двух вариантах
   const seenDays = {};
   for(const pl of draft.plans){
     for(const d of (pl.days || [])){
-      if(seenDays[d]) miss.push(`день «${d}» указан сразу в двух вариантах — оставь его в одном`);
+      if(seenDays[d]) miss.push(t('builder.duplicateDay',{day:canonicalLabel(d)}));
       seenDays[d] = true;
     }
   }
   for(let v=0; v<draft.plans.length; v++){
     const pl = draft.plans[v];
     if(!pl.exercises.length){
-      miss.push(many ? `в варианте ${v+1} нет ни одного упражнения` : 'нет ни одного упражнения');
+      miss.push(many ? t('builder.noExercisesVariant',{variant:v+1}) : t('builder.noExercises'));
       continue;
     }
     let badNames = 0;
@@ -1974,15 +1974,15 @@ async function saveProgram(){
     }
     if(badNames){
       miss.push(many
-        ? `в варианте ${v+1} без названия: ${badNames} ${plural(badNames, 'упражнение', 'упражнения', 'упражнений')}`
-        : `без названия: ${badNames} ${plural(badNames, 'упражнение', 'упражнения', 'упражнений')}`);
+        ? t('builder.unnamedVariant',{variant:v+1,count:badNames,exercises:storeCountText(badNames,'exercise').replace(/^\d+\s+/,'')})
+        : t('builder.unnamed',{count:badNames,exercises:storeCountText(badNames,'exercise').replace(/^\d+\s+/,'')}));
     }
   }
   if(miss.length){
-    const tip = 'Подсвеченные поля тоже подскажут, где проблема.';
+    const tip = t('builder.validationTip');
     appAlert(miss.length === 1
-      ? 'Не получилось сохранить:\n— ' + miss[0] + '.\n\n' + tip
-      : 'Не получилось сохранить — вот что нужно поправить:\n— ' + miss.join('\n— ') + '\n\n' + tip);
+      ? t('builder.saveFailedOne',{item:miss[0],tip})
+      : t('builder.saveFailedMany',{items:miss.join('\n— '),tip}));
     return;
   }
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
