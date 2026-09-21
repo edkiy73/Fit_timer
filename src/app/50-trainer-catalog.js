@@ -1141,20 +1141,25 @@ function fillTrainerPage(nick, t){
   // «стаж не указан» доверия не добавляют, а место занимают.
   const cells = [];
   if(t.years != null && t.years > 0){
-    cells.push([t.years, plural(t.years, 'год', 'года', 'лет') + ' стажа']);
+    cells.push([t.years, appLocale === 'ru'
+      ? plural(t.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
+      : t(t.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
   }
   if(t.programs > 0){
-    cells.push([t.programs, plural(t.programs, 'программа', 'программы', 'программ')]);
+    cells.push([t.programs, appLocale === 'ru'
+      ? plural(t.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
+      : t(t.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
   }
   if(t.opens > 0){
-    cells.push([t.opens, plural(t.opens, 'человек взял', 'человека взяли', 'человек взяли')]);
+    cells.push([t.opens, t(t.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
   }
   if(t.since){
     const d = daysSince((t.since || '').slice(0, 10));
     if(d != null){
       const m = Math.floor(d / 30);
-      cells.push(m >= 1 ? [m, plural(m, 'месяц', 'месяца', 'месяцев') + ' с нами']
-                        : [Math.max(1, d), plural(Math.max(1, d), 'день', 'дня', 'дней') + ' с нами']);
+      cells.push(m >= 1
+        ? [m, t(m === 1 ? 'trainer.withUsMonth' : 'trainer.withUsMonths')]
+        : [Math.max(1, d), t(Math.max(1, d) === 1 ? 'trainer.withUsDay' : 'trainer.withUsDays')]);
     }
   }
   setShown('tpStatsCard', cells.length > 0);
@@ -1198,12 +1203,15 @@ function estimateMinutes(p){
   return Math.max(1, Math.round(sec / 60));
 }
 
-const PUB_LABEL = {
-  pending:  ['на проверке', 'wait'],
-  approved: ['в каталоге', 'ok'],
-  rejected: ['не взяли', 'cold'],
-  gone:     ['заявка потерялась', 'cold']
-};
+function pubLabel(status){
+  const item = {
+    pending:  ['publish.pending', 'wait'],
+    approved: ['publish.approved', 'ok'],
+    rejected: ['publish.rejected', 'cold'],
+    gone:     ['publish.gone', 'cold']
+  }[status] || ['publish.pending', 'wait'];
+  return [t(item[0]), item[1]];
+}
 const pubbed = () => customPrograms.filter(p => p.pub && p.pub.id);
 
 function openMyCatalog(){
@@ -1216,7 +1224,7 @@ function renderMyCatalog(){
   box.innerHTML = '';
   const list = pubbed();
   list.forEach(p => {
-    const [label, tone] = PUB_LABEL[p.pub.status] || PUB_LABEL.pending;
+    const [label, tone] = pubLabel(p.pub.status);
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'cl-row';
@@ -1225,14 +1233,14 @@ function renderMyCatalog(){
       + `<div class="ub"><b></b><small></small></div><span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = p.name;
     row.querySelector('.ub small').textContent =
-      `${ex} ${plural(ex, 'упражнение', 'упражнения', 'упражнений')}`;
+      storeCountText(ex, 'exercise');
     row.querySelector('.cl-state').textContent = label;
     row.onclick = ()=> openPublish(p);
     box.appendChild(row);
   });
   $('mcHint').textContent = list.length
-    ? 'Программы смотрит человек. Взятую увидят все в каталоге.'
-    : 'Пока ничего не отправлено. Открой свою программу, «⋮» → «Предложить в каталог».';
+    ? t('publish.listHint')
+    : t('publish.emptyHint');
 }
 // Статусы всех заявок разом: по одной на программу — это столько путей до сервера,
 // сколько программ.
@@ -1270,15 +1278,15 @@ function fillPublish(){
   if(!p) return;
   const ex = (normPlans(p)[0].exercises || []).length;
   $('pubName').textContent = p.name;
-  $('pubSub').textContent = `${ex} ${plural(ex, 'упражнение', 'упражнения', 'упражнений')} · примерно ${estimateMinutes(p)} мин`;
+  $('pubSub').textContent = t('publish.approx',{count:ex,exercises:storeCountText(ex,'exercise').replace(/^\d+\s+/,''),minutes:estimateMinutes(p)});
 
   const st = p.pub && p.pub.status;
-  const shown = {
-    pending:  'На проверке. Обычно это занимает день-другой — программы смотрит человек.',
-    approved: 'Программа в каталоге. Её видят все.',
-    rejected: 'Не взяли. Можно поправить и предложить заново.',
-    gone:     'Заявка не нашлась. Можно отправить заново.'
-  }[st] || '';
+  const shown = st ? t({
+    pending:'publish.pendingText',
+    approved:'publish.approvedText',
+    rejected:'publish.rejectedText',
+    gone:'publish.goneText'
+  }[st] || 'publish.pendingText') : '';
   $('pubState').textContent = shown;
   $('pubState').classList.toggle('warn', st === 'rejected' || st === 'gone');
   setShown('pubForm', st !== 'pending' && st !== 'approved');
@@ -1291,10 +1299,10 @@ function fillPublish(){
     $(chevId).innerHTML = icon('chevD');
     $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); fillPublish(); });
   };
-  fill('pubCatBtn', 'pubCatVal', 'pubCatChev', 'Цель',
-       OPT_GOAL.map(g => [g, g]), pubDraft.cat, v => pubDraft.cat = v);
-  fill('pubLevelBtn', 'pubLevelVal', 'pubLevelChev', 'Уровень',
-       OPT_LEVEL.map(l => [l, l]), pubDraft.level, v => pubDraft.level = v);
+  fill('pubCatBtn', 'pubCatVal', 'pubCatChev', t('ai.goal'),
+       OPT_GOAL.map(g => [g, canonicalLabel(g)]), pubDraft.cat, v => pubDraft.cat = v);
+  fill('pubLevelBtn', 'pubLevelVal', 'pubLevelChev', t('ai.level'),
+       OPT_LEVEL.map(l => [l, canonicalLabel(l)]), pubDraft.level, v => pubDraft.level = v);
   if(document.activeElement !== $('pubGives')) $('pubGives').value = pubDraft.gives || '';
 }
 
@@ -1319,13 +1327,13 @@ async function doPublish(){
   if(!p) return;
   pubDraft.gives = clampText($('pubGives').value, LIM.gives);
   const miss = [];
-  if(!pubDraft.cat) miss.push('цель');
-  if(!pubDraft.level) miss.push('уровень');
-  if(pubDraft.gives.length < 20) miss.push('«что она даёт» — хотя бы 20 символов');
+  if(!pubDraft.cat) miss.push(t('publish.needGoal'));
+  if(!pubDraft.level) miss.push(t('publish.needLevel'));
+  if(pubDraft.gives.length < 20) miss.push(t('publish.needGives'));
   const ex = (normPlans(p)[0].exercises || []).length;
-  if(ex < 3) miss.push('хотя бы три упражнения в программе');
+  if(ex < 3) miss.push(t('publish.needExercises'));
   if(miss.length){
-    appAlert('Не хватает: ' + miss.join(', ') + '.');
+    appAlert(t('publish.missing',{items:miss.join(', ')}));
     return;
   }
   try{
@@ -1348,18 +1356,18 @@ async function doPublish(){
     p.pub = {id: r.id, status: r.status, draft: pubDraft};
     await savePrograms();
     fillPublish();
-    appAlert('Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.');
+    appAlert(t('publish.sent'));
   }catch(e){
     const why = {
-      no_trainer: 'Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.',
-      not_yours: 'Этот ник закреплён за другим тренером.',
-      banned: 'Приём программ с этого ника закрыт.',
-      too_many_today: 'Сегодня уже отправлено три программы. Продолжим завтра.',
-      already_sent: 'Эта программа уже ждёт проверки или уже в каталоге.',
-      no_store: 'На сервере не подключено хранилище — отправка пока не работает.',
-      bad_item: 'Не хватает данных: ' + ((e.miss || []).join(', ') || 'проверь поля') + '.'
+      no_trainer: t('publish.errNoTrainer'),
+      not_yours: t('publish.errNotYours'),
+      banned: t('publish.errBanned'),
+      too_many_today: t('publish.errTooMany'),
+      already_sent: t('publish.errAlready'),
+      no_store: t('publish.errStore'),
+      bad_item: t('publish.errBad',{items:((e.miss || []).join(', ') || t('publish.checkFields'))})
     }[e && e.code];
-    appAlert(why || 'Не получилось отправить — похоже, нет связи с сервером.');
+    appAlert(why || t('publish.errNetwork'));
   }
 }
 
@@ -1384,8 +1392,8 @@ function renderCatalogRow(){
   if(!$('btnMyCatalog')) return;
   const n = storeAll().length;
   $('storeRowSub').textContent = n
-    ? `${n} ${plural(n, 'программа', 'программы', 'программ')} от тренеров`
-    : 'Тренировки от тренеров';
+    ? t('catalog.fromTrainers',{count:n,programs:storeCountText(n,'program').replace(/^\d+\s+/,'')})
+    : t('catalog.trainerWorkouts');
   // Строку заявок показываем, только когда заявки есть: «ничего не отправлено»
   // сообщает ровно то, что строку не надо было показывать.
   const pub = pubbed();
@@ -1393,8 +1401,8 @@ function renderCatalogRow(){
   if(!pub.length) return;
   const byStatus = st => pub.filter(p => p.pub.status === st).length;
   $('coachCatSub').textContent =
-    [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
-     [byStatus('rejected'), 'не взяли']]
+    [[byStatus('approved'), t('publish.statusCatalog')], [byStatus('pending'), t('publish.statusReview')],
+     [byStatus('rejected'), t('publish.statusRejected')]]
       .filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(' · ');
 }
 
