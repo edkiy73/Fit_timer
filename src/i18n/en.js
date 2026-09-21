@@ -1244,4 +1244,9 @@ const I18N_EN = {
   'builder.validationTip': "Highlighted fields also show where the problem is.",
   'builder.saveFailedOne': "Couldn’t save:\n— {item}.\n\n{tip}",
   'builder.saveFailedMany': "Couldn’t save. Fix these items:\n— {items}\n\n{tip}",
+  'builder.volumeHint': "{exercises}{rounds} — {sets} per workout.",
+  'builder.nowPrefix': "Now {parts}",
+  'builder.startValuesHint': "The fields show starting values.",
+  'workout.switchSidesVoice': "Switch sides",
+  'workout.sideVoice': "Side {current} of {total}",
 };
