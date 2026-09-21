@@ -1984,6 +1984,7 @@ async function saveProgram(){
       : t('builder.saveFailedMany',{items:miss.join('\n— '),tip}));
     return;
   }
+  if(draft.locale !== 'ru' && draft.locale !== 'en') draft.locale = appLocale === 'ru' ? 'ru' : 'en';
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
