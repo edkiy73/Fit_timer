@@ -346,139 +346,183 @@ Trainer program links now become an account relationship only after the client a
 - Tapping the push opens the new server version for review. Saving it updates the existing local program (same local id/source link) while preserving its workout stats and progression adjustment.
 
 
-## Owner setup checklist
+## Что уже сделано и что требуется от владельца проекта
 
-The notification system is implemented in code, but remote delivery requires external credentials that must be created in Firebase / Apple / Resend and stored as secrets. The application code must never contain these private keys.
+Система уведомлений уже реализована в коде. Для локальных уведомлений ничего дополнительно настраивать не нужно.
 
-### What is already implemented
+Для удалённых push-уведомлений нужны внешние ключи Firebase и Apple. Эти ключи нельзя хранить в коде или коммитить в GitHub.
 
-Client and local notifications:
-- centralized Notification Manager;
-- workout reminders, missed-workout follow-up, inactivity return, unfinished workout reminder;
-- progression-aware workout notification text;
-- Premium promotion eligibility and cooldowns;
-- category switches for Push and Email;
-- account-level synchronization of notification preferences;
-- notification-open analytics.
+### Что уже реализовано
 
-Remote push:
-- Capacitor Push Notifications integration;
-- Android FCM token registration;
-- iOS APNs token registration callbacks;
-- device push tokens tied to confirmed account devices;
-- automatic unregister on sign-out;
-- invalid FCM/APNs token cleanup;
-- server-side category preference checks;
-- catalog approve/reject push to the trainer;
-- trainer program update push to a claimed client account;
-- notification tap routing.
+В приложении:
+- единый менеджер уведомлений;
+- напоминания о тренировках;
+- уведомления о пропущенной тренировке;
+- возврат после паузы;
+- напоминание о незавершённой тренировке;
+- уведомления о прогрессии;
+- Premium-push не чаще одного раза в 14 дней;
+- настройки категорий Push и Email;
+- синхронизация настроек между устройствами;
+- учёт открытий уведомлений.
 
-Campaigns:
-- Admin → Рассылки section;
-- News / Offers type;
-- RU and EN copy;
-- Push and/or Email channels;
-- Push-first, Email-fallback behavior when both are selected;
-- 14-day per-account cooldown for Offers/Premium campaigns;
-- email marketing only for explicit opt-in;
-- batched campaign processing.
+Удалённые push:
+- подключён Capacitor Push Notifications;
+- регистрация Android FCM-токена;
+- регистрация iOS APNs-токена;
+- токен привязан к подтверждённому устройству аккаунта;
+- при выходе устройство удаляется из push-доставки;
+- невалидные токены удаляются автоматически;
+- сервер проверяет настройки пользователя перед отправкой;
+- approve/reject заявки в каталог отправляет push тренеру;
+- обновление программы тренером отправляет push конкретному подопечному;
+- по нажатию на push открывается нужный экран.
 
-Diagnostics:
-- `/api/health` reports whether Android Push, iOS Push, Email, and storage are configured without exposing secret values.
+Рассылки:
+- в админке есть раздел **«Рассылки»**;
+- можно выбрать «Новости» или «Акция / Premium»;
+- тексты задаются отдельно на русском и английском;
+- можно выбрать Push, Email или оба канала;
+- если включены оба канала, сначала пробуется Push, Email используется как запасной канал;
+- для акций действует ограничение 14 дней на аккаунт;
+- email отправляется только тем, кто явно включил соответствующую настройку;
+- отправка идёт батчами, чтобы не упираться в лимиты serverless-функций.
 
-Build/CI:
-- Capacitor Push Notifications dependency is installed;
-- Android workflow can inject Firebase `google-services.json` from GitHub Secret;
-- Android debug smoke build with the push plugin has passed successfully.
+Диагностика:
+- `/api/health` показывает, настроены ли Android Push, iOS Push, Email и хранилище;
+- значения секретных ключей никогда не показываются.
 
-### Android / Firebase setup required from the project owner
-
-Use a Firebase project whose Android application id is exactly:
-
-`ru.fittimer.app`
-
-1. Open Firebase Console.
-2. Create a Firebase project or use the existing Fit Timer project.
-3. Add an **Android app**.
-4. Set Android package name to `ru.fittimer.app`.
-5. Download `google-services.json`.
-6. Base64-encode the whole file locally.
-7. In GitHub repository → Settings → Secrets and variables → Actions → New repository secret:
-   - Name: `GOOGLE_SERVICES_JSON_BASE64`
-   - Value: base64 contents of `google-services.json`
-8. In Firebase Console → Project settings → Service accounts → Generate new private key.
-9. Copy the downloaded service-account JSON into Vercel Environment Variables:
-   - `FIREBASE_SERVICE_ACCOUNT_JSON`
-   - Production environment.
-   - The entire JSON must be stored as one environment-variable value.
-10. Redeploy the Vercel project after adding the variable.
-11. Build a fresh Android APK/AAB after adding the GitHub Secret.
-12. Install the fresh build, sign in, enable at least one remote-push category, and allow notifications.
-
-Alternative server variable:
-- Instead of `FIREBASE_SERVICE_ACCOUNT_JSON`, the backend also accepts `FIREBASE_SERVICE_ACCOUNT_BASE64`.
-
-Do not commit either Firebase file to Git.
-
-### iOS / APNs setup required from the project owner
-
-This can be completed later if Android is the immediate priority.
-
-1. In Apple Developer, enable **Push Notifications** for the Fit Timer App ID / bundle id.
-2. Bundle id must match the iOS app configuration (currently expected as `ru.fittimer.app` unless the Xcode project is intentionally changed).
-3. Create an APNs authentication key (.p8).
-4. Add these Vercel Production environment variables:
-   - `APNS_KEY_ID`
-   - `APNS_TEAM_ID`
-   - `APNS_PRIVATE_KEY` — full .p8 private key contents
-   - `APNS_BUNDLE_ID` — normally `ru.fittimer.app`
-5. For development-device tokens only, set `APNS_USE_SANDBOX=1`.
-6. For TestFlight/App Store production pushes, do not use the sandbox flag.
-7. Redeploy Vercel after changing APNs variables.
-8. The Xcode App target must have the Push Notifications capability enabled before the signed iOS build is shipped.
-
-Never commit the .p8 file.
-
-### Email / Resend setup
-
-Email transport already exists in the project. Marketing email sending uses the same transport.
-
-Required:
-- `RESEND_API_KEY` in Vercel Production.
-- A verified sender/domain for real users.
-- `MAIL_FROM`, for example `Fit Timer <hello@your-domain.com>`.
-
-The default Resend test sender is only suitable for limited testing. For production campaigns, verify a real domain in Resend first.
-
-### How to verify after configuration
-
-1. Open `/api/health` on the production Fit Timer domain.
-2. Confirm:
-   - storage is connected;
-   - Email is configured;
-   - Push Android is configured;
-   - Push iOS is configured when iOS credentials are added.
-3. Install a newly built Android app after the Firebase GitHub Secret was added.
-4. Sign in to a real account.
-5. Open Account → Notifications.
-6. Enable Trainer & programs or Offers & news.
-7. Accept Android notification permission.
-8. Trigger one controlled test:
-   - approve/reject a trainer catalog submission, or
-   - send a test News campaign from Admin → Рассылки.
-9. Tap the notification and verify routing.
-10. Check aggregate notification-open counters if diagnostics/analytics are being inspected.
-
-### Important operational rules
-
-- Do not manually schedule marketing notifications from feature code. Use the central notification/campaign logic.
-- Do not send the same campaign independently by Push and Email. The campaign sender already handles Push-first / Email-fallback.
-- Do not bypass user category preferences.
-- Do not add Firebase/APNs private credentials to the repository.
-- Any change to GitHub Firebase build secrets requires a new Android build.
-- Any change to Vercel Firebase/APNs/Resend environment variables requires a Vercel redeploy.
-- Trainer-to-client push only works after the client has saved the trainer program while signed in; simply opening a link does not claim the relationship.
-- Email marketing opt-in/out must remain available to free users and must not depend on Premium sync.
+Сборка:
+- зависимость Capacitor Push Notifications подключена;
+- Android debug-сборка с новым push-плагином успешно проходит;
+- GitHub Actions умеет подставлять Firebase `google-services.json` из GitHub Secret.
 
 ---
 
+## Что нужно сделать сейчас
+
+Сейчас нужен только **Android Firebase**.
+
+iOS и почту пока можно не трогать.
+
+### Шаг 1. Создать Firebase-проект
+
+1. Открыть Firebase Console.
+2. Создать новый проект, например **Fit Timer**.
+3. Analytics можно не включать.
+
+### Шаг 2. Добавить Android-приложение
+
+Внутри Firebase-проекта:
+
+1. Нажать **Add app → Android**.
+2. В поле **Android package name** указать точно:
+
+`ru.fittimer.app`
+
+3. Остальные поля можно пока оставить пустыми.
+4. Нажать Register app.
+5. Скачать файл:
+
+`google-services.json`
+
+### Шаг 3. Добавить этот файл в GitHub Secret
+
+На Mac открыть Terminal в папке, где лежит скачанный файл, и выполнить:
+
+`base64 -i google-services.json | pbcopy`
+
+После этого содержимое файла в Base64 будет в буфере обмена.
+
+В GitHub:
+
+1. Открыть репозиторий Fit_timer.
+2. Settings.
+3. Secrets and variables.
+4. Actions.
+5. New repository secret.
+6. Name:
+
+`GOOGLE_SERVICES_JSON_BASE64`
+
+7. Value — вставить из буфера.
+8. Save.
+
+Это нужно для самой Android-сборки.
+
+### Шаг 4. Создать серверный ключ Firebase
+
+В Firebase:
+
+1. Project settings.
+2. Service accounts.
+3. Нажать **Generate new private key**.
+4. Скачается ещё один JSON-файл.
+
+Этот файл нужен серверу, чтобы отправлять push.
+
+### Шаг 5. Добавить серверный ключ в Vercel
+
+В Vercel:
+
+1. Открыть проект Fit Timer.
+2. Settings.
+3. Environment Variables.
+4. Добавить переменную:
+
+`FIREBASE_SERVICE_ACCOUNT_JSON`
+
+5. В Value вставить **весь текст скачанного JSON-файла целиком**.
+6. Environment: Production.
+7. Save.
+8. После этого сделать Redeploy.
+
+---
+
+## Как проверить после настройки Firebase
+
+После этих пяти шагов:
+
+1. Собрать новый APK.
+2. Установить его.
+3. Войти в аккаунт.
+4. Открыть Аккаунт → Уведомления.
+5. Включить «Тренер и программы» или «Предложения и новости».
+6. Разрешить уведомления Android.
+7. Проверить реальный push через:
+   - approve/reject заявки в каталог;
+   - или тестовую рассылку из админки.
+
+Также можно открыть:
+
+`/api/health`
+
+Там должно быть видно, что Android Push настроен.
+
+---
+
+## Что пока делать не нужно
+
+Пока не нужно:
+- настраивать iOS/APNs;
+- создавать Apple Push key;
+- трогать `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`;
+- настраивать отдельный домен для email;
+- тестировать массовые рассылки.
+
+Сначала нужно довести до рабочего состояния Android push.
+
+---
+
+## Важные правила
+
+- Не коммитить `google-services.json` в Git.
+- Не коммитить Firebase service-account JSON в Git.
+- Не хранить APNs-ключи в коде.
+- Изменение GitHub Secret требует новой Android-сборки.
+- Изменение Firebase/APNs/Email переменных в Vercel требует Redeploy.
+- Push от тренера подопечному работает только после того, как подопечный вошёл в аккаунт и сохранил присланную программу.
+- Простое открытие ссылки не связывает аккаунты.
+- Email opt-in / opt-out должен работать и у бесплатных пользователей.
+
+---
