@@ -9815,7 +9815,7 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish = clampText($('eaWish').value, LIM.wish);
-  return aiPrompt() +
+  return aiPrompt((editAIProg && editAIProg.locale) || appLocale) +
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
     'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
     'USER: ' + userForAI() + '\n' +
@@ -9876,6 +9876,8 @@ async function createEditedProgram(){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
+    ? editAIProg.locale : (appLocale === 'ru' ? 'ru' : 'en');
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
@@ -10842,15 +10844,17 @@ let storeServer = [];
 const storeAll = () => storeServer;
 let storeLoading = false;
 async function loadStoreServer(){
+  const locale = appLocale === 'ru' ? 'ru' : 'en';
+  const cacheKey = 'catalog_' + locale;
   storeLoading = true;
   try{
-    const d = await apiFetch('/api/catalog');
+    const d = await apiFetch('/api/catalog?lang=' + encodeURIComponent(locale));
     storeServer = Array.isArray(d.items) ? d.items : [];
-    lastSeen('catalog', storeServer);
+    lastSeen(cacheKey, storeServer);
   }catch(e){
-    // Каталог без сети — это то, что видели в прошлый раз, плюс зашитые программы.
-    // Пустая витрина вместо вчерашней — потеря без выигрыша.
-    storeServer = lastSeen('catalog') || [];
+    // Кэш тоже языковой: после переключения профиля русская витрина не должна
+    // внезапно подменять английскую и наоборот.
+    storeServer = lastSeen(cacheKey) || [];
   } finally { storeLoading = false; }
 }
 
@@ -11176,7 +11180,7 @@ async function siPaintMedia(it){
   if(!(it.hasMedia || it.media)) return;
   let media = it.media;
   if(!media){
-    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
     catch(e){ return; }            // без фото страница остаётся рабочей
     it.media = media || {};
   }
@@ -11217,12 +11221,15 @@ async function addStoreItem(id){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  // После добавления это обычная личная одноязычная копия. Язык нужен ИИ-правкам,
+  // чтобы они не переписали английскую программу на язык текущего интерфейса.
+  program.locale = (it.locale === 'ru' || it.locale === 'en') ? it.locale : (appLocale === 'ru' ? 'ru' : 'en');
   // Фото упражнений в списке каталога не лежат (иначе витрина весила бы мегабайты).
   // Забираем их сейчас — в момент, когда программа становится своей.
   if(it.hasMedia || it.media){
     let media = it.media;
     if(!media){
-      try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+      try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
       catch(e){ media = null; }        // без фото программа всё равно рабочая
     }
     applyMedia(program, media);
@@ -11508,6 +11515,7 @@ async function doPublish(){
       by: normHandle(trainer.handle),
       trainerKey: trainer.key || '',
       item: {
+        sourceLocale: (p.locale === 'ru' || p.locale === 'en') ? p.locale : (appLocale === 'ru' ? 'ru' : 'en'),
         name: p.name, gives: pubDraft.gives,
         // cat — КЛЮЧ цели («cardio»), а не её название: по нему подбирается обложка
         // и работают фильтры витрины. С названием обложка бралась первая попавшаяся.
@@ -11540,7 +11548,7 @@ async function doPublish(){
 
 function openStore(from){
   storeFrom = from || 'scrMenu';
-  if(!storeServer.length) storeServer = lastSeen('catalog') || [];
+  if(!storeServer.length) storeServer = lastSeen('catalog_' + (appLocale === 'ru' ? 'ru' : 'en')) || [];
   // Свежие позиции подтягиваем при входе и дорисовываем, когда придут: витрина
   // не должна ждать сеть, чтобы показать то, что уже есть.
   loadStoreServer().then(()=>{ if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); } });
@@ -13124,8 +13132,9 @@ Safety and quality:
 === USER REQUEST ===
 `;
 
-function aiPrompt(){
-  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', appLocale === 'ru' ? 'Russian' : 'English');
+function aiPrompt(locale){
+  const outLocale = (locale === 'ru' || locale === 'en') ? locale : appLocale;
+  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', outLocale === 'ru' ? 'Russian' : 'English');
 }
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
@@ -13693,6 +13702,7 @@ async function saveProgram(){
       : t('builder.saveFailedMany',{items:miss.join('\n— '),tip}));
     return;
   }
+  if(draft.locale !== 'ru' && draft.locale !== 'en') draft.locale = appLocale === 'ru' ? 'ru' : 'en';
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
@@ -16549,6 +16559,7 @@ async function ytApplyResult(){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  program.locale = appLocale === 'ru' ? 'ru' : 'en';
   program.name = versionedName(program.name || t('video.defaultProgram'));
   // сохраняем ссылку на источник в описании, если ИИ её не упомянул
   const link = ($('ytUrl').value || '').trim();
@@ -16570,7 +16581,7 @@ async function ytApplyResult(){
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = aiPrompt()
+  const text = aiPrompt((editAIProg && editAIProg.locale) || appLocale)
     + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
     + programToText(editAIProg)
     + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
