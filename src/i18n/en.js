@@ -727,4 +727,7 @@ const I18N_EN = {
   'catalog.fromTrainers': "{count} {programs} from trainers",
   'catalog.trainerWorkouts': "Trainer workouts",
   'builder.variant': "Variant",
+  'publish.statusCatalog': "in catalog",
+  'publish.statusReview': "under review",
+  'publish.statusRejected': "not approved",
 };
