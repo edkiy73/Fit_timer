@@ -1163,4 +1163,5 @@ const I18N_EN = {
   'import.openLink': "Open link",
   'import.file': "Upload program file",
   'import.hint': "A file contains the complete program including images. A link does not; images will be fetched from the sender.",
+  'trainer.presentPlaceholder': "How should clients see your name?",
 };
