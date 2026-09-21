@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 1795,
-      "chars": 84623,
+      "lines": 1804,
+      "chars": 85268,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -330,8 +330,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2390,
-      "chars": 108818,
+      "lines": 2392,
+      "chars": 109020,
       "symbols": [
         "ageError",
         "aiAuth",
@@ -451,8 +451,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1561,
-      "chars": 71316,
+      "lines": 1567,
+      "chars": 71978,
       "symbols": [
         "add",
         "addClient",
@@ -523,8 +523,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2002,
-      "chars": 93437,
+      "lines": 2004,
+      "chars": 93624,
       "symbols": [
         "aiChoiceEnglish",
         "aiListEnglish",
@@ -736,8 +736,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1887,
-      "chars": 78531,
+      "lines": 1894,
+      "chars": 78726,
       "symbols": [
         "addExManual",
         "aiRunClose",
