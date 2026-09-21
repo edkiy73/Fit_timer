@@ -863,7 +863,7 @@ function renderStore(){
     return `<article class="store-row" data-open="${it.id}">
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
-        <h3>${itrainerData.name}</h3>
+        <h3>${esc(it.name || t('store.untitled'))}</h3>
         <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
         <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
@@ -892,7 +892,7 @@ function openStoreItem(id){
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
-  $('siName').textContent = itrainerData.name;
+  $('siName').textContent = it.name || t('store.untitled');
   $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
@@ -1083,7 +1083,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(t('store.added',{name:itrainerData.name}));
+  appAlert(t('store.added',{name:it.name || t('store.untitled')}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
