@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1258,
-      "chars": 60400,
+      "chars": 60385,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 1764,
-      "chars": 82481,
+      "lines": 1780,
+      "chars": 84030,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -262,7 +262,7 @@
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
       "lines": 890,
-      "chars": 41389,
+      "chars": 41392,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -328,8 +328,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2399,
-      "chars": 112531,
+      "lines": 2395,
+      "chars": 109379,
       "symbols": [
         "ageError",
         "aiAuth",
@@ -369,6 +369,7 @@
         "exportProgramFile",
         "exProgToLines",
         "exRestLines",
+        "FILE_HINT",
         "finishImgGen",
         "flashDone",
         "forgetMe",
