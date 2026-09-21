@@ -49,10 +49,17 @@ function localeMiss(block, label){
   if(!block || clean(block.text, 60000).length < 60) miss.push(label + ': текст программы');
   return miss;
 }
+const TRANSLATABLE_KEYS = new Set([
+  'ПРОГРАММА', 'ОПИСАНИЕ ПРОГРАММЫ', 'УПРАЖНЕНИЕ', 'ОПИСАНИЕ',
+  'ОШИБКИ', 'ЗАМЕНА', 'ОПИСАНИЕ ЗАМЕНЫ'
+]);
 function protocolShape(text){
   return String(text || '').split(/\r?\n/).map(line => {
-    const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):/);
-    return m ? m[1] : '';
+    const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+    if(!m) return '';
+    // В переводе меняются только человекочитаемые тексты. Повторы, вес, отдых,
+    // дни, формат, прогрессия и порядок блоков обязаны быть буквально теми же.
+    return m[1] + ':' + (TRANSLATABLE_KEYS.has(m[1]) ? '<text>' : m[2].trim());
   }).filter(Boolean);
 }
 function syncSourceFields(c, norm){
