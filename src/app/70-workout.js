@@ -1262,7 +1262,19 @@ function earnBadges(){
 const hasBadge = id => Array.isArray(stats.badges) && stats.badges.includes(id);
 // за что выдано. У большинства это постоянная строка, но «Личный рекорд» обязан
 // говорить нынешнее число: плашка одна, а рекорд с человеком растёт.
-const badgeDesc = b => typeof b.desc === 'function' ? b.desc() : b.desc;
+const badgeName = b => t('badge.' + b.id + '.name');
+const badgeDesc = b => {
+  if(b.id === 'record'){
+    const n = stats.bestStreak || 0;
+    if(n >= 3){
+      const workouts = appLocale === 'ru'
+        ? plural(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany'))
+        : t(n === 1 ? 'calendar.workoutOne' : 'calendar.workoutFew');
+      return t('badge.recordBest',{count:n,workouts});
+    }
+  }
+  return t('badge.' + b.id + '.desc');
+};
 
 function renderBadges(){
   const fresh = earnBadges();
@@ -1274,15 +1286,15 @@ function renderBadges(){
   $('badgeRow').innerHTML = toShow.map(b =>
     `<div class="badge${fresh.includes(b.id) ? ' new' : ''}">
        <span class="b-ico">${icon(b.ico)}</span>
-       <div class="b-txt"><b>${b.name}</b><small>${fresh.includes(b.id) ? 'Новое достижение!' : badgeDesc(b)}</small></div>
+       <div class="b-txt"><b>${badgeName(b)}</b><small>${fresh.includes(b.id) ? t('badge.new') : badgeDesc(b)}</small></div>
      </div>`
   ).join('');
   const si = calcStreakInfo();
   if(si.n > 1){
     $('finStreak').textContent = si.n;
     // личный рекорд называем рекордом: это сильнее любого числа рядом с «подряд»
-    $('finStreakWord').textContent = state.lastRecord ? 'личный рекорд!'
-      : (si.byPlan ? 'подряд по плану' : 'дней подряд');
+    $('finStreakWord').textContent = state.lastRecord ? t('badge.personalRecord')
+      : (si.byPlan ? t('badge.streakPlan') : t('badge.streakDays'));
     setShown('finStreakBox', true);
   } else setShown('finStreakBox', false);
 }
@@ -1293,7 +1305,7 @@ function exitWorkout(){
   const done = steps.slice(0, state.stepIdx).filter(s => s.phase === 'work').length;
   const all = steps.filter(s => s.phase === 'work').length;
   $('exitProgress').textContent = all
-    ? `Пройдено упражнений: ${done} из ${all}.`
+    ? t('workout.exitProgress',{done,all})
     : '';
   $('exitModal').classList.add('open');
 }
