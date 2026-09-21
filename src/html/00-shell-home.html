@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
-<title>Fit Timer — домашние тренировки</title>
+<title data-i18n="app.title">Fit Timer — домашние тренировки</title>
 <meta name="theme-color" content="#0C0916">
 <link rel="manifest" href="manifest.webmanifest">
 <script src="app.config.js"></script>
@@ -48,7 +48,7 @@
           </div>
           <!-- аватарка ведёт в свой профиль: на «Сегодня» это единственное место,
                где видно, чей это экран, — а на устройстве профилей может быть несколько -->
-          <button type="button" class="greet-ava" id="greetAva" title="Профиль"></button>
+          <button type="button" class="greet-ava" id="greetAva" title="Профиль" data-i18n-title="home.profileTitle"></button>
         </div>
         <div class="greet-chips" id="greetChips"></div>
       </div>
@@ -58,7 +58,7 @@
          выглядело ссылкой, но не нажималось, и это читалось как зависание. -->
     <div class="today-card hidden" id="todayBox">
       <span class="tc-aura" aria-hidden="true"></span>
-      <span class="ts-label">План на сегодня · <span id="todayDayName"></span></span>
+      <span class="ts-label"><span data-i18n="home.todayPlan">План на сегодня ·</span> <span id="todayDayName"></span></span>
       <div id="todayList"></div>
     </div>
     <!-- вход в каталог: готовые программы от тренеров для тех, кому не хочется
@@ -95,7 +95,7 @@
       <span class="pb-glow" aria-hidden="true"></span>
       <span class="pb-ico" data-icon="crown"></span>
       <span class="pb-txt">
-        <b>Fit Timer Премиум</b>
+        <b data-i18n="premium.title">Fit Timer Премиум</b>
         <small id="pbSub" data-i18n="home.premiumSub">Тренировку соберёт ИИ. И весь каталог программ от тренеров.</small>
       </span>
     </button>
