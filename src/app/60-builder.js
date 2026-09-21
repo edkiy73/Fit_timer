@@ -711,9 +711,10 @@ function syncVolHint(){
   if(!main.length){ el.textContent = ''; return; }
   const sets = main.map(e => Math.max(1, parseInt(e.sets) || 1));
   const total = sets.reduce((a, b) => a + b, 0) * R;
-  el.textContent = `${main.length} ${plural(main.length, 'упражнение', 'упражнения', 'упражнений')}`
-    + (R > 1 ? ` × ${R} ${plural(R, 'круг', 'круга', 'кругов')}` : '')
-    + ` — ${total} ${plural(total, 'подход', 'подхода', 'подходов')} за тренировку.`;
+  const exText = storeCountText(main.length,'exercise');
+  const roundsText = R > 1 ? ' × ' + storeCountText(R,'round') : '';
+  const setsText = storeCountText(total,'set');
+  el.textContent = t('builder.volumeHint',{exercises:exText,rounds:roundsText,sets:setsText});
 }
 
 function renderDays(){
@@ -980,7 +981,7 @@ function syncExNowHints(){
   if(hasWeight(probe)){
     const base = progBaseValue(probe, 'weight'), now = getExWeight(p.id, probe, p);
     weightChanged = now > 0 && Math.abs(now - base) > 0.01;
-    if(weightChanged) parts.push(`${fmtKg(now)} кг`);
+    if(weightChanged) parts.push(`${fmtKg(now)} ${t('progress.kg')}`);
   }
   // Растёт вес, а вторая ось (повторы или секунды) сама по себе — нет (обычное
   // дело: «время и вес» просит держать секунды на месте и добавлять только груз):
@@ -988,16 +989,16 @@ function syncExNowHints(){
   // так, будто сколько делать — не сказано.
   if(probe.type === 'time'){
     const base = parseValue(probe.value).min, now = getExProgValue(p.id, probe, p, 'time');
-    if(now !== base || weightChanged) parts.push(`${now} сек`);
+    if(now !== base || weightChanged) parts.push(`${now} ${t('store.secShort')}`);
   } else {
     const base = valueText(probe.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
-    if(now !== base || weightChanged) parts.push(`${now} повт.`);
+    if(now !== base || weightChanged) parts.push(`${now} ${t('store.repShort')}`);
   }
   if(!parts.length){ setShown(el, false); return; }
   // «повт.» уже заканчивается точкой — не дублируем её точкой предложения
-  let sentence = `Сейчас ${parts.join(', ')}`;
+  let sentence = t('builder.nowPrefix',{parts:parts.join(', ')});
   if(sentence.endsWith('.')) sentence = sentence.slice(0, -1);
-  el.textContent = `${sentence}. В полях — стартовые числа.`;
+  el.textContent = sentence + '. ' + t('builder.startValuesHint');
   setShown(el, true);
 }
 
