@@ -474,8 +474,8 @@ function clearSnap(key){ delete snap[key]; }
 async function leaveGuard(changed, go, what){
   if(changed){
     const ok = await appDialog(
-      (what || 'Изменения') + ' ещё не сохранены. Если выйти сейчас, они пропадут.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+      t('common.unsaved',{what:what || t('common.changes')}),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
     );
     if(!ok) return false;
   }
@@ -493,9 +493,9 @@ function aiScreenDirty(ids){
    Теперь поле краснеет прямо во время ввода и говорит, что от него хотят,
    а сохранение не проходит, пока ошибка не исправлена. */
 const NUM_RULES = {
-  int:   {re: /^\s*\d{1,4}\s*$/,                          msg: 'Только целое число, например 3'},
-  range: {re: /^\s*\d{1,3}\s*(?:[-–—]\s*\d{1,3}\s*)?$/, msg: 'Число или диапазон: 12 или 12-15'},
-  dec:   {re: /^\s*\d{1,4}(?:[.,]\d{1,2})?\s*$/,         msg: 'Число, например 8 или 7.5'}
+  int:   {re: /^\s*\d{1,4}\s*$/,                          key: 'num.int'},
+  range: {re: /^\s*\d{1,3}\s*(?:[-–—]\s*\d{1,3}\s*)?$/, key: 'num.range'},
+  dec:   {re: /^\s*\d{1,4}(?:[.,]\d{1,2})?\s*$/,         key: 'num.dec'}
 };
 function markNum(el){
   const kind = el.dataset.numKind;
@@ -514,7 +514,7 @@ function markNum(el){
       field.appendChild(hint);
     }
     hint.innerHTML = icon('alert') + '<span></span>';
-    hint.querySelector('span').textContent = empty ? 'Заполни поле — без него не сохранить' : rule.msg;
+    hint.querySelector('span').textContent = empty ? t('num.required') : t(rule.key);
   } else if(hint) hint.remove();
   return !bad;
 }
@@ -567,7 +567,7 @@ function appDialog(msg, opts = {}){
     typed.oninput = null;
     if(opts.type){
       typed.value = '';
-      $('dlgTypeLabel').textContent = `Набери «${opts.type}»`;
+      $('dlgTypeLabel').textContent = t('dialog.type',{text:opts.type});
       const check = ()=>{ $('dlgOk').disabled = typed.value.trim().toLowerCase() !== opts.type.toLowerCase(); };
       typed.oninput = check;
       check();
@@ -575,9 +575,9 @@ function appDialog(msg, opts = {}){
     } else {
       $('dlgOk').disabled = false;
     }
-    $('dlgOk').textContent = opts.okText || 'Понятно';
+    $('dlgOk').textContent = opts.okText || t('common.ok');
     if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
-    else $('dlgCancel').textContent = 'Отмена';
+    else $('dlgCancel').textContent = t('common.cancel');
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
     const done = v => {
@@ -597,7 +597,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // Подтверждение действия. Кнопка по умолчанию — «Подтвердить», а не «Да»:
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
-const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
+const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: t('common.confirm'), cancelText: t('common.cancel'), ...o});
 const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
 /* Корневые разделы: только у них внизу док и нет собственной панели действий.
 
@@ -629,10 +629,10 @@ try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
-  scrBuilder:  ()=> programDirty() ? {what:'Изменения программы', clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
-  scrUserEdit: ()=> userDirty() ? {what:'Изменения профиля'} : null,
-  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:'Заполненный запрос'} : null
+  scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
+  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
+  scrUserEdit: ()=> userDirty() ? {what:t('profile.changes')} : null,
+  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
 // Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
@@ -947,8 +947,8 @@ function renderPlanRow(){
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
     const rotOn = state.raw.rotate && plans.length > 1;
-    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
-    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • сейчас';
+    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join('·') : `${t('builder.variant')} ${i+1}`;
+    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • ' + t('start.current');
     b.textContent = lbl;
     b.classList.toggle('act', state.planIdx === i);
     b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
@@ -1001,11 +1001,11 @@ function previousWorkoutLoad(p, planIdx){
 
 function loadTargetText(ex, v){
   const bits = [];
-  if(ex.type === 'time') bits.push(`${v.sec} сек`);
-  else bits.push(`${v.reps} ${plural(parseValue(v.reps).min, 'повторение', 'повторения', 'повторений')}`);
-  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} кг`);
+  if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
+  else bits.push(`${v.reps} ${t('workout.repsShort')}`);
+  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
   let out = bits.join(' × ');
-  if(ex.perSide) out += ' на сторону';
+  if(ex.perSide) out += ' ' + t('store.perSide');
   return out;
 }
 
@@ -1014,15 +1014,15 @@ function loadDelta(a, b){
   const bits = [];
   const moves = [];
   if(String(a.reps || '') !== String(b.reps || '')){
-    bits.push(`Повторы: было ${a.reps} → сегодня ${b.reps}`);
+    bits.push(t('start.deltaReps',{before:a.reps,today:b.reps}));
     const av = parseValue(a.reps), bv = parseValue(b.reps);
     moves.push(bv.min - av.min, bv.max - av.max);
   }
   if((+a.sec || 0) !== (+b.sec || 0)){
-    bits.push(`Время: было ${a.sec} → сегодня ${b.sec} сек`); moves.push((+b.sec || 0) - (+a.sec || 0));
+    bits.push(t('start.deltaTime',{before:a.sec,today:b.sec})); moves.push((+b.sec || 0) - (+a.sec || 0));
   }
   if((+a.kg || 0) !== (+b.kg || 0)){
-    bits.push(`Вес: было ${fmtKg(a.kg)} → сегодня ${fmtKg(b.kg)} кг`); moves.push((+b.kg || 0) - (+a.kg || 0));
+    bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
   const dir = directional.length && directional.every(x => x > 0) ? 'up'
@@ -1075,29 +1075,28 @@ function renderStartOverview(){
   const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
     * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
   const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
-  $('startOverviewSummary').textContent = `${exercises.length} ${plural(exercises.length, 'упражнение', 'упражнения', 'упражнений')} · ${workSets} ${plural(workSets, 'подход', 'подхода', 'подходов')} · `
-    + (dur.samples === 1 ? `в прошлый раз ${dur.n} мин` : dur.history ? `обычно ${dur.n} мин` : `≈ ${dur.n} мин`);
+  $('startOverviewSummary').textContent = storeCountText(exercises.length,'exercise') + ' · ' + storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
 
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
   if(previous.first){
-    changeText('Первая тренировка: начни с комфортного темпа.');
+    changeText(t('start.firstWorkout'));
   } else if(changes.length){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
     if(direction === 'up'){
-      changeText(`Нагрузка выше в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadHigher',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     } else if(direction === 'down'){
-      changeText(`Нагрузка ниже в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadLower',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     } else {
-      changeText(`Нагрузка изменилась в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     }
   } else if(p.progression){
     const done = (p.stats && p.stats.completions) || 0;
     const left = p.progression - (done % p.progression);
-    changeText(`Без изменений · следующее повышение через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`);
+    changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
   } else {
-    changeText('Без изменений · автоматическое повышение выключено.');
+    changeText(t('start.noChangesOff'));
   }
 
   const box = $('startOverviewList');
@@ -1108,10 +1107,10 @@ function renderStartOverview(){
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const meta = [];
-    if(ex.warmup) meta.push({text:'Разминка', cls:'wm'});
+    if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
     meta.push({text:loadTargetText(ex, current[i]), cls:''});
-    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} подх. × ${rounds} кр.` : `${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`, cls:''});
-    else meta.push({text:`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`, cls:''});
+    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
+    else meta.push({text:storeCountText(sets,'set'), cls:''});
     const delta = changes.find(x => x.i === i);
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
@@ -1119,7 +1118,7 @@ function renderStartOverview(){
       ? `<img src="${esc(ex.media.data)}" alt="">`
       : (ex.warmup ? icon('flame') : mainNo);
     row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
-    row.querySelector('b').textContent = ex.name || 'Упражнение';
+    row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
@@ -1173,29 +1172,29 @@ function buildStartMenu(){
   setShown('startByChip', !!by);
   if(by) $('startByName').textContent = by;
   menu.append(
-    mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
+    mk(icon('pencil') + t('common.edit'), ()=> openBuilder(p.id)),
     // тот же переключатель, что в меню карточки в списке: экран программы — второе
     // место, где о программе думают целиком, и искать выключатель в другом списке
     // ради одного действия человек не станет
-    mk(icon('power') + (on ? 'Отключить' : 'Включить'), async ()=>{
+    mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), async ()=>{
       p.active = !on;
       await savePrograms();
       buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
       renderMine();         // список под ним уже перерисован к возврату
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
+      if(on) appAlert(t('programs.disabledAlert'));
     }),
     // Порядок пунктов тот же, что в меню карточки списка: одно и то же меню в двух
     // местах обязано читаться одинаково, иначе рука промахивается.
-    mk(icon('copy') + 'Дублировать', async ()=>{
+    mk(icon('copy') + t('common.duplicate'), async ()=>{
       const c = await duplicateProgram(p);
       openBuilder(c.id);
     }),
-    mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
-    ...(trainerOn() ? [mk(icon('users') + 'Отправить подопечному', ()=> pickClientFor(p))] : []),
-    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + 'Предложить в каталог', ()=> openPublish(p))] : []),
-    mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
-    mk(icon('trash') + 'Удалить', async ()=>{
-      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+    mk(icon('share') + t('programs.shareLink'), ()=> exportProgram(p)),
+    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), ()=> pickClientFor(p))] : []),
+    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), ()=> openPublish(p))] : []),
+    mk(icon('download') + t('programs.saveFile'), ()=> exportProgramFile(p)),
+    mk(icon('trash') + t('common.delete'), async ()=>{
+      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
       customPrograms = customPrograms.filter(x => x.id !== p.id);
       await savePrograms();
       renderMine();
@@ -1213,7 +1212,7 @@ function renderStartInfo(){
     dTxt.textContent = d;
     setShown(dBox, true);
     dBox.classList.remove('open');
-    $('progDescMore').textContent = 'Показать полностью';
+    $('progDescMore').textContent = t('builder.showFull');
     requestAnimationFrame(()=>{
       const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
       setShown('progDescMore', !(fits));
@@ -1225,25 +1224,25 @@ function renderStartInfo(){
   const rotOn = state.raw.rotate && plans.length > 1;
   const t = pl.time || state.raw.time;
   const daysTxt = rotOn
-    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.join(', ') : '')
-    : ((pl.days && pl.days.length) ? pl.days.join(', ') : '');
+    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.map(canonicalLabel).join(', ') : '')
+    : ((pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join(', ') : '');
   const parts = [t, daysTxt].filter(Boolean);
-  if(rotOn) parts.push(`вариант ${state.planIdx + 1} из ${plans.length} по очереди`);
+  if(rotOn) parts.push(t('start.variantSequence',{current:state.planIdx+1,total:plans.length}));
   const schedule = parts.join(' · ');
-  $('startDesc').textContent = schedule ? `Расписание: ${schedule}` : '';
+  $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
   // объём: круги для круговых, подходы для силовых
   const mainEx = (pl.exercises || []).filter(e => !e.warmup);
   const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
   if(pl.rounds > 1 || setsTotal <= mainEx.length){
-    $('startVolLabel').textContent = plural(pl.rounds, 'круг', 'круга', 'кругов');
+    $('startVolLabel').textContent = storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
     $('startRounds').textContent = pl.rounds;
   } else {
-    $('startVolLabel').textContent = plural(setsTotal, 'подход', 'подхода', 'подходов');
+    $('startVolLabel').textContent = storeCountText(setsTotal,'set').replace(/^\d+\s+/,'');
     $('startRounds').textContent = setsTotal;
   }
   const nEx = pl.exercises.length;
   $('startExCount').textContent = nEx;
-  $('startExLabel').textContent = plural(nEx, 'упражнение', 'упражнения', 'упражнений');
+  $('startExLabel').textContent = storeCountText(nEx,'exercise').replace(/^\d+\s+/,'');
   // обложка программы — если её нет, место не занимаем
   const cov = $('startCover');
   if(state.raw.cover){
