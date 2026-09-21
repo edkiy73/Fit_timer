@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1258,
-      "chars": 60385,
+      "chars": 60503,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -207,7 +207,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 750,
-      "chars": 33560,
+      "chars": 33608,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -329,7 +329,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2395,
-      "chars": 109379,
+      "chars": 109392,
       "symbols": [
         "ageError",
         "aiAuth",
@@ -450,7 +450,7 @@
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
       "lines": 1546,
-      "chars": 70484,
+      "chars": 70784,
       "symbols": [
         "add",
         "addClient",
@@ -520,7 +520,7 @@
     "src/app/60-builder.js": {
       "kind": "frontend-js",
       "lines": 2005,
-      "chars": 93894,
+      "chars": 93912,
       "symbols": [
         "aiChoiceEnglish",
         "aiListEnglish",
