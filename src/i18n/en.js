@@ -1178,4 +1178,6 @@ const I18N_EN = {
   'legal.updated': "Updated September 10, 2026",
   'builder.descCounterHint': "shown before the workout starts.",
   'builder.progressOverTime': "Progress over time",
+  'program.default': "Program",
+  'profile.genderNeeded': "Choose a gender — it affects exercise selection.",
 };
