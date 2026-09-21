@@ -727,4 +727,7 @@ const I18N_RU = {
   'catalog.fromTrainers': "{count} {programs} от тренеров",
   'catalog.trainerWorkouts': "Тренировки от тренеров",
   'builder.variant': "Вариант",
+  'publish.statusCatalog': "в каталоге",
+  'publish.statusReview': "на проверке",
+  'publish.statusRejected': "не взяли",
 };
