@@ -383,24 +383,24 @@ async function syncNativeNotifications(){
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hm[0], hm[1]);
         const pre = new Date(start.getTime() - 15 * 60000);
         const missed = new Date(start.getTime() + 2 * 3600000);
-        if(pre > now) items.push({at:pre.toISOString(), title:'Тренировка через 15 минут',
-          body:`«${p.name}» начнётся в ${time}. Приготовься!`, extra:{programId:p.id, stage:'before'}});
-        if(start > now && !completed) items.push({at:start.toISOString(), title:'Пора тренироваться',
-          body:`Сегодня по плану «${p.name}».`, extra:{programId:p.id, stage:'start'}});
-        if(missed > now && !completed) items.push({at:missed.toISOString(), title:'Тренировка ещё ждёт',
-          body:`«${p.name}» запланирована на сегодня. Можно начать сейчас.`, extra:{programId:p.id, stage:'missed'}});
+        if(pre > now) items.push({at:pre.toISOString(), title:t('notify.beforeTitle'),
+          body:t('notify.beforeBody',{name:p.name,time}), extra:{programId:p.id, stage:'before'}});
+        if(start > now && !completed) items.push({at:start.toISOString(), title:t('notify.startTitleShort'),
+          body:t('notify.todayPlan',{name:p.name}), extra:{programId:p.id, stage:'start'}});
+        if(missed > now && !completed) items.push({at:missed.toISOString(), title:t('notify.waitingTitle'),
+          body:t('notify.waitingBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
       } else if(!completed){
         const morning = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0);
         const evening = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 20, 0);
-        if(morning > now) items.push({at:morning.toISOString(), title:'Сегодня тренировка',
-          body:`По плану — «${p.name}».`, extra:{programId:p.id, stage:'today'}});
-        if(evening > now) items.push({at:evening.toISOString(), title:'Не забудь про тренировку',
-          body:`«${p.name}» ещё можно выполнить сегодня.`, extra:{programId:p.id, stage:'missed'}});
+        if(morning > now) items.push({at:morning.toISOString(), title:t('notify.todayTitle'),
+          body:t('notify.todayBody',{name:p.name}), extra:{programId:p.id, stage:'today'}});
+        if(evening > now) items.push({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
+          body:t('notify.dontForgetBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
       }
     });
   }
-  items.push({at:new Date(Date.now() + 3 * 86400000).toISOString(), title:'Fit Timer ждёт',
-    body:'Давно не виделись. Открой план и выбери короткую тренировку на сегодня.',
+  items.push({at:new Date(Date.now() + 3 * 86400000).toISOString(), title:t('notify.returnTitle'),
+    body:t('notify.returnBody'),
     extra:{stage:'inactive'}});
   items.sort((a,b) => String(a.at).localeCompare(String(b.at)));
   await window.FitNative.syncWorkoutNotifications(items);
