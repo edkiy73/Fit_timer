@@ -126,6 +126,7 @@
       <button class="tab" data-tab="trainers">Тренеры <span id="nTrainers"></span></button>
       <button class="tab" data-tab="add">Добавить</button>
       <button class="tab" data-tab="settings">ИИ и тариф</button>
+      <button class="tab" data-tab="campaigns">Рассылки</button>
       <button class="tab" id="out" style="margin-left:auto">Выйти</button>
     </div>
   </div></header>
@@ -221,6 +222,7 @@ function render(){
   if(tab === 'add') return renderAdd(b);
   if(tab === 'trainers') return renderTrainers(b);
   if(tab === 'settings') return renderSettings(b);
+  if(tab === 'campaigns') return renderCampaigns(b);
   const list = tab === 'pending' ? data.pending : data.approved;
   if(!list.length){
     b.innerHTML = `<div class="empty">${tab === 'pending'
@@ -310,6 +312,53 @@ function renderTrainers(b){
     el.querySelector('.acts').appendChild(x);
     b.appendChild(el);
   });
+}
+
+function renderCampaigns(b){
+  b.innerHTML = `<div class="card">
+    <p class="name">Новости и акции</p>
+    <p class="muted">Рассылка идёт только подтверждённым аккаунтам и учитывает настройки пользователя. Если включены Push и Email, сначала используется Push, а Email — только как fallback, чтобы не дублировать одно сообщение.</p>
+    <div class="row">
+      <div><label>Тип</label><select id="campKind"><option value="news">Новости / обновления</option><option value="offers">Акция / Premium</option></select></div>
+      <div><label>Каналы</label>
+        <label class="check"><input id="campPush" type="checkbox" checked> Push</label>
+        <label class="check"><input id="campEmail" type="checkbox"> Email</label>
+      </div>
+    </div>
+    <div class="lang-card"><div class="lang-head"><b>RU</b></div>
+      <label>Заголовок</label><input id="campRuTitle" maxlength="100">
+      <label>Текст</label><textarea id="campRuBody" maxlength="1000"></textarea>
+    </div>
+    <div class="lang-card"><div class="lang-head"><b>EN</b></div>
+      <label>Title</label><input id="campEnTitle" maxlength="100">
+      <label>Text</label><textarea id="campEnBody" maxlength="1000"></textarea>
+    </div>
+    <p class="muted" id="campState"></p>
+    <div class="acts"><button class="b ok" id="campSend">Отправить</button></div>
+  </div>`;
+  $('campSend').onclick = sendCampaign;
+}
+async function sendCampaign(){
+  const btn=$('campSend'),state=$('campState');
+  const copy={
+    ru:{title:$('campRuTitle').value.trim(),body:$('campRuBody').value.trim()},
+    en:{title:$('campEnTitle').value.trim(),body:$('campEnBody').value.trim()}
+  };
+  if(!copy.ru.title||!copy.ru.body||!copy.en.title||!copy.en.body){alert('Заполни RU и EN тексты.');return;}
+  if(!$('campPush').checked&&!$('campEmail').checked){alert('Выбери хотя бы один канал.');return;}
+  if(!confirm('Запустить рассылку?')) return;
+  btn.disabled=true;
+  let cursor=0,total=0,pushSent=0,emailSent=0,skipped=0,failed=0;
+  try{
+    do{
+      const r=await api('campaign_send',{kind:$('campKind').value,push:$('campPush').checked,email:$('campEmail').checked,copy,cursor});
+      cursor=r.cursor;total=r.total;pushSent+=r.pushSent||0;emailSent+=r.emailSent||0;skipped+=r.skipped||0;failed+=r.failed||0;
+      state.textContent=`Обработано ${Math.min(cursor,total)} / ${total} · Push: ${pushSent} · Email: ${emailSent} · пропущено: ${skipped} · ошибок: ${failed}`;
+      if(r.done) break;
+    }while(true);
+    state.textContent += ' · готово';
+  }catch(e){alert('Рассылка остановлена: '+e.message);}
+  finally{btn.disabled=false;}
 }
 
 function renderSettings(b){

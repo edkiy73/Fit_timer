@@ -311,3 +311,18 @@ For the first complete version, focus on:
 Do not add many more events until there is analytics showing they are needed.
 
 The Notification Manager and frequency rules are more important than the raw number of notification types.
+
+
+### Admin campaigns
+
+The admin panel includes a **Рассылки** section for server-initiated news and Premium/deal messages.
+
+Rules implemented:
+- RU and EN copy are required before sending.
+- Admin can choose Push, Email, or both.
+- Delivery respects account notification preferences.
+- If both channels are selected, Push is attempted first and Email is used only as fallback, avoiding duplicate delivery of the same campaign.
+- Premium/deal campaigns have a server-side 14-day per-account cooldown.
+- Email is sent only to explicit `emailNews` / `emailOffers` opt-ins.
+- Campaign processing is batched (8 accounts/request) so it stays inside serverless execution limits.
+- Accounts enter the server campaign index after the next verified login or push-device registration; no database-wide key scan is required.

@@ -249,6 +249,10 @@ module.exports = async (req, res) => {
       Object.keys(acc.pushDevices).forEach(id=>{if(!acc.syncDevices[id])delete acc.pushDevices[id];});
     }
     await store.set(`a:${mh}`,JSON.stringify(acc));
+    if(!(await store.get(`a:indexed:${mh}`))){
+      await store.set(`a:indexed:${mh}`, '1');
+      await store.push('a:all', mh);
+    }
     return send(res,200,{ok:true,enabled:!!acc.pushDevices[deviceId]});
   }
 
@@ -387,6 +391,12 @@ module.exports = async (req, res) => {
 
     if(acc.handle) await store.set(`h:${acc.handle}`, mh);
     await store.set(`a:${mh}`, JSON.stringify(acc));
+    // Индекс нужен только для серверных рассылок. Сам адрес всё равно хранится
+    // внутри защищённой записи аккаунта; наружу список не отдаётся.
+    if(!(await store.get(`a:indexed:${mh}`))){
+      await store.set(`a:indexed:${mh}`, '1');
+      await store.push('a:all', mh);
+    }
 
     return send(res, 200, {
       ok: true, email, fresh,
