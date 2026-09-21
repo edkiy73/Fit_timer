@@ -345,13 +345,13 @@ function checkSchedules(){
     const useTime = (todayPlan && todayPlan.time) || p.time;
     if(!useTime || !planDays(p).includes(today)) return;
     const [h, m] = useTime.split(':').map(Number);
-    const t = h * 60 + m;
+    const minuteOfDay = h * 60 + m;
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
-    if(cur === t - 15 && !notifiedKeys.has(preKey)){
+    if(cur === minuteOfDay - 15 && !notifiedKeys.has(preKey)){
       notifiedKeys.add(preKey);
       showNotification(t('notify.beforeTitle'), t('notify.beforeBody',{name:p.name,time:useTime}));
     }
-    if(cur === t && !notifiedKeys.has(goKey)){
+    if(cur === minuteOfDay && !notifiedKeys.has(goKey)){
       notifiedKeys.add(goKey);
       showNotification(t('notify.startTitle'), t('notify.startBody',{name:p.name}));
     }
