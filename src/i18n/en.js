@@ -1372,4 +1372,10 @@ const I18N_EN = {
   'import.badLink': "This does not look like a program link. Paste the complete link you received or upload a program file.",
   'import.badCode': "Couldn’t read the code. Make sure it was copied completely.",
   'import.noProgramCode': "The code does not contain a program with exercises.",
+  'home.goodNight': "Good night",
+  'home.goodMorning': "Good morning",
+  'home.goodDay': "Good afternoon",
+  'home.goodEvening': "Good evening",
+  'images.textInstead': "The model returned text instead of an image: {text}",
+  'images.noImage': "The model did not return an image.",
 };
