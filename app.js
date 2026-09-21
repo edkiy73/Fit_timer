@@ -1372,6 +1372,12 @@ const I18N_RU = {
   'import.badLink': "Это не похоже на ссылку на программу. Вставь ссылку целиком — ту, что прислали, — или загрузи файл программы.",
   'import.badCode': "Не удалось прочитать код. Проверь, что он скопирован целиком.",
   'import.noProgramCode': "В коде нет программы с упражнениями.",
+  'home.goodNight': "Доброй ночи",
+  'home.goodMorning': "Доброе утро",
+  'home.goodDay': "Добрый день",
+  'home.goodEvening': "Добрый вечер",
+  'images.textInstead': "Модель ответила текстом вместо картинки: {text}",
+  'images.noImage': "Модель не вернула изображение.",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2747,6 +2753,12 @@ const I18N_EN = {
   'import.badLink': "This does not look like a program link. Paste the complete link you received or upload a program file.",
   'import.badCode': "Couldn’t read the code. Make sure it was copied completely.",
   'import.noProgramCode': "The code does not contain a program with exercises.",
+  'home.goodNight': "Good night",
+  'home.goodMorning': "Good morning",
+  'home.goodDay': "Good afternoon",
+  'home.goodEvening': "Good evening",
+  'images.textInstead': "The model returned text instead of an image: {text}",
+  'images.noImage': "The model did not return an image.",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -3425,9 +3437,9 @@ function syncSoundCascade(p){
 function appDialog(msg, opts = {}){
   return new Promise(res => {
     $('dlgMsg').textContent = msg;
-    const t = $('dlgCode');
-    if(opts.code){ setShown(t, true); t.value = opts.code; }
-    else setShown(t, false);
+    const codeEl = $('dlgCode');
+    if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
+    else setShown(codeEl, false);
     // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
     const typed = $('dlgType');
     setShown('dlgTypeBox', !!opts.type);
@@ -3604,17 +3616,17 @@ window.addEventListener('popstate', async e => {
     exitWorkout();
     return;
   }
-  let t = (e.state && e.state.scr) || 'scrMenu';
+  let targetScreen = (e.state && e.state.scr) || 'scrMenu';
   navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
   {
-    const at = navStack.lastIndexOf(t);
-    if(at >= 0) navStack.length = at + 1; else navStack = [t];
+    const at = navStack.lastIndexOf(targetScreen);
+    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
   }
   // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
   // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
   // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
   // на «Сегодня», бросив занятие на середине.
-  if((t === 'scrWork' && !state.live) || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
+  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
 
   if(!guardBypass){
     const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
@@ -3636,7 +3648,7 @@ window.addEventListener('popstate', async e => {
     }
   }
   guardBypass = false;
-  show(t, false);
+  show(targetScreen, false);
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
 // экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
@@ -3703,7 +3715,7 @@ function prepTab(id){
       // звук и управление без рук переехали сюда из «Настроек»
       syncSettingsForm();
       fillLiveSoundCascade('st');
-      $('hfHint').textContent = HF_HINTS[hfMode] || '';
+      $('hfHint').textContent = hfHintText(hfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
     else if(id === 'scrTrainer'){ renderClients(); pullAll(); }
@@ -4089,11 +4101,11 @@ function renderStartInfo(){
   const plans = normPlans(state.raw);
   const pl = plans[state.planIdx];
   const rotOn = state.raw.rotate && plans.length > 1;
-  const t = pl.time || state.raw.time;
+  const timeText = pl.time || state.raw.time;
   const daysTxt = rotOn
     ? ((state.raw.days && state.raw.days.length) ? state.raw.days.map(canonicalLabel).join(', ') : '')
     : ((pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join(', ') : '');
-  const parts = [t, daysTxt].filter(Boolean);
+  const parts = [timeText, daysTxt].filter(Boolean);
   if(rotOn) parts.push(t('start.variantSequence',{current:state.planIdx+1,total:plans.length}));
   const schedule = parts.join(' · ');
   $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
@@ -6416,13 +6428,13 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
     if(!trainer) trainer = {on: false, handle: '', links: ''};
     trainer.handle = r.handle;
     if(r.trainerKey) trainer.key = r.trainerKey;
-    const t = r.trainer || {};
+    const trainerRemote = r.trainer || {};
     // Сам ник ещё не делает человека тренером. Режим включён только если у
     // аккаунта действительно существует сохранённая публичная страница.
     trainer.on = !!r.trainer;
     if(r.trainer){
-      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = t[k] || ''; });
-      trainer.years = t.years == null ? null : t.years;
+      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = trainerRemote[k] || ''; });
+      trainer.years = trainerRemote.years == null ? null : trainerRemote.years;
     }
     trainer.pageErr = null;
     await saveTrainer();
@@ -7596,7 +7608,7 @@ function makeChip({ico, val, label, cls, why}){
 function renderGreeting(){
   const u = curUser();
   const h = new Date().getHours();
-  const hi = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+  const hi = h < 5 ? t('home.goodNight') : h < 12 ? t('home.goodMorning') : h < 18 ? t('home.goodDay') : t('home.goodEvening');
   const name = (u && u.name || '').trim();
   // Имени на главной нет намеренно. Своё имя человек и так знает, а в крупном
   // начертании оно ведёт себя непредсказуемо: длинное переносится, короткое выглядит
@@ -7973,8 +7985,8 @@ function renderToday(){
       // силовая (подходы у упражнений) — показываем подходы, круговая — круги
       if(plan.rounds > 1) bits.push(storeCountText(plan.rounds,'round'));
       else if(setsTotal > plan.exercises.length) bits.push(storeCountText(setsTotal,'set'));
-      const t = plan.time || p.time;
-      if(t) bits.push(t);
+      const planTime = plan.time || p.time;
+      if(planTime) bits.push(planTime);
       list.appendChild(todayRow({
         cls: done ? 'done' : '',
         ico: done ? 'check' : 'play',
@@ -8910,7 +8922,7 @@ const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
 
 async function callGeminiImage(prompt, signal){
   const key = geminiKey();
-  if(!key) throw new Error('Ключ Gemini не задан');
+  if(!key) throw new Error(t('ai.keyMissing'));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
   const body = {
     contents: [{parts: [{text: prompt}]}],
@@ -8943,7 +8955,7 @@ async function callGeminiImage(prompt, signal){
   const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
   if(!imgPart){
     const textPart = parts.find(p => p.text);
-    throw new Error(textPart ? 'Модель ответила текстом вместо картинки: ' + textPart.text.slice(0, 120) : 'Модель не вернула изображение.');
+    throw new Error(textPart ? t('images.textInstead',{text:textPart.text.slice(0,120)}) : t('images.noImage'));
   }
   return `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
 }
@@ -10023,7 +10035,7 @@ function renderClients(){
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
     row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
-      : sum.progs === 1 ? (newest ? newest.name : t('clients.programFallback'))
+      : sum.progs === 1 ? (newest ? newestrainerData.name : t('clients.programFallback'))
       : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
@@ -10749,7 +10761,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (it.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return (itrainerData.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
@@ -10798,7 +10810,7 @@ function renderStore(){
     return `<article class="store-row" data-open="${it.id}">
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
-        <h3>${it.name}</h3>
+        <h3>${itrainerData.name}</h3>
         <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
         <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
@@ -10827,7 +10839,7 @@ function openStoreItem(id){
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
-  $('siName').textContent = it.name;
+  $('siName').textContent = itrainerData.name;
   $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
@@ -11018,7 +11030,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(t('store.added',{name:it.name}));
+  appAlert(t('store.added',{name:itrainerData.name}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
@@ -11041,11 +11053,11 @@ function openTrainer(nick){
   else skeletonTrainer(nick);
   show('scrTrainerPage');
   apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
-    const t = Object.assign({}, d, {
+    const trainerData = Object.assign({}, d, {
       programs: Math.max(d.programs || 0, storeAll().filter(x => x.by === nick).length)
     });
-    lastSeen('tr_' + nick, t);
-    if(show._last === 'scrTrainerPage') fillTrainerPage(nick, t);
+    lastSeen('tr_' + nick, trainerData);
+    if(show._last === 'scrTrainerPage') fillTrainerPage(nick, trainerData);
   }).catch(()=>{});
 }
 
@@ -11065,33 +11077,33 @@ function skeletonTrainer(nick){
   setShown('tpLinkCard', false);
 }
 
-function fillTrainerPage(nick, t){
-  t = t || {};
-  $('tpPhoto').innerHTML = t.photo ? `<img src="${esc(t.photo)}" alt="">` : icon('user');
-  $('tpName').textContent = t.name || nick.replace(/^@/, '');
+function fillTrainerPage(nick, trainerData){
+  trainerData = trainerData || {};
+  $('tpPhoto').innerHTML = trainerData.photo ? `<img src="${esc(trainerData.photo)}" alt="">` : icon('user');
+  $('tpName').textContent = trainerData.name || nick.replace(/^@/, '');
   $('tpNick').textContent = nick;
-  const about = t.about || '';
+  const about = trainerData.about || '';
   setShown('tpAbout', !!about);
   $('tpAbout').textContent = about;   // textContent затирает и разметку заглушки
 
   // Три числа, и каждое показывается, только если оно есть. «0 программ» и
   // «стаж не указан» доверия не добавляют, а место занимают.
   const cells = [];
-  if(t.years != null && t.years > 0){
-    cells.push([t.years, appLocale === 'ru'
-      ? plural(t.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
-      : t(t.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
+  if(trainerData.years != null && trainerData.years > 0){
+    cells.push([trainerData.years, appLocale === 'ru'
+      ? plural(trainerData.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
+      : t(trainerData.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
   }
-  if(t.programs > 0){
-    cells.push([t.programs, appLocale === 'ru'
-      ? plural(t.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
-      : t(t.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
+  if(trainerData.programs > 0){
+    cells.push([trainerData.programs, appLocale === 'ru'
+      ? plural(trainerData.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
+      : t(trainerData.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
   }
-  if(t.opens > 0){
-    cells.push([t.opens, t(t.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
+  if(trainerData.opens > 0){
+    cells.push([trainerData.opens, t(trainerData.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
   }
-  if(t.since){
-    const d = daysSince((t.since || '').slice(0, 10));
+  if(trainerData.since){
+    const d = daysSince((trainerData.since || '').slice(0, 10));
     if(d != null){
       const m = Math.floor(d / 30);
       cells.push(m >= 1
@@ -11110,7 +11122,7 @@ function fillTrainerPage(nick, t){
     $('tpStats').appendChild(el);
   });
 
-  const link = (t.links || '').trim();
+  const link = (trainerData.links || '').trim();
   setShown('tpLinkCard', !!link);
   if(link){
     $('tpLink').href = /^https?:/.test(link) ? link : 'https://' + link;
@@ -12657,11 +12669,11 @@ function renderExList(){
   // объясняем, к чему относится список упражнений
   const plans = draft.plans || [];
   const pl = curPlan();
-  const t = $('bVariantTitle'), h = $('bVariantHint');
+  const titleEl = $('bVariantTitle'), h = $('bVariantHint');
   if(plans.length > 1){
     const rot = !!draft.rotate;
     const days = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
-    t.textContent = t('builder.variantExercises',{current:planIdx+1,total:plans.length});
+    titleEl.textContent = t('builder.variantExercises',{current:planIdx+1,total:plans.length});
     h.textContent = rot
       ? t('builder.variantExercisesHint')
       : (days
@@ -12669,7 +12681,7 @@ function renderExList(){
           : t('builder.variantNoDays'));
     setShown(h, true);
   } else {
-    t.textContent = t('builder.exercisesTitle');
+    titleEl.textContent = t('builder.exercisesTitle');
     const d1 = (pl.days || []).length ? pl.days.map(canonicalLabel).join(', ') : '';
     h.textContent = d1
       ? t('builder.scheduleExercises',{days:d1})
@@ -15157,13 +15169,13 @@ function checkSchedules(){
     const useTime = (todayPlan && todayPlan.time) || p.time;
     if(!useTime || !planDays(p).includes(today)) return;
     const [h, m] = useTime.split(':').map(Number);
-    const t = h * 60 + m;
+    const minuteOfDay = h * 60 + m;
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
-    if(cur === t - 15 && !notifiedKeys.has(preKey)){
+    if(cur === minuteOfDay - 15 && !notifiedKeys.has(preKey)){
       notifiedKeys.add(preKey);
       showNotification(t('notify.beforeTitle'), t('notify.beforeBody',{name:p.name,time:useTime}));
     }
-    if(cur === t && !notifiedKeys.has(goKey)){
+    if(cur === minuteOfDay && !notifiedKeys.has(goKey)){
       notifiedKeys.add(goKey);
       showNotification(t('notify.startTitle'), t('notify.startBody',{name:p.name}));
     }
@@ -15909,7 +15921,7 @@ async function delCurrentPlan(){
    Экран открывается из трёх мест: настроек, знакомства и подсказки про
    беременность. Возврат должен вести туда, откуда пришли, поэтому обратный
    путь запоминается функцией, а не берётся из истории. */
-let legalBack = ()=> goTab('scrSettings');
+let legalBack = ()=> goTab('scrAccount');
 const LEGAL_SECTIONS = {privacy: 'legalPrivacy', terms: 'legalTerms', health: 'legalHealth'};
 function legalToggle(key, on){
   const body = $(LEGAL_SECTIONS[key]);
@@ -15919,7 +15931,7 @@ function legalToggle(key, on){
   head.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 function openLegal(section, back){
-  legalBack = back || (()=> goTab('scrSettings'));
+  legalBack = back || (()=> goTab('scrAccount'));
   Object.keys(LEGAL_SECTIONS).forEach(k => legalToggle(k, k === section));
   show('scrLegal');
   window.scrollTo(0, 0);
