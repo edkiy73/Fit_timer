@@ -1988,6 +1988,7 @@ async function saveProgram(){
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
+  if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
   if(planDays(draft).length && window.FitNative && window.FitNative.requestNotifications){

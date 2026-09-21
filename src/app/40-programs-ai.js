@@ -2136,6 +2136,16 @@ async function createEditedProgram(){
 /* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
    программе — по ней потом уедет отчёт, и по ней же подопечный понимает, что программа
    пришла от тренера, а не собрана им самим. */
+async function claimProgramLink(id){
+  if(!id || !account || !account.email || !account.syncToken) return false;
+  let deviceId=await kvGet('deviceId');
+  if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
+  try{
+    await apiPost('/api/p/'+encodeURIComponent(id),{action:'claim',email:account.email,deviceId,token:account.syncToken});
+    return true;
+  }catch(_){return false;}
+}
+
 async function importProgramLink(id){
   let d;
   try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
@@ -2147,8 +2157,11 @@ async function importProgramLink(id){
   }
   const prog = d.program;
   if(!prog || !prog.name){ appAlert(t('import.noProgram')); return; }
-  prog.id = 'p' + Date.now();
-  prog.stats = {completions: 0};
+  const existing = customPrograms.find(x => x && x.src === id);
+  prog.id = existing ? existing.id : ('p' + Date.now());
+  prog.stats = existing && existing.stats ? existing.stats : {completions: 0};
+  if(existing && existing.active !== undefined) prog.active = existing.active;
+  if(existing && existing.progStepsAdj != null) prog.progStepsAdj = existing.progStepsAdj;
   prog.src = id;
   prog.plans = normPlans(prog);
   sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым

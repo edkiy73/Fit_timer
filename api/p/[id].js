@@ -16,11 +16,12 @@
    функцией, которых там всего двенадцать. */
 
 const { store } = require('../../lib/store');
-const { send, fail, rateOk, sameSecret, cors } = require('../../lib/util');
+const { send, fail, rateOk, sameSecret, cors, readBody } = require('../../lib/util');
+const crypto = require('crypto');
+const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
 module.exports = async (req, res) => {
   if(cors(req, res)) return;
-  if(req.method !== 'GET') return fail(res, 405, 'method_not_allowed');
   if(!store.configured()) return fail(res, 503, 'no_store');
 
   const id = (req.query && req.query.id) || '';
@@ -36,6 +37,25 @@ module.exports = async (req, res) => {
 
   let rec;
   try{ rec = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
+
+  if(req.method === 'POST'){
+    let body;
+    try{ body=await readBody(req); }catch(e){ return fail(res,413,'too_large'); }
+    if(!body || body.action !== 'claim') return fail(res,400,'unknown_action');
+    const email=String(body.email||'').trim().toLowerCase().slice(0,120);
+    const deviceId=String(body.deviceId||'').trim().slice(0,80);
+    const token=String(body.token||'');
+    if(!/^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/.test(email)||!deviceId||!token) return fail(res,401,'account_required');
+    const mh=sha(email).slice(0,32);
+    let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(_){}
+    const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
+    if(!device||!sameSecret(sha(token),device.h||'')) return fail(res,403,'bad_sync_token');
+    rec.clientMailHash=mh;
+    rec.claimedAt=new Date().toISOString();
+    await store.set(`p:${id}`,JSON.stringify(rec));
+    return send(res,200,{ok:true});
+  }
+  if(req.method !== 'GET') return fail(res,405,'method_not_allowed');
 
   /* ---- тренер смотрит, что стало со ссылкой ---- */
   if(key){

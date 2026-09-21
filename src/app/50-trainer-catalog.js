@@ -357,7 +357,7 @@ async function sendProgramToClient(c, p){
   // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
   let pr = clProgs(c).find(x => x.pid === p.id);
   let link = null, failed = null;
-  try{ link = await programLink(p, {to: c.name}); }
+  try{ link = await programLink(p, {to: c.name, existing: pr && pr.link ? pr.link : null}); }
   catch(e){ failed = e; }
 
   if(!link){ appAlert(linkFailNote(failed) + FILE_HINT); return; }

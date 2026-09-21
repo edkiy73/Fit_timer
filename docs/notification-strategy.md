@@ -333,3 +333,14 @@ Rules implemented:
 - FCM/APNs responses that indicate an unregistered or invalid device token automatically remove that token from the account.
 - Notification taps are recorded server-side by stage (for example `premium`, `catalog-status`, `start`) with total and daily counters.
 - Analytics stores aggregate counters only; notification text and workout content are not written to analytics.
+
+
+### Trainer-to-client remote updates
+
+Trainer program links now become an account relationship only after the client actually saves the received program while signed in.
+
+- Opening a link alone does not bind the client account.
+- Saving the program claims that link for the confirmed account.
+- Re-sending the same trainer program updates the existing server link instead of creating a new one, preserving opens/reports and the claimed client.
+- If the claimed client has Trainer & programs notifications enabled, a remote push is sent when the trainer publishes a new version through that same link.
+- Tapping the push opens the new server version for review. Saving it updates the existing local program (same local id/source link) while preserving its workout stats and progression adjustment.

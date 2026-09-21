@@ -11,6 +11,7 @@
    не мешает завести настоящие аккаунты потом. */
 
 const { store } = require('../lib/store');
+const { sendPushToAccountHash } = require('../lib/push');
 const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic, cleanLink } = require('../lib/util');
 
@@ -39,10 +40,24 @@ module.exports = async (req, res) => {
     return fail(res, 400, 'bad_program');
   }
 
-  const id = rndId(8);
-  const key = rndId(24);
+  let id = rndId(8);
+  let key = rndId(24);
   const now = new Date().toISOString();
   const by = String(body.by || '').slice(0, 40);
+  let previous = null;
+  const existing = body && body.existing;
+  if(existing && /^[0-9a-z]{4,16}$/.test(String(existing.id||'')) && existing.key){
+    const oldRaw = await store.get(`p:${existing.id}`);
+    if(oldRaw){
+      try{
+        const old=JSON.parse(oldRaw);
+        const given=require('crypto').createHash('sha256').update(String(existing.key)).digest('hex');
+        if(sameSecret(given,old.keyHash||'') && (!old.by || !by || old.by===by)){
+          previous=old; id=String(existing.id); key=String(existing.key);
+        }
+      }catch(_){}
+    }
+  }
 
   /* Профиль тренера и его счётчики.
 
@@ -78,14 +93,29 @@ module.exports = async (req, res) => {
   // Ключ храним хешем: дамп базы не должен раздавать доступ к отчётам.
   const keyHash = require('crypto').createHash('sha256').update(key).digest('hex');
 
-  await store.set(`p:${id}`, JSON.stringify({
+  const linkRec = Object.assign({}, previous || {}, {
     program: prog,
     by,
     byLink: cleanLink(body.byLink, 120),
-    to: clampLine(body.to, 40), // подпись «для кого» — её пишет тренер у себя
+    to: clampLine(body.to, 40),
     at: now,
     keyHash
-  }));
+  });
+  await store.set(`p:${id}`, JSON.stringify(linkRec));
 
-  send(res, 200, Object.assign({id, key, at: now}, trainerKey ? {trainerKey} : {}));
+  // Если подопечный ранее сохранил эту ссылку в подтверждённом аккаунте, изменение
+  // той же программы уже имеет точного адресата.
+  if(previous && linkRec.clientMailHash){
+    try{
+      const araw=await store.get(`a:${linkRec.clientMailHash}`),acc=araw?JSON.parse(araw):{},en=acc&&acc.locale==='en';
+      await sendPushToAccountHash(linkRec.clientMailHash,{
+        category:'trainer',
+        title:en?'Trainer updated your program':'Тренер обновил программу',
+        body:en?`“${prog.name}” has a new version. Open it to review the changes.`:`У «${prog.name}» появилась новая версия. Открой её и проверь изменения.`,
+        data:{stage:'trainer-program',linkId:id,category:'trainer'}
+      });
+    }catch(_){}
+  }
+
+  send(res, 200, Object.assign({id, key, at: now, updated:!!previous}, trainerKey ? {trainerKey} : {}));
 };
