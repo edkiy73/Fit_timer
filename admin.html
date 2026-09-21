@@ -650,7 +650,15 @@ async function saveForm(){
 
 async function act(action, extra){
   try{ await api(action, extra); await load(); }
-  catch(e){ alert('Не получилось: ' + e.message); }
+  catch(e){
+    const details = Array.isArray(e.miss) && e.miss.length
+      ? '\n\n— ' + e.miss.join('\n— ')
+      : '';
+    const head = action === 'approve'
+      ? 'Не получилось опубликовать программу'
+      : 'Не получилось выполнить действие';
+    alert(head + details + (details ? '' : ': ' + e.message));
+  }
 }
 
 document.querySelectorAll('.tab[data-tab]').forEach(t => {
