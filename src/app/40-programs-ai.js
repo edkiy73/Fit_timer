@@ -285,7 +285,7 @@ function renderWeekStrip(){
   setShown('weekBar', planned > 0);
   if(planned > 0){
     $('weekDone').textContent = w.doneTotal;
-    $('weekOf').textContent = 'из ' + planned;
+    $('weekOf').textContent = t('week.of',{total:planned});
     $('weekScore').classList.toggle('full', closed);
     $('weekBar').classList.toggle('full', closed);
     // ширину ставим следующим кадром — иначе полоса не «дорастает», а появляется готовой
@@ -298,30 +298,30 @@ function renderWeekStrip(){
   const chip = o => chips.appendChild(makeChip(o));
   if(planned > 0){
     if(closed) chip({
-      ico: 'check', val: '', label: 'Неделя закрыта', cls: 'ok',
-      why: `План недели выполнен: ${planned} из ${planned}. Что сделаешь сверх — пойдёт отдельной строкой и неделю уже не меняет.`
+      ico: 'check', val: '', label: t('week.closed'), cls: 'ok',
+      why: t('week.closedWhy',{done:planned,total:planned})
     });
     // пропуск — не приговор, а незакрытое дело: неделя ещё идёт, срок — воскресенье
     else if(w.debtTotal) chip({
-      ico: 'clock', val: w.debtTotal, label: 'можно отработать', cls: 'warn',
-      why: `Незакрытых тренировок этой недели: ${w.debtTotal}. Неделя идёт до воскресенья — пройди программу в любой день, и день закроется.`
+      ico: 'clock', val: w.debtTotal, label: t('week.makeUp'), cls: 'warn',
+      why: t('week.makeUpWhy',{count:w.debtTotal})
     });
     if(w.movedTotal) chip({
-      ico: 'reset', val: w.movedTotal, label: plural(w.movedTotal, 'отработана', 'отработаны', 'отработано'),
-      why: `Тренировок, прошедших не в назначенный день: ${w.movedTotal}. Неделя их засчитала — план недельный, а не суточный.`
+      ico: 'reset', val: w.movedTotal, label: t(w.movedTotal===1?'week.movedOne':'week.movedMany'),
+      why: t('week.movedWhy',{count:w.movedTotal})
     });
     // «сверх плана» без плана — пустые слова: там всё, что сделано, и есть вся неделя
     if(w.extraTotal) chip({
-      ico: 'plus', val: w.extraTotal, label: 'сверх плана',
-      why: `Тренировок сверх расписания: ${w.extraTotal}. В счёт недели они не идут и ничего не закрывают — это работа в плюс.`
+      ico: 'plus', val: w.extraTotal, label: t('week.extra'),
+      why: t('week.extraWhy',{count:w.extraTotal})
     });
   }
 
   // подпись остаётся ровно там, где чипами не сказать: расписания ещё нет
   const hint = !planned
     ? (w.anyDays
-        ? `Сделано на этой неделе: ${w.anyDays} ${plural(w.anyDays, 'тренировка', 'тренировки', 'тренировок')}`
-        : 'Дни тренировок пока не выбраны')
+        ? t('week.doneThisWeek',{count:w.anyDays,workouts:appLocale==='ru'?plural(w.anyDays,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')):t(w.anyDays===1?'calendar.workoutOne':'calendar.workoutFew')})
+        : t('week.daysUnset'))
     : '';
   $('weekStripHint').textContent = hint;
   setShown('weekStripHint', !!hint);
@@ -330,7 +330,7 @@ function renderWeekStrip(){
 // нажатие по дню недели: что в этот день сделано — и что было назначено, если не сделано
 function openWeekDay(d){
   const entries = (stats.history || []).filter(h => h.d === d.iso);
-  const title = DAY_FULL[d.idx] + ', ' + dayTitle(d.iso);
+  const title = canonicalLabel(DAY_FULL[d.idx]) + ', ' + dayTitle(d.iso);
   let empty = '';
   if(!entries.length){
     const names = customPrograms.filter(p => planDays(p).includes(d.name)).map(p => p.name);
@@ -339,14 +339,13 @@ function openWeekDay(d){
       // человек видит галочку и пустой список и думает, что приложение врёт
       // день недели ставим после тире — именительным падежом: «в четверг» требует
       // винительного («в субботу»), а склонять семь названий на лету незачем
-      empty = 'Тренировки в этот день не было. Отработано в другой день — ' +
-              d.movedFrom.map(i => DAY_FULL[i].toLowerCase()).join(' и ') + '.';
+      empty = t('week.noWorkoutMoved',{days:d.movedFrom.map(i=>canonicalLabel(DAY_FULL[i])).join(appLocale==='ru'?' и ':' and ')});
     } else if(names.length){
-      empty = (d.future ? 'По плану на этот день: ' : 'Тренировок не было. По плану было: ') + names.join(', ') + '.';
-      if(d.debt) empty += ' Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.';
-    } else empty = 'В этот день тренировок не было и не планировалось.';
+      empty = t(d.future?'week.plannedFuture':'week.plannedMissed',{names:names.join(', ')});
+      if(d.debt) empty += ' ' + t('week.canStillMakeUp');
+    } else empty = t('week.nonePlanned');
   }
-  openSessions('Тренировки за день', title, entries, empty);
+  openSessions(t('sessions.dayLabel'), title, entries, empty);
 }
 
 function renderToday(){
@@ -354,7 +353,7 @@ function renderToday(){
   const box = $('todayBox');
   const di = (new Date().getDay() + 6) % 7;
   const today = DAYS[di];
-  $('todayDayName').textContent = DAY_FULL[di].toLowerCase();
+  $('todayDayName').textContent = canonicalLabel(DAY_FULL[di]);
   const anyDays = customPrograms.some(p => planDays(p).length);
   setShown(box, true);
   // раньше без расписания блок просто исчезал, и «Сегодня» оставалась пустой.
@@ -372,10 +371,10 @@ function renderToday(){
     l.appendChild(todayRow({
       cls: 'rest info',
       ico: allOff ? 'power' : 'sparkle',
-      title: allOff ? 'Программы отключены' : (own ? 'Расписание не задано' : (onlyWarmup ? 'Пока только разминка' : 'Программ пока нет')),
-      sub: allOff ? 'Включи любую — и план вернётся сюда'
-                  : (own ? 'Выбери дни недели — и план появится здесь' : 'Собери свою программу за пару минут'),
-      action: own ? 'Открыть' : 'Создать',
+      title: allOff ? t('today.programsOff') : (own ? t('today.noSchedule') : (onlyWarmup ? t('today.warmupOnly') : t('today.noPrograms'))),
+      sub: allOff ? t('today.enableProgram')
+                  : (own ? t('today.chooseDays') : t('today.buildProgram')),
+      action: own ? t('today.open') : t('today.create'),
       onclick: ()=> goTab('scrPrograms')
     }));
     return;
@@ -411,12 +410,12 @@ function renderToday(){
     if(!slot) return null;
     const p = customPrograms.find(x => x.id === slot.pid);
     if(!p) return null;
-    const more = w.debtTotal > 1 ? ` и ещё ${w.debtTotal - 1}` : '';
+    const more = w.debtTotal > 1 ? t('today.andMore',{count:w.debtTotal-1}) : '';
     return todayRow({
       ico: 'reset',
-      title: 'Можно отработать',
-      sub: `${DAY_FULL[slot.idx]}, «${p.name}»${more} — неделя ещё закроется`,
-      action: 'Начать',
+      title: t('today.makeUp'),
+      sub: t('today.makeUpSub',{day:canonicalLabel(DAY_FULL[slot.idx]),name:p.name,more}),
+      action: t('today.start'),
       onclick: ()=> openStart(p)
     });
   };
@@ -427,20 +426,20 @@ function renderToday(){
       const bits = [];
       if(rot){
         const plansR = normPlans(p);
-        bits.push(`Вариант ${plansR.indexOf(plan) + 1} из ${plansR.length}`);
+        bits.push(t('today.variant',{current:plansR.indexOf(plan)+1,total:plansR.length}));
       }
-      bits.push(`${plan.exercises.length} ${plural(plan.exercises.length, 'упражнение', 'упражнения', 'упражнений')}`);
+      bits.push(storeCountText(plan.exercises.length,'exercise'));
       // силовая (подходы у упражнений) — показываем подходы, круговая — круги
-      if(plan.rounds > 1) bits.push(`${plan.rounds} ${plural(plan.rounds, 'круг', 'круга', 'кругов')}`);
-      else if(setsTotal > plan.exercises.length) bits.push(`${setsTotal} ${plural(setsTotal, 'подход', 'подхода', 'подходов')}`);
+      if(plan.rounds > 1) bits.push(storeCountText(plan.rounds,'round'));
+      else if(setsTotal > plan.exercises.length) bits.push(storeCountText(setsTotal,'set'));
       const t = plan.time || p.time;
       if(t) bits.push(t);
       list.appendChild(todayRow({
         cls: done ? 'done' : '',
         ico: done ? 'check' : 'play',
         title: p.name,
-        sub: done ? 'Уже выполнено сегодня' : bits.join(' · '),
-        action: done ? 'Ещё раз' : 'Начать',
+        sub: done ? t('today.done') : bits.join(' · '),
+        action: done ? t('today.again') : t('today.start'),
         onclick: () => openStart(p)
       }));
     });
@@ -463,7 +462,7 @@ function renderToday(){
       // раньше здесь был просто текст «Следующая тренировка: завтра — Название».
       // Название выглядело нажимаемым, но не нажималось. Теперь это обычная строка
       // плана: тап открывает программу, и в день отдыха можно начать её досрочно.
-      const when = next.in === 1 ? 'завтра' : ('в ' + next.day.toLowerCase());
+      const when = next.in === 1 ? t('today.tomorrow') : t('today.onDay',{day:canonicalLabel(next.day)});
       // Название следующей программы в день отдыха не показываем: до неё ещё дожить,
       // а расписание может смениться. Достаточно дня — «Следующая — в понедельник».
       // День установки: программу только что добавили, а приложение отвечает
@@ -473,9 +472,9 @@ function renderToday(){
       list.appendChild(todayRow({
         cls: neverTrained ? '' : 'rest',
         ico: neverTrained ? 'play' : 'moon',
-        title: neverTrained ? 'Начни сегодня' : 'Сегодня отдых',   // заголовок строки не переносится: длиннее — обрежется
-        sub: neverTrained ? `Первая тренировка: «${next.p.name}»` : `Следующая — ${when}`,
-        action: neverTrained ? 'Начать' : 'Открыть',
+        title: neverTrained ? t('today.startToday') : t('today.rest'),   // заголовок строки не переносится: длиннее — обрежется
+        sub: neverTrained ? t('today.firstWorkout',{name:next.p.name}) : t('today.next',{when}),
+        action: neverTrained ? t('today.start') : t('today.open'),
         onclick: () => openStart(next.p)
       }));
       // в день отдыха незакрытый долг важнее общих слов про отдых: он конкретен,
@@ -486,17 +485,17 @@ function renderToday(){
         const note = document.createElement('p');
         note.className = 'today-note';
         note.textContent = neverTrained
-          ? `По расписанию она ${when}, но ждать не обязательно: нагрузка растёт по пройденным тренировкам, а не по календарю.`
-          : 'Отдых — часть плана. Но если хочется размяться, открой программу и начни раньше срока.';
+          ? t('today.firstNote',{when})
+          : t('today.restNote');
         list.appendChild(note);
       }
     } else {
       list.appendChild(todayRow({
         cls: 'rest info',
         ico: 'moon',
-        title: 'Сегодня отдых',
-        sub: 'В расписании на ближайшую неделю тренировок нет',
-        action: 'Открыть',
+        title: t('today.rest'),
+        sub: t('today.noWeekWorkouts'),
+        action: t('today.open'),
         onclick: () => goTab('scrPrograms')
       }));
     }
@@ -631,7 +630,7 @@ function trainerProfile(){
 /* Отправка профиля на сервер происходит только по явной кнопке «Сохранить». */
 async function pushProfile(){
   if(!trainerAccountReady()){
-    trainer.pageErr = 'Сначала заведи аккаунт — страница тренера привязана к нему.';
+    trainer.pageErr = t('trainer.needAccountPage');
     return false;
   }
   if(!trainerOn()) return false;
@@ -646,8 +645,8 @@ async function pushProfile(){
     return true;
   }catch(e){
     trainer.pageErr = e && e.code === 'handle_taken'
-      ? 'Этот ник уже занят другим тренером — возьми другой.'
-      : 'Не удалось сохранить. Проверь связь и попробуй ещё раз.';
+      ? t('trainer.handleTaken')
+      : t('trainer.saveFailed');
     return false;
   }
 }
@@ -766,30 +765,30 @@ async function programLink(p, extra){
    целиком, вместе с картинками. */
 function linkFailNote(e){
   if(e && e.code === 'no_store'){
-    return 'Ссылки пока не работают: на сервере не подключено хранилище.';
+    return t('share.noStore');
   }
   if(e && e.code === 'rate_limited'){
-    return 'Слишком много ссылок подряд. Попробуй через несколько минут.';
+    return t('share.rate');
   }
-  return 'Ссылку сделать не удалось — нет связи с сервером. Попробуй ещё раз, когда появится интернет.';
+  return t('share.offline');
 }
-const FILE_HINT = '\n\nПередать программу прямо сейчас можно файлом: «Сохранить в файл» в том же меню. В файл входит всё, включая картинки.';
+const FILE_HINT = ()=> t('share.fileHint');
 
 async function exportProgram(p){
   let link;
   try{ link = await programLink(p); }
-  catch(e){ appAlert(linkFailNote(e) + FILE_HINT); return; }
+  catch(e){ appAlert(linkFailNote(e) + FILE_HINT()); return; }
 
-  const text = `Программа тренировки «${p.name}» — открой ссылку, и она добавится в Fit Timer:`;
+  const text = t('share.programText',{name:p.name});
   if(navigator.share){
     try{ await navigator.share({title: 'Fit Timer', text, url: link.url}); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
   try{
     await navigator.clipboard.writeText(link.url);
-    appAlert('Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nКартинки в ссылку не помещаются. Чтобы передать всё целиком — «Сохранить в файл».');
+    appAlert(t('share.linkCopied'));
   }catch(e){
-    appAlert('Не удалось скопировать автоматически. Выдели и скопируй вручную:', {code: link.url});
+    appAlert(t('common.copyManual'), {code: link.url});
   }
 }
 
@@ -810,13 +809,13 @@ async function exportProgramFile(p){
 
   const sizeKb = Math.round(json.length / 1024);
   if(window.FitNative && window.FitNative.isNative){
-    await shareGeneratedFile(blob, fname, `Программа «${p.name}»`);
+    await shareGeneratedFile(blob, fname, t('share.fileTitle',{name:p.name}));
     return;
   }
   const file = new File([blob], fname, {type: 'application/json'});
   if(navigator.canShare && navigator.canShare({files: [file]})){
     try{
-      await navigator.share({files: [file], title: `Программа «${p.name}»`});
+      await navigator.share({files: [file], title:t('share.fileTitle',{name:p.name})});
       return;
     }catch(e){ if(e && e.name === 'AbortError') return; }
   }
@@ -825,7 +824,7 @@ async function exportProgramFile(p){
   a.download = fname;
   a.click();
   setTimeout(()=> URL.revokeObjectURL(a.href), 5000);
-  appAlert(`Файл программы сохранён в загрузки (${sizeKb} КБ).\n\nВ нём есть всё: обложка и фото упражнений. Получатель откроет его через «Создать → Загрузить файл».`);
+  appAlert(t('share.fileSaved',{size:sizeKb}));
 }
 
 // Импорт программы из файла
@@ -836,7 +835,7 @@ async function importProgramFile(file){
     // поддерживаем и файл программы, и голый объект программы
     const prog = (data && data.type === 'program' && data.program) ? data.program : data;
     if(!prog || !prog.name || !Array.isArray(prog.plans)){
-      appAlert('Это не похоже на файл программы Fit Timer.');
+      appAlert(t('share.badFile'));
       return;
     }
     prog.id = 'p' + Date.now();
@@ -847,9 +846,9 @@ async function importProgramFile(file){
     customPrograms.push(prog);
     await savePrograms();
     renderMine();
-    appAlert(`Программа «${prog.name}» добавлена.`);
+    appAlert(t('share.programAdded',{name:prog.name}));
   }catch(e){
-    appAlert('Не удалось прочитать файл: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
+    appAlert(t('share.readFileFailed',{error:e && e.message ? e.message : t('common.unknownError')}));
   }
 }
 
