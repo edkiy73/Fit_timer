@@ -643,7 +643,7 @@ async function delCurrentPlan(){
    Экран открывается из трёх мест: настроек, знакомства и подсказки про
    беременность. Возврат должен вести туда, откуда пришли, поэтому обратный
    путь запоминается функцией, а не берётся из истории. */
-let legalBack = ()=> goTab('scrSettings');
+let legalBack = ()=> goTab('scrAccount');
 const LEGAL_SECTIONS = {privacy: 'legalPrivacy', terms: 'legalTerms', health: 'legalHealth'};
 function legalToggle(key, on){
   const body = $(LEGAL_SECTIONS[key]);
@@ -653,7 +653,7 @@ function legalToggle(key, on){
   head.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 function openLegal(section, back){
-  legalBack = back || (()=> goTab('scrSettings'));
+  legalBack = back || (()=> goTab('scrAccount'));
   Object.keys(LEGAL_SECTIONS).forEach(k => legalToggle(k, k === section));
   show('scrLegal');
   window.scrollTo(0, 0);
