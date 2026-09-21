@@ -65,6 +65,9 @@ These are invariants unless the user explicitly changes them.
 - App language is a per-profile preference: `u.locale = system | <locale>`, defaulting to `system`. `appLocale` is the resolved effective locale of the active profile. TTS follows it automatically; voice-command recognition remains a separate offline-pack setting.
 - Keep dictionaries in sync and run `npm run i18n:check`, `npm run check:sources`, and `npm run check:ai-index`.
 - For a new language, register its dictionary + `LOCALE_META`, add the selector option, and follow `docs/i18n-plan.md`. Do not duplicate catalog program IDs or fork canonical AI prompts by language.
+- Personal programs and trainer-to-client shared programs stay monolingual; do not translate them automatically.
+- Catalog entries are the exception: one workout mechanics object/ID must have RU + EN text before approval. Translation is started only by the admin during moderation, with manual edit/paste as fallback; trainer submission itself must not spend AI.
+- Installing from the catalog creates a normal monolingual personal snapshot in the active profile language and stores `p.locale`; later AI edits preserve that program language. Do not add a client-facing translate-program action unless explicitly requested.
 
 ### Language and terminology
 
