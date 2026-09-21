@@ -5,11 +5,11 @@
        (сравнение месяцев в календаре). Большого h1 здесь нет специально: экран
        подписан в доке, а 180 px пустой шапки на телефоне дороже любой типографики. -->
   <section class="screen root" id="scrStats">
-    <div class="page-head"><h1>Прогресс</h1></div>
+    <div class="page-head"><h1 data-i18n="progress.title">Прогресс</h1></div>
     <div class="tabs seg" id="statsTabs">
-      <button class="tab act" data-tab="workouts">Тренировки</button>
-      <button class="tab" data-tab="weight">Тело</button>
-      <button class="tab" data-tab="photo">Фото</button>
+      <button class="tab act" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
+      <button class="tab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
+      <button class="tab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
@@ -18,22 +18,22 @@
            чем помогали. Календарь поднят наверх — за месяцем сюда и приходят. -->
       <div class="mc-empty empty-state hidden" id="workEmpty">
         <span class="es-ico" data-icon="chart"></span>
-        <b>Тренировок пока нет</b>
-        <p>Пройди первую — здесь появятся календарь, недели и достижения.</p>
+        <b data-i18n="progress.noWorkoutsTitle">Тренировок пока нет</b>
+        <p data-i18n="progress.noWorkoutsText">Пройди первую — здесь появятся календарь, недели и достижения.</p>
       </div>
 
       <div class="metric-card" id="calCard">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev" title="Прошлый месяц"></button>
+          <button class="cal-nav" id="calPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
           <b id="calTitle"></b>
-          <button class="cal-nav" id="calNext" title="Следующий месяц"></button>
+          <button class="cal-nav" id="calNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
         </div>
         <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
       </div>
 
       <div class="metric-card" id="weeksCard">
-        <div class="sec-head"><b>Последние 8 недель</b></div>
+        <div class="sec-head"><b data-i18n="progress.last8Weeks">Последние 8 недель</b></div>
         <svg id="weekBars" viewBox="0 0 300 96"></svg>
       </div>
 
@@ -41,16 +41,16 @@
            на экране остаётся только «Тренировок пока нет». -->
       <div class="metric-card hidden" id="totalCard">
         <div class="tot-row tot-plain">
-          <div class="tot"><b id="totalTime">0 мин</b><span>общее время</span></div>
+          <div class="tot"><b id="totalTime">0 мин</b><span data-i18n="progress.totalTime">общее время</span></div>
           <div class="tot"><b id="totalCount">0</b><span id="totalCountWord">тренировок</span></div>
-          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику"></button>
+          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику" data-i18n-title="progress.clearStatsTitle"></button>
         </div>
       </div>
 
       <!-- Достижения раньше жили только на финале и исчезали через минуту.
            Здесь их можно пересматривать, и видно, что будет следующим. -->
       <div class="metric-card hidden" id="badgeCard">
-        <div class="sec-head"><b>Достижения</b><small id="badgeNote"></small></div>
+        <div class="sec-head"><b data-i18n="progress.achievements">Достижения</b><small id="badgeNote"></small></div>
         <div class="bdg-row" id="statBadges"></div>
         <p class="bdg-next" id="badgeNext"></p>
       </div>
@@ -60,16 +60,16 @@
       <div class="metric-card">
         <div class="mc-head">
           <div>
-            <span class="ts-label">Вес и объёмы</span>
+            <span class="ts-label" data-i18n="progress.bodyTitle">Вес и объёмы</span>
             <div class="mc-now" id="weightNowRow"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWeight" title="Записать"></button>
+          <button class="add-btn" id="btnAddWeight" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-meta hidden" id="weightMeta"></div>
         <div class="mc-empty empty-state" id="weightEmpty">
           <span class="es-ico" data-icon="weight"></span>
-          <b>Записей пока нет</b>
-          <p>Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.</p>
+          <b data-i18n="progress.noBodyTitle">Записей пока нет</b>
+          <p data-i18n="progress.noBodyText">Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.</p>
         </div>
         <!-- Раньше здесь стояли три одинаковых графика подряд (полэкрана).
              Теперь метрики — переключатель: значения всех видны сразу,
@@ -89,17 +89,17 @@
       <div class="metric-card">
         <div class="mc-head">
           <div>
-            <span class="ts-label">Самочувствие</span>
+            <span class="ts-label" data-i18n="progress.wellnessTitle">Самочувствие</span>
             <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWell" title="Записать"></button>
+          <button class="add-btn" id="btnAddWell" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-empty empty-state" id="wellEmpty">
           <span class="es-ico" data-icon="heart"></span>
           <!-- не «Записей пока нет»: ровно та же строка стоит в карточке выше, и две
                одинаковые шапки подряд читаются как одна пустая страница -->
-          <b>Самочувствие не записано</b>
-          <p>Давление, пульс и сон. Рядом с тренировками видно, чем отзывается нагрузка.</p>
+          <b data-i18n="progress.noWellTitle">Самочувствие не записано</b>
+          <p data-i18n="progress.noWellText">Давление, пульс и сон. Рядом с тренировками видно, чем отзывается нагрузка.</p>
         </div>
         <div class="wm-switch hidden" id="wellSwitch"></div>
         <div class="mc-charts hidden" id="wellCharts"></div>
@@ -114,27 +114,27 @@
       <div class="metric-card">
         <div class="mc-head">
           <div>
-            <span class="ts-label">Фото-прогресс</span>
+            <span class="ts-label" data-i18n="progress.photosTitle">Фото-прогресс</span>
             <div class="mc-now" id="photoNowRow"><b id="photoCount">—</b><span class="w-delta" id="photoHint"></span></div>
           </div>
         </div>
         <div class="mc-empty empty-state" id="photoEmpty">
           <span class="es-ico" data-icon="camera"></span>
-          <b>Фотографий пока нет</b>
-          <p>Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
+          <b data-i18n="progress.noPhotosTitle">Фотографий пока нет</b>
+          <p data-i18n="progress.noPhotosText">Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.</p>
         </div>
         <!-- Крупная пара «было / стало» с вкладки убрана: снимки тела не должны
              раскрываться во весь экран сами по себе — их открывают, когда захотят,
              кнопкой «Сравнить». -->
         <div class="mc-actions hidden" id="photoActions">
-          <button class="mc-act primary" id="btnCompare">Показать «было / стало»</button>
+          <button class="mc-act primary" id="btnCompare" data-i18n="progress.compare">Показать «было / стало»</button>
         </div>
         <div class="ph-grid hidden" id="photoStrip"></div>
         <!-- «Добавить» — обычная кнопка рядом с удалением, а не «плюс» в углу карточки:
              маленький значок в шапке не читался как главное действие вкладки. -->
         <div class="ph-tools">
-          <button type="button" class="btn-ghost" id="btnAddPhoto">Добавить фото</button>
-          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos">Удалить все фото</button>
+          <button type="button" class="btn-ghost" id="btnAddPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
@@ -163,8 +163,8 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.languageTitle">Язык</p></div>
       <div class="pref-row">
         <span data-i18n="settings.appLanguage">Язык приложения</span>
-        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения">
-          <option value="ru">Русский</option>
+        <select class="voice-sel" id="appLocaleSelect" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
+          <option value="ru" data-i18n="settings.russian">Русский</option>
           <option value="en">English</option>
         </select>
       </div>
@@ -248,7 +248,7 @@
             <label data-i18n="settings.profileName">Имя в профиле</label>
             <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить">
           </div>
-          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера">
+          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера" data-i18n-title="trainer.photoTitle">
             <span id="coachPhotoPrev"></span>
           </button>
         </div>
@@ -308,7 +308,7 @@
     </div>
 
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title" id="accCardTitle">Аккаунт</p></div>
+      <div class="cb-head"><p class="cb-title" id="accCardTitle" data-i18n="account.title">Аккаунт</p></div>
 
       <!-- Аккаунт бесплатный и создаётся быстро: основной CTA здесь уместен, потому что
            он сохраняет ник и данные аккаунта между устройствами. -->
@@ -357,7 +357,7 @@
       </div>
     </div>
     <div class="card-block">
-      <div class="cb-head"><p class="cb-title" id="wipeCardTitle">Удаление данных</p></div>
+      <div class="cb-head"><p class="cb-title" id="wipeCardTitle" data-i18n="account.deleteDataTitle">Удаление данных</p></div>
       <div class="danger-zone">
         <p id="wipeNote"></p>
         <button type="button" class="link-btn" id="btnWipeAccount" data-i18n="settings.deleteAll">Удалить все данные</button>
