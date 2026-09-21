@@ -249,7 +249,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
-        <div class="field"><label>Пол</label>
+        <div class="field"><label data-i18n="profile.gender">Пол</label>
           <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
@@ -326,7 +326,7 @@
         <p class="pm-lead" id="pokLead"></p>
         <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
         <p class="pm-fine" data-i18n="bio.enableHint">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
-        <button class="modal-btn" data-act="closeModal">Готово</button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="finish.done">Готово</button>
       </div>
     </div>
 
@@ -370,13 +370,13 @@
       <div class="modal-card" style="text-align:center">
         <div class="pm-crown" data-icon="fingerprint"></div>
         <h3 class="pm-title" data-i18n="lock.title">Вход в Fit Timer</h3>
-        <p class="pm-lead" id="lockMsg">Приложи палец или посмотри на камеру — и продолжим.</p>
+        <p class="pm-lead" id="lockMsg" data-i18n="lock.prompt">Приложи палец или посмотри на камеру — и продолжим.</p>
         <div class="field hidden" id="lockMailBox" style="text-align:left">
           <label data-i18n="lock.accountEmail">Почта аккаунта</label>
           <input type="email" id="lockEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
         </div>
-        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px">Разблокировать</button>
-        <button type="button" class="link-btn" id="lockMail">Войти по почте</button>
+        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail" data-i18n="lock.email">Войти по почте</button>
       </div>
     </div>
 
@@ -390,23 +390,23 @@
           <label id="dlgTypeLabel"></label>
           <input type="text" id="dlgType" maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px">ОК</button>
-        <button class="modal-btn" id="dlgCancel">Отмена</button>
+        <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px" data-i18n="common.ok">ОК</button>
+        <button class="modal-btn" id="dlgCancel" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
     <div class="modal" id="swapModal">
       <div class="modal-card">
-        <span class="mini-label">Можно усложнить</span>
+        <span class="mini-label" data-i18n="swap.title">Можно усложнить</span>
         <p class="dlg-msg" id="swapIntro"></p>
         <div class="swap-card">
           <h4 id="swapName"></h4>
           <p id="swapDesc"></p>
         </div>
-        <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px">Заменить через ИИ сейчас</button>
+        <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px" data-i18n="swap.replaceAI">Заменить через ИИ сейчас</button>
         <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
-        <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px">Понятно</button>
-        <button class="modal-btn" id="swapCopy">Скопировать название и описание</button>
+        <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px" data-i18n="common.ok">Понятно</button>
+        <button class="modal-btn" id="swapCopy" data-i18n="workout.copyNameDesc">Скопировать название и описание</button>
       </div>
     </div>
 
@@ -436,7 +436,7 @@
       <div class="modal-card">
         <span class="mini-label" id="optTitle"></span>
         <div id="optList"></div>
-        <button type="button" class="link-btn hidden" id="optReset">Сбросить</button>
+        <button type="button" class="link-btn hidden" id="optReset" data-i18n="common.reset">Сбросить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -446,9 +446,9 @@
          (формат, уровень, мышцы, инвентарь) — без промежуточной пустышки. -->
     <div class="modal" id="addExModal">
       <div class="modal-card">
-        <span class="mini-label">Новое упражнение</span>
-        <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b>Через ИИ</b><small>Опиши, что нужно, — подберёт нейросеть</small></span></button>
-        <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b>Вручную</b><small>Задаёшь название, формат и подходы</small></span></button>
+        <span class="mini-label" data-i18n="exercise.new">Новое упражнение</span>
+        <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="exercise.aiSub">Опиши, что нужно, — подберёт нейросеть</small></span></button>
+        <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="common.manual">Вручную</b><small data-i18n="exercise.manualSub">Задаёшь название, формат и подходы</small></span></button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -457,31 +457,31 @@
          упражнения): какой из них открыт, помнит restModalKey. -->
     <div class="modal" id="restModal">
       <div class="modal-card">
-        <span class="mini-label" id="restModalTitle">Свой отдых</span>
-        <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20"></div>
-        <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px">Готово</button>
+        <span class="mini-label" id="restModalTitle" data-i18n="rest.custom">Свой отдых</span>
+        <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20" data-i18n-placeholder="rest.example"></div>
+        <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
     <div class="modal" id="cmpModal">
       <div class="modal-card">
-        <span class="mini-label">Сравнение прогресса</span>
+        <span class="mini-label" data-i18n="compare.title">Сравнение прогресса</span>
         <div class="cmp-row">
           <div class="cmp-col">
             <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgA"></div>
-            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
           <div class="cmp-col">
             <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgB"></div>
-            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
         </div>
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
-        <p class="field-hint" style="text-align:center;margin:0 0 10px">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
-        <button class="btn-primary" id="btnShareCmp" style="padding:14px">Поделиться сравнением</button>
+        <p class="field-hint" style="text-align:center;margin:0 0 10px" data-i18n="compare.hint">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
+        <button class="btn-primary" id="btnShareCmp" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
@@ -502,7 +502,7 @@
          просто не помещался на экран и обрезался. -->
     <div class="modal" id="sessModal">
       <div class="modal-card">
-        <span class="mini-label" id="sessLabel">Тренировки</span>
+        <span class="mini-label" id="sessLabel" data-i18n="progress.tabWorkouts">Тренировки</span>
         <p class="dlg-msg" id="sessTitle"></p>
         <div class="sess-list" id="sessList"></div>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
@@ -511,27 +511,27 @@
 
     <div class="modal" id="waModal">
       <div class="modal-card">
-        <span class="mini-label">Новая запись</span>
+        <span class="mini-label" data-i18n="weight.newEntry">Новая запись</span>
         <div class="w-add on">
-          <div class="wf"><label>Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
-          <div class="wf"><label>Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
+          <div class="wf"><label data-i18n="weight.kgLabel">Вес, кг</label><input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.heightCm">Рост, см</label><input type="number" id="heightInput" min="100" max="250" inputmode="numeric"></div>
           <!-- жир и мышцы показывают умные весы; поля необязательные, как и обхваты -->
-          <div class="wf"><label>Жир, %</label><input type="number" id="fatInput" step="0.1" min="3" max="70" inputmode="decimal"></div>
-          <div class="wf"><label>Мышцы, %</label><input type="number" id="muscInput" step="0.1" min="10" max="80" inputmode="decimal"></div>
-          <div class="wf"><label>Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
-          <div class="wf"><label>Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
-          <div class="wf"><label>Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.fatPct">Жир, %</label><input type="number" id="fatInput" step="0.1" min="3" max="70" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.musclePct">Мышцы, %</label><input type="number" id="muscInput" step="0.1" min="10" max="80" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.waistCm">Талия, см</label><input type="number" id="waistInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.hipsCm">Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
+          <div class="wf"><label data-i18n="weight.chestCm">Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
     <div class="modal" id="whModal">
       <div class="modal-card">
-        <span class="mini-label">История веса</span>
+        <span class="mini-label" data-i18n="weight.history">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="whSave" style="padding:14px">Сохранить</button>
+        <button class="btn-primary" id="whSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -540,48 +540,48 @@
          человек меряет давление не каждый день и не всегда помнит, сколько спал. -->
     <div class="modal" id="wellModal">
       <div class="modal-card">
-        <span class="mini-label">Как ты сегодня</span>
+        <span class="mini-label" data-i18n="well.today">Как ты сегодня</span>
         <!-- Те же три ячейки в ряд, что и в истории (.wh-cells.wh-well): «Давление»
              одним полем из двух половин через косую, «Пульс», «Сон». Четыре
              отдельных поля укладывались по два в ряд, «Нижнее» отрывалось от
              «Давление, верхнее» и читалось как самостоятельный показатель, а
              форма записи и форма правки выглядели разными местами. -->
         <div class="wh-cells wh-well">
-          <div class="whc"><label>Давление</label>
+          <div class="whc"><label data-i18n="well.pressure">Давление</label>
             <span class="whp">
-              <input type="number" id="sysInput" min="70" max="250" inputmode="numeric" aria-label="Давление, верхнее"><i>/</i><input type="number" id="diaInput" min="40" max="160" inputmode="numeric" aria-label="Давление, нижнее">
+              <input type="number" id="sysInput" min="70" max="250" inputmode="numeric" aria-label="Давление, верхнее" data-i18n-aria="well.sysAria"><i>/</i><input type="number" id="diaInput" min="40" max="160" inputmode="numeric" aria-label="Давление, нижнее" data-i18n-aria="well.diaAria">
             </span>
           </div>
-          <div class="whc"><label>Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
-          <div class="whc"><label>Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
+          <div class="whc"><label data-i18n="well.pulse">Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
+          <div class="whc"><label data-i18n="well.sleepHours">Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
     <div class="modal" id="wellHistModal">
       <div class="modal-card">
-        <span class="mini-label">История самочувствия</span>
+        <span class="mini-label" data-i18n="well.history">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="wellHistSave" style="padding:14px">Сохранить</button>
+        <button class="btn-primary" id="wellHistSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
     <div class="modal" id="importModal">
       <div class="modal-card">
-        <span class="mini-label">Импорт программы</span>
+        <span class="mini-label" data-i18n="import.title">Импорт программы</span>
         <!-- Кода программы приложение больше не выдаёт: адрес с программой внутри
              отбивался хостингом, и остались два пути — короткая ссылка и файл.
              Поэтому и спрашиваем про них, а не про «FIT1…», которого человеку
              взять уже негде. Старые коды из чужих переписок поле по-прежнему
              понимает — ломать их задним числом незачем. -->
-        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились"></textarea></div>
-        <button class="btn-primary" id="btnDoImport" style="padding:15px">Открыть по ссылке</button>
-        <div class="imp-or"><span>или</span></div>
-        <button class="btn-ghost" id="btnImportProgFile" style="margin:0">Загрузить файл программы</button>
-        <p class="field-hint" style="margin-top:8px">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
+        <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились" data-i18n-placeholder="import.linkPlaceholder"></textarea></div>
+        <button class="btn-primary" id="btnDoImport" style="padding:15px" data-i18n="import.openLink">Открыть по ссылке</button>
+        <div class="imp-or"><span data-i18n="common.or">или</span></div>
+        <button class="btn-ghost" id="btnImportProgFile" style="margin:0" data-i18n="import.file">Загрузить файл программы</button>
+        <p class="field-hint" style="margin-top:8px" data-i18n="import.hint">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
