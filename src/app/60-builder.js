@@ -732,8 +732,8 @@ function renderDays(){
   setShown('bDaysFieldTop', top);
   setShown('bDaysField', !top);
   $('bDaysTopHint').textContent = rotOn
-    ? 'Дни говорят, когда тренироваться. Очередь вариантов они не сбивают.'
-    : 'В эти дни программа попадёт в план на сегодня.';
+    ? t('builder.daysRotateHint')
+    : t('builder.daysPlanHint');
   const box = $(top ? 'bDaysTop' : 'bDays'); box.innerHTML='';
   const owner = rotOn ? draft : curPlan();
   if(!Array.isArray(owner.days)) owner.days = [];
@@ -856,9 +856,8 @@ function syncExType(){
   // не читалось как «повторения и килограммы вместе».
   if($('exTypeHint')){
     $('exTypeHint').textContent = withWeight
-      ? (reps ? 'Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.'
-              : 'Удержание или перенос с грузом — на тренировке рядом с секундами будут килограммы.')
-      : (reps ? 'Считаем повторения — например «12-15».' : 'Считаем время — например «45» секунд.');
+      ? t(reps ? 'builder.typeWeightedRepsHint' : 'builder.typeWeightedTimeHint')
+      : t(reps ? 'builder.typeRepsHint' : 'builder.typeTimeHint');
   }
   setShown('exWeightRow', withWeight);
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
@@ -919,8 +918,8 @@ function renderProgControls(){
   }
 
   $('exProgOnHint').textContent = period
-    ? `прибавляется автоматически: ${progPeriodLabel(period)}`
-    : 'в настройках программы автоприбавка выключена — числа не растут';
+    ? t('builder.progressAutoPeriod',{period:progPeriodLabel(period)})
+    : t('builder.progressProgramOff');
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
@@ -1014,17 +1013,17 @@ function syncExProgSum(){
     const st = num(stepId), mx = num(maxId);
     if(st == null || st <= 0) return '';
     const s = `+${fmtKg(st)} ${unit}`;
-    return withMax && mx > 0 ? `${s}, максимум ${fmtKg(mx)}` : s;
+    return withMax && mx > 0 ? t('builder.summaryMax',{value:s,max:fmtKg(mx)}) : s;
   };
   // осей может быть две (вес — независимо от повторений или времени) — тогда
   // предел в строку не влезает, и сводка говорит только про прибавку: подробности —
   // в раскрытом блоке
   const dual = hasWeight(exDraft);
   const bits = exDraft.type === 'time'
-    ? [part('exStepTime', 'exMaxTime', 'сек', !dual)]
-    : [part('exStepReps', 'exMaxReps', 'повт.', !dual)];
-  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', 'кг', !dual));
-  const txt = bits.filter(Boolean).join(' и ');
+    ? [part('exStepTime', 'exMaxTime', t('store.secShort'), !dual)]
+    : [part('exStepReps', 'exMaxReps', t('store.repShort'), !dual)];
+  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', t('progress.kg'), !dual));
+  const txt = bits.filter(Boolean).join(appLocale === 'ru' ? ' и ' : ' & ');
   $('exProgSum').textContent = txt || t('builder.emptyProgress');
 }
 
