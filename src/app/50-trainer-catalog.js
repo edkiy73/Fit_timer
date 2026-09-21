@@ -692,18 +692,50 @@ let storeServer = [];
    честно: пустая витрина лучше вечно устаревшей. */
 const storeAll = () => storeServer;
 let storeLoading = false;
+
+async function catalogItemFull(it){
+  const lang = appLocale === 'ru' ? 'ru' : 'en';
+  const headers = {};
+  if(it && it.pro){
+    if(!account || !account.email || !account.syncToken) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+    const deviceId = await kvGet('deviceId');
+    if(!deviceId) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+    headers['X-Fit-Email'] = account.email;
+    headers['X-Fit-Device'] = deviceId;
+    headers['X-Fit-Token'] = account.syncToken;
+  }
+  const d = await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(lang), {headers});
+  if(d && d.item && d.item.locked) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+  return d && d.item;
+}
+
+async function ensureCatalogBody(it){
+  if(!it || !it.pro || it.text) return it;
+  try{
+    const full = await catalogItemFull(it);
+    if(full) Object.assign(it, full, {locked:false});
+    return it;
+  }catch(e){
+    if(e && e.code === 'premium_required'){
+      await refreshServerSubscription(true);
+    }
+    throw e;
+  }
+}
+
 async function loadStoreServer(){
   const locale = appLocale === 'ru' ? 'ru' : 'en';
   const cacheKey = 'catalog_' + locale;
   storeLoading = true;
   try{
     const d = await apiFetch('/api/catalog?lang=' + encodeURIComponent(locale));
-    storeServer = Array.isArray(d.items) ? d.items : [];
+    storeServer = Array.isArray(d.items) ? d.items.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it) : [];
     lastSeen(cacheKey, storeServer);
   }catch(e){
     // Кэш тоже языковой: после переключения профиля русская витрина не должна
     // внезапно подменять английскую и наоборот.
     storeServer = lastSeen(cacheKey) || [];
+    storeServer = storeServer.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it);
   } finally { storeLoading = false; }
 }
 
@@ -904,9 +936,15 @@ function siBits(ex){
   if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
-function openStoreItem(id){
+async function openStoreItem(id){
   const it = storeAll().find(x => x.id === id);
   if(!it) return;
+  if(it.pro && isPremium() && !it.text){
+    try{ await ensureCatalogBody(it); }
+    catch(e){
+      if(e && e.code === 'premium_required'){ openPremium(); return; }
+    }
+  }
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
@@ -959,7 +997,7 @@ function openStoreItem(id){
   setShown('siLock', locked);
   if(locked){
     $('siLockTxt').textContent =
-      t('store.lockedText',{count:exs.length,exercises:appLocale === 'ru' ? plural(exs.length,t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : (exs.length === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
+      t('store.lockedText',{count:(it.exCount||exs.length),exercises:appLocale === 'ru' ? plural((it.exCount||exs.length),t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : ((it.exCount||exs.length) === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
   }
   /* Состав — ПО ВАРИАНТАМ, а не одним списком.
 
@@ -1029,7 +1067,7 @@ async function siPaintMedia(it){
   if(!(it.hasMedia || it.media)) return;
   let media = it.media;
   if(!media){
-    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
+    try{ media = (await catalogItemFull(it)).media; }
     catch(e){ return; }            // без фото страница остаётся рабочей
     it.media = media || {};
   }
@@ -1060,8 +1098,13 @@ async function addStoreItem(id){
     openStart(own);
     return;
   }
-  // программа по подписке — вместо отказа показываем, что даёт подписка
+  // Локальная проверка — только UX. Сам текст Premium-программы всё равно
+  // выдаёт только сервер после проверки аккаунта и подписки.
   if(it.pro && !isPremium()){ openPremium(); return; }
+  if(it.pro && !it.text){
+    try{ await ensureCatalogBody(it); }
+    catch(e){ openPremium(); return; }
+  }
 
   const {program, errors} = parseProgramText(it.text);
   if(errors.length || !program.plans.length){

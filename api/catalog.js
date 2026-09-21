@@ -22,6 +22,20 @@ const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
+const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
+async function premiumCatalogAccess(req){
+  const email=String(req.headers['x-fit-email']||'').trim().toLowerCase().slice(0,120);
+  const deviceId=String(req.headers['x-fit-device']||'').trim().slice(0,80);
+  const token=String(req.headers['x-fit-token']||'');
+  if(!EMAIL.test(email)||!deviceId||!token) return false;
+  const mh=sha(email).slice(0,32);
+  let acc=null;
+  try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(_){}
+  const dev=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
+  if(!dev||!sameSecret(sha(token),dev.h||'')) return false;
+  return (Date.parse(acc.sub&&acc.sub.until)||0) > Date.now();
+}
+
 const LANGS = ['ru', 'en'];
 const normLocale = v => LANGS.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : 'ru';
 
@@ -115,10 +129,14 @@ async function list(req, res){
     try{ c = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
     if(c.status !== 'approved') return fail(res, 404, 'not_found');
     const loc = resolvedLocale(c, req.query && req.query.lang);
+    const allowed = !c.pro || await premiumCatalogAccess(req);
     return send(res, 200, {item: {
       id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min, name: loc.name,
-      gives: loc.gives, text: loc.text, locale: loc.lang, pro: !!c.pro,
-      cover: c.cover || null, media: localizedMedia(c, loc.lang)
+      gives: loc.gives, text: allowed ? loc.text : '', locale: loc.lang, pro: !!c.pro,
+      exCount:+c.exCount||exerciseNames(loc.text).length,
+      locked:!!c.pro && !allowed,
+      cover: c.cover || null, media: allowed ? localizedMedia(c, loc.lang) : null,
+      hasMedia:!!(c.media && Object.keys(c.media).length)
     }});
   }
 
@@ -147,7 +165,8 @@ async function list(req, res){
     // media в списке НЕТ намеренно — см. выше. Обложка одна на программу и лёгкая.
     const loc = resolvedLocale(c, req.query && req.query.lang);
     items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
-                name: loc.name, gives: loc.gives, text: loc.text, locale: loc.lang, pro: !!c.pro,
+                name: loc.name, gives: loc.gives, text: c.pro ? '' : loc.text, locale: loc.lang, pro: !!c.pro,
+                exCount:+c.exCount||exerciseNames(loc.text).length, locked:!!c.pro,
                 cover: c.cover || null, hasMedia: !!(c.media && Object.keys(c.media).length)});
   });
   send(res, 200, {items});
