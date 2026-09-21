@@ -36,6 +36,10 @@ function normalizeCatalogText(it, fallbackSource){
     const block = cleanLocaleBlock(src[lang]);
     if(block && (block.name || block.gives || block.text)) locales[lang] = block;
   });
+  const otherLocale = sourceLocale === 'ru' ? 'en' : 'ru';
+  if(locales[sourceLocale] && locales[otherLocale]){
+    locales[otherLocale] = normalizeTranslatedBlock(locales[sourceLocale], locales[otherLocale]);
+  }
   // Совместимость со старыми записями и заявками: верхний уровень — оригинал.
   if(!locales[sourceLocale] && it && (it.name || it.gives || it.text)){
     locales[sourceLocale] = cleanLocaleBlock({name:it.name, gives:it.gives, text:it.text});
@@ -53,6 +57,31 @@ const TRANSLATABLE_KEYS = new Set([
   'ПРОГРАММА', 'ОПИСАНИЕ ПРОГРАММЫ', 'УПРАЖНЕНИЕ', 'ОПИСАНИЕ',
   'ОШИБКИ', 'ЗАМЕНА', 'ОПИСАНИЕ ЗАМЕНЫ'
 ]);
+
+function normalizeTranslatedBlock(source, target){
+  if(!source || !target) return target;
+  const srcLines = String(source.text || '').split(/\r?\n/);
+  const dstLines = String(target.text || '').split(/\r?\n/);
+  // Автовосстановление безопасно только когда перевод сохранил построчную форму.
+  // В этом случае механику вообще не берём из перевода: копируем её из оригинала,
+  // а из второй версии забираем только человекочитаемые значения.
+  if(!srcLines.length || srcLines.length !== dstLines.length) return target;
+  const out = srcLines.map((line, i) => {
+    const sm = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+    if(!sm) return line;
+    const key = sm[1];
+    if(key === 'ПРОГРАММА') return key + ': ' + clampLine(target.name, 60);
+    if(!TRANSLATABLE_KEYS.has(key)) return line;
+    const dm = String(dstLines[i] || '').match(/^[^:]{1,80}:\s*(.*)$/);
+    const translated = dm ? dm[1].trim() : '';
+    return translated ? key + ': ' + translated : line;
+  });
+  return {
+    name: clampLine(target.name, 60),
+    gives: clampText(target.gives, 300),
+    text: out.join('\n')
+  };
+}
 function protocolShape(text){
   return String(text || '').split(/\r?\n/).map(line => {
     const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
@@ -240,7 +269,7 @@ module.exports = async (req, res) => {
     const c = JSON.parse(raw);
     if(a === 'approve'){
       const checked = checkItem(c, {requireBoth:true, fallbackSource:c.sourceLocale || 'ru'});
-      if(checked.miss.length) return fail(res, 400, 'missing_locales', {miss:checked.miss});
+      if(checked.miss.length) return fail(res, 400, 'catalog_not_ready', {miss:checked.miss});
       syncSourceFields(c, checked);
     }
     c.status = a === 'approve' ? 'approved' : 'rejected';
