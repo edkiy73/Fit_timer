@@ -726,4 +726,5 @@ const I18N_RU = {
   'publish.errNetwork': "Не получилось отправить — похоже, нет связи с сервером.",
   'catalog.fromTrainers': "{count} {programs} от тренеров",
   'catalog.trainerWorkouts': "Тренировки от тренеров",
+  'builder.variant': "Вариант",
 };
