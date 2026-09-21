@@ -84,6 +84,14 @@
     letter-spacing:0;text-transform:none;line-height:1.4;
   }
   .gate{max-width:380px;margin:80px auto;padding:0 16px}
+  .lang-card{border:1px solid var(--line);border-radius:12px;padding:14px;margin:14px 0;background:var(--bg)}
+  .lang-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+  .lang-head b{font-size:15px}
+  .lang-state{font-size:12px;color:var(--muted)}
+  .lang-state.ok{color:var(--ok)}
+  .translate-tools{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+  .translate-box{margin-top:10px}
+  .translate-box textarea{min-height:110px}
   /* Картинки. Правка каталога без них — полдела: обложка решает, откроют ли строку,
      а фото упражнения объясняет движение быстрее любого описания. */
   .pics{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
@@ -135,6 +143,37 @@ const GOALS = [['slim','Похудеть'],['tone','Подтянуть всё т
   ['cardio','Кардио и энергия']];
 const LEVELS = ['Новичок','Средний','Продвинутый'];
 const goalName = id => (GOALS.find(g => g[0] === id) || [id, id])[1];
+
+const LANGS = ['ru','en'];
+const langName = lang => lang === 'en' ? 'EN' : 'RU';
+function sourceLocaleOf(c){
+  if(c && (c.sourceLocale === 'ru' || c.sourceLocale === 'en')) return c.sourceLocale;
+  if(c && c.locales && c.locales.en && !c.locales.ru) return 'en';
+  return 'ru';
+}
+function localeBlock(c, lang){
+  const hit = c && c.locales && c.locales[lang];
+  if(hit) return {name:hit.name || '', gives:hit.gives || '', text:hit.text || ''};
+  const source = sourceLocaleOf(c);
+  if(c && lang === source) return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
+  if(c && !c.locales && lang === 'ru') return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
+  return {name:'', gives:'', text:''};
+}
+function localeReady(c, lang){
+  const x = localeBlock(c, lang);
+  return x.name.trim().length >= 3 && x.gives.trim().length >= 20 && x.text.length >= 60;
+}
+function localeMarks(c){
+  return LANGS.map(lang => langName(lang) + ' ' + (localeReady(c, lang) ? '✓' : '—')).join(' · ');
+}
+function translationPrompt(source, from, to){
+  const names = {ru:'Russian', en:'English'};
+  return 'Translate this Fit Timer catalog entry from ' + names[from] + ' to ' + names[to] + '.\n'
+    + 'Return ONLY valid JSON with exactly the keys name, gives, text.\n'
+    + 'Inside text keep every protocol label before the colon exactly unchanged (ПРОГРАММА, ДНИ, КРУГИ, УПРАЖНЕНИЕ, ОПИСАНИЕ, ФОРМАТ, ЗНАЧЕНИЕ, ПОДХОДЫ, ОТДЫХ, ШАГ, ПОТОЛОК and the other service labels).\n'
+    + 'Keep line order, blank lines, numbers, day tokens, boolean/control values and format values unchanged. Translate only human-readable names and prose. Do not add/remove/reorder exercises or change workout mechanics.\n\nSOURCE JSON:\n'
+    + JSON.stringify(source, null, 2);
+}
 
 let KEY = localStorage.getItem('adminKey') || '';
 let data = {pending: [], approved: [], trainers: [], settings: null, providers: {}};
@@ -205,7 +244,7 @@ function itemCard(c){
         <p class="name">${esc(c.name)}${c.pro ? '<span class="pill pro">премиум</span>' : ''}</p>
         ${c.by ? `<a class="who" href="/api/trainer/${encodeURIComponent(c.by)}" target="_blank" rel="noopener">${esc(c.by)}</a>` : '<span class="muted">от нас</span>'}
         <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}${
-          c.media && Object.keys(c.media).length ? ' · ' + Object.keys(c.media).length + ' фото' : ''}</p>
+          c.media && Object.keys(c.media).length ? ' · ' + Object.keys(c.media).length + ' фото' : ''} · ${esc(localeMarks(c))}</p>
       </div>
     </div>
     <p class="gives">${esc(c.gives)}</p>
@@ -221,12 +260,15 @@ function itemCard(c){
     return x;
   };
   if(pending){
-    /* Доступ выбирается В МОМЕНТ решения, а не потом: «взять» и «взять в премиум» —
-       это два разных решения об одной программе, и принимают их одновременно,
-       глядя на её состав. Отдельный переключатель после «взять» означал бы, что
-       программа успела побывать в открытом каталоге. */
-    btn('Взять в каталог', 'ok', () => act('approve', {id: c.id, pro: false}));
-    btn('Взять в премиум', 'ok', () => act('approve', {id: c.id, pro: true}));
+    const ready = localeReady(c, 'ru') && localeReady(c, 'en');
+    btn(ready ? 'Проверить RU / EN' : 'Подготовить RU / EN', '', () => {
+      tab = 'add'; render(); fillForm(c);
+    });
+    // Сервер тоже проверяет оба языка: скрытие кнопки здесь только убирает ложное действие.
+    if(ready){
+      btn('Взять в каталог', 'ok', () => act('approve', {id: c.id, pro: false}));
+      btn('Взять в премиум', 'ok', () => act('approve', {id: c.id, pro: true}));
+    }
     btn('Отклонить', 'no', () => act('reject', {id: c.id}));
   } else {
     btn(c.pro ? 'Открыть всем' : 'Сделать премиум', '', () => act('pro', {id: c.id, pro: !c.pro}));
