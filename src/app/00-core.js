@@ -558,9 +558,9 @@ function syncSoundCascade(p){
 function appDialog(msg, opts = {}){
   return new Promise(res => {
     $('dlgMsg').textContent = msg;
-    const t = $('dlgCode');
-    if(opts.code){ setShown(t, true); t.value = opts.code; }
-    else setShown(t, false);
+    const codeEl = $('dlgCode');
+    if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
+    else setShown(codeEl, false);
     // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
     const typed = $('dlgType');
     setShown('dlgTypeBox', !!opts.type);
@@ -737,17 +737,17 @@ window.addEventListener('popstate', async e => {
     exitWorkout();
     return;
   }
-  let t = (e.state && e.state.scr) || 'scrMenu';
+  let targetScreen = (e.state && e.state.scr) || 'scrMenu';
   navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
   {
-    const at = navStack.lastIndexOf(t);
-    if(at >= 0) navStack.length = at + 1; else navStack = [t];
+    const at = navStack.lastIndexOf(targetScreen);
+    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
   }
   // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
   // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
   // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
   // на «Сегодня», бросив занятие на середине.
-  if((t === 'scrWork' && !state.live) || t === 'scrFinish' || t === 'scrOnboard') t = 'scrMenu';
+  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
 
   if(!guardBypass){
     const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
@@ -769,7 +769,7 @@ window.addEventListener('popstate', async e => {
     }
   }
   guardBypass = false;
-  show(t, false);
+  show(targetScreen, false);
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
 // экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
@@ -836,7 +836,7 @@ function prepTab(id){
       // звук и управление без рук переехали сюда из «Настроек»
       syncSettingsForm();
       fillLiveSoundCascade('st');
-      $('hfHint').textContent = HF_HINTS[hfMode] || '';
+      $('hfHint').textContent = hfHintText(hfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
     }
     else if(id === 'scrTrainer'){ renderClients(); pullAll(); }
@@ -1222,11 +1222,11 @@ function renderStartInfo(){
   const plans = normPlans(state.raw);
   const pl = plans[state.planIdx];
   const rotOn = state.raw.rotate && plans.length > 1;
-  const t = pl.time || state.raw.time;
+  const timeText = pl.time || state.raw.time;
   const daysTxt = rotOn
     ? ((state.raw.days && state.raw.days.length) ? state.raw.days.map(canonicalLabel).join(', ') : '')
     : ((pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join(', ') : '');
-  const parts = [t, daysTxt].filter(Boolean);
+  const parts = [timeText, daysTxt].filter(Boolean);
   if(rotOn) parts.push(t('start.variantSequence',{current:state.planIdx+1,total:plans.length}));
   const schedule = parts.join(' · ');
   $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
