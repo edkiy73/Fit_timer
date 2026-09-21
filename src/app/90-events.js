@@ -137,10 +137,11 @@ async function chooseHandsFree(mode){
   return true;
 }
 
-if($('appLocaleSelect')){
-  $('appLocaleSelect').onchange = async e=>{
-    const pref = normalizeLocalePreference(e.target.value);
+document.querySelectorAll('#ueLocaleSeg button').forEach(b => {
+  b.onclick = async ()=>{
+    const pref = normalizeLocalePreference(b.dataset.locale);
     if(uDraft) uDraft.locale = pref;
+    syncUserForm();
     // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
     if(!uDraft || uDraft.id !== currentUser) return;
     await setAppLocale(pref, {persist:false});
@@ -152,8 +153,9 @@ if($('appLocaleSelect')){
       await refreshVoicePackUI();
     }
     syncHandsFreeUI();
+    syncUserForm();
   };
-}
+});
 window.addEventListener('appLocaleChanged', async ()=>{
   syncTtsLocaleToApp(true);
   syncHandsFreeUI();
@@ -286,7 +288,7 @@ function mountWorkoutSettingsBlocks(){
     hfSeg:'hfModalSeg', hfHint:'hfModalHint', voicePackBox:'hfVoicePackBox',
     voiceRecLang:'hfVoiceRecLang', voicePackStatus:'hfVoicePackStatus',
     voicePackProgress:'hfVoicePackProgress', voicePackProgressBar:'hfVoicePackProgressBar',
-    btnVoicePack:'btnHfVoicePack'
+    btnVoicePack:'btnHfVoicePack', btnHfCommands:'btnHfCommandsModal'
   });
 }
 mountWorkoutSettingsBlocks();
@@ -456,6 +458,12 @@ window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
 $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
+function openHfCommands(){
+  $('hfModal').classList.remove('open');
+  $('hfCommandsModal').classList.add('open');
+}
+['btnHfCommands','btnHfCommandsModal'].forEach(id => { if($(id)) $(id).onclick = openHfCommands; });
+$('hfCommandsModal').onclick = e => { if(e.target === $('hfCommandsModal')) $('hfCommandsModal').classList.remove('open'); };
 // создание программы: одна кнопка + выбор способа
 $('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
 $('greetAva').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
@@ -600,7 +608,7 @@ $('btnSaveCoach').onclick = async ()=>{
 $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
 $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
 $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
-$('mcBackTop').onclick = ()=> goBackTo('scrPrograms');
+$('mcBackTop').onclick = ()=>{ switchMoreTab('coach'); goTab('scrAccount'); };
 // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
 // профиля» разошёлся бы с настоящим через месяц.
 $('btnToStore').onclick = ()=> openStore('scrPrograms');

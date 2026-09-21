@@ -44,7 +44,8 @@ function syncUserForm(){
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   const th = themeOf(uDraft);
   document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
-  if($('appLocaleSelect')) $('appLocaleSelect').value = profileLocalePreference(uDraft);
+  const loc = profileLocalePreference(uDraft);
+  document.querySelectorAll('#ueLocaleSeg button').forEach(b => b.classList.toggle('act', b.dataset.locale === loc));
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo

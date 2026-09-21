@@ -768,6 +768,10 @@ function finishWorkout(){
       t: new Date(Date.now() - totalSec * 1000).getHours(),
       pid: (state.current && state.current.sourceId) || null,
       note: '', sec: totalSec, kcal: state.lastKcal || 0,
+      // Снимок названий нужен истории: программа потом может измениться, а попап дня
+      // должен показывать именно то, что человек реально делал тогда.
+      exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
+        .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже

@@ -134,6 +134,7 @@
              маленький значок в шапке не читался как главное действие вкладки. -->
         <div class="ph-tools">
           <button type="button" class="btn-ghost" id="btnAddPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
+          <p class="photo-local-note"><span data-icon="shield"></span><span data-i18n="progress.photoLocalOnly">Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.</span></p>
           <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
@@ -200,6 +201,7 @@
           <button type="button" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
+        <button type="button" class="hf-commands-link" id="btnHfCommands" data-i18n="handsfree.allCommands">Все команды</button>
         <div class="voice-pack hidden" id="voicePackBox">
           <div class="pref-row"><span data-i18n="settings.commandLanguage">Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
           <div class="voice-pack-status">
@@ -268,6 +270,11 @@
         <button type="button" class="btn-primary" id="btnSaveCoach" data-i18n="common.save">Сохранить</button>
         <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
         <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
+        <button type="button" class="way-row coach-catalog-row hidden" id="btnMyCatalog">
+          <span class="wr-ico" data-icon="crown"></span>
+          <span class="wr-txt"><b data-i18n="programs.catalogRequests">Заявки в каталог</b><small id="coachCatSub"></small></span>
+          <span class="wr-go" data-icon="chevR"></span>
+        </button>
       </div>
     </div>
 

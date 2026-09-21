@@ -1517,24 +1517,46 @@ function renderCalendar(){
 function sessRow(en, withDate){
   const p = customPrograms.find(x => x.id === en.pid);
   const name = p ? p.name : t('sessions.workoutFallback');
-  const meta = [];
-  if(p){
-    const plansN = normPlans(p).length;
-    if(plansN > 1){
-      // подпись днями надёжнее номера: она записана в момент тренировки и не зависит
-      // от того, как варианты переставились потом
-      if(en.planDays) meta.push(String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join('·'));
-      else if(typeof en.plan === 'number') meta.push(t('sessions.variant',{count:en.plan+1}));
-    }
+  let variant = '';
+  if(p && normPlans(p).length > 1){
+    if(en.planDays) variant = String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ');
+    else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
-  if(en.sec) meta.push(t('time.minutes',{minutes:Math.round(en.sec/60)}));
-  if(en.kcal) meta.push(`≈${en.kcal} ${t('workout.kcal')}`);
-  if(withDate) meta.unshift(shortD(en.d));
   const row = document.createElement('div');
   row.className = 'sess-row';
-  row.innerHTML = '<b></b>' + (meta.length ? `<small>${meta.join(' · ')}</small>` : '')
-    + (en.note ? '<span class="sess-note"></span>' : '');
-  row.querySelector('b').textContent = name;
+  row.innerHTML =
+    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
+    (variant ? '<div class="sess-plan"></div>' : '') +
+    '<div class="sess-facts"></div>' +
+    (Array.isArray(en.exercises) && en.exercises.length ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>' : '') +
+    (en.note ? '<span class="sess-note"></span>' : '');
+  row.querySelector('.sess-head b').textContent = name;
+  if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
+  if(variant) row.querySelector('.sess-plan').textContent = variant;
+  const facts = row.querySelector('.sess-facts');
+  if(en.sec){
+    const chip = document.createElement('span');
+    chip.textContent = t('time.minutes',{minutes:Math.round(en.sec/60)});
+    facts.appendChild(chip);
+  }
+  if(en.kcal){
+    const chip = document.createElement('span');
+    chip.textContent = `≈${en.kcal} ${t('workout.kcal')}`;
+    facts.appendChild(chip);
+  }
+  if(!facts.children.length) facts.remove();
+  if(Array.isArray(en.exercises) && en.exercises.length){
+    row.querySelector('.sess-ex-label').textContent = t('sessions.exercisesDone');
+    const list = row.querySelector('.sess-ex-list');
+    en.exercises.forEach((name, i)=>{
+      const item = document.createElement('div');
+      item.className = 'sess-ex';
+      item.innerHTML = '<span></span><b></b>';
+      item.querySelector('span').textContent = i + 1;
+      item.querySelector('b').textContent = name;
+      list.appendChild(item);
+    });
+  }
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }

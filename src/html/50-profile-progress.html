@@ -37,11 +37,11 @@
         </div>
         <div class="field">
           <label data-i18n="settings.appLanguage">Язык приложения</label>
-          <select class="voice-sel app-locale-sel" id="appLocaleSelect" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
-            <option value="system" data-i18n="profile.themeSystem">Как в системе</option>
-            <option value="ru" data-i18n="settings.russian">Русский</option>
-            <option value="en">English</option>
-          </select>
+          <div class="seg seg3" id="ueLocaleSeg" role="group" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
+            <button type="button" data-locale="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-locale="ru" data-i18n="settings.russian">Русский</button>
+            <button type="button" data-locale="en">English</button>
+          </div>
           <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.</p>
         </div>
       </div>
@@ -204,6 +204,20 @@
     <div class="modal" id="hfModal">
       <div class="modal-card">
         <div id="hfModalContent"></div>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
+      </div>
+    </div>
+
+    <div class="modal" id="hfCommandsModal">
+      <div class="modal-card hf-commands-card">
+        <span class="mini-label" data-i18n="handsfree.commandsTitle">Голосовые команды</span>
+        <p class="field-hint" data-i18n="handsfree.commandsIntro">Можно говорить естественно — несколько вариантов фразы делают одно и то же действие.</p>
+        <div class="hf-command-list">
+          <div class="hf-command"><span class="hfc-ico" data-icon="chevR"></span><span><b data-i18n="handsfree.commandNext">Дальше</b><small data-i18n="handsfree.commandNextExamples">«дальше», «готово», «пропустить», «сделал», «закончил»</small></span></div>
+          <div class="hf-command"><span class="hfc-ico" data-icon="pause"></span><span><b data-i18n="handsfree.commandPause">Пауза</b><small data-i18n="handsfree.commandPauseExamples">«пауза», «стоп», «подожди», «остановись»</small></span></div>
+          <div class="hf-command"><span class="hfc-ico" data-icon="play"></span><span><b data-i18n="handsfree.commandResume">Продолжить</b><small data-i18n="handsfree.commandResumeExamples">«продолжить», «продолжай», «поехали», «можно продолжать»</small></span></div>
+        </div>
+        <p class="hf-command-foot" data-i18n="handsfree.commandsLanguageNote">Команды распознаются на языке, выбранном в «Язык команд».</p>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>

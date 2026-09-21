@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 1804,
-      "chars": 85268,
+      "lines": 1826,
+      "chars": 86291,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -207,8 +207,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 753,
-      "chars": 33842,
+      "lines": 754,
+      "chars": 33918,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -451,8 +451,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1567,
-      "chars": 71978,
+      "lines": 1569,
+      "chars": 72022,
       "symbols": [
         "add",
         "addClient",
@@ -641,8 +641,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1329,
-      "chars": 61863,
+      "lines": 1333,
+      "chars": 62166,
       "symbols": [
         "afterExChange",
         "autoGrow",
@@ -736,8 +736,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1894,
-      "chars": 78726,
+      "lines": 1902,
+      "chars": 79192,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -775,6 +775,7 @@
         "mountWorkoutSettingsBlocks",
         "nativeVoiceReady",
         "num",
+        "openHfCommands",
         "openHfModal",
         "openLegal",
         "openPremium",
@@ -872,8 +873,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 617,
-      "chars": 39961,
+      "lines": 609,
+      "chars": 39454,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -944,7 +945,6 @@
         "bTime",
         "btnAddEx",
         "btnAddProgram",
-        "btnMyCatalog",
         "btnPsDone",
         "btnSaveEx",
         "btnSaveProgram",
@@ -955,7 +955,6 @@
         "bVariantHint",
         "bVariantTitle",
         "bVolHint",
-        "coachCatSub",
         "eaWish",
         "exaCount",
         "exaEquip",
@@ -1212,8 +1211,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 365,
-      "chars": 22730,
+      "lines": 372,
+      "chars": 23451,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1232,11 +1231,13 @@
         "btnCompare",
         "btnDeleteAllPhotos",
         "btnExportAll",
+        "btnHfCommands",
         "btnImportAll",
         "btnLegalHealth",
         "btnLegalPrivacy",
         "btnLegalTerms",
         "btnLoginRow",
+        "btnMyCatalog",
         "btnMyPage",
         "btnPlanCard",
         "btnResetTotal",
@@ -1256,6 +1257,7 @@
         "calSub",
         "calTitle",
         "coachAbout",
+        "coachCatSub",
         "coachClientsSub",
         "coachDeleteBlock",
         "coachFields",
@@ -1347,13 +1349,12 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 590,
-      "chars": 37982,
+      "lines": 604,
+      "chars": 39460,
       "ids": [
         "addExModal",
         "aemAI",
         "aemManual",
-        "appLocaleSelect",
         "btnAddClient",
         "btnClSend",
         "btnClSendTxt",
@@ -1402,6 +1403,7 @@
         "dock",
         "fatInput",
         "heightInput",
+        "hfCommandsModal",
         "hfModal",
         "hfModalContent",
         "hipsInput",
@@ -1507,6 +1509,7 @@
         "ueBackTop",
         "ueGenderF",
         "ueGenderM",
+        "ueLocaleSeg",
         "ueName",
         "uePhotoBtn",
         "uePhotoFile",

@@ -714,7 +714,7 @@ const I18N_RU = {
   'publish.needGives': "«что она даёт» — хотя бы 20 символов",
   'publish.needExercises': "хотя бы три упражнения в программе",
   'publish.missing': "Не хватает: {items}.",
-  'publish.sent': "Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.",
+  'publish.sent': 'Заявка отправлена на проверку. Статус можно отслеживать в «Другое → Тренер → Заявки в каталог».',
   'publish.errNoTrainer': "Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.",
   'publish.errNotYours': "Этот ник закреплён за другим тренером.",
   'publish.errBanned': "Приём программ с этого ника закрыт.",
@@ -1449,6 +1449,19 @@ const I18N_RU = {
   'images.providerBusy': "Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.",
   'youtube.hint': "Обычная ссылка или короткая youtu.be. Нейросеть разберёт видео в программу.",
   'youtube.badLink': "Не похоже на ссылку YouTube. Нужен youtube.com/watch?v=… или youtu.be/…",
+
+  'progress.photoLocalOnly': 'Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.',
+  'handsfree.allCommands': 'Все команды',
+  'handsfree.commandsTitle': 'Голосовые команды',
+  'handsfree.commandsIntro': 'Можно говорить естественно — несколько вариантов фразы делают одно и то же действие.',
+  'handsfree.commandNext': 'Дальше',
+  'handsfree.commandNextExamples': '«дальше», «готово», «пропустить», «сделал», «закончил»',
+  'handsfree.commandPause': 'Пауза',
+  'handsfree.commandPauseExamples': '«пауза», «стоп», «подожди», «остановись»',
+  'handsfree.commandResume': 'Продолжить',
+  'handsfree.commandResumeExamples': '«продолжить», «продолжай», «поехали», «можно продолжать»',
+  'handsfree.commandsLanguageNote': 'Команды распознаются на языке, выбранном в «Язык команд».',
+  'sessions.exercisesDone': 'Выполнено',
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2166,7 +2179,7 @@ const I18N_EN = {
   'publish.needGives': "“what it gives” — at least 20 characters",
   'publish.needExercises': "at least three exercises in the program",
   'publish.missing': "Missing: {items}.",
-  'publish.sent': "Submitted. A person will review it, usually within a day or two. The status will appear here.",
+  'publish.sent': 'Sent for review. Track its status in More → Trainer → Catalog submissions.',
   'publish.errNoTrainer': "First complete your trainer profile or send a program to a client so the username is linked to you.",
   'publish.errNotYours': "This username belongs to another trainer.",
   'publish.errBanned': "Program submissions from this username are disabled.",
@@ -2901,6 +2914,19 @@ const I18N_EN = {
   'images.providerBusy': "Google’s image model is currently overloaded. Try again in a few minutes.",
   'youtube.hint': "Use a regular YouTube link or a short youtu.be link. AI will turn the video into a program.",
   'youtube.badLink': "This does not look like a YouTube link. Use youtube.com/watch?v=… or youtu.be/…",
+
+  'progress.photoLocalOnly': 'Photos are stored only on this device and are not synced with your account. This keeps your progress photos on your phone.',
+  'handsfree.allCommands': 'All commands',
+  'handsfree.commandsTitle': 'Voice commands',
+  'handsfree.commandsIntro': 'You can speak naturally — several phrases can trigger the same action.',
+  'handsfree.commandNext': 'Next',
+  'handsfree.commandNextExamples': '“next”, “done”, “skip”, “finished”',
+  'handsfree.commandPause': 'Pause',
+  'handsfree.commandPauseExamples': '“pause”, “stop”, “wait”',
+  'handsfree.commandResume': 'Continue',
+  'handsfree.commandResumeExamples': '“continue”, “resume”, “go on”, “keep going”',
+  'handsfree.commandsLanguageNote': 'Commands are recognized in the language selected under “Command language”.',
+  'sessions.exercisesDone': 'Completed',
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -5824,24 +5850,46 @@ function renderCalendar(){
 function sessRow(en, withDate){
   const p = customPrograms.find(x => x.id === en.pid);
   const name = p ? p.name : t('sessions.workoutFallback');
-  const meta = [];
-  if(p){
-    const plansN = normPlans(p).length;
-    if(plansN > 1){
-      // подпись днями надёжнее номера: она записана в момент тренировки и не зависит
-      // от того, как варианты переставились потом
-      if(en.planDays) meta.push(String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join('·'));
-      else if(typeof en.plan === 'number') meta.push(t('sessions.variant',{count:en.plan+1}));
-    }
+  let variant = '';
+  if(p && normPlans(p).length > 1){
+    if(en.planDays) variant = String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ');
+    else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
-  if(en.sec) meta.push(t('time.minutes',{minutes:Math.round(en.sec/60)}));
-  if(en.kcal) meta.push(`≈${en.kcal} ${t('workout.kcal')}`);
-  if(withDate) meta.unshift(shortD(en.d));
   const row = document.createElement('div');
   row.className = 'sess-row';
-  row.innerHTML = '<b></b>' + (meta.length ? `<small>${meta.join(' · ')}</small>` : '')
-    + (en.note ? '<span class="sess-note"></span>' : '');
-  row.querySelector('b').textContent = name;
+  row.innerHTML =
+    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
+    (variant ? '<div class="sess-plan"></div>' : '') +
+    '<div class="sess-facts"></div>' +
+    (Array.isArray(en.exercises) && en.exercises.length ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>' : '') +
+    (en.note ? '<span class="sess-note"></span>' : '');
+  row.querySelector('.sess-head b').textContent = name;
+  if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
+  if(variant) row.querySelector('.sess-plan').textContent = variant;
+  const facts = row.querySelector('.sess-facts');
+  if(en.sec){
+    const chip = document.createElement('span');
+    chip.textContent = t('time.minutes',{minutes:Math.round(en.sec/60)});
+    facts.appendChild(chip);
+  }
+  if(en.kcal){
+    const chip = document.createElement('span');
+    chip.textContent = `≈${en.kcal} ${t('workout.kcal')}`;
+    facts.appendChild(chip);
+  }
+  if(!facts.children.length) facts.remove();
+  if(Array.isArray(en.exercises) && en.exercises.length){
+    row.querySelector('.sess-ex-label').textContent = t('sessions.exercisesDone');
+    const list = row.querySelector('.sess-ex-list');
+    en.exercises.forEach((name, i)=>{
+      const item = document.createElement('div');
+      item.className = 'sess-ex';
+      item.innerHTML = '<span></span><b></b>';
+      item.querySelector('span').textContent = i + 1;
+      item.querySelector('b').textContent = name;
+      list.appendChild(item);
+    });
+  }
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }
@@ -6154,7 +6202,8 @@ function syncUserForm(){
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
   const th = themeOf(uDraft);
   document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
-  if($('appLocaleSelect')) $('appLocaleSelect').value = profileLocalePreference(uDraft);
+  const loc = profileLocalePreference(uDraft);
+  document.querySelectorAll('#ueLocaleSeg button').forEach(b => b.classList.toggle('act', b.dataset.locale === loc));
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
@@ -10162,6 +10211,7 @@ function clientSum(c){
 /* ---- экран аккаунта: карточка «Тренер» ---- */
 function renderTrainerCard(){
   syncDockTabs();
+  renderCatalogRow();
   if(!$('tglTrainer')) return;
   const accountReady = trainerAccountReady();
   const modeOn = !!(accountReady && trainer && trainer.on);
@@ -11540,6 +11590,7 @@ async function doPublish(){
     p.pub = {id: r.id, status: r.status, draft: pubDraft};
     await savePrograms();
     fillPublish();
+    renderCatalogRow();
     appAlert(t('publish.sent'));
   }catch(e){
     const why = {
@@ -11570,8 +11621,8 @@ function openStore(from){
   window.scrollTo(0, 0);
 }
 
-// Строка «Мои в каталоге» на экране тренировок: видна тренеру и говорит, что с
-// заявками, не заставляя открывать раздел ради «ничего не изменилось».
+// Заявки живут рядом с профилем тренера: это его публикации и модерация, а не
+// обычный список тренировок. Строка сразу показывает сводку статусов.
 function renderCatalogRow(){
   if(!$('btnMyCatalog')) return;
   const n = storeAll().length;
@@ -14498,6 +14549,10 @@ function finishWorkout(){
       t: new Date(Date.now() - totalSec * 1000).getHours(),
       pid: (state.current && state.current.sourceId) || null,
       note: '', sec: totalSec, kcal: state.lastKcal || 0,
+      // Снимок названий нужен истории: программа потом может измениться, а попап дня
+      // должен показывать именно то, что человек реально делал тогда.
+      exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
+        .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
@@ -15656,10 +15711,11 @@ async function chooseHandsFree(mode){
   return true;
 }
 
-if($('appLocaleSelect')){
-  $('appLocaleSelect').onchange = async e=>{
-    const pref = normalizeLocalePreference(e.target.value);
+document.querySelectorAll('#ueLocaleSeg button').forEach(b => {
+  b.onclick = async ()=>{
+    const pref = normalizeLocalePreference(b.dataset.locale);
     if(uDraft) uDraft.locale = pref;
+    syncUserForm();
     // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
     if(!uDraft || uDraft.id !== currentUser) return;
     await setAppLocale(pref, {persist:false});
@@ -15671,8 +15727,9 @@ if($('appLocaleSelect')){
       await refreshVoicePackUI();
     }
     syncHandsFreeUI();
+    syncUserForm();
   };
-}
+});
 window.addEventListener('appLocaleChanged', async ()=>{
   syncTtsLocaleToApp(true);
   syncHandsFreeUI();
@@ -15805,7 +15862,7 @@ function mountWorkoutSettingsBlocks(){
     hfSeg:'hfModalSeg', hfHint:'hfModalHint', voicePackBox:'hfVoicePackBox',
     voiceRecLang:'hfVoiceRecLang', voicePackStatus:'hfVoicePackStatus',
     voicePackProgress:'hfVoicePackProgress', voicePackProgressBar:'hfVoicePackProgressBar',
-    btnVoicePack:'btnHfVoicePack'
+    btnVoicePack:'btnHfVoicePack', btnHfCommands:'btnHfCommandsModal'
   });
 }
 mountWorkoutSettingsBlocks();
@@ -15975,6 +16032,12 @@ window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
 $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
 $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
 $('btnMicW').onclick = openHfModal;
+function openHfCommands(){
+  $('hfModal').classList.remove('open');
+  $('hfCommandsModal').classList.add('open');
+}
+['btnHfCommands','btnHfCommandsModal'].forEach(id => { if($(id)) $(id).onclick = openHfCommands; });
+$('hfCommandsModal').onclick = e => { if(e.target === $('hfCommandsModal')) $('hfCommandsModal').classList.remove('open'); };
 // создание программы: одна кнопка + выбор способа
 $('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
 $('greetAva').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
@@ -16119,7 +16182,7 @@ $('btnSaveCoach').onclick = async ()=>{
 $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
 $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
 $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
-$('mcBackTop').onclick = ()=> goBackTo('scrPrograms');
+$('mcBackTop').onclick = ()=>{ switchMoreTab('coach'); goTab('scrAccount'); };
 // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
 // профиля» разошёлся бы с настоящим через месяц.
 $('btnToStore').onclick = ()=> openStore('scrPrograms');

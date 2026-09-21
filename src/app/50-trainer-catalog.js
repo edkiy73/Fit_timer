@@ -1,6 +1,7 @@
 /* ---- экран аккаунта: карточка «Тренер» ---- */
 function renderTrainerCard(){
   syncDockTabs();
+  renderCatalogRow();
   if(!$('tglTrainer')) return;
   const accountReady = trainerAccountReady();
   const modeOn = !!(accountReady && trainer && trainer.on);
@@ -1379,6 +1380,7 @@ async function doPublish(){
     p.pub = {id: r.id, status: r.status, draft: pubDraft};
     await savePrograms();
     fillPublish();
+    renderCatalogRow();
     appAlert(t('publish.sent'));
   }catch(e){
     const why = {
@@ -1409,8 +1411,8 @@ function openStore(from){
   window.scrollTo(0, 0);
 }
 
-// Строка «Мои в каталоге» на экране тренировок: видна тренеру и говорит, что с
-// заявками, не заставляя открывать раздел ради «ничего не изменилось».
+// Заявки живут рядом с профилем тренера: это его публикации и модерация, а не
+// обычный список тренировок. Строка сразу показывает сводку статусов.
 function renderCatalogRow(){
   if(!$('btnMyCatalog')) return;
   const n = storeAll().length;
