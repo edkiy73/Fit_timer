@@ -656,6 +656,169 @@ const I18N_RU = {
   'sync.ok': "Данные сохранены на сервере · фото-прогресс только на этом телефоне",
   'sync.error': "Нет связи с сервером · изменения отправятся позже",
   'sync.account': "Данные синхронизируются с аккаунтом",
+  'store.alreadyOwned': "Уже у вас",
+  'store.programOne': "программа",
+  'store.programFew': "программы",
+  'store.programMany': "программ",
+  'store.emptyTitle': "Ничего не нашлось",
+  'store.emptyText': "Попробуй другое слово или сними фильтры — программ в каталоге пока немного.",
+  'store.minuteShort': "мин",
+  'store.secShort': "сек",
+  'store.repShort': "повт.",
+  'store.setOne': "подход",
+  'store.setFew': "подхода",
+  'store.setMany': "подходов",
+  'store.roundOne': "круг",
+  'store.roundFew': "круга",
+  'store.roundMany': "кругов",
+  'store.variantOne': "вариант",
+  'store.variantFew': "варианта",
+  'store.variantMany': "вариантов",
+  'store.exerciseOne': "упражнение",
+  'store.exerciseFew': "упражнения",
+  'store.exerciseMany': "упражнений",
+  'store.inSequence': "по очереди",
+  'store.perSide': "на сторону",
+  'store.warmup': "Разминка",
+  'store.untitled': "Без названия",
+  'store.open': "Открыть",
+  'store.addMine': "Добавить в мои тренировки",
+  'store.lockedText': "{count} {exercises} с техникой, частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.",
+  'store.addFailed': "Не удалось добавить программу. Попробуй ещё раз.",
+  'store.added': "«{name}» в твоих тренировках.",
+  'trainer.experienceOne': "год стажа",
+  'trainer.experienceFew': "года стажа",
+  'trainer.experienceMany': "лет стажа",
+  'trainer.programOne': "программа",
+  'trainer.programFew': "программы",
+  'trainer.programMany': "программ",
+  'trainer.opensOne': "человек взял",
+  'trainer.opensMany': "человек взяли",
+  'trainer.withUsMonth': "месяц с нами",
+  'trainer.withUsMonths': "месяцев с нами",
+  'trainer.withUsDay': "день с нами",
+  'trainer.withUsDays': "дней с нами",
+  'publish.pending': "на проверке",
+  'publish.approved': "в каталоге",
+  'publish.rejected': "не взяли",
+  'publish.gone': "заявка потерялась",
+  'publish.listHint': "Программы смотрит человек. Взятую увидят все в каталоге.",
+  'publish.emptyHint': "Пока ничего не отправлено. Открой свою программу, «⋮» → «Предложить в каталог».",
+  'publish.approx': "{count} {exercises} · примерно {minutes} мин",
+  'publish.pendingText': "На проверке. Обычно это занимает день-другой — программы смотрит человек.",
+  'publish.approvedText': "Программа в каталоге. Её видят все.",
+  'publish.rejectedText': "Не взяли. Можно поправить и предложить заново.",
+  'publish.goneText': "Заявка не нашлась. Можно отправить заново.",
+  'publish.needGoal': "цель",
+  'publish.needLevel': "уровень",
+  'publish.needGives': "«что она даёт» — хотя бы 20 символов",
+  'publish.needExercises': "хотя бы три упражнения в программе",
+  'publish.missing': "Не хватает: {items}.",
+  'publish.sent': "Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.",
+  'publish.errNoTrainer': "Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.",
+  'publish.errNotYours': "Этот ник закреплён за другим тренером.",
+  'publish.errBanned': "Приём программ с этого ника закрыт.",
+  'publish.errTooMany': "Сегодня уже отправлено три программы. Продолжим завтра.",
+  'publish.errAlready': "Эта программа уже ждёт проверки или уже в каталоге.",
+  'publish.errStore': "На сервере не подключено хранилище — отправка пока не работает.",
+  'publish.errBad': "Не хватает данных: {items}.",
+  'publish.checkFields': "проверь поля",
+  'publish.errNetwork': "Не получилось отправить — похоже, нет связи с сервером.",
+  'catalog.fromTrainers': "{count} {programs} от тренеров",
+  'catalog.trainerWorkouts': "Тренировки от тренеров",
+  'builder.variant': "Вариант",
+  'publish.statusCatalog': "в каталоге",
+  'publish.statusReview': "на проверке",
+  'publish.statusRejected': "не взяли",
+  'clients.statClients': "Подопечных",
+  'clients.statActive': "Занимаются",
+  'clients.statWorkouts': "Тренировок",
+  'clients.noPrograms': "Программ пока нет",
+  'clients.programFallback': "Программа",
+  'clients.hintHas': "Подопечный занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.",
+  'clients.hintEmpty': "Добавь подопечного, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.",
+  'clients.default': "Подопечный",
+  'clients.sendMore': "Отправить ещё программу",
+  'clients.send': "Отправить программу",
+  'clients.sendHintMany': "У подопечного может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.",
+  'clients.sendHintFirst': "Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.",
+  'clients.emptyCard': "Программ пока нет. Отправь первую — и здесь появятся её занятия.",
+  'clients.oldLink': "Эта ссылка отправлена старой версией: отметок и отчётов по ней не будет. Отправь программу заново.",
+  'clients.resend': "Отправить ссылку ещё раз",
+  'clients.remove': "Убрать эту программу",
+  'report.none': "Занятий пока нет. Отчёт придёт сам, как только подопечный закончит первую тренировку.",
+  'clients.chooseProgram': "Сначала выбери программу: пункт «Отправить подопечному» есть в меню любой программы в списке тренировок.",
+  'clients.programGone': "Этой программы уже нет в твоём списке — отправь любую другую.",
+  'clients.linkCopied': "Ссылка скопирована — отправь её подопечному любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.",
+  'clients.copyLink': "Скопируй ссылку и отправь подопечному:",
+  'clients.sendTo': "Кому отправить",
+  'clients.alreadyHas': "эта программа уже у него — отправим ссылку заново",
+  'clients.new': "Новый подопечный",
+  'clients.sessionOne': "занятие",
+  'clients.sessionFew': "занятия",
+  'clients.sessionMany': "занятий",
+  'clients.silent': "молчит {count} {days}",
+  'clients.openedNoSessions': "открыл, занятий нет",
+  'clients.sentToday': "отправлено сегодня",
+  'clients.waiting': "ждёт {count} {days}",
+  'clients.notSent': "не отправлено",
+  'clients.withPrograms': "{count} {programs}",
+  'clients.sentOn': "отправлена {date}",
+  'clients.openedOn': "открыл {date}",
+  'clients.opened': "открыл",
+  'clients.notOpened': "ещё не открывал",
+  'clients.localMissing': "программы уже нет в твоём списке",
+  'clients.removeQuestion': "Убрать «{name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.",
+  'clients.removeAction': "Убрать",
+  'clients.shareText': "Программа «{program}»{forClient} — открой ссылку, и она добавится в Fit Timer:",
+  'clients.forClient': " для {name}",
+  'clients.pullNoStore': "На сервере не подключено хранилище — отметки и отчёты не сохраняются.",
+  'clients.pullNotFound': "Ссылка на сервере не найдена. Отправь программу заново.",
+  'clients.pullBadKey': "Нет доступа к этой ссылке. Отправь программу заново.",
+  'clients.pullRate': "Слишком много проверок подряд. Загляни через пару минут.",
+  'clients.pullOffline': "Нет связи с сервером — данные могут быть несвежими.",
+  'clients.defaultName': "Подопечный {count}",
+  'clients.alreadyCount': "уже {count} {programs}",
+  'report.workoutOne': "тренировка",
+  'report.workoutFew': "тренировки",
+  'report.workoutMany': "тренировок",
+  'report.last': "последняя {date}",
+  'report.streak': "серия {count}",
+  'report.byWeeks': "По неделям",
+  'report.now': "сейчас",
+  'report.byDays': "По дням",
+  'report.never': "ни разу",
+  'report.workouts': "Тренировки",
+  'report.moreEarlier': "и ещё {count} раньше",
+  'report.changed': "Поменял в программе",
+  'report.removed': "убрал",
+  'report.added': "добавил",
+  'report.growth': "Растёт",
+  'report.warmup': "разминка",
+  'report.reportOn': "Отчёт от {date}",
+  'report.totalReports': "всего отчётов {count}",
+  'report.setShort': "подх.",
+  'common.exerciseFallback': "Упражнение",
+  'programs.none': "Ни одной программы",
+  'programs.emptyTitle': "Своих программ пока нет",
+  'programs.emptyText': "Собери первую за пару минут: опиши, какая тренировка нужна, и её соберёт ИИ — или добавь упражнения руками.",
+  'programs.completed': "Пройдено раз: {count}",
+  'programs.offShort': "Откл",
+  'programs.sequence': "по очереди",
+  'common.edit': "Изменить",
+  'programs.disable': "Отключить",
+  'programs.enable': "Включить",
+  'programs.disableTitle': "Убрать из планов, не удаляя",
+  'programs.enableTitle': "Вернуть в расписание",
+  'programs.disabledAlert': "Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.",
+  'programs.shareLink': "Поделиться ссылкой",
+  'programs.sendClient': "Отправить подопечному",
+  'programs.saveFile': "Сохранить в файл",
+  'programs.allImages': "Со всеми картинками",
+  'programs.deleteQuestion': "Удалить программу «{name}»? Вместе с ней сотрётся и её статистика.",
+  'common.duplicate': "Дублировать",
+  'programs.submitCatalog': "Предложить в каталог",
+  'programs.drag': "Перетащить",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -1315,6 +1478,169 @@ const I18N_EN = {
   'sync.ok': "Data saved to the server · progress photos stay only on this phone",
   'sync.error': "No server connection · changes will upload later",
   'sync.account': "Data syncs with your account",
+  'store.alreadyOwned': "Already yours",
+  'store.programOne': "program",
+  'store.programFew': "programs",
+  'store.programMany': "programs",
+  'store.emptyTitle': "Nothing found",
+  'store.emptyText': "Try another search or clear the filters — the catalog is still growing.",
+  'store.minuteShort': "min",
+  'store.secShort': "sec",
+  'store.repShort': "reps",
+  'store.setOne': "set",
+  'store.setFew': "sets",
+  'store.setMany': "sets",
+  'store.roundOne': "round",
+  'store.roundFew': "rounds",
+  'store.roundMany': "rounds",
+  'store.variantOne': "variant",
+  'store.variantFew': "variants",
+  'store.variantMany': "variants",
+  'store.exerciseOne': "exercise",
+  'store.exerciseFew': "exercises",
+  'store.exerciseMany': "exercises",
+  'store.inSequence': "in sequence",
+  'store.perSide': "per side",
+  'store.warmup': "Warm-up",
+  'store.untitled': "Untitled",
+  'store.open': "Open",
+  'store.addMine': "Add to my workouts",
+  'store.lockedText': "{count} {exercises} with technique guidance, common mistakes, and progression. Available with Premium.",
+  'store.addFailed': "Couldn’t add the program. Try again.",
+  'store.added': "“{name}” is now in your workouts.",
+  'trainer.experienceOne': "year of experience",
+  'trainer.experienceFew': "years of experience",
+  'trainer.experienceMany': "years of experience",
+  'trainer.programOne': "program",
+  'trainer.programFew': "programs",
+  'trainer.programMany': "programs",
+  'trainer.opensOne': "person added",
+  'trainer.opensMany': "people added",
+  'trainer.withUsMonth': "month with us",
+  'trainer.withUsMonths': "months with us",
+  'trainer.withUsDay': "day with us",
+  'trainer.withUsDays': "days with us",
+  'publish.pending': "under review",
+  'publish.approved': "in catalog",
+  'publish.rejected': "not approved",
+  'publish.gone': "submission missing",
+  'publish.listHint': "Programs are reviewed by a person. Approved programs become visible to everyone in the catalog.",
+  'publish.emptyHint': "Nothing has been submitted yet. Open one of your programs, then use “⋮” → “Submit to catalog”.",
+  'publish.approx': "{count} {exercises} · about {minutes} min",
+  'publish.pendingText': "Under review. A person reviews each program; this usually takes a day or two.",
+  'publish.approvedText': "The program is in the catalog and visible to everyone.",
+  'publish.rejectedText': "Not approved. You can edit it and submit again.",
+  'publish.goneText': "The submission could not be found. You can submit it again.",
+  'publish.needGoal': "goal",
+  'publish.needLevel': "level",
+  'publish.needGives': "“what it gives” — at least 20 characters",
+  'publish.needExercises': "at least three exercises in the program",
+  'publish.missing': "Missing: {items}.",
+  'publish.sent': "Submitted. A person will review it, usually within a day or two. The status will appear here.",
+  'publish.errNoTrainer': "First complete your trainer profile or send a program to a client so the username is linked to you.",
+  'publish.errNotYours': "This username belongs to another trainer.",
+  'publish.errBanned': "Program submissions from this username are disabled.",
+  'publish.errTooMany': "You’ve already submitted three programs today. Try again tomorrow.",
+  'publish.errAlready': "This program is already under review or already in the catalog.",
+  'publish.errStore': "Catalog storage is not configured on the server yet.",
+  'publish.errBad': "Missing data: {items}.",
+  'publish.checkFields': "check the fields",
+  'publish.errNetwork': "Couldn’t submit the program — the server may be unavailable.",
+  'catalog.fromTrainers': "{count} {programs} from trainers",
+  'catalog.trainerWorkouts': "Trainer workouts",
+  'builder.variant': "Variant",
+  'publish.statusCatalog': "in catalog",
+  'publish.statusReview': "under review",
+  'publish.statusRejected': "not approved",
+  'clients.statClients': "Clients",
+  'clients.statActive': "Active",
+  'clients.statWorkouts': "Workouts",
+  'clients.noPrograms': "No programs yet",
+  'clients.programFallback': "Program",
+  'clients.hintHas': "A client can train without an account — they only need to open the link.",
+  'clients.hintEmpty': "Add a client, choose a program, and send the link. Neither of you needs an account for this.",
+  'clients.default': "Client",
+  'clients.sendMore': "Send another program",
+  'clients.send': "Send program",
+  'clients.sendHintMany': "A client can have multiple programs. Each one has its own link and workout history.",
+  'clients.sendHintFirst': "Anyone with the link can open it. The full program is embedded in the link, so it can be forwarded.",
+  'clients.emptyCard': "No programs yet. Send the first one and its workout history will appear here.",
+  'clients.oldLink': "This link was sent by an older app version, so opens and reports cannot be tracked. Send the program again.",
+  'clients.resend': "Send link again",
+  'clients.remove': "Remove this program",
+  'report.none': "No workouts yet. A report will appear after the client finishes the first workout.",
+  'clients.chooseProgram': "Choose a program first. “Send to client” is available in the menu of any program in your workout list.",
+  'clients.programGone': "This program is no longer in your list — send another one.",
+  'clients.linkCopied': "Link copied. Send it to the client in any messenger. Opens and workout reports will appear here automatically.",
+  'clients.copyLink': "Copy the link and send it to the client:",
+  'clients.sendTo': "Send to",
+  'clients.alreadyHas': "this client already has the program — the link will be sent again",
+  'clients.new': "New client",
+  'clients.sessionOne': "session",
+  'clients.sessionFew': "sessions",
+  'clients.sessionMany': "sessions",
+  'clients.silent': "inactive for {count} {days}",
+  'clients.openedNoSessions': "opened, no workouts",
+  'clients.sentToday': "sent today",
+  'clients.waiting': "waiting {count} {days}",
+  'clients.notSent': "not sent",
+  'clients.withPrograms': "{count} {programs}",
+  'clients.sentOn': "sent {date}",
+  'clients.openedOn': "opened {date}",
+  'clients.opened': "opened",
+  'clients.notOpened': "not opened yet",
+  'clients.localMissing': "program is no longer in your list",
+  'clients.removeQuestion': "Remove “{name}” from this client card? Its workouts will stop showing here, but the client will keep the program.",
+  'clients.removeAction': "Remove",
+  'clients.shareText': "Program “{program}”{forClient} — open the link to add it to Fit Timer:",
+  'clients.forClient': " for {name}",
+  'clients.pullNoStore': "Server storage is not configured, so opens and reports cannot be saved.",
+  'clients.pullNotFound': "The link was not found on the server. Send the program again.",
+  'clients.pullBadKey': "No access to this link. Send the program again.",
+  'clients.pullRate': "Too many checks in a row. Try again in a couple of minutes.",
+  'clients.pullOffline': "No server connection — the data may be outdated.",
+  'clients.defaultName': "Client {count}",
+  'clients.alreadyCount': "already {count} {programs}",
+  'report.workoutOne': "workout",
+  'report.workoutFew': "workouts",
+  'report.workoutMany': "workouts",
+  'report.last': "last {date}",
+  'report.streak': "streak {count}",
+  'report.byWeeks': "By week",
+  'report.now': "now",
+  'report.byDays': "By day",
+  'report.never': "never",
+  'report.workouts': "Workouts",
+  'report.moreEarlier': "and {count} more earlier",
+  'report.changed': "Changed in program",
+  'report.removed': "removed",
+  'report.added': "added",
+  'report.growth': "Progressing",
+  'report.warmup': "warm-up",
+  'report.reportOn': "Report from {date}",
+  'report.totalReports': "{count} reports total",
+  'report.setShort': "sets",
+  'common.exerciseFallback': "Exercise",
+  'programs.none': "No programs",
+  'programs.emptyTitle': "No programs yet",
+  'programs.emptyText': "Build your first program in a few minutes: describe the workout you want and let AI build it, or add exercises manually.",
+  'programs.completed': "Completed: {count}",
+  'programs.offShort': "Off",
+  'programs.sequence': "in sequence",
+  'common.edit': "Edit",
+  'programs.disable': "Disable",
+  'programs.enable': "Enable",
+  'programs.disableTitle': "Remove from schedule without deleting",
+  'programs.enableTitle': "Return to schedule",
+  'programs.disabledAlert': "Program disabled. It will not appear in today’s plan or weekly progress. You can still start it manually, but that workout will not count toward statistics or achievements.",
+  'programs.shareLink': "Share link",
+  'programs.sendClient': "Send to client",
+  'programs.saveFile': "Save to file",
+  'programs.allImages': "Includes all images",
+  'programs.deleteQuestion': "Delete program “{name}”? Its statistics will also be deleted.",
+  'common.duplicate': "Duplicate",
+  'programs.submitCatalog': "Submit to catalog",
+  'programs.drag': "Drag",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -8530,6 +8856,9 @@ async function pullAll(){
   if(show._last === 'scrTrainer'){ renderClients(); renderTrainerCard(); }
   if(any && show._last === 'scrClient') fillClient();
 }
+function clientDayWord(n){
+  return appLocale === 'ru' ? plural(n, 'день', 'дня', 'дней') : (n === 1 ? 'day' : 'days');
+}
 function renderClients(){
   const n = clients.length;
   const live = clients.filter(c => clientSum(c).n > 0).length;
@@ -8540,7 +8869,7 @@ function renderClients(){
     sum.innerHTML = '';
     // Подпись под числом, а не после него: тогда она не зависит от числа и её не
     // надо согласовывать. Заодно все три видны сразу, а не через точку в строке.
-    [['Подопечных', n], ['Занимаются', live], ['Тренировок', total]].forEach(([label, v]) => {
+    [[t('clients.statClients'), n], [t('clients.statActive'), live], [t('clients.statWorkouts'), total]].forEach(([label, v]) => {
       const el = document.createElement('div');
       el.className = 'cl-stat' + (v ? '' : ' zero');
       el.innerHTML = '<b></b><small></small>';
@@ -8562,30 +8891,30 @@ function renderClients(){
     let state, tone = 'wait';
     if(sum.n > 0){
       const d = daysSince(sum.last);
-      state = `${sum.n} ${plural(sum.n, 'занятие', 'занятия', 'занятий')}`;
+      state = sum.n + ' ' + (appLocale === 'ru' ? plural(sum.n, t('clients.sessionOne'), t('clients.sessionFew'), t('clients.sessionMany')) : t(sum.n === 1 ? 'clients.sessionOne' : 'clients.sessionFew'));
       tone = (d != null && d > 10) ? 'cold' : 'ok';
-      if(d != null && d > 10) state += ` · молчит ${d} ${plural(d, 'день', 'дня', 'дней')}`;
+      if(d != null && d > 10) state += ' · ' + t('clients.silent',{count:d,days:clientDayWord(d)});
     } else if(newest){
       const d = daysSince(newest.sentAt);
       // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
       // и тренеру нужно видеть, какой из них его.
-      if(sum.opens > 0) state = 'открыл, занятий нет';
-      else state = d === 0 ? 'отправлено сегодня' : `ждёт ${d} ${plural(d, 'день', 'дня', 'дней')}`;
-    } else state = 'не отправлено';
+      if(sum.opens > 0) state = t('clients.openedNoSessions');
+      else state = d === 0 ? t('clients.sentToday') : t('clients.waiting',{count:d,days:clientDayWord(d)});
+    } else state = t('clients.notSent');
     const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
       + `<span class="cl-state ${tone}"></span>`;
-    row.querySelector('b').textContent = c.name || 'Без имени';
-    row.querySelector('.ub small').textContent = !sum.progs ? 'Программ пока нет'
-      : sum.progs === 1 ? (newest ? newest.name : 'Программа')
-      : `${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
+    row.querySelector('b').textContent = c.name || t('profile.noName');
+    row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
+      : sum.progs === 1 ? (newest ? newest.name : t('clients.programFallback'))
+      : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
     box.appendChild(row);
   });
   $('clsHint').textContent = n
-    ? 'Подопечный занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.'
-    : 'Добавь подопечного, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.';
+    ? t('clients.hintHas')
+    : t('clients.hintEmpty');
 }
 
 /* ---- карточка подопечного ---- */
@@ -8603,22 +8932,22 @@ const curClient = () => clients[clientIdx] || null;
 function fillClient(){
   const c = curClient();
   if(!c) return;
-  $('clTitle').textContent = c.name || 'Подопечный';
+  $('clTitle').textContent = c.name || t('clients.default');
   if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
   if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
 
   const box = $('clProgs');
   box.innerHTML = '';
   const list = clProgs(c);
-  $('btnClSendTxt').textContent = list.length ? 'Отправить ещё программу' : 'Отправить программу';
+  $('btnClSendTxt').textContent = list.length ? t('clients.sendMore') : t('clients.send');
   $('clSendHint').textContent = list.length
-    ? 'У подопечного может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.'
-    : 'Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.';
+    ? t('clients.sendHintMany')
+    : t('clients.sendHintFirst');
 
   if(!list.length){
     const empty = document.createElement('div');
     empty.className = 'card-block';
-    empty.innerHTML = '<p class="field-hint">Программ пока нет. Отправь первую — и здесь появятся её занятия.</p>';
+    empty.innerHTML = '<p class="field-hint">' + esc(t('clients.emptyCard')) + '</p>';
     box.appendChild(empty);
     return;
   }
@@ -8637,15 +8966,15 @@ function progCard(c, pr){
   const head = document.createElement('div');
   head.className = 'cb-head';
   head.innerHTML = '<p class="cb-title"></p>';
-  head.querySelector('.cb-title').textContent = pr.name || 'Программа';
+  head.querySelector('.cb-title').textContent = pr.name || t('clients.programFallback');
   el.appendChild(head);
 
   const bits = [];
-  if(pr.sentAt) bits.push(`отправлена ${humanDay(pr.sentAt)}`);
+  if(pr.sentAt) bits.push(t('clients.sentOn',{date:humanDay(pr.sentAt)}));
   if(pr.link) bits.push(pr.opens > 0
-    ? (pr.firstOpen ? `открыл ${humanDay((pr.firstOpen || '').slice(0, 10))}` : 'открыл')
-    : 'ещё не открывал');
-  if(pr.sentAt && !prog) bits.push('программы уже нет в твоём списке');
+    ? (pr.firstOpen ? t('clients.openedOn',{date:humanDay((pr.firstOpen || '').slice(0, 10))}) : t('clients.opened'))
+    : t('clients.notOpened'));
+  if(pr.sentAt && !prog) bits.push(t('clients.localMissing'));
   const sub = document.createElement('p');
   sub.className = 'field-hint';
   sub.textContent = bits.join(' · ');
@@ -8657,7 +8986,7 @@ function progCard(c, pr){
   if(pr.err || stale){
     const st = document.createElement('p');
     st.className = 'field-hint warn';
-    st.textContent = pr.err || 'Эта ссылка отправлена старой версией: отметок и отчётов по ней не будет. Отправь программу заново.';
+    st.textContent = pr.err || t('clients.oldLink');
     el.appendChild(st);
   }
 
@@ -8668,16 +8997,16 @@ function progCard(c, pr){
   const again = document.createElement('button');
   again.type = 'button';
   again.className = 'choice ico-row';
-  again.innerHTML = icon('share') + '<b>Отправить ссылку ещё раз</b>';
+  again.innerHTML = icon('share') + '<b>' + esc(t('clients.resend')) + '</b>';
   again.onclick = ()=> resendProgram(c, pr);
   acts.appendChild(again);
   const drop = document.createElement('button');
   drop.type = 'button';
   drop.className = 'link-btn';
-  drop.textContent = 'Убрать эту программу';
+  drop.textContent = t('clients.remove');
   drop.onclick = async ()=>{
-    if(!(await appDialog(`Убрать «${pr.name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.`,
-      {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+    if(!(await appDialog(t('clients.removeQuestion',{name:pr.name}),
+      {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
     c.progs = clProgs(c).filter(x => x !== pr);
     await saveClients();
     fillClient();
@@ -8696,7 +9025,7 @@ function renderReport(box, pr){
   if(!r){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Занятий пока нет. Отчёт придёт сам, как только подопечный закончит первую тренировку.';
+    h.textContent = t('report.none');
     box.appendChild(h);
     return;
   }
@@ -8727,10 +9056,10 @@ function renderReport(box, pr){
 
   // ---- сколько и когда ----
   const head = add('tr-sum cls-sum', '<b></b><small></small>');
-  head.querySelector('b').textContent = `${r.n} ${plural(r.n, 'тренировка', 'тренировки', 'тренировок')}`;
+  head.querySelector('b').textContent = r.n + ' ' + (appLocale === 'ru' ? plural(r.n,t('report.workoutOne'),t('report.workoutFew'),t('report.workoutMany')) : t(r.n === 1 ? 'report.workoutOne' : 'report.workoutFew'));
   const bits = [];
-  if(r.last) bits.push(`последняя ${humanDay(r.last)}`);
-  if(r.streak > 1) bits.push(`серия ${r.streak}`);
+  if(r.last) bits.push(t('report.last',{date:humanDay(r.last)}));
+  if(r.streak > 1) bits.push(t('report.streak',{count:r.streak}));
   head.querySelector('small').textContent = bits.join(' · ');
 
   /* ---- четыре недели ----
@@ -8745,7 +9074,7 @@ function renderReport(box, pr){
       if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
     });
     const top = Math.max(1, ...weeks);
-    add('cls-label', 'По неделям');
+    add('cls-label', t('report.byWeeks'));
     const wrap = add('cl-weeks', '');
     const dm = t => t.getDate() + '.' + String(t.getMonth() + 1).padStart(2, '0');
     weeks.slice().reverse().forEach((n, i) => {
@@ -8757,7 +9086,7 @@ function renderReport(box, pr){
       // Столбик, а не рамка с числом: провал должен читаться формой, а не чтением.
       w.innerHTML = `<b></b><span class="cw-bar"><i style="height:${Math.round(n / top * 100)}%"></i></span><small></small>`;
       w.querySelector('b').textContent = n;
-      w.querySelector('small').textContent = back === 0 ? 'сейчас' : dm(from);
+      w.querySelector('small').textContent = back === 0 ? t('report.now') : dm(from);
       wrap.appendChild(w);
     });
   }
@@ -8765,9 +9094,9 @@ function renderReport(box, pr){
   /* ---- какие дни делает ---- */
   const plans = (r.plans || []).filter(x => x.days || x.n);
   if(plans.length > 1){
-    add('cls-label', 'По дням');
-    plans.forEach(pl => line(pl.days || `вариант ${pl.i + 1}`,
-      pl.n ? `${pl.n} ${plural(pl.n, 'раз', 'раза', 'раз')}` : 'ни разу',
+    add('cls-label', t('report.byDays'));
+    plans.forEach(pl => line(pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : (t('builder.variant') + ' ' + (pl.i + 1)),
+      pl.n ? String(pl.n) : t('report.never'),
       pl.n ? '' : 'muted'));
   }
 
@@ -8775,49 +9104,48 @@ function renderReport(box, pr){
      Средняя длительность скрывает то, ради чего её смотрят: одна тренировка на
      двадцать минут и одна на час дают «сорок минут», которых не было ни разу. */
   if(log.length){
-    add('cls-label', 'Тренировки');
-    const wd = ['вс','пн','вт','ср','чт','пт','сб'];
+    add('cls-label', t('report.workouts'));
+    const wd = null;
     // Сортируем сами: порядок записей в журнале — это порядок, в котором они легли,
     // а не порядок дней. Список тренировок, идущий вразнобой, нельзя читать вовсе.
     const sorted = log.slice().sort((a2, b2) => String(b2.d).localeCompare(String(a2.d)));
     sorted.slice(0, 8).forEach(x => {
       const pl = plans.find(y => y.i === x.p);
       let when = humanDay(x.d);
-      try{ when += ', ' + wd[new Date(x.d + 'T12:00:00').getDay()]; }catch(e){}
+      try{ when += ', ' + new Intl.DateTimeFormat(localeTag(),{weekday:'short'}).format(new Date(x.d + 'T12:00:00')); }catch(e){}
       // Вариант в скобках, как у упражнений. Через точку он читался как второй день
       // («17 сентября, чт · Пн» выглядит ошибкой), хотя говорит другое: человек
       // сделал понедельничную тренировку в четверг, и это как раз стоит заметить.
       if(plans.length > 1 && pl && pl.days) when += ` (${pl.days})`;
-      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' мин' : '';
+      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' ' + t('store.minuteShort') : '';
       line(when, mins || '—', mins ? '' : 'muted');
     });
-    if(log.length > 8) add('field-hint', '').textContent = `и ещё ${log.length - 8} раньше`;
+    if(log.length > 8) add('field-hint', '').textContent = t('report.moreEarlier',{count:log.length - 8});
   }
 
   /* ---- что подопечный поменял ---- */
   const d = r.diff || {};
   const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
   if(changed){
-    add('cls-label warn', 'Поменял в программе');
-    (d.del || []).forEach(n => line(n, 'убрал', 'warn'));
-    (d.add || []).forEach(n => line(n, 'добавил', 'warn'));
+    add('cls-label warn', t('report.changed'));
+    (d.del || []).forEach(n => line(n, t('report.removed'), 'warn'));
+    (d.add || []).forEach(n => line(n, t('report.added'), 'warn'));
     (d.mod || []).forEach(m => change(m.n, m.a, m.b, 'warn'));
   }
 
   // ---- рост нагрузки ----
   const ex = r.ex || [];
   if(ex.length){
-    add('cls-label', 'Растёт');
+    add('cls-label', t('report.growth'));
     const many = plans.length > 1;
     ex.forEach(e => {
       const pl = plans.find(x => x.i === e.p);
-      const tag = [e.w ? 'разминка' : '', many && pl && pl.days ? pl.days : ''].filter(Boolean).join(' · ');
+      const tag = [e.w ? t('report.warmup') : '', many && pl && pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : ''].filter(Boolean).join(' · ');
       change(e.n + (tag ? ` (${tag})` : ''), e.a, e.b, 'ok');
     });
   }
 
-  add('field-hint', '').textContent = `Отчёт от ${humanDay(r.at)}`
-    + (pr.reports.length > 1 ? ` · всего отчётов ${pr.reports.length}` : '');
+  add('field-hint', '').textContent = t('report.reportOn',{date:humanDay(r.at)}) + (pr.reports.length > 1 ? ' · ' + t('report.totalReports',{count:pr.reports.length}) : '');
 }
 
 /* ---- отправка программы подопечному ----
@@ -8825,7 +9153,7 @@ function renderReport(box, pr){
    подопечный, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
    подопечного, от кого она пришла. */
 async function sendProgramToClient(c, p){
-  if(!p){ appAlert('Сначала выбери программу: пункт «Отправить подопечному» есть в меню любой программы в списке тренировок.'); return; }
+  if(!p){ appAlert(t('clients.chooseProgram')); return; }
 
   // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
   // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
@@ -8858,7 +9186,7 @@ async function resendProgram(c, pr){
   if(!pr.link || !pr.link.id){
     const p = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
     if(p) return sendProgramToClient(c, p);
-    appAlert('Этой программы уже нет в твоём списке — отправь любую другую.');
+    appAlert(t('clients.programGone'));
     return;
   }
   await shareLink(PUBLIC_APP_URL + '?p=' + encodeURIComponent(pr.link.id),
@@ -8866,15 +9194,15 @@ async function resendProgram(c, pr){
 }
 
 async function shareLink(url, who, what){
-  const text = `Программа «${what}»${who ? ' для ' + who : ''} — открой ссылку, и она добавится в Fit Timer:`;
+  const text = t('clients.shareText',{program:what,forClient:who ? t('clients.forClient',{name:who}) : ''});
   if(navigator.share){
     try{ await navigator.share({title: 'Fit Timer', text, url}); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
   try{
     await navigator.clipboard.writeText(url);
-    appAlert('Ссылка скопирована — отправь её подопечному любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.');
-  }catch(e){ appAlert('Скопируй ссылку и отправь подопечному:', {code: url}); }
+    appAlert(t('clients.linkCopied'));
+  }catch(e){ appAlert(t('clients.copyLink'), {code: url}); }
 }
 
 /* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
@@ -8884,10 +9212,10 @@ async function shareLink(url, who, what){
    ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
    в порядке, но подопечный ещё не занимался»: пустую карточку. */
 const PULL_ERR = {
-  no_store: 'На сервере не подключено хранилище — отметки и отчёты не сохраняются.',
-  not_found: 'Ссылка на сервере не найдена. Отправь программу заново.',
-  bad_key: 'Нет доступа к этой ссылке. Отправь программу заново.',
-  rate_limited: 'Слишком много проверок подряд. Загляни через пару минут.'
+  no_store: 'clients.pullNoStore',
+  not_found: 'clients.pullNotFound',
+  bad_key: 'clients.pullBadKey',
+  rate_limited: 'clients.pullRate'
 };
 async function pullProgram(pr){
   if(!pr || !pr.link || !pr.link.id) return false;
@@ -8896,7 +9224,7 @@ async function pullProgram(pr){
     // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
     d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
   }catch(e){
-    pr.err = PULL_ERR[e && e.code] || 'Нет связи с сервером — данные могут быть несвежими.';
+    pr.err = t(PULL_ERR[e && e.code] || 'clients.pullOffline');
     return false;
   }
   pr.err = null;
@@ -8919,7 +9247,7 @@ async function pullClient(c){
 }
 
 async function addClient(){
-  const c = {id: 'c' + Date.now(), name: 'Подопечный ' + (clients.length + 1), note: '',
+  const c = {id: 'c' + Date.now(), name: t('clients.defaultName',{count:clients.length + 1}), note: '',
              programId: null, programName: '', sentAt: null, reports: []};
   clients.push(c);
   await saveClients();
@@ -8930,18 +9258,18 @@ async function addClient(){
 function pickClientFor(p){
   const box = $('pickClientList');
   box.innerHTML = '';
-  $('pickClientModal').querySelector('.mini-label').textContent = 'Кому отправить';
+  $('pickClientModal').querySelector('.mini-label').textContent = t('clients.sendTo');
   clients.forEach(c => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'choice';
     b.innerHTML = '<b></b><small></small>';
-    b.querySelector('b').textContent = c.name || 'Без имени';
+    b.querySelector('b').textContent = c.name || t('profile.noName');
     const has = clProgs(c).find(x => x.pid === p.id);
     const sum = clientSum(c);
-    b.querySelector('small').textContent = has ? 'эта программа уже у него — отправим ссылку заново'
-      : !sum.progs ? 'программ пока нет'
-      : `уже ${sum.progs} ${plural(sum.progs, 'программа', 'программы', 'программ')}`;
+    b.querySelector('small').textContent = has ? t('clients.alreadyHas')
+      : !sum.progs ? t('clients.noPrograms').toLowerCase()
+      : t('clients.alreadyCount',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
       await sendProgramToClient(c, p);
@@ -8951,7 +9279,7 @@ function pickClientFor(p){
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'choice add-row';
-  add.innerHTML = icon('plus') + '<b>Новый подопечный</b>';
+  add.innerHTML = icon('plus') + '<b>' + esc(t('clients.new')) + '</b>';
   add.onclick = async ()=>{
     $('pickClientModal').classList.remove('open');
     const c = await addClient();
@@ -9000,7 +9328,7 @@ function snapshotEx(p){
 // Ключ упражнения — вариант плюс название: одно и то же движение в разных днях
 // это разные строки программы, и путать их нельзя.
 const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
-const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' кг' : '') + (x.s > 1 ? ' × ' + x.s + ' подх.' : '');
+const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
 
 function buildReport(p){
   const mine = stats.history.filter(h => h.pid === p.id);
@@ -9042,9 +9370,9 @@ function buildReport(p){
     const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
     const grew = parseValue(now).min > parseValue(was).min || kgNow > kgWas;
     if(!grew) return;
-    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || 'Упражнение',
-             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} кг` : ''),
-             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} кг` : '')});
+    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || t('common.exerciseFallback'),
+             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} ${t('progress.kg')}` : ''),
+             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} ${t('progress.kg')}` : '')});
   }));
 
   // 4. Правки: что подопечный убрал, добавил и поменял руками.
@@ -9127,6 +9455,20 @@ const STORE_LOOK = {
 const STORE_CATS = OPT_GOAL.map(name => Object.assign({name}, STORE_LOOK[name]));
 const STORE_LEVELS = OPT_LEVEL;
 const storeCat = id => STORE_CATS.find(c => c.id === id) || STORE_CATS[0];
+function storeCountText(n, type){
+  const forms = {
+    program:['store.programOne','store.programFew','store.programMany'],
+    set:['store.setOne','store.setFew','store.setMany'],
+    round:['store.roundOne','store.roundFew','store.roundMany'],
+    variant:['store.variantOne','store.variantFew','store.variantMany'],
+    exercise:['store.exerciseOne','store.exerciseFew','store.exerciseMany']
+  }[type];
+  if(!forms) return String(n);
+  const word = appLocale === 'ru'
+    ? plural(n, t(forms[0]), t(forms[1]), t(forms[2]))
+    : t(n === 1 ? forms[0] : forms[1]);
+  return n + ' ' + word;
+}
 // Расклад обложки берём по месту программы ВНУТРИ её категории, а не по хешу
 // названия: хеш легко кладёт двух соседей в один вариант, и рядом стоящие
 // карточки выглядят близнецами. Порядковый номер такого не допускает.
@@ -9275,11 +9617,11 @@ function renderStoreFilters(){
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
   // пункт в списке — обещание, которого каталог не выполняет.
   const has = id => storeAll().some(x => x.cat === id);
-  fill('storeCatBtn', 'storeCatVal', 'storeCatChev', 'Цель',
-    STORE_CATS.filter(c => has(c.id)).map(c => [c.id, c.name]),
+  fill('storeCatBtn', 'storeCatVal', 'storeCatChev', t('ai.goal'),
+    STORE_CATS.filter(c => has(c.id)).map(c => [c.id, canonicalLabel(c.name)]),
     storeFilter.cat, v => storeFilter.cat = v);
-  fill('storeLevelBtn', 'storeLevelVal', 'storeLevelChev', 'Уровень',
-    STORE_LEVELS.map(l => [l, l]),
+  fill('storeLevelBtn', 'storeLevelVal', 'storeLevelChev', t('ai.level'),
+    STORE_LEVELS.map(l => [l, canonicalLabel(l)]),
     storeFilter.level, v => storeFilter.level = v);
 }
 
@@ -9290,7 +9632,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (it.name + ' ' + storeCat(it.cat).name + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return (it.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
@@ -9300,8 +9642,8 @@ function storeMatches(it){
 function storeLabels(it, own){
   if(!it.pro && !own) return '';
   return `<div class="st-labels">` +
-    (it.pro ? `<span class="st-tag pro">${icon('crown')}Премиум</span>` : '') +
-    (own ? `<span class="st-own">${icon('check')}Уже у вас</span>` : '') +
+    (it.pro ? `<span class="st-tag pro">${icon('crown')}${esc(t('premium.title'))}</span>` : '') +
+    (own ? `<span class="st-own">${icon('check')}${esc(t('store.alreadyOwned'))}</span>` : '') +
     `</div>`;
 }
 
@@ -9321,13 +9663,13 @@ function renderStore(){
   }
   const list = storeAll().filter(storeMatches);
   $('storeCount').textContent = list.length
-    ? `${list.length} ${plural(list.length, 'программа', 'программы', 'программ')}`
+    ? storeCountText(list.length, 'program')
     : '';
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      '<b>Ничего не нашлось</b>' +
-      '<p>Попробуй другое слово или сними фильтры — программ в каталоге пока немного.</p>' +
+      `<b>${esc(t('store.emptyTitle'))}</b>` +
+      `<p>${esc(t('store.emptyText'))}</p>` +
       '</div>';
     return;
   }
@@ -9340,8 +9682,8 @@ function renderStore(){
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
         <h3>${it.name}</h3>
-        <div class="sr-goal">${storeCat(it.cat).name}</div>
-        <div class="sr-meta"><span>${it.min} мин</span><span>${it.level}</span>${it.by ? `<span>${it.by}</span>` : ''}</div>
+        <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
+        <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
       </div>
     </article>`;
@@ -9355,11 +9697,11 @@ let siItem = null;
 // рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
 function siBits(ex){
   const b = [];
-  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} сек` : `${valueText(ex.value)} повт.`);
+  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} ${t('store.secShort')}` : `${valueText(ex.value)} ${t('store.repShort')}`);
   const sets = Math.max(1, parseInt(ex.sets) || 1);
-  if(sets > 1) b.push(`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`);
-  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} кг`);
-  if(ex.perSide) b.push('на сторону');
+  if(sets > 1) b.push(storeCountText(sets, 'set'));
+  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} ${t('progress.kg')}`);
+  if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
 function openStoreItem(id){
@@ -9369,7 +9711,7 @@ function openStoreItem(id){
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
   $('siName').textContent = it.name;
-  $('siGoal').textContent = c.name;
+  $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
   setShown('siBy', !!it.by);
@@ -9391,14 +9733,14 @@ function openStoreItem(id){
     el.textContent = txt;
     facts.appendChild(el);
   };
-  fact(it.level);
-  fact(`${it.min} мин`);
-  if(rounds > 1) fact(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
-  if(days) fact(days);
+  fact(canonicalLabel(it.level));
+  fact(`${it.min} ${t('store.minuteShort')}`);
+  if(rounds > 1) fact(storeCountText(rounds, 'round'));
+  if(days) fact(days.split(',').map(x => canonicalLabel(x.trim())).join(', '));
   if(plans.length > 1){
     fact(program.rotate
-      ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')} по очереди`
-      : `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+      ? `${storeCountText(plans.length, 'variant')} ${t('store.inSequence')}`
+      : storeCountText(plans.length, 'variant'));
   }
 
   const own = storeOwned(it.id);
@@ -9408,8 +9750,8 @@ function openStoreItem(id){
   // сумма читалась как «столько делают за раз», а сколько в каждом — написано на
   // самом варианте.
   $('siCount').textContent = plans.length > 1
-    ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`
-    : `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')}`;
+    ? storeCountText(plans.length, 'variant')
+    : storeCountText(exs.length, 'exercise');
   // Состав премиум-программы — часть подписки: без неё показываем не пустоту и не
   // отказ, а что именно там лежит. Нажатие открывает витрину подписки.
   const locked = !!it.pro && !isPremium();
@@ -9417,8 +9759,7 @@ function openStoreItem(id){
   setShown('siLock', locked);
   if(locked){
     $('siLockTxt').textContent =
-      `${exs.length} ${plural(exs.length, 'упражнение', 'упражнения', 'упражнений')} с техникой, ` +
-      `частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.`;
+      t('store.lockedText',{count:exs.length,exercises:appLocale === 'ru' ? plural(exs.length,t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : (exs.length === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
   }
   /* Состав — ПО ВАРИАНТАМ, а не одним списком.
 
@@ -9438,11 +9779,10 @@ function openStoreItem(id){
       const head = document.createElement('p');
       head.className = 'si-plan';
       const list = (pl.days || []).join(', ');
-      head.textContent = (program.rotate || !list) ? `Вариант ${pi + 1}` : list;
+      head.textContent = (program.rotate || !list) ? `${t('builder.variant')} ${pi + 1}` : list.split(',').map(x => canonicalLabel(x.trim())).join(', ');
       const n = (pl.exercises || []).length;
       const sub = document.createElement('span');
-      sub.textContent = `${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`
-        + (+pl.rounds > 1 ? ` · ${pl.rounds} ${plural(+pl.rounds, 'круг', 'круга', 'кругов')}` : '');
+      sub.textContent = storeCountText(n, 'exercise') + (+pl.rounds > 1 ? ` · ${storeCountText(+pl.rounds, 'round')}` : '');
       head.appendChild(sub);
       box.appendChild(head);
     }
@@ -9456,11 +9796,11 @@ function openStoreItem(id){
       row.innerHTML =
         `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
         `<div class="ex-info"><b></b><div class="ex-meta">` +
-        (ex.warmup ? '<span class="wm">Разминка</span>' : '') +
+        (ex.warmup ? `<span class="wm">${esc(t('store.warmup'))}</span>` : '') +
         siBits(ex).map(t => `<span>${t}</span>`).join('') +
         (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
         `</div></div>`;
-      row.querySelector('b').textContent = (ex.name || '').trim() || 'Без названия';
+      row.querySelector('b').textContent = (ex.name || '').trim() || t('store.untitled');
       // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
       // её с рядами надо по тому же, по чему она собрана на сервере.
       row.dataset.ex = (ex.name || '').trim();
@@ -9468,7 +9808,7 @@ function openStoreItem(id){
     });
   });
 
-  $('siBuy').textContent = own ? 'Открыть' : 'Добавить в мои тренировки';
+  $('siBuy').textContent = own ? t('store.open') : t('store.addMine');
   show('scrStoreItem');
   window.scrollTo(0, 0);
   if(!locked) siPaintMedia(it);
@@ -9525,7 +9865,7 @@ async function addStoreItem(id){
 
   const {program, errors} = parseProgramText(it.text);
   if(errors.length || !program.plans.length){
-    appAlert('Не удалось добавить программу. Попробуй ещё раз.');
+    appAlert(t('store.addFailed'));
     return;
   }
   program.id = 'p' + Date.now();
@@ -9551,7 +9891,7 @@ async function addStoreItem(id){
   // приходит уже после открытия попапа — а обработчик popstate закрывает верхний
   // попап. Остаёмся на странице программы, кнопка превращается в «Открыть».
   if(siItem && siItem.id === id){
-    $('siBuy').textContent = 'Открыть';
+    $('siBuy').textContent = t('store.open');
     // метку «Уже у вас» ставим тут же: уходить с экрана после добавления нельзя
     // (возврат по истории асинхронный и закрыл бы только что открытый попап)
     $('siLabels').innerHTML = storeLabels(siItem, true);
@@ -9561,7 +9901,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(`«${it.name}» в твоих тренировках.`);
+  appAlert(t('store.added',{name:it.name}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
@@ -9621,20 +9961,25 @@ function fillTrainerPage(nick, t){
   // «стаж не указан» доверия не добавляют, а место занимают.
   const cells = [];
   if(t.years != null && t.years > 0){
-    cells.push([t.years, plural(t.years, 'год', 'года', 'лет') + ' стажа']);
+    cells.push([t.years, appLocale === 'ru'
+      ? plural(t.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
+      : t(t.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
   }
   if(t.programs > 0){
-    cells.push([t.programs, plural(t.programs, 'программа', 'программы', 'программ')]);
+    cells.push([t.programs, appLocale === 'ru'
+      ? plural(t.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
+      : t(t.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
   }
   if(t.opens > 0){
-    cells.push([t.opens, plural(t.opens, 'человек взял', 'человека взяли', 'человек взяли')]);
+    cells.push([t.opens, t(t.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
   }
   if(t.since){
     const d = daysSince((t.since || '').slice(0, 10));
     if(d != null){
       const m = Math.floor(d / 30);
-      cells.push(m >= 1 ? [m, plural(m, 'месяц', 'месяца', 'месяцев') + ' с нами']
-                        : [Math.max(1, d), plural(Math.max(1, d), 'день', 'дня', 'дней') + ' с нами']);
+      cells.push(m >= 1
+        ? [m, t(m === 1 ? 'trainer.withUsMonth' : 'trainer.withUsMonths')]
+        : [Math.max(1, d), t(Math.max(1, d) === 1 ? 'trainer.withUsDay' : 'trainer.withUsDays')]);
     }
   }
   setShown('tpStatsCard', cells.length > 0);
@@ -9678,12 +10023,15 @@ function estimateMinutes(p){
   return Math.max(1, Math.round(sec / 60));
 }
 
-const PUB_LABEL = {
-  pending:  ['на проверке', 'wait'],
-  approved: ['в каталоге', 'ok'],
-  rejected: ['не взяли', 'cold'],
-  gone:     ['заявка потерялась', 'cold']
-};
+function pubLabel(status){
+  const item = {
+    pending:  ['publish.pending', 'wait'],
+    approved: ['publish.approved', 'ok'],
+    rejected: ['publish.rejected', 'cold'],
+    gone:     ['publish.gone', 'cold']
+  }[status] || ['publish.pending', 'wait'];
+  return [t(item[0]), item[1]];
+}
 const pubbed = () => customPrograms.filter(p => p.pub && p.pub.id);
 
 function openMyCatalog(){
@@ -9696,7 +10044,7 @@ function renderMyCatalog(){
   box.innerHTML = '';
   const list = pubbed();
   list.forEach(p => {
-    const [label, tone] = PUB_LABEL[p.pub.status] || PUB_LABEL.pending;
+    const [label, tone] = pubLabel(p.pub.status);
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'cl-row';
@@ -9705,14 +10053,14 @@ function renderMyCatalog(){
       + `<div class="ub"><b></b><small></small></div><span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = p.name;
     row.querySelector('.ub small').textContent =
-      `${ex} ${plural(ex, 'упражнение', 'упражнения', 'упражнений')}`;
+      storeCountText(ex, 'exercise');
     row.querySelector('.cl-state').textContent = label;
     row.onclick = ()=> openPublish(p);
     box.appendChild(row);
   });
   $('mcHint').textContent = list.length
-    ? 'Программы смотрит человек. Взятую увидят все в каталоге.'
-    : 'Пока ничего не отправлено. Открой свою программу, «⋮» → «Предложить в каталог».';
+    ? t('publish.listHint')
+    : t('publish.emptyHint');
 }
 // Статусы всех заявок разом: по одной на программу — это столько путей до сервера,
 // сколько программ.
@@ -9750,15 +10098,15 @@ function fillPublish(){
   if(!p) return;
   const ex = (normPlans(p)[0].exercises || []).length;
   $('pubName').textContent = p.name;
-  $('pubSub').textContent = `${ex} ${plural(ex, 'упражнение', 'упражнения', 'упражнений')} · примерно ${estimateMinutes(p)} мин`;
+  $('pubSub').textContent = t('publish.approx',{count:ex,exercises:storeCountText(ex,'exercise').replace(/^\d+\s+/,''),minutes:estimateMinutes(p)});
 
   const st = p.pub && p.pub.status;
-  const shown = {
-    pending:  'На проверке. Обычно это занимает день-другой — программы смотрит человек.',
-    approved: 'Программа в каталоге. Её видят все.',
-    rejected: 'Не взяли. Можно поправить и предложить заново.',
-    gone:     'Заявка не нашлась. Можно отправить заново.'
-  }[st] || '';
+  const shown = st ? t({
+    pending:'publish.pendingText',
+    approved:'publish.approvedText',
+    rejected:'publish.rejectedText',
+    gone:'publish.goneText'
+  }[st] || 'publish.pendingText') : '';
   $('pubState').textContent = shown;
   $('pubState').classList.toggle('warn', st === 'rejected' || st === 'gone');
   setShown('pubForm', st !== 'pending' && st !== 'approved');
@@ -9771,10 +10119,10 @@ function fillPublish(){
     $(chevId).innerHTML = icon('chevD');
     $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); fillPublish(); });
   };
-  fill('pubCatBtn', 'pubCatVal', 'pubCatChev', 'Цель',
-       OPT_GOAL.map(g => [g, g]), pubDraft.cat, v => pubDraft.cat = v);
-  fill('pubLevelBtn', 'pubLevelVal', 'pubLevelChev', 'Уровень',
-       OPT_LEVEL.map(l => [l, l]), pubDraft.level, v => pubDraft.level = v);
+  fill('pubCatBtn', 'pubCatVal', 'pubCatChev', t('ai.goal'),
+       OPT_GOAL.map(g => [g, canonicalLabel(g)]), pubDraft.cat, v => pubDraft.cat = v);
+  fill('pubLevelBtn', 'pubLevelVal', 'pubLevelChev', t('ai.level'),
+       OPT_LEVEL.map(l => [l, canonicalLabel(l)]), pubDraft.level, v => pubDraft.level = v);
   if(document.activeElement !== $('pubGives')) $('pubGives').value = pubDraft.gives || '';
 }
 
@@ -9799,13 +10147,13 @@ async function doPublish(){
   if(!p) return;
   pubDraft.gives = clampText($('pubGives').value, LIM.gives);
   const miss = [];
-  if(!pubDraft.cat) miss.push('цель');
-  if(!pubDraft.level) miss.push('уровень');
-  if(pubDraft.gives.length < 20) miss.push('«что она даёт» — хотя бы 20 символов');
+  if(!pubDraft.cat) miss.push(t('publish.needGoal'));
+  if(!pubDraft.level) miss.push(t('publish.needLevel'));
+  if(pubDraft.gives.length < 20) miss.push(t('publish.needGives'));
   const ex = (normPlans(p)[0].exercises || []).length;
-  if(ex < 3) miss.push('хотя бы три упражнения в программе');
+  if(ex < 3) miss.push(t('publish.needExercises'));
   if(miss.length){
-    appAlert('Не хватает: ' + miss.join(', ') + '.');
+    appAlert(t('publish.missing',{items:miss.join(', ')}));
     return;
   }
   try{
@@ -9828,18 +10176,18 @@ async function doPublish(){
     p.pub = {id: r.id, status: r.status, draft: pubDraft};
     await savePrograms();
     fillPublish();
-    appAlert('Отправлено. Программу посмотрит человек — обычно это день-другой. Как решится, статус появится здесь же.');
+    appAlert(t('publish.sent'));
   }catch(e){
     const why = {
-      no_trainer: 'Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.',
-      not_yours: 'Этот ник закреплён за другим тренером.',
-      banned: 'Приём программ с этого ника закрыт.',
-      too_many_today: 'Сегодня уже отправлено три программы. Продолжим завтра.',
-      already_sent: 'Эта программа уже ждёт проверки или уже в каталоге.',
-      no_store: 'На сервере не подключено хранилище — отправка пока не работает.',
-      bad_item: 'Не хватает данных: ' + ((e.miss || []).join(', ') || 'проверь поля') + '.'
+      no_trainer: t('publish.errNoTrainer'),
+      not_yours: t('publish.errNotYours'),
+      banned: t('publish.errBanned'),
+      too_many_today: t('publish.errTooMany'),
+      already_sent: t('publish.errAlready'),
+      no_store: t('publish.errStore'),
+      bad_item: t('publish.errBad',{items:((e.miss || []).join(', ') || t('publish.checkFields'))})
     }[e && e.code];
-    appAlert(why || 'Не получилось отправить — похоже, нет связи с сервером.');
+    appAlert(why || t('publish.errNetwork'));
   }
 }
 
@@ -9864,8 +10212,8 @@ function renderCatalogRow(){
   if(!$('btnMyCatalog')) return;
   const n = storeAll().length;
   $('storeRowSub').textContent = n
-    ? `${n} ${plural(n, 'программа', 'программы', 'программ')} от тренеров`
-    : 'Тренировки от тренеров';
+    ? t('catalog.fromTrainers',{count:n,programs:storeCountText(n,'program').replace(/^\d+\s+/,'')})
+    : t('catalog.trainerWorkouts');
   // Строку заявок показываем, только когда заявки есть: «ничего не отправлено»
   // сообщает ровно то, что строку не надо было показывать.
   const pub = pubbed();
@@ -9873,8 +10221,8 @@ function renderCatalogRow(){
   if(!pub.length) return;
   const byStatus = st => pub.filter(p => p.pub.status === st).length;
   $('coachCatSub').textContent =
-    [[byStatus('approved'), 'в каталоге'], [byStatus('pending'), 'на проверке'],
-     [byStatus('rejected'), 'не взяли']]
+    [[byStatus('approved'), t('publish.statusCatalog')], [byStatus('pending'), t('publish.statusReview')],
+     [byStatus('rejected'), t('publish.statusRejected')]]
       .filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(' · ');
 }
 
@@ -9882,16 +10230,14 @@ function renderMine(){
   renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
   const own = customPrograms.length;
-  $('progCount').textContent = own
-    ? `${own} ${plural(own, 'программа', 'программы', 'программ')}`
-    : 'Ни одной программы';
+  $('progCount').textContent = own ? storeCountText(own,'program') : t('programs.none');
 
   if(!customPrograms.length){
     box.insertAdjacentHTML('beforeend',
       '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      '<b>Своих программ пока нет</b>' +
-      '<p>Собери первую за пару минут: опиши, какая тренировка нужна, и её соберёт ИИ — или добавь упражнения руками.</p>' +
+      '<b>' + esc(t('programs.emptyTitle')) + '</b>' +
+      '<p>' + esc(t('programs.emptyText')) + '</p>' +
       '</div>');
     renderToday();
     return;
@@ -9909,29 +10255,29 @@ function renderMine(){
     const daysU = programDaysUnion(p);
     // расписание — один чип, очередь вариантов — отдельный: длинная строка
     // «Пн · Ср · 07:30 · варианты по очереди» разрывалась посреди фразы
-    const schedule = [daysU.length ? daysU.join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    const schedule = [daysU.length ? daysU.map(canonicalLabel).join(' · ') : '', p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
     const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
     const volOne = (plans[0].rounds > 1 || setsOne <= plans[0].exercises.length)
-      ? `${plans[0].rounds} ${plural(plans[0].rounds, 'круг', 'круга', 'кругов')}`
-      : `${setsOne} ${plural(setsOne, 'подход', 'подхода', 'подходов')}`;
+      ? storeCountText(plans[0].rounds,'round')
+      : storeCountText(setsOne,'set');
     // человеческие подписи вместо «Упр-ий» и «Вар-ов»
-    const exWord = `${exTotal} ${plural(exTotal, 'упражнение', 'упражнения', 'упражнений')}`;
+    const exWord = storeCountText(exTotal,'exercise');
     const line1 = plans.length > 1
-      ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')} · ${exWord}`
+      ? `${storeCountText(plans.length,'variant')} · ${exWord}`
       : `${exWord} · ${volOne}`;
     card.innerHTML =
       `<div class="mc-cover">${cover}</div>` +
       `<div class="mc-body"><h3></h3>` +
       `<p>${line1}</p>` +
-      (done ? `<p>Пройдено раз: ${done}</p>` : '') +
+      (done ? `<p>${esc(t('programs.completed',{count:done}))}</p>` : '') +
       ((schedule || rotates || !on)
         ? `<p class="mc-chips">` +
-          (!on ? `<span class="sched off">${icon('power')}Откл</span>` : '') +
+          (!on ? `<span class="sched off">${icon('power')}${esc(t('programs.offShort'))}</span>` : '') +
           (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
-          (rotates ? `<span class="sched">${icon('reset')}по очереди</span>` : '') +
+          (rotates ? `<span class="sched">${icon('reset')}${esc(t('programs.sequence'))}</span>` : '') +
           `</p>`
         : '') + `</div>`;
     card.querySelector('h3').textContent = p.name;
@@ -9942,17 +10288,17 @@ function renderMine(){
     const more = document.createElement('button');
     more.className = 'more-btn';
     more.innerHTML = icon('more');
-    more.title = 'Действия';
+    more.title = t('common.actions');
     const menu = document.createElement('div');
     menu.className = 'ctx-menu';
     const bEdit = document.createElement('button');
-    bEdit.innerHTML = icon('pencil') + 'Изменить';
+    bEdit.innerHTML = icon('pencil') + t('common.edit');
     bEdit.onclick = ()=>{ closeAllMenus(); openBuilder(p.id); };
     // включить / отключить: рядом с «Изменить», а не рядом с «Удалить» — это
     // не уничтожение, и путать эти два действия соседством нельзя
     const bOff = document.createElement('button');
-    bOff.innerHTML = icon('power') + (on ? 'Отключить' : 'Включить');
-    bOff.title = on ? 'Убрать из планов, не удаляя' : 'Вернуть в расписание';
+    bOff.innerHTML = icon('power') + (on ? t('programs.disable') : t('programs.enable'));
+    bOff.title = on ? t('programs.disableTitle') : t('programs.enableTitle');
     bOff.onclick = async ()=>{
       closeAllMenus();
       p.active = !on;
@@ -9960,26 +10306,26 @@ function renderMine(){
       renderMine();
       // объясняем только выключение: включение возвращает привычное поведение,
       // а вот исчезновение программы из «Сегодня» без объяснения пугает
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
+      if(on) appAlert(t('programs.disabledAlert'));
     };
     const bShare = document.createElement('button');
-    bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
+    bShare.innerHTML = icon('share') + t('programs.shareLink');
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
     // «Отправить подопечному» — то же действие, но с адресатом: отправка запоминается,
     // и потом видно, кому что уходило. Пункт есть только у тренера.
     const bClient = document.createElement('button');
-    bClient.innerHTML = icon('users') + 'Отправить подопечному';
+    bClient.innerHTML = icon('users') + t('programs.sendClient');
     bClient.onclick = ()=>{ closeAllMenus(); pickClientFor(p); };
     const bFile = document.createElement('button');
-    bFile.innerHTML = icon('download') + 'Сохранить в файл';
-    bFile.title = 'Со всеми картинками';
+    bFile.innerHTML = icon('download') + t('programs.saveFile');
+    bFile.title = t('programs.allImages');
     bFile.onclick = ()=>{ closeAllMenus(); exportProgramFile(p); };
     const bDel = document.createElement('button');
     bDel.className = 'danger';
-    bDel.innerHTML = icon('trash') + 'Удалить';
+    bDel.innerHTML = icon('trash') + t('common.delete');
     bDel.onclick = async ()=>{
       closeAllMenus();
-      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
       customPrograms = customPrograms.filter(x=>x.id!==p.id);
       await savePrograms();
       renderMine();
@@ -9988,14 +10334,14 @@ function renderMine(){
     // Действие, доступное в одном месте и недоступное в другом, человек считает
     // сломанным, а не «не предусмотренным здесь».
     const bCopy = document.createElement('button');
-    bCopy.innerHTML = icon('copy') + 'Дублировать';
+    bCopy.innerHTML = icon('copy') + t('common.duplicate');
     bCopy.onclick = async ()=>{
       closeAllMenus();
       const c = await duplicateProgram(p);
       openBuilder(c.id);
     };
     const bPub = document.createElement('button');
-    bPub.innerHTML = icon('crown') + 'Предложить в каталог';
+    bPub.innerHTML = icon('crown') + t('programs.submitCatalog');
     bPub.onclick = ()=>{ closeAllMenus(); openPublish(p); };
 
     menu.append(bEdit, bOff, bCopy, bShare);
@@ -10006,7 +10352,7 @@ function renderMine(){
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
     handle.innerHTML = icon('grip');
-    handle.title = 'Перетащить';
+    handle.title = t('programs.drag');
     wrap.append(card, handle, more, menu);
     wrap.dataset.pid = p.id;
     enableDrag(wrap, handle);
