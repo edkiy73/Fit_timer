@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1258,
-      "chars": 60503,
+      "chars": 60543,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -330,7 +330,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2389,
-      "chars": 109057,
+      "chars": 109073,
       "symbols": [
         "ageError",
         "aiAuth",
@@ -732,8 +732,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 1824,
-      "chars": 76292,
+      "lines": 1827,
+      "chars": 76403,
       "symbols": [
         "addExManual",
         "aiRunClose",
