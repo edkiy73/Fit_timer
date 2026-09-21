@@ -11,7 +11,7 @@
     </div>
     <div class="progress">
       <div class="labels">
-        <span id="roundLabel">Круг 1 / 4</span>
+        <span id="roundLabel" data-i18n="finish.roundPlaceholder">Круг 1 / 4</span>
         <span id="stepLabel"></span>
       </div>
       <div class="bar"><div class="fill" id="progressFill"></div></div>
@@ -110,8 +110,8 @@
         </div>
         <div class="rc-stats">
           <div class="rc-stat"><b id="finKcal">—</b><small data-i18n="workout.kcal">ккал</small></div>
-          <div class="rc-stat"><b id="finEx">—</b><small id="finExLabel">упражнений</small></div>
-          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord">подряд</small></div>
+          <div class="rc-stat"><b id="finEx">—</b><small id="finExLabel" data-i18n="finish.exercises">упражнений</small></div>
+          <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord" data-i18n="finish.streak">подряд</small></div>
         </div>
         <div class="badge-row" id="badgeRow"></div>
       </div>
@@ -124,8 +124,8 @@
     <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую
          часть экрана, хотя оба действия помещаются рядом -->
     <div class="actions act-row fin-rise">
-      <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться"></button>
-      <button class="btn-primary" id="btnAgain">Готово</button>
+      <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться" data-i18n-title="finish.shareTitle"></button>
+      <button class="btn-primary" id="btnAgain" data-i18n="finish.done">Готово</button>
     </div>
     <canvas id="finFx" aria-hidden="true"></canvas>
   </section>
