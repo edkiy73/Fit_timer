@@ -97,6 +97,21 @@ async function boot(b, label, errs, url){
   });
   ok('заявка в каталог ушла', sub.status === 'pending', sub.status);
 
+  // На модерации добавляем второй язык вручную: отправка тренером сама ИИ не запускает.
+  const engName = 'Home Strength ' + PNAME.split(' ').pop();
+  const engText = PROG
+    .replace('ПРОГРАММА: ' + PNAME, 'ПРОГРАММА: ' + engName)
+    .replace('УПРАЖНЕНИЕ: Приседания', 'УПРАЖНЕНИЕ: Squats')
+    .replace('УПРАЖНЕНИЕ: Отжимания', 'УПРАЖНЕНИЕ: Push-ups')
+    .replace('УПРАЖНЕНИЕ: Планка', 'УПРАЖНЕНИЕ: Plank');
+  await fetch(BASE + '/api/admin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
+    body: JSON.stringify({action: 'edit', id: sub.id, item: {sourceLocale:'ru', locales:{
+      ru:{name:PNAME, gives:'Короткая программа на каждый день без инвентаря.', text:PROG},
+      en:{name:engName, gives:'A short everyday home workout without equipment.', text:engText}
+    }}})
+  });
   // Берём её в каталог: удаление проверяем на том, что в каталоге УЖЕ лежит, —
   // на заявке, которую никто не взял, доказывать нечего.
   await fetch(BASE + '/api/admin', {
