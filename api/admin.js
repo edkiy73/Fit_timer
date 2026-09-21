@@ -17,6 +17,55 @@ const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back'
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
 const clean = (v, n) => String(v == null ? '' : v).slice(0, n);
 
+const LANGS = ['ru', 'en'];
+const normLocale = v => LANGS.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : 'ru';
+
+function cleanLocaleBlock(v){
+  if(!v || typeof v !== 'object') return null;
+  return {
+    name: clampLine(v.name, 60),
+    gives: clampText(v.gives, 300),
+    text: clean(v.text, 60000)
+  };
+}
+function normalizeCatalogText(it, fallbackSource){
+  const sourceLocale = normLocale((it && it.sourceLocale) || fallbackSource);
+  const locales = {};
+  const src = (it && it.locales && typeof it.locales === 'object') ? it.locales : {};
+  LANGS.forEach(lang => {
+    const block = cleanLocaleBlock(src[lang]);
+    if(block && (block.name || block.gives || block.text)) locales[lang] = block;
+  });
+  // Совместимость со старыми записями и заявками: верхний уровень — оригинал.
+  if(!locales[sourceLocale] && it && (it.name || it.gives || it.text)){
+    locales[sourceLocale] = cleanLocaleBlock({name:it.name, gives:it.gives, text:it.text});
+  }
+  return {sourceLocale, locales};
+}
+function localeMiss(block, label){
+  const miss = [];
+  if(!block || clean(block.name, 60).trim().length < 3) miss.push(label + ': название');
+  if(!block || clean(block.gives, 300).trim().length < 20) miss.push(label + ': что даёт');
+  if(!block || clean(block.text, 60000).length < 60) miss.push(label + ': текст программы');
+  return miss;
+}
+function protocolShape(text){
+  return String(text || '').split(/\r?\n/).map(line => {
+    const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):/);
+    return m ? m[1] : '';
+  }).filter(Boolean);
+}
+function syncSourceFields(c, norm){
+  const src = norm.locales[norm.sourceLocale] || norm.locales.ru || norm.locales.en;
+  c.sourceLocale = norm.sourceLocale;
+  c.locales = norm.locales;
+  if(src){
+    c.name = src.name;
+    c.gives = src.gives;
+    c.text = src.text;
+  }
+}
+
 // Карта «название упражнения → картинка». Режем и по числу, и по общему весу:
 // запись в хранилище не резиновая, а тридцать фото — это уже не программа.
 function pics(src){
@@ -48,16 +97,24 @@ async function readItems(listKey, want){
   return out;
 }
 
-// Проверка полей одна на добавление и на правку: разойдясь, они дают каталог, в
-// который через правку попадает то, что не прошло бы при добавлении.
-function checkItem(it){
+// Метаданные общие для обоих языков, текст — отдельный. В каталог публикуем
+// только запись, у которой готовы RU и EN и не разъехалась машинная структура.
+function checkItem(it, opts){
+  opts = opts || {};
+  const norm = normalizeCatalogText(it, opts.fallbackSource || 'ru');
   const miss = [];
-  if(clean(it.name, 60).trim().length < 3) miss.push('название');
-  if(clean(it.gives, 300).trim().length < 20) miss.push('что даёт');
   if(!GOALS.includes(it.cat)) miss.push('цель');
   if(!LEVELS.includes(it.level)) miss.push('уровень');
-  if(clean(it.text, 60000).length < 60) miss.push('текст программы');
-  return miss;
+  const required = opts.requireBoth ? LANGS : [norm.sourceLocale];
+  required.forEach(lang => miss.push(...localeMiss(norm.locales[lang], lang.toUpperCase())));
+  if(opts.requireBoth && norm.locales.ru && norm.locales.en){
+    const ruShape = protocolShape(norm.locales.ru.text);
+    const enShape = protocolShape(norm.locales.en.text);
+    if(!ruShape.length || JSON.stringify(ruShape) !== JSON.stringify(enShape)){
+      miss.push('RU/EN: структура программы должна совпадать');
+    }
+  }
+  return {miss, sourceLocale:norm.sourceLocale, locales:norm.locales};
 }
 
 module.exports = async (req, res) => {
@@ -130,11 +187,54 @@ module.exports = async (req, res) => {
     }
   }
 
+  /* ---- перевод каталога по запросу модератора ----
+     Никаких автоматических переводов при отправке: тратим ИИ только на заявку,
+     которую действительно решили готовить к публикации. Ручной ввод в админке
+     остаётся полноценным запасным путём. */
+  if(a === 'translate_catalog'){
+    const from = normLocale(body && body.from);
+    const to = normLocale(body && body.to);
+    if(from === to) return fail(res, 400, 'same_locale');
+    const source = cleanLocaleBlock(body && body.locale);
+    const bad = localeMiss(source, from.toUpperCase());
+    if(bad.length) return fail(res, 400, 'bad_source_locale', {miss:bad});
+    const names = {ru:'Russian', en:'English'};
+    const prompt =
+      'Translate this fitness catalog entry from ' + names[from] + ' to ' + names[to] + '.\n' +
+      'Return ONLY valid JSON with exactly these keys: name, gives, text. No Markdown.\n' +
+      'In text, keep every protocol label before the colon EXACTLY unchanged (for example ПРОГРАММА, ДНИ, КРУГИ, УПРАЖНЕНИЕ, ОПИСАНИЕ, ФОРМАТ, ЗНАЧЕНИЕ, ПОДХОДЫ, ОТДЫХ, ШАГ, ПОТОЛОК).\n' +
+      'Keep line order, blank lines, numbers, day tokens, boolean/control values and format values unchanged. ' +
+      'Translate only human-readable names and prose: program/exercise names, descriptions, muscles, mistakes, replacements.\n' +
+      'Do not add, remove, reorder or change exercises or workout mechanics.\n\nSOURCE JSON:\n' +
+      JSON.stringify(source);
+    try{
+      const settings = await getSettings();
+      const out = await generate('text', settings, prompt);
+      const raw = String(out.text || '').trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+      let parsed;
+      try{ parsed = JSON.parse(raw); }catch(e){ return fail(res, 502, 'translation_bad_json'); }
+      const locale = cleanLocaleBlock(parsed);
+      const miss = localeMiss(locale, to.toUpperCase());
+      if(miss.length) return fail(res, 502, 'translation_incomplete', {miss});
+      if(JSON.stringify(protocolShape(source.text)) !== JSON.stringify(protocolShape(locale.text))){
+        return fail(res, 502, 'translation_changed_structure');
+      }
+      return send(res, 200, {ok:true, locale, provider:out.provider, model:out.model, fallback:out.fallback});
+    }catch(e){
+      return fail(res, 502, 'translation_failed', {detail:String(e.message || e).slice(0,500)});
+    }
+  }
+
   /* ---- решение по заявке ---- */
   if(a === 'approve' || a === 'reject'){
     const raw = await store.get(`c:${id}`);
     if(!raw) return fail(res, 404, 'not_found');
     const c = JSON.parse(raw);
+    if(a === 'approve'){
+      const checked = checkItem(c, {requireBoth:true, fallbackSource:c.sourceLocale || 'ru'});
+      if(checked.miss.length) return fail(res, 400, 'missing_locales', {miss:checked.miss});
+      syncSourceFields(c, checked);
+    }
     c.status = a === 'approve' ? 'approved' : 'rejected';
     /* Доступ решается ЗДЕСЬ, а не тренером в заявке: «премиум» — это про то, что
        мы продаём, и отдавать этот рычаг тому, кто программу прислал, значит
@@ -171,19 +271,19 @@ module.exports = async (req, res) => {
   /* ---- добавить программу от себя ---- */
   if(a === 'add'){
     const it = (body && body.item) || {};
-    const miss = checkItem(it);
-    if(miss.length) return fail(res, 400, 'bad_item', {miss});
+    const checked = checkItem(it, {requireBoth:true, fallbackSource:it.sourceLocale || 'ru'});
+    if(checked.miss.length) return fail(res, 400, 'bad_item', {miss:checked.miss});
     const newId = 'a' + rndId(7);
-    await store.set(`c:${newId}`, JSON.stringify({
+    const c = {
       id: newId, by: clean(it.by, 40), cat: it.cat, level: it.level,
       min: Math.max(1, Math.min(180, Math.round(+it.min || 20))),
-      name: clampLine(it.name, 60), gives: clampText(it.gives, 300),
-      text: clean(it.text, 60000), cover: cleanPic(it.cover, 90000) || null,
-      media: pics(it.media),
+      cover: cleanPic(it.cover, 90000) || null, media: pics(it.media),
       exCount: Math.max(0, Math.round(+it.exCount || 0)),
       pro: !!it.pro,
       status: 'approved', at: new Date().toISOString(), mine: true
-    }));
+    };
+    syncSourceFields(c, checked);
+    await store.set(`c:${newId}`, JSON.stringify(c));
     await store.push('c:approved', newId);
     return send(res, 200, {ok: true, id: newId});
   }
@@ -193,16 +293,23 @@ module.exports = async (req, res) => {
     const raw = await store.get(`c:${id}`);
     if(!raw) return fail(res, 404, 'not_found');
     const c = JSON.parse(raw);
-    const it = Object.assign({}, c, (body && body.item) || {});
-    const miss = checkItem(it);
-    if(miss.length) return fail(res, 400, 'bad_item', {miss});
+    const incoming = (body && body.item) || {};
+    const it = Object.assign({}, c, incoming);
+    if(incoming.locales !== undefined){
+      it.locales = Object.assign({}, c.locales || {}, incoming.locales || {});
+    }
+    const touchesText = incoming.locales !== undefined || incoming.sourceLocale !== undefined
+      || incoming.name !== undefined || incoming.gives !== undefined || incoming.text !== undefined;
+    const checked = checkItem(it, {
+      requireBoth: c.status === 'approved' && touchesText,
+      fallbackSource:c.sourceLocale || 'ru'
+    });
+    if(checked.miss.length) return fail(res, 400, 'bad_item', {miss:checked.miss});
     // Правка идёт теми же пределами, что и добавление: разойдясь, они дают
     // каталог, в который через правку попадает то, что не прошло бы при добавлении.
-    if(it.name  != null) c.name  = clampLine(it.name, 60);
-    if(it.gives != null) c.gives = clampText(it.gives, 300);
+    if(touchesText) syncSourceFields(c, checked);
     if(it.by    != null) c.by    = clampLine(it.by, 40);
     ['cat', 'level'].forEach(k => { if(it[k] != null) c[k] = clean(it[k], 40); });
-    if(it.text  != null) c.text  = clean(it.text, 60000);
     if(it.min != null) c.min = Math.max(1, Math.min(180, Math.round(+it.min || 20)));
     if(it.cover !== undefined) c.cover = cleanPic(it.cover, 90000) || null;
     if(it.exCount != null) c.exCount = Math.max(0, Math.round(+it.exCount || 0));
