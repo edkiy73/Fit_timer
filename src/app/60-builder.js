@@ -1414,8 +1414,9 @@ Safety and quality:
 === USER REQUEST ===
 `;
 
-function aiPrompt(){
-  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', appLocale === 'ru' ? 'Russian' : 'English');
+function aiPrompt(locale){
+  const outLocale = (locale === 'ru' || locale === 'en') ? locale : appLocale;
+  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', outLocale === 'ru' ? 'Russian' : 'English');
 }
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
