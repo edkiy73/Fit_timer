@@ -31,6 +31,18 @@ const prog = (name) => `ПРОГРАММА: ${name}
 ПОДХОДЫ: 3
 ОТДЫХ: 45`).join('');
 
+const progEn = (name) => `ПРОГРАММА: ${name}
+ДНИ: Пн, Чт
+КРУГИ: 3
+ОТДЫХ МЕЖДУ КРУГАМИ: 60
+ПРОГРЕССИЯ: 4
+` + ['Squats', 'Push-ups', 'Plank'].map(n => `
+УПРАЖНЕНИЕ: ${n}
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12
+ПОДХОДЫ: 3
+ОТДЫХ: 45`).join('');
+
 (async () => {
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
@@ -139,11 +151,24 @@ const prog = (name) => `ПРОГРАММА: ${name}
   ok('заявка видна в очереди', !!asked, asked ? asked.id : '(не нашлась)');
   ok('и несёт всё, по чему решают', !!(asked && asked.gives && asked.text && asked.cat),
      asked ? `${asked.cat} · ${(asked.gives || '').slice(0, 24)}…` : '');
+  // Перевод появляется только здесь, когда модератор решил готовить заявку.
+  const ENAME = 'Strength Base ' + NAME.split(' ').pop();
+  const prepared = await admin('edit', {id: asked.id, item: {
+    sourceLocale: 'ru',
+    locales: {
+      ru: {name: asked.name, gives: asked.gives, text: asked.text},
+      en: {name: ENAME, gives: 'Three basic movements in a simple home circuit workout.', text: progEn(ENAME)}
+    }
+  }});
+  ok('модератор добавил второй язык', prepared.ok === true, prepared.error || 'ok');
   const took = await admin('approve', {id: asked.id});
-  ok('заявку взяли', took.status === 'approved', took.status || took.error);
-  const fromApi = await fetch(BASE + '/api/catalog').then(r => r.json());
-  ok('сервер отдаёт её в каталоге', (fromApi.items || []).some(x => x.name === NAME),
+  ok('заявку взяли только после RU + EN', took.status === 'approved', took.status || took.error);
+  const fromApi = await fetch(BASE + '/api/catalog?lang=ru').then(r => r.json());
+  ok('сервер отдаёт русский вариант', (fromApi.items || []).some(x => x.name === NAME),
      (fromApi.items || []).length + ' позиций');
+  const fromEn = await fetch(BASE + '/api/catalog?lang=en').then(r => r.json());
+  ok('тот же id отдаётся на английском', (fromEn.items || []).some(x => x.id === asked.id && x.name === ENAME),
+     ((fromEn.items || []).find(x => x.id === asked.id) || {}).name || 'нет');
 
   // ---- и вот теперь она в каталоге ----
   const after = await page.evaluate(async (name) => {
