@@ -1164,15 +1164,15 @@ async function loadProgWeights(){
 
 function fmtLong(sec){
   const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
-  if(h > 0) return `${h} ч ${m} мин`;
-  if(m > 0) return `${m} мин`;
-  return sec > 0 ? 'меньше минуты' : '0 мин';
+  if(h > 0) return t('time.hoursMinutes',{hours:h,minutes:m});
+  if(m > 0) return t('time.minutes',{minutes:m});
+  return sec > 0 ? t('time.lessMinute') : t('time.minutes',{minutes:0});
 }
 function renderTotal(){
   $('totalTime').textContent = fmtLong(stats.totalSec);
   const n = stats.count || 0;
   $('totalCount').textContent = n;
-  $('totalCountWord').textContent = plural(n, 'тренировка', 'тренировки', 'тренировок');
+  $('totalCountWord').textContent = appLocale === 'ru' ? plural(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(n===1?'calendar.workoutOne':'calendar.workoutFew');
 }
 
 
@@ -1225,12 +1225,19 @@ async function sessionForProgram(pid){
 
 function sessionAgeText(at){
   const mins = Math.round((Date.now() - at) / 60000);
-  if(mins < 1) return 'только что';
-  if(mins < 60) return `${mins} ${plural(mins, 'минуту', 'минуты', 'минут')} назад`;
+  if(mins < 1) return t('session.justNow');
+  if(mins < 60){
+    const word = appLocale === 'ru' ? plural(mins,t('session.minuteOne'),t('session.minuteFew'),t('session.minuteMany')) : t(mins===1?'session.minuteOne':'session.minuteFew');
+    return t('session.minutesAgo',{count:mins,minutes:word});
+  }
   const hours = Math.round(mins / 60);
-  if(hours < 24) return `${hours} ${plural(hours, 'час', 'часа', 'часов')} назад`;
+  if(hours < 24){
+    const word = appLocale === 'ru' ? plural(hours,t('session.hourOne'),t('session.hourFew'),t('session.hourMany')) : t(hours===1?'session.hourOne':'session.hourFew');
+    return t('session.hoursAgo',{count:hours,hours:word});
+  }
   const days = Math.round(hours / 24);
-  return `${days} ${plural(days, 'день', 'дня', 'дней')} назад`;
+  const word = appLocale === 'ru' ? plural(days,t('session.dayOne'),t('session.dayFew'),t('session.dayMany')) : t(days===1?'session.dayOne':'session.dayFew');
+  return t('session.daysAgo',{count:days,days:word});
 }
 
 // список рабочих шагов для выбора «с какого упражнения начать»
@@ -1240,10 +1247,10 @@ function workStepChoices(){
     if(s.phase !== 'work') return;
     let label = s.title;
     const meta = [];
-    if(s.round === 0) meta.push('разминка');
-    else if(state.current && state.current.rounds > 1) meta.push(`круг ${s.round}`);
-    if(s.setsTotal > 1) meta.push(`подход ${s.setNo}/${s.setsTotal}`);
-    if(s.side) meta.push(`сторона ${s.side}`);
+    if(s.round === 0) meta.push(t('start.metaWarmup'));
+    else if(state.current && state.current.rounds > 1) meta.push(t('start.metaRound',{count:s.round}));
+    if(s.setsTotal > 1) meta.push(t('start.metaSet',{current:s.setNo,total:s.setsTotal}));
+    if(s.side) meta.push(t('start.metaSide',{count:s.side}));
     out.push({idx: i, label, meta: meta.join(' · ')});
   });
   return out;
@@ -1341,7 +1348,9 @@ function calcStreak(){ return calcStreakInfo().n; }
 // «3 тренировки подряд» переносилось в две строки и распирало чип — на главной
 // хватает сокращения, полная форма осталась в подсказке
 function streakWord(n, byPlan){
-  return byPlan ? 'трен. подряд' : plural(n, 'день подряд', 'дня подряд', 'дней подряд');
+  return byPlan
+    ? t('streak.planShort')
+    : (appLocale === 'ru' ? plural(n,t('streak.dayOne'),t('streak.dayFew'),t('streak.dayMany')) : t(n===1?'streak.dayOne':'streak.dayFew'));
 }
 
 const MON_SHORT_NAMES = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
@@ -1375,7 +1384,9 @@ function renderStatsBlock(){
     counts.push(stats.history.filter(h => weekOf(s).includes(h.d)).length);
     const showMon = s.getMonth() !== prevMon;
     prevMon = s.getMonth();
-    labels.push(w === 0 ? 'эта' : (showMon ? `${s.getDate()} ${MON_SHORT[s.getMonth()]}` : String(s.getDate())));
+    labels.push(w === 0 ? t('stats.thisWeek') : (showMon
+      ? `${s.getDate()} ${new Intl.DateTimeFormat(localeTag(),{month:'short'}).format(s).replace('.','')}`
+      : String(s.getDate())));
   }
   const maxC = Math.max(1, ...counts);
   const bw = 300 / 8, top = 24, base = 72;
@@ -1413,7 +1424,7 @@ function renderStatBadges(){
   const earned = BADGES.filter(b => hasBadge(b.id));
   setShown('badgeCard', !!earned.length);
   if(!earned.length) return;
-  $('badgeNote').textContent = `${earned.length} из ${BADGES.length}`;
+  $('badgeNote').textContent = t('stats.badgesCount',{earned:earned.length,total:BADGES.length});
   const box = $('statBadges');
   box.innerHTML = '';
   earned.forEach(b => {
@@ -1428,8 +1439,8 @@ function renderStatBadges(){
   });
   const next = BADGES.find(b => !hasBadge(b.id));
   $('badgeNext').textContent = next
-    ? `Следующее — «${next.name}»: ${badgeDesc(next).toLowerCase()}`
-    : 'Собраны все достижения';
+    ? t('stats.nextBadge',{name:next.name,desc:badgeDesc(next).toLowerCase()})
+    : t('stats.allBadges');
 }
 
 function renderCalendar(){
@@ -1437,7 +1448,7 @@ function renderCalendar(){
   base.setDate(1);
   base.setMonth(base.getMonth() + calOffset);
   const y = base.getFullYear(), m = base.getMonth();
-  $('calTitle').textContent = `${MONTH_NAMES[m]} ${y}`;
+  $('calTitle').textContent = new Intl.DateTimeFormat(localeTag(),{month:'long',year:'numeric'}).format(base);
   const doneSet = new Set(stats.history.map(h => h.d));
   const todayIso = localISO(new Date());
   const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
@@ -1454,12 +1465,17 @@ function renderCalendar(){
   const isCur = calOffset === 0;
   const cut = isCur ? new Date().getDate() : 31;
   const pCnt = stats.history.filter(h => h.d.slice(0,7) === pKey && +h.d.slice(8) <= cut).length;
-  const sub = [cnt ? `${cnt} ${plural(cnt, 'тренировка', 'тренировки', 'тренировок')}` : 'ни одной тренировки'];
+  const sub = [cnt
+    ? cnt + ' ' + (appLocale === 'ru' ? plural(cnt,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(cnt===1?'calendar.workoutOne':'calendar.workoutFew'))
+    : t('calendar.noWorkouts')];
   // не «на 2 больше», а прямо два числа: так короче и не нужно доверять моей арифметике
-  if(cnt || pCnt) sub.push((isCur ? 'к этому дню ' : '') + `в ${MONTH_IN[pm.getMonth()]} было ${pCnt}`);
+  if(cnt || pCnt){
+    const month = new Intl.DateTimeFormat(localeTag(),{month:'long'}).format(pm);
+    sub.push(t(isCur ? 'calendar.prevCurrent' : 'calendar.prev',{month,count:pCnt}));
+  }
   $('calSub').textContent = sub.join(' · ');
 
-  const cells = DAYS.map(d => `<div class="cal-cell cal-dow">${d}</div>`);
+  const cells = DAYS.map(d => `<div class="cal-cell cal-dow">${canonicalLabel(d)}</div>`);
   for(let i = 0; i < firstDow; i++) cells.push('<div class="cal-cell"></div>');
   for(let d = 1; d <= dim; d++){
     const iso = `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1476,19 +1492,19 @@ function renderCalendar(){
 // Из этого же строится список за день, за неделю и за что угодно ещё.
 function sessRow(en, withDate){
   const p = customPrograms.find(x => x.id === en.pid);
-  const name = p ? p.name : 'Тренировка';
+  const name = p ? p.name : t('sessions.workoutFallback');
   const meta = [];
   if(p){
     const plansN = normPlans(p).length;
     if(plansN > 1){
       // подпись днями надёжнее номера: она записана в момент тренировки и не зависит
       // от того, как варианты переставились потом
-      if(en.planDays) meta.push(en.planDays);
-      else if(typeof en.plan === 'number') meta.push(`вариант ${en.plan + 1}`);
+      if(en.planDays) meta.push(String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join('·'));
+      else if(typeof en.plan === 'number') meta.push(t('sessions.variant',{count:en.plan+1}));
     }
   }
-  if(en.sec) meta.push(`${Math.round(en.sec / 60)} мин`);
-  if(en.kcal) meta.push(`≈${en.kcal} ккал`);
+  if(en.sec) meta.push(t('time.minutes',{minutes:Math.round(en.sec/60)}));
+  if(en.kcal) meta.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(withDate) meta.unshift(shortD(en.d));
   const row = document.createElement('div');
   row.className = 'sess-row';
@@ -1516,7 +1532,7 @@ function openSessions(label, title, entries, emptyText){
 }
 $('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
 
-const dayTitle = iso => { const [y, m, d] = iso.split('-'); return `${+d} ${MONTH_OF[+m - 1]} ${y}`; };
+const dayTitle = iso => new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
 
 // неделя целиком: что было пройдено с понедельника по воскресенье того столбика
 $('weekBars').addEventListener('click', e => {
@@ -1533,8 +1549,8 @@ $('weekBars').addEventListener('click', e => {
   const entries = stats.history.filter(h => days.includes(h.d))
     .sort((a, b) => a.d < b.d ? -1 : 1);
   const end = new Date(start); end.setDate(start.getDate() + 6);
-  const title = `${start.getDate()} ${MON_SHORT_NAMES[start.getMonth()]} — ${end.getDate()} ${MON_SHORT_NAMES[end.getMonth()]}`;
-  openSessions('Тренировки за неделю', title, entries, 'На этой неделе тренировок не было.');
+  const title = new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(start) + ' — ' + new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(end);
+  openSessions(t('sessions.weekLabel'), title, entries, t('sessions.weekEmpty'));
 });
 
 $('calGrid').addEventListener('click', e => {
@@ -1543,7 +1559,7 @@ $('calGrid').addEventListener('click', e => {
   const iso = cell.dataset.iso;
   const entries = stats.history.filter(h => h.d === iso);
   if(!entries.length) return;
-  openSessions('Тренировки за день', dayTitle(iso), entries);
+  openSessions(t('sessions.dayLabel'), dayTitle(iso), entries);
 });
 
 function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
@@ -1713,17 +1729,17 @@ function customToProgram(p, planIdx = 0){
 
   const rr = parseInt(plan.roundRest) || 0;
   if(rr > 0){
-    cycle.push({kind:'timer', phase:'rest', title:'Круг завершён', seconds:rr, instruction:'Попей воды и готовься к следующему кругу.', illo:'water', roundRest:true});
+    cycle.push({kind:'timer', phase:'rest', title:t('workout.roundComplete'), seconds:rr, instruction:t('workout.roundRestInstruction'), illo:'water', roundRest:true});
   }
 
   const planTime = plan.time || p.time || '';
-  const schedule = [planTime, (plan.days && plan.days.length) ? plan.days.join(', ') : ''].filter(Boolean).join(' · ');
+  const schedule = [planTime, (plan.days && plan.days.length) ? plan.days.map(canonicalLabel).join(', ') : ''].filter(Boolean).join(' · ');
   return {
-    num: 'Моя программа',
+    num: t('program.defaultMine'),
     title: p.name,
     sourceId: p.id,
     load: p.load || 100,
-    desc: `Упражнений: ${list.length}` + (schedule ? `. Расписание: ${schedule}.` : ''),
+    desc: t('program.exerciseSummary',{count:list.length}) + (schedule ? '. ' + t('program.scheduleSummary',{schedule}) : ''),
     rounds: plan.rounds, cycle, warmup
   };
 }
