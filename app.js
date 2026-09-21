@@ -819,6 +819,141 @@ const I18N_RU = {
   'common.duplicate': "Дублировать",
   'programs.submitCatalog': "Предложить в каталог",
   'programs.drag': "Перетащить",
+  'common.collapse': "Свернуть",
+  'programs.disabledStart': "Программа отключена. Результат никуда не попадёт: ни в статистику, ни в достижения.",
+  'programs.startAnyway': "Всё равно начать",
+  'workout.resumeSummary': "Остановились на {done} из {all} упражнений · {age}",
+  'workout.sessionSaved': "Место сохранено. В следующий раз сможешь продолжить отсюда.",
+  'trainer.needAccount': "Нужен аккаунт",
+  'trainer.needAccountMsg': "Без основного аккаунта по почте нельзя быть тренером. Заведи или верни бесплатный аккаунт — его единый ник будет использоваться и на странице тренера.",
+  'trainer.needAccountSaveMsg': "Без основного аккаунта по почте нельзя быть тренером. Сначала заведи или верни аккаунт, затем сохрани страницу тренера.",
+  'trainer.badLink': "Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.",
+  'trainer.photoFailed': "Не удалось загрузить фото.",
+  'common.saving': "Сохраняем…",
+  'common.saved': "Сохранено",
+  'trainer.saveFailed': "Не удалось сохранить. Проверь связь и попробуй ещё раз.",
+  'trainer.enableFirst': "Сначала включи режим тренера и укажи ник.",
+  'clients.removeClient': "Убрать «{name}» из списка? Программа у него останется — ссылка уже отправлена.",
+  'clients.unnamed': "подопечного",
+  'clients.buildFirst': "Сначала собери программу на экране «Тренировки» — её и отправим.",
+  'clients.sentAgain': "уже отправлена — пошлём ссылку заново",
+  'clients.exerciseCount': "{count} упражнений",
+  'clients.chooseWhichProgram': "Какую программу отправить",
+  'builder.deleteVariant': "Удалить этот вариант вместе с его упражнениями?",
+  'progress.weightRange': "Введи вес от 20 до 300 кг.",
+  'premium.payYear': "Премиум на год — {price}. Дальше столько же раз в год, пока не отменишь.",
+  'premium.payMonth': "Премиум на месяц — {price}. Дальше столько же каждый месяц, пока не отменишь.",
+  'premium.pay': "Оплатить {price}",
+  'premium.disableRenew': "Отключить автопродление? Премиум останется до {date}, дальше вернётся бесплатный тариф. Программы и статистика никуда не денутся.",
+  'premium.disableRenewAction': "Отключить",
+  'lock.enterEmail': "Введи почту, к которой привязан аккаунт.",
+  'lock.backBiometric': "Вернуться к отпечатку",
+  'progress.addPhoto': "Добавить фото",
+  'profile.changes': "Изменения профиля",
+  'profile.replacePhoto': "Заменить фото",
+  'profile.deletePhoto': "Удалить фото",
+  'finish.share': "Поделиться",
+  'finish.addNote': "Добавить заметку",
+  'video.addLink': "Вставь ссылку на видео.",
+  'video.badUrl': "Ссылка не похожа на YouTube. Возможно, адрес скопирован не полностью или это другой сервис.",
+  'video.tryAnyway': "Всё равно попробовать",
+  'video.checkAddress': "Проверить адрес",
+  'common.copyFailedManual': "Не удалось скопировать. Выдели текст вручную.",
+  'video.parseProblems': "Что не так:",
+  'video.defaultProgram': "Программа из видео",
+  'video.source': "Источник",
+  'video.added': "Готово: добавлена «{name}».",
+  'common.copyFailedRetry': "Не удалось скопировать. Попробуй ещё раз.",
+  'common.copied': "✓ Скопировано",
+  'common.copyManual': "Не удалось скопировать автоматически. Скопируй вручную:",
+  'ai.workingDefault': "Нейросеть работает",
+  'ai.workingLong': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
+  'ai.buildRequestFailed': "Не удалось собрать запрос.",
+  'ai.runFailed': "ИИ не ответил:\n\n{error}\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».",
+  'ai.unsavedRequest': "Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.",
+  'common.leaveWithoutSaving': "Выйти без сохранения",
+  'common.stay': "Остаться",
+  'audio.voiceOn': "Голос включён",
+  'images.processing': "Обработка… {done}/{total}",
+  'images.uploaded': "Загружено картинок: {count}. Теперь разложи их по местам или нажми «Разложить по порядку».",
+  'images.removeQuestion': "Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.",
+  'images.removeAction': "Убрать",
+  'images.loadFailed': "Не удалось загрузить картинку.",
+  'builder.unsavedProgram': "Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'ai.unsavedSwitch': "Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.",
+  'common.switch': "Переключиться",
+  'exercise.mainLimitAdd': "В основной части уже {count} упражнений — это предел. Удали что-нибудь, чтобы добавить новое.",
+  'exercise.nameRequired': "Упражнению нужно название — иначе в списке будет пустая строка.",
+  'exercise.warmLimitDuplicate': "В разминке уже {count} упражнений — это предел. Дублировать не получится.",
+  'exercise.mainLimitDuplicate': "В основной части уже {count} упражнений — это предел. Дублировать не получится.",
+  'exercise.this': "это упражнение",
+  'exercise.deleteQuestion': "Удалить «{name}»?",
+  'exercise.newUnsaved': "Упражнение ещё пустое. Если выйти сейчас, оно не добавится в список.",
+  'exercise.unsaved': "Изменения этого упражнения ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'exercise.warmMax': "В разминке можно до {count} упражнений.",
+  'exercise.mainMax': "В основной части можно до {count} упражнений.",
+  'images.summaryFilled': "Есть {filled} из {total}",
+  'images.summaryEmpty': "Ни одной из {total}",
+  'builder.anyDays': "по любым дням",
+  'builder.restSummary': "отдых {time}",
+  'builder.progressionAuto': "нагрузка растёт сама",
+  'builder.programChanges': "Изменения программы",
+  'stats.clearQuestion': "Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры, самочувствие и фото останутся.",
+  'stats.clear': "Очистить",
+  'progress.comparePhotos': "Показать «было / стало»",
+  'progress.deleteAllPhotosBtn': "Удалить все фото",
+  'profile.defaultNumber': "Профиль {count}",
+  'handsfree.headsetUnsupported': "Этот браузер не поддерживает управление с гарнитуры.",
+  'handsfree.mediaTitle': "Fit Timer — тренировка",
+  'handsfree.mediaArtist': "Кнопка гарнитуры = следующий этап",
+  'handsfree.micDenied': "Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.",
+  'notify.beforeTitle': "Тренировка через 15 минут",
+  'notify.beforeBody': "«{name}» начнётся в {time}. Приготовься!",
+  'notify.startTitle': "Наступило время тренировки",
+  'notify.startBody': "Пора выполнить «{name}». Вперёд!",
+  'notify.startTitleShort': "Пора тренироваться",
+  'notify.todayPlan': "Сегодня по плану «{name}».",
+  'notify.waitingTitle': "Тренировка ещё ждёт",
+  'notify.waitingBody': "«{name}» запланирована на сегодня. Можно начать сейчас.",
+  'notify.todayTitle': "Сегодня тренировка",
+  'notify.todayBody': "По плану — «{name}».",
+  'notify.dontForgetTitle': "Не забудь про тренировку",
+  'notify.dontForgetBody': "«{name}» ещё можно выполнить сегодня.",
+  'notify.returnTitle': "Fit Timer ждёт",
+  'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
+  'common.changes': "Изменения",
+  'common.unsaved': "{what} ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'num.int': "Только целое число, например 3",
+  'num.range': "Число или диапазон: 12 или 12-15",
+  'num.dec': "Число, например 8 или 7.5",
+  'num.required': "Заполни поле — без него не сохранить",
+  'dialog.type': "Набери «{text}»",
+  'common.ok': "Понятно",
+  'common.confirm': "Подтвердить",
+  'exercise.changes': "Изменения упражнения",
+  'ai.filledRequest': "Заполненный запрос",
+  'start.current': "сейчас",
+  'start.deltaReps': "Повторы: было {before} → сегодня {today}",
+  'start.deltaTime': "Время: было {before} → сегодня {today} сек",
+  'start.deltaWeight': "Вес: было {before} → сегодня {today} кг",
+  'start.lastTime': "в прошлый раз {minutes} мин",
+  'start.usualTime': "обычно {minutes} мин",
+  'start.approxTime': "≈ {minutes} мин",
+  'start.firstWorkout': "Первая тренировка: начни с комфортного темпа.",
+  'start.loadHigher': "Нагрузка выше в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.loadLower': "Нагрузка ниже в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.loadChanged': "Нагрузка изменилась в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.exerciseLocOne': "упражнении",
+  'start.exerciseLocMany': "упражнениях",
+  'start.noChangesNext': "Без изменений · следующее повышение через {count} {workouts}.",
+  'start.noChangesOff': "Без изменений · автоматическое повышение выключено.",
+  'start.workoutOne': "тренировку",
+  'start.workoutFew': "тренировки",
+  'start.workoutMany': "тренировок",
+  'start.setShort': "подх.",
+  'start.roundShort': "кр.",
+  'start.schedule': "Расписание: {schedule}",
+  'start.variantSequence': "вариант {current} из {total} по очереди",
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -1641,6 +1776,141 @@ const I18N_EN = {
   'common.duplicate': "Duplicate",
   'programs.submitCatalog': "Submit to catalog",
   'programs.drag': "Drag",
+  'common.collapse': "Collapse",
+  'programs.disabledStart': "This program is disabled. The workout will not count toward statistics or achievements.",
+  'programs.startAnyway': "Start anyway",
+  'workout.resumeSummary': "Stopped after {done} of {all} exercises · {age}",
+  'workout.sessionSaved': "Your place was saved. You can continue from here next time.",
+  'trainer.needAccount': "Account required",
+  'trainer.needAccountMsg': "Trainer mode requires the main email account. Create or restore the free account; its username will also be used on your trainer page.",
+  'trainer.needAccountSaveMsg': "Trainer mode requires the main email account. Create or restore the account first, then save your trainer page.",
+  'trainer.badLink': "This doesn’t look like a valid address. Use a website or profile link such as t.me/name, vk.com/name, or instagram.com/name.",
+  'trainer.photoFailed': "Couldn’t load the photo.",
+  'common.saving': "Saving…",
+  'common.saved': "Saved",
+  'trainer.saveFailed': "Couldn’t save. Check your connection and try again.",
+  'trainer.enableFirst': "Enable trainer mode and set a username first.",
+  'clients.removeClient': "Remove “{name}” from the list? They will keep the program because the link was already sent.",
+  'clients.unnamed': "client",
+  'clients.buildFirst': "Create a program on the Workouts screen first, then you can send it.",
+  'clients.sentAgain': "already sent — the link will be sent again",
+  'clients.exerciseCount': "{count} exercises",
+  'clients.chooseWhichProgram': "Which program to send",
+  'builder.deleteVariant': "Delete this variant and all of its exercises?",
+  'progress.weightRange': "Enter a weight from 20 to 300 kg.",
+  'premium.payYear': "Premium for one year — {price}. It renews yearly at the same price until you cancel.",
+  'premium.payMonth': "Premium for one month — {price}. It renews monthly at the same price until you cancel.",
+  'premium.pay': "Pay {price}",
+  'premium.disableRenew': "Turn off auto-renew? Premium will remain active until {date}, then the free plan returns. Your programs and statistics will stay.",
+  'premium.disableRenewAction': "Turn off",
+  'lock.enterEmail': "Enter the email linked to the account.",
+  'lock.backBiometric': "Back to biometrics",
+  'progress.addPhoto': "Add photo",
+  'profile.changes': "Profile changes",
+  'profile.replacePhoto': "Replace photo",
+  'profile.deletePhoto': "Delete photo",
+  'finish.share': "Share",
+  'finish.addNote': "Add note",
+  'video.addLink': "Paste a video link.",
+  'video.badUrl': "This doesn’t look like a YouTube link. The address may be incomplete or from another service.",
+  'video.tryAnyway': "Try anyway",
+  'video.checkAddress': "Check address",
+  'common.copyFailedManual': "Couldn’t copy automatically. Select the text manually.",
+  'video.parseProblems': "Problems:",
+  'video.defaultProgram': "Program from video",
+  'video.source': "Source",
+  'video.added': "Done: “{name}” was added.",
+  'common.copyFailedRetry': "Couldn’t copy. Try again.",
+  'common.copied': "✓ Copied",
+  'common.copyManual': "Couldn’t copy automatically. Copy it manually:",
+  'ai.workingDefault': "AI is working",
+  'ai.workingLong': "Processing the request — this usually takes from a few seconds to three minutes. Keep the app open.",
+  'ai.buildRequestFailed': "Couldn’t build the request.",
+  'ai.runFailed': "AI didn’t respond:\n\n{error}\n\nTry again, or build the program in an AI chat using the options under “Do it in an AI chat”.",
+  'ai.unsavedRequest': "The filled request has not been saved. If you leave now, it will be lost.",
+  'common.leaveWithoutSaving': "Leave without saving",
+  'common.stay': "Stay",
+  'audio.voiceOn': "Voice enabled",
+  'images.processing': "Processing… {done}/{total}",
+  'images.uploaded': "Uploaded images: {count}. Assign them to slots or use “Assign in order”.",
+  'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
+  'images.removeAction': "Remove",
+  'images.loadFailed': "Couldn’t load the image.",
+  'builder.unsavedProgram': "Program changes have not been saved. If you leave now, they will be lost.",
+  'ai.unsavedSwitch': "The filled request has not been saved. If you switch modes now, it will be lost.",
+  'common.switch': "Switch",
+  'exercise.mainLimitAdd': "The main workout already has the maximum of {count} exercises. Remove one before adding another.",
+  'exercise.nameRequired': "The exercise needs a name; otherwise the list will contain an empty row.",
+  'exercise.warmLimitDuplicate': "The warm-up already has the maximum of {count} exercises, so this one can’t be duplicated.",
+  'exercise.mainLimitDuplicate': "The main workout already has the maximum of {count} exercises, so this one can’t be duplicated.",
+  'exercise.this': "this exercise",
+  'exercise.deleteQuestion': "Delete “{name}”?",
+  'exercise.newUnsaved': "This exercise is still empty. If you leave now, it will not be added.",
+  'exercise.unsaved': "Exercise changes have not been saved. If you leave now, they will be lost.",
+  'exercise.warmMax': "The warm-up can contain up to {count} exercises.",
+  'exercise.mainMax': "The main workout can contain up to {count} exercises.",
+  'images.summaryFilled': "{filled} of {total} set",
+  'images.summaryEmpty': "0 of {total} set",
+  'builder.anyDays': "any days",
+  'builder.restSummary': "rest {time}",
+  'builder.progressionAuto': "automatic progression",
+  'builder.programChanges': "Program changes",
+  'stats.clearQuestion': "Clear all workout statistics? Total time, workout count, history, calendar, weeks, streaks, and achievements will be deleted. Programs, weight, measurements, wellness, and photos will remain.",
+  'stats.clear': "Clear",
+  'progress.comparePhotos': "Show before / after",
+  'progress.deleteAllPhotosBtn': "Delete all photos",
+  'profile.defaultNumber': "Profile {count}",
+  'handsfree.headsetUnsupported': "This browser does not support headset controls.",
+  'handsfree.mediaTitle': "Fit Timer — workout",
+  'handsfree.mediaArtist': "Headset button = next step",
+  'handsfree.micDenied': "Microphone access is blocked. Allow it for this site in your browser settings.",
+  'notify.beforeTitle': "Workout in 15 minutes",
+  'notify.beforeBody': "“{name}” starts at {time}. Get ready!",
+  'notify.startTitle': "Time to work out",
+  'notify.startBody': "Time for “{name}”. Let’s go!",
+  'notify.startTitleShort': "Time to work out",
+  'notify.todayPlan': "Today’s plan: “{name}”.",
+  'notify.waitingTitle': "Your workout is still waiting",
+  'notify.waitingBody': "“{name}” is scheduled for today. You can start now.",
+  'notify.todayTitle': "Workout today",
+  'notify.todayBody': "On the plan: “{name}”.",
+  'notify.dontForgetTitle': "Don’t forget your workout",
+  'notify.dontForgetBody': "You still have time for “{name}” today.",
+  'notify.returnTitle': "Fit Timer is waiting",
+  'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
+  'common.changes': "Changes",
+  'common.unsaved': "{what} have not been saved. If you leave now, they will be lost.",
+  'num.int': "Whole number only, for example 3",
+  'num.range': "Number or range: 12 or 12-15",
+  'num.dec': "Number, for example 8 or 7.5",
+  'num.required': "Fill in this field before saving",
+  'dialog.type': "Type “{text}”",
+  'common.ok': "OK",
+  'common.confirm': "Confirm",
+  'exercise.changes': "Exercise changes",
+  'ai.filledRequest': "Filled request",
+  'start.current': "current",
+  'start.deltaReps': "Reps: {before} → {today} today",
+  'start.deltaTime': "Time: {before} → {today} sec today",
+  'start.deltaWeight': "Weight: {before} → {today} kg today",
+  'start.lastTime': "last time {minutes} min",
+  'start.usualTime': "usually {minutes} min",
+  'start.approxTime': "≈ {minutes} min",
+  'start.firstWorkout': "First workout: start at a comfortable pace.",
+  'start.loadHigher': "Load is higher in {count} {exercises}. Rows show: before → today.",
+  'start.loadLower': "Load is lower in {count} {exercises}. Rows show: before → today.",
+  'start.loadChanged': "Load changed in {count} {exercises}. Rows show: before → today.",
+  'start.exerciseLocOne': "exercise",
+  'start.exerciseLocMany': "exercises",
+  'start.noChangesNext': "No changes · next increase after {count} {workouts}.",
+  'start.noChangesOff': "No changes · automatic progression is off.",
+  'start.workoutOne': "workout",
+  'start.workoutFew': "workouts",
+  'start.workoutMany': "workouts",
+  'start.setShort': "sets",
+  'start.roundShort': "rnd",
+  'start.schedule': "Schedule: {schedule}",
+  'start.variantSequence': "variant {current} of {total} in sequence",
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -2235,8 +2505,8 @@ function clearSnap(key){ delete snap[key]; }
 async function leaveGuard(changed, go, what){
   if(changed){
     const ok = await appDialog(
-      (what || 'Изменения') + ' ещё не сохранены. Если выйти сейчас, они пропадут.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+      t('common.unsaved',{what:what || t('common.changes')}),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
     );
     if(!ok) return false;
   }
@@ -2254,9 +2524,9 @@ function aiScreenDirty(ids){
    Теперь поле краснеет прямо во время ввода и говорит, что от него хотят,
    а сохранение не проходит, пока ошибка не исправлена. */
 const NUM_RULES = {
-  int:   {re: /^\s*\d{1,4}\s*$/,                          msg: 'Только целое число, например 3'},
-  range: {re: /^\s*\d{1,3}\s*(?:[-–—]\s*\d{1,3}\s*)?$/, msg: 'Число или диапазон: 12 или 12-15'},
-  dec:   {re: /^\s*\d{1,4}(?:[.,]\d{1,2})?\s*$/,         msg: 'Число, например 8 или 7.5'}
+  int:   {re: /^\s*\d{1,4}\s*$/,                          key: 'num.int'},
+  range: {re: /^\s*\d{1,3}\s*(?:[-–—]\s*\d{1,3}\s*)?$/, key: 'num.range'},
+  dec:   {re: /^\s*\d{1,4}(?:[.,]\d{1,2})?\s*$/,         key: 'num.dec'}
 };
 function markNum(el){
   const kind = el.dataset.numKind;
@@ -2275,7 +2545,7 @@ function markNum(el){
       field.appendChild(hint);
     }
     hint.innerHTML = icon('alert') + '<span></span>';
-    hint.querySelector('span').textContent = empty ? 'Заполни поле — без него не сохранить' : rule.msg;
+    hint.querySelector('span').textContent = empty ? t('num.required') : t(rule.key);
   } else if(hint) hint.remove();
   return !bad;
 }
@@ -2328,7 +2598,7 @@ function appDialog(msg, opts = {}){
     typed.oninput = null;
     if(opts.type){
       typed.value = '';
-      $('dlgTypeLabel').textContent = `Набери «${opts.type}»`;
+      $('dlgTypeLabel').textContent = t('dialog.type',{text:opts.type});
       const check = ()=>{ $('dlgOk').disabled = typed.value.trim().toLowerCase() !== opts.type.toLowerCase(); };
       typed.oninput = check;
       check();
@@ -2336,9 +2606,9 @@ function appDialog(msg, opts = {}){
     } else {
       $('dlgOk').disabled = false;
     }
-    $('dlgOk').textContent = opts.okText || 'Понятно';
+    $('dlgOk').textContent = opts.okText || t('common.ok');
     if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
-    else $('dlgCancel').textContent = 'Отмена';
+    else $('dlgCancel').textContent = t('common.cancel');
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
     const done = v => {
@@ -2358,7 +2628,7 @@ const appAlert = (m, o) => appDialog(m, o);
 // Подтверждение действия. Кнопка по умолчанию — «Подтвердить», а не «Да»:
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
-const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: 'Подтвердить', cancelText: 'Отмена', ...o});
+const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: t('common.confirm'), cancelText: t('common.cancel'), ...o});
 const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
 /* Корневые разделы: только у них внизу док и нет собственной панели действий.
 
@@ -2390,10 +2660,10 @@ try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
-  scrBuilder:  ()=> programDirty() ? {what:'Изменения программы', clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:'Изменения упражнения', clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
-  scrUserEdit: ()=> userDirty() ? {what:'Изменения профиля'} : null,
-  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:'Заполненный запрос'} : null
+  scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
+  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
+  scrUserEdit: ()=> userDirty() ? {what:t('profile.changes')} : null,
+  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
 // Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
@@ -2708,8 +2978,8 @@ function renderPlanRow(){
     const b = document.createElement('button');
     b.className = 'load-chip plan-chip';
     const rotOn = state.raw.rotate && plans.length > 1;
-    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.join('·') : `Вариант ${i+1}`;
-    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • сейчас';
+    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join('·') : `${t('builder.variant')} ${i+1}`;
+    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • ' + t('start.current');
     b.textContent = lbl;
     b.classList.toggle('act', state.planIdx === i);
     b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
@@ -2762,11 +3032,11 @@ function previousWorkoutLoad(p, planIdx){
 
 function loadTargetText(ex, v){
   const bits = [];
-  if(ex.type === 'time') bits.push(`${v.sec} сек`);
-  else bits.push(`${v.reps} ${plural(parseValue(v.reps).min, 'повторение', 'повторения', 'повторений')}`);
-  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} кг`);
+  if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
+  else bits.push(`${v.reps} ${t('workout.repsShort')}`);
+  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
   let out = bits.join(' × ');
-  if(ex.perSide) out += ' на сторону';
+  if(ex.perSide) out += ' ' + t('store.perSide');
   return out;
 }
 
@@ -2775,15 +3045,15 @@ function loadDelta(a, b){
   const bits = [];
   const moves = [];
   if(String(a.reps || '') !== String(b.reps || '')){
-    bits.push(`Повторы: было ${a.reps} → сегодня ${b.reps}`);
+    bits.push(t('start.deltaReps',{before:a.reps,today:b.reps}));
     const av = parseValue(a.reps), bv = parseValue(b.reps);
     moves.push(bv.min - av.min, bv.max - av.max);
   }
   if((+a.sec || 0) !== (+b.sec || 0)){
-    bits.push(`Время: было ${a.sec} → сегодня ${b.sec} сек`); moves.push((+b.sec || 0) - (+a.sec || 0));
+    bits.push(t('start.deltaTime',{before:a.sec,today:b.sec})); moves.push((+b.sec || 0) - (+a.sec || 0));
   }
   if((+a.kg || 0) !== (+b.kg || 0)){
-    bits.push(`Вес: было ${fmtKg(a.kg)} → сегодня ${fmtKg(b.kg)} кг`); moves.push((+b.kg || 0) - (+a.kg || 0));
+    bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
   const dir = directional.length && directional.every(x => x > 0) ? 'up'
@@ -2836,29 +3106,28 @@ function renderStartOverview(){
   const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
     * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
   const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
-  $('startOverviewSummary').textContent = `${exercises.length} ${plural(exercises.length, 'упражнение', 'упражнения', 'упражнений')} · ${workSets} ${plural(workSets, 'подход', 'подхода', 'подходов')} · `
-    + (dur.samples === 1 ? `в прошлый раз ${dur.n} мин` : dur.history ? `обычно ${dur.n} мин` : `≈ ${dur.n} мин`);
+  $('startOverviewSummary').textContent = storeCountText(exercises.length,'exercise') + ' · ' + storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
 
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
   if(previous.first){
-    changeText('Первая тренировка: начни с комфортного темпа.');
+    changeText(t('start.firstWorkout'));
   } else if(changes.length){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
     if(direction === 'up'){
-      changeText(`Нагрузка выше в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadHigher',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     } else if(direction === 'down'){
-      changeText(`Нагрузка ниже в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadLower',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     } else {
-      changeText(`Нагрузка изменилась в ${changes.length} ${plural(changes.length, 'упражнении', 'упражнениях', 'упражнениях')}. В строках показано: было → сегодня.`);
+      changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     }
   } else if(p.progression){
     const done = (p.stats && p.stats.completions) || 0;
     const left = p.progression - (done % p.progression);
-    changeText(`Без изменений · следующее повышение через ${left} ${plural(left, 'тренировку', 'тренировки', 'тренировок')}.`);
+    changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
   } else {
-    changeText('Без изменений · автоматическое повышение выключено.');
+    changeText(t('start.noChangesOff'));
   }
 
   const box = $('startOverviewList');
@@ -2869,10 +3138,10 @@ function renderStartOverview(){
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const meta = [];
-    if(ex.warmup) meta.push({text:'Разминка', cls:'wm'});
+    if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
     meta.push({text:loadTargetText(ex, current[i]), cls:''});
-    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} подх. × ${rounds} кр.` : `${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`, cls:''});
-    else meta.push({text:`${sets} ${plural(sets, 'подход', 'подхода', 'подходов')}`, cls:''});
+    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
+    else meta.push({text:storeCountText(sets,'set'), cls:''});
     const delta = changes.find(x => x.i === i);
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
@@ -2880,7 +3149,7 @@ function renderStartOverview(){
       ? `<img src="${esc(ex.media.data)}" alt="">`
       : (ex.warmup ? icon('flame') : mainNo);
     row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
-    row.querySelector('b').textContent = ex.name || 'Упражнение';
+    row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
@@ -2934,29 +3203,29 @@ function buildStartMenu(){
   setShown('startByChip', !!by);
   if(by) $('startByName').textContent = by;
   menu.append(
-    mk(icon('pencil') + 'Изменить', ()=> openBuilder(p.id)),
+    mk(icon('pencil') + t('common.edit'), ()=> openBuilder(p.id)),
     // тот же переключатель, что в меню карточки в списке: экран программы — второе
     // место, где о программе думают целиком, и искать выключатель в другом списке
     // ради одного действия человек не станет
-    mk(icon('power') + (on ? 'Отключить' : 'Включить'), async ()=>{
+    mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), async ()=>{
       p.active = !on;
       await savePrograms();
       buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
       renderMine();         // список под ним уже перерисован к возврату
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
+      if(on) appAlert(t('programs.disabledAlert'));
     }),
     // Порядок пунктов тот же, что в меню карточки списка: одно и то же меню в двух
     // местах обязано читаться одинаково, иначе рука промахивается.
-    mk(icon('copy') + 'Дублировать', async ()=>{
+    mk(icon('copy') + t('common.duplicate'), async ()=>{
       const c = await duplicateProgram(p);
       openBuilder(c.id);
     }),
-    mk(icon('share') + 'Поделиться ссылкой', ()=> exportProgram(p)),
-    ...(trainerOn() ? [mk(icon('users') + 'Отправить подопечному', ()=> pickClientFor(p))] : []),
-    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + 'Предложить в каталог', ()=> openPublish(p))] : []),
-    mk(icon('download') + 'Сохранить в файл', ()=> exportProgramFile(p)),
-    mk(icon('trash') + 'Удалить', async ()=>{
-      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+    mk(icon('share') + t('programs.shareLink'), ()=> exportProgram(p)),
+    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), ()=> pickClientFor(p))] : []),
+    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), ()=> openPublish(p))] : []),
+    mk(icon('download') + t('programs.saveFile'), ()=> exportProgramFile(p)),
+    mk(icon('trash') + t('common.delete'), async ()=>{
+      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
       customPrograms = customPrograms.filter(x => x.id !== p.id);
       await savePrograms();
       renderMine();
@@ -2974,7 +3243,7 @@ function renderStartInfo(){
     dTxt.textContent = d;
     setShown(dBox, true);
     dBox.classList.remove('open');
-    $('progDescMore').textContent = 'Показать полностью';
+    $('progDescMore').textContent = t('builder.showFull');
     requestAnimationFrame(()=>{
       const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
       setShown('progDescMore', !(fits));
@@ -2986,25 +3255,25 @@ function renderStartInfo(){
   const rotOn = state.raw.rotate && plans.length > 1;
   const t = pl.time || state.raw.time;
   const daysTxt = rotOn
-    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.join(', ') : '')
-    : ((pl.days && pl.days.length) ? pl.days.join(', ') : '');
+    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.map(canonicalLabel).join(', ') : '')
+    : ((pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join(', ') : '');
   const parts = [t, daysTxt].filter(Boolean);
-  if(rotOn) parts.push(`вариант ${state.planIdx + 1} из ${plans.length} по очереди`);
+  if(rotOn) parts.push(t('start.variantSequence',{current:state.planIdx+1,total:plans.length}));
   const schedule = parts.join(' · ');
-  $('startDesc').textContent = schedule ? `Расписание: ${schedule}` : '';
+  $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
   // объём: круги для круговых, подходы для силовых
   const mainEx = (pl.exercises || []).filter(e => !e.warmup);
   const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
   if(pl.rounds > 1 || setsTotal <= mainEx.length){
-    $('startVolLabel').textContent = plural(pl.rounds, 'круг', 'круга', 'кругов');
+    $('startVolLabel').textContent = storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
     $('startRounds').textContent = pl.rounds;
   } else {
-    $('startVolLabel').textContent = plural(setsTotal, 'подход', 'подхода', 'подходов');
+    $('startVolLabel').textContent = storeCountText(setsTotal,'set').replace(/^\d+\s+/,'');
     $('startRounds').textContent = setsTotal;
   }
   const nEx = pl.exercises.length;
   $('startExCount').textContent = nEx;
-  $('startExLabel').textContent = plural(nEx, 'упражнение', 'упражнения', 'упражнений');
+  $('startExLabel').textContent = storeCountText(nEx,'exercise').replace(/^\d+\s+/,'');
   // обложка программы — если её нет, место не занимаем
   const cov = $('startCover');
   if(state.raw.cover){
@@ -13835,7 +14104,7 @@ let hsAudio = null;
 function startHeadset(){
   try{
     if(!('mediaSession' in navigator)){
-      appAlert('Этот браузер не поддерживает управление с гарнитуры.');
+      appAlert(t('handsfree.headsetUnsupported'));
       setHfMode('off');
       return;
     }
@@ -13860,7 +14129,7 @@ function startHeadset(){
     navigator.mediaSession.setActionHandler('pause', advance);
     navigator.mediaSession.setActionHandler('nexttrack', advance);
     try{
-      navigator.mediaSession.metadata = new MediaMetadata({title: 'Fit Timer — тренировка', artist: 'Кнопка гарнитуры = следующий этап'});
+      navigator.mediaSession.metadata = new MediaMetadata({title:t('handsfree.mediaTitle'), artist:t('handsfree.mediaArtist')});
     }catch(e){}
   }catch(e){
     setHfMode('off');
@@ -13966,7 +14235,7 @@ function startListening(){
         voiceWanted = false;
         kvSet('voiceCtl', '0');
         syncPrefs();
-        appAlert('Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.');
+        appAlert(t('handsfree.micDenied'));
       }
     };
     r.start();
@@ -14029,11 +14298,11 @@ function checkSchedules(){
     const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
     if(cur === t - 15 && !notifiedKeys.has(preKey)){
       notifiedKeys.add(preKey);
-      showNotification('Тренировка через 15 минут', `«${p.name}» начнётся в ${useTime}. Приготовься!`);
+      showNotification(t('notify.beforeTitle'), t('notify.beforeBody',{name:p.name,time:useTime}));
     }
     if(cur === t && !notifiedKeys.has(goKey)){
       notifiedKeys.add(goKey);
-      showNotification('Наступило время тренировки', `Пора выполнить «${p.name}». Вперёд!`);
+      showNotification(t('notify.startTitle'), t('notify.startBody',{name:p.name}));
     }
   });
 }
@@ -14063,24 +14332,24 @@ async function syncNativeNotifications(){
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hm[0], hm[1]);
         const pre = new Date(start.getTime() - 15 * 60000);
         const missed = new Date(start.getTime() + 2 * 3600000);
-        if(pre > now) items.push({at:pre.toISOString(), title:'Тренировка через 15 минут',
-          body:`«${p.name}» начнётся в ${time}. Приготовься!`, extra:{programId:p.id, stage:'before'}});
-        if(start > now && !completed) items.push({at:start.toISOString(), title:'Пора тренироваться',
-          body:`Сегодня по плану «${p.name}».`, extra:{programId:p.id, stage:'start'}});
-        if(missed > now && !completed) items.push({at:missed.toISOString(), title:'Тренировка ещё ждёт',
-          body:`«${p.name}» запланирована на сегодня. Можно начать сейчас.`, extra:{programId:p.id, stage:'missed'}});
+        if(pre > now) items.push({at:pre.toISOString(), title:t('notify.beforeTitle'),
+          body:t('notify.beforeBody',{name:p.name,time}), extra:{programId:p.id, stage:'before'}});
+        if(start > now && !completed) items.push({at:start.toISOString(), title:t('notify.startTitleShort'),
+          body:t('notify.todayPlan',{name:p.name}), extra:{programId:p.id, stage:'start'}});
+        if(missed > now && !completed) items.push({at:missed.toISOString(), title:t('notify.waitingTitle'),
+          body:t('notify.waitingBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
       } else if(!completed){
         const morning = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0);
         const evening = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 20, 0);
-        if(morning > now) items.push({at:morning.toISOString(), title:'Сегодня тренировка',
-          body:`По плану — «${p.name}».`, extra:{programId:p.id, stage:'today'}});
-        if(evening > now) items.push({at:evening.toISOString(), title:'Не забудь про тренировку',
-          body:`«${p.name}» ещё можно выполнить сегодня.`, extra:{programId:p.id, stage:'missed'}});
+        if(morning > now) items.push({at:morning.toISOString(), title:t('notify.todayTitle'),
+          body:t('notify.todayBody',{name:p.name}), extra:{programId:p.id, stage:'today'}});
+        if(evening > now) items.push({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
+          body:t('notify.dontForgetBody',{name:p.name}), extra:{programId:p.id, stage:'missed'}});
       }
     });
   }
-  items.push({at:new Date(Date.now() + 3 * 86400000).toISOString(), title:'Fit Timer ждёт',
-    body:'Давно не виделись. Открой план и выбери короткую тренировку на сегодня.',
+  items.push({at:new Date(Date.now() + 3 * 86400000).toISOString(), title:t('notify.returnTitle'),
+    body:t('notify.returnBody'),
     extra:{stage:'inactive'}});
   items.sort((a,b) => String(a.at).localeCompare(String(b.at)));
   await window.FitNative.syncWorkoutNotifications(items);
@@ -14138,7 +14407,7 @@ $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu'));
 $('progDescMore').onclick = ()=>{
   const box = $('progDescBox'), open = !box.classList.contains('open');
   box.classList.toggle('open', open);
-  $('progDescMore').textContent = open ? 'Свернуть' : 'Показать полностью';
+  $('progDescMore').textContent = open ? t('common.collapse') : t('builder.showFull');
 };
 $('btnStart').onclick = async ()=>{
   // Отключённая программа не запрещена (её всё ещё можно запустить), но результат
@@ -14146,8 +14415,8 @@ $('btnStart').onclick = async ()=>{
   // выбора способа, а не после сорока минут тренировки.
   if(!progActive(state.raw)){
     const go = await appConfirm(
-      'Программа отключена. Результат никуда не попадёт: ни в статистику, ни в достижения.',
-      {okText: 'Всё равно начать'}
+      t('programs.disabledStart'),
+      {okText: t('programs.startAnyway')}
     );
     if(!go) return;
   }
@@ -14163,7 +14432,7 @@ $('btnStart').onclick = async ()=>{
     const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
     const workAll = steps.filter(s => s.phase === 'work').length;
     $('startResumeSub').textContent =
-      `Остановились на ${workDone} из ${workAll} упражнений · ${sessionAgeText(sess.at)}`;
+      t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
   }
   window.__pendingSession = sess || null;
   $('startModal').classList.add('open');
@@ -14214,7 +14483,7 @@ $('exitSave').onclick = async ()=>{
   $('exitModal').classList.remove('open');
   await saveSession();
   tearDownWorkout();
-  appAlert('Место сохранено. В следующий раз сможешь продолжить отсюда.');
+  appAlert(t('workout.sessionSaved'));
 };
 $('exitDrop').onclick = async ()=>{
   $('exitModal').classList.remove('open');
@@ -14362,7 +14631,7 @@ function wireLiveSoundCascade(p){
     $(p + 'VoiceOn').classList.toggle('on', on);
     syncSoundCascade(p);
     persistLiveSound();
-    if(on) speak('Голос включён');
+    if(on) speak(voiceIsEnglish() ? 'Voice enabled' : t('audio.voiceOn'));
   };
   $(p + 'FxOn').onclick = ()=>{
     const on = !$(p + 'FxOn').classList.contains('on');
@@ -14578,8 +14847,8 @@ async function enableTrainerMode(){
 $('tglTrainer').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Нужен аккаунт',
-      msg:'Без основного аккаунта по почте нельзя быть тренером. Заведи или верни бесплатный аккаунт — его единый ник будет использоваться и на странице тренера.'
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountMsg')
     });
     return;
   }
@@ -14602,7 +14871,7 @@ $('coachLinks').onblur = async e => {
   const raw = e.target.value.trim();
   const ok = raw ? cleanLink(raw) : '';
   $('coachLinksErr').textContent = (raw && !ok)
-    ? 'Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.'
+    ? t('trainer.badLink')
     : '';
   if(raw && !ok) return;                 // оставляем набранное в поле, но не сохраняем
   // Схему в поле не показываем: её не набирали, и «https://» перед ником только
@@ -14614,7 +14883,7 @@ $('coachPhotoFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   shrinkImage(file, 240, async data => {
-    if(!data){ appAlert('Не удалось загрузить фото.'); return; }
+    if(!data){ appAlert(t('trainer.photoFailed')); return; }
     coachPhotoDraft = data;
     $('coachPhotoPrev').innerHTML = `<img src="${esc(data)}" alt="">`;
   });
@@ -14629,8 +14898,8 @@ $('coachYears').oninput = async e => {
 $('btnSaveCoach').onclick = async ()=>{
   if(!trainerAccountReady()){
     openLogin(enableTrainerMode, {
-      label:'Нужен аккаунт',
-      msg:'Без основного аккаунта по почте нельзя быть тренером. Сначала заведи или верни аккаунт, затем сохрани страницу тренера.'
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountSaveMsg')
     });
     return;
   }
@@ -14638,7 +14907,7 @@ $('btnSaveCoach').onclick = async ()=>{
   const rawLink = $('coachLinks').value.trim();
   const link = rawLink ? cleanLink(rawLink) : '';
   if(rawLink && !link){
-    $('coachLinksErr').textContent = 'Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.';
+    $('coachLinksErr').textContent = t('trainer.badLink');
     $('coachLinks').focus();
     return;
   }
@@ -14655,7 +14924,7 @@ $('btnSaveCoach').onclick = async ()=>{
     pageErr:null
   });
   btn.disabled = true;
-  btn.textContent = 'Сохраняем…';
+  btn.textContent = t('common.saving');
   showSyncState('busy');
   await saveTrainer({deferSync:true});
   const ok = await pushProfile();
@@ -14664,12 +14933,12 @@ $('btnSaveCoach').onclick = async ()=>{
     if(isPremium()) queueAccountSync();
     showSyncState('ok');
     renderTrainerCard();
-    btn.textContent = 'Сохранено';
-    setTimeout(()=>{ if(btn.textContent === 'Сохранено') btn.textContent = 'Сохранить'; }, 1500);
+    btn.textContent = t('common.saved');
+    setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
   } else {
     showSyncState('error');
-    appAlert(trainer.pageErr || 'Не удалось сохранить. Проверь связь и попробуй ещё раз.');
-    btn.textContent = 'Сохранить';
+    appAlert(trainer.pageErr || t('trainer.saveFailed'));
+    btn.textContent = t('common.save');
   }
   btn.disabled = false;
 };
@@ -14688,7 +14957,7 @@ $('btnMyCatalog').onclick = ()=> openMyCatalog();
 $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin(), 250); };
 $('btnCoachWipe').onclick = wipeTrainerInfo;
 $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
-  : appAlert('Сначала включи режим тренера и укажи ник.');
+  : appAlert(t('trainer.enableFirst'));
 $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
 $('btnPublish').onclick = ()=> doPublish();
 $('btnAddClient').onclick = async ()=>{
@@ -14705,7 +14974,7 @@ $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
 $('clName').oninput = async e => {
   const c = curClient(); if(!c) return;
   c.name = clampLine(e.target.value, LIM.clientName);
-  $('clTitle').textContent = c.name || 'Подопечный';
+  $('clTitle').textContent = c.name || t('clients.default');
   await saveClients();
 };
 $('clNote').oninput = async e => {
@@ -14721,8 +14990,8 @@ $('btnClSend').onclick = ()=>{
 };
 $('btnDelClient').onclick = async ()=>{
   const c = curClient(); if(!c) return;
-  if(!(await appDialog(`Убрать «${c.name || 'подопечного'}» из списка? Программа у него останется — ссылка уже отправлена.`,
-       {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
+       {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
   clients = clients.filter(x => x.id !== c.id);
   clientIdx = -1;
   await saveClients();
@@ -14740,7 +15009,7 @@ function pickProgramForClient(c){
   if(!list.length){
     const h = document.createElement('p');
     h.className = 'field-hint';
-    h.textContent = 'Сначала собери программу на экране «Тренировки» — её и отправим.';
+    h.textContent = t('clients.buildFirst');
     box.appendChild(h);
   }
   list.forEach(p => {
@@ -14751,21 +15020,21 @@ function pickProgramForClient(c){
     b.querySelector('b').textContent = p.name;
     const has = clProgs(c).find(x => x.pid === p.id);
     b.querySelector('small').textContent = has
-      ? 'уже отправлена — пошлём ссылку заново'
-      : `${(normPlans(p)[0].exercises || []).length} упражнений`;
+      ? t('clients.sentAgain')
+      : t('clients.exerciseCount',{count:(normPlans(p)[0].exercises || []).length});
     b.onclick = async ()=>{
       $('pickClientModal').classList.remove('open');
       await sendProgramToClient(c, p);
     };
     box.appendChild(b);
   });
-  $('pickClientModal').querySelector('.mini-label').textContent = 'Какую программу отправить';
+  $('pickClientModal').querySelector('.mini-label').textContent = t('clients.chooseWhichProgram');
   $('pickClientModal').classList.add('open');
 }
 async function delCurrentPlan(){
   if(draft.plans.length <= 1) return;
-  if(!(await appDialog('Удалить этот вариант вместе с его упражнениями?',
-    {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('builder.deleteVariant'),
+    {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   draft.plans.splice(planIdx, 1);
   planIdx = Math.max(0, planIdx - 1);
   if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
@@ -14817,7 +15086,7 @@ $('btnAddWeight').onclick = ()=>{
 $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
 $('btnSaveWeight').onclick = async ()=>{
   const w = parseFloat(String($('weightInput').value).replace(',', '.'));
-  if(!w || w < 20 || w > 300){ appAlert('Введи вес от 20 до 300 кг.'); return; }
+  if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
   const h = parseInt($('heightInput').value);
   if(h && h >= 100 && h <= 250) stats.height = h;
   const cm = id => {
@@ -14858,9 +15127,9 @@ $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premium
 $('pmBuy').onclick = ()=>{
   const pr = priceTable(), cur = userCurrency();
   $('payWhat').textContent = pmPlan === 'year'
-    ? `Премиум на год — ${money(pr.year, cur)}. Дальше столько же раз в год, пока не отменишь.`
-    : `Премиум на месяц — ${money(pr.month, cur)}. Дальше столько же каждый месяц, пока не отменишь.`;
-  $('payGo').textContent = `Оплатить ${money(pr[pmPlan], cur)}`;
+    ? t('premium.payYear',{price:money(pr.year,cur)})
+    : t('premium.payMonth',{price:money(pr.month,cur)});
+  $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
   $('payEmail').value = (account && account.email) || '';
   $('payModal').classList.add('open');
 };
@@ -14879,8 +15148,8 @@ $('tglRenew').onclick = async ()=>{
   if(!account.sub) return;
   if(account.sub.autoRenew){
     const ok = await appDialog(
-      `Отключить автопродление? Премиум останется до ${humanDate(account.sub.until)}, дальше вернётся бесплатный тариф. Программы и статистика никуда не денутся.`,
-      {confirm: true, okText: 'Отключить', cancelText: 'Оставить'});
+      t('premium.disableRenew',{date:humanDate(account.sub.until)}),
+      {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
     if(!ok) return;
   }
   account.sub.autoRenew = !account.sub.autoRenew;
@@ -14917,10 +15186,10 @@ $('lockMail').onclick = ()=>{
   const mail = lockMode === 'mail';
   setShown('lockMailBox', mail);
   $('lockMsg').textContent = mail
-    ? 'Введи почту, к которой привязан аккаунт.'
-    : 'Приложи палец или посмотри на камеру — и продолжим.';
-  $('lockGo').textContent = mail ? 'Войти' : 'Разблокировать';
-  $('lockMail').textContent = mail ? 'Вернуться к отпечатку' : 'Войти по почте';
+    ? t('lock.enterEmail')
+    : t('lock.prompt');
+  $('lockGo').textContent = mail ? t('login.signIn') : t('lock.unlock');
+  $('lockMail').textContent = mail ? t('lock.backBiometric') : t('lock.email');
   if(mail) $('lockEmail').focus();
 };
 
@@ -14939,7 +15208,7 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
-$('btnAddPhoto').innerHTML = icon('camera') + 'Добавить фото';
+$('btnAddPhoto').innerHTML = icon('camera') + t('progress.addPhoto');
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -15033,7 +15302,7 @@ function switchMoreTab(key){
 document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
 document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
-$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), 'Изменения профиля');
+$('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), t('profile.changes'));
 $('btnAddUser').onclick = ()=> openUserEdit();
 $('btnSaveUser').onclick = saveUser;
 $('btnDelUser').onclick = deleteUser;
@@ -15060,8 +15329,8 @@ $('uePhotoBtn').onclick = e => {
     return b;
   };
   menu.append(
-    mk(icon('camera') + 'Заменить фото', ()=> $('uePhotoFile').click()),
-    mk(icon('trash') + 'Удалить фото', ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
+    mk(icon('camera') + t('profile.replacePhoto'), ()=> $('uePhotoFile').click()),
+    mk(icon('trash') + t('profile.deletePhoto'), ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
   );
   menu.classList.add('open');
 };
@@ -15078,12 +15347,12 @@ $('videoLink').addEventListener('click', ()=>{
 });
 // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-$('btnShareResult').innerHTML = icon('share') + '<span>Поделиться</span>';
+$('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-$('finNoteToggle').innerHTML = icon('pencil') + '<span>Добавить заметку</span>';
+$('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
 $('finNoteToggle').onclick = ()=>{
   setShown('finNoteToggle', false);
   setShown('finNoteField', true);
@@ -15104,11 +15373,11 @@ $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube
 $('ytUrl').oninput = ytCheckUrl;
 async function ytGuard(){
   const v = ($('ytUrl').value || '').trim();
-  if(!v){ appAlert('Вставь ссылку на видео.'); return false; }
+  if(!v){ appAlert(t('video.addLink')); return false; }
   if(!ytCheckUrl()){
     const go = await appDialog(
-      'Ссылка не похожа на YouTube. Возможно, адрес скопирован не полностью или это другой сервис.',
-      {confirm: true, okText: 'Всё равно попробовать', cancelText: 'Проверить адрес'}
+      t('video.badUrl'),
+      {confirm: true, okText: t('video.tryAnyway'), cancelText: t('video.checkAddress')}
     );
     return !!go;
   }
@@ -15119,30 +15388,30 @@ async function ytCopyPrompt(){
   try{
     await navigator.clipboard.writeText(youtubePrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const {program, errors} = parseProgramText(raw);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\nЧто не так:\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
-  program.name = versionedName(program.name || 'Программа из видео');
+  program.name = versionedName(program.name || t('video.defaultProgram'));
   // сохраняем ссылку на источник в описании, если ИИ её не упомянул
   const link = ($('ytUrl').value || '').trim();
   if(link && !(program.desc || '').includes('http')){
-    program.desc = ((program.desc || '') + ' Источник: ' + link).trim().slice(0, 1000);
+    program.desc = ((program.desc || '') + ' ' + t('video.source') + ': ' + link).trim().slice(0, 1000);
   }
   customPrograms.push(program);
   await savePrograms();
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(`Готово: добавлена «${program.name}».`);
+  appAlert(t('video.added',{name:program.name}));
 
 }
 
@@ -15152,21 +15421,21 @@ async function ytApplyResult(){
 // его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = AI_PROMPT
-    + '\n\nВОТ МОЯ ТЕКУЩАЯ ПРОГРАММА В ЭТОМ ЖЕ ФОРМАТЕ:\n\n'
+  const text = aiPrompt()
+    + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
     + programToText(editAIProg)
-    + '\n\nЧТО НУЖНО СДЕЛАТЬ: опиши задачу здесь. Верни программу целиком в том же формате — её можно будет вставить обратно в приложение.';
+    + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
   try{
     await navigator.clipboard.writeText(text);
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Попробуй ещё раз.'); }
+  }catch(e){ appAlert(t('common.copyFailedRetry')); }
 };
 async function copyEditPrompt(){
   const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(editAIPrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 
 $('swapBadge').onclick = openSwapHint;
@@ -15179,10 +15448,10 @@ $('swapCopy').onclick = async ()=>{
   const text = `${step.swap.name}\n${step.swap.desc || ''}`.trim();
   try{
     await navigator.clipboard.writeText(text);
-    $('swapCopy').textContent = '✓ Скопировано';
+    $('swapCopy').textContent = t('common.copied');
   }catch(e){
     closeSwapHint();
-    appAlert('Не удалось скопировать автоматически. Скопируй вручную:', {code: text});
+    appAlert(t('common.copyManual'), {code: text});
   }
 };
 
@@ -15197,8 +15466,8 @@ let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
 function aiRunOpen(title, onCancel){
   aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
   aiRunOnCancel = onCancel || null;
-  $('aiRunTitle').textContent = title || 'Нейросеть работает';
-  $('aiRunText').textContent = 'Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.';
+  $('aiRunTitle').textContent = title || t('ai.workingDefault');
+  $('aiRunText').textContent = t('ai.workingLong');
   $('aiRunTimer').textContent = '0:00';
   $('aiRunModal').classList.add('open');
   aiRunT0 = Date.now();
@@ -15231,7 +15500,7 @@ $('aiRunCancel').onclick = ()=>{
 async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
   let prompt;
-  try{ prompt = promptFn(); }catch(e){ appAlert('Не удалось собрать запрос.'); return; }
+  try{ prompt = promptFn(); }catch(e){ appAlert(t('ai.buildRequestFailed')); return; }
   aiRunOpen(title);
   try{
     const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
@@ -15242,8 +15511,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     aiRunClose();
     const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
     if(aborted) return; // отменили — молча
-    appAlert('ИИ не ответил:\n\n' + (e && e.message ? e.message : 'неизвестная ошибка') +
-      '\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».');
+    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
   }
 }
 // Один обработчик на все источники: чем собрать промт и чем применить ответ,
@@ -15252,7 +15520,7 @@ $('aiSelf').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(c.guard && !(await c.guard())) return;
-  runSelfAI(c.prompt, 'aiResult', c.apply, c.selfTitle, c.kind);
+  runSelfAI(c.prompt, 'aiResult', c.apply, aiUiText(c.selfTitle), c.kind);
 };
 $('aiCopy').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
@@ -15281,8 +15549,8 @@ function buildAiMenu(){
   };
   // openBuilder() здесь звать НЕЛЬЗЯ: он перечитывает программу из сохранённых и
   // выбрасывает только что сделанную копию вместе со всей несохранённой правкой
-  mk(icon('plus') + 'Дублировать', ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
-  mk(icon('trash') + 'Удалить', async ()=>{
+  mk(icon('plus') + t('common.duplicate'), ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
+  mk(icon('trash') + t('common.delete'), async ()=>{
     await delExerciseAt(exeIdx);
     asTab(()=> show('scrBuilder'));
   }, 'danger');
@@ -15291,8 +15559,8 @@ $('aiBackTop').onclick = async ()=>{
   const c = AI_SOURCES[aiSrc];
   if(!c) return;
   if(aiScreenDirty(c.dirty)){
-    const ok = await appDialog('Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'});
+    const ok = await appDialog(t('ai.unsavedRequest'),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')});
     if(!ok) return;
   }
   c.back();
@@ -15306,7 +15574,7 @@ $('imgPromptCopy').onclick = async ()=>{
   try{
     await navigator.clipboard.writeText(imagesPromptText());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 };
 $('imgDone').onclick = ()=> closeImages();
 $('imgPick').onclick = ()=> $('imgFiles').click();
@@ -15314,19 +15582,19 @@ $('imgFiles').onchange = e => {
   const files = [...(e.target.files || [])];
   e.target.value = '';
   if(!files.length) return;
-  const btn = $('imgPick'), restore = btnBusy(btn, `Обработка… 0/${files.length}`);
+  const btn = $('imgPick'), restore = btnBusy(btn, t('images.processing',{done:0,total:files.length}));
   shrinkAll(files, 640, list => {
     imgTray = imgTray.concat(list);
     restore();
     renderTray();
-    if(list.length) appAlert(`Загружено картинок: ${list.length}. Теперь разложи их по местам или нажми «Разложить по порядку».`);
+    if(list.length) appAlert(t('images.uploaded',{count:list.length}));
   });
 };
 $('trayAuto').onclick = trayAutoAssign;
 $('trayClear').onclick = async ()=>{
   if(!imgTray.length) return;
-  if(!(await appDialog('Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.',
-    {confirm: true, okText: 'Убрать', cancelText: 'Оставить'}))) return;
+  if(!(await appDialog(t('images.removeQuestion'),
+    {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
   imgTray = []; renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
@@ -15342,7 +15610,7 @@ $('slotFile').onchange = e => {
   e.target.value = '';
   if(!f) return;
   shrinkImage(f, 640, data => {
-    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    if(!data){ appAlert(t('images.loadFailed')); return; }
     const s = imageSlots()[slotTarget];
     if(s) s.set(data);
     $('slotModal').classList.remove('open');
@@ -15392,8 +15660,8 @@ function buildExMenu(){
     b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
     box.appendChild(b);
   };
-  mk(icon('plus') + 'Дублировать', dupExercise);
-  mk(icon('trash') + 'Удалить', delExercise, 'danger');
+  mk(icon('plus') + t('common.duplicate'), dupExercise);
+  mk(icon('trash') + t('common.delete'), delExercise, 'danger');
 }
 
 // конструктор: вручную ⇄ через ИИ ⇄ из видео
@@ -15407,8 +15675,8 @@ document.querySelectorAll('#bModeTabs .tab').forEach(b => {
     const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
     if(programDirty()){
       const go = await appDialog(
-        'Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.',
-        {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+        t('builder.unsavedProgram'),
+        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
       );
       back();
       if(!go) return;
@@ -15435,8 +15703,8 @@ $('aiTabs').addEventListener('click', async e => {
   if(b.dataset.m === cur) return;
   if(aiScreenDirty(c.dirty)){
     const ok = await appDialog(
-      'Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.',
-      {confirm: true, okText: 'Переключиться', cancelText: 'Остаться'}
+      t('ai.unsavedSwitch'),
+      {confirm: true, okText: t('common.switch'), cancelText: t('common.stay')}
     );
     markAITab();   // подсветку возвращаем на месте, ушёл человек или нет
     if(!ok) return;
@@ -15464,7 +15732,7 @@ async function exeCopyPrompt(){
   try{
     await navigator.clipboard.writeText(exePrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать.'); }
+  }catch(e){ appAlert(t('common.copyFailedRetry')); }
 }
 
 /* ---- упражнение через ИИ ---- */
@@ -15473,7 +15741,7 @@ async function exaCopyPrompt(){
   try{
     await navigator.clipboard.writeText(exaPrompt());
     flashDone(btn);
-  }catch(e){ appAlert('Не удалось скопировать. Выдели текст вручную.'); }
+  }catch(e){ appAlert(t('common.copyFailedManual')); }
 }
 
 // Новая строка заводится с рабочими значениями (повторения, 10, один подход) и
@@ -15482,7 +15750,7 @@ async function exaCopyPrompt(){
 function addExManual(){
   const list = curPlan().exercises;
   const nWarm = list.filter(e => e.warmup).length;
-  if(list.length - nWarm >= MAX_MAIN){ appAlert(`В основной части уже ${MAX_MAIN} упражнений — это предел. Удали что-нибудь, чтобы добавить новое.`); return; }
+  if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
@@ -15498,7 +15766,7 @@ function addExManual(){
 // в момент сохранения, а не молча подставляем «Упражнение 3».
 function exNameOk(){
   if($('exName').value.trim()) return true;
-  appAlert('Упражнению нужно название — иначе в списке будет пустая строка.');
+  appAlert(t('exercise.nameRequired'));
   $('exName').focus();
   return false;
 }
@@ -15519,8 +15787,8 @@ function dupExercise(){
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
     appAlert(exDraft.warmup
-      ? `В разминке уже ${MAX_WARM} упражнений — это предел. Дублировать не получится.`
-      : `В основной части уже ${MAX_MAIN} упражнений — это предел. Дублировать не получится.`);
+      ? t('exercise.warmLimitDuplicate',{count:MAX_WARM})
+      : t('exercise.mainLimitDuplicate',{count:MAX_MAIN}));
     return;
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
@@ -15531,8 +15799,8 @@ function dupExercise(){
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
-  const nameTxt = (exDraft.name || '').trim() || 'это упражнение';
-  if(!(await appDialog(`Удалить «${nameTxt}»?`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+  const nameTxt = (exDraft.name || '').trim() || t('exercise.this');
+  if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   exIsNew = false;
   curPlan().exercises.splice(exIdx, 1);
   exDraft = null; exIdx = -1; exOrig = '';
@@ -15556,9 +15824,9 @@ async function leaveExercise(){
   if(exDirty()){
     const go = await appDialog(
       exIsNew
-        ? 'Упражнение ещё пустое. Если выйти сейчас, оно не добавится в список.'
-        : 'Изменения этого упражнения ещё не сохранены. Если выйти сейчас, они пропадут.',
-      {confirm: true, okText: 'Выйти без сохранения', cancelText: 'Остаться'}
+        ? t('exercise.newUnsaved')
+        : t('exercise.unsaved'),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
     );
     if(!go) return;
   }
@@ -15621,8 +15889,8 @@ $('exWarm').onclick = ()=>{
   const list = curPlan().exercises;
   const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
   const nMain = list.filter((e, i) => !e.warmup && i !== exIdx).length;
-  if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(`В разминке можно до ${MAX_WARM} упражнений.`); return; }
-  if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(`В основной части можно до ${MAX_MAIN} упражнений.`); return; }
+  if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(t('exercise.warmMax',{count:MAX_WARM})); return; }
+  if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(t('exercise.mainMax',{count:MAX_MAIN})); return; }
   exDraft.warmup = !exDraft.warmup;
   $('exWarm').classList.toggle('on', exDraft.warmup);
   if(exDraft.warmup) exDraft.sets = 1;
@@ -15649,7 +15917,7 @@ $('exMediaFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   shrinkImage(file, 640, data => {
-    if(!data){ appAlert('Не удалось загрузить картинку.'); return; }
+    if(!data){ appAlert(t('images.loadFailed')); return; }
     setExImg(exDraft, data);
     renderExMedia(); syncExDetailsSum();
   });
@@ -15682,8 +15950,8 @@ function syncImagesSum(){
     if(ex.media && ex.media.kind === 'img') filled++;
   }));
   el.textContent = filled
-    ? `Есть ${filled} из ${total}`
-    : `Ни одной из ${total}`;
+    ? t('images.summaryFilled',{filled,total})
+    : t('images.summaryEmpty',{total});
 }
 // Сводка говорит, что НАСТРОЕНО, а не как называются поля внутри. Круги и отдых
 // между ними здесь обязательны: это первое, что человек хочет проверить перед
@@ -15693,16 +15961,16 @@ function syncSettingsSum(){
   const plans = draft.plans || [];
   const pl = curPlan();
   const daysU = programDaysUnion(draft);
-  if(daysU.length) bits.push(daysU.join('·'));
-  else if(draft.rotate) bits.push('по очереди');
-  else bits.push('по любым дням');
+  if(daysU.length) bits.push(daysU.map(canonicalLabel).join('·'));
+  else if(draft.rotate) bits.push(t('programs.sequence'));
+  else bits.push(t('builder.anyDays'));
   if(draft.time) bits.push(draft.time);
-  if(plans.length > 1) bits.push(`${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')}`);
+  if(plans.length > 1) bits.push(storeCountText(plans.length,'variant'));
   const rounds = (pl && +pl.rounds) || 1;
-  bits.push(`${rounds} ${plural(rounds, 'круг', 'круга', 'кругов')}`);
+  bits.push(storeCountText(rounds,'round'));
   const rr = (pl && +pl.roundRest) || 0;
-  if(rounds > 1 && rr > 0) bits.push('отдых ' + (rr % 60 === 0 ? (rr / 60) + ' мин' : rr + ' с'));
-  if(draft.progression) bits.push('нагрузка растёт сама');
+  if(rounds > 1 && rr > 0) bits.push(t('builder.restSummary',{time:(rr % 60 === 0 ? (rr / 60) + ' ' + t('store.minuteShort') : rr + ' ' + t('store.secShort'))}));
+  if(draft.progression) bits.push(t('builder.progressionAuto'));
   $('bSettingsSum').textContent = bits.join(' · ');
 }
 $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
@@ -15711,7 +15979,7 @@ $('bDesc').oninput = e => {
   $('bDescCount').textContent = draft.desc.length;
 };
 $('btnSaveProgram').onclick = ()=>{ if(numFieldsOk('scrBuilder')) saveProgram(); };
-$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, 'Изменения программы');
+$('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, t('builder.programChanges'));
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
@@ -15727,8 +15995,8 @@ $('bCoverFile').onchange = e=>{
 // и требует набрать фразу: восстановить это неоткуда.
 $('btnResetTotal').onclick = async ()=>{
   const ok = await appDialog(
-    'Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры, самочувствие и фото останутся.',
-    {confirm: true, okText: 'Очистить', cancelText: 'Отмена', type: 'подтверждаю удаление'}
+    t('stats.clearQuestion'),
+    {confirm: true, okText: t('stats.clear'), cancelText: t('common.cancel'), type: t('account.deleteConfirmPhrase')}
   );
   if(!ok) return;
   stats.totalSec = 0;
@@ -15773,8 +16041,8 @@ $('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('image') + 'Показать «было / стало»';
-$('btnDeleteAllPhotos').innerHTML = icon('trash') + 'Удалить все фото';
+$('btnCompare').innerHTML = icon('image') + t('progress.comparePhotos');
+$('btnDeleteAllPhotos').innerHTML = icon('trash') + t('progress.deleteAllPhotosBtn');
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');
@@ -15873,9 +16141,9 @@ try{
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:'Профиль 1', gender:'f', age:null, photo:null, theme:'light'}];
+    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'light'}];
     if((await kvGet('customPrograms_m')) !== null){
-      users.push({id:'m', name:'Профиль 2', gender:'m', age:null, photo:null, theme:'dark'});
+      users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'dark'});
     }
     await saveUsers();
   }
