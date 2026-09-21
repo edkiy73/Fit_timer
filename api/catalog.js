@@ -76,8 +76,30 @@ function localizedMedia(c, locale){
   return Object.keys(out).length ? out : media;
 }
 
+async function upgradeSeedLocales(){
+  const key = 'migration:seed-locales-v1';
+  if(await store.get(key)) return;
+  const { SEED_ITEMS } = require('../lib/seed');
+  for(const seed of SEED_ITEMS){
+    if(!seed.locales || !seed.locales.en) continue;
+    const raw = await store.get(`c:${seed.id}`);
+    if(!raw) continue;
+    let c;
+    try{ c = JSON.parse(raw); }catch(e){ continue; }
+    if(c.locales && c.locales.en) continue;
+    c.sourceLocale = 'ru';
+    c.locales = {
+      ru: {name:c.name || seed.name, gives:c.gives || seed.gives, text:c.text || seed.text},
+      en: seed.locales.en
+    };
+    await store.set(`c:${seed.id}`, JSON.stringify(c));
+  }
+  await store.set(key, '1');
+}
+
 async function list(req, res){
   if(!(await rateOk(req, 'catalog', 900))) return fail(res, 429, 'rate_limited');
+  try{ await upgradeSeedLocales(); }catch(e){}
 
   /* Одна программа целиком, вместе с фото упражнений. Отдельным запросом, потому
      что в общем списке фото сделали бы витрину неподъёмной: тридцать программ по
