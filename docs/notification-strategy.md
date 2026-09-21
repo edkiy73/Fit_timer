@@ -215,6 +215,24 @@ The two marketing email preferences are independent and default to off. Marketin
 
 ---
 
+## Settings synchronization
+
+Notification preferences are **account-level settings**, not profile-level settings.
+
+Requirements:
+- Push categories and email preferences should follow the signed-in account across devices.
+- Keep a local copy for instant UI/offline behavior, but treat the synchronized account document as the cross-device source of truth.
+- Store the settings as one account-level document (for example `notificationPrefs`) alongside other account documents such as trainer/client data.
+- Every preference change should update the local cache immediately, bump the account-document revision, and queue account sync.
+- On pull/login/new-device restore, apply the newest remote preference document to the local cache and refresh the settings UI.
+- Conflict resolution should use the same revision/timestamp rules as other account documents.
+- Transactional email delivery rules are server-controlled and must not be disabled by marketing preference sync.
+- Email marketing preferences must ultimately be available server-side even when the app is not open, because mailing eligibility cannot depend on one device's local storage.
+
+Note: the current general cross-device account sync is tied to the existing account-sync capability. If free accounts are expected to receive/manage marketing email, the server must persist email preferences independently of Premium-only training-data sync so opt-in/opt-out works for every signed-in account.
+
+---
+
 ## Architecture direction
 
 Use one Notification Manager that receives candidate notification events and decides whether to deliver them.

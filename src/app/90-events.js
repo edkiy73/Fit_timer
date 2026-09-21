@@ -126,10 +126,22 @@ function syncNotificationSettings(){
     btn.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
-function setNotificationPref(key, value){
+async function setNotificationPref(key, value){
   const prefs = getNotificationPrefs();
   prefs[key] = !!value;
   try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
+  // Настройки относятся ко всему аккаунту, а не к отдельному профилю.
+  // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта
+  // едет тем же account-level sync, что trainer/clients.
+  try{
+    if(account && account.email && typeof readAccountBucket === 'function'){
+      const rec = await readAccountBucket();
+      rec.bucket.notificationPrefs = Object.assign({}, NOTIFICATION_PREF_DEFAULTS, prefs);
+      if(typeof bumpAccountMeta === 'function') bumpAccountMeta(rec.bucket, 'notificationPrefs');
+      await writeAccountBucket(rec);
+      if(typeof queueAccountSync === 'function') queueAccountSync();
+    }
+  }catch(_){}
   syncNotificationSettings();
   if(key === 'workouts' && typeof syncNativeNotifications === 'function') syncNativeNotifications();
 }
@@ -778,7 +790,7 @@ $('btnLegalDone').onclick = ()=> legalBack();
     emailNews:'emailNews',
     emailOffers:'emailOffers'
   }[key]);
-  if(btn) btn.onclick = ()=> setNotificationPref(key, !getNotificationPrefs()[key]);
+  if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
 });
 $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
 $('btnLegalTerms').onclick   = ()=> openLegal('terms');

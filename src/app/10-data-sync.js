@@ -977,7 +977,7 @@ async function applyRemoteAccountDocs(result){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
-    if(!d || !['trainer','clients'].includes(d.key) || d.deleted) continue;
+    if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
     const localMeta = rec.bucket.meta[d.key];
     const takeRemote = !localMeta || remoteWins(d, localMeta);
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
@@ -992,15 +992,27 @@ async function applyRemoteAccountDocs(result){
       if(keep.on && keep.handle) rec.bucket.trainer.on = true;
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
-    } else {
+    } else if(d.key === 'clients'){
       rec.bucket.clients = mergeClientLists(rec.bucket.clients || clients, incoming, takeRemote);
       if(takeRemote) rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                                deviceId:d.deviceId || ''};
+    } else if(takeRemote){
+      rec.bucket.notificationPrefs = Object.assign({}, incoming || {});
+      rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
+                                deviceId:d.deviceId || ''};
+      try{
+        if(typeof NOTIFICATION_PREF_DEFAULTS !== 'undefined'){
+          localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(
+            Object.assign({}, NOTIFICATION_PREF_DEFAULTS, rec.bucket.notificationPrefs)
+          ));
+        }
+      }catch(_){}
     }
   }
   await writeAccountBucket(rec);
   trainer = rec.bucket.trainer || trainer;
   clients = Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients;
+  if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
 }
 
 async function accountDocsSnapshot(){
@@ -1008,10 +1020,20 @@ async function accountDocsSnapshot(){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const now = new Date().toISOString();
-  const values = {trainer:trainerSyncValue(rec.bucket.trainer || trainer),
-                  clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients};
+  let localNotificationPrefs = {};
+  try{
+    localNotificationPrefs = (typeof getNotificationPrefs === 'function')
+      ? getNotificationPrefs()
+      : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
+  }catch(_){}
+  if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
+  const values = {
+    trainer:trainerSyncValue(rec.bucket.trainer || trainer),
+    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients,
+    notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
+  };
   const docs = [];
-  for(const key of ['trainer','clients']){
+  for(const key of ['trainer','clients','notificationPrefs']){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
