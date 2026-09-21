@@ -195,6 +195,19 @@ Critical functional notifications may still require special treatment depending 
 
 ---
 
+## Email channel
+
+Email should be much rarer than push notifications and should not duplicate routine workout reminders.
+
+Recommended use:
+- **Account/service messages** — sign-in codes, important security/account changes, payment receipts or subscription problems when applicable. These are transactional and separate from marketing preferences.
+- **News & offers** — the main optional email category: meaningful product news, launches, promotions, and occasional Premium offers.
+- Do **not** send workout reminders, missed-workout nudges, progression updates, achievements, or trainer activity by email in the normal flow. Push/in-app is a better channel for those.
+
+Marketing email should require its own explicit preference/consent and include an unsubscribe mechanism. Frequency should remain low; avoid sending an email just because the 14-day Premium push slot became available. Push and email need a shared campaign cooldown so the same offer does not hit the user through both channels at nearly the same time.
+
+---
+
 ## Architecture direction
 
 Use one Notification Manager that receives candidate notification events and decides whether to deliver them.
