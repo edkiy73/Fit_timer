@@ -10,7 +10,7 @@
 const { store } = require('../lib/store');
 const { send, fail, readBody, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
-const { getSettings, sanitizeSettings, providerStatus, generate } = require('../lib/ai');
+const { getSettings, sanitizeSettings, providerStatus, billingProviderStatus, generate } = require('../lib/ai');
 const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
@@ -241,7 +241,7 @@ module.exports = async (req, res) => {
                        programs: +counts[i * 2] || 0, opens: +counts[i * 2 + 1] || 0});
       }catch(e){}
     });
-    return send(res, 200, {pending, approved, trainers, settings, providers:providerStatus()});
+    return send(res, 200, {pending, approved, trainers, settings, providers:providerStatus(), billingProviders:billingProviderStatus()});
   }
 
   /* ---- пользователи / ручной Premium / тестовый вход ---- */

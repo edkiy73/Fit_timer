@@ -462,11 +462,23 @@ function renderSettings(b){
     <p class="err" id="aiResult"></p>
   </div>
   <div class="card"><p class="name">Цена Premium</p>${currencies}</div>
-  <div class="card"><p class="name">Платёжная система</p>
-    <p class="muted">Поля уже готовы для подключения стора. Само списание включается только после серверной проверки покупки.</p>
-    <label>Статус / провайдер</label><input id="payProvider" value="${esc(pay.provider || 'not_connected')}" maxlength="40">
-    <div class="row"><div><label>Android · месяц</label><input id="androidMonth" value="${esc(pay.androidMonth || '')}"></div><div><label>Android · год</label><input id="androidYear" value="${esc(pay.androidYear || '')}"></div></div>
-    <div class="row"><div><label>iOS · месяц</label><input id="iosMonth" value="${esc(pay.iosMonth || '')}"></div><div><label>iOS · год</label><input id="iosYear" value="${esc(pay.iosYear || '')}"></div></div>
+  <div class="card"><p class="name">Платежи</p>
+    <p class="muted">Premium выдаёт только сервер после проверки провайдера. Секретные ключи хранятся только в Vercel.</p>
+    <p class="muted">Google Play: ${data.billingProviders&&data.billingProviders.google?'✓ сервер готов':'✗ ключ не задан'} · RuStore: ${data.billingProviders&&data.billingProviders.rustore?'✓ сервер готов':'✗ ключ не задан'} · ЮKassa: ${data.billingProviders&&data.billingProviders.yookassa?'✓ сервер готов':'✗ ключи не заданы'}</p>
+    <label>Режим</label><input id="payProvider" value="${esc(pay.provider || 'multi')}" maxlength="40">
+    <div class="lang-card"><div class="lang-head"><b>Google Play</b></div>
+      <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
+      <div class="row"><div><label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}"></div><div><label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}"></div></div>
+    </div>
+    <div class="lang-card"><div class="lang-head"><b>RuStore Pay</b></div>
+      <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
+      <div class="row"><div><label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}"></div><div><label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}"></div></div>
+    </div>
+    <div class="lang-card"><div class="lang-head"><b>ЮKassa</b></div>
+      <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена в разрешённых каналах/регионах</label>
+      <p class="muted">Цена берётся из таблицы Premium выше; product ID не нужен.</p>
+    </div>
+    <div class="row"><div><label>iOS · месяц (позже)</label><input id="iosMonth" value="${esc(pay.iosMonth || '')}"></div><div><label>iOS · год (позже)</label><input id="iosYear" value="${esc(pay.iosYear || '')}"></div></div>
     <p class="err" id="settingsErr"></p><div class="acts"><button class="b ok" id="saveSettings">Сохранить настройки</button></div>
   </div>`;
   $('saveSettings').onclick = saveSettings;
@@ -483,7 +495,14 @@ function settingsFromForm(){
   s.limits = {heavy:+$('limHeavy').value, light:+$('limLight').value, image:+$('limImage').value};
   s.retentionDays = +$('retention').value;
   Object.keys(s.prices || {}).forEach(cur => { s.prices[cur] = {month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value}; });
-  s.payment = {provider:$('payProvider').value.trim(),androidMonth:$('androidMonth').value.trim(),androidYear:$('androidYear').value.trim(),iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()};
+  s.payment = {
+    provider:$('payProvider').value.trim()||'multi',
+    google:{enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()},
+    rustore:{enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()},
+    yookassa:{enabled:$('yookassaEnabled').checked},
+    androidMonth:$('googleMonth').value.trim(),androidYear:$('googleYear').value.trim(),
+    iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
+  };
   return s;
 }
 async function saveSettings(){

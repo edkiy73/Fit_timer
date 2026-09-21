@@ -15,6 +15,7 @@
 const { store } = require('../lib/store');
 const { mailInfo } = require('../lib/mail');
 const { pushInfo } = require('../lib/push');
+const { billingProviderStatus } = require('../lib/ai');
 
 /* Метка сборки руками. Номер коммита Vercel подставляет сам, но на глаз он ничего
    не говорит; дата и короткое имя правки говорят сразу, та ли это версия. Правится
@@ -25,6 +26,7 @@ module.exports = async (req, res) => {
   const i = store.info();
   const m = mailInfo();
   const p = pushInfo();
+  const billing = billingProviderStatus();
   const L = [];
 
   L.push('Fit Timer — состояние сервера');
@@ -133,6 +135,9 @@ module.exports = async (req, res) => {
   L.push('');
   L.push(`PUSH ANDROID: ${p.android ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
   L.push(`PUSH iOS: ${p.ios ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
+  L.push(`BILLING Google Play: ${billing.google ? 'серверный ключ есть' : 'НЕ настроен'}.`);
+  L.push(`BILLING RuStore: ${billing.rustore ? 'серверный ключ есть' : 'НЕ настроен'}.`);
+  L.push(`BILLING ЮKassa: ${billing.yookassa ? 'серверные ключи есть' : 'НЕ настроена'}.`);
   if(!p.android){
     L.push('Для Android нужен FIREBASE_SERVICE_ACCOUNT_JSON или FIREBASE_SERVICE_ACCOUNT_BASE64 в Vercel.');
   }
