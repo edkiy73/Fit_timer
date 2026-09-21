@@ -686,21 +686,15 @@ function coachLinkIds(){
 // Человеческие названия отказов сервера. Код вроде mail_failed сам по себе не
 // говорит человеку ничего, а разбираться ему придётся самому.
 const MAIL_ERRS = {
-  no_mail:        'Отправка писем на сервере пока не включена.',
-  no_store:       'Сервер сейчас недоступен. Попробуй позже.',
-  bad_email:      'Проверь адрес — похоже, в нём опечатка.',
-  too_many_today: 'Сегодня уже отправляли код на этот адрес пять раз. Попробуй завтра.',
-  rate_limited:   'Слишком часто. Подожди немного.',
-  code_expired:   'Код устарел. Запроси новый.',
-  too_many_tries: 'Слишком много попыток. Запроси новый код.',
-  bad_code:       'Код не подошёл. Проверь, тот ли это код из письма.',
-  handle_taken:   'Твой ник уже привязан к другому аккаунту.',
-  offline:        'Нет связи с сервером. Проверь интернет.'
+  no_mail:'mail.noMail', no_store:'mail.noStore', bad_email:'mail.badEmail',
+  too_many_today:'mail.tooManyToday', rate_limited:'mail.rateLimited',
+  code_expired:'mail.codeExpired', too_many_tries:'mail.tooManyTries',
+  bad_code:'mail.badCode', handle_taken:'mail.handleTaken', offline:'mail.offline'
 };
-const mailErrText = e => (e && MAIL_ERRS[e.code])
+const mailErrText = e => (e && MAIL_ERRS[e.code] ? t(MAIL_ERRS[e.code]) : null)
   || (e && e.code === 'mail_failed'
-      ? 'Письмо не ушло: ' + ((e.detail || '').slice(0, 120) || 'почтовая служба отказала.')
-      : 'Не вышло. Проверь связь и попробуй ещё раз.');
+      ? t('mail.failed',{detail:(e.detail || '').slice(0,120) || t('mail.serviceRefused')})
+      : t('mail.generic'));
 
 /* ---- удаление ----
 
