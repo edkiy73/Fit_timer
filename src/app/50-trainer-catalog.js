@@ -692,15 +692,17 @@ let storeServer = [];
 const storeAll = () => storeServer;
 let storeLoading = false;
 async function loadStoreServer(){
+  const locale = appLocale === 'ru' ? 'ru' : 'en';
+  const cacheKey = 'catalog_' + locale;
   storeLoading = true;
   try{
-    const d = await apiFetch('/api/catalog');
+    const d = await apiFetch('/api/catalog?lang=' + encodeURIComponent(locale));
     storeServer = Array.isArray(d.items) ? d.items : [];
-    lastSeen('catalog', storeServer);
+    lastSeen(cacheKey, storeServer);
   }catch(e){
-    // Каталог без сети — это то, что видели в прошлый раз, плюс зашитые программы.
-    // Пустая витрина вместо вчерашней — потеря без выигрыша.
-    storeServer = lastSeen('catalog') || [];
+    // Кэш тоже языковой: после переключения профиля русская витрина не должна
+    // внезапно подменять английскую и наоборот.
+    storeServer = lastSeen(cacheKey) || [];
   } finally { storeLoading = false; }
 }
 
@@ -1026,7 +1028,7 @@ async function siPaintMedia(it){
   if(!(it.hasMedia || it.media)) return;
   let media = it.media;
   if(!media){
-    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id))).item.media; }
+    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
     catch(e){ return; }            // без фото страница остаётся рабочей
     it.media = media || {};
   }
@@ -1067,6 +1069,9 @@ async function addStoreItem(id){
   }
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
+  // После добавления это обычная личная одноязычная копия. Язык нужен ИИ-правкам,
+  // чтобы они не переписали английскую программу на язык текущего интерфейса.
+  program.locale = (it.locale === 'ru' || it.locale === 'en') ? it.locale : (appLocale === 'ru' ? 'ru' : 'en');
   // Фото упражнений в списке каталога не лежат (иначе витрина весила бы мегабайты).
   // Забираем их сейчас — в момент, когда программа становится своей.
   if(it.hasMedia || it.media){
@@ -1358,6 +1363,7 @@ async function doPublish(){
       by: normHandle(trainer.handle),
       trainerKey: trainer.key || '',
       item: {
+        sourceLocale: (p.locale === 'ru' || p.locale === 'en') ? p.locale : (appLocale === 'ru' ? 'ru' : 'en'),
         name: p.name, gives: pubDraft.gives,
         // cat — КЛЮЧ цели («cardio»), а не её название: по нему подбирается обложка
         // и работают фильтры витрины. С названием обложка бралась первая попавшаяся.
@@ -1390,7 +1396,7 @@ async function doPublish(){
 
 function openStore(from){
   storeFrom = from || 'scrMenu';
-  if(!storeServer.length) storeServer = lastSeen('catalog') || [];
+  if(!storeServer.length) storeServer = lastSeen('catalog_' + (appLocale === 'ru' ? 'ru' : 'en')) || [];
   // Свежие позиции подтягиваем при входе и дорисовываем, когда придут: витрина
   // не должна ждать сеть, чтобы показать то, что уже есть.
   loadStoreServer().then(()=>{ if(show._last === 'scrStore'){ renderStoreFilters(); renderStore(); } });
