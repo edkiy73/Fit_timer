@@ -151,6 +151,8 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   ok('заявка видна в очереди', !!asked, asked ? asked.id : '(не нашлась)');
   ok('и несёт всё, по чему решают', !!(asked && asked.gives && asked.text && asked.cat),
      asked ? `${asked.cat} · ${(asked.gives || '').slice(0, 24)}…` : '');
+  const blocked = await admin('approve', {id: asked.id});
+  ok('без второго языка публикация блокируется', blocked.error === 'missing_locales', blocked.error || blocked.status);
   // Перевод появляется только здесь, когда модератор решил готовить заявку.
   const ENAME = 'Strength Base ' + NAME.split(' ').pop();
   const prepared = await admin('edit', {id: asked.id, item: {
