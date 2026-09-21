@@ -1412,16 +1412,14 @@ function renderMine(){
   renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
   const own = customPrograms.length;
-  $('progCount').textContent = own
-    ? `${own} ${plural(own, 'программа', 'программы', 'программ')}`
-    : 'Ни одной программы';
+  $('progCount').textContent = own ? storeCountText(own,'program') : t('programs.none');
 
   if(!customPrograms.length){
     box.insertAdjacentHTML('beforeend',
       '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      '<b>Своих программ пока нет</b>' +
-      '<p>Собери первую за пару минут: опиши, какая тренировка нужна, и её соберёт ИИ — или добавь упражнения руками.</p>' +
+      '<b>' + esc(t('programs.emptyTitle')) + '</b>' +
+      '<p>' + esc(t('programs.emptyText')) + '</p>' +
       '</div>');
     renderToday();
     return;
@@ -1439,29 +1437,29 @@ function renderMine(){
     const daysU = programDaysUnion(p);
     // расписание — один чип, очередь вариантов — отдельный: длинная строка
     // «Пн · Ср · 07:30 · варианты по очереди» разрывалась посреди фразы
-    const schedule = [daysU.length ? daysU.join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    const schedule = [daysU.length ? daysU.map(canonicalLabel).join(' · ') : '', p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
     const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
     const volOne = (plans[0].rounds > 1 || setsOne <= plans[0].exercises.length)
-      ? `${plans[0].rounds} ${plural(plans[0].rounds, 'круг', 'круга', 'кругов')}`
-      : `${setsOne} ${plural(setsOne, 'подход', 'подхода', 'подходов')}`;
+      ? storeCountText(plans[0].rounds,'round')
+      : storeCountText(setsOne,'set');
     // человеческие подписи вместо «Упр-ий» и «Вар-ов»
-    const exWord = `${exTotal} ${plural(exTotal, 'упражнение', 'упражнения', 'упражнений')}`;
+    const exWord = storeCountText(exTotal,'exercise');
     const line1 = plans.length > 1
-      ? `${plans.length} ${plural(plans.length, 'вариант', 'варианта', 'вариантов')} · ${exWord}`
+      ? `${storeCountText(plans.length,'variant')} · ${exWord}`
       : `${exWord} · ${volOne}`;
     card.innerHTML =
       `<div class="mc-cover">${cover}</div>` +
       `<div class="mc-body"><h3></h3>` +
       `<p>${line1}</p>` +
-      (done ? `<p>Пройдено раз: ${done}</p>` : '') +
+      (done ? `<p>${esc(t('programs.completed',{count:done}))}</p>` : '') +
       ((schedule || rotates || !on)
         ? `<p class="mc-chips">` +
-          (!on ? `<span class="sched off">${icon('power')}Откл</span>` : '') +
+          (!on ? `<span class="sched off">${icon('power')}${esc(t('programs.offShort'))}</span>` : '') +
           (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
-          (rotates ? `<span class="sched">${icon('reset')}по очереди</span>` : '') +
+          (rotates ? `<span class="sched">${icon('reset')}${esc(t('programs.sequence'))}</span>` : '') +
           `</p>`
         : '') + `</div>`;
     card.querySelector('h3').textContent = p.name;
@@ -1472,17 +1470,17 @@ function renderMine(){
     const more = document.createElement('button');
     more.className = 'more-btn';
     more.innerHTML = icon('more');
-    more.title = 'Действия';
+    more.title = t('common.actions');
     const menu = document.createElement('div');
     menu.className = 'ctx-menu';
     const bEdit = document.createElement('button');
-    bEdit.innerHTML = icon('pencil') + 'Изменить';
+    bEdit.innerHTML = icon('pencil') + t('common.edit');
     bEdit.onclick = ()=>{ closeAllMenus(); openBuilder(p.id); };
     // включить / отключить: рядом с «Изменить», а не рядом с «Удалить» — это
     // не уничтожение, и путать эти два действия соседством нельзя
     const bOff = document.createElement('button');
-    bOff.innerHTML = icon('power') + (on ? 'Отключить' : 'Включить');
-    bOff.title = on ? 'Убрать из планов, не удаляя' : 'Вернуть в расписание';
+    bOff.innerHTML = icon('power') + (on ? t('programs.disable') : t('programs.enable'));
+    bOff.title = on ? t('programs.disableTitle') : t('programs.enableTitle');
     bOff.onclick = async ()=>{
       closeAllMenus();
       p.active = !on;
@@ -1490,26 +1488,26 @@ function renderMine(){
       renderMine();
       // объясняем только выключение: включение возвращает привычное поведение,
       // а вот исчезновение программы из «Сегодня» без объяснения пугает
-      if(on) appAlert('Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.');
+      if(on) appAlert(t('programs.disabledAlert'));
     };
     const bShare = document.createElement('button');
-    bShare.innerHTML = icon('share') + 'Поделиться ссылкой';
+    bShare.innerHTML = icon('share') + t('programs.shareLink');
     bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
     // «Отправить подопечному» — то же действие, но с адресатом: отправка запоминается,
     // и потом видно, кому что уходило. Пункт есть только у тренера.
     const bClient = document.createElement('button');
-    bClient.innerHTML = icon('users') + 'Отправить подопечному';
+    bClient.innerHTML = icon('users') + t('programs.sendClient');
     bClient.onclick = ()=>{ closeAllMenus(); pickClientFor(p); };
     const bFile = document.createElement('button');
-    bFile.innerHTML = icon('download') + 'Сохранить в файл';
-    bFile.title = 'Со всеми картинками';
+    bFile.innerHTML = icon('download') + t('programs.saveFile');
+    bFile.title = t('programs.allImages');
     bFile.onclick = ()=>{ closeAllMenus(); exportProgramFile(p); };
     const bDel = document.createElement('button');
     bDel.className = 'danger';
-    bDel.innerHTML = icon('trash') + 'Удалить';
+    bDel.innerHTML = icon('trash') + t('common.delete');
     bDel.onclick = async ()=>{
       closeAllMenus();
-      if(!(await appDialog(`Удалить программу «${p.name}»? Вместе с ней сотрётся и её статистика.`, {confirm: true, okText: 'Удалить', cancelText: 'Оставить'}))) return;
+      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
       customPrograms = customPrograms.filter(x=>x.id!==p.id);
       await savePrograms();
       renderMine();
@@ -1518,14 +1516,14 @@ function renderMine(){
     // Действие, доступное в одном месте и недоступное в другом, человек считает
     // сломанным, а не «не предусмотренным здесь».
     const bCopy = document.createElement('button');
-    bCopy.innerHTML = icon('copy') + 'Дублировать';
+    bCopy.innerHTML = icon('copy') + t('common.duplicate');
     bCopy.onclick = async ()=>{
       closeAllMenus();
       const c = await duplicateProgram(p);
       openBuilder(c.id);
     };
     const bPub = document.createElement('button');
-    bPub.innerHTML = icon('crown') + 'Предложить в каталог';
+    bPub.innerHTML = icon('crown') + t('programs.submitCatalog');
     bPub.onclick = ()=>{ closeAllMenus(); openPublish(p); };
 
     menu.append(bEdit, bOff, bCopy, bShare);
@@ -1536,7 +1534,7 @@ function renderMine(){
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
     handle.innerHTML = icon('grip');
-    handle.title = 'Перетащить';
+    handle.title = t('programs.drag');
     wrap.append(card, handle, more, menu);
     wrap.dataset.pid = p.id;
     enableDrag(wrap, handle);
