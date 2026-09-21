@@ -11,8 +11,7 @@ on:
         description: "Версия для пользователя"
         required: true
         default: "1.0.0"
-  push:
-    branches: ['**']
+  pull_request:
     paths: &mobile_paths
       - 'android/**'
       - 'scripts/**'
@@ -27,8 +26,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/android.yml'
-  pull_request:
-    paths: *mobile_paths
+
 
 jobs:
   build:

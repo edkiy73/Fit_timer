@@ -2,8 +2,7 @@ name: iOS — проверка сборки
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+  pull_request:
     paths: &mobile_paths
       - 'ios/**'
       - 'scripts/**'
@@ -18,8 +17,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ios.yml'
-  pull_request:
-    paths: *mobile_paths
+
 
 jobs:
   simulator:
