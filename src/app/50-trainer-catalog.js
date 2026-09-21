@@ -88,7 +88,7 @@ function renderClients(){
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
     row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
-      : sum.progs === 1 ? (newest ? newest.name : t('clients.programFallback'))
+      : sum.progs === 1 ? (newest ? newestrainerData.name : t('clients.programFallback'))
       : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
     row.onclick = ()=> openClient(i);
@@ -814,7 +814,7 @@ function storeMatches(it){
   if(!q) return true;
   // ищем по названию — и по категории с ником тренера заодно: «пресс» человек
   // наберёт скорее, чем полное имя программы, а тренера ищут по нику
-  return (it.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
+  return (itrainerData.name + ' ' + storeCat(it.cat).name + ' ' + canonicalLabel(storeCat(it.cat).name) + ' ' + (it.by || '')).toLowerCase().includes(q);
 }
 
 // «Премиум» и «Уже у вас» — одни и те же метки в списке и на странице программы.
@@ -863,7 +863,7 @@ function renderStore(){
     return `<article class="store-row" data-open="${it.id}">
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
-        <h3>${it.name}</h3>
+        <h3>${itrainerData.name}</h3>
         <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
         <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
@@ -892,7 +892,7 @@ function openStoreItem(id){
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
-  $('siName').textContent = it.name;
+  $('siName').textContent = itrainerData.name;
   $('siGoal').textContent = canonicalLabel(c.name);
   $('siGives').textContent = it.gives || '';
   $('siNick').textContent = it.by || '';
@@ -1083,7 +1083,7 @@ async function addStoreItem(id){
      записаны в её тексте, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
-  appAlert(t('store.added',{name:it.name}));
+  appAlert(t('store.added',{name:itrainerData.name}));
 }
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
@@ -1106,11 +1106,11 @@ function openTrainer(nick){
   else skeletonTrainer(nick);
   show('scrTrainerPage');
   apiFetch('/api/trainer/' + encodeURIComponent(nick)).then(d => {
-    const t = Object.assign({}, d, {
+    const trainerData = Object.assign({}, d, {
       programs: Math.max(d.programs || 0, storeAll().filter(x => x.by === nick).length)
     });
-    lastSeen('tr_' + nick, t);
-    if(show._last === 'scrTrainerPage') fillTrainerPage(nick, t);
+    lastSeen('tr_' + nick, trainerData);
+    if(show._last === 'scrTrainerPage') fillTrainerPage(nick, trainerData);
   }).catch(()=>{});
 }
 
@@ -1130,33 +1130,33 @@ function skeletonTrainer(nick){
   setShown('tpLinkCard', false);
 }
 
-function fillTrainerPage(nick, t){
-  t = t || {};
-  $('tpPhoto').innerHTML = t.photo ? `<img src="${esc(t.photo)}" alt="">` : icon('user');
-  $('tpName').textContent = t.name || nick.replace(/^@/, '');
+function fillTrainerPage(nick, trainerData){
+  trainerData = trainerData || {};
+  $('tpPhoto').innerHTML = trainerData.photo ? `<img src="${esc(trainerData.photo)}" alt="">` : icon('user');
+  $('tpName').textContent = trainerData.name || nick.replace(/^@/, '');
   $('tpNick').textContent = nick;
-  const about = t.about || '';
+  const about = trainerData.about || '';
   setShown('tpAbout', !!about);
   $('tpAbout').textContent = about;   // textContent затирает и разметку заглушки
 
   // Три числа, и каждое показывается, только если оно есть. «0 программ» и
   // «стаж не указан» доверия не добавляют, а место занимают.
   const cells = [];
-  if(t.years != null && t.years > 0){
-    cells.push([t.years, appLocale === 'ru'
-      ? plural(t.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
-      : t(t.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
+  if(trainerData.years != null && trainerData.years > 0){
+    cells.push([trainerData.years, appLocale === 'ru'
+      ? plural(trainerData.years, t('trainer.experienceOne'), t('trainer.experienceFew'), t('trainer.experienceMany'))
+      : t(trainerData.years === 1 ? 'trainer.experienceOne' : 'trainer.experienceFew')]);
   }
-  if(t.programs > 0){
-    cells.push([t.programs, appLocale === 'ru'
-      ? plural(t.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
-      : t(t.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
+  if(trainerData.programs > 0){
+    cells.push([trainerData.programs, appLocale === 'ru'
+      ? plural(trainerData.programs, t('trainer.programOne'), t('trainer.programFew'), t('trainer.programMany'))
+      : t(trainerData.programs === 1 ? 'trainer.programOne' : 'trainer.programFew')]);
   }
-  if(t.opens > 0){
-    cells.push([t.opens, t(t.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
+  if(trainerData.opens > 0){
+    cells.push([trainerData.opens, t(trainerData.opens === 1 ? 'trainer.opensOne' : 'trainer.opensMany')]);
   }
-  if(t.since){
-    const d = daysSince((t.since || '').slice(0, 10));
+  if(trainerData.since){
+    const d = daysSince((trainerData.since || '').slice(0, 10));
     if(d != null){
       const m = Math.floor(d / 30);
       cells.push(m >= 1
@@ -1175,7 +1175,7 @@ function fillTrainerPage(nick, t){
     $('tpStats').appendChild(el);
   });
 
-  const link = (t.links || '').trim();
+  const link = (trainerData.links || '').trim();
   setShown('tpLinkCard', !!link);
   if(link){
     $('tpLink').href = /^https?:/.test(link) ? link : 'https://' + link;
