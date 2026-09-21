@@ -273,7 +273,7 @@ function renderWeekStrip(){
     else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
     else if(d.debt) mark = '<i class="ws-debt"></i>';
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
-    cell.innerHTML = `<b>${d.name}</b>` + mark;
+    cell.innerHTML = `<b>${canonicalLabel(d.name)}</b>` + mark;
     cell.onclick = ()=> openWeekDay(d);
     box.appendChild(cell);
   });
