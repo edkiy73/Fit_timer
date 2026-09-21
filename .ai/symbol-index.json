@@ -329,8 +329,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2395,
-      "chars": 109392,
+      "lines": 2389,
+      "chars": 109057,
       "symbols": [
         "ageError",
         "aiAuth",
@@ -520,8 +520,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2005,
-      "chars": 93912,
+      "lines": 2004,
+      "chars": 93753,
       "symbols": [
         "aiChoiceEnglish",
         "aiListEnglish",
