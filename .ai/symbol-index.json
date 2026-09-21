@@ -797,7 +797,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 187,
-      "chars": 10488,
+      "chars": 10612,
       "ids": [
         "btnExit",
         "btnMicW",
@@ -865,7 +865,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 617,
-      "chars": 39862,
+      "chars": 39961,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1120,7 +1120,7 @@
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 133,
-      "chars": 7936,
+      "chars": 8087,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1184,7 +1184,7 @@
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
       "lines": 218,
-      "chars": 17756,
+      "chars": 18127,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
@@ -1205,7 +1205,7 @@
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 378,
-      "chars": 22445,
+      "chars": 23567,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1341,7 +1341,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 611,
-      "chars": 36889,
+      "chars": 40611,
       "ids": [
         "addExModal",
         "aemAI",
