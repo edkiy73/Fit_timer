@@ -3279,8 +3279,56 @@ ${exerciseSchema(outputLanguage)}`;
     '- Return only the protocol.'
   ].join('\n\n');
 
+  function normalizeResponse(raw){
+    return String(raw == null ? '' : raw).trim()
+      .replace(/^\`\`\`(?:text|txt|markdown)?\s*/i, '')
+      .replace(/\s*\`\`\`$/,'')
+      .trim();
+  }
+
+  function validateExerciseResponse(raw, opts){
+    const text = normalizeResponse(raw);
+    const blocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).map(x=>x.trim()).filter(Boolean);
+    const required = ['УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
+    const missing = [];
+    blocks.forEach((block, i) => required.forEach(label => {
+      if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
+    }));
+    const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
+    const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
+    const countOk = blocks.length >= min && blocks.length <= max;
+    return {ok: !!blocks.length && !missing.length && countOk, text, missing, count:blocks.length,
+      reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
+  }
+
+  function validateProgramResponse(raw){
+    const text = normalizeResponse(raw);
+    const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
+    const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
+    const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
+    const days = (text.match(/(?:^|\n)ДЕНЬ:/g) || []).length;
+    return {ok: !missing.length && exercises > 0 && days > 0, text, missing,
+      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : ''))};
+  }
+
+  function validateResponse(kind, raw){
+    if(String(kind || '').startsWith('image.')){
+      const image = String(raw == null ? '' : raw).trim();
+      return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
+        text:image, missing:[], reason:'bad_image'};
+    }
+    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10});
+    if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
+    if(/^(?:program\.(?:create|modify)|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
+    return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
+  }
+
   const api = {
     OPTIONAL_EXERCISE_LABELS,
+    normalizeResponse,
+    validateExerciseResponse,
+    validateProgramResponse,
+    validateResponse,
     machineLanguageRules,
     progressionRules,
     exerciseSchema,
@@ -5343,9 +5391,13 @@ const syncUser = u => ({
 });
 const remoteWins = (remote, local) => {
   if(!local) return true;
-  const a = Date.parse(remote.at || '') || 0, b = Date.parse(local.at || '') || 0;
-  if(a !== b) return a > b;
-  return String(remote.deviceId || '') > String(local.deviceId || '');
+  const rr = Math.max(0, +(remote && remote.rev) || 0);
+  const lr = Math.max(0, +(local && local.rev) || 0);
+  if(rr !== lr) return rr > lr;
+  // Одинаковая ревизия от другого устройства означает одновременное изменение
+  // одной базы. Сервер уже сериализует такие push и возвращает принятую версию;
+  // время телефона здесь намеренно не участвует.
+  return String(remote.deviceId || '') !== String(local.deviceId || '');
 };
 const parsed = (raw, fallback) => { try{ return raw == null ? fallback : JSON.parse(raw); }catch(e){ return fallback; } };
 
@@ -6742,6 +6794,7 @@ const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmu
                       'trainer', 'clients'];
 const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
+                     'recognitionLang', 'recognitionLangManual', 'voiceLang', 'voiceLangManual',
                      'voiceHint', 'voiceURI',
                      'wantSvg']; // wantSvg больше не пишется — строка нужна, чтобы стереть его у тех, кто успел его сохранить
 
@@ -6983,10 +7036,8 @@ function renderPremium(){
 
 // Тариф на «Аккаунте», данные аккаунта и баннер на главной — одно состояние,
 // показанное в трёх местах, поэтому и обновляются они одной функцией.
-/* Версия приложения. Правится ВМЕСТЕ с номером кэша в sw.js — это про одно и то
-   же: какая сборка сейчас у человека на телефоне. Дата и короткое имя правки, а не
-   номер: номер сам по себе не говорит ничего, а «я вижу 17 сентября» отвечает на
-   вопрос сразу. */
+/* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
+   какая сборка сейчас у человека на телефоне. */
 const BUILD = '20.09 · v22';
 function renderBuild(){
   const el = $('buildLine');
@@ -9207,7 +9258,7 @@ function isNetworkFail(e){
 function networkFailMessage(){
   const isFile = location.protocol === 'file:';
   let m = 'Запрос не дошёл до Google — это сетевая ошибка, а не отказ ключа.\n\nВероятные причины:\n';
-  if(isFile) m += '• Приложение открыто как файл с диска (file://). Из такого режима браузер запрещает запросы к сторонним серверам — открой приложение по адресу http/https или установи как PWA.\n';
+  if(isFile) m += '• Приложение открыто как файл с диска (file://). Из такого режима браузер запрещает запросы к сторонним серверам — открой приложение по адресу http/https.\n';
   m += '• Нет интернета или он пропал в момент запроса.\n' +
        '• Домен generativelanguage.googleapis.com недоступен у твоего провайдера или в регионе — в этом случае поможет VPN.\n' +
        '• Запрос режет расширение браузера (блокировщик рекламы, антитрекер) — попробуй отключить их для этой страницы.\n\n' +
@@ -9752,6 +9803,11 @@ function imageStaticExercise(item){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
+function imageLocalMotionExercise(item){
+  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
+  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
+}
+
 function imageProgramContext(){
   const parts = [
     draft && draft.goal, draft && draft.cat, draft && draft.category,
@@ -9779,28 +9835,76 @@ function imageCoverTone(context){
   return {tone:'Fit Timer violet and purple', mood:'balanced, premium, modern'};
 }
 
+
+function imageMuscleRegions(item){
+  const exercise = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
+  const labels = (item && item.muscles || []).map(x => String(x || '').trim()).filter(Boolean);
+  const out = [];
+  const add = text => { if(text && !out.includes(text)) out.push(text); };
+  labels.forEach(label => {
+    const raw = label.toLowerCase();
+    const en = String(aiCanonicalEnglish(label) || '').toLowerCase();
+    const key = raw + ' ' + en;
+    if(/ягод|glute/.test(key)) add('gluteus maximus on both sides');
+    else if(/квадриц|quadriceps/.test(key)) add('quadriceps on both legs');
+    else if(/задн.*бед|hamstring/.test(key)) add('hamstrings on both legs');
+    else if(/икр|calves|calf/.test(key)) add('calf muscles on both legs');
+    else if(/груд|chest/.test(key)) add('pectoralis major on both sides of the chest');
+    else if(/плеч|shoulder/.test(key)) add('deltoid muscles on both shoulders');
+    else if(/пресс|core|abs|abdom/.test(key)) add('rectus abdominis and obliques on both sides of the core');
+    else if(/рук|arms/.test(key)){
+      if(/бицепс|biceps? curl|hammer curl|сгибан.*рук/.test(exercise)){
+        add('biceps brachii on both upper arms');
+        add('brachialis on both upper arms');
+        add('brachioradialis on both forearms');
+      } else if(/трицепс|triceps? extension|разгибан.*рук/.test(exercise)){
+        add('triceps brachii on both upper arms');
+      } else add('upper-arm muscles on both arms');
+    }
+    else if(/шея|neck/.test(key)) add('neck stabilizer muscles on both sides');
+    else if(/спин|back/.test(key)){
+      if(/присед|squat|станов|deadlift|румын|romanian|наклон|good morning|hip hinge/.test(exercise))
+        add('lower back / spinal erectors on both sides');
+      else
+        add('latissimus dorsi and mid-back muscles on both sides');
+    } else add(aiCanonicalEnglish(label));
+  });
+  return out;
+}
+
+function imageCharacterStyle(genderTxt){
+  return genderTxt === 'man'
+    ? 'lifelike male athlete, natural skin tone, attractive masculine face, strong athletic physique'
+    : 'lifelike female athlete, natural skin tone, beautiful feminine face, fit athletic physique';
+}
+
 function exerciseImagePrompt(item, genderTxt){
   const equipment = imageEquipment(item);
   const isStatic = imageStaticExercise(item);
-  const muscles = item && item.muscles && item.muscles.length
-    ? `Highlight ONLY these main working muscles with a clear Fit Timer violet glow: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`
-    : 'Highlight only the primary working muscles with a restrained Fit Timer violet glow.';
-
+  const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
+  const regions = imageMuscleRegions(item);
+  const muscles = regions.length ? regions.join(', ') : 'only the primary working muscles required by this movement';
+  const motion = isStatic
+    ? 'Show ONE clear final pose only. No ghost pose or movement trail.'
+    : isLocalMotion
+      ? 'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
+      : 'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
   return [
     `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
-    'VISUAL SYSTEM: premium stylized-realistic 3D anatomy, neutral graphite-gray athlete, dark graphite background with restrained violet atmosphere. Use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) for functional accents. Do not use orange muscle highlights.',
-    `Character: ${genderTxt}. Keep a clean athletic appearance and believable human proportions.`,
-    item.desc ? `Technique context: ${item.desc}` : null,
+    `Style: premium stylized-realistic 3D, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, polished high-end rendering.`,
+    'Background: premium modern gym with depth and good lighting, softly blurred and secondary; avoid flat gray studio backgrounds.',
+    'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
+    item.desc ? `Technique: ${item.desc}` : null,
     equipment.length
-      ? `Required equipment: ${equipment.join(', ')}. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.`
-      : 'Do not invent equipment that is not required by this movement.',
-    isStatic
-      ? 'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      : 'Show TWO temporal phases of THE SAME athlete in one coherent scene: a solid main pose and a secondary semi-transparent ghost pose for the other endpoint of the movement. They are not two different people. Add one or two clean lavender-violet arrows that clearly show the movement direction. Do not use split-screen panels.',
-    muscles,
-    'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
-    'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
-    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, borders, collage or watermarks.'
+      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position in every visible phase.`
+      : 'Do not invent equipment that the exercise does not require.',
+    motion,
+    !isStatic && !isLocalMotion ? 'Add one or two small violet-lavender arrows showing movement direction.' : null,
+    `Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: ${muscles}.`,
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
+    'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
+    'No extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, collage, borders or watermarks.'
   ].filter(Boolean).join('\n');
 }
 
@@ -9810,15 +9914,17 @@ function coverImagePrompt(name, genderTxt){
   const exercises = uniqueProgramExercises().slice(0, 8).map(x => x.name).join(', ');
   return [
     `Create a square 1:1 premium catalog cover for the fitness program "${name}".`,
-    'This is a PROGRAM COVER, not an exercise instruction. Do not show start/end poses, ghost figures or movement arrows.',
-    'Use the same Fit Timer visual family as every other cover: premium stylized-realistic 3D, dark graphite base, polished studio lighting, clean depth, one hero athlete, uncluttered composition, consistent rendering quality.',
-    `Character: ${genderTxt}. Make the athlete the clear focal point and keep a consistent catalog-ready scale and composition.`,
+    'This is a PROGRAM COVER, not an exercise instruction. Create one bold, simple hero image that reads instantly at small thumbnail size.',
+    'COMPOSITION: full-bleed edge-to-edge artwork. Absolutely no inset square, inner card, picture frame, border, outline, vignette frame or mockup-within-a-mockup. The artwork itself must fill the entire 1:1 canvas.',
+    'Use one large hero athlete as the dominant subject, occupying roughly 65-80% of the frame. Prefer a close or medium-wide athletic composition over a distant full gym scene. Keep only one or two large supporting elements; avoid tiny weights, racks, plates and decorative detail that disappears in the catalog.',
+    'VISUAL STYLE: premium cinematic stylized-realistic 3D, natural skin tone, realistic sportswear, polished directional lighting, subtle depth and a modern gym atmosphere. Avoid gray mannequin/anatomy-model styling.',
+    `Character: ${genderTxt}. Make the pose energetic and aspirational, but not an exercise diagram.`,
     `Program context: ${context || name}.`,
     exercises ? `Representative exercises: ${exercises}.` : null,
-    `Goal-specific atmosphere: ${palette.tone}. Mood: ${palette.mood}. Keep a subtle Fit Timer violet (#7C56F5) accent in every category so all covers still belong to one brand.`,
-    'Choose a pose, relevant equipment and environment that communicate the overall purpose of the program rather than illustrating one exact exercise.',
-    'The cover must remain recognizable and attractive as a small square catalog thumbnail.',
-    'No text, letters, numbers, labels, logos, arrows, UI, collage, split-screen or watermarks.'
+    `Goal-specific atmosphere: ${palette.tone}. Mood: ${palette.mood}. Keep one restrained Fit Timer violet (#7C56F5) rim-light or environmental accent so every category still belongs to the same brand.`,
+    'The goal color should come mainly from the background light and atmosphere, not from tinting the athlete skin.',
+    'Use a softly blurred, simplified gym background with broad shapes and depth. The athlete must remain much more important than the environment.',
+    'No instructional arrows, no ghost poses, no muscle heat-map, no text, letters, numbers, labels, logos, UI, collage, split-screen, frames, borders, corner icons, badges, decorative sparkles, stars or watermarks.'
   ].filter(Boolean).join('\n');
 }
 
@@ -10241,6 +10347,33 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
+function aiClientVerdict(kind, raw, opts){
+  const verdict = FitAIProtocol.validateResponse(kind, raw);
+  if(!verdict.ok){
+    const miss = (verdict.missing || []).slice(0,6).join(', ');
+    appAlert(MSG_AI_PARSE + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
+    return null;
+  }
+  if(opts && opts.expectedCount != null && verdict.count != null && verdict.count !== opts.expectedCount){
+    appAlert(MSG_AI_PARSE);
+    return null;
+  }
+  return verdict.text;
+}
+
+function sameProgramShape(a, b){
+  const ap = normPlans(a), bp = normPlans(b);
+  if(ap.length !== bp.length) return false;
+  for(let i=0;i<ap.length;i++){
+    const ae=(ap[i].exercises||[]), be=(bp[i].exercises||[]);
+    if(ae.length !== be.length) return false;
+    for(let j=0;j<ae.length;j++){
+      if(String(ae[j].name||'').trim().toLowerCase() !== String(be[j].name||'').trim().toLowerCase()) return false;
+    }
+  }
+  return true;
+}
+
 function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
@@ -10275,6 +10408,7 @@ async function applyExEdit(){
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
   const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
@@ -10369,8 +10503,10 @@ function exaPrompt(){
 async function exaAddExercise(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  const checkedRaw = aiClientVerdict('exercise.create', raw);
+  if(!checkedRaw) return;
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
-  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
+  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checkedRaw;
   const {program, errors} = parseProgramText(wrapped);
   const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
   if(!list.length){
@@ -10547,12 +10683,17 @@ async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const wish = clampText($('eaWish').value, LIM.wish);
-  const safeRaw = aiStructureChangeRequested(wish)
-    ? raw
-    : aiMergeProgramEdit(programToText(editAIProg), raw);
-  const {program, errors} = parseProgramText(safeRaw);
+  const structural = aiStructureChangeRequested(wish);
+  const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
+  const checkedRaw = aiClientVerdict('program.modify', safeRaw);
+  if(!checkedRaw) return;
+  const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
+    return;
+  }
+  if(!structural && !sameProgramShape(editAIProg, program)){
+    appAlert(MSG_AI_PARSE);
     return;
   }
   program.id = 'p' + Date.now();
@@ -10700,8 +10841,7 @@ async function apiFetch(path, opts){
   const ctl = new AbortController();
   const t = setTimeout(()=> ctl.abort(), wait);
   try{
-    // cache: 'no-store' — второй рубеж к тому же правилу, что и в sw.js: ответы
-    // сервера живут минуты и кэшироваться не должны ни на одном уровне.
+    // Ответы API краткоживущие и не должны кэшироваться браузером.
     const res = await fetch(API_BASE + path,
       Object.assign({signal: ctl.signal, cache: 'no-store'}, cfg));
     const data = await res.json().catch(()=> ({}));
@@ -11269,7 +11409,7 @@ async function pullProgram(pr){
   let d;
   try{
     // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
-    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
+    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}`, {headers:{'X-Fit-Link-Key':pr.link.key}});
   }catch(e){
     pr.err = t(PULL_ERR[e && e.code] || 'clients.pullOffline');
     return false;
@@ -11467,7 +11607,7 @@ function autoReport(p){
   let rep;
   try{ rep = buildReport(p); }catch(e){ return; }
   if(!rep.n) return;
-  apiPost('/api/report', {link: p.src, report: rep}).catch(()=>{});
+  apiPost('/api/report', Object.assign({link: p.src, report: rep}, accountAuth())).catch(()=>{});
 }
 
 /* ================= КАТАЛОГ ПРОГРАММ =================
@@ -15149,8 +15289,10 @@ async function swapViaAI(){
     return;
   }
   aiRunClose();
+  const checked = aiClientVerdict('exercise.replace', text, {expectedCount:1});
+  if(!checked) return;
   // разбираем ответ тем же парсером, что и обычный импорт — обёртка даёт ему минимальную программу
-  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + text);
+  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checked);
   const got = (program.plans[0] && program.plans[0].exercises[0]) || null;
   if(!got || !(got.name || '').trim()){
     appAlert(t('workout.aiNoExercise'));
@@ -16179,14 +16321,7 @@ document.addEventListener('visibilitychange', ()=>{
 // проверяем раз в 20 секунд: не пора ли напомнить о тренировке
 const notifiedKeys = new Set();
 async function showNotification(title, body){
-  try{
-    const reg = ('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null;
-    if(reg && reg.showNotification){
-      reg.showNotification(title, {body, icon:'icon-192.png', badge:'icon-192.png', tag:'fittimer'});
-      return;
-    }
-  }catch(e){}
-  try{ new Notification(title, {body, icon:'icon-192.png'}); }catch(e){}
+  try{ new Notification(title, {body, tag:'fittimer'}); }catch(e){}
 }
 function checkSchedules(){
   if(document.hidden) return;
@@ -17626,7 +17761,10 @@ async function ytCopyPrompt(){
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const {program, errors} = parseProgramText(raw);
+  const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
+  const checked = aiClientVerdict(kind, raw);
+  if(!checked) return;
+  const {program, errors} = parseProgramText(checked);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
@@ -18489,7 +18627,3 @@ try{
   }
 })();
 
-// PWA: service worker (работает только при открытии с хостинга по https)
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
-}
