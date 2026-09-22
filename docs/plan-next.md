@@ -26,14 +26,17 @@
    - non-structural program edits не могут молча менять shape;
    - regression tests включены в CI.
 
-4. 🚧 **Account deletion / privacy audit**
+4. ✅ **Account deletion / privacy audit**
    - проверить все Redis keys/indexes/logs/device tokens;
    - убедиться, что delete account удаляет personal data и отзывает tokens;
    - catalog publications должны переживать удаление trainer personal data;
    - проверить retention AI/notification/auth diagnostics;
    - проверить локальные persisted keys и cleanup lists.
+   - account indexes, auth traces, AI usage/logs, campaign cooldowns and trainer-link claims are purged;
+   - authenticated trainer reports are tagged server-side and removed with account deletion;
+   - anonymous legacy reports remain link-scoped and are not guessed by name.
 
-5. **Push / notifications production verification**
+5. 🚧 **Push / notifications production verification**
    - проверить реальные Firebase credentials и Android delivery;
    - проверить APNs release configuration перед iOS release;
    - end-to-end: register → send → open action → invalid-token cleanup;
