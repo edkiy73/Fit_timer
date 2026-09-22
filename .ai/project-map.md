@@ -95,6 +95,8 @@ Shared backend modules:
 - `lib/seed.js` — seed/catalog data.
 - `lib/ai.js` — AI provider/runtime logic.
 - `lib/ai-endpoint.js` — AI endpoint orchestration.
+- `lib/analytics.js` — anonymous product funnel and retention milestones.
+- `lib/diagnostics.js` — redacted client error aggregation.
 
 Rule: helper modules go in `lib/`, not `api/`, because every API JS file can become a Vercel function.
 
@@ -142,6 +144,8 @@ Current Capacitor dependencies include App, Filesystem, Haptics, Local Notificat
 | navigation | `tests/nav-flow.js` |
 | programs | `tests/program-actions.js`, `tests/start-overview.js` |
 | AI | `tests/ai-api.js`, `docs/ai-runtime.md` |
+| analytics | `tests/analytics-unit.js`, `tests/analytics-api.js` |
+| diagnostics | `tests/diagnostics-unit.js` |
 | mobile shell | `npm run build`, `npm run check:mobile` |
 | broad invariants | `python3 check.py` |
 
