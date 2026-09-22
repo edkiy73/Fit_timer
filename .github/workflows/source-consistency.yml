@@ -16,14 +16,15 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Собрать исходники и проверить их
+      - name: Проверить canonical/generated consistency
         run: |
-          npm run build:sources
-          npm run ai:index
+          npm run check:sources
+          npm run check:ai-index
           npm run i18n:check
+          npm run build:sources
           node --check app.js
-          node --check api/sync.js
-          node --check lib/store.js
+          find api lib tests -name '*.js' -print0 | xargs -0 -n1 node --check
+          find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
           python3 check.py
 
       - name: Проверить серверную синхронизацию
