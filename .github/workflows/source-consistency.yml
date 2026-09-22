@@ -10,6 +10,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - name: Node.js 22
@@ -27,7 +28,7 @@ jobs:
           find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
           python3 check.py
 
-      - name: Проверить серверную синхронизацию
+      - name: Проверить серверные regression-сценарии
         run: |
           node tests/dev-server.js 8124 > /tmp/fittimer-test-server.log 2>&1 &
           SERVER_PID=$!
