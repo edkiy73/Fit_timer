@@ -75,6 +75,7 @@ const I18N_EN = {
   'common.headset': "Headset",
   'common.download': "Download",
   'common.checking': "Checking…",
+  'common.back': 'Back',
   'common.actions': "Actions",
   'common.manual': "Manual",
   'common.viaAI': "With AI",
