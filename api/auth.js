@@ -34,7 +34,7 @@
 const { store } = require('../lib/store');
 const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('../lib/util');
 const { sendMail } = require('../lib/mail');
-const { recordAnalytics } = require('../lib/analytics');
+const { recordAnalytics, removeAnalyticsDevice } = require('../lib/analytics');
 const { recordClientError } = require('../lib/diagnostics');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
@@ -133,6 +133,7 @@ async function forget(req, res, body){
       const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
       if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
       await store.del(`a:${mh}`);
+      try{ await removeAnalyticsDevice(deviceId); }catch(_){}
       await store.del(`a:indexed:${mh}`);
       await store.removeFromList('a:all', mh);
 
@@ -527,6 +528,17 @@ module.exports = async (req, res) => {
 
     if(acc.handle) await store.set(`h:${acc.handle}`, mh);
     await store.set(`a:${mh}`, JSON.stringify(acc));
+    if(fresh && deviceId){
+      try{
+        await recordAnalytics({
+          event:'account_created',
+          deviceId,
+          platform:(body&&body.platform)||'web',
+          locale:acc.locale||'ru',
+          premium:false
+        });
+      }catch(_){}
+    }
     // Индекс нужен только для серверных рассылок. Сам адрес всё равно хранится
     // внутри защищённой записи аккаунта; наружу список не отдаётся.
     if(!(await store.get(`a:indexed:${mh}`))){
