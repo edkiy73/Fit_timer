@@ -504,13 +504,14 @@ async function syncNativeNotifications(){
     }catch(_){}
   }
 
-  // Возврат после паузы: интервалы привязаны к последней реальной тренировке, а не
-  // к моменту открытия приложения. Открытие приложения в день напоминания гасит его.
+  // Возврат после паузы: максимум три мягких касания — через 3, 7 и 14 дней.
+  // После двух недель не продолжаем догонять человека уведомлениями. Интервалы
+  // привязаны к последней реальной тренировке, а не к моменту открытия приложения.
   if(prefs.workouts !== false && (stats.history || []).length){
     const last = (stats.history || []).filter(h=>h && h.d).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
     if(last){
       const base = new Date(last.d + 'T12:00:00');
-      [3,7,14,30].forEach(days => {
+      [3,7,14].forEach(days => {
         const day = new Date(base); day.setDate(day.getDate() + days);
         const at = notifyAt(day, 19, 0);
         if(notifyDayKey(day) === notifyDayKey(now)) return; // приложение уже открыто сегодня
