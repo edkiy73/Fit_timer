@@ -3,6 +3,21 @@ name: Android — проверка и сборка
 on:
   push:
     branches: [main]
+    paths: &mobile_paths
+      - 'android/**'
+      - 'scripts/build-web.mjs'
+      - 'scripts/check-mobile.mjs'
+      - 'src/**'
+      - 'app.js'
+      - 'style.css'
+      - 'index.html'
+      - 'mobile.js'
+      - 'app.config.js'
+      - 'assets/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       version_code:
@@ -14,19 +29,7 @@ on:
         required: true
         default: "1.0.0"
   pull_request:
-    paths: &mobile_paths
-      - 'android/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'app.js'
-      - 'style.css'
-      - 'index.html'
-      - 'mobile.js'
-      - 'app.config.js'
-      - 'capacitor.config.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/android.yml'
+    paths: *mobile_paths
 
 permissions:
   contents: write
