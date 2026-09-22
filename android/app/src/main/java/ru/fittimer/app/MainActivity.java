@@ -1,6 +1,7 @@
 package ru.fittimer.app;
 
-import android.os.Bundle;\nimport android.content.res.Configuration;
+import android.os.Bundle;
+import android.content.res.Configuration;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
