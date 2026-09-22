@@ -1041,7 +1041,7 @@ $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
-  await finishOnboardingCreate();
+  const freshProfile = await finishOnboardingCreate();
   trackProductEvent('onboarding_complete').catch(()=>{});
   if(pendingImport){
     importProgramCode(pendingImport);
@@ -1060,7 +1060,11 @@ async function leaveOnboarding(){
     importProgramLink(id);
     return;
   }
-  goTab('scrMenu');
+  // Новый пользователь уже выразил намерение начать тренировку. Не заставляем его
+  // сначала попадать на пустую «Сегодня», а ведём туда, где можно сразу выбрать
+  // готовую программу, собрать свою или открыть разминку. После входа в существующий
+  // аккаунт оставляем привычную главную — там уже есть личный план и история.
+  goTab(freshProfile ? 'scrPrograms' : 'scrMenu');
 }
 $('obStart').onclick = ()=> leaveOnboarding();
 // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
