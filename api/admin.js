@@ -73,6 +73,11 @@ function imageStaticExercise(name, description){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
+function imageLocalMotionExercise(name, description){
+  const s=(String(name||'')+' '+String(description||'')).toLowerCase();
+  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
+}
+
 function adminMuscleRegions(meta){
   const exercise=(String(meta.name||'')+' '+String(meta.description||'')).toLowerCase();
   const out=[];
@@ -86,7 +91,15 @@ function adminMuscleRegions(meta){
     else if(/груд|chest/.test(key)) add('pectoralis major on both sides of the chest');
     else if(/плеч|shoulder/.test(key)) add('deltoid muscles on both shoulders');
     else if(/пресс|core|abs|abdom/.test(key)) add('rectus abdominis and obliques on both sides of the core');
-    else if(/рук|arms/.test(key)) add('upper-arm muscles on both arms');
+    else if(/рук|arms/.test(key)){
+      if(/бицепс|biceps? curl|hammer curl|сгибан.*рук/.test(exercise)){
+        add('biceps brachii on both upper arms');
+        add('brachialis on both upper arms');
+        add('brachioradialis on both forearms');
+      } else if(/трицепс|triceps? extension|разгибан.*рук/.test(exercise)){
+        add('triceps brachii on both upper arms');
+      } else add('upper-arm muscles on both arms');
+    }
     else if(/шея|neck/.test(key)) add('neck stabilizer muscles on both sides');
     else if(/спин|back/.test(key)){
       if(/присед|squat|станов|deadlift|румын|romanian|наклон|good morning|hip hinge/.test(exercise))
@@ -105,6 +118,8 @@ function adminImageCharacterStyle(gender){
 
 function adminExerciseImagePrompt(meta){
   const equipment=imageEquipment(meta.name,meta.description);
+  const isStatic=imageStaticExercise(meta.name,meta.description);
+  const isLocalMotion=!isStatic&&imageLocalMotionExercise(meta.name,meta.description);
   const regions=adminMuscleRegions(meta);
   const muscleLines=regions.length
     ? ['Highlight ONLY these exact muscle regions:'].concat(regions.map(x=>'- '+x)).join(' ')
@@ -120,10 +135,14 @@ function adminExerciseImagePrompt(meta){
     'BRAND ACCENTS: use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents. Do NOT use violet for muscle highlighting.',
     meta.description?'Technique context: '+meta.description:null,
     equipment.length?'Required equipment: '+equipment.join(', ')+'. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.':'Do not invent equipment that is not required by this movement.',
-    imageStaticExercise(meta.name,meta.description)
+    isStatic
       ?'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      :'Show exactly TWO temporal depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. They must read as ONE person moving through the exercise, not two people standing side by side. Keep the ghost spatially close to and partially overlapping the main figure whenever possible. Align body parts that do not move; visibly offset mainly the joints, limbs and equipment that actually change position. For small single-joint movements such as curls or extensions, keep torso, head and legs nearly aligned and let the moving arms/forearms and equipment carry most of the ghost displacement. For large compound movements, allow only the minimum full-body offset needed to show the two endpoints clearly. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary, visually lighter and less dominant than the main figure. Do not compose the two phases as separate side-by-side portraits.',
-    imageStaticExercise(meta.name,meta.description)?null:'Add one or two clean violet-lavender arrows showing the movement direction.',
+      :isLocalMotion
+        ?'Show ONE full athlete only. Do NOT draw a second full person, second torso, second head or second pair of legs. Show the other endpoint of the movement only as a subtle semi-transparent motion overlay of the MOVING LIMBS and the SAME equipment: for a curl, duplicate only the forearms/hands/dumbbells (and only the minimum upper-arm motion if necessary). The torso, head, hips and legs must appear exactly once. The motion overlay must stay attached to the main body at the correct joints and clearly read as a motion trail, not another person.'
+        :'Show exactly TWO temporal depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. They must read as ONE person moving through the exercise, not two people standing side by side. Keep the ghost spatially close to and partially overlapping the main figure whenever possible. Align body parts that do not move; visibly offset mainly the joints, limbs and equipment that actually change position. For large compound movements, allow only the minimum full-body offset needed to show the two endpoints clearly. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary, visually lighter and less dominant than the main figure. Do not compose the two phases as separate side-by-side portraits.',
+    isStatic?null:(isLocalMotion
+      ?'Add one small clean violet-lavender curved arrow near each moving limb only. Do not place large arrows across the torso.'
+      :'Add one or two clean violet-lavender arrows showing the movement direction.'),
     muscleLines,
     'Do not highlight any other muscles.',
     'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
