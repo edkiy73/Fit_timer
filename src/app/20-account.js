@@ -310,6 +310,50 @@ function money(v, cur){
   }catch(e){ return v + ' ' + cur; }
 }
 const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
+
+let APP_UPDATE = null;
+async function openAndroidUpdate(){
+  if(!APP_UPDATE || !APP_UPDATE.url) return false;
+  if(window.FitNative && window.FitNative.openExternal){
+    const ok = await window.FitNative.openExternal(APP_UPDATE.url);
+    if(ok) return true;
+  }
+  return false;
+}
+async function applyAndroidUpdateConfig(raw){
+  const banner=$('appUpdateBanner'),gate=$('appUpdateGate');
+  if(banner) banner.classList.add('hidden');
+  if(gate) gate.classList.add('hidden');
+  APP_UPDATE=null;
+  if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
+  if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
+
+  const latest=Math.max(0,Math.round(+raw.latestCode||0));
+  const minimum=Math.max(0,Math.round(+raw.minimumCode||0));
+  if(!latest || !raw.url) return;
+  const info=await window.FitNative.getAppInfo();
+  const current=Math.max(0,Math.round(+(info&&info.build)||0));
+  if(!current || current>=latest) return;
+
+  const required=minimum>0 && current<minimum;
+  const suffix=raw.latestName ? ' · '+String(raw.latestName) : '';
+  const custom=(appLocale==='en' ? raw.messageEn : raw.messageRu) || '';
+  APP_UPDATE={url:String(raw.url),latest,minimum,current,required};
+
+  if(required){
+    if($('appUpdateGateTitle')) $('appUpdateGateTitle').textContent=t('update.requiredTitle',{version:suffix});
+    if($('appUpdateGateText')) $('appUpdateGateText').textContent=custom||t('update.requiredText');
+    if($('appUpdateNow')) $('appUpdateNow').onclick=()=>openAndroidUpdate();
+    if(gate) gate.classList.remove('hidden');
+    return;
+  }
+  if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle',{version:suffix});
+  if($('appUpdateText')) $('appUpdateText').textContent=custom||t('update.availableText');
+  if(banner){
+    banner.onclick=()=>openAndroidUpdate();
+    banner.classList.remove('hidden');
+  }
+}
 async function loadPublicConfig(){
   try{
     const res = await fetch(API_BASE + '/api/config', {cache:'no-store'});
@@ -317,6 +361,7 @@ async function loadPublicConfig(){
     const cfg = await res.json();
     if(cfg && cfg.prices && cfg.prices.USD) REMOTE_PRICES = cfg.prices;
     renderPlan(); renderPremium();
+    await applyAndroidUpdateConfig(cfg && cfg.update && cfg.update.android);
   }catch(e){}
 }
 function planUntil(plan, from){
