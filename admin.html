@@ -584,38 +584,30 @@ function render(){
 }
 
 function renderCatalog(b){
-  const pending = tab === 'pending';
-  const list = (pending ? data.pending : data.approved).slice().reverse();
-  b.innerHTML = pageHead(
-    pending ? 'На проверке' : 'Каталог',
-    pending ? 'Проверяй локализации и принимай программы без раскрытия каждой карточки.' : 'Опубликованные программы, доступ и быстрые действия.',
-    !pending ? '<button class="b ok" id="catalogAdd">+ Добавить</button>' : ''
+  const pending=tab==='pending';
+  const list=(pending?data.pending:data.approved).slice().reverse();
+  b.innerHTML=pageHead(
+    pending?'На проверке':'Каталог',
+    pending?'Заявки тренеров: локализации, доступ и модерация.':'Опубликованные программы и доступ Premium.',
+    !pending?'<button class="b ok" id="catalogAdd">+ Добавить</button>':''
   );
-  if(!pending) $('catalogAdd').onclick=()=>setTab('add');
+  if(!pending)$('catalogAdd').onclick=()=>setTab('add');
   if(!list.length){
-    b.insertAdjacentHTML('beforeend', `<div class="empty">${pending
-      ? 'Новых заявок нет.'
-      : 'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`);
-    const sd=$('seed'); if(sd) sd.onclick=()=>act('seed',{});
+    b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`);
+    const sd=$('seed');if(sd)sd.onclick=()=>act('seed',{});
     return;
   }
-  b.insertAdjacentHTML('beforeend', `
-    <div class="toolbar">
-      <div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div>
-      <span class="status-chip">${list.length} шт.</span>
-    </div>
-    <div class="table-shell"><table class="data-table">
-      <thead><tr><th></th><th>Программа</th><th>Автор</th><th>Параметры</th><th>Языки</th><th>Доступ</th><th></th></tr></thead>
-      <tbody id="catalogRows"></tbody>
-    </table></div>`);
-  const body=$('catalogRows');
+  b.insertAdjacentHTML('beforeend',`
+    <div class="toolbar"><div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div><span class="status-chip">${list.length} шт.</span></div>
+    <div class="entity-grid" id="catalogCards"></div>`);
+  const box=$('catalogCards');
+
   list.forEach(item=>{
     const ready=localeReady(item,'ru')&&localeReady(item,'en');
-    const tr=document.createElement('tr');
-    tr.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
-    const cover=item.cover
-      ? `<img class="cell-cover" src="${esc(item.cover)}" alt="">`
-      : '<span class="cell-cover empty">FIT</span>';
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
+    const cover=item.cover?`<img class="catalog-cover" src="${esc(item.cover)}" alt="">`:'<span class="catalog-cover empty">FIT</span>';
     const menu=pending
       ? `<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
           <button data-act="edit">Проверить и изменить</button>
@@ -629,32 +621,48 @@ function renderCatalog(b){
           <button class="danger" data-act="remove">Убрать из каталога</button>
           ${item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':''}
         </div></details>`;
-    tr.innerHTML=`
-      <td class="td-cover">${cover}</td>
-      <td class="td-primary"><div class="cell-main">${esc(item.name||'Без названия')}</div><div class="cell-sub">${esc(item.gives||'').slice(0,90)}</div></td>
-      <td data-label="Автор">${item.by?`<button class="who" type="button" data-trainer="${esc(item.by)}">${esc(item.by)}</button>`:'<span class="muted">Fit Timer</span>'}</td>
-      <td data-label="Параметры"><div>${esc(goalName(item.cat))}</div><div class="cell-sub">${esc(item.level)} · ${esc(item.min)} мин · ${item.exCount||0} упр.</div></td>
-      <td data-label="Языки"><span class="status-chip ${ready?'ok':''}">${esc(localeMarks(item))}</span></td>
-      <td data-label="Доступ">${item.pro?'<span class="pill pro">Premium</span>':'<span class="muted">Free</span>'}</td>
-      <td class="td-actions">${menu}</td>`;
-    const author=tr.querySelector('[data-trainer]');
+
+    card.innerHTML=`
+      <div class="entity-card-head">
+        ${cover}
+        <div style="min-width:0;flex:1">
+          <div class="entity-card-title">${esc(item.name||'Без названия')}</div>
+          <div class="entity-card-sub">${esc(item.gives||'').slice(0,120)}</div>
+        </div>
+      </div>
+      <div class="td-actions">${menu}</div>
+      <div class="entity-tags">
+        <span class="status-chip">${esc(goalName(item.cat))}</span>
+        <span class="status-chip">${esc(item.level)}</span>
+        <span class="status-chip">${item.min||0} мин</span>
+        <span class="status-chip ${ready?'ok':''}">${esc(localeMarks(item))}</span>
+        ${item.pro?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}
+      </div>
+      <div class="entity-meta">
+        <div><b>${item.exCount||0}</b><span>упражнений</span></div>
+        <div><b>${item.media?Object.keys(item.media).length:0}</b><span>фото</span></div>
+        <div><b>${item.by?`<button class="who" data-trainer="${esc(item.by)}">${esc(item.by)}</button>`:'Fit Timer'}</b><span>автор</span></div>
+      </div>`;
+
+    const author=card.querySelector('[data-trainer]');
     if(author)author.onclick=()=>openTrainerInAdmin(author.dataset.trainer);
-    tr.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+    card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
-      if(a==='edit'){ setTab('add'); fillForm(item); return; }
-      if(a==='approve') return act('approve',{id:item.id,pro:false});
-      if(a==='approvePro') return act('approve',{id:item.id,pro:true});
-      if(a==='reject') return act('reject',{id:item.id});
-      if(a==='togglePro') return act('pro',{id:item.id,pro:!item.pro});
-      if(a==='remove' && confirm(`Убрать «${item.name}» из каталога?`)) return act('remove',{id:item.id});
-      if(a==='ban' && confirm(`Закрыть ${item.by}? Его программы больше не будут приниматься.`)) return act('ban',{handle:item.by});
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='approve')return act('approve',{id:item.id,pro:false});
+      if(a==='approvePro')return act('approve',{id:item.id,pro:true});
+      if(a==='reject')return act('reject',{id:item.id});
+      if(a==='togglePro')return act('pro',{id:item.id,pro:!item.pro});
+      if(a==='remove'&&confirm(`Убрать «${item.name}» из каталога?`))return act('remove',{id:item.id});
+      if(a==='ban'&&confirm(`Закрыть ${item.by}? Его программы больше не будут приниматься.`))return act('ban',{handle:item.by});
     });
-    body.appendChild(tr);
+    box.appendChild(card);
   });
-  wireRowMenus(body);
+
+  wireRowMenus(box);
   $('catalogSearch').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    body.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
   };
 }
 
@@ -664,35 +672,41 @@ function renderTrainers(b){
   if(!list.length){b.insertAdjacentHTML('beforeend','<div class="empty">Тренеров пока нет.</div>');return;}
   b.insertAdjacentHTML('beforeend',`
     <div class="toolbar"><div class="grow"><input id="trainerSearch" type="search" placeholder="Поиск по имени или нику"></div><span class="status-chip">${list.length} тренеров</span></div>
-    <div class="table-shell"><table class="data-table">
-      <thead><tr><th>Тренер</th><th>Стаж</th><th>Программы</th><th>Взяли</th><th>Активность</th><th>Статус</th><th></th></tr></thead>
-      <tbody id="trainerRows"></tbody>
-    </table></div>`);
-  const box=$('trainerRows');
+    <div class="entity-grid" id="trainerCards"></div>`);
+  const box=$('trainerCards');
   list.forEach(t=>{
-    const tr=document.createElement('tr');
-    tr.dataset.search=((t.name||'')+' '+(t.handle||'')).toLowerCase();
-    tr.className=t.banned?'ban':'';
-    tr.innerHTML=`
-      <td class="td-primary"><div class="cell-main">${esc(t.name||t.handle)}</div><div class="cell-sub"><button class="who" type="button" data-open-trainer="${esc(t.handle)}">${esc(t.handle)}</button></div></td>
-      <td data-label="Стаж">${t.years?esc(t.years)+' лет':'—'}</td>
-      <td data-label="Программы" class="metric">${t.programs||0}</td>
-      <td data-label="Взяли" class="metric">${t.opens||0}</td>
-      <td data-label="Активность"><div>${esc(fmtDay(t.seen))}</div><div class="cell-sub">с ${esc(fmtDay(t.since))}</div></td>
-      <td data-label="Статус">${t.banned?'<span class="pill ban">закрыт</span>':'<span class="status-chip ok">активен</span>'}</td>
-      <td class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
-        <button data-open-profile>Показать в списке</button>
+    const card=document.createElement('article');
+    card.className='entity-card'+(t.banned?' ban':'');
+    card.dataset.search=((t.name||'')+' '+(t.handle||'')).toLowerCase();
+    card.innerHTML=`
+      <div class="entity-card-head">
+        <div style="min-width:0;flex:1">
+          <div class="entity-card-title">${esc(t.name||t.handle)}</div>
+          <div class="entity-card-sub"><button class="who" type="button" data-open-trainer="${esc(t.handle)}">${esc(t.handle)}</button></div>
+        </div>
+        ${t.banned?'<span class="pill ban">закрыт</span>':'<span class="status-chip ok">активен</span>'}
+      </div>
+      <div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
         <button class="${t.banned?'positive':'danger'}" data-toggle>${t.banned?'Вернуть доступ':'Закрыть приём программ'}</button>
-      </div></details></td>`;
-    tr.querySelector('[data-toggle]').onclick=()=>act(t.banned?'unban':'ban',{handle:t.handle});
-    const oh=tr.querySelector('[data-open-trainer]'); if(oh)oh.onclick=()=>openTrainerInAdmin(t.handle);
-    const op=tr.querySelector('[data-open-profile]'); if(op)op.onclick=()=>openTrainerInAdmin(t.handle);
-    box.appendChild(tr);
+      </div></details></div>
+      ${t.about?`<div class="entity-card-sub" style="margin-top:8px">${esc(t.about)}</div>`:''}
+      <div class="entity-meta">
+        <div><b>${t.years?esc(t.years)+' лет':'—'}</b><span>стаж</span></div>
+        <div><b>${t.programs||0}</b><span>программ</span></div>
+        <div><b>${t.opens||0}</b><span>добавили</span></div>
+      </div>
+      <div class="entity-tags">
+        <span class="status-chip">активность · ${esc(fmtDay(t.seen))}</span>
+        <span class="status-chip">с ${esc(fmtDay(t.since))}</span>
+      </div>`;
+    card.querySelector('[data-toggle]').onclick=()=>act(t.banned?'unban':'ban',{handle:t.handle});
+    const oh=card.querySelector('[data-open-trainer]');if(oh)oh.onclick=()=>openTrainerInAdmin(t.handle);
+    box.appendChild(card);
   });
   wireRowMenus(box);
   $('trainerSearch').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    box.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
   };
 }
 
