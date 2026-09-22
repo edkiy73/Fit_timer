@@ -482,6 +482,70 @@ module.exports = async (req, res) => {
     }
   }
 
+  if(a === 'catalog_ai_edit'){
+    const mode=String(body&&body.mode||'program');
+    if(!['program','exercise'].includes(mode)) return fail(res,400,'bad_ai_mode');
+    const locale=cleanLocaleBlock(body&&body.locale);
+    const bad=localeMiss(locale,'AI');
+    if(bad.length) return fail(res,400,'bad_source_locale',{miss:bad});
+    const instruction=clean(body&&body.instruction,2000).trim();
+    if(!instruction) return fail(res,400,'missing_instruction');
+    const exercise=clampLine(body&&body.exercise,120);
+    const prompt = mode==='exercise'
+      ? [
+          'Edit exactly one exercise inside this Fit Timer catalog program according to the instruction.',
+          'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
+          'Keep all protocol labels before colons unchanged.',
+          'Do not add, remove or reorder exercises. Do not change workout mechanics, sets, reps, time, rest, weight, days, progression or format unless the instruction explicitly asks to change that exact field.',
+          'Target exercise: '+exercise,
+          'Instruction: '+instruction,
+          'PROGRAM JSON:',
+          JSON.stringify(locale)
+        ].join('\n')
+      : [
+          'Edit this Fit Timer catalog program according to the instruction.',
+          'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
+          'Keep all protocol labels before colons unchanged.',
+          'Preserve line order and existing workout mechanics unless the instruction explicitly asks to change them.',
+          'Do not silently add or remove exercises.',
+          'Instruction: '+instruction,
+          'PROGRAM JSON:',
+          JSON.stringify(locale)
+        ].join('\n');
+    try{
+      const settings=await getSettings();
+      const out=await generate('text',settings,prompt);
+      const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
+      let parsed;
+      try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
+      const edited=cleanLocaleBlock(parsed);
+      const miss=localeMiss(edited,'AI');
+      if(miss.length) return fail(res,502,'ai_incomplete',{miss});
+      return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
+    }catch(e){
+      return fail(res,502,'ai_edit_failed',{detail:String(e.message||e).slice(0,500)});
+    }
+  }
+
+  if(a === 'catalog_ai_image'){
+    const kind=String(body&&body.kind||'exercise');
+    if(!['cover','exercise'].includes(kind)) return fail(res,400,'bad_image_kind');
+    const name=clampLine(body&&body.name,120);
+    const description=clean(body&&body.description,1000);
+    const program=clampLine(body&&body.program,120);
+    const prompt = kind==='cover'
+      ? 'Create a clean premium fitness app cover image for the workout program "'+program+'". No text, no logos, no UI, no collage. Modern editorial fitness photography, clear subject, neutral uncluttered background, square composition.'
+      : 'Create a clear instructional fitness exercise image for "'+name+'". '+description+' Show correct body position and movement, one athlete, no text, no arrows, no logos, uncluttered background, square composition suitable for a mobile exercise card.';
+    try{
+      const settings=await getSettings();
+      const out=await generate('image',settings,prompt);
+      if(!out.image) return fail(res,502,'image_not_returned');
+      return send(res,200,{ok:true,image:out.image,provider:out.provider,model:out.model,fallback:out.fallback});
+    }catch(e){
+      return fail(res,502,'image_generation_failed',{detail:String(e.message||e).slice(0,500)});
+    }
+  }
+
   /* ---- решение по заявке ---- */
   if(a === 'approve' || a === 'reject'){
     const raw = await store.get(`c:${id}`);
