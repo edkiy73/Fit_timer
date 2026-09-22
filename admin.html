@@ -582,6 +582,11 @@ async function load(){
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   render();
+  if(tab === 'add'){
+    const editId=localStorage.getItem('adminEditingId');
+    const item=[...(data.pending||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId));
+    if(item) fillForm(item);
+  }
 }
 
 function pageHead(title, text, right){
@@ -1306,6 +1311,7 @@ function setEditorLang(lang){
 function cancelProgramEdit(){
   const back=editingStatus==='pending'?'pending':'approved';
   editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+  localStorage.removeItem('adminEditingId');
   setTab(back);
 }
 function renderAdd(b){
@@ -1424,6 +1430,7 @@ function renderAdd(b){
 function fillForm(c){
   editing=c.id;
   editingStatus=c.status||null;
+  localStorage.setItem('adminEditingId', editing);
   form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c)};
   editorLang=form.sourceLocale;
   $('fCat').value=c.cat||'tone';
@@ -1460,6 +1467,7 @@ async function saveForm(){
     else await api('add', {item});
     const backTo = editingStatus === 'pending' ? 'pending' : 'approved';
     editing = null; editingStatus = null;
+    localStorage.removeItem('adminEditingId');
     form = {cover:null, media:{}, sourceLocale:'ru'};
     tab = backTo;
     localStorage.setItem('adminTab', tab);
@@ -1492,7 +1500,13 @@ window.addEventListener('resize',()=>closeRowMenus());
 window.addEventListener('scroll',()=>closeRowMenus(),true);
 
 document.querySelectorAll('[data-tab]').forEach(t => {
-  t.onclick = () => setTab(t.dataset.tab);
+  t.onclick = () => {
+    if(t.dataset.tab==='add'){
+      editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
+      form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+    }
+    setTab(t.dataset.tab);
+  };
 });
 $('navOpen').onclick = () => {
   document.body.classList.add('nav-open');
