@@ -1513,7 +1513,8 @@ async function generateSlotImageViaAI(){
   if(!premiumGate()) return;
   const s = imageSlots()[slotTarget];
   if(!s || s.kind !== 'ex') return;
-  const ex = ((draft.plans || [])[s.plan] || {}).exercises?.[s.idx];
+  const pl = (draft.plans || [])[s.plan];
+  const ex = pl && pl.exercises ? pl.exercises[s.idx] : null;
   if(!ex) return;
   $('slotModal').classList.remove('open');
   imgGenCancelled = false;
