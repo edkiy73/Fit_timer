@@ -2252,13 +2252,16 @@ const URL_SAFE = 1800;
 
 async function apiFetch(path, opts){
   if(API_BASE === null) throw new Error('offline');
+  const cfg = Object.assign({}, opts || {});
+  const wait = Math.max(1000, Math.min(30000, +cfg.timeoutMs || API_WAIT));
+  delete cfg.timeoutMs;
   const ctl = new AbortController();
-  const t = setTimeout(()=> ctl.abort(), API_WAIT);
+  const t = setTimeout(()=> ctl.abort(), wait);
   try{
     // cache: 'no-store' — второй рубеж к тому же правилу, что и в sw.js: ответы
     // сервера живут минуты и кэшироваться не должны ни на одном уровне.
     const res = await fetch(API_BASE + path,
-      Object.assign({signal: ctl.signal, cache: 'no-store'}, opts || {}));
+      Object.assign({signal: ctl.signal, cache: 'no-store'}, cfg));
     const data = await res.json().catch(()=> ({}));
     if(!res.ok){
       const err = new Error(data.error || ('http_' + res.status));
