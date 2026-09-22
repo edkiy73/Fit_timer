@@ -11,6 +11,10 @@
   },
   "rewrites": [
     {
+      "source": "/p/:id",
+      "destination": "/?p=:id"
+    },
+    {
       "source": "/api/ai",
       "destination": "/api/admin?ai_endpoint=1"
     },
