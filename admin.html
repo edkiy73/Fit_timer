@@ -105,6 +105,104 @@
   .pic .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;
           border:1px solid var(--line);background:var(--card);color:var(--danger);
           font-size:13px;line-height:1;cursor:pointer;padding:0}
+
+  /* Рабочая админка: desktop sidebar + mobile drawer. */
+  body{padding:0}
+  .admin-shell{min-height:100vh}
+  .side{
+    position:fixed;inset:0 auto 0 0;width:228px;background:var(--card);
+    border-right:1px solid var(--line);padding:18px 12px;z-index:30;overflow:auto
+  }
+  .brand-admin{display:flex;align-items:center;justify-content:space-between;padding:2px 8px 18px}
+  .brand-admin b{font-size:16px}
+  .nav-group{margin:12px 0 18px}
+  .nav-label{padding:0 10px 6px;color:var(--muted);font-size:11px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase}
+  .nav-btn{
+    width:100%;border:0;background:transparent;color:var(--ink);border-radius:10px;
+    padding:9px 10px;margin:2px 0;text-align:left;font:inherit;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:8px
+  }
+  .nav-btn:hover{background:var(--soft)}
+  .nav-btn.on{background:var(--soft);color:var(--accent);font-weight:700}
+  .nav-count{min-width:22px;text-align:center;padding:1px 6px;border-radius:999px;
+    background:var(--bg);font-size:11px;color:var(--muted)}
+  .nav-btn.on .nav-count{color:var(--accent)}
+  .main{margin-left:228px;min-width:0}
+  .topbar-admin{
+    position:sticky;padding:0;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)
+  }
+  .topbar-inner{max-width:980px;margin:auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
+  .topbar-inner h1{font-size:18px;margin:0}
+  .topbar-inner small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+  .menu-btn{display:none;width:38px;height:38px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card);color:var(--ink);font-size:20px;line-height:1;cursor:pointer}
+  .content{max-width:980px;margin:auto;padding:14px 20px 72px}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:4px 0 12px}
+  .page-head h2{font-size:20px;line-height:1.2;margin:0}
+  .page-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .card{padding:13px;margin:9px 0;border-radius:12px}
+  .list-card{padding:12px}
+  .list-card .tags{margin:3px 0 6px}
+  .list-card .gives{font-size:13px;margin:5px 0}
+  .list-card .acts{margin-top:9px}
+  button.b,a.b{padding:8px 11px;border-radius:9px;font-size:13px}
+  .acts{gap:6px;margin-top:10px}
+  label{margin-top:8px}
+  input,select,textarea{padding:10px 11px;border-radius:9px}
+  textarea{min-height:100px}
+  .row{gap:8px}
+  .section-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .section-grid .card{margin:0}
+  .status-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .status-chip{border:1px solid var(--line);background:var(--soft);border-radius:999px;
+    padding:4px 8px;font-size:12px;color:var(--muted)}
+  .status-chip.ok{color:var(--ok)}
+  .sticky-save{
+    position:sticky;bottom:10px;z-index:15;margin:16px -4px 0;padding:10px;
+    border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--card) 94%,transparent);
+    backdrop-filter:blur(12px);box-shadow:0 8px 30px rgba(0,0,0,.12);
+    display:flex;align-items:center;justify-content:space-between;gap:10px
+  }
+  .sticky-save .save-state{color:var(--muted);font-size:12px;min-height:18px}
+  .sticky-save .save-actions{display:flex;gap:6px;margin-left:auto}
+  .compact-note{margin:4px 0;color:var(--muted);font-size:12px}
+  .nav-shade{display:none}
+  .gate .card{padding:18px}
+  @media(max-width:760px){
+    .side{transform:translateX(-102%);transition:transform .2s ease;width:min(84vw,300px);
+      box-shadow:18px 0 45px rgba(0,0,0,.22)}
+    .side.open{transform:none}
+    .nav-shade{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25;
+      opacity:0;pointer-events:none;transition:opacity .2s}
+    body.nav-open .nav-shade{opacity:1;pointer-events:auto}
+    .main{margin-left:0}
+    .menu-btn{display:block;flex:none}
+    .topbar-inner{padding:10px 12px}
+    .content{padding:10px 10px 72px}
+    .page-head{align-items:flex-start;margin-top:2px}
+    .page-head h2{font-size:18px}
+    .section-grid{grid-template-columns:1fr}
+    .card{padding:11px;margin:7px 0;border-radius:11px}
+    .list-card{padding:10px}
+    img.cover{width:48px;height:48px;border-radius:8px}
+    .name{font-size:15px}
+    .tags,.muted{font-size:12px}
+    .gives{font-size:13px}
+    .acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .acts .b{width:100%;text-align:center;padding:9px 8px}
+    .row{display:grid;grid-template-columns:1fr}
+    .row>*{min-width:0}
+    .lang-card{padding:10px;margin:9px 0}
+    .sticky-save{bottom:8px;margin:12px 0 0;padding:8px}
+    .sticky-save .save-actions{display:grid;grid-auto-flow:column}
+    .pics{gap:8px}
+    .pic,.pic .ph{width:74px}
+    .pic .ph{height:74px}
+    pre{max-height:240px;padding:9px}
+  }
+
 </style>
 </head>
 <body>
@@ -118,20 +216,39 @@
 </div>
 
 <div id="app" hidden>
-  <header><div class="wrap">
-    <h1>Админка Fit Timer</h1>
-    <div class="tabs">
-      <button class="tab on" data-tab="pending">На проверке <span id="nPending"></span></button>
-      <button class="tab" data-tab="approved">В каталоге <span id="nApproved"></span></button>
-      <button class="tab" data-tab="trainers">Тренеры <span id="nTrainers"></span></button>
-      <button class="tab" data-tab="users">Пользователи</button>
-      <button class="tab" data-tab="add">Добавить</button>
-      <button class="tab" data-tab="settings">ИИ и тариф</button>
-      <button class="tab" data-tab="campaigns">Рассылки</button>
-      <button class="tab" id="out" style="margin-left:auto">Выйти</button>
-    </div>
-  </div></header>
-  <div class="wrap" id="body"></div>
+  <div class="admin-shell">
+    <aside class="side" id="adminNav">
+      <div class="brand-admin"><b>FIT / ADMIN</b><button class="b quiet" id="out">Выйти</button></div>
+      <div class="nav-group">
+        <div class="nav-label">Каталог</div>
+        <button class="nav-btn on" data-tab="pending"><span>На проверке</span><span class="nav-count" id="nPending"></span></button>
+        <button class="nav-btn" data-tab="approved"><span>В каталоге</span><span class="nav-count" id="nApproved"></span></button>
+        <button class="nav-btn" data-tab="add"><span>Добавить программу</span></button>
+        <button class="nav-btn" data-tab="trainers"><span>Тренеры</span><span class="nav-count" id="nTrainers"></span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Аккаунты</div>
+        <button class="nav-btn" data-tab="users"><span>Пользователи</span></button>
+        <button class="nav-btn" data-tab="campaigns"><span>Рассылки</span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Система</div>
+        <button class="nav-btn" data-tab="ai"><span>ИИ</span></button>
+        <button class="nav-btn" data-tab="pricing"><span>Premium и цены</span></button>
+        <button class="nav-btn" data-tab="payments"><span>Платежи</span></button>
+      </div>
+    </aside>
+    <div class="nav-shade" id="navShade"></div>
+    <main class="main">
+      <header class="topbar-admin">
+        <div class="topbar-inner">
+          <button class="menu-btn" id="navOpen" aria-label="Меню">☰</button>
+          <div><h1 id="pageTitle">На проверке</h1><small>Fit Timer · админка</small></div>
+        </div>
+      </header>
+      <div class="content" id="body"></div>
+    </main>
+  </div>
 </div>
 
 <script>
@@ -182,6 +299,22 @@ let data = {pending: [], approved: [], trainers: [], settings: null, providers: 
 let usersCache = null;
 let tab = 'pending';
 
+const PAGE_TITLES = {
+  pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
+  users:'Пользователи', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи'
+};
+function closeNav(){
+  document.body.classList.remove('nav-open');
+  $('adminNav').classList.remove('open');
+}
+function setTab(next){
+  tab = next;
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  closeNav();
+  render();
+}
+
 async function api(action, extra){
   const res = await fetch('/api/admin', {
     method: 'POST',
@@ -216,6 +349,8 @@ async function load(){
   $('nApproved').textContent = data.approved.length || '';
   $('nTrainers').textContent = data.trainers.length || '';
   if(tab !== 'users') usersCache = null;
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   render();
 }
 
@@ -225,9 +360,12 @@ function render(){
   if(tab === 'add') return renderAdd(b);
   if(tab === 'trainers') return renderTrainers(b);
   if(tab === 'users') return renderUsers(b);
-  if(tab === 'settings') return renderSettings(b);
   if(tab === 'campaigns') return renderCampaigns(b);
+  if(tab === 'ai') return renderAI(b);
+  if(tab === 'pricing') return renderPricing(b);
+  if(tab === 'payments') return renderPayments(b);
   const list = tab === 'pending' ? data.pending : data.approved;
+  b.insertAdjacentHTML('beforeend', `<div class="page-head"><div><h2>${tab === 'pending' ? 'На проверке' : 'Каталог'}</h2><p>${tab === 'pending' ? 'Заявки тренеров и подготовка RU / EN.' : 'Опубликованные программы и доступ Premium.'}</p></div></div>`);
   if(!list.length){
     b.innerHTML = `<div class="empty">${tab === 'pending'
       ? 'Пусто — всё разобрано.'
@@ -241,7 +379,7 @@ function render(){
 
 function itemCard(c){
   const el = document.createElement('div');
-  el.className = 'card';
+  el.className = 'card list-card';
   const pending = c.status === 'pending';
   el.innerHTML = `
     <div class="top">
@@ -268,7 +406,7 @@ function itemCard(c){
   if(pending){
     const ready = localeReady(c, 'ru') && localeReady(c, 'en');
     btn(ready ? 'Проверить RU / EN' : 'Подготовить RU / EN', '', () => {
-      tab = 'add'; render(); fillForm(c);
+      setTab('add'); fillForm(c);
     });
     // Сервер тоже проверяет оба языка: скрытие кнопки здесь только убирает ложное действие.
     if(ready){
@@ -278,7 +416,7 @@ function itemCard(c){
     btn('Отклонить', 'no', () => act('reject', {id: c.id}));
   } else {
     btn(c.pro ? 'Открыть всем' : 'Сделать премиум', '', () => act('pro', {id: c.id, pro: !c.pro}));
-    btn('Изменить', '', () => { tab = 'add'; render(); fillForm(c); });
+    btn('Изменить', '', () => { setTab('add'); fillForm(c); });
     btn('Убрать из каталога', 'no', () => {
       if(confirm(`Убрать «${c.name}» из каталога?`)) act('remove', {id: c.id});
     });
@@ -293,6 +431,7 @@ function itemCard(c){
 }
 
 function renderTrainers(b){
+  b.insertAdjacentHTML('beforeend','<div class="page-head"><div><h2>Тренеры</h2><p>Публичные профили, активность и доступ к каталогу.</p></div></div>');
   if(!data.trainers.length){
     b.innerHTML = '<div class="empty">Тренеров пока нет.</div>';
     return;
@@ -300,7 +439,7 @@ function renderTrainers(b){
   const day = v => v ? new Date(v).toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}) : '—';
   data.trainers.slice().reverse().forEach(t => {
     const el = document.createElement('div');
-    el.className = 'card' + (t.banned ? ' ban' : '');
+    el.className = 'card list-card' + (t.banned ? ' ban' : '');
     el.innerHTML = `
       <p class="name">${esc(t.name || t.handle)}${t.banned ? '<span class="pill ban">закрыт</span>' : ''}</p>
       <a class="who" href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">${esc(t.handle)}</a>
@@ -319,7 +458,7 @@ function renderTrainers(b){
 }
 
 async function renderUsers(b){
-  b.innerHTML = `<div class="card">
+  b.innerHTML = `<div class="page-head"><div><h2>Пользователи</h2><p>Аккаунты, Premium и тестовый вход.</p></div></div><div class="card">
     <p class="name">Пользователи</p>
     <p class="muted">Аккаунт можно создать вручную. Premium здесь — серверное право, поэтому оно работает даже после переустановки и не зависит от флага в APK.</p>
     <div class="row">
@@ -385,7 +524,7 @@ async function renderUsers(b){
 }
 
 function renderCampaigns(b){
-  b.innerHTML = `<div class="card">
+  b.innerHTML = `<div class="page-head"><div><h2>Рассылки</h2><p>Push и Email без дублирования сообщений.</p></div></div><div class="card">
     <p class="name">Новости и акции</p>
     <p class="muted">Рассылка идёт только подтверждённым аккаунтам и учитывает настройки пользователя. Если включены Push и Email, сначала используется Push, а Email — только как fallback, чтобы не дублировать одно сообщение.</p>
     <div class="row">
@@ -404,8 +543,8 @@ function renderCampaigns(b){
       <label>Text</label><textarea id="campEnBody" maxlength="1000"></textarea>
     </div>
     <p class="muted" id="campState"></p>
-    <div class="acts"><button class="b ok" id="campSend">Отправить</button></div>
-  </div>`;
+  </div>
+  <div class="sticky-save"><span class="save-state">Проверь RU и EN перед отправкой</span><div class="save-actions"><button class="b ok" id="campSend">Отправить рассылку</button></div></div>`;
   $('campSend').onclick = sendCampaign;
 }
 async function sendCampaign(){
@@ -431,71 +570,164 @@ async function sendCampaign(){
   finally{btn.disabled=false;}
 }
 
-function renderSettings(b){
-  const s = data.settings || {}, lim = s.limits || {}, pay = s.payment || {};
-  const route = (type, which, label) => {
-    const x = (s[type] && s[type][which]) || {};
-    return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
-      ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
-      </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
-  };
-  const status = p => data.providers && data.providers[p] ? '✓ ключ подключён' : '✗ ключ не задан на сервере';
-  const currencies = Object.entries(s.prices || {}).map(([cur,p]) => `<div class="row">
-    <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
-    <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div></div>`).join('');
-  b.innerHTML = `<div class="card">
-    <p class="name">ИИ для Premium</p>
-    <p class="muted">Ключи не показываются и не сохраняются здесь: GEMINI_API_KEY и OPENAI_API_KEY задаются на сервере.</p>
-    <p class="muted">Gemini: ${status('gemini')} · OpenAI: ${status('openai')}</p>
-    <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled !== false ? ' checked' : ''}> Генерация включена</label>
-    <div class="row">${route('text','primary','Текст · основной')}</div>
-    <div class="row">${route('text','backup','Текст · резервный')}</div>
-    <div class="row">${route('image','primary','Картинки · основной')}</div>
-    <div class="row">${route('image','backup','Картинки · резервный')}</div>
-    <div class="row">
-      <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
-      <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
-      <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
-      <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays || 30)}"></div>
-    </div>
-    <div class="acts"><button class="b" id="testText">Проверить текстовый ИИ</button><button class="b" id="testImage">Проверить картинки</button></div>
-    <p class="err" id="aiResult"></p>
-  </div>
-  <div class="card"><p class="name">Цена Premium</p>${currencies}</div>
-  <div class="card"><p class="name">Платежи</p>
-    <p class="muted">Premium выдаёт только сервер после проверки провайдера. Секретные ключи хранятся только в Vercel.</p>
-    <p class="muted">Google Play: ${data.billingProviders&&data.billingProviders.google?'✓ сервер готов':'✗ ключ не задан'} · RuStore: ${data.billingProviders&&data.billingProviders.rustore?'✓ сервер готов':'✗ ключ не задан'} · ЮKassa: ${data.billingProviders&&data.billingProviders.yookassa?'✓ сервер готов':'✗ ключи не заданы'}</p>
-    <label>Режим</label><input id="payProvider" value="${esc(pay.provider || 'multi')}" maxlength="40">
-    <div class="lang-card"><div class="lang-head"><b>Google Play</b></div>
-      <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
-      <div class="row"><div><label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}"></div><div><label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}"></div></div>
-    </div>
-    <div class="lang-card"><div class="lang-head"><b>RuStore Pay</b></div>
-      <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
-      <div class="row"><div><label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}"></div><div><label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}"></div></div>
-    </div>
-    <div class="lang-card"><div class="lang-head"><b>ЮKassa</b></div>
-      <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена в разрешённых каналах/регионах</label>
-      <p class="muted">Цена берётся из таблицы Premium выше; product ID не нужен.</p>
-    </div>
-    <div class="row"><div><label>iOS · месяц (позже)</label><input id="iosMonth" value="${esc(pay.iosMonth || '')}"></div><div><label>iOS · год (позже)</label><input id="iosYear" value="${esc(pay.iosYear || '')}"></div></div>
-    <p class="err" id="settingsErr"></p><div class="acts"><button class="b ok" id="saveSettings">Сохранить настройки</button></div>
-  </div>`;
-  $('saveSettings').onclick = saveSettings;
-  $('testText').onclick = () => testAI('text');
-  $('testImage').onclick = () => testAI('image');
+function settingsClone(){
+  return JSON.parse(JSON.stringify(data.settings || {}));
+}
+function routeFields(s, type, which, label){
+  const x = (s[type] && s[type][which]) || {};
+  return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
+    ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
+  </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
+}
+function saveBar(id, buttonLabel){
+  return `<div class="sticky-save"><span class="save-state" id="${id}State"></span><div class="save-actions"><button class="b ok" id="${id}Save">${buttonLabel || 'Сохранить'}</button></div></div>`;
+}
+async function persistSettings(next, stateId){
+  const state=$(stateId);
+  if(state) state.textContent='Сохраняю…';
+  try{
+    const r=await api('save_settings',{settings:next});
+    data.settings=r.settings;
+    if(state) state.textContent='✓ Сохранено';
+    return true;
+  }catch(e){
+    if(state) state.textContent='Не сохранилось: '+e.message;
+    return false;
+  }
 }
 
-function settingsFromForm(){
-  const s = JSON.parse(JSON.stringify(data.settings || {}));
-  s.enabled = $('aiEnabled').checked;
-  ['text','image'].forEach(type => ['primary','backup'].forEach(which => {
-    s[type][which] = {provider:$(`${type}_${which}_provider`).value, model:$(`${type}_${which}_model`).value.trim()};
+function renderAI(b){
+  const s=data.settings||{}, lim=s.limits||{};
+  const status=p=>data.providers&&data.providers[p]?'✓ ключ подключён':'✗ ключ не задан';
+  b.innerHTML=`
+    <div class="page-head"><div><h2>ИИ</h2><p>Провайдеры, модели, лимиты и хранение запросов.</p></div></div>
+    <div class="card">
+      <div class="status-row">
+        <span class="status-chip ${data.providers&&data.providers.gemini?'ok':''}">Gemini · ${status('gemini')}</span>
+        <span class="status-chip ${data.providers&&data.providers.openai?'ok':''}">OpenAI · ${status('openai')}</span>
+      </div>
+      <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}> Генерация включена
+        <small>Ключи хранятся только в Vercel и здесь не показываются.</small>
+      </label>
+    </div>
+    <div class="section-grid">
+      <div class="card"><p class="name">Текст</p>
+        <div class="row">${routeFields(s,'text','primary','Основной')}</div>
+        <div class="row">${routeFields(s,'text','backup','Резервный')}</div>
+        <div class="acts"><button class="b" id="testText">Проверить текст</button></div>
+      </div>
+      <div class="card"><p class="name">Картинки</p>
+        <div class="row">${routeFields(s,'image','primary','Основной')}</div>
+        <div class="row">${routeFields(s,'image','backup','Резервный')}</div>
+        <div class="acts"><button class="b" id="testImage">Проверить картинки</button></div>
+      </div>
+    </div>
+    <div class="card"><p class="name">Лимиты Premium</p>
+      <div class="row">
+        <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+        <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+        <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+        <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
+      </div>
+      <p class="compact-note">Эти лимиты относятся только к AI-функциям, не к аккаунту или каталогу.</p>
+    </div>
+    <p class="err" id="aiResult"></p>
+    ${saveBar('aiSettings','Сохранить ИИ')}`;
+  $('aiSettingsSave').onclick=saveAISettings;
+  $('testText').onclick=()=>testAIAdmin('text');
+  $('testImage').onclick=()=>testAIAdmin('image');
+}
+function aiSettingsFromForm(){
+  const s=settingsClone();
+  s.text=s.text||{}; s.image=s.image||{};
+  s.enabled=$('aiEnabled').checked;
+  ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
+    s[type][which]={provider:$(`${type}_${which}_provider`).value,model:$(`${type}_${which}_model`).value.trim()};
   }));
-  s.limits = {heavy:+$('limHeavy').value, light:+$('limLight').value, image:+$('limImage').value};
-  s.retentionDays = +$('retention').value;
-  Object.keys(s.prices || {}).forEach(cur => { s.prices[cur] = {month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value}; });
-  s.payment = {
+  s.limits={heavy:+$('limHeavy').value,light:+$('limLight').value,image:+$('limImage').value};
+  s.retentionDays=+$('retention').value;
+  return s;
+}
+async function saveAISettings(){
+  await persistSettings(aiSettingsFromForm(),'aiSettingsState');
+}
+async function testAIAdmin(type){
+  const el=$('aiResult'); el.textContent='Проверяю…';
+  const ok=await persistSettings(aiSettingsFromForm(),'aiSettingsState');
+  if(!ok){el.textContent='Сначала нужно сохранить корректные настройки.';return;}
+  try{
+    const r=await api('test_ai',{type});
+    el.textContent=`✓ ${r.provider} / ${r.model}${r.fallback?' (резерв)':''}: ${r.result}`;
+  }catch(e){el.textContent='✗ '+(e.detail||e.message);}
+}
+
+function renderPricing(b){
+  const s=data.settings||{}, prices=s.prices||{};
+  const currencies=Object.entries(prices).map(([cur,p])=>`
+    <div class="price-line row">
+      <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
+      <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div>
+    </div>`).join('');
+  b.innerHTML=`
+    <div class="page-head"><div><h2>Premium и цены</h2><p>Стоимость подписки по валютам. Платёжные каналы настраиваются отдельно.</p></div></div>
+    <div class="card">
+      <p class="name">Цены</p>
+      ${currencies||'<p class="muted">В конфигурации пока нет валют.</p>'}
+    </div>
+    ${saveBar('priceSettings','Сохранить цены')}`;
+  $('priceSettingsSave').onclick=savePricingSettings;
+}
+async function savePricingSettings(){
+  const s=settingsClone();
+  s.prices=s.prices||{};
+  Object.keys(s.prices).forEach(cur=>{
+    s.prices[cur]={month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value};
+  });
+  await persistSettings(s,'priceSettingsState');
+}
+
+function renderPayments(b){
+  const s=data.settings||{}, pay=s.payment||{};
+  const bp=data.billingProviders||{};
+  b.innerHTML=`
+    <div class="page-head"><div><h2>Платежи</h2><p>Каналы оплаты и product ID. Цены находятся в отдельном разделе.</p></div></div>
+    <div class="status-row">
+      <span class="status-chip ${bp.google?'ok':''}">Google Play · ${bp.google?'сервер готов':'нет ключа'}</span>
+      <span class="status-chip ${bp.rustore?'ok':''}">RuStore · ${bp.rustore?'сервер готов':'нет ключа'}</span>
+      <span class="status-chip ${bp.yookassa?'ok':''}">ЮKassa · ${bp.yookassa?'сервер готов':'нет ключей'}</span>
+    </div>
+    <div class="card">
+      <label>Режим</label><input id="payProvider" value="${esc(pay.provider||'multi')}" maxlength="40">
+      <p class="compact-note">Секреты провайдеров хранятся только в Vercel.</p>
+    </div>
+    <div class="section-grid">
+      <div class="card"><p class="name">Google Play</p>
+        <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
+        <label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}">
+        <label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}">
+      </div>
+      <div class="card"><p class="name">RuStore Pay</p>
+        <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
+        <label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}">
+        <label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}">
+      </div>
+      <div class="card"><p class="name">ЮKassa</p>
+        <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена
+          <small>Использует цены из раздела Premium и цены; product ID не нужен.</small>
+        </label>
+      </div>
+      <div class="card"><p class="name">iOS</p>
+        <p class="compact-note">Заготовка на будущее.</p>
+        <label>Product ID · месяц</label><input id="iosMonth" value="${esc(pay.iosMonth||'')}">
+        <label>Product ID · год</label><input id="iosYear" value="${esc(pay.iosYear||'')}">
+      </div>
+    </div>
+    ${saveBar('paySettings','Сохранить платежи')}`;
+  $('paySettingsSave').onclick=savePaymentSettings;
+}
+async function savePaymentSettings(){
+  const s=settingsClone();
+  s.payment={
     provider:$('payProvider').value.trim()||'multi',
     google:{enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()},
     rustore:{enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()},
@@ -503,16 +735,7 @@ function settingsFromForm(){
     androidMonth:$('googleMonth').value.trim(),androidYear:$('googleYear').value.trim(),
     iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
   };
-  return s;
-}
-async function saveSettings(){
-  try{ const r = await api('save_settings',{settings:settingsFromForm()}); data.settings = r.settings; $('settingsErr').textContent = '✓ Сохранено'; }
-  catch(e){ $('settingsErr').textContent = 'Не сохранилось: ' + e.message; }
-}
-async function testAI(type){
-  const el = $('aiResult'); el.textContent = 'Проверяю…';
-  try{ await api('save_settings',{settings:settingsFromForm()}); const r = await api('test_ai',{type}); el.textContent = `✓ ${r.provider} / ${r.model}${r.fallback ? ' (резерв)' : ''}: ${r.result}`; }
-  catch(e){ el.textContent = '✗ ' + (e.detail || e.message); }
+  await persistSettings(s,'paySettingsState');
 }
 
 let editing = null;
@@ -658,8 +881,7 @@ function picBox(label, data, set){
 }
 function renderAdd(b){
   const d = translationDirection();
-  b.innerHTML = `<div class="card">
-    <p class="name" id="formTitle">Новая программа</p>
+  b.innerHTML = `<div class="page-head"><div><h2 id="formTitle">Новая программа</h2><p>Механика, локализации и медиа одной программы.</p></div></div><div class="card">
     <p class="muted" id="fSourceHint">Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста (ПРОГРАММА, УПРАЖНЕНИЕ, ФОРМАТ и т. п.) не переводятся.</p>
     <div class="row">
       <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
@@ -705,9 +927,12 @@ function renderAdd(b){
     <div class="pics" id="fPics"></div>
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
-    <div class="acts">
-      <button class="b ok" id="fSave">Сохранить</button>
+  </div>
+  <div class="sticky-save">
+    <span class="save-state" id="programSaveState"></span>
+    <div class="save-actions">
       <button class="b quiet" id="fClear">Очистить</button>
+      <button class="b ok" id="fSave">Сохранить программу</button>
     </div>
   </div>`;
   $('fSave').onclick = saveForm;
@@ -745,7 +970,7 @@ function fillForm(c){
     media: Object.assign({}, c.media || {}),
     sourceLocale: sourceLocaleOf(c)
   };
-  $('formTitle').textContent = 'Изменить: ' + (c.name || localeBlock(c, form.sourceLocale).name || '');
+  $('formTitle').textContent = 'Редактирование программы';
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
@@ -761,6 +986,9 @@ function fillForm(c){
 }
 
 async function saveForm(){
+  const saveBtn=$('fSave'), saveState=$('programSaveState');
+  if(saveBtn) saveBtn.disabled=true;
+  if(saveState) saveState.textContent='Сохраняю…';
   const source = form.sourceLocale === 'en' ? 'en' : 'ru';
   const locales = {ru: localeFromForm('ru'), en: localeFromForm('en')};
   const src = locales[source];
@@ -783,6 +1011,8 @@ async function saveForm(){
     await load();
   }catch(e){
     $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
+    if(saveState) saveState.textContent='Ошибка сохранения';
+    if(saveBtn) saveBtn.disabled=false;
   }
 }
 
@@ -799,14 +1029,15 @@ async function act(action, extra){
   }
 }
 
-document.querySelectorAll('.tab[data-tab]').forEach(t => {
-  t.onclick = () => {
-    tab = t.dataset.tab;
-    document.querySelectorAll('.tab[data-tab]').forEach(x => x.classList.toggle('on', x === t));
-    render();
-  };
+document.querySelectorAll('[data-tab]').forEach(t => {
+  t.onclick = () => setTab(t.dataset.tab);
 });
-$('out').onclick = () => { localStorage.removeItem('adminKey'); KEY = ''; showGate(''); };
+$('navOpen').onclick = () => {
+  document.body.classList.add('nav-open');
+  $('adminNav').classList.add('open');
+};
+$('navShade').onclick = closeNav;
+$('out').onclick = () => { localStorage.removeItem('adminKey'); KEY = ''; closeNav(); showGate(''); };
 $('enter').onclick = () => {
   KEY = $('key').value.trim();
   localStorage.setItem('adminKey', KEY);
