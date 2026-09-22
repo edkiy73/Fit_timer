@@ -149,9 +149,13 @@ jobs:
 
       - name: Обновить постоянный релиз latest-apk
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest-apk --cleanup-tag -y 2>/dev/null || true
-          gh release create latest-apk             --target "$GITHUB_SHA"             --title "FitTimer — последний APK"             --notes "Автоматическая release-сборка из main. Commit: $GITHUB_SHA"
+          gh release create latest-apk \
+            --target "$GITHUB_SHA" \
+            --title "FitTimer — последний APK" \
+            --notes "Автоматическая release-сборка из main. Commit: $GITHUB_SHA"
           gh release upload latest-apk FitTimer-latest.apk --clobber
