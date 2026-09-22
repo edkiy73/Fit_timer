@@ -1182,7 +1182,10 @@ async function ytCopyPrompt(){
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const {program, errors} = parseProgramText(raw);
+  const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
+  const checked = aiClientVerdict(kind, raw);
+  if(!checked) return;
+  const {program, errors} = parseProgramText(checked);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
