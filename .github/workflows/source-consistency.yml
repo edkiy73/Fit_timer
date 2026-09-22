@@ -2,7 +2,7 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'lib/ai-protocol.js', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
     paths: ['src/**', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
