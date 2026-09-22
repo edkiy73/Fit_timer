@@ -1154,7 +1154,7 @@ const AI_SOURCES = {
     prompt: ()=> fullAIPrompt(),
     copy:   ()=> copyPrompt(),
     apply:  ()=> importFromText(),
-    dirty: ['qNote', 'aiResult'],
+    dirty: ['qNote', 'qContext', 'aiResult'],
     manual: ()=> openBuilder(),
     back:  ()=> goTab('scrPrograms')
   },
@@ -1217,7 +1217,7 @@ const AI_SOURCES = {
     prompt: ()=> exaPrompt(),
     copy:   ()=> exaCopyPrompt(),
     apply:  ()=> exaAddExercise(),
-    dirty: ['exaWish', 'aiResult'],
+    dirty: ['exaWish', 'exaContext', 'aiResult'],
     manual: ()=> addExManual(),
     back:  ()=> show('scrBuilder')
   },
@@ -2022,8 +2022,10 @@ function exaChips(){
 function openExAI(){
   exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
+  $('exaContext').value = '';
   exaChips();
   autoGrow($('exaWish'));
+  autoGrow($('exaContext'));
   openAI('exNew');
 }
 
@@ -2046,6 +2048,11 @@ function exaPrompt(){
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
   let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  const context=clampText(($('exaContext')&&$('exaContext').value)||'',600).trim();
+  if(context){
+    req+='\nUSER CAPABILITIES / LIMITATIONS CONTEXT: '+context+
+      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
+  }
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
   return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
