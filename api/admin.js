@@ -148,30 +148,46 @@ const TRANSLATABLE_KEYS = new Set([
   'ОШИБКИ', 'ЗАМЕНА', 'ОПИСАНИЕ ЗАМЕНЫ'
 ]);
 
+function protocolLine(line){
+  const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+  return m ? {key:m[1],value:m[2]} : null;
+}
+function protocolOccurrences(text){
+  const out={};
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const p=protocolLine(line);
+    if(!p) return;
+    if(!out[p.key]) out[p.key]=[];
+    out[p.key].push(p.value);
+  });
+  return out;
+}
+function mergeProtocolText(sourceText, candidateText, allowedKeys){
+  const values=protocolOccurrences(candidateText);
+  const used={};
+  return String(sourceText||'').split(/\r?\n/).map(line=>{
+    const p=protocolLine(line);
+    if(!p) return line;
+    const idx=used[p.key]||0;
+    used[p.key]=idx+1;
+    if(allowedKeys && !allowedKeys.has(p.key)) return line;
+    const list=values[p.key]||[];
+    if(idx>=list.length) return line;
+    return p.key+': '+String(list[idx]||'').trim();
+  }).join('\n');
+}
 function normalizeTranslatedBlock(source, target){
   if(!source || !target) return target;
-  const srcLines = String(source.text || '').split(/\r?\n/);
-  const dstLines = String(target.text || '').split(/\r?\n/);
-  // Автовосстановление безопасно только когда перевод сохранил построчную форму.
-  // В этом случае механику вообще не берём из перевода: копируем её из оригинала,
-  // а из второй версии забираем только человекочитаемые значения.
-  if(!srcLines.length || srcLines.length !== dstLines.length) return target;
-  const out = srcLines.map((line, i) => {
-    const sm = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
-    if(!sm) return line;
-    const key = sm[1];
-    if(key === 'ПРОГРАММА') return key + ': ' + clampLine(target.name, 60);
-    if(!TRANSLATABLE_KEYS.has(key)) return line;
-    const dm = String(dstLines[i] || '').match(/^[^:]{1,80}:\s*(.*)$/);
-    const translated = dm ? dm[1].trim() : '';
-    return translated ? key + ': ' + translated : line;
-  });
   return {
     name: clampLine(target.name, 60),
     gives: clampText(target.gives, 300),
-    text: out.join('\n')
+    // Перевод может переставить/удалить строки. Механику не доверяем модели:
+    // берём структуру оригинала и подставляем только человекочитаемые значения
+    // по паре «label + номер вхождения».
+    text: mergeProtocolText(source.text, target.text, TRANSLATABLE_KEYS)
   };
 }
+
 function protocolShape(text){
   return String(text || '').split(/\r?\n/).map(line => {
     const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
@@ -470,7 +486,7 @@ module.exports = async (req, res) => {
       const raw = String(out.text || '').trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
       let parsed;
       try{ parsed = JSON.parse(raw); }catch(e){ return fail(res, 502, 'translation_bad_json'); }
-      const locale = cleanLocaleBlock(parsed);
+      const locale = normalizeTranslatedBlock(source, cleanLocaleBlock(parsed));
       const miss = localeMiss(locale, to.toUpperCase());
       if(miss.length) return fail(res, 502, 'translation_incomplete', {miss});
       if(JSON.stringify(protocolShape(source.text)) !== JSON.stringify(protocolShape(locale.text))){
@@ -482,6 +498,28 @@ module.exports = async (req, res) => {
     }
   }
 
+  function exerciseBlockRange(text, exerciseName){
+    const lines=String(text||'').split(/\r?\n/);
+    const target=String(exerciseName||'').trim().toLowerCase();
+    let start=-1,end=lines.length;
+    for(let i=0;i<lines.length;i++){
+      const m=lines[i].match(/^УПРАЖНЕНИЕ:\s*(.*)$/i);
+      if(!m) continue;
+      if(start<0 && m[1].trim().toLowerCase()===target){ start=i; continue; }
+      if(start>=0){ end=i; break; }
+    }
+    return {lines,start,end};
+  }
+  function replaceExerciseBlock(text, exerciseName, candidate){
+    const src=exerciseBlockRange(text,exerciseName);
+    if(src.start<0) return text;
+    const sourceBlock=src.lines.slice(src.start,src.end).join('\n');
+    // Для редактирования упражнения разрешаем менять значения любых существующих
+    // строк внутри блока, но запрещаем удалять/добавлять labels и менять порядок.
+    const merged=mergeProtocolText(sourceBlock,candidate,null);
+    return src.lines.slice(0,src.start).concat(merged.split('\n'),src.lines.slice(src.end)).join('\n');
+  }
+
   if(a === 'catalog_ai_edit'){
     const mode=String(body&&body.mode||'program');
     if(!['program','exercise'].includes(mode)) return fail(res,400,'bad_ai_mode');
@@ -491,36 +529,65 @@ module.exports = async (req, res) => {
     const instruction=clean(body&&body.instruction,2000).trim();
     if(!instruction) return fail(res,400,'missing_instruction');
     const exercise=clampLine(body&&body.exercise,120);
-    const prompt = mode==='exercise'
-      ? [
-          'Edit exactly one exercise inside this Fit Timer catalog program according to the instruction.',
-          'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
-          'Keep all protocol labels before colons unchanged.',
-          'Do not add, remove or reorder exercises. Do not change workout mechanics, sets, reps, time, rest, weight, days, progression or format unless the instruction explicitly asks to change that exact field.',
-          'Target exercise: '+exercise,
-          'Instruction: '+instruction,
-          'PROGRAM JSON:',
-          JSON.stringify(locale)
-        ].join('\n')
-      : [
-          'Edit this Fit Timer catalog program according to the instruction.',
-          'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
-          'Keep all protocol labels before colons unchanged.',
-          'Preserve line order and existing workout mechanics unless the instruction explicitly asks to change them.',
-          'Do not silently add or remove exercises.',
-          'Instruction: '+instruction,
-          'PROGRAM JSON:',
-          JSON.stringify(locale)
-        ].join('\n');
+
     try{
       const settings=await getSettings();
+
+      if(mode==='exercise'){
+        const range=exerciseBlockRange(locale.text,exercise);
+        if(range.start<0) return fail(res,404,'exercise_not_found');
+        const sourceBlock=range.lines.slice(range.start,range.end).join('\n');
+        const prompt=[
+          'Edit exactly this ONE Fit Timer exercise block according to the instruction.',
+          'Return ONLY valid JSON: {"block":"..."}. No Markdown.',
+          'CRITICAL STRUCTURE RULES:',
+          '- Keep every existing protocol line and every label before the colon.',
+          '- Keep the same line order and same number of protocol lines.',
+          '- Never delete a line. If the user asks to remove/disable a setting, KEEP its label and set a neutral value: 0 for numeric/rest values, false for boolean values.',
+          '- Do not add another exercise or change anything outside this block.',
+          'Instruction: '+instruction,
+          'EXERCISE BLOCK:',
+          sourceBlock
+        ].join('\n');
+        const out=await generate('text',settings,prompt);
+        const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
+        let parsed;
+        try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
+        const block=String(parsed.block||'').trim();
+        if(!block) return fail(res,502,'ai_incomplete');
+        const text=replaceExerciseBlock(locale.text,exercise,block);
+        const edited={name:locale.name,gives:locale.gives,text};
+        return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
+      }
+
+      const prompt=[
+        'Edit this Fit Timer catalog program according to the instruction.',
+        'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
+        'CRITICAL STRUCTURE RULES FOR text:',
+        '- Keep EVERY existing protocol line and EVERY label before the colon.',
+        '- Keep the exact line order and the same number of protocol lines.',
+        '- Never delete a protocol line and never add a new protocol label.',
+        '- If the instruction says to remove/disable a setting, keep the line and set a neutral value: 0 for numeric/rest values, false for boolean values.',
+        '- You may change only values after existing labels.',
+        '- Do not add/remove/reorder exercises unless the instruction explicitly asks to change an exercise list; even then, preserve all service labels required by the existing format.',
+        'Instruction: '+instruction,
+        'PROGRAM JSON:',
+        JSON.stringify(locale)
+      ].join('\n');
       const out=await generate('text',settings,prompt);
       const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
       let parsed;
       try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
-      const edited=cleanLocaleBlock(parsed);
-      const miss=localeMiss(edited,'AI');
+      const rawEdited=cleanLocaleBlock(parsed);
+      const miss=localeMiss(rawEdited,'AI');
       if(miss.length) return fail(res,502,'ai_incomplete',{miss});
+      const edited={
+        name:rawEdited.name,
+        gives:rawEdited.gives,
+        // Даже если модель нарушила инструкцию и удалила строку, возвращаем
+        // структуру оригинала, подставляя значения только в существующие labels.
+        text:mergeProtocolText(locale.text,rawEdited.text,null)
+      };
       return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){
       return fail(res,502,'ai_edit_failed',{detail:String(e.message||e).slice(0,500)});
@@ -533,9 +600,21 @@ module.exports = async (req, res) => {
     const name=clampLine(body&&body.name,120);
     const description=clean(body&&body.description,1000);
     const program=clampLine(body&&body.program,120);
+    const gender=body&&body.gender==='m'?'man':'woman';
+    const style=[
+      'Style: a stylized realistic 3D illustration of a human body.',
+      'Use muted gray tones for the body and a warm orange glow for the working muscles.',
+      'Show movement direction with clean white arrows when useful.',
+      'Use a clean, slightly blurred neutral or gym background.',
+      'Character: '+gender+'.',
+      'Keep the SAME visual language across the whole program image set.',
+      'No text, logos, captions, UI, collage, or watermarks inside the image.'
+    ].join(' ');
     const prompt = kind==='cover'
-      ? 'Create a clean premium fitness app cover image for the workout program "'+program+'". No text, no logos, no UI, no collage. Modern editorial fitness photography, clear subject, neutral uncluttered background, square composition.'
-      : 'Create a clear instructional fitness exercise image for "'+name+'". '+description+' Show correct body position and movement, one athlete, no text, no arrows, no logos, uncluttered background, square composition suitable for a mobile exercise card.';
+      ? 'Create a square 1:1 cover image for the fitness-program card "'+program+'". '+style+' Show the overall theme of the program rather than one specific exercise.'
+      : 'Create a wide 16:9 exercise illustration for "'+name+'" in a fitness app. '+style+
+        (description?' Technique context: '+description+'.':'')+
+        ' Show the most characteristic phase of the movement and anatomically plausible exercise technique.';
     try{
       const settings=await getSettings();
       const out=await generate('image',settings,prompt);

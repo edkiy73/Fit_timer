@@ -378,15 +378,16 @@
   .exercise-card p{font-size:11.5px;color:var(--muted);margin:5px 0 0;line-height:1.4}
   .exercise-card .b{padding:6px 8px;font-size:11.5px;flex:none}
   .media-tools{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
-  .pic{width:104px}
-  .pic .ph{width:104px;height:104px;position:relative}
+  .pic{width:144px}
+  .pic .ph{width:144px;height:108px;position:relative;cursor:default}
   .pic .ph.generating:after{content:'Генерация…';position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:6px}
-  .pic-tools{display:flex;gap:4px;margin-top:4px}
-  .pic-tools button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:4px;font-size:10px;cursor:pointer}
+  .pic-tools{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+  .pic-tools button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:7px;padding:7px 6px;font-size:11.5px;cursor:pointer;min-height:36px}
+  .pic-tools [data-remove]{grid-column:1/-1}
   @media(max-width:760px){
     .exercise-grid{grid-template-columns:1fr}
-    .pic,.pic .ph{width:92px}
-    .pic .ph{height:92px}
+    .pic{width:calc(50% - 4px)}
+    .pic .ph{width:100%;height:118px}
   }
 
 </style>
@@ -1087,7 +1088,7 @@ async function savePaymentSettings(){
 
 let editing = null;
 let editingStatus = null;
-let form = {cover: null, media: {}, sourceLocale:'ru'};   // картинки живут отдельно от полей ввода
+let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};   // картинки живут отдельно от полей ввода
 
 /* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
    запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
@@ -1250,7 +1251,7 @@ async function generateCatalogPic(kind,name,description,set,el){
   const ph=el&&el.querySelector('.ph');if(ph)ph.classList.add('generating');
   $('fErr').textContent='Генерирую '+(kind==='cover'?'обложку':'фото «'+name+'»')+'…';
   try{
-    const r=await api('catalog_ai_image',{kind,name,description,program:localeFromForm(form.sourceLocale).name});
+    const r=await api('catalog_ai_image',{kind,name,description,program:localeFromForm(form.sourceLocale).name,gender:form.imageGender||'f'});
     shrinkGeneratedPic(r.image,pic=>{set(pic);$('fErr').textContent='✓ Картинка готова. Не забудь сохранить программу.';});
   }catch(e){
     if(ph)ph.classList.remove('generating');
@@ -1270,7 +1271,7 @@ async function generateMedia(mode){
     const j=jobs[i];
     $('fErr').textContent='Генерация изображений '+(i+1)+' / '+jobs.length+'…';
     try{
-      const r=await api('catalog_ai_image',{kind:j.kind,name:j.name,description:j.description,program:localeFromForm(source).name});
+      const r=await api('catalog_ai_image',{kind:j.kind,name:j.name,description:j.description,program:localeFromForm(source).name,gender:form.imageGender||'f'});
       await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
     }catch(e){$('fErr').textContent='Остановлено на '+(i+1)+' / '+jobs.length+': '+(e.detail||e.message);return;}
   }
@@ -1284,16 +1285,20 @@ function renderPics(){
 
   const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
   const box=$('fPics');box.innerHTML='';
-  $('fPicsHint').textContent=names.length?'Клик по картинке — генерация через ИИ. «Загрузить» — своё фото.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
+  $('fPicsHint').textContent=names.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
   blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];renderPics();},'exercise',ex.description)));
   Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
 }
 function picBox(label,data,set,kind,description){
   const el=document.createElement('div');el.className='pic';
-  el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'ИИ'}</div>
+  el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'нет фото'}</div>
     <small>${esc(label)}</small>
-    <div class="pic-tools"><button type="button" data-upload>Загрузить</button>${data?'<button type="button" data-remove>Убрать</button>':''}</div>`;
-  el.querySelector('.ph').onclick=()=>generateCatalogPic(kind,label,description,set,el);
+    <div class="pic-tools">
+      <button type="button" data-generate>ИИ</button>
+      <button type="button" data-upload>Загрузить</button>
+      ${data?'<button type="button" data-remove>✕</button>':''}
+    </div>`;
+  el.querySelector('[data-generate]').onclick=()=>generateCatalogPic(kind,label,description,set,el);
   el.querySelector('[data-upload]').onclick=()=>pickPic(set);
   const rm=el.querySelector('[data-remove]');if(rm)rm.onclick=()=>set(null);
   return el;
@@ -1310,7 +1315,7 @@ function setEditorLang(lang){
 }
 function cancelProgramEdit(){
   const back=editingStatus==='pending'?'pending':'approved';
-  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
   localStorage.removeItem('adminEditingId');
   setTab(back);
 }
@@ -1377,6 +1382,17 @@ function renderAdd(b){
     <details class="form-fold" open>
       <summary>Медиа <span class="cell-sub">· обложка и фото упражнений</span></summary>
       <div class="fold-body">
+        <div class="form-card" style="margin:0 0 10px">
+          <div class="form-card-body">
+            <div class="field-grid">
+              <div><label>Персонаж на изображениях</label><select id="imageGender">
+                <option value="f">Женщина</option>
+                <option value="m">Мужчина</option>
+              </select></div>
+              <div class="wide"><div class="compact-note" style="margin-top:24px">Единый стиль Fit Timer: реалистичная 3D-анатомия, серое тело, оранжевая подсветка работающих мышц, белые стрелки движения, нейтральный / gym-фон, без текста и логотипов.</div></div>
+            </div>
+          </div>
+        </div>
         <div class="media-tools">
           <button class="b" id="genMissing" type="button">Сгенерировать недостающие</button>
           <button class="b quiet" id="genAll" type="button">Сгенерировать все заново</button>
@@ -1416,6 +1432,8 @@ function renderAdd(b){
   $('fCopyTranslate').onclick=copyTranslationSource;
   $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
   $('fPasteApply').onclick=applyPastedTranslation;
+  $('imageGender').value=form.imageGender||'f';
+  $('imageGender').onchange=()=>{form.imageGender=$('imageGender').value==='m'?'m':'f';};
   $('genMissing').onclick=()=>generateMedia('missing');
   $('genAll').onclick=()=>{if(confirm('Перегенерировать обложку и все фото упражнений?'))generateMedia('all');};
   $('fFile').onchange=e=>{
@@ -1431,7 +1449,7 @@ function fillForm(c){
   editing=c.id;
   editingStatus=c.status||null;
   localStorage.setItem('adminEditingId', editing);
-  form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c)};
+  form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c),imageGender:'f'};
   editorLang=form.sourceLocale;
   $('fCat').value=c.cat||'tone';
   $('fLevel').value=c.level||'Новичок';
@@ -1468,7 +1486,7 @@ async function saveForm(){
     const backTo = editingStatus === 'pending' ? 'pending' : 'approved';
     editing = null; editingStatus = null;
     localStorage.removeItem('adminEditingId');
-    form = {cover:null, media:{}, sourceLocale:'ru'};
+    form = {cover:null, media:{}, sourceLocale:'ru', imageGender:'f'};
     tab = backTo;
     localStorage.setItem('adminTab', tab);
     await load();
@@ -1503,7 +1521,7 @@ document.querySelectorAll('[data-tab]').forEach(t => {
   t.onclick = () => {
     if(t.dataset.tab==='add'){
       editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
-      form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+      form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
     }
     setTab(t.dataset.tab);
   };
