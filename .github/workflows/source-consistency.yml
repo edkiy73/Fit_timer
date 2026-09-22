@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'lib/ai-protocol.js', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', 'check.py', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', 'check.py', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
@@ -22,3 +22,17 @@ jobs:
           npm run ai:index
           npm run i18n:check
           node --check app.js
+          node --check api/sync.js
+          node --check lib/store.js
+          python3 check.py
+
+      - name: Проверить серверную синхронизацию
+        run: |
+          node tests/dev-server.js 8124 > /tmp/fittimer-test-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8124/ >/dev/null; then break; fi
+            sleep 0.25
+          done
+          node tests/sync-api.js
