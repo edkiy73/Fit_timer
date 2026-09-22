@@ -1223,12 +1223,15 @@ async function saveReleaseSettings(){
   s.update=s.update||{};
   const latest=Math.max(0,Math.round(+$('relLatestCode').value||0));
   const minimum=Math.max(0,Math.round(+$('relMinimumCode').value||0));
+  const url=$('relUrl').value.trim();
+  if(minimum&&!latest){alert('Сначала укажи последний versionCode.');return;}
   if(latest&&minimum>latest){alert('Минимальная версия не может быть выше последней.');return;}
+  if(latest&&!url){alert('Для обновления нужна ссылка на Google Play, RuStore или APK.');return;}
   s.update.android={
     latestCode:latest,
     minimumCode:minimum,
     latestName:$('relLatestName').value.trim(),
-    url:$('relUrl').value.trim(),
+    url,
     messageRu:$('relMessageRu').value.trim(),
     messageEn:$('relMessageEn').value.trim()
   };
