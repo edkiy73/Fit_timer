@@ -1015,86 +1015,118 @@ function picBox(label, data, set){
   if(x) x.onclick = e => { e.stopPropagation(); set(null); };
   return el;
 }
+let editorLang='ru';
+function setEditorLang(lang){
+  editorLang=lang==='en'?'en':'ru';
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.classList.toggle('on',x.dataset.editorLang===editorLang));
+  const ru=$('editorRu'),en=$('editorEn');
+  if(ru)ru.hidden=editorLang!=='ru';
+  if(en)en.hidden=editorLang!=='en';
+}
+function cancelProgramEdit(){
+  const back=editingStatus==='pending'?'pending':'approved';
+  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+  setTab(back);
+}
 function renderAdd(b){
-  const d = translationDirection();
-  b.innerHTML = `<div class="page-head"><div><h2 id="formTitle">Новая программа</h2><p>Механика, локализации и медиа одной программы.</p></div></div><div class="card">
-    <p class="muted" id="fSourceHint">Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста (ПРОГРАММА, УПРАЖНЕНИЕ, ФОРМАТ и т. п.) не переводятся.</p>
-    <div class="row">
-      <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
-      <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l => `<option>${l}</option>`).join('')}</select></div>
-      <div><label>Минут</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
-    </div>
-    <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
-    <label class="check"><input type="checkbox" id="fPro"> Только по подписке
-      <small>Состав будет закрыт заглушкой, добавить себе — только с Премиумом</small></label>
-
-    <div class="lang-card">
-      <div class="lang-head"><b>Русский</b><span class="lang-state" id="fStateRu"></span></div>
-      <label>Название</label><input id="fNameRu" maxlength="60">
-      <label>Что она даёт</label><textarea id="fGivesRu" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
-      <label>Текст программы</label><textarea id="fTextRu" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
-    </div>
-
-    <div class="lang-card">
-      <div class="lang-head"><b>English</b><span class="lang-state" id="fStateEn"></span></div>
-      <label>Name</label><input id="fNameEn" maxlength="60">
-      <label>What it gives</label><textarea id="fGivesEn" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
-      <label>Program text</label><textarea id="fTextEn" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
-    </div>
-
-    <div class="translate-tools">
-      <p class="name" style="font-size:15px">Перевод для каталога</p>
-      <p class="muted">ИИ запускается только по кнопке ниже. Если он недоступен, скопируй исходник, переведи где угодно и вставь готовый JSON.</p>
-      <div class="acts">
-        <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)} через ИИ</button>
-        <button class="b quiet" id="fCopyTranslate">Скопировать для внешнего перевода</button>
-        <button class="b quiet" id="fPasteToggle">Вставить готовый JSON</button>
-      </div>
-      <div class="translate-box" id="fPasteWrap" hidden>
-        <textarea id="fPasteJson" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
-        <div class="acts"><button class="b ok" id="fPasteApply">Применить перевод</button></div>
+  const d=translationDirection();
+  b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Сначала параметры, затем текст. Медиа открывается только когда нужно.')+`
+    <div class="form-card">
+      <div class="form-card-head"><h3>Основное</h3><span class="status-chip" id="programAccessState">Free</span></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Цель</label><select id="fCat">${GOALS.map(g=>`<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
+          <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+          <div><label>Длительность, мин</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
+          <div><label>Автор</label><input id="fBy" maxlength="40" placeholder="@trainer или пусто"></div>
+        </div>
+        <label class="inline-switch" style="margin-top:10px"><input type="checkbox" id="fPro"><span>Только Premium</span></label>
       </div>
     </div>
 
-    <label>Обложка</label>
-    <div class="pics" id="fCoverBox"></div>
-    <label>Фото упражнений</label>
-    <p class="muted" id="fPicsHint">Названия берутся из исходного языка программы — впиши упражнения, и здесь появятся места под фото.</p>
-    <div class="pics" id="fPics"></div>
+    <div class="form-card">
+      <div class="form-card-head">
+        <div><h3>Текст программы</h3><div class="cell-sub" id="fSourceHint">Одна механика, две локализации.</div></div>
+        <div class="seg">
+          <button type="button" data-editor-lang="ru" class="${editorLang==='ru'?'on':''}">RU <span id="fStateRu"></span></button>
+          <button type="button" data-editor-lang="en" class="${editorLang==='en'?'on':''}">EN <span id="fStateEn"></span></button>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div id="editorRu" class="lang-pane"${editorLang==='ru'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Название</label><input id="fNameRu" maxlength="60"></div>
+            <div class="wide"><label>Что даёт программа</label><textarea id="fGivesRu" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Протокол программы</label><textarea id="fTextRu" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+          </div>
+        </div>
+        <div id="editorEn" class="lang-pane"${editorLang==='en'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Name</label><input id="fNameEn" maxlength="60"></div>
+            <div class="wide"><label>What it gives</label><textarea id="fGivesEn" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+          </div>
+        </div>
+        <div class="translate-tools">
+          <div class="editor-tools">
+            <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)}</button>
+            <button class="b quiet" id="fCopyTranslate">Скопировать промпт</button>
+            <button class="b quiet" id="fPasteToggle">Вставить JSON</button>
+          </div>
+          <div class="translate-box" id="fPasteWrap" hidden>
+            <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
+            <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="form-fold"${form.cover||Object.keys(form.media||{}).length?' open':''}>
+      <summary>Медиа <span class="cell-sub">· обложка и фото упражнений</span></summary>
+      <div class="fold-body">
+        <label>Обложка</label>
+        <div class="pics" id="fCoverBox"></div>
+        <label>Фото упражнений</label>
+        <p class="compact-note" id="fPicsHint"></p>
+        <div class="pics" id="fPics"></div>
+      </div>
+    </details>
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
-  </div>
-  <div class="sticky-save">
-    <span class="save-state" id="programSaveState"></span>
-    <div class="save-actions">
-      <button class="b quiet" id="fClear">Очистить</button>
-      <button class="b ok" id="fSave">Сохранить программу</button>
-    </div>
-  </div>`;
-  $('fSave').onclick = saveForm;
-  $('fClear').onclick = () => {
-    editing = null; editingStatus = null;
-    form = {cover:null, media:{}, sourceLocale:'ru'};
-    render();
+    <div class="sticky-save">
+      <span class="save-state" id="programSaveState"></span>
+      <div class="save-actions">
+        <button class="b quiet" id="fClear">Отмена</button>
+        <button class="b ok" id="fSave">Сохранить</button>
+      </div>
+    </div>`;
+
+  $('fSave').onclick=saveForm;
+  $('fClear').onclick=cancelProgramEdit;
+  if(editing==null)$('fPro').checked=false;
+  $('fPro').onchange=()=>{
+    $('programAccessState').textContent=$('fPro').checked?'Premium':'Free';
+    $('programAccessState').className='status-chip'+($('fPro').checked?' ok':'');
   };
-  if(editing == null) $('fPro').checked = false;
-  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id => {
-    $(id).oninput = () => {
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
+  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
+    $(id).oninput=()=>{
       updateLocaleStates();
-      if(id === (form.sourceLocale === 'en' ? 'fTextEn' : 'fTextRu')) renderPics();
+      if(id===(form.sourceLocale==='en'?'fTextEn':'fTextRu'))renderPics();
     };
   });
-  $('fTranslate').onclick = translateCatalogForm;
-  $('fCopyTranslate').onclick = copyTranslationSource;
-  $('fPasteToggle').onclick = () => { $('fPasteWrap').hidden = !$('fPasteWrap').hidden; };
-  $('fPasteApply').onclick = applyPastedTranslation;
-  $('fFile').onchange = e => {
-    const file = e.target.files && e.target.files[0];
-    if(!file || !pickTo) return;
-    shrinkPic(file, 640, pic => { pickTo(pic); pickTo = null; });
+  $('fTranslate').onclick=translateCatalogForm;
+  $('fCopyTranslate').onclick=copyTranslationSource;
+  $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
+  $('fPasteApply').onclick=applyPastedTranslation;
+  $('fFile').onchange=e=>{
+    const file=e.target.files&&e.target.files[0];
+    if(!file||!pickTo)return;
+    shrinkPic(file,640,pic=>{pickTo(pic);pickTo=null;});
   };
-  $('fSourceHint').textContent += ' Исходник: ' + langName(form.sourceLocale) + '.';
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · служебные метки протокола не переводятся';
   updateLocaleStates();
+  setEditorLang(editorLang);
   renderPics();
 }
 
@@ -1106,18 +1138,22 @@ function fillForm(c){
     media: Object.assign({}, c.media || {}),
     sourceLocale: sourceLocaleOf(c)
   };
+  editorLang = form.sourceLocale;
   $('formTitle').textContent = 'Редактирование программы';
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
   $('fBy').value = c.by || '';
   $('fPro').checked = !!c.pro;
+  $('programAccessState').textContent = c.pro ? 'Premium' : 'Free';
+  $('programAccessState').className = 'status-chip' + (c.pro ? ' ok' : '');
   setLocaleForm('ru', localeBlock(c, 'ru'));
   setLocaleForm('en', localeBlock(c, 'en'));
   const d = translationDirection();
   $('fTranslate').textContent = 'Перевести ' + langName(d.from) + ' → ' + langName(d.to) + ' через ИИ';
   $('fSourceHint').textContent = 'Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста не переводятся. Исходник заявки: ' + langName(form.sourceLocale) + '.';
   updateLocaleStates();
+  setEditorLang(editorLang);
   renderPics();
 }
 
