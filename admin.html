@@ -569,71 +569,164 @@ async function sendCampaign(){
   finally{btn.disabled=false;}
 }
 
-function renderSettings(b){
-  const s = data.settings || {}, lim = s.limits || {}, pay = s.payment || {};
-  const route = (type, which, label) => {
-    const x = (s[type] && s[type][which]) || {};
-    return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
-      ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
-      </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
-  };
-  const status = p => data.providers && data.providers[p] ? '✓ ключ подключён' : '✗ ключ не задан на сервере';
-  const currencies = Object.entries(s.prices || {}).map(([cur,p]) => `<div class="row">
-    <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
-    <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div></div>`).join('');
-  b.innerHTML = `<div class="card">
-    <p class="name">ИИ для Premium</p>
-    <p class="muted">Ключи не показываются и не сохраняются здесь: GEMINI_API_KEY и OPENAI_API_KEY задаются на сервере.</p>
-    <p class="muted">Gemini: ${status('gemini')} · OpenAI: ${status('openai')}</p>
-    <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled !== false ? ' checked' : ''}> Генерация включена</label>
-    <div class="row">${route('text','primary','Текст · основной')}</div>
-    <div class="row">${route('text','backup','Текст · резервный')}</div>
-    <div class="row">${route('image','primary','Картинки · основной')}</div>
-    <div class="row">${route('image','backup','Картинки · резервный')}</div>
-    <div class="row">
-      <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
-      <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
-      <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
-      <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays || 30)}"></div>
-    </div>
-    <div class="acts"><button class="b" id="testText">Проверить текстовый ИИ</button><button class="b" id="testImage">Проверить картинки</button></div>
-    <p class="err" id="aiResult"></p>
-  </div>
-  <div class="card"><p class="name">Цена Premium</p>${currencies}</div>
-  <div class="card"><p class="name">Платежи</p>
-    <p class="muted">Premium выдаёт только сервер после проверки провайдера. Секретные ключи хранятся только в Vercel.</p>
-    <p class="muted">Google Play: ${data.billingProviders&&data.billingProviders.google?'✓ сервер готов':'✗ ключ не задан'} · RuStore: ${data.billingProviders&&data.billingProviders.rustore?'✓ сервер готов':'✗ ключ не задан'} · ЮKassa: ${data.billingProviders&&data.billingProviders.yookassa?'✓ сервер готов':'✗ ключи не заданы'}</p>
-    <label>Режим</label><input id="payProvider" value="${esc(pay.provider || 'multi')}" maxlength="40">
-    <div class="lang-card"><div class="lang-head"><b>Google Play</b></div>
-      <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
-      <div class="row"><div><label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}"></div><div><label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}"></div></div>
-    </div>
-    <div class="lang-card"><div class="lang-head"><b>RuStore Pay</b></div>
-      <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
-      <div class="row"><div><label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}"></div><div><label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}"></div></div>
-    </div>
-    <div class="lang-card"><div class="lang-head"><b>ЮKassa</b></div>
-      <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена в разрешённых каналах/регионах</label>
-      <p class="muted">Цена берётся из таблицы Premium выше; product ID не нужен.</p>
-    </div>
-    <div class="row"><div><label>iOS · месяц (позже)</label><input id="iosMonth" value="${esc(pay.iosMonth || '')}"></div><div><label>iOS · год (позже)</label><input id="iosYear" value="${esc(pay.iosYear || '')}"></div></div>
-    <p class="err" id="settingsErr"></p><div class="acts"><button class="b ok" id="saveSettings">Сохранить настройки</button></div>
-  </div>`;
-  $('saveSettings').onclick = saveSettings;
-  $('testText').onclick = () => testAI('text');
-  $('testImage').onclick = () => testAI('image');
+function settingsClone(){
+  return JSON.parse(JSON.stringify(data.settings || {}));
+}
+function routeFields(s, type, which, label){
+  const x = (s[type] && s[type][which]) || {};
+  return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
+    ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
+  </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
+}
+function saveBar(id, buttonLabel){
+  return `<div class="sticky-save"><span class="save-state" id="${id}State"></span><div class="save-actions"><button class="b ok" id="${id}Save">${buttonLabel || 'Сохранить'}</button></div></div>`;
+}
+async function persistSettings(next, stateId){
+  const state=$(stateId);
+  if(state) state.textContent='Сохраняю…';
+  try{
+    const r=await api('save_settings',{settings:next});
+    data.settings=r.settings;
+    if(state) state.textContent='✓ Сохранено';
+    return true;
+  }catch(e){
+    if(state) state.textContent='Не сохранилось: '+e.message;
+    return false;
+  }
 }
 
-function settingsFromForm(){
-  const s = JSON.parse(JSON.stringify(data.settings || {}));
-  s.enabled = $('aiEnabled').checked;
-  ['text','image'].forEach(type => ['primary','backup'].forEach(which => {
-    s[type][which] = {provider:$(`${type}_${which}_provider`).value, model:$(`${type}_${which}_model`).value.trim()};
+function renderAI(b){
+  const s=data.settings||{}, lim=s.limits||{};
+  const status=p=>data.providers&&data.providers[p]?'✓ ключ подключён':'✗ ключ не задан';
+  b.innerHTML=`
+    <div class="page-head"><div><h2>ИИ</h2><p>Провайдеры, модели, лимиты и хранение запросов.</p></div></div>
+    <div class="card">
+      <div class="status-row">
+        <span class="status-chip ${data.providers&&data.providers.gemini?'ok':''}">Gemini · ${status('gemini')}</span>
+        <span class="status-chip ${data.providers&&data.providers.openai?'ok':''}">OpenAI · ${status('openai')}</span>
+      </div>
+      <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}> Генерация включена
+        <small>Ключи хранятся только в Vercel и здесь не показываются.</small>
+      </label>
+    </div>
+    <div class="section-grid">
+      <div class="card"><p class="name">Текст</p>
+        <div class="row">${routeFields(s,'text','primary','Основной')}</div>
+        <div class="row">${routeFields(s,'text','backup','Резервный')}</div>
+        <div class="acts"><button class="b" id="testText">Проверить текст</button></div>
+      </div>
+      <div class="card"><p class="name">Картинки</p>
+        <div class="row">${routeFields(s,'image','primary','Основной')}</div>
+        <div class="row">${routeFields(s,'image','backup','Резервный')}</div>
+        <div class="acts"><button class="b" id="testImage">Проверить картинки</button></div>
+      </div>
+    </div>
+    <div class="card"><p class="name">Лимиты Premium</p>
+      <div class="row">
+        <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+        <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+        <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+        <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
+      </div>
+      <p class="compact-note">Эти лимиты относятся только к AI-функциям, не к аккаунту или каталогу.</p>
+    </div>
+    <p class="err" id="aiResult"></p>
+    ${saveBar('aiSettings','Сохранить ИИ')}`;
+  $('aiSettingsSave').onclick=saveAISettings;
+  $('testText').onclick=()=>testAIAdmin('text');
+  $('testImage').onclick=()=>testAIAdmin('image');
+}
+function aiSettingsFromForm(){
+  const s=settingsClone();
+  s.text=s.text||{}; s.image=s.image||{};
+  s.enabled=$('aiEnabled').checked;
+  ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
+    s[type][which]={provider:$(`${type}_${which}_provider`).value,model:$(`${type}_${which}_model`).value.trim()};
   }));
-  s.limits = {heavy:+$('limHeavy').value, light:+$('limLight').value, image:+$('limImage').value};
-  s.retentionDays = +$('retention').value;
-  Object.keys(s.prices || {}).forEach(cur => { s.prices[cur] = {month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value}; });
-  s.payment = {
+  s.limits={heavy:+$('limHeavy').value,light:+$('limLight').value,image:+$('limImage').value};
+  s.retentionDays=+$('retention').value;
+  return s;
+}
+async function saveAISettings(){
+  await persistSettings(aiSettingsFromForm(),'aiSettingsState');
+}
+async function testAIAdmin(type){
+  const el=$('aiResult'); el.textContent='Проверяю…';
+  const ok=await persistSettings(aiSettingsFromForm(),'aiSettingsState');
+  if(!ok){el.textContent='Сначала нужно сохранить корректные настройки.';return;}
+  try{
+    const r=await api('test_ai',{type});
+    el.textContent=`✓ ${r.provider} / ${r.model}${r.fallback?' (резерв)':''}: ${r.result}`;
+  }catch(e){el.textContent='✗ '+(e.detail||e.message);}
+}
+
+function renderPricing(b){
+  const s=data.settings||{}, prices=s.prices||{};
+  const currencies=Object.entries(prices).map(([cur,p])=>`
+    <div class="price-line row">
+      <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
+      <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div>
+    </div>`).join('');
+  b.innerHTML=`
+    <div class="page-head"><div><h2>Premium и цены</h2><p>Стоимость подписки по валютам. Платёжные каналы настраиваются отдельно.</p></div></div>
+    <div class="card">
+      <p class="name">Цены</p>
+      ${currencies||'<p class="muted">В конфигурации пока нет валют.</p>'}
+    </div>
+    ${saveBar('priceSettings','Сохранить цены')}`;
+  $('priceSettingsSave').onclick=savePricingSettings;
+}
+async function savePricingSettings(){
+  const s=settingsClone();
+  s.prices=s.prices||{};
+  Object.keys(s.prices).forEach(cur=>{
+    s.prices[cur]={month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value};
+  });
+  await persistSettings(s,'priceSettingsState');
+}
+
+function renderPayments(b){
+  const s=data.settings||{}, pay=s.payment||{};
+  const bp=data.billingProviders||{};
+  b.innerHTML=`
+    <div class="page-head"><div><h2>Платежи</h2><p>Каналы оплаты и product ID. Цены находятся в отдельном разделе.</p></div></div>
+    <div class="status-row">
+      <span class="status-chip ${bp.google?'ok':''}">Google Play · ${bp.google?'сервер готов':'нет ключа'}</span>
+      <span class="status-chip ${bp.rustore?'ok':''}">RuStore · ${bp.rustore?'сервер готов':'нет ключа'}</span>
+      <span class="status-chip ${bp.yookassa?'ok':''}">ЮKassa · ${bp.yookassa?'сервер готов':'нет ключей'}</span>
+    </div>
+    <div class="card">
+      <label>Режим</label><input id="payProvider" value="${esc(pay.provider||'multi')}" maxlength="40">
+      <p class="compact-note">Секреты провайдеров хранятся только в Vercel.</p>
+    </div>
+    <div class="section-grid">
+      <div class="card"><p class="name">Google Play</p>
+        <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
+        <label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}">
+        <label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}">
+      </div>
+      <div class="card"><p class="name">RuStore Pay</p>
+        <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
+        <label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}">
+        <label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}">
+      </div>
+      <div class="card"><p class="name">ЮKassa</p>
+        <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена
+          <small>Использует цены из раздела Premium и цены; product ID не нужен.</small>
+        </label>
+      </div>
+      <div class="card"><p class="name">iOS</p>
+        <p class="compact-note">Заготовка на будущее.</p>
+        <label>Product ID · месяц</label><input id="iosMonth" value="${esc(pay.iosMonth||'')}">
+        <label>Product ID · год</label><input id="iosYear" value="${esc(pay.iosYear||'')}">
+      </div>
+    </div>
+    ${saveBar('paySettings','Сохранить платежи')}`;
+  $('paySettingsSave').onclick=savePaymentSettings;
+}
+async function savePaymentSettings(){
+  const s=settingsClone();
+  s.payment={
     provider:$('payProvider').value.trim()||'multi',
     google:{enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()},
     rustore:{enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()},
@@ -641,16 +734,7 @@ function settingsFromForm(){
     androidMonth:$('googleMonth').value.trim(),androidYear:$('googleYear').value.trim(),
     iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
   };
-  return s;
-}
-async function saveSettings(){
-  try{ const r = await api('save_settings',{settings:settingsFromForm()}); data.settings = r.settings; $('settingsErr').textContent = '✓ Сохранено'; }
-  catch(e){ $('settingsErr').textContent = 'Не сохранилось: ' + e.message; }
-}
-async function testAI(type){
-  const el = $('aiResult'); el.textContent = 'Проверяю…';
-  try{ await api('save_settings',{settings:settingsFromForm()}); const r = await api('test_ai',{type}); el.textContent = `✓ ${r.provider} / ${r.model}${r.fallback ? ' (резерв)' : ''}: ${r.result}`; }
-  catch(e){ el.textContent = '✗ ' + (e.detail || e.message); }
+  await persistSettings(s,'paySettingsState');
 }
 
 let editing = null;
