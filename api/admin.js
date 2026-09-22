@@ -511,6 +511,7 @@ module.exports = async (req, res) => {
     return {lines,start,end};
   }
   const EXERCISE_OPTIONAL_LABELS = new Set([
+    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
     'ФОРМАТ','ВЕС','УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
     'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
     'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
@@ -580,9 +581,14 @@ module.exports = async (req, res) => {
           '- Keep every existing protocol line and every existing label before the colon.',
           '- Never delete an existing line.',
           '- You MAY add only valid optional exercise fields when the requested change requires them.',
-          '- Valid optional fields: ФОРМАТ, ВЕС, УСЛОЖНЯТЬ, ШАГ, ШАГ ВЕСА, ШАГ ПОВТОРОВ, ШАГ ВРЕМЕНИ, ПОТОЛОК, ПОТОЛОК ВЕСА, ПОТОЛОК ПОВТОРОВ, ПОТОЛОК ВРЕМЕНИ, ПРИ ПОТОЛКЕ, ЗАМЕНА, ОПИСАНИЕ ЗАМЕНЫ.',
+          '- Valid optional fields: СТОРОНА, РАЗМИНКА, ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ, ФОРМАТ, ВЕС, УСЛОЖНЯТЬ, ШАГ, ШАГ ВЕСА, ШАГ ПОВТОРОВ, ШАГ ВРЕМЕНИ, ПОТОЛОК, ПОТОЛОК ВЕСА, ПОТОЛОК ПОВТОРОВ, ПОТОЛОК ВРЕМЕНИ, ПРИ ПОТОЛКЕ, ЗАМЕНА, ОПИСАНИЕ ЗАМЕНЫ.',
+          '- Use СТОРОНА: да when the value is performed separately for each side/arm/leg.',
           '- If adding external load such as a kettlebell/dumbbell/barbell, update ФОРМАТ to include "и вес", add ВЕС with the starting kilograms, and add УСЛОЖНЯТЬ: да plus an appropriate ШАГ ВЕСА unless the instruction explicitly says weight must stay fixed.',
-          '- Example for "add an 8 kg kettlebell and progress the load" on a reps exercise: ФОРМАТ: повторения и вес; ВЕС: 8; УСЛОЖНЯТЬ: да; ШАГ ВЕСА: 2. Keep the existing reps/value/sets/rest lines.',
+          '- For weighted reps, use ПРИ ПОТОЛКЕ: да when the intended progression is double progression: reps rise to ПОТОЛОК ПОВТОРОВ, then weight rises by ШАГ ВЕСА and reps return toward the starting range.',
+          '- Use ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ when there is a sensible harder next-level exercise to switch to after the current exercise has reached its useful ceiling.',
+          '- Example for "add an 8 kg kettlebell and progress the load" on a reps exercise: ФОРМАТ: повторения и вес; ВЕС: 8; УСЛОЖНЯТЬ: да; ШАГ ВЕСА: 2. If the request also says to add weight after reaching max reps, add ПОТОЛОК ПОВТОРОВ and ПРИ ПОТОЛКЕ: да.',
+          '- Example for unilateral work: keep the existing ЗНАЧЕНИЕ and add СТОРОНА: да rather than doubling the number.',
+          '- Keep optional progression fields only when they make physiological and mechanical sense for the exercise; do not invent a harder replacement if there is no clear safe progression.',
           '- If the user asks to remove/disable a setting, KEEP its existing label and set a neutral value: 0 for numeric/rest values, false/no for boolean values.',
           '- Do not add another exercise or change anything outside this block.',
           'Instruction: '+instruction,
