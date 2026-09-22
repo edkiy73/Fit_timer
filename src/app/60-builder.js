@@ -1824,6 +1824,7 @@ function initAIForm(){
   $('qRotate').classList.toggle('on', q.rotate);
   setShown('qRotateRow', q.split);
   $('qNote').value = q.note || '';
+  autoGrow($('qContext'));
   if(aiWaysReset.scrAI) aiWaysReset.scrAI();
 }
 $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
@@ -1902,6 +1903,10 @@ function composeRequest(){
 
   let out = 'Build a home-workout program. ' + userForAI() + ' ' + parts.join(' ');
   if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
+  const context = clampText(($('qContext') && $('qContext').value) || '', 600).trim();
+  if(context){
+    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
+  }
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
@@ -1937,6 +1942,7 @@ function importFromText(){
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
   draft = program;
   planIdx = 0;
+  if($('qContext')) $('qContext').value = '';
   fillBuilder(t('ai.reviewSave'));
 }
 
