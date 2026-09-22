@@ -940,7 +940,7 @@ async function renderErrors(b){
   }
   const cards=list.map(x=>'<article class="entity-card">'
     +'<div class="entity-card-title">'+esc((x.name||'Error')+': '+(x.message||''))+'</div>'
-    +'<div class="entity-card-sub" style="margin-top:6px">Последняя: '+esc(fmtDay(x.last))+' · впервые: '+esc(fmtDay(x.first))+'</div>'
+    +'<div class="entity-card-sub" style="margin-top:6px">Последняя: '+esc(fmtDay(x.last))+' · впервые: '+esc(fmtDay(x.first))+(x.build?' · сборка '+esc(x.build):'')+'</div>'
     +'<div class="entity-meta"><div><b>'+((+x.count)||0)+'</b><span>срабатываний</span></div>'
     +'<div><b>'+(((x.platform||{}).android)||0)+'</b><span>Android</span></div>'
     +'<div><b>'+(((x.platform||{}).ios)||0)+'</b><span>iOS</span></div></div>'
