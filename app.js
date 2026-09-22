@@ -35,6 +35,7 @@ const I18N_RU = {
   'store.roleTrainer': 'тренер',
   'store.inside': 'Что внутри',
   'store.locked': 'Состав открыт по подписке',
+  'onboarding.start': 'Выбрать тренировку',
   'onboarding.title': 'Тренируйся<br>по своим правилам',
   'onboarding.lead': 'Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.',
   'onboarding.programTitle': 'Программа под тебя',
@@ -1547,6 +1548,7 @@ const I18N_EN = {
   'store.roleTrainer': 'trainer',
   'store.inside': 'What’s inside',
   'store.locked': 'Program details are available with Premium',
+  'onboarding.start': 'Choose a workout',
   'onboarding.title': 'Train<br>your way',
   'onboarding.lead': 'Choose a ready-made program, get one from your trainer, or build your own. Fit Timer guides you through the workout and tells you when it’s time to progress.',
   'onboarding.programTitle': 'A program for you',
@@ -8419,7 +8421,7 @@ function startOnboarding(){
 // Профиль заводится по нажатию любой кнопки знакомства — и там же фиксируется согласие
 // с правилами, о котором написано под кнопками.
 async function finishOnboardingCreate(){
-  if(users.length) return;
+  if(users.length) return false;
   const u = {
     id: 'u' + Date.now(),
     name: nextProfileName(),
@@ -8437,6 +8439,7 @@ async function finishOnboardingCreate(){
   await ensureWarmup();
   renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
   applyTheme();
+  return true;
 }
 
 /* ---- пол и возраст: спрашиваем по требованию ---- */
@@ -17812,7 +17815,7 @@ $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
-  await finishOnboardingCreate();
+  const freshProfile = await finishOnboardingCreate();
   trackProductEvent('onboarding_complete').catch(()=>{});
   if(pendingImport){
     importProgramCode(pendingImport);
@@ -17831,7 +17834,11 @@ async function leaveOnboarding(){
     importProgramLink(id);
     return;
   }
-  goTab('scrMenu');
+  // Новый пользователь уже выразил намерение начать тренировку. Не заставляем его
+  // сначала попадать на пустую «Сегодня», а ведём туда, где можно сразу выбрать
+  // готовую программу, собрать свою или открыть разминку. После входа в существующий
+  // аккаунт оставляем привычную главную — там уже есть личный план и история.
+  goTab(freshProfile ? 'scrPrograms' : 'scrMenu');
 }
 $('obStart').onclick = ()=> leaveOnboarding();
 // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
