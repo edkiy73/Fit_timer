@@ -1882,9 +1882,11 @@ async function applyExEdit(){
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
-  // Защитный merge: модель может изменить существующие значения и добавить только
-  // официальные optional-поля, но не может случайно потерять СТОРОНА/ОТДЫХ/потолок и т.п.
-  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),raw);
+  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
+  // в два упражнения или потерять старые служебные поля.
+  const candidateBlocks=aiExerciseBlocks(raw);
+  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
