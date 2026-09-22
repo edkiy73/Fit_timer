@@ -324,7 +324,7 @@
   .user-card-email{font-size:14px;font-weight:700;line-height:1.25;word-break:break-word}
   .user-card-handle{font-size:12px;color:var(--muted);margin-top:2px}
   .user-card .td-actions{position:absolute;right:10px;top:10px;width:32px}
-  .user-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+  .user-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
   .user-meta-item{background:var(--soft);border-radius:9px;padding:7px 8px;min-width:0}
   .user-meta-item b{display:block;font-size:12px;line-height:1.2}
   .user-meta-item span{display:block;color:var(--muted);font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -339,7 +339,7 @@
   @media(max-width:760px){
     .user-grid{grid-template-columns:1fr}
     .user-card{padding:10px}
-    .user-meta{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .user-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ai-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
 
@@ -724,6 +724,7 @@ async function renderUsers(b){
       </div>
 
       <div class="user-meta">
+        <div class="user-meta-item"><b>${esc(fmtDay(u.seen||u.since))}</b><span>активность</span></div>
         <div class="user-meta-item"><b>${esc(fmtDay(u.since))}</b><span>создан</span></div>
         <div class="user-meta-item"><b>${u.devices||0}</b><span>устройств</span></div>
         <div class="user-meta-item"><b>${u.pushDevices||0}</b><span>push</span></div>
