@@ -85,12 +85,14 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2064,
-      "chars": 94965,
+      "lines": 2106,
+      "chars": 96170,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
         "add",
+        "analyticsDeviceId",
+        "analyticsPlatform",
         "applyRemoteAccountDocs",
         "applyRemoteSync",
         "avg",
@@ -196,6 +198,8 @@
         "syncProfileInt",
         "syncUser",
         "toggleMenu",
+        "trackInstallOnce",
+        "trackProductEvent",
         "trainerSyncValue",
         "unite",
         "validAge",
@@ -472,8 +476,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1643,
-      "chars": 74871,
+      "lines": 1644,
+      "chars": 74923,
       "symbols": [
         "add",
         "addClient",
@@ -548,8 +552,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2023,
-      "chars": 93242,
+      "lines": 2025,
+      "chars": 93343,
       "symbols": [
         "aiChoiceEnglish",
         "aiExerciseBlocks",
@@ -672,8 +676,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1340,
-      "chars": 62520,
+      "lines": 1342,
+      "chars": 62630,
       "symbols": [
         "afterExChange",
         "autoGrow",
@@ -776,8 +780,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2051,
-      "chars": 85814,
+      "lines": 2056,
+      "chars": 86068,
       "symbols": [
         "addExManual",
         "aiRunClose",
