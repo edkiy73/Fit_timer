@@ -1578,8 +1578,16 @@ async function generateAdminProgram(){
     failedMediaJobs=[];
     setEditorLang(lang);
     updateLocaleStates();renderExerciseCards();renderPics();
-    $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · второй язык нужно перевести и проверить';
-    state.textContent='✓ Программа готова · '+(r.provider||'AI')+' / '+(r.model||'model')+(r.fallback?' · резерв':'')+'. Проверь текст, затем переведи второй язык.';
+    $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · второй язык создаётся автоматически';
+    state.textContent='Программа готова. Перевожу '+langName(lang)+' → '+langName(other)+'…';
+    try{
+      const tr=await api('translate_catalog',{from:lang,to:other,locale:r.locale||{}});
+      setLocaleForm(other,tr.locale||{});
+      updateLocaleStates();
+      state.textContent='✓ Программа и оба языка готовы. Проверь тексты, затем сделай изображения и сохрани.';
+    }catch(trErr){
+      state.textContent='✓ Исходник готов, но второй язык не перевёлся: '+(trErr.detail||trErr.message)+'. Используй кнопку '+langName(lang)+' → '+langName(other)+' ниже.';
+    }
     const textCard=$('fName'+(lang==='en'?'En':'Ru'));
     if(textCard)textCard.scrollIntoView({behavior:'smooth',block:'center'});
   }catch(e){
