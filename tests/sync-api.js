@@ -76,7 +76,7 @@ async function login(deviceId, sub, email = MAIL){
   // Секрет отчётов у нового клиента идёт в заголовке, а не в URL.
   const shared = await post('/api/share',{
     program:{name:'Проверка ссылки',plans:[{days:['Пн'],exercises:[{name:'x'}]}]},
-    by:nick,trainerKey:claimed.trainerKey,trainer:{name:'Лена'}
+    by:nick,trainerKey:again.trainerKey || claimed.trainerKey,trainer:{name:'Лена'}
   });
   const reportRead = await fetch(BASE + '/api/p/' + shared.id,{
     headers:{'X-Fit-Link-Key':shared.key}
