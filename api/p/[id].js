@@ -16,7 +16,7 @@
    функцией, которых там всего двенадцать. */
 
 const { store } = require('../../lib/store');
-const { send, fail, rateOk, sameSecret, cors, readBody } = require('../../lib/util');
+const { send, fail, rateOk, rateOkScoped, sameSecret, cors, readBody } = require('../../lib/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -26,9 +26,14 @@ module.exports = async (req, res) => {
 
   const id = (req.query && req.query.id) || '';
   if(!/^[0-9a-z]{4,16}$/.test(id)) return fail(res, 400, 'bad_id');
-  const key = (req.query && req.query.key) || '';
+  // Новый клиент передаёт секрет в заголовке, чтобы он не попадал в URL/историю/логи.
+  // Query оставлен только для совместимости со старыми APK.
+  const key = String(req.headers['x-fit-link-key'] || (req.query && req.query.key) || '');
 
   if(!(await rateOk(req, key ? 'link' : 'open', key ? 300 : 600))){
+    return fail(res, 429, 'rate_limited');
+  }
+  if(key && !(await rateOkScoped(req, 'link-key', 60, id, 15 * 60, true))){
     return fail(res, 429, 'rate_limited');
   }
 
