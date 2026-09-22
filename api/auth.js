@@ -137,6 +137,7 @@ async function forget(req, res, body){
       // Одноразовые auth-следы и AI usage/diagnostics тоже относятся к аккаунту.
       // У них есть TTL, но delete account должен чистить их сразу, а не ждать срока.
       await store.del(`mail:${mh}`);
+      await store.del(`campaign:last:offers:${mh}`);
       for(const key of await store.scan(`mailday:${mh}:*`, 400)) await store.del(key);
       for(const key of await store.scan(`ai:use:*:${mh}:*`, 500)) await store.del(key);
       for(const key of await store.scan('ai:log:*', 120)){
@@ -147,6 +148,23 @@ async function forget(req, res, body){
             if(rec && rec.account === mh) await store.removeFromList(key, row);
           }catch(_){}
         }
+      }
+
+      // Shared link принадлежит тренеру, поэтому при удалении аккаунта подопечного
+      // саму ссылку не трогаем. Убираем только claim, связывающий её с удалённым
+      // account hash; иначе trainer link продолжал бы хранить псевдонимизированный email.
+      for(const key of await store.scan('p:*', 100000)){
+        if(!/^p:[0-9a-z]{4,16}$/.test(String(key || ''))) continue;
+        const raw = await store.get(key);
+        if(!raw) continue;
+        try{
+          const link = JSON.parse(raw);
+          if(link && link.clientMailHash === mh){
+            delete link.clientMailHash;
+            delete link.claimedAt;
+            await store.set(key, JSON.stringify(link));
+          }
+        }catch(_){}
       }
 
       // Манифест знает все отдельные документы синхронизации. Сначала читаем его,
