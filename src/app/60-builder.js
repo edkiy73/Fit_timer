@@ -1364,7 +1364,7 @@ function aiExerciseBlocks(text){
     if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
     let end=i+1;
     while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-    out.push({start:i,end,lines:lines.slice(i,end)});
+    out.push({start:i,end,lines:lines.slice(i,end),name:(aiProtocolLine(lines[i])||{}).value||''});
     i=end-1;
   }
   return out;
@@ -1408,11 +1408,16 @@ function aiMergeProgramEdit(sourceText,candidateText){
     topValues[p.key].push(p.value);
   });
   const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
+  const usedCand=new Set();
+  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
   const out=[];
   for(let i=0;i<srcLines.length;i++){
     const entry=blockByStart.get(i);
     if(entry){
-      const cb=candBlocks[entry.i];
+      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
+      const cb=ci>=0?candBlocks[ci]:null;
+      if(ci>=0)usedCand.add(ci);
       out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
       i=entry.b.end-1;
       continue;
