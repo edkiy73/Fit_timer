@@ -15,6 +15,7 @@ const FitAIProtocol = require('../lib/ai-protocol');
 const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
+const { analyticsStats } = require('../lib/analytics');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -519,6 +520,10 @@ module.exports = async (req, res) => {
       store.del(`ai:use:${month}:${mh}:image`)
     ]);
     return send(res,200,{ok:true,email,month});
+  }
+
+  if(a === 'analytics_stats'){
+    return send(res,200,{ok:true,stats:await analyticsStats(body&&body.days)});
   }
 
   if(a === 'user_create'){
