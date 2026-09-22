@@ -1466,21 +1466,41 @@ async function generateCatalogPic(kind,name,description,set,el){
 async function generateMedia(mode){
   const source=form.sourceLocale;
   const exercises=exerciseBlocks(source);
-  const jobs=[];
-  if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
-  exercises.forEach(ex=>{
-    if(mode==='all'||!form.media[ex.name])jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>{form.media[ex.name]=d;}});
-  });
-  if(!jobs.length){$('fErr').textContent='Все изображения уже есть.';return;}
+  let jobs=[];
+  if(mode==='retry'){
+    jobs=failedMediaJobs.slice();
+  }else{
+    if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
+    exercises.forEach(ex=>{
+      if(mode==='all'||!form.media[ex.name])jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>{form.media[ex.name]=d;}});
+    });
+  }
+  if(!jobs.length){
+    failedMediaJobs=[];
+    const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
+    const state=$('mediaProgressText');if(state)state.textContent='Все изображения уже есть.';
+    return;
+  }
+  const failed=[];
+  const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
   for(let i=0;i<jobs.length;i++){
-    const j=jobs[i];
-    $('fErr').textContent='Генерация изображений '+(i+1)+' / '+jobs.length+'…';
+    const j=jobs[i],state=$('mediaProgressText');
+    if(state)state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);
     try{
       const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
       await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
-    }catch(e){$('fErr').textContent='Остановлено на '+(i+1)+' / '+jobs.length+': '+(e.detail||e.message);return;}
+    }catch(e){
+      failed.push(j);
+    }
   }
-  $('fErr').textContent='✓ Изображения сгенерированы. Сохрани программу.';
+  failedMediaJobs=failed;
+  const done=jobs.length-failed.length,state=$('mediaProgressText');
+  if(!failed.length){
+    if(state)state.textContent='✓ Готово '+done+' / '+jobs.length+'. Сохрани программу.';
+  }else{
+    if(state)state.textContent='Готово '+done+' / '+jobs.length+' · ошибок '+failed.length+'. Уже готовые картинки сохранены.';
+    if(retry)retry.hidden=false;
+  }
   renderPics();
 }
 
