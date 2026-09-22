@@ -75,6 +75,7 @@ const I18N_RU = {
   'common.headset': "Гарнитура",
   'common.download': "Скачать",
   'common.checking': "Проверяем…",
+  'common.back': 'Назад',
   'common.actions': "Действия",
   'common.manual': "Вручную",
   'common.viaAI': "Через ИИ",

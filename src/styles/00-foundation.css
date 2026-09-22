@@ -91,7 +91,7 @@ body.booting .app{visibility:hidden}
     /* пятна живого фона карточки плана */
     --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.42;
   }
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}\n  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
   button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active{transform:scale(.96)}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
@@ -466,3 +466,9 @@ body.booting .app{visibility:hidden}
   .illo img{max-width:100%;max-height:26vh;width:auto;border-radius:10px;display:block;margin:0 auto;object-fit:contain}
 
   
+  /* Минимальная зона касания для иконок и навигации — TalkBack/увеличенный текст
+     не должны превращать мелкие контролы в цель меньше рекомендованных 44px. */
+  .back-chip,.icon-btn,.more-btn,.add-btn,.ss-clear,.btn-prev{min-width:44px;min-height:44px}
+  button:focus-visible,[role="switch"]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+    outline:3px solid var(--accent-line);outline-offset:2px
+  }
