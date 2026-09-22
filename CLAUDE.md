@@ -28,7 +28,7 @@ Historical rationale and bug traps live in:
 
 Fit Timer is a Russian-first workout timer / training app.
 
-- Web/PWA + Android/iOS via Capacitor 8.
+- Web + Android/iOS via Capacitor 8. PWA/service worker support was removed.
 - Production: `https://fittimer99.vercel.app`
 - Production branch: `main`
 - App id: `ru.fittimer.app`
