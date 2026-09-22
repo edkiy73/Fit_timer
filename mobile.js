@@ -350,8 +350,30 @@
     });
   }
 
+  async function getAppInfo(){
+    if(!native || !plugins.App || !plugins.App.getInfo) return null;
+    try{
+      const info=await plugins.App.getInfo();
+      return {
+        version:String((info&&info.version)||''),
+        build:Number((info&&info.build)||0)||0
+      };
+    }catch(_){ return null; }
+  }
+
+  async function openExternal(url){
+    const value=String(url||'').trim();
+    if(!value) return false;
+    if(native && fitSystem && fitSystem.openExternal){
+      try{ await fitSystem.openExternal({url:value}); return true; }catch(_){}
+    }
+    try{ window.open(value,'_blank','noopener'); return true; }catch(_){ return false; }
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
+    getAppInfo,
+    openExternal,
     requestNotifications,
     registerRemotePush,
     scheduleRest,
