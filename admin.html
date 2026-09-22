@@ -378,15 +378,16 @@
   .exercise-card p{font-size:11.5px;color:var(--muted);margin:5px 0 0;line-height:1.4}
   .exercise-card .b{padding:6px 8px;font-size:11.5px;flex:none}
   .media-tools{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
-  .pic{width:104px}
-  .pic .ph{width:104px;height:104px;position:relative;cursor:default}
+  .pic{width:144px}
+  .pic .ph{width:144px;height:108px;position:relative;cursor:default}
   .pic .ph.generating:after{content:'Генерация…';position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:6px}
-  .pic-tools{display:flex;gap:4px;margin-top:4px}
-  .pic-tools button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:7px;padding:7px 6px;font-size:11.5px;cursor:pointer;min-height:32px}
+  .pic-tools{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+  .pic-tools button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:7px;padding:7px 6px;font-size:11.5px;cursor:pointer;min-height:36px}
+  .pic-tools [data-remove]{grid-column:1/-1}
   @media(max-width:760px){
     .exercise-grid{grid-template-columns:1fr}
-    .pic,.pic .ph{width:92px}
-    .pic .ph{height:92px}
+    .pic{width:calc(50% - 4px)}
+    .pic .ph{width:100%;height:118px}
   }
 
 </style>
