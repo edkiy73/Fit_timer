@@ -9,12 +9,9 @@
 1. `index.html` собирает существующий текстовый prompt и вызывает `POST /api/ai`.
 2. Клиент передаёт `email`, отдельный `syncToken` устройства, `deviceId`, `kind`
    и prompt. Ключей Gemini/OpenAI в HTML и APK нет.
-3. `api/ai.js` сверяет токен с аккаунтом и проверяет серверную дату окончания
-   Premium, затем месячный лимит.
-4. `lib/ai.js` читает `settings:ai`, вызывает основной маршрут и при timeout,
-   404, 429 или 5xx один раз пробует резервный.
-5. Ответ возвращается клиенту и проходит прежний parser/валидатор программы.
-   Картинки уменьшаются клиентом перед сохранением.
+3. `/api/ai` через rewrite попадает в `api/admin.js` → `lib/ai-endpoint.js`, где проверяются токен аккаунта, Premium и лимиты.
+4. `lib/ai.js` читает `settings:ai`, вызывает основной маршрут и при transport/provider error или структурно невалидном HTTP 200 пробует резервный маршрут.
+5. Ответ сначала проходит общий `lib/ai-protocol.js` на сервере, затем повторную client-side проверку перед применением. Картинки уменьшаются клиентом перед сохранением.
 6. Обезличенная запись запроса и результата лежит в дневном Redis-списке
    `ai:log:YYYY-MM-DD` с TTL не больше 30 дней. Почта в журнал не пишется — только
    необратимый hash аккаунта.
@@ -69,7 +66,8 @@ Premium-аккаунт и dummy-ключ провайдера. Этот флаг
 python3 check.py
 npm run mobile:sync
 npm run check:mobile
-node --check api/ai.js
+node --check api/admin.js
+node --check lib/ai-endpoint.js
 node --check lib/ai.js
 ```
 
