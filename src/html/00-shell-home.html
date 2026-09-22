@@ -83,6 +83,14 @@
       <p class="field-hint" id="weekStripHint"></p>
     </div>
 
+    <!-- Обновление Android показываем только когда сервер сообщает о более новой
+         release-сборке. Это не реклама: мягкий баннер можно игнорировать, а
+         обязательная минимальная версия блокируется отдельным gate ниже. -->
+    <button class="update-banner hidden" id="appUpdateBanner" type="button">
+      <span class="ub-copy"><b id="appUpdateTitle"></b><small id="appUpdateText"></small></span>
+      <span class="ub-action" data-i18n="update.action">Обновить</span>
+    </button>
+
     <!-- Баннер подписки стоит выше прогресса: прогресс — итог экрана, после него
          читать предложение уже некому. Когда премиум оформлен, баннер прячется. -->
     <button class="premium-banner" id="btnPremium">
@@ -109,6 +117,16 @@
       <div class="quick-stats hidden" id="qsWell"></div>
     </div>
   </section>
+
+  <div class="update-gate hidden" id="appUpdateGate" role="dialog" aria-modal="true">
+    <div class="update-gate-card">
+      <span class="update-gate-mark">FIT / TIMER</span>
+      <h2 id="appUpdateGateTitle"></h2>
+      <p id="appUpdateGateText"></p>
+      <button class="btn-primary" id="appUpdateNow" type="button" data-i18n="update.action">Обновить</button>
+      <small data-i18n="update.requiredHint">Эта версия больше не совместима с текущим сервисом.</small>
+    </div>
+  </div>
 
   <!-- КАТАЛОГ ПРОГРАММ. Не магазин: оплаты нет и в этой версии не появится —
        программа добавляется в библиотеку, а не покупается. У каждой программы есть
