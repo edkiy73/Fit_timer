@@ -193,7 +193,10 @@ const I18N_RU = {
   'premium.buy': "Оформить",
   'login.title': "Вход в аккаунт",
   'login.codeHint': "Пришлём код. Писем, кроме кода, не будет.",
-  'login.code': "Код из письма",
+  'login.code': "Код входа",
+  'login.haveCode': "У меня уже есть код",
+  'login.haveCodeMsg': "Введи код для {email}. Письмо отправлять не будем.",
+  'login.haveCodeHint': "Подойдёт одноразовый код из письма или тестовый код, созданный в админке.",
   'login.codePlaceholder': "6 цифр",
   'login.nick': "Ник аккаунта",
   'login.nickHint': "Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.",
@@ -670,6 +673,7 @@ const I18N_RU = {
   'well.sleepHours': "Сон, ч",
   'sync.premiumOnly': "Синхронизация тренировок доступна в Премиум",
   'sync.busy': "Синхронизируем данные…",
+  'sync.progress': "Синхронизация… {step}/{total}",
   'sync.ok': "Данные сохранены на сервере · фото-прогресс только на этом телефоне",
   'sync.error': "Нет связи с сервером · изменения отправятся позже",
   'sync.account': "Данные синхронизируются с аккаунтом",
@@ -1681,7 +1685,10 @@ const I18N_EN = {
   'premium.buy': "Get Premium",
   'login.title': "Sign in",
   'login.codeHint': "We’ll email you a code. No other emails.",
-  'login.code': "Email code",
+  'login.code': "Sign-in code",
+  'login.haveCode': "I already have a code",
+  'login.haveCodeMsg': "Enter the code for {email}. We won’t send another email.",
+  'login.haveCodeHint': "Use a one-time email code or a test code created in the admin panel.",
   'login.codePlaceholder': "6 digits",
   'login.nick': "Account nickname",
   'login.nickHint': "Set once. This is your Fit Timer nickname, including on your trainer page.",
@@ -2158,6 +2165,7 @@ const I18N_EN = {
   'well.sleepHours': "Sleep, h",
   'sync.premiumOnly': "Workout sync is available with Premium",
   'sync.busy': "Syncing data…",
+  'sync.progress': "Syncing… {step}/{total}",
   'sync.ok': "Data saved to the server · progress photos stay only on this phone",
   'sync.error': "No server connection · changes will upload later",
   'sync.account': "Data syncs with your account",
@@ -5060,17 +5068,47 @@ let syncTimer = null;
 let syncBusy = null;
 let syncReplaceLocal = false;
 let syncState = 'idle';
+let syncStep = 0;
+let syncTotal = 0;
 
-function showSyncState(state){
+function showSyncState(state, step, total){
   syncState = state;
+  if(state === 'busy'){
+    if(step !== undefined) syncStep = +step || 0;
+    if(total !== undefined) syncTotal = +total || 0;
+  }else{
+    syncStep = 0;
+    syncTotal = 0;
+  }
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
   else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  else if(state === 'busy' && syncStep && syncTotal) el.textContent = t('sync.progress',{step:syncStep,total:syncTotal});
   else if(state === 'busy') el.textContent = t('sync.busy');
   else if(state === 'ok') el.textContent = t('sync.ok');
   else if(state === 'error') el.textContent = t('sync.error');
   else el.textContent = t('sync.account');
+}
+
+async function syncApiPost(body){
+  let last;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      return await apiFetch('/api/sync', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        timeoutMs:15000
+      });
+    }catch(e){
+      last = e;
+      const transient = !e || !e.status || e.status >= 500 || e.name === 'AbortError';
+      if(!transient || attempt) break;
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
+  throw last || new Error('sync_failed');
 }
 
 const accountAuth = () => ({
@@ -5428,7 +5466,7 @@ async function syncNotificationPrefsServer(action){
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
   const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
   if(base.action === 'pull'){
-    const result = await apiPost('/api/sync', base);
+    const result = await syncApiPost(base);
     await applyRemoteAccountDocs(result);
     return true;
   }
@@ -5443,7 +5481,7 @@ async function syncNotificationPrefsServer(action){
   const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
     schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
   await writeAccountBucket(rec);
-  await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+  await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   return true;
 }
 
@@ -5451,7 +5489,7 @@ async function pushAccountDocs(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   const base = syncAuth('push');
   for(const doc of await accountDocsSnapshot()){
-    await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   }
 }
 
@@ -5480,14 +5518,14 @@ const accountSyncAdapter = {
   async push(payload){
     const base = syncAuth('push');
     const u = curUser();
-    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
+    await syncApiPost(Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
     // По одному документу: программа может содержать свои картинки и быть крупной;
     // общий пакет тогда упирается в предел запроса, хотя каждый документ допустим.
-    for(const doc of payload) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    for(const doc of payload) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
     showSyncState('ok');
   },
   async pull(){
-    const result = await apiPost('/api/sync', syncAuth('pull'));
+    const result = await syncApiPost(syncAuth('pull'));
     await applyRemoteSync(result);
     return result;
   }
@@ -5498,8 +5536,8 @@ async function pushAllProfiles(){
   for(const u of users){
     const snap = await profileSnapshot(u.id);
     if(!snap) continue;
-    await apiPost('/api/sync', Object.assign(base, {profiles:[snap.profile], docs:[]}));
-    for(const doc of snap.docs) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    await syncApiPost(Object.assign(base, {profiles:[snap.profile], docs:[]}));
+    for(const doc of snap.docs) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   }
 }
 
@@ -5508,7 +5546,7 @@ async function pushDeletedProfiles(){
   if(!list.length) return;
   const base = syncAuth('push');
   for(const rec of list){
-    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
+    await syncApiPost(Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
   }
   account.deletedProfiles = [];
   await saveAccount();
@@ -5526,16 +5564,21 @@ async function connectAccountSync(opts){
   }
   if(syncBusy) return syncBusy;
   syncReplaceLocal = !!(opts && opts.replaceLocal);
-  showSyncState('busy');
+  showSyncState('busy', 1, 6);
   syncBusy = (async()=>{
     try{
       SYNC.adapter = accountSyncAdapter;
       await pushDeletedProfiles();          // удаление должно дойти до pull, иначе профиль воскреснет
-      await accountSyncAdapter.pull();        // сначала вернуть серверное, потом отправлять местное
-      await pushDeletedProfiles();          // pull мог найти и схлопнуть старые пустые дубликаты
+      showSyncState('busy', 2, 6);
+      await accountSyncAdapter.pull();       // сначала вернуть серверное, потом отправлять местное
+      showSyncState('busy', 3, 6);
+      await pushDeletedProfiles();           // pull мог найти и схлопнуть старые пустые дубликаты
       await pushAllProfiles();
+      showSyncState('busy', 4, 6);
       await pushAccountDocs();
-      await SYNC.push();                      // в том числе надгробия удалённых программ
+      showSyncState('busy', 5, 6);
+      await SYNC.push();                     // в том числе надгробия удалённых программ
+      showSyncState('busy', 6, 6);
       await loadIdentity();
       await loadData();
       renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
@@ -5553,10 +5596,18 @@ function queueAccountSync(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
     showSyncState('busy');
-    if(SYNC.adapter) Promise.all([SYNC.push(), pushAccountDocs()]).catch(()=> showSyncState('error'));
+    if(SYNC.adapter) Promise.all([SYNC.push(), pushAccountDocs()])
+      .then(()=> showSyncState('ok'))
+      .catch(()=> showSyncState('error'));
     else connectAccountSync().catch(()=> showSyncState('error'));
   }, 900);
 }
+
+window.addEventListener('online', ()=>{
+  if(account && account.email && account.syncToken && isPremium()){
+    connectAccountSync().catch(()=> showSyncState('error'));
+  }
+});
 
 // На новой установке загрузчик создаёт технический «Профиль 1», поэтому users.length
 // уже равен единице ещё до входа. Проверяем содержимое: только совершенно пустую
@@ -6472,6 +6523,27 @@ async function loadAccount(){
 }
 async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
 async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+async function refreshServerSubscription(force){
+  if(!account || !account.email || !account.syncToken) return false;
+  const now = Date.now();
+  if(!force && refreshServerSubscription._at && now - refreshServerSubscription._at < 15000) return false;
+  refreshServerSubscription._at = now;
+  let deviceId = await kvGet('deviceId');
+  if(!deviceId) return false;
+  try{
+    const r = await apiPost('/api/auth',{
+      action:'status', email:account.email, deviceId, syncToken:account.syncToken
+    });
+    account.sub = r.sub || null;
+    await saveAccount();
+    renderPlan();
+    if(typeof renderPremium === 'function') renderPremium();
+    if(typeof syncGeminiBtns === 'function') syncGeminiBtns();
+    return true;
+  }catch(_){
+    return false;
+  }
+}
 
 async function syncAccountLocale(locale){
   const next = normalizeLocale(locale);
@@ -6752,6 +6824,23 @@ function openLogin(after, opts){
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
 
+function loginUseExistingCode(){
+  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  $('loginErr').textContent = '';
+  if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
+    $('loginErr').textContent = t('login.addressTypo');
+    $('loginEmail').focus();
+    return;
+  }
+  loginStep = 2;
+  setShown('loginStep1', false);
+  setShown('loginStep2', true);
+  $('loginMsg').textContent = t('login.haveCodeMsg',{email});
+  $('loginCodeHint').textContent = t('login.haveCodeHint');
+  $('loginGo').textContent = t('login.signIn');
+  setTimeout(()=> $('loginCode').focus(), 80);
+}
+
 async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   const btn = $('loginGo');
   const now = new Date().toISOString();
@@ -6760,7 +6849,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   account.handle = r.handle || '';
   account.locale = r.locale || account.locale || appLocale;
   account.linkedAt = switchingAccount ? now : (account.linkedAt || now);
-  if(r.sub) account.sub = r.sub;
+  account.sub = r.sub || null;
   if(r.syncToken) account.syncToken = r.syncToken;
   if(r.locale) await setAppLocale(r.locale, {persist:true});
   rememberAccount();
@@ -6868,10 +6957,8 @@ async function doLogin(){
       // он привяжется к нему сразу, а не потребует второго действия.
       handle: !switchingAccount && trainer && trainer.handle ? normHandle(trainer.handle) : '',
       trainerKey: !switchingAccount && trainer ? (trainer.key || '') : '',
-      // Оформляемая подписка уезжает тем же запросом: отдельного «сохрани подписку»
-      // нет и не нужно — почта подтверждается ровно затем, чтобы она к чему-то
-      // прицепилась.
-      sub: switchingAccount ? (pendingSub || null) : ((account && account.sub) || pendingSub || null),
+      // Premium — только серверное право. Локальный account.sub является кэшем
+      // интерфейса и никогда не отправляется как доказательство подписки.
       locale: appLocale
     });
     if(r.needsHandle || !r.handle){
@@ -10055,6 +10142,16 @@ async function createEditedProgram(){
 /* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
    программе — по ней потом уедет отчёт, и по ней же подопечный понимает, что программа
    пришла от тренера, а не собрана им самим. */
+async function claimProgramLink(id){
+  if(!id || !account || !account.email || !account.syncToken) return false;
+  let deviceId=await kvGet('deviceId');
+  if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
+  try{
+    await apiPost('/api/p/'+encodeURIComponent(id),{action:'claim',email:account.email,deviceId,token:account.syncToken});
+    return true;
+  }catch(_){return false;}
+}
+
 async function importProgramLink(id){
   let d;
   try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
@@ -10066,8 +10163,11 @@ async function importProgramLink(id){
   }
   const prog = d.program;
   if(!prog || !prog.name){ appAlert(t('import.noProgram')); return; }
-  prog.id = 'p' + Date.now();
-  prog.stats = {completions: 0};
+  const existing = customPrograms.find(x => x && x.src === id);
+  prog.id = existing ? existing.id : ('p' + Date.now());
+  prog.stats = existing && existing.stats ? existing.stats : {completions: 0};
+  if(existing && existing.active !== undefined) prog.active = existing.active;
+  if(existing && existing.progStepsAdj != null) prog.progStepsAdj = existing.progStepsAdj;
   prog.src = id;
   prog.plans = normPlans(prog);
   sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым
@@ -10158,13 +10258,16 @@ const URL_SAFE = 1800;
 
 async function apiFetch(path, opts){
   if(API_BASE === null) throw new Error('offline');
+  const cfg = Object.assign({}, opts || {});
+  const wait = Math.max(1000, Math.min(30000, +cfg.timeoutMs || API_WAIT));
+  delete cfg.timeoutMs;
   const ctl = new AbortController();
-  const t = setTimeout(()=> ctl.abort(), API_WAIT);
+  const t = setTimeout(()=> ctl.abort(), wait);
   try{
     // cache: 'no-store' — второй рубеж к тому же правилу, что и в sw.js: ответы
     // сервера живут минуты и кэшироваться не должны ни на одном уровне.
     const res = await fetch(API_BASE + path,
-      Object.assign({signal: ctl.signal, cache: 'no-store'}, opts || {}));
+      Object.assign({signal: ctl.signal, cache: 'no-store'}, cfg));
     const data = await res.json().catch(()=> ({}));
     if(!res.ok){
       const err = new Error(data.error || ('http_' + res.status));
@@ -10667,7 +10770,7 @@ async function sendProgramToClient(c, p){
   // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
   let pr = clProgs(c).find(x => x.pid === p.id);
   let link = null, failed = null;
-  try{ link = await programLink(p, {to: c.name}); }
+  try{ link = await programLink(p, {to: c.name, existing: pr && pr.link ? pr.link : null}); }
   catch(e){ failed = e; }
 
   if(!link){ appAlert(linkFailNote(failed) + FILE_HINT); return; }
@@ -11002,18 +11105,50 @@ let storeServer = [];
    честно: пустая витрина лучше вечно устаревшей. */
 const storeAll = () => storeServer;
 let storeLoading = false;
+
+async function catalogItemFull(it){
+  const lang = appLocale === 'ru' ? 'ru' : 'en';
+  const headers = {};
+  if(it && it.pro){
+    if(!account || !account.email || !account.syncToken) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+    const deviceId = await kvGet('deviceId');
+    if(!deviceId) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+    headers['X-Fit-Email'] = account.email;
+    headers['X-Fit-Device'] = deviceId;
+    headers['X-Fit-Token'] = account.syncToken;
+  }
+  const d = await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(lang), {headers});
+  if(d && d.item && d.item.locked) throw Object.assign(new Error('premium_required'),{code:'premium_required',status:402});
+  return d && d.item;
+}
+
+async function ensureCatalogBody(it){
+  if(!it || !it.pro || it.text) return it;
+  try{
+    const full = await catalogItemFull(it);
+    if(full) Object.assign(it, full, {locked:false});
+    return it;
+  }catch(e){
+    if(e && e.code === 'premium_required'){
+      await refreshServerSubscription(true);
+    }
+    throw e;
+  }
+}
+
 async function loadStoreServer(){
   const locale = appLocale === 'ru' ? 'ru' : 'en';
   const cacheKey = 'catalog_' + locale;
   storeLoading = true;
   try{
     const d = await apiFetch('/api/catalog?lang=' + encodeURIComponent(locale));
-    storeServer = Array.isArray(d.items) ? d.items : [];
+    storeServer = Array.isArray(d.items) ? d.items.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it) : [];
     lastSeen(cacheKey, storeServer);
   }catch(e){
     // Кэш тоже языковой: после переключения профиля русская витрина не должна
     // внезапно подменять английскую и наоборот.
     storeServer = lastSeen(cacheKey) || [];
+    storeServer = storeServer.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it);
   } finally { storeLoading = false; }
 }
 
@@ -11214,9 +11349,15 @@ function siBits(ex){
   if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
-function openStoreItem(id){
+async function openStoreItem(id){
   const it = storeAll().find(x => x.id === id);
   if(!it) return;
+  if(it.pro && isPremium() && !it.text){
+    try{ await ensureCatalogBody(it); }
+    catch(e){
+      if(e && e.code === 'premium_required'){ openPremium(); return; }
+    }
+  }
   siItem = it;
   const c = storeCat(it.cat);
   $('siCover').innerHTML = storeCover(it, true);
@@ -11269,7 +11410,7 @@ function openStoreItem(id){
   setShown('siLock', locked);
   if(locked){
     $('siLockTxt').textContent =
-      t('store.lockedText',{count:exs.length,exercises:appLocale === 'ru' ? plural(exs.length,t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : (exs.length === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
+      t('store.lockedText',{count:(it.exCount||exs.length),exercises:appLocale === 'ru' ? plural((it.exCount||exs.length),t('store.exerciseOne'),t('store.exerciseFew'),t('store.exerciseMany')) : ((it.exCount||exs.length) === 1 ? t('store.exerciseOne') : t('store.exerciseFew'))});
   }
   /* Состав — ПО ВАРИАНТАМ, а не одним списком.
 
@@ -11339,7 +11480,7 @@ async function siPaintMedia(it){
   if(!(it.hasMedia || it.media)) return;
   let media = it.media;
   if(!media){
-    try{ media = (await apiFetch('/api/catalog?item=' + encodeURIComponent(it.id) + '&lang=' + encodeURIComponent(appLocale === 'ru' ? 'ru' : 'en'))).item.media; }
+    try{ media = (await catalogItemFull(it)).media; }
     catch(e){ return; }            // без фото страница остаётся рабочей
     it.media = media || {};
   }
@@ -11370,8 +11511,13 @@ async function addStoreItem(id){
     openStart(own);
     return;
   }
-  // программа по подписке — вместо отказа показываем, что даёт подписка
+  // Локальная проверка — только UX. Сам текст Premium-программы всё равно
+  // выдаёт только сервер после проверки аккаунта и подписки.
   if(it.pro && !isPremium()){ openPremium(); return; }
+  if(it.pro && !it.text){
+    try{ await ensureCatalogBody(it); }
+    catch(e){ openPremium(); return; }
+  }
 
   const {program, errors} = parseProgramText(it.text);
   if(errors.length || !program.plans.length){
@@ -13866,6 +14012,7 @@ async function saveProgram(){
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
+  if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
   if(planDays(draft).length && window.FitNative && window.FitNative.requestNotifications){
@@ -15984,13 +16131,23 @@ function syncSettingsForm(){
 }
 window.addEventListener('fitNotificationAction', e => {
   const n = e && e.detail && e.detail.notification;
-  const extra = (n && n.extra) || (e && e.detail && e.detail.extra) || {};
+  const extra = (n && n.extra) || (n && n.data) || (e && e.detail && e.detail.extra) || {};
+  (async()=>{
+    if(!account||!account.email||!account.syncToken)return;
+    const deviceId=await kvGet('deviceId');if(!deviceId)return;
+    try{await apiPost('/api/auth',{action:'notification_event',email:account.email,deviceId,
+      syncToken:account.syncToken,event:'open',stage:String(extra.stage||extra.kind||'unknown')});}catch(_){}
+  })();
   if(extra.stage === 'premium'){
     if(typeof openPremium === 'function') openPremium();
     return;
   }
   if(extra.stage === 'catalog-status'){
     goTab('scrTrainer');
+    return;
+  }
+  if(extra.stage === 'trainer-program' && extra.linkId){
+    if(typeof importProgramLink === 'function') importProgramLink(String(extra.linkId));
     return;
   }
   if(extra.programId){
@@ -16698,7 +16855,10 @@ $('btnSaveWeight').onclick = async ()=>{
 // навигация по календарю
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
-function openPremium(){ renderPremium(); $('premiumModal').classList.add('open'); }
+function openPremium(){
+  renderPremium(); $('premiumModal').classList.add('open');
+  refreshServerSubscription(true).catch(()=>{});
+}
 $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
@@ -16735,6 +16895,7 @@ $('tglRenew').onclick = async ()=>{
   renderPlan(); renderPremium();
 };
 $('loginGo').onclick = doLogin;
+$('loginHaveCode').onclick = loginUseExistingCode;
 const dropLogin = ()=>{
   loginDone = null;
   loginPending = null;
@@ -16879,6 +17040,7 @@ function switchMoreTab(key){
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.classList.toggle('act', b.dataset.more === key));
   ['me', 'sound', 'coach', 'acc'].forEach(k => setShown('morePane_' + k, k === key));
   if(key === 'coach') refreshTrainerProfile();
+  if(key === 'acc') refreshServerSubscription(true).catch(()=>{});
 }
 document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
 document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
@@ -17726,6 +17888,8 @@ try{
       voiceWanted = false; soundOn = true;
       musicMode = false;
       syncPrefs();
+      applyThemeFor({theme:'system'});
+      document.body.classList.remove('booting');
       startOnboarding();
       return;
     }
@@ -17737,8 +17901,10 @@ try{
   }
   currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
-  // До первой динамической отрисовки включаем язык именно активного профиля.
+  // До первой динамической отрисовки включаем язык и тему активного профиля:
+  // пользователь не должен видеть дефолтный экран, пока восстанавливается его состояние.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
+  applyThemeFor(curUser());
   await loadIdentity();
   await loadData();
   await loadPhotos();
@@ -17782,8 +17948,13 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
-  // При обычном повторном запуске код снова не нужен: сохранённый ключ устройства
-  // возвращает свежие данные до того, как человек начнёт что-либо менять.
+
+  // Всё выше — только локальные данные. Показываем уже правильный профиль и тему,
+  // не заставляя экран ждать сеть/Vercel и не показывая промежуточный дефолтный UI.
+  document.body.classList.remove('booting');
+
+  // Серверное состояние обновляем уже поверх готового локального интерфейса.
+  await refreshServerSubscription(true);
   if(account.email && account.syncToken){
     await connectAccountSync();
     await refreshTrainerProfile();
