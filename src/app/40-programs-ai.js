@@ -1638,7 +1638,7 @@ async function generateAllImagesViaAI(scope){
   };
 
   if(makeCover){
-    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); await finishImgGen(done, total, failed); return; }
   }
   for(const ex of exList){
     const go = await runOne('ex', ex, data => {
@@ -1650,7 +1650,7 @@ async function generateAllImagesViaAI(scope){
     if(!go) break;
   }
   aiRunClose();
-  finishImgGen(done, total, failed);
+  await finishImgGen(done, total, failed);
 }
 
 async function generateSlotImageViaAI(){
@@ -1684,11 +1684,16 @@ async function generateSlotImageViaAI(){
   }catch(e){
     aiRunClose();
     if(imgGenCancelled) return;
-    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await appDialog(
+      t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    if(retry) return generateSlotImageViaAI();
+    // слот, выбранное упражнение и все уже созданные изображения остаются на месте.
   }
 }
 
-function finishImgGen(done, total, failed){
+async function finishImgGen(done, total, failed){
   renderSlots();
   if(imgGenCancelled){
     appAlert(t('images.stopped',{done,total}));
@@ -1697,7 +1702,12 @@ function finishImgGen(done, total, failed){
   if(!failed.length){
     appAlert(t('images.done',{done,total}));
   } else {
-    appAlert(t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}));
+    const retry = await appDialog(
+      t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    // Повторяем только пустые места: уже успешно созданные картинки не тратим заново.
+    if(retry) return generateAllImagesViaAI('missing');
   }
 }
 

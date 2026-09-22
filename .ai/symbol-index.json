@@ -345,8 +345,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2632,
-      "chars": 120344,
+      "lines": 2642,
+      "chars": 120907,
       "symbols": [
         "add",
         "ageError",
@@ -680,8 +680,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1390,
-      "chars": 64548,
+      "lines": 1394,
+      "chars": 64717,
       "symbols": [
         "afterExChange",
         "autoGrow",
@@ -787,10 +787,11 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2089,
-      "chars": 87355,
+      "lines": 2100,
+      "chars": 87826,
       "symbols": [
         "addExManual",
+        "aiRetryDialog",
         "aiRunClose",
         "aiRunNote",
         "aiRunOpen",

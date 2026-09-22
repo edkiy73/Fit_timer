@@ -910,7 +910,11 @@ const I18N_RU = {
   'ai.workingDefault': "Нейросеть работает",
   'ai.workingLong': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
   'ai.buildRequestFailed': "Не удалось собрать запрос.",
-  'ai.runFailed': "ИИ не ответил:\n\n{error}\n\nМожно попробовать ещё раз — или собрать программу в чате с ИИ: способы под кнопкой «Сделать в чате с ИИ».",
+  'ai.runFailed': "ИИ не ответил:\n\n{error}",
+  'ai.retryQuestion': "Запрос и все заполненные поля сохранены. Повторить генерацию сейчас?",
+  'ai.retry': "Повторить",
+  'ai.editRequest': "Изменить запрос",
+  'ai.notNow': "Не сейчас",
   'ai.unsavedRequest': "Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.",
   'common.leaveWithoutSaving': "Выйти без сохранения",
   'common.stay': "Остаться",
@@ -2423,7 +2427,11 @@ const I18N_EN = {
   'ai.workingDefault': "AI is working",
   'ai.workingLong': "Processing the request — this usually takes from a few seconds to three minutes. Keep the app open.",
   'ai.buildRequestFailed': "Couldn’t build the request.",
-  'ai.runFailed': "AI didn’t respond:\n\n{error}\n\nTry again, or build the program in an AI chat using the options under “Do it in an AI chat”.",
+  'ai.runFailed': "AI didn’t respond:\n\n{error}",
+  'ai.retryQuestion': "Your request and all filled fields are still here. Retry generation now?",
+  'ai.retry': "Retry",
+  'ai.editRequest': "Edit request",
+  'ai.notNow': "Not now",
   'ai.unsavedRequest': "The filled request has not been saved. If you leave now, it will be lost.",
   'common.leaveWithoutSaving': "Leave without saving",
   'common.stay': "Stay",
@@ -10138,7 +10146,7 @@ async function generateAllImagesViaAI(scope){
   };
 
   if(makeCover){
-    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); await finishImgGen(done, total, failed); return; }
   }
   for(const ex of exList){
     const go = await runOne('ex', ex, data => {
@@ -10150,7 +10158,7 @@ async function generateAllImagesViaAI(scope){
     if(!go) break;
   }
   aiRunClose();
-  finishImgGen(done, total, failed);
+  await finishImgGen(done, total, failed);
 }
 
 async function generateSlotImageViaAI(){
@@ -10184,11 +10192,16 @@ async function generateSlotImageViaAI(){
   }catch(e){
     aiRunClose();
     if(imgGenCancelled) return;
-    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await appDialog(
+      t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    if(retry) return generateSlotImageViaAI();
+    // слот, выбранное упражнение и все уже созданные изображения остаются на месте.
   }
 }
 
-function finishImgGen(done, total, failed){
+async function finishImgGen(done, total, failed){
   renderSlots();
   if(imgGenCancelled){
     appAlert(t('images.stopped',{done,total}));
@@ -10197,7 +10210,12 @@ function finishImgGen(done, total, failed){
   if(!failed.length){
     appAlert(t('images.done',{done,total}));
   } else {
-    appAlert(t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}));
+    const retry = await appDialog(
+      t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    // Повторяем только пустые места: уже успешно созданные картинки не тратим заново.
+    if(retry) return generateAllImagesViaAI('missing');
   }
 }
 
@@ -15431,7 +15449,11 @@ async function swapViaAI(){
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
-    appAlert(t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await appDialog(
+      t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    if(retry) return swapViaAI();
     return;
   }
   aiRunClose();
@@ -18077,6 +18099,14 @@ $('aiRunCancel').onclick = ()=>{
   if(cb) cb();
 };
 
+async function aiRetryDialog(error){
+  const detail = error && error.message ? error.message : t('common.unknownError');
+  return appDialog(
+    t('ai.runFailed',{error:detail}) + '\n\n' + t('ai.retryQuestion'),
+    {confirm:true,okText:t('ai.retry'),cancelText:t('ai.editRequest')}
+  );
+}
+
 // собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
 async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
@@ -18092,7 +18122,10 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     aiRunClose();
     const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
     if(aborted) return; // отменили — молча
-    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await aiRetryDialog(e);
+    if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);
+    // «Изменить запрос» ничего не закрывает и ничего не очищает: человек остаётся
+    // на том же AI-экране со всеми выбранными параметрами и текстом запроса.
   }
 }
 // Один обработчик на все источники: чем собрать промт и чем применить ответ,

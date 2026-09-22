@@ -1303,6 +1303,14 @@ $('aiRunCancel').onclick = ()=>{
   if(cb) cb();
 };
 
+async function aiRetryDialog(error){
+  const detail = error && error.message ? error.message : t('common.unknownError');
+  return appDialog(
+    t('ai.runFailed',{error:detail}) + '\n\n' + t('ai.retryQuestion'),
+    {confirm:true,okText:t('ai.retry'),cancelText:t('ai.editRequest')}
+  );
+}
+
 // собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
 async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
@@ -1318,7 +1326,10 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     aiRunClose();
     const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
     if(aborted) return; // отменили — молча
-    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await aiRetryDialog(e);
+    if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);
+    // «Изменить запрос» ничего не закрывает и ничего не очищает: человек остаётся
+    // на том же AI-экране со всеми выбранными параметрами и текстом запроса.
   }
 }
 // Один обработчик на все источники: чем собрать промт и чем применить ответ,
