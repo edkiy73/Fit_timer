@@ -793,9 +793,13 @@ const syncUser = u => ({
 });
 const remoteWins = (remote, local) => {
   if(!local) return true;
-  const a = Date.parse(remote.at || '') || 0, b = Date.parse(local.at || '') || 0;
-  if(a !== b) return a > b;
-  return String(remote.deviceId || '') > String(local.deviceId || '');
+  const rr = Math.max(0, +(remote && remote.rev) || 0);
+  const lr = Math.max(0, +(local && local.rev) || 0);
+  if(rr !== lr) return rr > lr;
+  // Одинаковая ревизия от другого устройства означает одновременное изменение
+  // одной базы. Сервер уже сериализует такие push и возвращает принятую версию;
+  // время телефона здесь намеренно не участвует.
+  return String(remote.deviceId || '') !== String(local.deviceId || '');
 };
 const parsed = (raw, fallback) => { try{ return raw == null ? fallback : JSON.parse(raw); }catch(e){ return fallback; } };
 
