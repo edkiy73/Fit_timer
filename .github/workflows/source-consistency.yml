@@ -46,3 +46,4 @@ jobs:
           node tests/diagnostics-unit.js
           node tests/update-settings-unit.js
           node tests/onboarding-funnel-unit.js
+          node tests/ai-recovery-unit.js
