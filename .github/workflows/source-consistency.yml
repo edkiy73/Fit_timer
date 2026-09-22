@@ -5,7 +5,7 @@ on:
     paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', 'check.py', 'app.js', 'style.css', 'index.html', 'scripts/build-sources.mjs', 'package.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
