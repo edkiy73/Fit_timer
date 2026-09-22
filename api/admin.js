@@ -658,12 +658,12 @@ module.exports = async (req, res) => {
     ].join(' ');
     const prompt = kind==='cover'
       ? 'Create a square 1:1 cover image for the fitness-program card "'+program+'". '+style+' Show the overall theme of the program rather than one specific exercise.'
-      : 'Create a wide 16:9 exercise illustration for "'+name+'" in a fitness app. '+style+
+      : 'Create a 4:3 exercise illustration for "'+name+'" in a fitness app. '+style+
         (description?' Technique context: '+description+'.':'')+
         ' Show the most characteristic phase of the movement and anatomically plausible exercise technique.';
     try{
       const settings=await getSettings();
-      const out=await generate('image',settings,prompt);
+      const out=await generate('image',settings,prompt,{aspectRatio:kind==='cover'?'1:1':'4:3'});
       if(!out.image) return fail(res,502,'image_not_returned');
       return send(res,200,{ok:true,image:out.image,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){
