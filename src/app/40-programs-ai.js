@@ -1988,6 +1988,33 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
+function aiClientVerdict(kind, raw, opts){
+  const verdict = FitAIProtocol.validateResponse(kind, raw);
+  if(!verdict.ok){
+    const miss = (verdict.missing || []).slice(0,6).join(', ');
+    appAlert(MSG_AI_PARSE + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
+    return null;
+  }
+  if(opts && opts.expectedCount != null && verdict.count != null && verdict.count !== opts.expectedCount){
+    appAlert(MSG_AI_PARSE);
+    return null;
+  }
+  return verdict.text;
+}
+
+function sameProgramShape(a, b){
+  const ap = normPlans(a), bp = normPlans(b);
+  if(ap.length !== bp.length) return false;
+  for(let i=0;i<ap.length;i++){
+    const ae=(ap[i].exercises||[]), be=(bp[i].exercises||[]);
+    if(ae.length !== be.length) return false;
+    for(let j=0;j<ae.length;j++){
+      if(String(ae[j].name||'').trim().toLowerCase() !== String(be[j].name||'').trim().toLowerCase()) return false;
+    }
+  }
+  return true;
+}
+
 function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
@@ -2022,6 +2049,7 @@ async function applyExEdit(){
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
   const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
@@ -2116,8 +2144,10 @@ function exaPrompt(){
 async function exaAddExercise(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  const checkedRaw = aiClientVerdict('exercise.create', raw);
+  if(!checkedRaw) return;
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
-  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
+  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checkedRaw;
   const {program, errors} = parseProgramText(wrapped);
   const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
   if(!list.length){
@@ -2294,12 +2324,17 @@ async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
   const wish = clampText($('eaWish').value, LIM.wish);
-  const safeRaw = aiStructureChangeRequested(wish)
-    ? raw
-    : aiMergeProgramEdit(programToText(editAIProg), raw);
-  const {program, errors} = parseProgramText(safeRaw);
+  const structural = aiStructureChangeRequested(wish);
+  const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
+  const checkedRaw = aiClientVerdict('program.modify', safeRaw);
+  if(!checkedRaw) return;
+  const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
+    return;
+  }
+  if(!structural && !sameProgramShape(editAIProg, program)){
+    appAlert(MSG_AI_PARSE);
     return;
   }
   program.id = 'p' + Date.now();
