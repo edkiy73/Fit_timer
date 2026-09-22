@@ -1301,6 +1301,7 @@ function setEditorLang(lang){
   const ru=$('editorRu'),en=$('editorEn');
   if(ru)ru.hidden=editorLang!=='ru';
   if(en)en.hidden=editorLang!=='en';
+  renderExerciseCards();
 }
 function cancelProgramEdit(){
   const back=editingStatus==='pending'?'pending':'approved';
@@ -1308,8 +1309,7 @@ function cancelProgramEdit(){
   setTab(back);
 }
 function renderAdd(b){
-  const d=translationDirection();
-  b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Сначала параметры, затем текст. Медиа открывается только когда нужно.')+`
+  b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
     <div class="form-card">
       <div class="form-card-head"><h3>Основное</h3><span class="status-chip" id="programAccessState">Free</span></div>
       <div class="form-card-body">
@@ -1325,7 +1325,7 @@ function renderAdd(b){
 
     <div class="form-card">
       <div class="form-card-head">
-        <div><h3>Текст программы</h3><div class="cell-sub" id="fSourceHint">Одна механика, две локализации.</div></div>
+        <div><h3>Текст программы</h3><div class="cell-sub" id="fSourceHint"></div></div>
         <div class="seg">
           <button type="button" data-editor-lang="ru" class="${editorLang==='ru'?'on':''}">RU <span id="fStateRu"></span></button>
           <button type="button" data-editor-lang="en" class="${editorLang==='en'?'on':''}">EN <span id="fStateEn"></span></button>
@@ -1343,12 +1343,15 @@ function renderAdd(b){
           <div class="field-grid">
             <div class="wide"><label>Name</label><input id="fNameEn" maxlength="60"></div>
             <div class="wide"><label>What it gives</label><textarea id="fGivesEn" class="compact-text" maxlength="300"></textarea></div>
-            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000"></textarea></div>
           </div>
         </div>
+
         <div class="translate-tools">
           <div class="editor-tools">
-            <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)}</button>
+            <button class="b" id="fTranslateRuEn">RU → EN</button>
+            <button class="b" id="fTranslateEnRu">EN → RU</button>
+            <button class="b" id="fAiProgram">Изменить программу через ИИ</button>
             <button class="b quiet" id="fCopyTranslate">Скопировать промпт</button>
             <button class="b quiet" id="fPasteToggle">Вставить JSON</button>
           </div>
@@ -1360,9 +1363,18 @@ function renderAdd(b){
       </div>
     </div>
 
-    <details class="form-fold"${form.cover||Object.keys(form.media||{}).length?' open':''}>
+    <div class="form-card">
+      <div class="form-card-head"><div><h3>Упражнения</h3><div class="cell-sub">Разобраны из протокола активного языка</div></div></div>
+      <div class="form-card-body"><div class="exercise-grid" id="exerciseCards"></div></div>
+    </div>
+
+    <details class="form-fold" open>
       <summary>Медиа <span class="cell-sub">· обложка и фото упражнений</span></summary>
       <div class="fold-body">
+        <div class="media-tools">
+          <button class="b" id="genMissing" type="button">Сгенерировать недостающие</button>
+          <button class="b quiet" id="genAll" type="button">Сгенерировать все заново</button>
+        </div>
         <label>Обложка</label>
         <div class="pics" id="fCoverBox"></div>
         <label>Фото упражнений</label>
@@ -1370,6 +1382,7 @@ function renderAdd(b){
         <div class="pics" id="fPics"></div>
       </div>
     </details>
+
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
     <div class="sticky-save">
@@ -1389,50 +1402,41 @@ function renderAdd(b){
   };
   document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
   ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
-    $(id).oninput=()=>{
-      updateLocaleStates();
-      if(id===(form.sourceLocale==='en'?'fTextEn':'fTextRu'))renderPics();
-    };
+    $(id).oninput=()=>{updateLocaleStates();renderExerciseCards();renderPics();};
   });
-  $('fTranslate').onclick=translateCatalogForm;
+  $('fTranslateRuEn').onclick=()=>translateCatalogForm('ru','en');
+  $('fTranslateEnRu').onclick=()=>translateCatalogForm('en','ru');
+  $('fAiProgram').onclick=()=>aiEditProgram(editorLang,'');
   $('fCopyTranslate').onclick=copyTranslationSource;
   $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
   $('fPasteApply').onclick=applyPastedTranslation;
+  $('genMissing').onclick=()=>generateMedia('missing');
+  $('genAll').onclick=()=>{if(confirm('Перегенерировать обложку и все фото упражнений?'))generateMedia('all');};
   $('fFile').onchange=e=>{
     const file=e.target.files&&e.target.files[0];
     if(!file||!pickTo)return;
     shrinkPic(file,640,pic=>{pickTo(pic);pickTo=null;});
   };
-  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · служебные метки протокола не переводятся';
-  updateLocaleStates();
-  setEditorLang(editorLang);
-  renderPics();
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  updateLocaleStates();setEditorLang(editorLang);renderPics();
 }
 
 function fillForm(c){
-  editing = c.id;
-  editingStatus = c.status || null;
-  form = {
-    cover: c.cover || null,
-    media: Object.assign({}, c.media || {}),
-    sourceLocale: sourceLocaleOf(c)
-  };
-  editorLang = form.sourceLocale;
-  $('fCat').value = c.cat || 'tone';
-  $('fLevel').value = c.level || 'Новичок';
-  $('fMin').value = c.min || 20;
-  $('fBy').value = c.by || '';
-  $('fPro').checked = !!c.pro;
-  $('programAccessState').textContent = c.pro ? 'Premium' : 'Free';
-  $('programAccessState').className = 'status-chip' + (c.pro ? ' ok' : '');
-  setLocaleForm('ru', localeBlock(c, 'ru'));
-  setLocaleForm('en', localeBlock(c, 'en'));
-  const d = translationDirection();
-  $('fTranslate').textContent = 'Перевести ' + langName(d.from) + ' → ' + langName(d.to) + ' через ИИ';
-  $('fSourceHint').textContent = 'Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста не переводятся. Исходник заявки: ' + langName(form.sourceLocale) + '.';
-  updateLocaleStates();
-  setEditorLang(editorLang);
-  renderPics();
+  editing=c.id;
+  editingStatus=c.status||null;
+  form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c)};
+  editorLang=form.sourceLocale;
+  $('fCat').value=c.cat||'tone';
+  $('fLevel').value=c.level||'Новичок';
+  $('fMin').value=c.min||20;
+  $('fBy').value=c.by||'';
+  $('fPro').checked=!!c.pro;
+  $('programAccessState').textContent=c.pro?'Premium':'Free';
+  $('programAccessState').className='status-chip'+(c.pro?' ok':'');
+  setLocaleForm('ru',localeBlock(c,'ru'));
+  setLocaleForm('en',localeBlock(c,'en'));
+  $('fSourceHint').textContent='Исходник заявки: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  updateLocaleStates();setEditorLang(editorLang);renderPics();
 }
 
 async function saveForm(){
