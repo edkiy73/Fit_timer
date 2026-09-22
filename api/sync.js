@@ -60,10 +60,19 @@ const cleanUser = u => ({
   voiceVol: cleanProfileInt(u && u.voiceVol, 100, 0, 100),
   fxVol: cleanProfileInt(u && u.fxVol, 100, 0, 100)
 });
-const newer = (a, b) => {
+const newerProfile = (a, b) => {
   const ta = Date.parse((a && a.at) || '') || 0, tb = Date.parse((b && b.at) || '') || 0;
   if(ta !== tb) return ta > tb;
   return String((a && a.deviceId) || '') > String((b && b.deviceId) || '');
+};
+// Документы уже имеют монотонный rev. На часы телефона для конфликтов не опираемся:
+// неверная дата на одном устройстве иначе может навсегда заблокировать свежие правки.
+// Если два устройства изменили одну базовую ревизию одновременно, сервер принимает
+// последнее доставленное изменение; повтор той же ревизии с того же устройства идемпотентен.
+const newerDoc = (a, b) => {
+  const ra = Math.max(0, +(a && a.rev) || 0), rb = Math.max(0, +(b && b.rev) || 0);
+  if(ra !== rb) return ra > rb;
+  return String((a && a.deviceId) || '') !== String((b && b.deviceId) || '');
 };
 
 module.exports = async (req, res) => {
@@ -88,12 +97,14 @@ module.exports = async (req, res) => {
   const premium = paidUntil >= Date.now();
 
   const manifestKey = `s:${mh}`;
-  let manifest = {v: 2, profiles: {}, accountDocs: {}};
-  try{ manifest = JSON.parse(await store.get(manifestKey)) || manifest; }catch(e){}
-  if(!manifest.profiles || typeof manifest.profiles !== 'object') manifest.profiles = {};
-  if(!manifest.accountDocs || typeof manifest.accountDocs !== 'object') manifest.accountDocs = {};
+  try{
+    return await store.withLock(`lock:sync:${mh}`, async()=> {
+      let manifest = {v: 2, profiles: {}, accountDocs: {}};
+      try{ manifest = JSON.parse(await store.get(manifestKey)) || manifest; }catch(e){}
+      if(!manifest.profiles || typeof manifest.profiles !== 'object') manifest.profiles = {};
+      if(!manifest.accountDocs || typeof manifest.accountDocs !== 'object') manifest.accountDocs = {};
 
-  if(body.action === 'push'){
+      if(body.action === 'push'){
     const profiles = Array.isArray(body.profiles) ? body.profiles.slice(0, 20) : [];
     const docs = Array.isArray(body.docs) ? body.docs.slice(0, 80) : [];
     // Бесплатному аккаунту разрешён только документ настроек уведомлений:
@@ -108,7 +119,7 @@ module.exports = async (req, res) => {
       if(!PROFILE.test(user.id)) continue;
       const prev = manifest.profiles[user.id] || {docs: {}};
       if(!prev.docs) prev.docs = {};
-      if(prev.userAt && !newer({at: rec.at, deviceId}, {at: prev.userAt, deviceId: prev.userDevice})) continue;
+      if(prev.userAt && !newerProfile({at: rec.at, deviceId}, {at: prev.userAt, deviceId: prev.userDevice})) continue;
       if(rec && rec.deleted){
         for(const d of Object.values(prev.docs)) if(d && d.storeKey) await store.del(d.storeKey);
         manifest.profiles[user.id] = {user, userAt:rec.at || now, userDevice:deviceId,
@@ -130,7 +141,7 @@ module.exports = async (req, res) => {
         const meta = {rev: Math.max(1, +d.rev || 1), at: d.at || now,
                       schema: Math.max(1, +d.schema || 1), deviceId,
                       deleted: !!d.deleted};
-        if(prev && !newer(meta, prev)) continue;
+        if(prev && !newerDoc(meta, prev)) continue;
         const storeKey = `sa:${mh}:${key}`;
         if(meta.deleted) await store.del(storeKey);
         else await store.set(storeKey, value || '', YEAR);
@@ -147,7 +158,7 @@ module.exports = async (req, res) => {
       const meta = {rev: Math.max(1, +d.rev || 1), at: d.at || now,
                     schema: Math.max(1, +d.schema || 1), deviceId,
                     deleted: !!d.deleted};
-      if(prev && !newer(meta, prev)) continue;
+      if(prev && !newerDoc(meta, prev)) continue;
       const storeKey = `sd:${mh}:${sha(pid + '\n' + key).slice(0, 32)}`;
       if(meta.deleted) await store.del(storeKey);
       else await store.set(storeKey, value || '', YEAR);
@@ -188,5 +199,10 @@ module.exports = async (req, res) => {
     return send(res, 200, {ok: true, profiles: out, accountDocs});
   }
 
-  fail(res, 400, 'unknown_action');
+      fail(res, 400, 'unknown_action');
+    }, {ttl:8, retries:60, delay:50});
+  }catch(e){
+    if(e && e.message === 'lock_timeout') return fail(res, 503, 'sync_busy');
+    throw e;
+  }
 };
