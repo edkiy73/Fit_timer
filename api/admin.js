@@ -19,6 +19,93 @@ const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
 const LEVELS = ['Новичок', 'Средний', 'Продвинутый'];
+const IMAGE_GOAL_LABELS = {
+  slim:'weight loss and calorie burn',
+  tone:'full-body toning and general fitness',
+  glut:'glutes and lower-body shaping',
+  core:'core and abdominal strength',
+  power:'strength and endurance',
+  relief:'muscle definition',
+  flex:'mobility, stretching and flexibility',
+  back:'posture and back strength',
+  post:'postpartum recovery',
+  cardio:'cardio and energy'
+};
+function imageCoverTone(category, context){
+  const byCat = {
+    slim:{tone:'deep blue to cyan',mood:'energetic, fast, fresh'},
+    tone:{tone:'violet and magenta',mood:'balanced, athletic, modern'},
+    glut:{tone:'berry magenta and deep violet',mood:'strong, sculpted, energetic'},
+    core:{tone:'warm amber and indigo with violet accents',mood:'focused, controlled, stable'},
+    power:{tone:'deep crimson and burgundy with subtle violet undertones',mood:'powerful, intense, athletic'},
+    relief:{tone:'crimson-violet and deep burgundy',mood:'defined, strong, premium'},
+    flex:{tone:'teal and emerald with soft lavender accents',mood:'calm, fluid, restorative'},
+    back:{tone:'indigo and blue-violet with a warm accent',mood:'upright, controlled, stable'},
+    post:{tone:'soft teal and lavender',mood:'gentle, restorative, confident'},
+    cardio:{tone:'electric blue to cyan',mood:'energetic, fast, fresh'}
+  };
+  if(byCat[category]) return byCat[category];
+  const s=String(context||'').toLowerCase();
+  if(/кардио|вынослив|жиросж|похуд|hiit|cardio|endurance|fat loss/.test(s)) return byCat.cardio;
+  if(/сила|силов|мышечн|масса|гипертроф|strength|muscle|hypertrophy/.test(s)) return byCat.power;
+  if(/растяж|гибк|мобил|восстанов|после род|stretch|flexibility|mobility|recovery|postpartum/.test(s)) return byCat.flex;
+  if(/осанк|спин|кор|пресс|стабил|posture|back|core|stability/.test(s)) return byCat.back;
+  return {tone:'Fit Timer violet and purple',mood:'balanced, premium, modern'};
+}
+function imageEquipment(name, description){
+  const s=(String(name||'')+' '+String(description||'')).toLowerCase();
+  const out=[];
+  const add=(re,label)=>{if(re.test(s)&&!out.includes(label))out.push(label);};
+  add(/гантел|dumbbell/,'dumbbells');
+  add(/штанг|barbell/,'barbell');
+  add(/гир(я|и|ей|ю|ь)?|kettlebell/,'kettlebell');
+  add(/резин|эспанд|resistance band|\bband\b/,'resistance band');
+  add(/скам(ья|ьи|ью)|bench/,'workout bench');
+  add(/блок|кроссовер|трос|cable/,'cable machine');
+  add(/турник|перекладин|pull[- ]?up bar/,'pull-up bar');
+  add(/коврик|\bmat\b/,'exercise mat');
+  add(/фитбол|мяч|exercise ball|swiss ball/,'exercise ball');
+  add(/тумб|платформ|степ|plyo box|step platform/,'box or step platform');
+  return out;
+}
+function imageStaticExercise(name, description){
+  const s=(String(name||'')+' '+String(description||'')).toLowerCase();
+  return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
+}
+function adminExerciseImagePrompt(meta){
+  const equipment=imageEquipment(meta.name,meta.description);
+  const muscles=(meta.muscles||[]).filter(Boolean).slice(0,12);
+  return [
+    'Create a 4:3 instructional fitness illustration for "'+meta.name+'" in the Fit Timer app.',
+    'VISUAL SYSTEM: premium stylized-realistic 3D anatomy, neutral graphite-gray athlete, dark graphite background with restrained violet atmosphere. Use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) for functional accents. Do not use orange muscle highlights.',
+    'Character: '+meta.gender+'. Keep a clean athletic appearance and believable human proportions.',
+    meta.description?'Technique context: '+meta.description:null,
+    equipment.length?'Required equipment: '+equipment.join(', ')+'. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.':'Do not invent equipment that is not required by this movement.',
+    imageStaticExercise(meta.name,meta.description)
+      ?'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
+      :'Show TWO temporal phases of THE SAME athlete in one coherent scene: a solid main pose and a secondary semi-transparent ghost pose for the other endpoint of the movement. They are not two different people. Add one or two clean lavender-violet arrows that clearly show the movement direction. Do not use split-screen panels.',
+    muscles.length?'Highlight ONLY these main working muscles with a clear Fit Timer violet glow: '+muscles.join(', ')+'.':'Highlight only the primary working muscles with a restrained Fit Timer violet glow.',
+    meta.format?'Exercise format: '+meta.format+'.':null,
+    'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
+    'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
+    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, borders, collage or watermarks.'
+  ].filter(Boolean).join(' ');
+}
+function adminCoverImagePrompt(meta){
+  const context=[IMAGE_GOAL_LABELS[meta.category],meta.gives,(meta.exerciseNames||[]).join(', ')].filter(Boolean).join(' · ');
+  const palette=imageCoverTone(meta.category,context);
+  return [
+    'Create a square 1:1 premium catalog cover for the fitness program "'+meta.program+'".',
+    'This is a PROGRAM COVER, not an exercise instruction. Do not show start/end poses, ghost figures or movement arrows.',
+    'Use the same Fit Timer visual family as every other cover: premium stylized-realistic 3D, dark graphite base, polished studio lighting, clean depth, one hero athlete, uncluttered composition, consistent rendering quality.',
+    'Character: '+meta.gender+'. Make the athlete the clear focal point and keep a consistent catalog-ready scale and composition.',
+    context?'Program context: '+context+'.':null,
+    'Goal-specific atmosphere: '+palette.tone+'. Mood: '+palette.mood+'. Keep a subtle Fit Timer violet (#7C56F5) accent in every category so all covers still belong to one brand.',
+    'Choose a pose, relevant equipment and environment that communicate the overall purpose of the program rather than illustrating one exact exercise.',
+    'The cover must remain recognizable and attractive as a small square catalog thumbnail.',
+    'No text, letters, numbers, labels, logos, arrows, UI, collage, split-screen or watermarks.'
+  ].filter(Boolean).join(' ');
+}
 const clean = (v, n) => String(v == null ? '' : v).slice(0, n);
 const escMail = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -740,21 +827,15 @@ module.exports = async (req, res) => {
     const name=clampLine(body&&body.name,120);
     const description=clean(body&&body.description,1000);
     const program=clampLine(body&&body.program,120);
+    const gives=clean(body&&body.gives,500);
+    const category=GOALS.includes(String(body&&body.category||''))?String(body.category):'';
     const gender=body&&body.gender==='m'?'man':'woman';
-    const style=[
-      'Style: a stylized realistic 3D illustration of a human body.',
-      'Use muted gray tones for the body and a warm orange glow for the working muscles.',
-      'Show movement direction with clean white arrows when useful.',
-      'Use a clean, slightly blurred neutral or gym background.',
-      'Character: '+gender+'.',
-      'Keep the SAME visual language across the whole program image set.',
-      'No text, logos, captions, UI, collage, or watermarks inside the image.'
-    ].join(' ');
-    const prompt = kind==='cover'
-      ? 'Create a square 1:1 cover image for the fitness-program card "'+program+'". '+style+' Show the overall theme of the program rather than one specific exercise.'
-      : 'Create a 4:3 exercise illustration for "'+name+'" in a fitness app. '+style+
-        (description?' Technique context: '+description+'.':'')+
-        ' Show the most characteristic phase of the movement and anatomically plausible exercise technique.';
+    const muscles=Array.isArray(body&&body.muscles)?body.muscles.map(x=>clampLine(x,50)).filter(Boolean).slice(0,12):[];
+    const format=clampLine(body&&body.format,80);
+    const exerciseNames=Array.isArray(body&&body.exerciseNames)?body.exerciseNames.map(x=>clampLine(x,120)).filter(Boolean).slice(0,20):[];
+    const prompt=kind==='cover'
+      ?adminCoverImagePrompt({program,gives,category,gender,exerciseNames})
+      :adminExerciseImagePrompt({name,description,muscles,format,gender});
     try{
       const settings=await getSettings();
       const out=await generate('image',settings,prompt,{aspectRatio:kind==='cover'?'1:1':'4:3'});
