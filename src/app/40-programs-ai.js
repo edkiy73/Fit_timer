@@ -1684,7 +1684,10 @@ async function generateSlotImageViaAI(){
   }catch(e){
     aiRunClose();
     if(imgGenCancelled) return;
-    const retry = await aiRetryDialog(e);
+    const retry = await appDialog(
+      t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
     if(retry) return generateSlotImageViaAI();
     // слот, выбранное упражнение и все уже созданные изображения остаются на месте.
   }
@@ -1701,7 +1704,7 @@ async function finishImgGen(done, total, failed){
   } else {
     const retry = await appDialog(
       t('images.partial',{done:done-failed.length,total,failed:failed.join('\n• ')}) + '\n\n' + t('ai.retryQuestion'),
-      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.editRequest')}
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
     );
     // Повторяем только пустые места: уже успешно созданные картинки не тратим заново.
     if(retry) return generateAllImagesViaAI('missing');
