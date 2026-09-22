@@ -15542,6 +15542,47 @@ function estimateKcal(sec, load){
   return Math.round(met * 3.5 * w / 200 * (sec / 60));
 }
 
+const REVIEW_STATE_KEY = 'fitReviewPromptV1';
+const REVIEW_MILESTONES = [5, 20, 50];
+const REVIEW_MIN_GAP_MS = 90 * 24 * 60 * 60 * 1000;
+
+function reviewPromptState(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(REVIEW_STATE_KEY) || '{}');
+    return {
+      attempts: Array.isArray(raw.attempts) ? raw.attempts.filter(x => x && Number(x.at) > 0) : []
+    };
+  }catch(_){ return {attempts:[]}; }
+}
+
+function reviewMilestoneDue(count, now){
+  count = Number(count) || 0;
+  now = Number(now) || Date.now();
+  if(count < REVIEW_MILESTONES[0]) return 0;
+  const state = reviewPromptState();
+  const used = Math.min(state.attempts.length, REVIEW_MILESTONES.length);
+  if(used >= REVIEW_MILESTONES.length) return 0;
+  const milestone = REVIEW_MILESTONES[used];
+  if(count < milestone) return 0;
+  if(used > 0){
+    const last = Number(state.attempts[used - 1] && state.attempts[used - 1].at) || 0;
+    if(last && now - last < REVIEW_MIN_GAP_MS) return 0;
+  }
+  return milestone;
+}
+
+async function maybeRequestAppReview(count){
+  const milestone = reviewMilestoneDue(count);
+  if(!milestone || !(window.FitNative && window.FitNative.requestReview)) return false;
+  const ok = await window.FitNative.requestReview();
+  if(!ok) return false;
+  const state = reviewPromptState();
+  state.attempts.push({count:Number(count) || milestone, milestone, at:Date.now()});
+  state.attempts = state.attempts.slice(0, REVIEW_MILESTONES.length);
+  try{ localStorage.setItem(REVIEW_STATE_KEY, JSON.stringify(state)); }catch(_){}
+  return true;
+}
+
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
@@ -15629,6 +15670,10 @@ function finishWorkout(){
   saveStats();
   syncNativeNotifications();
   renderStats();
+  if(countsToStats){
+    const completedCount = stats.count || 0;
+    setTimeout(()=>{ maybeRequestAppReview(completedCount).catch(()=>{}); }, 2500);
+  }
   if(countsToStats && srcProgram){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
