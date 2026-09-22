@@ -207,3 +207,27 @@
   #dlgCode{width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:monospace;font-size:12px;padding:10px;margin-bottom:12px;resize:vertical}
 
   
+  /* ---------- обновление приложения ---------- */
+  .update-banner{
+    width:100%;display:flex;align-items:center;gap:12px;text-align:left;
+    margin:0 0 var(--sp-3);padding:14px 15px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
+    border-radius:var(--r-md);background:color-mix(in srgb,var(--accent) 8%,var(--surface));
+    color:var(--ink);box-shadow:var(--sh-1)
+  }
+  .update-banner .ub-copy{min-width:0;display:flex;flex:1;flex-direction:column;gap:3px}
+  .update-banner .ub-copy b{font-family:var(--font-display);font-size:15px;letter-spacing:.02em}
+  .update-banner .ub-copy small{color:var(--muted);font-size:var(--fs-sm);line-height:1.35}
+  .update-banner .ub-action{flex:none;color:var(--accent);font-weight:700;font-size:13px}
+  .update-gate{
+    position:fixed;inset:0;z-index:140;display:grid;place-items:center;padding:20px;
+    background:var(--bg);overflow:auto
+  }
+  .update-gate-card{
+    width:min(420px,100%);padding:24px;border:1px solid var(--line);border-radius:var(--r-lg);
+    background:var(--surface);box-shadow:var(--sh-2);text-align:center
+  }
+  .update-gate-mark{display:block;color:var(--accent);font-family:var(--font-display);font-weight:700;letter-spacing:.12em;margin-bottom:14px}
+  .update-gate-card h2{margin:0 0 10px;font-size:24px}
+  .update-gate-card p{margin:0 0 18px;color:var(--muted);line-height:1.5}
+  .update-gate-card .btn-primary{width:100%}
+  .update-gate-card small{display:block;margin-top:12px;color:var(--muted);line-height:1.4}
