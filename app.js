@@ -4656,6 +4656,48 @@ async function kvSet(key, val){
   try{ localStorage.setItem(key, val); }catch(e){}
 }
 
+async function analyticsDeviceId(){
+  let id = await kvGet('deviceId');
+  if(!id){
+    id = newId();
+    await kvSet('deviceId', id);
+  }
+  return id;
+}
+function analyticsPlatform(){
+  try{
+    if(window.Capacitor && typeof window.Capacitor.getPlatform === 'function'){
+      const p = window.Capacitor.getPlatform();
+      if(p === 'android' || p === 'ios') return p;
+    }
+  }catch(_){}
+  return 'web';
+}
+async function trackProductEvent(event){
+  try{
+    const body = {
+      action:'analytics',
+      event:String(event||''),
+      deviceId:await analyticsDeviceId(),
+      platform:analyticsPlatform(),
+      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+      premium:(typeof isPremium === 'function') ? !!isPremium() : false
+    };
+    const res = await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body),
+      keepalive:true,
+      cache:'no-store'
+    });
+    return !!res.ok;
+  }catch(_){ return false; }
+}
+async function trackInstallOnce(){
+  if((await kvGet('analyticsInstallSent')) === '1') return;
+  if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
+}
+
 async function loadData(){
   // данные хранятся раздельно по профилям; старые данные один раз переезжают в текущий профиль
   let progRaw = await kvGet(pk('customPrograms'));
@@ -12120,6 +12162,7 @@ async function addStoreItem(id){
   program.cover = storeCoverData(it);
   customPrograms.push(program);
   await savePrograms();
+  trackProductEvent('program_added').catch(()=>{});
   renderMine();
   renderStore();                        // в списке у программы появляется метка «Уже у вас»
   // Уходить отсюда на витрину НЕЛЬЗЯ: возврат по истории асинхронный, и popstate
@@ -14635,8 +14678,10 @@ async function saveProgram(){
   }
   if(draft.locale !== 'ru' && draft.locale !== 'en') draft.locale = appLocale === 'ru' ? 'ru' : 'en';
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
+  const isNewProgram = idx < 0;
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
+  if(isNewProgram) trackProductEvent('program_added').catch(()=>{});
   if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
@@ -14842,6 +14887,7 @@ function paintPause(){
 // fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
 function startWorkout(fromIdx, elapsed){
+  trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
   if(window.FitNative) window.FitNative.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
@@ -15400,6 +15446,7 @@ function estimateKcal(sec, load){
 }
 
 function finishWorkout(){
+  trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
   setPause(false);
   stopHandsFree();
@@ -17481,6 +17528,7 @@ $('btnSaveWeight').onclick = async ()=>{
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
 function openPremium(){
+  trackProductEvent('premium_opened').catch(()=>{});
   renderPremium(); $('premiumModal').classList.add('open');
   refreshServerSubscription(true).catch(()=>{});
 }
@@ -17488,6 +17536,7 @@ $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
 $('pmBuy').onclick = ()=>{
+  trackProductEvent('purchase_started').catch(()=>{});
   const pr = priceTable(), cur = userCurrency();
   $('payWhat').textContent = pmPlan === 'year'
     ? t('premium.payYear',{price:money(pr.year,cur)})
@@ -17619,6 +17668,7 @@ $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
   await finishOnboardingCreate();
+  trackProductEvent('onboarding_complete').catch(()=>{});
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
@@ -17780,6 +17830,7 @@ async function ytApplyResult(){
   }
   customPrograms.push(program);
   await savePrograms();
+  trackProductEvent('program_added').catch(()=>{});
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
@@ -18503,6 +18554,7 @@ try{
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
+  trackInstallOnce().catch(()=>{});
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
