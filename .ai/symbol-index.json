@@ -217,7 +217,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 791,
-      "chars": 35304,
+      "chars": 35328,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
