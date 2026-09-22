@@ -961,7 +961,7 @@ async function callGemini(prompt, signal){
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
     contents: [{parts: [{text: prompt}]}],
-    generationConfig: {maxOutputTokens: 32768, temperature: 1}
+    generationConfig: {maxOutputTokens: 32768, temperature: .3}
   };
   let last = null;
   // 503 «high demand» — временная перегрузка, а не отказ: Google прямо советует повторить.
