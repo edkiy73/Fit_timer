@@ -62,6 +62,37 @@ async function login(deviceId, sub, email = MAIL){
   const again = await login('trainer-device-2', null, trainerMail);
   ok('единый ник возвращается при входе', again.handle === nick && !again.needsHandle, again.handle);
 
+  // share не имеет права создавать тренера в обход подтверждённого аккаунта.
+  let bypassBlocked = false;
+  try{
+    await post('/api/share',{
+      program:{name:'Чужая',plans:[{days:['Пн'],exercises:[{name:'x'}]}]},
+      by:'@ghost.' + Math.random().toString(36).slice(2,7),
+      trainerKey:'fake',trainer:{name:'Самозванец'}
+    });
+  }catch(e){ bypassBlocked = e.status === 403 && e.error === 'no_trainer'; }
+  ok('share не создаёт тренера без аккаунта', bypassBlocked);
+
+  // Секрет отчётов у нового клиента идёт в заголовке, а не в URL.
+  const shared = await post('/api/share',{
+    program:{name:'Проверка ссылки',plans:[{days:['Пн'],exercises:[{name:'x'}]}]},
+    by:nick,trainerKey:claimed.trainerKey,trainer:{name:'Лена'}
+  });
+  const reportRead = await fetch(BASE + '/api/p/' + shared.id,{
+    headers:{'X-Fit-Link-Key':shared.key}
+  });
+  const reportBody = await reportRead.json();
+  ok('ключ отчётов принимается из заголовка',
+     reportRead.status === 200 && Array.isArray(reportBody.reports),
+     reportRead.status + ' ' + JSON.stringify(reportBody));
+  const badReportRead = await fetch(BASE + '/api/p/' + shared.id,{
+    headers:{'X-Fit-Link-Key':'wrong'}
+  });
+  const badReportBody = await badReportRead.json();
+  ok('неверный ключ отчётов не пускает',
+     badReportRead.status === 403 && badReportBody.error === 'bad_key',
+     badReportRead.status + ' ' + JSON.stringify(badReportBody));
+
   const a = await login('device-a', sub);
   const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',locale:'en',
     prepSec:7,readySec:4,sideSec:12,voiceVol:85,fxVol:65,
