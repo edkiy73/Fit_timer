@@ -41,7 +41,6 @@ Fit Timer is a Russian-first workout timer / training app.
 - Admin UI: `admin.html`
 - Generated mobile web bundle: `dist/` — never edit directly
 - Current native shells: `android/`, `ios/`
-- `legacy/android-twa/` is archive only
 
 ## Critical product rules
 
