@@ -387,7 +387,7 @@ async function resendProgram(c, pr){
     appAlert(t('clients.programGone'));
     return;
   }
-  await shareLink(PUBLIC_APP_URL + '?p=' + encodeURIComponent(pr.link.id),
+  await shareLink(PUBLIC_APP_URL + 'p/' + encodeURIComponent(pr.link.id),
                   c.name, pr.name);
 }
 
