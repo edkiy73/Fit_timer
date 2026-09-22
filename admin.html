@@ -454,7 +454,13 @@ function wireRowMenus(root){
     d.dataset.wired='1';
     d.addEventListener('toggle',()=>{
       if(d.open){closeRowMenus(d);positionRowMenu(d);}
+      else{
+        const pop=d.querySelector('.row-menu-pop');
+        if(pop)pop.style.visibility='';
+      }
     });
+    const pop=d.querySelector('.row-menu-pop');
+    if(pop)pop.addEventListener('click',()=>{d.open=false;});
   });
 }
 function openTrainerInAdmin(handle){
