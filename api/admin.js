@@ -490,7 +490,7 @@ module.exports = async (req, res) => {
     if(bad.length) return fail(res,400,'bad_source_locale',{miss:bad});
     const instruction=clean(body&&body.instruction,2000).trim();
     if(!instruction) return fail(res,400,'missing_instruction');
-    const exercise=cleanLine(body&&body.exercise,120);
+    const exercise=clampLine(body&&body.exercise,120);
     const prompt = mode==='exercise'
       ? [
           'Edit exactly one exercise inside this Fit Timer catalog program according to the instruction.',
@@ -530,9 +530,9 @@ module.exports = async (req, res) => {
   if(a === 'catalog_ai_image'){
     const kind=String(body&&body.kind||'exercise');
     if(!['cover','exercise'].includes(kind)) return fail(res,400,'bad_image_kind');
-    const name=cleanLine(body&&body.name,120);
+    const name=clampLine(body&&body.name,120);
     const description=clean(body&&body.description,1000);
-    const program=cleanLine(body&&body.program,120);
+    const program=clampLine(body&&body.program,120);
     const prompt = kind==='cover'
       ? 'Create a clean premium fitness app cover image for the workout program "'+program+'". No text, no logos, no UI, no collage. Modern editorial fitness photography, clear subject, neutral uncluttered background, square composition.'
       : 'Create a clear instructional fitness exercise image for "'+name+'". '+description+' Show correct body position and movement, one athlete, no text, no arrows, no logos, uncluttered background, square composition suitable for a mobile exercise card.';
