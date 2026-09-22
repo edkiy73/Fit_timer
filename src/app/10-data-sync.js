@@ -682,16 +682,37 @@ let syncBusy = null;
 let syncReplaceLocal = false;
 let syncState = 'idle';
 
-function showSyncState(state){
+function showSyncState(state, step, total){
   syncState = state;
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
   else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  else if(state === 'busy' && step && total) el.textContent = t('sync.progress',{step,total});
   else if(state === 'busy') el.textContent = t('sync.busy');
   else if(state === 'ok') el.textContent = t('sync.ok');
   else if(state === 'error') el.textContent = t('sync.error');
   else el.textContent = t('sync.account');
+}
+
+async function syncApiPost(body){
+  let last;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      return await apiFetch('/api/sync', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        timeoutMs:15000
+      });
+    }catch(e){
+      last = e;
+      const transient = !e || !e.status || e.status >= 500 || e.name === 'AbortError';
+      if(!transient || attempt) break;
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
+  throw last || new Error('sync_failed');
 }
 
 const accountAuth = () => ({
@@ -1049,7 +1070,7 @@ async function syncNotificationPrefsServer(action){
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
   const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
   if(base.action === 'pull'){
-    const result = await apiPost('/api/sync', base);
+    const result = await syncApiPost(base);
     await applyRemoteAccountDocs(result);
     return true;
   }
@@ -1064,7 +1085,7 @@ async function syncNotificationPrefsServer(action){
   const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
     schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
   await writeAccountBucket(rec);
-  await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+  await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   return true;
 }
 
@@ -1072,7 +1093,7 @@ async function pushAccountDocs(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   const base = syncAuth('push');
   for(const doc of await accountDocsSnapshot()){
-    await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   }
 }
 
@@ -1101,14 +1122,14 @@ const accountSyncAdapter = {
   async push(payload){
     const base = syncAuth('push');
     const u = curUser();
-    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
+    await syncApiPost(Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
     // По одному документу: программа может содержать свои картинки и быть крупной;
     // общий пакет тогда упирается в предел запроса, хотя каждый документ допустим.
-    for(const doc of payload) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    for(const doc of payload) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
     showSyncState('ok');
   },
   async pull(){
-    const result = await apiPost('/api/sync', syncAuth('pull'));
+    const result = await syncApiPost(syncAuth('pull'));
     await applyRemoteSync(result);
     return result;
   }
@@ -1119,8 +1140,8 @@ async function pushAllProfiles(){
   for(const u of users){
     const snap = await profileSnapshot(u.id);
     if(!snap) continue;
-    await apiPost('/api/sync', Object.assign(base, {profiles:[snap.profile], docs:[]}));
-    for(const doc of snap.docs) await apiPost('/api/sync', Object.assign(base, {profiles:[], docs:[doc]}));
+    await syncApiPost(Object.assign(base, {profiles:[snap.profile], docs:[]}));
+    for(const doc of snap.docs) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   }
 }
 
@@ -1129,7 +1150,7 @@ async function pushDeletedProfiles(){
   if(!list.length) return;
   const base = syncAuth('push');
   for(const rec of list){
-    await apiPost('/api/sync', Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
+    await syncApiPost(Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
   }
   account.deletedProfiles = [];
   await saveAccount();
@@ -1147,16 +1168,21 @@ async function connectAccountSync(opts){
   }
   if(syncBusy) return syncBusy;
   syncReplaceLocal = !!(opts && opts.replaceLocal);
-  showSyncState('busy');
+  showSyncState('busy', 1, 6);
   syncBusy = (async()=>{
     try{
       SYNC.adapter = accountSyncAdapter;
       await pushDeletedProfiles();          // удаление должно дойти до pull, иначе профиль воскреснет
-      await accountSyncAdapter.pull();        // сначала вернуть серверное, потом отправлять местное
-      await pushDeletedProfiles();          // pull мог найти и схлопнуть старые пустые дубликаты
+      showSyncState('busy', 2, 6);
+      await accountSyncAdapter.pull();       // сначала вернуть серверное, потом отправлять местное
+      showSyncState('busy', 3, 6);
+      await pushDeletedProfiles();           // pull мог найти и схлопнуть старые пустые дубликаты
       await pushAllProfiles();
+      showSyncState('busy', 4, 6);
       await pushAccountDocs();
-      await SYNC.push();                      // в том числе надгробия удалённых программ
+      showSyncState('busy', 5, 6);
+      await SYNC.push();                     // в том числе надгробия удалённых программ
+      showSyncState('busy', 6, 6);
       await loadIdentity();
       await loadData();
       renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
@@ -1174,10 +1200,18 @@ function queueAccountSync(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
     showSyncState('busy');
-    if(SYNC.adapter) Promise.all([SYNC.push(), pushAccountDocs()]).catch(()=> showSyncState('error'));
+    if(SYNC.adapter) Promise.all([SYNC.push(), pushAccountDocs()])
+      .then(()=> showSyncState('ok'))
+      .catch(()=> showSyncState('error'));
     else connectAccountSync().catch(()=> showSyncState('error'));
   }, 900);
 }
+
+window.addEventListener('online', ()=>{
+  if(account && account.email && account.syncToken && isPremium()){
+    connectAccountSync().catch(()=> showSyncState('error'));
+  }
+});
 
 // На новой установке загрузчик создаёт технический «Профиль 1», поэтому users.length
 // уже равен единице ещё до входа. Проверяем содержимое: только совершенно пустую
