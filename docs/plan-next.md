@@ -1,5 +1,45 @@
 # Fit Timer — план на следующие заходы
 
+Обновлено: 22 сентября 2026.
+
+## Текущий production-план
+
+1. ✅ Синхронизация: race condition, clock skew, regression CI.
+2. ✅ Auth/API abuse protection: OTP, admin, AI, report/link limits, секреты в заголовках.
+3. 🚧 AI stability: серверная валидация, fallback на malformed response, клиентские guards перед применением результата.
+4. Удаление аккаунта и privacy-аудит: остаточные данные, индексы, логи, токены, retention.
+5. Push/notifications: release-конфиг и end-to-end проверка Android/iOS.
+6. APK/update/release pipeline: signing, update install, release artifacts.
+7. Web/cache: решить судьбу PWA/service worker; если PWA больше не продукт — удалить весь связанный код/manifest/cache без полумер.
+8. CI: сделать core auth/catalog/AI/limits/backup сценарии обязательными.
+9. Billing: Google Play verification + RTDN + restore; затем RuStore/YooKassa.
+10. Финальный production-аудит.
+
+## Repo cleanup и ревизия документации
+
+Этот этап выполняется отдельным проходом, после проверки фактических ссылок и использования. Ничего спорного не удалять только потому, что файл выглядит старым.
+
+- Построить список root/scripts/docs/.ai/.claude/legacy файлов и найти реальные ссылки на каждый.
+- Разделить на: active / generated / legacy-archive / stale / unknown.
+- Удалять только доказанно неиспользуемые файлы и одновременно убирать ссылки из build/CI/docs.
+- Проверить PWA-набор: `sw.js`, `manifest.webmanifest`, web icons, service-worker registration, Vercel headers, build-web и notification fallback.
+- Проверить `README.md` и `README.txt`; оставить один актуальный путь, если второй больше не нужен.
+- Полностью сверить `AGENTS.md`, `CLAUDE.md`, `.ai/project-map.md`, feature router/symbol index и `.claude/agents/*` с текущей архитектурой.
+- Пересмотреть все `docs/*.md`: обновить актуальные, архивировать историю только если она реально полезна, удалить документы с неверными архитектурными указаниями.
+- После cleanup прогнать поиск битых ссылок, `check:sources`, `check:ai-index`, `check.py`, mobile checks и CI.
+
+### Уже обнаружено до cleanup
+
+- `docs/backend-gtm.md` содержит устаревшие правила аккаунта/sync и не должен считаться текущей спецификацией.
+- `docs/why.md` всё ещё описывает приложение как один редактируемый `index.html`, что больше не соответствует `src/**` + generated outputs.
+- Этот файл раньше ссылался на отсутствующий `docs/tech-plan.md`.
+- PWA-файлы пока **нельзя просто удалить**: service worker реально регистрируется, manifest подключён в HTML, `build-web.mjs` копирует PWA assets, а web-notification fallback использует service worker. Сначала нужно решить, нужен ли вообще устанавливаемый/offline web-вариант.
+
+---
+
+## Исторический план
+
+
 Дата: 11 сентября 2026. Продолжение `docs/tech-plan.md`: там разбор «что вообще
 не так», здесь — пошаговые планы четырёх работ, которые остались.
 
