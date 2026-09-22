@@ -899,7 +899,7 @@ function isNetworkFail(e){
 function networkFailMessage(){
   const isFile = location.protocol === 'file:';
   let m = 'Запрос не дошёл до Google — это сетевая ошибка, а не отказ ключа.\n\nВероятные причины:\n';
-  if(isFile) m += '• Приложение открыто как файл с диска (file://). Из такого режима браузер запрещает запросы к сторонним серверам — открой приложение по адресу http/https или установи как PWA.\n';
+  if(isFile) m += '• Приложение открыто как файл с диска (file://). Из такого режима браузер запрещает запросы к сторонним серверам — открой приложение по адресу http/https.\n';
   m += '• Нет интернета или он пропал в момент запроса.\n' +
        '• Домен generativelanguage.googleapis.com недоступен у твоего провайдера или в регионе — в этом случае поможет VPN.\n' +
        '• Запрос режет расширение браузера (блокировщик рекламы, антитрекер) — попробуй отключить их для этой страницы.\n\n' +
@@ -2482,8 +2482,7 @@ async function apiFetch(path, opts){
   const ctl = new AbortController();
   const t = setTimeout(()=> ctl.abort(), wait);
   try{
-    // cache: 'no-store' — второй рубеж к тому же правилу, что и в sw.js: ответы
-    // сервера живут минуты и кэшироваться не должны ни на одном уровне.
+    // Ответы API краткоживущие и не должны кэшироваться браузером.
     const res = await fetch(API_BASE + path,
       Object.assign({signal: ctl.signal, cache: 'no-store'}, cfg));
     const data = await res.json().catch(()=> ({}));
