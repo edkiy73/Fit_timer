@@ -105,10 +105,21 @@ function discardLegacyWeightCorrections(){
   }
 }
 
-async function switchUser(id){
+// Переключение профиля сериализуем. Раньше два быстрых нажатия могли запустить
+// loadIdentity/loadData одновременно: обе функции читают профильные ключи через
+// currentUser, поэтому продолжение первого await уже могло читать данные второго
+// профиля и оставлять их в глобальном состоянии приложения.
+let profileSwitchQueue = Promise.resolve();
+function switchUser(id){
+  profileSwitchQueue = profileSwitchQueue
+    .catch(()=>{})
+    .then(()=> switchUserNow(id));
+  return profileSwitchQueue;
+}
+async function switchUserNow(id){
   if(currentUser === id) return;
   currentUser = id;
-  kvSet('currentUser', id);
+  await kvSet('currentUser', id);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   await loadData();
@@ -595,31 +606,53 @@ function bumpDoc(key, extra){
   outbox = outbox.filter(o => o.key !== key);
   outbox.push({key, rev: docMeta[key].rev, at});
 }
-async function flushMeta(){
-  await kvSet(pk('docMeta'), JSON.stringify(docMeta));
-  await kvSet(pk('outbox'), JSON.stringify(outbox));
+async function flushMeta(uid, metaValue, outboxValue){
+  // Фиксируем профиль и снимки ДО первого await. Иначе переключение профиля между
+  // двумя kvSet записывало docMeta одному человеку, а outbox уже другому.
+  const ownerId = uid || currentUser;
+  const metaSnapshot = metaValue || docMeta;
+  const outboxSnapshot = outboxValue || outbox;
+  await kvSet('docMeta_' + ownerId, JSON.stringify(metaSnapshot));
+  await kvSet('outbox_' + ownerId, JSON.stringify(outboxSnapshot));
 }
 
 // Одно сохранение документа: пишем значение, поднимаем редакцию, ставим в очередь.
+// Все данные операции принадлежат uid, который был активен В МОМЕНТ нажатия Save.
 async function saveDoc(key, value){
-  await kvSet(pk(key), JSON.stringify(value));
+  const uid = currentUser;
+  const valueJson = JSON.stringify(value);
+  let meta = docMeta;
+  let queue = outbox.slice();
+  await kvSet(key + '_' + uid, valueJson);
   if(!isSyncKey(key)) return;
-  bumpDoc(key);
-  await flushMeta();
+
+  const prev = meta[key] || {rev:0};
+  const at = new Date().toISOString();
+  meta = Object.assign({}, meta, {
+    [key]: {rev:prev.rev + 1, at, schema:SCHEMA_VERSION}
+  });
+  queue = queue.filter(o => o.key !== key);
+  queue.push({key, rev:meta[key].rev, at});
+  await flushMeta(uid, meta, queue);
+
+  // Глобальное состояние обновляем только если пользователь всё ещё на том же профиле.
+  if(currentUser === uid){ docMeta = meta; outbox = queue; }
   queueAccountSync();
 }
 
 // Что уедет на сервер под этим ключом. Программы лежат в памяти одним списком, поэтому
 // значение документа собирается здесь, а не читается из хранилища по имени ключа.
 // null — это НАДГРОБИЕ: программу удалили, и сервер должен об этом узнать.
-async function docValue(key){
-  if(key === 'index') return JSON.stringify({order: customPrograms.map(p => p.id)});
-  if(key.startsWith('program:')){
+async function docValue(key, uid){
+  const ownerId = uid || currentUser;
+  if(key === 'index' || key.startsWith('program:')){
+    const programs = parsed(await kvGet('customPrograms_' + ownerId), []);
+    if(key === 'index') return JSON.stringify({order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
     const id = key.slice('program:'.length);
-    const p = customPrograms.find(x => String(x.id) === id);
+    const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
     return p ? JSON.stringify(p) : null;
   }
-  return await kvGet(pk(key));
+  return await kvGet(key + '_' + ownerId);
 }
 
 // Единый шов обмена с сервером. Пока нет аккаунта, Премиума или сети, адаптера нет:
@@ -647,30 +680,32 @@ const SYNC = {
   },
   pending(){ return outbox.length; },
   async push(){
-    // без личности отправлять некуда и незачем: профиль ещё не заведён
-    if(!SYNC.adapter || !identity) return {sent: 0, offline: true};
+    // Фиксируем владельца очереди до первого await. Это старый путь синхронизации,
+    // но он тоже не должен уметь отправить документы A под profileId профиля B.
+    if(!SYNC.adapter || !identity) return {sent:0, offline:true};
+    const uid = currentUser;
+    const ident = Object.assign({}, identity);
     const batch = outbox.slice();
-    // Значения собираем ЗДЕСЬ и через await. docValue асинхронная, и без await на сервер
-    // уехал бы список промисов вместо документов — молча, потому что JSON.stringify
-    // превращает промис в пустой объект.
     const payload = [];
     for(const o of batch){
-      const value = await docValue(o.key);
-      // Надгробие бывает только у программы. У обычного ключа пустое значение означает
-      // «ещё ни разу не сохраняли», а не «удалили»: отправить его как удаление — значит
-      // стереть на сервере статистику, которой человек просто пока не набрал.
+      const value = await docValue(o.key, uid);
       const gone = value === null && o.key.startsWith('program:');
       if(value === null && !gone) continue;
       payload.push({
-        key: o.key, rev: o.rev, at: o.at, schema: SCHEMA_VERSION,
-        profileId: identity.profileId, deviceId: identity.deviceId,
-        deleted: gone, value
+        key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
+        profileId:ident.profileId, deviceId:ident.deviceId,
+        deleted:gone, value
       });
     }
     if(payload.length) await SYNC.adapter.push(payload);
-    outbox = outbox.filter(o => !batch.find(b => b.key === o.key && b.rev === o.rev));
-    await kvSet(pk('outbox'), JSON.stringify(outbox));
-    return {sent: batch.length};
+
+    let queue = parsed(await kvGet('outbox_' + uid), []);
+    queue = (Array.isArray(queue) ? queue : []).filter(o =>
+      !batch.some(b => b.key === o.key && b.rev === o.rev)
+    );
+    await kvSet('outbox_' + uid, JSON.stringify(queue));
+    if(currentUser === uid) outbox = queue;
+    return {sent:batch.length};
   }
 };
 
@@ -1334,27 +1369,49 @@ const hasConsent = kind => !!(identity && identity.consents && identity.consents
 // те, что человек действительно тронул. Хеш программы лежит рядом с её редакцией —
 // без него каждое сохранение любой программы гнало бы наверх весь список.
 async function savePrograms(){
-  await kvSet(pk('customPrograms'), JSON.stringify(customPrograms));
+  // customPrograms — глобальный массив активного профиля. Делаем независимый снимок
+  // до первого await, чтобы последующее переключение профиля не подменило содержимое.
+  const uid = currentUser;
+  const programs = JSON.parse(JSON.stringify(customPrograms));
+  let meta = docMeta;
+  let queue = outbox.slice();
+  await kvSet('customPrograms_' + uid, JSON.stringify(programs));
+
+  const bump = (key, extra)=>{
+    const prev = meta[key] || {rev:0};
+    const at = new Date().toISOString();
+    meta = Object.assign({}, meta, {
+      [key]: Object.assign({rev:prev.rev + 1, at, schema:SCHEMA_VERSION}, extra || {})
+    });
+    queue = queue.filter(o => o.key !== key);
+    queue.push({key, rev:meta[key].rev, at});
+  };
+
   let touched = false;
   const live = new Set();
-  for(const p of customPrograms){
+  for(const p of programs){
     const key = PROGRAM_DOC(p.id);
     live.add(key);
     const h = docHash(JSON.stringify(p));
-    const prev = docMeta[key];
+    const prev = meta[key];
     if(prev && prev.h === h && !prev.gone) continue;
-    bumpDoc(key, {h});
+    bump(key, {h});
     touched = true;
   }
-  // удалённая программа — тоже документ: без надгробия она вернётся с другого устройства
-  for(const key of Object.keys(docMeta)){
-    if(!key.startsWith('program:') || live.has(key) || docMeta[key].gone) continue;
-    bumpDoc(key, {gone: true});
+  // удалённая программа — тоже документ: без надгобия она вернётся с другого устройства
+  for(const key of Object.keys(meta)){
+    if(!key.startsWith('program:') || live.has(key) || meta[key].gone) continue;
+    bump(key, {gone:true});
     touched = true;
   }
-  const order = docHash(customPrograms.map(p => p.id).join(','));
-  if(!docMeta.index || docMeta.index.h !== order){ bumpDoc('index', {h: order}); touched = true; }
-  if(touched){ await flushMeta(); queueAccountSync(); }
+  const order = docHash(programs.map(p => p.id).join(','));
+  if(!meta.index || meta.index.h !== order){ bump('index', {h:order}); touched = true; }
+
+  if(touched){
+    await flushMeta(uid, meta, queue);
+    if(currentUser === uid){ docMeta = meta; outbox = queue; }
+    queueAccountSync();
+  }
 }
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
