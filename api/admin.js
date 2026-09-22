@@ -175,7 +175,7 @@ function translationFieldsFromText(text){
 function applyTranslationFields(sourceText, translated){
   const src=translationFieldsFromText(sourceText);
   const list=Array.isArray(translated&&translated.exercises)?translated.exercises:[];
-  const byIndex=new Map(list.map((x,i)=>[Number.isInteger(+x.index)?+x.index:i,x||{}]));
+  const byIndex=new Map(list.map((x,i)=>{x=x&&typeof x==='object'?x:{};return [Number.isInteger(+x.index)?+x.index:i,x];}));
   let exIndex=-1;
   return String(sourceText||'').split(/\r?\n/).map(line=>{
     const p=protocolLine(line);if(!p)return line;
@@ -220,7 +220,7 @@ function translationPayloadComplete(source,payload){
   const list=Array.isArray(payload.exercises)?payload.exercises:[];
   if(list.length!==src.exercises.length)return false;
   for(let i=0;i<src.exercises.length;i++){
-    const a=src.exercises[i],b=list.find(x=>+x.index===i)||list[i]||{};
+    const a=src.exercises[i],b=list.find(x=>x&&+x.index===i)||list[i]||{};
     for(const k of ['name','description','mistakes','replacementName','replacementDescription']){
       if(a[k]&&!String(b[k]||'').trim())return false;
     }
@@ -607,8 +607,8 @@ module.exports = async (req, res) => {
   }
   function structureChangeRequested(text){
     const s=String(text||'').toLowerCase();
-    return /(?:добав|убер|удал|замен|перестав|перенес).{0,36}(?:упражнен|день|вариант|трениров)|(?:упражнен|день|вариант|трениров).{0,36}(?:добав|убер|удал|замен|перестав|перенес)/i.test(s)
-      || /(?:add|remove|delete|replace|reorder|move).{0,36}(?:exercise|day|variant|workout)|(?:exercise|day|variant|workout).{0,36}(?:add|remove|delete|replace|reorder|move)/i.test(s);
+    return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
+      || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
   }
   function programExerciseBlocks(text){
     const lines=String(text||'').split(/\r?\n/),out=[];
