@@ -2081,6 +2081,7 @@ async function exaAddExercise(){
   }
   if(!added){ appAlert(t('exercise.addLimit')); return; }
   $('aiResult').value = '';
+  if($('exaContext')) $('exaContext').value = '';
   renderExList();
   show('scrBuilder');
   appAlert(added === 1
