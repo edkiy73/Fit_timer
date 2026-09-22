@@ -914,6 +914,7 @@ const I18N_EN = {
   'ai.retryQuestion': "Your request and all filled fields are still here. Retry generation now?",
   'ai.retry': "Retry",
   'ai.editRequest': "Edit request",
+  'ai.notNow': "Not now",
   'ai.unsavedRequest': "The filled request has not been saved. If you leave now, it will be lost.",
   'common.leaveWithoutSaving': "Leave without saving",
   'common.stay': "Stay",
