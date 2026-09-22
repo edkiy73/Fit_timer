@@ -902,6 +902,7 @@ $('btnSaveWeight').onclick = async ()=>{
 // Подписка: витрина → оформление → успех. Оплату принимает магазин приложений,
 // платёжные данные в приложение не попадают и у нас не хранятся.
 function openPremium(){
+  trackProductEvent('premium_opened').catch(()=>{});
   renderPremium(); $('premiumModal').classList.add('open');
   refreshServerSubscription(true).catch(()=>{});
 }
@@ -909,6 +910,7 @@ $('btnPremium').onclick = openPremium;
 $('btnPlanCard').onclick = openPremium;
 $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
 $('pmBuy').onclick = ()=>{
+  trackProductEvent('purchase_started').catch(()=>{});
   const pr = priceTable(), cur = userCurrency();
   $('payWhat').textContent = pmPlan === 'year'
     ? t('premium.payYear',{price:money(pr.year,cur)})
@@ -1040,6 +1042,7 @@ $('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
   await finishOnboardingCreate();
+  trackProductEvent('onboarding_complete').catch(()=>{});
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
@@ -1201,6 +1204,7 @@ async function ytApplyResult(){
   }
   customPrograms.push(program);
   await savePrograms();
+  trackProductEvent('program_added').catch(()=>{});
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
@@ -1924,6 +1928,7 @@ try{
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
+  trackInstallOnce().catch(()=>{});
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
