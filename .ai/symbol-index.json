@@ -680,8 +680,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1345,
-      "chars": 62858,
+      "lines": 1390,
+      "chars": 64548,
       "symbols": [
         "afterExChange",
         "autoGrow",
@@ -713,6 +713,7 @@
         "hexA",
         "lastWorkStep",
         "launch",
+        "maybeRequestAppReview",
         "nextStep",
         "openSwapHint",
         "paintPause",
@@ -725,6 +726,8 @@
         "renderBadges",
         "renderNextUp",
         "renderStep",
+        "reviewMilestoneDue",
+        "reviewPromptState",
         "roundRect",
         "saveExToWorkout",
         "setFinRing",
