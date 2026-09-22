@@ -216,3 +216,24 @@ The voice model is explicitly downloaded by the user from the hands-free setting
 Android WorkManager owns voice-model downloads. They continue when the user leaves the settings screen or backgrounds the app, wait for connectivity when necessary, and post a completion notification. The web layer only polls WorkManager progress while the app is visible.
 
 Recognition uses the unrestricted small Vosk language model, ignores partial hypotheses, validates only complete command phrases, and applies confidence thresholds (stricter for next/skip than pause/resume) to reduce accidental advances.
+
+
+## In-app Android updates
+
+The installed Android app checks the existing public `/api/config` response after startup.
+
+Admin → **Релиз Android** controls:
+- `latestCode` — latest available Android `versionCode`;
+- `minimumCode` — oldest still-supported `versionCode`; keep `0` unless an old build must be blocked;
+- `latestName` — user-facing version label;
+- update URL — Google Play, RuStore or trusted HTTPS APK page;
+- optional RU/EN message.
+
+Behavior:
+- current build >= latest: nothing is shown;
+- current build < latest: a quiet update banner appears on Home;
+- current build < minimum: the app shows a non-dismissible update gate;
+- version comparison uses the native Capacitor App `build` value, not the handwritten UI build label;
+- update links are opened by Android `ACTION_VIEW`, outside the WebView.
+
+Do not raise `minimumCode` as part of a normal release. It is only for builds that are no longer compatible with the backend or have a serious release-blocking defect.
