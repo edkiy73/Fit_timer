@@ -427,6 +427,7 @@
         <button class="nav-btn" data-tab="ai"><span>ИИ</span></button>
         <button class="nav-btn" data-tab="pricing"><span>Premium и цены</span></button>
         <button class="nav-btn" data-tab="payments"><span>Платежи</span></button>
+        <button class="nav-btn" data-tab="release"><span>Релиз Android</span></button>
       </div>
     </aside>
     <div class="nav-shade" id="navShade"></div>
@@ -490,11 +491,11 @@ let data = {pending: [], approved: [], trainers: [], settings: null, providers: 
 let usersCache = null;
 let analyticsCache = null;
 const savedTab = localStorage.getItem('adminTab');
-let tab = ['pending','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments'].includes(savedTab) ? savedTab : 'pending';
+let tab = ['pending','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'pending';
 
 const PAGE_TITLES = {
   pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
-  users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи'
+  users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи', release:'Релиз Android'
 };
 function closeNav(){
   document.body.classList.remove('nav-open');
@@ -613,6 +614,7 @@ function render(){
   if(tab === 'ai') return renderAI(b);
   if(tab === 'pricing') return renderPricing(b);
   if(tab === 'payments') return renderPayments(b);
+  if(tab === 'release') return renderRelease(b);
   return renderCatalog(b);
 }
 
@@ -1187,6 +1189,50 @@ async function savePaymentSettings(){
     iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
   };
   await persistSettings(s,'paySettingsState');
+}
+
+function renderRelease(b){
+  const s=data.settings||{},u=(s.update&&s.update.android)||{};
+  b.innerHTML=pageHead('Релиз Android','Управляет только подсказкой обновления в уже установленном приложении. Значение 0 означает «не использовать».')+`
+    <div class="form-card">
+      <div class="form-card-head"><h3>Версии</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Последний versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(u.latestCode||0)}"></div>
+          <div><label>Минимальный versionCode</label><input id="relMinimumCode" type="number" min="0" step="1" value="${esc(u.minimumCode||0)}"></div>
+          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(u.latestName||'')}" placeholder="Например: 1.2.0"></div>
+          <div class="wide"><label>Ссылка обновления</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="https://play.google.com/..."></div>
+        </div>
+        <p class="compact-note">Если текущий build ниже «Последнего» — покажется мягкий баннер. Если ниже «Минимального» — обновление станет обязательным. Не поднимай minimum без необходимости.</p>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Текст</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div class="wide"><label>RU</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Доступна новая версия Fit Timer.">${esc(u.messageRu||'')}</textarea></div>
+          <div class="wide"><label>EN</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="A new Fit Timer version is available.">${esc(u.messageEn||'')}</textarea></div>
+        </div>
+      </div>
+    </div>
+    ${saveBar('releaseSettings','Сохранить релиз')}`;
+  $('releaseSettingsSave').onclick=saveReleaseSettings;
+}
+async function saveReleaseSettings(){
+  const s=settingsClone();
+  s.update=s.update||{};
+  const latest=Math.max(0,Math.round(+$('relLatestCode').value||0));
+  const minimum=Math.max(0,Math.round(+$('relMinimumCode').value||0));
+  if(latest&&minimum>latest){alert('Минимальная версия не может быть выше последней.');return;}
+  s.update.android={
+    latestCode:latest,
+    minimumCode:minimum,
+    latestName:$('relLatestName').value.trim(),
+    url:$('relUrl').value.trim(),
+    messageRu:$('relMessageRu').value.trim(),
+    messageEn:$('relMessageEn').value.trim()
+  };
+  await persistSettings(s,'releaseSettingsState');
 }
 
 let editing = null;
