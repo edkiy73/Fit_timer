@@ -1,9 +1,7 @@
 # Fit Timer: Web, Android и iOS
 
 Источник истины для разработчиков и ИИ, которые продолжают мобильную сборку.
-Проект использует одну HTML/CSS/JS-кодовую базу и Capacitor 8. Старый TWA
-сохранён только для истории в `legacy/android-twa/`.
-
+Проект использует одну HTML/CSS/JS-кодовую базу и Capacitor 8. 
 ## Архитектура
 
 ```text
@@ -202,7 +200,6 @@ node --check scripts/build-web.mjs
 - Не класть секреты в JavaScript, Capacitor config или Git.
 - Не возвращать старую иконку с человеком: текущий знак — кольцо таймера с
   диагональным акцентом, мастер лежит в `assets/icon.svg`.
-- `legacy/android-twa/` — справочная копия; текущая платформа — `android/`.
 
 
 ## Offline voice commands on Android
