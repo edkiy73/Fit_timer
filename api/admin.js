@@ -39,7 +39,29 @@ async function indexAccount(mh){
     await store.push('a:all', mh);
   }
 }
+async function ensureAccountIndex(){
+  if(await store.get('a:index:backfill:v1')) return 0;
+  // Старые аккаунты появились до общего индекса a:all. Ищем только ключи
+  // точного формата a:<32 hex>, чтобы не захватить a:indexed:* и служебные записи.
+  const keys = await store.scan('a:????????????????????????????????');
+  const ids = [...new Set(keys.map(k => {
+    const m = String(k).match(/^a:([a-f0-9]{32})$/);
+    return m ? m[1] : '';
+  }).filter(Boolean))];
+  const have = new Set((await store.list('a:all')).filter(x => /^[a-f0-9]{32}$/.test(String(x))));
+  const missing = ids.filter(mh => !have.has(mh));
+  const commands = [];
+  ids.forEach(mh => commands.push(['SET', `a:indexed:${mh}`, '1', 'EX', String(365 * 24 * 3600)]));
+  missing.forEach(mh => commands.push(['RPUSH', 'a:all', mh]));
+  if(ids.length) commands.push(['EXPIRE', 'a:all', String(365 * 24 * 3600)]);
+  if(commands.length) await store.pipe(commands);
+  // Маркер ставим только после успешного прохода, чтобы ошибка Redis не
+  // превратила частичную миграцию в «готово».
+  await store.set('a:index:backfill:v1', new Date().toISOString(), 10 * 365 * 24 * 3600);
+  return missing.length;
+}
 async function adminUsers(){
+  await ensureAccountIndex();
   const ids=[...new Set((await store.list('a:all')).filter(x=>/^[a-f0-9]{32}$/.test(String(x))))].slice(-1000);
   const raws=await store.many(ids.map(mh=>`a:${mh}`));
   const out=[];
@@ -308,6 +330,7 @@ module.exports = async (req, res) => {
      Один запрос обрабатывает маленькую пачку: serverless-функция живёт недолго,
      поэтому админка продолжает курсором, пока список не закончится. */  
   if(a === 'campaign_send'){
+    await ensureAccountIndex();
     const kind = body && body.kind === 'offers' ? 'offers' : 'news';
     const wantPush = !!(body && body.push);
     const wantEmail = !!(body && body.email);
