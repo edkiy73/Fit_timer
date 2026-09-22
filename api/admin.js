@@ -666,7 +666,8 @@ module.exports = async (req, res) => {
     const instruction=clean(body&&body.instruction,2000).trim();
     if(!instruction)return fail(res,400,'missing_instruction');
     const exercise=clampLine(body&&body.exercise,120);
-    const language=/[а-яё]/i.test(locale.name+' '+locale.gives)?'Russian':'English';
+    const editLocale=normLocale(body&&body.lang);
+    const language=editLocale==='ru'?'Russian':'English';
 
     try{
       const settings=await getSettings();
