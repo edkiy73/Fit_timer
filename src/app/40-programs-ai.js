@@ -860,14 +860,15 @@ function ageError(v, required = false){
   return '';
 }
 // строка о человеке для запроса к ИИ
-function userForAI(){
+function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
   bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
-  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
+  const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  bits.push(`User-visible output language: ${outLang}`);
   return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery, but never infer absolute strength or starting weight from sex alone.';
 }
 
@@ -1852,8 +1853,8 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-function exAnswerFormat(){
-  const lang=aiOutputLanguage();
+function exAnswerFormat(locale){
+  const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
     FitAIProtocol.machineLanguageRules(lang),
     FitAIProtocol.exerciseSchema(lang),
@@ -1868,10 +1869,10 @@ function exePrompt(){
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(false),
-    'USER: '+userForAI(),
+    'USER: '+userForAI(draft&&draft.locale),
     'REQUEST: '+(wish||'(No specific request. Improve clarity and technique guidance while preserving the exercise intent and training mechanics.)'),
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
-    exAnswerFormat()
+    exAnswerFormat(draft&&draft.locale)
   ].join('\n\n');
 }
 
@@ -1962,10 +1963,10 @@ function exaPrompt(){
   const task=many
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
-  let req='USER: '+userForAI()+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
-  return [task,req,exAnswerFormat()].join('\n\n');
+  return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
 }
 
 async function exaAddExercise(){
@@ -2096,7 +2097,7 @@ function editAIPrompt(){
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
     FitAIProtocol.editRules(structural)+'\n'+
-    'USER: '+userForAI()+'\n'+
+    'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+(wish||'(No specific request. Improve clarity while preserving purpose, structure and sensible load.)')+'\n\n'+
     '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
 }
