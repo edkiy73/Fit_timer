@@ -203,6 +203,113 @@
     pre{max-height:240px;padding:9px}
   }
 
+
+  /* Workbench UI: lists are tables, forms are grouped, secondary actions stay quiet. */
+  .toolbar{display:flex;align-items:center;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+  .toolbar .grow{flex:1 1 240px}
+  .toolbar input,.toolbar select{background:var(--card)}
+  .inline-create{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:8px;align-items:end}
+  .table-shell{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:visible}
+  .data-table{width:100%;border-collapse:collapse;font-size:13px}
+  .data-table th{padding:9px 11px;text-align:left;color:var(--muted);font-size:11px;
+    text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom:1px solid var(--line)}
+  .data-table td{padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .data-table tr:last-child td{border-bottom:0}
+  .data-table tr.ban{opacity:.58}
+  .data-table tbody tr:hover{background:color-mix(in srgb,var(--soft) 55%,transparent)}
+  .cell-main{font-weight:650;color:var(--ink);line-height:1.25}
+  .cell-sub{color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.3}
+  .cell-cover{width:42px;height:42px;border-radius:8px;object-fit:cover;background:var(--soft);display:block}
+  .cell-cover.empty{display:grid;place-items:center;color:var(--muted);font-size:10px}
+  .td-actions{width:44px;text-align:right;position:relative}
+  details.row-menu{position:relative;display:inline-block}
+  details.row-menu>summary{list-style:none;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);
+    background:var(--card);display:grid;place-items:center;cursor:pointer;color:var(--muted);font-size:17px}
+  details.row-menu>summary::-webkit-details-marker{display:none}
+  .row-menu-pop{position:absolute;right:0;top:36px;z-index:40;min-width:190px;padding:5px;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 38px rgba(0,0,0,.18)}
+  .row-menu-pop button,.row-menu-pop a{display:block;width:100%;border:0;background:transparent;color:var(--ink);
+    text-decoration:none;text-align:left;padding:9px 10px;border-radius:7px;font:inherit;font-size:13px;cursor:pointer}
+  .row-menu-pop button:hover,.row-menu-pop a:hover{background:var(--soft)}
+  .row-menu-pop .danger{color:var(--danger)}
+  .row-menu-pop .positive{color:var(--ok)}
+  .metric{font-variant-numeric:tabular-nums}
+  .seg{display:inline-flex;padding:3px;background:var(--soft);border-radius:9px;gap:2px}
+  .seg button{border:0;background:transparent;color:var(--muted);border-radius:7px;padding:6px 10px;
+    font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .form-card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0}
+  .form-card-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+    justify-content:space-between;gap:10px}
+  .form-card-head h3{font-size:14px;margin:0}
+  .form-card-body{padding:12px 14px}
+  .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+  .field-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .field-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .field-grid label{margin-top:0}
+  .inline-switch{display:flex;align-items:center;gap:8px;min-height:40px}
+  .inline-switch input{width:18px;height:18px;accent-color:var(--accent)}
+  .inline-switch span{font-size:13px}
+  .lang-pane[hidden]{display:none!important}
+  .editor-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .editor-tools .b{padding:7px 9px}
+  .program-text{min-height:260px}
+  .compact-text{min-height:74px;font-family:inherit;font-size:14px}
+  details.form-fold{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+  details.form-fold>summary{padding:12px 14px;border:0;margin:0;color:var(--ink);font-weight:650;font-size:14px}
+  details.form-fold[open]>summary{border-bottom:1px solid var(--line)}
+  .fold-body{padding:12px 14px}
+  .route-table{display:grid;grid-template-columns:110px 1fr 1fr;gap:8px 10px;align-items:end}
+  .route-head{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding-bottom:2px}
+  .route-label{font-weight:650;padding-bottom:10px}
+  .pair{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px}
+  .price-table input,.payment-table input,.payment-table select{min-width:0;padding:8px 9px}
+  .price-table td:first-child,.payment-table td:first-child{font-weight:650}
+  .toggle{width:18px!important;height:18px;accent-color:var(--accent)}
+  .channel-row{display:flex;align-items:center;gap:14px;min-height:38px;flex-wrap:wrap}
+  .channel-row label{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink);font-size:13px;
+    text-transform:none;letter-spacing:0}
+  .channel-row input{width:18px;height:18px;accent-color:var(--accent)}
+  .danger-text{color:var(--danger)}
+  .mobile-only{display:none}
+  @media(max-width:760px){
+    .toolbar{margin:5px 0 9px}
+    .inline-create{grid-template-columns:1fr auto}
+    .table-shell{border-radius:10px;overflow:visible}
+    .data-table thead{display:none}
+    .data-table,.data-table tbody,.data-table tr,.data-table td{display:block;width:100%}
+    .data-table tr{position:relative;padding:9px 42px 9px 10px;border-bottom:1px solid var(--line)}
+    .data-table tr:last-child{border-bottom:0}
+    .data-table td{padding:2px 0;border:0}
+    .data-table td[data-label]:before{content:attr(data-label) ' · ';color:var(--muted);font-size:11px}
+    .data-table .td-primary{padding-bottom:5px}
+    .data-table .td-actions{position:absolute;right:8px;top:8px;width:32px;padding:0}
+    .data-table .td-cover{float:left;width:50px;margin-right:9px}
+    .data-table .td-cover+.td-primary{min-height:46px}
+    .cell-cover{width:42px;height:42px}
+    .row-menu-pop{position:fixed;left:10px;right:10px;top:auto;bottom:10px;min-width:0;
+      border-radius:14px;padding:7px;box-shadow:0 14px 50px rgba(0,0,0,.32)}
+    .row-menu-pop button,.row-menu-pop a{padding:11px 12px;font-size:14px}
+    .field-grid,.field-grid.three,.field-grid.four{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .field-grid .wide{grid-column:1/-1}
+    .route-table{grid-template-columns:1fr}
+    .route-head{display:none}
+    .route-label{padding:8px 0 0}
+    .pair{grid-template-columns:110px minmax(0,1fr)}
+    .form-card-head,.form-card-body,.fold-body{padding:10px}
+    details.form-fold>summary{padding:10px}
+    .program-text{min-height:220px}
+    .desktop-only{display:none!important}
+    .mobile-only{display:block}
+    .sticky-save .save-state{max-width:42%;line-height:1.2}
+  }
+  @media(max-width:430px){
+    .field-grid,.field-grid.three,.field-grid.four{grid-template-columns:1fr 1fr}
+    .inline-create{grid-template-columns:1fr}
+    .inline-create .b{width:100%}
+    .pair{grid-template-columns:105px minmax(0,1fr)}
+  }
+
 </style>
 </head>
 <body>
@@ -354,6 +461,11 @@ async function load(){
   render();
 }
 
+function pageHead(title, text, right){
+  return `<div class="page-head"><div><h2>${title}</h2><p>${text||''}</p></div>${right||''}</div>`;
+}
+const fmtDay = v => v ? new Date(v).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '—';
+
 function render(){
   const b = $('body');
   b.innerHTML = '';
@@ -364,188 +476,234 @@ function render(){
   if(tab === 'ai') return renderAI(b);
   if(tab === 'pricing') return renderPricing(b);
   if(tab === 'payments') return renderPayments(b);
-  const list = tab === 'pending' ? data.pending : data.approved;
-  b.insertAdjacentHTML('beforeend', `<div class="page-head"><div><h2>${tab === 'pending' ? 'На проверке' : 'Каталог'}</h2><p>${tab === 'pending' ? 'Заявки тренеров и подготовка RU / EN.' : 'Опубликованные программы и доступ Premium.'}</p></div></div>`);
-  if(!list.length){
-    b.innerHTML = `<div class="empty">${tab === 'pending'
-      ? 'Пусто — всё разобрано.'
-      : 'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`;
-    const sd = document.getElementById('seed');
-    if(sd) sd.onclick = () => act('seed', {});
-    return;
-  }
-  list.slice().reverse().forEach(c => b.appendChild(itemCard(c)));
+  return renderCatalog(b);
 }
 
-function itemCard(c){
-  const el = document.createElement('div');
-  el.className = 'card list-card';
-  const pending = c.status === 'pending';
-  el.innerHTML = `
-    <div class="top">
-      ${c.cover ? `<img class="cover" src="${esc(c.cover)}" alt="">` : ''}
-      <div style="flex:1;min-width:0">
-        <p class="name">${esc(c.name)}${c.pro ? '<span class="pill pro">премиум</span>' : ''}</p>
-        ${c.by ? `<a class="who" href="/api/trainer/${encodeURIComponent(c.by)}" target="_blank" rel="noopener">${esc(c.by)}</a>` : '<span class="muted">от нас</span>'}
-        <p class="tags">${esc(goalName(c.cat))} · ${esc(c.level)} · ${esc(c.min)} мин${c.exCount ? ' · ' + esc(c.exCount) + ' упражнений' : ''}${
-          c.media && Object.keys(c.media).length ? ' · ' + Object.keys(c.media).length + ' фото' : ''} · ${esc(localeMarks(c))}</p>
-      </div>
+function renderCatalog(b){
+  const pending = tab === 'pending';
+  const list = (pending ? data.pending : data.approved).slice().reverse();
+  b.innerHTML = pageHead(
+    pending ? 'На проверке' : 'Каталог',
+    pending ? 'Проверяй локализации и принимай программы без раскрытия каждой карточки.' : 'Опубликованные программы, доступ и быстрые действия.',
+    !pending ? '<button class="b ok" id="catalogAdd">+ Добавить</button>' : ''
+  );
+  if(!pending) $('catalogAdd').onclick=()=>setTab('add');
+  if(!list.length){
+    b.insertAdjacentHTML('beforeend', `<div class="empty">${pending
+      ? 'Новых заявок нет.'
+      : 'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`);
+    const sd=$('seed'); if(sd) sd.onclick=()=>act('seed',{});
+    return;
+  }
+  b.insertAdjacentHTML('beforeend', `
+    <div class="toolbar">
+      <div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div>
+      <span class="status-chip">${list.length} шт.</span>
     </div>
-    <p class="gives">${esc(c.gives)}</p>
-    <details><summary>Что внутри</summary><pre>${esc(c.text)}</pre></details>
-    <div class="acts"></div>`;
-  const acts = el.querySelector('.acts');
-  const btn = (label, cls, fn) => {
-    const x = document.createElement('button');
-    x.className = 'b ' + (cls || '');
-    x.textContent = label;
-    x.onclick = fn;
-    acts.appendChild(x);
-    return x;
+    <div class="table-shell"><table class="data-table">
+      <thead><tr><th></th><th>Программа</th><th>Автор</th><th>Параметры</th><th>Языки</th><th>Доступ</th><th></th></tr></thead>
+      <tbody id="catalogRows"></tbody>
+    </table></div>`);
+  const body=$('catalogRows');
+  list.forEach(item=>{
+    const ready=localeReady(item,'ru')&&localeReady(item,'en');
+    const tr=document.createElement('tr');
+    tr.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
+    const cover=item.cover
+      ? `<img class="cell-cover" src="${esc(item.cover)}" alt="">`
+      : '<span class="cell-cover empty">FIT</span>';
+    const menu=pending
+      ? `<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+          <button data-act="edit">Проверить и изменить</button>
+          ${ready?'<button class="positive" data-act="approve">В каталог</button><button class="positive" data-act="approvePro">В Premium</button>':''}
+          <button class="danger" data-act="reject">Отклонить</button>
+          ${item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':''}
+        </div></details>`
+      : `<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+          <button data-act="edit">Изменить</button>
+          <button data-act="togglePro">${item.pro?'Открыть всем':'Сделать Premium'}</button>
+          <button class="danger" data-act="remove">Убрать из каталога</button>
+          ${item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':''}
+        </div></details>`;
+    tr.innerHTML=`
+      <td class="td-cover">${cover}</td>
+      <td class="td-primary"><div class="cell-main">${esc(item.name||'Без названия')}</div><div class="cell-sub">${esc(item.gives||'').slice(0,90)}</div></td>
+      <td data-label="Автор">${item.by?`<a class="who" href="/api/trainer/${encodeURIComponent(item.by)}" target="_blank" rel="noopener">${esc(item.by)}</a>`:'<span class="muted">Fit Timer</span>'}</td>
+      <td data-label="Параметры"><div>${esc(goalName(item.cat))}</div><div class="cell-sub">${esc(item.level)} · ${esc(item.min)} мин · ${item.exCount||0} упр.</div></td>
+      <td data-label="Языки"><span class="status-chip ${ready?'ok':''}">${esc(localeMarks(item))}</span></td>
+      <td data-label="Доступ">${item.pro?'<span class="pill pro">Premium</span>':'<span class="muted">Free</span>'}</td>
+      <td class="td-actions">${menu}</td>`;
+    tr.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.act;
+      if(a==='edit'){ setTab('add'); fillForm(item); return; }
+      if(a==='approve') return act('approve',{id:item.id,pro:false});
+      if(a==='approvePro') return act('approve',{id:item.id,pro:true});
+      if(a==='reject') return act('reject',{id:item.id});
+      if(a==='togglePro') return act('pro',{id:item.id,pro:!item.pro});
+      if(a==='remove' && confirm(`Убрать «${item.name}» из каталога?`)) return act('remove',{id:item.id});
+      if(a==='ban' && confirm(`Закрыть ${item.by}? Его программы больше не будут приниматься.`)) return act('ban',{handle:item.by});
+    });
+    body.appendChild(tr);
+  });
+  $('catalogSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    body.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
   };
-  if(pending){
-    const ready = localeReady(c, 'ru') && localeReady(c, 'en');
-    btn(ready ? 'Проверить RU / EN' : 'Подготовить RU / EN', '', () => {
-      setTab('add'); fillForm(c);
-    });
-    // Сервер тоже проверяет оба языка: скрытие кнопки здесь только убирает ложное действие.
-    if(ready){
-      btn('Взять в каталог', 'ok', () => act('approve', {id: c.id, pro: false}));
-      btn('Взять в премиум', 'ok', () => act('approve', {id: c.id, pro: true}));
-    }
-    btn('Отклонить', 'no', () => act('reject', {id: c.id}));
-  } else {
-    btn(c.pro ? 'Открыть всем' : 'Сделать премиум', '', () => act('pro', {id: c.id, pro: !c.pro}));
-    btn('Изменить', '', () => { setTab('add'); fillForm(c); });
-    btn('Убрать из каталога', 'no', () => {
-      if(confirm(`Убрать «${c.name}» из каталога?`)) act('remove', {id: c.id});
-    });
-  }
-  if(c.by){
-    btn('Закрыть автора', 'quiet', () => {
-      if(confirm(`Закрыть ${c.by}? Его программы больше не будут приниматься.`))
-        act('ban', {handle: c.by});
-    });
-  }
-  return el;
 }
 
 function renderTrainers(b){
-  b.insertAdjacentHTML('beforeend','<div class="page-head"><div><h2>Тренеры</h2><p>Публичные профили, активность и доступ к каталогу.</p></div></div>');
-  if(!data.trainers.length){
-    b.innerHTML = '<div class="empty">Тренеров пока нет.</div>';
-    return;
-  }
-  const day = v => v ? new Date(v).toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}) : '—';
-  data.trainers.slice().reverse().forEach(t => {
-    const el = document.createElement('div');
-    el.className = 'card list-card' + (t.banned ? ' ban' : '');
-    el.innerHTML = `
-      <p class="name">${esc(t.name || t.handle)}${t.banned ? '<span class="pill ban">закрыт</span>' : ''}</p>
-      <a class="who" href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">${esc(t.handle)}</a>
-      <p class="tags">${t.years ? t.years + ' лет стажа · ' : ''}${t.programs} программ · ${t.opens} взяли<br>
-        появился ${esc(day(t.since))} · последняя активность ${esc(day(t.seen))}</p>
-      ${t.about ? `<p class="gives">${esc(t.about)}</p>` : ''}
-      ${t.links ? `<p class="muted">${esc(t.links)}</p>` : ''}
-      <div class="acts"></div>`;
-    const x = document.createElement('button');
-    x.className = 'b ' + (t.banned ? '' : 'no');
-    x.textContent = t.banned ? 'Вернуть' : 'Закрыть приём программ';
-    x.onclick = () => act(t.banned ? 'unban' : 'ban', {handle: t.handle});
-    el.querySelector('.acts').appendChild(x);
-    b.appendChild(el);
+  const list=data.trainers.slice().reverse();
+  b.innerHTML=pageHead('Тренеры','Публичные профили, активность и доступ к отправке программ.');
+  if(!list.length){b.insertAdjacentHTML('beforeend','<div class="empty">Тренеров пока нет.</div>');return;}
+  b.insertAdjacentHTML('beforeend',`
+    <div class="toolbar"><div class="grow"><input id="trainerSearch" type="search" placeholder="Поиск по имени или нику"></div><span class="status-chip">${list.length} тренеров</span></div>
+    <div class="table-shell"><table class="data-table">
+      <thead><tr><th>Тренер</th><th>Стаж</th><th>Программы</th><th>Взяли</th><th>Активность</th><th>Статус</th><th></th></tr></thead>
+      <tbody id="trainerRows"></tbody>
+    </table></div>`);
+  const box=$('trainerRows');
+  list.forEach(t=>{
+    const tr=document.createElement('tr');
+    tr.dataset.search=((t.name||'')+' '+(t.handle||'')).toLowerCase();
+    tr.className=t.banned?'ban':'';
+    tr.innerHTML=`
+      <td class="td-primary"><div class="cell-main">${esc(t.name||t.handle)}</div><div class="cell-sub"><a class="who" href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">${esc(t.handle)}</a></div></td>
+      <td data-label="Стаж">${t.years?esc(t.years)+' лет':'—'}</td>
+      <td data-label="Программы" class="metric">${t.programs||0}</td>
+      <td data-label="Взяли" class="metric">${t.opens||0}</td>
+      <td data-label="Активность"><div>${esc(fmtDay(t.seen))}</div><div class="cell-sub">с ${esc(fmtDay(t.since))}</div></td>
+      <td data-label="Статус">${t.banned?'<span class="pill ban">закрыт</span>':'<span class="status-chip ok">активен</span>'}</td>
+      <td class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+        <a href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">Открыть профиль</a>
+        <button class="${t.banned?'positive':'danger'}" data-toggle>${t.banned?'Вернуть доступ':'Закрыть приём программ'}</button>
+      </div></details></td>`;
+    tr.querySelector('[data-toggle]').onclick=()=>act(t.banned?'unban':'ban',{handle:t.handle});
+    box.appendChild(tr);
   });
+  $('trainerSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
+  };
 }
 
 async function renderUsers(b){
-  b.innerHTML = `<div class="page-head"><div><h2>Пользователи</h2><p>Аккаунты, Premium и тестовый вход.</p></div></div><div class="card">
-    <p class="name">Пользователи</p>
-    <p class="muted">Аккаунт можно создать вручную. Premium здесь — серверное право, поэтому оно работает даже после переустановки и не зависит от флага в APK.</p>
-    <div class="row">
-      <div><label>Email нового аккаунта</label><input id="newUserEmail" type="email" placeholder="test@example.com"></div>
-      <div style="align-self:end"><button class="b ok" id="createUser">Создать аккаунт</button></div>
+  b.innerHTML=pageHead('Пользователи','Аккаунты, Premium и тестовый вход.')+`
+    <div class="toolbar">
+      <div class="grow inline-create">
+        <div><label>Email нового аккаунта</label><input id="newUserEmail" type="email" placeholder="test@example.com"></div>
+        <button class="b ok" id="createUser">Создать</button>
+      </div>
     </div>
-    <p class="muted">«Тестовый код» создаёт одноразовый код на 15 минут. В приложении вводится как обычный код из письма.</p>
-  </div>
-  <div id="usersList"><div class="empty">Загружаю пользователей…</div></div>`;
+    <div id="usersList"><div class="empty">Загружаю пользователей…</div></div>`;
   $('createUser').onclick=async()=>{
-    const email=$('newUserEmail').value.trim().toLowerCase();
-    if(!email)return;
+    const email=$('newUserEmail').value.trim().toLowerCase(); if(!email)return;
     try{await api('user_create',{email});usersCache=null;await renderUsers(b);}
     catch(e){alert('Не получилось создать аккаунт: '+e.message);}
   };
-  try{
-    if(!usersCache) usersCache=(await api('users_list')).users||[];
-  }catch(e){
-    $('usersList').innerHTML='<div class="empty">Не удалось загрузить пользователей: '+esc(e.message)+'</div>';
-    return;
-  }
+  try{if(!usersCache)usersCache=(await api('users_list')).users||[];}
+  catch(e){$('usersList').innerHTML='<div class="empty">Не удалось загрузить пользователей: '+esc(e.message)+'</div>';return;}
   const box=$('usersList');
-  box.innerHTML='';
   if(!usersCache.length){box.innerHTML='<div class="empty">Аккаунтов пока нет.</div>';return;}
-  const day=v=>v?new Date(v).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}):'—';
+  box.innerHTML=`
+    <div class="toolbar"><div class="grow"><input id="userSearch" type="search" placeholder="Поиск по email или нику"></div><span class="status-chip">${usersCache.length} аккаунтов</span></div>
+    <div class="table-shell"><table class="data-table">
+      <thead><tr><th>Аккаунт</th><th>Тариф</th><th>Создан</th><th>Устройства</th><th>Push</th><th></th></tr></thead>
+      <tbody id="userRows"></tbody>
+    </table></div>`;
+  const rows=$('userRows');
   usersCache.forEach(u=>{
-    const el=document.createElement('div');
-    el.className='card';
     const premium=u.premium&&u.sub;
-    el.innerHTML=`
-      <p class="name">${esc(u.email)}${premium?'<span class="pill pro">Premium</span>':''}</p>
-      <p class="tags">${u.handle?esc(u.handle)+' · ':''}создан ${esc(day(u.since))} · устройств ${u.devices||0} · push ${u.pushDevices||0}</p>
-      <p class="muted">${premium?'Premium до '+esc(day(u.sub.until))+' · '+esc(u.sub.provider||'server'):'Free'}</p>
-      <div class="acts">
-        <button class="b ok" data-premium>Выдать Premium</button>
-        ${premium?'<button class="b no" data-revoke>Снять Premium</button>':''}
-        <button class="b" data-code>Тестовый код входа</button>
-      </div>`;
-    el.querySelector('[data-premium]').onclick=async()=>{
-      const raw=prompt('На сколько дней выдать Premium?','30');
-      if(raw===null)return;
-      const days=Math.max(1,Math.min(3650,Math.round(+raw||0)));
-      if(!days){alert('Укажи количество дней.');return;}
+    const tr=document.createElement('tr');
+    tr.dataset.search=((u.email||'')+' '+(u.handle||'')).toLowerCase();
+    tr.innerHTML=`
+      <td class="td-primary"><div class="cell-main">${esc(u.email)}</div><div class="cell-sub">${u.handle?esc(u.handle):'без ника'}</div></td>
+      <td data-label="Тариф">${premium?`<span class="pill pro">Premium</span><div class="cell-sub">до ${esc(fmtDay(u.sub.until))}</div>`:'<span class="muted">Free</span>'}</td>
+      <td data-label="Создан">${esc(fmtDay(u.since))}</td>
+      <td data-label="Устройства" class="metric">${u.devices||0}</td>
+      <td data-label="Push" class="metric">${u.pushDevices||0}</td>
+      <td class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+        <button class="positive" data-premium>Выдать Premium</button>
+        ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
+        <button data-code>Тестовый код входа</button>
+      </div></details></td>`;
+    tr.querySelector('[data-premium]').onclick=async()=>{
+      const raw=prompt('На сколько дней выдать Premium?','30'); if(raw===null)return;
+      const days=Math.max(1,Math.min(3650,Math.round(+raw||0))); if(!days)return alert('Укажи количество дней.');
       try{await api('user_premium',{email:u.email,days});usersCache=null;await renderUsers(b);}
       catch(e){alert('Не получилось выдать Premium: '+e.message);}
     };
-    const rev=el.querySelector('[data-revoke]');
+    const rev=tr.querySelector('[data-revoke]');
     if(rev)rev.onclick=async()=>{
       if(!confirm('Снять Premium у '+u.email+'?'))return;
       try{await api('user_premium',{email:u.email,revoke:true});usersCache=null;await renderUsers(b);}
       catch(e){alert('Не получилось снять Premium: '+e.message);}
     };
-    el.querySelector('[data-code]').onclick=async()=>{
+    tr.querySelector('[data-code]').onclick=async()=>{
       try{
         const r=await api('user_test_code',{email:u.email});
         const msg='Email: '+r.email+'\nКод: '+r.code+'\nДействует '+r.expiresMinutes+' минут и только один раз.';
-        try{await navigator.clipboard.writeText(r.code);alert(msg+'\n\nКод скопирован.');}
-        catch(_){alert(msg);}
+        try{await navigator.clipboard.writeText(r.code);alert(msg+'\n\nКод скопирован.');}catch(_){alert(msg);}
       }catch(e){alert('Не получилось создать код: '+e.message);}
     };
-    box.appendChild(el);
+    rows.appendChild(tr);
   });
+  $('userSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    rows.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
+  };
+}
+
+let campaignLang='ru';
+function setCampaignLang(lang){
+  campaignLang=lang==='en'?'en':'ru';
+  document.querySelectorAll('[data-camp-lang]').forEach(x=>x.classList.toggle('on',x.dataset.campLang===campaignLang));
+  const ru=$('campPaneRu'), en=$('campPaneEn');
+  if(ru)ru.hidden=campaignLang!=='ru';
+  if(en)en.hidden=campaignLang!=='en';
 }
 
 function renderCampaigns(b){
-  b.innerHTML = `<div class="page-head"><div><h2>Рассылки</h2><p>Push и Email без дублирования сообщений.</p></div></div><div class="card">
-    <p class="name">Новости и акции</p>
-    <p class="muted">Рассылка идёт только подтверждённым аккаунтам и учитывает настройки пользователя. Если включены Push и Email, сначала используется Push, а Email — только как fallback, чтобы не дублировать одно сообщение.</p>
-    <div class="row">
-      <div><label>Тип</label><select id="campKind"><option value="news">Новости / обновления</option><option value="offers">Акция / Premium</option></select></div>
-      <div><label>Каналы</label>
-        <label class="check"><input id="campPush" type="checkbox" checked> Push</label>
-        <label class="check"><input id="campEmail" type="checkbox"> Email</label>
+  b.innerHTML=pageHead('Рассылки','Собери сообщение, проверь оба языка и запусти одну кампанию.')+`
+    <div class="form-card">
+      <div class="form-card-head"><h3>Доставка</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Тип сообщения</label><select id="campKind"><option value="news">Новости / обновления</option><option value="offers">Акция / Premium</option></select></div>
+          <div><label>Каналы</label><div class="channel-row">
+            <label><input id="campPush" type="checkbox" checked> Push</label>
+            <label><input id="campEmail" type="checkbox"> Email fallback</label>
+          </div></div>
+        </div>
+        <p class="compact-note">Если доступны оба канала, сначала используется Push, Email — только как fallback.</p>
       </div>
     </div>
-    <div class="lang-card"><div class="lang-head"><b>RU</b></div>
-      <label>Заголовок</label><input id="campRuTitle" maxlength="100">
-      <label>Текст</label><textarea id="campRuBody" maxlength="1000"></textarea>
-    </div>
-    <div class="lang-card"><div class="lang-head"><b>EN</b></div>
-      <label>Title</label><input id="campEnTitle" maxlength="100">
-      <label>Text</label><textarea id="campEnBody" maxlength="1000"></textarea>
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Сообщение</h3>
+        <div class="seg">
+          <button type="button" data-camp-lang="ru" class="${campaignLang==='ru'?'on':''}">RU</button>
+          <button type="button" data-camp-lang="en" class="${campaignLang==='en'?'on':''}">EN</button>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div id="campPaneRu" class="lang-pane"${campaignLang==='ru'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Заголовок</label><input id="campRuTitle" maxlength="100" placeholder="Что нового"></div>
+            <div class="wide"><label>Текст</label><textarea id="campRuBody" class="compact-text" maxlength="1000" placeholder="Коротко и по делу"></textarea></div>
+          </div>
+        </div>
+        <div id="campPaneEn" class="lang-pane"${campaignLang==='en'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Title</label><input id="campEnTitle" maxlength="100" placeholder="What's new"></div>
+            <div class="wide"><label>Text</label><textarea id="campEnBody" class="compact-text" maxlength="1000" placeholder="Short and clear"></textarea></div>
+          </div>
+        </div>
+      </div>
     </div>
     <p class="muted" id="campState"></p>
-  </div>
-  <div class="sticky-save"><span class="save-state">Проверь RU и EN перед отправкой</span><div class="save-actions"><button class="b ok" id="campSend">Отправить рассылку</button></div></div>`;
-  $('campSend').onclick = sendCampaign;
+    <div class="sticky-save"><span class="save-state">Нужны заполненные RU и EN</span><div class="save-actions"><button class="b ok" id="campSend">Отправить рассылку</button></div></div>`;
+  document.querySelectorAll('[data-camp-lang]').forEach(x=>x.onclick=()=>setCampaignLang(x.dataset.campLang));
+  $('campSend').onclick=sendCampaign;
 }
 async function sendCampaign(){
   const btn=$('campSend'),state=$('campState');
@@ -555,17 +713,17 @@ async function sendCampaign(){
   };
   if(!copy.ru.title||!copy.ru.body||!copy.en.title||!copy.en.body){alert('Заполни RU и EN тексты.');return;}
   if(!$('campPush').checked&&!$('campEmail').checked){alert('Выбери хотя бы один канал.');return;}
-  if(!confirm('Запустить рассылку?')) return;
+  if(!confirm('Запустить рассылку?'))return;
   btn.disabled=true;
   let cursor=0,total=0,pushSent=0,emailSent=0,skipped=0,failed=0;
   try{
     do{
       const r=await api('campaign_send',{kind:$('campKind').value,push:$('campPush').checked,email:$('campEmail').checked,copy,cursor});
       cursor=r.cursor;total=r.total;pushSent+=r.pushSent||0;emailSent+=r.emailSent||0;skipped+=r.skipped||0;failed+=r.failed||0;
-      state.textContent=`Обработано ${Math.min(cursor,total)} / ${total} · Push: ${pushSent} · Email: ${emailSent} · пропущено: ${skipped} · ошибок: ${failed}`;
-      if(r.done) break;
+      state.textContent=`Обработано ${Math.min(cursor,total)} / ${total} · Push ${pushSent} · Email ${emailSent} · пропущено ${skipped} · ошибок ${failed}`;
+      if(r.done)break;
     }while(true);
-    state.textContent += ' · готово';
+    state.textContent+=' · готово';
   }catch(e){alert('Рассылка остановлена: '+e.message);}
   finally{btn.disabled=false;}
 }
@@ -573,73 +731,68 @@ async function sendCampaign(){
 function settingsClone(){
   return JSON.parse(JSON.stringify(data.settings || {}));
 }
-function routeFields(s, type, which, label){
-  const x = (s[type] && s[type][which]) || {};
-  return `<div><label>${label} · провайдер</label><select id="${type}_${which}_provider">
-    ${['gemini','openai'].map(p => `<option value="${p}"${x.provider === p ? ' selected' : ''}>${p}</option>`).join('')}
-  </select></div><div><label>${label} · модель</label><input id="${type}_${which}_model" value="${esc(x.model || '')}" maxlength="100"></div>`;
-}
 function saveBar(id, buttonLabel){
-  return `<div class="sticky-save"><span class="save-state" id="${id}State"></span><div class="save-actions"><button class="b ok" id="${id}Save">${buttonLabel || 'Сохранить'}</button></div></div>`;
+  return `<div class="sticky-save"><span class="save-state" id="${id}State"></span><div class="save-actions"><button class="b ok" id="${id}Save">${buttonLabel||'Сохранить'}</button></div></div>`;
 }
-async function persistSettings(next, stateId){
-  const state=$(stateId);
-  if(state) state.textContent='Сохраняю…';
+async function persistSettings(next,stateId){
+  const state=$(stateId); if(state)state.textContent='Сохраняю…';
   try{
     const r=await api('save_settings',{settings:next});
     data.settings=r.settings;
-    if(state) state.textContent='✓ Сохранено';
+    if(state)state.textContent='✓ Сохранено';
     return true;
   }catch(e){
-    if(state) state.textContent='Не сохранилось: '+e.message;
+    if(state)state.textContent='Не сохранилось: '+e.message;
     return false;
   }
 }
 
+function routePair(s,type,which){
+  const x=(s[type]&&s[type][which])||{};
+  return `<div class="pair">
+    <select id="${type}_${which}_provider">${['gemini','openai'].map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
+    <input id="${type}_${which}_model" value="${esc(x.model||'')}" maxlength="100" placeholder="model">
+  </div>`;
+}
 function renderAI(b){
-  const s=data.settings||{}, lim=s.limits||{};
-  const status=p=>data.providers&&data.providers[p]?'✓ ключ подключён':'✗ ключ не задан';
-  b.innerHTML=`
-    <div class="page-head"><div><h2>ИИ</h2><p>Провайдеры, модели, лимиты и хранение запросов.</p></div></div>
-    <div class="card">
-      <div class="status-row">
-        <span class="status-chip ${data.providers&&data.providers.gemini?'ok':''}">Gemini · ${status('gemini')}</span>
-        <span class="status-chip ${data.providers&&data.providers.openai?'ok':''}">OpenAI · ${status('openai')}</span>
-      </div>
-      <label class="check"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}> Генерация включена
-        <small>Ключи хранятся только в Vercel и здесь не показываются.</small>
-      </label>
+  const s=data.settings||{},lim=s.limits||{};
+  const stat=(name,ok)=>`<span class="status-chip ${ok?'ok':''}">${name} · ${ok?'подключён':'нет ключа'}</span>`;
+  b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium.')+`
+    <div class="toolbar">
+      ${stat('Gemini',data.providers&&data.providers.gemini)}
+      ${stat('OpenAI',data.providers&&data.providers.openai)}
+      <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
     </div>
-    <div class="section-grid">
-      <div class="card"><p class="name">Текст</p>
-        <div class="row">${routeFields(s,'text','primary','Основной')}</div>
-        <div class="row">${routeFields(s,'text','backup','Резервный')}</div>
-        <div class="acts"><button class="b" id="testText">Проверить текст</button></div>
-      </div>
-      <div class="card"><p class="name">Картинки</p>
-        <div class="row">${routeFields(s,'image','primary','Основной')}</div>
-        <div class="row">${routeFields(s,'image','backup','Резервный')}</div>
-        <div class="acts"><button class="b" id="testImage">Проверить картинки</button></div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Маршрутизация</h3></div>
+      <div class="form-card-body">
+        <div class="route-table">
+          <div class="route-head">Тип</div><div class="route-head">Основной</div><div class="route-head">Резервный</div>
+          <div class="route-label">Текст</div><div>${routePair(s,'text','primary')}</div><div>${routePair(s,'text','backup')}</div>
+          <div class="route-label">Картинки</div><div>${routePair(s,'image','primary')}</div><div>${routePair(s,'image','backup')}</div>
+        </div>
+        <div class="acts"><button class="b" id="testText">Тест текста</button><button class="b" id="testImage">Тест картинки</button></div>
       </div>
     </div>
-    <div class="card"><p class="name">Лимиты Premium</p>
-      <div class="row">
-        <div><label>Программы / месяц</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
-        <div><label>Упражнения / месяц</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
-        <div><label>Картинки / месяц</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
-        <div><label>Хранение запросов, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Лимиты на месяц</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid four">
+          <div><label>Программы</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+          <div><label>Упражнения</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+          <div><label>Картинки</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+          <div><label>Хранение, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
+        </div>
       </div>
-      <p class="compact-note">Эти лимиты относятся только к AI-функциям, не к аккаунту или каталогу.</p>
     </div>
     <p class="err" id="aiResult"></p>
-    ${saveBar('aiSettings','Сохранить ИИ')}`;
+    ${saveBar('aiSettings','Сохранить')}`;
   $('aiSettingsSave').onclick=saveAISettings;
   $('testText').onclick=()=>testAIAdmin('text');
   $('testImage').onclick=()=>testAIAdmin('image');
 }
 function aiSettingsFromForm(){
-  const s=settingsClone();
-  s.text=s.text||{}; s.image=s.image||{};
+  const s=settingsClone();s.text=s.text||{};s.image=s.image||{};
   s.enabled=$('aiEnabled').checked;
   ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
     s[type][which]={provider:$(`${type}_${which}_provider`).value,model:$(`${type}_${which}_model`).value.trim()};
@@ -648,11 +801,9 @@ function aiSettingsFromForm(){
   s.retentionDays=+$('retention').value;
   return s;
 }
-async function saveAISettings(){
-  await persistSettings(aiSettingsFromForm(),'aiSettingsState');
-}
+async function saveAISettings(){await persistSettings(aiSettingsFromForm(),'aiSettingsState');}
 async function testAIAdmin(type){
-  const el=$('aiResult'); el.textContent='Проверяю…';
+  const el=$('aiResult');el.textContent='Проверяю…';
   const ok=await persistSettings(aiSettingsFromForm(),'aiSettingsState');
   if(!ok){el.textContent='Сначала нужно сохранить корректные настройки.';return;}
   try{
@@ -662,24 +813,23 @@ async function testAIAdmin(type){
 }
 
 function renderPricing(b){
-  const s=data.settings||{}, prices=s.prices||{};
-  const currencies=Object.entries(prices).map(([cur,p])=>`
-    <div class="price-line row">
-      <div><label>${cur} · месяц</label><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></div>
-      <div><label>${cur} · год</label><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></div>
-    </div>`).join('');
-  b.innerHTML=`
-    <div class="page-head"><div><h2>Premium и цены</h2><p>Стоимость подписки по валютам. Платёжные каналы настраиваются отдельно.</p></div></div>
-    <div class="card">
-      <p class="name">Цены</p>
-      ${currencies||'<p class="muted">В конфигурации пока нет валют.</p>'}
-    </div>
+  const s=data.settings||{},prices=s.prices||{};
+  const rows=Object.entries(prices).map(([cur,p])=>`<tr>
+    <td class="td-primary"><div class="cell-main">${esc(cur)}</div></td>
+    <td data-label="Месяц"><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></td>
+    <td data-label="Год"><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></td>
+    <td data-label="Выгода"><span class="cell-sub">${p.month&&p.year?Math.max(0,Math.round((1-p.year/(p.month*12))*100))+'% за год':'—'}</span></td>
+  </tr>`).join('');
+  b.innerHTML=pageHead('Premium и цены','Одна таблица цен по валютам. Платёжные провайдеры настраиваются отдельно.')+`
+    <div class="table-shell"><table class="data-table price-table">
+      <thead><tr><th>Валюта</th><th>Месяц</th><th>Год</th><th>Выгода года</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="4">Валюты не настроены.</td></tr>'}</tbody>
+    </table></div>
     ${saveBar('priceSettings','Сохранить цены')}`;
   $('priceSettingsSave').onclick=savePricingSettings;
 }
 async function savePricingSettings(){
-  const s=settingsClone();
-  s.prices=s.prices||{};
+  const s=settingsClone();s.prices=s.prices||{};
   Object.keys(s.prices).forEach(cur=>{
     s.prices[cur]={month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value};
   });
@@ -687,48 +837,35 @@ async function savePricingSettings(){
 }
 
 function renderPayments(b){
-  const s=data.settings||{}, pay=s.payment||{};
-  const bp=data.billingProviders||{};
-  b.innerHTML=`
-    <div class="page-head"><div><h2>Платежи</h2><p>Каналы оплаты и product ID. Цены находятся в отдельном разделе.</p></div></div>
-    <div class="status-row">
-      <span class="status-chip ${bp.google?'ok':''}">Google Play · ${bp.google?'сервер готов':'нет ключа'}</span>
-      <span class="status-chip ${bp.rustore?'ok':''}">RuStore · ${bp.rustore?'сервер готов':'нет ключа'}</span>
-      <span class="status-chip ${bp.yookassa?'ok':''}">ЮKassa · ${bp.yookassa?'сервер готов':'нет ключей'}</span>
-    </div>
-    <div class="card">
-      <label>Режим</label><input id="payProvider" value="${esc(pay.provider||'multi')}" maxlength="40">
-      <p class="compact-note">Секреты провайдеров хранятся только в Vercel.</p>
-    </div>
-    <div class="section-grid">
-      <div class="card"><p class="name">Google Play</p>
-        <label class="check"><input id="googleEnabled" type="checkbox"${!pay.google||pay.google.enabled!==false?' checked':''}> Включён</label>
-        <label>Product ID · месяц</label><input id="googleMonth" value="${esc((pay.google&&pay.google.month)||pay.androidMonth||'')}">
-        <label>Product ID · год</label><input id="googleYear" value="${esc((pay.google&&pay.google.year)||pay.androidYear||'')}">
-      </div>
-      <div class="card"><p class="name">RuStore Pay</p>
-        <label class="check"><input id="rustoreEnabled" type="checkbox"${!pay.rustore||pay.rustore.enabled!==false?' checked':''}> Включён</label>
-        <label>Product code · месяц</label><input id="rustoreMonth" value="${esc((pay.rustore&&pay.rustore.month)||'')}">
-        <label>Product code · год</label><input id="rustoreYear" value="${esc((pay.rustore&&pay.rustore.year)||'')}">
-      </div>
-      <div class="card"><p class="name">ЮKassa</p>
-        <label class="check"><input id="yookassaEnabled" type="checkbox"${!pay.yookassa||pay.yookassa.enabled!==false?' checked':''}> Включена
-          <small>Использует цены из раздела Premium и цены; product ID не нужен.</small>
-        </label>
-      </div>
-      <div class="card"><p class="name">iOS</p>
-        <p class="compact-note">Заготовка на будущее.</p>
-        <label>Product ID · месяц</label><input id="iosMonth" value="${esc(pay.iosMonth||'')}">
-        <label>Product ID · год</label><input id="iosYear" value="${esc(pay.iosYear||'')}">
-      </div>
-    </div>
+  const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
+  const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
+  const providerRow=(id,name,ready,enabled,month,year,kind)=>`<tr>
+    <td class="td-primary"><div class="cell-main">${name}</div><div class="cell-sub">${ready?'сервер готов':'не хватает серверных ключей'}</div></td>
+    <td data-label="Включён"><input class="toggle" id="${id}Enabled" type="checkbox"${enabled?' checked':''}></td>
+    <td data-label="Месяц">${kind==='price'?'<span class="muted">из таблицы цен</span>':`<input id="${id}Month" value="${esc(month||'')}" placeholder="product id">`}</td>
+    <td data-label="Год">${kind==='price'?'<span class="muted">из таблицы цен</span>':`<input id="${id}Year" value="${esc(year||'')}" placeholder="product id">`}</td>
+  </tr>`;
+  b.innerHTML=pageHead('Платежи','Провайдеры в одной таблице: статус, включение и идентификаторы товаров.')+`
+    <div class="toolbar"><div style="min-width:220px"><label>Режим</label><select id="payProvider">
+      ${['multi','google','rustore','yookassa'].map(x=>`<option value="${x}"${(pay.provider||'multi')===x?' selected':''}>${x}</option>`).join('')}
+    </select></div><span class="compact-note">Секреты провайдеров хранятся только в Vercel.</span></div>
+    <div class="table-shell"><table class="data-table payment-table">
+      <thead><tr><th>Провайдер</th><th>Включён</th><th>Месяц</th><th>Год</th></tr></thead>
+      <tbody>
+        ${providerRow('google','Google Play',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)}
+        ${providerRow('rustore','RuStore Pay',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year)}
+        ${providerRow('yookassa','ЮKassa',!!bp.yookassa,yoo.enabled!==false,'','','price')}
+        ${providerRow('ios','iOS · позже',false,false,pay.iosMonth,pay.iosYear)}
+      </tbody>
+    </table></div>
     ${saveBar('paySettings','Сохранить платежи')}`;
   $('paySettingsSave').onclick=savePaymentSettings;
+  const ios=$('iosEnabled');if(ios){ios.disabled=true;ios.checked=false;}
 }
 async function savePaymentSettings(){
   const s=settingsClone();
   s.payment={
-    provider:$('payProvider').value.trim()||'multi',
+    provider:$('payProvider').value,
     google:{enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()},
     rustore:{enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()},
     yookassa:{enabled:$('yookassaEnabled').checked},
@@ -879,86 +1016,118 @@ function picBox(label, data, set){
   if(x) x.onclick = e => { e.stopPropagation(); set(null); };
   return el;
 }
+let editorLang='ru';
+function setEditorLang(lang){
+  editorLang=lang==='en'?'en':'ru';
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.classList.toggle('on',x.dataset.editorLang===editorLang));
+  const ru=$('editorRu'),en=$('editorEn');
+  if(ru)ru.hidden=editorLang!=='ru';
+  if(en)en.hidden=editorLang!=='en';
+}
+function cancelProgramEdit(){
+  const back=editingStatus==='pending'?'pending':'approved';
+  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru'};editorLang='ru';
+  setTab(back);
+}
 function renderAdd(b){
-  const d = translationDirection();
-  b.innerHTML = `<div class="page-head"><div><h2 id="formTitle">Новая программа</h2><p>Механика, локализации и медиа одной программы.</p></div></div><div class="card">
-    <p class="muted" id="fSourceHint">Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста (ПРОГРАММА, УПРАЖНЕНИЕ, ФОРМАТ и т. п.) не переводятся.</p>
-    <div class="row">
-      <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
-      <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l => `<option>${l}</option>`).join('')}</select></div>
-      <div><label>Минут</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
-    </div>
-    <label>Ник автора (можно пусто — тогда «от нас»)</label><input id="fBy" maxlength="40" placeholder="@lena.doma">
-    <label class="check"><input type="checkbox" id="fPro"> Только по подписке
-      <small>Состав будет закрыт заглушкой, добавить себе — только с Премиумом</small></label>
-
-    <div class="lang-card">
-      <div class="lang-head"><b>Русский</b><span class="lang-state" id="fStateRu"></span></div>
-      <label>Название</label><input id="fNameRu" maxlength="60">
-      <label>Что она даёт</label><textarea id="fGivesRu" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
-      <label>Текст программы</label><textarea id="fTextRu" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
-    </div>
-
-    <div class="lang-card">
-      <div class="lang-head"><b>English</b><span class="lang-state" id="fStateEn"></span></div>
-      <label>Name</label><input id="fNameEn" maxlength="60">
-      <label>What it gives</label><textarea id="fGivesEn" style="min-height:70px;font-family:inherit;font-size:15px" maxlength="300"></textarea>
-      <label>Program text</label><textarea id="fTextEn" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea>
-    </div>
-
-    <div class="translate-tools">
-      <p class="name" style="font-size:15px">Перевод для каталога</p>
-      <p class="muted">ИИ запускается только по кнопке ниже. Если он недоступен, скопируй исходник, переведи где угодно и вставь готовый JSON.</p>
-      <div class="acts">
-        <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)} через ИИ</button>
-        <button class="b quiet" id="fCopyTranslate">Скопировать для внешнего перевода</button>
-        <button class="b quiet" id="fPasteToggle">Вставить готовый JSON</button>
-      </div>
-      <div class="translate-box" id="fPasteWrap" hidden>
-        <textarea id="fPasteJson" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
-        <div class="acts"><button class="b ok" id="fPasteApply">Применить перевод</button></div>
+  const d=translationDirection();
+  b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Сначала параметры, затем текст. Медиа открывается только когда нужно.')+`
+    <div class="form-card">
+      <div class="form-card-head"><h3>Основное</h3><span class="status-chip" id="programAccessState">Free</span></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Цель</label><select id="fCat">${GOALS.map(g=>`<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
+          <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+          <div><label>Длительность, мин</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
+          <div><label>Автор</label><input id="fBy" maxlength="40" placeholder="@trainer или пусто"></div>
+        </div>
+        <label class="inline-switch" style="margin-top:10px"><input type="checkbox" id="fPro"><span>Только Premium</span></label>
       </div>
     </div>
 
-    <label>Обложка</label>
-    <div class="pics" id="fCoverBox"></div>
-    <label>Фото упражнений</label>
-    <p class="muted" id="fPicsHint">Названия берутся из исходного языка программы — впиши упражнения, и здесь появятся места под фото.</p>
-    <div class="pics" id="fPics"></div>
+    <div class="form-card">
+      <div class="form-card-head">
+        <div><h3>Текст программы</h3><div class="cell-sub" id="fSourceHint">Одна механика, две локализации.</div></div>
+        <div class="seg">
+          <button type="button" data-editor-lang="ru" class="${editorLang==='ru'?'on':''}">RU <span id="fStateRu"></span></button>
+          <button type="button" data-editor-lang="en" class="${editorLang==='en'?'on':''}">EN <span id="fStateEn"></span></button>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div id="editorRu" class="lang-pane"${editorLang==='ru'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Название</label><input id="fNameRu" maxlength="60"></div>
+            <div class="wide"><label>Что даёт программа</label><textarea id="fGivesRu" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Протокол программы</label><textarea id="fTextRu" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+          </div>
+        </div>
+        <div id="editorEn" class="lang-pane"${editorLang==='en'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Name</label><input id="fNameEn" maxlength="60"></div>
+            <div class="wide"><label>What it gives</label><textarea id="fGivesEn" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+          </div>
+        </div>
+        <div class="translate-tools">
+          <div class="editor-tools">
+            <button class="b" id="fTranslate">Перевести ${langName(d.from)} → ${langName(d.to)}</button>
+            <button class="b quiet" id="fCopyTranslate">Скопировать промпт</button>
+            <button class="b quiet" id="fPasteToggle">Вставить JSON</button>
+          </div>
+          <div class="translate-box" id="fPasteWrap" hidden>
+            <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
+            <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="form-fold"${form.cover||Object.keys(form.media||{}).length?' open':''}>
+      <summary>Медиа <span class="cell-sub">· обложка и фото упражнений</span></summary>
+      <div class="fold-body">
+        <label>Обложка</label>
+        <div class="pics" id="fCoverBox"></div>
+        <label>Фото упражнений</label>
+        <p class="compact-note" id="fPicsHint"></p>
+        <div class="pics" id="fPics"></div>
+      </div>
+    </details>
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
-  </div>
-  <div class="sticky-save">
-    <span class="save-state" id="programSaveState"></span>
-    <div class="save-actions">
-      <button class="b quiet" id="fClear">Очистить</button>
-      <button class="b ok" id="fSave">Сохранить программу</button>
-    </div>
-  </div>`;
-  $('fSave').onclick = saveForm;
-  $('fClear').onclick = () => {
-    editing = null; editingStatus = null;
-    form = {cover:null, media:{}, sourceLocale:'ru'};
-    render();
+    <div class="sticky-save">
+      <span class="save-state" id="programSaveState"></span>
+      <div class="save-actions">
+        <button class="b quiet" id="fClear">Отмена</button>
+        <button class="b ok" id="fSave">Сохранить</button>
+      </div>
+    </div>`;
+
+  $('fSave').onclick=saveForm;
+  $('fClear').onclick=cancelProgramEdit;
+  if(editing==null)$('fPro').checked=false;
+  $('fPro').onchange=()=>{
+    $('programAccessState').textContent=$('fPro').checked?'Premium':'Free';
+    $('programAccessState').className='status-chip'+($('fPro').checked?' ok':'');
   };
-  if(editing == null) $('fPro').checked = false;
-  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id => {
-    $(id).oninput = () => {
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
+  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
+    $(id).oninput=()=>{
       updateLocaleStates();
-      if(id === (form.sourceLocale === 'en' ? 'fTextEn' : 'fTextRu')) renderPics();
+      if(id===(form.sourceLocale==='en'?'fTextEn':'fTextRu'))renderPics();
     };
   });
-  $('fTranslate').onclick = translateCatalogForm;
-  $('fCopyTranslate').onclick = copyTranslationSource;
-  $('fPasteToggle').onclick = () => { $('fPasteWrap').hidden = !$('fPasteWrap').hidden; };
-  $('fPasteApply').onclick = applyPastedTranslation;
-  $('fFile').onchange = e => {
-    const file = e.target.files && e.target.files[0];
-    if(!file || !pickTo) return;
-    shrinkPic(file, 640, pic => { pickTo(pic); pickTo = null; });
+  $('fTranslate').onclick=translateCatalogForm;
+  $('fCopyTranslate').onclick=copyTranslationSource;
+  $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
+  $('fPasteApply').onclick=applyPastedTranslation;
+  $('fFile').onchange=e=>{
+    const file=e.target.files&&e.target.files[0];
+    if(!file||!pickTo)return;
+    shrinkPic(file,640,pic=>{pickTo(pic);pickTo=null;});
   };
-  $('fSourceHint').textContent += ' Исходник: ' + langName(form.sourceLocale) + '.';
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · служебные метки протокола не переводятся';
   updateLocaleStates();
+  setEditorLang(editorLang);
   renderPics();
 }
 
@@ -970,18 +1139,21 @@ function fillForm(c){
     media: Object.assign({}, c.media || {}),
     sourceLocale: sourceLocaleOf(c)
   };
-  $('formTitle').textContent = 'Редактирование программы';
+  editorLang = form.sourceLocale;
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
   $('fBy').value = c.by || '';
   $('fPro').checked = !!c.pro;
+  $('programAccessState').textContent = c.pro ? 'Premium' : 'Free';
+  $('programAccessState').className = 'status-chip' + (c.pro ? ' ok' : '');
   setLocaleForm('ru', localeBlock(c, 'ru'));
   setLocaleForm('en', localeBlock(c, 'en'));
   const d = translationDirection();
   $('fTranslate').textContent = 'Перевести ' + langName(d.from) + ' → ' + langName(d.to) + ' через ИИ';
   $('fSourceHint').textContent = 'Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста не переводятся. Исходник заявки: ' + langName(form.sourceLocale) + '.';
   updateLocaleStates();
+  setEditorLang(editorLang);
   renderPics();
 }
 
