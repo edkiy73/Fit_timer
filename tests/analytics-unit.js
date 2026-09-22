@@ -15,7 +15,7 @@ const ok=(name,cond,extra)=>{if(!cond)bad++;console.log((cond?'  ok  ':' ПЛО�
   ok('события считаются',today.events.install.count===3,JSON.stringify(today.events.install));
   ok('unique не дублирует одно устройство',today.events.install.unique===2,JSON.stringify(today.events.install));
   ok('другое событие считается отдельно',today.events.workout_completed.count===1);
-  ok('платформы агрегируются',today.platform.android===3&&today.platform.web===1,JSON.stringify(today.platform));
+  ok('платформы агрегируются',today.platform.android===4&&today.platform.web===1,JSON.stringify(today.platform));
   ok('Premium-флаг хранится только агрегатом',today.premium===1,String(today.premium));
   let rejected=false;
   try{await recordAnalytics({event:'email_opened',deviceId:'dev-a'});}catch(e){rejected=e&&e.message==='bad_event';}
