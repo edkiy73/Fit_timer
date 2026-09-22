@@ -542,8 +542,8 @@ function renderCampaigns(b){
       <label>Text</label><textarea id="campEnBody" maxlength="1000"></textarea>
     </div>
     <p class="muted" id="campState"></p>
-    <div class="acts"><button class="b ok" id="campSend">Отправить</button></div>
-  </div>`;
+  </div>
+  <div class="sticky-save"><span class="save-state">Проверь RU и EN перед отправкой</span><div class="save-actions"><button class="b ok" id="campSend">Отправить рассылку</button></div></div>`;
   $('campSend').onclick = sendCampaign;
 }
 async function sendCampaign(){
@@ -880,8 +880,7 @@ function picBox(label, data, set){
 }
 function renderAdd(b){
   const d = translationDirection();
-  b.innerHTML = `<div class="card">
-    <p class="name" id="formTitle">Новая программа</p>
+  b.innerHTML = `<div class="page-head"><div><h2 id="formTitle">Новая программа</h2><p>Механика, локализации и медиа одной программы.</p></div></div><div class="card">
     <p class="muted" id="fSourceHint">Каталог хранит одну механику и два текстовых варианта. Служебные метки внутри текста (ПРОГРАММА, УПРАЖНЕНИЕ, ФОРМАТ и т. п.) не переводятся.</p>
     <div class="row">
       <div><label>Цель</label><select id="fCat">${GOALS.map(g => `<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
@@ -927,9 +926,12 @@ function renderAdd(b){
     <div class="pics" id="fPics"></div>
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
-    <div class="acts">
-      <button class="b ok" id="fSave">Сохранить</button>
+  </div>
+  <div class="sticky-save">
+    <span class="save-state" id="programSaveState"></span>
+    <div class="save-actions">
       <button class="b quiet" id="fClear">Очистить</button>
+      <button class="b ok" id="fSave">Сохранить программу</button>
     </div>
   </div>`;
   $('fSave').onclick = saveForm;
@@ -967,7 +969,7 @@ function fillForm(c){
     media: Object.assign({}, c.media || {}),
     sourceLocale: sourceLocaleOf(c)
   };
-  $('formTitle').textContent = 'Изменить: ' + (c.name || localeBlock(c, form.sourceLocale).name || '');
+  $('formTitle').textContent = 'Редактирование программы';
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
@@ -983,6 +985,9 @@ function fillForm(c){
 }
 
 async function saveForm(){
+  const saveBtn=$('fSave'), saveState=$('programSaveState');
+  if(saveBtn) saveBtn.disabled=true;
+  if(saveState) saveState.textContent='Сохраняю…';
   const source = form.sourceLocale === 'en' ? 'en' : 'ru';
   const locales = {ru: localeFromForm('ru'), en: localeFromForm('en')};
   const src = locales[source];
@@ -1005,6 +1010,8 @@ async function saveForm(){
     await load();
   }catch(e){
     $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
+    if(saveState) saveState.textContent='Ошибка сохранения';
+    if(saveBtn) saveBtn.disabled=false;
   }
 }
 
