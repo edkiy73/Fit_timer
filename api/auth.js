@@ -131,6 +131,24 @@ async function forget(req, res, body){
       const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
       if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
       await store.del(`a:${mh}`);
+      await store.del(`a:indexed:${mh}`);
+      await store.removeFromList('a:all', mh);
+
+      // Одноразовые auth-следы и AI usage/diagnostics тоже относятся к аккаунту.
+      // У них есть TTL, но delete account должен чистить их сразу, а не ждать срока.
+      await store.del(`mail:${mh}`);
+      for(const key of await store.scan(`mailday:${mh}:*`, 400)) await store.del(key);
+      for(const key of await store.scan(`ai:use:*:${mh}:*`, 500)) await store.del(key);
+      for(const key of await store.scan('ai:log:*', 120)){
+        const rows = await store.list(key);
+        for(const row of rows){
+          try{
+            const rec = JSON.parse(row);
+            if(rec && rec.account === mh) await store.removeFromList(key, row);
+          }catch(_){}
+        }
+      }
+
       // Манифест знает все отдельные документы синхронизации. Сначала читаем его,
       // затем удаляем сами документы и только после этого манифест: иначе список
       // ключей потеряется, а данные останутся в базе без способа их найти.
@@ -160,7 +178,7 @@ async function forget(req, res, body){
   const want = new Set((Array.isArray(body && body.links) ? body.links : [])
     .map(x => String(x || '')).filter(x => /^[0-9a-z]{4,16}$/.test(x)).slice(0, 300));
   if(okHandle){
-    const keys = await store.scan('p:*', 20000);
+    const keys = await store.scan('p:*', 100000);
     for(const key of keys){
       const m = /^p:([0-9a-z]{4,16})$/.exec(String(key || ''));
       if(!m) continue;
@@ -183,7 +201,8 @@ async function forget(req, res, body){
     await store.del(`p:${id}:opens`);
     await store.del(`p:${id}:first`);
     await store.del(`p:${id}:last`);
-    await store.del(`reportday:${id}:${new Date().toISOString().slice(0,10)}`);
+    const reportDays = await store.scan(`reportday:${id}:*`, 400);
+    for(const key of reportDays) await store.del(key);
     links++;
   }
 
