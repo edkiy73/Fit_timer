@@ -75,6 +75,7 @@ const I18N_RU = {
   'common.headset': "Гарнитура",
   'common.download': "Скачать",
   'common.checking': "Проверяем…",
+  'common.back': 'Назад',
   'common.actions': "Действия",
   'common.manual': "Вручную",
   'common.viaAI': "Через ИИ",
@@ -1596,6 +1597,7 @@ const I18N_EN = {
   'common.headset': "Headset",
   'common.download': "Download",
   'common.checking': "Checking…",
+  'common.back': 'Back',
   'common.actions': "Actions",
   'common.manual': "Manual",
   'common.viaAI': "With AI",
@@ -3094,7 +3096,29 @@ function applyI18n(root){
   root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder)); });
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  syncAccessibility(root);
 }
+
+function syncAccessibility(root){
+  root = root || document;
+  root.querySelectorAll('.back-chip').forEach(el => {
+    el.setAttribute('aria-label', t('common.back'));
+    if(!el.getAttribute('title')) el.setAttribute('title', t('common.back'));
+  });
+  root.querySelectorAll('button[title]').forEach(el => {
+    if(!el.getAttribute('aria-label')) el.setAttribute('aria-label', el.getAttribute('title'));
+  });
+  root.querySelectorAll('.switch').forEach(el => {
+    el.setAttribute('role', 'switch');
+    el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+    if(!el.getAttribute('aria-label')){
+      const row = el.closest('.pref-row');
+      const label = row && row.querySelector(':scope > span');
+      if(label) el.setAttribute('aria-label', (label.textContent || '').trim());
+    }
+  });
+}
+
 async function loadAppLocale(){
   appLocaleStored = false;
   appLocalePreference = 'system';
@@ -3186,6 +3210,18 @@ function canonicalDescription(value){
   const key=CANONICAL_DESC_KEYS[String(value || '')];
   return key ? t(key) : '';
 }
+
+try{
+  const a11yObserver = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      const el = m.target;
+      if(el && el.classList && el.classList.contains('switch')){
+        el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+      }
+    });
+  });
+  a11yObserver.observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:['class']});
+}catch(_){}
 /* Shared Fit Timer AI protocol contract.
    Browser: globalThis.FitAIProtocol
    Server:  require('../lib/ai-protocol')
