@@ -364,11 +364,11 @@
   .next-up .nu-label::after{content:'';flex:1;height:1px;background:var(--rest-line)}
   .nu-row{display:flex;gap:var(--sp-3);align-items:flex-start}
   .nu-media{
-    flex:none;width:64px;height:64px;border-radius:var(--r-md);overflow:hidden;
+    flex:none;width:80px;height:60px;border-radius:var(--r-md);overflow:hidden;
     background:var(--rest-soft);color:var(--muted);
     display:flex;align-items:center;justify-content:center;
   }
-  .nu-media img{width:100%;height:100%;object-fit:cover;display:block}
+  .nu-media img{width:100%;height:100%;object-fit:contain;display:block}
   .nu-media svg{width:85%;height:85%}
   .nu-body{flex:1;min-width:0}
   .nu-body h4{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px;line-height:1.2}
