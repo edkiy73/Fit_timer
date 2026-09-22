@@ -130,7 +130,7 @@
   .nav-btn.on .nav-count{color:var(--accent)}
   .main{margin-left:228px;min-width:0}
   .topbar-admin{
-    position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);
+    position:sticky;padding:0;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);
     backdrop-filter:blur(14px);border-bottom:1px solid var(--line)
   }
   .topbar-inner{max-width:980px;margin:auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
@@ -350,6 +350,7 @@ async function load(){
   $('nTrainers').textContent = data.trainers.length || '';
   if(tab !== 'users') usersCache = null;
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   render();
 }
 
