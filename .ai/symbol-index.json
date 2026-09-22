@@ -788,8 +788,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2100,
-      "chars": 87826,
+      "lines": 2126,
+      "chars": 88554,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -836,9 +836,11 @@
         "openStats",
         "pct",
         "persistLiveSound",
+        "persistNotificationPrefs",
         "pickProgramForClient",
         "previewSelectedVoice",
         "readTimings",
+        "refreshAfterForeground",
         "refreshVoicePackUI",
         "runSelfAI",
         "saveExAndBack",
