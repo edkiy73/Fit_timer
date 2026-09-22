@@ -1043,6 +1043,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'ai_disabled') throw new Error(t('ai.disabled'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
+  trackProductEvent('ai_used').catch(()=>{});
   return j;
 }
 
