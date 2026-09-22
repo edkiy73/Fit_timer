@@ -299,6 +299,22 @@ let data = {pending: [], approved: [], trainers: [], settings: null, providers: 
 let usersCache = null;
 let tab = 'pending';
 
+const PAGE_TITLES = {
+  pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
+  users:'Пользователи', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи'
+};
+function closeNav(){
+  document.body.classList.remove('nav-open');
+  $('adminNav').classList.remove('open');
+}
+function setTab(next){
+  tab = next;
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  closeNav();
+  render();
+}
+
 async function api(action, extra){
   const res = await fetch('/api/admin', {
     method: 'POST',
@@ -333,6 +349,7 @@ async function load(){
   $('nApproved').textContent = data.approved.length || '';
   $('nTrainers').textContent = data.trainers.length || '';
   if(tab !== 'users') usersCache = null;
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   render();
 }
 
@@ -342,9 +359,12 @@ function render(){
   if(tab === 'add') return renderAdd(b);
   if(tab === 'trainers') return renderTrainers(b);
   if(tab === 'users') return renderUsers(b);
-  if(tab === 'settings') return renderSettings(b);
   if(tab === 'campaigns') return renderCampaigns(b);
+  if(tab === 'ai') return renderAI(b);
+  if(tab === 'pricing') return renderPricing(b);
+  if(tab === 'payments') return renderPayments(b);
   const list = tab === 'pending' ? data.pending : data.approved;
+  b.insertAdjacentHTML('beforeend', `<div class="page-head"><div><h2>${tab === 'pending' ? 'На проверке' : 'Каталог'}</h2><p>${tab === 'pending' ? 'Заявки тренеров и подготовка RU / EN.' : 'Опубликованные программы и доступ Premium.'}</p></div></div>`);
   if(!list.length){
     b.innerHTML = `<div class="empty">${tab === 'pending'
       ? 'Пусто — всё разобрано.'
@@ -358,7 +378,7 @@ function render(){
 
 function itemCard(c){
   const el = document.createElement('div');
-  el.className = 'card';
+  el.className = 'card list-card';
   const pending = c.status === 'pending';
   el.innerHTML = `
     <div class="top">
@@ -385,7 +405,7 @@ function itemCard(c){
   if(pending){
     const ready = localeReady(c, 'ru') && localeReady(c, 'en');
     btn(ready ? 'Проверить RU / EN' : 'Подготовить RU / EN', '', () => {
-      tab = 'add'; render(); fillForm(c);
+      setTab('add'); fillForm(c);
     });
     // Сервер тоже проверяет оба языка: скрытие кнопки здесь только убирает ложное действие.
     if(ready){
@@ -395,7 +415,7 @@ function itemCard(c){
     btn('Отклонить', 'no', () => act('reject', {id: c.id}));
   } else {
     btn(c.pro ? 'Открыть всем' : 'Сделать премиум', '', () => act('pro', {id: c.id, pro: !c.pro}));
-    btn('Изменить', '', () => { tab = 'add'; render(); fillForm(c); });
+    btn('Изменить', '', () => { setTab('add'); fillForm(c); });
     btn('Убрать из каталога', 'no', () => {
       if(confirm(`Убрать «${c.name}» из каталога?`)) act('remove', {id: c.id});
     });
@@ -410,6 +430,7 @@ function itemCard(c){
 }
 
 function renderTrainers(b){
+  b.insertAdjacentHTML('beforeend','<div class="page-head"><div><h2>Тренеры</h2><p>Публичные профили, активность и доступ к каталогу.</p></div></div>');
   if(!data.trainers.length){
     b.innerHTML = '<div class="empty">Тренеров пока нет.</div>';
     return;
@@ -417,7 +438,7 @@ function renderTrainers(b){
   const day = v => v ? new Date(v).toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}) : '—';
   data.trainers.slice().reverse().forEach(t => {
     const el = document.createElement('div');
-    el.className = 'card' + (t.banned ? ' ban' : '');
+    el.className = 'card list-card' + (t.banned ? ' ban' : '');
     el.innerHTML = `
       <p class="name">${esc(t.name || t.handle)}${t.banned ? '<span class="pill ban">закрыт</span>' : ''}</p>
       <a class="who" href="/api/trainer/${encodeURIComponent(t.handle)}" target="_blank" rel="noopener">${esc(t.handle)}</a>
@@ -436,7 +457,7 @@ function renderTrainers(b){
 }
 
 async function renderUsers(b){
-  b.innerHTML = `<div class="card">
+  b.innerHTML = `<div class="page-head"><div><h2>Пользователи</h2><p>Аккаунты, Premium и тестовый вход.</p></div></div><div class="card">
     <p class="name">Пользователи</p>
     <p class="muted">Аккаунт можно создать вручную. Premium здесь — серверное право, поэтому оно работает даже после переустановки и не зависит от флага в APK.</p>
     <div class="row">
@@ -502,7 +523,7 @@ async function renderUsers(b){
 }
 
 function renderCampaigns(b){
-  b.innerHTML = `<div class="card">
+  b.innerHTML = `<div class="page-head"><div><h2>Рассылки</h2><p>Push и Email без дублирования сообщений.</p></div></div><div class="card">
     <p class="name">Новости и акции</p>
     <p class="muted">Рассылка идёт только подтверждённым аккаунтам и учитывает настройки пользователя. Если включены Push и Email, сначала используется Push, а Email — только как fallback, чтобы не дублировать одно сообщение.</p>
     <div class="row">
@@ -916,14 +937,15 @@ async function act(action, extra){
   }
 }
 
-document.querySelectorAll('.tab[data-tab]').forEach(t => {
-  t.onclick = () => {
-    tab = t.dataset.tab;
-    document.querySelectorAll('.tab[data-tab]').forEach(x => x.classList.toggle('on', x === t));
-    render();
-  };
+document.querySelectorAll('[data-tab]').forEach(t => {
+  t.onclick = () => setTab(t.dataset.tab);
 });
-$('out').onclick = () => { localStorage.removeItem('adminKey'); KEY = ''; showGate(''); };
+$('navOpen').onclick = () => {
+  document.body.classList.add('nav-open');
+  $('adminNav').classList.add('open');
+};
+$('navShade').onclick = closeNav;
+$('out').onclick = () => { localStorage.removeItem('adminKey'); KEY = ''; closeNav(); showGate(''); };
 $('enter').onclick = () => {
   KEY = $('key').value.trim();
   localStorage.setItem('adminKey', KEY);
