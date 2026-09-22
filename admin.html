@@ -1545,6 +1545,48 @@ function cancelProgramEdit(){
   localStorage.removeItem('adminEditingId');
   setTab(back);
 }
+function setAdminCreateMode(mode){
+  adminCreateMode=mode==='manual'?'manual':'ai';
+  document.querySelectorAll('[data-create-mode]').forEach(x=>x.classList.toggle('on',x.dataset.createMode===adminCreateMode));
+  const fields=$('aiCreateFields');if(fields)fields.hidden=adminCreateMode!=='ai';
+}
+async function generateAdminProgram(){
+  const btn=$('fAiCreate'),state=$('fAiCreateState');
+  const lang=$('aiCreateLang').value==='en'?'en':'ru';
+  btn.disabled=true;
+  state.textContent='ИИ собирает полную программу…';
+  try{
+    const r=await api('catalog_ai_create',{
+      lang,
+      cat:$('fCat').value,
+      level:$('fLevel').value,
+      min:+$('fMin').value||20,
+      days:+$('aiCreateDays').value||3,
+      equipment:$('aiCreateEquipment').value.trim(),
+      limitations:$('aiCreateLimitations').value.trim(),
+      focus:$('aiCreateFocus').value.trim(),
+      style:$('aiCreateStyle').value,
+      warmup:$('aiCreateWarmup').value,
+      instruction:$('aiCreateWish').value.trim()
+    });
+    const other=lang==='ru'?'en':'ru';
+    setLocaleForm(lang,r.locale||{});
+    setLocaleForm(other,{});
+    form.sourceLocale=lang;
+    form.cover=null;
+    form.media={};
+    failedMediaJobs=[];
+    setEditorLang(lang);
+    updateLocaleStates();renderExerciseCards();renderPics();
+    $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · второй язык нужно перевести и проверить';
+    state.textContent='✓ Программа готова · '+(r.provider||'AI')+' / '+(r.model||'model')+(r.fallback?' · резерв':'')+'. Проверь текст, затем переведи второй язык.';
+    const textCard=$('fName'+(lang==='en'?'En':'Ru'));
+    if(textCard)textCard.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){
+    state.textContent='Не получилось сгенерировать: '+(e.detail||e.message);
+  }finally{btn.disabled=false;}
+}
+
 function renderAdd(b){
   b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
     <div class="form-card">
@@ -1557,6 +1599,30 @@ function renderAdd(b){
           <div><label>Автор</label><input id="fBy" maxlength="40" placeholder="@trainer или пусто"></div>
         </div>
         <label class="inline-switch" style="margin-top:10px"><input type="checkbox" id="fPro"><span>Только Premium</span></label>
+      </div>
+    </div>
+
+    <div class="form-card admin-ai-create" id="aiCreateCard"${editing?' hidden':''}>
+      <div class="form-card-head">
+        <div><h3>Создание программы</h3><div class="cell-sub">Цель, уровень и длительность берутся из блока «Основное».</div></div>
+        <div class="seg">
+          <button type="button" data-create-mode="ai" class="${adminCreateMode==='ai'?'on':''}">Через ИИ</button>
+          <button type="button" data-create-mode="manual" class="${adminCreateMode==='manual'?'on':''}">Вручную</button>
+        </div>
+      </div>
+      <div class="form-card-body" id="aiCreateFields"${adminCreateMode==='ai'?'':' hidden'}>
+        <div class="field-grid">
+          <div><label>Язык исходника</label><select id="aiCreateLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div><label>Тренировок в неделю</label><input id="aiCreateDays" type="number" min="1" max="7" value="3"></div>
+          <div><label>Структура</label><select id="aiCreateStyle"><option value="auto">На усмотрение ИИ</option><option value="circuit">Круговая</option><option value="strength">Силовая</option><option value="mixed">Смешанная</option></select></div>
+          <div><label>Разминка</label><select id="aiCreateWarmup"><option value="auto">На усмотрение ИИ</option><option value="yes">Добавить</option><option value="no">Без разминки</option></select></div>
+          <div class="wide"><label>Оборудование</label><input id="aiCreateEquipment" maxlength="500" placeholder="Например: гантели 5–20 кг, скамья, резинки"></div>
+          <div class="wide"><label>Акцент</label><input id="aiCreateFocus" maxlength="500" placeholder="Например: больше спины и плеч, без лишнего кардио"></div>
+          <div class="wide"><label>Ограничения</label><textarea id="aiCreateLimitations" class="compact-text" maxlength="700" placeholder="Например: без прыжков, беречь колени"></textarea></div>
+          <div class="wide"><label>Дополнительное пожелание</label><textarea id="aiCreateWish" class="compact-text" maxlength="1200" placeholder="Что ещё важно учесть"></textarea></div>
+        </div>
+        <div class="acts"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button></div>
+        <p class="muted" id="fAiCreateState">ИИ заполнит исходный язык. После этого проверь программу и переведи второй язык.</p>
       </div>
     </div>
 
@@ -1596,6 +1662,15 @@ function renderAdd(b){
             <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
             <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
           </div>
+          <div class="ai-inline-box" id="fAiEditBox" hidden>
+            <div class="ai-inline-title"><b id="fAiEditTitle">Изменить через ИИ</b><span class="status-chip">запрос сохраняется при ошибке</span></div>
+            <textarea id="fAiInstruction" class="compact-text" maxlength="2000"></textarea>
+            <div class="acts">
+              <button class="b ok" type="button" id="fAiEditApply">Применить изменение</button>
+              <button class="b quiet" type="button" id="fAiEditCancel">Отмена</button>
+            </div>
+            <p class="muted" id="fAiEditState"></p>
+          </div>
         </div>
       </div>
     </div>
@@ -1623,6 +1698,7 @@ function renderAdd(b){
           <button class="b" id="genMissing" type="button">Сгенерировать недостающие</button>
           <button class="b quiet" id="genAll" type="button">Сгенерировать все заново</button>
         </div>
+        <div class="media-progress"><span class="muted" id="mediaProgressText"></span><button class="b quiet" type="button" id="retryFailedMedia" hidden>Повторить ошибки</button></div>
         <label>Обложка</label>
         <div class="pics" id="fCoverBox"></div>
         <label>Фото упражнений</label>
@@ -1643,6 +1719,9 @@ function renderAdd(b){
 
   $('fSave').onclick=saveForm;
   $('fClear').onclick=cancelProgramEdit;
+  document.querySelectorAll('[data-create-mode]').forEach(x=>x.onclick=()=>setAdminCreateMode(x.dataset.createMode));
+  if($('fAiCreate'))$('fAiCreate').onclick=generateAdminProgram;
+  setAdminCreateMode(adminCreateMode);
   if(editing==null)$('fPro').checked=false;
   $('fPro').onchange=()=>{
     $('programAccessState').textContent=$('fPro').checked?'Premium':'Free';
@@ -1654,13 +1733,16 @@ function renderAdd(b){
   });
   $('fTranslateRuEn').onclick=()=>translateCatalogForm('ru','en');
   $('fTranslateEnRu').onclick=()=>translateCatalogForm('en','ru');
-  $('fAiProgram').onclick=()=>aiEditProgram(editorLang,'');
+  $('fAiProgram').onclick=()=>openAiEditProgram(editorLang,'');
+  $('fAiEditApply').onclick=aiEditProgram;
+  $('fAiEditCancel').onclick=closeAiEditProgram;
   $('fCopyTranslate').onclick=copyTranslationSource;
   $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
   $('fPasteApply').onclick=applyPastedTranslation;
   $('imageGender').value=form.imageGender||'f';
   $('imageGender').onchange=()=>{form.imageGender=$('imageGender').value==='m'?'m':'f';};
   $('genMissing').onclick=()=>generateMedia('missing');
+  $('retryFailedMedia').onclick=()=>generateMedia('retry');
   $('genAll').onclick=()=>{if(confirm('Перегенерировать обложку и все фото упражнений?'))generateMedia('all');};
   $('fFile').onchange=e=>{
     const file=e.target.files&&e.target.files[0];
