@@ -35,6 +35,7 @@ const { store } = require('../lib/store');
 const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('../lib/util');
 const { sendMail } = require('../lib/mail');
 const { recordAnalytics } = require('../lib/analytics');
+const { recordClientError } = require('../lib/diagnostics');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -263,6 +264,15 @@ module.exports = async (req, res) => {
       return send(res,200,out);
     }catch(e){
       return fail(res,e&&e.status||400,e&&e.message||'bad_analytics');
+    }
+  }
+
+  if(act === 'client_error'){
+    if(!(await rateOkScoped(req,'client-error',120,'',3600,true))) return fail(res,429,'rate_limited');
+    try{
+      return send(res,200,await recordClientError(body||{}));
+    }catch(e){
+      return fail(res,400,'bad_client_error');
     }
   }
 
