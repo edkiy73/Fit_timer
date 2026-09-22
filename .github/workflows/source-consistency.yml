@@ -38,3 +38,4 @@ jobs:
           node tests/sync-api.js
           node tests/auth-abuse.js
           node tests/ai-runtime-unit.js
+          node tests/push-unit.js
