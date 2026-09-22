@@ -251,10 +251,26 @@
     <div class="modal-card">
       <span class="mini-label" id="slotTitle" data-i18n="builder.image">Картинка</span>
       <div class="tray" id="slotTray"></div>
-      <p class="field-hint hidden" id="slotEmptyHint" data-i18n="builder.noUploadedImages">Загруженных картинок пока нет — выбери их с телефона.</p>
+      <p class="field-hint hidden" id="slotEmptyHint" data-i18n="builder.noUploadedImages">Доступных картинок пока нет — выбери их с телефона или создай через ИИ.</p>
       <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px" data-i18n="builder.chooseFromPhone">Выбрать с телефона</button>
+      <button class="btn-ghost" id="slotGenerateAI" style="margin-top:8px" data-i18n="builder.generateOneAI">Сделать через ИИ</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
       <button type="button" class="modal-btn danger" id="slotRemove" data-i18n="builder.removeImage">Убрать картинку</button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal" id="imgGenScopeModal">
+    <div class="modal-card">
+      <span class="mini-label" data-i18n="builder.generateScopeTitle">Какие картинки сделать</span>
+      <button class="choice primary" id="imgGenAll">
+        <b data-i18n="builder.generateAllImages">Сгенерировать все</b>
+        <small data-i18n="builder.generateAllImagesSub">Перерисовать обложку и все упражнения</small>
+      </button>
+      <button class="choice" id="imgGenMissing">
+        <b data-i18n="builder.generateMissingImages">Только недостающие</b>
+        <small data-i18n="builder.generateMissingImagesSub">Оставить готовые картинки и сделать только пустые</small>
+      </button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
