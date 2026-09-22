@@ -420,7 +420,7 @@ async function pullProgram(pr){
   let d;
   try{
     // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
-    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}?key=${encodeURIComponent(pr.link.key)}`);
+    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}`, {headers:{'X-Fit-Link-Key':pr.link.key}});
   }catch(e){
     pr.err = t(PULL_ERR[e && e.code] || 'clients.pullOffline');
     return false;
