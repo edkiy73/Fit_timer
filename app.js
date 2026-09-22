@@ -5507,31 +5507,50 @@ async function syncNotificationPrefsServer(action){
 
 async function pushAccountDocs(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
-  const base = syncAuth('push');
-  for(const doc of await accountDocsSnapshot()){
-    await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
-  }
+  const docs = await accountDocsSnapshot();
+  if(!docs.length) return;
+  await syncApiPost(Object.assign(syncAuth('push'), {profiles:[], docs}));
 }
 
-async function profileSnapshot(uid){
+// Собрать только то, что реально изменилось у конкретного профиля.
+// outbox уже существует для этой задачи; полный снимок каждого профиля при каждом
+// старте был лишним и превращал обычную синхронизацию в десятки HTTP-запросов.
+async function pendingProfileSnapshot(uid){
   const u = users.find(x => x.id === uid);
   if(!u) return null;
-  const programs = parsed(await kvGet('customPrograms_' + uid), []);
+  const queue = parsed(await kvGet('outbox_' + uid), []);
   const meta = parsed(await kvGet('docMeta_' + uid), {});
   const ident = parsed(await kvGet('identity_' + uid), {});
-  const now = new Date().toISOString();
+  const programs = parsed(await kvGet('customPrograms_' + uid), []);
   const serverId = u.profileId || u.id;
+  const deviceId = (await kvGet('deviceId')) || '';
   const docs = [];
-  const add = (key, value) => {
-    if(value == null) return;
-    const m = meta[key] || {rev:1, at:now, schema:SCHEMA_VERSION};
-    docs.push({key, profileId:serverId, rev:m.rev||1, at:m.at||now, schema:m.schema||SCHEMA_VERSION,
-               deleted:!!m.gone, value:m.gone ? null : JSON.stringify(value)});
+  for(const o of Array.isArray(queue) ? queue : []){
+    const key = String(o.key || '');
+    if(!isSyncKey(key)) continue;
+    let value = null;
+    if(key === 'stats') value = await kvGet('stats_' + uid);
+    else if(key === 'index') value = JSON.stringify({order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
+    else if(key.startsWith('program:')){
+      const id = key.slice(8);
+      const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
+      value = p ? JSON.stringify(p) : null;
+    } else value = await kvGet(key + '_' + uid);
+    const gone = value === null && key.startsWith('program:');
+    if(value === null && !gone) continue;
+    docs.push({
+      key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,
+      at:o.at || (meta[key]||{}).at || new Date().toISOString(),
+      schema:+((meta[key]||{}).schema) || SCHEMA_VERSION,
+      deviceId, deleted:gone || !!((meta[key]||{}).gone), value
+    });
+  }
+  return {
+    uid,
+    queue:Array.isArray(queue) ? queue : [],
+    profile:{user:syncUser(u), at:u.syncAt || ident.createdAt || '1970-01-01T00:00:00.000Z'},
+    docs
   };
-  add('stats', parsed(await kvGet('stats_' + uid), null));
-  (Array.isArray(programs) ? programs : []).forEach(p => add(PROGRAM_DOC(p.id), p));
-  add('index', {order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
-  return {profile:{user:syncUser(u), at:u.syncAt || ident.createdAt || '1970-01-01T00:00:00.000Z'}, docs};
 }
 
 const accountSyncAdapter = {
@@ -5539,8 +5558,7 @@ const accountSyncAdapter = {
     const base = syncAuth('push');
     const u = curUser();
     await syncApiPost(Object.assign(base, {profiles:[{user:syncUser(u), at:u.syncAt || identity.createdAt}], docs:[]}));
-    // По одному документу: программа может содержать свои картинки и быть крупной;
-    // общий пакет тогда упирается в предел запроса, хотя каждый документ допустим.
+    // У активного профиля payload уже является дельтой из outbox.
     for(const doc of payload) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   },
   async pull(){
@@ -5550,23 +5568,56 @@ const accountSyncAdapter = {
   }
 };
 
-async function pushAllProfiles(){
-  const base = syncAuth('push');
+async function pushPendingProfiles(){
+  const snaps = [];
   for(const u of users){
-    const snap = await profileSnapshot(u.id);
-    if(!snap) continue;
-    await syncApiPost(Object.assign(base, {profiles:[snap.profile], docs:[]}));
-    for(const doc of snap.docs) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
+    const snap = await pendingProfileSnapshot(u.id);
+    if(snap) snaps.push(snap);
+  }
+  const profiles = snaps.map(s => s.profile);
+  if(profiles.length){
+    // Метаданные всех профилей маленькие — отправляем одним запросом.
+    await syncApiPost(Object.assign(syncAuth('push'), {profiles, docs:[]}));
+  }
+
+  // Отправляем только изменённые документы. Небольшой параллелизм не даёт одной
+  // медленной serverless-функции растянуть десяток независимых документов на минуты.
+  const jobs = [];
+  for(const snap of snaps){
+    for(const doc of snap.docs) jobs.push({snap, doc});
+  }
+  const doneByUid = new Map();
+  for(let i = 0; i < jobs.length; i += 3){
+    const chunk = jobs.slice(i, i + 3);
+    const results = await Promise.all(chunk.map(async job => {
+      await syncApiPost(Object.assign(syncAuth('push'), {profiles:[], docs:[job.doc]}));
+      return job;
+    }));
+    results.forEach(job => {
+      if(!doneByUid.has(job.snap.uid)) doneByUid.set(job.snap.uid, []);
+      doneByUid.get(job.snap.uid).push(job.doc);
+    });
+  }
+
+  // Удаляем из очереди только успешно отправленные конкретные ревизии. Если за время
+  // отправки документ изменился снова, новая ревизия останется ждать следующего прохода.
+  for(const snap of snaps){
+    const done = doneByUid.get(snap.uid) || [];
+    if(!done.length) continue;
+    let queue = parsed(await kvGet('outbox_' + snap.uid), []);
+    queue = (Array.isArray(queue) ? queue : []).filter(o =>
+      !done.some(d => d.key === o.key && d.rev === o.rev)
+    );
+    await kvSet('outbox_' + snap.uid, JSON.stringify(queue));
+    if(snap.uid === currentUser) outbox = queue;
   }
 }
 
 async function pushDeletedProfiles(){
   const list = Array.isArray(account.deletedProfiles) ? account.deletedProfiles.slice() : [];
   if(!list.length) return;
-  const base = syncAuth('push');
-  for(const rec of list){
-    await syncApiPost(Object.assign(base, {profiles:[{user:{id:rec.id}, at:rec.at, deleted:true}], docs:[]}));
-  }
+  const profiles = list.map(rec => ({user:{id:rec.id}, at:rec.at, deleted:true}));
+  await syncApiPost(Object.assign(syncAuth('push'), {profiles, docs:[]}));
   account.deletedProfiles = [];
   await saveAccount();
 }
@@ -5579,12 +5630,9 @@ async function flushAccountSync(){
   showSyncState('busy', 3, 3, 'sync.stage.upload');
   syncUploadBusy = (async()=>{
     try{
-      // Самая тяжёлая часть намеренно последняя и фоновая: все профили и их
-      // документы могут потребовать много последовательных запросов.
       await pushDeletedProfiles();
-      await pushAllProfiles();
+      await pushPendingProfiles();
       await pushAccountDocs();
-      await SYNC.push();                     // в том числе надгробия удалённых программ
       showSyncState('ok');
       return true;
     }catch(e){
