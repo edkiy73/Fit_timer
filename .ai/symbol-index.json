@@ -346,7 +346,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2632,
-      "chars": 120345,
+      "chars": 120344,
       "symbols": [
         "add",
         "ageError",
@@ -481,7 +481,7 @@
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
       "lines": 1644,
-      "chars": 74923,
+      "chars": 74922,
       "symbols": [
         "add",
         "addClient",
@@ -784,8 +784,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2056,
-      "chars": 86068,
+      "lines": 2085,
+      "chars": 86974,
       "symbols": [
         "addExManual",
         "aiRunClose",
