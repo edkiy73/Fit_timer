@@ -97,13 +97,13 @@ async function capture(page, fn){
   const page = await boot(b, WITH_API, errs);
   const r = await capture(page, `exportProgram(customPrograms.find(p => p.id === 'big'))`);
   const url = (r.out && r.out.text) || '';
-  ok('с сервером выдаётся адрес', /^https?:\/\/.+\?p=[0-9a-z]{4,16}$/.test(url), url.slice(-24));
+  ok('с сервером выдаётся App Link', /^https?:\/\/.+\/p\/[0-9a-z]{4,16}$/.test(url), url.slice(-24));
   ok('адрес короткий', url.length < URL_SAFE, url.length + ' символов');
   ok('программа в адрес не попала', !/FIT1\./.test(url));
 
   // ссылка действительно открывается и приносит ту же программу
   const back = await page.evaluate(async (u) => {
-    const id = u.split('?p=')[1];
+    const id = new URL(u).pathname.split('/').filter(Boolean).pop();
     const d = await apiFetch('/api/p/' + id);
     return {name: d.program.name, ex: (d.program.plans[0].exercises || []).length, by: d.by};
   }, url);
