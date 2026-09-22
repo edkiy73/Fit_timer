@@ -2048,7 +2048,3 @@ try{
   }
 })();
 
-// PWA: service worker (работает только при открытии с хостинга по https)
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
-}
