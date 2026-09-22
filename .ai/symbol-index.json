@@ -216,8 +216,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 791,
-      "chars": 35328,
+      "lines": 792,
+      "chars": 35417,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
@@ -341,8 +341,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2631,
-      "chars": 120299,
+      "lines": 2632,
+      "chars": 120345,
       "symbols": [
         "add",
         "ageError",
@@ -676,8 +676,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1342,
-      "chars": 62630,
+      "lines": 1345,
+      "chars": 62858,
       "symbols": [
         "afterExChange",
         "autoGrow",
