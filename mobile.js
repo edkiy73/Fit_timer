@@ -403,10 +403,16 @@
     try{ window.open(value,'_blank','noopener'); return true; }catch(_){ return false; }
   }
 
+  async function requestReview(){
+    if(!native || !fitSystem || !fitSystem.requestReview) return false;
+    try{ await fitSystem.requestReview(); return true; }catch(_){ return false; }
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
     getAppInfo,
     openExternal,
+    requestReview,
     consumeProgramLink,
     requestNotifications,
     registerRemotePush,

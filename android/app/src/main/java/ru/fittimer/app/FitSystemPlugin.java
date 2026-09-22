@@ -11,6 +11,9 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.play.core.review.ReviewInfo;
+import com.google.android.play.core.review.ReviewManager;
+import com.google.android.play.core.review.ReviewManagerFactory;
 
 @CapacitorPlugin(name = "FitSystem")
 public class FitSystemPlugin extends Plugin {
@@ -31,6 +34,27 @@ public class FitSystemPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("open_failed", e);
         }
+    }
+
+    @PluginMethod
+    public void requestReview(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            try {
+                ReviewManager manager = ReviewManagerFactory.create(getContext());
+                manager.requestReviewFlow().addOnCompleteListener(requestTask -> {
+                    if (!requestTask.isSuccessful()) {
+                        call.reject("review_unavailable", requestTask.getException());
+                        return;
+                    }
+                    ReviewInfo reviewInfo = requestTask.getResult();
+                    manager.launchReviewFlow(getActivity(), reviewInfo).addOnCompleteListener(flowTask -> {
+                        call.resolve();
+                    });
+                });
+            } catch (Exception e) {
+                call.reject("review_failed", e);
+            }
+        });
     }
 
     @PluginMethod

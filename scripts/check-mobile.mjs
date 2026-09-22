@@ -24,6 +24,7 @@ if(!app.includes('FIT_TIMER_CONFIG')) throw new Error('Runtime configuration is 
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
 const mobileBridge = await readFile('mobile.js', 'utf8');
 if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal')) throw new Error('Native update bridge is incomplete');
+if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app review bridge is missing');
 if(!mobileBridge.includes('appUrlOpen') || !mobileBridge.includes('getLaunchUrl') || !mobileBridge.includes('consumeProgramLink')) throw new Error('Native App Link bridge is incomplete');
 const manifest = await readFile('android/app/src/main/AndroidManifest.xml', 'utf8');
 if(!manifest.includes('android:autoVerify="true"') || !manifest.includes('android:host="fittimer99.vercel.app"') || !manifest.includes('android:pathPrefix="/p/"')){
@@ -41,11 +42,13 @@ if(!certs.includes('94:97:92:14:41:BD:0E:E1:05:C4:ED:D3:7A:24:A1:E8:88:99:81:E9:
 
 const fitSystem = await readFile('android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java', 'utf8');
 if(!fitSystem.includes('openExternal') || !fitSystem.includes('Intent.ACTION_VIEW')) throw new Error('Android external update launcher is missing');
+if(!fitSystem.includes('ReviewManagerFactory') || !fitSystem.includes('launchReviewFlow')) throw new Error('Android in-app review flow is missing');
 
 const androidRoot = await readFile('android/build.gradle', 'utf8');
 const androidApp = await readFile('android/app/build.gradle', 'utf8');
 if(!androidRoot.includes('firebase-crashlytics-gradle')) throw new Error('Android Crashlytics Gradle plugin is missing');
 if(!androidApp.includes("com.google.firebase:firebase-crashlytics")) throw new Error('Android Crashlytics SDK is missing');
 if(!androidApp.includes("com.google.firebase.crashlytics")) throw new Error('Android Crashlytics plugin is not applied');
+if(!androidApp.includes("com.google.android.play:review:2.0.2")) throw new Error('Google Play review dependency is missing');
 
 console.log('Mobile project structure is valid.');
