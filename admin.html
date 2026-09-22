@@ -418,6 +418,7 @@
       <div class="nav-group">
         <div class="nav-label">Аккаунты</div>
         <button class="nav-btn" data-tab="users"><span>Пользователи</span></button>
+        <button class="nav-btn" data-tab="analytics"><span>Аналитика</span></button>
         <button class="nav-btn" data-tab="campaigns"><span>Рассылки</span></button>
       </div>
       <div class="nav-group">
@@ -486,12 +487,13 @@ function translationPrompt(source, from, to){
 let KEY = localStorage.getItem('adminKey') || '';
 let data = {pending: [], approved: [], trainers: [], settings: null, providers: {}};
 let usersCache = null;
+let analyticsCache = null;
 const savedTab = localStorage.getItem('adminTab');
-let tab = ['pending','approved','add','trainers','users','campaigns','ai','pricing','payments'].includes(savedTab) ? savedTab : 'pending';
+let tab = ['pending','approved','add','trainers','users','analytics','campaigns','ai','pricing','payments'].includes(savedTab) ? savedTab : 'pending';
 
 const PAGE_TITLES = {
   pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
-  users:'Пользователи', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи'
+  users:'Пользователи', analytics:'Аналитика', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи'
 };
 function closeNav(){
   document.body.classList.remove('nav-open');
@@ -582,6 +584,7 @@ async function load(){
   $('nApproved').textContent = data.approved.length || '';
   $('nTrainers').textContent = data.trainers.length || '';
   if(tab !== 'users') usersCache = null;
+  if(tab !== 'analytics') analyticsCache = null;
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   render();
@@ -603,6 +606,7 @@ function render(){
   if(tab === 'add') return renderAdd(b);
   if(tab === 'trainers') return renderTrainers(b);
   if(tab === 'users') return renderUsers(b);
+  if(tab === 'analytics') return renderAnalytics(b);
   if(tab === 'campaigns') return renderCampaigns(b);
   if(tab === 'ai') return renderAI(b);
   if(tab === 'pricing') return renderPricing(b);
@@ -862,6 +866,46 @@ function setCampaignLang(lang){
   const ru=$('campPaneRu'), en=$('campPaneEn');
   if(ru)ru.hidden=campaignLang!=='ru';
   if(en)en.hidden=campaignLang!=='en';
+}
+
+async function renderAnalytics(b){
+  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Без email, имён, программ и фото.')
+    + '<div class="empty">Загрузка…</div>';
+  try{
+    if(!analyticsCache) analyticsCache=(await api('analytics_stats',{days:30})).stats;
+  }catch(e){
+    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.')
+      + '<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
+    return;
+  }
+  const a=analyticsCache||{}, t=a.totals||{};
+  const rows=[
+    ['Установки','install'],
+    ['Завершили onboarding','onboarding_complete'],
+    ['Добавили программу','program_added'],
+    ['Начали тренировку','workout_started'],
+    ['Завершили тренировку','workout_completed'],
+    ['Открыли Premium','premium_opened'],
+    ['Начали покупку','purchase_started']
+  ];
+  const val=k=>t[k]||{count:0,unique:0};
+  const base=Math.max(1,val('install').unique);
+  const cards=rows.map(([label,key])=>{
+    const v=val(key), pct=key==='install'?100:Math.round(v.unique/base*100);
+    return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
+      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>уникальных</span></div>'
+      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от установок</span></div></div></div>';
+  }).join('');
+  const dayRows=(a.rows||[]).slice().reverse().map(r=>{
+    const e=r.events||{};
+    const u=k=>((e[k]||{}).unique||0);
+    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td>'
+      +'<td>'+u('program_added')+'</td><td>'+u('workout_started')+'</td><td>'+u('workout_completed')+'</td>'
+      +'<td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
+  }).join('');
+  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Unique = один deviceId в сутки на событие.')
+    +'<div class="entity-grid">'+cards+'</div>'
+    +'<div style="overflow:auto;margin-top:18px"><table class="tbl"><thead><tr><th>День</th><th>Установки</th><th>Onboarding</th><th>Программа</th><th>Старт</th><th>Финиш</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
 }
 
 function renderCampaigns(b){
