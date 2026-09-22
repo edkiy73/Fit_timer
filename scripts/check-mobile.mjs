@@ -20,4 +20,10 @@ const app = await readFile('dist/app.js', 'utf8');
 if(!html.includes('app.js') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!app.includes('FIT_TIMER_CONFIG')) throw new Error('Runtime configuration is not used');
 
+const androidRoot = await readFile('android/build.gradle', 'utf8');
+const androidApp = await readFile('android/app/build.gradle', 'utf8');
+if(!androidRoot.includes('firebase-crashlytics-gradle')) throw new Error('Android Crashlytics Gradle plugin is missing');
+if(!androidApp.includes("com.google.firebase:firebase-crashlytics")) throw new Error('Android Crashlytics SDK is missing');
+if(!androidApp.includes("com.google.firebase.crashlytics")) throw new Error('Android Crashlytics plugin is not applied');
+
 console.log('Mobile project structure is valid.');
