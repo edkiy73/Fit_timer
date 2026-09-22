@@ -905,7 +905,7 @@ async function renderAnalytics(b){
   }).join('');
   b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Unique = один deviceId в сутки на событие.')
     +'<div class="entity-grid">'+cards+'</div>'
-    +'<div style="overflow:auto;margin-top:18px"><table class="tbl"><thead><tr><th>День</th><th>Установки</th><th>Onboarding</th><th>Программа</th><th>Старт</th><th>Финиш</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Установки</th><th>Onboarding</th><th>Программа</th><th>Старт</th><th>Финиш</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
 }
 
 function renderCampaigns(b){
