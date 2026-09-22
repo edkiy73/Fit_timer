@@ -58,6 +58,48 @@ async function kvSet(key, val){
   try{ localStorage.setItem(key, val); }catch(e){}
 }
 
+async function analyticsDeviceId(){
+  let id = await kvGet('deviceId');
+  if(!id){
+    id = newId();
+    await kvSet('deviceId', id);
+  }
+  return id;
+}
+function analyticsPlatform(){
+  try{
+    if(window.Capacitor && typeof window.Capacitor.getPlatform === 'function'){
+      const p = window.Capacitor.getPlatform();
+      if(p === 'android' || p === 'ios') return p;
+    }
+  }catch(_){}
+  return 'web';
+}
+async function trackProductEvent(event){
+  try{
+    const body = {
+      action:'analytics',
+      event:String(event||''),
+      deviceId:await analyticsDeviceId(),
+      platform:analyticsPlatform(),
+      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+      premium:(typeof isPremium === 'function') ? !!isPremium() : false
+    };
+    const res = await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body),
+      keepalive:true,
+      cache:'no-store'
+    });
+    return !!res.ok;
+  }catch(_){ return false; }
+}
+async function trackInstallOnce(){
+  if((await kvGet('analyticsInstallSent')) === '1') return;
+  if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
+}
+
 async function loadData(){
   // данные хранятся раздельно по профилям; старые данные один раз переезжают в текущий профиль
   let progRaw = await kvGet(pk('customPrograms'));
