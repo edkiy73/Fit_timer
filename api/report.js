@@ -9,7 +9,9 @@
    ему незачем. Имя в отчёте — то, что человек сам написал у себя в профиле. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rateOk, cors } = require('../lib/util');
+const { send, fail, readBody, rateOk, cors, sameSecret } = require('../lib/util');
+const crypto = require('crypto');
+const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
 const MAX_REPORTS = 200;
 
@@ -30,6 +32,21 @@ module.exports = async (req, res) => {
   const r = body.report || {};
   if(typeof r.n !== 'number' || r.n < 0) return fail(res, 400, 'bad_report');
 
+  // Account auth здесь опционален: старые/гостевые клиенты продолжают отправлять
+  // link-scoped отчёт. Если пользователь вошёл, сервер сам привязывает запись к
+  // account hash, чтобы delete account мог удалить только его отчёты.
+  let accountHash = '';
+  const email = String((body && body.email) || '').trim().toLowerCase().slice(0,120);
+  const deviceId = String((body && body.deviceId) || '').trim().slice(0,80);
+  const token = String((body && body.token) || '');
+  if(email && deviceId && token && /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
+    const mh = sha(email).slice(0,32);
+    let acc = null;
+    try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
+    const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
+    if(device && sameSecret(sha(token), device.h || '')) accountHash = mh;
+  }
+
   // ID ссылки публичный, поэтому одним знанием адреса нельзя позволять забить
   // тренеру сотни фальшивых отчётов. Лимит общий на ссылку, а не только на IP.
   const day = new Date().toISOString().slice(0, 10);
@@ -49,6 +66,7 @@ module.exports = async (req, res) => {
   await store.push(`p:${id}:reports`, JSON.stringify({
     at: new Date().toISOString(),
     v: 2,
+    _account: accountHash || undefined,
     who: str(r.who, 40),
     name: str(r.name, 80),
     n: num(r.n, 9999),
