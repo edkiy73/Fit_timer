@@ -1550,8 +1550,10 @@ function exerciseImagePrompt(item, genderTxt){
       ? 'Add one small clean violet-lavender curved trajectory arrow near each moving limb or piece of equipment. The arrows must show the full direction of travel without crossing the torso. No ghost equipment and no duplicate dumbbells.'
       : 'Add one or two clean violet-lavender arrows showing the movement direction.'),
     muscleLines,
-    'Do not highlight any other muscles.',
-    'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
+    'Do not highlight any other muscles. Every muscle region NOT listed above must stay in its natural skin or clothing color with ZERO red/orange anatomical glow. Do not add red/orange glow to the chest, abdomen, back, shoulders, legs or any unrelated region unless that exact region is listed above.',
+    isLocalMotion
+      ? 'For this single-pose isolation illustration, apply the red/orange muscle highlight only once on the main athlete.'
+      : 'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
     'Use the same clearly visible warm red to red-orange glow intensity, the same anatomical placement and the same highlighted area each time. Keep the highlighting symmetrical, localized and anatomically consistent. The highlighted muscles must read instantly without turning the whole body red.',
     'Choose a side or three-quarter camera angle for maximum technical clarity. Keep the important joints, limbs and equipment visible. Avoid decorative cropping.',
     'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
