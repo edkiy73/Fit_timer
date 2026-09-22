@@ -1490,7 +1490,7 @@ function exerciseImagePrompt(item, genderTxt){
       : 'Do not invent equipment that is not required by this movement.',
     isStatic
       ? 'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      : 'Show TWO temporal phases of THE SAME athlete in one coherent scene: one solid main pose and one clearly secondary semi-transparent pose for the other endpoint of the movement. Keep the same face, body, clothes and colors in both phases. Add one or two clean violet-lavender arrows that show the movement direction. Do not use split-screen panels.',
+      : 'Show exactly TWO body depictions total in one coherent scene: one main fully detailed athlete and one secondary semi-transparent ghost pose for the other endpoint of the movement. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures and never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position; never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary and less dominant than the main figure. Add one or two clean violet-lavender arrows that show the movement direction. Do not use split-screen panels.',
     muscles,
     'Muscle highlighting must remain localized to the working muscles and readable on top of natural skin/clothing colors; do not turn the whole body red.',
     'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
