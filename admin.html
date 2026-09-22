@@ -975,6 +975,20 @@ function renderAI(b){
       </div>
     </div>
     <div class="form-card">
+      <div class="form-card-head"><h3>Качество изображений</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Разрешение генерации</label><select id="imageSize">
+            <option value="512"${(s.image&&s.image.size||'1K')==='512'?' selected':''}>512 px (0.5K)</option>
+            <option value="1K"${(s.image&&s.image.size||'1K')==='1K'?' selected':''}>1K</option>
+            <option value="2K"${(s.image&&s.image.size||'1K')==='2K'?' selected':''}>2K</option>
+            <option value="4K"${(s.image&&s.image.size||'1K')==='4K'?' selected':''}>4K</option>
+          </select></div>
+          <div class="wide"><div class="compact-note" style="margin-top:24px">Меньшее разрешение дешевле. Для Gemini 3.1 Flash Image доступны 512, 1K, 2K и 4K. Если выбранная модель не поддерживает размер, провайдер вернёт ошибку.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-card">
       <div class="form-card-head"><h3>Лимиты на месяц</h3></div>
       <div class="form-card-body">
         <div class="field-grid four">
@@ -997,6 +1011,7 @@ function aiSettingsFromForm(){
   ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
     s[type][which]={provider:$(`${type}_${which}_provider`).value,model:$(`${type}_${which}_model`).value.trim()};
   }));
+  s.image.size=$('imageSize').value;
   s.limits={heavy:+$('limHeavy').value,light:+$('limLight').value,image:+$('limImage').value};
   s.retentionDays=+$('retention').value;
   return s;
