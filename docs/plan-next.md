@@ -10,7 +10,7 @@
 4. Удаление аккаунта и privacy-аудит: остаточные данные, индексы, логи, токены, retention.
 5. Push/notifications: release-конфиг и end-to-end проверка Android/iOS.
 6. APK/update/release pipeline: signing, update install, release artifacts.
-7. Web/cache: решить судьбу PWA/service worker; если PWA больше не продукт — удалить весь связанный код/manifest/cache без полумер.
+7. ✅ Web/PWA cleanup: PWA/service worker удалены; остаются обычный web + Android/iOS.
 8. CI: сделать core auth/catalog/AI/limits/backup сценарии обязательными.
 9. Billing: Google Play verification + RTDN + restore; затем RuStore/YooKassa.
 10. Финальный production-аудит.
@@ -22,7 +22,7 @@
 - Построить список root/scripts/docs/.ai/.claude/legacy файлов и найти реальные ссылки на каждый.
 - Разделить на: active / generated / legacy-archive / stale / unknown.
 - Удалять только доказанно неиспользуемые файлы и одновременно убирать ссылки из build/CI/docs.
-- Проверить PWA-набор: `sw.js`, `manifest.webmanifest`, web icons, service-worker registration, Vercel headers, build-web и notification fallback.
+- ✅ PWA-набор удалён: `sw.js`, `manifest.webmanifest`, web icons, service-worker registration, Vercel header, build-web wiring и service-worker notification fallback.
 - Проверить `README.md` и `README.txt`; оставить один актуальный путь, если второй больше не нужен.
 - Полностью сверить `AGENTS.md`, `CLAUDE.md`, `.ai/project-map.md`, feature router/symbol index и `.claude/agents/*` с текущей архитектурой.
 - Пересмотреть все `docs/*.md`: обновить актуальные, архивировать историю только если она реально полезна, удалить документы с неверными архитектурными указаниями.
