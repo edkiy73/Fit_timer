@@ -32,7 +32,6 @@ They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed produ
 - Serverless API: `api/`; shared server code: `lib/`.
 - Storage: Vercel Storage / Upstash Redis.
 - Native shells: `android/`, `ios/`.
-- Legacy TWA: `legacy/android-twa/` — archive only.
 
 ## 3. Minimal-read routing
 
