@@ -769,6 +769,9 @@ function finishWorkout(){
   if(countsToStats){
     stats.totalSec += totalSec;
     stats.count = (stats.count || 0) + 1;
+    if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
+    else if(stats.count === 5) trackProductEvent('workout_5').catch(()=>{});
+    else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
     const histEntry = {
       id: newId(),
       d: localISO(new Date()),
