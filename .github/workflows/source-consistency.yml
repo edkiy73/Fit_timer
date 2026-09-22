@@ -44,3 +44,4 @@ jobs:
           node tests/analytics-unit.js
           node tests/analytics-api.js
           node tests/diagnostics-unit.js
+          node tests/update-settings-unit.js
