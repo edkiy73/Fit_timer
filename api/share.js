@@ -66,27 +66,20 @@ module.exports = async (req, res) => {
      возможна: иначе кто угодно переписал бы чужую страницу, назвавшись тем же ником.
      Ссылку при этом мы создаём в любом случае — чужой ник не повод ломать человеку
      отправку программы, просто его профиль на страницу не попадёт. */
-  let trainerKey = null;
   if(by){
+    // Ник тренера больше нельзя создать через share. Тренер появляется только после
+    // подтверждённого аккаунта через /api/trainer; иначе share обходил бы эту защиту.
     const raw = await store.get(`t:${by}`);
+    if(!raw) return fail(res, 403, 'no_trainer');
+    let cur = null;
+    try{ cur = JSON.parse(raw); }catch(e){ return fail(res, 500, 'corrupt'); }
+    const given = require('crypto').createHash('sha256').update(String(body.trainerKey || '')).digest('hex');
+    if(!sameSecret(given, cur.keyHash || '')) return fail(res, 403, 'not_yours');
+
     const prof = body.trainer && typeof body.trainer === 'object' ? body.trainer : null;
-    if(!raw){
-      trainerKey = rndId(24);
-      await store.push('t:all', by);
-      const face = faceOf(prof);
-      if(!face.links) face.links = cleanLink(body.byLink, 120);
-      await store.set(`t:${by}`, JSON.stringify(Object.assign({
-        handle: by, since: now, seen: now,
-        keyHash: require('crypto').createHash('sha256').update(trainerKey).digest('hex')
-      }, face)));
-    } else if(prof && body.trainerKey){
-      let cur = null;
-      try{ cur = JSON.parse(raw); }catch(e){}
-      const given = require('crypto').createHash('sha256').update(String(body.trainerKey)).digest('hex');
-      if(cur && sameSecret(given, cur.keyHash)){
-        cur.seen = now;
-        await store.set(`t:${by}`, JSON.stringify(Object.assign(cur, faceOf(prof))));
-      }
+    if(prof){
+      cur.seen = now;
+      await store.set(`t:${by}`, JSON.stringify(Object.assign(cur, faceOf(prof))));
     }
     await store.incr(`t:${by}:programs`);
   }
@@ -117,5 +110,5 @@ module.exports = async (req, res) => {
     }catch(_){}
   }
 
-  send(res, 200, Object.assign({id, key, at: now, updated:!!previous}, trainerKey ? {trainerKey} : {}));
+  send(res, 200, {id, key, at: now, updated:!!previous});
 };
