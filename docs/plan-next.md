@@ -19,8 +19,8 @@
 
 Этот этап выполняется отдельным проходом, после проверки фактических ссылок и использования. Ничего спорного не удалять только потому, что файл выглядит старым.
 
-- Построить список root/scripts/docs/.ai/.claude/legacy файлов и найти реальные ссылки на каждый.
-- Разделить на: active / generated / legacy-archive / stale / unknown.
+- Построить список root/scripts/docs/.ai/.claude файлов и найти реальные ссылки на каждый.
+- Разделить на: active / generated / stale / unknown.
 - Удалять только доказанно неиспользуемые файлы и одновременно убирать ссылки из build/CI/docs.
 - ✅ PWA-набор удалён: `sw.js`, `manifest.webmanifest`, web icons, service-worker registration, Vercel header, build-web wiring и service-worker notification fallback.
 - Проверить `README.md` и `README.txt`; оставить один актуальный путь, если второй больше не нужен.
@@ -29,6 +29,8 @@
 - После cleanup прогнать поиск битых ссылок, `check:sources`, `check:ai-index`, `check.py`, mobile checks и CI.
 
 ### Уже обнаружено до cleanup
+
+- ✅ Старый TWA и `.well-known/assetlinks.json` удалены как неиспользуемый стек.
 
 - `docs/backend-gtm.md` содержит устаревшие правила аккаунта/sync и не должен считаться текущей спецификацией.
 - `docs/why.md` всё ещё описывает приложение как один редактируемый `index.html`, что больше не соответствует `src/**` + generated outputs.
