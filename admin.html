@@ -880,34 +880,49 @@ async function renderAnalytics(b){
       + '<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
     return;
   }
-  const a=analyticsCache||{}, t=a.totals||{};
+  const a=analyticsCache||{}, t=a.totals||{}, cohort=a.cohort||{};
   const rows=[
-    ['Установки','install'],
+    ['Первый запуск','install'],
     ['Завершили onboarding','onboarding_complete'],
+    ['Создали аккаунт','account_created'],
     ['Добавили программу','program_added'],
     ['Начали тренировку','workout_started'],
     ['Завершили тренировку','workout_completed'],
+    ['Дошли до 3 тренировок','workout_3'],
+    ['Дошли до 5 тренировок','workout_5'],
+    ['Дошли до 10 тренировок','workout_10'],
+    ['Успешно использовали AI','ai_used'],
     ['Открыли Premium','premium_opened'],
     ['Начали покупку','purchase_started']
   ];
   const val=k=>t[k]||{count:0,unique:0};
-  const base=Math.max(1,val('install').unique);
+  const base=Math.max(1,(cohort.devices||val('install').unique||0));
   const cards=rows.map(([label,key])=>{
     const v=val(key), pct=key==='install'?100:Math.round(v.unique/base*100);
     return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
-      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>уникальных</span></div>'
-      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от установок</span></div></div></div>';
+      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div>'
+      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
   }).join('');
   const dayRows=(a.rows||[]).slice().reverse().map(r=>{
     const e=r.events||{};
     const u=k=>((e[k]||{}).unique||0);
     return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td>'
-      +'<td>'+u('program_added')+'</td><td>'+u('workout_started')+'</td><td>'+u('workout_completed')+'</td>'
+      +'<td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td>'
+      +'<td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td>'
       +'<td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
   }).join('');
-  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Unique = один deviceId в сутки на событие.')
+  const p=cohort.platform||{}, l=cohort.locale||{};
+  const cohortInfo='<div class="status-row">'
+    +'<span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span>'
+    +'<span class="status-chip">Android '+(p.android||0)+'</span>'
+    +'<span class="status-chip">iOS '+(p.ios||0)+'</span>'
+    +'<span class="status-chip">Web '+(p.web||0)+'</span>'
+    +'<span class="status-chip">RU '+(l.ru||0)+'</span>'
+    +'<span class="status-chip">EN '+(l.en||0)+'</span></div>';
+  b.innerHTML=pageHead('Аналитика','Exact unique = один анонимный device hash за весь выбранный период. Первый запуск у старых пользователей означает первый запуск после появления аналитики.')
+    +cohortInfo
     +'<div class="entity-grid">'+cards+'</div>'
-    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Установки</th><th>Onboarding</th><th>Программа</th><th>Старт</th><th>Финиш</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
 }
 
 async function renderErrors(b){
