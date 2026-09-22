@@ -77,35 +77,42 @@ function adminExerciseImagePrompt(meta){
   const muscles=(meta.muscles||[]).filter(Boolean).slice(0,12);
   return [
     'Create a 4:3 instructional fitness illustration for "'+meta.name+'" in the Fit Timer app.',
-    'VISUAL SYSTEM: premium stylized-realistic 3D anatomy, neutral graphite-gray athlete, dark graphite background with restrained violet atmosphere. Use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) for functional accents. Do not use orange muscle highlights.',
-    'Character: '+meta.gender+'. Keep a clean athletic appearance and believable human proportions.',
+    'VISUAL SYSTEM: premium stylized-realistic 3D fitness illustration with a lifelike athlete, natural skin tone, natural face, realistic dark sportswear and believable human proportions. Do NOT render the athlete as a gray mannequin, statue or monochrome anatomy model.',
+    'BACKGROUND: a real modern gym environment, softly blurred and understated, with large simple equipment shapes and realistic depth. The background must support the exercise without competing with it. Avoid an empty studio background.',
+    'BRAND ACCENTS: use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for movement arrows, subtle rim light and small environmental light accents. Do NOT use violet to highlight muscles.',
+    'Character: '+meta.gender+'. Keep the same natural visual treatment across the whole image set.',
     meta.description?'Technique context: '+meta.description:null,
     equipment.length?'Required equipment: '+equipment.join(', ')+'. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.':'Do not invent equipment that is not required by this movement.',
     imageStaticExercise(meta.name,meta.description)
       ?'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      :'Show TWO temporal phases of THE SAME athlete in one coherent scene: a solid main pose and a secondary semi-transparent ghost pose for the other endpoint of the movement. They are not two different people. Add one or two clean lavender-violet arrows that clearly show the movement direction. Do not use split-screen panels.',
-    muscles.length?'Highlight ONLY these main working muscles with a clear Fit Timer violet glow: '+muscles.join(', ')+'.':'Highlight only the primary working muscles with a restrained Fit Timer violet glow.',
+      :'Show TWO temporal phases of THE SAME athlete in one coherent scene: one solid main pose and one clearly secondary semi-transparent pose for the other endpoint of the movement. Keep the same face, body, clothes and colors in both phases. Add one or two clean violet-lavender arrows that show the movement direction. Do not use split-screen panels.',
+    muscles.length?'Highlight ONLY these main working muscles with a restrained warm red anatomical heat-map glow: '+muscles.join(', ')+'.':'Highlight only the primary working muscles with a restrained warm red anatomical heat-map glow.',
+    'Muscle highlighting must remain localized to the working muscles and readable on top of natural skin/clothing colors; do not turn the whole body red.',
     meta.format?'Exercise format: '+meta.format+'.':null,
     'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
     'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
-    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, borders, collage or watermarks.'
+    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, frames, borders, corner badges, decorative sparkles, collage or watermarks.'
   ].filter(Boolean).join(' ');
 }
+
 function adminCoverImagePrompt(meta){
   const context=[IMAGE_GOAL_LABELS[meta.category],meta.gives,(meta.exerciseNames||[]).join(', ')].filter(Boolean).join(' · ');
   const palette=imageCoverTone(meta.category,context);
   return [
     'Create a square 1:1 premium catalog cover for the fitness program "'+meta.program+'".',
-    'This is a PROGRAM COVER, not an exercise instruction. Do not show start/end poses, ghost figures or movement arrows.',
-    'Use the same Fit Timer visual family as every other cover: premium stylized-realistic 3D, dark graphite base, polished studio lighting, clean depth, one hero athlete, uncluttered composition, consistent rendering quality.',
-    'Character: '+meta.gender+'. Make the athlete the clear focal point and keep a consistent catalog-ready scale and composition.',
+    'This is a PROGRAM COVER, not an exercise instruction. Create one bold, simple hero image that reads instantly at small thumbnail size.',
+    'COMPOSITION: full-bleed edge-to-edge artwork. Absolutely no inset square, inner card, picture frame, border, outline, vignette frame or mockup-within-a-mockup. The artwork itself must fill the entire 1:1 canvas.',
+    'Use one large hero athlete as the dominant subject, occupying roughly 65-80% of the frame. Prefer a close or medium-wide athletic composition over a distant full gym scene. Keep only one or two large supporting elements; avoid tiny weights, racks, plates and decorative detail that disappears in the catalog.',
+    'VISUAL STYLE: premium cinematic stylized-realistic 3D, natural skin tone, realistic sportswear, polished directional lighting, subtle depth and a modern gym atmosphere. Avoid gray mannequin/anatomy-model styling.',
+    'Character: '+meta.gender+'. Make the pose energetic and aspirational, but not an exercise diagram.',
     context?'Program context: '+context+'.':null,
-    'Goal-specific atmosphere: '+palette.tone+'. Mood: '+palette.mood+'. Keep a subtle Fit Timer violet (#7C56F5) accent in every category so all covers still belong to one brand.',
-    'Choose a pose, relevant equipment and environment that communicate the overall purpose of the program rather than illustrating one exact exercise.',
-    'The cover must remain recognizable and attractive as a small square catalog thumbnail.',
-    'No text, letters, numbers, labels, logos, arrows, UI, collage, split-screen or watermarks.'
+    'Goal-specific atmosphere: '+palette.tone+'. Mood: '+palette.mood+'. Keep one restrained Fit Timer violet (#7C56F5) rim-light or environmental accent so every category still belongs to the same brand.',
+    'The goal color should come mainly from the background light and atmosphere, not from tinting the athlete skin.',
+    'Use a softly blurred, simplified gym background with broad shapes and depth. The athlete must remain much more important than the environment.',
+    'No instructional arrows, no ghost poses, no muscle heat-map, no text, letters, numbers, labels, logos, UI, collage, split-screen, frames, borders, corner icons, badges, decorative sparkles, stars or watermarks.'
   ].filter(Boolean).join(' ');
 }
+
 const clean = (v, n) => String(v == null ? '' : v).slice(0, n);
 const escMail = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
