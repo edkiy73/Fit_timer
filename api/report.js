@@ -30,6 +30,12 @@ module.exports = async (req, res) => {
   const r = body.report || {};
   if(typeof r.n !== 'number' || r.n < 0) return fail(res, 400, 'bad_report');
 
+  // ID ссылки публичный, поэтому одним знанием адреса нельзя позволять забить
+  // тренеру сотни фальшивых отчётов. Лимит общий на ссылку, а не только на IP.
+  const day = new Date().toISOString().slice(0, 10);
+  const daily = await store.incr(`reportday:${id}:${day}`, 2 * 24 * 3600);
+  if(daily > 50) return fail(res, 429, 'too_many_today');
+
   const n = await store.list(`p:${id}:reports`);
   if(n.length >= MAX_REPORTS) return fail(res, 429, 'too_many');
 
