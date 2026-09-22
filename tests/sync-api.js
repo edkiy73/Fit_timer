@@ -93,6 +93,35 @@ async function login(deviceId, sub, email = MAIL){
      badReportRead.status === 403 && badReportBody.error === 'bad_key',
      badReportRead.status + ' ' + JSON.stringify(badReportBody));
 
+  const clientMail = 'client-api-' + Math.random().toString(36).slice(2,8) + '@example.com';
+  const client = await login('client-device', null, clientMail);
+  await post('/api/p/' + shared.id,{
+    action:'claim',email:clientMail,deviceId:'client-device',token:client.syncToken
+  });
+  await post('/api/report',{
+    link:shared.id,report:{who:'Подопечный',name:'Проверка ссылки',n:1,sec:300},
+    email:clientMail,deviceId:'client-device',token:client.syncToken
+  });
+  const beforeClientDelete = await fetch(BASE + '/api/p/' + shared.id,{
+    headers:{'X-Fit-Link-Key':shared.key}
+  });
+  const beforeClientDeleteBody = await beforeClientDelete.json();
+  ok('authenticated report сохраняется у trainer link',
+     beforeClientDelete.status === 200 && beforeClientDeleteBody.reports.length === 1,
+     JSON.stringify(beforeClientDeleteBody.reports));
+
+  await post('/api/auth',{
+    action:'forget',scope:'all',email:clientMail,deviceId:'client-device',
+    syncToken:client.syncToken,links:[]
+  });
+  const afterClientDelete = await fetch(BASE + '/api/p/' + shared.id,{
+    headers:{'X-Fit-Link-Key':shared.key}
+  });
+  const afterClientDeleteBody = await afterClientDelete.json();
+  ok('удаление подопечного удаляет его authenticated reports, но сохраняет trainer link',
+     afterClientDelete.status === 200 && afterClientDeleteBody.reports.length === 0,
+     JSON.stringify(afterClientDeleteBody.reports));
+
   // Даже если локальный список ссылок потерян, account deletion обязан найти
   // trainer links на сервере и удалить их сам.
   await post('/api/auth',{
