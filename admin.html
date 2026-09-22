@@ -380,6 +380,7 @@
   .media-tools{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
   .pic{width:144px}
   .pic .ph{width:144px;aspect-ratio:4/3;height:auto;position:relative;cursor:default}
+  .pic.cover-pic .ph{aspect-ratio:1/1}
   .pic .ph.generating:after{content:'Генерация…';position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:6px}
   .pic-tools{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
   .pic-tools button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:7px;padding:7px 6px;font-size:11.5px;cursor:pointer;min-height:36px}
@@ -388,6 +389,7 @@
     .exercise-grid{grid-template-columns:1fr}
     .pic{width:calc(50% - 4px)}
     .pic .ph{width:100%;aspect-ratio:4/3;height:auto}
+    .pic.cover-pic .ph{aspect-ratio:1/1}
   }
 
 </style>
@@ -1151,6 +1153,7 @@ function exerciseBlocks(lang){
     return {
       name:value('УПРАЖНЕНИЕ'),
       description:value('ОПИСАНИЕ'),
+      muscles:value('МЫШЦЫ').split(/[,;]/).map(x=>x.trim()).filter(Boolean),
       format:value('ФОРМАТ'),
       value:value('ЗНАЧЕНИЕ'),
       start,end
@@ -1263,11 +1266,29 @@ function shrinkGeneratedPic(data,cb){
   };
   img.onerror=()=>cb(data);img.src=data;
 }
+function catalogImagePayload(kind,name,description){
+  const source=form.sourceLocale;
+  const locale=localeFromForm(source);
+  const blocks=exerciseBlocks(source);
+  const ex=blocks.find(x=>x.name===name)||{};
+  return {
+    kind,
+    name,
+    description,
+    muscles:ex.muscles||[],
+    format:ex.format||'',
+    program:locale.name,
+    gives:locale.gives,
+    category:$('fCat')?$('fCat').value:'',
+    exerciseNames:blocks.map(x=>x.name).slice(0,20),
+    gender:form.imageGender||'f'
+  };
+}
 async function generateCatalogPic(kind,name,description,set,el){
   const ph=el&&el.querySelector('.ph');if(ph)ph.classList.add('generating');
   $('fErr').textContent='Генерирую '+(kind==='cover'?'обложку':'фото «'+name+'»')+'…';
   try{
-    const r=await api('catalog_ai_image',{kind,name,description,program:localeFromForm(form.sourceLocale).name,gender:form.imageGender||'f'});
+    const r=await api('catalog_ai_image',catalogImagePayload(kind,name,description));
     shrinkGeneratedPic(r.image,pic=>{set(pic);$('fErr').textContent='✓ Картинка готова. Не забудь сохранить программу.';});
   }catch(e){
     if(ph)ph.classList.remove('generating');
@@ -1287,13 +1308,14 @@ async function generateMedia(mode){
     const j=jobs[i];
     $('fErr').textContent='Генерация изображений '+(i+1)+' / '+jobs.length+'…';
     try{
-      const r=await api('catalog_ai_image',{kind:j.kind,name:j.name,description:j.description,program:localeFromForm(source).name,gender:form.imageGender||'f'});
+      const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
       await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
     }catch(e){$('fErr').textContent='Остановлено на '+(i+1)+' / '+jobs.length+': '+(e.detail||e.message);return;}
   }
   $('fErr').textContent='✓ Изображения сгенерированы. Сохрани программу.';
   renderPics();
 }
+
 function renderPics(){
   const cover=$('fCoverBox');if(!cover)return;
   cover.innerHTML='';
@@ -1306,7 +1328,7 @@ function renderPics(){
   Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
 }
 function picBox(label,data,set,kind,description){
-  const el=document.createElement('div');el.className='pic';
+  const el=document.createElement('div');el.className='pic '+(kind==='cover'?'cover-pic':'exercise-pic');
   el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'нет фото'}</div>
     <small>${esc(label)}</small>
     <div class="pic-tools">
