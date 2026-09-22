@@ -1444,6 +1444,11 @@ function imageStaticExercise(item){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
+function imageLocalMotionExercise(item){
+  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
+  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
+}
+
 function imageProgramContext(){
   const parts = [
     draft && draft.goal, draft && draft.cat, draft && draft.category,
@@ -1488,7 +1493,15 @@ function imageMuscleRegions(item){
     else if(/груд|chest/.test(key)) add('pectoralis major on both sides of the chest');
     else if(/плеч|shoulder/.test(key)) add('deltoid muscles on both shoulders');
     else if(/пресс|core|abs|abdom/.test(key)) add('rectus abdominis and obliques on both sides of the core');
-    else if(/рук|arms/.test(key)) add('upper-arm muscles on both arms');
+    else if(/рук|arms/.test(key)){
+      if(/бицепс|biceps? curl|hammer curl|сгибан.*рук/.test(exercise)){
+        add('biceps brachii on both upper arms');
+        add('brachialis on both upper arms');
+        add('brachioradialis on both forearms');
+      } else if(/трицепс|triceps? extension|разгибан.*рук/.test(exercise)){
+        add('triceps brachii on both upper arms');
+      } else add('upper-arm muscles on both arms');
+    }
     else if(/шея|neck/.test(key)) add('neck stabilizer muscles on both sides');
     else if(/спин|back/.test(key)){
       if(/присед|squat|станов|deadlift|румын|romanian|наклон|good morning|hip hinge/.test(exercise))
@@ -1509,6 +1522,7 @@ function imageCharacterStyle(genderTxt){
 function exerciseImagePrompt(item, genderTxt){
   const equipment = imageEquipment(item);
   const isStatic = imageStaticExercise(item);
+  const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
   const regions = imageMuscleRegions(item);
   const muscleLines = regions.length
     ? ['Highlight ONLY these exact muscle regions:', ...regions.map(x => '- ' + x)].join('\n')
@@ -1529,8 +1543,12 @@ function exerciseImagePrompt(item, genderTxt){
       : 'Do not invent equipment that is not required by this movement.',
     isStatic
       ? 'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      : 'Show exactly TWO temporal depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. They must read as ONE person moving through the exercise, not two people standing side by side. Keep the ghost spatially close to and partially overlapping the main figure whenever possible. Align body parts that do not move; visibly offset mainly the joints, limbs and equipment that actually change position. For small single-joint movements such as curls or extensions, keep torso, head and legs nearly aligned and let the moving arms/forearms and equipment carry most of the ghost displacement. For large compound movements, allow only the minimum full-body offset needed to show the two endpoints clearly. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary, visually lighter and less dominant than the main figure. Do not compose the two phases as separate side-by-side portraits.',
-    isStatic ? null : 'Add one or two clean violet-lavender arrows showing the movement direction.',
+      : isLocalMotion
+        ? 'Show ONE full athlete only. Do NOT draw a second full person, second torso, second head or second pair of legs. Show the other endpoint of the movement only as a subtle semi-transparent motion overlay of the MOVING LIMBS and the SAME equipment: for a curl, duplicate only the forearms/hands/dumbbells (and only the minimum upper-arm motion if necessary). The torso, head, hips and legs must appear exactly once. The motion overlay must stay attached to the main body at the correct joints and clearly read as a motion trail, not another person.'
+        : 'Show exactly TWO temporal depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. They must read as ONE person moving through the exercise, not two people standing side by side. Keep the ghost spatially close to and partially overlapping the main figure whenever possible. Align body parts that do not move; visibly offset mainly the joints, limbs and equipment that actually change position. For large compound movements, allow only the minimum full-body offset needed to show the two endpoints clearly. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary, visually lighter and less dominant than the main figure. Do not compose the two phases as separate side-by-side portraits.',
+    isStatic ? null : (isLocalMotion
+      ? 'Add one small clean violet-lavender curved arrow near each moving limb only. Do not place large arrows across the torso.'
+      : 'Add one or two clean violet-lavender arrows showing the movement direction.'),
     muscleLines,
     'Do not highlight any other muscles.',
     'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
