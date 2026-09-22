@@ -1438,10 +1438,22 @@ function singleImagePrompt(kind, item){
 
 let imgGenCancelled = false;
 
-async function generateAllImagesViaAI(){
+async function generateAllImagesViaAI(scope){
   if(!premiumGate()) return;
-  const exList = uniqueProgramExercises();
-  const total = 1 + exList.length; // обложка + упражнения
+  scope = scope === 'missing' ? 'missing' : 'all';
+
+  const exList = uniqueProgramExercises().filter(ex => {
+    if(scope !== 'missing') return true;
+    const key = ex.name.toLowerCase();
+    return !(draft.plans || []).some(pl => (pl.exercises || []).some(e2 =>
+      (e2.name || '').trim().toLowerCase() === key &&
+      e2.media && e2.media.kind === 'img' && e2.media.data
+    ));
+  });
+  const makeCover = scope !== 'missing' || !draft.cover;
+  const total = (makeCover ? 1 : 0) + exList.length;
+  if(!total){ appAlert(t('images.nothingMissing')); return; }
+
   const imageWord = appLocale === 'ru'
     ? plural(total,t('images.imageOne'),t('images.imageFew'),t('images.imageMany'))
     : t(total === 1 ? 'images.imageOne' : 'images.imageMany');
@@ -1464,8 +1476,15 @@ async function generateAllImagesViaAI(){
     try{
       const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
         kind === 'cover' ? 'image.cover' : 'image.exercise');
-      await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? t('images.cover') : item.name); res(); }));
-      renderSlots(); // видно прогресс по мере генерации
+      await new Promise(res => shrinkDataUrl(raw, 640, data => {
+        if(data){
+          applyFn(data);
+          if(!imgTray.includes(data)) imgTray.push(data);
+        } else failed.push(kind === 'cover' ? t('images.cover') : item.name);
+        res();
+      }));
+      renderTray();
+      renderSlots();
     }catch(e){
       if(imgGenCancelled) return false;
       failed.push((kind === 'cover' ? t('images.cover') : item.name) + ': ' + (e && e.message ? e.message : t('images.error')));
@@ -1474,7 +1493,9 @@ async function generateAllImagesViaAI(){
     return !imgGenCancelled;
   };
 
-  if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+  if(makeCover){
+    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+  }
   for(const ex of exList){
     const go = await runOne('ex', ex, data => {
       // применяем ко всем упражнениям с этим именем во всех вариантах — не платим за копию дважды
@@ -1486,6 +1507,41 @@ async function generateAllImagesViaAI(){
   }
   aiRunClose();
   finishImgGen(done, total, failed);
+}
+
+async function generateSlotImageViaAI(){
+  if(!premiumGate()) return;
+  const s = imageSlots()[slotTarget];
+  if(!s || s.kind !== 'ex') return;
+  const pl = (draft.plans || [])[s.plan];
+  const ex = pl && pl.exercises ? pl.exercises[s.idx] : null;
+  if(!ex) return;
+  $('slotModal').classList.remove('open');
+  imgGenCancelled = false;
+  aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
+  $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
+  $('aiRunText').textContent = s.title;
+  try{
+    const item = {
+      name:(ex.name || '').trim(),
+      desc:(ex.desc || '').trim(),
+      muscles:(ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean)
+    };
+    const raw = await callGeminiImage(singleImagePrompt('ex', item), aiRunCtl ? aiRunCtl.signal : undefined, 'image.exercise');
+    await new Promise(res => shrinkDataUrl(raw, 640, data => {
+      if(data){
+        s.set(data);
+        if(!imgTray.includes(data)) imgTray.push(data);
+      }
+      res();
+    }));
+    aiRunClose();
+    renderTray(); renderSlots();
+  }catch(e){
+    aiRunClose();
+    if(imgGenCancelled) return;
+    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+  }
 }
 
 function finishImgGen(done, total, failed){
@@ -1569,7 +1625,13 @@ function shrinkAll(files, maxSide, done){
 let imagesFrom = 'scrBuilder';
 function openImages(){
   imagesFrom = show._last || 'scrBuilder';
+  // «Доступные» всегда начинается с картинок, которые уже используются в программе.
+  // Поэтому после сохранения и повторного открытия назначенные изображения не исчезают.
   imgTray = [];
+  imageSlots().forEach(s => {
+    const data = s.get();
+    if(data && !imgTray.includes(data)) imgTray.push(data);
+  });
   renderTray();
   renderSlots();
   syncGeminiBtns();
@@ -1605,9 +1667,12 @@ function renderTray(){
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
     const el = document.createElement('div');
-    el.className = 'tray-item' + (used.has(data) ? ' used' : '');
-    el.innerHTML = `<img src="${esc(data)}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
-    el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
+    const isUsed = used.has(data);
+    el.className = 'tray-item' + (isUsed ? ' used' : '');
+    el.innerHTML = `<img src="${esc(data)}" alt="">` +
+      (isUsed ? '' : `<button type="button" class="ti-x">${icon('close')}</button>`);
+    const x = el.querySelector('.ti-x');
+    if(x) x.onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
     el.onclick = ()=> appAlert(t('images.pickHint'));
     box.appendChild(el);
   });
@@ -1674,6 +1739,7 @@ function openSlotPicker(i){
     };
     box.appendChild(el);
   });
+  setShown('slotGenerateAI', s.kind === 'ex');
   setShown('slotRemove', s.get());
   $('slotModal').classList.add('open');
 }

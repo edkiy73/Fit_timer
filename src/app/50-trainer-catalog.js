@@ -1388,6 +1388,36 @@ async function refreshPubStatus(){
   }catch(e){}
 }
 
+// Каталог отдаёт обложку прямо в списке программ, поэтому держим её лёгкой.
+async function catalogCoverData(src){
+  if(!src) return null;
+  const raw = String(src);
+  if(raw.length < 88000) return raw;
+  return await new Promise(resolve => {
+    const img = new Image();
+    img.onload = ()=>{
+      let maxSide = 480, quality = .78;
+      const render = ()=>{
+        const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const cnv = document.createElement('canvas');
+        cnv.width = Math.max(1, Math.round(img.width * k));
+        cnv.height = Math.max(1, Math.round(img.height * k));
+        const ctx = cnv.getContext('2d');
+        ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
+        let out = '';
+        try{ out = cnv.toDataURL('image/jpeg', quality); }catch(_){}
+        if(out && out.length < 88000) return resolve(out);
+        if(quality > .52){ quality -= .08; return render(); }
+        if(maxSide > 300){ maxSide -= 60; quality = .72; return render(); }
+        resolve(out && out.length < 90000 ? out : null);
+      };
+      render();
+    };
+    img.onerror = ()=> resolve(null);
+    img.src = raw;
+  });
+}
+
 async function doPublish(){
   const p = pubProg;
   if(!p) return;
@@ -1403,6 +1433,7 @@ async function doPublish(){
     return;
   }
   try{
+    const catalogCover = await catalogCoverData(p.cover);
     const r = await apiPost('/api/catalog', {
       by: normHandle(trainer.handle),
       trainerKey: trainer.key || '',
@@ -1415,7 +1446,7 @@ async function doPublish(){
         level: pubDraft.level,
         min: estimateMinutes(p), exCount: ex, text: programToText(p),
         // Своя обложка, если тренер её задал. Рисованная по цели остаётся запасной.
-        cover: (p.cover && String(p.cover).length < 90000) ? p.cover : null,
+        cover: catalogCover,
         // Фото упражнений — отдельной картой: в тексте программы им места нет.
         media: programMedia(p)
       }

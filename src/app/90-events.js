@@ -1358,7 +1358,16 @@ $('aiBackTop').onclick = async ()=>{
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=> closeImages();
-$('imgSelfGen').onclick = generateAllImagesViaAI;
+$('imgSelfGen').onclick = ()=> $('imgGenScopeModal').classList.add('open');
+$('imgGenScopeModal').onclick = e => { if(e.target === $('imgGenScopeModal')) $('imgGenScopeModal').classList.remove('open'); };
+$('imgGenAll').onclick = ()=>{
+  $('imgGenScopeModal').classList.remove('open');
+  generateAllImagesViaAI('all');
+};
+$('imgGenMissing').onclick = ()=>{
+  $('imgGenScopeModal').classList.remove('open');
+  generateAllImagesViaAI('missing');
+};
 $('imgPromptCopy').onclick = async ()=>{
   const btn = $('imgPromptCopy');
   try{
@@ -1383,9 +1392,13 @@ $('imgFiles').onchange = e => {
 $('trayAuto').onclick = trayAutoAssign;
 $('trayClear').onclick = async ()=>{
   if(!imgTray.length) return;
+  const used = trayUsed();
+  const removable = imgTray.filter(x => !used.has(x));
+  if(!removable.length) return;
   if(!(await appDialog(t('images.removeQuestion'),
     {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
-  imgTray = []; renderTray();
+  imgTray = imgTray.filter(x => used.has(x));
+  renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
 $('slotRemove').onclick = ()=>{
@@ -1395,6 +1408,7 @@ $('slotRemove').onclick = ()=>{
   renderSlots(); renderTray();   // счётчик «ещё не разложено» считается по местам
 };
 $('slotFromPhone').onclick = ()=> $('slotFile').click();
+$('slotGenerateAI').onclick = generateSlotImageViaAI;
 $('slotFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
   e.target.value = '';
@@ -1403,8 +1417,9 @@ $('slotFile').onchange = e => {
     if(!data){ appAlert(t('images.loadFailed')); return; }
     const s = imageSlots()[slotTarget];
     if(s) s.set(data);
+    if(!imgTray.includes(data)) imgTray.push(data);
     $('slotModal').classList.remove('open');
-    renderSlots();
+    renderTray(); renderSlots();
   });
 };
 
