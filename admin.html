@@ -392,6 +392,16 @@
     .pic.cover-pic .ph{aspect-ratio:1/1}
   }
 
+
+  .admin-ai-create{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--soft) 65%,var(--card))}
+  .admin-ai-create .form-card-head{align-items:center}
+  .ai-inline-box{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+  .ai-inline-box[hidden]{display:none}
+  .ai-inline-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .ai-inline-title b{font-size:13px}
+  .media-progress{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;min-height:28px}
+  .media-progress .muted{margin-right:auto}
+  .b[disabled]{opacity:.55;cursor:default}
 </style>
 </head>
 <body>
@@ -1240,7 +1250,10 @@ async function saveReleaseSettings(){
 
 let editing = null;
 let editingStatus = null;
-let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};   // картинки живут отдельно от полей ввода
+let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};
+let aiEditTarget = null;
+let failedMediaJobs = [];
+let adminCreateMode = 'ai';   // картинки живут отдельно от полей ввода
 
 /* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
    запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
