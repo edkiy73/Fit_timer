@@ -28,7 +28,16 @@
 - Пересмотреть все `docs/*.md`: обновить актуальные, архивировать историю только если она реально полезна, удалить документы с неверными архитектурными указаниями.
 - После cleanup прогнать поиск битых ссылок, `check:sources`, `check:ai-index`, `check.py`, mobile checks и CI.
 
-### Уже обнаружено до cleanup
+#### Cleanup progress
+
+- ✅ PWA/service worker stack removed.
+- ✅ Old TWA and `.well-known/assetlinks.json` removed.
+- ✅ Obsolete `docs/backend-gtm.md`, `docs/fresh-take.md`, `docs/claude-context-archive.md` removed.
+- ✅ `docs/why.md` replaced with current rationale.
+- ✅ `.claude/agents/design-lead.md`, `docs/ai-runtime.md`, `docs/mobile-release.md`, `docs/ai-generation-plan.md` updated.
+- ⏸ Ambiguous historical/manual-use files are kept until owner decision.
+
+## Уже обнаружено до cleanup
 
 - ✅ Старый TWA и `.well-known/assetlinks.json` удалены как неиспользуемый стек.
 
