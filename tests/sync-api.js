@@ -162,9 +162,13 @@ async function login(deviceId, sub, email = MAIL){
   ok('удаление аккаунта отзывает доступ к серверной копии', gone);
 
   const free = await login('device-free');
-  let premiumOnly = false;
-  try{ await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-free',token:free.syncToken}); }
-  catch(e){ premiumOnly = e.status === 402 && e.error === 'premium_required'; }
-  ok('бесплатный аккаунт не открывает серверную синхронизацию', premiumOnly);
+  const freePull = await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-free',token:free.syncToken});
+  ok('бесплатный аккаунт не получает Premium-профили из синхронизации',
+     Array.isArray(freePull.profiles) && freePull.profiles.length === 0,
+     JSON.stringify(freePull.profiles));
+  ok('бесплатному аккаунту остаётся служебная синхронизация настроек уведомлений',
+     Array.isArray(freePull.accountDocs)
+       && freePull.accountDocs.every(d => d && d.key === 'notificationPrefs'),
+     JSON.stringify(freePull.accountDocs));
   process.exit(bad ? 1 : 0);
 })().catch(e=>{ console.error(e); process.exit(1); });
