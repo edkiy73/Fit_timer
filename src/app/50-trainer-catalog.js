@@ -1131,6 +1131,7 @@ async function addStoreItem(id){
   program.cover = storeCoverData(it);
   customPrograms.push(program);
   await savePrograms();
+  trackProductEvent('program_added').catch(()=>{});
   renderMine();
   renderStore();                        // в списке у программы появляется метка «Уже у вас»
   // Уходить отсюда на витрину НЕЛЬЗЯ: возврат по истории асинхронный, и popstate
