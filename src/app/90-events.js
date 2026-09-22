@@ -127,13 +127,10 @@ function syncNotificationSettings(){
     btn.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
-async function setNotificationPref(key, value){
-  const prefs = getNotificationPrefs();
-  prefs[key] = !!value;
+async function persistNotificationPrefs(prefs){
   try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
   // Настройки относятся ко всему аккаунту, а не к отдельному профилю.
-  // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта
-  // едет тем же account-level sync, что trainer/clients.
+  // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта.
   try{
     if(account && account.email && typeof readAccountBucket === 'function'){
       const rec = await readAccountBucket();
@@ -144,10 +141,24 @@ async function setNotificationPref(key, value){
       if(typeof queueAccountSync === 'function' && isPremium()) queueAccountSync();
     }
   }catch(_){}
+}
+
+async function setNotificationPref(key, value){
+  const prefs = getNotificationPrefs();
+  prefs[key] = !!value;
+  await persistNotificationPrefs(prefs);
   syncNotificationSettings();
   if(['workouts','trainer','progress','offers'].includes(key) && value
     && window.FitNative && window.FitNative.requestNotifications){
-    try{ await window.FitNative.requestNotifications(); }catch(_){}
+    let granted = false;
+    try{ granted = await window.FitNative.requestNotifications(); }catch(_){}
+    if(!granted){
+      prefs[key] = false;
+      await persistNotificationPrefs(prefs);
+      syncNotificationSettings();
+      appAlert(t('notify.permissionDenied'));
+      return;
+    }
   }
   if(['workouts','trainer','progress','offers'].includes(key)
     && typeof syncNativeNotifications === 'function') syncNativeNotifications();
@@ -1839,6 +1850,20 @@ $('btnResetTotal').onclick = async ()=>{
   renderStats();
 };
 
+let releaseResumeAt = Date.now();
+async function refreshAfterForeground(){
+  const now = Date.now();
+  if(now - releaseResumeAt < 60000) return;
+  releaseResumeAt = now;
+  loadPublicConfig();
+  refreshServerSubscription(true).catch(()=>{});
+  if(account && account.email && account.syncToken){
+    connectAccountSync().catch(()=>{});
+    refreshTrainerProfile().catch(()=>{});
+  }
+  syncNativeNotifications().catch(()=>{});
+}
+
 document.addEventListener('visibilitychange', ()=>{
   const inWorkout = $('scrWork').classList.contains('on');
   if(document.visibilityState !== 'visible'){
@@ -1853,6 +1878,7 @@ document.addEventListener('visibilitychange', ()=>{
     try{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }catch(e){}
     startHandsFree();
   }
+  refreshAfterForeground().catch(()=>{});
   // Сами таймеры считают по Date.now и дедлайнам. В фоне ресурсы освобождаем, а
   // при возврате первый тик сразу догонит прошедшее время.
 });
