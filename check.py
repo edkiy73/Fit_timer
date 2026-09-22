@@ -153,10 +153,19 @@ def check_ids(whole, js, css, markup):
     used |= set(re.findall(r"#([A-Za-z_][\w-]*)", css))
     used |= set(re.findall(r"querySelector(?:All)?\(\s*'#([A-Za-z_][\w-]*)", js))
 
+    # Некоторые блоки настроек клонируются в модалки, а их новые id задаются
+    # объектом mapping в cloneSettingsBlock(..., {...}). Эти элементы отсутствуют
+    # в исходной HTML-разметке намеренно и появляются только во время выполнения.
+    dynamic_ids = set()
+    for block in re.findall(r"cloneSettingsBlock\([^;]+?\{(.*?)\}\s*\)", js, re.S):
+        dynamic_ids |= set(re.findall(r":\s*'([A-Za-z_][\w-]*)'", block))
+
     # обращение к несуществующему элементу роняет запуск приложения целиком:
     # $('btnX').onclick = ... по пустоте — «Cannot set properties of null»
     for name in sorted(used):
         if name not in in_markup and ('#' + name) not in css:
+            if name in dynamic_ids:
+                continue
             if re.search(r"createElement|\.id\s*=\s*'%s'" % re.escape(name), js) and \
                ("'" + name + "'") in js:
                 # элемент может создаваться из кода — проверяем явно
