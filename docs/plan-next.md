@@ -37,10 +37,13 @@
    - anonymous legacy reports remain link-scoped and are not guessed by name.
 
 5. 🚧 **Push / notifications production verification**
-   - проверить реальные Firebase credentials и Android delivery;
-   - проверить APNs release configuration перед iOS release;
-   - end-to-end: register → send → open action → invalid-token cleanup;
-   - сверить настройки с `docs/notification-strategy.md`.
+   - ✅ Android app содержит Push Notifications plugin + Google Services integration;
+   - ✅ GitHub release log подтверждает реальный `GOOGLE_SERVICES_JSON_BASE64`;
+   - ✅ server FCM send + UNREGISTERED token cleanup покрыты regression CI;
+   - ✅ notification preferences и push-device lifecycle остаются account-level;
+   - ⏳ проверить Vercel `FIREBASE_SERVICE_ACCOUNT_*` и реальную delivery на устройстве;
+   - ⏳ iOS: добавить/проверить Push Notifications capability вместе с реальным signing/provisioning;
+   - ⏳ end-to-end на устройстве: register → send → open action → token cleanup.
 
 6. **APK / iOS release pipeline**
    - update compatibility/signing/versionCode;
