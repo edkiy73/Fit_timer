@@ -333,11 +333,17 @@ const I18N_RU = {
   'builder.generateInChatSub': "Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.",
   'builder.copyPrompt': "Скопировать задание",
   'builder.copyPromptSub': "Дальше его нужно вставить в любой чат",
-  'builder.uploaded': "Загружено",
+  'builder.uploaded': "Доступные",
+  'builder.generateScopeTitle': "Какие картинки сделать",
+  'builder.generateAllImages': "Сгенерировать все",
+  'builder.generateAllImagesSub': "Перерисовать обложку и все упражнения",
+  'builder.generateMissingImages': "Только недостающие",
+  'builder.generateMissingImagesSub': "Оставить готовые картинки и сделать только пустые",
+  'builder.generateOneAI': "Сделать через ИИ",
   'builder.remove': "Убрать",
   'builder.assignOrder': "Разложить по порядку",
   'builder.assignWhere': "Куда подставить",
-  'builder.assignHint': "Нажми на место — предложим картинку из загруженных или с телефона.",
+  'builder.assignHint': "Нажми на место — можно выбрать доступную картинку, взять с телефона или сделать новую через ИИ.",
   'workout.interrupt': "Прервать тренировку",
   'workout.saveExit': "Сохранить и выйти",
   'workout.saveExitSub': "В следующий раз продолжишь с этого места",
@@ -354,7 +360,7 @@ const I18N_RU = {
   'ai.workingHint': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
   'common.abort': "Отменить",
   'builder.image': "Картинка",
-  'builder.noUploadedImages': "Загруженных картинок пока нет — выбери их с телефона.",
+  'builder.noUploadedImages': "Доступных картинок пока нет — выбери их с телефона или создай через ИИ.",
   'builder.removeImage': "Убрать картинку",
   'option.level.beginner': "Новичок",
   'option.level.intermediate': "Средний",
@@ -1473,7 +1479,8 @@ const I18N_RU = {
   'images.imageOne': "картинка",
   'images.imageFew': "картинки",
   'images.imageMany': "картинок",
-  'images.generateConfirm': "Будет нарисовано {count} {images}: обложка программы и по одной на каждое упражнение — все в едином стиле. Продолжить?",
+  'images.generateConfirm': "Будет нарисовано {count} {images}. Продолжить?",
+  'images.nothingMissing': "Все места уже с картинками — недостающих нет.",
   'images.keyRejected': "Ключ отклонён. Проверь, что скопирован полностью.",
   'images.rateLimited': "Слишком много запросов — подожди немного и попробуй снова.",
   'images.billingRequired': "Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.",
@@ -1829,11 +1836,17 @@ const I18N_EN = {
   'builder.generateInChatSub': "The app will prepare a prompt for an image-generating chat. Save the generated images to your phone, then upload them with the button above.",
   'builder.copyPrompt': "Copy prompt",
   'builder.copyPromptSub': "Then paste it into any AI chat",
-  'builder.uploaded': "Uploaded",
+  'builder.uploaded': "Available",
+  'builder.generateScopeTitle': "Which images to generate",
+  'builder.generateAllImages': "Generate all",
+  'builder.generateAllImagesSub': "Redraw the cover and every exercise image",
+  'builder.generateMissingImages': "Missing only",
+  'builder.generateMissingImagesSub': "Keep existing images and generate only empty slots",
+  'builder.generateOneAI': "Generate with AI",
   'builder.remove': "Remove",
   'builder.assignOrder': "Assign in order",
   'builder.assignWhere': "Where to place",
-  'builder.assignHint': "Tap a slot to choose from uploaded images or from your phone.",
+  'builder.assignHint': "Tap a slot to choose an available image, pick one from your phone, or generate a new one with AI.",
   'workout.interrupt': "Stop workout",
   'workout.saveExit': "Save and exit",
   'workout.saveExitSub': "Next time you’ll continue from this point",
@@ -1850,7 +1863,7 @@ const I18N_EN = {
   'ai.workingHint': "Your request is being processed — usually from a few seconds to three minutes. Keep the app open.",
   'common.abort': "Cancel",
   'builder.image': "Image",
-  'builder.noUploadedImages': "No uploaded images yet — choose some from your phone.",
+  'builder.noUploadedImages': "No available images yet — choose one from your phone or generate it with AI.",
   'builder.removeImage': "Remove image",
   'option.level.beginner': "Beginner",
   'option.level.intermediate': "Intermediate",
@@ -2969,7 +2982,8 @@ const I18N_EN = {
   'images.imageOne': "image",
   'images.imageFew': "images",
   'images.imageMany': "images",
-  'images.generateConfirm': "Generate {count} {images}: one program cover and one image for each exercise, all in one consistent style. Continue?",
+  'images.generateConfirm': "Generate {count} {images}. Continue?",
+  'images.nothingMissing': "Every slot already has an image — nothing is missing.",
   'images.keyRejected': "The key was rejected. Make sure it was copied completely.",
   'images.rateLimited': "Too many requests. Try again shortly.",
   'images.billingRequired': "Access denied. Gemini image generation requires billing to be enabled on the Google account.",
@@ -4500,10 +4514,21 @@ function discardLegacyWeightCorrections(){
   }
 }
 
-async function switchUser(id){
+// Переключение профиля сериализуем. Раньше два быстрых нажатия могли запустить
+// loadIdentity/loadData одновременно: обе функции читают профильные ключи через
+// currentUser, поэтому продолжение первого await уже могло читать данные второго
+// профиля и оставлять их в глобальном состоянии приложения.
+let profileSwitchQueue = Promise.resolve();
+function switchUser(id){
+  profileSwitchQueue = profileSwitchQueue
+    .catch(()=>{})
+    .then(()=> switchUserNow(id));
+  return profileSwitchQueue;
+}
+async function switchUserNow(id){
   if(currentUser === id) return;
   currentUser = id;
-  kvSet('currentUser', id);
+  await kvSet('currentUser', id);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity();
   await loadData();
@@ -4990,31 +5015,53 @@ function bumpDoc(key, extra){
   outbox = outbox.filter(o => o.key !== key);
   outbox.push({key, rev: docMeta[key].rev, at});
 }
-async function flushMeta(){
-  await kvSet(pk('docMeta'), JSON.stringify(docMeta));
-  await kvSet(pk('outbox'), JSON.stringify(outbox));
+async function flushMeta(uid, metaValue, outboxValue){
+  // Фиксируем профиль и снимки ДО первого await. Иначе переключение профиля между
+  // двумя kvSet записывало docMeta одному человеку, а outbox уже другому.
+  const ownerId = uid || currentUser;
+  const metaSnapshot = metaValue || docMeta;
+  const outboxSnapshot = outboxValue || outbox;
+  await kvSet('docMeta_' + ownerId, JSON.stringify(metaSnapshot));
+  await kvSet('outbox_' + ownerId, JSON.stringify(outboxSnapshot));
 }
 
 // Одно сохранение документа: пишем значение, поднимаем редакцию, ставим в очередь.
+// Все данные операции принадлежат uid, который был активен В МОМЕНТ нажатия Save.
 async function saveDoc(key, value){
-  await kvSet(pk(key), JSON.stringify(value));
+  const uid = currentUser;
+  const valueJson = JSON.stringify(value);
+  let meta = docMeta;
+  let queue = outbox.slice();
+  await kvSet(key + '_' + uid, valueJson);
   if(!isSyncKey(key)) return;
-  bumpDoc(key);
-  await flushMeta();
+
+  const prev = meta[key] || {rev:0};
+  const at = new Date().toISOString();
+  meta = Object.assign({}, meta, {
+    [key]: {rev:prev.rev + 1, at, schema:SCHEMA_VERSION}
+  });
+  queue = queue.filter(o => o.key !== key);
+  queue.push({key, rev:meta[key].rev, at});
+  await flushMeta(uid, meta, queue);
+
+  // Глобальное состояние обновляем только если пользователь всё ещё на том же профиле.
+  if(currentUser === uid){ docMeta = meta; outbox = queue; }
   queueAccountSync();
 }
 
 // Что уедет на сервер под этим ключом. Программы лежат в памяти одним списком, поэтому
 // значение документа собирается здесь, а не читается из хранилища по имени ключа.
 // null — это НАДГРОБИЕ: программу удалили, и сервер должен об этом узнать.
-async function docValue(key){
-  if(key === 'index') return JSON.stringify({order: customPrograms.map(p => p.id)});
-  if(key.startsWith('program:')){
+async function docValue(key, uid){
+  const ownerId = uid || currentUser;
+  if(key === 'index' || key.startsWith('program:')){
+    const programs = parsed(await kvGet('customPrograms_' + ownerId), []);
+    if(key === 'index') return JSON.stringify({order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
     const id = key.slice('program:'.length);
-    const p = customPrograms.find(x => String(x.id) === id);
+    const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
     return p ? JSON.stringify(p) : null;
   }
-  return await kvGet(pk(key));
+  return await kvGet(key + '_' + ownerId);
 }
 
 // Единый шов обмена с сервером. Пока нет аккаунта, Премиума или сети, адаптера нет:
@@ -5042,30 +5089,32 @@ const SYNC = {
   },
   pending(){ return outbox.length; },
   async push(){
-    // без личности отправлять некуда и незачем: профиль ещё не заведён
-    if(!SYNC.adapter || !identity) return {sent: 0, offline: true};
+    // Фиксируем владельца очереди до первого await. Это старый путь синхронизации,
+    // но он тоже не должен уметь отправить документы A под profileId профиля B.
+    if(!SYNC.adapter || !identity) return {sent:0, offline:true};
+    const uid = currentUser;
+    const ident = Object.assign({}, identity);
     const batch = outbox.slice();
-    // Значения собираем ЗДЕСЬ и через await. docValue асинхронная, и без await на сервер
-    // уехал бы список промисов вместо документов — молча, потому что JSON.stringify
-    // превращает промис в пустой объект.
     const payload = [];
     for(const o of batch){
-      const value = await docValue(o.key);
-      // Надгробие бывает только у программы. У обычного ключа пустое значение означает
-      // «ещё ни разу не сохраняли», а не «удалили»: отправить его как удаление — значит
-      // стереть на сервере статистику, которой человек просто пока не набрал.
+      const value = await docValue(o.key, uid);
       const gone = value === null && o.key.startsWith('program:');
       if(value === null && !gone) continue;
       payload.push({
-        key: o.key, rev: o.rev, at: o.at, schema: SCHEMA_VERSION,
-        profileId: identity.profileId, deviceId: identity.deviceId,
-        deleted: gone, value
+        key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
+        profileId:ident.profileId, deviceId:ident.deviceId,
+        deleted:gone, value
       });
     }
     if(payload.length) await SYNC.adapter.push(payload);
-    outbox = outbox.filter(o => !batch.find(b => b.key === o.key && b.rev === o.rev));
-    await kvSet(pk('outbox'), JSON.stringify(outbox));
-    return {sent: batch.length};
+
+    let queue = parsed(await kvGet('outbox_' + uid), []);
+    queue = (Array.isArray(queue) ? queue : []).filter(o =>
+      !batch.some(b => b.key === o.key && b.rev === o.rev)
+    );
+    await kvSet('outbox_' + uid, JSON.stringify(queue));
+    if(currentUser === uid) outbox = queue;
+    return {sent:batch.length};
   }
 };
 
@@ -5729,27 +5778,49 @@ const hasConsent = kind => !!(identity && identity.consents && identity.consents
 // те, что человек действительно тронул. Хеш программы лежит рядом с её редакцией —
 // без него каждое сохранение любой программы гнало бы наверх весь список.
 async function savePrograms(){
-  await kvSet(pk('customPrograms'), JSON.stringify(customPrograms));
+  // customPrograms — глобальный массив активного профиля. Делаем независимый снимок
+  // до первого await, чтобы последующее переключение профиля не подменило содержимое.
+  const uid = currentUser;
+  const programs = JSON.parse(JSON.stringify(customPrograms));
+  let meta = docMeta;
+  let queue = outbox.slice();
+  await kvSet('customPrograms_' + uid, JSON.stringify(programs));
+
+  const bump = (key, extra)=>{
+    const prev = meta[key] || {rev:0};
+    const at = new Date().toISOString();
+    meta = Object.assign({}, meta, {
+      [key]: Object.assign({rev:prev.rev + 1, at, schema:SCHEMA_VERSION}, extra || {})
+    });
+    queue = queue.filter(o => o.key !== key);
+    queue.push({key, rev:meta[key].rev, at});
+  };
+
   let touched = false;
   const live = new Set();
-  for(const p of customPrograms){
+  for(const p of programs){
     const key = PROGRAM_DOC(p.id);
     live.add(key);
     const h = docHash(JSON.stringify(p));
-    const prev = docMeta[key];
+    const prev = meta[key];
     if(prev && prev.h === h && !prev.gone) continue;
-    bumpDoc(key, {h});
+    bump(key, {h});
     touched = true;
   }
-  // удалённая программа — тоже документ: без надгробия она вернётся с другого устройства
-  for(const key of Object.keys(docMeta)){
-    if(!key.startsWith('program:') || live.has(key) || docMeta[key].gone) continue;
-    bumpDoc(key, {gone: true});
+  // удалённая программа — тоже документ: без надгобия она вернётся с другого устройства
+  for(const key of Object.keys(meta)){
+    if(!key.startsWith('program:') || live.has(key) || meta[key].gone) continue;
+    bump(key, {gone:true});
     touched = true;
   }
-  const order = docHash(customPrograms.map(p => p.id).join(','));
-  if(!docMeta.index || docMeta.index.h !== order){ bumpDoc('index', {h: order}); touched = true; }
-  if(touched){ await flushMeta(); queueAccountSync(); }
+  const order = docHash(programs.map(p => p.id).join(','));
+  if(!meta.index || meta.index.h !== order){ bump('index', {h:order}); touched = true; }
+
+  if(touched){
+    await flushMeta(uid, meta, queue);
+    if(currentUser === uid){ docMeta = meta; outbox = queue; }
+    queueAccountSync();
+  }
 }
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
@@ -9534,10 +9605,22 @@ function singleImagePrompt(kind, item){
 
 let imgGenCancelled = false;
 
-async function generateAllImagesViaAI(){
+async function generateAllImagesViaAI(scope){
   if(!premiumGate()) return;
-  const exList = uniqueProgramExercises();
-  const total = 1 + exList.length; // обложка + упражнения
+  scope = scope === 'missing' ? 'missing' : 'all';
+
+  const exList = uniqueProgramExercises().filter(ex => {
+    if(scope !== 'missing') return true;
+    const key = ex.name.toLowerCase();
+    return !(draft.plans || []).some(pl => (pl.exercises || []).some(e2 =>
+      (e2.name || '').trim().toLowerCase() === key &&
+      e2.media && e2.media.kind === 'img' && e2.media.data
+    ));
+  });
+  const makeCover = scope !== 'missing' || !draft.cover;
+  const total = (makeCover ? 1 : 0) + exList.length;
+  if(!total){ appAlert(t('images.nothingMissing')); return; }
+
   const imageWord = appLocale === 'ru'
     ? plural(total,t('images.imageOne'),t('images.imageFew'),t('images.imageMany'))
     : t(total === 1 ? 'images.imageOne' : 'images.imageMany');
@@ -9560,8 +9643,15 @@ async function generateAllImagesViaAI(){
     try{
       const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
         kind === 'cover' ? 'image.cover' : 'image.exercise');
-      await new Promise(res => shrinkDataUrl(raw, 640, data => { if(data) applyFn(data); else failed.push(kind === 'cover' ? t('images.cover') : item.name); res(); }));
-      renderSlots(); // видно прогресс по мере генерации
+      await new Promise(res => shrinkDataUrl(raw, 640, data => {
+        if(data){
+          applyFn(data);
+          if(!imgTray.includes(data)) imgTray.push(data);
+        } else failed.push(kind === 'cover' ? t('images.cover') : item.name);
+        res();
+      }));
+      renderTray();
+      renderSlots();
     }catch(e){
       if(imgGenCancelled) return false;
       failed.push((kind === 'cover' ? t('images.cover') : item.name) + ': ' + (e && e.message ? e.message : t('images.error')));
@@ -9570,7 +9660,9 @@ async function generateAllImagesViaAI(){
     return !imgGenCancelled;
   };
 
-  if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+  if(makeCover){
+    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); finishImgGen(done, total, failed); return; }
+  }
   for(const ex of exList){
     const go = await runOne('ex', ex, data => {
       // применяем ко всем упражнениям с этим именем во всех вариантах — не платим за копию дважды
@@ -9582,6 +9674,40 @@ async function generateAllImagesViaAI(){
   }
   aiRunClose();
   finishImgGen(done, total, failed);
+}
+
+async function generateSlotImageViaAI(){
+  if(!premiumGate()) return;
+  const s = imageSlots()[slotTarget];
+  if(!s || s.kind !== 'ex') return;
+  const ex = ((draft.plans || [])[s.plan] || {}).exercises?.[s.idx];
+  if(!ex) return;
+  $('slotModal').classList.remove('open');
+  imgGenCancelled = false;
+  aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
+  $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
+  $('aiRunText').textContent = s.title;
+  try{
+    const item = {
+      name:(ex.name || '').trim(),
+      desc:(ex.desc || '').trim(),
+      muscles:(ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean)
+    };
+    const raw = await callGeminiImage(singleImagePrompt('ex', item), aiRunCtl ? aiRunCtl.signal : undefined, 'image.exercise');
+    await new Promise(res => shrinkDataUrl(raw, 640, data => {
+      if(data){
+        s.set(data);
+        if(!imgTray.includes(data)) imgTray.push(data);
+      }
+      res();
+    }));
+    aiRunClose();
+    renderTray(); renderSlots();
+  }catch(e){
+    aiRunClose();
+    if(imgGenCancelled) return;
+    appAlert(t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+  }
 }
 
 function finishImgGen(done, total, failed){
@@ -9665,7 +9791,13 @@ function shrinkAll(files, maxSide, done){
 let imagesFrom = 'scrBuilder';
 function openImages(){
   imagesFrom = show._last || 'scrBuilder';
+  // «Доступные» всегда начинается с картинок, которые уже используются в программе.
+  // Поэтому после сохранения и повторного открытия назначенные изображения не исчезают.
   imgTray = [];
+  imageSlots().forEach(s => {
+    const data = s.get();
+    if(data && !imgTray.includes(data)) imgTray.push(data);
+  });
   renderTray();
   renderSlots();
   syncGeminiBtns();
@@ -9701,9 +9833,12 @@ function renderTray(){
   box.innerHTML = '';
   imgTray.forEach((data, i)=>{
     const el = document.createElement('div');
-    el.className = 'tray-item' + (used.has(data) ? ' used' : '');
-    el.innerHTML = `<img src="${esc(data)}" alt=""><button type="button" class="ti-x">${icon('close')}</button>`;
-    el.querySelector('.ti-x').onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
+    const isUsed = used.has(data);
+    el.className = 'tray-item' + (isUsed ? ' used' : '');
+    el.innerHTML = `<img src="${esc(data)}" alt="">` +
+      (isUsed ? '' : `<button type="button" class="ti-x">${icon('close')}</button>`);
+    const x = el.querySelector('.ti-x');
+    if(x) x.onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
     el.onclick = ()=> appAlert(t('images.pickHint'));
     box.appendChild(el);
   });
@@ -9770,6 +9905,7 @@ function openSlotPicker(i){
     };
     box.appendChild(el);
   });
+  setShown('slotGenerateAI', s.kind === 'ex');
   setShown('slotRemove', s.get());
   $('slotModal').classList.add('open');
 }
@@ -11891,6 +12027,36 @@ async function refreshPubStatus(){
   }catch(e){}
 }
 
+// Каталог отдаёт обложку прямо в списке программ, поэтому держим её лёгкой.
+async function catalogCoverData(src){
+  if(!src) return null;
+  const raw = String(src);
+  if(raw.length < 88000) return raw;
+  return await new Promise(resolve => {
+    const img = new Image();
+    img.onload = ()=>{
+      let maxSide = 480, quality = .78;
+      const render = ()=>{
+        const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const cnv = document.createElement('canvas');
+        cnv.width = Math.max(1, Math.round(img.width * k));
+        cnv.height = Math.max(1, Math.round(img.height * k));
+        const ctx = cnv.getContext('2d');
+        ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
+        let out = '';
+        try{ out = cnv.toDataURL('image/jpeg', quality); }catch(_){}
+        if(out && out.length < 88000) return resolve(out);
+        if(quality > .52){ quality -= .08; return render(); }
+        if(maxSide > 300){ maxSide -= 60; quality = .72; return render(); }
+        resolve(out && out.length < 90000 ? out : null);
+      };
+      render();
+    };
+    img.onerror = ()=> resolve(null);
+    img.src = raw;
+  });
+}
+
 async function doPublish(){
   const p = pubProg;
   if(!p) return;
@@ -11906,6 +12072,7 @@ async function doPublish(){
     return;
   }
   try{
+    const catalogCover = await catalogCoverData(p.cover);
     const r = await apiPost('/api/catalog', {
       by: normHandle(trainer.handle),
       trainerKey: trainer.key || '',
@@ -11918,7 +12085,7 @@ async function doPublish(){
         level: pubDraft.level,
         min: estimateMinutes(p), exCount: ex, text: programToText(p),
         // Своя обложка, если тренер её задал. Рисованная по цели остаётся запасной.
-        cover: (p.cover && String(p.cover).length < 90000) ? p.cover : null,
+        cover: catalogCover,
         // Фото упражнений — отдельной картой: в тексте программы им места нет.
         media: programMedia(p)
       }
@@ -17402,7 +17569,16 @@ $('aiBackTop').onclick = async ()=>{
 
 /* ---- картинки программы ---- */
 $('imgBackTop').onclick = ()=> closeImages();
-$('imgSelfGen').onclick = generateAllImagesViaAI;
+$('imgSelfGen').onclick = ()=> $('imgGenScopeModal').classList.add('open');
+$('imgGenScopeModal').onclick = e => { if(e.target === $('imgGenScopeModal')) $('imgGenScopeModal').classList.remove('open'); };
+$('imgGenAll').onclick = ()=>{
+  $('imgGenScopeModal').classList.remove('open');
+  generateAllImagesViaAI('all');
+};
+$('imgGenMissing').onclick = ()=>{
+  $('imgGenScopeModal').classList.remove('open');
+  generateAllImagesViaAI('missing');
+};
 $('imgPromptCopy').onclick = async ()=>{
   const btn = $('imgPromptCopy');
   try{
@@ -17427,9 +17603,13 @@ $('imgFiles').onchange = e => {
 $('trayAuto').onclick = trayAutoAssign;
 $('trayClear').onclick = async ()=>{
   if(!imgTray.length) return;
+  const used = trayUsed();
+  const removable = imgTray.filter(x => !used.has(x));
+  if(!removable.length) return;
   if(!(await appDialog(t('images.removeQuestion'),
     {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
-  imgTray = []; renderTray();
+  imgTray = imgTray.filter(x => used.has(x));
+  renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
 $('slotRemove').onclick = ()=>{
@@ -17439,6 +17619,7 @@ $('slotRemove').onclick = ()=>{
   renderSlots(); renderTray();   // счётчик «ещё не разложено» считается по местам
 };
 $('slotFromPhone').onclick = ()=> $('slotFile').click();
+$('slotGenerateAI').onclick = generateSlotImageViaAI;
 $('slotFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
   e.target.value = '';
@@ -17447,8 +17628,9 @@ $('slotFile').onchange = e => {
     if(!data){ appAlert(t('images.loadFailed')); return; }
     const s = imageSlots()[slotTarget];
     if(s) s.set(data);
+    if(!imgTray.includes(data)) imgTray.push(data);
     $('slotModal').classList.remove('open');
-    renderSlots();
+    renderTray(); renderSlots();
   });
 };
 
