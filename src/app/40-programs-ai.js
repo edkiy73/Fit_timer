@@ -1429,7 +1429,7 @@ function singleImagePrompt(kind, item){
   if(kind === 'cover'){
     return `Create a square 1:1 cover image for the fitness-program card "${name}".\n${styleLine}\nShow the overall theme of the program rather than one specific exercise.`;
   }
-  const bits = [`Create a wide 16:9 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
+  const bits = [`Create a 4:3 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
   if(item.desc) bits.push(`Technique context: ${item.desc}`);
   if(item.muscles && item.muscles.length) bits.push(`Highlight these working muscles: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   bits.push('Show the most characteristic phase of the movement.');
