@@ -1,6 +1,8 @@
 name: Android — проверка и сборка
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       version_code:
@@ -27,6 +29,12 @@ on:
       - 'package-lock.json'
       - '.github/workflows/android.yml'
 
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -129,3 +137,19 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Подготовить постоянный APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          test -n "$APK"
+          cp "$APK" FitTimer-latest.apk
+
+      - name: Обновить постоянный релиз latest-apk
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest-apk --cleanup-tag -y 2>/dev/null || true
+          gh release create latest-apk             --target "$GITHUB_SHA"             --title "FitTimer — последний APK"             --notes "Автоматическая release-сборка из main. Commit: $GITHUB_SHA"
+          gh release upload latest-apk FitTimer-latest.apk --clobber
