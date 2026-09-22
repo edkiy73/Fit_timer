@@ -2004,8 +2004,10 @@ async function saveProgram(){
   }
   if(draft.locale !== 'ru' && draft.locale !== 'en') draft.locale = appLocale === 'ru' ? 'ru' : 'en';
   const idx = customPrograms.findIndex(x=>x.id===draft.id);
+  const isNewProgram = idx < 0;
   if(idx >= 0) customPrograms[idx] = draft; else customPrograms.push(draft);
   await savePrograms();
+  if(isNewProgram) trackProductEvent('program_added').catch(()=>{});
   if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
