@@ -221,6 +221,22 @@ Android WorkManager owns voice-model downloads. They continue when the user leav
 Recognition uses the unrestricted small Vosk language model, ignores partial hypotheses, validates only complete command phrases, and applies confidence thresholds (stricter for next/skip than pause/resume) to reduce accidental advances.
 
 
+## In-app review
+
+FitTimer просит оценить приложение только после успешно завершённых тренировок:
+
+- первая попытка — после 5-й тренировки;
+- повторные контрольные точки — 20 и 50 тренировок;
+- между повторными попытками должно пройти минимум 90 дней;
+- максимум три попытки за всё время на устройстве;
+- запрос не показывается после незавершённой/отключённой программы и не используется в Web;
+- Android использует Google Play In-App Review API через `FitSystemPlugin`;
+- Google Play сам решает, показать ли системное окно. Приложение не спрашивает
+  предварительно «нравится ли FitTimer» и не пытается определить, поставлена ли оценка.
+
+Состояние попыток хранится локально в `fitReviewPromptV1`. Не превращать это в
+частый кастомный попап: системный review flow намеренно контролируется магазином.
+
 ## Android App Links
 
 Новые ссылки на программы публикуются как:
