@@ -36,22 +36,20 @@
    - authenticated trainer reports are tagged server-side and removed with account deletion;
    - anonymous legacy reports remain link-scoped and are not guessed by name.
 
-5. 🚧 **Push / notifications production verification**
+5. ✅ **Push / notifications production verification (Android/web)**
    - ✅ Android app содержит Push Notifications plugin + Google Services integration;
    - ✅ GitHub release log подтверждает реальный `GOOGLE_SERVICES_JSON_BASE64`;
    - ✅ server FCM send + UNREGISTERED token cleanup покрыты regression CI;
    - ✅ notification preferences и push-device lifecycle остаются account-level;
-   - ⏳ проверить Vercel `FIREBASE_SERVICE_ACCOUNT_*` и реальную delivery на устройстве;
-   - ⏳ iOS: добавить/проверить Push Notifications capability вместе с реальным signing/provisioning;
-   - ⏳ end-to-end на устройстве: register → send → open action → token cleanup.
+   - ✅ реальная отправка push из admin проверена на устройстве;
+   - ✅ отправка email из admin проверена в production;
+   - iOS push вынесен в отдельный iOS release stage.
 
-6. 🚧 **APK / iOS release pipeline**
+6. ✅ **Android release pipeline**
    - ✅ Android release подписывается постоянным key, `apksigner` проходит;
    - ✅ AAB/APK artifacts и `latest-apk` публикуются автоматически;
    - ✅ versionCode растёт от GitHub run number;
-   - ✅ iOS Simulator build теперь запускается на push в `main` и проходит;
-   - ⏳ iOS signing/archive/TestFlight требует Apple Developer provisioning/certificates;
-   - ⏳ Push Notifications capability добавить/проверить вместе с iOS signing;
+   - ✅ Firebase config попадает в release build;
    - не менять существующий Android signing material для «починки» обновлений.
 
 7. ✅ **Web/PWA cleanup**
@@ -68,13 +66,21 @@
    - Android CI больше не стартует на docs/backend-only commits;
    - iOS simulator CI запускается на релевантные push в `main`.
 
-9. **Billing**
+9. **iOS release stage**
+   - выполнять после Android release и до рекламной кампании;
+   - Apple Developer signing/provisioning;
+   - Push Notifications capability + APNs;
+   - signed Archive;
+   - TestFlight upload;
+   - release smoke test на реальном iPhone.
+
+10. **Billing**
    - Google Play Billing + server receipt verification + RTDN + restore;
    - RuStore Pay + server notifications;
    - YooKassa только там, где такой канал допустим;
    - Premium entitlement остаётся server-authoritative.
 
-10. **Final production audit**
+11. **Final production audit**
     - security/privacy;
     - store readiness;
     - docs/env consistency;
