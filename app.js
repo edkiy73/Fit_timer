@@ -3174,7 +3174,7 @@ function canonicalDescription(value){
 - Never translate canonical muscle tokens or weekday tokens.`;
 
   const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
-Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Prefer conservative, explainable training decisions over novelty. Do not invent facts about the user or pretend certainty where context is missing.
+Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Treat all explicitly provided user data as authoritative constraints and build a program that genuinely matches the stated goal, level, equipment, schedule, duration and preferences. Do not make the whole program easier just because some unrelated details are unknown. Use extra caution only where uncertainty truly matters: absolute starting loads when strength is unknown, medical or pain-related risk, and unusually aggressive progression. Do not invent facts about the user or pretend certainty where context is missing.
 
 - ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between increases and experienced users roughly 2-4, but adapt to the actual program and recovery.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
@@ -3187,7 +3187,8 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
 - If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
-- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load.
+- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load without downgrading the overall program difficulty.
+- Respect the declared fitness level. Beginner, intermediate and advanced programs should differ meaningfully in exercise complexity, volume, density and progression where appropriate; do not silently turn an intermediate or advanced request into a beginner workout.
 - Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
 - Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
 - Preserve unilateral/bilateral movement nature unless the user explicitly requests a different movement.
@@ -9723,19 +9724,106 @@ function shrinkDataUrl(dataUrl, maxSide, cb){
 }
 
 // промт под ОДНО конкретное изображение (в отличие от промта для копирования — там просят весь набор разом)
+function imageEquipment(item){
+  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
+  const out = [];
+  const add = (re, label) => { if(re.test(s) && !out.includes(label)) out.push(label); };
+  add(/гантел|dumbbell/, 'dumbbells');
+  add(/штанг|barbell/, 'barbell');
+  add(/гир(я|и|ей|ю|ь)?|kettlebell/, 'kettlebell');
+  add(/резин|эспанд|resistance band|\bband\b/, 'resistance band');
+  add(/скам(ья|ьи|ью)|bench/, 'workout bench');
+  add(/блок|кроссовер|трос|cable/, 'cable machine');
+  add(/турник|перекладин|pull[- ]?up bar/, 'pull-up bar');
+  add(/коврик|\bmat\b/, 'exercise mat');
+  add(/фитбол|мяч|exercise ball|swiss ball/, 'exercise ball');
+  add(/тумб|платформ|степ|plyo box|step platform/, 'box or step platform');
+  return out;
+}
+
+function imageStaticExercise(item){
+  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
+  return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
+}
+
+function imageProgramContext(){
+  const parts = [
+    draft && draft.goal, draft && draft.cat, draft && draft.category,
+    draft && draft.name, draft && draft.desc
+  ];
+  uniqueProgramExercises().slice(0, 12).forEach(ex => {
+    parts.push(ex.name);
+    if(ex.muscles && ex.muscles.length) parts.push(ex.muscles.join(', '));
+  });
+  return parts.filter(Boolean).join(' · ');
+}
+
+function imageCoverTone(context){
+  const s = String(context || '').toLowerCase();
+  if(/кардио|вынослив|жиросж|похуд|hiit|cardio|endurance|fat loss/.test(s))
+    return {tone:'deep blue to cyan', mood:'energetic, fast, fresh'};
+  if(/сила|силов|мышечн|масса|гипертроф|strength|muscle|hypertrophy/.test(s))
+    return {tone:'deep crimson and burgundy with subtle violet undertones', mood:'powerful, intense, athletic'};
+  if(/растяж|гибк|мобил|восстанов|после род|stretch|flexibility|mobility|recovery|postpartum/.test(s))
+    return {tone:'teal and emerald with soft lavender accents', mood:'calm, fluid, restorative'};
+  if(/осанк|спин|кор|пресс|стабил|posture|back|core|stability/.test(s))
+    return {tone:'indigo and warm amber with violet accents', mood:'focused, controlled, stable'};
+  if(/ягод|glute/.test(s))
+    return {tone:'berry magenta and deep violet', mood:'strong, sculpted, energetic'};
+  return {tone:'Fit Timer violet and purple', mood:'balanced, premium, modern'};
+}
+
+function exerciseImagePrompt(item, genderTxt){
+  const equipment = imageEquipment(item);
+  const isStatic = imageStaticExercise(item);
+  const muscles = item && item.muscles && item.muscles.length
+    ? `Highlight ONLY these main working muscles with a clear Fit Timer violet glow: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`
+    : 'Highlight only the primary working muscles with a restrained Fit Timer violet glow.';
+
+  return [
+    `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
+    'VISUAL SYSTEM: premium stylized-realistic 3D anatomy, neutral graphite-gray athlete, dark graphite background with restrained violet atmosphere. Use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) for functional accents. Do not use orange muscle highlights.',
+    `Character: ${genderTxt}. Keep a clean athletic appearance and believable human proportions.`,
+    item.desc ? `Technique context: ${item.desc}` : null,
+    equipment.length
+      ? `Required equipment: ${equipment.join(', ')}. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.`
+      : 'Do not invent equipment that is not required by this movement.',
+    isStatic
+      ? 'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
+      : 'Show TWO temporal phases of THE SAME athlete in one coherent scene: a solid main pose and a secondary semi-transparent ghost pose for the other endpoint of the movement. They are not two different people. Add one or two clean lavender-violet arrows that clearly show the movement direction. Do not use split-screen panels.',
+    muscles,
+    'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
+    'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
+    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, borders, collage or watermarks.'
+  ].filter(Boolean).join('\n');
+}
+
+function coverImagePrompt(name, genderTxt){
+  const context = imageProgramContext();
+  const palette = imageCoverTone(context);
+  const exercises = uniqueProgramExercises().slice(0, 8).map(x => x.name).join(', ');
+  return [
+    `Create a square 1:1 premium catalog cover for the fitness program "${name}".`,
+    'This is a PROGRAM COVER, not an exercise instruction. Do not show start/end poses, ghost figures or movement arrows.',
+    'Use the same Fit Timer visual family as every other cover: premium stylized-realistic 3D, dark graphite base, polished studio lighting, clean depth, one hero athlete, uncluttered composition, consistent rendering quality.',
+    `Character: ${genderTxt}. Make the athlete the clear focal point and keep a consistent catalog-ready scale and composition.`,
+    `Program context: ${context || name}.`,
+    exercises ? `Representative exercises: ${exercises}.` : null,
+    `Goal-specific atmosphere: ${palette.tone}. Mood: ${palette.mood}. Keep a subtle Fit Timer violet (#7C56F5) accent in every category so all covers still belong to one brand.`,
+    'Choose a pose, relevant equipment and environment that communicate the overall purpose of the program rather than illustrating one exact exercise.',
+    'The cover must remain recognizable and attractive as a small square catalog thumbnail.',
+    'No text, letters, numbers, labels, logos, arrows, UI, collage, split-screen or watermarks.'
+  ].filter(Boolean).join('\n');
+}
+
+// Промт под ОДНО конкретное изображение.
 function singleImagePrompt(kind, item){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
   const name = (draft.name || '').trim() || 'Workout program';
-  const styleLine = `Style: a stylized realistic 3D illustration of a human body. Use muted gray tones for the body and a warm orange glow for the working muscles. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Character: ${genderTxt}. No text, logos, captions, or watermarks inside the image.`;
-  if(kind === 'cover'){
-    return `Create a square 1:1 cover image for the fitness-program card "${name}".\n${styleLine}\nShow the overall theme of the program rather than one specific exercise.`;
-  }
-  const bits = [`Create a 4:3 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
-  if(item.desc) bits.push(`Technique context: ${item.desc}`);
-  if(item.muscles && item.muscles.length) bits.push(`Highlight these working muscles: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`);
-  bits.push('Show the most characteristic phase of the movement.');
-  return bits.join('\n');
+  return kind === 'cover'
+    ? coverImagePrompt(name, genderTxt)
+    : exerciseImagePrompt(item || {}, genderTxt);
 }
 
 let imgGenCancelled = false;
@@ -9871,7 +9959,9 @@ function uniqueProgramExercises(){
     seen.set(key, {
       name,
       desc: (ex.desc || '').trim(),
-      muscles: (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean)
+      muscles: (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean),
+      format: ex.type || '',
+      weight: +ex.weight || 0
     });
   }));
   return [...seen.values()];
@@ -9881,28 +9971,19 @@ function imagesPromptText(){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
   const name = (draft.name || '').trim() || 'Workout program';
-  const desc = (draft.desc || '').trim();
   const exList = uniqueProgramExercises();
-
-  const L = [];
-  L.push('Generate a complete image set for a fitness app: one program cover and one image for every exercise listed below. The whole set must look like one coherent series: the same visual style, same character, same clothing, similar background, and consistent color palette.');
-  L.push('');
-  L.push('STYLE: stylized realistic 3D human-body illustration. Keep the body in muted gray tones and highlight the working muscles with a warm orange glow. Show movement direction with clean white arrows. Use a clean, slightly blurred neutral or gym background. Do not put text, logos, captions, or watermarks inside the images.');
-  L.push(`Character in every image: ${genderTxt}, the same person and the same sportswear throughout the set.`);
-  L.push('');
-  L.push(`PROGRAM: ${name}`);
-  if(desc) L.push(`DESCRIPTION: ${desc}`);
-  L.push('');
-  L.push('1. PROGRAM COVER — square 1:1. Show the overall idea of the program without focusing on one specific exercise.');
+  const L = [
+    'Generate a coherent image set for the Fit Timer fitness app.',
+    'All exercise illustrations use 4:3. The program cover uses 1:1.',
+    'Keep the same premium stylized-realistic 3D visual language, athlete, sportswear and rendering quality throughout the set.',
+    '',
+    'PROGRAM COVER:',
+    coverImagePrompt(name, genderTxt)
+  ];
   exList.forEach((ex, i) => {
-    L.push('');
-    L.push(`${i + 2}. EXERCISE "${ex.name}" — wide 16:9. Show the most characteristic phase of the movement.`);
-    if(ex.desc) L.push(`   Technique context: ${ex.desc}`);
-    if(ex.muscles.length) L.push(`   Highlight these working muscles: ${ex.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+    L.push('', `EXERCISE ${i + 1}:`, exerciseImagePrompt(ex, genderTxt));
   });
-  L.push('');
-  L.push('OUTPUT ORDER: if you can return multiple images in one response, generate the entire set in exactly the order above. Otherwise generate them one by one, starting with the cover.');
-  L.push('Before each generated image, add a short text label outside the image saying either "Cover" or the exact exercise name, so the images can be assigned correctly later.');
+  L.push('', 'Return the cover first, then the exercise images in the exact order listed above.');
   return L.join('\n');
 }
 
