@@ -8,7 +8,7 @@
    адрес попадает в историю браузера и в журналы, заголовок — нет. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rndId, sameSecret, cors,
+const { send, fail, readBody, rateOkScoped, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
 const { getSettings, sanitizeSettings, providerStatus, billingProviderStatus, generate } = require('../lib/ai');
 const FitAIProtocol = require('../lib/ai-protocol');
@@ -458,6 +458,11 @@ module.exports = async (req, res) => {
 
   const admin = process.env.ADMIN_KEY || '';
   if(!admin) return fail(res, 503, 'no_admin_key');
+  // Админка — одна из самых чувствительных дверей. Даже при сбое Redis
+  // перебор ключа не должен становиться безлимитным.
+  if(!(await rateOkScoped(req, 'admin-auth', 30, '', 3600, true))){
+    return fail(res, 429, 'rate_limited');
+  }
   // Заголовок приходит закодированным — в него можно положить только ASCII,
   // а ключ бывает любым. Кривую кодировку считаем неверным ключом, а не падаем.
   let given = String(req.headers['x-admin-key'] || '');
