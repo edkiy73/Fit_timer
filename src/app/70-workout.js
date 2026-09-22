@@ -579,16 +579,21 @@ function swapSourceExercise(){
   return src ? {...src, step} : null;
 }
 
-function swapAIPrompt(ex, swap){
-  return 'Replace this home-workout exercise with the specified harder progression and return the COMPLETE NEW exercise using the protocol below. ' +
-    'Return only the new exercise block, with no explanation before or after it.\n\n' +
-    'USER: ' + userForAI() + '\n' +
-    'TARGET REPLACEMENT: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
-    'WHY: the current exercise has reached its progression ceiling, so the next level of the same movement pattern is needed.\n' +
-    'IMPORTANT: choose NEW starting values appropriate for the harder exercise, usually fewer reps or seconds than the old exercise, plus a sensible new progression increment and ceiling. ' +
-    'Keep set count and rest reasonably close to the current exercise. If the new exercise also has a clear harder next step, include it in ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
-    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+function swapAIPrompt(ex,swap){
+  return [
+    'Replace this home-workout exercise with the specified harder progression.',
+    'Return exactly ONE complete NEW exercise block and nothing else: no Markdown and no explanation.',
+    'The replacement must remain the same general movement pattern and preserve unilateral/bilateral nature when appropriate.',
+    'Do not introduce new equipment unless it is explicitly implied by TARGET REPLACEMENT or already used by the current exercise.',
+    'Choose fresh starting values appropriate for the harder exercise; usually use fewer reps/seconds than the old ceiling, then define a sensible progression and ceiling.',
+    'Keep set count and rest reasonably close unless the harder movement genuinely requires a change.',
+    'If the new exercise itself has a clear later progression that cannot be handled by reps/time/weight alone, you may include ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.',
+    'USER: '+userForAI(),
+    'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
+    'WHY: the current exercise reached its useful progression ceiling.',
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    exAnswerFormat()
+  ].join('\n\n');
 }
 
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
