@@ -96,7 +96,14 @@ async function forget(req, res, body){
          нечем: ключ снимается, привязка к почте снимается. Освободить ник нельзя —
          его носят программы, уже лежащие в каталоге, и чужой человек, назвавшись
          так же, унаследовал бы их автора. */
-      if(all){ t.keyHash = ''; delete t.mailHash; }
+      if(all){
+        t.keyHash = '';
+        delete t.mailHash;
+        // Ник остаётся занятым ради уже опубликованного авторства, но хранить для
+        // этого hash удалённой почты не нужно. Tombstone не позволяет захватить ник
+        // заново и при этом не связывает его с удалённым email.
+        await store.set(`h:${handle}`, 'deleted');
+      }
       await store.set(`t:${handle}`, JSON.stringify(t));
       wiped = true;
     }
@@ -146,11 +153,25 @@ async function forget(req, res, body){
   }
 
   /* Ссылки, отправленные подопечным, вместе с отчётами и счётчиками открытий.
-     Их список знает только телефон тренера — на сервере он нигде не собран,
-     и собирать его ради одного удаления значило бы завести ещё одно место,
-     где хранится «кто кому что отправил». */
-  const want = (Array.isArray(body && body.links) ? body.links : [])
-    .map(x => String(x || '')).filter(x => /^[0-9a-z]{4,16}$/.test(x)).slice(0, 300);
+     Список с телефона используем как быстрый путь, но он не может быть единственным:
+     после переустановки или удаления на другом устройстве локальная картотека бывает
+     неполной. Полное удаление — редкая операция, поэтому здесь допустим SCAN по p:*,
+     чтобы найти все server links этого trainer handle. */
+  const want = new Set((Array.isArray(body && body.links) ? body.links : [])
+    .map(x => String(x || '')).filter(x => /^[0-9a-z]{4,16}$/.test(x)).slice(0, 300));
+  if(okHandle){
+    const keys = await store.scan('p:*', 20000);
+    for(const key of keys){
+      const m = /^p:([0-9a-z]{4,16})$/.exec(String(key || ''));
+      if(!m) continue;
+      const rec = await store.get(key);
+      if(!rec) continue;
+      try{
+        const p = JSON.parse(rec);
+        if(p && p.by === handle) want.add(m[1]);
+      }catch(_){}
+    }
+  }
   for(const id of want){
     const rec = await store.get(`p:${id}`);
     if(!rec) continue;
@@ -162,6 +183,7 @@ async function forget(req, res, body){
     await store.del(`p:${id}:opens`);
     await store.del(`p:${id}:first`);
     await store.del(`p:${id}:last`);
+    await store.del(`reportday:${id}:${new Date().toISOString().slice(0,10)}`);
     links++;
   }
 
