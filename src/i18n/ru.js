@@ -953,6 +953,7 @@ const I18N_RU = {
   'handsfree.mediaTitle': "Fit Timer — тренировка",
   'handsfree.mediaArtist': "Кнопка гарнитуры = следующий этап",
   'handsfree.micDenied': "Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.",
+  'notify.permissionDenied': "Уведомления запрещены в настройках системы. Разреши их для Fit Timer и включи нужный пункт ещё раз.",
   'notify.beforeTitle': "Тренировка через 15 минут",
   'notify.beforeBody': "«{name}» начнётся в {time}. Приготовься!",
   'notify.startTitle': "Наступило время тренировки",

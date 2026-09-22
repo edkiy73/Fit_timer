@@ -953,6 +953,7 @@ const I18N_EN = {
   'handsfree.mediaTitle': "Fit Timer — workout",
   'handsfree.mediaArtist': "Headset button = next step",
   'handsfree.micDenied': "Microphone access is blocked. Allow it for this site in your browser settings.",
+  'notify.permissionDenied': "Notifications are blocked in system settings. Allow them for Fit Timer, then enable this option again.",
   'notify.beforeTitle': "Workout in 15 minutes",
   'notify.beforeBody': "“{name}” starts at {time}. Get ready!",
   'notify.startTitle': "Time to work out",
