@@ -579,7 +579,7 @@ function swapSourceExercise(){
   return src ? {...src, step} : null;
 }
 
-function swapAIPrompt(ex,swap){
+function swapAIPrompt(ex,swap,locale){
   return [
     'Replace this home-workout exercise with the specified harder progression.',
     'Return exactly ONE complete NEW exercise block and nothing else: no Markdown and no explanation.',
@@ -588,11 +588,11 @@ function swapAIPrompt(ex,swap){
     'Choose fresh starting values appropriate for the harder exercise; usually use fewer reps/seconds than the old ceiling, then define a sensible progression and ceiling.',
     'Keep set count and rest reasonably close unless the harder movement genuinely requires a change.',
     'If the new exercise itself has a clear later progression that cannot be handled by reps/time/weight alone, you may include ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.',
-    'USER: '+userForAI(),
+    'USER: '+userForAI(locale),
     'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
     'WHY: the current exercise reached its useful progression ceiling.',
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
-    exAnswerFormat()
+    exAnswerFormat(locale)
   ].join('\n\n');
 }
 
@@ -628,7 +628,7 @@ async function swapViaAI(){
   aiRunOpen(t('workout.swapPicking'));
   let text;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
