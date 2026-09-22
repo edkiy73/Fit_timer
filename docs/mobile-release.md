@@ -42,7 +42,6 @@ index.html + mobile.js + app.config.js
 | `ios/` | Текущий проект Xcode, iOS 15+ |
 | `.github/workflows/android.yml` | Проверка PR и подписанные update-совместимые AAB/APK на каждом push |
 | `.github/workflows/ios.yml` | Проверочная сборка iOS Simulator |
-| `legacy/android-twa/` | Архив прежней TWA, не редактировать |
 
 ## Локальная подготовка
 
