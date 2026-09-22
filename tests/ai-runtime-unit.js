@@ -27,4 +27,43 @@ ok('валидный data-url изображения проходит', img.ok, 
 const badImg = FitAIProtocol.validateResponse('image.cover', 'https://example.com/x.png');
 ok('внешняя ссылка вместо изображения блокируется', !badImg.ok, JSON.stringify(badImg));
 
-process.exit(bad ? 1 : 0);
+(async()=>{
+  process.env.GEMINI_API_KEY = 'unit';
+  process.env.OPENAI_API_KEY = 'unit';
+  const { generate } = require('../lib/ai');
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async (url) => {
+    calls++;
+    if(String(url).includes('generativelanguage.googleapis.com')){
+      return {
+        ok:true,status:200,
+        json:async()=>({candidates:[{content:{parts:[{text:badProgram}]}}]})
+      };
+    }
+    return {
+      ok:true,status:200,
+      json:async()=>({output_text:goodProgram})
+    };
+  };
+  try{
+    const settings = {
+      text:{
+        primary:{provider:'gemini',model:'primary-test'},
+        backup:{provider:'openai',model:'backup-test'}
+      },
+      image:{primary:{provider:'gemini',model:'img-a'},backup:{provider:'openai',model:'img-b'},size:'1K'}
+    };
+    const out = await generate('text', settings, 'prompt', {
+      validate:x=>FitAIProtocol.validateResponse('program.create', x.text)
+    });
+    ok('невалидный HTTP 200 у primary уходит на backup',
+       out.fallback === true && out.provider === 'openai' && out.text === goodProgram && calls === 2,
+       JSON.stringify({fallback:out.fallback,provider:out.provider,calls}));
+  }catch(e){
+    ok('fallback-тест не падает', false, e && e.message);
+  }finally{
+    global.fetch = originalFetch;
+  }
+  process.exit(bad ? 1 : 0);
+})().catch(e=>{ console.error(e); process.exit(1); });
