@@ -1367,13 +1367,30 @@ function applyPastedTranslation(){
     $('fErr').textContent='✓ Перевод вставлен.';
   }catch(e){$('fErr').textContent='Не получилось прочитать JSON. Нужны поля name, gives и text.';}
 }
-async function aiEditProgram(lang,exercise){
-  const question=exercise
-    ? 'Что изменить в упражнении «'+exercise+'»?'
-    : 'Что изменить в программе '+langName(lang)+'?';
-  const instruction=prompt(question,'');
-  if(!instruction)return;
-  $('fErr').textContent=exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…';
+function openAiEditProgram(lang,exercise){
+  aiEditTarget={lang:lang==='en'?'en':'ru',exercise:exercise||''};
+  const box=$('fAiEditBox'),title=$('fAiEditTitle'),input=$('fAiInstruction');
+  if(!box||!input)return;
+  title.textContent=exercise?'Изменить упражнение «'+exercise+'» через ИИ':'Изменить программу '+langName(aiEditTarget.lang)+' через ИИ';
+  input.value='';
+  input.placeholder=exercise?'Например: замени на вариант без прыжков и сохрани ту же нагрузку':'Например: добавь ещё один тренировочный день на спину и плечи';
+  box.hidden=false;
+  input.focus();
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeAiEditProgram(){
+  aiEditTarget=null;
+  const box=$('fAiEditBox'),input=$('fAiInstruction');
+  if(box)box.hidden=true;
+  if(input)input.value='';
+}
+async function aiEditProgram(){
+  if(!aiEditTarget)return;
+  const lang=aiEditTarget.lang,exercise=aiEditTarget.exercise;
+  const instruction=($('fAiInstruction').value||'').trim();
+  if(!instruction){$('fAiEditState').textContent='Опиши, что нужно изменить.';return;}
+  const btn=$('fAiEditApply');
+  btn.disabled=true;$('fAiEditState').textContent=exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…';
   try{
     const r=await api('catalog_ai_edit',{
       mode:exercise?'exercise':'program',
@@ -1385,7 +1402,10 @@ async function aiEditProgram(lang,exercise){
     setLocaleForm(lang,r.locale||{});
     updateLocaleStates();renderExerciseCards();renderPics();
     $('fErr').textContent='✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.';
-  }catch(e){$('fErr').textContent='ИИ не изменил: '+(e.detail||e.message);}
+    closeAiEditProgram();
+  }catch(e){
+    $('fAiEditState').textContent='ИИ не изменил: '+(e.detail||e.message);
+  }finally{btn.disabled=false;}
 }
 function renderExerciseCards(){
   const box=$('exerciseCards');if(!box)return;
@@ -1399,7 +1419,7 @@ function renderExerciseCards(){
       <div class="exercise-card-head"><div class="exercise-card-title">${esc(ex.name)}</div><button class="b quiet" type="button">Изменить через ИИ</button></div>
       ${ex.description?`<p>${esc(ex.description)}</p>`:''}
       ${ex.format||ex.value?`<div class="entity-tags"><span class="status-chip">${esc(ex.format||'формат')}</span>${ex.value?`<span class="status-chip">${esc(ex.value)}</span>`:''}</div>`:''}`;
-    card.querySelector('button').onclick=()=>aiEditProgram(editorLang,ex.name);
+    card.querySelector('button').onclick=()=>openAiEditProgram(editorLang,ex.name);
     box.appendChild(card);
   });
 }
