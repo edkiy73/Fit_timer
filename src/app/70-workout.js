@@ -1255,12 +1255,37 @@ function playFinishFx(after){
    Формулировки не привязаны к полу: приложением пользуются и женщины, и мужчины.
    desc бывает функцией — см. badgeDesc(): «Личный рекорд» обязан показывать нынешний
    рекорд, а не застывшее число того дня, когда плашка выдалась. */
+function activeWeekStreak(history){
+  const weeks = new Set();
+  (history || []).forEach(h => {
+    if(!h || !h.d) return;
+    const d = new Date(h.d + 'T12:00:00');
+    if(isNaN(d)) return;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    weeks.add(localISO(monday));
+  });
+  const sorted = [...weeks].sort();
+  let best = 0, cur = 0, prev = null;
+  sorted.forEach(iso => {
+    const d = new Date(iso + 'T12:00:00');
+    if(prev){
+      const days = Math.round((d - prev) / 86400000);
+      cur = days === 7 ? cur + 1 : 1;
+    } else cur = 1;
+    if(cur > best) best = cur;
+    prev = d;
+  });
+  return best;
+}
+
 const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
   // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
   {id: 'body',  ico: 'chart',    name: 'Под наблюдением',     desc: '4 записи веса или замеров',          test: () => (stats.weights || []).length >= 4},
   {id: 'notes', ico: 'book',     name: 'Дневник',             desc: 'Заметка после тренировки',           test: () => (stats.history || []).some(h => (h.note || '').trim())},
+  {id: 't5',    ico: 'bolt',     name: 'Первые пять',         desc: '5 тренировок',                       test: () => (stats.count || 0) >= 5},
   {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
   {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
   {id: 'ph2',   ico: 'camera',   name: 'Было и стало',        desc: 'Два снимка прогресса',               test: () => (photos || []).length >= 2},
@@ -1283,6 +1308,7 @@ const BADGES = [
   {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
   {id: 'duo',   ico: 'user',     name: 'Не в одиночку',       desc: 'Второй профиль на устройстве',       test: () => (users || []).length >= 2},
   // не «сколько всего», а «как давно не бросил»: три разных месяца в истории
+  {id: 'month', ico: 'calendar', name: 'Четыре недели',       desc: 'Тренировки 4 недели подряд',         test: () => activeWeekStreak(stats.history) >= 4},
   {id: 'season', ico: 'target',  name: 'Три месяца',          desc: 'Тренировки в трёх разных месяцах',   test: () => new Set((stats.history || []).map(h => (h.d || '').slice(0, 7)).filter(Boolean)).size >= 3},
   // Возвращение после перерыва — то, за что стоит хвалить сильнее всего: бросить
   // проще, чем начать заново. Считаем разрыв между соседними тренировками: если он
