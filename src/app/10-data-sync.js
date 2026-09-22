@@ -109,6 +109,7 @@ function clientErrorPayload(kind, error, fallbackMessage){
     name:String((e && e.name) || 'Error').slice(0,80),
     message:String((e && e.message) || fallbackMessage || 'unknown').slice(0,700),
     stack:String((e && e.stack) || '').slice(0,4000),
+    build:String(window.FIT_TIMER_BUILD || '').slice(0,80),
     platform:analyticsPlatform(),
     locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
   };
