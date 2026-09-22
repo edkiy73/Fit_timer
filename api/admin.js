@@ -16,6 +16,7 @@ const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
 const { analyticsStats } = require('../lib/analytics');
+const { clientErrorStats } = require('../lib/diagnostics');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -524,6 +525,10 @@ module.exports = async (req, res) => {
 
   if(a === 'analytics_stats'){
     return send(res,200,{ok:true,stats:await analyticsStats(body&&body.days)});
+  }
+
+  if(a === 'client_errors'){
+    return send(res,200,{ok:true,stats:await clientErrorStats()});
   }
 
   if(a === 'user_create'){
