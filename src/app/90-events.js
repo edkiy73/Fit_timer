@@ -1968,6 +1968,9 @@ try{
   renderGreeting();
   renderToday();
   checkSchedules();
+  // Критичные локальные данные уже восстановлены — дальше идут только второстепенные
+  // настройки и сеть, поэтому основной интерфейс можно показать без дефолтного флэша.
+  document.body.classList.remove('booting');
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
   if(hasScheduledWorkout && getNotificationPrefs().workouts !== false && window.FitNative && window.FitNative.requestNotifications){
@@ -1994,10 +1997,6 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
-
-  // Всё выше — только локальные данные. Показываем уже правильный профиль и тему,
-  // не заставляя экран ждать сеть/Vercel и не показывая промежуточный дефолтный UI.
-  document.body.classList.remove('booting');
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
   await refreshServerSubscription(true);
