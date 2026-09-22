@@ -329,14 +329,7 @@ document.addEventListener('visibilitychange', ()=>{
 // проверяем раз в 20 секунд: не пора ли напомнить о тренировке
 const notifiedKeys = new Set();
 async function showNotification(title, body){
-  try{
-    const reg = ('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null;
-    if(reg && reg.showNotification){
-      reg.showNotification(title, {body, icon:'icon-192.png', badge:'icon-192.png', tag:'fittimer'});
-      return;
-    }
-  }catch(e){}
-  try{ new Notification(title, {body, icon:'icon-192.png'}); }catch(e){}
+  try{ new Notification(title, {body, tag:'fittimer'}); }catch(e){}
 }
 function checkSchedules(){
   if(document.hidden) return;
