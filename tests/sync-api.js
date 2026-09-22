@@ -93,6 +93,25 @@ async function login(deviceId, sub, email = MAIL){
      badReportRead.status === 403 && badReportBody.error === 'bad_key',
      badReportRead.status + ' ' + JSON.stringify(badReportBody));
 
+  // Даже если локальный список ссылок потерян, account deletion обязан найти
+  // trainer links на сервере и удалить их сам.
+  await post('/api/auth',{
+    action:'forget',scope:'all',email:trainerMail,deviceId:'trainer-device-2',
+    syncToken:again.syncToken,handle:nick,trainerKey:again.trainerKey || claimed.trainerKey,links:[]
+  });
+  let linkGone = false;
+  try{ await get('/api/p/' + shared.id); }catch(e){ linkGone = e.status === 404; }
+  ok('удаление аккаунта находит trainer links без локального списка', linkGone);
+
+  const reuseMail = 'reuse-' + Math.random().toString(36).slice(2,8) + '@example.com';
+  const reuse = await login('reuse-device', null, reuseMail);
+  let reserved = false;
+  try{
+    await post('/api/auth',{action:'set_handle',email:reuseMail,deviceId:'reuse-device',
+      syncToken:reuse.syncToken,handle:nick});
+  }catch(e){ reserved = e.status === 409 && e.error === 'handle_taken'; }
+  ok('ник удалённого автора остаётся зарезервирован без передачи новому аккаунту', reserved);
+
   const a = await login('device-a', sub);
   const profile = {id:'profile-one',name:'Лена',gender:'f',age:34,theme:'dark',locale:'en',
     prepSec:7,readySec:4,sideSec:12,voiceVol:85,fxVol:65,
