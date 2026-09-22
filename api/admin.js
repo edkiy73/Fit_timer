@@ -72,24 +72,64 @@ function imageStaticExercise(name, description){
   const s=(String(name||'')+' '+String(description||'')).toLowerCase();
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
+
+function adminMuscleRegions(meta){
+  const exercise=(String(meta.name||'')+' '+String(meta.description||'')).toLowerCase();
+  const out=[];
+  const add=text=>{if(text&&!out.includes(text))out.push(text);};
+  (meta.muscles||[]).forEach(label=>{
+    const key=String(label||'').toLowerCase();
+    if(/ягод|glute/.test(key)) add('gluteus maximus on both sides');
+    else if(/квадриц|quadriceps/.test(key)) add('quadriceps on both legs');
+    else if(/задн.*бед|hamstring/.test(key)) add('hamstrings on both legs');
+    else if(/икр|calves|calf/.test(key)) add('calf muscles on both legs');
+    else if(/груд|chest/.test(key)) add('pectoralis major on both sides of the chest');
+    else if(/плеч|shoulder/.test(key)) add('deltoid muscles on both shoulders');
+    else if(/пресс|core|abs|abdom/.test(key)) add('rectus abdominis and obliques on both sides of the core');
+    else if(/рук|arms/.test(key)) add('upper-arm muscles on both arms');
+    else if(/шея|neck/.test(key)) add('neck stabilizer muscles on both sides');
+    else if(/спин|back/.test(key)){
+      if(/присед|squat|станов|deadlift|румын|romanian|наклон|good morning|hip hinge/.test(exercise))
+        add('lower back / spinal erectors on both sides');
+      else
+        add('latissimus dorsi and mid-back muscles on both sides');
+    } else add(String(label||'').trim());
+  });
+  return out;
+}
+function adminImageCharacterStyle(gender){
+  return gender==='man'
+    ? 'lifelike male athlete, natural skin tone, attractive masculine face, strong athletic physique'
+    : 'lifelike female athlete, natural skin tone, beautiful feminine face, fit athletic physique';
+}
+
 function adminExerciseImagePrompt(meta){
   const equipment=imageEquipment(meta.name,meta.description);
-  const muscles=(meta.muscles||[]).filter(Boolean).slice(0,12);
+  const regions=adminMuscleRegions(meta);
+  const muscleLines=regions.length
+    ? ['Highlight ONLY these exact muscle regions:'].concat(regions.map(x=>'- '+x)).join(' ')
+    : 'Highlight only the primary working muscle regions that are clearly required by this movement.';
   return [
     'Create a 4:3 instructional fitness illustration for "'+meta.name+'" in the Fit Timer app.',
-    'VISUAL SYSTEM: premium stylized-realistic 3D fitness illustration with a lifelike athlete, natural skin tone, natural face, realistic dark sportswear and believable human proportions. Do NOT render the athlete as a gray mannequin, statue or monochrome anatomy model.',
-    'BACKGROUND: a real modern gym environment, softly blurred and understated, with large simple equipment shapes and realistic depth. The background must support the exercise without competing with it. Avoid an empty studio background.',
-    'BRAND ACCENTS: use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for movement arrows, subtle rim light and small environmental light accents. Do NOT use violet to highlight muscles.',
-    'Character: '+meta.gender+'. Keep the same natural visual treatment across the whole image set.',
+    'Create a premium, clean, high-end fitness illustration. The result must feel like an expensive modern app visual, not a cheap infographic.',
+    'VISUAL STYLE: stylized-realistic premium 3D fitness illustration, '+adminImageCharacterStyle(meta.gender)+', realistic dark sportswear, believable human proportions, high-end polished rendering.',
+    meta.gender==='man'
+      ?'Do NOT render the athlete as a gray mannequin, anatomy statue, monochrome model, plastic character, awkward weak-looking person, or nerdy-looking character.'
+      :'Do NOT render the athlete as a gray mannequin, anatomy statue, monochrome model, plastic character, awkward weak-looking person, or generic fashion model.',
+    'BACKGROUND: show a premium modern gym environment with depth, atmosphere and good lighting. The background must be softly blurred and secondary, but still feel alive and real. Do NOT use a flat gray empty background. Use visible light sources, soft gradients, realistic gym shapes, contrast and depth.',
+    'BRAND ACCENTS: use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents. Do NOT use violet for muscle highlighting.',
     meta.description?'Technique context: '+meta.description:null,
     equipment.length?'Required equipment: '+equipment.join(', ')+'. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.':'Do not invent equipment that is not required by this movement.',
     imageStaticExercise(meta.name,meta.description)
       ?'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      :'Show exactly TWO body depictions total in one coherent scene: one main fully detailed athlete and one secondary semi-transparent ghost pose for the other endpoint of the movement. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures and never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position; never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary and less dominant than the main figure. Add one or two clean violet-lavender arrows that show the movement direction. Do not use split-screen panels.',
-    muscles.length?'Highlight ONLY these main working muscles with a restrained warm red anatomical heat-map glow: '+muscles.join(', ')+'.':'Highlight only the primary working muscles with a restrained warm red anatomical heat-map glow.',
-    'Muscle highlighting must remain localized to the working muscles and readable on top of natural skin/clothing colors; do not turn the whole body red.',
+      :'Show exactly TWO body depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary and less dominant than the main figure.',
+    imageStaticExercise(meta.name,meta.description)?null:'Add one or two clean violet-lavender arrows showing the movement direction.',
+    muscleLines,
+    'Do not highlight any other muscles.',
+    'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
+    'Use the same clearly visible warm red to red-orange glow intensity, the same anatomical placement and the same highlighted area each time. Keep the highlighting symmetrical, localized and anatomically consistent. The highlighted muscles must read instantly without turning the whole body red.',
     meta.format?'Exercise format: '+meta.format+'.':null,
-    'Choose the camera angle for maximum technical clarity, usually side or three-quarter view. Keep the relevant hands, feet, joints and equipment visible; avoid decorative cropping.',
+    'Choose a side or three-quarter camera angle for maximum technical clarity. Keep the important joints, limbs and equipment visible. Avoid decorative cropping.',
     'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
     'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, frames, borders, corner badges, decorative sparkles, collage or watermarks.'
   ].filter(Boolean).join(' ');
