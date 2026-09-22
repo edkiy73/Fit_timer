@@ -679,26 +679,38 @@ const SYNC = {
    на сервер уходят только stats, index и program:<id>. */
 let syncTimer = null;
 let syncBusy = null;
+let syncUploadBusy = null;
+let syncUploadAgain = false;
 let syncReplaceLocal = false;
 let syncState = 'idle';
 let syncStep = 0;
 let syncTotal = 0;
+let syncDetail = '';
 
-function showSyncState(state, step, total){
+function showSyncState(state, step, total, detailKey){
   syncState = state;
   if(state === 'busy'){
-    if(step !== undefined) syncStep = +step || 0;
-    if(total !== undefined) syncTotal = +total || 0;
+    // Вызов только с state идёт из renderAccount(): он не должен стирать уже
+    // показанный этап. Явные 0/0 используются там, где нужен обычный busy без прогресса.
+    if(step !== undefined || total !== undefined || detailKey !== undefined){
+      syncStep = +step || 0;
+      syncTotal = +total || 0;
+      syncDetail = detailKey || '';
+    }
   }else{
     syncStep = 0;
     syncTotal = 0;
+    syncDetail = '';
   }
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
   else if(!isPremium()) el.textContent = t('sync.premiumOnly');
-  else if(state === 'busy' && syncStep && syncTotal) el.textContent = t('sync.progress',{step:syncStep,total:syncTotal});
-  else if(state === 'busy') el.textContent = t('sync.busy');
+  else if(state === 'busy' && syncStep && syncTotal && syncDetail){
+    el.textContent = t('sync.progress',{step:syncStep,total:syncTotal,detail:t(syncDetail)});
+  } else if(state === 'busy' && syncStep && syncTotal){
+    el.textContent = t('sync.progressShort',{step:syncStep,total:syncTotal});
+  } else if(state === 'busy') el.textContent = t('sync.busy');
   else if(state === 'ok') el.textContent = t('sync.ok');
   else if(state === 'error') el.textContent = t('sync.error');
   else el.textContent = t('sync.account');
@@ -1135,7 +1147,6 @@ const accountSyncAdapter = {
     // По одному документу: программа может содержать свои картинки и быть крупной;
     // общий пакет тогда упирается в предел запроса, хотя каждый документ допустим.
     for(const doc of payload) await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
-    showSyncState('ok');
   },
   async pull(){
     const result = await syncApiPost(syncAuth('pull'));
@@ -1165,6 +1176,36 @@ async function pushDeletedProfiles(){
   await saveAccount();
 }
 
+async function flushAccountSync(){
+  if(syncUploadBusy){
+    syncUploadAgain = true;
+    return syncUploadBusy;
+  }
+  showSyncState('busy', 3, 3, 'sync.stage.upload');
+  syncUploadBusy = (async()=>{
+    try{
+      // Самая тяжёлая часть намеренно последняя и фоновая: все профили и их
+      // документы могут потребовать много последовательных запросов.
+      await pushDeletedProfiles();
+      await pushAllProfiles();
+      await pushAccountDocs();
+      await SYNC.push();                     // в том числе надгробия удалённых программ
+      showSyncState('ok');
+      return true;
+    }catch(e){
+      showSyncState('error');
+      return false;
+    }finally{
+      syncUploadBusy = null;
+      if(syncUploadAgain){
+        syncUploadAgain = false;
+        setTimeout(()=> flushAccountSync(), 0);
+      }
+    }
+  })();
+  return syncUploadBusy;
+}
+
 async function connectAccountSync(opts){
   if(!account || !account.email || !account.syncToken || !identity){
     showSyncState('idle');
@@ -1177,29 +1218,25 @@ async function connectAccountSync(opts){
   }
   if(syncBusy) return syncBusy;
   syncReplaceLocal = !!(opts && opts.replaceLocal);
-  showSyncState('busy', 1, 6);
+  showSyncState('busy', 1, 3, 'sync.stage.check');
   syncBusy = (async()=>{
     try{
       SYNC.adapter = accountSyncAdapter;
-      await pushDeletedProfiles();          // удаление должно дойти до pull, иначе профиль воскреснет
-      showSyncState('busy', 2, 6);
-      await accountSyncAdapter.pull();       // сначала вернуть серверное, потом отправлять местное
-      showSyncState('busy', 3, 6);
-      await pushDeletedProfiles();           // pull мог найти и схлопнуть старые пустые дубликаты
-      await pushAllProfiles();
-      showSyncState('busy', 4, 6);
-      await pushAccountDocs();
-      showSyncState('busy', 5, 6);
-      await SYNC.push();                     // в том числе надгробия удалённых программ
-      showSyncState('busy', 6, 6);
-      await loadIdentity();
-      await loadData();
-      renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
-      applyThemeFor(curUser());
-      showSyncState('ok');
+      // Удаление должно дойти до pull, иначе сервер может вернуть уже удалённый профиль.
+      await pushDeletedProfiles();
+      showSyncState('busy', 2, 3, 'sync.stage.download');
+      await accountSyncAdapter.pull();
+
+      // После pull актуальные данные уже применены и интерфейс можно считать готовым.
+      // Долгую выгрузку не ждём: она идёт последним этапом в фоне.
+      flushAccountSync();
       return true;
-    }catch(e){ showSyncState('error'); return false; }
-    finally{ syncBusy = null; }
+    }catch(e){
+      showSyncState('error');
+      return false;
+    }finally{
+      syncBusy = null;
+    }
   })();
   return syncBusy;
 }
@@ -1208,10 +1245,7 @@ function queueAccountSync(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
-    showSyncState('busy');
-    if(SYNC.adapter) Promise.all([SYNC.push(), pushAccountDocs()])
-      .then(()=> showSyncState('ok'))
-      .catch(()=> showSyncState('error'));
+    if(SYNC.adapter) flushAccountSync();
     else connectAccountSync().catch(()=> showSyncState('error'));
   }, 900);
 }
