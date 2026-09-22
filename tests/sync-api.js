@@ -105,6 +105,43 @@ async function login(deviceId, sub, email = MAIL){
   ok('подопечные синхронизируются на уровне аккаунта',
      clientsDoc && JSON.parse(clientsDoc.value)[0].name === 'Маша');
 
+  // Два serverless-запроса одного аккаунта могут прийти одновременно. Оба документа
+  // обязаны остаться в manifest: раньше read-modify-write мог потерять один из них.
+  const raceAt = '2026-09-17T13:00:00.000Z';
+  await Promise.all([
+    post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,profiles:[],docs:[
+      {profileId:profile.id,key:'program:race-a',rev:1,at:raceAt,schema:1,
+       value:JSON.stringify({id:'race-a',name:'Параллельная A'})}
+    ]}),
+    post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,profiles:[],docs:[
+      {profileId:profile.id,key:'program:race-b',rev:1,at:raceAt,schema:1,
+       value:JSON.stringify({id:'race-b',name:'Параллельная B'})}
+    ]})
+  ]);
+  const afterRace = await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-a',token:a.syncToken});
+  const raceProfile = afterRace.profiles.find(x=>x.user.id===profile.id);
+  ok('одновременные push не теряют документы',
+     raceProfile && raceProfile.docs.some(d=>d.key==='program:race-a')
+       && raceProfile.docs.some(d=>d.key==='program:race-b'),
+     raceProfile && raceProfile.docs.map(d=>d.key).join(','));
+
+  // Часы устройства не определяют победителя. Более высокая ревизия должна принятьcя,
+  // даже если её timestamp выглядит намного старше уже сохранённой.
+  await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,profiles:[],docs:[
+    {profileId:profile.id,key:'program:clock',rev:2,at:'2035-01-01T00:00:00.000Z',schema:1,
+     value:JSON.stringify({id:'clock',name:'Старшая дата'})}
+  ]});
+  await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,profiles:[],docs:[
+    {profileId:profile.id,key:'program:clock',rev:3,at:'2020-01-01T00:00:00.000Z',schema:1,
+     value:JSON.stringify({id:'clock',name:'Новая ревизия'})}
+  ]});
+  const afterClock = await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-a',token:a.syncToken});
+  const clockProfile = afterClock.profiles.find(x=>x.user.id===profile.id);
+  const clockDoc = clockProfile && clockProfile.docs.find(d=>d.key==='program:clock');
+  ok('ревизия важнее неверных часов устройства',
+     clockDoc && clockDoc.rev === 3 && JSON.parse(clockDoc.value).name === 'Новая ревизия',
+     clockDoc && `rev=${clockDoc.rev}, at=${clockDoc.at}`);
+
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,
     profiles:[{user:{id:profile.id},at:'2026-09-17T12:00:00.000Z',deleted:true}],docs:[]});
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,
