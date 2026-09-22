@@ -151,10 +151,12 @@ async function forget(req, res, body){
       }
 
       // Shared link принадлежит тренеру, поэтому при удалении аккаунта подопечного
-      // саму ссылку не трогаем. Убираем только claim, связывающий её с удалённым
-      // account hash; иначе trainer link продолжал бы хранить псевдонимизированный email.
+      // саму ссылку не трогаем. Убираем claim и только те отчёты, которые сервер
+      // ранее пометил hash этого аккаунта. Старые/анонимные link-scoped отчёты
+      // намеренно не угадываем по имени.
       for(const key of await store.scan('p:*', 100000)){
-        if(!/^p:[0-9a-z]{4,16}$/.test(String(key || ''))) continue;
+        const m = /^p:([0-9a-z]{4,16})$/.exec(String(key || ''));
+        if(!m) continue;
         const raw = await store.get(key);
         if(!raw) continue;
         try{
@@ -165,6 +167,14 @@ async function forget(req, res, body){
             await store.set(key, JSON.stringify(link));
           }
         }catch(_){}
+        const reportsKey = `p:${m[1]}:reports`;
+        const reports = await store.list(reportsKey);
+        for(const row of reports){
+          try{
+            const rec = JSON.parse(row);
+            if(rec && rec._account === mh) await store.removeFromList(reportsKey, row);
+          }catch(_){}
+        }
       }
 
       // Манифест знает все отдельные документы синхронизации. Сначала читаем его,
