@@ -618,7 +618,7 @@ function autoReport(p){
   let rep;
   try{ rep = buildReport(p); }catch(e){ return; }
   if(!rep.n) return;
-  apiPost('/api/report', {link: p.src, report: rep}).catch(()=>{});
+  apiPost('/api/report', Object.assign({link: p.src, report: rep}, accountAuth())).catch(()=>{});
 }
 
 /* ================= КАТАЛОГ ПРОГРАММ =================
