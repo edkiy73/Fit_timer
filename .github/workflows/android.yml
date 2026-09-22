@@ -20,7 +20,6 @@ on:
       - 'src/**'
       - 'app.js'
       - 'style.css'
-      - 'sw.js'
       - 'index.html'
       - 'mobile.js'
       - 'app.config.js'
