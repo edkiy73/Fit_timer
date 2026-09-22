@@ -215,6 +215,7 @@
     text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom:1px solid var(--line)}
   .data-table td{padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:middle}
   .data-table tr:last-child td{border-bottom:0}
+  .data-table tr.ban{opacity:.58}
   .data-table tbody tr:hover{background:color-mix(in srgb,var(--soft) 55%,transparent)}
   .cell-main{font-weight:650;color:var(--ink);line-height:1.25}
   .cell-sub{color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.3}
@@ -1139,7 +1140,6 @@ function fillForm(c){
     sourceLocale: sourceLocaleOf(c)
   };
   editorLang = form.sourceLocale;
-  $('formTitle').textContent = 'Редактирование программы';
   $('fCat').value = c.cat || 'tone';
   $('fLevel').value = c.level || 'Новичок';
   $('fMin').value = c.min || 20;
