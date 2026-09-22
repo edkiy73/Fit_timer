@@ -636,8 +636,10 @@ async function swapViaAI(){
     return;
   }
   aiRunClose();
+  const checked = aiClientVerdict('exercise.replace', text, {expectedCount:1});
+  if(!checked) return;
   // разбираем ответ тем же парсером, что и обычный импорт — обёртка даёт ему минимальную программу
-  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + text);
+  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checked);
   const got = (program.plans[0] && program.plans[0].exercises[0]) || null;
   if(!got || !(got.name || '').trim()){
     appAlert(t('workout.aiNoExercise'));
