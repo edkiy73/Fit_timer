@@ -35,6 +35,7 @@ const I18N_EN = {
   'store.roleTrainer': 'trainer',
   'store.inside': 'What’s inside',
   'store.locked': 'Program details are available with Premium',
+  'onboarding.start': 'Choose a workout',
   'onboarding.title': 'Train<br>your way',
   'onboarding.lead': 'Choose a ready-made program, get one from your trainer, or build your own. Fit Timer guides you through the workout and tells you when it’s time to progress.',
   'onboarding.programTitle': 'A program for you',
