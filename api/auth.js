@@ -289,7 +289,8 @@ module.exports = async (req, res) => {
   if(act === 'send'){
     // Отправка письма — чувствительная операция: если защитный счётчик недоступен,
     // лучше честно ответить 503, чем превратить сбой Redis в бесплатный mail-bomb.
-    if(!(await rateOkScoped(req, 'auth-send', 30, mh, 3600, true))){
+    if(!(await rateOkScoped(req, 'auth-send-ip', 30, '', 3600, true))
+      || !(await rateOkScoped(req, 'auth-send-mail', 10, mh, 3600, true))){
       return fail(res, 429, 'rate_limited');
     }
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается
@@ -328,7 +329,8 @@ module.exports = async (req, res) => {
 
   /* ---- подтвердить код ---- */
   if(act === 'verify'){
-    if(!(await rateOkScoped(req, 'auth-verify', 60, mh, 15 * 60, true))){
+    if(!(await rateOkScoped(req, 'auth-verify-ip', 120, '', 15 * 60, true))
+      || !(await rateOkScoped(req, 'auth-verify-mail', 20, mh, 15 * 60, true))){
       return fail(res, 429, 'rate_limited');
     }
     // Обычный email-код и одноразовый код из админки используют один и тот же
