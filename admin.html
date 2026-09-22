@@ -160,10 +160,9 @@
     padding:4px 8px;font-size:12px;color:var(--muted)}
   .status-chip.ok{color:var(--ok)}
   .sticky-save{
-    position:sticky;bottom:10px;z-index:15;margin:16px -4px 0;padding:10px;
-    border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--card) 94%,transparent);
-    backdrop-filter:blur(12px);box-shadow:0 8px 30px rgba(0,0,0,.12);
-    display:flex;align-items:center;justify-content:space-between;gap:10px
+    position:sticky;bottom:10px;z-index:15;margin:14px 0 0;padding:0;
+    background:transparent;border:0;box-shadow:none;backdrop-filter:none;
+    display:flex;align-items:center;justify-content:flex-end;gap:10px
   }
   .sticky-save .save-state{color:var(--muted);font-size:12px;min-height:18px}
   .sticky-save .save-actions{display:flex;gap:6px;margin-left:auto}
@@ -195,7 +194,7 @@
     .row{display:grid;grid-template-columns:1fr}
     .row>*{min-width:0}
     .lang-card{padding:10px;margin:9px 0}
-    .sticky-save{bottom:8px;margin:12px 0 0;padding:8px}
+    .sticky-save{bottom:8px;margin:12px 0 0;padding:0}
     .sticky-save .save-actions{display:grid;grid-auto-flow:column}
     .pics{gap:8px}
     .pic,.pic .ph{width:74px}
@@ -343,6 +342,34 @@
     .ai-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
 
+
+  .entity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .entity-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;position:relative;min-width:0}
+  .entity-card .td-actions{position:absolute;right:10px;top:10px;width:32px}
+  .entity-card-head{display:flex;gap:10px;align-items:flex-start;padding-right:38px}
+  .entity-card-title{font-size:14px;font-weight:700;line-height:1.25}
+  .entity-card-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .entity-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+  .entity-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+  .entity-meta>div{background:var(--soft);border-radius:9px;padding:7px 8px;min-width:0}
+  .entity-meta b{display:block;font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .entity-meta span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+  .catalog-cover{width:52px;height:52px;border-radius:9px;object-fit:cover;background:var(--soft);flex:none}
+  .catalog-cover.empty{display:grid;place-items:center;color:var(--muted);font-size:10px}
+  .payment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .payment-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .payment-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .payment-card-head b{font-size:14px}
+  .payment-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+  .payment-inputs label{margin-top:0}
+  .payment-ready{font-size:11px;color:var(--muted)}
+  .payment-ready.ok{color:var(--ok)}
+  @media(max-width:760px){
+    .entity-grid,.payment-grid{grid-template-columns:1fr}
+    .entity-meta{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .payment-inputs{grid-template-columns:1fr 1fr}
+  }
+
 </style>
 </head>
 <body>
@@ -437,7 +464,8 @@ function translationPrompt(source, from, to){
 let KEY = localStorage.getItem('adminKey') || '';
 let data = {pending: [], approved: [], trainers: [], settings: null, providers: {}};
 let usersCache = null;
-let tab = 'pending';
+const savedTab = localStorage.getItem('adminTab');
+let tab = ['pending','approved','add','trainers','users','campaigns','ai','pricing','payments'].includes(savedTab) ? savedTab : 'pending';
 
 const PAGE_TITLES = {
   pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
@@ -450,6 +478,7 @@ function closeNav(){
 function setTab(next){
   closeRowMenus();
   tab = next;
+  localStorage.setItem('adminTab', tab);
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   closeNav();
@@ -1312,6 +1341,7 @@ async function saveForm(){
     editing = null; editingStatus = null;
     form = {cover:null, media:{}, sourceLocale:'ru'};
     tab = backTo;
+    localStorage.setItem('adminTab', tab);
     await load();
   }catch(e){
     $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
