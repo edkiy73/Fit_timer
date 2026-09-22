@@ -277,8 +277,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 909,
-      "chars": 40691,
+      "lines": 910,
+      "chars": 40712,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -787,8 +787,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2085,
-      "chars": 86974,
+      "lines": 2089,
+      "chars": 87355,
       "symbols": [
         "addExManual",
         "aiRunClose",
@@ -1260,7 +1260,7 @@
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
       "lines": 218,
-      "chars": 18127,
+      "chars": 18143,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
