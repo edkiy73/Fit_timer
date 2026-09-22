@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2142,
-      "chars": 97487,
+      "lines": 2143,
+      "chars": 97547,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -218,8 +218,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 792,
-      "chars": 35417,
+      "lines": 793,
+      "chars": 35466,
       "symbols": [
         "accountBucketKey",
         "bioDisable",
