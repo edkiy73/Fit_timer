@@ -616,7 +616,7 @@ module.exports = async (req, res) => {
       if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i]))continue;
       let end=i+1;
       while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-      out.push({start:i,end,lines:lines.slice(i,end)});
+      out.push({start:i,end,lines:lines.slice(i,end),name:(protocolLine(lines[i])||{}).value||''});
       i=end-1;
     }
     return out;
@@ -635,10 +635,15 @@ module.exports = async (req, res) => {
       vals[p.key].push(p.value);
     });
     const used={},blockMap=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}])),out=[];
+    const usedCand=new Set();
+    const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
     for(let i=0;i<srcLines.length;i++){
       const entry=blockMap.get(i);
       if(entry){
-        const cb=candBlocks[entry.i];
+        let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+        if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i))ci=entry.i;
+        const cb=ci>=0?candBlocks[ci]:null;
+        if(ci>=0)usedCand.add(ci);
         const sourceBlock=entry.b.lines.join('\n');
         const candidateBlock=cb?cb.lines.join('\n'):'';
         const tempName=(protocolLine(entry.b.lines[0])||{}).value||'';
@@ -692,6 +697,8 @@ module.exports = async (req, res) => {
         try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
         const block=String(parsed.block||'').trim();
         if(!block)return fail(res,502,'ai_incomplete');
+        const count=(block.match(/^УПРАЖНЕНИЕ:\s*/gm)||[]).length;
+        if(count!==1)return fail(res,502,'ai_wrong_exercise_count',{count});
         const text=replaceExerciseBlock(locale.text,exercise,block);
         const edited={name:locale.name,gives:locale.gives,text};
         return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
