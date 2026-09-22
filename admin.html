@@ -1014,29 +1014,40 @@ async function savePricingSettings(){
 function renderPayments(b){
   const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
   const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
-  const providerRow=(id,name,ready,enabled,month,year,kind)=>`<tr>
-    <td class="td-primary"><div class="cell-main">${name}</div><div class="cell-sub">${ready?'сервер готов':'не хватает серверных ключей'}</div></td>
-    <td data-label="Включён"><input class="toggle" id="${id}Enabled" type="checkbox"${enabled?' checked':''}></td>
-    <td data-label="Месяц">${kind==='price'?'<span class="muted">из таблицы цен</span>':`<input id="${id}Month" value="${esc(month||'')}" placeholder="product id">`}</td>
-    <td data-label="Год">${kind==='price'?'<span class="muted">из таблицы цен</span>':`<input id="${id}Year" value="${esc(year||'')}" placeholder="product id">`}</td>
-  </tr>`;
-  b.innerHTML=pageHead('Платежи','Провайдеры в одной таблице: статус, включение и идентификаторы товаров.')+`
-    <div class="toolbar"><div style="min-width:220px"><label>Режим</label><select id="payProvider">
-      ${['multi','google','rustore','yookassa'].map(x=>`<option value="${x}"${(pay.provider||'multi')===x?' selected':''}>${x}</option>`).join('')}
-    </select></div><span class="compact-note">Секреты провайдеров хранятся только в Vercel.</span></div>
-    <div class="table-shell"><table class="data-table payment-table">
-      <thead><tr><th>Провайдер</th><th>Включён</th><th>Месяц</th><th>Год</th></tr></thead>
-      <tbody>
-        ${providerRow('google','Google Play',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)}
-        ${providerRow('rustore','RuStore Pay',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year)}
-        ${providerRow('yookassa','ЮKassa',!!bp.yookassa,yoo.enabled!==false,'','','price')}
-        ${providerRow('ios','iOS · позже',false,false,pay.iosMonth,pay.iosYear)}
-      </tbody>
-    </table></div>
+  const card=(id,name,ready,enabled,month,year,kind,disabled)=>`
+    <div class="payment-card">
+      <div class="payment-card-head">
+        <div><b>${name}</b><div class="payment-ready ${ready?'ok':''}">${ready?'сервер готов':'не хватает серверных ключей'}</div></div>
+        <label class="inline-switch" style="min-height:0;margin:0"><input id="${id}Enabled" type="checkbox"${enabled?' checked':''}${disabled?' disabled':''}><span>Включён</span></label>
+      </div>
+      <div class="payment-inputs">
+        ${kind==='price'
+          ? '<div style="grid-column:1/-1"><div class="compact-note">Цена берётся из раздела Premium и цены. Product ID не нужен.</div></div>'
+          : `<div><label>Месяц</label><input id="${id}Month" value="${esc(month||'')}" placeholder="product id"></div>
+             <div><label>Год</label><input id="${id}Year" value="${esc(year||'')}" placeholder="product id"></div>`}
+      </div>
+    </div>`;
+  b.innerHTML=pageHead('Платежи','Провайдеры разложены по карточкам; месяц и год редактируются в одной строке.')+`
+    <div class="form-card">
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Режим оплаты</label><select id="payProvider">
+            ${['multi','google','rustore','yookassa'].map(x=>`<option value="${x}"${(pay.provider||'multi')===x?' selected':''}>${x}</option>`).join('')}
+          </select></div>
+          <div class="wide"><div class="compact-note" style="margin-top:25px">Секретные ключи провайдеров хранятся только в Vercel.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="payment-grid">
+      ${card('google','Google Play',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)}
+      ${card('rustore','RuStore Pay',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year)}
+      ${card('yookassa','ЮKassa',!!bp.yookassa,yoo.enabled!==false,'','','price')}
+      ${card('ios','iOS · позже',false,false,pay.iosMonth,pay.iosYear,'',true)}
+    </div>
     ${saveBar('paySettings','Сохранить платежи')}`;
   $('paySettingsSave').onclick=savePaymentSettings;
-  const ios=$('iosEnabled');if(ios){ios.disabled=true;ios.checked=false;}
 }
+
 async function savePaymentSettings(){
   const s=settingsClone();
   s.payment={
