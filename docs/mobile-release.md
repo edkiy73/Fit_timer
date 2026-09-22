@@ -171,8 +171,11 @@ Team, distribution certificate и provisioning profile создать невоз
    серверная диагностика; фотографии остаются локальными.
 7. Для платных цифровых функций подключить StoreKit и Google Play Billing. Не
    добавлять Stripe-кнопку в iOS без отдельной проверки правил.
-8. Universal/App Links требуют собственного домена и association-файлов. Пока
-   публичные ссылки открываются в браузере, импорт продолжает работать.
+8. Android App Links для программ уже настроены на текущем production-домене:
+   новые ссылки имеют вид `https://fittimer99.vercel.app/p/<id>`, а
+   `/.well-known/assetlinks.json` связывает домен с release-подписью
+   `ru.fittimer.app`. При смене домена или release-сертификата нужно одновременно
+   обновить Android intent filter и association-файл.
 
 ## Проверка релиза
 
@@ -217,6 +220,26 @@ Android WorkManager owns voice-model downloads. They continue when the user leav
 
 Recognition uses the unrestricted small Vosk language model, ignores partial hypotheses, validates only complete command phrases, and applies confidence thresholds (stricter for next/skip than pause/resume) to reduce accidental advances.
 
+
+## Android App Links
+
+Новые ссылки на программы публикуются как:
+
+```text
+https://fittimer99.vercel.app/p/<id>
+```
+
+- Android `MainActivity` принимает только HTTPS-ссылки этого домена с путём
+  `/p/` и использует `android:autoVerify="true"`.
+- Домен подтверждает приложение через `/.well-known/assetlinks.json`.
+- `mobile.js` обрабатывает и холодный запуск через `App.getLaunchUrl()`, и
+  открытие ссылки в уже запущенном приложении через `appUrlOpen`.
+- Если приложение не установлено, Vercel переписывает `/p/<id>` в существующий
+  web-import `/?p=<id>`; браузерный сценарий поэтому остаётся рабочим.
+- Старые ссылки `?p=<id>` продолжают поддерживаться приложением для обратной
+  совместимости, но новые ссылки создаются только в формате `/p/<id>`.
+- Release SHA-256 в `assetlinks.json` должен совпадать с реальным сертификатом
+  подписи. Не менять signing key без отдельной миграции App Links и обновлений.
 
 ## In-app Android updates
 

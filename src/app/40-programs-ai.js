@@ -745,7 +745,7 @@ async function programLink(p, extra){
   // Ник закрепляется за первым, кто им воспользовался: ключ приходит один раз и
   // дальше подтверждает, что профиль правит его хозяин.
   if(r.trainerKey && !trainer.key){ trainer.key = r.trainerKey; saveTrainer(); }
-  return {url: PUBLIC_APP_URL + '?p=' + encodeURIComponent(r.id), id: r.id, key: r.key};
+  return {url: PUBLIC_APP_URL + 'p/' + encodeURIComponent(r.id), id: r.id, key: r.key};
 }
 
 /* Почему ссылки не вышло — человеку, и без запасного пути.
@@ -2358,7 +2358,7 @@ async function createEditedProgram(){
   appAlert(t('program.createdEdited',{name:program.name}) + (carried?t('program.imagesCarried',{count:carried}):''));
 }
 
-/* Короткая ссылка ?p=<id>: программу забираем с сервера. Метка src остаётся в
+/* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в
    программе — по ней потом уедет отчёт, и по ней же подопечный понимает, что программа
    пришла от тренера, а не собрана им самим. */
 async function claimProgramLink(id){

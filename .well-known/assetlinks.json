@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ru.fittimer.app",
+      "sha256_cert_fingerprints": [
+        "94:97:92:14:41:BD:0E:E1:05:C4:ED:D3:7A:24:A1:E8:88:99:81:E9:FA:B3:54:AD:78:45:90:39:1D:87:C7:DA"
+      ]
+    }
+  }
+]

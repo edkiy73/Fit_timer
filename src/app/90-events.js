@@ -1048,6 +1048,12 @@ async function leaveOnboarding(){
     pendingImport = null;
     return;
   }
+  if(pendingNativeLink){
+    const id = pendingNativeLink;
+    pendingNativeLink = null;
+    importProgramLink(id);
+    return;
+  }
   if(pendingLink){
     const id = pendingLink;
     pendingLink = null;
@@ -1902,20 +1908,42 @@ document.querySelectorAll('[data-icon]').forEach(el => {
 // стартовое состояние навигации: «Сегодня» с доком внизу
 show('scrMenu', false);
 
-// параметры запуска: ?import=FIT1... (ссылка на программу) и ярлыки ?today / ?create
+// параметры запуска: ?import=FIT1..., /p/<id> (legacy ?p=<id>) и ярлыки ?today / ?create
 let pendingImport = null;
-let pendingLink = null;     // короткая ссылка ?p=<id> — программа лежит на сервере
+let pendingLink = null;
+let pendingNativeLink = null;
+let programLinksReady = false;
 let pendingAction = null;
+
+window.addEventListener('fitProgramLink', e => {
+  const id = String((e && e.detail && e.detail.id) || '');
+  if(!/^[0-9a-z]{4,16}$/.test(id)) return;
+  try{
+    if(window.FitNative && window.FitNative.consumeProgramLink) window.FitNative.consumeProgramLink();
+  }catch(_){}
+  if(programLinksReady){
+    importProgramLink(id);
+    return;
+  }
+  pendingNativeLink = id;
+});
+
 try{
   const sp = new URLSearchParams(location.search);
   const q = sp.get('import');
   if(q && q.startsWith('FIT1.')) pendingImport = q;
+  const pathLink = String(location.pathname || '').match(/^\/p\/([0-9a-z]{4,16})\/?$/);
+  if(pathLink) pendingLink = pathLink[1];
   const sp_p = sp.get('p');
-  if(sp_p && /^[0-9a-z]{4,16}$/.test(sp_p)) pendingLink = sp_p;
+  if(!pendingLink && sp_p && /^[0-9a-z]{4,16}$/.test(sp_p)) pendingLink = sp_p;
   if(sp.has('today')) pendingAction = 'today';
   if(sp.has('create')) pendingAction = 'create';
   if(pendingImport || pendingLink || pendingAction){
-    history.replaceState({scr: 'scrMenu'}, '', location.pathname); // чистим адрес
+    history.replaceState({scr: 'scrMenu'}, '', '/'); // чистим адрес после разбора ссылки
+  }
+  if(window.FitNative && window.FitNative.consumeProgramLink){
+    const nativeId = String(window.FitNative.consumeProgramLink() || '');
+    if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
   }
 }catch(e){}
 
@@ -2027,6 +2055,7 @@ try{
     await connectAccountSync();
     await refreshTrainerProfile();
   }
+  programLinksReady = true;
   if(pendingImport){
     importProgramCode(pendingImport);
     pendingImport = null;
