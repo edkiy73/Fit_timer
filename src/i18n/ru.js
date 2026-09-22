@@ -35,6 +35,7 @@ const I18N_RU = {
   'store.roleTrainer': 'тренер',
   'store.inside': 'Что внутри',
   'store.locked': 'Состав открыт по подписке',
+  'onboarding.start': 'Выбрать тренировку',
   'onboarding.title': 'Тренируйся<br>по своим правилам',
   'onboarding.lead': 'Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.',
   'onboarding.programTitle': 'Программа под тебя',
