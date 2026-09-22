@@ -45,21 +45,28 @@
    - ⏳ iOS: добавить/проверить Push Notifications capability вместе с реальным signing/provisioning;
    - ⏳ end-to-end на устройстве: register → send → open action → token cleanup.
 
-6. **APK / iOS release pipeline**
-   - update compatibility/signing/versionCode;
-   - signed Android release artifact;
-   - iOS signing/archive/TestFlight path;
-   - не менять существующий signing material для «починки» обновлений.
+6. 🚧 **APK / iOS release pipeline**
+   - ✅ Android release подписывается постоянным key, `apksigner` проходит;
+   - ✅ AAB/APK artifacts и `latest-apk` публикуются автоматически;
+   - ✅ versionCode растёт от GitHub run number;
+   - ✅ iOS Simulator build теперь запускается на push в `main` и проходит;
+   - ⏳ iOS signing/archive/TestFlight требует Apple Developer provisioning/certificates;
+   - ⏳ Push Notifications capability добавить/проверить вместе с iOS signing;
+   - не менять существующий Android signing material для «починки» обновлений.
 
 7. ✅ **Web/PWA cleanup**
    - PWA/service worker/manifest/web PWA icons удалены;
    - старый Android TWA и `.well-known/assetlinks.json` удалены;
    - остаются обычный web + Android/iOS через Capacitor.
 
-8. **CI expansion**
-   - обязательные core auth/catalog/AI/limits/backup checks;
-   - release-sensitive checks перед store work;
-   - не превращать CI в полный e2e на каждый маленький commit без причины.
+8. ✅ **CI expansion**
+   - canonical/generated drift теперь ломает CI, а не маскируется пересборкой;
+   - AI symbol index и i18n проверяются до build;
+   - syntax-check охватывает все `api/lib/tests/scripts`;
+   - sync/auth/AI/push regressions обязательны;
+   - source workflow запускается на `.ai/**` и `scripts/**`;
+   - Android CI больше не стартует на docs/backend-only commits;
+   - iOS simulator CI запускается на релевантные push в `main`.
 
 9. **Billing**
    - Google Play Billing + server receipt verification + RTDN + restore;
