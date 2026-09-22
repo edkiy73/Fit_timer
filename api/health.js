@@ -19,7 +19,7 @@ const { billingProviderStatus } = require('../lib/ai');
 
 /* Метка сборки руками. Номер коммита Vercel подставляет сам, но дата и короткое имя
    правки быстрее показывают, та ли это версия. */
-const BUILT = '2026-09-22 · AI guards и удаление PWA';
+const BUILT = '2026-09-22 · privacy cleanup и push verification';
 
 module.exports = async (req, res) => {
   const i = store.info();
