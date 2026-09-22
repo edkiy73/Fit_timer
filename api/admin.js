@@ -510,14 +510,50 @@ module.exports = async (req, res) => {
     }
     return {lines,start,end};
   }
+  const EXERCISE_OPTIONAL_LABELS = new Set([
+    'ФОРМАТ','ВЕС','УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
+    'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
+    'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
+    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ','ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ'
+  ]);
   function replaceExerciseBlock(text, exerciseName, candidate){
     const src=exerciseBlockRange(text,exerciseName);
     if(src.start<0) return text;
-    const sourceBlock=src.lines.slice(src.start,src.end).join('\n');
-    // Для редактирования упражнения разрешаем менять значения любых существующих
-    // строк внутри блока, но запрещаем удалять/добавлять labels и менять порядок.
-    const merged=mergeProtocolText(sourceBlock,candidate,null);
-    return src.lines.slice(0,src.start).concat(merged.split('\n'),src.lines.slice(src.end)).join('\n');
+    const sourceLines=src.lines.slice(src.start,src.end);
+    const candidateLines=String(candidate||'').split(/\r?\n/);
+    const candidateByKey={};
+    candidateLines.forEach(line=>{
+      const p=protocolLine(line);
+      if(!p) return;
+      if(!candidateByKey[p.key]) candidateByKey[p.key]=[];
+      candidateByKey[p.key].push(p.value);
+    });
+
+    const used={};
+    const existingKeys=new Set();
+    const merged=sourceLines.map(line=>{
+      const p=protocolLine(line);
+      if(!p) return line;
+      existingKeys.add(p.key);
+      const idx=used[p.key]||0;
+      used[p.key]=idx+1;
+      const vals=candidateByKey[p.key]||[];
+      if(idx>=vals.length) return line;
+      return p.key+': '+String(vals[idx]||'').trim();
+    });
+
+    // Для редактирования упражнения разрешаем ДОБАВИТЬ только официальные
+    // optional-поля парсера. Это позволяет превратить упражнение без веса в
+    // «повторения и вес», задать 8 кг, шаг/потолок и т.п., но не даёт модели
+    // изобретать новые служебные labels.
+    candidateLines.forEach(line=>{
+      const p=protocolLine(line);
+      if(!p || existingKeys.has(p.key) || !EXERCISE_OPTIONAL_LABELS.has(p.key)) return;
+      merged.push(p.key+': '+String(p.value||'').trim());
+      existingKeys.add(p.key);
+    });
+
+    return src.lines.slice(0,src.start).concat(merged,src.lines.slice(src.end)).join('\n');
   }
 
   if(a === 'catalog_ai_edit'){
@@ -541,9 +577,13 @@ module.exports = async (req, res) => {
           'Edit exactly this ONE Fit Timer exercise block according to the instruction.',
           'Return ONLY valid JSON: {"block":"..."}. No Markdown.',
           'CRITICAL STRUCTURE RULES:',
-          '- Keep every existing protocol line and every label before the colon.',
-          '- Keep the same line order and same number of protocol lines.',
-          '- Never delete a line. If the user asks to remove/disable a setting, KEEP its label and set a neutral value: 0 for numeric/rest values, false for boolean values.',
+          '- Keep every existing protocol line and every existing label before the colon.',
+          '- Never delete an existing line.',
+          '- You MAY add only valid optional exercise fields when the requested change requires them.',
+          '- Valid optional fields: ФОРМАТ, ВЕС, УСЛОЖНЯТЬ, ШАГ, ШАГ ВЕСА, ШАГ ПОВТОРОВ, ШАГ ВРЕМЕНИ, ПОТОЛОК, ПОТОЛОК ВЕСА, ПОТОЛОК ПОВТОРОВ, ПОТОЛОК ВРЕМЕНИ, ПРИ ПОТОЛКЕ, ЗАМЕНА, ОПИСАНИЕ ЗАМЕНЫ.',
+          '- If adding external load such as a kettlebell/dumbbell/barbell, update ФОРМАТ to include "и вес", add ВЕС with the starting kilograms, and add УСЛОЖНЯТЬ: да plus an appropriate ШАГ ВЕСА unless the instruction explicitly says weight must stay fixed.',
+          '- Example for "add an 8 kg kettlebell and progress the load" on a reps exercise: ФОРМАТ: повторения и вес; ВЕС: 8; УСЛОЖНЯТЬ: да; ШАГ ВЕСА: 2. Keep the existing reps/value/sets/rest lines.',
+          '- If the user asks to remove/disable a setting, KEEP its existing label and set a neutral value: 0 for numeric/rest values, false/no for boolean values.',
           '- Do not add another exercise or change anything outside this block.',
           'Instruction: '+instruction,
           'EXERCISE BLOCK:',
