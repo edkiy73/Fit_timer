@@ -138,14 +138,17 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.click('#enter');
   await page.waitForTimeout(900);
   ok('с ключом открывается', await page.isVisible('#app'));
+  await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
   const listed = await page.textContent('#body');
   ok('на вкладке «В каталоге» видны программы', /Кардио без прыжков/.test(listed));
+  await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="trainers"]');
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
      /активность/.test(await page.textContent('#body')));
+  await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="add"]');
   await page.waitForTimeout(300);
   ok('у новой программы есть полноценный режим создания через ИИ',
