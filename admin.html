@@ -105,6 +105,104 @@
   .pic .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;
           border:1px solid var(--line);background:var(--card);color:var(--danger);
           font-size:13px;line-height:1;cursor:pointer;padding:0}
+
+  /* Рабочая админка: desktop sidebar + mobile drawer. */
+  body{padding:0}
+  .admin-shell{min-height:100vh}
+  .side{
+    position:fixed;inset:0 auto 0 0;width:228px;background:var(--card);
+    border-right:1px solid var(--line);padding:18px 12px;z-index:30;overflow:auto
+  }
+  .brand-admin{display:flex;align-items:center;justify-content:space-between;padding:2px 8px 18px}
+  .brand-admin b{font-size:16px}
+  .nav-group{margin:12px 0 18px}
+  .nav-label{padding:0 10px 6px;color:var(--muted);font-size:11px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase}
+  .nav-btn{
+    width:100%;border:0;background:transparent;color:var(--ink);border-radius:10px;
+    padding:9px 10px;margin:2px 0;text-align:left;font:inherit;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:8px
+  }
+  .nav-btn:hover{background:var(--soft)}
+  .nav-btn.on{background:var(--soft);color:var(--accent);font-weight:700}
+  .nav-count{min-width:22px;text-align:center;padding:1px 6px;border-radius:999px;
+    background:var(--bg);font-size:11px;color:var(--muted)}
+  .nav-btn.on .nav-count{color:var(--accent)}
+  .main{margin-left:228px;min-width:0}
+  .topbar-admin{
+    position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)
+  }
+  .topbar-inner{max-width:980px;margin:auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
+  .topbar-inner h1{font-size:18px;margin:0}
+  .topbar-inner small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+  .menu-btn{display:none;width:38px;height:38px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card);color:var(--ink);font-size:20px;line-height:1;cursor:pointer}
+  .content{max-width:980px;margin:auto;padding:14px 20px 72px}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:4px 0 12px}
+  .page-head h2{font-size:20px;line-height:1.2;margin:0}
+  .page-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .card{padding:13px;margin:9px 0;border-radius:12px}
+  .list-card{padding:12px}
+  .list-card .tags{margin:3px 0 6px}
+  .list-card .gives{font-size:13px;margin:5px 0}
+  .list-card .acts{margin-top:9px}
+  button.b,a.b{padding:8px 11px;border-radius:9px;font-size:13px}
+  .acts{gap:6px;margin-top:10px}
+  label{margin-top:8px}
+  input,select,textarea{padding:10px 11px;border-radius:9px}
+  textarea{min-height:100px}
+  .row{gap:8px}
+  .section-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .section-grid .card{margin:0}
+  .status-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .status-chip{border:1px solid var(--line);background:var(--soft);border-radius:999px;
+    padding:4px 8px;font-size:12px;color:var(--muted)}
+  .status-chip.ok{color:var(--ok)}
+  .sticky-save{
+    position:sticky;bottom:10px;z-index:15;margin:16px -4px 0;padding:10px;
+    border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--card) 94%,transparent);
+    backdrop-filter:blur(12px);box-shadow:0 8px 30px rgba(0,0,0,.12);
+    display:flex;align-items:center;justify-content:space-between;gap:10px
+  }
+  .sticky-save .save-state{color:var(--muted);font-size:12px;min-height:18px}
+  .sticky-save .save-actions{display:flex;gap:6px;margin-left:auto}
+  .compact-note{margin:4px 0;color:var(--muted);font-size:12px}
+  .nav-shade{display:none}
+  .gate .card{padding:18px}
+  @media(max-width:760px){
+    .side{transform:translateX(-102%);transition:transform .2s ease;width:min(84vw,300px);
+      box-shadow:18px 0 45px rgba(0,0,0,.22)}
+    .side.open{transform:none}
+    .nav-shade{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25;
+      opacity:0;pointer-events:none;transition:opacity .2s}
+    body.nav-open .nav-shade{opacity:1;pointer-events:auto}
+    .main{margin-left:0}
+    .menu-btn{display:block;flex:none}
+    .topbar-inner{padding:10px 12px}
+    .content{padding:10px 10px 72px}
+    .page-head{align-items:flex-start;margin-top:2px}
+    .page-head h2{font-size:18px}
+    .section-grid{grid-template-columns:1fr}
+    .card{padding:11px;margin:7px 0;border-radius:11px}
+    .list-card{padding:10px}
+    img.cover{width:48px;height:48px;border-radius:8px}
+    .name{font-size:15px}
+    .tags,.muted{font-size:12px}
+    .gives{font-size:13px}
+    .acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .acts .b{width:100%;text-align:center;padding:9px 8px}
+    .row{display:grid;grid-template-columns:1fr}
+    .row>*{min-width:0}
+    .lang-card{padding:10px;margin:9px 0}
+    .sticky-save{bottom:8px;margin:12px 0 0;padding:8px}
+    .sticky-save .save-actions{display:grid;grid-auto-flow:column}
+    .pics{gap:8px}
+    .pic,.pic .ph{width:74px}
+    .pic .ph{height:74px}
+    pre{max-height:240px;padding:9px}
+  }
+
 </style>
 </head>
 <body>
@@ -118,20 +216,39 @@
 </div>
 
 <div id="app" hidden>
-  <header><div class="wrap">
-    <h1>Админка Fit Timer</h1>
-    <div class="tabs">
-      <button class="tab on" data-tab="pending">На проверке <span id="nPending"></span></button>
-      <button class="tab" data-tab="approved">В каталоге <span id="nApproved"></span></button>
-      <button class="tab" data-tab="trainers">Тренеры <span id="nTrainers"></span></button>
-      <button class="tab" data-tab="users">Пользователи</button>
-      <button class="tab" data-tab="add">Добавить</button>
-      <button class="tab" data-tab="settings">ИИ и тариф</button>
-      <button class="tab" data-tab="campaigns">Рассылки</button>
-      <button class="tab" id="out" style="margin-left:auto">Выйти</button>
-    </div>
-  </div></header>
-  <div class="wrap" id="body"></div>
+  <div class="admin-shell">
+    <aside class="side" id="adminNav">
+      <div class="brand-admin"><b>FIT / ADMIN</b><button class="b quiet" id="out">Выйти</button></div>
+      <div class="nav-group">
+        <div class="nav-label">Каталог</div>
+        <button class="nav-btn on" data-tab="pending"><span>На проверке</span><span class="nav-count" id="nPending"></span></button>
+        <button class="nav-btn" data-tab="approved"><span>В каталоге</span><span class="nav-count" id="nApproved"></span></button>
+        <button class="nav-btn" data-tab="add"><span>Добавить программу</span></button>
+        <button class="nav-btn" data-tab="trainers"><span>Тренеры</span><span class="nav-count" id="nTrainers"></span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Аккаунты</div>
+        <button class="nav-btn" data-tab="users"><span>Пользователи</span></button>
+        <button class="nav-btn" data-tab="campaigns"><span>Рассылки</span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Система</div>
+        <button class="nav-btn" data-tab="ai"><span>ИИ</span></button>
+        <button class="nav-btn" data-tab="pricing"><span>Premium и цены</span></button>
+        <button class="nav-btn" data-tab="payments"><span>Платежи</span></button>
+      </div>
+    </aside>
+    <div class="nav-shade" id="navShade"></div>
+    <main class="main">
+      <header class="topbar-admin">
+        <div class="topbar-inner">
+          <button class="menu-btn" id="navOpen" aria-label="Меню">☰</button>
+          <div><h1 id="pageTitle">На проверке</h1><small>Fit Timer · админка</small></div>
+        </div>
+      </header>
+      <div class="content" id="body"></div>
+    </main>
+  </div>
 </div>
 
 <script>
