@@ -32,7 +32,7 @@
      где её больше нет. */
 
 const { store } = require('../lib/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors } = require('../lib/util');
+const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('../lib/util');
 const { sendMail } = require('../lib/mail');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
@@ -172,7 +172,7 @@ module.exports = async (req, res) => {
   if(cors(req, res)) return;
   if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
   if(!store.configured()) return fail(res, 503, 'no_store');
-  if(!(await rateOk(req, 'auth', 40))) return fail(res, 429, 'rate_limited');
+  if(!(await rateOk(req, 'auth', 240))) return fail(res, 429, 'rate_limited');
 
   let body;
   try{ body = await readBody(req); }catch(e){ return fail(res, 413, 'too_large'); }
@@ -287,6 +287,11 @@ module.exports = async (req, res) => {
 
   /* ---- прислать код ---- */
   if(act === 'send'){
+    // Отправка письма — чувствительная операция: если защитный счётчик недоступен,
+    // лучше честно ответить 503, чем превратить сбой Redis в бесплатный mail-bomb.
+    if(!(await rateOkScoped(req, 'auth-send', 30, mh, 3600, true))){
+      return fail(res, 429, 'rate_limited');
+    }
     // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается
     // письмами с любого количества телефонов, и виноваты в этом мы.
     const day = new Date().toISOString().slice(0, 10);
@@ -323,6 +328,9 @@ module.exports = async (req, res) => {
 
   /* ---- подтвердить код ---- */
   if(act === 'verify'){
+    if(!(await rateOkScoped(req, 'auth-verify', 60, mh, 15 * 60, true))){
+      return fail(res, 429, 'rate_limited');
+    }
     // Обычный email-код и одноразовый код из админки используют один и тот же
     // проверенный путь. Админский код не является мастер-паролем: он хранится
     // только в хеше, живёт 15 минут и удаляется после первого успешного входа.
