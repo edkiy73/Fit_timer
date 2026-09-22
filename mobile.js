@@ -15,6 +15,39 @@
   let speechErrorHandle = null;
   let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
+  let pendingProgramLink = '';
+
+  function programIdFromAppUrl(value){
+    try{
+      const url = new URL(String(value || ''));
+      const configured = window.FIT_TIMER_CONFIG && window.FIT_TIMER_CONFIG.publicAppUrl;
+      const expected = new URL(configured || 'https://fittimer99.vercel.app');
+      if(url.protocol !== 'https:' || url.host !== expected.host) return '';
+      const match = url.pathname.match(/^\/p\/([0-9a-z]{4,16})\/?$/);
+      return match ? match[1] : '';
+    }catch(_){ return ''; }
+  }
+
+  function rememberProgramLink(value){
+    const id = programIdFromAppUrl(value);
+    if(!id) return false;
+    pendingProgramLink = id;
+    try{ window.dispatchEvent(new CustomEvent('fitProgramLink', {detail:{id, url:String(value || '')}})); }catch(_){}
+    return true;
+  }
+
+  function consumeProgramLink(){
+    const id = pendingProgramLink;
+    pendingProgramLink = '';
+    return id;
+  }
+
+  if(native && plugins.App && plugins.App.addListener){
+    try{ plugins.App.addListener('appUrlOpen', event=> rememberProgramLink(event && event.url)); }catch(_){}
+    if(plugins.App.getLaunchUrl){
+      try{ plugins.App.getLaunchUrl().then(result=> rememberProgramLink(result && result.url)).catch(()=>{}); }catch(_){}
+    }
+  }
   function installRemotePushListeners(){
     if(remotePushListenersInstalled||!native||!pushNotifications||!pushNotifications.addListener)return;
     remotePushListenersInstalled=true;
@@ -374,6 +407,7 @@
     isNative: native,
     getAppInfo,
     openExternal,
+    consumeProgramLink,
     requestNotifications,
     registerRemotePush,
     scheduleRest,
