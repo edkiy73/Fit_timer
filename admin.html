@@ -317,6 +317,32 @@
     .pair{grid-template-columns:105px minmax(0,1fr)}
   }
 
+
+  .user-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .user-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;position:relative}
+  .user-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding-right:38px}
+  .user-card-email{font-size:14px;font-weight:700;line-height:1.25;word-break:break-word}
+  .user-card-handle{font-size:12px;color:var(--muted);margin-top:2px}
+  .user-card .td-actions{position:absolute;right:10px;top:10px;width:32px}
+  .user-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+  .user-meta-item{background:var(--soft);border-radius:9px;padding:7px 8px;min-width:0}
+  .user-meta-item b{display:block;font-size:12px;line-height:1.2}
+  .user-meta-item span{display:block;color:var(--muted);font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ai-box{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+  .ai-box-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .ai-box-head b{font-size:12px}
+  .ai-period{font-size:10.5px;color:var(--muted)}
+  .ai-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .ai-stat{border:1px solid var(--line);border-radius:9px;padding:7px 8px;min-width:0}
+  .ai-stat strong{display:block;font-size:14px;line-height:1.15;font-variant-numeric:tabular-nums}
+  .ai-stat span{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+  @media(max-width:760px){
+    .user-grid{grid-template-columns:1fr}
+    .user-card{padding:10px}
+    .user-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ai-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+
 </style>
 </head>
 <body>
@@ -642,7 +668,7 @@ function renderTrainers(b){
 }
 
 async function renderUsers(b){
-  b.innerHTML=pageHead('Пользователи','Аккаунты, Premium и тестовый вход.')+`
+  b.innerHTML=pageHead('Пользователи','Аккаунты, Premium, AI-лимиты и тестовый вход.')+`
     <div class="toolbar">
       <div class="grow inline-create">
         <div><label>Email нового аккаунта</label><input id="newUserEmail" type="email" placeholder="test@example.com"></div>
@@ -650,63 +676,112 @@ async function renderUsers(b){
       </div>
     </div>
     <div id="usersList"><div class="empty">Загружаю пользователей…</div></div>`;
+
   $('createUser').onclick=async()=>{
     const email=$('newUserEmail').value.trim().toLowerCase(); if(!email)return;
     try{await api('user_create',{email});usersCache=null;await renderUsers(b);}
     catch(e){alert('Не получилось создать аккаунт: '+e.message);}
   };
+
   try{if(!usersCache)usersCache=(await api('users_list')).users||[];}
   catch(e){$('usersList').innerHTML='<div class="empty">Не удалось загрузить пользователей: '+esc(e.message)+'</div>';return;}
+
   const box=$('usersList');
   if(!usersCache.length){box.innerHTML='<div class="empty">Аккаунтов пока нет.</div>';return;}
+
   box.innerHTML=`
-    <div class="toolbar"><div class="grow"><input id="userSearch" type="search" placeholder="Поиск по email или нику"></div><span class="status-chip">${usersCache.length} аккаунтов</span></div>
-    <div class="table-shell"><table class="data-table">
-      <thead><tr><th>Аккаунт</th><th>Тариф</th><th>AI за месяц</th><th>Создан</th><th>Устройства</th><th>Push</th><th></th></tr></thead>
-      <tbody id="userRows"></tbody>
-    </table></div>`;
-  const rows=$('userRows');
+    <div class="toolbar">
+      <div class="grow"><input id="userSearch" type="search" placeholder="Поиск по email или нику"></div>
+      <span class="status-chip">${usersCache.length} аккаунтов</span>
+    </div>
+    <div class="user-grid" id="userCards"></div>`;
+
+  const cards=$('userCards');
+  const shortDate=v=>v?new Date(v+'T00:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—';
   usersCache.forEach(u=>{
     const premium=u.premium&&u.sub;
-    const tr=document.createElement('tr');
-    tr.dataset.search=((u.email||'')+' '+(u.handle||'')).toLowerCase();
-    tr.innerHTML=`
-      <td class="td-primary"><div class="cell-main">${esc(u.email)}</div><div class="cell-sub">${u.handle?esc(u.handle):'без ника'}</div></td>
-      <td data-label="Тариф">${premium?`<span class="pill pro">Premium</span><div class="cell-sub">до ${esc(fmtDay(u.sub.until))}</div>`:'<span class="muted">Free</span>'}</td>
-      <td data-label="AI"><div class="cell-main">${(u.aiUsage&&u.aiUsage.programs)||0} / ${(u.aiUsage&&u.aiUsage.exercises)||0} / ${(u.aiUsage&&u.aiUsage.images)||0}</div><div class="cell-sub">программы / упражнения / картинки</div></td>
-      <td data-label="Создан">${esc(fmtDay(u.since))}</td>
-      <td data-label="Устройства" class="metric">${u.devices||0}</td>
-      <td data-label="Push" class="metric">${u.pushDevices||0}</td>
-      <td class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
-        <button class="positive" data-premium>Выдать Premium</button>
-        ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
-        <button data-code>Тестовый код входа</button>
-      </div></details></td>`;
-    tr.querySelector('[data-premium]').onclick=async()=>{
+    const usage=u.aiUsage||{};
+    const limits=usage.limits||{};
+    const card=document.createElement('article');
+    card.className='user-card';
+    card.dataset.search=((u.email||'')+' '+(u.handle||'')).toLowerCase();
+    card.innerHTML=`
+      <div class="user-card-head">
+        <div>
+          <div class="user-card-email">${esc(u.email)}</div>
+          <div class="user-card-handle">${u.handle?esc(u.handle):'без ника'}</div>
+        </div>
+        <div>${premium?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}</div>
+      </div>
+
+      <div class="td-actions">
+        <details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+          <button class="positive" data-premium>Выдать Premium</button>
+          ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
+          <button data-code>Тестовый код входа</button>
+          <button class="danger" data-ai-reset>Сбросить AI-лимиты</button>
+        </div></details>
+      </div>
+
+      <div class="user-meta">
+        <div class="user-meta-item"><b>${esc(fmtDay(u.seen||u.since))}</b><span>активность</span></div>
+        <div class="user-meta-item"><b>${esc(fmtDay(u.since))}</b><span>создан</span></div>
+        <div class="user-meta-item"><b>${u.devices||0}</b><span>устройств</span></div>
+        <div class="user-meta-item"><b>${u.pushDevices||0}</b><span>push</span></div>
+      </div>
+
+      <div class="ai-box">
+        <div class="ai-box-head">
+          <b>AI за месяц</b>
+          <span class="ai-period">${shortDate(usage.periodStart)} — ${shortDate(usage.periodEnd)}</span>
+        </div>
+        <div class="ai-stats">
+          <div class="ai-stat"><strong>${usage.programs||0} / ${limits.programs||0}</strong><span>программы</span></div>
+          <div class="ai-stat"><strong>${usage.exercises||0} / ${limits.exercises||0}</strong><span>упражнения</span></div>
+          <div class="ai-stat"><strong>${usage.images||0} / ${limits.images||0}</strong><span>картинки</span></div>
+        </div>
+      </div>
+
+      ${premium?`<div class="cell-sub" style="margin-top:8px">Premium до ${esc(fmtDay(u.sub.until))} · ${esc(u.sub.provider||'server')}</div>`:''}`;
+
+    card.querySelector('[data-premium]').onclick=async()=>{
       const raw=prompt('На сколько дней выдать Premium?','30'); if(raw===null)return;
       const days=Math.max(1,Math.min(3650,Math.round(+raw||0))); if(!days)return alert('Укажи количество дней.');
       try{await api('user_premium',{email:u.email,days});usersCache=null;await renderUsers(b);}
       catch(e){alert('Не получилось выдать Premium: '+e.message);}
     };
-    const rev=tr.querySelector('[data-revoke]');
+
+    const rev=card.querySelector('[data-revoke]');
     if(rev)rev.onclick=async()=>{
       if(!confirm('Снять Premium у '+u.email+'?'))return;
       try{await api('user_premium',{email:u.email,revoke:true});usersCache=null;await renderUsers(b);}
       catch(e){alert('Не получилось снять Premium: '+e.message);}
     };
-    tr.querySelector('[data-code]').onclick=async()=>{
+
+    card.querySelector('[data-code]').onclick=async()=>{
       try{
         const r=await api('user_test_code',{email:u.email});
         const msg='Email: '+r.email+'\nКод: '+r.code+'\nДействует '+r.expiresMinutes+' минут и только один раз.';
         try{await navigator.clipboard.writeText(r.code);alert(msg+'\n\nКод скопирован.');}catch(_){alert(msg);}
       }catch(e){alert('Не получилось создать код: '+e.message);}
     };
-    rows.appendChild(tr);
+
+    card.querySelector('[data-ai-reset]').onclick=async()=>{
+      if(!confirm('Сбросить AI-счётчики у '+u.email+' за текущий месяц?\n\nПосле этого пользователь снова получит полный месячный лимит.'))return;
+      try{
+        await api('user_ai_reset',{email:u.email});
+        usersCache=null;
+        await renderUsers(b);
+      }catch(e){alert('Не получилось сбросить AI-лимиты: '+e.message);}
+    };
+
+    cards.appendChild(card);
   });
-  wireRowMenus(rows);
+
+  wireRowMenus(cards);
   $('userSearch').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
-    rows.querySelectorAll('tr').forEach(r=>r.hidden=!!q&&!r.dataset.search.includes(q));
+    cards.querySelectorAll('.user-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
   };
 }
 
