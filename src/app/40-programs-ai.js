@@ -1524,40 +1524,28 @@ function exerciseImagePrompt(item, genderTxt){
   const isStatic = imageStaticExercise(item);
   const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
   const regions = imageMuscleRegions(item);
-  const muscleLines = regions.length
-    ? ['Highlight ONLY these exact muscle regions:', ...regions.map(x => '- ' + x)].join('\n')
-    : 'Highlight only the primary working muscle regions that are clearly required by this movement.';
-
+  const muscles = regions.length ? regions.join(', ') : 'only the primary working muscles required by this movement';
+  const motion = isStatic
+    ? 'Show ONE clear final pose only. No ghost pose or movement trail.'
+    : isLocalMotion
+      ? 'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
+      : 'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
   return [
     `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
-    'Create a premium, clean, high-end fitness illustration. The result must feel like an expensive modern app visual, not a cheap infographic.',
-    `VISUAL STYLE: stylized-realistic premium 3D fitness illustration, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, believable human proportions, high-end polished rendering.`,
-    genderTxt === 'man'
-      ? 'Do NOT render the athlete as a gray mannequin, anatomy statue, monochrome model, plastic character, awkward weak-looking person, or nerdy-looking character.'
-      : 'Do NOT render the athlete as a gray mannequin, anatomy statue, monochrome model, plastic character, awkward weak-looking person, or generic fashion model.',
-    'BACKGROUND: show a premium modern gym environment with depth, atmosphere and good lighting. The background must be softly blurred and secondary, but still feel alive and real. Do NOT use a flat gray empty background. Use visible light sources, soft gradients, realistic gym shapes, contrast and depth.',
-    'BRAND ACCENTS: use Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents. Do NOT use violet for muscle highlighting.',
-    item.desc ? `Technique context: ${item.desc}` : null,
+    `Style: premium stylized-realistic 3D, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, polished high-end rendering.`,
+    'Background: premium modern gym with depth and good lighting, softly blurred and secondary; avoid flat gray studio backgrounds.',
+    'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
+    item.desc ? `Technique: ${item.desc}` : null,
     equipment.length
-      ? `Required equipment: ${equipment.join(', ')}. Show every required item clearly, in the correct quantity, realistic scale and correct contact/grip with the body.`
-      : 'Do not invent equipment that is not required by this movement.',
-    isStatic
-      ? 'This is a static hold: show ONE clear final pose only. Do not duplicate the athlete and do not add a fake movement path.'
-      : isLocalMotion
-        ? 'Show ONE full athlete only, in the most informative phase of the movement. Do NOT draw any second body, ghost body, duplicate limb, duplicate arm, extra hand or extra leg. Do NOT use semi-transparent body-part overlays. Explain the movement only with clean trajectory arrows placed beside the moving limbs/equipment. For curls and extensions, keep the elbows fixed near the torso and show the main pose near peak contraction so the technique and working muscles are easy to read.'
-        : 'Show exactly TWO temporal depictions total in one coherent scene: 1) one main fully detailed athlete; 2) one secondary semi-transparent ghost pose for the other endpoint of the movement. They must read as ONE person moving through the exercise, not two people standing side by side. Keep the ghost spatially close to and partially overlapping the main figure whenever possible. Align body parts that do not move; visibly offset mainly the joints, limbs and equipment that actually change position. For large compound movements, allow only the minimum full-body offset needed to show the two endpoints clearly. Both depictions must represent THE SAME athlete performing THE SAME exercise with THE SAME required equipment. Never show three figures. Never add an intermediate third phase. The ghost pose must include the same barbell, dumbbells, bench contact or other required equipment in the correct position. Never show a ghost body without its equipment. Keep the same face, body, clothes and colors in both phases. Make the ghost clearly secondary, visually lighter and less dominant than the main figure. Do not compose the two phases as separate side-by-side portraits.',
-    isStatic ? null : (isLocalMotion
-      ? 'Add one small clean violet-lavender curved trajectory arrow near each moving limb or piece of equipment. The arrows must show the full direction of travel without crossing the torso. No ghost equipment and no duplicate dumbbells.'
-      : 'Add one or two clean violet-lavender arrows showing the movement direction.'),
-    muscleLines,
-    'Do not highlight any other muscles. Every muscle region NOT listed above must stay in its natural skin or clothing color with ZERO red/orange anatomical glow. Do not add red/orange glow to the chest, abdomen, back, shoulders, legs or any unrelated region unless that exact region is listed above.',
-    isLocalMotion
-      ? 'For this single-pose isolation illustration, apply the red/orange muscle highlight only once on the main athlete.'
-      : 'The muscle highlighting must be identical in the main pose and the ghost pose, and must stay consistent between male and female versions of the same exercise.',
-    'Use the same clearly visible warm red to red-orange glow intensity, the same anatomical placement and the same highlighted area each time. Keep the highlighting symmetrical, localized and anatomically consistent. The highlighted muscles must read instantly without turning the whole body red.',
-    'Choose a side or three-quarter camera angle for maximum technical clarity. Keep the important joints, limbs and equipment visible. Avoid decorative cropping.',
-    'Biomechanical correctness is more important than drama: realistic joint alignment, spine position, grip, stance, range of motion and equipment placement.',
-    'No impossible anatomy, extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, captions, frames, borders, corner badges, decorative sparkles, collage or watermarks.'
+      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position in every visible phase.`
+      : 'Do not invent equipment that the exercise does not require.',
+    motion,
+    !isStatic && !isLocalMotion ? 'Add one or two small violet-lavender arrows showing movement direction.' : null,
+    `Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: ${muscles}.`,
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
+    'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
+    'No extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, collage, borders or watermarks.'
   ].filter(Boolean).join('\n');
 }
 
