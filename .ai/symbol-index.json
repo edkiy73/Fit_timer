@@ -680,9 +680,10 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1394,
-      "chars": 64717,
+      "lines": 1420,
+      "chars": 65676,
       "symbols": [
+        "activeWeekStreak",
         "afterExChange",
         "autoGrow",
         "autoGrowMax",
@@ -750,8 +751,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 588,
-      "chars": 27586,
+      "lines": 589,
+      "chars": 27655,
       "symbols": [
         "add",
         "advance",

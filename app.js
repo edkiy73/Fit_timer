@@ -1057,6 +1057,8 @@ const I18N_RU = {
   'badge.body.desc': "4 записи веса или замеров",
   'badge.notes.name': "Дневник",
   'badge.notes.desc': "Заметка после тренировки",
+  'badge.t5.name': "Первые пять",
+  'badge.t5.desc': "5 тренировок",
   'badge.t10.name': "В ритме",
   'badge.t10.desc': "10 тренировок",
   'badge.wk.name': "Неделя по плану",
@@ -1079,6 +1081,8 @@ const I18N_RU = {
   'badge.var3.desc': "Пройдены 3 разные программы",
   'badge.duo.name': "Не в одиночку",
   'badge.duo.desc': "Второй профиль на устройстве",
+  'badge.month.name': "Четыре недели",
+  'badge.month.desc': "Тренировки 4 недели подряд",
   'badge.season.name': "Три месяца",
   'badge.season.desc': "Тренировки в трёх разных месяцах",
   'badge.back.name': "Возвращение",
@@ -2574,6 +2578,8 @@ const I18N_EN = {
   'badge.body.desc': "4 weight or measurement entries",
   'badge.notes.name': "Journal",
   'badge.notes.desc': "Added a note after a workout",
+  'badge.t5.name': "First five",
+  'badge.t5.desc': "5 workouts",
   'badge.t10.name': "In rhythm",
   'badge.t10.desc': "10 workouts",
   'badge.wk.name': "Week completed",
@@ -2596,6 +2602,8 @@ const I18N_EN = {
   'badge.var3.desc': "Completed 3 different programs",
   'badge.duo.name': "Not alone",
   'badge.duo.desc': "Added a second profile on this device",
+  'badge.month.name': "Four weeks",
+  'badge.month.desc': "Worked out 4 weeks in a row",
   'badge.season.name': "Three months",
   'badge.season.desc': "Worked out in three different months",
   'badge.back.name': "Comeback",
@@ -16071,12 +16079,37 @@ function playFinishFx(after){
    Формулировки не привязаны к полу: приложением пользуются и женщины, и мужчины.
    desc бывает функцией — см. badgeDesc(): «Личный рекорд» обязан показывать нынешний
    рекорд, а не застывшее число того дня, когда плашка выдалась. */
+function activeWeekStreak(history){
+  const weeks = new Set();
+  (history || []).forEach(h => {
+    if(!h || !h.d) return;
+    const d = new Date(h.d + 'T12:00:00');
+    if(isNaN(d)) return;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    weeks.add(localISO(monday));
+  });
+  const sorted = [...weeks].sort();
+  let best = 0, cur = 0, prev = null;
+  sorted.forEach(iso => {
+    const d = new Date(iso + 'T12:00:00');
+    if(prev){
+      const days = Math.round((d - prev) / 86400000);
+      cur = days === 7 ? cur + 1 : 1;
+    } else cur = 1;
+    if(cur > best) best = cur;
+    prev = d;
+  });
+  return best;
+}
+
 const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
   // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
   {id: 'body',  ico: 'chart',    name: 'Под наблюдением',     desc: '4 записи веса или замеров',          test: () => (stats.weights || []).length >= 4},
   {id: 'notes', ico: 'book',     name: 'Дневник',             desc: 'Заметка после тренировки',           test: () => (stats.history || []).some(h => (h.note || '').trim())},
+  {id: 't5',    ico: 'bolt',     name: 'Первые пять',         desc: '5 тренировок',                       test: () => (stats.count || 0) >= 5},
   {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
   {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
   {id: 'ph2',   ico: 'camera',   name: 'Было и стало',        desc: 'Два снимка прогресса',               test: () => (photos || []).length >= 2},
@@ -16099,6 +16132,7 @@ const BADGES = [
   {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
   {id: 'duo',   ico: 'user',     name: 'Не в одиночку',       desc: 'Второй профиль на устройстве',       test: () => (users || []).length >= 2},
   // не «сколько всего», а «как давно не бросил»: три разных месяца в истории
+  {id: 'month', ico: 'calendar', name: 'Четыре недели',       desc: 'Тренировки 4 недели подряд',         test: () => activeWeekStreak(stats.history) >= 4},
   {id: 'season', ico: 'target',  name: 'Три месяца',          desc: 'Тренировки в трёх разных месяцах',   test: () => new Set((stats.history || []).map(h => (h.d || '').slice(0, 7)).filter(Boolean)).size >= 3},
   // Возвращение после перерыва — то, за что стоит хвалить сильнее всего: бросить
   // проще, чем начать заново. Считаем разрыв между соседними тренировками: если он
@@ -16713,13 +16747,14 @@ async function syncNativeNotifications(){
     }catch(_){}
   }
 
-  // Возврат после паузы: интервалы привязаны к последней реальной тренировке, а не
-  // к моменту открытия приложения. Открытие приложения в день напоминания гасит его.
+  // Возврат после паузы: максимум три мягких касания — через 3, 7 и 14 дней.
+  // После двух недель не продолжаем догонять человека уведомлениями. Интервалы
+  // привязаны к последней реальной тренировке, а не к моменту открытия приложения.
   if(prefs.workouts !== false && (stats.history || []).length){
     const last = (stats.history || []).filter(h=>h && h.d).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
     if(last){
       const base = new Date(last.d + 'T12:00:00');
-      [3,7,14,30].forEach(days => {
+      [3,7,14].forEach(days => {
         const day = new Date(base); day.setDate(day.getDate() + days);
         const at = notifyAt(day, 19, 0);
         if(notifyDayKey(day) === notifyDayKey(now)) return; // приложение уже открыто сегодня
