@@ -3150,6 +3150,140 @@ function canonicalDescription(value){
   const key=CANONICAL_DESC_KEYS[String(value || '')];
   return key ? t(key) : '';
 }
+/* Shared Fit Timer AI protocol contract.
+   Browser: globalThis.FitAIProtocol
+   Server:  require('../lib/ai-protocol')
+   Keep this file dependency-free so the same rules are used by the app and admin API. */
+(function(root){
+  const OPTIONAL_EXERCISE_LABELS = [
+    'ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ',
+    'ФОРМАТ','ЗНАЧЕНИЕ','ВЕС','ПОДХОДЫ',
+    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА',
+    'ОТДЫХ','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
+    'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
+    'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
+    'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
+    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ',
+    'ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ','ЗАМЕНА ОПИСАНИЕ','ВИДЕО'
+  ];
+
+  const machineLanguageRules = outputLanguage => `IMPORTANT LANGUAGE RULE:
+- All instructions in this prompt are in English.
+- User-visible content values must be written in ${outputLanguage}.
+- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens below are machine-readable constants. Keep them EXACTLY unchanged even when user-visible content is English.
+- Never translate canonical muscle tokens or weekday tokens.`;
+
+  const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
+Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Prefer conservative, explainable training decisions over novelty. Do not invent facts about the user or pretend certainty where context is missing.
+
+- ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between increases and experienced users roughly 2-4, but adapt to the actual program and recovery.
+- Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
+- For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
+- For weighted reps, distinguish three cases:
+  1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
+  2) rep progression: positive ШАГ ПОВТОРОВ;
+  3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
+- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
+- ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
+- СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
+- If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
+- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load.
+- Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
+- Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
+- Preserve unilateral/bilateral movement nature unless the user explicitly requests a different movement.
+- Never invent equipment the user does not have.
+- Do not diagnose or claim medical safety. Respect stated limitations and avoid exercises that clearly conflict with them.`;
+
+  const exerciseSchema = outputLanguage => `=== EXERCISE PROTOCOL ===
+УПРАЖНЕНИЕ: exercise name in ${outputLanguage}
+ОПИСАНИЕ: 3-4 practical sentences in ${outputLanguage} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
+МЫШЦЫ: comma-separated tokens STRICTLY from: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
+ОШИБКИ: 1-2 common mistakes in ${outputLanguage}, max 300 characters (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
+ВЕС: starting kilograms for weighted formats
+ПОДХОДЫ: consecutive sets before the next exercise, 1-10
+СТОРОНА: "да" if ЗНАЧЕНИЕ is performed separately for each side; omit otherwise
+РАЗМИНКА: "да" for warm-up exercises; omit otherwise
+ОТДЫХ: seconds between sets
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"
+ШАГ: progression increment for unweighted reps/time only
+ШАГ ПОВТОРОВ: reps increment for weighted reps, only when reps themselves should progress
+ШАГ ВРЕМЕНИ: seconds increment for weighted time, only when time itself should progress
+ШАГ ВЕСА: kg increment for weighted formats
+ПОТОЛОК: required ceiling for progressive unweighted formats
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
+ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
+ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
+ВИДЕО: real technique URL only if confident it exists; otherwise omit`;
+
+  const programSchema = outputLanguage => `=== PROGRAM PROTOCOL ===
+ПРОГРАММА: program name in ${outputLanguage}
+ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line in ${outputLanguage}; explain purpose, frequency, expected result, what to watch, and when to reduce load
+ВРЕМЯ: HH:MM (optional)
+ПРОГРЕССИЯ: integer 1-15 or "нет"; number of COMPLETED workouts between progression steps
+ЧЕРЕДОВАНИЕ: "да" or "нет"; "да" means variants rotate A-B-A independently of weekdays
+ДНИ ТРЕНИРОВОК: comma-separated canonical tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only for shared schedule when ЧЕРЕДОВАНИЕ: да
+
+Workout variants:
+- one repeating workout = one variant
+- different exercise sets = multiple variants, max 7
+- every variant starts with ДЕНЬ:
+ДЕНЬ: canonical weekday tokens for this variant; leave empty when ЧЕРЕДОВАНИЕ: да
+КРУГИ: 1-10; repetitions of the ENTIRE exercise list
+ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
+
+КРУГИ and ПОДХОДЫ are independent:
+- circuit: usually КРУГИ 2-5 and ПОДХОДЫ 1
+- strength: usually КРУГИ 1 and ПОДХОДЫ 3-4
+- mixed: both can be >1 when total volume remains sensible
+
+${exerciseSchema(outputLanguage)}`;
+
+  const editRules = allowStructure => allowStructure
+    ? `=== EDIT RULES ===
+- Apply only the requested structural changes. Preserve unrelated variants, exercises, protocol fields and values.
+- You may add/remove/reorder an exercise or variant ONLY where the user's request explicitly requires it.
+- Never silently drop a protocol line because it looks unnecessary.
+- You may add valid optional exercise fields when needed by the requested change.
+- If the user asks to disable/remove a numeric setting while keeping the same structure, prefer keeping its existing label with value 0.`
+    : `=== EDIT RULES ===
+- Preserve the number and order of workout variants and exercises.
+- Preserve every existing protocol line unless its VALUE is being changed.
+- Never delete or rename an existing protocol label.
+- You MAY add only valid optional exercise fields when the requested change requires them.
+- If the user asks to disable/remove a numeric setting, keep its existing label and set a neutral value such as 0.
+- Do not change unrelated fields.`;
+
+  const programPrompt = outputLanguage => [
+    'You are a fitness-program assistant for home workouts.',
+    'Return ONLY the plain-text protocol below: no Markdown and no commentary before or after it.',
+    machineLanguageRules(outputLanguage),
+    programSchema(outputLanguage),
+    progressionRules(),
+    'Quality checks before answering:',
+    '- Make exercise selection, volume, intensity, rest and progression coherent as one program.',
+    '- If a target workout duration is supplied, estimate work + rest time and keep the expected duration roughly within ±20% when practical.',
+    '- Do not create conflicting progression fields.',
+    '- Return only the protocol.'
+  ].join('\n\n');
+
+  const api = {
+    OPTIONAL_EXERCISE_LABELS,
+    machineLanguageRules,
+    progressionRules,
+    exerciseSchema,
+    programSchema,
+    editRules,
+    programPrompt
+  };
+  root.FitAIProtocol = api;
+  if(typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -9027,15 +9161,16 @@ function ageError(v, required = false){
   return '';
 }
 // строка о человеке для запроса к ИИ
-function userForAI(){
+function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
   bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
-  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
-  return bits.join('. ') + '. Use this information when choosing exercises, load, progression, and recovery.';
+  const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  bits.push(`User-visible output language: ${outLang}`);
+  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery, but never infer absolute strength or starting weight from sex alone.';
 }
 
 /* ================= GEMINI API ================= */
@@ -9127,7 +9262,7 @@ async function callGemini(prompt, signal){
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
     contents: [{parts: [{text: prompt}]}],
-    generationConfig: {maxOutputTokens: 32768, temperature: 1}
+    generationConfig: {maxOutputTokens: 32768, temperature: .3}
   };
   let last = null;
   // 503 «high demand» — временная перегрузка, а не отказ: Google прямо советует повторить.
@@ -9596,7 +9731,7 @@ function singleImagePrompt(kind, item){
   if(kind === 'cover'){
     return `Create a square 1:1 cover image for the fitness-program card "${name}".\n${styleLine}\nShow the overall theme of the program rather than one specific exercise.`;
   }
-  const bits = [`Create a wide 16:9 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
+  const bits = [`Create a 4:3 exercise illustration for "${item.name}" in a fitness app.`, styleLine];
   if(item.desc) bits.push(`Technique context: ${item.desc}`);
   if(item.muscles && item.muscles.length) bits.push(`Highlight these working muscles: ${item.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   bits.push('Show the most characteristic phase of the movement.');
@@ -10019,74 +10154,50 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-function exAnswerFormat(){
-  return `=== OUTPUT FORMAT ===
-Use the exact Russian protocol keys and enum tokens below because the app parser expects them. Write user-visible values (exercise name, description, mistakes, replacement name/description) in ${aiOutputLanguage()}.
-
-УПРАЖНЕНИЕ: exercise name
-ОПИСАНИЕ: technique, 3-5 practical sentences
-МЫШЦЫ: comma-separated tokens STRICTLY from: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1-2 common mistakes (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
-ЗНАЧЕНИЕ: number or range like 10-12; time formats use seconds
-ВЕС: starting kg for weighted formats
-ПОДХОДЫ: integer 1-5
-СТОРОНА: "да" if counted separately per side; omit otherwise
-РАЗМИНКА: "да" for a warm-up exercise; omit otherwise
-ОТДЫХ: seconds between sets
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
-УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, and breathing drills
-ШАГ: progression increment for unweighted reps/time
-ШАГ ПОВТОРОВ: optional reps increment for weighted reps
-ШАГ ВРЕМЕНИ: optional seconds increment for weighted time
-ШАГ ВЕСА: optional kg increment for weighted formats
-ПОТОЛОК: REQUIRED progression ceiling for unweighted formats when УСЛОЖНЯТЬ: да
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
-ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
-ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps, "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
-ЗАМЕНА: harder next-level exercise name when the ceiling is reached (optional)
-ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences describing that replacement, only when ЗАМЕНА exists
-ВИДЕО: real technique URL only if confident it exists; otherwise omit
-
-Return only the exercise block, with no Markdown and no explanation before or after it.`;
+function exAnswerFormat(locale){
+  const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  return [
+    FitAIProtocol.machineLanguageRules(lang),
+    FitAIProtocol.exerciseSchema(lang),
+    FitAIProtocol.progressionRules()
+  ].join('\n\n');
 }
 
 function exePrompt(){
-  const ex = curPlan().exercises[exeIdx];
-  const wish = clampText($('exeWish').value, LIM.wish);
-  return 'Edit this home-workout exercise and return the COMPLETE updated exercise in the protocol below. ' +
-    'Keep fields that the request does not affect unchanged. Return only the exercise block.\n\n' +
-    'USER: ' + userForAI() + '\n' +
-    'REQUEST: ' + (wish || '(No specific request. Improve clarity and technique guidance while preserving the exercise intent.)') + '\n\n' +
-    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+  const ex=curPlan().exercises[exeIdx];
+  const wish=clampText($('exeWish').value,LIM.wish);
+  return [
+    'Edit exactly ONE home-workout exercise.',
+    'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
+    FitAIProtocol.editRules(false),
+    'USER: '+userForAI(draft&&draft.locale),
+    'REQUEST: '+(wish||'(No specific request. Improve clarity and technique guidance while preserving the exercise intent and training mechanics.)'),
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    exAnswerFormat(draft&&draft.locale)
+  ].join('\n\n');
 }
 
 async function applyExEdit(){
-  const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
-  const {program} = parseProgramText(wrapped);
-  const got = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
-  if(!got.length){ appAlert(MSG_AI_NOEX); return; }
-  const list = curPlan().exercises;
-  const oldEx = list[exeIdx];
-  if(!oldEx){ show('scrBuilder'); return; }
-  const upd = got[0];
-  // сохраняем картинку, если ИИ её не вернул
-  if(!upd.media && oldEx.media) upd.media = oldEx.media;
-  list[exeIdx] = upd;
-  // если ИИ вернул больше одного — остальные добавим после
-  if(got.length > 1){
-    const extra = got.slice(1);
-    list.splice(exeIdx + 1, 0, ...extra);
-  }
-  $('aiResult').value = '';
+  const raw=($('aiResult').value||'').trim();
+  if(!raw){appAlert(MSG_AI_EMPTY);return;}
+  const list=curPlan().exercises;
+  const oldEx=list[exeIdx];
+  if(!oldEx){show('scrBuilder');return;}
+  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
+  // в два упражнения или потерять старые служебные поля.
+  const candidateBlocks=aiExerciseBlocks(raw);
+  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
+  const {program}=parseProgramText(wrapped);
+  const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
+  if(got.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const upd=got[0];
+  if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  list[exeIdx]=upd;
+  $('aiResult').value='';
   await afterExChange();
-  appAlert(got.length > 1
-    ? `Упражнение обновлено, добавлено ещё: ${got.length - 1}.`
-    : `Упражнение «${upd.name}» обновлено.`);
+  appAlert(`Упражнение «${upd.name}» обновлено.`);
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
@@ -10138,30 +10249,27 @@ function openExAI(){
 }
 
 function exaPrompt(){
-  const wish = clampText($('exaWish').value, LIM.wish);
-  const given = [], free = [];
-  const fmtMap = {'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
-  if(exa.format) given.push(`Preferred format: ${fmtMap[exa.format] || aiCanonicalEnglish(exa.format)}.`);
+  const wish=clampText($('exaWish').value,LIM.wish);
+  const given=[],free=[];
+  const fmtMap={'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
+  if(exa.format)given.push(`Preferred format: ${fmtMap[exa.format]||aiCanonicalEnglish(exa.format)}.`);
   else free.push('choose the most natural format: reps, weighted reps, time, or weighted time');
-  if(exa.level) given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
+  if(exa.level)given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
   else free.push('difficulty level');
-  if(exa.muscles.length) given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  if(exa.muscles.length)given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   else free.push('working muscles');
-  if(exa.equip.length) given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
+  if(exa.equip.length)given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
   else free.push('equipment; assume no special home equipment unless the exercise needs it');
 
-  const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
-  const many = cnt > 1;
-  let out = `Create exactly ${cnt} ${many ? 'different exercises' : 'exercise'} for a home workout. `;
-  out += many
-    ? 'Each exercise must be a separate block beginning with "УПРАЖНЕНИЕ:". Separate blocks with a blank line. Do not duplicate exercises. Return only those blocks.\n\n'
-    : 'Return only one exercise block.\n\n';
-  out += 'USER: ' + userForAI() + '\n';
-  out += 'REQUEST: ' + (wish || '(No specific request. Suggest a useful exercise that fits the user.)') + '\n';
-  if(given.length) out += given.join(' ') + '\n';
-  if(free.length) out += 'Decide these unspecified items yourself: ' + free.join('; ') + '.\n\n';
-  out += exAnswerFormat();
-  return out;
+  const cnt=Math.max(1,Math.min(10,parseInt(exa.count)||1));
+  const many=cnt>1;
+  const task=many
+    ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
+    : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
+  let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  if(given.length)req+='\n'+given.join(' ');
+  if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
+  return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
 }
 
 async function exaAddExercise(){
@@ -10286,13 +10394,15 @@ function programToText(p){
 }
 
 function editAIPrompt(){
-  const wish = clampText($('eaWish').value, LIM.wish);
-  return aiPrompt((editAIProg && editAIProg.locale) || appLocale) +
-    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
-    'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
-    'USER: ' + userForAI() + '\n' +
-    'USER REQUEST: ' + (wish || '(No specific request. Improve the program while preserving its purpose and sensible load.)') + '\n\n' +
-    '=== CURRENT PROGRAM ===\n' + programToText(editAIProg);
+  const wish=clampText($('eaWish').value,LIM.wish);
+  const structural=aiStructureChangeRequested(wish);
+  return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
+    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
+    'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
+    FitAIProtocol.editRules(structural)+'\n'+
+    'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
+    'USER REQUEST: '+(wish||'(No specific request. Improve clarity while preserving purpose, structure and sensible load.)')+'\n\n'+
+    '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
 }
 
 function openEditAI(p){
@@ -10341,7 +10451,11 @@ function carryMedia(oldProg, newProg){
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const {program, errors} = parseProgramText(raw);
+  const wish = clampText($('eaWish').value, LIM.wish);
+  const safeRaw = aiStructureChangeRequested(wish)
+    ? raw
+    : aiMergeProgramEdit(programToText(editAIProg), raw);
+  const {program, errors} = parseProgramText(safeRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
@@ -13625,80 +13739,92 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-const AI_PROMPT = `You are a fitness-program assistant for home workouts. Build a safe, practical program from the user's request and return ONLY the plain-text protocol below: no Markdown, no commentary before or after it.
-
-IMPORTANT LANGUAGE RULE:
-- All instructions in this prompt are in English.
-- User-visible content values (program name, program description, exercise names, exercise descriptions, mistakes, replacement names/descriptions) must be written in {{OUTPUT_LANGUAGE}}.
-- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens listed below are machine-readable constants. Keep those exact Russian tokens unchanged even when the user-visible content is English.
-
-=== OUTPUT PROTOCOL ===
-
-General fields, one per line as "KEY: value":
-
-ПРОГРАММА: program name
-ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line; explain who it is for, expected result, frequency, what to watch, and when to reduce load
-ВРЕМЯ: HH:MM, for example 07:30 (optional)
-ПРОГРЕССИЯ: integer 1-15 or "нет"; increase load after this many COMPLETED workouts, not calendar days. Beginners usually 3-6, experienced users 2-4.
-ЧЕРЕДОВАНИЕ: "да" or "нет"; use "да" when workout variants rotate A-B-A independently of weekdays
-ДНИ ТРЕНИРОВОК: comma-separated canonical weekday tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only needed as the shared schedule when ЧЕРЕДОВАНИЕ: да
-
-Workout variants:
-- Same workout every training day = one variant.
-- Different exercise sets for different days = multiple variants, maximum 7.
-- Each variant starts with ДЕНЬ:.
-
-ДЕНЬ: canonical weekday tokens for this variant, comma-separated. When ЧЕРЕДОВАНИЕ: да, leave the value empty.
-КРУГИ: 1-10; how many times the ENTIRE exercise list repeats
-ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
-
-КРУГИ and ПОДХОДЫ are independent:
-- circuit: КРУГИ 2-5, usually ПОДХОДЫ 1
-- strength: КРУГИ 1, usually ПОДХОДЫ 3-4
-- mixed: both may be >1, but keep total volume sensible
-
-Each exercise starts with УПРАЖНЕНИЕ:.
-
-УПРАЖНЕНИЕ: user-visible exercise name in {{OUTPUT_LANGUAGE}}
-ОПИСАНИЕ: 3-4 practical sentences in {{OUTPUT_LANGUAGE}} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
-МЫШЦЫ: comma-separated tokens STRICTLY from this canonical list: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
-ОШИБКИ: 1-2 common mistakes in {{OUTPUT_LANGUAGE}}, max 300 characters (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
-ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
-ВЕС: starting kilograms for weighted formats (optional otherwise)
-ПОДХОДЫ: consecutive sets before the next exercise, 1-10
-СТОРОНА: "да" if the value is performed separately per side; omit otherwise
-РАЗМИНКА: "да" for warm-up exercises; omit otherwise
-ОТДЫХ: seconds between sets of this exercise
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the LAST set before the next exercise; only include when different from ОТДЫХ
-УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, or breathing drills
-ШАГ: for progressive unweighted formats only; reps increment for "повторения", seconds increment for "время"
-ШАГ ПОВТОРОВ: optional reps increment for "повторения и вес"
-ШАГ ВРЕМЕНИ: optional seconds increment for "время и вес"
-ШАГ ВЕСА: optional kg increment for weighted formats
-ПОТОЛОК: REQUIRED when УСЛОЖНЯТЬ: да for unweighted formats; realistic maximum in the same unit as ЗНАЧЕНИЕ
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted-reps format
-ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted-time format
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
-ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps only. "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
-ЗАМЕНА: a harder next-level exercise name in {{OUTPUT_LANGUAGE}} when the ceiling is reached (optional)
-ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in {{OUTPUT_LANGUAGE}} describing that harder variation; only when ЗАМЕНА exists
-ВИДЕО: a real YouTube technique link only if you are confident it exists; never invent a URL
-
-Safety and quality:
-- Match exercise selection, volume, intensity, progression, and recovery to the user's age, sex, experience, equipment, and stated limitations.
-- Do not diagnose or claim medical safety. Respect stated restrictions.
-- Keep progression realistic for home training.
-- Warm-up exercises should not progressively overload.
-- Do not add impossible equipment.
-- Return only the protocol.
-
-=== USER REQUEST ===
-`;
-
 function aiPrompt(locale){
-  const outLocale = (locale === 'ru' || locale === 'en') ? locale : appLocale;
-  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', outLocale === 'ru' ? 'Russian' : 'English');
+  const outLocale=(locale==='ru'||locale==='en')?locale:appLocale;
+  const lang=outLocale==='ru'?'Russian':'English';
+  return FitAIProtocol.programPrompt(lang);
+}
+
+function aiStructureChangeRequested(text){
+  const s=String(text||'').toLowerCase();
+  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
+    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
+}
+function aiProtocolLine(line){
+  const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+  return m?{key:m[1],value:m[2]}:null;
+}
+function aiExerciseBlocks(text){
+  const lines=String(text||'').split(/\r?\n/),out=[];
+  for(let i=0;i<lines.length;i++){
+    if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
+    let end=i+1;
+    while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
+    out.push({start:i,end,lines:lines.slice(i,end),name:(aiProtocolLine(lines[i])||{}).value||''});
+    i=end-1;
+  }
+  return out;
+}
+function aiMergeExerciseBlock(sourceText,candidateText){
+  const src=String(sourceText||'').split(/\r?\n/);
+  const cand=String(candidateText||'').split(/\r?\n/);
+  const values={},used={},existing=new Set();
+  cand.forEach(line=>{
+    const p=aiProtocolLine(line);if(!p)return;
+    if(!values[p.key])values[p.key]=[];
+    values[p.key].push(p.value);
+  });
+  const merged=src.map(line=>{
+    const p=aiProtocolLine(line);if(!p)return line;
+    existing.add(p.key);
+    const idx=used[p.key]||0;used[p.key]=idx+1;
+    const arr=values[p.key]||[];
+    return idx<arr.length?p.key+': '+String(arr[idx]||'').trim():line;
+  });
+  const allowed=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS||[]);
+  cand.forEach(line=>{
+    const p=aiProtocolLine(line);
+    if(!p||existing.has(p.key)||!allowed.has(p.key))return;
+    merged.push(p.key+': '+String(p.value||'').trim());
+    existing.add(p.key);
+  });
+  return merged.join('\n');
+}
+function aiMergeProgramEdit(sourceText,candidateText){
+  const srcLines=String(sourceText||'').split(/\r?\n/);
+  const candLines=String(candidateText||'').split(/\r?\n/);
+  const srcBlocks=aiExerciseBlocks(sourceText),candBlocks=aiExerciseBlocks(candidateText);
+  const candExerciseLine=new Set();
+  candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLine.add(i);});
+  const topValues={};
+  candLines.forEach((line,i)=>{
+    if(candExerciseLine.has(i))return;
+    const p=aiProtocolLine(line);if(!p)return;
+    if(!topValues[p.key])topValues[p.key]=[];
+    topValues[p.key].push(p.value);
+  });
+  const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
+  const usedCand=new Set();
+  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
+  const out=[];
+  for(let i=0;i<srcLines.length;i++){
+    const entry=blockByStart.get(i);
+    if(entry){
+      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
+      const cb=ci>=0?candBlocks[ci]:null;
+      if(ci>=0)usedCand.add(ci);
+      out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
+      i=entry.b.end-1;
+      continue;
+    }
+    const p=aiProtocolLine(srcLines[i]);
+    if(!p){out.push(srcLines[i]);continue;}
+    const idx=topUsed[p.key]||0;topUsed[p.key]=idx+1;
+    const arr=topValues[p.key]||[];
+    out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
+  }
+  return out.join('\n');
 }
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
@@ -14175,7 +14301,7 @@ function composeRequest(){
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
-const fullAIPrompt = ()=> aiPrompt() + '\n' + composeRequest();
+const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
@@ -14865,16 +14991,21 @@ function swapSourceExercise(){
   return src ? {...src, step} : null;
 }
 
-function swapAIPrompt(ex, swap){
-  return 'Replace this home-workout exercise with the specified harder progression and return the COMPLETE NEW exercise using the protocol below. ' +
-    'Return only the new exercise block, with no explanation before or after it.\n\n' +
-    'USER: ' + userForAI() + '\n' +
-    'TARGET REPLACEMENT: ' + swap.name + (swap.desc ? ' — ' + swap.desc : '') + '\n' +
-    'WHY: the current exercise has reached its progression ceiling, so the next level of the same movement pattern is needed.\n' +
-    'IMPORTANT: choose NEW starting values appropriate for the harder exercise, usually fewer reps or seconds than the old exercise, plus a sensible new progression increment and ceiling. ' +
-    'Keep set count and rest reasonably close to the current exercise. If the new exercise also has a clear harder next step, include it in ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.\n\n' +
-    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+function swapAIPrompt(ex,swap,locale){
+  return [
+    'Replace this home-workout exercise with the specified harder progression.',
+    'Return exactly ONE complete NEW exercise block and nothing else: no Markdown and no explanation.',
+    'The replacement must remain the same general movement pattern and preserve unilateral/bilateral nature when appropriate.',
+    'Do not introduce new equipment unless it is explicitly implied by TARGET REPLACEMENT or already used by the current exercise.',
+    'Choose fresh starting values appropriate for the harder exercise; usually use fewer reps/seconds than the old ceiling, then define a sensible progression and ceiling.',
+    'Keep set count and rest reasonably close unless the harder movement genuinely requires a change.',
+    'If the new exercise itself has a clear later progression that cannot be handled by reps/time/weight alone, you may include ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.',
+    'USER: '+userForAI(locale),
+    'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
+    'WHY: the current exercise reached its useful progression ceiling.',
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    exAnswerFormat(locale)
+  ].join('\n\n');
 }
 
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
@@ -14909,7 +15040,7 @@ async function swapViaAI(){
   aiRunOpen(t('workout.swapPicking'));
   let text;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча

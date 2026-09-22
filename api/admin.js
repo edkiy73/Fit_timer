@@ -11,6 +11,7 @@ const { store } = require('../lib/store');
 const { send, fail, readBody, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../lib/util');
 const { getSettings, sanitizeSettings, providerStatus, billingProviderStatus, generate } = require('../lib/ai');
+const FitAIProtocol = require('../lib/ai-protocol');
 const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
@@ -144,59 +145,104 @@ function localeMiss(block, label){
   return miss;
 }
 const TRANSLATABLE_KEYS = new Set([
-  'ПРОГРАММА', 'ОПИСАНИЕ ПРОГРАММЫ', 'УПРАЖНЕНИЕ', 'ОПИСАНИЕ',
-  'ОШИБКИ', 'ЗАМЕНА', 'ОПИСАНИЕ ЗАМЕНЫ'
+  'ПРОГРАММА','ОПИСАНИЕ ПРОГРАММЫ','УПРАЖНЕНИЕ','ОПИСАНИЕ',
+  'ОШИБКИ','ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ'
 ]);
 
 function protocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
-  return m ? {key:m[1],value:m[2]} : null;
+  return m?{key:m[1],value:m[2]}:null;
 }
-function protocolOccurrences(text){
-  const out={};
+function translationFieldsFromText(text){
+  const out={programName:'',programDescription:'',exercises:[]};
+  let ex=null;
   String(text||'').split(/\r?\n/).forEach(line=>{
-    const p=protocolLine(line);
-    if(!p) return;
-    if(!out[p.key]) out[p.key]=[];
-    out[p.key].push(p.value);
+    const p=protocolLine(line);if(!p)return;
+    if(p.key==='ПРОГРАММА'){out.programName=p.value;return;}
+    if(p.key==='ОПИСАНИЕ ПРОГРАММЫ'){out.programDescription=p.value;return;}
+    if(p.key==='УПРАЖНЕНИЕ'){
+      ex={index:out.exercises.length,name:p.value,description:'',mistakes:'',replacementName:'',replacementDescription:''};
+      out.exercises.push(ex);return;
+    }
+    if(!ex)return;
+    if(p.key==='ОПИСАНИЕ')ex.description=p.value;
+    else if(p.key==='ОШИБКИ')ex.mistakes=p.value;
+    else if(p.key==='ЗАМЕНА')ex.replacementName=p.value;
+    else if(p.key==='ОПИСАНИЕ ЗАМЕНЫ')ex.replacementDescription=p.value;
   });
   return out;
 }
-function mergeProtocolText(sourceText, candidateText, allowedKeys){
-  const values=protocolOccurrences(candidateText);
-  const used={};
+function applyTranslationFields(sourceText, translated){
+  const src=translationFieldsFromText(sourceText);
+  const list=Array.isArray(translated&&translated.exercises)?translated.exercises:[];
+  const byIndex=new Map(list.map((x,i)=>{x=x&&typeof x==='object'?x:{};return [Number.isInteger(+x.index)?+x.index:i,x];}));
+  let exIndex=-1;
   return String(sourceText||'').split(/\r?\n/).map(line=>{
-    const p=protocolLine(line);
-    if(!p) return line;
-    const idx=used[p.key]||0;
-    used[p.key]=idx+1;
-    if(allowedKeys && !allowedKeys.has(p.key)) return line;
-    const list=values[p.key]||[];
-    if(idx>=list.length) return line;
-    return p.key+': '+String(list[idx]||'').trim();
+    const p=protocolLine(line);if(!p)return line;
+    if(p.key==='ПРОГРАММА'){
+      const v=String((translated&&translated.programName)||'').trim();
+      return v?'ПРОГРАММА: '+v:line;
+    }
+    if(p.key==='ОПИСАНИЕ ПРОГРАММЫ'){
+      const v=String((translated&&translated.programDescription)||'').trim();
+      return v?'ОПИСАНИЕ ПРОГРАММЫ: '+v:line;
+    }
+    if(p.key==='УПРАЖНЕНИЕ')exIndex++;
+    const x=byIndex.get(exIndex)||{};
+    const map={
+      'УПРАЖНЕНИЕ':'name',
+      'ОПИСАНИЕ':'description',
+      'ОШИБКИ':'mistakes',
+      'ЗАМЕНА':'replacementName',
+      'ОПИСАНИЕ ЗАМЕНЫ':'replacementDescription'
+    };
+    const field=map[p.key];
+    if(!field)return line;
+    const v=String(x[field]||'').trim();
+    return v?p.key+': '+v:line;
   }).join('\n');
 }
-function normalizeTranslatedBlock(source, target){
-  if(!source || !target) return target;
+function translationPayload(source){
+  const fields=translationFieldsFromText(source&&source.text);
   return {
-    name: clampLine(target.name, 60),
-    gives: clampText(target.gives, 300),
-    // Перевод может переставить/удалить строки. Механику не доверяем модели:
-    // берём структуру оригинала и подставляем только человекочитаемые значения
-    // по паре «label + номер вхождения».
-    text: mergeProtocolText(source.text, target.text, TRANSLATABLE_KEYS)
+    name:String(source&&source.name||''),
+    gives:String(source&&source.gives||''),
+    programName:fields.programName,
+    programDescription:fields.programDescription,
+    exercises:fields.exercises
   };
 }
-
+function translationPayloadComplete(source,payload){
+  if(!payload||!String(payload.name||'').trim()||!String(payload.gives||'').trim())return false;
+  const src=translationPayload(source);
+  if(src.programName&&!String(payload.programName||'').trim())return false;
+  if(src.programDescription&&!String(payload.programDescription||'').trim())return false;
+  const list=Array.isArray(payload.exercises)?payload.exercises:[];
+  if(list.length!==src.exercises.length)return false;
+  for(let i=0;i<src.exercises.length;i++){
+    const a=src.exercises[i],b=list.find(x=>x&&+x.index===i)||list[i]||{};
+    for(const k of ['name','description','mistakes','replacementName','replacementDescription']){
+      if(a[k]&&!String(b[k]||'').trim())return false;
+    }
+  }
+  return true;
+}
+function normalizeTranslatedBlock(source,target){
+  if(!source||!target)return target;
+  const fields=translationFieldsFromText(target.text);
+  return {
+    name:clampLine(target.name,60),
+    gives:clampText(target.gives,300),
+    text:applyTranslationFields(source.text,fields)
+  };
+}
 function protocolShape(text){
-  return String(text || '').split(/\r?\n/).map(line => {
-    const m = line.match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
-    if(!m) return '';
-    // В переводе меняются только человекочитаемые тексты. Повторы, вес, отдых,
-    // дни, формат, прогрессия и порядок блоков обязаны быть буквально теми же.
-    return m[1] + ':' + (TRANSLATABLE_KEYS.has(m[1]) ? '<text>' : m[2].trim());
+  return String(text||'').split(/\r?\n/).map(line=>{
+    const p=protocolLine(line);if(!p)return '';
+    return p.key+':'+(TRANSLATABLE_KEYS.has(p.key)?'<text>':p.value.trim());
   }).filter(Boolean);
 }
+
 function syncSourceFields(c, norm){
   const src = norm.locales[norm.sourceLocale] || norm.locales.ru || norm.locales.en;
   c.sourceLocale = norm.sourceLocale;
@@ -465,36 +511,45 @@ module.exports = async (req, res) => {
      которую действительно решили готовить к публикации. Ручной ввод в админке
      остаётся полноценным запасным путём. */
   if(a === 'translate_catalog'){
-    const from = normLocale(body && body.from);
-    const to = normLocale(body && body.to);
-    if(from === to) return fail(res, 400, 'same_locale');
-    const source = cleanLocaleBlock(body && body.locale);
-    const bad = localeMiss(source, from.toUpperCase());
-    if(bad.length) return fail(res, 400, 'bad_source_locale', {miss:bad});
-    const names = {ru:'Russian', en:'English'};
-    const prompt =
-      'Translate this fitness catalog entry from ' + names[from] + ' to ' + names[to] + '.\n' +
-      'Return ONLY valid JSON with exactly these keys: name, gives, text. No Markdown.\n' +
-      'In text, keep every protocol label before the colon EXACTLY unchanged (for example ПРОГРАММА, ДНИ, КРУГИ, УПРАЖНЕНИЕ, ОПИСАНИЕ, ФОРМАТ, ЗНАЧЕНИЕ, ПОДХОДЫ, ОТДЫХ, ШАГ, ПОТОЛОК).\n' +
-      'Keep line order, blank lines, numbers, day tokens, boolean/control values and format values unchanged. ' +
-      'Translate only human-readable names and prose: program/exercise names, descriptions, muscles, mistakes, replacements.\n' +
-      'Do not add, remove, reorder or change exercises or workout mechanics.\n\nSOURCE JSON:\n' +
-      JSON.stringify(source);
+    const from=normLocale(body&&body.from);
+    const to=normLocale(body&&body.to);
+    if(from===to)return fail(res,400,'same_locale');
+    const source=cleanLocaleBlock(body&&body.locale);
+    const bad=localeMiss(source,from.toUpperCase());
+    if(bad.length)return fail(res,400,'bad_source_locale',{miss:bad});
+    const names={ru:'Russian',en:'English'};
+    const sourceFields=translationPayload(source);
+    const prompt=[
+      'Translate the user-visible fitness text from '+names[from]+' to '+names[to]+'.',
+      'Return ONLY valid JSON with exactly these top-level keys: name, gives, programName, programDescription, exercises. No Markdown.',
+      'Each exercises item MUST contain exactly: index, name, description, mistakes, replacementName, replacementDescription.',
+      'Keep every exercise index and array order unchanged.',
+      'Translate ONLY human-readable prose and names. Do not translate or invent machine fields, muscles, weekdays, numbers, weights, reps, rest, format tokens, booleans, progression settings or workout mechanics.',
+      'If a source string is empty, return an empty string for that field.',
+      'Do not summarize, improve, reinterpret or rewrite the workout. Translate meaning faithfully.',
+      'SOURCE JSON:',
+      JSON.stringify(sourceFields)
+    ].join('\n');
     try{
-      const settings = await getSettings();
-      const out = await generate('text', settings, prompt);
-      const raw = String(out.text || '').trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+      const settings=await getSettings();
+      const out=await generate('text',settings,prompt);
+      const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
       let parsed;
-      try{ parsed = JSON.parse(raw); }catch(e){ return fail(res, 502, 'translation_bad_json'); }
-      const locale = normalizeTranslatedBlock(source, cleanLocaleBlock(parsed));
-      const miss = localeMiss(locale, to.toUpperCase());
-      if(miss.length) return fail(res, 502, 'translation_incomplete', {miss});
-      if(JSON.stringify(protocolShape(source.text)) !== JSON.stringify(protocolShape(locale.text))){
-        return fail(res, 502, 'translation_changed_structure');
+      try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'translation_bad_json');}
+      if(!translationPayloadComplete(source,parsed))return fail(res,502,'translation_incomplete');
+      const locale={
+        name:clampLine(parsed.name,60),
+        gives:clampText(parsed.gives,300),
+        text:applyTranslationFields(source.text,parsed)
+      };
+      const miss=localeMiss(locale,to.toUpperCase());
+      if(miss.length)return fail(res,502,'translation_incomplete',{miss});
+      if(JSON.stringify(protocolShape(source.text))!==JSON.stringify(protocolShape(locale.text))){
+        return fail(res,502,'translation_changed_structure');
       }
-      return send(res, 200, {ok:true, locale, provider:out.provider, model:out.model, fallback:out.fallback});
+      return send(res,200,{ok:true,locale,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){
-      return fail(res, 502, 'translation_failed', {detail:String(e.message || e).slice(0,500)});
+      return fail(res,502,'translation_failed',{detail:String(e.message||e).slice(0,500)});
     }
   }
 
@@ -510,13 +565,7 @@ module.exports = async (req, res) => {
     }
     return {lines,start,end};
   }
-  const EXERCISE_OPTIONAL_LABELS = new Set([
-    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
-    'ФОРМАТ','ВЕС','УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
-    'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
-    'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
-    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ','ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ'
-  ]);
+  const EXERCISE_OPTIONAL_LABELS=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS);
   function replaceExerciseBlock(text, exerciseName, candidate){
     const src=exerciseBlockRange(text,exerciseName);
     if(src.start<0) return text;
@@ -556,83 +605,128 @@ module.exports = async (req, res) => {
 
     return src.lines.slice(0,src.start).concat(merged,src.lines.slice(src.end)).join('\n');
   }
+  function structureChangeRequested(text){
+    const s=String(text||'').toLowerCase();
+    return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
+      || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
+  }
+  function programExerciseBlocks(text){
+    const lines=String(text||'').split(/\r?\n/),out=[];
+    for(let i=0;i<lines.length;i++){
+      if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i]))continue;
+      let end=i+1;
+      while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
+      out.push({start:i,end,lines:lines.slice(i,end),name:(protocolLine(lines[i])||{}).value||''});
+      i=end-1;
+    }
+    return out;
+  }
+  function mergeProgramEditText(sourceText,candidateText){
+    const srcLines=String(sourceText||'').split(/\r?\n/);
+    const candLines=String(candidateText||'').split(/\r?\n/);
+    const srcBlocks=programExerciseBlocks(sourceText),candBlocks=programExerciseBlocks(candidateText);
+    const candExerciseLines=new Set();
+    candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLines.add(i);});
+    const vals={};
+    candLines.forEach((line,i)=>{
+      if(candExerciseLines.has(i))return;
+      const p=protocolLine(line);if(!p)return;
+      if(!vals[p.key])vals[p.key]=[];
+      vals[p.key].push(p.value);
+    });
+    const used={},blockMap=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}])),out=[];
+    const usedCand=new Set();
+    const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
+    for(let i=0;i<srcLines.length;i++){
+      const entry=blockMap.get(i);
+      if(entry){
+        let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+        if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i))ci=entry.i;
+        const cb=ci>=0?candBlocks[ci]:null;
+        if(ci>=0)usedCand.add(ci);
+        const sourceBlock=entry.b.lines.join('\n');
+        const candidateBlock=cb?cb.lines.join('\n'):'';
+        const tempName=(protocolLine(entry.b.lines[0])||{}).value||'';
+        const wrapped='УПРАЖНЕНИЕ: '+tempName+'\n'+entry.b.lines.slice(1).join('\n');
+        // same merger, addressed by the source exercise name
+        out.push(...replaceExerciseBlock(wrapped,tempName,candidateBlock).split('\n'));
+        i=entry.b.end-1;
+        continue;
+      }
+      const p=protocolLine(srcLines[i]);
+      if(!p){out.push(srcLines[i]);continue;}
+      const idx=used[p.key]||0;used[p.key]=idx+1;
+      const arr=vals[p.key]||[];
+      out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
+    }
+    return out.join('\n');
+  }
 
   if(a === 'catalog_ai_edit'){
     const mode=String(body&&body.mode||'program');
-    if(!['program','exercise'].includes(mode)) return fail(res,400,'bad_ai_mode');
+    if(!['program','exercise'].includes(mode))return fail(res,400,'bad_ai_mode');
     const locale=cleanLocaleBlock(body&&body.locale);
     const bad=localeMiss(locale,'AI');
-    if(bad.length) return fail(res,400,'bad_source_locale',{miss:bad});
+    if(bad.length)return fail(res,400,'bad_source_locale',{miss:bad});
     const instruction=clean(body&&body.instruction,2000).trim();
-    if(!instruction) return fail(res,400,'missing_instruction');
+    if(!instruction)return fail(res,400,'missing_instruction');
     const exercise=clampLine(body&&body.exercise,120);
+    const editLocale=normLocale(body&&body.lang);
+    const language=editLocale==='ru'?'Russian':'English';
 
     try{
       const settings=await getSettings();
 
       if(mode==='exercise'){
         const range=exerciseBlockRange(locale.text,exercise);
-        if(range.start<0) return fail(res,404,'exercise_not_found');
+        if(range.start<0)return fail(res,404,'exercise_not_found');
         const sourceBlock=range.lines.slice(range.start,range.end).join('\n');
         const prompt=[
-          'Edit exactly this ONE Fit Timer exercise block according to the instruction.',
+          'Edit exactly ONE Fit Timer exercise according to the instruction.',
           'Return ONLY valid JSON: {"block":"..."}. No Markdown.',
-          'CRITICAL STRUCTURE RULES:',
-          '- Keep every existing protocol line and every existing label before the colon.',
-          '- Never delete an existing line.',
-          '- You MAY add only valid optional exercise fields when the requested change requires them.',
-          '- Valid optional fields: СТОРОНА, РАЗМИНКА, ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ, ФОРМАТ, ВЕС, УСЛОЖНЯТЬ, ШАГ, ШАГ ВЕСА, ШАГ ПОВТОРОВ, ШАГ ВРЕМЕНИ, ПОТОЛОК, ПОТОЛОК ВЕСА, ПОТОЛОК ПОВТОРОВ, ПОТОЛОК ВРЕМЕНИ, ПРИ ПОТОЛКЕ, ЗАМЕНА, ОПИСАНИЕ ЗАМЕНЫ.',
-          '- Use СТОРОНА: да when the value is performed separately for each side/arm/leg.',
-          '- If adding external load such as a kettlebell/dumbbell/barbell, update ФОРМАТ to include "и вес", add ВЕС with the starting kilograms, and add УСЛОЖНЯТЬ: да plus an appropriate ШАГ ВЕСА unless the instruction explicitly says weight must stay fixed.',
-          '- For weighted reps, use ПРИ ПОТОЛКЕ: да when the intended progression is double progression: reps rise to ПОТОЛОК ПОВТОРОВ, then weight rises by ШАГ ВЕСА and reps return toward the starting range.',
-          '- Use ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ when there is a sensible harder next-level exercise to switch to after the current exercise has reached its useful ceiling.',
-          '- Example for "add an 8 kg kettlebell and progress the load" on a reps exercise: ФОРМАТ: повторения и вес; ВЕС: 8; УСЛОЖНЯТЬ: да; ШАГ ВЕСА: 2. If the request also says to add weight after reaching max reps, add ПОТОЛОК ПОВТОРОВ and ПРИ ПОТОЛКЕ: да.',
-          '- Example for unilateral work: keep the existing ЗНАЧЕНИЕ and add СТОРОНА: да rather than doubling the number.',
-          '- Keep optional progression fields only when they make physiological and mechanical sense for the exercise; do not invent a harder replacement if there is no clear safe progression.',
-          '- If the user asks to remove/disable a setting, KEEP its existing label and set a neutral value: 0 for numeric/rest values, false/no for boolean values.',
-          '- Do not add another exercise or change anything outside this block.',
+          FitAIProtocol.machineLanguageRules(language),
+          FitAIProtocol.exerciseSchema(language),
+          FitAIProtocol.progressionRules(),
+          FitAIProtocol.editRules(false),
           'Instruction: '+instruction,
-          'EXERCISE BLOCK:',
-          sourceBlock
-        ].join('\n');
+          '=== CURRENT EXERCISE ===\n'+sourceBlock
+        ].join('\n\n');
         const out=await generate('text',settings,prompt);
         const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
         let parsed;
         try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
         const block=String(parsed.block||'').trim();
-        if(!block) return fail(res,502,'ai_incomplete');
+        if(!block)return fail(res,502,'ai_incomplete');
+        const count=(block.match(/^УПРАЖНЕНИЕ:\s*/gm)||[]).length;
+        if(count!==1)return fail(res,502,'ai_wrong_exercise_count',{count});
         const text=replaceExerciseBlock(locale.text,exercise,block);
         const edited={name:locale.name,gives:locale.gives,text};
         return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
       }
 
+      const structural=structureChangeRequested(instruction);
       const prompt=[
         'Edit this Fit Timer catalog program according to the instruction.',
         'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
-        'CRITICAL STRUCTURE RULES FOR text:',
-        '- Keep EVERY existing protocol line and EVERY label before the colon.',
-        '- Keep the exact line order and the same number of protocol lines.',
-        '- Never delete a protocol line and never add a new protocol label.',
-        '- If the instruction says to remove/disable a setting, keep the line and set a neutral value: 0 for numeric/rest values, false for boolean values.',
-        '- You may change only values after existing labels.',
-        '- Do not add/remove/reorder exercises unless the instruction explicitly asks to change an exercise list; even then, preserve all service labels required by the existing format.',
+        FitAIProtocol.machineLanguageRules(language),
+        FitAIProtocol.programSchema(language),
+        FitAIProtocol.progressionRules(),
+        FitAIProtocol.editRules(structural),
         'Instruction: '+instruction,
         'PROGRAM JSON:',
         JSON.stringify(locale)
-      ].join('\n');
+      ].join('\n\n');
       const out=await generate('text',settings,prompt);
       const raw=String(out.text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
       let parsed;
       try{parsed=JSON.parse(raw);}catch(_){return fail(res,502,'ai_bad_json');}
       const rawEdited=cleanLocaleBlock(parsed);
       const miss=localeMiss(rawEdited,'AI');
-      if(miss.length) return fail(res,502,'ai_incomplete',{miss});
+      if(miss.length)return fail(res,502,'ai_incomplete',{miss});
       const edited={
         name:rawEdited.name,
         gives:rawEdited.gives,
-        // Даже если модель нарушила инструкцию и удалила строку, возвращаем
-        // структуру оригинала, подставляя значения только в существующие labels.
-        text:mergeProtocolText(locale.text,rawEdited.text,null)
+        text:structural?rawEdited.text:mergeProgramEditText(locale.text,rawEdited.text)
       };
       return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){

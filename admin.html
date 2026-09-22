@@ -1226,6 +1226,7 @@ async function aiEditProgram(lang,exercise){
   try{
     const r=await api('catalog_ai_edit',{
       mode:exercise?'exercise':'program',
+      lang,
       locale:localeFromForm(lang),
       exercise:exercise||'',
       instruction

@@ -860,15 +860,16 @@ function ageError(v, required = false){
   return '';
 }
 // строка о человеке для запроса к ИИ
-function userForAI(){
+function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
   bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
-  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
-  return bits.join('. ') + '. Use this information when choosing exercises, load, progression, and recovery.';
+  const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  bits.push(`User-visible output language: ${outLang}`);
+  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery, but never infer absolute strength or starting weight from sex alone.';
 }
 
 /* ================= GEMINI API ================= */
@@ -960,7 +961,7 @@ async function callGemini(prompt, signal){
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
     contents: [{parts: [{text: prompt}]}],
-    generationConfig: {maxOutputTokens: 32768, temperature: 1}
+    generationConfig: {maxOutputTokens: 32768, temperature: .3}
   };
   let last = null;
   // 503 «high demand» — временная перегрузка, а не отказ: Google прямо советует повторить.
@@ -1852,74 +1853,50 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-function exAnswerFormat(){
-  return `=== OUTPUT FORMAT ===
-Use the exact Russian protocol keys and enum tokens below because the app parser expects them. Write user-visible values (exercise name, description, mistakes, replacement name/description) in ${aiOutputLanguage()}.
-
-УПРАЖНЕНИЕ: exercise name
-ОПИСАНИЕ: technique, 3-5 practical sentences
-МЫШЦЫ: comma-separated tokens STRICTLY from: ${MUSCLES.map(m => m[1]).join(', ')}
-ОШИБКИ: 1-2 common mistakes (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
-ЗНАЧЕНИЕ: number or range like 10-12; time formats use seconds
-ВЕС: starting kg for weighted formats
-ПОДХОДЫ: integer 1-5
-СТОРОНА: "да" if counted separately per side; omit otherwise
-РАЗМИНКА: "да" for a warm-up exercise; omit otherwise
-ОТДЫХ: seconds between sets
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
-УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, and breathing drills
-ШАГ: progression increment for unweighted reps/time
-ШАГ ПОВТОРОВ: optional reps increment for weighted reps
-ШАГ ВРЕМЕНИ: optional seconds increment for weighted time
-ШАГ ВЕСА: optional kg increment for weighted formats
-ПОТОЛОК: REQUIRED progression ceiling for unweighted formats when УСЛОЖНЯТЬ: да
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
-ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
-ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps, "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
-ЗАМЕНА: harder next-level exercise name when the ceiling is reached (optional)
-ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences describing that replacement, only when ЗАМЕНА exists
-ВИДЕО: real technique URL only if confident it exists; otherwise omit
-
-Return only the exercise block, with no Markdown and no explanation before or after it.`;
+function exAnswerFormat(locale){
+  const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  return [
+    FitAIProtocol.machineLanguageRules(lang),
+    FitAIProtocol.exerciseSchema(lang),
+    FitAIProtocol.progressionRules()
+  ].join('\n\n');
 }
 
 function exePrompt(){
-  const ex = curPlan().exercises[exeIdx];
-  const wish = clampText($('exeWish').value, LIM.wish);
-  return 'Edit this home-workout exercise and return the COMPLETE updated exercise in the protocol below. ' +
-    'Keep fields that the request does not affect unchanged. Return only the exercise block.\n\n' +
-    'USER: ' + userForAI() + '\n' +
-    'REQUEST: ' + (wish || '(No specific request. Improve clarity and technique guidance while preserving the exercise intent.)') + '\n\n' +
-    '=== CURRENT EXERCISE ===\n' + exerciseToText(ex) + '\n\n' +
-    exAnswerFormat();
+  const ex=curPlan().exercises[exeIdx];
+  const wish=clampText($('exeWish').value,LIM.wish);
+  return [
+    'Edit exactly ONE home-workout exercise.',
+    'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
+    FitAIProtocol.editRules(false),
+    'USER: '+userForAI(draft&&draft.locale),
+    'REQUEST: '+(wish||'(No specific request. Improve clarity and technique guidance while preserving the exercise intent and training mechanics.)'),
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    exAnswerFormat(draft&&draft.locale)
+  ].join('\n\n');
 }
 
 async function applyExEdit(){
-  const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + raw;
-  const {program} = parseProgramText(wrapped);
-  const got = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
-  if(!got.length){ appAlert(MSG_AI_NOEX); return; }
-  const list = curPlan().exercises;
-  const oldEx = list[exeIdx];
-  if(!oldEx){ show('scrBuilder'); return; }
-  const upd = got[0];
-  // сохраняем картинку, если ИИ её не вернул
-  if(!upd.media && oldEx.media) upd.media = oldEx.media;
-  list[exeIdx] = upd;
-  // если ИИ вернул больше одного — остальные добавим после
-  if(got.length > 1){
-    const extra = got.slice(1);
-    list.splice(exeIdx + 1, 0, ...extra);
-  }
-  $('aiResult').value = '';
+  const raw=($('aiResult').value||'').trim();
+  if(!raw){appAlert(MSG_AI_EMPTY);return;}
+  const list=curPlan().exercises;
+  const oldEx=list[exeIdx];
+  if(!oldEx){show('scrBuilder');return;}
+  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
+  // в два упражнения или потерять старые служебные поля.
+  const candidateBlocks=aiExerciseBlocks(raw);
+  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
+  const {program}=parseProgramText(wrapped);
+  const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
+  if(got.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const upd=got[0];
+  if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  list[exeIdx]=upd;
+  $('aiResult').value='';
   await afterExChange();
-  appAlert(got.length > 1
-    ? `Упражнение обновлено, добавлено ещё: ${got.length - 1}.`
-    : `Упражнение «${upd.name}» обновлено.`);
+  appAlert(`Упражнение «${upd.name}» обновлено.`);
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
@@ -1971,30 +1948,27 @@ function openExAI(){
 }
 
 function exaPrompt(){
-  const wish = clampText($('exaWish').value, LIM.wish);
-  const given = [], free = [];
-  const fmtMap = {'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
-  if(exa.format) given.push(`Preferred format: ${fmtMap[exa.format] || aiCanonicalEnglish(exa.format)}.`);
+  const wish=clampText($('exaWish').value,LIM.wish);
+  const given=[],free=[];
+  const fmtMap={'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
+  if(exa.format)given.push(`Preferred format: ${fmtMap[exa.format]||aiCanonicalEnglish(exa.format)}.`);
   else free.push('choose the most natural format: reps, weighted reps, time, or weighted time');
-  if(exa.level) given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
+  if(exa.level)given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
   else free.push('difficulty level');
-  if(exa.muscles.length) given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  if(exa.muscles.length)given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   else free.push('working muscles');
-  if(exa.equip.length) given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
+  if(exa.equip.length)given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
   else free.push('equipment; assume no special home equipment unless the exercise needs it');
 
-  const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
-  const many = cnt > 1;
-  let out = `Create exactly ${cnt} ${many ? 'different exercises' : 'exercise'} for a home workout. `;
-  out += many
-    ? 'Each exercise must be a separate block beginning with "УПРАЖНЕНИЕ:". Separate blocks with a blank line. Do not duplicate exercises. Return only those blocks.\n\n'
-    : 'Return only one exercise block.\n\n';
-  out += 'USER: ' + userForAI() + '\n';
-  out += 'REQUEST: ' + (wish || '(No specific request. Suggest a useful exercise that fits the user.)') + '\n';
-  if(given.length) out += given.join(' ') + '\n';
-  if(free.length) out += 'Decide these unspecified items yourself: ' + free.join('; ') + '.\n\n';
-  out += exAnswerFormat();
-  return out;
+  const cnt=Math.max(1,Math.min(10,parseInt(exa.count)||1));
+  const many=cnt>1;
+  const task=many
+    ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
+    : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
+  let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  if(given.length)req+='\n'+given.join(' ');
+  if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
+  return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
 }
 
 async function exaAddExercise(){
@@ -2119,13 +2093,15 @@ function programToText(p){
 }
 
 function editAIPrompt(){
-  const wish = clampText($('eaWish').value, LIM.wish);
-  return aiPrompt((editAIProg && editAIProg.locale) || appLocale) +
-    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n' +
-    'The current program is provided below. Apply the requested changes and return the COMPLETE program in the same machine-readable protocol, including exercises that were not changed. Do not omit unaffected content.\n' +
-    'USER: ' + userForAI() + '\n' +
-    'USER REQUEST: ' + (wish || '(No specific request. Improve the program while preserving its purpose and sensible load.)') + '\n\n' +
-    '=== CURRENT PROGRAM ===\n' + programToText(editAIProg);
+  const wish=clampText($('eaWish').value,LIM.wish);
+  const structural=aiStructureChangeRequested(wish);
+  return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
+    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
+    'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
+    FitAIProtocol.editRules(structural)+'\n'+
+    'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
+    'USER REQUEST: '+(wish||'(No specific request. Improve clarity while preserving purpose, structure and sensible load.)')+'\n\n'+
+    '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
 }
 
 function openEditAI(p){
@@ -2174,7 +2150,11 @@ function carryMedia(oldProg, newProg){
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY); return; }
-  const {program, errors} = parseProgramText(raw);
+  const wish = clampText($('eaWish').value, LIM.wish);
+  const safeRaw = aiStructureChangeRequested(wish)
+    ? raw
+    : aiMergeProgramEdit(programToText(editAIProg), raw);
+  const {program, errors} = parseProgramText(safeRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;

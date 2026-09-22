@@ -1343,80 +1343,92 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-const AI_PROMPT = `You are a fitness-program assistant for home workouts. Build a safe, practical program from the user's request and return ONLY the plain-text protocol below: no Markdown, no commentary before or after it.
-
-IMPORTANT LANGUAGE RULE:
-- All instructions in this prompt are in English.
-- User-visible content values (program name, program description, exercise names, exercise descriptions, mistakes, replacement names/descriptions) must be written in {{OUTPUT_LANGUAGE}}.
-- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens listed below are machine-readable constants. Keep those exact Russian tokens unchanged even when the user-visible content is English.
-
-=== OUTPUT PROTOCOL ===
-
-General fields, one per line as "KEY: value":
-
-ПРОГРАММА: program name
-ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line; explain who it is for, expected result, frequency, what to watch, and when to reduce load
-ВРЕМЯ: HH:MM, for example 07:30 (optional)
-ПРОГРЕССИЯ: integer 1-15 or "нет"; increase load after this many COMPLETED workouts, not calendar days. Beginners usually 3-6, experienced users 2-4.
-ЧЕРЕДОВАНИЕ: "да" or "нет"; use "да" when workout variants rotate A-B-A independently of weekdays
-ДНИ ТРЕНИРОВОК: comma-separated canonical weekday tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only needed as the shared schedule when ЧЕРЕДОВАНИЕ: да
-
-Workout variants:
-- Same workout every training day = one variant.
-- Different exercise sets for different days = multiple variants, maximum 7.
-- Each variant starts with ДЕНЬ:.
-
-ДЕНЬ: canonical weekday tokens for this variant, comma-separated. When ЧЕРЕДОВАНИЕ: да, leave the value empty.
-КРУГИ: 1-10; how many times the ENTIRE exercise list repeats
-ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
-
-КРУГИ and ПОДХОДЫ are independent:
-- circuit: КРУГИ 2-5, usually ПОДХОДЫ 1
-- strength: КРУГИ 1, usually ПОДХОДЫ 3-4
-- mixed: both may be >1, but keep total volume sensible
-
-Each exercise starts with УПРАЖНЕНИЕ:.
-
-УПРАЖНЕНИЕ: user-visible exercise name in {{OUTPUT_LANGUAGE}}
-ОПИСАНИЕ: 3-4 practical sentences in {{OUTPUT_LANGUAGE}} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
-МЫШЦЫ: comma-separated tokens STRICTLY from this canonical list: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
-ОШИБКИ: 1-2 common mistakes in {{OUTPUT_LANGUAGE}}, max 300 characters (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
-ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
-ВЕС: starting kilograms for weighted formats (optional otherwise)
-ПОДХОДЫ: consecutive sets before the next exercise, 1-10
-СТОРОНА: "да" if the value is performed separately per side; omit otherwise
-РАЗМИНКА: "да" for warm-up exercises; omit otherwise
-ОТДЫХ: seconds between sets of this exercise
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the LAST set before the next exercise; only include when different from ОТДЫХ
-УСЛОЖНЯТЬ: "да" or "нет"; use "нет" for warm-up, stretching, technique, or breathing drills
-ШАГ: for progressive unweighted formats only; reps increment for "повторения", seconds increment for "время"
-ШАГ ПОВТОРОВ: optional reps increment for "повторения и вес"
-ШАГ ВРЕМЕНИ: optional seconds increment for "время и вес"
-ШАГ ВЕСА: optional kg increment for weighted formats
-ПОТОЛОК: REQUIRED when УСЛОЖНЯТЬ: да for unweighted formats; realistic maximum in the same unit as ЗНАЧЕНИЕ
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted-reps format
-ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted-time format
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
-ПРИ ПОТОЛКЕ: "да" or "нет"; for weighted reps only. "да" means reps reset to the starting range when their ceiling is reached and weight rises by ШАГ ВЕСА
-ЗАМЕНА: a harder next-level exercise name in {{OUTPUT_LANGUAGE}} when the ceiling is reached (optional)
-ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in {{OUTPUT_LANGUAGE}} describing that harder variation; only when ЗАМЕНА exists
-ВИДЕО: a real YouTube technique link only if you are confident it exists; never invent a URL
-
-Safety and quality:
-- Match exercise selection, volume, intensity, progression, and recovery to the user's age, sex, experience, equipment, and stated limitations.
-- Do not diagnose or claim medical safety. Respect stated restrictions.
-- Keep progression realistic for home training.
-- Warm-up exercises should not progressively overload.
-- Do not add impossible equipment.
-- Return only the protocol.
-
-=== USER REQUEST ===
-`;
-
 function aiPrompt(locale){
-  const outLocale = (locale === 'ru' || locale === 'en') ? locale : appLocale;
-  return AI_PROMPT.replaceAll('{{OUTPUT_LANGUAGE}}', outLocale === 'ru' ? 'Russian' : 'English');
+  const outLocale=(locale==='ru'||locale==='en')?locale:appLocale;
+  const lang=outLocale==='ru'?'Russian':'English';
+  return FitAIProtocol.programPrompt(lang);
+}
+
+function aiStructureChangeRequested(text){
+  const s=String(text||'').toLowerCase();
+  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
+    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
+}
+function aiProtocolLine(line){
+  const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+  return m?{key:m[1],value:m[2]}:null;
+}
+function aiExerciseBlocks(text){
+  const lines=String(text||'').split(/\r?\n/),out=[];
+  for(let i=0;i<lines.length;i++){
+    if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
+    let end=i+1;
+    while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
+    out.push({start:i,end,lines:lines.slice(i,end),name:(aiProtocolLine(lines[i])||{}).value||''});
+    i=end-1;
+  }
+  return out;
+}
+function aiMergeExerciseBlock(sourceText,candidateText){
+  const src=String(sourceText||'').split(/\r?\n/);
+  const cand=String(candidateText||'').split(/\r?\n/);
+  const values={},used={},existing=new Set();
+  cand.forEach(line=>{
+    const p=aiProtocolLine(line);if(!p)return;
+    if(!values[p.key])values[p.key]=[];
+    values[p.key].push(p.value);
+  });
+  const merged=src.map(line=>{
+    const p=aiProtocolLine(line);if(!p)return line;
+    existing.add(p.key);
+    const idx=used[p.key]||0;used[p.key]=idx+1;
+    const arr=values[p.key]||[];
+    return idx<arr.length?p.key+': '+String(arr[idx]||'').trim():line;
+  });
+  const allowed=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS||[]);
+  cand.forEach(line=>{
+    const p=aiProtocolLine(line);
+    if(!p||existing.has(p.key)||!allowed.has(p.key))return;
+    merged.push(p.key+': '+String(p.value||'').trim());
+    existing.add(p.key);
+  });
+  return merged.join('\n');
+}
+function aiMergeProgramEdit(sourceText,candidateText){
+  const srcLines=String(sourceText||'').split(/\r?\n/);
+  const candLines=String(candidateText||'').split(/\r?\n/);
+  const srcBlocks=aiExerciseBlocks(sourceText),candBlocks=aiExerciseBlocks(candidateText);
+  const candExerciseLine=new Set();
+  candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLine.add(i);});
+  const topValues={};
+  candLines.forEach((line,i)=>{
+    if(candExerciseLine.has(i))return;
+    const p=aiProtocolLine(line);if(!p)return;
+    if(!topValues[p.key])topValues[p.key]=[];
+    topValues[p.key].push(p.value);
+  });
+  const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
+  const usedCand=new Set();
+  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
+  const out=[];
+  for(let i=0;i<srcLines.length;i++){
+    const entry=blockByStart.get(i);
+    if(entry){
+      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
+      const cb=ci>=0?candBlocks[ci]:null;
+      if(ci>=0)usedCand.add(ci);
+      out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
+      i=entry.b.end-1;
+      continue;
+    }
+    const p=aiProtocolLine(srcLines[i]);
+    if(!p){out.push(srcLines[i]);continue;}
+    const idx=topUsed[p.key]||0;topUsed[p.key]=idx+1;
+    const arr=topValues[p.key]||[];
+    out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
+  }
+  return out.join('\n');
 }
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
@@ -1893,7 +1905,7 @@ function composeRequest(){
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
-const fullAIPrompt = ()=> aiPrompt() + '\n' + composeRequest();
+const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
