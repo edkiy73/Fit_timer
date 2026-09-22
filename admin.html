@@ -370,6 +370,25 @@
     .payment-inputs{grid-template-columns:1fr 1fr}
   }
 
+
+  .exercise-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+  .exercise-card{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+  .exercise-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .exercise-card-title{font-size:13px;font-weight:700;line-height:1.3}
+  .exercise-card p{font-size:11.5px;color:var(--muted);margin:5px 0 0;line-height:1.4}
+  .exercise-card .b{padding:6px 8px;font-size:11.5px;flex:none}
+  .media-tools{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
+  .pic{width:104px}
+  .pic .ph{width:104px;height:104px;position:relative}
+  .pic .ph.generating:after{content:'Генерация…';position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:6px}
+  .pic-tools{display:flex;gap:4px;margin-top:4px}
+  .pic-tools button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:4px;font-size:10px;cursor:pointer}
+  @media(max-width:760px){
+    .exercise-grid{grid-template-columns:1fr}
+    .pic,.pic .ph{width:92px}
+    .pic .ph{height:92px}
+  }
+
 </style>
 </head>
 <body>
@@ -1095,113 +1114,186 @@ function pickPic(fn){
 
 // Названия упражнений — из текста программы. Другого источника нет и не нужно:
 // фото привязано к названию, и расходиться им нельзя.
+function exerciseBlocks(lang){
+  const field=lang==='en' ? $('fTextEn') : $('fTextRu');
+  const text=field?field.value:'';
+  const lines=text.split(/\r?\n/);
+  const starts=[];
+  lines.forEach((line,i)=>{if(/^УПРАЖНЕНИЕ:\s*/i.test(line))starts.push(i);});
+  return starts.map((start,idx)=>{
+    const end=idx+1<starts.length?starts[idx+1]:lines.length;
+    const chunk=lines.slice(start,end);
+    const value=key=>{
+      const row=chunk.find(x=>new RegExp('^'+key+':\\s*','i').test(x));
+      return row?row.replace(new RegExp('^'+key+':\\s*','i'),'').trim():'';
+    };
+    return {
+      name:value('УПРАЖНЕНИЕ'),
+      description:value('ОПИСАНИЕ'),
+      format:value('ФОРМАТ'),
+      value:value('ЗНАЧЕНИЕ'),
+      start,end
+    };
+  }).filter(x=>x.name);
+}
 function exNames(){
-  const out = [];
-  const field = form.sourceLocale === 'en' ? $('fTextEn') : $('fTextRu');
-  const text = field ? field.value : '';
-  (text.match(/^УПРАЖНЕНИЕ:\s*(.+)$/gmi) || []).forEach(l => {
-    const n = l.replace(/^УПРАЖНЕНИЕ:\s*/i, '').trim();
-    if(n && !out.includes(n)) out.push(n);
-  });
-  return out;
+  return exerciseBlocks(form.sourceLocale).map(x=>x.name);
 }
 
 function localeFromForm(lang){
-  const suf = lang === 'en' ? 'En' : 'Ru';
-  return {
-    name: $('fName' + suf).value.trim(),
-    gives: $('fGives' + suf).value.trim(),
-    text: $('fText' + suf).value
-  };
+  const suf=lang==='en'?'En':'Ru';
+  return {name:$('fName'+suf).value.trim(),gives:$('fGives'+suf).value.trim(),text:$('fText'+suf).value};
 }
-function setLocaleForm(lang, x){
-  const suf = lang === 'en' ? 'En' : 'Ru';
-  x = x || {};
-  $('fName' + suf).value = x.name || '';
-  $('fGives' + suf).value = x.gives || '';
-  $('fText' + suf).value = x.text || '';
+function setLocaleForm(lang,x){
+  const suf=lang==='en'?'En':'Ru';x=x||{};
+  $('fName'+suf).value=x.name||'';
+  $('fGives'+suf).value=x.gives||'';
+  $('fText'+suf).value=x.text||'';
 }
 function updateLocaleStates(){
-  LANGS.forEach(lang => {
-    const x = localeFromForm(lang);
-    const ok = x.name.length >= 3 && x.gives.length >= 20 && x.text.length >= 60;
-    const el = $('fState' + (lang === 'en' ? 'En' : 'Ru'));
-    el.textContent = ok ? 'готово ✓' : 'не заполнено';
-    el.className = 'lang-state' + (ok ? ' ok' : '');
+  LANGS.forEach(lang=>{
+    const x=localeFromForm(lang);
+    const ok=x.name.length>=3&&x.gives.length>=20&&x.text.length>=60;
+    const el=$('fState'+(lang==='en'?'En':'Ru'));
+    el.textContent=ok?'✓':'—';
+    el.className='lang-state'+(ok?' ok':'');
   });
 }
-function translationDirection(){
-  const from = form.sourceLocale === 'en' ? 'en' : 'ru';
-  return {from, to: from === 'ru' ? 'en' : 'ru'};
-}
-async function translateCatalogForm(){
-  const d = translationDirection();
-  $('fErr').textContent = 'Перевожу…';
+let pasteDirection={from:'ru',to:'en'};
+async function translateCatalogForm(from,to){
+  pasteDirection={from,to};
+  $('fErr').textContent='Перевожу '+langName(from)+' → '+langName(to)+'…';
   try{
-    const r = await api('translate_catalog', {from:d.from, to:d.to, locale:localeFromForm(d.from)});
-    setLocaleForm(d.to, r.locale || {});
-    updateLocaleStates();
-    $('fErr').textContent = '✓ Перевод готов. Проверь текст перед сохранением.';
+    const r=await api('translate_catalog',{from,to,locale:localeFromForm(from)});
+    setLocaleForm(to,r.locale||{});
+    updateLocaleStates();renderExerciseCards();renderPics();
+    $('fErr').textContent='✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.';
   }catch(e){
-    $('fErr').textContent = 'ИИ не перевёл: ' + (e.detail || e.message) + '. Можно вставить перевод вручную.';
+    $('fErr').textContent='ИИ не перевёл: '+(e.detail||e.message)+'. Можно вставить перевод вручную.';
   }
 }
 async function copyTranslationSource(){
-  const d = translationDirection();
-  const txt = translationPrompt(localeFromForm(d.from), d.from, d.to);
+  const from=editorLang,to=editorLang==='ru'?'en':'ru';
+  pasteDirection={from,to};
+  const txt=translationPrompt(localeFromForm(from),from,to);
   try{
     await navigator.clipboard.writeText(txt);
-    $('fErr').textContent = '✓ Текст для внешнего перевода скопирован.';
+    $('fErr').textContent='✓ Промпт '+langName(from)+' → '+langName(to)+' скопирован.';
   }catch(e){
-    $('fPasteJson').value = txt;
-    $('fPasteWrap').hidden = false;
-    $('fErr').textContent = 'Буфер недоступен — текст показан ниже.';
+    $('fPasteJson').value=txt;$('fPasteWrap').hidden=false;
+    $('fErr').textContent='Буфер недоступен — текст показан ниже.';
   }
 }
 function applyPastedTranslation(){
-  const d = translationDirection();
-  let raw = $('fPasteJson').value.trim();
-  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const d=pasteDirection;
+  let raw=$('fPasteJson').value.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
   try{
-    const x = JSON.parse(raw);
-    setLocaleForm(d.to, x);
-    $('fPasteWrap').hidden = true;
-    $('fPasteJson').value = '';
-    updateLocaleStates();
-    renderPics();
-    $('fErr').textContent = '✓ Перевод вставлен. Проверь его перед сохранением.';
+    const x=JSON.parse(raw);
+    setLocaleForm(d.to,x);
+    $('fPasteWrap').hidden=true;$('fPasteJson').value='';
+    updateLocaleStates();renderExerciseCards();renderPics();
+    $('fErr').textContent='✓ Перевод вставлен.';
+  }catch(e){$('fErr').textContent='Не получилось прочитать JSON. Нужны поля name, gives и text.';}
+}
+async function aiEditProgram(lang,exercise){
+  const question=exercise
+    ? 'Что изменить в упражнении «'+exercise+'»?'
+    : 'Что изменить в программе '+langName(lang)+'?';
+  const instruction=prompt(question,'');
+  if(!instruction)return;
+  $('fErr').textContent=exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…';
+  try{
+    const r=await api('catalog_ai_edit',{
+      mode:exercise?'exercise':'program',
+      locale:localeFromForm(lang),
+      exercise:exercise||'',
+      instruction
+    });
+    setLocaleForm(lang,r.locale||{});
+    updateLocaleStates();renderExerciseCards();renderPics();
+    $('fErr').textContent='✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.';
+  }catch(e){$('fErr').textContent='ИИ не изменил: '+(e.detail||e.message);}
+}
+function renderExerciseCards(){
+  const box=$('exerciseCards');if(!box)return;
+  const list=exerciseBlocks(editorLang);
+  box.innerHTML='';
+  if(!list.length){box.innerHTML='<div class="compact-note">Упражнения появятся здесь после заполнения протокола.</div>';return;}
+  list.forEach(ex=>{
+    const card=document.createElement('div');
+    card.className='exercise-card';
+    card.innerHTML=`
+      <div class="exercise-card-head"><div class="exercise-card-title">${esc(ex.name)}</div><button class="b quiet" type="button">Изменить через ИИ</button></div>
+      ${ex.description?`<p>${esc(ex.description)}</p>`:''}
+      ${ex.format||ex.value?`<div class="entity-tags"><span class="status-chip">${esc(ex.format||'формат')}</span>${ex.value?`<span class="status-chip">${esc(ex.value)}</span>`:''}</div>`:''}`;
+    card.querySelector('button').onclick=()=>aiEditProgram(editorLang,ex.name);
+    box.appendChild(card);
+  });
+}
+function shrinkGeneratedPic(data,cb){
+  const img=new Image();
+  img.onload=()=>{
+    const maxSide=640,k=Math.min(1,maxSide/Math.max(img.width,img.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.width*k));canvas.height=Math.max(1,Math.round(img.height*k));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    try{cb(canvas.toDataURL('image/jpeg',.82));}catch(_){cb(data);}
+  };
+  img.onerror=()=>cb(data);img.src=data;
+}
+async function generateCatalogPic(kind,name,description,set,el){
+  const ph=el&&el.querySelector('.ph');if(ph)ph.classList.add('generating');
+  $('fErr').textContent='Генерирую '+(kind==='cover'?'обложку':'фото «'+name+'»')+'…';
+  try{
+    const r=await api('catalog_ai_image',{kind,name,description,program:localeFromForm(form.sourceLocale).name});
+    shrinkGeneratedPic(r.image,pic=>{set(pic);$('fErr').textContent='✓ Картинка готова. Не забудь сохранить программу.';});
   }catch(e){
-    $('fErr').textContent = 'Не получилось прочитать JSON. Нужны поля name, gives и text.';
+    if(ph)ph.classList.remove('generating');
+    $('fErr').textContent='ИИ не сгенерировал картинку: '+(e.detail||e.message);
   }
 }
-function renderPics(){
-  const cover = $('fCoverBox');
-  cover.innerHTML = '';
-  cover.appendChild(picBox('Обложка', form.cover, d => { form.cover = d; renderPics(); }));
-
-  const names = exNames();
-  const box = $('fPics');
-  box.innerHTML = '';
-  $('fPicsHint').textContent = names.length
-    ? 'Нажми на квадрат, чтобы выбрать фото. Картинка уменьшается сама.'
-    : 'Названия берутся из текста программы — впиши упражнения, и здесь появятся места под фото.';
-  names.forEach(n => box.appendChild(
-    picBox(n, form.media[n], d => { if(d) form.media[n] = d; else delete form.media[n]; renderPics(); })));
-  // фото упражнений, которых в тексте больше нет, держать незачем
-  Object.keys(form.media).forEach(k => { if(!names.includes(k)) delete form.media[k]; });
+async function generateMedia(mode){
+  const source=form.sourceLocale;
+  const exercises=exerciseBlocks(source);
+  const jobs=[];
+  if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
+  exercises.forEach(ex=>{
+    if(mode==='all'||!form.media[ex.name])jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>{form.media[ex.name]=d;}});
+  });
+  if(!jobs.length){$('fErr').textContent='Все изображения уже есть.';return;}
+  for(let i=0;i<jobs.length;i++){
+    const j=jobs[i];
+    $('fErr').textContent='Генерация изображений '+(i+1)+' / '+jobs.length+'…';
+    try{
+      const r=await api('catalog_ai_image',{kind:j.kind,name:j.name,description:j.description,program:localeFromForm(source).name});
+      await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
+    }catch(e){$('fErr').textContent='Остановлено на '+(i+1)+' / '+jobs.length+': '+(e.detail||e.message);return;}
+  }
+  $('fErr').textContent='✓ Изображения сгенерированы. Сохрани программу.';
+  renderPics();
 }
+function renderPics(){
+  const cover=$('fCoverBox');if(!cover)return;
+  cover.innerHTML='';
+  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;renderPics();},'cover',''));
 
-function picBox(label, data, set){
-  const el = document.createElement('div');
-  el.className = 'pic';
-  el.innerHTML = `<div class="ph">${data ? `<img src="${esc(data)}" alt="">` : 'выбрать'}</div>`
-    + `<small>${esc(label)}</small>`
-    + (data ? '<button class="x" title="Убрать">✕</button>' : '');
-  el.querySelector('.ph').onclick = () => pickPic(set);
-  const x = el.querySelector('.x');
-  if(x) x.onclick = e => { e.stopPropagation(); set(null); };
+  const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
+  const box=$('fPics');box.innerHTML='';
+  $('fPicsHint').textContent=names.length?'Клик по картинке — генерация через ИИ. «Загрузить» — своё фото.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
+  blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];renderPics();},'exercise',ex.description)));
+  Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
+}
+function picBox(label,data,set,kind,description){
+  const el=document.createElement('div');el.className='pic';
+  el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'ИИ'}</div>
+    <small>${esc(label)}</small>
+    <div class="pic-tools"><button type="button" data-upload>Загрузить</button>${data?'<button type="button" data-remove>Убрать</button>':''}</div>`;
+  el.querySelector('.ph').onclick=()=>generateCatalogPic(kind,label,description,set,el);
+  el.querySelector('[data-upload]').onclick=()=>pickPic(set);
+  const rm=el.querySelector('[data-remove]');if(rm)rm.onclick=()=>set(null);
   return el;
 }
+
 let editorLang='ru';
 function setEditorLang(lang){
   editorLang=lang==='en'?'en':'ru';
