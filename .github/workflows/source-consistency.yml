@@ -49,3 +49,4 @@ jobs:
           node tests/ai-recovery-unit.js
           node tests/motivation-unit.js
           node tests/accessibility-unit.js
+          node tests/release-ux-unit.js
