@@ -189,6 +189,7 @@ function paintPause(){
 // fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
 function startWorkout(fromIdx, elapsed){
+  trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
   if(window.FitNative) window.FitNative.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
@@ -747,6 +748,7 @@ function estimateKcal(sec, load){
 }
 
 function finishWorkout(){
+  trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
   setPause(false);
   stopHandsFree();
