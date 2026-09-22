@@ -18,10 +18,7 @@ For every coding task:
 
 Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
-The previous full project context is preserved verbatim in:
-`docs/claude-context-archive.md`
-
-Historical rationale and bug traps live in:
+Current engineering rationale and known bug traps live in:
 `docs/why.md`
 
 ## Project snapshot
@@ -201,4 +198,3 @@ Read only when relevant:
 - `docs/ai-generation-plan.md` — AI generation design/history
 - `docs/trainer-ui.md` — trainer UX
 - `docs/why.md` — historical rationale and known traps
-- `docs/claude-context-archive.md` — old full context, preserved for rare deep-reference needs
