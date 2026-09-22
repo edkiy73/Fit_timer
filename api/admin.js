@@ -63,7 +63,13 @@ async function ensureAccountIndex(){
 async function adminUsers(){
   await ensureAccountIndex();
   const ids=[...new Set((await store.list('a:all')).filter(x=>/^[a-f0-9]{32}$/.test(String(x))))].slice(-1000);
-  const month=new Date().toISOString().slice(0,7);
+  const now=new Date();
+  const month=now.toISOString().slice(0,7);
+  const [year,mon]=month.split('-').map(Number);
+  const periodStart=`${month}-01`;
+  const periodEnd=new Date(Date.UTC(year,mon,0)).toISOString().slice(0,10);
+  const settings=await getSettings();
+  const limits=settings.limits||{};
   const [raws, usage] = await Promise.all([
     store.many(ids.map(mh=>`a:${mh}`)),
     store.many(ids.flatMap(mh=>[
@@ -88,10 +94,15 @@ async function adminUsers(){
         devices:Object.keys(a.syncDevices||{}).length,
         pushDevices:Object.keys(a.pushDevices||{}).length,
         aiUsage:{
-          month,
+          month, periodStart, periodEnd,
           programs:+usage[i*3]||0,
           exercises:+usage[i*3+1]||0,
-          images:+usage[i*3+2]||0
+          images:+usage[i*3+2]||0,
+          limits:{
+            programs:+limits.heavy||0,
+            exercises:+limits.light||0,
+            images:+limits.image||0
+          }
         }
       });
     }catch(_){}
@@ -283,6 +294,20 @@ module.exports = async (req, res) => {
   /* ---- пользователи / ручной Premium / тестовый вход ---- */
   if(a === 'users_list'){
     return send(res,200,{ok:true,users:await adminUsers()});
+  }
+
+  if(a === 'user_ai_reset'){
+    const email=accountMail(body&&body.email);
+    if(!ACCOUNT_EMAIL.test(email)) return fail(res,400,'bad_email');
+    const mh=accountHash(email);
+    if(!(await store.get(`a:${mh}`))) return fail(res,404,'account_not_found');
+    const month=new Date().toISOString().slice(0,7);
+    await Promise.all([
+      store.del(`ai:use:${month}:${mh}:heavy`),
+      store.del(`ai:use:${month}:${mh}:light`),
+      store.del(`ai:use:${month}:${mh}:image`)
+    ]);
+    return send(res,200,{ok:true,email,month});
   }
 
   if(a === 'user_create'){
