@@ -253,6 +253,18 @@ module.exports = async (req, res) => {
      доказывает он ключом от неё, а не почтой. */
   if(act === 'forget') return forget(req, res, body);
 
+  // Продуктовая аналитика не требует аккаунта: первые шаги воронки происходят
+  // до регистрации. Сохраняем только агрегаты и короткоживущий hash deviceId.
+  if(act === 'analytics'){
+    if(!(await rateOkScoped(req,'analytics',240,'',3600,true))) return fail(res,429,'rate_limited');
+    try{
+      const out=await recordAnalytics(body||{});
+      return send(res,200,out);
+    }catch(e){
+      return fail(res,e&&e.status||400,e&&e.message||'bad_analytics');
+    }
+  }
+
   const email = normMail(body && body.email);
   if(!EMAIL.test(email)) return fail(res, 400, 'bad_email');
   const mh = sha(email).slice(0, 32);   // по хешу ищем, сам адрес лежит в записи
