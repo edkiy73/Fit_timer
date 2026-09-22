@@ -1909,7 +1909,6 @@ try{
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
-  await refreshServerSubscription(true);
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
@@ -1935,6 +1934,8 @@ try{
       voiceWanted = false; soundOn = true;
       musicMode = false;
       syncPrefs();
+      applyThemeFor({theme:'system'});
+      document.body.classList.remove('booting');
       startOnboarding();
       return;
     }
@@ -1946,8 +1947,10 @@ try{
   }
   currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
-  // До первой динамической отрисовки включаем язык именно активного профиля.
+  // До первой динамической отрисовки включаем язык и тему активного профиля:
+  // пользователь не должен видеть дефолтный экран, пока восстанавливается его состояние.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
+  applyThemeFor(curUser());
   await loadIdentity();
   await loadData();
   await loadPhotos();
@@ -1991,8 +1994,13 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
-  // При обычном повторном запуске код снова не нужен: сохранённый ключ устройства
-  // возвращает свежие данные до того, как человек начнёт что-либо менять.
+
+  // Всё выше — только локальные данные. Показываем уже правильный профиль и тему,
+  // не заставляя экран ждать сеть/Vercel и не показывая промежуточный дефолтный UI.
+  document.body.classList.remove('booting');
+
+  // Серверное состояние обновляем уже поверх готового локального интерфейса.
+  await refreshServerSubscription(true);
   if(account.email && account.syncToken){
     await connectAccountSync();
     await refreshTrainerProfile();
