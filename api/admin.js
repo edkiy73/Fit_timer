@@ -63,7 +63,15 @@ async function ensureAccountIndex(){
 async function adminUsers(){
   await ensureAccountIndex();
   const ids=[...new Set((await store.list('a:all')).filter(x=>/^[a-f0-9]{32}$/.test(String(x))))].slice(-1000);
-  const raws=await store.many(ids.map(mh=>`a:${mh}`));
+  const month=new Date().toISOString().slice(0,7);
+  const [raws, usage] = await Promise.all([
+    store.many(ids.map(mh=>`a:${mh}`)),
+    store.many(ids.flatMap(mh=>[
+      `ai:use:${month}:${mh}:heavy`,
+      `ai:use:${month}:${mh}:light`,
+      `ai:use:${month}:${mh}:image`
+    ]))
+  ]);
   const out=[];
   raws.forEach((raw,i)=>{
     if(!raw) return;
@@ -78,7 +86,13 @@ async function adminUsers(){
           provider:String(sub.provider||sub.source||''), autoRenew:!!sub.autoRenew
         }:null,
         devices:Object.keys(a.syncDevices||{}).length,
-        pushDevices:Object.keys(a.pushDevices||{}).length
+        pushDevices:Object.keys(a.pushDevices||{}).length,
+        aiUsage:{
+          month,
+          programs:+usage[i*3]||0,
+          exercises:+usage[i*3+1]||0,
+          images:+usage[i*3+2]||0
+        }
       });
     }catch(_){}
   });
