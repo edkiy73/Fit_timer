@@ -651,7 +651,8 @@ async function doLogin(){
       trainerKey: !switchingAccount && trainer ? (trainer.key || '') : '',
       // Premium — только серверное право. Локальный account.sub является кэшем
       // интерфейса и никогда не отправляется как доказательство подписки.
-      locale: appLocale
+      locale: appLocale,
+      platform: (typeof analyticsPlatform === 'function') ? analyticsPlatform() : 'web'
     });
     if(r.needsHandle || !r.handle){
       loginPending = {r, email, cleanInstall, switchingAccount, deviceId:loginDeviceId};
