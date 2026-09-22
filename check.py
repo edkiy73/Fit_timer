@@ -43,7 +43,22 @@ def load():
         s = f.read()
     scripts = re.findall(r'<script>(.*?)</script>', s, re.S)
     styles = re.findall(r'<style>(.*?)</style>', s, re.S)
-    # разметка = файл без скриптов и стилей: иначе строки внутри кода
+
+    # Раньше production index.html содержал JS/CSS inline. После разбиения исходников
+    # сборка подключает app.js и style.css отдельными файлами; проверка не должна
+    # объявлять весь проект пустым только из-за смены способа подключения ресурсов.
+    if not scripts:
+        app_js = os.path.join(ROOT, 'app.js')
+        if os.path.exists(app_js):
+            with open(app_js, encoding='utf-8') as f:
+                scripts = [f.read()]
+    if not styles:
+        style_css = os.path.join(ROOT, 'style.css')
+        if os.path.exists(style_css):
+            with open(style_css, encoding='utf-8') as f:
+                styles = [f.read()]
+
+    # разметка = файл без inline-скриптов и стилей: иначе строки внутри кода
     # попадают в проверку тегов и всё ломается
     markup = re.sub(r'<script>.*?</script>', '', s, flags=re.S)
     markup = re.sub(r'<style>.*?</style>', '', markup, flags=re.S)
