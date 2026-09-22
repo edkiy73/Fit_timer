@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
