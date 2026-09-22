@@ -41,3 +41,4 @@ jobs:
           node tests/auth-abuse.js
           node tests/ai-runtime-unit.js
           node tests/push-unit.js
+          node tests/analytics-unit.js
