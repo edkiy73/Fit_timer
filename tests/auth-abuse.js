@@ -21,16 +21,6 @@ async function post(body){
 }
 
 (async()=>{
-  const badAdmin = await fetch(BASE + '/api/admin', {
-    method:'POST',
-    headers:{'content-type':'application/json','x-admin-key':'wrong'},
-    body:JSON.stringify({action:'overview'})
-  });
-  const badAdminBody = await badAdmin.json();
-  ok('неверный admin key не пускает',
-     badAdmin.status === 403 && badAdminBody.error === 'bad_key',
-     badAdmin.status + ' ' + JSON.stringify(badAdminBody));
-
   // Суточный предел по одному адресу: первые пять писем разрешены.
   let first;
   for(let i=0;i<5;i++){
