@@ -830,7 +830,7 @@ function startOnboarding(){
 // Профиль заводится по нажатию любой кнопки знакомства — и там же фиксируется согласие
 // с правилами, о котором написано под кнопками.
 async function finishOnboardingCreate(){
-  if(users.length) return;
+  if(users.length) return false;
   const u = {
     id: 'u' + Date.now(),
     name: nextProfileName(),
@@ -848,6 +848,7 @@ async function finishOnboardingCreate(){
   await ensureWarmup();
   renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
   applyTheme();
+  return true;
 }
 
 /* ---- пол и возраст: спрашиваем по требованию ---- */

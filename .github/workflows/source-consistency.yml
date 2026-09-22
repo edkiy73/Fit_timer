@@ -45,3 +45,4 @@ jobs:
           node tests/analytics-api.js
           node tests/diagnostics-unit.js
           node tests/update-settings-unit.js
+          node tests/onboarding-funnel-unit.js
