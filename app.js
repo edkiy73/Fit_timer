@@ -4698,6 +4698,42 @@ async function trackInstallOnce(){
   if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
 }
 
+let clientErrorReporting = false;
+function clientErrorPayload(kind, error, fallbackMessage){
+  const e = error && typeof error === 'object' ? error : null;
+  return {
+    action:'client_error',
+    kind:kind === 'rejection' ? 'rejection' : 'error',
+    name:String((e && e.name) || 'Error').slice(0,80),
+    message:String((e && e.message) || fallbackMessage || 'unknown').slice(0,700),
+    stack:String((e && e.stack) || '').slice(0,4000),
+    platform:analyticsPlatform(),
+    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
+  };
+}
+async function reportClientError(kind, error, fallbackMessage){
+  if(clientErrorReporting) return false;
+  clientErrorReporting = true;
+  try{
+    const res=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(clientErrorPayload(kind,error,fallbackMessage)),
+      keepalive:true,
+      cache:'no-store'
+    });
+    return !!res.ok;
+  }catch(_){ return false; }
+  finally{ clientErrorReporting=false; }
+}
+window.addEventListener('error',e=>{
+  reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
+});
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;
+  reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
+});
+
 async function loadData(){
   // данные хранятся раздельно по профилям; старые данные один раз переезжают в текущий профиль
   let progRaw = await kvGet(pk('customPrograms'));
@@ -7354,7 +7390,8 @@ async function doLogin(){
       trainerKey: !switchingAccount && trainer ? (trainer.key || '') : '',
       // Premium — только серверное право. Локальный account.sub является кэшем
       // интерфейса и никогда не отправляется как доказательство подписки.
-      locale: appLocale
+      locale: appLocale,
+      platform: (typeof analyticsPlatform === 'function') ? analyticsPlatform() : 'web'
     });
     if(r.needsHandle || !r.handle){
       loginPending = {r, email, cleanInstall, switchingAccount, deviceId:loginDeviceId};
@@ -9444,6 +9481,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'ai_disabled') throw new Error(t('ai.disabled'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
+  trackProductEvent('ai_used').catch(()=>{});
   return j;
 }
 
@@ -15467,6 +15505,9 @@ function finishWorkout(){
   if(countsToStats){
     stats.totalSec += totalSec;
     stats.count = (stats.count || 0) + 1;
+    if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
+    else if(stats.count === 5) trackProductEvent('workout_5').catch(()=>{});
+    else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
     const histEntry = {
       id: newId(),
       d: localISO(new Date()),
