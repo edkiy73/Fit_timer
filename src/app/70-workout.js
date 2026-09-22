@@ -633,7 +633,11 @@ async function swapViaAI(){
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
-    appAlert(t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}));
+    const retry = await appDialog(
+      t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
+    );
+    if(retry) return swapViaAI();
     return;
   }
   aiRunClose();
