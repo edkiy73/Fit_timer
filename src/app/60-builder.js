@@ -1351,8 +1351,8 @@ function aiPrompt(locale){
 
 function aiStructureChangeRequested(text){
   const s=String(text||'').toLowerCase();
-  return /(?:добав|убер|удал|замен|перестав|перенес).{0,36}(?:упражнен|день|вариант|трениров)|(?:упражнен|день|вариант|трениров).{0,36}(?:добав|убер|удал|замен|перестав|перенес)/i.test(s)
-    || /(?:add|remove|delete|replace|reorder|move).{0,36}(?:exercise|day|variant|workout)|(?:exercise|day|variant|workout).{0,36}(?:add|remove|delete|replace|reorder|move)/i.test(s);
+  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
+    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
 }
 function aiProtocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
@@ -1900,7 +1900,7 @@ function composeRequest(){
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
-const fullAIPrompt = ()=> aiPrompt() + '\n' + composeRequest();
+const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 async function copyPrompt(){
