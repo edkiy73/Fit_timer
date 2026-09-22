@@ -681,14 +681,23 @@ let syncTimer = null;
 let syncBusy = null;
 let syncReplaceLocal = false;
 let syncState = 'idle';
+let syncStep = 0;
+let syncTotal = 0;
 
 function showSyncState(state, step, total){
   syncState = state;
+  if(state === 'busy'){
+    if(step !== undefined) syncStep = +step || 0;
+    if(total !== undefined) syncTotal = +total || 0;
+  }else{
+    syncStep = 0;
+    syncTotal = 0;
+  }
   const el = $('accSync');
   if(!el) return;
   if(!account || !account.email) el.textContent = '';
   else if(!isPremium()) el.textContent = t('sync.premiumOnly');
-  else if(state === 'busy' && step && total) el.textContent = t('sync.progress',{step,total});
+  else if(state === 'busy' && syncStep && syncTotal) el.textContent = t('sync.progress',{step:syncStep,total:syncTotal});
   else if(state === 'busy') el.textContent = t('sync.busy');
   else if(state === 'ok') el.textContent = t('sync.ok');
   else if(state === 'error') el.textContent = t('sync.error');
