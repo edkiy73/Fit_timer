@@ -152,9 +152,11 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
      await page.isVisible('#aiCreateCard') && await page.isVisible('#fAiCreate'));
   await page.fill('#aiCreateWish','Собери тестовую силовую программу');
   await page.click('#fAiCreate');
-  await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Тестовая программа');
-  ok('AI-create заполняет редактор валидной программой',
+  await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Тестовая программа'
+    && document.querySelector('#fNameEn')?.value === 'EN Test Program');
+  ok('AI-create заполняет редактор валидной программой и вторым языком',
      (await page.inputValue('#fNameRu')) === 'Тестовая программа'
+     && (await page.inputValue('#fNameEn')) === 'EN Test Program'
      && /УПРАЖНЕНИЕ: Приседания/.test(await page.inputValue('#fTextRu')));
   await page.fill('#fTextRu', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
   await page.waitForTimeout(300);
