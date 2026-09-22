@@ -19,7 +19,7 @@ ok('обрезанная программа блокируется', !p2.ok && p
 const e1 = FitAIProtocol.validateResponse('exercise.create', goodExercise);
 ok('валидное упражнение проходит', e1.ok, JSON.stringify(e1));
 const e2 = FitAIProtocol.validateResponse('exercise.modify', badExercise);
-ok('неполное упражнение блокируется', !e2.ok && e2.missing.includes('ЗНАЧЕНИЕ'), JSON.stringify(e2));
+ok('неполное упражнение блокируется', !e2.ok && e2.missing.some(x=>x.endsWith(':ЗНАЧЕНИЕ')), JSON.stringify(e2));
 const multiExercise = goodExercise + '\n\n' + goodExercise.replace('Планка','Боковая планка');
 const multiCreate = FitAIProtocol.validateResponse('exercise.create', multiExercise);
 ok('создание нескольких упражнений разрешено', multiCreate.ok && multiCreate.count === 2, JSON.stringify(multiCreate));
