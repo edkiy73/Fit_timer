@@ -34,6 +34,7 @@
 const { store } = require('../lib/store');
 const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('../lib/util');
 const { sendMail } = require('../lib/mail');
+const { recordAnalytics } = require('../lib/analytics');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
