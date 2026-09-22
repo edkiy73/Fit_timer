@@ -116,7 +116,6 @@ Key files:
 - `android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java` — Android audio bridge.
 - `android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java` — Android system bridge.
 - `ios/` — iOS Capacitor shell.
-- `legacy/android-twa/` — archive; do not use for current implementation.
 
 Current Capacitor dependencies include App, Filesystem, Haptics, Local Notifications, Share and Splash Screen.
 
