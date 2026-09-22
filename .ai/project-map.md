@@ -5,7 +5,7 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 ## Runtime flow
 
 ```text
-Web/PWA
+Web
   src/html/* + src/styles/* + src/app/*
   -> generated index.html + style.css + app.js
           |
@@ -53,8 +53,6 @@ Use `npm run ai:context -- "task description"` as the preferred first step for p
 | `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
 | `app.config.js` | runtime public config bootstrap | API/public URL behavior |
-| `sw.js` | PWA service worker/cache | stale assets/update behavior |
-| `manifest.webmanifest` | PWA metadata | install/PWA metadata |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
 Localization:
@@ -168,7 +166,6 @@ These often require reading more than one layer:
 - sharing in browser vs Capacitor APK,
 - AI entitlement/config/provider fallback,
 - app update/signing/versioning,
-- service worker/cache update behavior,
 - Vercel region/env/storage changes.
 
 For these, map the full request path before editing, but still avoid unrelated repo-wide reads.
