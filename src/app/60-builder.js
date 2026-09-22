@@ -1942,6 +1942,7 @@ function importFromText(){
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
   draft = program;
   planIdx = 0;
+  if($('qContext')) $('qContext').value = '';
   fillBuilder(t('ai.reviewSave'));
 }
 
