@@ -673,6 +673,7 @@ const I18N_EN = {
   'well.sleepHours': "Sleep, h",
   'sync.premiumOnly': "Workout sync is available with Premium",
   'sync.busy': "Syncing data…",
+  'sync.progress': "Syncing… {step}/{total}",
   'sync.ok': "Data saved to the server · progress photos stay only on this phone",
   'sync.error': "No server connection · changes will upload later",
   'sync.account': "Data syncs with your account",
