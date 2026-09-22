@@ -3156,11 +3156,15 @@ function canonicalDescription(value){
    Keep this file dependency-free so the same rules are used by the app and admin API. */
 (function(root){
   const OPTIONAL_EXERCISE_LABELS = [
-    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
-    'ФОРМАТ','ВЕС','УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
+    'ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ',
+    'ФОРМАТ','ЗНАЧЕНИЕ','ВЕС','ПОДХОДЫ',
+    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА',
+    'ОТДЫХ','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
+    'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
     'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
     'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
-    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ','ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ'
+    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ',
+    'ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ','ЗАМЕНА ОПИСАНИЕ','ВИДЕО'
   ];
 
   const machineLanguageRules = outputLanguage => `IMPORTANT LANGUAGE RULE:
@@ -3172,14 +3176,14 @@ function canonicalDescription(value){
   const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
 Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Prefer conservative, explainable training decisions over novelty. Do not invent facts about the user or pretend certainty where context is missing.
 
-- ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg.
+- ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between increases and experienced users roughly 2-4, but adapt to the actual program and recovery.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
 - For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
 - For weighted reps, distinguish three cases:
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
   2) rep progression: positive ШАГ ПОВТОРОВ;
   3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
-- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ.
+- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
 - If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
@@ -9157,14 +9161,15 @@ function ageError(v, required = false){
   return '';
 }
 // строка о человеке для запроса к ИИ
-function userForAI(){
+function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
   bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
-  bits.push(`User-visible output language: ${aiOutputLanguage()}`);
+  const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
+  bits.push(`User-visible output language: ${outLang}`);
   return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery, but never infer absolute strength or starting weight from sex alone.';
 }
 
@@ -9257,7 +9262,7 @@ async function callGemini(prompt, signal){
   // поэтому лимит вывода задаём явно — иначе модель обрежет на полуслове
   const body = {
     contents: [{parts: [{text: prompt}]}],
-    generationConfig: {maxOutputTokens: 32768, temperature: 1}
+    generationConfig: {maxOutputTokens: 32768, temperature: .3}
   };
   let last = null;
   // 503 «high demand» — временная перегрузка, а не отказ: Google прямо советует повторить.
@@ -10149,8 +10154,8 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-function exAnswerFormat(){
-  const lang=aiOutputLanguage();
+function exAnswerFormat(locale){
+  const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
     FitAIProtocol.machineLanguageRules(lang),
     FitAIProtocol.exerciseSchema(lang),
@@ -10165,10 +10170,10 @@ function exePrompt(){
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(false),
-    'USER: '+userForAI(),
+    'USER: '+userForAI(draft&&draft.locale),
     'REQUEST: '+(wish||'(No specific request. Improve clarity and technique guidance while preserving the exercise intent and training mechanics.)'),
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
-    exAnswerFormat()
+    exAnswerFormat(draft&&draft.locale)
   ].join('\n\n');
 }
 
@@ -10178,9 +10183,11 @@ async function applyExEdit(){
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
-  // Защитный merge: модель может изменить существующие значения и добавить только
-  // официальные optional-поля, но не может случайно потерять СТОРОНА/ОТДЫХ/потолок и т.п.
-  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),raw);
+  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
+  // в два упражнения или потерять старые служебные поля.
+  const candidateBlocks=aiExerciseBlocks(raw);
+  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
+  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
@@ -10259,10 +10266,10 @@ function exaPrompt(){
   const task=many
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
-  let req='USER: '+userForAI()+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
-  return [task,req,exAnswerFormat()].join('\n\n');
+  return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
 }
 
 async function exaAddExercise(){
@@ -10393,7 +10400,7 @@ function editAIPrompt(){
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
     FitAIProtocol.editRules(structural)+'\n'+
-    'USER: '+userForAI()+'\n'+
+    'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+(wish||'(No specific request. Improve clarity while preserving purpose, structure and sensible load.)')+'\n\n'+
     '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
 }
@@ -13753,7 +13760,7 @@ function aiExerciseBlocks(text){
     if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
     let end=i+1;
     while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-    out.push({start:i,end,lines:lines.slice(i,end)});
+    out.push({start:i,end,lines:lines.slice(i,end),name:(aiProtocolLine(lines[i])||{}).value||''});
     i=end-1;
   }
   return out;
@@ -13797,11 +13804,16 @@ function aiMergeProgramEdit(sourceText,candidateText){
     topValues[p.key].push(p.value);
   });
   const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
+  const usedCand=new Set();
+  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
   const out=[];
   for(let i=0;i<srcLines.length;i++){
     const entry=blockByStart.get(i);
     if(entry){
-      const cb=candBlocks[entry.i];
+      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
+      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
+      const cb=ci>=0?candBlocks[ci]:null;
+      if(ci>=0)usedCand.add(ci);
       out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
       i=entry.b.end-1;
       continue;
@@ -14979,7 +14991,7 @@ function swapSourceExercise(){
   return src ? {...src, step} : null;
 }
 
-function swapAIPrompt(ex,swap){
+function swapAIPrompt(ex,swap,locale){
   return [
     'Replace this home-workout exercise with the specified harder progression.',
     'Return exactly ONE complete NEW exercise block and nothing else: no Markdown and no explanation.',
@@ -14988,11 +15000,11 @@ function swapAIPrompt(ex,swap){
     'Choose fresh starting values appropriate for the harder exercise; usually use fewer reps/seconds than the old ceiling, then define a sensible progression and ceiling.',
     'Keep set count and rest reasonably close unless the harder movement genuinely requires a change.',
     'If the new exercise itself has a clear later progression that cannot be handled by reps/time/weight alone, you may include ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.',
-    'USER: '+userForAI(),
+    'USER: '+userForAI(locale),
     'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
     'WHY: the current exercise reached its useful progression ceiling.',
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
-    exAnswerFormat()
+    exAnswerFormat(locale)
   ].join('\n\n');
 }
 
@@ -15028,7 +15040,7 @@ async function swapViaAI(){
   aiRunOpen(t('workout.swapPicking'));
   let text;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
   }catch(e){
     aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
