@@ -10,6 +10,7 @@ const targets = [
       'src/i18n/ru.js',
       'src/i18n/en.js',
       'src/i18n/index.js',
+      'lib/ai-protocol.js',
       'src/app/00-core.js',
       'src/app/10-data-sync.js',
       'src/app/20-account.js',
