@@ -1688,7 +1688,7 @@ async function savePaymentSettings(){
 
 function renderRelease(b){
   const direct=releaseSettings('direct'),store=releaseSettings('store');
-  b.innerHTML=pageHead('Обновление Android','Direct APK скачивается внутри Fit Timer. Сборки из магазина открывают страницу Google Play / RuStore.')+\`
+  b.innerHTML=pageHead('Обновление Android','Direct APK скачивается внутри Fit Timer. Сборки из магазина открывают страницу Google Play / RuStore.')+`
     <div class="form-card">
       <div class="form-card-head">
         <h3>Последняя собранная версия</h3>
@@ -1705,7 +1705,7 @@ function renderRelease(b){
       <div class="form-card-body">
         <p class="compact-note">Нажимай публикацию только после того, как эта версия реально появилась в Google Play или RuStore.</p>
         <label>Ссылка магазина</label>
-        <input id="relStoreUrl" maxlength="500" value="\${esc(store.url||'')}" placeholder="https://play.google.com/... или market://...">
+        <input id="relStoreUrl" maxlength="500" value="${esc(store.url||'')}" placeholder="https://play.google.com/... или market://...">
         <div class="action-row" style="margin-top:12px"><div class="action-stack">
           <span class="action-feedback" id="releaseStorePublishState"></span>
           <button class="b" id="releasePublishStore" type="button">Опубликовать для магазина</button>
@@ -1717,43 +1717,43 @@ function renderRelease(b){
       <div class="release-advanced-body">
         <h4 style="margin:0 0 8px">Direct APK</h4>
         <label class="check">
-          <input id="relRequired" type="checkbox" \${direct.minimumCode>0?'checked':''}>
+          <input id="relRequired" type="checkbox" ${direct.minimumCode>0?'checked':''}>
           Обязательное обновление Direct APK
           <small>Обычно выключено. Включай только если старую direct-сборку действительно нельзя использовать.</small>
         </label>
-        <div id="relMinimumWrap" class="\${direct.minimumCode>0?'':'hidden'}">
+        <div id="relMinimumWrap" class="${direct.minimumCode>0?'':'hidden'}">
           <label>Минимально поддерживаемый versionCode</label>
-          <input id="relMinimumCode" type="number" min="0" step="1" value="\${esc(direct.minimumCode||0)}">
+          <input id="relMinimumCode" type="number" min="0" step="1" value="${esc(direct.minimumCode||0)}">
         </div>
         <div class="field-grid" style="margin-top:12px">
-          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="\${esc(direct.latestCode||0)}"></div>
-          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="\${esc(direct.latestName||'')}"></div>
-          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">\${esc(direct.messageRu||'')}</textarea></div>
-          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">\${esc(direct.messageEn||'')}</textarea></div>
+          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(direct.latestCode||0)}"></div>
+          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(direct.latestName||'')}"></div>
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(direct.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(direct.messageEn||'')}</textarea></div>
         </div>
 
         <h4 style="margin:20px 0 8px">Магазин</h4>
         <label class="check">
-          <input id="relStoreRequired" type="checkbox" \${store.minimumCode>0?'checked':''}>
+          <input id="relStoreRequired" type="checkbox" ${store.minimumCode>0?'checked':''}>
           Обязательное обновление магазинной сборки
           <small>Не влияет на Direct APK. Используется только приложениями, собранными для магазина.</small>
         </label>
-        <div id="relStoreMinimumWrap" class="\${store.minimumCode>0?'':'hidden'}">
+        <div id="relStoreMinimumWrap" class="${store.minimumCode>0?'':'hidden'}">
           <label>Минимально поддерживаемый versionCode</label>
-          <input id="relStoreMinimumCode" type="number" min="0" step="1" value="\${esc(store.minimumCode||0)}">
+          <input id="relStoreMinimumCode" type="number" min="0" step="1" value="${esc(store.minimumCode||0)}">
         </div>
         <div class="field-grid" style="margin-top:12px">
-          <div><label>Опубликованный versionCode</label><input id="relStoreLatestCode" type="number" min="0" step="1" value="\${esc(store.latestCode||0)}"></div>
-          <div><label>Название версии</label><input id="relStoreLatestName" maxlength="40" value="\${esc(store.latestName||'')}"></div>
-          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relStoreMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">\${esc(store.messageRu||'')}</textarea></div>
-          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relStoreMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">\${esc(store.messageEn||'')}</textarea></div>
+          <div><label>Опубликованный versionCode</label><input id="relStoreLatestCode" type="number" min="0" step="1" value="${esc(store.latestCode||0)}"></div>
+          <div><label>Название версии</label><input id="relStoreLatestName" maxlength="40" value="${esc(store.latestName||'')}"></div>
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relStoreMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(store.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relStoreMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(store.messageEn||'')}</textarea></div>
         </div>
         <div class="action-row" style="margin-top:12px"><div class="action-stack">
           <span class="action-feedback" id="releaseSettingsState"></span>
           <button class="b" id="releaseSettingsSave" type="button">Сохранить дополнительные настройки</button>
         </div></div>
       </div>
-    </details>\`;
+    </details>`;
   $('releaseSettingsSave').onclick=saveReleaseSettings;
   $('releasePublishStore').onclick=publishLatestStoreBuild;
   $('releaseRefreshBuild').onclick=()=>loadLatestAndroidBuild(true);
