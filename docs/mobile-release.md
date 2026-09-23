@@ -282,6 +282,8 @@ CI builds:
 
 The GitHub `latest-apk` release publishes `FitTimer-release.json` next to the direct APK, so the admin uses the exact signed `versionCode` / `versionName`.
 
+Every `main` build also uploads an immutable copy `FitTimer-<versionCode>.apk` to the `apk-archive` release (last 20 kept), and `FitTimer-release.json` points `apkUrl` there. The admin publishes that exact URL. Do not point direct updates at `latest-apk/FitTimer-latest.apk`: the next push to `main` replaces that file, and the phone then rejects it as `version_mismatch` ("Не удалось скачать или проверить обновление").
+
 Behavior:
 - current build >= channel latest: nothing is shown;
 - current build < channel latest: a quiet update banner appears on Home;

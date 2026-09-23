@@ -53,6 +53,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('профиль B не получил программы других профилей', r.B === 'pb:5', r.B);
   ok('профиль C не получил программы других профилей', r.C === 'pc:1', r.C);
   ok('разминка профиля на английском переведена', r.locale === 'en' && r.warmupEn === '10-minute warm-up', r.warmupEn);
+  // Удалённая разминка не возвращается ни при переключении, ни после перезапуска.
+  await page.evaluate(async () => {
+    customPrograms = customPrograms.filter(p => p.id !== 'warmup'); await savePrograms();
+    await switchUser('uC'); await switchUser('uB');
+  });
+  const back = await page.evaluate(() => customPrograms.some(p => p.id === 'warmup'));
+  await page.reload({waitUntil: 'load'}); await page.waitForTimeout(1200);
+  const afterReload = await page.evaluate(() => currentUser === 'uB' && customPrograms.some(p => p.id === 'warmup'));
+  ok('удалённая разминка не возвращается', !back && !afterReload, `после переключения ${back}, после перезапуска ${afterReload}`);
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();
   console.log(bad ? '\nПровалено: ' + bad : '\nВсё ок');

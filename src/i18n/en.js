@@ -1340,7 +1340,6 @@ const I18N_EN = {
   'week.dayMakeUp': "Can make up",
   'week.dayMoved': "Completed on another day",
   'week.dayMovedOn': "Counted from the workout on {day}.",
-  'week.plannedExercises': "Planned exercises",
   'today.programsOff': "Programs disabled",
   'today.noSchedule': "Schedule not set",
   'today.warmupOnly': "Warm-up only",

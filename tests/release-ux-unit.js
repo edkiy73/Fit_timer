@@ -34,6 +34,11 @@ need(workflow.includes('outputs/apk/direct/release'), 'latest APK must come from
 need(workflow.includes('FitTimer-release.json'), 'latest APK release must publish machine-readable metadata');
 need(workflow.includes('const versionCode = Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
 need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest release must upload APK and metadata together');
+// latest-apk перезаписывается каждым пушем в main: опубликованная версия должна
+// вести на свой неизменяемый файл, иначе телефон отклоняет его (version_mismatch).
+need(workflow.includes('releases/download/apk-archive/FitTimer-${versionCode}.apk'), 'release metadata must point to the immutable per-version APK');
+need(workflow.indexOf('gh release upload apk-archive') > 0 && workflow.indexOf('gh release upload apk-archive') < workflow.indexOf('gh release upload latest-apk'), 'archive APK must be uploaded before metadata references it');
+need((await readFile('api/admin.js', 'utf8')).includes('archivedApkUrl(meta && meta.apkUrl, versionCode)'), 'admin must publish the archived APK URL');
 need(home.indexOf('id="appUpdateBanner"') < home.indexOf('id="todayBox"'), 'soft update banner must sit above Today');
 need(ru.includes("'update.availableTitle': \"Доступно обновление\""), 'RU soft update title must stay version-free');
 need(en.includes("'update.availableTitle': \"Update available\""), 'EN soft update title must stay version-free');

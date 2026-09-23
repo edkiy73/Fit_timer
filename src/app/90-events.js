@@ -1008,7 +1008,6 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
-$('btnAddPhoto').innerHTML = icon('camera') + t('progress.addPhoto');
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -1162,12 +1161,10 @@ $('videoLink').addEventListener('click', ()=>{
 });
 // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-$('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-$('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
 $('finNoteToggle').onclick = ()=>{
   setShown('finNoteToggle', false);
   setShown('finNoteField', true);
@@ -1903,8 +1900,18 @@ $('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('image') + t('progress.comparePhotos');
-$('btnDeleteAllPhotos').innerHTML = icon('trash') + t('progress.deleteAllPhotosBtn');
+// Кнопки «иконка + подпись» задаются кодом, а не data-i18n (иконку applyI18n стёр бы).
+// Раньше подпись ставилась один раз при запуске и при смене языка оставалась прежней:
+// экран результата выходил английским, а «Поделиться» — русским.
+function renderIconLabels(){
+  $('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
+  $('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
+  $('btnAddPhoto').innerHTML = icon('camera') + esc(t('progress.addPhoto'));
+  $('btnCompare').innerHTML = icon('image') + esc(t('progress.comparePhotos'));
+  $('btnDeleteAllPhotos').innerHTML = icon('trash') + esc(t('progress.deleteAllPhotosBtn'));
+}
+renderIconLabels();
+window.addEventListener('appLocaleChanged', renderIconLabels);
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');

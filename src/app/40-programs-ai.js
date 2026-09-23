@@ -328,6 +328,17 @@ function renderWeekStrip(){
   setShown('weekStripHint', !!hint);
 }
 
+// Упражнение из попапа дня: закрываем попап и открываем его в редакторе программы
+// на нужном варианте. «Назад» из упражнения ведёт в программу, как обычно.
+function openDayExercise(pid, pi, i){
+  if(!customPrograms.some(x => x.id === pid)) return;
+  $('sessModal').classList.remove('open');
+  openBuilder(pid);
+  planIdx = Math.max(0, Math.min(pi, draft.plans.length - 1));
+  if(typeof renderPlanTabs === 'function') renderPlanTabs();
+  if(curPlan().exercises[i]) openExercise(i);
+}
+
 // нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
 // план показываем отдельными карточками программ — не строкой названий через запятую.
 function openWeekDay(d){
@@ -363,7 +374,7 @@ function openWeekDay(d){
       '<div class="sess-facts"></div>' +
       '<div class="sess-plan hidden"></div>' +
       (plan && Array.isArray(plan.exercises) && plan.exercises.length
-        ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>'
+        ? '<div class="sess-exercises"><div class="sess-ex-list"></div></div>'
         : '');
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
 
@@ -392,14 +403,17 @@ function openWeekDay(d){
     }
 
     if(plan && Array.isArray(plan.exercises) && plan.exercises.length){
-      row.querySelector('.sess-ex-label').textContent = t('week.plannedExercises');
       const list = row.querySelector('.sess-ex-list');
+      const pi = plans.indexOf(plan);
       plan.exercises.forEach((ex, i) => {
-        const item = document.createElement('div');
+        // Упражнение открывается целиком — тем же редактором, что и из программы.
+        const item = document.createElement('button');
+        item.type = 'button';
         item.className = 'sess-ex';
-        item.innerHTML = '<span></span><b></b>';
+        item.innerHTML = '<span></span><b></b>' + icon('chevR');
         item.querySelector('span').textContent = i + 1;
         item.querySelector('b').textContent = ex.name || t('sessions.workoutFallback');
+        item.onclick = () => openDayExercise(p.id, pi, i);
         list.appendChild(item);
       });
     }

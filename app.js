@@ -1340,7 +1340,6 @@ const I18N_RU = {
   'week.dayMakeUp': "Можно отработать",
   'week.dayMoved': "Отработано в другой день",
   'week.dayMovedOn': "Засчитано тренировкой в {day}.",
-  'week.plannedExercises': "Упражнения по плану",
   'today.programsOff': "Программы отключены",
   'today.noSchedule': "Расписание не задано",
   'today.warmupOnly': "Пока только разминка",
@@ -2881,7 +2880,6 @@ const I18N_EN = {
   'week.dayMakeUp': "Can make up",
   'week.dayMoved': "Completed on another day",
   'week.dayMovedOn': "Counted from the workout on {day}.",
-  'week.plannedExercises': "Planned exercises",
   'today.programsOff': "Programs disabled",
   'today.noSchedule': "Schedule not set",
   'today.warmupOnly': "Warm-up only",
@@ -7873,6 +7871,13 @@ async function ensureWarmup(){
     if((await kvGet(pk('warmupAdded'))) !== '1') kvSet(pk('warmupAdded'),'1');
     return;
   }
+  // Разминку добавляем один раз. Если её уже добавляли (флаг) или удалили на другом
+  // устройстве (надгробие синхронизации), значит человек её удалил сам — раньше она
+  // возвращалась при каждом запуске и переключении профиля.
+  const owner = currentUser;
+  const tomb = docMeta && docMeta[PROGRAM_DOC('warmup')];
+  if((await kvGet(pk('warmupAdded'))) === '1' || (tomb && tomb.gone)) return;
+  if(owner !== currentUser) return;
   customPrograms.unshift(warmupProgram());
   await savePrograms();
   kvSet(pk('warmupAdded'),'1');
@@ -9065,6 +9070,17 @@ function renderWeekStrip(){
   setShown('weekStripHint', !!hint);
 }
 
+// Упражнение из попапа дня: закрываем попап и открываем его в редакторе программы
+// на нужном варианте. «Назад» из упражнения ведёт в программу, как обычно.
+function openDayExercise(pid, pi, i){
+  if(!customPrograms.some(x => x.id === pid)) return;
+  $('sessModal').classList.remove('open');
+  openBuilder(pid);
+  planIdx = Math.max(0, Math.min(pi, draft.plans.length - 1));
+  if(typeof renderPlanTabs === 'function') renderPlanTabs();
+  if(curPlan().exercises[i]) openExercise(i);
+}
+
 // нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
 // план показываем отдельными карточками программ — не строкой названий через запятую.
 function openWeekDay(d){
@@ -9100,7 +9116,7 @@ function openWeekDay(d){
       '<div class="sess-facts"></div>' +
       '<div class="sess-plan hidden"></div>' +
       (plan && Array.isArray(plan.exercises) && plan.exercises.length
-        ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>'
+        ? '<div class="sess-exercises"><div class="sess-ex-list"></div></div>'
         : '');
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
 
@@ -9129,14 +9145,17 @@ function openWeekDay(d){
     }
 
     if(plan && Array.isArray(plan.exercises) && plan.exercises.length){
-      row.querySelector('.sess-ex-label').textContent = t('week.plannedExercises');
       const list = row.querySelector('.sess-ex-list');
+      const pi = plans.indexOf(plan);
       plan.exercises.forEach((ex, i) => {
-        const item = document.createElement('div');
+        // Упражнение открывается целиком — тем же редактором, что и из программы.
+        const item = document.createElement('button');
+        item.type = 'button';
         item.className = 'sess-ex';
-        item.innerHTML = '<span></span><b></b>';
+        item.innerHTML = '<span></span><b></b>' + icon('chevR');
         item.querySelector('span').textContent = i + 1;
         item.querySelector('b').textContent = ex.name || t('sessions.workoutFallback');
+        item.onclick = () => openDayExercise(p.id, pi, i);
         list.appendChild(item);
       });
     }
@@ -18155,7 +18174,6 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
-$('btnAddPhoto').innerHTML = icon('camera') + t('progress.addPhoto');
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -18309,12 +18327,10 @@ $('videoLink').addEventListener('click', ()=>{
 });
 // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-$('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-$('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
 $('finNoteToggle').onclick = ()=>{
   setShown('finNoteToggle', false);
   setShown('finNoteField', true);
@@ -19050,8 +19066,18 @@ $('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('image') + t('progress.comparePhotos');
-$('btnDeleteAllPhotos').innerHTML = icon('trash') + t('progress.deleteAllPhotosBtn');
+// Кнопки «иконка + подпись» задаются кодом, а не data-i18n (иконку applyI18n стёр бы).
+// Раньше подпись ставилась один раз при запуске и при смене языка оставалась прежней:
+// экран результата выходил английским, а «Поделиться» — русским.
+function renderIconLabels(){
+  $('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
+  $('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
+  $('btnAddPhoto').innerHTML = icon('camera') + esc(t('progress.addPhoto'));
+  $('btnCompare').innerHTML = icon('image') + esc(t('progress.comparePhotos'));
+  $('btnDeleteAllPhotos').innerHTML = icon('trash') + esc(t('progress.deleteAllPhotosBtn'));
+}
+renderIconLabels();
+window.addEventListener('appLocaleChanged', renderIconLabels);
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');

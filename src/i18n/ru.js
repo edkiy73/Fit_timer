@@ -1340,7 +1340,6 @@ const I18N_RU = {
   'week.dayMakeUp': "Можно отработать",
   'week.dayMoved': "Отработано в другой день",
   'week.dayMovedOn': "Засчитано тренировкой в {day}.",
-  'week.plannedExercises': "Упражнения по плану",
   'today.programsOff': "Программы отключены",
   'today.noSchedule': "Расписание не задано",
   'today.warmupOnly': "Пока только разминка",
