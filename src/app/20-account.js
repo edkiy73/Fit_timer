@@ -184,9 +184,9 @@ async function wipeAccount(){
 // рядом с профилем: подписка принадлежит тому, кто заплатил, а не имени в списке.
 let account = null;
 let bioOK = false;   // устройство умеет проверять отпечаток или лицо
-// Аккаунты, которые на этом устройстве уже открывали. Здесь остаются только
-// account-level данные. Нативная биометрия намеренно НЕ переносится между входами:
-// после явного выхода локальную защиту включают заново.
+// Аккаунты, которые на этом устройстве уже открывали. Выход не должен означать потерю
+// подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
+// биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
 const blankAccount = ()=> ({email: '', handle: '', locale: '', createdAt: new Date().toISOString(), linkedAt: null, sub: null, biometry: null, deletedProfiles: []});
 async function readAccountData(){
@@ -254,7 +254,7 @@ async function syncAccountLocale(locale){
 }
 function rememberAccount(){
   if(!account.email) return;
-  const rec = {email: account.email, handle: account.handle || '', locale: account.locale || appLocale, sub: account.sub, syncToken: account.syncToken || null,
+  const rec = {email: account.email, handle: account.handle || '', locale: account.locale || appLocale, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
                deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
