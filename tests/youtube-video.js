@@ -12,8 +12,9 @@ const cat=yt._test.groundEvidence({isWorkout:true,confidence:.99,exercises:[
   {name:'Приседания',evidence:'кот прыгает на диван',mechanicsEvidence:'кот прыгает на диван',format:'reps',value:12,sets:3,restSec:30,warmup:false,warmupEvidence:''}
 ]},{segments:[{start:0,text:'Сегодня кот прыгает на диван и играет с игрушкой.'}]});
 ok('обычное движение без механики не получает повторы',cat.exercises[0]&&cat.exercises[0].value===null);
-const facts=yt._test.sourceFacts('dQw4w9WgXcQ','Test','transcript',{rounds:1,roundRestSec:0,exercises:[
-  {name:'Squat',startSec:12,format:'reps',value:'10',sets:3,restSec:30,warmup:false}
+const facts=yt._test.sourceFacts('dQw4w9WgXcQ','Test','transcript',{programDescription:'Короткая тренировка на ноги и корпус.',rounds:1,roundRestSec:0,exercises:[
+  {name:'Приседания',description:'Встань устойчиво. Отведи таз назад и присядь. Держи корпус собранным и выдыхай на подъёме. Не своди колени внутрь.',
+   muscles:['Квадрицепс','Ягодицы'],mistakes:'Не округляй спину и не своди колени.',startSec:12,format:'reps',value:'10',sets:3,restSec:30,warmup:false}
 ]});
 const protocol=['ПРОГРАММА: Test','ДЕНЬ:','КРУГИ: 1','ОТДЫХ МЕЖДУ КРУГАМИ: 0','','УПРАЖНЕНИЕ: Приседания',
 'ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 3','ОТДЫХ: 30','ВИДЕО: https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=12s'].join('\n');
@@ -21,4 +22,8 @@ ok('неизменная механика проходит',yt._test.validateFin
 ok('изменённые повторы блокируются',yt._test.validateFinalProgram(protocol.replace('ЗНАЧЕНИЕ: 10','ЗНАЧЕНИЕ: 15'),facts).ok===false);
 const built=yt._test.factsToProtocol(facts,'ru');
 ok('протокол собирается без второго вызова ИИ',yt._test.validateFinalProgram(built,facts).ok===true);
+ok('в протоколе есть техника',/ОПИСАНИЕ: Встань устойчиво/.test(built));
+ok('в протоколе есть мышцы',/МЫШЦЫ: Квадрицепс, Ягодицы/.test(built));
+ok('в протоколе есть ошибки',/ОШИБКИ: Не округляй спину/.test(built));
+ok('импорт видео не включает выдуманную прогрессию',/УСЛОЖНЯТЬ: нет/.test(built)&&!/ШАГ:/.test(built));
 process.exit(bad?1:0);
