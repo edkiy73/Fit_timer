@@ -819,8 +819,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2172,
-      "chars": 90531,
+      "lines": 2169,
+      "chars": 90230,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -973,7 +973,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 635,
-      "chars": 41651,
+      "chars": 41658,
       "ids": [
         "aiActions",
         "aiAnswer",

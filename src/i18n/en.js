@@ -307,7 +307,7 @@ const I18N_EN = {
   'ai.appDoesIt': "The app will do it automatically",
   'ai.inChat': "Do it in an AI chat",
   'ai.copyProgram': "Copy the program itself",
-  'ai.copyProgramSub': "The full program as text — discuss it anywhere and paste the result back here",
+  'ai.copyProgramSub': "Program text only, without an AI task — paste it into any chat",
   'ai.step3': "Step 3 · Response from chat",
   'ai.build': "Build",
   'builder.lessProgress': "Fewer progression steps",

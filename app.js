@@ -307,7 +307,7 @@ const I18N_RU = {
   'ai.appDoesIt': "Приложение сделает это само",
   'ai.inChat': "Сделать в чате с ИИ",
   'ai.copyProgram': "Скопировать саму программу",
-  'ai.copyProgramSub': "Вся программа текстом — обсудить где угодно и вернуть ответ сюда",
+  'ai.copyProgramSub': "Только текст программы, без задания для ИИ — можно вставить в любой чат",
   'ai.step3': "Шаг 3 · Ответ из чата",
   'ai.build': "Собрать",
   'builder.lessProgress': "Меньше повышений",
@@ -1864,7 +1864,7 @@ const I18N_EN = {
   'ai.appDoesIt': "The app will do it automatically",
   'ai.inChat': "Do it in an AI chat",
   'ai.copyProgram': "Copy the program itself",
-  'ai.copyProgramSub': "The full program as text — discuss it anywhere and paste the result back here",
+  'ai.copyProgramSub': "Program text only, without an AI task — paste it into any chat",
   'ai.step3': "Step 3 · Response from chat",
   'ai.build': "Build",
   'builder.lessProgress': "Fewer progression steps",
@@ -18736,15 +18736,12 @@ async function ytApplyResult(){
 }
 
 /* ---- доработка через ИИ ---- */
-// «программа целиком»: полное описание формата + текущая программа. В отличие от обычного
-// «Скопировать» (там только промт с запросом на изменение), этот текст самодостаточен —
-// его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
+// «Скопировать саму программу» означает буквально экспорт текущей программы в
+// переносимом текстовом формате FitTimer. Никаких системных инструкций и скрытого
+// задания здесь нет — полный AI-промт с пожеланием копирует соседняя кнопка.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = aiPrompt((editAIProg && editAIProg.locale) || appLocale)
-    + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
-    + programToText(editAIProg)
-    + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
+  const text = programToText(editAIProg);
   try{
     await navigator.clipboard.writeText(text);
     flashDone(btn);

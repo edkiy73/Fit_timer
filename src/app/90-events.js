@@ -1239,15 +1239,12 @@ async function ytApplyResult(){
 }
 
 /* ---- доработка через ИИ ---- */
-// «программа целиком»: полное описание формата + текущая программа. В отличие от обычного
-// «Скопировать» (там только промт с запросом на изменение), этот текст самодостаточен —
-// его можно отдать любой нейросети в новом чате, и она поймёт и структуру, и содержимое.
+// «Скопировать саму программу» означает буквально экспорт текущей программы в
+// переносимом текстовом формате FitTimer. Никаких системных инструкций и скрытого
+// задания здесь нет — полный AI-промт с пожеланием копирует соседняя кнопка.
 $('aiCopyFull').onclick = async ()=>{
   const btn = $('aiCopyFull');
-  const text = aiPrompt((editAIProg && editAIProg.locale) || appLocale)
-    + '\n\n=== CURRENT PROGRAM IN THE SAME FORMAT ===\n\n'
-    + programToText(editAIProg)
-    + '\n\n=== TASK ===\nDescribe the requested changes here. Return the COMPLETE program in the same format so it can be pasted back into the app.';
+  const text = programToText(editAIProg);
   try{
     await navigator.clipboard.writeText(text);
     flashDone(btn);
