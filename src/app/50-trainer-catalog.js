@@ -1506,6 +1506,21 @@ function renderCatalogRow(){
       .filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(' · ');
 }
 
+function compactProgramDays(days){
+  const ordered = DAYS.filter(d => Array.isArray(days) && days.includes(d));
+  if(!ordered.length) return '';
+  const parts = [];
+  for(let i = 0; i < ordered.length; ){
+    let j = i;
+    while(j + 1 < ordered.length && DAYS.indexOf(ordered[j + 1]) === DAYS.indexOf(ordered[j]) + 1) j++;
+    const run = j - i + 1;
+    if(run >= 3) parts.push(canonicalLabel(ordered[i]) + '–' + canonicalLabel(ordered[j]));
+    else for(let k = i; k <= j; k++) parts.push(canonicalLabel(ordered[k]));
+    i = j + 1;
+  }
+  return parts.join(' · ');
+}
+
 function renderMine(){
   renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
@@ -1535,7 +1550,7 @@ function renderMine(){
     const daysU = programDaysUnion(p);
     // расписание — один чип, очередь вариантов — отдельный: длинная строка
     // «Пн · Ср · 07:30 · варианты по очереди» разрывалась посреди фразы
-    const schedule = [daysU.length ? daysU.map(canonicalLabel).join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    const schedule = [compactProgramDays(daysU), p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
