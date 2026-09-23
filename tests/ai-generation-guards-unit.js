@@ -39,8 +39,9 @@ need(programs.includes('if(!imageGenerationGuard(kind, item)) return false;'),
 need(programs.includes('if(!imageWorkspaceGuard()) return;') &&
      programs.includes("function openImages(){\n  if(!imageWorkspaceGuard()) return false;"),
   'batch generation and image workspace both use the shared guard');
-need(!programs.includes("|| 'Workout program'"),
-  'image prompts have no hidden fallback program name');
+const singlePrompt = programs.slice(programs.indexOf('function singleImagePrompt'), programs.indexOf('let imgGenCancelled'));
+need(singlePrompt.includes('const name = imageProgramName();') && !singlePrompt.includes("|| 'Workout program'"),
+  'real image generation has no hidden fallback program name');
 need(!events.includes("if(!item.name){ appAlert(t('images.needExerciseName'))"),
   'exercise editor has no duplicate local image-name guard');
 
