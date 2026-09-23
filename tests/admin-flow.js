@@ -165,7 +165,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('для mobile smoke создан черновик редактора',mobileDraft.s===200,mobileDraft.j.id);
 
   // ---- сама страница ----
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/admin.html', {waitUntil: 'load'});
   await page.waitForTimeout(500);

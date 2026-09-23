@@ -17,7 +17,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra == null ? '' : ' → ' + extra)); };
 
 async function boot(browser, label, errors){
-  const page = await (await browser.newContext({viewport:{width:412,height:900}})).newPage();
+  const page = await (await browser.newContext({viewport:{width:412,height:900},locale:'ru-RU'})).newPage();
   page.on('pageerror', e => errors.push(label + ': ' + e));
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
   await page.waitForTimeout(700);
@@ -56,6 +56,9 @@ async function boot(browser, label, errors){
     const sent = await apiPost('/api/auth',{action:'send',email});
     const sub = {plan:'year',since:'2026-09-17',until:'2099-09-17',currency:'RUB',price:2990,autoRenew:true};
     const r = await apiPost('/api/auth',{action:'verify',email,code:sent.devCode,deviceId:identity.deviceId,sub});
+    // Вход без ника не завершается: аккаунт сразу получает ник, как в приложении.
+    await apiPost('/api/auth',{action:'set_handle',email,deviceId:identity.deviceId,syncToken:r.syncToken,
+      handle:'@' + email.split('@')[0].replace(/[^a-z0-9]/g, '')});
     account.email=email; account.sub=r.sub; account.syncToken=r.syncToken;
     await saveAccount(); identity.email=email; await saveIdentity();
     await connectAccountSync();

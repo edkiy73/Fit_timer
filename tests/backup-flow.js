@@ -36,7 +36,7 @@ const PROG = `ПРОГРАММА: Сила дома
 ШАГ ВЕСА: 2`;
 
 const boot = async (b, errs, label) => {
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);

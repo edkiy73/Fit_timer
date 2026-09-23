@@ -46,7 +46,7 @@ const BIG = `ПРОГРАММА: Силовая база
 `).join('');
 
 async function boot(b, url, errs){
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(e + ''));
   await page.goto(url + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
