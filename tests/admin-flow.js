@@ -231,6 +231,8 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(200);
   ok('AI явно тестируется без сохранения',/без сохранения/i.test(await page.textContent('#body')));
   ok('AI настройки на 360px не распирают viewport',await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  ok('результат AI-теста находится рядом с кнопками теста',
+     await page.locator('#testText').evaluate(btn => !!(btn.parentElement && btn.parentElement.querySelector('#aiResult'))));
 
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="payments"]');
@@ -243,6 +245,16 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
      /нужны|нужен/.test(await page.textContent('#paySettingsState')));
   ok('платежный экран на телефоне не распирает viewport',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  ok('статус сохранения платежей находится рядом с кнопкой',
+     await page.locator('#paySettingsSave').evaluate(btn => btn.parentElement && btn.parentElement.querySelector('#paySettingsState') !== null));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="analytics"]');
+  await page.waitForTimeout(250);
+  ok('аналитика умеет менять период 7/30/90 дней',
+     await page.locator('#analyticsDays option').count()===3);
+  ok('аналитика на 360px не распирает viewport',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="errors"]');
   await page.waitForTimeout(250);

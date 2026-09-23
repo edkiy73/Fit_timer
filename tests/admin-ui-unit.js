@@ -47,6 +47,13 @@ need(html.includes('function paymentReadiness('),'payment readiness summary is m
 need(html.includes('id="editorReviewCard"'),'program editor moderation readiness card is missing');
 need(!html.slice(html.indexOf('function renderUsers(b){'),html.indexOf("let campaignLang='ru';")).includes("prompt("),'user Premium actions must not use browser prompt');
 need(html.includes('function grantUserPremium('),'user Premium inline action flow is missing');
+need(html.includes('function setActionFeedback('),'forms need action-local feedback helper');
+need(html.includes('class="action-feedback"'),'save/action bars need feedback next to the pressed action');
+need(html.includes("flashActionButton($('releaseSettingsSave'),'Проверь поля'"),'release validation must be shown at the save action');
+need(html.includes("flashActionButton($('priceSettingsSave'),'Проверь цены'"),'pricing validation must be shown at the save action');
+need(!html.slice(html.indexOf('async function saveReleaseSettings(){'),html.indexOf('let editing = null')).includes("alert("),'release form must not report validation through alert');
+need(html.includes('let analyticsDays=30'),'analytics period selector is missing');
+need(html.includes('<option value="90">90 дней</option>'),'analytics must support 7/30/90 day periods');
 need(html.includes('data-user-panel'),'user account actions need inline feedback panel');
 need(html.includes('function previewCampaign()'),'campaign audience preview is missing');
 need(html.includes('campaignPreviewKey'),'campaign send must be invalidated when copy/channels change');

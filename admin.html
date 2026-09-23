@@ -166,6 +166,12 @@
   }
   .sticky-save .save-state{color:var(--muted);font-size:12px;min-height:18px}
   .sticky-save .save-actions{display:flex;gap:6px;margin-left:auto}
+  .action-stack{display:inline-flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0}
+  .action-feedback{min-height:16px;max-width:420px;font-size:11.5px;line-height:1.35;color:var(--muted);text-align:right}
+  .action-feedback.ok{color:var(--ok)}
+  .action-feedback.err{color:var(--danger)}
+  .action-feedback.busy{color:var(--accent)}
+  .action-row{display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;flex-wrap:wrap}
   .compact-note{margin:4px 0;color:var(--muted);font-size:12px}
   .nav-shade{display:none}
   .gate .card{padding:18px}
@@ -465,6 +471,9 @@
     .sticky-save{align-items:stretch;flex-direction:column}
     .sticky-save .save-actions{width:100%;display:grid;grid-auto-flow:row;grid-template-columns:1fr}
     .sticky-save .save-actions .b{width:100%}
+    .action-stack{width:100%;align-items:stretch}
+    .action-feedback{text-align:left;max-width:none}
+    .action-row{display:grid;grid-template-columns:1fr}
     .admin-notice{left:12px;right:12px;bottom:12px;max-width:none}
   }
 </style>
@@ -696,6 +705,35 @@ function adminNotice(message,tone){
   el.hidden=false;
   clearTimeout(noticeTimer);
   noticeTimer=setTimeout(()=>{el.hidden=true;},3200);
+}
+function setActionFeedback(stateId,message,tone){
+  const el=$(stateId);if(!el)return;
+  el.textContent=message||'';
+  el.className='action-feedback'+(tone?' '+tone:'');
+}
+function actionButtonState(button,busy,label){
+  if(!button)return;
+  if(busy){
+    if(!button.dataset.idleText)button.dataset.idleText=button.textContent;
+    button.disabled=true;
+    button.textContent=label||'Сохраняю…';
+  }else{
+    button.disabled=false;
+    button.textContent=button.dataset.idleText||button.textContent;
+    delete button.dataset.idleText;
+  }
+}
+function flashActionButton(button,text,tone){
+  if(!button)return;
+  const idle=button.dataset.idleText||button.textContent;
+  button.disabled=false;
+  button.textContent=text;
+  button.classList.toggle('no',tone==='err');
+  setTimeout(()=>{
+    if(!document.body.contains(button))return;
+    button.textContent=idle;
+    button.classList.remove('no');
+  },1800);
 }
 function moderationState(item){
   const ru=localeReady(item,'ru'),en=localeReady(item,'en');
@@ -1094,59 +1132,50 @@ async function grantUserPremium(u,days,card,managed){
   }
 }
 
-async function renderAnalytics(b){
-  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Без email, имён, программ и фото.')
-    + '<div class="empty">Загрузка…</div>';
+let analyticsDays=30;
+async function renderAnalytics(b,force){
+  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка. Без email, имён, программ и фото.',
+    '<div class="action-row"><select id="analyticsDays" style="width:auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button class="b" id="analyticsRefresh">Обновить</button><span class="action-feedback" id="analyticsState"></span></div>')
+    +'<div class="empty">Загрузка…</div>';
+  $('analyticsDays').value=String(analyticsDays);
+  $('analyticsDays').onchange=()=>{analyticsDays=+$('analyticsDays').value;analyticsCache=null;renderAnalytics(b,true);};
+  $('analyticsRefresh').onclick=()=>{analyticsCache=null;renderAnalytics(b,true);};
   try{
-    if(!analyticsCache) analyticsCache=(await api('analytics_stats',{days:30})).stats;
+    setActionFeedback('analyticsState','Загружаю…','busy');
+    if(!analyticsCache||force) analyticsCache=(await api('analytics_stats',{days:analyticsDays})).stats;
   }catch(e){
-    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.')
-      + '<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
+    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.',
+      '<div class="action-row"><button class="b" id="analyticsRetry">Повторить</button><span class="action-feedback err">Ошибка: '+esc(e.message||e)+'</span></div>');
+    $('analyticsRetry').onclick=()=>renderAnalytics(b,true);
     return;
   }
-  const a=analyticsCache||{}, t=a.totals||{}, cohort=a.cohort||{};
+  const a=analyticsCache||{},t=a.totals||{},cohort=a.cohort||{};
   const rows=[
-    ['Первый запуск','install'],
-    ['Завершили onboarding','onboarding_complete'],
-    ['Создали аккаунт','account_created'],
-    ['Добавили программу','program_added'],
-    ['Начали тренировку','workout_started'],
-    ['Завершили тренировку','workout_completed'],
-    ['Дошли до 3 тренировок','workout_3'],
-    ['Дошли до 5 тренировок','workout_5'],
-    ['Дошли до 10 тренировок','workout_10'],
-    ['Успешно использовали AI','ai_used'],
-    ['Открыли Premium','premium_opened'],
-    ['Начали покупку','purchase_started']
+    ['Первый запуск','install'],['Завершили onboarding','onboarding_complete'],['Создали аккаунт','account_created'],
+    ['Добавили программу','program_added'],['Начали тренировку','workout_started'],['Завершили тренировку','workout_completed'],
+    ['Дошли до 3 тренировок','workout_3'],['Дошли до 5 тренировок','workout_5'],['Дошли до 10 тренировок','workout_10'],
+    ['Успешно использовали AI','ai_used'],['Открыли Premium','premium_opened'],['Начали покупку','purchase_started']
   ];
   const val=k=>t[k]||{count:0,unique:0};
   const base=Math.max(1,(cohort.devices||val('install').unique||0));
   const cards=rows.map(([label,key])=>{
-    const v=val(key), pct=key==='install'?100:Math.round(v.unique/base*100);
+    const v=val(key),pct=key==='install'?100:Math.round(v.unique/base*100);
     return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
-      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div>'
-      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
+      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div><div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
   }).join('');
   const dayRows=(a.rows||[]).slice().reverse().map(r=>{
-    const e=r.events||{};
-    const u=k=>((e[k]||{}).unique||0);
-    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td>'
-      +'<td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td>'
-      +'<td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td>'
-      +'<td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
+    const e=r.events||{},u=k=>((e[k]||{}).unique||0);
+    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td><td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td><td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td><td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
   }).join('');
-  const p=cohort.platform||{}, l=cohort.locale||{};
-  const cohortInfo='<div class="status-row">'
-    +'<span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span>'
-    +'<span class="status-chip">Android '+(p.android||0)+'</span>'
-    +'<span class="status-chip">iOS '+(p.ios||0)+'</span>'
-    +'<span class="status-chip">Web '+(p.web||0)+'</span>'
-    +'<span class="status-chip">RU '+(l.ru||0)+'</span>'
-    +'<span class="status-chip">EN '+(l.en||0)+'</span></div>';
-  b.innerHTML=pageHead('Аналитика','Exact unique = один анонимный device hash за весь выбранный период. Первый запуск у старых пользователей означает первый запуск после появления аналитики.')
-    +cohortInfo
+  const p=cohort.platform||{},l=cohort.locale||{};
+  const controls='<div class="action-row"><select id="analyticsDays" style="width:auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button class="b" id="analyticsRefresh">Обновить</button><span class="action-feedback ok" id="analyticsState">✓ Обновлено</span></div>';
+  b.innerHTML=pageHead('Аналитика','Период: последние '+analyticsDays+' дней. Exact unique = один анонимный device hash за период.',controls)
+    +'<div class="status-row"><span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span><span class="status-chip">Android '+(p.android||0)+'</span><span class="status-chip">iOS '+(p.ios||0)+'</span><span class="status-chip">Web '+(p.web||0)+'</span><span class="status-chip">RU '+(l.ru||0)+'</span><span class="status-chip">EN '+(l.en||0)+'</span></div>'
     +'<div class="entity-grid">'+cards+'</div>'
     +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+  $('analyticsDays').value=String(analyticsDays);
+  $('analyticsDays').onchange=()=>{analyticsDays=+$('analyticsDays').value;analyticsCache=null;renderAnalytics(b,true);};
+  $('analyticsRefresh').onclick=()=>{analyticsCache=null;renderAnalytics(b,true);};
 }
 
 async function renderErrors(b){
@@ -1295,8 +1324,7 @@ function renderCampaigns(b){
         <div><b>—</b><span>аккаунтов</span></div><div><b>—</b><span>получат Push</span></div><div><b>—</b><span>получат Email</span></div><div><b>—</b><span>пропущено</span></div>
       </div><p class="compact-note" id="campPreviewState">Отправка станет доступна после проверки текущего текста и каналов.</p></div>
     </div>
-    <p class="muted" id="campState"></p>
-    <div class="sticky-save"><span class="save-state">Предпросмотр обязателен перед массовой отправкой</span><div class="save-actions"><button class="b ok" id="campSend" disabled>Отправить рассылку</button></div></div>`;
+    <div class="sticky-save"><div class="save-actions"><div class="action-stack"><button class="b ok" id="campSend" disabled>Отправить рассылку</button><span class="action-feedback" id="campState">Предпросмотр обязателен перед массовой отправкой</span></div></div></div>`;
   document.querySelectorAll('[data-camp-lang]').forEach(x=>x.onclick=()=>setCampaignLang(x.dataset.campLang));
   ['campKind','campPush','campEmail','campRuTitle','campRuBody','campEnTitle','campEnBody'].forEach(id=>{
     $(id).addEventListener(id.startsWith('camp')&&['campPush','campEmail','campKind'].includes(id)?'change':'input',invalidateCampaignPreview);
@@ -1360,20 +1388,25 @@ function settingsClone(){
   return JSON.parse(JSON.stringify(data.settings || {}));
 }
 function saveBar(id, buttonLabel){
-  return `<div class="sticky-save"><span class="save-state" id="${id}State"></span><div class="save-actions"><button class="b ok" id="${id}Save">${buttonLabel||'Сохранить'}</button></div></div>`;
+  return `<div class="sticky-save"><div class="save-actions"><div class="action-stack"><button class="b ok" id="${id}Save">${buttonLabel||'Сохранить'}</button><span class="action-feedback" id="${id}State"></span></div></div></div>`;
 }
-async function persistSettings(next,stateId){
-  const state=$(stateId); if(state)state.textContent='Сохраняю…';
+async function persistSettings(next,stateId,buttonId){
+  const btn=$(buttonId||stateId.replace(/State$/,'Save'));
+  actionButtonState(btn,true,'Сохраняю…');
+  setActionFeedback(stateId,'Сохраняю изменения…','busy');
   try{
     const r=await api('save_settings',{settings:next});
     data.settings=r.settings;
-    if(state)state.textContent='✓ Сохранено';
-    adminNotice('Настройки сохранены.');
+    setActionFeedback(stateId,'✓ Сохранено','ok');
+    flashActionButton(btn,'✓ Сохранено','ok');
     return true;
   }catch(e){
-    if(state)state.textContent='Не сохранилось: '+e.message;
+    setActionFeedback(stateId,'Ошибка: '+e.message,'err');
+    flashActionButton(btn,'Ошибка','err');
     adminNotice('Не сохранилось: '+e.message,'err');
     return false;
+  }finally{
+    if(btn&&btn.disabled)actionButtonState(btn,false);
   }
 }
 
@@ -1420,7 +1453,7 @@ function renderAI(b){
           <div class="route-label">Картинки</div><div>${routePair(s,'image','primary')}</div><div>${routePair(s,'image','backup')}</div>
         </div>
         <div class="ai-route-state" id="aiRouteState"></div>
-        <div class="acts"><button class="b" id="testText">Тест текста без сохранения</button><button class="b" id="testImage">Тест картинки без сохранения</button></div>
+        <div class="action-row"><button class="b" id="testText">Тест текста без сохранения</button><button class="b" id="testImage">Тест картинки без сохранения</button><span class="action-feedback" id="aiResult"></span></div>
       </div>
     </div>
     <div class="form-card"><div class="form-card-head"><h3>Качество изображений</h3></div><div class="form-card-body">
@@ -1439,7 +1472,6 @@ function renderAI(b){
         <div><label>Хранение, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
       </div>
     </div></div>
-    <p class="err" id="aiResult"></p>
     ${saveBar('aiSettings','Сохранить production-настройки')}`;
   $('aiSettingsSave').onclick=saveAISettings;
   $('testText').onclick=()=>testAIAdmin('text');
@@ -1462,25 +1494,26 @@ function aiSettingsFromForm(){
 async function saveAISettings(){
   const s=aiSettingsFromForm(),problems=[...aiRouteProblem(s,'text'),...aiRouteProblem(s,'image')];
   if(problems.length){
-    $('aiSettingsState').textContent=problems.join(' · ');
-    adminNotice('ИИ не сохранён: '+problems[0],'err');
+    setActionFeedback('aiSettingsState',problems[0],'err');
+    flashActionButton($('aiSettingsSave'),'Проверь настройки','err');
     return;
   }
   await persistSettings(s,'aiSettingsState');
 }
 async function testAIAdmin(type){
-  const el=$('aiResult'),btn=$(type==='image'?'testImage':'testText'),settings=aiSettingsFromForm();
+  const btn=$(type==='image'?'testImage':'testText'),settings=aiSettingsFromForm();
   const route=settings[type]||{},primary=route.primary||{};
-  if(!primary.model){el.textContent='✗ Укажи основную модель для '+(type==='image'?'картинок':'текста')+'.';return;}
-  btn.disabled=true;el.textContent='Проверяю текущие поля без сохранения…';
+  if(!primary.model){setActionFeedback('aiResult','Укажи основную модель для '+(type==='image'?'картинок':'текста')+'.','err');return;}
+  actionButtonState(btn,true,'Проверяю…');
+  setActionFeedback('aiResult','Проверяю текущие поля без сохранения…','busy');
   try{
     const r=await api('test_ai',{type,settings});
-    el.textContent='✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · production-настройки не изменены';
-    adminNotice('AI-тест прошёл: '+r.provider+' / '+r.model+'.');
+    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · ничего не сохранено','ok');
+    flashActionButton(btn,'✓ Работает','ok');
   }catch(e){
-    el.textContent='✗ '+(e.detail||e.message)+' · настройки не сохранены';
-    adminNotice('AI-тест не прошёл: '+(e.detail||e.message),'err');
-  }finally{btn.disabled=false;}
+    setActionFeedback('aiResult','Ошибка: '+(e.detail||e.message)+' · настройки не сохранены','err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 
 function renderPricing(b){
@@ -1498,12 +1531,30 @@ function renderPricing(b){
     </table></div>
     ${saveBar('priceSettings','Сохранить цены')}`;
   $('priceSettingsSave').onclick=savePricingSettings;
+  Object.keys(prices).forEach(cur=>{
+    ['month','year'].forEach(k=>$('price_'+cur+'_'+k).addEventListener('input',()=>updatePriceRow(cur)));
+    updatePriceRow(cur);
+  });
+}
+function updatePriceRow(cur){
+  const m=+$('price_'+cur+'_month').value||0,y=+$('price_'+cur+'_year').value||0;
+  const row=$('price_'+cur+'_month').closest('tr'),out=row&&row.querySelector('[data-label="Выгода"] .cell-sub');
+  if(out)out.textContent=m>0&&y>0?Math.max(0,Math.round((1-y/(m*12))*100))+'% за год':'—';
 }
 async function savePricingSettings(){
   const s=settingsClone();s.prices=s.prices||{};
+  const bad=[];
   Object.keys(s.prices).forEach(cur=>{
-    s.prices[cur]={month:+$(`price_${cur}_month`).value,year:+$(`price_${cur}_year`).value};
+    const month=+$('price_'+cur+'_month').value,year=+$('price_'+cur+'_year').value;
+    if(!(month>0)||!(year>0))bad.push(cur+': цена должна быть больше нуля');
+    if(month>0&&year>month*12)bad.push(cur+': год дороже 12 месяцев');
+    s.prices[cur]={month,year};
   });
+  if(bad.length){
+    setActionFeedback('priceSettingsState',bad[0],'err');
+    flashActionButton($('priceSettingsSave'),'Проверь цены','err');
+    return;
+  }
   await persistSettings(s,'priceSettingsState');
 }
 
@@ -1570,8 +1621,8 @@ async function savePaymentSettings(){
     problems.push('В режиме multi нужен хотя бы один полностью готовый и включённый провайдер');
   }
   if(problems.length){
-    $('paySettingsState').textContent=problems.join(' · ');
-    adminNotice('Платежи не сохранены: '+problems[0],'err');
+    setActionFeedback('paySettingsState',problems[0],'err');
+    flashActionButton($('paySettingsSave'),'Проверь настройки','err');
     return;
   }
   const s=settingsClone();
@@ -1596,6 +1647,7 @@ function renderRelease(b){
           <div class="wide"><label>Ссылка обновления</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="https://play.google.com/..."></div>
         </div>
         <p class="compact-note">Если текущий build ниже «Последнего» — покажется мягкий баннер. Если ниже «Минимального» — обновление станет обязательным. Не поднимай minimum без необходимости.</p>
+        <div class="status-row" id="releasePreview"></div>
       </div>
     </div>
     <div class="form-card">
@@ -1609,24 +1661,47 @@ function renderRelease(b){
     </div>
     ${saveBar('releaseSettings','Сохранить релиз')}`;
   $('releaseSettingsSave').onclick=saveReleaseSettings;
+  ['relLatestCode','relMinimumCode','relLatestName','relUrl','relMessageRu','relMessageEn'].forEach(id=>$(id).addEventListener('input',updateReleasePreview));
+  updateReleasePreview();
+}
+function releaseValues(){
+  return {
+    latest:Math.max(0,Math.round(+$('relLatestCode').value||0)),
+    minimum:Math.max(0,Math.round(+$('relMinimumCode').value||0)),
+    name:$('relLatestName').value.trim(),
+    url:$('relUrl').value.trim(),
+    ru:$('relMessageRu').value.trim(),
+    en:$('relMessageEn').value.trim()
+  };
+}
+function releaseProblems(v){
+  const out=[];
+  if(v.minimum&&!v.latest)out.push('Сначала укажи последний versionCode');
+  if(v.latest&&v.minimum>v.latest)out.push('Минимальная версия выше последней');
+  if(v.latest&&!v.url)out.push('Для обновления нужна ссылка');
+  if(v.latest&&(!v.ru||!v.en))out.push('Лучше заполнить RU и EN текст обновления');
+  return out;
+}
+function updateReleasePreview(){
+  const el=$('releasePreview');if(!el)return;
+  const v=releaseValues(),problems=releaseProblems(v),hard=v.minimum>0;
+  el.innerHTML='<span class="status-chip '+(v.latest?'ok':'')+'">Последняя · '+(v.latest||'не задана')+'</span>'
+    +'<span class="status-chip '+(hard?'':'ok')+'">'+(hard?'Обязательное обновление от '+v.minimum:'Без обязательного обновления')+'</span>'
+    +(problems.length?'<span class="status-chip">'+esc(problems[0])+'</span>':'');
 }
 async function saveReleaseSettings(){
-  const s=settingsClone();
-  s.update=s.update||{};
-  const latest=Math.max(0,Math.round(+$('relLatestCode').value||0));
-  const minimum=Math.max(0,Math.round(+$('relMinimumCode').value||0));
-  const url=$('relUrl').value.trim();
-  if(minimum&&!latest){alert('Сначала укажи последний versionCode.');return;}
-  if(latest&&minimum>latest){alert('Минимальная версия не может быть выше последней.');return;}
-  if(latest&&!url){alert('Для обновления нужна ссылка на Google Play, RuStore или APK.');return;}
-  s.update.android={
-    latestCode:latest,
-    minimumCode:minimum,
-    latestName:$('relLatestName').value.trim(),
-    url,
-    messageRu:$('relMessageRu').value.trim(),
-    messageEn:$('relMessageEn').value.trim()
-  };
+  const v=releaseValues(),problems=releaseProblems(v);
+  if(problems.length){
+    setActionFeedback('releaseSettingsState',problems[0],'err');
+    flashActionButton($('releaseSettingsSave'),'Проверь поля','err');
+    return;
+  }
+  if(v.minimum>0&&!confirm('Сделать обновление обязательным для сборок ниже '+v.minimum+'?')){
+    setActionFeedback('releaseSettingsState','Сохранение отменено — minimum не изменён.','busy');
+    return;
+  }
+  const s=settingsClone();s.update=s.update||{};
+  s.update.android={latestCode:v.latest,minimumCode:v.minimum,latestName:v.name,url:v.url,messageRu:v.ru,messageEn:v.en};
   await persistSettings(s,'releaseSettingsState');
 }
 
@@ -2291,7 +2366,7 @@ async function saveForm(mode){
   const saveBtn=$('fSave'),publishBtn=$('fPublish'),saveState=$('programSaveState');
   if(saveBtn)saveBtn.disabled=true;
   if(publishBtn)publishBtn.disabled=true;
-  if(saveState)saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';
+  if(saveState){saveState.style.color='';saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';}
   const item=currentProgramItem();
   try{
     let backTo='approved';
@@ -2320,8 +2395,10 @@ async function saveForm(mode){
     localStorage.setItem('adminTab',tab);
     await load();
   }catch(e){
-    $('fErr').textContent=e.miss?'Не хватает для публикации: '+e.miss.join(', '):'Не сохранилось: '+e.message;
-    if(saveState)saveState.textContent=mode==='publish'&&editingStatus==='draft'?'Черновик сохранён · исправь замечания и повтори публикацию':'Ошибка сохранения';
+    const msg=e.miss?'Не хватает: '+e.miss.join(', '):'Не сохранилось: '+e.message;
+    $('fErr').textContent=msg;
+    if(saveState){saveState.textContent=msg;saveState.style.color='var(--danger)';}
+    adminNotice(msg,'err');
   }finally{
     if(saveBtn)saveBtn.disabled=false;
     if(publishBtn)publishBtn.disabled=false;
