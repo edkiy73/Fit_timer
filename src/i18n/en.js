@@ -1321,6 +1321,7 @@ const I18N_EN = {
   'ai.pasteProgram': "Paste the program text into the field.",
   'ai.needProgramInput': "Add at least one preference for the program — for example a goal, training days, equipment, or your own request.",
   'ai.needExerciseInput': "Add at least one preference for the exercise — for example target muscles, format, equipment, or your own request.",
+  'ai.needEditRequest': "Describe what you want to change.",
   'ai.problemList': "Problems:",
   'ai.reviewSave': "Review and save",
   'builder.needProgramName': "program name",
