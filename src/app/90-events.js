@@ -958,6 +958,8 @@ $('loginHaveCode').onclick = loginUseExistingCode;
 const dropLogin = ()=>{
   loginDone = null;
   loginPending = null;
+  loginFixedEmail = '';
+  $('loginEmail').readOnly = false;
   pendingSub = null;   // ушёл с шага кода — подписки не случилось
   $('loginModal').classList.remove('open');
 };
@@ -980,7 +982,12 @@ $('lockGo').onclick = ()=> tryUnlock();
 // просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
 $('lockMail').onclick = ()=> openLogin(
   ()=> $('lockModal').classList.remove('open'),
-  {email:(account && account.email) || '', label:t('lock.email'), msg:t('login.intro')}
+  {
+    email:(account && account.email) || '',
+    fixedEmail:true,
+    label:t('lock.email'),
+    msg:t('login.intro')
+  }
 );
 window.addEventListener('fitAppForeground', e=>{
   maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
@@ -1991,7 +1998,9 @@ try{
     const raw = localStorage.getItem('account');
     const saved = raw && JSON.parse(raw);
     if(window.FitNative && window.FitNative.isNative
-      && saved && saved.biometry && saved.biometry.enabled) $('lockModal').classList.add('open');
+      && saved && saved.biometry && saved.biometry.enabled && saved.biometry.kind === 'native'){
+      $('lockModal').classList.add('open');
+    }
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
@@ -1999,6 +2008,16 @@ try{
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
+  // Старый TWA/WebAuthn credential относится к прежнему browser origin и не
+  // переносится в локальный Capacitor runtime. Снимаем старый флаг один раз:
+  // пользователь сможет включить новую нативную защиту в настройках.
+  if(account && account.biometry && account.biometry.enabled && account.biometry.kind !== 'native'){
+    account.biometry = null;
+    rememberAccount();
+    await saveAccount();
+    await saveKnown();
+    $('lockModal').classList.remove('open');
+  }
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
