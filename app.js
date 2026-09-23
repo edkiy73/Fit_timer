@@ -145,7 +145,7 @@ const I18N_RU = {
   'settings.accountHint': "Быстрая регистрация в один шаг по почте. Аккаунт бесплатный: он сохранит твой ник, подписку и данные аккаунта, чтобы они вернулись на новом телефоне. Синхронизация тренировок доступна по подписке.",
   'settings.accountNick': "Ник аккаунта",
   'settings.biometry': "Вход по биометрии",
-  'settings.biometrySub': "Отпечаток или лицо вместо ввода почты при входе",
+  'settings.biometrySub': "При запуске и после 5 минут вне приложения. Активную тренировку не прерывает.",
   'settings.signOut': "Выйти из аккаунта",
   'settings.backup': "Резервная копия",
   'settings.backupHint': "Профили, программы, статистика, вес, замеры и фото — одним файлом.",
@@ -594,19 +594,20 @@ const I18N_RU = {
   'login.handleTaken': "Этот ник уже занят. Попробуй другой.",
   'account.signOutQuestion': "Выйти из аккаунта {email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.",
   'account.signOut': "Выйти",
-  'bio.cancelled': "запрос отменён или истёк.",
-  'bio.exists': "на этом устройстве ключ уже заведён.",
-  'bio.unsupported': "устройство не умеет проверять отпечаток или лицо.",
-  'bio.security': "приложение открыто не по защищённому адресу.",
-  'bio.refused': "устройство отказало.",
-  'bio.needAccount': "Биометрия привязывается к аккаунту — сначала нужна почта.",
+  'bio.cancelled': "проверка отменена.",
+  'bio.unsupported': "на этом устройстве биометрия недоступна.",
+  'bio.notEnrolled': "сначала добавь отпечаток или лицо в настройках телефона.",
+  'bio.unavailable': "биометрия сейчас временно недоступна.",
+  'bio.lockout': "система временно заблокировала биометрию после неудачных попыток.",
+  'bio.refused': "устройство не смогло выполнить проверку.",
+  'bio.needAccount': "Биометрия защищает уже авторизованный аккаунт — сначала войди по почте.",
   'bio.enableFailed': "Не получилось включить биометрию: {error}",
   'bio.disableQuestion': "Выключить вход по биометрии? Приложение будет открываться сразу.",
-  'lock.prompt': "Приложи палец или посмотри на камеру — и продолжим.",
+  'lock.prompt': "Подтверди отпечатком или лицом — и продолжим.",
   'lock.unlock': "Разблокировать",
   'lock.email': "Войти по почте",
-  'lock.wrongEmail': "Такая почта к этому аккаунту не привязана. Проверь адрес.",
-  'lock.failed': "Не получилось узнать. Попробуй ещё раз или войди по почте.",
+  'lock.failed': "Проверка отменена. Можно попробовать ещё раз или войти по почте.",
+  'lock.failedReason': "Биометрия не сработала: {reason} Можно попробовать ещё раз или войти по почте.",
   'progress.photoCount': "{count} фото",
   'progress.photoUpdate': "пора обновить",
   'progress.deleteAllPhotos': "Удалить все фото ({count})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.",
@@ -1674,7 +1675,7 @@ const I18N_EN = {
   'settings.accountHint': "Sign up in one quick email step. The account is free and keeps your nickname, subscription and account data so they return on a new phone. Workout sync is available with Premium.",
   'settings.accountNick': "Account nickname",
   'settings.biometry': "Biometric sign-in",
-  'settings.biometrySub': "Use your fingerprint or face instead of entering email",
+  'settings.biometrySub': "On launch and after 5 minutes away. Never interrupts an active workout.",
   'settings.signOut': "Sign out",
   'settings.backup': "Backup",
   'settings.backupHint': "Profiles, programs, stats, weight, measurements and photos in one file.",
@@ -2123,19 +2124,20 @@ const I18N_EN = {
   'login.handleTaken': "That username is already taken. Try another one.",
   'account.signOutQuestion': "Sign out of {email}? Programs, statistics, weight, and photos will stay on this phone. The subscription and biometric sign-in will be detached and return when you sign in again.",
   'account.signOut': "Sign out",
-  'bio.cancelled': "the request was cancelled or timed out.",
-  'bio.exists': "a key already exists on this device.",
-  'bio.unsupported': "this device does not support fingerprint or face verification.",
-  'bio.security': "the app is not running in a secure context.",
-  'bio.refused': "the device rejected the request.",
-  'bio.needAccount': "Biometrics are linked to an account, so sign in with email first.",
+  'bio.cancelled': "verification was cancelled.",
+  'bio.unsupported': "biometrics are not available on this device.",
+  'bio.notEnrolled': "add a fingerprint or face in your phone settings first.",
+  'bio.unavailable': "biometrics are temporarily unavailable.",
+  'bio.lockout': "the system temporarily locked biometrics after unsuccessful attempts.",
+  'bio.refused': "the device could not complete verification.",
+  'bio.needAccount': "Biometrics protect an already signed-in account, so sign in with email first.",
   'bio.enableFailed': "Couldn’t enable biometrics: {error}",
   'bio.disableQuestion': "Turn off biometric sign-in? The app will open without verification.",
-  'lock.prompt': "Use your fingerprint or look at the camera to continue.",
+  'lock.prompt': "Confirm with your fingerprint or face to continue.",
   'lock.unlock': "Unlock",
   'lock.email': "Sign in with email",
-  'lock.wrongEmail': "That email is not linked to this account. Check the address.",
-  'lock.failed': "Couldn’t verify you. Try again or sign in with email.",
+  'lock.failed': "Verification was cancelled. Try again or sign in with email.",
+  'lock.failedReason': "Biometrics didn’t work: {reason} Try again or sign in with email.",
   'progress.photoCount': "{count} photos",
   'progress.photoUpdate': "time for a new photo",
   'progress.deleteAllPhotos': "Delete all {count} photos? Progress photos are not stored anywhere else and cannot be recovered.",
@@ -4242,6 +4244,9 @@ function show(id, push = true){
   // а панель управления всегда на одном месте (см. body.screen-work в стилях)
   document.body.classList.toggle('screen-work', id==='scrWork');
   if(ROOT_TABS.includes(id)) prepTab(id);
+  // Если приложение долго было в фоне посреди тренировки, не прерываем подход
+  // биометрией. Проверку откладываем до первого выхода с экрана тренировки.
+  if(id !== 'scrWork' && typeof maybeRunDeferredBiometricLock === 'function') maybeRunDeferredBiometricLock();
 }
 
 // содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
@@ -7272,7 +7277,7 @@ function renderPlan(){
   setShown('rowHandle', has && !!account.handle);
   setShown('btnSignOut', has);
   setShown('rowRenew', has && on);
-  setShown('rowBio', has && bioOK);
+  setShown('rowBio', has && nativeBiometryHost());
   $('btnWipeAccount').textContent = has ? t('account.deleteAccountButton') : t('account.deleteAllButton');
   $('wipeNote').textContent = has
     ? t('account.deleteAccountNote')
@@ -7570,89 +7575,114 @@ async function signOut(){
 }
 
 /* ---- вход по биометрии ---- */
-// Это passkey: телефон заводит ключ в защищённом хранилище и отдаёт подпись только
-// после отпечатка или лица. Проверку пока делает само устройство; когда появится
-// сервер, туда переедут только challenge и сверка подписи — ключ и весь код ниже
-// останутся прежними, перевыпускать людям ничего не придётся.
-async function bioSupported(){
-  try{
-    if(!window.PublicKeyCredential || !navigator.credentials || !navigator.credentials.create) return false;
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  }catch(e){ return false; }
+// На Android/iOS это локальная защита приватности, а не второй способ авторизации
+// аккаунта. Первый вход и восстановление доступа всегда остаются через email + OTP.
+// Биометрия только открывает уже авторизованное приложение на этом устройстве.
+let bioState = {available:false, reason:'unsupported'};
+let bioLastResult = null;
+let bioRelockDeferred = false;
+const BIO_RELOCK_MS = 5 * 60 * 1000;
+
+function nativeBiometryHost(){
+  return !!(window.FitNative && window.FitNative.isNative
+    && window.FitNative.biometricStatus && window.FitNative.authenticateBiometric);
 }
-const rndBytes = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; };
-const toB64 = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
-const fromB64 = s64 => Uint8Array.from(atob(s64), c => c.charCodeAt(0));
-function bioErr(e){
-  const n = (e && e.name) || '';
-  if(n === 'NotAllowedError') return t('bio.cancelled');
-  if(n === 'InvalidStateError') return t('bio.exists');
-  if(n === 'NotSupportedError') return t('bio.unsupported');
-  if(n === 'SecurityError') return t('bio.security');
+function bioReason(reason){
+  if(reason === 'not_enrolled') return t('bio.notEnrolled');
+  if(reason === 'temporarily_unavailable') return t('bio.unavailable');
+  if(reason === 'lockout') return t('bio.lockout');
+  if(reason === 'cancelled') return t('bio.cancelled');
+  if(reason === 'unsupported') return t('bio.unsupported');
   return t('bio.refused');
+}
+async function bioSupported(){
+  if(!nativeBiometryHost()){
+    bioState = {available:false, reason:'unsupported'};
+    return false;
+  }
+  try{
+    const state = await window.FitNative.biometricStatus();
+    bioState = state && typeof state === 'object' ? state : {available:false, reason:'unsupported'};
+    return bioState.available === true;
+  }catch(e){
+    bioState = {available:false, reason:'temporarily_unavailable'};
+    return false;
+  }
+}
+async function requestNativeBiometry(){
+  if(!nativeBiometryHost()) return {ok:false, error:'unsupported'};
+  try{
+    return await window.FitNative.authenticateBiometric({
+      title:t('lock.title'),
+      reason:t('lock.prompt'),
+      cancelText:t('common.cancel')
+    });
+  }catch(e){
+    return {ok:false, error:'temporarily_unavailable'};
+  }
 }
 async function bioEnable(){
   if(!account.email){ appAlert(t('bio.needAccount')); return false; }
-  try{
-    const cred = await navigator.credentials.create({publicKey: {
-      challenge: rndBytes(32),
-      rp: {name: 'Fit Timer'},
-      user: {id: rndBytes(16), name: account.email, displayName: account.email},
-      pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
-      authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred'},
-      timeout: 60000, attestation: 'none'
-    }});
-    if(!cred) return false;
-    account.biometry = {enabled: true, credId: toB64(cred.rawId), at: new Date().toISOString()};
-    await saveAccount();
-    renderPlan();
-    return true;
-  }catch(e){
-    appAlert(t('bio.enableFailed',{error:bioErr(e)}));
+  bioOK = await bioSupported();
+  if(!bioOK){
+    appAlert(t('bio.enableFailed',{error:bioReason(bioState.reason)}));
     return false;
   }
+  const checked = await requestNativeBiometry();
+  if(!checked || !checked.ok){
+    if(!checked || checked.error !== 'cancelled'){
+      appAlert(t('bio.enableFailed',{error:bioReason(checked && checked.error)}));
+    }
+    return false;
+  }
+  account.biometry = {enabled:true, kind:'native', at:new Date().toISOString()};
+  rememberAccount();
+  await saveAccount();
+  await saveKnown();
+  renderPlan();
+  return true;
 }
 async function bioDisable(){
   if(!(await appConfirm(t('bio.disableQuestion')))) return;
   account.biometry = null;
+  rememberAccount();
   await saveAccount();
+  await saveKnown();
   renderPlan();
 }
 async function bioVerify(){
-  try{
-    const got = await navigator.credentials.get({publicKey: {
-      challenge: rndBytes(32),
-      allowCredentials: [{type: 'public-key', id: fromB64(account.biometry.credId)}],
-      userVerification: 'required', timeout: 60000
-    }});
-    return !!got;
-  }catch(e){ return false; }
+  bioLastResult = await requestNativeBiometry();
+  return !!(bioLastResult && bioLastResult.ok);
 }
 
-/* ---- замок при запуске ---- */
-let lockMode = 'bio';
-const lockNeeded = ()=> !!(account && account.biometry && account.biometry.enabled);
+/* ---- мягкая блокировка приватности ---- */
+const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry && account.biometry.enabled);
 function openLock(){
-  lockMode = 'bio';
-  setShown('lockMailBox', false);
-  $('lockEmail').value = '';
+  if(!lockNeeded()) return;
+  bioRelockDeferred = false;
   $('lockMsg').textContent = t('lock.prompt');
-  $('lockGo').textContent = t('lock.unlock');
-  $('lockMail').textContent = t('lock.email');
   $('lockModal').classList.add('open');
-  tryUnlock();   // сразу, чтобы не заставлять нажимать лишний раз
+  tryUnlock();   // системный prompt сразу, без лишнего тапа
 }
 async function tryUnlock(){
-  if(lockMode === 'mail'){
-    const v = ($('lockEmail').value || '').trim().toLowerCase();
-    if(v && v === (account.email || '').toLowerCase()){ $('lockModal').classList.remove('open'); return; }
-    $('lockMsg').textContent = t('lock.wrongEmail');
+  if(!lockNeeded()){ $('lockModal').classList.remove('open'); return; }
+  if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
+  $('lockMsg').textContent = bioLastResult && bioLastResult.error && bioLastResult.error !== 'cancelled'
+    ? t('lock.failedReason',{reason:bioReason(bioLastResult.error)})
+    : t('lock.failed');
+}
+function maybeBiometricRelock(awayMs){
+  if(!lockNeeded() || !(awayMs >= BIO_RELOCK_MS) || $('lockModal').classList.contains('open')) return;
+  if($('scrWork') && $('scrWork').classList.contains('on')){
+    bioRelockDeferred = true;
     return;
   }
-  if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
-  // отказ бывает и от системы, и от человека («отмена» в окне отпечатка) — в обоих
-  // случаях врать «приложи палец» уже нельзя, палец он приложил
-  $('lockMsg').textContent = t('lock.failed');
+  openLock();
+}
+function maybeRunDeferredBiometricLock(){
+  if(!bioRelockDeferred || !lockNeeded()) return;
+  if($('scrWork') && $('scrWork').classList.contains('on')) return;
+  openLock();
 }
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
@@ -17869,20 +17899,15 @@ $('btnSignOut').onclick = signOut;
 // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
 // сохраняем и их, иначе выбор молча пропадёт
 $('lockGo').onclick = ()=> tryUnlock();
-$('lockEmail').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
-// Ссылка внизу переключает два способа входа и всегда называет тот, куда ведёт:
-// «Войти по почте», когда открыт отпечаток, и наоборот.
-$('lockMail').onclick = ()=>{
-  lockMode = lockMode === 'mail' ? 'bio' : 'mail';
-  const mail = lockMode === 'mail';
-  setShown('lockMailBox', mail);
-  $('lockMsg').textContent = mail
-    ? t('lock.enterEmail')
-    : t('lock.prompt');
-  $('lockGo').textContent = mail ? t('login.signIn') : t('lock.unlock');
-  $('lockMail').textContent = mail ? t('lock.backBiometric') : t('lock.email');
-  if(mail) $('lockEmail').focus();
-};
+// Биометрия не является авторизацией аккаунта. Если она недоступна или человек
+// просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
+$('lockMail').onclick = ()=> openLogin(
+  ()=> $('lockModal').classList.remove('open'),
+  {email:(account && account.email) || '', label:t('lock.email'), msg:t('login.intro')}
+);
+window.addEventListener('fitAppForeground', e=>{
+  maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
+});
 
 $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
 $('importProgFile').onchange = async e => {
@@ -18887,7 +18912,9 @@ try{
   // аккаунта асинхронное. Поэтому признак замка снимаем синхронно, до первого await.
   try{
     const raw = localStorage.getItem('account');
-    if(raw && JSON.parse(raw).biometry) $('lockModal').classList.add('open');
+    const saved = raw && JSON.parse(raw);
+    if(window.FitNative && window.FitNative.isNative
+      && saved && saved.biometry && saved.biometry.enabled) $('lockModal').classList.add('open');
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
