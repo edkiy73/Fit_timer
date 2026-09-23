@@ -167,7 +167,8 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('места под фото берутся из текста программы',
      slots.join(',') === 'Приседания,Планка', slots.join(', '));
   ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
-  ok('в админке есть отдельные RU и EN поля', await page.isVisible('#fNameRu') && await page.isVisible('#fNameEn'));
+  ok('в админке есть отдельные RU и EN поля',
+     await page.locator('#fNameRu').count() === 1 && await page.locator('#fNameEn').count() === 1);
   ok('есть ручная вставка перевода без ИИ', await page.isVisible('#fPasteToggle'));
   await page.screenshot({path: __dirname + '/shot-admin.png', fullPage: true});
 
