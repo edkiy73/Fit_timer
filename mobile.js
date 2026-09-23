@@ -437,6 +437,18 @@
     }catch(_){ return {status:'error'}; }
   }
 
+  // Состояние загрузки обновления хранит нативная сторона: интерфейс пересобирается
+  // после сворачивания и должен продолжить показывать ту же загрузку, а не начать новую.
+  async function getUpdateState(){
+    if(!native || !fitSystem || !fitSystem.getUpdateState) return {running:false, status:'idle'};
+    try{ return await fitSystem.getUpdateState(); }catch(_){ return {running:false, status:'idle'}; }
+  }
+
+  async function cancelUpdate(){
+    if(!native || !fitSystem || !fitSystem.cancelUpdate) return false;
+    try{ await fitSystem.cancelUpdate(); return true; }catch(_){ return false; }
+  }
+
   async function resumeUpdateInstall(expectedVersionCode){
     if(!native || !fitSystem || !fitSystem.resumeUpdateInstall) return {status:'unsupported'};
     try{
@@ -469,6 +481,8 @@
     openExternal,
     installUpdate,
     resumeUpdateInstall,
+    getUpdateState,
+    cancelUpdate,
     requestReview,
     biometricStatus,
     authenticateBiometric,

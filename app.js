@@ -192,11 +192,13 @@ const I18N_RU = {
   'update.verifying': "Проверяю файл обновления…",
   'update.permission': "Разреши Fit Timer устанавливать обновления. После возврата установка продолжится автоматически.",
   'update.installer': "Обновление скачано. Подтверди установку в системном окне.",
-  'update.failed': "Не удалось скачать или проверить обновление. Нажми «Обновить», чтобы попробовать снова.",
+  'update.failed': "Не удалось скачать обновление — возможно, пропал интернет. Нажми «Повторить»: загрузка продолжится с того же места.",
   'update.requiredTitle': "Нужно обновить Fit Timer{version}",
   'update.requiredText': "Эта версия приложения больше не поддерживается. Обновление сохранит твои данные и настройки.",
   'update.requiredHint': "Эта версия больше не совместима с текущим сервисом.",
   'update.action': "Обновить",
+  'update.cancel': "Отменить",
+  'update.retry': "Повторить",
   'premium.title': "Fit Timer Премиум",
   'premium.lead': "Тренируйся проще: получай помощь с программой, выбирай готовые планы и сохраняй свой прогресс при смене телефона.",
   'premium.ai': "ИИ поможет собрать программу и упражнения под твою цель",
@@ -1059,6 +1061,7 @@ const I18N_RU = {
   'sessions.variant': "вариант {count}",
   'sessions.variantDays': "вариант {days}",
   'sessions.doneText': "Тренировка пройдена",
+  'sessions.progStep': "шаг прогрессии {count}",
   'sessions.weekLabel': "Тренировки за неделю",
   'sessions.weekEmpty': "На этой неделе тренировок не было.",
   'sessions.dayLabel': "Тренировки за день",
@@ -1344,6 +1347,7 @@ const I18N_RU = {
   'week.plannedMissed': "Тренировок не было. По плану было: {names}.",
   'week.canStillMakeUp': "Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.",
   'week.plannedText': "Тренировка запланирована.",
+  'week.progStepText': "Шаг прогрессии: {count}.",
   'week.nonePlanned': "В этот день тренировок не было и не планировалось.",
   'week.dayMovedOn': "Засчитано тренировкой из другого дня: {day}.",
   'today.programsOff': "Программы отключены",
@@ -1737,11 +1741,13 @@ const I18N_EN = {
   'update.verifying': "Checking the update file…",
   'update.permission': "Allow Fit Timer to install updates. Installation will continue when you return.",
   'update.installer': "Update downloaded. Confirm installation in the system window.",
-  'update.failed': "Couldn’t download or verify the update. Tap Update to try again.",
+  'update.failed': "Couldn’t download the update — the connection may have dropped. Tap Retry to continue where it stopped.",
   'update.requiredTitle': "Fit Timer needs an update{version}",
   'update.requiredText': "This app version is no longer supported. Updating keeps your data and settings.",
   'update.requiredHint': "This version is no longer compatible with the current service.",
   'update.action': "Update",
+  'update.cancel': "Cancel",
+  'update.retry': "Retry",
   'premium.title': "Fit Timer Premium",
   'premium.lead': "Make training easier: get help building programs, choose ready-made plans, and keep your progress when you change phones.",
   'premium.ai': "Let AI build programs and exercises for your goal",
@@ -2604,6 +2610,7 @@ const I18N_EN = {
   'sessions.variant': "variant {count}",
   'sessions.variantDays': "variant {days}",
   'sessions.doneText': "Workout done",
+  'sessions.progStep': "progression step {count}",
   'sessions.weekLabel': "Workouts for the week",
   'sessions.weekEmpty': "No workouts this week.",
   'sessions.dayLabel': "Workouts for the day",
@@ -2889,6 +2896,7 @@ const I18N_EN = {
   'week.plannedMissed': "No workout was completed. Planned: {names}.",
   'week.canStillMakeUp': "You can still make it up: complete the program by Sunday to close the week.",
   'week.plannedText': "Workout planned.",
+  'week.progStepText': "Progression step: {count}.",
   'week.nonePlanned': "No workout was completed or planned for this day.",
   'week.dayMovedOn': "Counted from the workout on {day}.",
   'today.programsOff': "Programs disabled",
@@ -6594,6 +6602,7 @@ function sessRow(en, withDate, withStatus){
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
+  if(en.step > 0) parts.push(t('sessions.progStep',{count:en.step}));
   // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
@@ -6849,16 +6858,27 @@ function closeAllMenus(){
 // границей считаем его верх, а не низ окна.
 function placeMenu(m){
   m.classList.remove('up');
+  const vh = window.innerHeight;
+  // Низ экрана закрывают док и панели, которые ПРИЛИПЛИ к низу («Сохранить программу»).
+  // Та же панель на короткой странице стоит сразу под списком, посреди экрана, и
+  // ничего не закрывает — раньше из-за неё меню открывалось вверх при свободном месте.
+  let bottom = vh;
   const dock = document.querySelector('.dock');
-  const dockTop = (dock && getComputedStyle(dock).display !== 'none')
-    ? dock.getBoundingClientRect().top : window.innerHeight;
-  // Закреплённая снизу панель экрана («Сохранить программу») тоже закрывает меню:
-  // у последней строки списка оно пряталось под ней.
-  const bars = [...document.querySelectorAll('.screen.on .actions, .screen.on .builder-actions')]
-    .map(el => el.getBoundingClientRect()).filter(b => b.height && b.top < window.innerHeight);
-  const limit = Math.min(window.innerHeight, dockTop, ...bars.map(b => b.top)) - 8;
-  const r = m.getBoundingClientRect();
-  if(r.bottom > limit && r.top - r.height > 8) m.classList.add('up');
+  if(dock && getComputedStyle(dock).display !== 'none') bottom = Math.min(bottom, dock.getBoundingClientRect().top);
+  document.querySelectorAll('.screen.on .actions, .screen.on .builder-actions').forEach(el => {
+    const cs = getComputedStyle(el);
+    if(cs.display === 'none' || (cs.position !== 'sticky' && cs.position !== 'fixed')) return;
+    const b = el.getBoundingClientRect();
+    if(b.height && b.top < vh && b.bottom >= vh - 2) bottom = Math.min(bottom, b.top);
+  });
+  const down = m.getBoundingClientRect();
+  if(down.bottom <= bottom - 8) return;            // снизу помещается — вниз
+  m.classList.add('up');
+  const up = m.getBoundingClientRect();
+  if(up.top >= 8) return;                          // снизу нет, сверху есть — вверх
+  // не помещается ни так, ни так: вниз, и докручиваем страницу, чтобы меню было видно
+  m.classList.remove('up');
+  window.scrollBy({top: down.bottom - (bottom - 8), behavior: 'smooth'});
 }
 // Открыть меню: закрыть остальные, показать это и развернуть вверх, если надо.
 function toggleMenu(m){
@@ -7191,6 +7211,10 @@ function money(v, cur){
 const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
 
 let APP_UPDATE = null;
+let APP_UPDATE_PREV = null;
+// Один вид баннера на одно состояние загрузки. Раньше проценты стояли дважды (в тексте
+// и на кнопке), отменить было нельзя, а после сворачивания баннер пересобирался с нуля
+// и терял идущую загрузку. Состояние теперь берём у нативной стороны.
 function androidUpdateAction(text, disabled){
   const action=$('appUpdateBanner')&&$('appUpdateBanner').querySelector('.ub-action');
   if(action) action.textContent=text||t('update.action');
@@ -7205,51 +7229,69 @@ function androidUpdateStatus(text, action, busy){
   if(target)target.textContent=text;
   androidUpdateAction(action, busy);
 }
+// phase: idle | downloading | verifying | permission | installer | error
+function renderAndroidUpdate(phase, progress){
+  if(!APP_UPDATE)return;
+  APP_UPDATE.phase=phase;
+  if(phase==='downloading'){
+    androidUpdateStatus(progress>=0?t('update.downloading',{progress}):t('update.downloadingUnknown'),t('update.cancel'),false);
+  }else if(phase==='verifying'){
+    androidUpdateStatus(t('update.verifying'),'…',true);
+  }else if(phase==='permission'){
+    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+  }else if(phase==='installer'){
+    androidUpdateStatus(t('update.installer'),t('update.action'),false);
+  }else if(phase==='error'){
+    androidUpdateStatus(t('update.failed'),t('update.retry'),false);
+  }else{
+    androidUpdateStatus(APP_UPDATE.idleText||t('update.availableText'),t('update.action'),false);
+  }
+}
 function renderAndroidUpdateProgress(event){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct')return;
   const status=String((event&&event.status)||'');
   const progress=Math.max(-1,Math.min(100,Math.round(+(event&&event.progress)||0)));
-  if(status==='downloading'){
-    androidUpdateStatus(progress>=0?t('update.downloading',{progress}):t('update.downloadingUnknown'),progress>=0?progress+'%':'…',true);
-  }else if(status==='verifying'||status==='ready'){
-    androidUpdateStatus(t('update.verifying'),'…',true);
-  }else if(status==='permission'){
-    androidUpdateStatus(t('update.permission'),t('update.action'),false);
-  }else if(status==='installer'){
-    androidUpdateStatus(t('update.installer'),t('update.action'),false);
-  }else if(status==='error'){
-    APP_UPDATE.busy=false;
-    androidUpdateStatus(t('update.failed'),t('update.action'),false);
-  }
+  if(status==='downloading'){ APP_UPDATE.busy=true; renderAndroidUpdate('downloading',progress); }
+  else if(status==='verifying'||status==='ready'){ APP_UPDATE.busy=true; renderAndroidUpdate('verifying'); }
+  else if(status==='permission'){ renderAndroidUpdate('permission'); }
+  else if(status==='installer'){ APP_UPDATE.busy=false; renderAndroidUpdate('installer'); }
+  else if(status==='cancelled'){ APP_UPDATE.busy=false; renderAndroidUpdate('idle'); }
+  else if(status==='error'){ APP_UPDATE.busy=false; renderAndroidUpdate('error'); }
 }
 async function finishDirectUpdateResult(result){
+  if(!APP_UPDATE)return false;
   const status=String((result&&result.status)||'');
+  // загрузка уже шла — прогресс продолжит приходить событиями, баннер уже показывает её
+  if(status==='in_progress'){ APP_UPDATE.busy=true; return true; }
   APP_UPDATE.busy=false;
   if(status==='permission_required'){
     APP_UPDATE.awaitingPermission=true;
-    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+    renderAndroidUpdate('permission');
     return true;
   }
   APP_UPDATE.awaitingPermission=false;
-  if(status==='installer_opened'){
-    androidUpdateStatus(t('update.installer'),t('update.action'),false);
-    return true;
-  }
+  if(status==='installer_opened'){ renderAndroidUpdate('installer'); return true; }
+  if(status==='cancelled'){ renderAndroidUpdate('idle'); return false; }
   if(status==='missing'||status==='error'||status==='unsupported'){
-    androidUpdateStatus(t('update.failed'),t('update.action'),false);
+    renderAndroidUpdate('error');
     return false;
   }
   return true;
 }
 async function openAndroidUpdate(){
-  if(!APP_UPDATE || !APP_UPDATE.url || APP_UPDATE.busy) return false;
+  if(!APP_UPDATE || !APP_UPDATE.url) return false;
   if(APP_UPDATE.channel==='direct'){
     if(!window.FitNative || !window.FitNative.installUpdate){
-      androidUpdateStatus(t('update.failed'),t('update.action'),false);
+      renderAndroidUpdate('error');
+      return false;
+    }
+    // нажатие во время загрузки — «Отменить»; во время проверки файла — ничего
+    if(APP_UPDATE.busy){
+      if(APP_UPDATE.phase==='downloading' && window.FitNative.cancelUpdate) await window.FitNative.cancelUpdate();
       return false;
     }
     APP_UPDATE.busy=true;
-    androidUpdateStatus(t('update.downloadingUnknown'),'…',true);
+    renderAndroidUpdate('downloading',-1);
     const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
@@ -7258,6 +7300,21 @@ async function openAndroidUpdate(){
     if(ok) return true;
   }
   return false;
+}
+// Баннер пересобирается при каждом обновлении настроек (в том числе после
+// сворачивания): подхватываем загрузку, которая уже идёт или оборвалась.
+async function restoreAndroidUpdateState(){
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!window.FitNative||!window.FitNative.getUpdateState)return;
+  const st=await window.FitNative.getUpdateState();
+  if(!APP_UPDATE||!st)return;
+  const status=String(st.status||'');
+  if(st.running){
+    APP_UPDATE.busy=true;
+    if(status==='verifying'||status==='ready') renderAndroidUpdate('verifying');
+    else renderAndroidUpdate('downloading',Math.max(-1,Math.round(+st.progress||-1)));
+  }else if(status==='error'){
+    renderAndroidUpdate('error');
+  }
 }
 async function resumePendingAndroidUpdate(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
@@ -7274,6 +7331,7 @@ async function applyAndroidUpdateConfig(raw){
   const banner=$('appUpdateBanner'),gate=$('appUpdateGate');
   if(banner) banner.classList.add('hidden');
   if(gate) gate.classList.add('hidden');
+  APP_UPDATE_PREV=APP_UPDATE;
   APP_UPDATE=null;
   if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
@@ -7292,13 +7350,17 @@ async function applyAndroidUpdateConfig(raw){
   const required=minimum>0 && current<minimum;
   const suffix=cfg.latestName ? ' · '+String(cfg.latestName) : '';
   const custom=(appLocale==='en' ? cfg.messageEn : cfg.messageRu) || '';
-  APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,awaitingPermission:false};
+  const prev=APP_UPDATE_PREV;
+  APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,
+    awaitingPermission:!!(prev&&prev.latest===latest&&prev.awaitingPermission),phase:'idle',
+    idleText:custom||t(required?'update.requiredText':'update.availableText')};
 
   if(required){
     if($('appUpdateGateTitle')) $('appUpdateGateTitle').textContent=t('update.requiredTitle',{version:suffix});
     if($('appUpdateGateText')) $('appUpdateGateText').textContent=custom||t('update.requiredText');
     if($('appUpdateNow')) $('appUpdateNow').onclick=()=>openAndroidUpdate();
     if(gate) gate.classList.remove('hidden');
+    await restoreAndroidUpdateState();
     return;
   }
   if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle');
@@ -7308,6 +7370,7 @@ async function applyAndroidUpdateConfig(raw){
     banner.onclick=()=>openAndroidUpdate();
     banner.classList.remove('hidden');
   }
+  await restoreAndroidUpdateState();
 }
 async function loadPublicConfig(){
   try{
@@ -9114,7 +9177,9 @@ function openWeekDay(d){
     const parts = [moved
       ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
       : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
-    if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}));
+    if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}) + '.');
+    const step = progSteps(p);
+    if(step > 0) parts.push(t('week.progStepText',{count:step}));
 
     const row = document.createElement('button');
     row.type = 'button';
@@ -15942,6 +16007,8 @@ function commitFinish(ctx){
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
         .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
+      // шаг прогрессии, с которым тренировка пройдена (до повышения этой тренировкой)
+      step: srcProgram ? progSteps(srcProgram) : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
       // нельзя было восстановить без догадок.

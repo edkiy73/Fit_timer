@@ -1878,6 +1878,7 @@ function sessRow(en, withDate, withStatus){
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
+  if(en.step > 0) parts.push(t('sessions.progStep',{count:en.step}));
   // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
@@ -2133,16 +2134,27 @@ function closeAllMenus(){
 // границей считаем его верх, а не низ окна.
 function placeMenu(m){
   m.classList.remove('up');
+  const vh = window.innerHeight;
+  // Низ экрана закрывают док и панели, которые ПРИЛИПЛИ к низу («Сохранить программу»).
+  // Та же панель на короткой странице стоит сразу под списком, посреди экрана, и
+  // ничего не закрывает — раньше из-за неё меню открывалось вверх при свободном месте.
+  let bottom = vh;
   const dock = document.querySelector('.dock');
-  const dockTop = (dock && getComputedStyle(dock).display !== 'none')
-    ? dock.getBoundingClientRect().top : window.innerHeight;
-  // Закреплённая снизу панель экрана («Сохранить программу») тоже закрывает меню:
-  // у последней строки списка оно пряталось под ней.
-  const bars = [...document.querySelectorAll('.screen.on .actions, .screen.on .builder-actions')]
-    .map(el => el.getBoundingClientRect()).filter(b => b.height && b.top < window.innerHeight);
-  const limit = Math.min(window.innerHeight, dockTop, ...bars.map(b => b.top)) - 8;
-  const r = m.getBoundingClientRect();
-  if(r.bottom > limit && r.top - r.height > 8) m.classList.add('up');
+  if(dock && getComputedStyle(dock).display !== 'none') bottom = Math.min(bottom, dock.getBoundingClientRect().top);
+  document.querySelectorAll('.screen.on .actions, .screen.on .builder-actions').forEach(el => {
+    const cs = getComputedStyle(el);
+    if(cs.display === 'none' || (cs.position !== 'sticky' && cs.position !== 'fixed')) return;
+    const b = el.getBoundingClientRect();
+    if(b.height && b.top < vh && b.bottom >= vh - 2) bottom = Math.min(bottom, b.top);
+  });
+  const down = m.getBoundingClientRect();
+  if(down.bottom <= bottom - 8) return;            // снизу помещается — вниз
+  m.classList.add('up');
+  const up = m.getBoundingClientRect();
+  if(up.top >= 8) return;                          // снизу нет, сверху есть — вверх
+  // не помещается ни так, ни так: вниз, и докручиваем страницу, чтобы меню было видно
+  m.classList.remove('up');
+  window.scrollBy({top: down.bottom - (bottom - 8), behavior: 'smooth'});
 }
 // Открыть меню: закрыть остальные, показать это и развернуть вверх, если надо.
 function toggleMenu(m){
