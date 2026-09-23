@@ -1026,6 +1026,8 @@ const I18N_EN = {
   'start.workoutMany': "workouts",
   'start.setShort': "sets",
   'start.roundShort': "rnd",
+  'start.weightPending': "weight not set",
+  'start.pickWeightTitle': "Working weight",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",

@@ -1,8 +1,9 @@
 # План: AI-редактирование и прогрессия
 
-Статус: пачка 1 реализована (см. коммит «AI edit: free-form response + semantic
-diff, no more forced merge»). Пачки 2–4 не реализованы. Сверено с кодом на
-2026-09-23.
+Статус: пачки 1–2 реализованы (см. коммиты «AI edit: free-form response +
+semantic diff, no more forced merge» и «Weight-pending: unset weight no
+longer accrues progression steps»). Пачки 3–4 не реализованы. Сверено с кодом
+на 2026-09-23.
 
 **Уточнение к пачке 1 по ходу реализации.** В плане ниже (шаг 6) было «перенос
 `stats.completions`». От этого отказались: `createEditedProgram` теперь

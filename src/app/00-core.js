@@ -1131,8 +1131,46 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
+    // формат с весом, а снаряд ещё не выбран — предлагаем задать прямо тут,
+    // а не заставлять сначала открывать конструктор
+    if(weightPending(ex)){
+      const w = document.createElement('span');
+      w.className = 'weight-pending';
+      w.textContent = t('start.weightPending');
+      w.onclick = () => openWeightPendingModal(i);
+      tags.appendChild(w);
+    }
     box.appendChild(row);
   });
+}
+
+// вес формата «повторения и вес» / «время и вес» ещё не выбран — попап на все
+// упражнения списка сразу, какое открыто, помнит weightModalIdx (тот же приём,
+// что у #restModal в конструкторе)
+let weightModalIdx = -1;
+function openWeightPendingModal(i){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[i];
+  if(!ex) return;
+  weightModalIdx = i;
+  $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
+  $('weightModalInput').value = '';
+  $('weightModal').classList.add('open');
+  $('weightModalInput').focus();
+}
+async function commitWeightPending(){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
+  weightModalIdx = -1;
+  $('weightModal').classList.remove('open');
+  if(!ex) return;
+  const kg = parseKg($('weightModalInput').value);
+  if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
+  ex.weight = kg;
+  await savePrograms();
+  renderStartOverview();
 }
 
 // показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.

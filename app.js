@@ -1026,6 +1026,8 @@ const I18N_RU = {
   'start.workoutMany': "тренировок",
   'start.setShort': "подх.",
   'start.roundShort': "кр.",
+  'start.weightPending': "вес не задан",
+  'start.pickWeightTitle': "Рабочий вес",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",
@@ -2587,6 +2589,8 @@ const I18N_EN = {
   'start.workoutMany': "workouts",
   'start.setShort': "sets",
   'start.roundShort': "rnd",
+  'start.weightPending': "weight not set",
+  'start.pickWeightTitle': "Working weight",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",
@@ -4751,8 +4755,46 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
+    // формат с весом, а снаряд ещё не выбран — предлагаем задать прямо тут,
+    // а не заставлять сначала открывать конструктор
+    if(weightPending(ex)){
+      const w = document.createElement('span');
+      w.className = 'weight-pending';
+      w.textContent = t('start.weightPending');
+      w.onclick = () => openWeightPendingModal(i);
+      tags.appendChild(w);
+    }
     box.appendChild(row);
   });
+}
+
+// вес формата «повторения и вес» / «время и вес» ещё не выбран — попап на все
+// упражнения списка сразу, какое открыто, помнит weightModalIdx (тот же приём,
+// что у #restModal в конструкторе)
+let weightModalIdx = -1;
+function openWeightPendingModal(i){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[i];
+  if(!ex) return;
+  weightModalIdx = i;
+  $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
+  $('weightModalInput').value = '';
+  $('weightModal').classList.add('open');
+  $('weightModalInput').focus();
+}
+async function commitWeightPending(){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
+  weightModalIdx = -1;
+  $('weightModal').classList.remove('open');
+  if(!ex) return;
+  const kg = parseKg($('weightModalInput').value);
+  if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
+  ex.weight = kg;
+  await savePrograms();
+  renderStartOverview();
 }
 
 // показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
@@ -11126,9 +11168,13 @@ function exProgToLines(ex, opts){
   const p = opts && opts.program;
   const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
+  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
+  // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
+  // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
+  // вовсе, а прогрессия молча копилась поверх несуществующей базы.
+  if(hasWeight(ex)) L.push('ВЕС: ' + fmtKg(weightNow));
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
-      if(weightNow) L.push('ВЕС: ' + fmtKg(weightNow));
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -11152,8 +11198,6 @@ function exProgToLines(ex, opts){
       L.push('ЗАМЕНА: ' + ex.swapName.trim());
       if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
-  } else if(hasWeight(ex) && weightNow){
-    L.push('ВЕС: ' + fmtKg(weightNow)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
   return L;
 }
@@ -13764,6 +13808,11 @@ function hasWeight(ex){
   if(ex.progOn != null) return false;          // новая модель, но формат без веса
   return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
 }
+// формат включает вес, но снаряд ещё не выбран (0 — не «нулевой вес», а «неизвестный»,
+// см. getExProgValue): прогрессия по весу не копится, экран старта предлагает выбрать
+function weightPending(ex){
+  return hasWeight(ex) && !(+ex.weight > 0);
+}
 // отдых после ВСЕГО упражнения (перед следующим), а не между его подходами.
 // У старых упражнений (и когда явно не задан) поле пустое — запасной вариант
 // тогда тот же, что и между подходами: разное число нужно не всем, и лучше
@@ -13935,6 +13984,12 @@ function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
   const base = progBaseValue(ex, axis);
+  // вес 0 — это «снаряд ещё не выбран», а не «стартуем с нуля кг»: прогрессия
+  // не должна копиться поверх несуществующей базы (иначе вес сначала не
+  // показывается вовсе, а после пары тренировок вдруг появляется «4 кг» из
+  // воздуха). Как только человек выберет вес на экране старта, ex.weight
+  // перестанет быть 0 и прогрессия пойдёт как обычно от этой новой базы.
+  if(axis === 'weight' && base <= 0) return 0;
   const ceil = progCeil(ex, axis);
   let v;
   if(axis === 'weight' && isDualProg(ex)){
@@ -17908,6 +17963,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
 $('btnResume').onclick = ()=> setPause(false);
 $('psMinus').onclick = ()=> bumpProgSteps(-1);
 $('psPlus').onclick = ()=> bumpProgSteps(1);
+$('weightModalDone').onclick = ()=> commitWeightPending();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){

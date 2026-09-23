@@ -1026,6 +1026,8 @@ const I18N_RU = {
   'start.workoutMany': "тренировок",
   'start.setShort': "подх.",
   'start.roundShort': "кр.",
+  'start.weightPending': "вес не задан",
+  'start.pickWeightTitle': "Рабочий вес",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",

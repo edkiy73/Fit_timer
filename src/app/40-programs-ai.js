@@ -2076,9 +2076,13 @@ function exProgToLines(ex, opts){
   const p = opts && opts.program;
   const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
+  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
+  // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
+  // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
+  // вовсе, а прогрессия молча копилась поверх несуществующей базы.
+  if(hasWeight(ex)) L.push('ВЕС: ' + fmtKg(weightNow));
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
-      if(weightNow) L.push('ВЕС: ' + fmtKg(weightNow));
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -2102,8 +2106,6 @@ function exProgToLines(ex, opts){
       L.push('ЗАМЕНА: ' + ex.swapName.trim());
       if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
-  } else if(hasWeight(ex) && weightNow){
-    L.push('ВЕС: ' + fmtKg(weightNow)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
   return L;
 }

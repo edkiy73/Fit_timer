@@ -299,6 +299,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
 $('btnResume').onclick = ()=> setPause(false);
 $('psMinus').onclick = ()=> bumpProgSteps(-1);
 $('psPlus').onclick = ()=> bumpProgSteps(1);
+$('weightModalDone').onclick = ()=> commitWeightPending();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){

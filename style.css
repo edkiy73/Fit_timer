@@ -1583,6 +1583,8 @@ body.booting .app{visibility:hidden}
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
   /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
   .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
+  /* вес формата «…и вес» ещё не выбран — метка кликабельна, открывает #weightModal */
+  .ex-meta .weight-pending{color:var(--danger);background:none;border:1px dashed var(--danger);cursor:pointer}
   /* На старте вариант, нагрузка и состав — одна сущность, поэтому одна карточка.
      Строки упражнений сохраняют знакомую внутренность .ex-row, но разделяются
      линиями вместо собственных рамок и скруглений. */

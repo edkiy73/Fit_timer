@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1266,
-      "chars": 61248,
+      "lines": 1304,
+      "chars": 62740,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -27,6 +27,7 @@
         "check",
         "clearSnap",
         "clicks",
+        "commitWeightPending",
         "defaultPlanIdx",
         "dismissTopModal",
         "done",
@@ -57,6 +58,7 @@
         "nextStepSpeech",
         "numFieldsOk",
         "openStart",
+        "openWeightPendingModal",
         "plural",
         "prepTab",
         "previousWorkoutLoad",
@@ -360,8 +362,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2835,
-      "chars": 129805,
+      "lines": 2837,
+      "chars": 129954,
       "symbols": [
         "add",
         "ageError",
@@ -583,8 +585,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2015,
-      "chars": 93117,
+      "lines": 2026,
+      "chars": 93790,
       "symbols": [
         "aiChoiceEnglish",
         "aiCreateProgramGuard",
@@ -702,7 +704,8 @@
         "syncRotateUI",
         "syncVolHint",
         "tag",
-        "valueText"
+        "valueText",
+        "weightPending"
       ]
     },
     "src/app/70-workout.js": {
@@ -817,8 +820,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2169,
-      "chars": 90230,
+      "lines": 2170,
+      "chars": 90289,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -970,8 +973,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 635,
-      "chars": 41658,
+      "lines": 647,
+      "chars": 42525,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1221,6 +1224,10 @@
         "trayLeft",
         "variantsHint",
         "variantsLabel",
+        "weightModal",
+        "weightModalDone",
+        "weightModalInput",
+        "weightModalTitle",
         "ytHint",
         "ytUrl",
         "ytWish"
