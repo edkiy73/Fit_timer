@@ -1692,18 +1692,17 @@ function sessionAgeText(at){
   return t('session.daysAgo',{count:days,days:word});
 }
 
-// список рабочих шагов для выбора «с какого упражнения начать»
+// список упражнений для выбора «с какого упражнения начать».
+// Выбирается именно упражнение, а не отдельный подход/сторона/круг:
+// всегда начинаем с его первого подхода, первой стороны и первого круга.
 function workStepChoices(){
   const out = [];
   (state.steps || []).forEach((s, i) => {
     if(s.phase !== 'work') return;
-    let label = s.title;
+    if((s.setNo || 1) !== 1 || (s.side || 1) !== 1 || s.round > 1) return;
     const meta = [];
     if(s.round === 0) meta.push(t('start.metaWarmup'));
-    else if(state.current && state.current.rounds > 1) meta.push(t('start.metaRound',{count:s.round}));
-    if(s.setsTotal > 1) meta.push(t('start.metaSet',{current:s.setNo,total:s.setsTotal}));
-    if(s.side) meta.push(t('start.metaSide',{count:s.side}));
-    out.push({idx: i, label, meta: meta.join(' · ')});
+    out.push({idx: i, label:s.title, meta:meta.join(' · ')});
   });
   return out;
 }
