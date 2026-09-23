@@ -1056,6 +1056,8 @@ const I18N_RU = {
   'calendar.prev': "в {month} было {count}",
   'sessions.workoutFallback': "Тренировка",
   'sessions.variant': "вариант {count}",
+  'sessions.variantDays': "вариант {days}",
+  'sessions.doneText': "Тренировка пройдена",
   'sessions.weekLabel': "Тренировки за неделю",
   'sessions.weekEmpty': "На этой неделе тренировок не было.",
   'sessions.dayLabel': "Тренировки за день",
@@ -1335,11 +1337,9 @@ const I18N_RU = {
   'week.plannedFuture': "По плану на этот день: {names}.",
   'week.plannedMissed': "Тренировок не было. По плану было: {names}.",
   'week.canStillMakeUp': "Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.",
+  'week.plannedText': "Тренировка запланирована.",
   'week.nonePlanned': "В этот день тренировок не было и не планировалось.",
-  'week.dayPlanned': "Запланировано",
-  'week.dayMakeUp': "Можно отработать",
-  'week.dayMoved': "Отработано в другой день",
-  'week.dayMovedOn': "Засчитано тренировкой в {day}.",
+  'week.dayMovedOn': "Засчитано тренировкой из другого дня: {day}.",
   'today.programsOff': "Программы отключены",
   'today.noSchedule': "Расписание не задано",
   'today.warmupOnly': "Пока только разминка",
@@ -2595,6 +2595,8 @@ const I18N_EN = {
   'calendar.prev': "in {month}: {count}",
   'sessions.workoutFallback': "Workout",
   'sessions.variant': "variant {count}",
+  'sessions.variantDays': "variant {days}",
+  'sessions.doneText': "Workout done",
   'sessions.weekLabel': "Workouts for the week",
   'sessions.weekEmpty': "No workouts this week.",
   'sessions.dayLabel': "Workouts for the day",
@@ -2874,10 +2876,8 @@ const I18N_EN = {
   'week.plannedFuture': "Planned for this day: {names}.",
   'week.plannedMissed': "No workout was completed. Planned: {names}.",
   'week.canStillMakeUp': "You can still make it up: complete the program by Sunday to close the week.",
+  'week.plannedText': "Workout planned.",
   'week.nonePlanned': "No workout was completed or planned for this day.",
-  'week.dayPlanned': "Planned",
-  'week.dayMakeUp': "Can make up",
-  'week.dayMoved': "Completed on another day",
   'week.dayMovedOn': "Counted from the workout on {day}.",
   'today.programsOff': "Programs disabled",
   'today.noSchedule': "Schedule not set",
@@ -6562,52 +6562,47 @@ function renderCalendar(){
   $('calGrid').innerHTML = cells.join('');
 }
 
-// Одна запись истории — одна строка: название программы, вариант, время и калории.
-// Из этого же строится список за день, за неделю и за что угодно ещё.
-function sessRow(en, withDate){
+// Одна запись истории — одна карточка: название программы и строка обычного текста
+// «время · калории · вариант», под ней заметка. Из этого же строится список за день,
+// за неделю и за что угодно ещё. withStatus добавляет в начало «Тренировка пройдена»:
+// в попапе дня рядом стоят и пройденные, и запланированные.
+function sessRow(en, withDate, withStatus){
   const p = customPrograms.find(x => x.id === en.pid);
   const name = p ? p.name : t('sessions.workoutFallback');
   let variant = '';
   if(p && normPlans(p).length > 1){
-    if(en.planDays) variant = String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ');
+    if(en.planDays) variant = t('sessions.variantDays',{days:String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ')});
     else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
-  // Упражнений здесь нет намеренно: попап — про то, какие тренировки были. Состав
-  // смотрят на странице программы, куда ведёт нажатие по строке.
+  const parts = [];
+  if(withStatus) parts.push(t('sessions.doneText'));
+  if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
+  if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
+  if(variant) parts.push(variant);
+  // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
+  // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
   row.className = 'sess-row' + (p ? ' sess-link' : '');
   if(p){ row.type = 'button'; row.onclick = () => openDayProgram(p.id, typeof en.plan === 'number' ? en.plan : -1); }
   row.innerHTML =
-    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + (p ? icon('chevR') : '') + '</div>' +
-    (variant ? '<div class="sess-plan"></div>' : '') +
-    '<div class="sess-facts"></div>' +
+    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
+    (parts.length ? '<p class="sess-line"></p>' : '') +
     (en.note ? '<span class="sess-note"></span>' : '');
   row.querySelector('.sess-head b').textContent = name;
   if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
-  if(variant) row.querySelector('.sess-plan').textContent = variant;
-  const facts = row.querySelector('.sess-facts');
-  if(en.sec){
-    const chip = document.createElement('span');
-    chip.textContent = t('time.minutes',{minutes:Math.round(en.sec/60)});
-    facts.appendChild(chip);
-  }
-  if(en.kcal){
-    const chip = document.createElement('span');
-    chip.textContent = `≈${en.kcal} ${t('workout.kcal')}`;
-    facts.appendChild(chip);
-  }
-  if(!facts.children.length) facts.remove();
+  if(parts.length) row.querySelector('.sess-line').textContent = parts.join(' · ');
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }
-function openSessions(label, title, entries, emptyText){
+function openSessions(label, title, entries, emptyText, opts){
   $('sessLabel').textContent = label;
   $('sessTitle').textContent = title;
   const box = $('sessList');
   box.innerHTML = '';
   // за неделю записи из разных дней — без даты они сливаются в один список
   const multiDay = new Set(entries.map(e => e.d)).size > 1;
-  if(entries.length) entries.forEach(en => box.appendChild(sessRow(en, multiDay)));
+  const withStatus = !!(opts && opts.status);
+  if(entries.length) entries.forEach(en => box.appendChild(sessRow(en, multiDay, withStatus)));
   else if(emptyText){
     const p = document.createElement('p');
     p.className = 'sess-empty';
@@ -6645,7 +6640,7 @@ $('calGrid').addEventListener('click', e => {
   const iso = cell.dataset.iso;
   const entries = stats.history.filter(h => h.d === iso);
   if(!entries.length) return;
-  openSessions(t('sessions.dayLabel'), dayTitle(iso), entries);
+  openSessions(t('sessions.dayLabel'), dayTitle(iso), entries, '', {status:true});
 });
 
 function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
@@ -6842,7 +6837,11 @@ function placeMenu(m){
   const dock = document.querySelector('.dock');
   const dockTop = (dock && getComputedStyle(dock).display !== 'none')
     ? dock.getBoundingClientRect().top : window.innerHeight;
-  const limit = Math.min(window.innerHeight, dockTop) - 8;
+  // Закреплённая снизу панель экрана («Сохранить программу») тоже закрывает меню:
+  // у последней строки списка оно пряталось под ней.
+  const bars = [...document.querySelectorAll('.screen.on .actions, .screen.on .builder-actions')]
+    .map(el => el.getBoundingClientRect()).filter(b => b.height && b.top < window.innerHeight);
+  const limit = Math.min(window.innerHeight, dockTop, ...bars.map(b => b.top)) - 8;
   const r = m.getBoundingClientRect();
   if(r.bottom > limit && r.top - r.height > 8) m.classList.add('up');
 }
@@ -9075,7 +9074,7 @@ function openDayProgram(pid, pi){
 function openWeekDay(d){
   const entries = (stats.history || []).filter(h => h.d === d.iso);
   const title = canonicalLabel(DAY_FULL[d.idx]) + ', ' + dayTitle(d.iso);
-  openSessions(t('sessions.dayLabel'), title, entries, '');
+  openSessions(t('sessions.dayLabel'), title, entries, '', {status:true});
   const box = $('sessList');
   let plannedRows = 0;
 
@@ -9096,36 +9095,19 @@ function openWeekDay(d){
     }
     const plan = plans[planIdx] || plans[0] || null;
     const moved = slot.from !== null && slot.from !== d.idx;
-    const status = moved ? t('week.dayMoved') : (d.past ? t('week.dayMakeUp') : t('week.dayPlanned'));
+    // Обычный текст вместо плашек: что с этой тренировкой в этот день.
+    const parts = [moved
+      ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
+      : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
+    if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}));
 
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'sess-row sess-link';
-    row.innerHTML =
-      '<div class="sess-head"><b></b>' + icon('chevR') + '</div>' +
-      '<div class="sess-facts"></div>' +
-      '<div class="sess-plan hidden"></div>';
+    row.innerHTML = '<div class="sess-head"><b></b></div><p class="sess-line"></p>';
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
+    row.querySelector('.sess-line').textContent = parts.join(' ');
     row.onclick = () => openDayProgram(p.id, plans.indexOf(plan));
-
-    const facts = row.querySelector('.sess-facts');
-    const stateChip = document.createElement('span');
-    stateChip.textContent = status;
-    facts.appendChild(stateChip);
-    if(p.rotate && plans.length > 1){
-      const variantChip = document.createElement('span');
-      variantChip.textContent = t('today.variant',{current:planIdx+1,total:plans.length});
-      facts.appendChild(variantChip);
-    }
-
-    const note = row.querySelector('.sess-plan');
-    if(moved){
-      note.textContent = t('week.dayMovedOn',{day:canonicalLabel(DAY_FULL[slot.from])});
-      note.classList.remove('hidden');
-    }else if(d.debt){
-      note.textContent = t('week.canStillMakeUp');
-      note.classList.remove('hidden');
-    }
 
     box.appendChild(row);
     plannedRows++;
