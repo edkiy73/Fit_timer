@@ -1771,7 +1771,6 @@ $('exMediaAI').onclick = ()=>{
   const item = exImageItem(Object.assign({}, exDraft, {
     name:$('exName').value, desc:$('exDesc').value
   }));
-  if(!item.name){ appAlert(t('images.needExerciseName')); $('exName').focus(); return; }
   generateOneImageViaAI('ex', item, item.name, data => {
     setExImg(exDraft, data);
     renderExMedia(); syncExDetailsSum();
