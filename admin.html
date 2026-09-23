@@ -171,6 +171,10 @@
   .action-feedback.ok{color:var(--ok)}
   .action-feedback.err{color:var(--danger)}
   .action-feedback.busy{color:var(--accent)}
+  .editor-tools-feedback{display:block;margin-top:7px}
+  .media-progress .muted.ok{color:var(--ok)}
+  .media-progress .muted.err{color:var(--danger)}
+  .media-progress .muted.busy{color:var(--accent)}
   .action-row{display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;flex-wrap:wrap}
   .compact-note{margin:4px 0;color:var(--muted);font-size:12px}
   .nav-shade{display:none}
@@ -227,7 +231,7 @@
   .cell-cover{width:42px;height:42px;border-radius:8px;object-fit:cover;background:var(--soft);display:block}
   .cell-cover.empty{display:grid;place-items:center;color:var(--muted);font-size:10px}
   .td-actions{width:44px;text-align:right;position:relative}
-  details.row-menu{position:relative;display:inline-block}
+  details.row-menu{position:relative;display:inline-block;border:0;padding:0;margin:0}
   details.row-menu>summary{list-style:none;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);
     background:var(--card);display:grid;place-items:center;cursor:pointer;color:var(--muted);font-size:17px}
   details.row-menu>summary::-webkit-details-marker{display:none}
@@ -828,7 +832,7 @@ function renderDrafts(b){
     card.dataset.search=((src.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
     const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
     card.innerHTML='<div class="entity-card-head">'+cover+'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(src.name||'Без названия')+'</div><div class="entity-card-sub">'+esc((src.gives||'').slice(0,120)||'Черновик ещё не заполнен полностью')+'</div></div></div>'
-      +'<div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop"><button data-act="edit">Продолжить редактирование</button><button class="positive" data-act="publish">Опубликовать</button><button class="positive" data-act="publishPro">Опубликовать в Premium</button><button class="danger" data-act="delete">Удалить черновик</button></div></details></div>'
+      +'<div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop"><button data-act="edit">Продолжить редактирование</button><button class="positive" data-act="publish">Опубликовать</button><button class="positive" data-act="publishPro">Опубликовать в Premium</button><button class="danger" data-act="delete">Удалить черновик</button></div></details></div>'
       +'<div class="entity-tags"><span class="status-chip">'+esc(goalName(item.cat))+'</span><span class="status-chip">'+esc(item.level||'—')+'</span><span class="status-chip '+(ready?'ok':'')+'">'+(ready?'Готов к публикации':'Нужно заполнить')+'</span><span class="status-chip">'+esc(localeMarks(item))+'</span></div>'
       +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
@@ -873,13 +877,13 @@ function renderCatalog(b){
     card.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
     const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
     const menu=!pending
-      ? '<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">'
+      ? '<details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">'
         +'<button data-act="edit">Изменить</button>'
         +'<button data-act="togglePro">'+(item.pro?'Открыть всем':'Сделать Premium')+'</button>'
         +'<button class="danger" data-act="remove">Убрать из каталога</button>'
         +(item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':'')
         +'</div></details>'
-      : (item.by?'<details class="row-menu"><summary>•••</summary><div class="row-menu-pop"><button class="danger" data-act="ban">Закрыть автора</button></div></details>':'');
+      : (item.by?'<details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop"><button class="danger" data-act="ban">Закрыть автора</button></div></details>':'');
 
     card.innerHTML=
       '<div class="entity-card-head">'+cover
@@ -956,7 +960,7 @@ function renderTrainers(b){
         </div>
         ${t.banned?'<span class="pill ban">закрыт</span>':'<span class="status-chip ok">активен</span>'}
       </div>
-      <div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+      <div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">
         <button class="${t.banned?'positive':'danger'}" data-toggle>${t.banned?'Вернуть доступ':'Закрыть приём программ'}</button>
       </div></details></div>
       ${t.about?`<div class="entity-card-sub" style="margin-top:8px">${esc(t.about)}</div>`:''}
@@ -1033,7 +1037,7 @@ async function renderUsers(b){
         <div><div class="user-card-email">${esc(u.email)}</div><div class="user-card-handle">${u.handle?esc(u.handle):'без ника'} · ${esc((u.locale||'ru').toUpperCase())}</div></div>
         <div>${premium?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}</div>
       </div>
-      <div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+      <div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">
         <button class="positive" data-premium>Выдать Premium</button>
         ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
         <button data-code>Тестовый код входа</button>
@@ -1792,39 +1796,49 @@ function updateLocaleStates(){
 let pasteDirection={from:'ru',to:'en'};
 async function translateCatalogForm(from,to){
   pasteDirection={from,to};
-  $('fErr').textContent='Перевожу '+langName(from)+' → '+langName(to)+'…';
+  const btn=$(from==='ru'?'fTranslateRuEn':'fTranslateEnRu');
+  actionButtonState(btn,true,'Перевожу…');
+  setActionFeedback('editorToolsState','Перевожу '+langName(from)+' → '+langName(to)+'…','busy');
   try{
     const r=await api('translate_catalog',{from,to,locale:localeFromForm(from)});
     setLocaleForm(to,r.locale||{});
     updateLocaleStates();renderExerciseCards();renderPics();
-    $('fErr').textContent='✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.';
+    setActionFeedback('editorToolsState','✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.','ok');
+    flashActionButton(btn,'✓ Готово','ok');
   }catch(e){
-    $('fErr').textContent='ИИ не перевёл: '+(e.detail||e.message)+'. Можно вставить перевод вручную.';
-  }
+    setActionFeedback('editorToolsState','ИИ не перевёл: '+(e.detail||e.message)+'. Можно вставить перевод вручную.','err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 async function copyTranslationSource(){
-  const from=editorLang,to=editorLang==='ru'?'en':'ru';
+  const from=editorLang,to=editorLang==='ru'?'en':'ru',btn=$('fCopyTranslate');
   pasteDirection={from,to};
   const txt=translationPrompt(localeFromForm(from),from,to);
   try{
     await navigator.clipboard.writeText(txt);
-    $('fErr').textContent='✓ Промпт '+langName(from)+' → '+langName(to)+' скопирован.';
+    setActionFeedback('editorToolsState','✓ Промпт '+langName(from)+' → '+langName(to)+' скопирован.','ok');
+    flashActionButton(btn,'✓ Скопировано','ok');
   }catch(e){
     $('fPasteJson').value=txt;$('fPasteWrap').hidden=false;
-    $('fErr').textContent='Буфер недоступен — текст показан ниже.';
+    setActionFeedback('editorToolsState','Буфер недоступен — промпт показан в поле ниже.','err');
   }
 }
 function applyPastedTranslation(){
-  const d=pasteDirection;
-  let raw=$('fPasteJson').value.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  const d=pasteDirection,btn=$('fPasteApply');
+  let raw=$('fPasteJson').value.trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
   try{
     const x=JSON.parse(raw);
     setLocaleForm(d.to,x);
     $('fPasteWrap').hidden=true;$('fPasteJson').value='';
     updateLocaleStates();renderExerciseCards();renderPics();
-    $('fErr').textContent='✓ Перевод вставлен.';
-  }catch(e){$('fErr').textContent='Не получилось прочитать JSON. Нужны поля name, gives и text.';}
+    setActionFeedback('editorToolsState','✓ Перевод вставлен в '+langName(d.to)+'. Проверь перед сохранением.','ok');
+    flashActionButton(btn,'✓ Применено','ok');
+  }catch(e){
+    setActionFeedback('editorToolsState','Не получилось прочитать JSON. Нужны поля name, gives и text.','err');
+    flashActionButton(btn,'Ошибка JSON','err');
+  }
 }
+
 function openAiEditProgram(lang,exercise){
   aiEditTarget={lang:lang==='en'?'en':'ru',exercise:exercise||''};
   const box=$('fAiEditBox'),title=$('fAiEditTitle'),input=$('fAiInstruction');
@@ -1846,9 +1860,10 @@ async function aiEditProgram(){
   if(!aiEditTarget)return;
   const lang=aiEditTarget.lang,exercise=aiEditTarget.exercise;
   const instruction=($('fAiInstruction').value||'').trim();
-  if(!instruction){$('fAiEditState').textContent='Опиши, что нужно изменить.';return;}
+  if(!instruction){setActionFeedback('fAiEditState','Опиши, что нужно изменить.','err');return;}
   const btn=$('fAiEditApply');
-  btn.disabled=true;$('fAiEditState').textContent=exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…';
+  actionButtonState(btn,true,'Изменяю…');
+  setActionFeedback('fAiEditState',exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…','busy');
   try{
     const r=await api('catalog_ai_edit',{
       mode:exercise?'exercise':'program',
@@ -1859,11 +1874,12 @@ async function aiEditProgram(){
     });
     setLocaleForm(lang,r.locale||{});
     updateLocaleStates();renderExerciseCards();renderPics();
-    $('fErr').textContent='✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.';
     closeAiEditProgram();
+    setActionFeedback('editorToolsState','✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.','ok');
   }catch(e){
-    $('fAiEditState').textContent='ИИ не изменил: '+(e.detail||e.message);
-  }finally{btn.disabled=false;}
+    setActionFeedback('fAiEditState','ИИ не изменил: '+(e.detail||e.message),'err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 function renderExerciseCards(){
   const box=$('exerciseCards');if(!box)return;
@@ -1911,16 +1927,21 @@ function catalogImagePayload(kind,name,description){
   };
 }
 async function generateCatalogPic(kind,name,description,set,el){
-  const ph=el&&el.querySelector('.ph');if(ph)ph.classList.add('generating');
-  $('fErr').textContent='Генерирую '+(kind==='cover'?'обложку':'фото «'+name+'»')+'…';
+  const ph=el&&el.querySelector('.ph'),btn=el&&el.querySelector('[data-generate]'),state=$('mediaProgressText');
+  if(ph)ph.classList.add('generating');
+  actionButtonState(btn,true,'…');
+  if(state){state.className='muted busy';state.textContent='Генерирую '+(kind==='cover'?'обложку':'«'+name+'»')+'…';}
   try{
     const r=await api('catalog_ai_image',catalogImagePayload(kind,name,description));
-    shrinkGeneratedPic(r.image,pic=>{set(pic);$('fErr').textContent='✓ Картинка готова. Не забудь сохранить программу.';});
+    await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{set(pic);renderPics();resolve();}));
+    if(state){state.className='muted ok';state.textContent='✓ Картинка готова. Не забудь сохранить программу.';}
   }catch(e){
     if(ph)ph.classList.remove('generating');
-    $('fErr').textContent='ИИ не сгенерировал картинку: '+(e.detail||e.message);
-  }
+    if(state){state.className='muted err';state.textContent='Не получилось: '+(e.detail||e.message);}
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn&&btn.disabled)actionButtonState(btn,false);}
 }
+
 async function generateMedia(mode){
   const source=form.sourceLocale;
   const exercises=exerciseBlocks(source);
@@ -1936,14 +1957,14 @@ async function generateMedia(mode){
   if(!jobs.length){
     failedMediaJobs=[];
     const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
-    const state=$('mediaProgressText');if(state)state.textContent='Все изображения уже есть.';
+    const state=$('mediaProgressText');if(state){state.className='muted ok';state.textContent='Все изображения уже есть.';}
     return;
   }
   const failed=[];
   const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
   for(let i=0;i<jobs.length;i++){
     const j=jobs[i],state=$('mediaProgressText');
-    if(state)state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);
+    if(state){state.className='muted busy';state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);}
     try{
       const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
       await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
@@ -1954,9 +1975,9 @@ async function generateMedia(mode){
   failedMediaJobs=failed;
   const done=jobs.length-failed.length,state=$('mediaProgressText');
   if(!failed.length){
-    if(state)state.textContent='✓ Готово '+done+' / '+jobs.length+'. Сохрани программу.';
+    if(state){state.className='muted ok';state.textContent='✓ Готово '+done+' / '+jobs.length+'. Сохрани программу.';}
   }else{
-    if(state)state.textContent='Готово '+done+' / '+jobs.length+' · ошибок '+failed.length+'. Уже готовые картинки сохранены.';
+    if(state){state.className='muted err';state.textContent='Готово '+done+' / '+jobs.length+' · ошибок '+failed.length+'. Уже готовые картинки сохранены.';}
     if(retry)retry.hidden=false;
   }
   renderPics();
@@ -2012,8 +2033,8 @@ function setAdminCreateMode(mode){
 async function generateAdminProgram(){
   const btn=$('fAiCreate'),state=$('fAiCreateState');
   const lang=$('aiCreateLang').value==='en'?'en':'ru';
-  btn.disabled=true;
-  state.textContent='ИИ собирает полную программу…';
+  actionButtonState(btn,true,'Генерирую…');
+  setActionFeedback('fAiCreateState','ИИ собирает полную программу…','busy');
   try{
     const r=await api('catalog_ai_create',{
       lang,
@@ -2043,15 +2064,16 @@ async function generateAdminProgram(){
       const tr=await api('translate_catalog',{from:lang,to:other,locale:r.locale||{}});
       setLocaleForm(other,tr.locale||{});
       updateLocaleStates();
-      state.textContent='✓ Программа и оба языка готовы. Проверь тексты, затем сделай изображения и сохрани.';
+      setActionFeedback('fAiCreateState','✓ Программа и оба языка готовы. Проверь тексты, затем сделай изображения и сохрани.','ok');
     }catch(trErr){
-      state.textContent='✓ Исходник готов, но второй язык не перевёлся: '+(trErr.detail||trErr.message)+'. Используй кнопку '+langName(lang)+' → '+langName(other)+' ниже.';
+      setActionFeedback('fAiCreateState','Исходник готов, но второй язык не перевёлся: '+(trErr.detail||trErr.message)+'. Используй кнопку '+langName(lang)+' → '+langName(other)+' ниже.','err');
     }
     const textCard=$('fName'+(lang==='en'?'En':'Ru'));
     if(textCard)textCard.scrollIntoView({behavior:'smooth',block:'center'});
   }catch(e){
-    state.textContent='Не получилось сгенерировать: '+(e.detail||e.message);
-  }finally{btn.disabled=false;}
+    setActionFeedback('fAiCreateState','Не получилось сгенерировать: '+(e.detail||e.message),'err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 
 function formLocaleReady(lang){
@@ -2116,17 +2138,19 @@ async function moderatePendingFromEditor(pro,source){
   const buttons=['editorApproveFree','editorApprovePro','editorReject'].map($).filter(Boolean);
   buttons.forEach(x=>x.disabled=true);
   const state=$('programSaveState');
+  setActionFeedback('editorReviewFeedback','Сохраняю правки перед публикацией…','busy');
   if(state)state.textContent='Сохраняю правки перед публикацией…';
   try{
     await api('edit',{id:editing,item:currentProgramItem()});
     if(state)state.textContent='Правки сохранены · публикую…';
+    setActionFeedback('editorReviewFeedback','Правки сохранены · публикую…','busy');
     await api('approve',{id:editing,pro:!!pro});
     closeEditorTo('approved');
     await load();
     adminNotice(pro?'Программа опубликована в Premium.':'Программа опубликована в каталоге.');
   }catch(e){
     const detail=Array.isArray(e.miss)&&e.miss.length?e.miss.join(' · '):(e.detail||e.message);
-    $('fErr').textContent='Не получилось опубликовать: '+detail;
+    setActionFeedback('editorReviewFeedback','Не получилось опубликовать: '+detail,'err');
     if(state)state.textContent='Исправь замечания и повтори';
     updateEditorModeration();
   }finally{
@@ -2138,12 +2162,14 @@ async function rejectPendingFromEditor(){
   const name=localeFromForm(form.sourceLocale).name||'эту программу';
   if(!confirm('Отклонить «'+name+'»? Тренер получит уведомление.'))return;
   const btn=$('editorReject');if(btn)btn.disabled=true;
+  setActionFeedback('editorReviewFeedback','Отклоняю заявку…','busy');
   try{
     await api('reject',{id:editing});
     closeEditorTo('pending');
     await load();
     adminNotice('Заявка отклонена.');
   }catch(e){
+    setActionFeedback('editorReviewFeedback','Не получилось отклонить: '+e.message,'err');
     adminNotice('Не получилось отклонить: '+e.message,'err');
     if(btn)btn.disabled=false;
   }
@@ -2178,6 +2204,7 @@ function renderAdd(b){
           <button class="b ok" type="button" id="editorApprovePro">Сохранить и опубликовать Premium</button>
           <button class="b danger-text" type="button" id="editorReject">Отклонить заявку</button>
         </div>
+        <span class="action-feedback" id="editorReviewFeedback"></span>
       </div>
     </div>
 
@@ -2200,8 +2227,7 @@ function renderAdd(b){
           <div class="wide"><label>Ограничения</label><textarea id="aiCreateLimitations" class="compact-text" maxlength="700" placeholder="Например: без прыжков, беречь колени"></textarea></div>
           <div class="wide"><label>Дополнительное пожелание</label><textarea id="aiCreateWish" class="compact-text" maxlength="1200" placeholder="Что ещё важно учесть"></textarea></div>
         </div>
-        <div class="acts"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button></div>
-        <p class="muted" id="fAiCreateState">ИИ заполнит исходный язык. После этого проверь программу и переведи второй язык.</p>
+        <div class="action-row"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button><span class="action-feedback" id="fAiCreateState">ИИ заполнит исходный язык. После этого проверь программу и переведи второй язык.</span></div>
       </div>
     </div>
 
@@ -2237,6 +2263,7 @@ function renderAdd(b){
             <button class="b quiet" id="fCopyTranslate">Скопировать промпт</button>
             <button class="b quiet" id="fPasteToggle">Вставить JSON</button>
           </div>
+          <span class="action-feedback editor-tools-feedback" id="editorToolsState"></span>
           <div class="translate-box" id="fPasteWrap" hidden>
             <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
             <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
@@ -2248,7 +2275,7 @@ function renderAdd(b){
               <button class="b ok" type="button" id="fAiEditApply">Применить изменение</button>
               <button class="b quiet" type="button" id="fAiEditCancel">Отмена</button>
             </div>
-            <p class="muted" id="fAiEditState"></p>
+            <p class="action-feedback" id="fAiEditState"></p>
           </div>
         </div>
       </div>

@@ -48,6 +48,14 @@ need(html.includes('id="editorReviewCard"'),'program editor moderation readiness
 need(!html.slice(html.indexOf('function renderUsers(b){'),html.indexOf("let campaignLang='ru';")).includes("prompt("),'user Premium actions must not use browser prompt');
 need(html.includes('function grantUserPremium('),'user Premium inline action flow is missing');
 need(html.includes('function setActionFeedback('),'forms need action-local feedback helper');
+need(html.includes('details.row-menu{position:relative;display:inline-block;border:0;padding:0;margin:0}'),'row menu must neutralize generic details divider/margins');
+need(!html.includes('<summary>•••</summary>'),'kebab menus need an accessible action label');
+need(html.includes('id="editorToolsState"'),'translation tools need local feedback');
+need(html.includes('id="editorReviewFeedback"'),'moderation actions need local feedback');
+need(html.includes("setActionFeedback('editorToolsState'"),'translation/copy/paste results must stay by their buttons');
+need((html.match(/\$\('fErr'\)/g)||[]).length===1,'editor fErr should be reserved for final save errors, not sub-actions');
+need(!html.includes('alert('),'admin must not use blocking alert dialogs');
+need(!html.includes('prompt('),'admin must not use browser prompt dialogs');
 need(html.includes('class="action-feedback"'),'save/action bars need feedback next to the pressed action');
 need(html.includes("flashActionButton($('releaseSettingsSave'),'Проверь поля'"),'release validation must be shown at the save action');
 need(html.includes("flashActionButton($('priceSettingsSave'),'Проверь цены'"),'pricing validation must be shown at the save action');

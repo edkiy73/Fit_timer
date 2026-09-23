@@ -195,6 +195,13 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
      /активность/.test(await page.textContent('#body')));
+  const rowMenuStyle=await page.locator('details.row-menu').first().evaluate(el=>{
+    const st=getComputedStyle(el);
+    return {borderTop:st.borderTopWidth,paddingTop:st.paddingTop,marginTop:st.marginTop};
+  });
+  ok('у меню ••• нет серой линии и лишнего отступа',
+     rowMenuStyle.borderTop==='0px'&&rowMenuStyle.paddingTop==='0px'&&rowMenuStyle.marginTop==='0px',
+     JSON.stringify(rowMenuStyle));
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="users"]');
   await page.waitForTimeout(300);
