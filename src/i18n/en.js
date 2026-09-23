@@ -592,7 +592,7 @@ const I18N_EN = {
   'login.chooseHandle': "Email verified. Choose one username for both your account and trainer page.",
   'login.createAccount': "Create account",
   'login.handleTaken': "That username is already taken. Try another one.",
-  'account.signOutQuestion': "Sign out of {email}? Programs, statistics, weight, and photos will stay on this phone. The subscription stays with the account; you can enable the biometric privacy lock again after signing in.",
+  'account.signOutQuestion': "Sign out of {email}? Programs, statistics, weight, and photos will stay on this phone. The subscription and biometric sign-in will be detached and return when you sign in again.",
   'account.signOut': "Sign out",
   'bio.cancelled': "verification was cancelled.",
   'bio.unsupported': "biometrics are not available on this device.",
