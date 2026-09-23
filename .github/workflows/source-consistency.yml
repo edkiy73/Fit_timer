@@ -52,6 +52,7 @@ jobs:
           node tests/accessibility-unit.js
           node tests/release-ux-unit.js
           node tests/admin-ui-unit.js
+          node tests/vercel-ignore-unit.js
 
       - name: Проверить AI API админки
         env:

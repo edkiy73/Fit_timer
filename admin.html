@@ -402,6 +402,16 @@
   .media-progress{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;min-height:28px}
   .media-progress .muted{margin-right:auto}
   .b[disabled]{opacity:.55;cursor:default}
+  .moderation-readiness{margin-top:10px;padding:9px 10px;border-radius:9px;background:var(--soft);font-size:11.5px;color:var(--muted);line-height:1.45}
+  .moderation-readiness.ok{color:var(--ok)}
+  .moderation-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .moderation-actions .b{min-height:36px}
+  .admin-notice{position:fixed;right:18px;bottom:18px;z-index:120;max-width:min(420px,calc(100vw - 24px));padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);box-shadow:0 14px 40px rgba(0,0,0,.28);font-size:13px}
+  .admin-notice.ok{border-color:color-mix(in srgb,var(--ok) 55%,var(--line));color:var(--ok)}
+  .admin-notice.err{border-color:color-mix(in srgb,var(--danger) 55%,var(--line));color:var(--danger)}
+  .payment-summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+  .payment-card.problem{border-color:color-mix(in srgb,var(--danger) 35%,var(--line))}
+  .payment-ready.warn{color:var(--danger)}
   .dashboard-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 10px}
   .dashboard-kpi{appearance:none;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;font:inherit}
   .dashboard-kpi:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
@@ -417,6 +427,22 @@
   @media(max-width:760px){
     .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
     .dashboard-grid{grid-template-columns:1fr}
+    .content{overflow-x:hidden}
+    .page-head{flex-direction:column;align-items:stretch}
+    .page-head>.b{width:100%;text-align:center}
+    .moderation-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .moderation-actions .b{width:100%}
+    .sticky-save{padding:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 28px rgba(0,0,0,.16)}
+    .sticky-save .save-state{max-width:none;flex:1}
+    .payment-card-head{align-items:flex-start}
+  }
+  @media(max-width:520px){
+    .payment-inputs{grid-template-columns:1fr}
+    .moderation-actions{grid-template-columns:1fr}
+    .sticky-save{align-items:stretch;flex-direction:column}
+    .sticky-save .save-actions{width:100%;display:grid;grid-auto-flow:row;grid-template-columns:1fr}
+    .sticky-save .save-actions .b{width:100%}
+    .admin-notice{left:12px;right:12px;bottom:12px;max-width:none}
   }
 </style>
 </head>
@@ -634,6 +660,32 @@ function pageHead(title, text, right){
 }
 const fmtDay = v => v ? new Date(v).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '—';
 
+let noticeTimer=null;
+function adminNotice(message,tone){
+  let el=$('adminNotice');
+  if(!el){
+    el=document.createElement('div');
+    el.id='adminNotice';
+    document.body.appendChild(el);
+  }
+  el.className='admin-notice '+(tone==='err'?'err':'ok');
+  el.textContent=message;
+  el.hidden=false;
+  clearTimeout(noticeTimer);
+  noticeTimer=setTimeout(()=>{el.hidden=true;},3200);
+}
+function moderationState(item){
+  const ru=localeReady(item,'ru'),en=localeReady(item,'en');
+  const ex=Math.max(0,+item.exCount||0);
+  const media=item.media?Object.keys(item.media).length:0;
+  const problems=[];
+  if(!ru)problems.push('не готов RU');
+  if(!en)problems.push('не готов EN');
+  if(!item.cover)problems.push('нет обложки');
+  if(ex&&media<ex)problems.push('фото упражнений '+media+'/'+ex);
+  return {ready:ru&&en,ru,en,ex,media,problems};
+}
+
 function render(){
   const b = $('body');
   b.innerHTML = '';
@@ -739,73 +791,79 @@ function renderCatalog(b){
   const list=(pending?data.pending:data.approved).slice().reverse();
   b.innerHTML=pageHead(
     pending?'На проверке':'Каталог',
-    pending?'Заявки тренеров: локализации, доступ и модерация.':'Опубликованные программы и доступ Premium.',
+    pending?'Сразу видно, что готово к публикации и чего не хватает.':'Опубликованные программы и доступ Premium.',
     !pending?'<button class="b ok" id="catalogAdd">+ Добавить</button>':''
   );
   if(!pending)$('catalogAdd').onclick=()=>setTab('add');
   if(!list.length){
     b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`);
-    const sd=$('seed');if(sd)sd.onclick=()=>act('seed',{});
+    const sd=$('seed');if(sd)sd.onclick=()=>act('seed',{},null,'Тестовые программы добавлены.');
     return;
   }
-  b.insertAdjacentHTML('beforeend',`
-    <div class="toolbar"><div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div><span class="status-chip">${list.length} шт.</span></div>
-    <div class="entity-grid" id="catalogCards"></div>`);
+  b.insertAdjacentHTML('beforeend',
+    '<div class="toolbar"><div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div><span class="status-chip">'+list.length+' шт.</span></div>'
+    +'<div class="entity-grid" id="catalogCards"></div>');
   const box=$('catalogCards');
 
   list.forEach(item=>{
-    const ready=localeReady(item,'ru')&&localeReady(item,'en');
+    const state=moderationState(item),ready=state.ready;
     const card=document.createElement('article');
     card.className='entity-card';
     card.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
-    const cover=item.cover?`<img class="catalog-cover" src="${esc(item.cover)}" alt="">`:'<span class="catalog-cover empty">FIT</span>';
-    const menu=pending
-      ? `<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
-          <button data-act="edit">Проверить и изменить</button>
-          ${ready?'<button class="positive" data-act="approve">В каталог</button><button class="positive" data-act="approvePro">В Premium</button>':''}
-          <button class="danger" data-act="reject">Отклонить</button>
-          ${item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':''}
-        </div></details>`
-      : `<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
-          <button data-act="edit">Изменить</button>
-          <button data-act="togglePro">${item.pro?'Открыть всем':'Сделать Premium'}</button>
-          <button class="danger" data-act="remove">Убрать из каталога</button>
-          ${item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':''}
-        </div></details>`;
+    const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
+    const menu=!pending
+      ? '<details class="row-menu"><summary>•••</summary><div class="row-menu-pop">'
+        +'<button data-act="edit">Изменить</button>'
+        +'<button data-act="togglePro">'+(item.pro?'Открыть всем':'Сделать Premium')+'</button>'
+        +'<button class="danger" data-act="remove">Убрать из каталога</button>'
+        +(item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':'')
+        +'</div></details>'
+      : (item.by?'<details class="row-menu"><summary>•••</summary><div class="row-menu-pop"><button class="danger" data-act="ban">Закрыть автора</button></div></details>':'');
 
-    card.innerHTML=`
-      <div class="entity-card-head">
-        ${cover}
-        <div style="min-width:0;flex:1">
-          <div class="entity-card-title">${esc(item.name||'Без названия')}</div>
-          <div class="entity-card-sub">${esc(item.gives||'').slice(0,120)}</div>
-        </div>
-      </div>
-      <div class="td-actions">${menu}</div>
-      <div class="entity-tags">
-        <span class="status-chip">${esc(goalName(item.cat))}</span>
-        <span class="status-chip">${esc(item.level)}</span>
-        <span class="status-chip">${item.min||0} мин</span>
-        <span class="status-chip ${ready?'ok':''}">${esc(localeMarks(item))}</span>
-        ${item.pro?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}
-      </div>
-      <div class="entity-meta">
-        <div><b>${item.exCount||0}</b><span>упражнений</span></div>
-        <div><b>${item.media?Object.keys(item.media).length:0}</b><span>фото</span></div>
-        <div><b>${item.by?`<button class="who" data-trainer="${esc(item.by)}">${esc(item.by)}</button>`:'Fit Timer'}</b><span>автор</span></div>
-      </div>`;
+    card.innerHTML=
+      '<div class="entity-card-head">'+cover
+        +'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(item.name||'Без названия')+'</div>'
+        +'<div class="entity-card-sub">'+esc(item.gives||'').slice(0,120)+'</div></div></div>'
+      +(menu?'<div class="td-actions">'+menu+'</div>':'')
+      +'<div class="entity-tags">'
+        +'<span class="status-chip">'+esc(goalName(item.cat))+'</span>'
+        +'<span class="status-chip">'+esc(item.level)+'</span>'
+        +'<span class="status-chip">'+(item.min||0)+' мин</span>'
+        +'<span class="status-chip '+(ready?'ok':'')+'">'+esc(localeMarks(item))+'</span>'
+        +(item.pro?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>')
+      +'</div>'
+      +'<div class="entity-meta">'
+        +'<div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div>'
+        +'<div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div>'
+        +'<div><b>'+(item.by?'<button class="who" data-trainer="'+esc(item.by)+'">'+esc(item.by)+'</button>':'Fit Timer')+'</b><span>автор</span></div>'
+      +'</div>'
+      +(pending?'<div class="moderation-readiness '+(ready?'ok':'')+'">'+(ready
+        ? '✓ Тексты RU и EN готовы к публикации'+(state.problems.length?' · '+esc(state.problems.join(' · ')):'')
+        : 'Перед публикацией: '+esc(state.problems.join(' · ')||'проверь программу'))+'</div>'
+        +'<div class="moderation-actions">'
+          +'<button class="b" data-direct="edit">Проверить / изменить</button>'
+          +'<button class="b ok" data-direct="approve"'+(ready?'':' disabled')+'>В каталог</button>'
+          +'<button class="b ok" data-direct="approvePro"'+(ready?'':' disabled')+'>В Premium</button>'
+          +'<button class="b danger-text" data-direct="reject">Отклонить</button>'
+        +'</div>':'');
 
     const author=card.querySelector('[data-trainer]');
     if(author)author.onclick=()=>openTrainerInAdmin(author.dataset.trainer);
+
+    card.querySelectorAll('[data-direct]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.direct;
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='approve')return act('approve',{id:item.id,pro:false},btn,'Программа опубликована в каталоге.');
+      if(a==='approvePro')return act('approve',{id:item.id,pro:true},btn,'Программа опубликована в Premium.');
+      if(a==='reject'&&confirm('Отклонить «'+item.name+'»? Тренер получит уведомление.'))return act('reject',{id:item.id},btn,'Заявка отклонена.');
+    });
+
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
       if(a==='edit'){setTab('add');fillForm(item);return;}
-      if(a==='approve')return act('approve',{id:item.id,pro:false});
-      if(a==='approvePro')return act('approve',{id:item.id,pro:true});
-      if(a==='reject')return act('reject',{id:item.id});
-      if(a==='togglePro')return act('pro',{id:item.id,pro:!item.pro});
-      if(a==='remove'&&confirm(`Убрать «${item.name}» из каталога?`))return act('remove',{id:item.id});
-      if(a==='ban'&&confirm(`Закрыть ${item.by}? Его программы больше не будут приниматься.`))return act('ban',{handle:item.by});
+      if(a==='togglePro')return act('pro',{id:item.id,pro:!item.pro},btn,item.pro?'Программа открыта всем.':'Программа переведена в Premium.');
+      if(a==='remove'&&confirm('Убрать «'+item.name+'» из каталога?'))return act('remove',{id:item.id},btn,'Программа убрана из каталога.');
+      if(a==='ban'&&confirm('Закрыть '+item.by+'? Его программы больше не будут приниматься.'))return act('ban',{handle:item.by},btn,'Приём программ от тренера закрыт.');
     });
     box.appendChild(card);
   });
@@ -1146,9 +1204,11 @@ async function persistSettings(next,stateId){
     const r=await api('save_settings',{settings:next});
     data.settings=r.settings;
     if(state)state.textContent='✓ Сохранено';
+    adminNotice('Настройки сохранены.');
     return true;
   }catch(e){
     if(state)state.textContent='Не сохранилось: '+e.message;
+    adminNotice('Не сохранилось: '+e.message,'err');
     return false;
   }
 }
@@ -1257,54 +1317,80 @@ async function savePricingSettings(){
   await persistSettings(s,'priceSettingsState');
 }
 
+function paymentReadiness(id,ready,enabled,month,year,needsProducts){
+  const missing=[];
+  if(!ready)missing.push('нет серверных ключей');
+  if(needsProducts&&!month)missing.push('нет Product ID месяца');
+  if(needsProducts&&!year)missing.push('нет Product ID года');
+  return {usable:ready&&(!needsProducts||(month&&year)),missing,enabled:!!enabled};
+}
 function renderPayments(b){
   const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
   const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
-  const card=(id,name,ready,enabled,month,year,kind,disabled)=>`
-    <div class="payment-card">
-      <div class="payment-card-head">
-        <div><b>${name}</b><div class="payment-ready ${ready?'ok':''}">${ready?'сервер готов':'не хватает серверных ключей'}</div></div>
-        <label class="inline-switch" style="min-height:0;margin:0"><input id="${id}Enabled" type="checkbox"${enabled?' checked':''}${disabled?' disabled':''}><span>Включён</span></label>
-      </div>
-      <div class="payment-inputs">
-        ${kind==='price'
-          ? '<div style="grid-column:1/-1"><div class="compact-note">Цена берётся из раздела Premium и цены. Product ID не нужен.</div></div>'
-          : `<div><label>Месяц</label><input id="${id}Month" value="${esc(month||'')}" placeholder="product id"></div>
-             <div><label>Год</label><input id="${id}Year" value="${esc(year||'')}" placeholder="product id"></div>`}
-      </div>
-    </div>`;
-  b.innerHTML=pageHead('Платежи','Провайдеры разложены по карточкам; месяц и год редактируются в одной строке.')+`
-    <div class="form-card">
-      <div class="form-card-body">
-        <div class="field-grid">
-          <div><label>Режим оплаты</label><select id="payProvider">
-            ${['multi','google','rustore','yookassa'].map(x=>`<option value="${x}"${(pay.provider||'multi')===x?' selected':''}>${x}</option>`).join('')}
-          </select></div>
-          <div class="wide"><div class="compact-note" style="margin-top:25px">Секретные ключи провайдеров хранятся только в Vercel.</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="payment-grid">
-      ${card('google','Google Play',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)}
-      ${card('rustore','RuStore Pay',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year)}
-      ${card('yookassa','ЮKassa',!!bp.yookassa,yoo.enabled!==false,'','','price')}
-      ${card('ios','iOS · позже',false,false,pay.iosMonth,pay.iosYear,'',true)}
-    </div>
-    ${saveBar('paySettings','Сохранить платежи')}`;
+  const states={
+    google:paymentReadiness('google',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear,true),
+    rustore:paymentReadiness('rustore',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year,true),
+    yookassa:paymentReadiness('yookassa',!!bp.yookassa,yoo.enabled!==false,'','',false)
+  };
+  const usable=Object.values(states).filter(x=>x.usable&&x.enabled).length;
+  const card=(id,name,st,enabled,month,year,kind,disabled)=>{
+    const stateText=st.usable?'готов к оплате':st.missing.join(' · ');
+    return '<div class="payment-card '+(st.usable?'':'problem')+'">'
+      +'<div class="payment-card-head"><div><b>'+name+'</b><div class="payment-ready '+(st.usable?'ok':'warn')+'">'+esc(stateText)+'</div></div>'
+      +'<label class="inline-switch" style="min-height:0;margin:0"><input id="'+id+'Enabled" type="checkbox"'+(enabled?' checked':'')+(disabled?' disabled':'')+'><span>Включён</span></label></div>'
+      +'<div class="payment-inputs">'
+      +(kind==='price'
+        ? '<div style="grid-column:1/-1"><div class="compact-note">Цена берётся из раздела Premium и цены. Product ID не нужен.</div></div>'
+        : '<div><label>Месяц</label><input id="'+id+'Month" value="'+esc(month||'')+'" placeholder="product id"></div>'
+          +'<div><label>Год</label><input id="'+id+'Year" value="'+esc(year||'')+'" placeholder="product id"></div>')
+      +'</div></div>';
+  };
+  b.innerHTML=pageHead('Платежи','Здесь видно не только наличие ключей, но и можно ли реально принимать оплату.')
+    +'<div class="payment-summary"><span class="status-chip '+(usable?'ok':'')+'">Готовых и включённых · '+usable+'</span>'
+      +'<span class="status-chip">Режим · '+esc(pay.provider||'multi')+'</span></div>'
+    +'<div class="form-card"><div class="form-card-body"><div class="field-grid">'
+      +'<div><label>Режим оплаты</label><select id="payProvider">'
+        +['multi','google','rustore','yookassa'].map(x=>'<option value="'+x+'"'+((pay.provider||'multi')===x?' selected':'')+'>'+x+'</option>').join('')
+      +'</select></div>'
+      +'<div class="wide"><div class="compact-note" style="margin-top:25px">Секретные ключи остаются только в Vercel. Админка показывает лишь факт готовности.</div></div>'
+    +'</div></div></div>'
+    +'<div class="payment-grid">'
+      +card('google','Google Play',states.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)
+      +card('rustore','RuStore Pay',states.rustore,rustore.enabled!==false,rustore.month,rustore.year)
+      +card('yookassa','ЮKassa',states.yookassa,yoo.enabled!==false,'','','price')
+      +card('ios','iOS · позже',{usable:false,missing:['ещё не подключён']},false,pay.iosMonth,pay.iosYear,'',true)
+    +'</div>'+saveBar('paySettings','Сохранить платежи');
   $('paySettingsSave').onclick=savePaymentSettings;
 }
 
 async function savePaymentSettings(){
+  const provider=$('payProvider').value;
+  const google={enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()};
+  const rustore={enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()};
+  const yookassa={enabled:$('yookassaEnabled').checked};
+  const bp=data.billingProviders||{};
+  const problems=[];
+  if(google.enabled&&(!bp.google||!google.month||!google.year))problems.push('Google Play: нужны серверные ключи и Product ID месяца/года');
+  if(rustore.enabled&&(!bp.rustore||!rustore.month||!rustore.year))problems.push('RuStore: нужны серверные ключи и Product ID месяца/года');
+  if(yookassa.enabled&&!bp.yookassa)problems.push('ЮKassa: нужны SHOP_ID и SECRET_KEY на сервере');
+  const selected={google,rustore,yookassa}[provider];
+  if(provider!=='multi'&&(!selected||!selected.enabled))problems.push('Выбранный провайдер должен быть включён');
+  if(provider!=='multi'&&!bp[provider])problems.push('У выбранного провайдера нет серверных ключей');
+  if(provider==='multi'&&!((google.enabled&&bp.google&&google.month&&google.year)||(rustore.enabled&&bp.rustore&&rustore.month&&rustore.year)||(yookassa.enabled&&bp.yookassa))){
+    problems.push('В режиме multi нужен хотя бы один полностью готовый и включённый провайдер');
+  }
+  if(problems.length){
+    $('paySettingsState').textContent=problems.join(' · ');
+    adminNotice('Платежи не сохранены: '+problems[0],'err');
+    return;
+  }
   const s=settingsClone();
   s.payment={
-    provider:$('payProvider').value,
-    google:{enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()},
-    rustore:{enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()},
-    yookassa:{enabled:$('yookassaEnabled').checked},
-    androidMonth:$('googleMonth').value.trim(),androidYear:$('googleYear').value.trim(),
+    provider,google,rustore,yookassa,
+    androidMonth:google.month,androidYear:google.year,
     iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
   };
-  await persistSettings(s,'paySettingsState');
+  if(await persistSettings(s,'paySettingsState'))adminNotice('Настройки платежей сохранены.');
 }
 
 function renderRelease(b){
@@ -1941,16 +2027,19 @@ async function saveForm(mode){
   }
 }
 
-async function act(action, extra){
-  try{ await api(action, extra); await load(); }
-  catch(e){
-    const details = Array.isArray(e.miss) && e.miss.length
-      ? '\n\n— ' + e.miss.join('\n— ')
-      : '';
-    const head = action === 'approve' || action === 'publish_draft'
-      ? 'Не получилось опубликовать программу'
-      : 'Не получилось выполнить действие';
-    alert(head + details + (details ? '' : ': ' + e.message));
+async function act(action, extra, source, successMessage){
+  const old=source&&source.textContent;
+  if(source){source.disabled=true;source.textContent='Подожди…';}
+  try{
+    await api(action,extra);
+    await load();
+    adminNotice(successMessage||'Готово.');
+  }catch(e){
+    const details=Array.isArray(e.miss)&&e.miss.length?' — '+e.miss.join(' · '):'';
+    const head=action==='approve'||action==='publish_draft'?'Не получилось опубликовать':'Не получилось выполнить действие';
+    adminNotice(head+details+(details?'':': '+e.message),'err');
+  }finally{
+    if(source&&document.body.contains(source)){source.disabled=false;source.textContent=old;}
   }
 }
 

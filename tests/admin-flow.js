@@ -172,6 +172,8 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(900);
   ok('с ключом открывается', await page.isVisible('#app'));
   ok('по умолчанию открывается полезный обзор', /Что требует внимания/.test(await page.textContent('#body')));
+  ok('мобильная админка не создаёт горизонтальный скролл',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
@@ -182,6 +184,17 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
      /активность/.test(await page.textContent('#body')));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="payments"]');
+  await page.waitForTimeout(250);
+  ok('платежи показывают реальную готовность провайдеров',
+     /не хватает серверных ключей|нет серверных ключей/.test(await page.textContent('#body')));
+  await page.click('#paySettingsSave');
+  await page.waitForTimeout(100);
+  ok('невозможную платежную конфигурацию нельзя молча сохранить',
+     /нужны|нужен/.test(await page.textContent('#paySettingsState')));
+  ok('платежный экран на телефоне не распирает viewport',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="add"]');
   await page.waitForTimeout(300);

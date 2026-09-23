@@ -7,6 +7,8 @@ const sourceWorkflow = await readFile('.github/workflows/source-consistency.yml'
 const smokeWorkflow = await readFile('.github/workflows/admin-smoke.yml','utf8');
 const healthApi = await readFile('api/health.js','utf8');
 const healthLib = await readFile('lib/health.js','utf8');
+const vercelConfig = await readFile('vercel.json','utf8');
+const vercelIgnore = await readFile('scripts/vercel-ignore.mjs','utf8');
 
 const need=(ok,msg)=>{if(!ok)throw new Error(msg);};
 
@@ -39,6 +41,14 @@ need(html.includes('id="fPublish"'),'explicit publish action is missing from pro
 need(html.includes("api('save_draft'"),'program editor must save server drafts');
 need(html.includes("api('publish_draft'"),'program editor must publish drafts explicitly');
 need(html.includes("fetch('/api/health?format=json'"),'dashboard must consume structured health status');
+need(html.includes('function moderationState(item)'),'moderation readiness helper is missing');
+need(html.includes('class="moderation-actions"'),'pending submissions need direct moderation actions');
+need(html.includes('function paymentReadiness('),'payment readiness summary is missing');
+need(html.includes("problems.push('Google Play:"),'payment settings must validate impossible provider states');
+need(html.includes('class="admin-notice'),'admin actions need non-blocking feedback');
+need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');
+need(vercelConfig.includes('"ignoreCommand": "node scripts/vercel-ignore.mjs"'),'Vercel ignored build step is not configured');
+need(vercelIgnore.includes('[skip vercel]') && vercelIgnore.includes('[deploy]'),'Vercel deploy markers are missing');
 need(healthApi.includes("format === 'json'"),'health JSON mode is missing');
 need(healthLib.includes("store.selfTest()"),'health must actively exercise storage');
 need(healthLib.includes("store.list('c:approved')"),'health must probe catalog reads');
