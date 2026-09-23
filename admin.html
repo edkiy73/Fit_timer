@@ -1688,7 +1688,7 @@ async function savePaymentSettings(){
 
 function renderRelease(b){
   const s=data.settings||{},u=(s.update&&s.update.android)||{};
-  b.innerHTML=pageHead('Обновление Android','Для обычного релиза достаточно проверить последнюю сборку и нажать «Опубликовать обновление».')+\`
+  b.innerHTML=pageHead('Обновление Android','Для обычного релиза достаточно проверить последнюю сборку и нажать «Опубликовать обновление».')+`
     <div class="form-card">
       <div class="form-card-head">
         <h3>Последняя сборка</h3>
@@ -1706,24 +1706,24 @@ function renderRelease(b){
       <summary>Дополнительные настройки</summary>
       <div class="release-advanced-body">
         <label class="check">
-          <input id="relRequired" type="checkbox" \${u.minimumCode>0?'checked':''}>
+          <input id="relRequired" type="checkbox" ${u.minimumCode>0?'checked':''}>
           Обязательное обновление
           <small>Включай только если старую версию действительно нельзя больше использовать. Обычно этот переключатель выключен.</small>
         </label>
-        <div id="relMinimumWrap" class="\${u.minimumCode>0?'':'hidden'}">
+        <div id="relMinimumWrap" class="${u.minimumCode>0?'':'hidden'}">
           <label>Минимально поддерживаемый versionCode</label>
-          <input id="relMinimumCode" type="number" min="0" step="1" value="\${esc(u.minimumCode||0)}">
+          <input id="relMinimumCode" type="number" min="0" step="1" value="${esc(u.minimumCode||0)}">
           <p class="compact-note">Сборки ниже этого кода будут заблокированы экраном обновления.</p>
         </div>
         <div class="field-grid" style="margin-top:12px">
-          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="\${esc(u.latestCode||0)}"></div>
-          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="\${esc(u.latestName||'')}" placeholder="Например: 1.2.0"></div>
-          <div class="wide"><label>Куда ведёт кнопка «Обновить»</label><input id="relUrl" maxlength="500" value="\${esc(u.url||'')}" placeholder="GitHub APK, Google Play или RuStore"></div>
+          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(u.latestCode||0)}"></div>
+          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(u.latestName||'')}" placeholder="Например: 1.2.0"></div>
+          <div class="wide"><label>Куда ведёт кнопка «Обновить»</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="GitHub APK, Google Play или RuStore"></div>
         </div>
         <p class="compact-note">Эти поля заполняются автоматически при публикации. Менять их вручную нужно только для другого канала обновления или аварийного сценария.</p>
         <div class="field-grid" style="margin-top:12px">
-          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">\${esc(u.messageRu||'')}</textarea></div>
-          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">\${esc(u.messageEn||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(u.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(u.messageEn||'')}</textarea></div>
         </div>
         <div class="action-row" style="margin-top:12px">
           <div class="action-stack">
@@ -1732,7 +1732,7 @@ function renderRelease(b){
           </div>
         </div>
       </div>
-    </details>\`;
+    </details>`;
   $('releaseSettingsSave').onclick=saveReleaseSettings;
   $('releaseRefreshBuild').onclick=()=>loadLatestAndroidBuild(true);
   $('relRequired').onchange=()=>{
