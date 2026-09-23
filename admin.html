@@ -598,7 +598,10 @@ function closeNav(){
 }
 function setTab(next){
   if(tab==='add'&&next!=='add'&&editorDirty&&!allowEditorLeave){
-    if(!confirm('Есть несохранённые изменения программы. Выйти без сохранения?'))return;
+    if(!confirm('Есть несохранённые изменения программы. Выйти без сохранения?')){
+      closeNav();
+      return;
+    }
   }
   closeRowMenus();
   tab = next;

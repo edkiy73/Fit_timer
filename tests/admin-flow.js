@@ -308,6 +308,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.click('.nav-btn[data-tab="dashboard"]');
   await page.waitForTimeout(120);
   ok('из несохранённого редактора нельзя уйти случайно',/несохранённые изменения/i.test(leaveDialog)&&await page.isVisible('#fNameRu'),leaveDialog);
+  ok('после отмены перехода мобильное меню закрывается',!(await page.locator('body').evaluate(el=>el.classList.contains('nav-open'))));
   ok('редактор на 360px не создаёт горизонтальный скролл',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 
