@@ -137,50 +137,60 @@ window.addEventListener('unhandledrejection',e=>{
   reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
 });
 
-async function loadData(){
-  // данные хранятся раздельно по профилям; старые данные один раз переезжают в текущий профиль
-  let progRaw = await kvGet(pk('customPrograms'));
-  let statRaw = await kvGet(pk('stats'));
+async function loadData(ownerId = currentUser){
+  // Все чтения привязываем к профилю, который начал загрузку. Раньше pk() вычислялся
+  // заново после каждого await: если в этот момент фоновая синхронизация и ручное
+  // переключение профиля пересекались, данные могли приехать уже от другого профиля.
+  const ownerKey = key => key + '_' + ownerId;
+  let progRaw = await kvGet(ownerKey('customPrograms'));
+  let statRaw = await kvGet(ownerKey('stats'));
+  if(currentUser !== ownerId) return false;
   if(progRaw === null && (await kvGet('migrated')) !== '1'){
     const legacyP = await kvGet('customPrograms');
     const legacyS = await kvGet('stats');
-    if(legacyP !== null){ progRaw = legacyP; kvSet(pk('customPrograms'), legacyP); }
-    if(legacyS !== null){ statRaw = legacyS; kvSet(pk('stats'), legacyS); }
-    kvSet('migrated', '1');
+    if(currentUser !== ownerId) return false;
+    if(legacyP !== null){ progRaw = legacyP; await kvSet(ownerKey('customPrograms'), legacyP); }
+    if(legacyS !== null){ statRaw = legacyS; await kvSet(ownerKey('stats'), legacyS); }
+    await kvSet('migrated', '1');
   }
-  try{ customPrograms = JSON.parse(progRaw) || []; }catch(e){ customPrograms = []; }
-  // Старые личные программы появились до поля locale. Они всё равно одноязычные,
-  // поэтому один раз определяем их язык по авторскому тексту. Исторически почти
-  // все такие программы русские; латиница без кириллицы считается английской.
-  customPrograms.forEach(p => {
+
+  let nextPrograms = [];
+  let nextStats = {totalSec:0};
+  try{ nextPrograms = JSON.parse(progRaw) || []; }catch(e){ nextPrograms = []; }
+  nextPrograms.forEach(p => {
     if(!p || p.id === 'warmup' || p.locale === 'ru' || p.locale === 'en') return;
     const plans = Array.isArray(p.plans) ? p.plans : [];
     const sample = [p.name, p.desc].concat(plans.flatMap(pl => (pl.exercises || []).flatMap(ex => [ex.name, ex.desc, ex.mistakes, ex.swapName, ex.swapDesc]))).join(' ');
     p.locale = /[А-Яа-яЁё]/.test(sample) ? 'ru' : 'en';
   });
-  try{ stats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ stats = {totalSec:0}; }
-  if(typeof stats.totalSec !== 'number') stats.totalSec = 0;
-  if(!Array.isArray(stats.weights)) stats.weights = [];
-  if(!Array.isArray(stats.wellness)) stats.wellness = [];
-  if(!Array.isArray(stats.history)) stats.history = [];
-  if(typeof stats.count !== 'number') stats.count = 0;
-  await loadProgWeights();
+  try{ nextStats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ nextStats = {totalSec:0}; }
+  if(typeof nextStats.totalSec !== 'number') nextStats.totalSec = 0;
+  if(!Array.isArray(nextStats.weights)) nextStats.weights = [];
+  if(!Array.isArray(nextStats.wellness)) nextStats.wellness = [];
+  if(!Array.isArray(nextStats.history)) nextStats.history = [];
+  if(typeof nextStats.count !== 'number') nextStats.count = 0;
+  if(currentUser !== ownerId) return false;
+
+  customPrograms = nextPrograms;
+  stats = nextStats;
+  await loadProgWeights(ownerId);
+  if(currentUser !== ownerId) return false;
   await loadTrainer();
-  // Док должен знать про режим тренера СРАЗУ. Раньше кнопку показывал только
-  // renderTrainerCard(), а он зовётся при входе в «Другое», — и до первого захода
-  // туда у тренера было четыре раздела вместо пяти.
+  if(currentUser !== ownerId) return false;
   syncDockTabs();
-  discardLegacyWeightCorrections();
+  discardLegacyWeightCorrections(ownerId);
+  return true;
 }
 
 // Удаляем накопленные прежними версиями скрытые поправки веса.
-function discardLegacyWeightCorrections(){
+function discardLegacyWeightCorrections(ownerId = currentUser){
+  if(currentUser !== ownerId) return;
   progWeights = {};
-  kvSet(pk('progWeights'), '{}');
-  if(docMeta && docMeta.progWeights){ delete docMeta.progWeights; kvSet(pk('docMeta'), JSON.stringify(docMeta)); }
+  kvSet('progWeights_' + ownerId, '{}');
+  if(docMeta && docMeta.progWeights){ delete docMeta.progWeights; kvSet('docMeta_' + ownerId, JSON.stringify(docMeta)); }
   if(Array.isArray(outbox) && outbox.some(x => x.key === 'progWeights')){
     outbox = outbox.filter(x => x.key !== 'progWeights');
-    kvSet(pk('outbox'), JSON.stringify(outbox));
+    kvSet('outbox_' + ownerId, JSON.stringify(outbox));
   }
 }
 
@@ -189,19 +199,22 @@ function discardLegacyWeightCorrections(){
 // currentUser, поэтому продолжение первого await уже могло читать данные второго
 // профиля и оставлять их в глобальном состоянии приложения.
 let profileSwitchQueue = Promise.resolve();
-function switchUser(id){
+function queueProfileState(task){
   profileSwitchQueue = profileSwitchQueue
     .catch(()=>{})
-    .then(()=> switchUserNow(id));
+    .then(task);
   return profileSwitchQueue;
+}
+function switchUser(id){
+  return queueProfileState(()=> switchUserNow(id));
 }
 async function switchUserNow(id){
   if(currentUser === id) return;
   currentUser = id;
   await kvSet('currentUser', id);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadIdentity();
-  await loadData();
+  await loadIdentity(id);
+  await loadData(id);
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -637,42 +650,45 @@ let outbox   = [];     // [{key, rev, at}] — что ждёт отправки 
 // люди. Поле, названное accountId, увезло бы эту путаницу в схему базы, и жила бы она
 // там годами; переименовать до первого запроса — правка в десять строк, после — миграция
 // с данными у всех.
-async function loadIdentity(){
+async function loadIdentity(ownerId = currentUser){
+  const ownerKey = key => key + '_' + ownerId;
   let dev = await kvGet('deviceId');
   if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
-  try{ identity = JSON.parse(await kvGet(pk('identity'))) || null; }catch(e){ identity = null; }
-  // прежнее имя поля; у тех, кто успел завести личность, оно уже лежит в хранилище
-  if(identity && !identity.profileId && identity.accountId){
-    identity.profileId = identity.accountId;
-    delete identity.accountId;
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  let nextIdentity = null;
+  try{ nextIdentity = JSON.parse(await kvGet(ownerKey('identity'))) || null; }catch(e){ nextIdentity = null; }
+  if(currentUser !== ownerId) return false;
+  if(nextIdentity && !nextIdentity.profileId && nextIdentity.accountId){
+    nextIdentity.profileId = nextIdentity.accountId;
+    delete nextIdentity.accountId;
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  if(!identity || !identity.profileId){
-    identity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  if(!nextIdentity || !nextIdentity.profileId){
+    nextIdentity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  // Серверный id принадлежит профилю, а локальный id — лишь имя его ключей на этом
-  // устройстве. Запоминаем связь один раз; профиль, приехавший с сервера, наоборот,
-  // диктует identity свой уже существующий id.
-  const owner = curUser();
-  if(owner && owner.profileId && owner.profileId !== identity.profileId){
-    identity.profileId = owner.profileId;
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  const owner = users.find(u => u.id === ownerId);
+  if(owner && owner.profileId && owner.profileId !== nextIdentity.profileId){
+    nextIdentity.profileId = owner.profileId;
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   } else if(owner && !owner.profileId){
-    owner.profileId = identity.profileId;
+    owner.profileId = nextIdentity.profileId;
     await saveUsers();
   }
-  if(!identity.consents) identity.consents = {};
-  identity.deviceId = dev;
-  // отметки, поставленные до создания профиля, переносим на него — но не затираем
-  // уже существующие: повторное знакомство не должно сдвигать дату первого согласия
-  if(pendingConsents.length){
-    pendingConsents.forEach(({kind, rec}) => { if(!identity.consents[kind]) identity.consents[kind] = rec; });
+  if(!nextIdentity.consents) nextIdentity.consents = {};
+  nextIdentity.deviceId = dev;
+  if(pendingConsents.length && currentUser === ownerId){
+    pendingConsents.forEach(({kind, rec}) => { if(!nextIdentity.consents[kind]) nextIdentity.consents[kind] = rec; });
     pendingConsents = [];
-    await kvSet(pk('identity'), JSON.stringify(identity));
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  try{ docMeta = JSON.parse(await kvGet(pk('docMeta'))) || {}; }catch(e){ docMeta = {}; }
-  try{ outbox  = JSON.parse(await kvGet(pk('outbox')))  || []; }catch(e){ outbox  = []; }
+  let nextMeta = {}, nextOutbox = [];
+  try{ nextMeta = JSON.parse(await kvGet(ownerKey('docMeta'))) || {}; }catch(e){ nextMeta = {}; }
+  try{ nextOutbox = JSON.parse(await kvGet(ownerKey('outbox'))) || []; }catch(e){ nextOutbox = []; }
+  if(currentUser !== ownerId) return false;
+  identity = nextIdentity;
+  docMeta = nextMeta;
+  outbox = nextOutbox;
+  return true;
 }
 async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
 
@@ -958,6 +974,9 @@ function mergeStatsDocs(local, remote, preferRemote){
 }
 
 async function applyRemoteSync(result){
+  return queueProfileState(()=> applyRemoteSyncNow(result));
+}
+async function applyRemoteSyncNow(result){
   await applyRemoteAccountDocs(result);
   const remote = Array.isArray(result && result.profiles) ? result.profiles : [];
   if(!remote.length) return;
@@ -1095,10 +1114,11 @@ async function applyRemoteSync(result){
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadIdentity();
+  const activeOwner = currentUser;
+  await loadIdentity(activeOwner);
   identity.email = account.email;
   await saveIdentity();
-  await loadData();
+  await loadData(activeOwner);
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -1498,9 +1518,9 @@ async function savePrograms(){
 }
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
-async function loadProgWeights(){
-  progWeights = {};
-  await kvSet(pk('progWeights'), '{}');
+async function loadProgWeights(ownerId = currentUser){
+  await kvSet('progWeights_' + ownerId, '{}');
+  if(currentUser === ownerId) progWeights = {};
 }
 
 function fmtLong(sec){
