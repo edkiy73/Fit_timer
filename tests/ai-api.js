@@ -20,6 +20,18 @@ const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : 
   const overview = await post('/api/admin',{action:'overview'},{'x-admin-key':encodeURIComponent(ADMIN)});
   ok('настройки доступны в общей админке', overview.status === 200 && overview.body.settings.retentionDays === 30);
   const settings = overview.body.settings;
+
+  const adminCreate = await post('/api/admin',{
+    action:'catalog_ai_create',lang:'ru',cat:'power',level:'Средний',min:30,days:3,
+    equipment:'гантели',limitations:'без прыжков',focus:'спина',style:'strength',warmup:'yes',
+    instruction:'тестовая программа'
+  },{'x-admin-key':encodeURIComponent(ADMIN)});
+  ok('админка создаёт полную программу через ИИ',
+    adminCreate.status === 200
+    && adminCreate.body.locale
+    && adminCreate.body.locale.name === 'Тестовая программа'
+    && /УПРАЖНЕНИЕ: Приседания/.test(adminCreate.body.locale.text || ''));
+
   settings.limits.heavy = 1;
   const saved = await post('/api/admin',{action:'save_settings',settings},{'x-admin-key':encodeURIComponent(ADMIN)});
   ok('лимиты сохраняются', saved.status === 200 && saved.body.settings.limits.heavy === 1);

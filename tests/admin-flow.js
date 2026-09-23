@@ -14,7 +14,7 @@ catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); pr
 
 const BASE = process.env.FIT_URL || 'http://localhost:8124';
 const ADMIN = process.env.ADMIN_KEY || 'testadminkey123456';
-const CHROME = process.env.FIT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const CHROME = process.env.FIT_CHROME || '';
 
 let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
@@ -28,7 +28,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
 }).then(async r => ({s: r.status, j: await r.json().catch(() => ({}))}));
 
 (async () => {
-  const b = await chromium.launch({executablePath: CHROME});
+  const b = await chromium.launch(CHROME ? {executablePath: CHROME} : {});
   const errs = [];
 
   // ---- дверь заперта ----
@@ -138,23 +138,37 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.click('#enter');
   await page.waitForTimeout(900);
   ok('с ключом открывается', await page.isVisible('#app'));
-  await page.click('.tab[data-tab="approved"]');
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
   const listed = await page.textContent('#body');
   ok('на вкладке «В каталоге» видны программы', /Кардио без прыжков/.test(listed));
-  await page.click('.tab[data-tab="trainers"]');
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="trainers"]');
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
-     /последняя активность/.test(await page.textContent('#body')));
-  await page.click('.tab[data-tab="add"]');
+     /активность/.test(await page.textContent('#body')));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="add"]');
   await page.waitForTimeout(300);
+  ok('у новой программы есть полноценный режим создания через ИИ',
+     await page.isVisible('#aiCreateCard') && await page.isVisible('#fAiCreate'));
+  await page.fill('#aiCreateWish','Собери тестовую силовую программу');
+  await page.click('#fAiCreate');
+  await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Тестовая программа'
+    && document.querySelector('#fNameEn')?.value === 'EN Test Program');
+  ok('AI-create заполняет редактор валидной программой и вторым языком',
+     (await page.inputValue('#fNameRu')) === 'Тестовая программа'
+     && (await page.inputValue('#fNameEn')) === 'EN Test Program'
+     && /УПРАЖНЕНИЕ: Приседания/.test(await page.inputValue('#fTextRu')));
   await page.fill('#fTextRu', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
   await page.waitForTimeout(300);
   const slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
   ok('места под фото берутся из текста программы',
      slots.join(',') === 'Приседания,Планка', slots.join(', '));
   ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
-  ok('в админке есть отдельные RU и EN поля', await page.isVisible('#fNameRu') && await page.isVisible('#fNameEn'));
+  ok('в админке есть отдельные RU и EN поля',
+     await page.locator('#fNameRu').count() === 1 && await page.locator('#fNameEn').count() === 1);
   ok('есть ручная вставка перевода без ИИ', await page.isVisible('#fPasteToggle'));
   await page.screenshot({path: __dirname + '/shot-admin.png', fullPage: true});
 
