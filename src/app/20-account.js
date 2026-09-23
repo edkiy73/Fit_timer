@@ -312,14 +312,85 @@ function money(v, cur){
 const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
 
 let APP_UPDATE = null;
+function androidUpdateAction(text, disabled){
+  const action=$('appUpdateBanner')&&$('appUpdateBanner').querySelector('.ub-action');
+  if(action) action.textContent=text||t('update.action');
+  if($('appUpdateNow')){
+    $('appUpdateNow').textContent=text||t('update.action');
+    $('appUpdateNow').disabled=!!disabled;
+  }
+}
+function androidUpdateStatus(text, action, busy){
+  if(!APP_UPDATE)return;
+  const target=APP_UPDATE.required?$('appUpdateGateText'):$('appUpdateText');
+  if(target)target.textContent=text;
+  androidUpdateAction(action, busy);
+}
+function renderAndroidUpdateProgress(event){
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct')return;
+  const status=String((event&&event.status)||'');
+  const progress=Math.max(-1,Math.min(100,Math.round(+(event&&event.progress)||0)));
+  if(status==='downloading'){
+    androidUpdateStatus(progress>=0?t('update.downloading',{progress}):t('update.downloadingUnknown'),progress>=0?progress+'%':'…',true);
+  }else if(status==='verifying'||status==='ready'){
+    androidUpdateStatus(t('update.verifying'),'…',true);
+  }else if(status==='permission'){
+    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+  }else if(status==='installer'){
+    androidUpdateStatus(t('update.installer'),t('update.action'),false);
+  }else if(status==='error'){
+    APP_UPDATE.busy=false;
+    androidUpdateStatus(t('update.failed'),t('update.action'),false);
+  }
+}
+async function finishDirectUpdateResult(result){
+  const status=String((result&&result.status)||'');
+  APP_UPDATE.busy=false;
+  if(status==='permission_required'){
+    APP_UPDATE.awaitingPermission=true;
+    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+    return true;
+  }
+  APP_UPDATE.awaitingPermission=false;
+  if(status==='installer_opened'){
+    androidUpdateStatus(t('update.installer'),t('update.action'),false);
+    return true;
+  }
+  if(status==='missing'||status==='error'||status==='unsupported'){
+    androidUpdateStatus(t('update.failed'),t('update.action'),false);
+    return false;
+  }
+  return true;
+}
 async function openAndroidUpdate(){
-  if(!APP_UPDATE || !APP_UPDATE.url) return false;
+  if(!APP_UPDATE || !APP_UPDATE.url || APP_UPDATE.busy) return false;
+  if(APP_UPDATE.channel==='direct'){
+    if(!window.FitNative || !window.FitNative.installUpdate){
+      androidUpdateStatus(t('update.failed'),t('update.action'),false);
+      return false;
+    }
+    APP_UPDATE.busy=true;
+    androidUpdateStatus(t('update.downloadingUnknown'),'…',true);
+    const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
+    return finishDirectUpdateResult(result);
+  }
   if(window.FitNative && window.FitNative.openExternal){
     const ok = await window.FitNative.openExternal(APP_UPDATE.url);
     if(ok) return true;
   }
   return false;
 }
+async function resumePendingAndroidUpdate(){
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
+  if(!window.FitNative||!window.FitNative.resumeUpdateInstall)return;
+  APP_UPDATE.busy=true;
+  APP_UPDATE.awaitingPermission=false;
+  const result=await window.FitNative.resumeUpdateInstall(APP_UPDATE.latest);
+  await finishDirectUpdateResult(result);
+}
+window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
+window.addEventListener('fitAppForeground',()=>setTimeout(()=>resumePendingAndroidUpdate(),180));
+
 async function applyAndroidUpdateConfig(raw){
   const banner=$('appUpdateBanner'),gate=$('appUpdateGate');
   if(banner) banner.classList.add('hidden');
@@ -328,17 +399,21 @@ async function applyAndroidUpdateConfig(raw){
   if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
 
-  const latest=Math.max(0,Math.round(+raw.latestCode||0));
-  const minimum=Math.max(0,Math.round(+raw.minimumCode||0));
-  if(!latest || !raw.url) return;
   const info=await window.FitNative.getAppInfo();
+  const distribution=String((info&&info.distribution)||'direct')==='store'?'store':'direct';
+  const cfg=distribution==='store'
+    ? ((raw.store&&typeof raw.store==='object')?raw.store:{})
+    : ((raw.direct&&typeof raw.direct==='object')?raw.direct:raw);
+  const latest=Math.max(0,Math.round(+cfg.latestCode||0));
+  const minimum=Math.max(0,Math.round(+cfg.minimumCode||0));
+  if(!latest || !cfg.url) return;
   const current=Math.max(0,Math.round(+(info&&info.build)||0));
   if(!current || current>=latest) return;
 
   const required=minimum>0 && current<minimum;
-  const suffix=raw.latestName ? ' · '+String(raw.latestName) : '';
-  const custom=(appLocale==='en' ? raw.messageEn : raw.messageRu) || '';
-  APP_UPDATE={url:String(raw.url),latest,minimum,current,required};
+  const suffix=cfg.latestName ? ' · '+String(cfg.latestName) : '';
+  const custom=(appLocale==='en' ? cfg.messageEn : cfg.messageRu) || '';
+  APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,awaitingPermission:false};
 
   if(required){
     if($('appUpdateGateTitle')) $('appUpdateGateTitle').textContent=t('update.requiredTitle',{version:suffix});
@@ -349,6 +424,7 @@ async function applyAndroidUpdateConfig(raw){
   }
   if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle');
   if($('appUpdateText')) $('appUpdateText').textContent=custom||t('update.availableText');
+  androidUpdateAction(t('update.action'),false);
   if(banner){
     banner.onclick=()=>openAndroidUpdate();
     banner.classList.remove('hidden');

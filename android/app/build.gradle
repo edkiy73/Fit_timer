@@ -3,6 +3,20 @@ apply plugin: 'com.android.application'
 android {
     namespace = "ru.fittimer.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    flavorDimensions += "distribution"
+    productFlavors {
+        direct {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "true"
+        }
+        play {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "false"
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "ru.fittimer.app"
         minSdkVersion rootProject.ext.minSdkVersion

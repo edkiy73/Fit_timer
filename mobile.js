@@ -18,6 +18,7 @@
   let remotePushListenersInstalled = false;
   let pendingProgramLink = '';
   let appInactiveAt = 0;
+  let updateProgressHandle = null;
 
   function programIdFromAppUrl(value){
     try{
@@ -361,6 +362,14 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installNativeOverrides, {once:true});
   else installNativeOverrides();
 
+  if(native && fitSystem && fitSystem.addListener){
+    try{
+      updateProgressHandle = fitSystem.addListener('updateProgress', event=>{
+        try{ window.dispatchEvent(new CustomEvent('fitUpdateProgress', {detail:event || {}})); }catch(_){}
+      });
+    }catch(_){}
+  }
+
   // visibilitychange в WebView бывает запоздалым. Нативное событие приложения
   // немедленно освобождает микрофон, TTS, media loop, AudioContext и wake lock.
   if(native && plugins.App && plugins.App.addListener){
@@ -394,9 +403,17 @@
     if(!native || !plugins.App || !plugins.App.getInfo) return null;
     try{
       const info=await plugins.App.getInfo();
+      let distribution = '';
+      if(fitSystem && fitSystem.getDistribution){
+        try{
+          const d = await fitSystem.getDistribution();
+          distribution = String((d && d.channel) || '');
+        }catch(_){}
+      }
       return {
         version:String((info&&info.version)||''),
-        build:Number((info&&info.build)||0)||0
+        build:Number((info&&info.build)||0)||0,
+        distribution
       };
     }catch(_){ return null; }
   }
@@ -408,6 +425,25 @@
       try{ await fitSystem.openExternal({url:value}); return true; }catch(_){}
     }
     try{ window.open(value,'_blank','noopener'); return true; }catch(_){ return false; }
+  }
+
+  async function installUpdate(url, expectedVersionCode){
+    if(!native || !fitSystem || !fitSystem.downloadUpdate) return {status:'unsupported'};
+    try{
+      return await fitSystem.downloadUpdate({
+        url:String(url||''),
+        expectedVersionCode:Math.max(0,Math.round(+expectedVersionCode||0))
+      });
+    }catch(_){ return {status:'error'}; }
+  }
+
+  async function resumeUpdateInstall(expectedVersionCode){
+    if(!native || !fitSystem || !fitSystem.resumeUpdateInstall) return {status:'unsupported'};
+    try{
+      return await fitSystem.resumeUpdateInstall({
+        expectedVersionCode:Math.max(0,Math.round(+expectedVersionCode||0))
+      });
+    }catch(_){ return {status:'error'}; }
   }
 
   async function requestReview(){
@@ -431,6 +467,8 @@
     isNative: native,
     getAppInfo,
     openExternal,
+    installUpdate,
+    resumeUpdateInstall,
     requestReview,
     biometricStatus,
     authenticateBiometric,
