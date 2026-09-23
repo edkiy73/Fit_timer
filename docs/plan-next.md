@@ -54,7 +54,8 @@
 
 7. ✅ **Web/PWA cleanup**
    - PWA/service worker/manifest/web PWA icons удалены;
-   - старый Android TWA и `.well-known/assetlinks.json` удалены;
+   - старый Android TWA и его assetlinks-конфигурация удалены;
+   - текущий `.well-known/assetlinks.json` создан заново и используется только для Android App Links `/p/<id>`;
    - остаются обычный web + Android/iOS через Capacitor.
 
 8. ✅ **CI expansion**
@@ -93,7 +94,7 @@
 Удалено как устаревшее:
 - PWA: `sw.js`, `manifest.webmanifest`, PWA web icons, старый `README.txt`;
 - старый `legacy/android-twa/`;
-- старый TWA `.well-known/assetlinks.json`;
+- старый TWA-вариант `.well-known/assetlinks.json` (текущий файл — отдельная App Links конфигурация);
 - `docs/backend-gtm.md`;
 - `docs/fresh-take.md`;
 - `docs/claude-context-archive.md`.
