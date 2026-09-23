@@ -49,6 +49,11 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('тренеры стартового набора заведены', !!lena);
   ok('и у них посчитаны программы', lena && lena.programs > 0, lena && lena.programs);
 
+  const adminUser='admin-smoke@example.com';
+  ok('тестовый пользователь создаётся',(await api('user_create',{email:adminUser})).s===200);
+  const campPreview=await api('campaign_send',{preview:true,kind:'news',push:true,email:false,cursor:0,copy:{ru:{title:'Тест',body:'Тестовое сообщение'},en:{title:'Test',body:'Test message'}}});
+  ok('рассылку можно безопасно просчитать без отправки',campPreview.s===200&&campPreview.j.preview===true,campPreview.j.total);
+
   // ---- добавить своими руками ----
   const NAME = 'От нас ' + Math.random().toString(36).slice(2, 6);
   const добавь = (over) => {
@@ -190,6 +195,43 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(400);
   ok('на вкладке «Тренеры» видна активность',
      /активность/.test(await page.textContent('#body')));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="users"]');
+  await page.waitForTimeout(300);
+  await page.fill('#userSearch',adminUser);
+  const userCard=page.locator('.user-card').filter({hasText:adminUser}).first();
+  await userCard.locator('details.row-menu summary').click();
+  await userCard.locator('[data-premium]').click();
+  ok('Premium выдаётся через inline-панель без prompt',await userCard.locator('[data-user-panel]').isVisible()&&/Ручной Premium/.test(await userCard.locator('[data-user-panel]').textContent()));
+  await userCard.locator('[data-user-panel] [data-close]').click();
+  await userCard.locator('details.row-menu summary').click();
+  await userCard.locator('[data-code]').click();
+  await page.waitForTimeout(150);
+  ok('тестовый код показывается внутри карточки',await userCard.locator('[data-user-panel] code').isVisible());
+  ok('пользователи на 360px не распирают viewport',await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="campaigns"]');
+  await page.waitForTimeout(200);
+  await page.fill('#campRuTitle','Новости');
+  await page.fill('#campRuBody','Тестовая русская рассылка');
+  await page.click('[data-camp-lang="en"]');
+  await page.fill('#campEnTitle','News');
+  await page.fill('#campEnBody','Test English campaign');
+  ok('до preview массовая отправка заблокирована',await page.locator('#campSend').isDisabled());
+  await page.click('#campPreview');
+  await page.waitForFunction(() => !document.querySelector('#campSend').disabled);
+  ok('после preview видны размеры аудитории и отправка доступна',/Проверено/.test(await page.textContent('#campPreviewState')));
+  await page.fill('#campEnBody','Changed English campaign');
+  ok('любое изменение снова блокирует отправку',await page.locator('#campSend').isDisabled());
+  ok('рассылки на 360px не распирают viewport',await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="ai"]');
+  await page.waitForTimeout(200);
+  ok('AI явно тестируется без сохранения',/без сохранения/i.test(await page.textContent('#body')));
+  ok('AI настройки на 360px не распирают viewport',await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="payments"]');
   await page.waitForTimeout(250);

@@ -415,6 +415,17 @@
   .admin-notice{position:fixed;right:18px;bottom:18px;z-index:120;max-width:min(420px,calc(100vw - 24px));padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);box-shadow:0 14px 40px rgba(0,0,0,.28);font-size:13px}
   .admin-notice.ok{border-color:color-mix(in srgb,var(--ok) 55%,var(--line));color:var(--ok)}
   .admin-notice.err{border-color:color-mix(in srgb,var(--danger) 55%,var(--line));color:var(--danger)}
+  .user-action-panel{margin-top:9px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+  .user-action-row{display:flex;gap:6px;flex-wrap:wrap;align-items:end}
+  .user-action-row>div{flex:1;min-width:110px}
+  .test-code-box{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .test-code-box code{font-size:22px;font-weight:800;letter-spacing:.12em}
+  .campaign-preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}
+  .campaign-preview>div{padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--soft)}
+  .campaign-preview b{display:block;font-size:18px}.campaign-preview span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+  .ai-route-state{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+  .ai-route-state>div{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--soft);font-size:11.5px}
+  .ai-route-state b{display:block;margin-bottom:2px}.ai-route-state .bad{color:var(--danger)}
   .payment-summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
   .payment-card.problem{border-color:color-mix(in srgb,var(--danger) 35%,var(--line))}
   .payment-ready.warn{color:var(--danger)}
@@ -439,6 +450,7 @@
     .moderation-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
     .moderation-actions .b{width:100%}
     .editor-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .campaign-preview,.ai-route-state{grid-template-columns:repeat(2,minmax(0,1fr))}
     .sticky-save{padding:8px;background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 28px rgba(0,0,0,.16)}
     .sticky-save .save-state{max-width:none;flex:1}
     .payment-card-head{align-items:flex-start}
@@ -446,7 +458,10 @@
   @media(max-width:520px){
     .payment-inputs{grid-template-columns:1fr}
     .moderation-actions{grid-template-columns:1fr}
-    .editor-review-grid{grid-template-columns:1fr}
+    .editor-review-grid,.campaign-preview,.ai-route-state{grid-template-columns:1fr}
+    .user-action-row{display:grid;grid-template-columns:1fr}
+    .user-action-row>div{min-width:0}
+    .test-code-box{align-items:flex-start;flex-direction:column}
     .sticky-save{align-items:stretch;flex-direction:column}
     .sticky-save .save-actions{width:100%;display:grid;grid-auto-flow:row;grid-template-columns:1fr}
     .sticky-save .save-actions .b{width:100%}
@@ -934,13 +949,23 @@ async function renderUsers(b){
         <div><label>Email нового аккаунта</label><input id="newUserEmail" type="email" placeholder="test@example.com"></div>
         <button class="b ok" id="createUser">Создать</button>
       </div>
+      <span class="save-state" id="createUserState"></span>
     </div>
     <div id="usersList"><div class="empty">Загружаю пользователей…</div></div>`;
 
   $('createUser').onclick=async()=>{
-    const email=$('newUserEmail').value.trim().toLowerCase(); if(!email)return;
-    try{await api('user_create',{email});usersCache=null;await renderUsers(b);}
-    catch(e){alert('Не получилось создать аккаунт: '+e.message);}
+    const email=$('newUserEmail').value.trim().toLowerCase(),state=$('createUserState'),btn=$('createUser');
+    if(!email){state.textContent='Укажи email.';return;}
+    btn.disabled=true;state.textContent='Создаю…';
+    try{
+      const r=await api('user_create',{email});
+      usersCache=null;
+      adminNotice('Аккаунт '+r.email+' готов.');
+      await renderUsers(b);
+    }catch(e){
+      state.textContent='Не получилось: '+e.message;
+      adminNotice('Не получилось создать аккаунт: '+e.message,'err');
+    }finally{if(document.body.contains(btn))btn.disabled=false;}
   };
 
   try{if(!usersCache)usersCache=(await api('users_list')).users||[];}
@@ -959,80 +984,92 @@ async function renderUsers(b){
   const cards=$('userCards');
   const shortDate=v=>v?new Date(v+'T00:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—';
   usersCache.forEach(u=>{
-    const premium=u.premium&&u.sub;
-    const usage=u.aiUsage||{};
-    const limits=usage.limits||{};
+    const premium=u.premium&&u.sub,usage=u.aiUsage||{},limits=usage.limits||{};
+    const provider=premium&&String(u.sub.provider||'server');
+    const managed=provider&&provider!=='admin';
     const card=document.createElement('article');
     card.className='user-card';
     card.dataset.search=((u.email||'')+' '+(u.handle||'')).toLowerCase();
     card.innerHTML=`
       <div class="user-card-head">
-        <div>
-          <div class="user-card-email">${esc(u.email)}</div>
-          <div class="user-card-handle">${u.handle?esc(u.handle):'без ника'}</div>
-        </div>
+        <div><div class="user-card-email">${esc(u.email)}</div><div class="user-card-handle">${u.handle?esc(u.handle):'без ника'} · ${esc((u.locale||'ru').toUpperCase())}</div></div>
         <div>${premium?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}</div>
       </div>
-
-      <div class="td-actions">
-        <details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
-          <button class="positive" data-premium>Выдать Premium</button>
-          ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
-          <button data-code>Тестовый код входа</button>
-          <button class="danger" data-ai-reset>Сбросить AI-лимиты</button>
-        </div></details>
-      </div>
-
+      <div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop">
+        <button class="positive" data-premium>Выдать Premium</button>
+        ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
+        <button data-code>Тестовый код входа</button>
+        <button class="danger" data-ai-reset>Сбросить AI-лимиты</button>
+      </div></details></div>
       <div class="user-meta">
         <div class="user-meta-item"><b>${esc(fmtDay(u.seen||u.since))}</b><span>активность</span></div>
         <div class="user-meta-item"><b>${esc(fmtDay(u.since))}</b><span>создан</span></div>
         <div class="user-meta-item"><b>${u.devices||0}</b><span>устройств</span></div>
         <div class="user-meta-item"><b>${u.pushDevices||0}</b><span>push</span></div>
       </div>
-
-      <div class="ai-box">
-        <div class="ai-box-head">
-          <b>AI за месяц</b>
-          <span class="ai-period">${shortDate(usage.periodStart)} — ${shortDate(usage.periodEnd)}</span>
-        </div>
+      <div class="ai-box"><div class="ai-box-head"><b>AI за месяц</b><span class="ai-period">${shortDate(usage.periodStart)} — ${shortDate(usage.periodEnd)}</span></div>
         <div class="ai-stats">
           <div class="ai-stat"><strong>${usage.programs||0} / ${limits.programs||0}</strong><span>программы</span></div>
           <div class="ai-stat"><strong>${usage.exercises||0} / ${limits.exercises||0}</strong><span>упражнения</span></div>
           <div class="ai-stat"><strong>${usage.images||0} / ${limits.images||0}</strong><span>картинки</span></div>
         </div>
       </div>
+      ${premium?'<div class="cell-sub" style="margin-top:8px">Premium до '+esc(fmtDay(u.sub.until))+' · '+esc(provider)+(managed?' · управляется платёжным провайдером':'')+'</div>':''}
+      <div class="user-action-panel" data-user-panel hidden></div>`;
 
-      ${premium?`<div class="cell-sub" style="margin-top:8px">Premium до ${esc(fmtDay(u.sub.until))} · ${esc(u.sub.provider||'server')}</div>`:''}`;
-
-    card.querySelector('[data-premium]').onclick=async()=>{
-      const raw=prompt('На сколько дней выдать Premium?','30'); if(raw===null)return;
-      const days=Math.max(1,Math.min(3650,Math.round(+raw||0))); if(!days)return alert('Укажи количество дней.');
-      try{await api('user_premium',{email:u.email,days});usersCache=null;await renderUsers(b);}
-      catch(e){alert('Не получилось выдать Premium: '+e.message);}
+    const panel=card.querySelector('[data-user-panel]');
+    const closePanel=()=>{panel.hidden=true;panel.innerHTML='';};
+    const grant=card.querySelector('[data-premium]');
+    grant.onclick=()=>{
+      panel.hidden=false;
+      panel.innerHTML='<b>Ручной Premium</b><p class="compact-note" style="margin:5px 0 9px">'
+        +(managed?'У пользователя уже активна подписка через '+esc(provider)+'. Ручная выдача заменит серверную запись подписки — используй только для поддержки.':'Срок считается от сегодняшней даты.')
+        +'</p><div class="user-action-row">'
+        +'<button class="b" data-days="30">30 дней</button><button class="b" data-days="90">90 дней</button><button class="b" data-days="365">1 год</button>'
+        +'<div><label>Свой срок, дней</label><input type="number" min="1" max="3650" value="30" data-custom-days></div><button class="b ok" data-custom-grant>Выдать</button>'
+        +'<button class="b quiet" data-close>Отмена</button></div>';
+      panel.querySelectorAll('[data-days]').forEach(btn=>btn.onclick=()=>grantUserPremium(u,+btn.dataset.days,card,managed));
+      panel.querySelector('[data-custom-grant]').onclick=()=>{
+        const days=Math.max(1,Math.min(3650,Math.round(+panel.querySelector('[data-custom-days]').value||0)));
+        if(days)grantUserPremium(u,days,card,managed);
+      };
+      panel.querySelector('[data-close]').onclick=closePanel;
     };
 
     const rev=card.querySelector('[data-revoke]');
     if(rev)rev.onclick=async()=>{
-      if(!confirm('Снять Premium у '+u.email+'?'))return;
-      try{await api('user_premium',{email:u.email,revoke:true});usersCache=null;await renderUsers(b);}
-      catch(e){alert('Не получилось снять Premium: '+e.message);}
+      const suffix=managed?' Это подписка '+provider+'; действие удалит её серверный статус.':'';
+      if(!confirm('Снять Premium у '+u.email+'?'+suffix))return;
+      rev.disabled=true;
+      try{
+        await api('user_premium',{email:u.email,revoke:true});
+        usersCache=null;adminNotice('Premium снят у '+u.email+'.');await renderUsers(b);
+      }catch(e){adminNotice('Не получилось снять Premium: '+e.message,'err');rev.disabled=false;}
     };
 
-    card.querySelector('[data-code]').onclick=async()=>{
+    card.querySelector('[data-code]').onclick=async e=>{
+      const btn=e.currentTarget;btn.disabled=true;
+      panel.hidden=false;panel.innerHTML='<span class="muted">Создаю одноразовый код…</span>';
       try{
         const r=await api('user_test_code',{email:u.email});
-        const msg='Email: '+r.email+'\nКод: '+r.code+'\nДействует '+r.expiresMinutes+' минут и только один раз.';
-        try{await navigator.clipboard.writeText(r.code);alert(msg+'\n\nКод скопирован.');}catch(_){alert(msg);}
-      }catch(e){alert('Не получилось создать код: '+e.message);}
+        panel.innerHTML='<div class="test-code-box"><div><b>Тестовый код</b><div class="compact-note">'+esc(r.email)+' · '+r.expiresMinutes+' минут · одно использование</div></div>'
+          +'<code>'+esc(r.code)+'</code><button class="b ok" data-copy-code>Скопировать</button><button class="b quiet" data-close>Закрыть</button></div>';
+        panel.querySelector('[data-copy-code]').onclick=async()=>{
+          try{await navigator.clipboard.writeText(r.code);adminNotice('Код скопирован.');}
+          catch(_){adminNotice('Буфер обмена недоступен.','err');}
+        };
+        panel.querySelector('[data-close]').onclick=closePanel;
+      }catch(err){panel.innerHTML='<span class="danger-text">Не получилось создать код: '+esc(err.message)+'</span>';}
+      finally{btn.disabled=false;}
     };
 
-    card.querySelector('[data-ai-reset]').onclick=async()=>{
-      if(!confirm('Сбросить AI-счётчики у '+u.email+' за текущий месяц?\n\nПосле этого пользователь снова получит полный месячный лимит.'))return;
+    card.querySelector('[data-ai-reset]').onclick=async e=>{
+      if(!confirm('Сбросить AI-счётчики у '+u.email+' за текущий месяц? После этого снова будет доступен полный лимит.'))return;
+      const btn=e.currentTarget;btn.disabled=true;
       try{
-        await api('user_ai_reset',{email:u.email});
-        usersCache=null;
-        await renderUsers(b);
-      }catch(e){alert('Не получилось сбросить AI-лимиты: '+e.message);}
+        await api('user_ai_reset',{email:u.email});usersCache=null;
+        adminNotice('AI-лимиты сброшены.');await renderUsers(b);
+      }catch(err){adminNotice('Не получилось сбросить AI-лимиты: '+err.message,'err');btn.disabled=false;}
     };
 
     cards.appendChild(card);
@@ -1044,8 +1081,21 @@ async function renderUsers(b){
     cards.querySelectorAll('.user-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
   };
 }
+async function grantUserPremium(u,days,card,managed){
+  if(managed&&!confirm('У '+u.email+' активная подписка через '+(u.sub&&u.sub.provider||'провайдера')+'. Заменить её ручным Premium на '+days+' дней?'))return;
+  const panel=card.querySelector('[data-user-panel]');
+  panel.querySelectorAll('button,input').forEach(x=>x.disabled=true);
+  try{
+    await api('user_premium',{email:u.email,days});
+    usersCache=null;adminNotice('Premium выдан на '+days+' дней.');await renderUsers($('body'));
+  }catch(e){
+    adminNotice('Не получилось выдать Premium: '+e.message,'err');
+    panel.querySelectorAll('button,input').forEach(x=>x.disabled=false);
+  }
+}
 
 let campaignLang='ru';
+let campaignPreviewKey='';
 function setCampaignLang(lang){
   campaignLang=lang==='en'?'en':'ru';
   document.querySelectorAll('[data-camp-lang]').forEach(x=>x.classList.toggle('on',x.dataset.campLang===campaignLang));
@@ -1053,201 +1103,127 @@ function setCampaignLang(lang){
   if(ru)ru.hidden=campaignLang!=='ru';
   if(en)en.hidden=campaignLang!=='en';
 }
-
-async function renderAnalytics(b){
-  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Без email, имён, программ и фото.')
-    + '<div class="empty">Загрузка…</div>';
-  try{
-    if(!analyticsCache) analyticsCache=(await api('analytics_stats',{days:30})).stats;
-  }catch(e){
-    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.')
-      + '<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
-    return;
-  }
-  const a=analyticsCache||{}, t=a.totals||{}, cohort=a.cohort||{};
-  const rows=[
-    ['Первый запуск','install'],
-    ['Завершили onboarding','onboarding_complete'],
-    ['Создали аккаунт','account_created'],
-    ['Добавили программу','program_added'],
-    ['Начали тренировку','workout_started'],
-    ['Завершили тренировку','workout_completed'],
-    ['Дошли до 3 тренировок','workout_3'],
-    ['Дошли до 5 тренировок','workout_5'],
-    ['Дошли до 10 тренировок','workout_10'],
-    ['Успешно использовали AI','ai_used'],
-    ['Открыли Premium','premium_opened'],
-    ['Начали покупку','purchase_started']
-  ];
-  const val=k=>t[k]||{count:0,unique:0};
-  const base=Math.max(1,(cohort.devices||val('install').unique||0));
-  const cards=rows.map(([label,key])=>{
-    const v=val(key), pct=key==='install'?100:Math.round(v.unique/base*100);
-    return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
-      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div>'
-      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
-  }).join('');
-  const dayRows=(a.rows||[]).slice().reverse().map(r=>{
-    const e=r.events||{};
-    const u=k=>((e[k]||{}).unique||0);
-    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td>'
-      +'<td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td>'
-      +'<td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td>'
-      +'<td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
-  }).join('');
-  const p=cohort.platform||{}, l=cohort.locale||{};
-  const cohortInfo='<div class="status-row">'
-    +'<span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span>'
-    +'<span class="status-chip">Android '+(p.android||0)+'</span>'
-    +'<span class="status-chip">iOS '+(p.ios||0)+'</span>'
-    +'<span class="status-chip">Web '+(p.web||0)+'</span>'
-    +'<span class="status-chip">RU '+(l.ru||0)+'</span>'
-    +'<span class="status-chip">EN '+(l.en||0)+'</span></div>';
-  b.innerHTML=pageHead('Аналитика','Exact unique = один анонимный device hash за весь выбранный период. Первый запуск у старых пользователей означает первый запуск после появления аналитики.')
-    +cohortInfo
-    +'<div class="entity-grid">'+cards+'</div>'
-    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
-}
-
-async function renderErrors(b){
-  b.innerHTML=pageHead('Ошибки','Непойманные JS/WebView ошибки за последние 90 дней. Пользовательские данные не сохраняются.',
-    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
-    +'<div class="empty">Загрузка…</div>';
-  $('errorsRefresh').onclick=()=>renderErrors(b);
-  let d;
-  try{d=(await api('client_errors')).stats||{};}catch(e){
-    b.innerHTML=pageHead('Ошибки','Не удалось загрузить диагностику.',
-      '<div class="dashboard-actions"><button class="b" id="errorsRetry">Повторить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
-      +'<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
-    $('errorsRetry').onclick=()=>renderErrors(b);
-    return;
-  }
-  const list=d.items||[];
-  const head=pageHead('Ошибки','Сгруппировано по сигнатуре · всего срабатываний: '+(+d.total||0),
-    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>');
-  if(!list.length){
-    b.innerHTML=head+'<div class="empty">Ошибок не зафиксировано.</div>';
-    $('errorsRefresh').onclick=()=>renderErrors(b);
-    return;
-  }
-  b.innerHTML=head
-    +'<div class="toolbar"><div class="grow"><input id="errorSearch" type="search" placeholder="Поиск по сообщению, сборке или сигнатуре"></div><span class="status-chip">'+list.length+' групп</span></div>'
-    +'<div class="entity-grid" id="errorCards"></div>';
-  $('errorsRefresh').onclick=()=>renderErrors(b);
-  const box=$('errorCards');
-  list.forEach(x=>{
-    const sig=String(x.sig||'');
-    const detail=[
-      (x.name||'Error')+': '+(x.message||''),
-      'sig: '+sig,
-      'first: '+(x.first||'—'),
-      'last: '+(x.last||'—'),
-      'count: '+((+x.count)||0),
-      'build: '+(x.build||'—'),
-      'platform: '+JSON.stringify(x.platform||{}),
-      x.stack?'stack: '+x.stack:''
-    ].filter(Boolean).join('\n');
-    const card=document.createElement('article');
-    card.className='entity-card';
-    card.dataset.search=((x.name||'')+' '+(x.message||'')+' '+(x.build||'')+' '+sig).toLowerCase();
-    card.innerHTML='<div class="entity-card-head"><div style="min-width:0;flex:1">'
-      +'<div class="entity-card-title">'+esc((x.name||'Error')+': '+(x.message||''))+'</div>'
-      +'<div class="entity-card-sub">Сигнатура '+esc(sig||'—')+' · последняя '+esc(fmtDay(x.last))+(x.build?' · сборка '+esc(x.build):'')+'</div></div></div>'
-      +'<div class="entity-meta"><div><b>'+((+x.count)||0)+'</b><span>срабатываний</span></div>'
-      +'<div><b>'+(((x.platform||{}).android)||0)+'</b><span>Android</span></div>'
-      +'<div><b>'+((((x.platform||{}).ios)||0)+(((x.platform||{}).web)||0))+'</b><span>iOS / Web</span></div></div>'
-      +(x.stack?'<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:10px 0 0">'+esc(x.stack)+'</pre>':'')
-      +'<div class="moderation-actions"><button class="b" data-copy>Скопировать детали</button>'
-      +'<button class="b quiet" data-resolve>Считать исправленной</button></div>';
-    card.querySelector('[data-copy]').onclick=async()=>{
-      try{await navigator.clipboard.writeText(detail);adminNotice('Детали ошибки скопированы.');}
-      catch(_){adminNotice('Буфер обмена недоступен.','err');}
-    };
-    card.querySelector('[data-resolve]').onclick=async e=>{
-      if(!sig||!confirm('Убрать эту группу ошибок из списка? Если ошибка повторится, она появится снова.'))return;
-      const btn=e.currentTarget,old=btn.textContent;btn.disabled=true;btn.textContent='Убираю…';
-      try{
-        await api('client_error_clear',{sig});
-        card.remove();
-        adminNotice('Ошибка отмечена исправленной.');
-        if(!box.children.length)renderErrors(b);
-      }catch(err){
-        btn.disabled=false;btn.textContent=old;
-        adminNotice('Не получилось убрать ошибку: '+err.message,'err');
-      }
-    };
-    box.appendChild(card);
-  });
-  $('errorSearch').oninput=e=>{
-    const q=e.target.value.trim().toLowerCase();
-    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+function campaignPayload(){
+  return {
+    kind:$('campKind').value,
+    push:$('campPush').checked,
+    email:$('campEmail').checked,
+    copy:{
+      ru:{title:$('campRuTitle').value.trim(),body:$('campRuBody').value.trim()},
+      en:{title:$('campEnTitle').value.trim(),body:$('campEnBody').value.trim()}
+    }
   };
 }
-
+function campaignKey(p){return JSON.stringify(p);}
+function invalidateCampaignPreview(){
+  campaignPreviewKey='';
+  const btn=$('campSend');if(btn)btn.disabled=true;
+  const state=$('campPreviewState');if(state)state.textContent='Изменилаcь кампания — проверь аудиторию заново.';
+}
+async function loadCampaignHealth(){
+  const el=$('campHealth');if(!el)return;
+  try{
+    const h=await fetch('/api/health?format=json',{cache:'no-store'}).then(r=>r.json());
+    const mail=h.services&&h.services.mail||{},push=h.services&&h.services.push||{};
+    el.innerHTML='<span class="status-chip '+(push.android||push.ios?'ok':'')+'">Push · '+(push.android||push.ios?'настроен':'не настроен')+'</span>'
+      +'<span class="status-chip '+(mail.configured?'ok':'')+'">Email · '+(mail.configured?'настроен':'не настроен')+'</span>';
+  }catch(_){el.textContent='Не удалось проверить каналы.';}
+}
 function renderCampaigns(b){
-  b.innerHTML=pageHead('Рассылки','Собери сообщение, проверь оба языка и запусти одну кампанию.')+`
+  campaignPreviewKey='';
+  b.innerHTML=pageHead('Рассылки','Сначала проверь аудиторию, затем отправляй неизменённую кампанию.')+`
+    <div class="toolbar" id="campHealth"><span class="muted">Проверяю каналы…</span></div>
     <div class="form-card">
       <div class="form-card-head"><h3>Доставка</h3></div>
       <div class="form-card-body">
         <div class="field-grid">
           <div><label>Тип сообщения</label><select id="campKind"><option value="news">Новости / обновления</option><option value="offers">Акция / Premium</option></select></div>
-          <div><label>Каналы</label><div class="channel-row">
-            <label><input id="campPush" type="checkbox" checked> Push</label>
-            <label><input id="campEmail" type="checkbox"> Email fallback</label>
-          </div></div>
+          <div><label>Каналы</label><div class="channel-row"><label><input id="campPush" type="checkbox" checked> Push</label><label><input id="campEmail" type="checkbox"> Email fallback</label></div></div>
         </div>
-        <p class="compact-note">Если доступны оба канала, сначала используется Push, Email — только как fallback.</p>
+        <p class="compact-note">Push идёт первым. Email используется только если Push для аккаунта недоступен. Для предложений действует 14-дневный cooldown.</p>
       </div>
     </div>
     <div class="form-card">
-      <div class="form-card-head">
-        <h3>Сообщение</h3>
-        <div class="seg">
-          <button type="button" data-camp-lang="ru" class="${campaignLang==='ru'?'on':''}">RU</button>
-          <button type="button" data-camp-lang="en" class="${campaignLang==='en'?'on':''}">EN</button>
-        </div>
-      </div>
+      <div class="form-card-head"><h3>Сообщение</h3><div class="seg">
+        <button type="button" data-camp-lang="ru" class="${campaignLang==='ru'?'on':''}">RU</button>
+        <button type="button" data-camp-lang="en" class="${campaignLang==='en'?'on':''}">EN</button>
+      </div></div>
       <div class="form-card-body">
-        <div id="campPaneRu" class="lang-pane"${campaignLang==='ru'?'':' hidden'}>
-          <div class="field-grid">
-            <div class="wide"><label>Заголовок</label><input id="campRuTitle" maxlength="100" placeholder="Что нового"></div>
-            <div class="wide"><label>Текст</label><textarea id="campRuBody" class="compact-text" maxlength="1000" placeholder="Коротко и по делу"></textarea></div>
-          </div>
-        </div>
-        <div id="campPaneEn" class="lang-pane"${campaignLang==='en'?'':' hidden'}>
-          <div class="field-grid">
-            <div class="wide"><label>Title</label><input id="campEnTitle" maxlength="100" placeholder="What's new"></div>
-            <div class="wide"><label>Text</label><textarea id="campEnBody" class="compact-text" maxlength="1000" placeholder="Short and clear"></textarea></div>
-          </div>
-        </div>
+        <div id="campPaneRu" class="lang-pane"${campaignLang==='ru'?'':' hidden'}><div class="field-grid">
+          <div class="wide"><label>Заголовок</label><input id="campRuTitle" maxlength="100" placeholder="Что нового"></div>
+          <div class="wide"><label>Текст</label><textarea id="campRuBody" class="compact-text" maxlength="1000" placeholder="Коротко и по делу"></textarea></div>
+        </div></div>
+        <div id="campPaneEn" class="lang-pane"${campaignLang==='en'?'':' hidden'}><div class="field-grid">
+          <div class="wide"><label>Title</label><input id="campEnTitle" maxlength="100" placeholder="What's new"></div>
+          <div class="wide"><label>Text</label><textarea id="campEnBody" class="compact-text" maxlength="1000" placeholder="Short and clear"></textarea></div>
+        </div></div>
       </div>
     </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Аудитория перед отправкой</h3><button class="b" id="campPreview">Проверить аудиторию</button></div>
+      <div class="form-card-body"><div class="campaign-preview" id="campPreviewStats">
+        <div><b>—</b><span>аккаунтов</span></div><div><b>—</b><span>получат Push</span></div><div><b>—</b><span>получат Email</span></div><div><b>—</b><span>пропущено</span></div>
+      </div><p class="compact-note" id="campPreviewState">Отправка станет доступна после проверки текущего текста и каналов.</p></div>
+    </div>
     <p class="muted" id="campState"></p>
-    <div class="sticky-save"><span class="save-state">Нужны заполненные RU и EN</span><div class="save-actions"><button class="b ok" id="campSend">Отправить рассылку</button></div></div>`;
+    <div class="sticky-save"><span class="save-state">Предпросмотр обязателен перед массовой отправкой</span><div class="save-actions"><button class="b ok" id="campSend" disabled>Отправить рассылку</button></div></div>`;
   document.querySelectorAll('[data-camp-lang]').forEach(x=>x.onclick=()=>setCampaignLang(x.dataset.campLang));
+  ['campKind','campPush','campEmail','campRuTitle','campRuBody','campEnTitle','campEnBody'].forEach(id=>{
+    $(id).addEventListener(id.startsWith('camp')&&['campPush','campEmail','campKind'].includes(id)?'change':'input',invalidateCampaignPreview);
+  });
+  $('campPreview').onclick=previewCampaign;
   $('campSend').onclick=sendCampaign;
+  loadCampaignHealth();
+}
+function validateCampaign(p,state){
+  if(!p.copy.ru.title||!p.copy.ru.body||!p.copy.en.title||!p.copy.en.body){if(state)state.textContent='Заполни RU и EN тексты.';return false;}
+  if(!p.push&&!p.email){if(state)state.textContent='Выбери хотя бы один канал.';return false;}
+  return true;
+}
+async function previewCampaign(){
+  const p=campaignPayload(),btn=$('campPreview'),state=$('campPreviewState');
+  if(!validateCampaign(p,state))return;
+  btn.disabled=true;state.textContent='Считаю получателей…';
+  let cursor=0,total=0,push=0,email=0,skipped=0;
+  try{
+    do{
+      const r=await api('campaign_send',Object.assign({},p,{preview:true,cursor}));
+      cursor=r.cursor;total=r.total;push+=r.pushEligible||0;email+=r.emailEligible||0;skipped+=r.skipped||0;
+      if(r.done)break;
+    }while(true);
+    const vals=[total,push,email,skipped];
+    [...$('campPreviewStats').children].forEach((el,i)=>el.querySelector('b').textContent=vals[i]);
+    campaignPreviewKey=campaignKey(p);
+    $('campSend').disabled=false;
+    state.textContent='✓ Проверено. Изменение текста, типа или каналов потребует новой проверки.';
+    adminNotice('Аудитория рассчитана: '+(push+email)+' получателей.');
+  }catch(e){
+    state.textContent='Не получилось проверить аудиторию: '+e.message;
+    adminNotice(state.textContent,'err');
+  }finally{btn.disabled=false;}
 }
 async function sendCampaign(){
-  const btn=$('campSend'),state=$('campState');
-  const copy={
-    ru:{title:$('campRuTitle').value.trim(),body:$('campRuBody').value.trim()},
-    en:{title:$('campEnTitle').value.trim(),body:$('campEnBody').value.trim()}
-  };
-  if(!copy.ru.title||!copy.ru.body||!copy.en.title||!copy.en.body){alert('Заполни RU и EN тексты.');return;}
-  if(!$('campPush').checked&&!$('campEmail').checked){alert('Выбери хотя бы один канал.');return;}
-  if(!confirm('Запустить рассылку?'))return;
+  const btn=$('campSend'),state=$('campState'),p=campaignPayload();
+  if(!validateCampaign(p,state))return;
+  if(campaignPreviewKey!==campaignKey(p)){invalidateCampaignPreview();adminNotice('Сначала проверь текущую аудиторию.','err');return;}
+  const stats=[...$('campPreviewStats').querySelectorAll('b')].map(x=>x.textContent);
+  if(!confirm('Отправить эту рассылку?\n\nАккаунтов: '+stats[0]+'\nPush: '+stats[1]+'\nEmail: '+stats[2]+'\nПропущено: '+stats[3]))return;
   btn.disabled=true;
   let cursor=0,total=0,pushSent=0,emailSent=0,skipped=0,failed=0;
   try{
     do{
-      const r=await api('campaign_send',{kind:$('campKind').value,push:$('campPush').checked,email:$('campEmail').checked,copy,cursor});
+      const r=await api('campaign_send',Object.assign({},p,{cursor}));
       cursor=r.cursor;total=r.total;pushSent+=r.pushSent||0;emailSent+=r.emailSent||0;skipped+=r.skipped||0;failed+=r.failed||0;
-      state.textContent=`Обработано ${Math.min(cursor,total)} / ${total} · Push ${pushSent} · Email ${emailSent} · пропущено ${skipped} · ошибок ${failed}`;
+      state.textContent='Обработано '+Math.min(cursor,total)+' / '+total+' · Push '+pushSent+' · Email '+emailSent+' · пропущено '+skipped+' · ошибок '+failed;
       if(r.done)break;
     }while(true);
     state.textContent+=' · готово';
-  }catch(e){alert('Рассылка остановлена: '+e.message);}
-  finally{btn.disabled=false;}
+    campaignPreviewKey='';
+    adminNotice('Рассылка завершена. Push '+pushSent+', Email '+emailSent+'.');
+  }catch(e){
+    state.textContent='Рассылка остановлена: '+e.message;
+    adminNotice(state.textContent,'err');
+  }finally{btn.disabled=true;}
 }
 
 function settingsClone(){
@@ -1278,77 +1254,103 @@ function routePair(s,type,which){
     <input id="${type}_${which}_model" value="${esc(x.model||'')}" maxlength="100" placeholder="model">
   </div>`;
 }
+function aiProviderReady(name){return !!(data.providers&&data.providers[name]);}
+function aiRouteProblem(settings,type){
+  const route=settings[type]||{},primary=route.primary||{},backup=route.backup||{};
+  const problems=[];
+  if(!primary.model)problems.push(type+': не указана основная модель');
+  if(!backup.model)problems.push(type+': не указана резервная модель');
+  if(!aiProviderReady(primary.provider))problems.push(type+': нет ключа '+primary.provider+' для основной модели');
+  return problems;
+}
+function updateAIRouteReadiness(){
+  const box=$('aiRouteState');if(!box)return;
+  const s=aiSettingsFromForm();
+  const row=(type,label)=>{
+    const r=s[type]||{},p=r.primary||{},b=r.backup||{};
+    const pOk=!!p.model&&aiProviderReady(p.provider),bOk=!!b.model&&aiProviderReady(b.provider);
+    return '<div><b>'+esc(label)+'</b><span class="'+(pOk?'':'bad')+'">Основной: '+esc(p.provider||'—')+' / '+esc(p.model||'модель не указана')+' · '+(aiProviderReady(p.provider)?'ключ есть':'нет ключа')+'</span>'
+      +'<br><span class="'+(bOk?'':'bad')+'">Резерв: '+esc(b.provider||'—')+' / '+esc(b.model||'модель не указана')+' · '+(aiProviderReady(b.provider)?'ключ есть':'нет ключа')+'</span></div>';
+  };
+  box.innerHTML=row('text','Текст')+row('image','Изображения');
+}
 function renderAI(b){
   const s=data.settings||{},lim=s.limits||{};
-  const stat=(name,ok)=>`<span class="status-chip ${ok?'ok':''}">${name} · ${ok?'подключён':'нет ключа'}</span>`;
-  b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium.')+`
-    <div class="toolbar">
-      ${stat('Gemini',data.providers&&data.providers.gemini)}
-      ${stat('OpenAI',data.providers&&data.providers.openai)}
+  const stat=(name,ok)=>'<span class="status-chip '+(ok?'ok':'')+'">'+name+' · '+(ok?'ключ есть':'нет ключа')+'</span>';
+  b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium. Тесты не меняют production-настройки.')+`
+    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}
       <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
     </div>
     <div class="form-card">
-      <div class="form-card-head"><h3>Маршрутизация</h3></div>
+      <div class="form-card-head"><div><h3>Маршрутизация</h3><div class="cell-sub">«Тест» использует поля ниже, но ничего не сохраняет.</div></div></div>
       <div class="form-card-body">
         <div class="route-table">
           <div class="route-head">Тип</div><div class="route-head">Основной</div><div class="route-head">Резервный</div>
           <div class="route-label">Текст</div><div>${routePair(s,'text','primary')}</div><div>${routePair(s,'text','backup')}</div>
           <div class="route-label">Картинки</div><div>${routePair(s,'image','primary')}</div><div>${routePair(s,'image','backup')}</div>
         </div>
-        <div class="acts"><button class="b" id="testText">Тест текста</button><button class="b" id="testImage">Тест картинки</button></div>
+        <div class="ai-route-state" id="aiRouteState"></div>
+        <div class="acts"><button class="b" id="testText">Тест текста без сохранения</button><button class="b" id="testImage">Тест картинки без сохранения</button></div>
       </div>
     </div>
-    <div class="form-card">
-      <div class="form-card-head"><h3>Качество изображений</h3></div>
-      <div class="form-card-body">
-        <div class="field-grid">
-          <div><label>Разрешение генерации</label><select id="imageSize">
-            <option value="512"${(s.image&&s.image.size||'1K')==='512'?' selected':''}>512 px (0.5K)</option>
-            <option value="1K"${(s.image&&s.image.size||'1K')==='1K'?' selected':''}>1K</option>
-            <option value="2K"${(s.image&&s.image.size||'1K')==='2K'?' selected':''}>2K</option>
-            <option value="4K"${(s.image&&s.image.size||'1K')==='4K'?' selected':''}>4K</option>
-          </select></div>
-          <div class="wide"><div class="compact-note" style="margin-top:24px">Меньшее разрешение дешевле. Для Gemini 3.1 Flash Image доступны 512, 1K, 2K и 4K. Если выбранная модель не поддерживает размер, провайдер вернёт ошибку.</div></div>
-        </div>
+    <div class="form-card"><div class="form-card-head"><h3>Качество изображений</h3></div><div class="form-card-body">
+      <div class="field-grid"><div><label>Разрешение генерации</label><select id="imageSize">
+        <option value="512"${(s.image&&s.image.size||'1K')==='512'?' selected':''}>512 px (0.5K)</option>
+        <option value="1K"${(s.image&&s.image.size||'1K')==='1K'?' selected':''}>1K</option>
+        <option value="2K"${(s.image&&s.image.size||'1K')==='2K'?' selected':''}>2K</option>
+        <option value="4K"${(s.image&&s.image.size||'1K')==='4K'?' selected':''}>4K</option>
+      </select></div><div class="wide"><div class="compact-note" style="margin-top:24px">Меньшее разрешение дешевле. Если модель не поддерживает размер, тест покажет ошибку до сохранения.</div></div></div>
+    </div></div>
+    <div class="form-card"><div class="form-card-head"><h3>Лимиты на месяц</h3></div><div class="form-card-body">
+      <div class="field-grid four">
+        <div><label>Программы</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+        <div><label>Упражнения</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+        <div><label>Картинки</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+        <div><label>Хранение, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
       </div>
-    </div>
-    <div class="form-card">
-      <div class="form-card-head"><h3>Лимиты на месяц</h3></div>
-      <div class="form-card-body">
-        <div class="field-grid four">
-          <div><label>Программы</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
-          <div><label>Упражнения</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
-          <div><label>Картинки</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
-          <div><label>Хранение, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
-        </div>
-      </div>
-    </div>
+    </div></div>
     <p class="err" id="aiResult"></p>
-    ${saveBar('aiSettings','Сохранить')}`;
+    ${saveBar('aiSettings','Сохранить production-настройки')}`;
   $('aiSettingsSave').onclick=saveAISettings;
   $('testText').onclick=()=>testAIAdmin('text');
   $('testImage').onclick=()=>testAIAdmin('image');
+  ['text_primary_provider','text_primary_model','text_backup_provider','text_backup_model','image_primary_provider','image_primary_model','image_backup_provider','image_backup_model','imageSize']
+    .forEach(id=>$(id).addEventListener($(id).tagName==='SELECT'?'change':'input',updateAIRouteReadiness));
+  updateAIRouteReadiness();
 }
 function aiSettingsFromForm(){
   const s=settingsClone();s.text=s.text||{};s.image=s.image||{};
   s.enabled=$('aiEnabled').checked;
   ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
-    s[type][which]={provider:$(`${type}_${which}_provider`).value,model:$(`${type}_${which}_model`).value.trim()};
+    s[type][which]={provider:$(type+'_'+which+'_provider').value,model:$(type+'_'+which+'_model').value.trim()};
   }));
   s.image.size=$('imageSize').value;
   s.limits={heavy:+$('limHeavy').value,light:+$('limLight').value,image:+$('limImage').value};
   s.retentionDays=+$('retention').value;
   return s;
 }
-async function saveAISettings(){await persistSettings(aiSettingsFromForm(),'aiSettingsState');}
+async function saveAISettings(){
+  const s=aiSettingsFromForm(),problems=[...aiRouteProblem(s,'text'),...aiRouteProblem(s,'image')];
+  if(problems.length){
+    $('aiSettingsState').textContent=problems.join(' · ');
+    adminNotice('ИИ не сохранён: '+problems[0],'err');
+    return;
+  }
+  await persistSettings(s,'aiSettingsState');
+}
 async function testAIAdmin(type){
-  const el=$('aiResult');el.textContent='Проверяю…';
-  const ok=await persistSettings(aiSettingsFromForm(),'aiSettingsState');
-  if(!ok){el.textContent='Сначала нужно сохранить корректные настройки.';return;}
+  const el=$('aiResult'),btn=$(type==='image'?'testImage':'testText'),settings=aiSettingsFromForm();
+  const route=settings[type]||{},primary=route.primary||{};
+  if(!primary.model){el.textContent='✗ Укажи основную модель для '+(type==='image'?'картинок':'текста')+'.';return;}
+  btn.disabled=true;el.textContent='Проверяю текущие поля без сохранения…';
   try{
-    const r=await api('test_ai',{type});
-    el.textContent=`✓ ${r.provider} / ${r.model}${r.fallback?' (резерв)':''}: ${r.result}`;
-  }catch(e){el.textContent='✗ '+(e.detail||e.message);}
+    const r=await api('test_ai',{type,settings});
+    el.textContent='✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · production-настройки не изменены';
+    adminNotice('AI-тест прошёл: '+r.provider+' / '+r.model+'.');
+  }catch(e){
+    el.textContent='✗ '+(e.detail||e.message)+' · настройки не сохранены';
+    adminNotice('AI-тест не прошёл: '+(e.detail||e.message),'err');
+  }finally{btn.disabled=false;}
 }
 
 function renderPricing(b){

@@ -16,6 +16,15 @@ let bad=0;
 const ok=(name,v,extra)=>{if(!v)bad++;console.log((v?'  ok  ':' ПЛОХО')+'  '+name+(extra?' → '+extra:''));};
 
 (async()=>{
+  const before=(await post({action:'overview'})).body.settings;
+  const testSettings=JSON.parse(JSON.stringify(before));
+  testSettings.text.primary={provider:'gemini',model:'temporary-test-model'};
+  testSettings.text.backup={provider:'gemini',model:'temporary-test-model'};
+  const probe=await post({action:'test_ai',type:'text',settings:testSettings});
+  ok('AI test accepts unsaved form settings',probe.status===200&&probe.body.model==='temporary-test-model',JSON.stringify(probe.body));
+  const after=(await post({action:'overview'})).body.settings;
+  ok('AI test does not mutate saved production settings',after.text.primary.model===before.text.primary.model,after.text.primary.model);
+
   const made=await post({
     action:'catalog_ai_create',lang:'ru',cat:'power',level:'Средний',min:30,days:3,
     equipment:'гантели',limitations:'без прыжков',focus:'спина',style:'strength',warmup:'yes',

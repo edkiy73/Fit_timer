@@ -45,6 +45,15 @@ need(html.includes('function moderationState(item)'),'moderation readiness helpe
 need(html.includes('class="moderation-actions"'),'pending submissions need direct moderation actions');
 need(html.includes('function paymentReadiness('),'payment readiness summary is missing');
 need(html.includes('id="editorReviewCard"'),'program editor moderation readiness card is missing');
+need(!html.slice(html.indexOf('function renderUsers(b){'),html.indexOf("let campaignLang='ru';")).includes("prompt("),'user Premium actions must not use browser prompt');
+need(html.includes('function grantUserPremium('),'user Premium inline action flow is missing');
+need(html.includes('data-user-panel'),'user account actions need inline feedback panel');
+need(html.includes('function previewCampaign()'),'campaign audience preview is missing');
+need(html.includes('campaignPreviewKey'),'campaign send must be invalidated when copy/channels change');
+need(api.includes('const preview = !!(body && body.preview)'),'campaign API dry-run is missing');
+need(html.includes('Тест текста без сохранения'),'AI settings must clearly test without saving');
+need(html.includes("api('test_ai',{type,settings})"),'AI test must send unsaved settings directly');
+need(api.includes("body && body.settings ? sanitizeSettings(body.settings)"),'AI test API must use supplied unsaved settings');
 need(html.includes('function moderatePendingFromEditor('),'pending program must be publishable from editor after saving edits');
 need(html.includes("api('client_error_clear'"),'error screen must support resolving one error group');
 need(html.includes('Считать исправленной'),'error screen needs an explicit resolved action');
