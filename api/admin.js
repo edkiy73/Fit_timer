@@ -16,7 +16,7 @@ const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
 const { analyticsStats } = require('../lib/analytics');
-const { clientErrorStats } = require('../lib/diagnostics');
+const { clientErrorStats, clearClientError } = require('../lib/diagnostics');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -530,6 +530,13 @@ module.exports = async (req, res) => {
 
   if(a === 'client_errors'){
     return send(res,200,{ok:true,stats:await clientErrorStats()});
+  }
+
+  if(a === 'client_error_clear'){
+    const sig=clampLine(body&&body.sig,40).toLowerCase();
+    if(!/^[a-f0-9]{20}$/.test(sig)) return fail(res,400,'bad_signature');
+    const cleared=await clearClientError(sig);
+    return send(res,200,{ok:true,cleared});
   }
 
   if(a === 'user_create'){

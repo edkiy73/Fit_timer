@@ -156,6 +156,9 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('это видно в списке', banned && banned.banned === true);
   ok('и возвращается', (await api('unban', {handle: '@lena.doma'})).s === 200);
 
+  const mobileDraft=await api('save_draft',{item:draftItem});
+  ok('для mobile smoke создан черновик редактора',mobileDraft.s===200,mobileDraft.j.id);
+
   // ---- сама страница ----
   const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
@@ -173,6 +176,9 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('с ключом открывается', await page.isVisible('#app'));
   ok('по умолчанию открывается полезный обзор', /Что требует внимания/.test(await page.textContent('#body')));
   ok('мобильная админка не создаёт горизонтальный скролл',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await page.setViewportSize({width:360,height:800});
+  ok('dashboard помещается на узком Android viewport',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="approved"]');
@@ -195,6 +201,25 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
      /нужны|нужен/.test(await page.textContent('#paySettingsState')));
   ok('платежный экран на телефоне не распирает viewport',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="errors"]');
+  await page.waitForTimeout(250);
+  ok('экран ошибок помещается на 360px',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  ok('у диагностики есть быстрый переход в health',await page.locator('a[href="/api/health"]').count()===1);
+
+  await page.evaluate(id=>{
+    localStorage.setItem('adminEditingId',id);
+    localStorage.setItem('adminTab','add');
+  },mobileDraft.j.id);
+  await page.reload({waitUntil:'load'});
+  await page.waitForTimeout(500);
+  ok('черновик открывается как редактор на телефоне',/Черновик программы/.test(await page.textContent('#pageTitle'))||await page.isVisible('#editorReviewCard'));
+  ok('карта готовности редактора видна на мобильном',await page.isVisible('#editorReviewCard'));
+  ok('карта готовности показывает RU, EN и медиа',/Русский/.test(await page.textContent('#editorReviewCard'))&&/English/.test(await page.textContent('#editorReviewCard'))&&/Фото упражнений/.test(await page.textContent('#editorReviewCard')));
+  ok('редактор на 360px не создаёт горизонтальный скролл',
+     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="add"]');
   await page.waitForTimeout(300);
@@ -246,6 +271,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('правкой тоже переключается', edited.s === 200);
   const solo = await fetch(BASE + '/api/catalog?item=' + made.j.id).then(r => r.json());
   ok('и по одной программе метка приезжает', solo.item.pro === true, String(solo.item.pro));
+  await api('delete_draft',{id:mobileDraft.j.id});
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

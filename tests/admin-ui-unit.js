@@ -44,6 +44,11 @@ need(html.includes("fetch('/api/health?format=json'"),'dashboard must consume st
 need(html.includes('function moderationState(item)'),'moderation readiness helper is missing');
 need(html.includes('class="moderation-actions"'),'pending submissions need direct moderation actions');
 need(html.includes('function paymentReadiness('),'payment readiness summary is missing');
+need(html.includes('id="editorReviewCard"'),'program editor moderation readiness card is missing');
+need(html.includes('function moderatePendingFromEditor('),'pending program must be publishable from editor after saving edits');
+need(html.includes("api('client_error_clear'"),'error screen must support resolving one error group');
+need(html.includes('Считать исправленной'),'error screen needs an explicit resolved action');
+need(api.includes("if(a === 'client_error_clear')"),'admin API must clear resolved error groups');
 need(html.includes("problems.push('Google Play:"),'payment settings must validate impossible provider states');
 need(html.includes("el.className='admin-notice "),'admin actions need non-blocking feedback');
 need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');

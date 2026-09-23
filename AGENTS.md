@@ -123,6 +123,18 @@ npm run check:mobile
 - AI provider/model/pricing/limits are server/admin configured; do not bake provider secrets or pricing into APK/web clients.
 - AI has primary/fallback provider support and server-side logging/retention rules; read `docs/ai-runtime.md` before changing it.
 
+### Vercel deployment discipline
+
+The repository uses `vercel.json -> ignoreCommand -> scripts/vercel-ignore.mjs` to conserve Vercel Hobby deployments.
+
+- Changes limited to `.github/`, `.ai/`, `docs/`, `tests/`, `android/`, `ios/`, or agent/readme files should normally be ignored by Vercel automatically.
+- Intermediate commits may include **`[skip vercel]`** when production does not need that individual checkpoint. Use this for test-only fixes or partial work that will be followed by a deploy-enabled commit.
+- **Never put `[skip vercel]` on the final commit of a batch that changes production web/API/admin behavior.** The final production-relevant commit must be deploy-enabled.
+- **`[deploy]`** forces a deployment even when changed paths would otherwise be ignored.
+- Do not disable Git deployments globally just to save quota. Prefer the ignored-build policy above.
+- After using `[skip vercel]`, verify the Vercel status says the build was canceled by the Ignored Build Step rather than treating it as a production deployment.
+- Batch related production changes when practical so one final deploy contains the complete verified slice.
+
 ## 10. Completion standard
 
 A task is complete when:
