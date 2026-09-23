@@ -67,6 +67,13 @@ need(html.includes('class="action-feedback"'),'save/action bars need feedback ne
 need(html.includes("flashActionButton($('releaseSettingsSave'),'Проверь поля'"),'release validation must be shown at the save action');
 need(html.includes("flashActionButton($('priceSettingsSave'),'Проверь цены'"),'pricing validation must be shown at the save action');
 need(!html.slice(html.indexOf('async function saveReleaseSettings(){'),html.indexOf('let editing = null')).includes("alert("),'release form must not report validation through alert');
+need(api.includes("if(a === 'android_release_latest')"),'admin API must expose latest Android release metadata');
+need(api.includes('FitTimer-release.json'),'admin API must read CI-published Android release metadata');
+need(html.includes("api('android_release_latest')"),'release screen must load the latest built APK automatically');
+need(html.includes('Использовать последнюю сборку'),'release screen needs a one-click latest-build action');
+const applyReleaseStart=html.indexOf('function applyLatestAndroidBuild(');
+const applyReleaseEnd=html.indexOf('function renderLatestAndroidBuild',applyReleaseStart);
+need(applyReleaseStart>=0 && !html.slice(applyReleaseStart,applyReleaseEnd).includes("$('relMinimumCode').value="),'latest-build autofill must never raise minimumCode');
 need(html.includes('let analyticsDays=30'),'analytics period selector is missing');
 need(html.includes('<option value="90">90 дней</option>'),'analytics must support 7/30/90 day periods');
 need(html.includes('data-user-panel'),'user account actions need inline feedback panel');

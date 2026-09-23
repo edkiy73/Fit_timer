@@ -270,6 +270,8 @@ Admin → **Релиз Android** controls:
 - update URL — Google Play, RuStore or trusted HTTPS APK page;
 - optional RU/EN message.
 
+The GitHub `latest-apk` release also publishes `FitTimer-release.json` next to the APK. The admin release screen reads that metadata, shows the exact signed `versionCode` / `versionName`, and can fill empty release fields or replace them with the latest build in one click. This only edits the form: the user-facing update banner is not published until **Сохранить релиз** is pressed. Automatic fill never changes `minimumCode`.
+
 Behavior:
 - current build >= latest: nothing is shown;
 - current build < latest: a quiet update banner appears on Home;

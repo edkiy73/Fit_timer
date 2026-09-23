@@ -581,6 +581,7 @@ function translationPrompt(source, from, to){
 
 let KEY = localStorage.getItem('adminKey') || '';
 let data = {pending: [], drafts: [], approved: [], trainers: [], settings: null, providers: {}, billingProviders: {}};
+let latestAndroidBuild = null;
 let usersCache = null;
 let analyticsCache = null;
 let editorDirty = false;
@@ -1675,17 +1676,26 @@ async function savePaymentSettings(){
 
 function renderRelease(b){
   const s=data.settings||{},u=(s.update&&s.update.android)||{};
-  b.innerHTML=pageHead('Релиз Android','Управляет только подсказкой обновления в уже установленном приложении. Значение 0 означает «не использовать».')+`
+  b.innerHTML=pageHead('Релиз Android','Последняя APK определяется автоматически. Публикация обновления происходит только после сохранения этого экрана.')+`
     <div class="form-card">
-      <div class="form-card-head"><h3>Версии</h3></div>
+      <div class="form-card-head">
+        <h3>Последняя собранная APK</h3>
+        <button class="b quiet" id="releaseRefreshBuild" type="button">Проверить снова</button>
+      </div>
+      <div class="form-card-body" id="releaseBuildInfo">
+        <p class="compact-note">Проверяю последнюю release-сборку…</p>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Что показывать пользователям</h3></div>
       <div class="form-card-body">
         <div class="field-grid">
           <div><label>Последний versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(u.latestCode||0)}"></div>
           <div><label>Минимальный versionCode</label><input id="relMinimumCode" type="number" min="0" step="1" value="${esc(u.minimumCode||0)}"></div>
           <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(u.latestName||'')}" placeholder="Например: 1.2.0"></div>
-          <div class="wide"><label>Ссылка обновления</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="https://play.google.com/..."></div>
+          <div class="wide"><label>Ссылка обновления</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="Будет подставлена из последней APK"></div>
         </div>
-        <p class="compact-note">Если текущий build ниже «Последнего» — покажется мягкий баннер. Если ниже «Минимального» — обновление станет обязательным. Не поднимай minimum без необходимости.</p>
+        <p class="compact-note">Если текущий build ниже «Последнего» — покажется мягкий баннер. «Минимальный» оставляй 0 для обычных релизов: значение выше 0 блокирует старые версии до обновления.</p>
         <div class="status-row" id="releasePreview"></div>
       </div>
     </div>
@@ -1700,8 +1710,14 @@ function renderRelease(b){
     </div>
     ${saveBar('releaseSettings','Сохранить релиз')}`;
   $('releaseSettingsSave').onclick=saveReleaseSettings;
-  ['relLatestCode','relMinimumCode','relLatestName','relUrl','relMessageRu','relMessageEn'].forEach(id=>$(id).addEventListener('input',updateReleasePreview));
+  $('releaseRefreshBuild').onclick=()=>loadLatestAndroidBuild(true);
+  ['relLatestCode','relMinimumCode','relLatestName','relUrl','relMessageRu','relMessageEn'].forEach(id=>$(id).addEventListener('input',()=>{
+    updateReleasePreview();
+    renderLatestAndroidBuild();
+  }));
   updateReleasePreview();
+  renderLatestAndroidBuild();
+  loadLatestAndroidBuild();
 }
 function releaseValues(){
   return {
@@ -1718,7 +1734,8 @@ function releaseProblems(v){
   if(v.minimum&&!v.latest)out.push('Сначала укажи последний versionCode');
   if(v.latest&&v.minimum>v.latest)out.push('Минимальная версия выше последней');
   if(v.latest&&!v.url)out.push('Для обновления нужна ссылка');
-  if(v.latest&&(!v.ru||!v.en))out.push('Лучше заполнить RU и EN текст обновления');
+  if(v.latest&&!/^https:\/\//i.test(v.url))out.push('Ссылка обновления должна начинаться с https://');
+  if(v.latest&&(!v.ru||!v.en))out.push('Заполни RU и EN текст обновления');
   return out;
 }
 function updateReleasePreview(){
@@ -1727,6 +1744,63 @@ function updateReleasePreview(){
   el.innerHTML='<span class="status-chip '+(v.latest?'ok':'')+'">Последняя · '+(v.latest||'не задана')+'</span>'
     +'<span class="status-chip '+(hard?'':'ok')+'">'+(hard?'Обязательное обновление от '+v.minimum:'Без обязательного обновления')+'</span>'
     +(problems.length?'<span class="status-chip">'+esc(problems[0])+'</span>':'');
+}
+function applyLatestAndroidBuild(silent){
+  const r=latestAndroidBuild;
+  if(!r||!$('relLatestCode'))return;
+  $('relLatestCode').value=r.versionCode;
+  $('relLatestName').value=r.versionName;
+  $('relUrl').value=r.apkUrl;
+  if(!$('relMessageRu').value.trim())$('relMessageRu').value='Доступна новая версия Fit Timer.';
+  if(!$('relMessageEn').value.trim())$('relMessageEn').value='A new Fit Timer version is available.';
+  updateReleasePreview();
+  renderLatestAndroidBuild();
+  if(!silent)setActionFeedback('releaseSettingsState','Последняя APK подставлена. Нажми «Сохранить релиз», чтобы включить баннер.','busy');
+}
+function renderLatestAndroidBuild(){
+  const box=$('releaseBuildInfo');if(!box)return;
+  if(!latestAndroidBuild){
+    box.innerHTML='<p class="compact-note">Данные сборки ещё не загружены.</p>';
+    return;
+  }
+  const r=latestAndroidBuild,v=releaseValues();
+  const matches=v.latest===r.versionCode&&v.name===r.versionName&&v.url===r.apkUrl;
+  const behind=v.latest>0&&v.latest<r.versionCode;
+  box.innerHTML='<div class="status-row">'
+    +'<span class="status-chip ok">APK · '+esc(r.versionName)+'</span>'
+    +'<span class="status-chip">versionCode · '+esc(r.versionCode)+'</span>'
+    +'<span class="status-chip '+(matches?'ok':'')+'">'+(matches?'Эта сборка выбрана':behind?'Есть более новая сборка':'Не выбрана')+'</span>'
+    +'</div>'
+    +'<p class="compact-note">Собрана '+esc(fmtDay(r.builtAt))+(r.commit?' · commit '+esc(String(r.commit).slice(0,7)):'')+'. Поля ниже можно менять вручную, но для обычного релиза достаточно использовать эту сборку.</p>'
+    +'<div class="action-row"><button class="b '+(matches?'quiet':'ok')+'" id="releaseUseLatest" type="button">'+(matches?'Подставить заново':'Использовать последнюю сборку')+'</button>'
+    +'<a class="b quiet" href="'+esc(r.releaseUrl)+'" target="_blank" rel="noopener">Открыть GitHub release</a></div>';
+  $('releaseUseLatest').onclick=()=>applyLatestAndroidBuild(false);
+}
+async function loadLatestAndroidBuild(force){
+  const box=$('releaseBuildInfo'),btn=$('releaseRefreshBuild');if(!box)return;
+  if(latestAndroidBuild&&!force){
+    renderLatestAndroidBuild();
+    return;
+  }
+  box.innerHTML='<p class="compact-note">Проверяю последнюю release-сборку…</p>';
+  if(btn)btn.disabled=true;
+  try{
+    const out=await api('android_release_latest');
+    latestAndroidBuild=out.release||null;
+    if(!latestAndroidBuild)throw new Error('empty_release');
+    const v=releaseValues();
+    if(!v.latest&&!v.name&&!v.url){
+      applyLatestAndroidBuild(true);
+      setActionFeedback('releaseSettingsState','Поля заполнены по последней APK. Нажми «Сохранить релиз», чтобы включить баннер.','busy');
+    }else{
+      renderLatestAndroidBuild();
+    }
+  }catch(e){
+    latestAndroidBuild=null;
+    box.innerHTML='<p class="compact-note">Не удалось получить последнюю APK. Поля ниже остаются доступны вручную; попробуй «Проверить снова» после завершения Android-сборки.</p>';
+  }finally{
+    if(btn)btn.disabled=false;
+  }
 }
 async function saveReleaseSettings(){
   const v=releaseValues(),problems=releaseProblems(v);
@@ -1741,7 +1815,11 @@ async function saveReleaseSettings(){
   }
   const s=settingsClone();s.update=s.update||{};
   s.update.android={latestCode:v.latest,minimumCode:v.minimum,latestName:v.name,url:v.url,messageRu:v.ru,messageEn:v.en};
-  await persistSettings(s,'releaseSettingsState');
+  if(await persistSettings(s,'releaseSettingsState')){
+    data.settings=s;
+    renderLatestAndroidBuild();
+    adminNotice('Настройки Android-релиза сохранены.');
+  }
 }
 
 let editing = null;

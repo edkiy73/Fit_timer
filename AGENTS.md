@@ -18,6 +18,15 @@ Before editing:
 Do **not** read all of `CLAUDE.md`, `app.js`, `style.css`, or `index.html` by default.
 They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed product history/reference, not the normal first read.
 
+### Repository freshness and concurrent work
+
+- Before starting any coding task, fetch/read the current `main` HEAD and base the work on that exact revision. Never assume a checkout, previous chat, cached file, or earlier connector result is still current.
+- Prefer an isolated feature branch for multi-file work. Do not edit `main` from stale file contents while another agent or person may be working.
+- Immediately before every push, PR merge, or direct write to `main`, refresh `origin/main` (or the GitHub `refs/heads/main` ref) again and compare it with the revision the work started from.
+- If `main` advanced, inspect the intervening commits/diff and reconcile them before publishing. Never force-push, reset, or overwrite a newer file with an older full-file copy just to make the write succeed.
+- For GitHub contents/API edits, re-fetch the target file SHA before updating it. A stale-SHA failure is a signal to re-read and merge, not to retry blindly.
+- After reconciling concurrent changes, rerun the smallest relevant checks before merge/push.
+
 ## 2. Repository facts
 
 - Production branch: `main`.
