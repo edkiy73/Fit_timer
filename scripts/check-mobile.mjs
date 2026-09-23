@@ -9,6 +9,8 @@ const required = [
   'android/app/src/main/AndroidManifest.xml',
   'android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java',
+  'android/app/src/main/java/ru/fittimer/app/FitBiometricPlugin.java',
+  'ios/App/App/FitBiometricPlugin.swift',
   'ios/App/App/Info.plist'
 ];
 for(const file of required) await access(file);
@@ -25,6 +27,7 @@ if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update po
 const mobileBridge = await readFile('mobile.js', 'utf8');
 if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal')) throw new Error('Native update bridge is incomplete');
 if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app review bridge is missing');
+if(!mobileBridge.includes('biometricStatus') || !mobileBridge.includes('authenticateBiometric')) throw new Error('Native biometric bridge is missing');
 if(!mobileBridge.includes('appUrlOpen') || !mobileBridge.includes('getLaunchUrl') || !mobileBridge.includes('consumeProgramLink')) throw new Error('Native App Link bridge is incomplete');
 const manifest = await readFile('android/app/src/main/AndroidManifest.xml', 'utf8');
 if(!manifest.includes('android:autoVerify="true"') || !manifest.includes('android:host="fittimer99.vercel.app"') || !manifest.includes('android:pathPrefix="/p/"')){
@@ -43,6 +46,11 @@ if(!certs.includes('94:97:92:14:41:BD:0E:E1:05:C4:ED:D3:7A:24:A1:E8:88:99:81:E9:
 const fitSystem = await readFile('android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java', 'utf8');
 if(!fitSystem.includes('openExternal') || !fitSystem.includes('Intent.ACTION_VIEW')) throw new Error('Android external update launcher is missing');
 if(!fitSystem.includes('ReviewManagerFactory') || !fitSystem.includes('launchReviewFlow')) throw new Error('Android in-app review flow is missing');
+
+const fitBiometricAndroid = await readFile('android/app/src/main/java/ru/fittimer/app/FitBiometricPlugin.java', 'utf8');
+if(!fitBiometricAndroid.includes('BiometricPrompt') || !fitBiometricAndroid.includes('BIOMETRIC_WEAK')) throw new Error('Android native biometric flow is missing');
+const iosBiometric = await readFile('ios/App/App/FitBiometricPlugin.swift', 'utf8');
+if(!iosBiometric.includes('LocalAuthentication') || !iosBiometric.includes('deviceOwnerAuthenticationWithBiometrics')) throw new Error('iOS native biometric flow is missing');
 
 const androidRoot = await readFile('android/build.gradle', 'utf8');
 const androidApp = await readFile('android/app/build.gradle', 'utf8');
