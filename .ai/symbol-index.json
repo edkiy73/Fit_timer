@@ -345,8 +345,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2642,
-      "chars": 120907,
+      "lines": 2653,
+      "chars": 121560,
       "symbols": [
         "add",
         "ageError",
@@ -751,8 +751,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 589,
-      "chars": 27655,
+      "lines": 590,
+      "chars": 27721,
       "symbols": [
         "add",
         "advance",
@@ -788,8 +788,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2126,
-      "chars": 88554,
+      "lines": 2127,
+      "chars": 88621,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
