@@ -905,6 +905,11 @@ const I18N_RU = {
   'video.defaultProgram': "Программа из видео",
   'video.source': "Источник",
   'video.added': "Готово: добавлена «{name}».",
+  'video.notWorkout': "Похоже, это не тренировочное видео. Я не стал собирать программу, чтобы ничего не придумывать.",
+  'video.noTranscript': "У видео не удалось получить субтитры, а безопасно разобрать его напрямую сейчас нельзя. Попробуй другое видео.",
+  'video.insufficient': "В видео недостаточно подтверждённых данных об упражнениях, повторах или времени. Я не стал заполнять пропуски догадками.",
+  'video.unavailable': "YouTube не дал прочитать это видео. Проверь, что оно публичное и доступно по ссылке.",
+  'video.processingSafe': "Получаю субтитры, проверяю, что это тренировка, и только потом собираю программу.",
   'common.copyFailedRetry': "Не удалось скопировать. Попробуй ещё раз.",
   'common.copied': "✓ Скопировано",
   'common.copyManual': "Не удалось скопировать автоматически. Скопируй вручную:",
@@ -961,7 +966,8 @@ const I18N_RU = {
   'notify.startTitleShort': "Пора тренироваться",
   'notify.todayPlan': "Сегодня по плану «{name}».",
   'notify.waitingTitle': "Тренировка ещё ждёт",
-  'notify.waitingBody': "«{name}» запланирована на сегодня. Можно начать сейчас.",
+  'notify.waitingBodyShort': "«{name}» — сегодня по плану.",
+  'notify.waitingBody': "«{name}» запланирована на сегодня. Открой Fit Timer и начни тренировку, когда будешь готов.",
   'notify.todayTitle': "Сегодня тренировка",
   'notify.todayBody': "По плану — «{name}».",
   'notify.dontForgetTitle': "Не забудь про тренировку",
@@ -2428,6 +2434,11 @@ const I18N_EN = {
   'video.defaultProgram': "Program from video",
   'video.source': "Source",
   'video.added': "Done: “{name}” was added.",
+  'video.notWorkout': "This does not appear to be a workout video. I did not build a program because that would require guessing.",
+  'video.noTranscript': "Captions could not be read, and the video cannot be analyzed safely right now. Try another video.",
+  'video.insufficient': "The video does not contain enough verified exercise, rep, or timing data. I did not fill the gaps by guessing.",
+  'video.unavailable': "YouTube would not let Fit Timer read this video. Check that it is public and available from the link.",
+  'video.processingSafe': "Getting captions, checking that this is a workout, then building the program from verified details.",
   'common.copyFailedRetry': "Couldn’t copy. Try again.",
   'common.copied': "✓ Copied",
   'common.copyManual': "Couldn’t copy automatically. Copy it manually:",
@@ -2484,7 +2495,8 @@ const I18N_EN = {
   'notify.startTitleShort': "Time to work out",
   'notify.todayPlan': "Today’s plan: “{name}”.",
   'notify.waitingTitle': "Your workout is still waiting",
-  'notify.waitingBody': "“{name}” is scheduled for today. You can start now.",
+  'notify.waitingBodyShort': "“{name}” is on today’s plan.",
+  'notify.waitingBody': "“{name}” is scheduled for today. Open Fit Timer and start whenever you’re ready.",
   'notify.todayTitle': "Workout today",
   'notify.todayBody': "On the plan: “{name}”.",
   'notify.dontForgetTitle': "Don’t forget your workout",
@@ -9588,13 +9600,24 @@ async function callServerAI(prompt, signal, kind){
   const auth = aiAuth();
   if(!auth.email || !auth.token || !auth.deviceId)
     throw new Error(t('ai.signInPremium'));
+  const extra = kind === 'video.parse' ? {
+    videoUrl:(parseYouTubeUrl($('ytUrl').value) || {}).url || ($('ytUrl').value || '').trim(),
+    locale:appLocale,
+    wish:clampText($('ytWish').value,LIM.wish),
+    userContext:userForAI()
+  } : {};
   const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
-    body:JSON.stringify(Object.assign({prompt,kind}, auth))});
+    body:JSON.stringify(Object.assign({prompt,kind}, extra, auth))});
   const j = await res.json().catch(()=> ({}));
   if(!res.ok){
     if(j.error === 'ai_limit') throw new Error(t('ai.limitReached',{used:j.used,limit:j.limit}));
     if(j.error === 'premium_required') throw new Error(t('ai.premiumRequired'));
     if(j.error === 'ai_disabled') throw new Error(t('ai.disabled'));
+    if(j.error === 'video_not_workout') throw new Error(t('video.notWorkout'));
+    if(j.error === 'video_no_transcript') throw new Error(t('video.noTranscript'));
+    if(j.error === 'video_insufficient') throw new Error(t('video.insufficient'));
+    if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
+    if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
   trackProductEvent('ai_used').catch(()=>{});
@@ -16754,7 +16777,8 @@ async function syncNativeNotifications(){
             body:t('notify.todayPlan',{name:p.name}), priority:85,
             extra:{programId:p.id, stage:'start', category:'workouts'}});
           add({at:missed.toISOString(), title:t('notify.waitingTitle'),
-            body:t('notify.waitingBody',{name:p.name}), priority:70,
+            body:t('notify.waitingBodyShort',{name:p.name}),
+            largeBody:t('notify.waitingBody',{name:p.name}), priority:70,
             extra:{programId:p.id, stage:'missed', category:'workouts'}});
         }else{
           const morning = notifyAt(day, 9, 0);
@@ -18197,6 +18221,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   let prompt;
   try{ prompt = promptFn(); }catch(e){ appAlert(t('ai.buildRequestFailed')); return; }
   aiRunOpen(title);
+  if(kind === 'video.parse') aiRunNote(t('video.processingSafe'));
   try{
     const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
     aiRunClose();

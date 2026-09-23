@@ -1328,6 +1328,7 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   let prompt;
   try{ prompt = promptFn(); }catch(e){ appAlert(t('ai.buildRequestFailed')); return; }
   aiRunOpen(title);
+  if(kind === 'video.parse') aiRunNote(t('video.processingSafe'));
   try{
     const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
     aiRunClose();

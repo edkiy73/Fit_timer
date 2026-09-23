@@ -473,7 +473,8 @@ async function syncNativeNotifications(){
             body:t('notify.todayPlan',{name:p.name}), priority:85,
             extra:{programId:p.id, stage:'start', category:'workouts'}});
           add({at:missed.toISOString(), title:t('notify.waitingTitle'),
-            body:t('notify.waitingBody',{name:p.name}), priority:70,
+            body:t('notify.waitingBodyShort',{name:p.name}),
+            largeBody:t('notify.waitingBody',{name:p.name}), priority:70,
             extra:{programId:p.id, stage:'missed', category:'workouts'}});
         }else{
           const morning = notifyAt(day, 9, 0);

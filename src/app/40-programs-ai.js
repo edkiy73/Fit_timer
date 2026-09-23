@@ -1034,13 +1034,24 @@ async function callServerAI(prompt, signal, kind){
   const auth = aiAuth();
   if(!auth.email || !auth.token || !auth.deviceId)
     throw new Error(t('ai.signInPremium'));
+  const extra = kind === 'video.parse' ? {
+    videoUrl:(parseYouTubeUrl($('ytUrl').value) || {}).url || ($('ytUrl').value || '').trim(),
+    locale:appLocale,
+    wish:clampText($('ytWish').value,LIM.wish),
+    userContext:userForAI()
+  } : {};
   const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
-    body:JSON.stringify(Object.assign({prompt,kind}, auth))});
+    body:JSON.stringify(Object.assign({prompt,kind}, extra, auth))});
   const j = await res.json().catch(()=> ({}));
   if(!res.ok){
     if(j.error === 'ai_limit') throw new Error(t('ai.limitReached',{used:j.used,limit:j.limit}));
     if(j.error === 'premium_required') throw new Error(t('ai.premiumRequired'));
     if(j.error === 'ai_disabled') throw new Error(t('ai.disabled'));
+    if(j.error === 'video_not_workout') throw new Error(t('video.notWorkout'));
+    if(j.error === 'video_no_transcript') throw new Error(t('video.noTranscript'));
+    if(j.error === 'video_insufficient') throw new Error(t('video.insufficient'));
+    if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
+    if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
   trackProductEvent('ai_used').catch(()=>{});

@@ -120,6 +120,7 @@
         id: PLAN_NOTIFICATION_MIN + i,
         title: String(item.title || 'Fit Timer'),
         body: String(item.body || ''),
+        largeBody: String(item.largeBody || item.body || ''),
         schedule: {at:new Date(item.at), allowWhileIdle:true},
         isExactNotification: exact,
         smallIcon: 'ic_stat_fittimer',
