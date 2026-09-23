@@ -218,8 +218,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 863,
-      "chars": 37864,
+      "lines": 869,
+      "chars": 38188,
       "symbols": [
         "accountBucketKey",
         "applyAndroidUpdateConfig",
@@ -789,8 +789,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2124,
-      "chars": 88541,
+      "lines": 2143,
+      "chars": 89162,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
