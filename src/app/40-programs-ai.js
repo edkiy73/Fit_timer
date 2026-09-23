@@ -1632,8 +1632,8 @@ function coverImagePrompt(name, genderTxt){
 
 function imageProgramName(){
   const field = $('bName');
-  const typed = field && field.value != null ? String(field.value).trim() : '';
-  return typed || String(draft && draft.name || '').trim();
+  if(field && field.value != null) return String(field.value).trim();
+  return String(draft && draft.name || '').trim();
 }
 
 function unnamedImageExerciseCount(){
