@@ -11,6 +11,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/account-flow.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -65,12 +67,12 @@ async function boot(b, label, errs, url){
   const NICK = '@lena.' + Math.random().toString(36).slice(2, 8);
   const MAIL = 'lena.' + Math.random().toString(36).slice(2, 8) + '@example.com';
 
-  /* ---- телефон первый: тренер завёл страницу и привязал почту ---- */
+  /* ---- телефон первый: вошёл в аккаунт, взял ник и включил режим тренера ---- */
   const one = await boot(b, 'телефон 1', errs);
-  await one.evaluate(async ({txt, nick}) => {
-    trainer = {on: true, handle: nick, name: 'Лена', about: 'Домашний фитнес, только коврик.',
-               years: 8, links: 't.me/' + nick.slice(1)};
-    await saveTrainer();
+  const made = await becomeTrainer(one, {email: MAIL, handle: NICK, trainer: {
+    name: 'Лена', about: 'Домашний фитнес, только коврик.', years: 8, links: 't.me/' + NICK.slice(1)}});
+  ok('страница тренера создана внутри аккаунта', made.ok && made.handle === NICK, made.err || made.handle);
+  await one.evaluate(async ({txt}) => {
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'm1';
     customPrograms.push(p); await savePrograms();
@@ -79,9 +81,9 @@ async function boot(b, label, errs, url){
     const c = await addClient(); c.name = 'Марина';
     await saveClients(); clientIdx = clients.indexOf(c);
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'm1'));
-  }, {txt: PROG, nick: NICK});
+  }, {txt: PROG});
   const key1 = await one.evaluate(() => trainer.key || '');
-  ok('ник закреплён за первым телефоном', !!key1, key1.slice(0, 6) + '…');
+  ok('ник закреплён за аккаунтом, ключ страницы выдан', !!key1, key1.slice(0, 6) + '…');
 
   const linkId = await one.evaluate(() => (clients[0].progs[0].link || {}).id || '');
   ok('ссылка подопечному создана', !!linkId, linkId);
@@ -122,23 +124,12 @@ async function boot(b, label, errs, url){
   const live = await fetch(BASE + '/api/catalog').then(r => r.json());
   ok('и лежит в каталоге', (live.items || []).some(x => x.id === sub.id));
 
-  const bind = await one.evaluate(async (email) => {
-    const s = await apiPost('/api/auth', {action: 'send', email});
-    const v = await apiPost('/api/auth', {action: 'verify', email, code: s.devCode,
-                                          handle: normHandle(trainer.handle), trainerKey: trainer.key});
-    return {s, v};
-  }, MAIL);
-  ok('код пришёл', !!bind.s.devCode);
-  ok('аккаунт заведён этим же кодом', bind.v.fresh === true);
-  ok('ник привязался к аккаунту', bind.v.handle === NICK, bind.v.handle);
-  ok('ключ при этом НЕ менялся', !bind.v.trainerKey);
-
   /* ---- телефон второй: пусто, но почта та же ---- */
   const two = await boot(b, 'телефон 2', errs);
   const back = await two.evaluate(async (email) => {
     const s = await apiPost('/api/auth', {action: 'send', email});
     return await apiPost('/api/auth', {action: 'verify', email, code: s.devCode,
-                                       handle: '', trainerKey: ''});
+                                       deviceId: identity.deviceId, handle: '', trainerKey: ''});
   }, MAIL);
   ok('аккаунт не заводится второй раз', back.fresh === false);
   ok('ник вернулся на новый телефон', back.handle === NICK, back.handle);
@@ -147,6 +138,7 @@ async function boot(b, label, errs, url){
      back.trainer && back.trainer.name === 'Лена' && back.trainer.years === 8,
      `${back.trainer && back.trainer.name}, стаж ${back.trainer && back.trainer.years}`);
 
+  // Один ключ страницы без входа в аккаунт больше ничего не правит.
   const old = await one.evaluate(async () => {
     try{
       await apiPost('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)),
@@ -154,7 +146,7 @@ async function boot(b, label, errs, url){
       return 'прошло';
     }catch(e){ return e.code || String(e); }
   });
-  ok('прежний ключ перестал работать', old === 'handle_taken', old);
+  ok('без аккаунта страницу не поправить даже ключом', old === 'account_required', old);
 
   const wrong = await two.evaluate(async (email) => {
     await apiPost('/api/auth', {action: 'send', email});
@@ -165,10 +157,11 @@ async function boot(b, label, errs, url){
 
   /* ---- «убрать данные о себе»: страница пустеет, каталог цел ---- */
   await two.evaluate(async (r) => {
+    account.email = r.email; account.syncToken = r.syncToken; account.handle = r.handle;
+    await saveAccount();
     trainer = {on: true, handle: r.handle, key: r.trainerKey, name: r.trainer.name,
                about: r.trainer.about, years: r.trainer.years, links: r.trainer.links};
     await saveTrainer();
-    account.email = r.email; await saveAccount();
     clients = [{id: 'c1', name: 'Марина', progs: [{pid: null, name: 'программа',
                 link: {id: r.linkId, key: 'неважно'}, reports: []}]}];
     await saveClients();
@@ -215,13 +208,17 @@ async function boot(b, label, errs, url){
   ok('ссылка подопечному стёрта', hard.link === 'not_found', hard.link);
   ok('и ТУТ программа из каталога осталась', hard.mine === 1, hard.mine + ' в каталоге');
 
-  const retake = await two.evaluate(async () => {
+  // Другая почта пытается взять освободившийся, казалось бы, ник.
+  const retake = await two.evaluate(async (nick) => {
+    const email = 'other.' + Math.random().toString(36).slice(2, 8) + '@example.com';
+    const s = await apiPost('/api/auth', {action: 'send', email});
+    const v = await apiPost('/api/auth', {action: 'verify', email, code: s.devCode, deviceId: identity.deviceId});
     try{
-      await apiPost('/api/trainer/' + encodeURIComponent(trainer.handle),
-                    {trainer: {name: 'Самозванец'}, trainerKey: ''});
+      await apiPost('/api/auth', {action: 'set_handle', email, deviceId: identity.deviceId,
+                                  syncToken: v.syncToken, handle: nick});
       return 'прошло';
     }catch(e){ return e.code; }
-  });
+  }, NICK);
   ok('ник не достаётся никому другому', retake === 'handle_taken', retake);
 
   const relogin = await two.evaluate(async (email) => {
@@ -231,15 +228,10 @@ async function boot(b, label, errs, url){
   ok('аккаунт удалён — вход заводит его заново, без ника',
      relogin.fresh === true && !relogin.handle, `fresh=${relogin.fresh}, ник «${relogin.handle}»`);
 
-  /* ---- то же самое руками, через попап входа ---- */
+  /* ---- то же самое руками: стать тренером без аккаунта нельзя, ведёт во вход ---- */
   const NICK2 = '@olga.' + Math.random().toString(36).slice(2, 8);
   const MAIL2 = 'olga.' + Math.random().toString(36).slice(2, 8) + '@example.com';
   const three = await boot(b, 'телефон 3', errs);
-  await three.evaluate(async (nick) => {
-    trainer = {on: true, handle: nick, name: 'Оля', about: 'Пилатес дома', years: 5};
-    await saveTrainer();
-    await pushProfile();
-  }, NICK2);
 
   await three.evaluate(()=> goTab('scrAccount'));
   await three.waitForTimeout(500);
@@ -248,9 +240,7 @@ async function boot(b, label, errs, url){
   ok('без аккаунта тренеру про это сказано', await three.isVisible('#coachNoAcc'));
   ok('отдельного входа для тренеров нет', !(await three.$('#btnCoachMail')));
 
-  await three.evaluate(()=> switchMoreTab('acc'));
-  await three.waitForTimeout(300);
-  await three.click('#btnLoginRow');
+  await three.evaluate(()=> $('tglTrainer').click());
   await three.waitForTimeout(400);
   ok('попап открылся на первом шаге',
      await three.isVisible('#loginEmail') && !(await three.isVisible('#loginCode')));
@@ -270,12 +260,17 @@ async function boot(b, label, errs, url){
 
   await three.click('#loginGo');
   await three.waitForTimeout(900);
+  ok('новый аккаунт просит ник', await three.isVisible('#loginHandle'));
+  await three.fill('#loginHandle', NICK2);
+  await three.click('#loginGo');
+  await three.waitForTimeout(900);
   if(await three.isVisible('#dlgOk')){ await three.click('#dlgOk'); await three.waitForTimeout(400); }
   const bound2 = await three.evaluate(()=> account.email || '');
   ok('аккаунт записался', bound2 === MAIL2, bound2);
   ok('попап закрылся', !(await three.isVisible('#loginCode')));
-  const nickKept = await three.evaluate(()=> trainer.handle);
-  ok('ник тренера привязался к аккаунту', nickKept === NICK2, nickKept);
+  const nickKept = await three.evaluate(()=> ({handle: trainer.handle, on: trainerOn()}));
+  ok('после входа режим тренера включился с ником аккаунта',
+     nickKept.on && nickKept.handle === NICK2, JSON.stringify(nickKept));
 
   await three.evaluate(()=> switchMoreTab('coach'));
   await three.waitForTimeout(300);
@@ -330,20 +325,25 @@ async function boot(b, label, errs, url){
   await four.waitForTimeout(700);
   await four.click('#loginGo');          // код подставлен локальным запуском
   await four.waitForTimeout(900);
+  // новый аккаунт: один ник на аккаунт и страницу тренера
+  await four.fill('#loginHandle', '@pay.' + Math.random().toString(36).slice(2, 8));
+  await four.click('#loginGo');
+  await four.waitForTimeout(900);
   if(await four.isVisible('#dlgOk')){ await four.click('#dlgOk'); await four.waitForTimeout(300); }
   ok('с кодом подписка оформлена',
      await four.evaluate((m) => isPremium() && account.email === m, MAIL3),
      await four.evaluate(() => `${isPremium()} / ${account.email}`));
 
-  // и она возвращается на другом телефоне — ради этого код и спрашивали
+  // Premium — только серверное право: его выдаёт оплата или админка, а не
+  // приложение. Другой телефон находит тот же аккаунт, но подписку клиент сам
+  // себе на сервере не заводит.
   const five = await boot(b, 'телефон 5', errs);
   const restored = await five.evaluate(async (email) => {
     const s = await apiPost('/api/auth', {action: 'send', email});
     return await apiPost('/api/auth', {action: 'verify', email, code: s.devCode});
   }, MAIL3);
-  ok('подписка вернулась на другом телефоне',
-     !!(restored.sub && restored.sub.plan === 'month'),
-     JSON.stringify(restored.sub));
+  ok('другой телефон находит тот же аккаунт', restored.fresh === false, 'fresh=' + restored.fresh);
+  ok('подписку клиент сам себе на сервере не выдаёт', restored.sub == null, JSON.stringify(restored.sub));
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;

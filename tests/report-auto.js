@@ -8,6 +8,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/report-auto.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -48,8 +50,8 @@ async function boot(b, label, errs, url){
 
   // ---- тренер отправляет ----
   const tp = await boot(b, 'тренер', errs);
+  await becomeTrainer(tp, {handle: '@lena.' + Math.random().toString(36).slice(2, 8)});
   const link = await tp.evaluate(async (txt) => {
-    trainer = {on: true, handle: '@lena.doma', links: ''}; await saveTrainer();
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'tp1';
     customPrograms.push(p); await savePrograms();

@@ -203,7 +203,9 @@ async function restore(page, dump){
      `${got.prog}, шаг ${got.weightStep}`);
   ok('статистика, вес тела и достижения', got.count === 12 && got.body === 2 && got.badge,
      `${got.count} тренировок, ${got.body} замера, достижение на месте: ${got.badge}`);
-  ok('РУЧНАЯ ПРАВКА ВЕСА вернулась', got.manual === 4, String(got.manual));
+  // Скрытые поправки веса убраны намеренно (discardLegacyWeightCorrections): вес
+  // живёт только в программе, из старой копии второй источник не возвращается.
+  ok('старая скрытая поправка веса НЕ вернулась', got.manual === undefined, String(got.manual));
   ok('фото прогресса вернулись', got.photos === 1, got.photos);
   ok('режим тренера вернулся вместе с ключом',
      got.coach === '@lena.doma' && got.coachKey === 'ключ-правки-страницы', got.coach);
@@ -229,7 +231,7 @@ async function restore(page, dump){
     }},
     settings: {soundOff: '1'}});
   const oldGot = await three.evaluate(async () => ({
-    prog: (customPrograms[0] || {}).name, count: stats.count,
+    prog: (customPrograms.find(p => p.id !== 'warmup') || {}).name, count: stats.count,
     // булево из копии первой версии должно лечь в хранилище строкой '1'
     warm: await kvGet(pk('warmupAdded')), sound: await kvGet('soundOff'),
     age: curUser().age, hasBirth: Object.prototype.hasOwnProperty.call(curUser(), 'birth')

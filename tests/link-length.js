@@ -9,6 +9,8 @@
             python3 -m http.server 8123     (сервера нет)
             node tests/link-length.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -45,15 +47,17 @@ const BIG = `ПРОГРАММА: Силовая база
 ОПИСАНИЕ ЗАМЕНЫ: То же движение, но из нижней точки мягко выталкивайся вверх, отрывая пятки от пола. Приземляйся беззвучно, сначала на носок, потом опускай пятку.
 `).join('');
 
-async function boot(b, url, errs){
+const NICK = '@lena.' + Math.random().toString(36).slice(2, 8);
+
+// withTrainer — тренер существует только внутри аккаунта, а вход требует сервера.
+async function boot(b, url, errs, withTrainer){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(e + ''));
   await page.goto(url + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
+  if(withTrainer) await becomeTrainer(page, {handle: NICK, trainer: {links: ''}});
   await page.evaluate(async (txt) => {
-    trainer = {on: true, handle: '@lena.doma', links: ''};
-    await saveTrainer();
     const r = parseProgramText(txt);
     const p = r.program || r;
     p.id = 'big';
@@ -94,7 +98,7 @@ async function capture(page, fn){
   console.log(`      (программа в base64: ${size} символов — в адрес она не помещается)`);
 
   // ---- сервер есть ----
-  const page = await boot(b, WITH_API, errs);
+  const page = await boot(b, WITH_API, errs, true);
   const r = await capture(page, `exportProgram(customPrograms.find(p => p.id === 'big'))`);
   const url = (r.out && r.out.text) || '';
   ok('с сервером выдаётся App Link', /^https?:\/\/.+\/p\/[0-9a-z]{4,16}$/.test(url), url.slice(-24));
@@ -108,7 +112,7 @@ async function capture(page, fn){
     return {name: d.program.name, ex: (d.program.plans[0].exercises || []).length, by: d.by};
   }, url);
   ok('по адресу приходит та же программа', back.name === 'Силовая база' && back.ex === 10, `${back.name}, ${back.ex} упр.`);
-  ok('ник тренера доехал', back.by === '@lena.doma');
+  ok('ник тренера доехал', back.by === NICK, back.by);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

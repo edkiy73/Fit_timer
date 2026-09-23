@@ -11,6 +11,8 @@
    Запуск:  ADMIN_KEY=testadminkey123456 node tests/dev-server.js 8124
             node tests/media-flow.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -62,13 +64,11 @@ async function boot(b, label, errs, url){
   const NAME = 'С картинками ' + Math.random().toString(36).slice(2, 6);
 
   const tp = await boot(b, 'тренер', errs);
+  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
   const link = await tp.evaluate(async ({txt, nick, name}) => {
     // Картинки подделываем маленькими — важно, что они ЕСТЬ и что доезжают.
     const pic = n => 'data:image/png;base64,' + btoa('pic-' + n).replace(/=/g, '');
-    const me = users.find(u => u.id === currentUser); me.name = 'Лена';
-    trainer = {on: true, handle: nick, about: '', years: null, links: ''};
-    await saveTrainer();
-    await pushProfile();
     const r = parseProgramText(txt);
     const p = r.program || r;
     p.id = 'pic1'; p.name = name;

@@ -9,6 +9,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/nav-flow.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -64,32 +66,29 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   await page.waitForTimeout(700);
   ok('по нему открывается каталог', (await screen(page)) === 'scrStore', await screen(page));
 
-  // ---- включаем режим тренера ----
-  await page.evaluate(async () => {
-    goTab('scrAccount');
-    trainer = {on: true, handle: '@nav.coach', about: '', years: null, links: ''};
-    await saveTrainer();
-    renderTrainerCard();
-    renderMine();
-  });
+  // ---- включаем режим тренера (только внутри аккаунта) ----
+  await page.evaluate(() => goTab('scrAccount'));
+  await becomeTrainer(page, {handle: '@nav.' + Math.random().toString(36).slice(2, 8)});
+  await page.evaluate(() => { renderTrainerCard(); renderMine(); });
   await page.waitForTimeout(500);
   const coach = await tabs(page);
   ok('у тренера пять разделов', coach.length === 5, coach.join(' · '));
   ok('появились «Подопечные»', coach.includes('Подопечные'));
 
-  // Строка заявок показывается, только когда заявки ЕСТЬ: «ничего не отправлено»
-  // сообщает ровно то, что строку не надо было показывать.
-  await page.evaluate(() => goTab('scrPrograms'));
+  // Строка заявок живёт во вкладке «Тренер» и показывается, только когда заявки
+  // ЕСТЬ: «ничего не отправлено» сообщает ровно то, что строку не надо было показывать.
+  await page.evaluate(() => { goTab('scrAccount'); switchMoreTab('coach'); });
   await page.waitForTimeout(400);
   ok('без заявок строки нет даже у тренера', !(await page.isVisible('#btnMyCatalog')));
   await page.evaluate(async () => {
     const r = parseProgramText('ПРОГРАММА: Проба\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
     const p = r.program || r; p.id = 'navp1'; p.pub = {id: 'u1', status: 'pending'};
     customPrograms.push(p); await savePrograms();
-    renderMine();
+    renderTrainerCard();
   });
   await page.waitForTimeout(300);
   ok('с заявкой строка появляется', await page.isVisible('#btnMyCatalog'));
+  await page.evaluate(() => switchMoreTab('me'));
 
   // «Другое» разделено вкладками — иначе одиннадцать карточек подряд читаются как свалка
   await page.evaluate(() => goTab('scrAccount'));
@@ -102,7 +101,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
     && document.getElementById('morePane_acc').classList.contains('hidden')));
   await page.click('#moreTabs .tab[data-more="coach"]');
   await page.waitForTimeout(250);
-  ok('вкладка тренера открывается', await page.isVisible('#coachHandle'));
+  ok('вкладка тренера открывается', await page.isVisible('#coachName'));
 
   // «Подопечные» — корневой раздел: док на месте, панели действий нет
   await page.evaluate(() => goTab('scrTrainer'));

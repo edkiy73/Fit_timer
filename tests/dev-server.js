@@ -20,6 +20,7 @@ if(!process.env.KV_REST_API_URL) process.env.ALLOW_MEMORY_STORE = '1';
 const PORT = +(process.argv[2] || process.env.PORT || 8124);
 
 const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
+               '.css':'text/css; charset=utf-8',
                '.json':'application/json; charset=utf-8',
                '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml'};
 
@@ -69,6 +70,8 @@ http.createServer(async (req, res) => {
   // статика
   let rel = decodeURIComponent(u.pathname);
   if(rel === '/' || rel === '') rel = '/index.html';
+  // как rewrite /p/:id в vercel.json: ссылка на программу открывает приложение
+  if(/^\/p\/[^/]+\/?$/.test(rel)) rel = '/index.html';
   const file = path.join(ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
   if(!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()){
     res.statusCode = 404; res.end('not found'); return;

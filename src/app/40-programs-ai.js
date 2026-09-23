@@ -2556,7 +2556,7 @@ const API_BASE = RUNTIME_CONFIG.apiBase
   : (location.protocol.startsWith('http') ? '' : null);
 const PUBLIC_APP_URL = RUNTIME_CONFIG.publicAppUrl
   ? String(RUNTIME_CONFIG.publicAppUrl).replace(/\/$/, '') + '/'
-  : (location.origin + location.pathname);
+  : (location.origin + location.pathname.replace(/[^/]*$/, ''));   // /index.html → /
 const API_WAIT = 7000;
 /* Потолок длины адреса, который мы соглашаемся выдать человеку. Настоящий предел
    выше (хостинг отбивает около 14 КБ), но запас нужен: ссылку пересылают, к ней
