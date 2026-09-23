@@ -45,7 +45,7 @@ need(html.includes('function moderationState(item)'),'moderation readiness helpe
 need(html.includes('class="moderation-actions"'),'pending submissions need direct moderation actions');
 need(html.includes('function paymentReadiness('),'payment readiness summary is missing');
 need(html.includes("problems.push('Google Play:"),'payment settings must validate impossible provider states');
-need(html.includes('class="admin-notice'),'admin actions need non-blocking feedback');
+need(html.includes("el.className='admin-notice "),'admin actions need non-blocking feedback');
 need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');
 need(vercelConfig.includes('"ignoreCommand": "node scripts/vercel-ignore.mjs"'),'Vercel ignored build step is not configured');
 need(vercelIgnore.includes('[skip vercel]') && vercelIgnore.includes('[deploy]'),'Vercel deploy markers are missing');
