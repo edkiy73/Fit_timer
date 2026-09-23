@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID используется для приватной разблокировки Fit Timer. Фото и другие данные остаются на устройстве.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Микрофон нужен для управления тренировкой голосовыми командами.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
