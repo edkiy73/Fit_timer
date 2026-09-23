@@ -419,8 +419,9 @@ body.booting .app{visibility:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
   .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
   .seg button.act{background:var(--work);color:var(--on-accent)}
-  .media-row{display:flex;gap:8px}
-  .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
+  .media-row{display:flex;flex-wrap:wrap;gap:8px}
+  /* три кнопки в ряд (фото · через ИИ · убрать): ширина по подписи, без переноса строк */
+  .media-row button{flex:1 1 auto;white-space:nowrap;padding-left:10px !important;padding-right:10px !important;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
   .media-row button.act{border-color:var(--accent-line);color:var(--ink)}
   /* семь дней недели — всегда одна строка: перенос одного дня на вторую строку
      выглядел как сбой вёрстки. Чипы ужимаются, а не переносятся. */

@@ -557,7 +557,9 @@ function syncSoundCascade(p){
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
 function appDialog(msg, opts = {}){
   return new Promise(res => {
-    $('dlgMsg').textContent = msg;
+    // текст передают и готовой строкой, и функцией от t(): на экран не должен
+    // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
+    $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
     const codeEl = $('dlgCode');
     if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
     else setShown(codeEl, false);
