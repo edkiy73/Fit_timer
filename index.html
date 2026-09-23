@@ -960,6 +960,18 @@
         <p data-i18n="finish.quickText">Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.</p>
         <button type="button" class="btn-primary" id="btnDiscardResult" data-i18n="finish.discard">Не засчитывать</button>
       </div>
+      <!-- Прогрессия — состояние у каждого упражнения: показывается, только если
+           хоть одно из сегодняшних дошло до своей проверки. Автоматического
+           повышения больше нет — решает человек, одним нажатием. -->
+      <div class="fin-progcheck fin-rise hidden" id="finProgCheck">
+        <div id="finProgCheckAsk">
+          <b data-i18n="finish.progCheckTitle">Всё получилось? Нагрузку повысим</b>
+          <button type="button" class="btn-primary" id="finProgCheckYes" data-i18n="finish.progCheckYes">Да, повышаем</button>
+          <button type="button" class="fpc-toggle" id="finProgCheckToggle" data-i18n="finish.progCheckHardLink">Где-то было тяжело</button>
+          <div class="fpc-list hidden" id="finProgCheckList"></div>
+        </div>
+        <p class="fpc-done hidden" id="finProgCheckDone" data-i18n="finish.progCheckApplied">Готово — нагрузка вырастет со следующей тренировки.</p>
+      </div>
       <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
       <div class="field fin-note hidden" id="finNoteField">
         <label data-i18n="workout.note">Заметка о тренировке</label>

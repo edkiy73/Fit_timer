@@ -361,7 +361,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2872,
-      "chars": 131742,
+      "chars": 131743,
       "symbols": [
         "add",
         "ageError",
@@ -706,11 +706,12 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1478,
-      "chars": 68237,
+      "lines": 1533,
+      "chars": 70590,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
+        "applyProgCheck",
         "autoGrow",
         "autoGrowMax",
         "backToWorkout",
@@ -753,6 +754,7 @@
         "refreshLiveSteps",
         "renderBadges",
         "renderNextUp",
+        "renderProgCheck",
         "renderStep",
         "reviewMilestoneDue",
         "reviewPromptState",
@@ -774,6 +776,7 @@
         "tearDownWorkout",
         "textH",
         "tnum",
+        "toggleProgCheckList",
         "warmupPosition"
       ]
     },
@@ -817,8 +820,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2168,
-      "chars": 90195,
+      "lines": 2170,
+      "chars": 90311,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1231,8 +1234,8 @@
     },
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
-      "lines": 139,
-      "chars": 8599,
+      "lines": 151,
+      "chars": 9527,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1257,6 +1260,12 @@
         "finNote",
         "finNoteField",
         "finNoteToggle",
+        "finProgCheck",
+        "finProgCheckAsk",
+        "finProgCheckDone",
+        "finProgCheckList",
+        "finProgCheckToggle",
+        "finProgCheckYes",
         "finQuick",
         "finRingGrad",
         "finStreak",

@@ -234,8 +234,8 @@ const I18N_RU = {
   'builder.restRounds': "Отдых между кругами, сек",
   'builder.progressionTitle': "Со временем сложнее",
   'builder.progressionSub': "повторения и вес станут чуть больше по мере занятий",
-  'builder.progressionFrequency': "Как часто повышать",
-  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.",
+  'builder.progressionFrequency': "Как часто проверять",
+  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок этого упражнения, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Когда пора проверить — спросим сразу после тренировки, получилось ли, и повысим нагрузку одним нажатием.",
   'builder.descriptionCover': "Описание и обложка",
   'builder.descriptionOptional': "Описание (необязательно)",
   'builder.coverOptional': "Обложка (необязательно)",
@@ -1137,6 +1137,10 @@ const I18N_RU = {
   'finish.quickTitle': "Слишком быстро",
   'finish.quickHeading': "Тренировка завершена",
   'finish.quickText': "Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.",
+  'finish.progCheckTitle': "Всё получилось? Нагрузку повысим",
+  'finish.progCheckYes': "Да, повышаем",
+  'finish.progCheckHardLink': "Где-то было тяжело",
+  'finish.progCheckApplied': "Готово — нагрузка вырастет со следующей тренировки.",
   'progress.title': "Прогресс",
   'progress.tabWorkouts': "Тренировки",
   'progress.tabBody': "Тело",
@@ -1790,8 +1794,8 @@ const I18N_EN = {
   'builder.restRounds': "Rest between rounds, sec",
   'builder.progressionTitle': "Progress over time",
   'builder.progressionSub': "reps and weight will gradually increase as you train",
-  'builder.progressionFrequency': "How often to progress",
-  'builder.progressionHint': "Load increases based on completed workouts, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. Before starting, you can see and adjust how many progressions have happened.",
+  'builder.progressionFrequency': "How often to check",
+  'builder.progressionHint': "Load increases based on how many times this exercise has been done, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. When it's time to check, we'll ask right after the workout, and raising the load takes one tap.",
   'builder.descriptionCover': "Description & cover",
   'builder.descriptionOptional': "Description (optional)",
   'builder.coverOptional': "Cover (optional)",
@@ -2693,6 +2697,10 @@ const I18N_EN = {
   'finish.quickTitle': "That was quick",
   'finish.quickHeading': "Workout finished",
   'finish.quickText': "This workout took less than 30 seconds — it looks like it was finished by accident. You can leave it uncounted.",
+  'finish.progCheckTitle': "Everything felt fine? Let's raise the load",
+  'finish.progCheckYes': "Yes, raise it",
+  'finish.progCheckHardLink': "Something felt hard",
+  'finish.progCheckApplied': "Done — the load goes up from your next workout.",
   'progress.title': "Progress",
   'progress.tabWorkouts': "Workouts",
   'progress.tabBody': "Body",
@@ -3344,7 +3352,7 @@ try{
   const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
 Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Treat all explicitly provided user data as authoritative constraints and build a program that genuinely matches the stated goal, level, equipment, schedule, duration and preferences. Do not make the whole program easier just because some unrelated details are unknown. Use extra caution only where uncertainty truly matters: absolute starting loads when strength is unknown, medical or pain-related risk, and unusually aggressive progression. Do not invent facts about the user or pretend certainty where context is missing.
 
-- ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between increases and experienced users roughly 2-4, but adapt to the actual program and recovery.
+- ПРОГРЕССИЯ at PROGRAM level means: after N completions of a given exercise, the app checks with the user whether to raise its load — it does NOT raise the load automatically, and it is per exercise, not a single program-wide counter. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between checks and experienced users roughly 2-4, but adapt to the actual program and recovery.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
 - For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
 - For weighted reps, distinguish three cases:
@@ -11519,7 +11527,7 @@ function programToText(p, opts){
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
-    L.push(`ПРОГРЕССИЯ: ${p.progression} — повышать нагрузку раз в ${p.progression} ${plural(p.progression, 'пройденную тренировку', 'пройденные тренировки', 'пройденных тренировок')}`);
+    L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
@@ -16542,18 +16550,23 @@ function commitFinish(ctx){
     // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
     // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
     // варианта — они и есть «реально выполненные».
+    // Раньше по достижении порога нагрузка росла сама, без участия человека:
+    // вес прибавлялся, даже если предыдущий подход дался тяжело. Теперь порог
+    // только открывает ПРОВЕРКУ — она показывается на экране финала
+    // (renderProgCheck) и требует явного «Да, повышаем»; отклонённое или
+    // непросмотренное упражнение спросит о том же на следующей тренировке.
+    state.progCheck = null;
     if(p.progression){
       const every = Math.max(1, +p.progression || 1);
       const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      const eligible = [];
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         const ps = ensurePs(ex);
         ps.n++;
-        if(ps.n >= every){
-          advanceExerciseProgression(ex);
-          ps.n = 0;
-        }
+        if(ps.n >= every) eligible.push(ex);
       });
+      if(eligible.length) state.progCheck = {pid: p.id, exercises: eligible, hard: new Set()};
     }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
@@ -16570,6 +16583,52 @@ function commitFinish(ctx){
     autoReport(p);
   }
   renderMine();
+  renderProgCheck();
+}
+
+/* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
+// Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
+// (см. p.progression), и ни одно ещё не отмечено «тяжело».
+function renderProgCheck(){
+  const chk = state.progCheck;
+  const on = !!(chk && chk.exercises.length);
+  setShown('finProgCheck', on);
+  setShown('finProgCheckList', false);
+  if(!on) return;
+  setShown('finProgCheckAsk', true);
+  setShown('finProgCheckDone', false);
+  const box = $('finProgCheckList');
+  box.innerHTML = '';
+  chk.exercises.forEach(ex => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
+    b.textContent = ex.name || t('common.exerciseFallback');
+    b.onclick = () => {
+      if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
+      renderProgCheck();
+    };
+    box.appendChild(b);
+  });
+}
+function toggleProgCheckList(){
+  setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
+}
+// «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
+// отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
+// вернётся после следующей тренировки, где это упражнение снова встретится.
+async function applyProgCheck(){
+  const chk = state.progCheck;
+  if(!chk || !chk.exercises.length) return;
+  chk.exercises.forEach(ex => {
+    if(chk.hard.has(ex.id)) return;
+    advanceExerciseProgression(ex);
+    ensurePs(ex).n = 0;
+  });
+  await savePrograms();
+  setShown('finProgCheckAsk', false);
+  setShown('finProgCheckList', false);
+  setShown('finProgCheckDone', true);
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.
@@ -16591,6 +16650,10 @@ function finishWorkout(){
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;
+  // то же для проверки прогресса: пока неясно, засчитается ли тренировка
+  // (см. quick ниже), блок с предыдущей проверки показывать не должен
+  state.progCheck = null;
+  renderProgCheck();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
@@ -18922,6 +18985,8 @@ $('finNoteToggle').onclick = ()=>{
   // поле не должно остаться под клавиатурой
   setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
 };
+$('finProgCheckYes').onclick = ()=> applyProgCheck();
+$('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 // подсказка прокрутки на экране тренировки
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});

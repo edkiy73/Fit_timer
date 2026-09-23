@@ -869,18 +869,23 @@ function commitFinish(ctx){
     // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
     // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
     // варианта — они и есть «реально выполненные».
+    // Раньше по достижении порога нагрузка росла сама, без участия человека:
+    // вес прибавлялся, даже если предыдущий подход дался тяжело. Теперь порог
+    // только открывает ПРОВЕРКУ — она показывается на экране финала
+    // (renderProgCheck) и требует явного «Да, повышаем»; отклонённое или
+    // непросмотренное упражнение спросит о том же на следующей тренировке.
+    state.progCheck = null;
     if(p.progression){
       const every = Math.max(1, +p.progression || 1);
       const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      const eligible = [];
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         const ps = ensurePs(ex);
         ps.n++;
-        if(ps.n >= every){
-          advanceExerciseProgression(ex);
-          ps.n = 0;
-        }
+        if(ps.n >= every) eligible.push(ex);
       });
+      if(eligible.length) state.progCheck = {pid: p.id, exercises: eligible, hard: new Set()};
     }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
@@ -897,6 +902,52 @@ function commitFinish(ctx){
     autoReport(p);
   }
   renderMine();
+  renderProgCheck();
+}
+
+/* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
+// Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
+// (см. p.progression), и ни одно ещё не отмечено «тяжело».
+function renderProgCheck(){
+  const chk = state.progCheck;
+  const on = !!(chk && chk.exercises.length);
+  setShown('finProgCheck', on);
+  setShown('finProgCheckList', false);
+  if(!on) return;
+  setShown('finProgCheckAsk', true);
+  setShown('finProgCheckDone', false);
+  const box = $('finProgCheckList');
+  box.innerHTML = '';
+  chk.exercises.forEach(ex => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
+    b.textContent = ex.name || t('common.exerciseFallback');
+    b.onclick = () => {
+      if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
+      renderProgCheck();
+    };
+    box.appendChild(b);
+  });
+}
+function toggleProgCheckList(){
+  setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
+}
+// «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
+// отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
+// вернётся после следующей тренировки, где это упражнение снова встретится.
+async function applyProgCheck(){
+  const chk = state.progCheck;
+  if(!chk || !chk.exercises.length) return;
+  chk.exercises.forEach(ex => {
+    if(chk.hard.has(ex.id)) return;
+    advanceExerciseProgression(ex);
+    ensurePs(ex).n = 0;
+  });
+  await savePrograms();
+  setShown('finProgCheckAsk', false);
+  setShown('finProgCheckList', false);
+  setShown('finProgCheckDone', true);
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.
@@ -918,6 +969,10 @@ function finishWorkout(){
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;
+  // то же для проверки прогресса: пока неясно, засчитается ли тренировка
+  // (см. quick ниже), блок с предыдущей проверки показывать не должен
+  state.progCheck = null;
+  renderProgCheck();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;

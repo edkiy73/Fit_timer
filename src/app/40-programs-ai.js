@@ -2443,7 +2443,7 @@ function programToText(p, opts){
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
-    L.push(`ПРОГРЕССИЯ: ${p.progression} — повышать нагрузку раз в ${p.progression} ${plural(p.progression, 'пройденную тренировку', 'пройденные тренировки', 'пройденных тренировок')}`);
+    L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){

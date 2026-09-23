@@ -1171,6 +1171,8 @@ $('finNoteToggle').onclick = ()=>{
   // поле не должно остаться под клавиатурой
   setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
 };
+$('finProgCheckYes').onclick = ()=> applyProgCheck();
+$('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 // подсказка прокрутки на экране тренировки
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
