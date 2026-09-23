@@ -38,6 +38,10 @@ function localISO(d){
 }
 let customPrograms = [];
 let stats = {totalSec: 0};
+// Чей профиль сейчас лежит в customPrograms/stats. currentUser меняется раньше, чем
+// приезжают данные нового профиля; сохранение в этом окне записало бы программы
+// прежнего профиля под ключ нового — так они «растекались» по всем профилям.
+let dataOwner = null;
 // Старые версии позволяли незаметно записать поправку рабочего веса прямо во время
 // тренировки. В редакторе при этом оставалась база (например, 6 кг), а на старте
 // показывалось уже 4 кг. Такой второй источник веса удалён.
@@ -173,6 +177,7 @@ async function loadData(ownerId = currentUser){
 
   customPrograms = nextPrograms;
   stats = nextStats;
+  dataOwner = ownerId;
   await loadProgWeights(ownerId);
   if(currentUser !== ownerId) return false;
   await loadTrainer();
@@ -212,9 +217,12 @@ async function switchUserNow(id){
   if(currentUser === id) return;
   currentUser = id;
   await kvSet('currentUser', id);
-  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadIdentity(id);
   await loadData(id);
+  // Язык включаем только после загрузки данных нового профиля: смена языка
+  // пересохраняет встроенную разминку, и раньше это записывало программы прежнего
+  // профиля в новый.
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -715,6 +723,7 @@ async function flushMeta(uid, metaValue, outboxValue){
 // Все данные операции принадлежат uid, который был активен В МОМЕНТ нажатия Save.
 async function saveDoc(key, value){
   const uid = currentUser;
+  if(key === 'stats' && dataOwner !== uid) return;
   const valueJson = JSON.stringify(value);
   let meta = docMeta;
   let queue = outbox.slice();
@@ -1113,12 +1122,14 @@ async function applyRemoteSyncNow(result){
 
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);
-  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   const activeOwner = currentUser;
   await loadIdentity(activeOwner);
   identity.email = account.email;
   await saveIdentity();
   await loadData(activeOwner);
+  // После loadData: иначе смена языка пересохранила бы устаревший список программ
+  // из памяти поверх только что принятых с сервера.
+  await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -1475,6 +1486,7 @@ async function savePrograms(){
   // customPrograms — глобальный массив активного профиля. Делаем независимый снимок
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
+  if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
