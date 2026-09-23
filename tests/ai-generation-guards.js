@@ -71,6 +71,31 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.evaluate(() => aiCreateExerciseGuard()) === true);
 
   await page.evaluate(async () => {
+    customPrograms.push({id:'guard-edit', name:'Тестовая программа', plans:[{days:['Пн'], rounds:1, roundRest:0,
+      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
+    await savePrograms();
+    openEditAI(customPrograms.find(p => p.id === 'guard-edit'));
+  });
+  await page.waitForTimeout(100);
+  ok('пустое изменение программы блокируется общим guard',
+    await page.evaluate(() => aiEditRequestGuard('eaWish')) === false);
+  ok('для изменения просит явно написать задачу',
+    /что нужно изменить/.test(await page.textContent('#dlgMsg')));
+  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
+  await page.evaluate(() => { $('eaWish').value = 'Сделай тренировку короче'; });
+  ok('явный запрос изменения программы проходит',
+    await page.evaluate(() => aiEditRequestGuard('eaWish')) === true);
+
+  await page.evaluate(() => { openBuilder('guard-edit'); openExEdAI(0); });
+  await page.waitForTimeout(100);
+  ok('пустое изменение упражнения блокируется общим guard',
+    await page.evaluate(() => aiEditRequestGuard('exeWish')) === false);
+  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
+  await page.evaluate(() => { $('exeWish').value = 'Сделай мягче для коленей'; });
+  ok('явный запрос изменения упражнения проходит',
+    await page.evaluate(() => aiEditRequestGuard('exeWish')) === true);
+
+  await page.evaluate(async () => {
     window.premiumGate = () => true;
     window.__imageCalls = 0;
     window.callGeminiImage = async () => { __imageCalls++; throw new Error('provider must not be called by guard tests'); };
