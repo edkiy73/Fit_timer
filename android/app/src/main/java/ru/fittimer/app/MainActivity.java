@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FitAudioPlugin.class);
         registerPlugin(FitSystemPlugin.class);
+        registerPlugin(FitBiometricPlugin.class);
         super.onCreate(savedInstanceState);
         applySystemFontScale();
     }
