@@ -821,6 +821,9 @@ function show(id, push = true){
   // а панель управления всегда на одном месте (см. body.screen-work в стилях)
   document.body.classList.toggle('screen-work', id==='scrWork');
   if(ROOT_TABS.includes(id)) prepTab(id);
+  // Если приложение долго было в фоне посреди тренировки, не прерываем подход
+  // биометрией. Проверку откладываем до первого выхода с экрана тренировки.
+  if(id !== 'scrWork' && typeof maybeRunDeferredBiometricLock === 'function') maybeRunDeferredBiometricLock();
 }
 
 // содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
