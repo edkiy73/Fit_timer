@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const html = await readFile('admin.html','utf8');
+const markup = await readFile('admin.html','utf8');
+const adminJs = await readFile('admin.js','utf8');
+// Проверки ниже ищут и разметку, и код — читаем их вместе.
+const html = markup + '\n' + adminJs;
 const api = await readFile('api/admin.js','utf8');
 const sourceWorkflow = await readFile('.github/workflows/source-consistency.yml','utf8');
 const smokeWorkflow = await readFile('.github/workflows/admin-smoke.yml','utf8');
@@ -12,9 +15,11 @@ const vercelIgnore = await readFile('scripts/vercel-ignore.mjs','utf8');
 
 const need=(ok,msg)=>{if(!ok)throw new Error(msg);};
 
-const script=(html.match(/<script>([\s\S]*?)<\/script>/)||[])[1];
-need(script,'admin inline script not found');
-new vm.Script(script,{filename:'admin-inline.js'});
+// Встроенных скриптов нет: CSP script-src 'self' запрещает их, в том числе внедрённые.
+need(markup.includes('<script src="admin.js"></script>'),'admin.html must load admin.js');
+need(!/<script>[\s\S]*?<\/script>/.test(markup) && !/ on[a-z]+="/i.test(markup),'admin.html must not contain inline scripts or handlers');
+new vm.Script(adminJs,{filename:'admin.js'});
+need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
 
 need(api.includes("if(a === 'catalog_ai_create')"),'admin AI-create API is missing');
 need(api.includes('FitAIProtocol.validateProgramResponse(out.text)'),'AI-created program must be protocol-validated');

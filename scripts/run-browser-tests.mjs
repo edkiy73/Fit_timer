@@ -23,7 +23,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 // Тесты, которые идут здесь. Порядок — от быстрых к долгим.
 export const BROWSER_TESTS = [
   'api-flow', 'ai-api', 'youtube-video',
-  'parse-flat', 'start-overview', 'profile-switch', 'quick-finish', 'update-banner',
+  'csp', 'parse-flat', 'start-overview', 'profile-switch', 'quick-finish', 'update-banner',
   'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow',
   'limits', 'link-length', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
   'report-auto', 'report-detail', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'

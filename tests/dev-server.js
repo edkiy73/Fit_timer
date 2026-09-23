@@ -64,6 +64,19 @@ const REWRITES = (() => {
     });
   }catch(e){ return []; }
 })();
+// headers из vercel.json (CSP и прочие): тесты идут с той же политикой, что и прод
+const HEADERS = (() => {
+  try{
+    const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+    return (cfg.headers || []).map(h => ({
+      re: new RegExp('^' + h.source.replace(/:(\w+)/g, '([^/]+)') + '$'),
+      headers: h.headers || []
+    }));
+  }catch(e){ return []; }
+})();
+function applyHeaders(pathname, res){
+  HEADERS.forEach(h => { if(h.re.test(pathname)) h.headers.forEach(x => res.setHeader(x.key, x.value)); });
+}
 function rewrite(u){
   for(const r of REWRITES){
     const m = u.pathname.match(r.re);
@@ -85,6 +98,7 @@ const staticFile = pathname => {
 
 http.createServer(async (req, res) => {
   let u = new URL(req.url, 'http://localhost');
+  applyHeaders(u.pathname, res);
   if(!ROUTES.some(r => r.re.test(u.pathname)) && !staticFile(u.pathname)){
     const next = rewrite(u);
     if(next) u = next;

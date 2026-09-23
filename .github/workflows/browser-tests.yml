@@ -16,6 +16,8 @@ on:
       - 'mobile.js'
       - 'app.config.js'
       - 'vercel.json'
+      - 'admin.html'
+      - 'admin.js'
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/run-browser-tests.mjs'
