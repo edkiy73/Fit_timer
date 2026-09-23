@@ -1,0 +1,2167 @@
+/* Логика админки. Раньше жила встроенным <script> в admin.html; вынесена в файл,
+   чтобы строгая политика CSP (script-src 'self') запрещала любые встроенные скрипты —
+   в том числе внедрённые через текст заявки в каталог. */
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const GOALS = [['slim','Похудеть'],['tone','Подтянуть всё тело'],['glut','Ягодицы и пресс'],
+  ['core','Плоский живот'],['power','Сила и выносливость'],['relief','Рельеф мышц'],
+  ['flex','Растяжка и гибкость'],['back','Осанка и спина'],['post','После родов'],
+  ['cardio','Кардио и энергия']];
+const LEVELS = ['Новичок','Средний','Продвинутый'];
+const goalName = id => (GOALS.find(g => g[0] === id) || [id, id])[1];
+
+const LANGS = ['ru','en'];
+const langName = lang => lang === 'en' ? 'EN' : 'RU';
+function sourceLocaleOf(c){
+  if(c && (c.sourceLocale === 'ru' || c.sourceLocale === 'en')) return c.sourceLocale;
+  if(c && c.locales && c.locales.en && !c.locales.ru) return 'en';
+  return 'ru';
+}
+function localeBlock(c, lang){
+  const hit = c && c.locales && c.locales[lang];
+  if(hit) return {name:hit.name || '', gives:hit.gives || '', text:hit.text || ''};
+  const source = sourceLocaleOf(c);
+  if(c && lang === source) return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
+  if(c && !c.locales && lang === 'ru') return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
+  return {name:'', gives:'', text:''};
+}
+function localeReady(c, lang){
+  const x = localeBlock(c, lang);
+  return x.name.trim().length >= 3 && x.gives.trim().length >= 20 && x.text.length >= 60;
+}
+function localeMarks(c){
+  return LANGS.map(lang => langName(lang) + ' ' + (localeReady(c, lang) ? '✓' : '—')).join(' · ');
+}
+function translationPrompt(source, from, to){
+  const names = {ru:'Russian', en:'English'};
+  return 'Translate this Fit Timer catalog entry from ' + names[from] + ' to ' + names[to] + '.\n'
+    + 'Return ONLY valid JSON with exactly the keys name, gives, text.\n'
+    + 'Inside text keep every protocol label before the colon exactly unchanged (ПРОГРАММА, ДНИ, КРУГИ, УПРАЖНЕНИЕ, ОПИСАНИЕ, ФОРМАТ, ЗНАЧЕНИЕ, ПОДХОДЫ, ОТДЫХ, ШАГ, ПОТОЛОК and the other service labels).\n'
+    + 'Keep line order, blank lines, numbers, day tokens, boolean/control values and format values unchanged. Translate only human-readable names and prose. Do not add/remove/reorder exercises or change workout mechanics.\n\nSOURCE JSON:\n'
+    + JSON.stringify(source, null, 2);
+}
+
+// Ключ админки живёт только в этой вкладке (sessionStorage) и пропадает при её
+// закрытии. В localStorage он был доступен любому скрипту на домене приложения:
+// одна XSS в приложении отдала бы админку. Старый сохранённый ключ переносим один раз.
+function adminKeyLoad(){
+  let k = '';
+  try{ k = sessionStorage.getItem('adminKey') || ''; }catch(_){}
+  try{
+    const legacy = localStorage.getItem('adminKey');
+    if(legacy){
+      if(!k){ k = legacy; try{ sessionStorage.setItem('adminKey', k); }catch(_){} }
+      localStorage.removeItem('adminKey');
+    }
+  }catch(_){}
+  return k;
+}
+let KEY = adminKeyLoad();
+let data = {pending: [], drafts: [], approved: [], trainers: [], settings: null, providers: {}, billingProviders: {}};
+let latestAndroidBuild = null;
+let usersCache = null;
+let analyticsCache = null;
+let editorDirty = false;
+let allowEditorLeave = false;
+const savedTab = localStorage.getItem('adminTab');
+let tab = ['dashboard','pending','drafts','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'dashboard';
+
+const PAGE_TITLES = {
+  dashboard:'Обзор', pending:'На проверке', drafts:'Черновики', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
+  users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи', release:'Релиз Android'
+};
+function closeNav(){
+  document.body.classList.remove('nav-open');
+  $('adminNav').classList.remove('open');
+}
+function setTab(next){
+  if(tab==='add'&&next!=='add'&&editorDirty&&!allowEditorLeave){
+    if(!confirm('Есть несохранённые изменения программы. Выйти без сохранения?')){
+      closeNav();
+      return;
+    }
+  }
+  closeRowMenus();
+  tab = next;
+  localStorage.setItem('adminTab', tab);
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  closeNav();
+  render();
+  window.scrollTo({top:0,left:0,behavior:'auto'});
+}
+function closeRowMenus(except){
+  document.querySelectorAll('details.row-menu[open]').forEach(d=>{if(d!==except)d.open=false;});
+}
+function positionRowMenu(details){
+  const summary=details.querySelector('summary'), pop=details.querySelector('.row-menu-pop');
+  if(!summary||!pop||!details.open)return;
+  const r=summary.getBoundingClientRect();
+  pop.style.visibility='hidden';
+  pop.style.left='0px'; pop.style.top='0px';
+  requestAnimationFrame(()=>{
+    const w=pop.offsetWidth||200,h=pop.offsetHeight||160,gap=6,pad=8;
+    let left=Math.min(window.innerWidth-pad-w,Math.max(pad,r.right-w));
+    let top=r.bottom+gap;
+    if(top+h>window.innerHeight-pad) top=Math.max(pad,r.top-gap-h);
+    pop.style.left=Math.round(left)+'px';
+    pop.style.top=Math.round(top)+'px';
+    pop.style.visibility='visible';
+  });
+}
+function wireRowMenus(root){
+  (root||document).querySelectorAll('details.row-menu').forEach(d=>{
+    if(d.dataset.wired)return;
+    d.dataset.wired='1';
+    d.addEventListener('toggle',()=>{
+      if(d.open){closeRowMenus(d);positionRowMenu(d);}
+      else{
+        const pop=d.querySelector('.row-menu-pop');
+        if(pop)pop.style.visibility='';
+      }
+    });
+    const pop=d.querySelector('.row-menu-pop');
+    if(pop)pop.addEventListener('click',()=>{d.open=false;});
+  });
+}
+function openTrainerInAdmin(handle){
+  setTab('trainers');
+  requestAnimationFrame(()=>{
+    const s=$('trainerSearch');
+    if(s){s.value=handle||'';s.dispatchEvent(new Event('input'));}
+  });
+}
+
+async function api(action, extra){
+  const res = await fetch('/api/admin', {
+    method: 'POST',
+    // Ключ кодируем: в заголовок можно положить только ASCII, и ключ с кириллицей
+    // или пробелом ронял САМ запрос — человек видел «нет связи» вместо «ключ не тот».
+    headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(KEY)},
+    cache: 'no-store',
+    body: JSON.stringify(Object.assign({action}, extra || {}))
+  });
+  const j = await res.json().catch(() => ({}));
+  if(!res.ok) throw Object.assign(new Error(j.error || res.status), j);
+  return j;
+}
+
+function showGate(msg){
+  $('app').hidden = true; $('gate').hidden = false;
+  $('gateErr').textContent = msg || '';
+  $('key').value = '';
+}
+
+async function load(){
+  try{
+    data = await api('overview');
+  }catch(e){
+    if(e.message === 'bad_key') return showGate('Ключ не подошёл.');
+    if(e.message === 'no_admin_key') return showGate('На сервере не задана переменная ADMIN_KEY.');
+    if(e.message === 'no_store') return showGate('Хранилище не подключено — см. /api/health');
+    return showGate('Не получилось связаться с сервером.');
+  }
+  $('gate').hidden = true; $('app').hidden = false;
+  $('nPending').textContent = data.pending.length || '';
+  $('nDrafts').textContent = (data.drafts || []).length || '';
+  $('nApproved').textContent = data.approved.length || '';
+  $('nTrainers').textContent = data.trainers.length || '';
+  if(tab !== 'users') usersCache = null;
+  if(tab !== 'analytics') analyticsCache = null;
+  $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  render();
+  if(tab === 'add'){
+    const editId=localStorage.getItem('adminEditingId');
+    const item=[...(data.pending||[]),...(data.drafts||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId));
+    if(item) fillForm(item);
+  }
+}
+
+function pageHead(title, text, right){
+  return `<div class="page-head"><div><h2>${title}</h2><p>${text||''}</p></div>${right||''}</div>`;
+}
+const fmtDay = v => v ? new Date(v).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '—';
+
+let noticeTimer=null;
+function adminNotice(message,tone){
+  let el=$('adminNotice');
+  if(!el){
+    el=document.createElement('div');
+    el.id='adminNotice';
+    document.body.appendChild(el);
+  }
+  el.className='admin-notice '+(tone==='err'?'err':'ok');
+  el.textContent=message;
+  el.hidden=false;
+  clearTimeout(noticeTimer);
+  noticeTimer=setTimeout(()=>{el.hidden=true;},3200);
+}
+function setActionFeedback(stateId,message,tone){
+  const el=$(stateId);if(!el)return;
+  el.textContent=message||'';
+  el.className='action-feedback'+(tone?' '+tone:'');
+}
+function actionButtonState(button,busy,label){
+  if(!button)return;
+  if(busy){
+    if(!button.dataset.idleText)button.dataset.idleText=button.textContent;
+    button.disabled=true;
+    button.textContent=label||'Сохраняю…';
+  }else{
+    button.disabled=false;
+    button.textContent=button.dataset.idleText||button.textContent;
+    delete button.dataset.idleText;
+  }
+}
+function flashActionButton(button,text,tone){
+  if(!button)return;
+  const idle=button.dataset.idleText||button.textContent;
+  button.disabled=false;
+  button.textContent=text;
+  button.classList.toggle('no',tone==='err');
+  setTimeout(()=>{
+    if(!document.body.contains(button))return;
+    button.textContent=idle;
+    button.classList.remove('no');
+  },1800);
+}
+function markEditorDirty(){
+  if(tab!=='add')return;
+  editorDirty=true;
+  const state=$('programSaveState');
+  if(state&&(!state.textContent||/сохранено|черновик/i.test(state.textContent))){
+    state.style.color='';
+    state.textContent='Есть несохранённые изменения';
+  }
+}
+function resetEditorDirty(){
+  editorDirty=false;
+}
+function moderationState(item){
+  const ru=localeReady(item,'ru'),en=localeReady(item,'en');
+  const ex=Math.max(0,+item.exCount||0);
+  const media=item.media?Object.keys(item.media).length:0;
+  const problems=[];
+  if(!ru)problems.push('не готов RU');
+  if(!en)problems.push('не готов EN');
+  if(!item.cover)problems.push('нет обложки');
+  if(ex&&media<ex)problems.push('фото упражнений '+media+'/'+ex);
+  return {ready:ru&&en,ru,en,ex,media,problems};
+}
+
+function render(){
+  const b = $('body');
+  b.innerHTML = '';
+  if(tab === 'dashboard') return renderDashboard(b);
+  if(tab === 'add') return renderAdd(b);
+  if(tab === 'drafts') return renderDrafts(b);
+  if(tab === 'trainers') return renderTrainers(b);
+  if(tab === 'users') return renderUsers(b);
+  if(tab === 'analytics') return renderAnalytics(b);
+  if(tab === 'errors') return renderErrors(b);
+  if(tab === 'campaigns') return renderCampaigns(b);
+  if(tab === 'ai') return renderAI(b);
+  if(tab === 'pricing') return renderPricing(b);
+  if(tab === 'payments') return renderPayments(b);
+  if(tab === 'release') return renderRelease(b);
+  return renderCatalog(b);
+}
+
+async function loadDashboardHealth(){
+  const box=$('dashboardHealth');
+  if(!box)return;
+  try{
+    const res=await fetch('/api/health?format=json',{cache:'no-store'});
+    const h=await res.json();
+    const probe=name=>(h.probes||[]).find(x=>x.name===name)||{};
+    const ai=h.services&&h.services.ai||{},mail=h.services&&h.services.mail||{},push=h.services&&h.services.push||{};
+    const state=h.status==='ok'?'Работает':h.status==='warning'?'Требует внимания':'Ошибка';
+    box.innerHTML='<div class="health-line"><b>Общий статус</b><span class="status-chip '+(h.status==='ok'?'ok':'')+'">'+esc(state)+'</span></div>'
+      +'<div class="health-line"><b>Хранилище</b><span>'+esc((h.storage&&h.storage.mode)||'—')+' · '+esc((h.storage&&h.storage.latencyMs)!=null?h.storage.latencyMs+' мс':'—')+'</span></div>'
+      +'<div class="health-line"><b>Каталог</b><span>'+(probe('catalog').ok?'OK':'Ошибка')+'</span></div>'
+      +'<div class="health-line"><b>Email / AI</b><span>'+(mail.configured?'Email OK':'Email нет')+' · '+(ai.configured?'AI OK':'AI нет')+'</span></div>'
+      +'<div class="health-line"><b>Push</b><span>Android '+(push.android?'OK':'—')+' · iOS '+(push.ios?'OK':'—')+'</span></div>';
+  }catch(e){
+    box.innerHTML='<div class="health-line"><b>Диагностика</b><span class="danger-text">Не удалось загрузить</span></div>';
+  }
+}
+
+function dashboardAIReady(){
+  const s=data.settings||{};
+  return s.enabled!==false && aiRouteProblem(s,'text').length===0 && aiRouteProblem(s,'image').length===0;
+}
+function dashboardBillingReady(){
+  const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
+  const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
+  const states={
+    google:paymentReadiness('google',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear,true),
+    rustore:paymentReadiness('rustore',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year,true),
+    yookassa:paymentReadiness('yookassa',!!bp.yookassa,yoo.enabled!==false,'','',false)
+  };
+  const mode=pay.provider||'multi';
+  if(mode==='multi')return Object.values(states).some(x=>x.usable&&x.enabled);
+  return !!(states[mode]&&states[mode].usable&&states[mode].enabled);
+}
+function renderDashboard(b){
+  const pending=(data.pending||[]).length,drafts=(data.drafts||[]).length,approved=(data.approved||[]).length,trainers=(data.trainers||[]).length;
+  const aiReady=dashboardAIReady(),billingReady=dashboardBillingReady();
+  b.innerHTML=pageHead('Обзор','Что требует внимания и быстрые действия по продукту.')
+    +'<div class="dashboard-kpis">'
+      +'<button class="dashboard-kpi" data-go="pending"><b>'+pending+'</b><span>заявок на проверке</span></button>'
+      +'<button class="dashboard-kpi" data-go="drafts"><b>'+drafts+'</b><span>черновиков программ</span></button>'
+      +'<button class="dashboard-kpi" data-go="approved"><b>'+approved+'</b><span>программ в каталоге</span></button>'
+      +'<button class="dashboard-kpi" data-go="trainers"><b>'+trainers+'</b><span>тренеров</span></button>'
+    +'</div>'
+    +'<div class="dashboard-grid">'
+      +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Сейчас</h3><div class="status-row">'
+        +'<span class="status-chip '+(aiReady?'ok':'')+'">AI · '+(aiReady?'готов':'проверь настройки')+'</span>'
+        +'<span class="status-chip '+(billingReady?'ok':'')+'">Платежи · '+(billingReady?'готовы':'проверь настройки')+'</span>'
+      +'</div></div><div class="form-card-body">'
+        +'<div class="dashboard-actions"><button class="b ok" data-go="add">Новая программа</button><button class="b" data-go="pending">Открыть модерацию</button><button class="b" data-go="users">Пользователи</button><button class="b" data-go="analytics">Аналитика</button></div>'
+        +'<p class="compact-note" style="margin-top:10px">'+(pending?'Есть заявки, которые ждут решения: '+pending+'.':'Новых заявок на модерацию нет.')+(drafts?' Черновиков в работе: '+drafts+'.':'')+'</p>'
+      +'</div></section>'
+      +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Система</h3><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Полная диагностика</a></div>'
+        +'<div class="form-card-body health-summary" id="dashboardHealth"><div class="muted">Проверяю критичные сервисы…</div></div></section>'
+    +'</div>';
+  b.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>setTab(x.dataset.go));
+  loadDashboardHealth();
+}
+
+function renderDrafts(b){
+  const list=(data.drafts||[]).slice().reverse();
+  b.innerHTML=pageHead('Черновики','Сохраняются на сервере и не видны пользователям до явной публикации.','<button class="b ok" id="draftAdd">+ Новая программа</button>');
+  $('draftAdd').onclick=()=>setTab('add');
+  if(!list.length){
+    b.insertAdjacentHTML('beforeend','<div class="empty">Черновиков нет. Незаконченную программу можно сохранить здесь и продолжить позже.</div>');
+    return;
+  }
+  b.insertAdjacentHTML('beforeend','<div class="toolbar"><div class="grow"><input id="draftSearch" type="search" placeholder="Поиск по черновикам"></div><span class="status-chip">'+list.length+' шт.</span></div><div class="entity-grid" id="draftCards"></div>');
+  const box=$('draftCards');
+  list.forEach(item=>{
+    const src=localeBlock(item,sourceLocaleOf(item));
+    const ready=localeReady(item,'ru')&&localeReady(item,'en');
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((src.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
+    const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
+    card.innerHTML='<div class="entity-card-head">'+cover+'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(src.name||'Без названия')+'</div><div class="entity-card-sub">'+esc((src.gives||'').slice(0,120)||'Черновик ещё не заполнен полностью')+'</div></div></div>'
+      +'<div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop"><button data-act="edit">Продолжить редактирование</button><button class="positive" data-act="publish">Опубликовать</button><button class="positive" data-act="publishPro">Опубликовать в Premium</button><button class="danger" data-act="delete">Удалить черновик</button></div></details></div>'
+      +'<div class="entity-tags"><span class="status-chip">'+esc(goalName(item.cat))+'</span><span class="status-chip">'+esc(item.level||'—')+'</span><span class="status-chip '+(ready?'ok':'')+'">'+(ready?'Готов к публикации':'Нужно заполнить')+'</span><span class="status-chip">'+esc(localeMarks(item))+'</span></div>'
+      +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
+    card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.act;
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='publish')return act('publish_draft',{id:item.id,pro:false},btn,'Черновик опубликован.');
+      if(a==='publishPro')return act('publish_draft',{id:item.id,pro:true},btn,'Черновик опубликован в Premium.');
+      if(a==='delete'&&confirm('Удалить этот черновик?'))return act('delete_draft',{id:item.id},btn,'Черновик удалён.');
+    });
+    box.appendChild(card);
+  });
+  wireRowMenus(box);
+  $('draftSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+
+function renderCatalog(b){
+  const pending=tab==='pending';
+  const list=(pending?data.pending:data.approved).slice().reverse();
+  b.innerHTML=pageHead(
+    pending?'На проверке':'Каталог',
+    pending?'Сразу видно, что готово к публикации и чего не хватает.':'Опубликованные программы и доступ Premium.',
+    !pending?'<button class="b ok" id="catalogAdd">+ Добавить</button>':''
+  );
+  if(!pending)$('catalogAdd').onclick=()=>setTab('add');
+  if(!list.length){
+    b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет. Добавь первую программу кнопкой выше.'}</div>`);
+    return;
+  }
+  b.insertAdjacentHTML('beforeend',
+    '<div class="toolbar"><div class="grow"><input id="catalogSearch" type="search" placeholder="Поиск по программе или автору"></div><span class="status-chip">'+list.length+' шт.</span></div>'
+    +'<div class="entity-grid" id="catalogCards"></div>');
+  const box=$('catalogCards');
+
+  list.forEach(item=>{
+    const state=moderationState(item),ready=state.ready;
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((item.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
+    const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
+    const menu=!pending
+      ? '<details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">'
+        +'<button data-act="edit">Изменить</button>'
+        +'<button data-act="togglePro">'+(item.pro?'Открыть всем':'Сделать Premium')+'</button>'
+        +'<button class="danger" data-act="remove">Убрать из каталога</button>'
+        +(item.by?'<button class="danger" data-act="ban">Закрыть автора</button>':'')
+        +'</div></details>'
+      : (item.by?'<details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop"><button class="danger" data-act="ban">Закрыть автора</button></div></details>':'');
+
+    card.innerHTML=
+      '<div class="entity-card-head">'+cover
+        +'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(item.name||'Без названия')+'</div>'
+        +'<div class="entity-card-sub">'+esc(item.gives||'').slice(0,120)+'</div></div></div>'
+      +(menu?'<div class="td-actions">'+menu+'</div>':'')
+      +'<div class="entity-tags">'
+        +'<span class="status-chip">'+esc(goalName(item.cat))+'</span>'
+        +'<span class="status-chip">'+esc(item.level)+'</span>'
+        +'<span class="status-chip">'+(item.min||0)+' мин</span>'
+        +'<span class="status-chip '+(ready?'ok':'')+'">'+esc(localeMarks(item))+'</span>'
+        +(item.pro?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>')
+      +'</div>'
+      +'<div class="entity-meta">'
+        +'<div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div>'
+        +'<div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div>'
+        +'<div><b>'+(item.by?'<button class="who" data-trainer="'+esc(item.by)+'">'+esc(item.by)+'</button>':'Fit Timer')+'</b><span>автор</span></div>'
+      +'</div>'
+      +(pending?'<div class="moderation-readiness '+(ready?'ok':'')+'">'+(ready
+        ? '✓ Тексты RU и EN готовы к публикации'+(state.problems.length?' · '+esc(state.problems.join(' · ')):'')
+        : 'Перед публикацией: '+esc(state.problems.join(' · ')||'проверь программу'))+'</div>'
+        +'<div class="moderation-actions">'
+          +'<button class="b" data-direct="edit">Проверить / изменить</button>'
+          +'<button class="b ok" data-direct="approve"'+(ready?'':' disabled')+'>В каталог</button>'
+          +'<button class="b ok" data-direct="approvePro"'+(ready?'':' disabled')+'>В Premium</button>'
+          +'<button class="b danger-text" data-direct="reject">Отклонить</button>'
+        +'</div>':'');
+
+    const author=card.querySelector('[data-trainer]');
+    if(author)author.onclick=()=>openTrainerInAdmin(author.dataset.trainer);
+
+    card.querySelectorAll('[data-direct]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.direct;
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='approve')return act('approve',{id:item.id,pro:false},btn,'Программа опубликована в каталоге.');
+      if(a==='approvePro')return act('approve',{id:item.id,pro:true},btn,'Программа опубликована в Premium.');
+      if(a==='reject'&&confirm('Отклонить «'+item.name+'»? Тренер получит уведомление.'))return act('reject',{id:item.id},btn,'Заявка отклонена.');
+    });
+
+    card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.act;
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='togglePro')return act('pro',{id:item.id,pro:!item.pro},btn,item.pro?'Программа открыта всем.':'Программа переведена в Premium.');
+      if(a==='remove'&&confirm('Убрать «'+item.name+'» из каталога?'))return act('remove',{id:item.id},btn,'Программа убрана из каталога.');
+      if(a==='ban'&&confirm('Закрыть '+item.by+'? Его программы больше не будут приниматься.'))return act('ban',{handle:item.by},btn,'Приём программ от тренера закрыт.');
+    });
+    box.appendChild(card);
+  });
+
+  wireRowMenus(box);
+  $('catalogSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+
+function renderTrainers(b){
+  const list=data.trainers.slice().reverse();
+  b.innerHTML=pageHead('Тренеры','Публичные профили, активность и доступ к отправке программ.');
+  if(!list.length){b.insertAdjacentHTML('beforeend','<div class="empty">Тренеров пока нет.</div>');return;}
+  b.insertAdjacentHTML('beforeend',`
+    <div class="toolbar"><div class="grow"><input id="trainerSearch" type="search" placeholder="Поиск по имени или нику"></div><span class="status-chip">${list.length} тренеров</span></div>
+    <div class="entity-grid" id="trainerCards"></div>`);
+  const box=$('trainerCards');
+  list.forEach(t=>{
+    const card=document.createElement('article');
+    card.className='entity-card'+(t.banned?' ban':'');
+    card.dataset.search=((t.name||'')+' '+(t.handle||'')).toLowerCase();
+    card.innerHTML=`
+      <div class="entity-card-head">
+        <div style="min-width:0;flex:1">
+          <div class="entity-card-title">${esc(t.name||t.handle)}</div>
+          <div class="entity-card-sub"><button class="who" type="button" data-open-trainer="${esc(t.handle)}">${esc(t.handle)}</button></div>
+        </div>
+        ${t.banned?'<span class="pill ban">закрыт</span>':'<span class="status-chip ok">активен</span>'}
+      </div>
+      <div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">
+        <button class="${t.banned?'positive':'danger'}" data-toggle>${t.banned?'Вернуть доступ':'Закрыть приём программ'}</button>
+      </div></details></div>
+      ${t.about?`<div class="entity-card-sub" style="margin-top:8px">${esc(t.about)}</div>`:''}
+      <div class="entity-meta">
+        <div><b>${t.years?esc(t.years)+' лет':'—'}</b><span>стаж</span></div>
+        <div><b>${t.programs||0}</b><span>программ</span></div>
+        <div><b>${t.opens||0}</b><span>добавили</span></div>
+      </div>
+      <div class="entity-tags">
+        <span class="status-chip">активность · ${esc(fmtDay(t.seen))}</span>
+        <span class="status-chip">с ${esc(fmtDay(t.since))}</span>
+      </div>`;
+    card.querySelector('[data-toggle]').onclick=()=>act(t.banned?'unban':'ban',{handle:t.handle});
+    const oh=card.querySelector('[data-open-trainer]');if(oh)oh.onclick=()=>openTrainerInAdmin(t.handle);
+    box.appendChild(card);
+  });
+  wireRowMenus(box);
+  $('trainerSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+
+async function renderUsers(b){
+  b.innerHTML=pageHead('Пользователи','Аккаунты, Premium, AI-лимиты и тестовый вход.')+`
+    <div class="toolbar">
+      <div class="grow inline-create">
+        <div><label>Email нового аккаунта</label><input id="newUserEmail" type="email" placeholder="test@example.com"></div>
+        <button class="b ok" id="createUser">Создать</button>
+      </div>
+      <span class="save-state" id="createUserState"></span>
+    </div>
+    <div id="usersList"><div class="empty">Загружаю пользователей…</div></div>`;
+
+  $('createUser').onclick=async()=>{
+    const email=$('newUserEmail').value.trim().toLowerCase(),state=$('createUserState'),btn=$('createUser');
+    if(!email){state.textContent='Укажи email.';return;}
+    btn.disabled=true;state.textContent='Создаю…';
+    try{
+      const r=await api('user_create',{email});
+      usersCache=null;
+      adminNotice('Аккаунт '+r.email+' готов.');
+      await renderUsers(b);
+    }catch(e){
+      state.textContent='Не получилось: '+e.message;
+      adminNotice('Не получилось создать аккаунт: '+e.message,'err');
+    }finally{if(document.body.contains(btn))btn.disabled=false;}
+  };
+
+  try{if(!usersCache)usersCache=(await api('users_list')).users||[];}
+  catch(e){$('usersList').innerHTML='<div class="empty">Не удалось загрузить пользователей: '+esc(e.message)+'</div>';return;}
+
+  const box=$('usersList');
+  if(!usersCache.length){box.innerHTML='<div class="empty">Аккаунтов пока нет.</div>';return;}
+
+  box.innerHTML=`
+    <div class="toolbar">
+      <div class="grow"><input id="userSearch" type="search" placeholder="Поиск по email или нику"></div>
+      <span class="status-chip">${usersCache.length} аккаунтов</span>
+    </div>
+    <div class="user-grid" id="userCards"></div>`;
+
+  const cards=$('userCards');
+  const shortDate=v=>v?new Date(v+'T00:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—';
+  usersCache.forEach(u=>{
+    const premium=u.premium&&u.sub,usage=u.aiUsage||{},limits=usage.limits||{};
+    const provider=premium&&String(u.sub.provider||'server');
+    const managed=provider&&provider!=='admin';
+    const card=document.createElement('article');
+    card.className='user-card';
+    card.dataset.search=((u.email||'')+' '+(u.handle||'')).toLowerCase();
+    card.innerHTML=`
+      <div class="user-card-head">
+        <div><div class="user-card-email">${esc(u.email)}</div><div class="user-card-handle">${u.handle?esc(u.handle):'без ника'} · ${esc((u.locale||'ru').toUpperCase())}</div></div>
+        <div>${premium?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>'}</div>
+      </div>
+      <div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop">
+        <button class="positive" data-premium>Выдать Premium</button>
+        ${premium?'<button class="danger" data-revoke>Снять Premium</button>':''}
+        <button data-code>Тестовый код входа</button>
+        <button class="danger" data-ai-reset>Сбросить AI-лимиты</button>
+      </div></details></div>
+      <div class="user-meta">
+        <div class="user-meta-item"><b>${esc(fmtDay(u.seen||u.since))}</b><span>активность</span></div>
+        <div class="user-meta-item"><b>${esc(fmtDay(u.since))}</b><span>создан</span></div>
+        <div class="user-meta-item"><b>${u.devices||0}</b><span>устройств</span></div>
+        <div class="user-meta-item"><b>${u.pushDevices||0}</b><span>push</span></div>
+      </div>
+      <div class="ai-box"><div class="ai-box-head"><b>AI за месяц</b><span class="ai-period">${shortDate(usage.periodStart)} — ${shortDate(usage.periodEnd)}</span></div>
+        <div class="ai-stats">
+          <div class="ai-stat"><strong>${usage.programs||0} / ${limits.programs||0}</strong><span>программы</span></div>
+          <div class="ai-stat"><strong>${usage.exercises||0} / ${limits.exercises||0}</strong><span>упражнения</span></div>
+          <div class="ai-stat"><strong>${usage.images||0} / ${limits.images||0}</strong><span>картинки</span></div>
+        </div>
+      </div>
+      ${premium?'<div class="cell-sub" style="margin-top:8px">Premium до '+esc(fmtDay(u.sub.until))+' · '+esc(provider)+(managed?' · управляется платёжным провайдером':'')+'</div>':''}
+      <div class="user-action-panel" data-user-panel hidden></div>`;
+
+    const panel=card.querySelector('[data-user-panel]');
+    const closePanel=()=>{panel.hidden=true;panel.innerHTML='';};
+    const grant=card.querySelector('[data-premium]');
+    grant.onclick=()=>{
+      panel.hidden=false;
+      panel.innerHTML='<b>Ручной Premium</b><p class="compact-note" style="margin:5px 0 9px">'
+        +(managed?'У пользователя уже активна подписка через '+esc(provider)+'. Ручная выдача заменит серверную запись подписки — используй только для поддержки.':'Срок считается от сегодняшней даты.')
+        +'</p><div class="user-action-row">'
+        +'<button class="b" data-days="30">30 дней</button><button class="b" data-days="90">90 дней</button><button class="b" data-days="365">1 год</button>'
+        +'<div><label>Свой срок, дней</label><input type="number" min="1" max="3650" value="30" data-custom-days></div><button class="b ok" data-custom-grant>Выдать</button>'
+        +'<button class="b quiet" data-close>Отмена</button></div>';
+      panel.querySelectorAll('[data-days]').forEach(btn=>btn.onclick=()=>grantUserPremium(u,+btn.dataset.days,card,managed));
+      panel.querySelector('[data-custom-grant]').onclick=()=>{
+        const days=Math.max(1,Math.min(3650,Math.round(+panel.querySelector('[data-custom-days]').value||0)));
+        if(days)grantUserPremium(u,days,card,managed);
+      };
+      panel.querySelector('[data-close]').onclick=closePanel;
+    };
+
+    const rev=card.querySelector('[data-revoke]');
+    if(rev)rev.onclick=async()=>{
+      const suffix=managed?' Это подписка '+provider+'; действие удалит её серверный статус.':'';
+      if(!confirm('Снять Premium у '+u.email+'?'+suffix))return;
+      rev.disabled=true;
+      try{
+        await api('user_premium',{email:u.email,revoke:true});
+        usersCache=null;adminNotice('Premium снят у '+u.email+'.');await renderUsers(b);
+      }catch(e){adminNotice('Не получилось снять Premium: '+e.message,'err');rev.disabled=false;}
+    };
+
+    card.querySelector('[data-code]').onclick=async e=>{
+      const btn=e.currentTarget;btn.disabled=true;
+      panel.hidden=false;panel.innerHTML='<span class="muted">Создаю одноразовый код…</span>';
+      try{
+        const r=await api('user_test_code',{email:u.email});
+        panel.innerHTML='<div class="test-code-box"><div><b>Тестовый код</b><div class="compact-note">'+esc(r.email)+' · '+r.expiresMinutes+' минут · одно использование</div></div>'
+          +'<code>'+esc(r.code)+'</code><button class="b ok" data-copy-code>Скопировать</button><button class="b quiet" data-close>Закрыть</button></div>';
+        panel.querySelector('[data-copy-code]').onclick=async()=>{
+          try{await navigator.clipboard.writeText(r.code);adminNotice('Код скопирован.');}
+          catch(_){adminNotice('Буфер обмена недоступен.','err');}
+        };
+        panel.querySelector('[data-close]').onclick=closePanel;
+      }catch(err){panel.innerHTML='<span class="danger-text">Не получилось создать код: '+esc(err.message)+'</span>';}
+      finally{btn.disabled=false;}
+    };
+
+    card.querySelector('[data-ai-reset]').onclick=async e=>{
+      if(!confirm('Сбросить AI-счётчики у '+u.email+' за текущий месяц? После этого снова будет доступен полный лимит.'))return;
+      const btn=e.currentTarget;btn.disabled=true;
+      try{
+        await api('user_ai_reset',{email:u.email});usersCache=null;
+        adminNotice('AI-лимиты сброшены.');await renderUsers(b);
+      }catch(err){adminNotice('Не получилось сбросить AI-лимиты: '+err.message,'err');btn.disabled=false;}
+    };
+
+    cards.appendChild(card);
+  });
+
+  wireRowMenus(cards);
+  $('userSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    cards.querySelectorAll('.user-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+async function grantUserPremium(u,days,card,managed){
+  if(managed&&!confirm('У '+u.email+' активная подписка через '+(u.sub&&u.sub.provider||'провайдера')+'. Заменить её ручным Premium на '+days+' дней?'))return;
+  const panel=card.querySelector('[data-user-panel]');
+  panel.querySelectorAll('button,input').forEach(x=>x.disabled=true);
+  try{
+    await api('user_premium',{email:u.email,days});
+    usersCache=null;adminNotice('Premium выдан на '+days+' дней.');await renderUsers($('body'));
+  }catch(e){
+    adminNotice('Не получилось выдать Premium: '+e.message,'err');
+    panel.querySelectorAll('button,input').forEach(x=>x.disabled=false);
+  }
+}
+
+let analyticsDays=30;
+async function renderAnalytics(b,force){
+  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка. Без email, имён, программ и фото.',
+    '<div class="action-row"><select id="analyticsDays" style="width:auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button class="b" id="analyticsRefresh">Обновить</button><span class="action-feedback" id="analyticsState"></span></div>')
+    +'<div class="empty">Загрузка…</div>';
+  $('analyticsDays').value=String(analyticsDays);
+  $('analyticsDays').onchange=()=>{analyticsDays=+$('analyticsDays').value;analyticsCache=null;renderAnalytics(b,true);};
+  $('analyticsRefresh').onclick=()=>{analyticsCache=null;renderAnalytics(b,true);};
+  try{
+    setActionFeedback('analyticsState','Загружаю…','busy');
+    if(!analyticsCache||force) analyticsCache=(await api('analytics_stats',{days:analyticsDays})).stats;
+  }catch(e){
+    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.',
+      '<div class="action-row"><button class="b" id="analyticsRetry">Повторить</button><span class="action-feedback err">Ошибка: '+esc(e.message||e)+'</span></div>');
+    $('analyticsRetry').onclick=()=>renderAnalytics(b,true);
+    return;
+  }
+  const a=analyticsCache||{},t=a.totals||{},cohort=a.cohort||{};
+  const rows=[
+    ['Первый запуск','install'],['Завершили onboarding','onboarding_complete'],['Создали аккаунт','account_created'],
+    ['Добавили программу','program_added'],['Начали тренировку','workout_started'],['Завершили тренировку','workout_completed'],
+    ['Дошли до 3 тренировок','workout_3'],['Дошли до 5 тренировок','workout_5'],['Дошли до 10 тренировок','workout_10'],
+    ['Успешно использовали AI','ai_used'],['Открыли Premium','premium_opened'],['Начали покупку','purchase_started']
+  ];
+  const val=k=>t[k]||{count:0,unique:0};
+  const base=Math.max(1,(cohort.devices||val('install').unique||0));
+  const cards=rows.map(([label,key])=>{
+    const v=val(key),pct=key==='install'?100:Math.round(v.unique/base*100);
+    return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
+      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div><div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
+  }).join('');
+  const dayRows=(a.rows||[]).slice().reverse().map(r=>{
+    const e=r.events||{},u=k=>((e[k]||{}).unique||0);
+    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td><td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td><td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td><td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
+  }).join('');
+  const p=cohort.platform||{},l=cohort.locale||{};
+  const controls='<div class="action-row"><select id="analyticsDays" style="width:auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button class="b" id="analyticsRefresh">Обновить</button><span class="action-feedback ok" id="analyticsState">✓ Обновлено</span></div>';
+  b.innerHTML=pageHead('Аналитика','Период: последние '+analyticsDays+' дней. Exact unique = один анонимный device hash за период.',controls)
+    +'<div class="status-row"><span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span><span class="status-chip">Android '+(p.android||0)+'</span><span class="status-chip">iOS '+(p.ios||0)+'</span><span class="status-chip">Web '+(p.web||0)+'</span><span class="status-chip">RU '+(l.ru||0)+'</span><span class="status-chip">EN '+(l.en||0)+'</span></div>'
+    +'<div class="entity-grid">'+cards+'</div>'
+    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+  $('analyticsDays').value=String(analyticsDays);
+  $('analyticsDays').onchange=()=>{analyticsDays=+$('analyticsDays').value;analyticsCache=null;renderAnalytics(b,true);};
+  $('analyticsRefresh').onclick=()=>{analyticsCache=null;renderAnalytics(b,true);};
+}
+
+async function renderErrors(b){
+  b.innerHTML=pageHead('Ошибки','Непойманные JS/WebView ошибки за последние 90 дней. Пользовательские данные не сохраняются.',
+    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
+    +'<div class="empty">Загрузка…</div>';
+  $('errorsRefresh').onclick=()=>renderErrors(b);
+  let d;
+  try{d=(await api('client_errors')).stats||{};}catch(e){
+    b.innerHTML=pageHead('Ошибки','Не удалось загрузить диагностику.',
+      '<div class="dashboard-actions"><button class="b" id="errorsRetry">Повторить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
+      +'<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
+    $('errorsRetry').onclick=()=>renderErrors(b);
+    return;
+  }
+  const list=d.items||[];
+  const head=pageHead('Ошибки','Сгруппировано по сигнатуре · всего срабатываний: '+(+d.total||0),
+    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>');
+  if(!list.length){
+    b.innerHTML=head+'<div class="empty">Ошибок не зафиксировано.</div>';
+    $('errorsRefresh').onclick=()=>renderErrors(b);
+    return;
+  }
+  b.innerHTML=head
+    +'<div class="toolbar"><div class="grow"><input id="errorSearch" type="search" placeholder="Поиск по сообщению, сборке или сигнатуре"></div><span class="status-chip">'+list.length+' групп</span></div>'
+    +'<div class="entity-grid" id="errorCards"></div>';
+  $('errorsRefresh').onclick=()=>renderErrors(b);
+  const box=$('errorCards');
+  list.forEach(x=>{
+    const sig=String(x.sig||'');
+    const detail=[
+      (x.name||'Error')+': '+(x.message||''),
+      'sig: '+sig,
+      'first: '+(x.first||'—'),
+      'last: '+(x.last||'—'),
+      'count: '+((+x.count)||0),
+      'build: '+(x.build||'—'),
+      'platform: '+JSON.stringify(x.platform||{}),
+      x.stack?'stack: '+x.stack:''
+    ].filter(Boolean).join('\n');
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((x.name||'')+' '+(x.message||'')+' '+(x.build||'')+' '+sig).toLowerCase();
+    card.innerHTML='<div class="entity-card-head"><div style="min-width:0;flex:1">'
+      +'<div class="entity-card-title">'+esc((x.name||'Error')+': '+(x.message||''))+'</div>'
+      +'<div class="entity-card-sub">Сигнатура '+esc(sig||'—')+' · последняя '+esc(fmtDay(x.last))+(x.build?' · сборка '+esc(x.build):'')+'</div></div></div>'
+      +'<div class="entity-meta"><div><b>'+((+x.count)||0)+'</b><span>срабатываний</span></div>'
+      +'<div><b>'+(((x.platform||{}).android)||0)+'</b><span>Android</span></div>'
+      +'<div><b>'+((((x.platform||{}).ios)||0)+(((x.platform||{}).web)||0))+'</b><span>iOS / Web</span></div></div>'
+      +(x.stack?'<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:10px 0 0">'+esc(x.stack)+'</pre>':'')
+      +'<div class="moderation-actions"><button class="b" data-copy>Скопировать детали</button>'
+      +'<button class="b quiet" data-resolve>Считать исправленной</button></div>';
+    card.querySelector('[data-copy]').onclick=async()=>{
+      try{await navigator.clipboard.writeText(detail);adminNotice('Детали ошибки скопированы.');}
+      catch(_){adminNotice('Буфер обмена недоступен.','err');}
+    };
+    card.querySelector('[data-resolve]').onclick=async e=>{
+      if(!sig||!confirm('Убрать эту группу ошибок из списка? Если ошибка повторится, она появится снова.'))return;
+      const btn=e.currentTarget,old=btn.textContent;btn.disabled=true;btn.textContent='Убираю…';
+      try{
+        await api('client_error_clear',{sig});
+        card.remove();
+        adminNotice('Ошибка отмечена исправленной.');
+        if(!box.children.length)renderErrors(b);
+      }catch(err){
+        btn.disabled=false;btn.textContent=old;
+        adminNotice('Не получилось убрать ошибку: '+err.message,'err');
+      }
+    };
+    box.appendChild(card);
+  });
+  $('errorSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+
+let campaignLang='ru';
+let campaignPreviewKey='';
+function setCampaignLang(lang){
+  campaignLang=lang==='en'?'en':'ru';
+  document.querySelectorAll('[data-camp-lang]').forEach(x=>x.classList.toggle('on',x.dataset.campLang===campaignLang));
+  const ru=$('campPaneRu'), en=$('campPaneEn');
+  if(ru)ru.hidden=campaignLang!=='ru';
+  if(en)en.hidden=campaignLang!=='en';
+}
+function campaignPayload(){
+  return {
+    kind:$('campKind').value,
+    push:$('campPush').checked,
+    email:$('campEmail').checked,
+    copy:{
+      ru:{title:$('campRuTitle').value.trim(),body:$('campRuBody').value.trim()},
+      en:{title:$('campEnTitle').value.trim(),body:$('campEnBody').value.trim()}
+    }
+  };
+}
+function campaignKey(p){return JSON.stringify(p);}
+function invalidateCampaignPreview(){
+  campaignPreviewKey='';
+  const btn=$('campSend');if(btn)btn.disabled=true;
+  const state=$('campPreviewState');if(state)state.textContent='Изменилаcь кампания — проверь аудиторию заново.';
+}
+async function loadCampaignHealth(){
+  const el=$('campHealth');if(!el)return;
+  try{
+    const h=await fetch('/api/health?format=json',{cache:'no-store'}).then(r=>r.json());
+    const mail=h.services&&h.services.mail||{},push=h.services&&h.services.push||{};
+    el.innerHTML='<span class="status-chip '+(push.android||push.ios?'ok':'')+'">Push · '+(push.android||push.ios?'настроен':'не настроен')+'</span>'
+      +'<span class="status-chip '+(mail.configured?'ok':'')+'">Email · '+(mail.configured?'настроен':'не настроен')+'</span>';
+  }catch(_){el.textContent='Не удалось проверить каналы.';}
+}
+function renderCampaigns(b){
+  campaignPreviewKey='';
+  b.innerHTML=pageHead('Рассылки','Сначала проверь аудиторию, затем отправляй неизменённую кампанию.')+`
+    <div class="toolbar" id="campHealth"><span class="muted">Проверяю каналы…</span></div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Доставка</h3></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Тип сообщения</label><select id="campKind"><option value="news">Новости / обновления</option><option value="offers">Акция / Premium</option></select></div>
+          <div><label>Каналы</label><div class="channel-row"><label><input id="campPush" type="checkbox" checked> Push</label><label><input id="campEmail" type="checkbox"> Email fallback</label></div></div>
+        </div>
+        <p class="compact-note">Push идёт первым. Email используется только если Push для аккаунта недоступен. Для предложений действует 14-дневный cooldown.</p>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Сообщение</h3><div class="seg">
+        <button type="button" data-camp-lang="ru" class="${campaignLang==='ru'?'on':''}">RU</button>
+        <button type="button" data-camp-lang="en" class="${campaignLang==='en'?'on':''}">EN</button>
+      </div></div>
+      <div class="form-card-body">
+        <div id="campPaneRu" class="lang-pane"${campaignLang==='ru'?'':' hidden'}><div class="field-grid">
+          <div class="wide"><label>Заголовок</label><input id="campRuTitle" maxlength="100" placeholder="Что нового"></div>
+          <div class="wide"><label>Текст</label><textarea id="campRuBody" class="compact-text" maxlength="1000" placeholder="Коротко и по делу"></textarea></div>
+        </div></div>
+        <div id="campPaneEn" class="lang-pane"${campaignLang==='en'?'':' hidden'}><div class="field-grid">
+          <div class="wide"><label>Title</label><input id="campEnTitle" maxlength="100" placeholder="What's new"></div>
+          <div class="wide"><label>Text</label><textarea id="campEnBody" class="compact-text" maxlength="1000" placeholder="Short and clear"></textarea></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Аудитория перед отправкой</h3><button class="b" id="campPreview">Проверить аудиторию</button></div>
+      <div class="form-card-body"><div class="campaign-preview" id="campPreviewStats">
+        <div><b>—</b><span>аккаунтов</span></div><div><b>—</b><span>получат Push</span></div><div><b>—</b><span>получат Email</span></div><div><b>—</b><span>пропущено</span></div>
+      </div><p class="compact-note" id="campPreviewState">Отправка станет доступна после проверки текущего текста и каналов.</p></div>
+    </div>
+    <div class="sticky-save"><div class="save-actions"><div class="action-stack"><button class="b ok" id="campSend" disabled>Отправить рассылку</button><span class="action-feedback" id="campState">Предпросмотр обязателен перед массовой отправкой</span></div></div></div>`;
+  document.querySelectorAll('[data-camp-lang]').forEach(x=>x.onclick=()=>setCampaignLang(x.dataset.campLang));
+  ['campKind','campPush','campEmail','campRuTitle','campRuBody','campEnTitle','campEnBody'].forEach(id=>{
+    $(id).addEventListener(id.startsWith('camp')&&['campPush','campEmail','campKind'].includes(id)?'change':'input',invalidateCampaignPreview);
+  });
+  $('campPreview').onclick=previewCampaign;
+  $('campSend').onclick=sendCampaign;
+  loadCampaignHealth();
+}
+function validateCampaign(p,state){
+  if(!p.copy.ru.title||!p.copy.ru.body||!p.copy.en.title||!p.copy.en.body){if(state)state.textContent='Заполни RU и EN тексты.';return false;}
+  if(!p.push&&!p.email){if(state)state.textContent='Выбери хотя бы один канал.';return false;}
+  return true;
+}
+async function previewCampaign(){
+  const p=campaignPayload(),btn=$('campPreview'),state=$('campPreviewState');
+  if(!validateCampaign(p,state))return;
+  btn.disabled=true;state.textContent='Считаю получателей…';
+  let cursor=0,total=0,push=0,email=0,skipped=0;
+  try{
+    do{
+      const r=await api('campaign_send',Object.assign({},p,{preview:true,cursor}));
+      cursor=r.cursor;total=r.total;push+=r.pushEligible||0;email+=r.emailEligible||0;skipped+=r.skipped||0;
+      if(r.done)break;
+    }while(true);
+    const vals=[total,push,email,skipped];
+    [...$('campPreviewStats').children].forEach((el,i)=>el.querySelector('b').textContent=vals[i]);
+    campaignPreviewKey=campaignKey(p);
+    $('campSend').disabled=false;
+    state.textContent='✓ Проверено. Изменение текста, типа или каналов потребует новой проверки.';
+    adminNotice('Аудитория рассчитана: '+(push+email)+' получателей.');
+  }catch(e){
+    state.textContent='Не получилось проверить аудиторию: '+e.message;
+    adminNotice(state.textContent,'err');
+  }finally{btn.disabled=false;}
+}
+async function sendCampaign(){
+  const btn=$('campSend'),state=$('campState'),p=campaignPayload();
+  if(!validateCampaign(p,state))return;
+  if(campaignPreviewKey!==campaignKey(p)){invalidateCampaignPreview();adminNotice('Сначала проверь текущую аудиторию.','err');return;}
+  const stats=[...$('campPreviewStats').querySelectorAll('b')].map(x=>x.textContent);
+  if(!confirm('Отправить эту рассылку?\n\nАккаунтов: '+stats[0]+'\nPush: '+stats[1]+'\nEmail: '+stats[2]+'\nПропущено: '+stats[3]))return;
+  btn.disabled=true;
+  let cursor=0,total=0,pushSent=0,emailSent=0,skipped=0,failed=0;
+  try{
+    do{
+      const r=await api('campaign_send',Object.assign({},p,{cursor}));
+      cursor=r.cursor;total=r.total;pushSent+=r.pushSent||0;emailSent+=r.emailSent||0;skipped+=r.skipped||0;failed+=r.failed||0;
+      state.textContent='Обработано '+Math.min(cursor,total)+' / '+total+' · Push '+pushSent+' · Email '+emailSent+' · пропущено '+skipped+' · ошибок '+failed;
+      if(r.done)break;
+    }while(true);
+    state.textContent+=' · готово';
+    campaignPreviewKey='';
+    adminNotice('Рассылка завершена. Push '+pushSent+', Email '+emailSent+'.');
+  }catch(e){
+    state.textContent='Рассылка остановлена: '+e.message;
+    adminNotice(state.textContent,'err');
+  }finally{btn.disabled=true;}
+}
+
+function settingsClone(){
+  return JSON.parse(JSON.stringify(data.settings || {}));
+}
+function saveBar(id, buttonLabel){
+  return `<div class="sticky-save"><div class="save-actions"><div class="action-stack"><button class="b ok" id="${id}Save">${buttonLabel||'Сохранить'}</button><span class="action-feedback" id="${id}State"></span></div></div></div>`;
+}
+async function persistSettings(next,stateId,buttonId){
+  const btn=$(buttonId||stateId.replace(/State$/,'Save'));
+  actionButtonState(btn,true,'Сохраняю…');
+  setActionFeedback(stateId,'Сохраняю изменения…','busy');
+  try{
+    const r=await api('save_settings',{settings:next});
+    data.settings=r.settings;
+    setActionFeedback(stateId,'✓ Сохранено','ok');
+    flashActionButton(btn,'✓ Сохранено','ok');
+    return true;
+  }catch(e){
+    setActionFeedback(stateId,'Ошибка: '+e.message,'err');
+    flashActionButton(btn,'Ошибка','err');
+    adminNotice('Не сохранилось: '+e.message,'err');
+    return false;
+  }finally{
+    if(btn&&btn.disabled)actionButtonState(btn,false);
+  }
+}
+
+function routePair(s,type,which){
+  const x=(s[type]&&s[type][which])||{};
+  return `<div class="pair">
+    <select id="${type}_${which}_provider">${['gemini','openai'].map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
+    <input id="${type}_${which}_model" value="${esc(x.model||'')}" maxlength="100" placeholder="model">
+  </div>`;
+}
+function aiProviderReady(name){return !!(data.providers&&data.providers[name]);}
+function aiRouteProblem(settings,type){
+  const route=settings[type]||{},primary=route.primary||{},backup=route.backup||{};
+  const problems=[];
+  if(!primary.model)problems.push(type+': не указана основная модель');
+  if(!backup.model)problems.push(type+': не указана резервная модель');
+  if(!aiProviderReady(primary.provider))problems.push(type+': нет ключа '+primary.provider+' для основной модели');
+  return problems;
+}
+function updateAIRouteReadiness(){
+  const box=$('aiRouteState');if(!box)return;
+  const s=aiSettingsFromForm();
+  const row=(type,label)=>{
+    const r=s[type]||{},p=r.primary||{},b=r.backup||{};
+    const pOk=!!p.model&&aiProviderReady(p.provider),bOk=!!b.model&&aiProviderReady(b.provider);
+    return '<div><b>'+esc(label)+'</b><span class="'+(pOk?'':'bad')+'">Основной: '+esc(p.provider||'—')+' / '+esc(p.model||'модель не указана')+' · '+(aiProviderReady(p.provider)?'ключ есть':'нет ключа')+'</span>'
+      +'<br><span class="'+(bOk?'':'bad')+'">Резерв: '+esc(b.provider||'—')+' / '+esc(b.model||'модель не указана')+' · '+(aiProviderReady(b.provider)?'ключ есть':'нет ключа')+'</span></div>';
+  };
+  box.innerHTML=row('text','Текст')+row('image','Изображения');
+}
+function renderAI(b){
+  const s=data.settings||{},lim=s.limits||{};
+  const stat=(name,ok)=>'<span class="status-chip '+(ok?'ok':'')+'">'+name+' · '+(ok?'ключ есть':'нет ключа')+'</span>';
+  b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium. Тесты не меняют production-настройки.')+`
+    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}
+      <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><div><h3>Маршрутизация</h3><div class="cell-sub">«Тест» использует поля ниже, но ничего не сохраняет.</div></div></div>
+      <div class="form-card-body">
+        <div class="route-table">
+          <div class="route-head">Тип</div><div class="route-head">Основной</div><div class="route-head">Резервный</div>
+          <div class="route-label">Текст</div><div>${routePair(s,'text','primary')}</div><div>${routePair(s,'text','backup')}</div>
+          <div class="route-label">Картинки</div><div>${routePair(s,'image','primary')}</div><div>${routePair(s,'image','backup')}</div>
+        </div>
+        <div class="ai-route-state" id="aiRouteState"></div>
+        <div class="action-row"><button class="b" id="testText">Тест текста без сохранения</button><button class="b" id="testImage">Тест картинки без сохранения</button><span class="action-feedback" id="aiResult"></span></div>
+      </div>
+    </div>
+    <div class="form-card"><div class="form-card-head"><h3>Качество изображений</h3></div><div class="form-card-body">
+      <div class="field-grid"><div><label>Разрешение генерации</label><select id="imageSize">
+        <option value="512"${(s.image&&s.image.size||'1K')==='512'?' selected':''}>512 px (0.5K)</option>
+        <option value="1K"${(s.image&&s.image.size||'1K')==='1K'?' selected':''}>1K</option>
+        <option value="2K"${(s.image&&s.image.size||'1K')==='2K'?' selected':''}>2K</option>
+        <option value="4K"${(s.image&&s.image.size||'1K')==='4K'?' selected':''}>4K</option>
+      </select></div><div class="wide"><div class="compact-note" style="margin-top:24px">Меньшее разрешение дешевле. Если модель не поддерживает размер, тест покажет ошибку до сохранения.</div></div></div>
+    </div></div>
+    <div class="form-card"><div class="form-card-head"><h3>Лимиты на месяц</h3></div><div class="form-card-body">
+      <div class="field-grid four">
+        <div><label>Программы</label><input id="limHeavy" type="number" min="0" value="${esc(lim.heavy)}"></div>
+        <div><label>Упражнения</label><input id="limLight" type="number" min="0" value="${esc(lim.light)}"></div>
+        <div><label>Картинки</label><input id="limImage" type="number" min="0" value="${esc(lim.image)}"></div>
+        <div><label>Хранение, дней</label><input id="retention" type="number" min="1" max="30" value="${esc(s.retentionDays||30)}"></div>
+      </div>
+    </div></div>
+    ${saveBar('aiSettings','Сохранить production-настройки')}`;
+  $('aiSettingsSave').onclick=saveAISettings;
+  $('testText').onclick=()=>testAIAdmin('text');
+  $('testImage').onclick=()=>testAIAdmin('image');
+  ['text_primary_provider','text_primary_model','text_backup_provider','text_backup_model','image_primary_provider','image_primary_model','image_backup_provider','image_backup_model','imageSize']
+    .forEach(id=>$(id).addEventListener($(id).tagName==='SELECT'?'change':'input',updateAIRouteReadiness));
+  updateAIRouteReadiness();
+}
+function aiSettingsFromForm(){
+  const s=settingsClone();s.text=s.text||{};s.image=s.image||{};
+  s.enabled=$('aiEnabled').checked;
+  ['text','image'].forEach(type=>['primary','backup'].forEach(which=>{
+    s[type][which]={provider:$(type+'_'+which+'_provider').value,model:$(type+'_'+which+'_model').value.trim()};
+  }));
+  s.image.size=$('imageSize').value;
+  s.limits={heavy:+$('limHeavy').value,light:+$('limLight').value,image:+$('limImage').value};
+  s.retentionDays=+$('retention').value;
+  return s;
+}
+async function saveAISettings(){
+  const s=aiSettingsFromForm(),problems=[...aiRouteProblem(s,'text'),...aiRouteProblem(s,'image')];
+  if(problems.length){
+    setActionFeedback('aiSettingsState',problems[0],'err');
+    flashActionButton($('aiSettingsSave'),'Проверь настройки','err');
+    return;
+  }
+  await persistSettings(s,'aiSettingsState');
+}
+async function testAIAdmin(type){
+  const btn=$(type==='image'?'testImage':'testText'),settings=aiSettingsFromForm();
+  const route=settings[type]||{},primary=route.primary||{};
+  if(!primary.model){setActionFeedback('aiResult','Укажи основную модель для '+(type==='image'?'картинок':'текста')+'.','err');return;}
+  actionButtonState(btn,true,'Проверяю…');
+  setActionFeedback('aiResult','Проверяю текущие поля без сохранения…','busy');
+  try{
+    const r=await api('test_ai',{type,settings});
+    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · ничего не сохранено','ok');
+    flashActionButton(btn,'✓ Работает','ok');
+  }catch(e){
+    setActionFeedback('aiResult','Ошибка: '+(e.detail||e.message)+' · настройки не сохранены','err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
+}
+
+function renderPricing(b){
+  const s=data.settings||{},prices=s.prices||{};
+  const rows=Object.entries(prices).map(([cur,p])=>`<tr>
+    <td class="td-primary"><div class="cell-main">${esc(cur)}</div></td>
+    <td data-label="Месяц"><input id="price_${cur}_month" type="number" min="0.01" step="0.01" value="${esc(p.month)}"></td>
+    <td data-label="Год"><input id="price_${cur}_year" type="number" min="0.01" step="0.01" value="${esc(p.year)}"></td>
+    <td data-label="Выгода"><span class="cell-sub">${p.month&&p.year?Math.max(0,Math.round((1-p.year/(p.month*12))*100))+'% за год':'—'}</span></td>
+  </tr>`).join('');
+  b.innerHTML=pageHead('Premium и цены','Одна таблица цен по валютам. Платёжные провайдеры настраиваются отдельно.')+`
+    <div class="table-shell"><table class="data-table price-table">
+      <thead><tr><th>Валюта</th><th>Месяц</th><th>Год</th><th>Выгода года</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="4">Валюты не настроены.</td></tr>'}</tbody>
+    </table></div>
+    ${saveBar('priceSettings','Сохранить цены')}`;
+  $('priceSettingsSave').onclick=savePricingSettings;
+  Object.keys(prices).forEach(cur=>{
+    ['month','year'].forEach(k=>$('price_'+cur+'_'+k).addEventListener('input',()=>updatePriceRow(cur)));
+    updatePriceRow(cur);
+  });
+}
+function updatePriceRow(cur){
+  const m=+$('price_'+cur+'_month').value||0,y=+$('price_'+cur+'_year').value||0;
+  const row=$('price_'+cur+'_month').closest('tr'),out=row&&row.querySelector('[data-label="Выгода"] .cell-sub');
+  if(out)out.textContent=m>0&&y>0?Math.max(0,Math.round((1-y/(m*12))*100))+'% за год':'—';
+}
+async function savePricingSettings(){
+  const s=settingsClone();s.prices=s.prices||{};
+  const bad=[];
+  Object.keys(s.prices).forEach(cur=>{
+    const month=+$('price_'+cur+'_month').value,year=+$('price_'+cur+'_year').value;
+    if(!(month>0)||!(year>0))bad.push(cur+': цена должна быть больше нуля');
+    if(month>0&&year>month*12)bad.push(cur+': год дороже 12 месяцев');
+    s.prices[cur]={month,year};
+  });
+  if(bad.length){
+    setActionFeedback('priceSettingsState',bad[0],'err');
+    flashActionButton($('priceSettingsSave'),'Проверь цены','err');
+    return;
+  }
+  await persistSettings(s,'priceSettingsState');
+}
+
+function paymentReadiness(id,ready,enabled,month,year,needsProducts){
+  const missing=[];
+  if(!ready)missing.push('нет серверных ключей');
+  if(needsProducts&&!month)missing.push('нет Product ID месяца');
+  if(needsProducts&&!year)missing.push('нет Product ID года');
+  return {usable:ready&&(!needsProducts||(month&&year)),missing,enabled:!!enabled};
+}
+function renderPayments(b){
+  const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
+  const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
+  const states={
+    google:paymentReadiness('google',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear,true),
+    rustore:paymentReadiness('rustore',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year,true),
+    yookassa:paymentReadiness('yookassa',!!bp.yookassa,yoo.enabled!==false,'','',false)
+  };
+  const usable=Object.values(states).filter(x=>x.usable&&x.enabled).length;
+  const card=(id,name,st,enabled,month,year,kind,disabled)=>{
+    const stateText=st.usable?'готов к оплате':st.missing.join(' · ');
+    return '<div class="payment-card '+(st.usable?'':'problem')+'">'
+      +'<div class="payment-card-head"><div><b>'+name+'</b><div class="payment-ready '+(st.usable?'ok':'warn')+'">'+esc(stateText)+'</div></div>'
+      +'<label class="inline-switch" style="min-height:0;margin:0"><input id="'+id+'Enabled" type="checkbox"'+(enabled?' checked':'')+(disabled?' disabled':'')+'><span>Включён</span></label></div>'
+      +'<div class="payment-inputs">'
+      +(kind==='price'
+        ? '<div style="grid-column:1/-1"><div class="compact-note">Цена берётся из раздела Premium и цены. Product ID не нужен.</div></div>'
+        : '<div><label>Месяц</label><input id="'+id+'Month" value="'+esc(month||'')+'" placeholder="product id"></div>'
+          +'<div><label>Год</label><input id="'+id+'Year" value="'+esc(year||'')+'" placeholder="product id"></div>')
+      +'</div></div>';
+  };
+  b.innerHTML=pageHead('Платежи','Здесь видно не только наличие ключей, но и можно ли реально принимать оплату.')
+    +'<div class="payment-summary"><span class="status-chip '+(usable?'ok':'')+'">Готовых и включённых · '+usable+'</span>'
+      +'<span class="status-chip">Режим · '+esc(pay.provider||'multi')+'</span></div>'
+    +'<div class="form-card"><div class="form-card-body"><div class="field-grid">'
+      +'<div><label>Режим оплаты</label><select id="payProvider">'
+        +['multi','google','rustore','yookassa'].map(x=>'<option value="'+x+'"'+((pay.provider||'multi')===x?' selected':'')+'>'+x+'</option>').join('')
+      +'</select></div>'
+      +'<div class="wide"><div class="compact-note" style="margin-top:25px">Секретные ключи остаются только в Vercel. Админка показывает лишь факт готовности.</div></div>'
+    +'</div></div></div>'
+    +'<div class="payment-grid">'
+      +card('google','Google Play',states.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear)
+      +card('rustore','RuStore Pay',states.rustore,rustore.enabled!==false,rustore.month,rustore.year)
+      +card('yookassa','ЮKassa',states.yookassa,yoo.enabled!==false,'','','price')
+      +card('ios','iOS · позже',{usable:false,missing:['ещё не подключён']},false,pay.iosMonth,pay.iosYear,'',true)
+    +'</div>'+saveBar('paySettings','Сохранить платежи');
+  $('paySettingsSave').onclick=savePaymentSettings;
+}
+
+async function savePaymentSettings(){
+  const provider=$('payProvider').value;
+  const google={enabled:$('googleEnabled').checked,month:$('googleMonth').value.trim(),year:$('googleYear').value.trim()};
+  const rustore={enabled:$('rustoreEnabled').checked,month:$('rustoreMonth').value.trim(),year:$('rustoreYear').value.trim()};
+  const yookassa={enabled:$('yookassaEnabled').checked};
+  const bp=data.billingProviders||{};
+  const problems=[];
+  if(google.enabled&&(!bp.google||!google.month||!google.year))problems.push('Google Play: нужны серверные ключи и Product ID месяца/года');
+  if(rustore.enabled&&(!bp.rustore||!rustore.month||!rustore.year))problems.push('RuStore: нужны серверные ключи и Product ID месяца/года');
+  if(yookassa.enabled&&!bp.yookassa)problems.push('ЮKassa: нужны SHOP_ID и SECRET_KEY на сервере');
+  const selected={google,rustore,yookassa}[provider];
+  if(provider!=='multi'&&(!selected||!selected.enabled))problems.push('Выбранный провайдер должен быть включён');
+  if(provider!=='multi'&&!bp[provider])problems.push('У выбранного провайдера нет серверных ключей');
+  if(provider==='multi'&&!((google.enabled&&bp.google&&google.month&&google.year)||(rustore.enabled&&bp.rustore&&rustore.month&&rustore.year)||(yookassa.enabled&&bp.yookassa))){
+    problems.push('В режиме multi нужен хотя бы один полностью готовый и включённый провайдер');
+  }
+  if(problems.length){
+    setActionFeedback('paySettingsState',problems[0],'err');
+    flashActionButton($('paySettingsSave'),'Проверь настройки','err');
+    return;
+  }
+  const s=settingsClone();
+  s.payment={
+    provider,google,rustore,yookassa,
+    androidMonth:google.month,androidYear:google.year,
+    iosMonth:$('iosMonth').value.trim(),iosYear:$('iosYear').value.trim()
+  };
+  if(await persistSettings(s,'paySettingsState'))adminNotice('Настройки платежей сохранены.');
+}
+
+function renderRelease(b){
+  const direct=releaseSettings('direct'),store=releaseSettings('store');
+  b.innerHTML=pageHead('Обновление Android','Direct APK скачивается внутри Fit Timer. Сборки из магазина открывают страницу Google Play / RuStore.')+`
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Последняя собранная версия</h3>
+        <button class="b quiet" id="releaseRefreshBuild" type="button">Проверить снова</button>
+      </div>
+      <div class="form-card-body" id="releaseBuildInfo"><p class="compact-note">Проверяю последнюю release-сборку…</p></div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Каналы обновления</h3></div>
+      <div class="form-card-body" id="releaseLiveState"></div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head"><h3>Магазин приложений</h3></div>
+      <div class="form-card-body">
+        <p class="compact-note">Нажимай публикацию только после того, как эта версия реально появилась в Google Play или RuStore.</p>
+        <label>Ссылка магазина</label>
+        <input id="relStoreUrl" maxlength="500" value="${esc(store.url||'')}" placeholder="https://play.google.com/... или market://...">
+        <div class="action-row" style="margin-top:12px"><div class="action-stack">
+          <span class="action-feedback" id="releaseStorePublishState"></span>
+          <button class="b" id="releasePublishStore" type="button">Опубликовать для магазина</button>
+        </div></div>
+      </div>
+    </div>
+    <details class="release-advanced">
+      <summary>Дополнительные настройки</summary>
+      <div class="release-advanced-body">
+        <h4 style="margin:0 0 8px">Direct APK</h4>
+        <label class="check">
+          <input id="relRequired" type="checkbox" ${direct.minimumCode>0?'checked':''}>
+          Обязательное обновление Direct APK
+          <small>Обычно выключено. Включай только если старую direct-сборку действительно нельзя использовать.</small>
+        </label>
+        <div id="relMinimumWrap" class="${direct.minimumCode>0?'':'hidden'}">
+          <label>Минимально поддерживаемый versionCode</label>
+          <input id="relMinimumCode" type="number" min="0" step="1" value="${esc(direct.minimumCode||0)}">
+        </div>
+        <div class="field-grid" style="margin-top:12px">
+          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(direct.latestCode||0)}"></div>
+          <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(direct.latestName||'')}"></div>
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(direct.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(direct.messageEn||'')}</textarea></div>
+        </div>
+
+        <h4 style="margin:20px 0 8px">Магазин</h4>
+        <label class="check">
+          <input id="relStoreRequired" type="checkbox" ${store.minimumCode>0?'checked':''}>
+          Обязательное обновление магазинной сборки
+          <small>Не влияет на Direct APK. Используется только приложениями, собранными для магазина.</small>
+        </label>
+        <div id="relStoreMinimumWrap" class="${store.minimumCode>0?'':'hidden'}">
+          <label>Минимально поддерживаемый versionCode</label>
+          <input id="relStoreMinimumCode" type="number" min="0" step="1" value="${esc(store.minimumCode||0)}">
+        </div>
+        <div class="field-grid" style="margin-top:12px">
+          <div><label>Опубликованный versionCode</label><input id="relStoreLatestCode" type="number" min="0" step="1" value="${esc(store.latestCode||0)}"></div>
+          <div><label>Название версии</label><input id="relStoreLatestName" maxlength="40" value="${esc(store.latestName||'')}"></div>
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relStoreMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(store.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relStoreMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(store.messageEn||'')}</textarea></div>
+        </div>
+        <div class="action-row" style="margin-top:12px"><div class="action-stack">
+          <span class="action-feedback" id="releaseSettingsState"></span>
+          <button class="b" id="releaseSettingsSave" type="button">Сохранить дополнительные настройки</button>
+        </div></div>
+      </div>
+    </details>`;
+  $('releaseSettingsSave').onclick=saveReleaseSettings;
+  $('releasePublishStore').onclick=publishLatestStoreBuild;
+  $('releaseRefreshBuild').onclick=()=>loadLatestAndroidBuild(true);
+  $('relRequired').onchange=()=>{setShown('relMinimumWrap',$('relRequired').checked);updateReleasePreview();};
+  $('relStoreRequired').onchange=()=>{setShown('relStoreMinimumWrap',$('relStoreRequired').checked);updateReleasePreview();};
+  ['relLatestCode','relMinimumCode','relLatestName','relMessageRu','relMessageEn',
+   'relStoreLatestCode','relStoreMinimumCode','relStoreLatestName','relStoreUrl','relStoreMessageRu','relStoreMessageEn']
+    .forEach(id=>$(id).addEventListener('input',updateReleasePreview));
+  updateReleasePreview();renderReleaseLiveState();renderLatestAndroidBuild();loadLatestAndroidBuild();
+}
+function androidReleaseRoot(settings){
+  return (((settings||data.settings||{}).update||{}).android)||{};
+}
+function releaseSettings(channel){
+  const root=androidReleaseRoot();
+  if(channel==='store')return (root.store&&typeof root.store==='object')?root.store:{};
+  return (root.direct&&typeof root.direct==='object')?root.direct:root;
+}
+function writeReleaseChannel(settings,channel,record){
+  settings.update=settings.update||{};
+  const root=Object.assign({},settings.update.android||{});
+  root[channel]=record;
+  if(channel==='direct')Object.assign(root,record);
+  settings.update.android=root;
+}
+function releaseValues(channel){
+  const store=channel==='store';
+  const required=$(store?'relStoreRequired':'relRequired')&&$(store?'relStoreRequired':'relRequired').checked;
+  return {
+    latest:Math.max(0,Math.round(+$((store?'relStoreLatestCode':'relLatestCode')).value||0)),
+    minimum:required?Math.max(0,Math.round(+$((store?'relStoreMinimumCode':'relMinimumCode')).value||0)):0,
+    name:$((store?'relStoreLatestName':'relLatestName')).value.trim(),
+    url:store?$('relStoreUrl').value.trim():'',
+    ru:$((store?'relStoreMessageRu':'relMessageRu')).value.trim(),
+    en:$((store?'relStoreMessageEn':'relMessageEn')).value.trim()
+  };
+}
+function releaseProblems(v,channel){
+  const out=[];
+  if(v.minimum&&!v.latest)out.push('Сначала укажи опубликованный versionCode');
+  if(v.latest&&v.minimum>v.latest)out.push('Минимальная версия выше опубликованной');
+  if(channel==='store'&&v.latest&&!v.url)out.push('Для магазина нужна ссылка');
+  if(channel==='store'&&v.url&&!/^(https:\/\/|market:\/\/)/i.test(v.url))out.push('Ссылка магазина должна начинаться с https:// или market://');
+  return out;
+}
+function releaseChannel(url){
+  const v=String(url||'');
+  if(/play\.google\.com/i.test(v)||/^market:\/\//i.test(v))return 'Google Play';
+  if(/rustore/i.test(v))return 'RuStore';
+  return v?'Магазин':'не настроен';
+}
+function updateReleasePreview(){
+  const problems=releaseProblems(releaseValues('direct'),'direct').concat(releaseProblems(releaseValues('store'),'store'));
+  if(problems.length)setActionFeedback('releaseSettingsState',problems[0],'err');
+}
+function channelStateHtml(title,mode,u){
+  const latest=Math.max(0,Math.round(+u.latestCode||0)),minimum=Math.max(0,Math.round(+u.minimumCode||0));
+  const label=latest?(u.latestName||latest):'не опубликовано';
+  const sub=mode==='direct'
+    ? 'APK скачивается внутри Fit Timer, затем Android просит подтвердить установку.'
+    : 'Fit Timer открывает '+releaseChannel(u.url)+'. APK внутри приложения не скачивается.';
+  return '<div class="release-primary" style="padding:4px 0 10px"><div class="release-primary-copy"><b>'+esc(title)+' · '+esc(label)+'</b><small>'+esc(sub)+'</small></div>'
+    +'<span class="status-chip '+(latest?'ok':'')+'">'+(latest?'Опубликовано':'Выключено')+'</span></div>'
+    +'<div class="status-row"><span class="status-chip">'+(mode==='direct'?'Direct APK':esc(releaseChannel(u.url)))+'</span>'
+    +'<span class="status-chip '+(minimum?'':'ok')+'">'+(minimum?'Обязательное ниже '+esc(minimum):'Без обязательного обновления')+'</span></div>';
+}
+function renderReleaseLiveState(){
+  const box=$('releaseLiveState');if(!box)return;
+  box.innerHTML=channelStateHtml('Direct APK','direct',releaseSettings('direct'))
+    +'<div style="height:1px;background:var(--line);margin:8px 0 12px"></div>'
+    +channelStateHtml('Магазин','store',releaseSettings('store'));
+}
+function syncReleaseForm(){
+  if(!$('relLatestCode'))return;
+  const d=releaseSettings('direct'),s=releaseSettings('store');
+  $('relLatestCode').value=d.latestCode||0;$('relMinimumCode').value=d.minimumCode||0;$('relLatestName').value=d.latestName||'';
+  $('relMessageRu').value=d.messageRu||'';$('relMessageEn').value=d.messageEn||'';$('relRequired').checked=+(d.minimumCode||0)>0;setShown('relMinimumWrap',$('relRequired').checked);
+  $('relStoreLatestCode').value=s.latestCode||0;$('relStoreMinimumCode').value=s.minimumCode||0;$('relStoreLatestName').value=s.latestName||'';
+  $('relStoreUrl').value=s.url||'';$('relStoreMessageRu').value=s.messageRu||'';$('relStoreMessageEn').value=s.messageEn||'';
+  $('relStoreRequired').checked=+(s.minimumCode||0)>0;setShown('relStoreMinimumWrap',$('relStoreRequired').checked);
+}
+async function publishLatestAndroidBuild(){
+  const r=latestAndroidBuild;if(!r){setActionFeedback('releasePublishState','Последняя сборка ещё не загружена.','err');return;}
+  const u=releaseSettings('direct');
+  const rec={latestCode:r.versionCode,minimumCode:Math.max(0,Math.round(+u.minimumCode||0)),latestName:r.versionName,url:r.apkUrl,
+    messageRu:u.messageRu==='Доступна новая версия Fit Timer.'?'':(u.messageRu||''),messageEn:u.messageEn==='A new Fit Timer version is available.'?'':(u.messageEn||'')};
+  const s=settingsClone();writeReleaseChannel(s,'direct',rec);
+  setActionFeedback('releasePublishState','Публикую Direct APK…','busy');
+  if(await persistSettings(s,'releasePublishState')){
+    data.settings=s;syncReleaseForm();renderReleaseLiveState();renderLatestAndroidBuild();
+    setActionFeedback('releasePublishState','Direct APK опубликована. Обновление будет скачиваться внутри Fit Timer.','ok');
+    adminNotice('Direct APK опубликована.');
+  }
+}
+async function publishLatestStoreBuild(){
+  const r=latestAndroidBuild;if(!r){setActionFeedback('releaseStorePublishState','Последняя сборка ещё не загружена.','err');return;}
+  const u=releaseSettings('store'),url=$('relStoreUrl').value.trim();
+  if(!/^(https:\/\/|market:\/\/)/i.test(url)){
+    setActionFeedback('releaseStorePublishState','Сначала укажи ссылку Google Play / RuStore.','err');
+    flashActionButton($('releasePublishStore'),'Нужна ссылка','err');return;
+  }
+  const rec={latestCode:r.versionCode,minimumCode:Math.max(0,Math.round(+u.minimumCode||0)),latestName:r.versionName,url,messageRu:u.messageRu||'',messageEn:u.messageEn||''};
+  const s=settingsClone();writeReleaseChannel(s,'store',rec);
+  setActionFeedback('releaseStorePublishState','Публикую магазинный канал…','busy');
+  if(await persistSettings(s,'releaseStorePublishState')){
+    data.settings=s;syncReleaseForm();renderReleaseLiveState();renderLatestAndroidBuild();
+    setActionFeedback('releaseStorePublishState','Магазинный канал опубликован.','ok');adminNotice('Обновление для магазина опубликовано.');
+  }
+}
+function renderLatestAndroidBuild(){
+  const box=$('releaseBuildInfo');if(!box)return;
+  if(!latestAndroidBuild){box.innerHTML='<p class="compact-note">Данные сборки ещё не загружены.</p>';return;}
+  const r=latestAndroidBuild,d=releaseSettings('direct'),s=releaseSettings('store');
+  const directPublished=Math.max(0,Math.round(+d.latestCode||0))===r.versionCode;
+  const storePublished=Math.max(0,Math.round(+s.latestCode||0))===r.versionCode;
+  box.innerHTML='<div class="release-primary"><div class="release-primary-copy"><b>Fit Timer '+esc(r.versionName)+'</b>'
+    +'<small>Собрана '+esc(fmtDay(r.builtAt))+(r.commit?' · commit '+esc(String(r.commit).slice(0,7)):'')+'</small></div>'
+    +'<span class="status-chip '+(directPublished?'ok':'')+'">'+(directPublished?'Direct опубликована':'Direct не опубликована')+'</span></div>'
+    +'<div class="status-row"><span class="status-chip '+(storePublished?'ok':'')+'">'+(storePublished?'Магазин опубликован':'Магазин ещё не опубликован')+'</span></div>'
+    +'<div class="action-row" style="margin-top:12px"><a class="b quiet" href="'+esc(r.releaseUrl)+'" target="_blank" rel="noopener">GitHub release</a>'
+    +'<div class="action-stack"><span class="action-feedback" id="releasePublishState"></span>'
+    +'<button class="b '+(directPublished?'quiet':'ok')+'" id="releasePublishLatest" type="button" '+(directPublished?'disabled':'')+'>'
+    +(directPublished?'Direct APK опубликована':'Опубликовать Direct APK')+'</button></div></div>';
+  const btn=$('releasePublishLatest');if(btn&&!directPublished)btn.onclick=publishLatestAndroidBuild;
+}
+async function loadLatestAndroidBuild(force){
+  const box=$('releaseBuildInfo'),btn=$('releaseRefreshBuild');if(!box)return;
+  if(latestAndroidBuild&&!force){renderLatestAndroidBuild();return;}
+  box.innerHTML='<p class="compact-note">Проверяю последнюю release-сборку…</p>';if(btn)btn.disabled=true;
+  try{
+    const out=await api('android_release_latest');latestAndroidBuild=out.release||null;if(!latestAndroidBuild)throw new Error('empty_release');
+    renderLatestAndroidBuild();renderReleaseLiveState();
+  }catch(e){latestAndroidBuild=null;box.innerHTML='<p class="compact-note">Не удалось получить последнюю APK. Попробуй «Проверить снова» после завершения Android-сборки.</p>';}
+  finally{if(btn)btn.disabled=false;}
+}
+async function saveReleaseSettings(){
+  const direct=releaseValues('direct'),store=releaseValues('store');
+  const problems=releaseProblems(direct,'direct').concat(releaseProblems(store,'store'));
+  if(problems.length){setActionFeedback('releaseSettingsState',problems[0],'err');flashActionButton($('releaseSettingsSave'),'Проверь поля','err');return;}
+  const beforeD=releaseSettings('direct'),beforeS=releaseSettings('store');
+  if(direct.minimum>0&&direct.minimum!==Math.max(0,Math.round(+beforeD.minimumCode||0))&&!confirm('Сделать Direct APK обязательной для сборок ниже '+direct.minimum+'?'))return;
+  if(store.minimum>0&&store.minimum!==Math.max(0,Math.round(+beforeS.minimumCode||0))&&!confirm('Сделать магазинное обновление обязательным для сборок ниже '+store.minimum+'?'))return;
+  const s=settingsClone();
+  writeReleaseChannel(s,'direct',{latestCode:direct.latest,minimumCode:direct.minimum,latestName:direct.name,url:beforeD.url||'',messageRu:direct.ru,messageEn:direct.en});
+  writeReleaseChannel(s,'store',{latestCode:store.latest,minimumCode:store.minimum,latestName:store.name,url:store.url,messageRu:store.ru,messageEn:store.en});
+  if(await persistSettings(s,'releaseSettingsState')){
+    data.settings=s;renderReleaseLiveState();renderLatestAndroidBuild();setActionFeedback('releaseSettingsState','Дополнительные настройки обоих каналов сохранены.','ok');
+    adminNotice('Настройки Android-обновлений сохранены.');
+  }
+}
+
+let editing = null;
+let editingStatus = null;
+let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};
+let aiEditTarget = null;
+let failedMediaJobs = [];
+let adminCreateMode = 'ai';   // картинки живут отдельно от полей ввода
+
+/* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
+   запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
+   не поместятся никуда, и отправлять их незачем — на экране они всё равно
+   размером с ноготь. */
+function shrinkPic(file, maxSide, cb){
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    try{ cb(c.toDataURL('image/jpeg', .82)); }catch(e){ cb(null); }
+    URL.revokeObjectURL(img.src);
+  };
+  img.onerror = () => cb(null);
+  img.src = URL.createObjectURL(file);
+}
+
+// Один выбор файла на всю страницу: кто его ждёт, тот и получит.
+let pickTo = null;
+function pickPic(fn){
+  pickTo = fn;
+  const f = $('fFile');
+  f.value = '';
+  f.click();
+}
+
+// Названия упражнений — из текста программы. Другого источника нет и не нужно:
+// фото привязано к названию, и расходиться им нельзя.
+function exerciseBlocks(lang){
+  const field=lang==='en' ? $('fTextEn') : $('fTextRu');
+  const text=field?field.value:'';
+  const lines=text.split(/\r?\n/);
+  const starts=[];
+  lines.forEach((line,i)=>{if(/^УПРАЖНЕНИЕ:\s*/i.test(line))starts.push(i);});
+  return starts.map((start,idx)=>{
+    const end=idx+1<starts.length?starts[idx+1]:lines.length;
+    const chunk=lines.slice(start,end);
+    const value=key=>{
+      const row=chunk.find(x=>new RegExp('^'+key+':\\s*','i').test(x));
+      return row?row.replace(new RegExp('^'+key+':\\s*','i'),'').trim():'';
+    };
+    return {
+      name:value('УПРАЖНЕНИЕ'),
+      description:value('ОПИСАНИЕ'),
+      muscles:value('МЫШЦЫ').split(/[,;]/).map(x=>x.trim()).filter(Boolean),
+      format:value('ФОРМАТ'),
+      value:value('ЗНАЧЕНИЕ'),
+      start,end
+    };
+  }).filter(x=>x.name);
+}
+function exNames(){
+  return exerciseBlocks(form.sourceLocale).map(x=>x.name);
+}
+
+function localeFromForm(lang){
+  const suf=lang==='en'?'En':'Ru';
+  return {name:$('fName'+suf).value.trim(),gives:$('fGives'+suf).value.trim(),text:$('fText'+suf).value};
+}
+function setLocaleForm(lang,x){
+  const suf=lang==='en'?'En':'Ru';x=x||{};
+  $('fName'+suf).value=x.name||'';
+  $('fGives'+suf).value=x.gives||'';
+  $('fText'+suf).value=x.text||'';
+}
+function updateLocaleStates(){
+  LANGS.forEach(lang=>{
+    const x=localeFromForm(lang);
+    const ok=x.name.length>=3&&x.gives.length>=20&&x.text.length>=60;
+    const el=$('fState'+(lang==='en'?'En':'Ru'));
+    el.textContent=ok?'✓':'—';
+    el.className='lang-state'+(ok?' ok':'');
+  });
+  updateEditorModeration();
+}
+let pasteDirection={from:'ru',to:'en'};
+async function translateCatalogForm(from,to){
+  pasteDirection={from,to};
+  const btn=$(from==='ru'?'fTranslateRuEn':'fTranslateEnRu');
+  actionButtonState(btn,true,'Перевожу…');
+  setActionFeedback('editorToolsState','Перевожу '+langName(from)+' → '+langName(to)+'…','busy');
+  try{
+    const r=await api('translate_catalog',{from,to,locale:localeFromForm(from)});
+    setLocaleForm(to,r.locale||{});
+    markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
+    setActionFeedback('editorToolsState','✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.','ok');
+    flashActionButton(btn,'✓ Готово','ok');
+  }catch(e){
+    setActionFeedback('editorToolsState','ИИ не перевёл: '+(e.detail||e.message)+'. Можно вставить перевод вручную.','err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
+}
+async function copyTranslationSource(){
+  const from=editorLang,to=editorLang==='ru'?'en':'ru',btn=$('fCopyTranslate');
+  pasteDirection={from,to};
+  const txt=translationPrompt(localeFromForm(from),from,to);
+  try{
+    await navigator.clipboard.writeText(txt);
+    setActionFeedback('editorToolsState','✓ Промпт '+langName(from)+' → '+langName(to)+' скопирован.','ok');
+    flashActionButton(btn,'✓ Скопировано','ok');
+  }catch(e){
+    $('fPasteJson').value=txt;$('fPasteWrap').hidden=false;
+    setActionFeedback('editorToolsState','Буфер недоступен — промпт показан в поле ниже.','err');
+  }
+}
+function applyPastedTranslation(){
+  const d=pasteDirection,btn=$('fPasteApply');
+  let raw=$('fPasteJson').value.trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
+  try{
+    const x=JSON.parse(raw);
+    setLocaleForm(d.to,x);
+    markEditorDirty();
+    $('fPasteWrap').hidden=true;$('fPasteJson').value='';
+    updateLocaleStates();renderExerciseCards();renderPics();
+    setActionFeedback('editorToolsState','✓ Перевод вставлен в '+langName(d.to)+'. Проверь перед сохранением.','ok');
+    flashActionButton(btn,'✓ Применено','ok');
+  }catch(e){
+    setActionFeedback('editorToolsState','Не получилось прочитать JSON. Нужны поля name, gives и text.','err');
+    flashActionButton(btn,'Ошибка JSON','err');
+  }
+}
+
+function openAiEditProgram(lang,exercise){
+  aiEditTarget={lang:lang==='en'?'en':'ru',exercise:exercise||''};
+  const box=$('fAiEditBox'),title=$('fAiEditTitle'),input=$('fAiInstruction');
+  if(!box||!input)return;
+  title.textContent=exercise?'Изменить упражнение «'+exercise+'» через ИИ':'Изменить программу '+langName(aiEditTarget.lang)+' через ИИ';
+  input.value='';
+  input.placeholder=exercise?'Например: замени на вариант без прыжков и сохрани ту же нагрузку':'Например: добавь ещё один тренировочный день на спину и плечи';
+  box.hidden=false;
+  input.focus();
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeAiEditProgram(){
+  aiEditTarget=null;
+  const box=$('fAiEditBox'),input=$('fAiInstruction');
+  if(box)box.hidden=true;
+  if(input)input.value='';
+}
+async function aiEditProgram(){
+  if(!aiEditTarget)return;
+  const lang=aiEditTarget.lang,exercise=aiEditTarget.exercise;
+  const instruction=($('fAiInstruction').value||'').trim();
+  if(!instruction){setActionFeedback('fAiEditState','Опиши, что нужно изменить.','err');return;}
+  const btn=$('fAiEditApply');
+  actionButtonState(btn,true,'Изменяю…');
+  setActionFeedback('fAiEditState',exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…','busy');
+  try{
+    const r=await api('catalog_ai_edit',{
+      mode:exercise?'exercise':'program',
+      lang,
+      locale:localeFromForm(lang),
+      exercise:exercise||'',
+      instruction
+    });
+    setLocaleForm(lang,r.locale||{});
+    markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
+    closeAiEditProgram();
+    setActionFeedback('editorToolsState','✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.','ok');
+  }catch(e){
+    setActionFeedback('fAiEditState','ИИ не изменил: '+(e.detail||e.message),'err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
+}
+function renderExerciseCards(){
+  const box=$('exerciseCards');if(!box)return;
+  const list=exerciseBlocks(editorLang);
+  box.innerHTML='';
+  if(!list.length){box.innerHTML='<div class="compact-note">Упражнения появятся здесь после заполнения протокола.</div>';return;}
+  list.forEach(ex=>{
+    const card=document.createElement('div');
+    card.className='exercise-card';
+    card.innerHTML=`
+      <div class="exercise-card-head"><div class="exercise-card-title">${esc(ex.name)}</div><button class="b quiet" type="button">Изменить через ИИ</button></div>
+      ${ex.description?`<p>${esc(ex.description)}</p>`:''}
+      ${ex.format||ex.value?`<div class="entity-tags"><span class="status-chip">${esc(ex.format||'формат')}</span>${ex.value?`<span class="status-chip">${esc(ex.value)}</span>`:''}</div>`:''}`;
+    card.querySelector('button').onclick=()=>openAiEditProgram(editorLang,ex.name);
+    box.appendChild(card);
+  });
+}
+function shrinkGeneratedPic(data,cb){
+  const img=new Image();
+  img.onload=()=>{
+    const maxSide=640,k=Math.min(1,maxSide/Math.max(img.width,img.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.width*k));canvas.height=Math.max(1,Math.round(img.height*k));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    try{cb(canvas.toDataURL('image/jpeg',.82));}catch(_){cb(data);}
+  };
+  img.onerror=()=>cb(data);img.src=data;
+}
+function catalogImagePayload(kind,name,description){
+  const source=form.sourceLocale;
+  const locale=localeFromForm(source);
+  const blocks=exerciseBlocks(source);
+  const ex=blocks.find(x=>x.name===name)||{};
+  return {
+    kind,
+    name,
+    description,
+    muscles:ex.muscles||[],
+    format:ex.format||'',
+    program:locale.name,
+    gives:locale.gives,
+    category:$('fCat')?$('fCat').value:'',
+    exerciseNames:blocks.map(x=>x.name).slice(0,20),
+    gender:form.imageGender||'f'
+  };
+}
+async function generateCatalogPic(kind,name,description,set,el){
+  const ph=el&&el.querySelector('.ph'),btn=el&&el.querySelector('[data-generate]'),state=$('mediaProgressText');
+  if(ph)ph.classList.add('generating');
+  actionButtonState(btn,true,'…');
+  if(state){state.className='muted busy';state.textContent='Генерирую '+(kind==='cover'?'обложку':'«'+name+'»')+'…';}
+  try{
+    const r=await api('catalog_ai_image',catalogImagePayload(kind,name,description));
+    await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{set(pic);renderPics();resolve();}));
+    if(state){state.className='muted ok';state.textContent='✓ Картинка готова. Не забудь сохранить программу.';}
+  }catch(e){
+    if(ph)ph.classList.remove('generating');
+    if(state){state.className='muted err';state.textContent='Не получилось: '+(e.detail||e.message);}
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn&&btn.disabled)actionButtonState(btn,false);}
+}
+
+async function generateMedia(mode){
+  const source=form.sourceLocale;
+  const exercises=exerciseBlocks(source);
+  let jobs=[];
+  if(mode==='retry'){
+    jobs=failedMediaJobs.slice();
+  }else{
+    if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
+    exercises.forEach(ex=>{
+      if(mode==='all'||!form.media[ex.name])jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>{form.media[ex.name]=d;}});
+    });
+  }
+  if(!jobs.length){
+    failedMediaJobs=[];
+    const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
+    const state=$('mediaProgressText');if(state){state.className='muted ok';state.textContent='Все изображения уже есть.';}
+    return;
+  }
+  const failed=[];
+  const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
+  for(let i=0;i<jobs.length;i++){
+    const j=jobs[i],state=$('mediaProgressText');
+    if(state){state.className='muted busy';state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);}
+    try{
+      const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
+      await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);markEditorDirty();renderPics();resolve();}));
+    }catch(e){
+      failed.push(j);
+    }
+  }
+  failedMediaJobs=failed;
+  const done=jobs.length-failed.length,state=$('mediaProgressText');
+  if(!failed.length){
+    if(state){state.className='muted ok';state.textContent='✓ Готово '+done+' / '+jobs.length+'. Сохрани программу.';}
+  }else{
+    if(state){state.className='muted err';state.textContent='Готово '+done+' / '+jobs.length+' · ошибок '+failed.length+'. Уже готовые картинки сохранены.';}
+    if(retry)retry.hidden=false;
+  }
+  renderPics();
+}
+
+function renderPics(){
+  const cover=$('fCoverBox');if(!cover)return;
+  cover.innerHTML='';
+  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;markEditorDirty();renderPics();},'cover',''));
+
+  const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
+  const box=$('fPics');box.innerHTML='';
+  $('fPicsHint').textContent=names.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
+  blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];markEditorDirty();renderPics();},'exercise',ex.description)));
+  Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
+  updateEditorModeration();
+}
+function picBox(label,data,set,kind,description){
+  const el=document.createElement('div');el.className='pic '+(kind==='cover'?'cover-pic':'exercise-pic');
+  el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'нет фото'}</div>
+    <small>${esc(label)}</small>
+    <div class="pic-tools">
+      <button type="button" data-generate>ИИ</button>
+      <button type="button" data-upload>Загрузить</button>
+      ${data?'<button type="button" data-remove>✕</button>':''}
+    </div>`;
+  el.querySelector('[data-generate]').onclick=()=>generateCatalogPic(kind,label,description,set,el);
+  el.querySelector('[data-upload]').onclick=()=>pickPic(set);
+  const rm=el.querySelector('[data-remove]');if(rm)rm.onclick=()=>set(null);
+  return el;
+}
+
+let editorLang='ru';
+function setEditorLang(lang){
+  editorLang=lang==='en'?'en':'ru';
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.classList.toggle('on',x.dataset.editorLang===editorLang));
+  const ru=$('editorRu'),en=$('editorEn');
+  if(ru)ru.hidden=editorLang!=='ru';
+  if(en)en.hidden=editorLang!=='en';
+  renderExerciseCards();
+}
+function cancelProgramEdit(){
+  if(editorDirty&&!confirm('Отменить редактирование и потерять несохранённые изменения?'))return;
+  const back=editingStatus==='pending'?'pending':editingStatus==='draft'?'drafts':'approved';
+  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+  resetEditorDirty();
+  localStorage.removeItem('adminEditingId');
+  allowEditorLeave=true;
+  setTab(back);
+  allowEditorLeave=false;
+}
+function setAdminCreateMode(mode){
+  adminCreateMode=mode==='manual'?'manual':'ai';
+  document.querySelectorAll('[data-create-mode]').forEach(x=>x.classList.toggle('on',x.dataset.createMode===adminCreateMode));
+  const fields=$('aiCreateFields');if(fields)fields.hidden=adminCreateMode!=='ai';
+}
+async function generateAdminProgram(){
+  const btn=$('fAiCreate'),state=$('fAiCreateState');
+  const lang=$('aiCreateLang').value==='en'?'en':'ru';
+  actionButtonState(btn,true,'Генерирую…');
+  setActionFeedback('fAiCreateState','ИИ собирает полную программу…','busy');
+  try{
+    const r=await api('catalog_ai_create',{
+      lang,
+      cat:$('fCat').value,
+      level:$('fLevel').value,
+      min:+$('fMin').value||20,
+      days:+$('aiCreateDays').value||3,
+      equipment:$('aiCreateEquipment').value.trim(),
+      limitations:$('aiCreateLimitations').value.trim(),
+      focus:$('aiCreateFocus').value.trim(),
+      style:$('aiCreateStyle').value,
+      warmup:$('aiCreateWarmup').value,
+      instruction:$('aiCreateWish').value.trim()
+    });
+    const other=lang==='ru'?'en':'ru';
+    setLocaleForm(lang,r.locale||{});
+    setLocaleForm(other,{});
+    form.sourceLocale=lang;
+    markEditorDirty();
+    form.cover=null;
+    form.media={};
+    failedMediaJobs=[];
+    setEditorLang(lang);
+    updateLocaleStates();renderExerciseCards();renderPics();
+    $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · второй язык создаётся автоматически';
+    state.textContent='Программа готова. Перевожу '+langName(lang)+' → '+langName(other)+'…';
+    try{
+      const tr=await api('translate_catalog',{from:lang,to:other,locale:r.locale||{}});
+      setLocaleForm(other,tr.locale||{});
+      updateLocaleStates();
+      setActionFeedback('fAiCreateState','✓ Программа и оба языка готовы. Проверь тексты, затем сделай изображения и сохрани.','ok');
+    }catch(trErr){
+      setActionFeedback('fAiCreateState','Исходник готов, но второй язык не перевёлся: '+(trErr.detail||trErr.message)+'. Используй кнопку '+langName(lang)+' → '+langName(other)+' ниже.','err');
+    }
+    const textCard=$('fName'+(lang==='en'?'En':'Ru'));
+    if(textCard)textCard.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){
+    setActionFeedback('fAiCreateState','Не получилось сгенерировать: '+(e.detail||e.message),'err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
+}
+
+function formLocaleReady(lang){
+  const x=localeFromForm(lang);
+  return x.name.length>=3&&x.gives.length>=20&&x.text.length>=60;
+}
+function editorReadiness(){
+  const exercises=exerciseBlocks(form.sourceLocale);
+  const mediaCount=exercises.filter(ex=>!!form.media[ex.name]).length;
+  return {
+    ru:formLocaleReady('ru'),
+    en:formLocaleReady('en'),
+    cover:!!form.cover,
+    exercises:exercises.length,
+    media:mediaCount,
+    publishable:formLocaleReady('ru')&&formLocaleReady('en')
+  };
+}
+function updateEditorModeration(){
+  const card=$('editorReviewCard');
+  if(!card)return;
+  const relevant=editingStatus==='pending'||editingStatus==='draft';
+  card.hidden=!relevant;
+  if(!relevant)return;
+  const st=editorReadiness(),rows=$('editorReviewRows'),note=$('editorReviewNote');
+  const item=(title,ok,text)=>'<div class="editor-review-item '+(ok?'ok':'')+'"><b>'+(ok?'✓ ':'— ')+esc(title)+'</b><span>'+esc(text)+'</span></div>';
+  rows.innerHTML=
+    item('Русский',st.ru,st.ru?'готов к публикации':'нужно заполнить название, описание и протокол')
+    +item('English',st.en,st.en?'готов к публикации':'нужно заполнить название, описание и протокол')
+    +item('Обложка',st.cover,st.cover?'есть':'не блокирует публикацию, но каталог будет слабее')
+    +item('Фото упражнений',st.exercises>0&&st.media===st.exercises,
+      st.exercises?st.media+' из '+st.exercises+(st.media===st.exercises?' готовы':' — можно догенерировать'):'упражнения ещё не разобраны');
+  if(note)note.textContent=st.publishable
+    ? 'Тексты готовы. Обложка и фото не блокируют публикацию, но лучше закрыть медиа до выпуска.'
+    : 'Публикация заблокирована, пока RU и EN не проходят обязательную проверку.';
+  const free=$('editorApproveFree'),pro=$('editorApprovePro');
+  if(free)free.disabled=!st.publishable;
+  if(pro)pro.disabled=!st.publishable;
+}
+function currentProgramItem(){
+  const source=form.sourceLocale==='en'?'en':'ru';
+  const locales={ru:localeFromForm('ru'),en:localeFromForm('en')};
+  const src=locales[source];
+  return {
+    sourceLocale:source,locales,
+    name:src.name,gives:src.gives,text:src.text,
+    cat:$('fCat').value,level:$('fLevel').value,
+    min:+$('fMin').value,by:$('fBy').value.trim(),
+    exCount:exNames().length,pro:$('fPro').checked,
+    cover:form.cover,media:form.media
+  };
+}
+function closeEditorTo(target){
+  editing=null;editingStatus=null;
+  resetEditorDirty();
+  localStorage.removeItem('adminEditingId');
+  form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
+  tab=target;
+  localStorage.setItem('adminTab',tab);
+}
+async function moderatePendingFromEditor(pro,source){
+  if(editingStatus!=='pending'||!editing)return;
+  const buttons=['editorApproveFree','editorApprovePro','editorReject'].map($).filter(Boolean);
+  buttons.forEach(x=>x.disabled=true);
+  const state=$('programSaveState');
+  setActionFeedback('editorReviewFeedback','Сохраняю правки перед публикацией…','busy');
+  if(state)state.textContent='Сохраняю правки перед публикацией…';
+  try{
+    await api('edit',{id:editing,item:currentProgramItem()});
+    if(state)state.textContent='Правки сохранены · публикую…';
+    setActionFeedback('editorReviewFeedback','Правки сохранены · публикую…','busy');
+    await api('approve',{id:editing,pro:!!pro});
+    closeEditorTo('approved');
+    await load();
+    adminNotice(pro?'Программа опубликована в Premium.':'Программа опубликована в каталоге.');
+  }catch(e){
+    const detail=Array.isArray(e.miss)&&e.miss.length?e.miss.join(' · '):(e.detail||e.message);
+    setActionFeedback('editorReviewFeedback','Не получилось опубликовать: '+detail,'err');
+    if(state)state.textContent='Исправь замечания и повтори';
+    updateEditorModeration();
+  }finally{
+    buttons.forEach(x=>{if(document.body.contains(x))x.disabled=false;});
+  }
+}
+async function rejectPendingFromEditor(){
+  if(editingStatus!=='pending'||!editing)return;
+  const name=localeFromForm(form.sourceLocale).name||'эту программу';
+  if(!confirm('Отклонить «'+name+'»? Тренер получит уведомление.'))return;
+  const btn=$('editorReject');if(btn)btn.disabled=true;
+  setActionFeedback('editorReviewFeedback','Отклоняю заявку…','busy');
+  try{
+    await api('reject',{id:editing});
+    closeEditorTo('pending');
+    await load();
+    adminNotice('Заявка отклонена.');
+  }catch(e){
+    setActionFeedback('editorReviewFeedback','Не получилось отклонить: '+e.message,'err');
+    adminNotice('Не получилось отклонить: '+e.message,'err');
+    if(btn)btn.disabled=false;
+  }
+}
+
+function renderAdd(b){
+  const editorTitle=editingStatus==='draft'?'Черновик программы':editing?'Редактирование программы':'Новая программа';
+  b.innerHTML=pageHead(editorTitle,'Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
+    <div class="form-card">
+      <div class="form-card-head"><h3>Основное</h3><span class="status-chip" id="programAccessState">Free</span></div>
+      <div class="form-card-body">
+        <div class="field-grid">
+          <div><label>Цель</label><select id="fCat">${GOALS.map(g=>`<option value="${g[0]}">${g[1]}</option>`).join('')}</select></div>
+          <div><label>Уровень</label><select id="fLevel">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+          <div><label>Длительность, мин</label><input id="fMin" type="number" min="1" max="180" value="20"></div>
+          <div><label>Автор</label><input id="fBy" maxlength="40" placeholder="@trainer или пусто"></div>
+        </div>
+        <label class="inline-switch" style="margin-top:10px"><input type="checkbox" id="fPro"><span>Только Premium</span></label>
+      </div>
+    </div>
+
+    <div class="form-card" id="editorReviewCard" hidden>
+      <div class="form-card-head">
+        <div><h3 id="editorReviewTitle">Готовность к публикации</h3><div class="cell-sub">Проверка текущих данных редактора, а не сохранённой версии.</div></div>
+        <span class="status-chip" id="editorReviewStatus">Модерация</span>
+      </div>
+      <div class="form-card-body">
+        <div class="editor-review-grid" id="editorReviewRows"></div>
+        <div class="editor-review-note" id="editorReviewNote"></div>
+        <div class="moderation-actions" id="editorReviewActions" hidden>
+          <button class="b ok" type="button" id="editorApproveFree">Сохранить и опубликовать Free</button>
+          <button class="b ok" type="button" id="editorApprovePro">Сохранить и опубликовать Premium</button>
+          <button class="b danger-text" type="button" id="editorReject">Отклонить заявку</button>
+        </div>
+        <span class="action-feedback" id="editorReviewFeedback"></span>
+      </div>
+    </div>
+
+    <div class="form-card admin-ai-create" id="aiCreateCard"${editing?' hidden':''}>
+      <div class="form-card-head">
+        <div><h3>Создание программы</h3><div class="cell-sub">Цель, уровень и длительность берутся из блока «Основное».</div></div>
+        <div class="seg">
+          <button type="button" data-create-mode="ai" class="${adminCreateMode==='ai'?'on':''}">Через ИИ</button>
+          <button type="button" data-create-mode="manual" class="${adminCreateMode==='manual'?'on':''}">Вручную</button>
+        </div>
+      </div>
+      <div class="form-card-body" id="aiCreateFields"${adminCreateMode==='ai'?'':' hidden'}>
+        <div class="field-grid">
+          <div><label>Язык исходника</label><select id="aiCreateLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div><label>Тренировок в неделю</label><input id="aiCreateDays" type="number" min="1" max="7" value="3"></div>
+          <div><label>Структура</label><select id="aiCreateStyle"><option value="auto">На усмотрение ИИ</option><option value="circuit">Круговая</option><option value="strength">Силовая</option><option value="mixed">Смешанная</option></select></div>
+          <div><label>Разминка</label><select id="aiCreateWarmup"><option value="auto">На усмотрение ИИ</option><option value="yes">Добавить</option><option value="no">Без разминки</option></select></div>
+          <div class="wide"><label>Оборудование</label><input id="aiCreateEquipment" maxlength="500" placeholder="Например: гантели 5–20 кг, скамья, резинки"></div>
+          <div class="wide"><label>Акцент</label><input id="aiCreateFocus" maxlength="500" placeholder="Например: больше спины и плеч, без лишнего кардио"></div>
+          <div class="wide"><label>Ограничения</label><textarea id="aiCreateLimitations" class="compact-text" maxlength="700" placeholder="Например: без прыжков, беречь колени"></textarea></div>
+          <div class="wide"><label>Дополнительное пожелание</label><textarea id="aiCreateWish" class="compact-text" maxlength="1200" placeholder="Что ещё важно учесть"></textarea></div>
+        </div>
+        <div class="action-row"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button><span class="action-feedback" id="fAiCreateState">ИИ заполнит исходный язык. После этого проверь программу и переведи второй язык.</span></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-head">
+        <div><h3>Текст программы</h3><div class="cell-sub" id="fSourceHint"></div></div>
+        <div class="seg">
+          <button type="button" data-editor-lang="ru" class="${editorLang==='ru'?'on':''}">RU <span id="fStateRu"></span></button>
+          <button type="button" data-editor-lang="en" class="${editorLang==='en'?'on':''}">EN <span id="fStateEn"></span></button>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div id="editorRu" class="lang-pane"${editorLang==='ru'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Название</label><input id="fNameRu" maxlength="60"></div>
+            <div class="wide"><label>Что даёт программа</label><textarea id="fGivesRu" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Протокол программы</label><textarea id="fTextRu" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+          </div>
+        </div>
+        <div id="editorEn" class="lang-pane"${editorLang==='en'?'':' hidden'}>
+          <div class="field-grid">
+            <div class="wide"><label>Name</label><input id="fNameEn" maxlength="60"></div>
+            <div class="wide"><label>What it gives</label><textarea id="fGivesEn" class="compact-text" maxlength="300"></textarea></div>
+            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000"></textarea></div>
+          </div>
+        </div>
+
+        <div class="translate-tools">
+          <div class="editor-tools">
+            <button class="b" id="fTranslateRuEn">RU → EN</button>
+            <button class="b" id="fTranslateEnRu">EN → RU</button>
+            <button class="b" id="fAiProgram">Изменить программу через ИИ</button>
+            <button class="b quiet" id="fCopyTranslate">Скопировать промпт</button>
+            <button class="b quiet" id="fPasteToggle">Вставить JSON</button>
+          </div>
+          <span class="action-feedback editor-tools-feedback" id="editorToolsState"></span>
+          <div class="translate-box" id="fPasteWrap" hidden>
+            <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
+            <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
+          </div>
+          <div class="ai-inline-box" id="fAiEditBox" hidden>
+            <div class="ai-inline-title"><b id="fAiEditTitle">Изменить через ИИ</b><span class="status-chip">запрос сохраняется при ошибке</span></div>
+            <textarea id="fAiInstruction" class="compact-text" maxlength="2000"></textarea>
+            <div class="acts">
+              <button class="b ok" type="button" id="fAiEditApply">Применить изменение</button>
+              <button class="b quiet" type="button" id="fAiEditCancel">Отмена</button>
+            </div>
+            <p class="action-feedback" id="fAiEditState"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-head"><div><h3>Упражнения</h3><div class="cell-sub">Разобраны из протокола активного языка</div></div></div>
+      <div class="form-card-body"><div class="exercise-grid" id="exerciseCards"></div></div>
+    </div>
+
+    <details class="form-fold" open>
+      <summary>Медиа <span class="cell-sub">· обложка и фото упражнений</span></summary>
+      <div class="fold-body">
+        <div class="form-card" style="margin:0 0 10px">
+          <div class="form-card-body">
+            <div class="field-grid">
+              <div><label>Персонаж на изображениях</label><select id="imageGender">
+                <option value="f">Женщина</option>
+                <option value="m">Мужчина</option>
+              </select></div>
+              <div class="wide"><div class="compact-note" style="margin-top:24px">Единый стиль Fit Timer: реалистичная 3D-анатомия, серое тело, оранжевая подсветка работающих мышц, белые стрелки движения, нейтральный / gym-фон, без текста и логотипов.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="media-tools">
+          <button class="b" id="genMissing" type="button">Сгенерировать недостающие</button>
+          <button class="b quiet" id="genAll" type="button">Сгенерировать все заново</button>
+        </div>
+        <div class="media-progress"><span class="muted" id="mediaProgressText"></span><button class="b quiet" type="button" id="retryFailedMedia" hidden>Повторить ошибки</button></div>
+        <label>Обложка</label>
+        <div class="pics" id="fCoverBox"></div>
+        <label>Фото упражнений</label>
+        <p class="compact-note" id="fPicsHint"></p>
+        <div class="pics" id="fPics"></div>
+      </div>
+    </details>
+
+    <input type="file" id="fFile" accept="image/*" hidden>
+    <p class="err" id="fErr"></p>
+    <div class="sticky-save">
+      <span class="save-state" id="programSaveState">${editingStatus==='draft'?'Черновик · не опубликован':''}</span>
+      <div class="save-actions">
+        <button class="b quiet" id="fClear">Отмена</button>
+        <button class="b ${editingStatus==='pending'||editingStatus==='approved'?'ok':'quiet'}" id="fSave">${editingStatus==='pending'||editingStatus==='approved'?'Сохранить':'Сохранить черновик'}</button>
+        ${editingStatus==='pending'||editingStatus==='approved'?'':'<button class="b ok" id="fPublish">Опубликовать</button>'}
+      </div>
+    </div>`;
+
+  $('fSave').onclick=()=>saveForm(editingStatus==='pending'||editingStatus==='approved'?'save':'draft');
+  if($('fPublish'))$('fPublish').onclick=()=>saveForm('publish');
+  $('fClear').onclick=cancelProgramEdit;
+  $('editorApproveFree').onclick=e=>moderatePendingFromEditor(false,e.currentTarget);
+  $('editorApprovePro').onclick=e=>moderatePendingFromEditor(true,e.currentTarget);
+  $('editorReject').onclick=rejectPendingFromEditor;
+  document.querySelectorAll('[data-create-mode]').forEach(x=>x.onclick=()=>setAdminCreateMode(x.dataset.createMode));
+  if($('fAiCreate'))$('fAiCreate').onclick=generateAdminProgram;
+  setAdminCreateMode(adminCreateMode);
+  if(editing==null)$('fPro').checked=false;
+  $('fPro').onchange=()=>{
+    markEditorDirty();
+    $('programAccessState').textContent=$('fPro').checked?'Premium':'Free';
+    $('programAccessState').className='status-chip'+($('fPro').checked?' ok':'');
+    updateEditorModeration();
+  };
+  document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
+  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
+    $(id).oninput=()=>{markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();};
+  });
+  ['fCat','fLevel','fMin','fBy'].forEach(id=>$(id).addEventListener('input',markEditorDirty));
+  $('fTranslateRuEn').onclick=()=>translateCatalogForm('ru','en');
+  $('fTranslateEnRu').onclick=()=>translateCatalogForm('en','ru');
+  $('fAiProgram').onclick=()=>openAiEditProgram(editorLang,'');
+  $('fAiEditApply').onclick=aiEditProgram;
+  $('fAiEditCancel').onclick=closeAiEditProgram;
+  $('fCopyTranslate').onclick=copyTranslationSource;
+  $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
+  $('fPasteApply').onclick=applyPastedTranslation;
+  $('imageGender').value=form.imageGender||'f';
+  $('imageGender').onchange=()=>{form.imageGender=$('imageGender').value==='m'?'m':'f';markEditorDirty();};
+  $('genMissing').onclick=()=>generateMedia('missing');
+  $('retryFailedMedia').onclick=()=>generateMedia('retry');
+  $('genAll').onclick=()=>{if(confirm('Перегенерировать обложку и все фото упражнений?'))generateMedia('all');};
+  $('fFile').onchange=e=>{
+    const file=e.target.files&&e.target.files[0];
+    if(!file||!pickTo)return;
+    shrinkPic(file,640,pic=>{pickTo(pic);pickTo=null;});
+  };
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
+  if(editing==null)resetEditorDirty();
+}
+
+function fillForm(c){
+  editing=c.id;
+  editingStatus=c.status||null;
+  localStorage.setItem('adminEditingId', editing);
+  const reviewActions=$('editorReviewActions'),reviewStatus=$('editorReviewStatus'),reviewTitle=$('editorReviewTitle');
+  if(reviewActions)reviewActions.hidden=editingStatus!=='pending';
+  if(reviewStatus)reviewStatus.textContent=editingStatus==='pending'?'На модерации':editingStatus==='draft'?'Черновик':'Опубликовано';
+  if(reviewTitle)reviewTitle.textContent=editingStatus==='pending'?'Модерация перед публикацией':'Готовность к публикации';
+  form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c),imageGender:'f'};
+  editorLang=form.sourceLocale;
+  $('fCat').value=c.cat||'tone';
+  $('fLevel').value=c.level||'Новичок';
+  $('fMin').value=c.min||20;
+  $('fBy').value=c.by||'';
+  $('fPro').checked=!!c.pro;
+  $('programAccessState').textContent=c.pro?'Premium':'Free';
+  $('programAccessState').className='status-chip'+(c.pro?' ok':'');
+  setLocaleForm('ru',localeBlock(c,'ru'));
+  setLocaleForm('en',localeBlock(c,'en'));
+  $('fSourceHint').textContent='Исходник заявки: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
+  resetEditorDirty();
+}
+
+async function saveForm(mode){
+  mode=mode||'save';
+  const saveBtn=$('fSave'),publishBtn=$('fPublish'),saveState=$('programSaveState');
+  if(saveBtn)saveBtn.disabled=true;
+  if(publishBtn)publishBtn.disabled=true;
+  if(saveState){saveState.style.color='';saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';}
+  const item=currentProgramItem();
+  try{
+    let backTo='approved';
+    if(mode==='draft'||mode==='publish'){
+      const draftId=editingStatus==='draft'?editing:null;
+      const saved=await api('save_draft',{id:draftId,item});
+      editing=saved.id;
+      editingStatus='draft';
+      localStorage.setItem('adminEditingId',editing);
+      if(mode==='publish'){
+        if(saveState)saveState.textContent='Черновик сохранён · публикую…';
+        await api('publish_draft',{id:editing,pro:item.pro});
+        backTo='approved';
+      }else{
+        backTo='drafts';
+      }
+    }else{
+      if(!editing)throw new Error('nothing_to_edit');
+      await api('edit',{id:editing,item});
+      backTo=editingStatus==='pending'?'pending':'approved';
+    }
+    editing=null;editingStatus=null;
+    resetEditorDirty();
+    localStorage.removeItem('adminEditingId');
+    form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
+    tab=backTo;
+    localStorage.setItem('adminTab',tab);
+    await load();
+  }catch(e){
+    const msg=e.miss?'Не хватает: '+e.miss.join(', '):'Не сохранилось: '+e.message;
+    $('fErr').textContent=msg;
+    if(saveState){saveState.textContent=msg;saveState.style.color='var(--danger)';}
+    adminNotice(msg,'err');
+  }finally{
+    if(saveBtn)saveBtn.disabled=false;
+    if(publishBtn)publishBtn.disabled=false;
+  }
+}
+
+async function act(action, extra, source, successMessage){
+  const old=source&&source.textContent;
+  if(source){source.disabled=true;source.textContent='Подожди…';}
+  try{
+    await api(action,extra);
+    await load();
+    adminNotice(successMessage||'Готово.');
+  }catch(e){
+    const details=Array.isArray(e.miss)&&e.miss.length?' — '+e.miss.join(' · '):'';
+    const head=action==='approve'||action==='publish_draft'?'Не получилось опубликовать':'Не получилось выполнить действие';
+    adminNotice(head+details+(details?'':': '+e.message),'err');
+  }finally{
+    if(source&&document.body.contains(source)){source.disabled=false;source.textContent=old;}
+  }
+}
+
+window.addEventListener('beforeunload',e=>{
+  if(!editorDirty)return;
+  e.preventDefault();
+  e.returnValue='';
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeRowMenus();
+    if(document.body.classList.contains('nav-open'))closeNav();
+  }
+});
+
+document.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('details.row-menu')) closeRowMenus();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRowMenus();});
+window.addEventListener('resize',()=>closeRowMenus());
+window.addEventListener('scroll',()=>closeRowMenus(),true);
+
+document.querySelectorAll('[data-tab]').forEach(t => {
+  t.onclick = () => {
+    if(t.dataset.tab==='add'){
+      editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
+      form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+    }
+    setTab(t.dataset.tab);
+  };
+});
+$('navOpen').onclick = () => {
+  document.body.classList.add('nav-open');
+  $('adminNav').classList.add('open');
+};
+$('navShade').onclick = closeNav;
+$('out').onclick = () => { try{ sessionStorage.removeItem('adminKey'); }catch(_){} KEY = ''; closeNav(); showGate(''); };
+$('enter').onclick = () => {
+  KEY = $('key').value.trim();
+  try{ sessionStorage.setItem('adminKey', KEY); }catch(_){}
+  load();
+};
+$('key').onkeydown = e => { if(e.key === 'Enter') $('enter').click(); };
+
+if(KEY) load(); else showGate('');

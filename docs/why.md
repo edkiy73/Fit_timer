@@ -129,6 +129,18 @@ Service worker, manifest, PWA icons и старый TWA удалены.
 Причина: поддержка третьего install/runtime пути создавала отдельную cache/update модель,
 которая больше не нужна продукту. Не возвращать PWA частично без отдельного решения владельца.
 
+## CSP и ключ админки
+
+`vercel.json` отдаёт на все пути Content-Security-Policy (`script-src 'self'`, без
+`unsafe-inline`/`unsafe-eval`, внешние — только Google Fonts), `nosniff`, `X-Frame-Options: DENY`.
+Поэтому в `index.html`/`admin.html` нельзя встроенные `<script>` и атрибуты `onclick="…"` —
+браузер их молча заблокирует. Скрипт админки живёт в `admin.js`. Новый внешний домен
+(шрифты, картинки, API) — сначала добавить в CSP. Ловит это `tests/csp.js`; dev-server
+повторяет заголовки из `vercel.json`.
+
+Ключ админки хранится в `sessionStorage` (живёт до закрытия вкладки), старый ключ из
+`localStorage` при загрузке переносится и стирается.
+
 ## Проверка после изменений
 
 Минимальный порядок:

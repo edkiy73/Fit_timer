@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'admin.html'
+      - 'admin.js'
       - 'api/admin.js'
       - 'lib/ai.js'
       - 'lib/ai-protocol.js'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'admin.html'
+      - 'admin.js'
       - 'api/admin.js'
       - 'lib/ai.js'
       - 'lib/ai-protocol.js'
