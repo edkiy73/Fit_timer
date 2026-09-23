@@ -185,11 +185,33 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.setViewportSize({width:360,height:800});
   ok('dashboard помещается на узком Android viewport',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  const finalTabs=['dashboard','pending','drafts','approved','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'];
+  for(const tabName of finalTabs){
+    if(tabName!=='dashboard'){
+      await page.click('#navOpen');
+      await page.click('.nav-btn[data-tab="'+tabName+'"]');
+      await page.waitForTimeout(120);
+    }
+    const fit=await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+    ok('финальный mobile-fit: '+tabName,fit);
+  }
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="dashboard"]');
+  await page.waitForTimeout(120);
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
   const listed = await page.textContent('#body');
   ok('на вкладке «В каталоге» видны программы', /Кардио без прыжков/.test(listed));
+  ok('production UI не показывает seed тестовых программ',!/Залить пять тестовых программ/.test(listed));
+  await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="trainers"]');
+  await page.waitForTimeout(150);
+  ok('смена раздела возвращает к началу страницы',(await page.evaluate(()=>window.scrollY))===0);
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="approved"]');
+  await page.waitForTimeout(120);
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="trainers"]');
   await page.waitForTimeout(400);
@@ -278,6 +300,14 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('черновик открывается как редактор на телефоне',/Черновик программы/.test(await page.textContent('#pageTitle'))||await page.isVisible('#editorReviewCard'));
   ok('карта готовности редактора видна на мобильном',await page.isVisible('#editorReviewCard'));
   ok('карта готовности показывает RU, EN и медиа',/Русский/.test(await page.textContent('#editorReviewCard'))&&/English/.test(await page.textContent('#editorReviewCard'))&&/Фото упражнений/.test(await page.textContent('#editorReviewCard')));
+  await page.fill('#fNameRu',(await page.inputValue('#fNameRu'))+' X');
+  ok('редактор явно показывает несохранённые изменения',/несохранённые/i.test(await page.textContent('#programSaveState')));
+  let leaveDialog='';
+  page.once('dialog',async d=>{leaveDialog=d.message();await d.dismiss();});
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="dashboard"]');
+  await page.waitForTimeout(120);
+  ok('из несохранённого редактора нельзя уйти случайно',/несохранённые изменения/i.test(leaveDialog)&&await page.isVisible('#fNameRu'),leaveDialog);
   ok('редактор на 360px не создаёт горизонтальный скролл',
      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 

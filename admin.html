@@ -528,7 +528,7 @@
       <header class="topbar-admin">
         <div class="topbar-inner">
           <button class="menu-btn" id="navOpen" aria-label="Меню">☰</button>
-          <div><h1 id="pageTitle">На проверке</h1><small>Fit Timer · админка</small></div>
+          <div><h1 id="pageTitle">Обзор</h1><small>Fit Timer · админка</small></div>
         </div>
       </header>
       <div class="content" id="body"></div>
@@ -583,6 +583,8 @@ let KEY = localStorage.getItem('adminKey') || '';
 let data = {pending: [], drafts: [], approved: [], trainers: [], settings: null, providers: {}, billingProviders: {}};
 let usersCache = null;
 let analyticsCache = null;
+let editorDirty = false;
+let allowEditorLeave = false;
 const savedTab = localStorage.getItem('adminTab');
 let tab = ['dashboard','pending','drafts','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'dashboard';
 
@@ -595,6 +597,9 @@ function closeNav(){
   $('adminNav').classList.remove('open');
 }
 function setTab(next){
+  if(tab==='add'&&next!=='add'&&editorDirty&&!allowEditorLeave){
+    if(!confirm('Есть несохранённые изменения программы. Выйти без сохранения?'))return;
+  }
   closeRowMenus();
   tab = next;
   localStorage.setItem('adminTab', tab);
@@ -602,6 +607,7 @@ function setTab(next){
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   closeNav();
   render();
+  window.scrollTo({top:0,left:0,behavior:'auto'});
 }
 function closeRowMenus(except){
   document.querySelectorAll('details.row-menu[open]').forEach(d=>{if(d!==except)d.open=false;});
@@ -739,6 +745,18 @@ function flashActionButton(button,text,tone){
     button.classList.remove('no');
   },1800);
 }
+function markEditorDirty(){
+  if(tab!=='add')return;
+  editorDirty=true;
+  const state=$('programSaveState');
+  if(state&&(!state.textContent||/сохранено|черновик/i.test(state.textContent))){
+    state.style.color='';
+    state.textContent='Есть несохранённые изменения';
+  }
+}
+function resetEditorDirty(){
+  editorDirty=false;
+}
 function moderationState(item){
   const ru=localeReady(item,'ru'),en=localeReady(item,'en');
   const ex=Math.max(0,+item.exCount||0);
@@ -788,10 +806,25 @@ async function loadDashboardHealth(){
   }
 }
 
+function dashboardAIReady(){
+  const s=data.settings||{};
+  return s.enabled!==false && aiRouteProblem(s,'text').length===0 && aiRouteProblem(s,'image').length===0;
+}
+function dashboardBillingReady(){
+  const s=data.settings||{},pay=s.payment||{},bp=data.billingProviders||{};
+  const google=pay.google||{},rustore=pay.rustore||{},yoo=pay.yookassa||{};
+  const states={
+    google:paymentReadiness('google',!!bp.google,google.enabled!==false,google.month||pay.androidMonth,google.year||pay.androidYear,true),
+    rustore:paymentReadiness('rustore',!!bp.rustore,rustore.enabled!==false,rustore.month,rustore.year,true),
+    yookassa:paymentReadiness('yookassa',!!bp.yookassa,yoo.enabled!==false,'','',false)
+  };
+  const mode=pay.provider||'multi';
+  if(mode==='multi')return Object.values(states).some(x=>x.usable&&x.enabled);
+  return !!(states[mode]&&states[mode].usable&&states[mode].enabled);
+}
 function renderDashboard(b){
   const pending=(data.pending||[]).length,drafts=(data.drafts||[]).length,approved=(data.approved||[]).length,trainers=(data.trainers||[]).length;
-  const aiReady=!!(data.providers&&(data.providers.gemini||data.providers.openai));
-  const bp=data.billingProviders||{},billingReady=!!(bp.google||bp.rustore||bp.yookassa);
+  const aiReady=dashboardAIReady(),billingReady=dashboardBillingReady();
   b.innerHTML=pageHead('Обзор','Что требует внимания и быстрые действия по продукту.')
     +'<div class="dashboard-kpis">'
       +'<button class="dashboard-kpi" data-go="pending"><b>'+pending+'</b><span>заявок на проверке</span></button>'
@@ -801,8 +834,8 @@ function renderDashboard(b){
     +'</div>'
     +'<div class="dashboard-grid">'
       +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Сейчас</h3><div class="status-row">'
-        +'<span class="status-chip '+(aiReady?'ok':'')+'">AI · '+(aiReady?'готов':'нет ключа')+'</span>'
-        +'<span class="status-chip '+(billingReady?'ok':'')+'">Платежи · '+(billingReady?'есть провайдер':'не настроены')+'</span>'
+        +'<span class="status-chip '+(aiReady?'ok':'')+'">AI · '+(aiReady?'готов':'проверь настройки')+'</span>'
+        +'<span class="status-chip '+(billingReady?'ok':'')+'">Платежи · '+(billingReady?'готовы':'проверь настройки')+'</span>'
       +'</div></div><div class="form-card-body">'
         +'<div class="dashboard-actions"><button class="b ok" data-go="add">Новая программа</button><button class="b" data-go="pending">Открыть модерацию</button><button class="b" data-go="users">Пользователи</button><button class="b" data-go="analytics">Аналитика</button></div>'
         +'<p class="compact-note" style="margin-top:10px">'+(pending?'Есть заявки, которые ждут решения: '+pending+'.':'Новых заявок на модерацию нет.')+(drafts?' Черновиков в работе: '+drafts+'.':'')+'</p>'
@@ -838,9 +871,9 @@ function renderDrafts(b){
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
       if(a==='edit'){setTab('add');fillForm(item);return;}
-      if(a==='publish')return act('publish_draft',{id:item.id,pro:false});
-      if(a==='publishPro')return act('publish_draft',{id:item.id,pro:true});
-      if(a==='delete'&&confirm('Удалить этот черновик?'))return act('delete_draft',{id:item.id});
+      if(a==='publish')return act('publish_draft',{id:item.id,pro:false},btn,'Черновик опубликован.');
+      if(a==='publishPro')return act('publish_draft',{id:item.id,pro:true},btn,'Черновик опубликован в Premium.');
+      if(a==='delete'&&confirm('Удалить этот черновик?'))return act('delete_draft',{id:item.id},btn,'Черновик удалён.');
     });
     box.appendChild(card);
   });
@@ -861,8 +894,7 @@ function renderCatalog(b){
   );
   if(!pending)$('catalogAdd').onclick=()=>setTab('add');
   if(!list.length){
-    b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет.<br><br><button class="b" id="seed">Залить пять тестовых программ</button>'}</div>`);
-    const sd=$('seed');if(sd)sd.onclick=()=>act('seed',{},null,'Тестовые программы добавлены.');
+    b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет. Добавь первую программу кнопкой выше.'}</div>`);
     return;
   }
   b.insertAdjacentHTML('beforeend',
@@ -1802,7 +1834,7 @@ async function translateCatalogForm(from,to){
   try{
     const r=await api('translate_catalog',{from,to,locale:localeFromForm(from)});
     setLocaleForm(to,r.locale||{});
-    updateLocaleStates();renderExerciseCards();renderPics();
+    markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
     setActionFeedback('editorToolsState','✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.','ok');
     flashActionButton(btn,'✓ Готово','ok');
   }catch(e){
@@ -1829,6 +1861,7 @@ function applyPastedTranslation(){
   try{
     const x=JSON.parse(raw);
     setLocaleForm(d.to,x);
+    markEditorDirty();
     $('fPasteWrap').hidden=true;$('fPasteJson').value='';
     updateLocaleStates();renderExerciseCards();renderPics();
     setActionFeedback('editorToolsState','✓ Перевод вставлен в '+langName(d.to)+'. Проверь перед сохранением.','ok');
@@ -1873,7 +1906,7 @@ async function aiEditProgram(){
       instruction
     });
     setLocaleForm(lang,r.locale||{});
-    updateLocaleStates();renderExerciseCards();renderPics();
+    markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
     closeAiEditProgram();
     setActionFeedback('editorToolsState','✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.','ok');
   }catch(e){
@@ -1967,7 +2000,7 @@ async function generateMedia(mode){
     if(state){state.className='muted busy';state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);}
     try{
       const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
-      await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);renderPics();resolve();}));
+      await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);markEditorDirty();renderPics();resolve();}));
     }catch(e){
       failed.push(j);
     }
@@ -1986,12 +2019,12 @@ async function generateMedia(mode){
 function renderPics(){
   const cover=$('fCoverBox');if(!cover)return;
   cover.innerHTML='';
-  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;renderPics();},'cover',''));
+  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;markEditorDirty();renderPics();},'cover',''));
 
   const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
   const box=$('fPics');box.innerHTML='';
   $('fPicsHint').textContent=names.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
-  blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];renderPics();},'exercise',ex.description)));
+  blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];markEditorDirty();renderPics();},'exercise',ex.description)));
   Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
   updateEditorModeration();
 }
@@ -2020,10 +2053,14 @@ function setEditorLang(lang){
   renderExerciseCards();
 }
 function cancelProgramEdit(){
+  if(editorDirty&&!confirm('Отменить редактирование и потерять несохранённые изменения?'))return;
   const back=editingStatus==='pending'?'pending':editingStatus==='draft'?'drafts':'approved';
   editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+  resetEditorDirty();
   localStorage.removeItem('adminEditingId');
+  allowEditorLeave=true;
   setTab(back);
+  allowEditorLeave=false;
 }
 function setAdminCreateMode(mode){
   adminCreateMode=mode==='manual'?'manual':'ai';
@@ -2053,6 +2090,7 @@ async function generateAdminProgram(){
     setLocaleForm(lang,r.locale||{});
     setLocaleForm(other,{});
     form.sourceLocale=lang;
+    markEditorDirty();
     form.cover=null;
     form.media={};
     failedMediaJobs=[];
@@ -2128,6 +2166,7 @@ function currentProgramItem(){
 }
 function closeEditorTo(target){
   editing=null;editingStatus=null;
+  resetEditorDirty();
   localStorage.removeItem('adminEditingId');
   form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
   tab=target;
@@ -2335,14 +2374,16 @@ function renderAdd(b){
   setAdminCreateMode(adminCreateMode);
   if(editing==null)$('fPro').checked=false;
   $('fPro').onchange=()=>{
+    markEditorDirty();
     $('programAccessState').textContent=$('fPro').checked?'Premium':'Free';
     $('programAccessState').className='status-chip'+($('fPro').checked?' ok':'');
     updateEditorModeration();
   };
   document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
   ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
-    $(id).oninput=()=>{updateLocaleStates();renderExerciseCards();renderPics();};
+    $(id).oninput=()=>{markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();};
   });
+  ['fCat','fLevel','fMin','fBy'].forEach(id=>$(id).addEventListener('input',markEditorDirty));
   $('fTranslateRuEn').onclick=()=>translateCatalogForm('ru','en');
   $('fTranslateEnRu').onclick=()=>translateCatalogForm('en','ru');
   $('fAiProgram').onclick=()=>openAiEditProgram(editorLang,'');
@@ -2352,7 +2393,7 @@ function renderAdd(b){
   $('fPasteToggle').onclick=()=>{$('fPasteWrap').hidden=!$('fPasteWrap').hidden;};
   $('fPasteApply').onclick=applyPastedTranslation;
   $('imageGender').value=form.imageGender||'f';
-  $('imageGender').onchange=()=>{form.imageGender=$('imageGender').value==='m'?'m':'f';};
+  $('imageGender').onchange=()=>{form.imageGender=$('imageGender').value==='m'?'m':'f';markEditorDirty();};
   $('genMissing').onclick=()=>generateMedia('missing');
   $('retryFailedMedia').onclick=()=>generateMedia('retry');
   $('genAll').onclick=()=>{if(confirm('Перегенерировать обложку и все фото упражнений?'))generateMedia('all');};
@@ -2363,6 +2404,7 @@ function renderAdd(b){
   };
   $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
   updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
+  if(editing==null)resetEditorDirty();
 }
 
 function fillForm(c){
@@ -2386,6 +2428,7 @@ function fillForm(c){
   setLocaleForm('en',localeBlock(c,'en'));
   $('fSourceHint').textContent='Исходник заявки: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
   updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
+  resetEditorDirty();
 }
 
 async function saveForm(mode){
@@ -2416,6 +2459,7 @@ async function saveForm(mode){
       backTo=editingStatus==='pending'?'pending':'approved';
     }
     editing=null;editingStatus=null;
+    resetEditorDirty();
     localStorage.removeItem('adminEditingId');
     form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
     tab=backTo;
@@ -2447,6 +2491,18 @@ async function act(action, extra, source, successMessage){
     if(source&&document.body.contains(source)){source.disabled=false;source.textContent=old;}
   }
 }
+
+window.addEventListener('beforeunload',e=>{
+  if(!editorDirty)return;
+  e.preventDefault();
+  e.returnValue='';
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeRowMenus();
+    if(document.body.classList.contains('nav-open'))closeNav();
+  }
+});
 
 document.addEventListener('pointerdown',e=>{
   if(!e.target.closest('details.row-menu')) closeRowMenus();

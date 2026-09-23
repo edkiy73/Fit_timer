@@ -48,6 +48,13 @@ need(html.includes('id="editorReviewCard"'),'program editor moderation readiness
 need(!html.slice(html.indexOf('function renderUsers(b){'),html.indexOf("let campaignLang='ru';")).includes("prompt("),'user Premium actions must not use browser prompt');
 need(html.includes('function grantUserPremium('),'user Premium inline action flow is missing');
 need(html.includes('function setActionFeedback('),'forms need action-local feedback helper');
+need(html.includes("let editorDirty = false"),'program editor must track unsaved changes');
+need(html.includes("Есть несохранённые изменения программы"),'leaving a dirty editor must ask for confirmation');
+need(html.includes("beforeunload"),'dirty editor must protect against browser/tab close');
+need(html.includes("window.scrollTo({top:0"),'section navigation must reset scroll position');
+need(!html.includes('Залить пять тестовых программ'),'production admin must not expose catalog seed action');
+need(html.includes('function dashboardBillingReady()'),'dashboard payment status must use full readiness');
+need(html.includes('function dashboardAIReady()'),'dashboard AI status must use full readiness');
 need(html.includes('details.row-menu{position:relative;display:inline-block;border:0;padding:0;margin:0}'),'row menu must neutralize generic details divider/margins');
 need(!html.includes('<summary>•••</summary>'),'kebab menus need an accessible action label');
 need(html.includes('id="editorToolsState"'),'translation tools need local feedback');
