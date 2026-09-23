@@ -221,8 +221,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 869,
-      "chars": 38171,
+      "lines": 874,
+      "chars": 38560,
       "symbols": [
         "accountBucketKey",
         "applyAndroidUpdateConfig",

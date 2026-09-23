@@ -95,7 +95,7 @@ const shot = page => page.evaluate(() => ({
 (async () => {
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);

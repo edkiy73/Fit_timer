@@ -619,6 +619,12 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
 
   renderPlan(); renderPremium(); syncGeminiBtns();
   renderTrainerCard(); syncDockTabs();
+  // Вход с экрана знакомства: профиля на телефоне ещё нет, и без него синхронизация
+  // не запускалась. Потом появлялся пустой «Мой профиль», уезжал в аккаунт отдельным
+  // профилем и оставался активным. Заводим его до синхронизации — она заменит его
+  // профилями аккаунта.
+  let done = null;
+  if(!identity && loginDone){ done = loginDone; loginDone = null; await done(); }
   let synced = true;
   if(isPremium()){
     btn.textContent = t('login.syncing');
@@ -629,8 +635,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   loginPending = null;
   loginFixedEmail = '';
   $('loginEmail').readOnly = false;
-  const done = loginDone; loginDone = null;
-  if(done) await done();
+  if(!done && loginDone){ done = loginDone; loginDone = null; await done(); }
   if(done) return;
   pendingSub = null;
   appAlert(!synced

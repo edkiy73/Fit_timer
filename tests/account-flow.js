@@ -51,7 +51,7 @@ const PROG = `ПРОГРАММА: ${PNAME}
 ОТДЫХ: 5`;
 
 async function boot(b, label, errs, url){
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
