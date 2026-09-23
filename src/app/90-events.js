@@ -2011,20 +2011,13 @@ try{
   // Старый TWA/WebAuthn credential относится к прежнему browser origin и не
   // переносится в локальный Capacitor runtime. Снимаем старый флаг один раз:
   // пользователь сможет включить новую нативную защиту в настройках.
-  let cleanedLegacyBiometry = false;
   if(account && account.biometry && account.biometry.enabled && account.biometry.kind !== 'native'){
     account.biometry = null;
-    cleanedLegacyBiometry = true;
+    rememberAccount();
     await saveAccount();
+    await saveKnown();
     $('lockModal').classList.remove('open');
   }
-  knownAccounts.forEach(a=>{
-    if(a && Object.prototype.hasOwnProperty.call(a, 'biometry')){
-      delete a.biometry;
-      cleanedLegacyBiometry = true;
-    }
-  });
-  if(cleanedLegacyBiometry) await saveKnown();
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
