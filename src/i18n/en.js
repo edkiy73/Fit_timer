@@ -1023,6 +1023,7 @@ const I18N_EN = {
   'start.roundShort': "rnd",
   'start.weightPending': "weight not set",
   'start.pickWeightTitle': "Working weight",
+  'start.pickWeightHint': "Heavy enough that the last reps take real effort, but not to failure",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",

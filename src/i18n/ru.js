@@ -1023,6 +1023,7 @@ const I18N_RU = {
   'start.roundShort': "кр.",
   'start.weightPending': "вес не задан",
   'start.pickWeightTitle': "Рабочий вес",
+  'start.pickWeightHint': "Такой, чтобы последние повторения давались с усилием, но не в отказ",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",

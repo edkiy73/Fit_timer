@@ -26,6 +26,27 @@ function need(cond, msg){
   need(FitAIProtocol.validateProgramResponse(good).ok === true, 'well-formed single-variant program passes');
 }
 
+/* ---- ШАГ ВЕСА без ПОТОЛОК ВЕСА — вес растёт без реалистичного предела,
+   это не мелочь: проверяем и в exercise-, и в program-level ответах ---- */
+{
+  const block = 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 0\nПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ВЕСА: 2';
+  const v = FitAIProtocol.validateExerciseResponse(block, {minCount: 1, maxCount: 1});
+  need(v.ok === false && v.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)), 'growing weight without a ceiling is rejected: ' + JSON.stringify(v));
+}
+{
+  const block = 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 0\nПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ВЕСА: 2\nПОТОЛОК ВЕСА: 24';
+  need(FitAIProtocol.validateExerciseResponse(block, {minCount: 1, maxCount: 1}).ok === true, 'growing weight with a ceiling passes, even at ВЕС: 0 (not yet chosen)');
+}
+{
+  const block = 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 20\nПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ПОВТОРОВ: 1\nШАГ ВЕСА: 0';
+  need(FitAIProtocol.validateExerciseResponse(block, {minCount: 1, maxCount: 1}).ok === true, 'ШАГ ВЕСА: 0 (axis intentionally not growing) needs no ceiling');
+}
+{
+  const prog = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Присед\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 3\nОТДЫХ: 60\n\n'
+    + 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 8\nПОДХОДЫ: 3\nОТДЫХ: 60\nШАГ ВЕСА: 2';
+  need(FitAIProtocol.validateProgramResponse(prog).ok === false, 'one exercise missing the ceiling fails the whole program response');
+}
+
 /* ---- carryExerciseFields: ответ ИИ используется как есть, добавляются только
    недостающие описательные поля из исходника ---- */
 {

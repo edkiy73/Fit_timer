@@ -1023,6 +1023,7 @@ const I18N_RU = {
   'start.roundShort': "кр.",
   'start.weightPending': "вес не задан",
   'start.pickWeightTitle': "Рабочий вес",
+  'start.pickWeightHint': "Такой, чтобы последние повторения давались с усилием, но не в отказ",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",
@@ -2583,6 +2584,7 @@ const I18N_EN = {
   'start.roundShort': "rnd",
   'start.weightPending': "weight not set",
   'start.pickWeightTitle': "Working weight",
+  'start.pickWeightHint': "Heavy enough that the last reps take real effort, but not to failure",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",
@@ -3359,6 +3361,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
   2) rep progression: positive ШАГ ПОВТОРОВ;
   3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
+- Whenever ШАГ ВЕСА is positive (cases 1 and 3 above), always give ПОТОЛОК ВЕСА — weight that grows without any realistic cap is the actual injury/plateau risk, not a missing field. This applies even when the user hasn't picked a starting weight yet.
 - ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
@@ -3392,7 +3395,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ПОТОЛОК: required ceiling for progressive unweighted formats
 ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
 ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
 ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
 ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
 ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
@@ -3456,14 +3459,30 @@ ${exerciseSchema(outputLanguage)}`;
       .trim();
   }
 
+  // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
+  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Промт просит эту строку
+  // всегда, когда сам вес растёт (см. exerciseSchema/progressionRules), но
+  // промт — не гарантия; здесь та же проверка после генерации, что и у
+  // остальных обязательных полей.
+  function exerciseBlockMissingWeightCeiling(block){
+    const stepM = block.match(/(?:^|\n)ШАГ ВЕСА:\s*([\d.,]+)/);
+    if(!stepM) return false;
+    const step = parseFloat(stepM[1].replace(',', '.'));
+    if(!(step > 0)) return false;
+    return !/(?:^|\n)ПОТОЛОК ВЕСА:\s*\S/.test(block);
+  }
+
   function validateExerciseResponse(raw, opts){
     const text = normalizeResponse(raw);
     const blocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).map(x=>x.trim()).filter(Boolean);
     const required = ['УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
     const missing = [];
-    blocks.forEach((block, i) => required.forEach(label => {
-      if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
-    }));
+    blocks.forEach((block, i) => {
+      required.forEach(label => {
+        if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
+      });
+      if(exerciseBlockMissingWeightCeiling(block)) missing.push((i+1)+':ПОТОЛОК ВЕСА');
+    });
     const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
     const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
     const countOk = blocks.length >= min && blocks.length <= max;
@@ -3481,6 +3500,9 @@ ${exerciseSchema(outputLanguage)}`;
     const variants = text.split(/(?:^|\n)ДЕНЬ:/).slice(1);
     const days = variants.length;
     const emptyVariant = variants.some(v => !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(v));
+    const exBlocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm);
+    const weightCeilingMissing = exBlocks.some(exerciseBlockMissingWeightCeiling);
+    if(weightCeilingMissing) missing.push('ПОТОЛОК ВЕСА');
     return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
       reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
