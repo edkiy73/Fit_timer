@@ -261,24 +261,33 @@ https://fittimer99.vercel.app/p/<id>
 
 ## In-app Android updates
 
-The installed Android app checks the existing public `/api/config` response after startup.
+The installed Android app checks the public `/api/config` response after startup and chooses an update channel from its compiled distribution flavor.
 
-Admin → **Обновление Android** is intentionally product-level rather than a raw version form:
+There are two independent channels:
 
-- the latest signed APK is read automatically from the GitHub `latest-apk` release;
-- the primary action is **Опубликовать обновление**;
-- the live-state card says whether an update is currently published, where the update button leads, and whether a mandatory threshold is enabled;
-- `versionCode`, `minimumCode`, destination URL and optional RU/EN override copy live under **Дополнительные настройки**;
-- publishing a normal release updates `latestCode`, `latestName` and the managed APK URL but never raises `minimumCode`;
-- old auto-filled RU/EN release copy is normalized back to the app's built-in copy when the latest release is published.
+- **Direct APK** — `direct` flavor. The Home banner downloads the APK inside Fit Timer, shows progress, verifies package id, exact `versionCode` and signing certificate, then opens the Android system installer for the final confirmation. The permanent GitHub `latest-apk` release is this flavor.
+- **Store** — `play` flavor. It never downloads an APK and does not request `REQUEST_INSTALL_PACKAGES`; the update action opens the configured Google Play / RuStore page.
 
-The GitHub `latest-apk` release publishes `FitTimer-release.json` next to the APK so the admin always uses the exact signed `versionCode` / `versionName`.
+The backend stores independent `update.android.direct` and `update.android.store` release state. Flat `update.android.latestCode/url/...` fields remain aliases of **direct** for pre-channel APKs already installed in the wild.
+
+Admin → **Обновление Android**:
+- **Опубликовать Direct APK** publishes the latest signed direct APK immediately;
+- **Опубликовать для магазина** is separate and should be pressed only after the same build is actually available in Google Play / RuStore;
+- each channel has its own `minimumCode` and optional RU/EN override copy;
+- normal publishing never raises either mandatory threshold.
+
+CI builds:
+- `assembleDirectRelease` → direct APK with installer permission;
+- `bundlePlayRelease` and `assemblePlayRelease` → store-safe artifacts without installer permission.
+
+The GitHub `latest-apk` release publishes `FitTimer-release.json` next to the direct APK, so the admin uses the exact signed `versionCode` / `versionName`.
 
 Behavior:
-- current build >= latest: nothing is shown;
-- current build < latest: a quiet update banner appears on Home;
-- current build < minimum: the app shows a non-dismissible update gate;
-- version comparison uses the native Capacitor App `build` value, not the handwritten UI build label;
-- update links are opened by Android `ACTION_VIEW`, outside the WebView.
+- current build >= channel latest: nothing is shown;
+- current build < channel latest: a quiet update banner appears on Home;
+- current build < channel minimum: the app shows a non-dismissible update gate;
+- version comparison uses native Capacitor App `build`;
+- direct updates stay inside Fit Timer until the Android confirmation screen;
+- store updates open the configured store.
 
-Do not raise `minimumCode` as part of a normal release. It is only for builds that are no longer compatible with the backend or have a serious release-blocking defect.
+Do not add `REQUEST_INSTALL_PACKAGES` to the base manifest or the `play` flavor. Do not raise `minimumCode` as part of a normal release.
