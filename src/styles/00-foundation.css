@@ -91,7 +91,8 @@ body.booting .app{visibility:hidden}
     /* пятна живого фона карточки плана */
     --aura-a:#7C56F5; --aura-b:#B44BDA; --aura-op:.42;
   }
-  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}\n  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   button,.day-chip,.load-chip,.plan-tab,.choice,.back-chip,.icon-btn{transition:transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease}
   button:active,.day-chip:active,.load-chip:active,.plan-tab:active,.choice:active,.back-chip:active,.icon-btn:active{transform:scale(.96)}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}

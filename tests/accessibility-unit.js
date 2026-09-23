@@ -17,6 +17,8 @@ need(i18n.includes("el.setAttribute('role', 'switch')"), 'custom switches need s
 need(i18n.includes("el.setAttribute('aria-checked'"), 'custom switches need checked state');
 need(i18n.includes("button[title]"), 'icon buttons with title need accessible names');
 need(css.includes('min-width:44px;min-height:44px'), 'small icon controls need 44px touch targets');
+need(!css.includes('}\\n  *{box-sizing:border-box'), 'CSS reset must contain a real newline, not a literal \\n selector');
+need(/text-size-adjust:100%\}\s*\n\s*\*\{box-sizing:border-box/.test(css), 'global box-sizing/reset must remain active after text-size-adjust');
 need(css.includes(':focus-visible'), 'keyboard/switch focus indication is missing');
 need(android.includes('setTextZoom(zoom)'), 'Android WebView must respect system font scale');
 need(android.includes('onConfigurationChanged(Configuration newConfig)'), 'font scale must refresh after configuration changes');
