@@ -4820,50 +4820,60 @@ window.addEventListener('unhandledrejection',e=>{
   reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
 });
 
-async function loadData(){
-  // данные хранятся раздельно по профилям; старые данные один раз переезжают в текущий профиль
-  let progRaw = await kvGet(pk('customPrograms'));
-  let statRaw = await kvGet(pk('stats'));
+async function loadData(ownerId = currentUser){
+  // Все чтения привязываем к профилю, который начал загрузку. Раньше pk() вычислялся
+  // заново после каждого await: если в этот момент фоновая синхронизация и ручное
+  // переключение профиля пересекались, данные могли приехать уже от другого профиля.
+  const ownerKey = key => key + '_' + ownerId;
+  let progRaw = await kvGet(ownerKey('customPrograms'));
+  let statRaw = await kvGet(ownerKey('stats'));
+  if(currentUser !== ownerId) return false;
   if(progRaw === null && (await kvGet('migrated')) !== '1'){
     const legacyP = await kvGet('customPrograms');
     const legacyS = await kvGet('stats');
-    if(legacyP !== null){ progRaw = legacyP; kvSet(pk('customPrograms'), legacyP); }
-    if(legacyS !== null){ statRaw = legacyS; kvSet(pk('stats'), legacyS); }
-    kvSet('migrated', '1');
+    if(currentUser !== ownerId) return false;
+    if(legacyP !== null){ progRaw = legacyP; await kvSet(ownerKey('customPrograms'), legacyP); }
+    if(legacyS !== null){ statRaw = legacyS; await kvSet(ownerKey('stats'), legacyS); }
+    await kvSet('migrated', '1');
   }
-  try{ customPrograms = JSON.parse(progRaw) || []; }catch(e){ customPrograms = []; }
-  // Старые личные программы появились до поля locale. Они всё равно одноязычные,
-  // поэтому один раз определяем их язык по авторскому тексту. Исторически почти
-  // все такие программы русские; латиница без кириллицы считается английской.
-  customPrograms.forEach(p => {
+
+  let nextPrograms = [];
+  let nextStats = {totalSec:0};
+  try{ nextPrograms = JSON.parse(progRaw) || []; }catch(e){ nextPrograms = []; }
+  nextPrograms.forEach(p => {
     if(!p || p.id === 'warmup' || p.locale === 'ru' || p.locale === 'en') return;
     const plans = Array.isArray(p.plans) ? p.plans : [];
     const sample = [p.name, p.desc].concat(plans.flatMap(pl => (pl.exercises || []).flatMap(ex => [ex.name, ex.desc, ex.mistakes, ex.swapName, ex.swapDesc]))).join(' ');
     p.locale = /[А-Яа-яЁё]/.test(sample) ? 'ru' : 'en';
   });
-  try{ stats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ stats = {totalSec:0}; }
-  if(typeof stats.totalSec !== 'number') stats.totalSec = 0;
-  if(!Array.isArray(stats.weights)) stats.weights = [];
-  if(!Array.isArray(stats.wellness)) stats.wellness = [];
-  if(!Array.isArray(stats.history)) stats.history = [];
-  if(typeof stats.count !== 'number') stats.count = 0;
-  await loadProgWeights();
+  try{ nextStats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ nextStats = {totalSec:0}; }
+  if(typeof nextStats.totalSec !== 'number') nextStats.totalSec = 0;
+  if(!Array.isArray(nextStats.weights)) nextStats.weights = [];
+  if(!Array.isArray(nextStats.wellness)) nextStats.wellness = [];
+  if(!Array.isArray(nextStats.history)) nextStats.history = [];
+  if(typeof nextStats.count !== 'number') nextStats.count = 0;
+  if(currentUser !== ownerId) return false;
+
+  customPrograms = nextPrograms;
+  stats = nextStats;
+  await loadProgWeights(ownerId);
+  if(currentUser !== ownerId) return false;
   await loadTrainer();
-  // Док должен знать про режим тренера СРАЗУ. Раньше кнопку показывал только
-  // renderTrainerCard(), а он зовётся при входе в «Другое», — и до первого захода
-  // туда у тренера было четыре раздела вместо пяти.
+  if(currentUser !== ownerId) return false;
   syncDockTabs();
-  discardLegacyWeightCorrections();
+  discardLegacyWeightCorrections(ownerId);
+  return true;
 }
 
 // Удаляем накопленные прежними версиями скрытые поправки веса.
-function discardLegacyWeightCorrections(){
+function discardLegacyWeightCorrections(ownerId = currentUser){
+  if(currentUser !== ownerId) return;
   progWeights = {};
-  kvSet(pk('progWeights'), '{}');
-  if(docMeta && docMeta.progWeights){ delete docMeta.progWeights; kvSet(pk('docMeta'), JSON.stringify(docMeta)); }
+  kvSet('progWeights_' + ownerId, '{}');
+  if(docMeta && docMeta.progWeights){ delete docMeta.progWeights; kvSet('docMeta_' + ownerId, JSON.stringify(docMeta)); }
   if(Array.isArray(outbox) && outbox.some(x => x.key === 'progWeights')){
     outbox = outbox.filter(x => x.key !== 'progWeights');
-    kvSet(pk('outbox'), JSON.stringify(outbox));
+    kvSet('outbox_' + ownerId, JSON.stringify(outbox));
   }
 }
 
@@ -4872,19 +4882,22 @@ function discardLegacyWeightCorrections(){
 // currentUser, поэтому продолжение первого await уже могло читать данные второго
 // профиля и оставлять их в глобальном состоянии приложения.
 let profileSwitchQueue = Promise.resolve();
-function switchUser(id){
+function queueProfileState(task){
   profileSwitchQueue = profileSwitchQueue
     .catch(()=>{})
-    .then(()=> switchUserNow(id));
+    .then(task);
   return profileSwitchQueue;
+}
+function switchUser(id){
+  return queueProfileState(()=> switchUserNow(id));
 }
 async function switchUserNow(id){
   if(currentUser === id) return;
   currentUser = id;
   await kvSet('currentUser', id);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadIdentity();
-  await loadData();
+  await loadIdentity(id);
+  await loadData(id);
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -5320,42 +5333,45 @@ let outbox   = [];     // [{key, rev, at}] — что ждёт отправки 
 // люди. Поле, названное accountId, увезло бы эту путаницу в схему базы, и жила бы она
 // там годами; переименовать до первого запроса — правка в десять строк, после — миграция
 // с данными у всех.
-async function loadIdentity(){
+async function loadIdentity(ownerId = currentUser){
+  const ownerKey = key => key + '_' + ownerId;
   let dev = await kvGet('deviceId');
   if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
-  try{ identity = JSON.parse(await kvGet(pk('identity'))) || null; }catch(e){ identity = null; }
-  // прежнее имя поля; у тех, кто успел завести личность, оно уже лежит в хранилище
-  if(identity && !identity.profileId && identity.accountId){
-    identity.profileId = identity.accountId;
-    delete identity.accountId;
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  let nextIdentity = null;
+  try{ nextIdentity = JSON.parse(await kvGet(ownerKey('identity'))) || null; }catch(e){ nextIdentity = null; }
+  if(currentUser !== ownerId) return false;
+  if(nextIdentity && !nextIdentity.profileId && nextIdentity.accountId){
+    nextIdentity.profileId = nextIdentity.accountId;
+    delete nextIdentity.accountId;
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  if(!identity || !identity.profileId){
-    identity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  if(!nextIdentity || !nextIdentity.profileId){
+    nextIdentity = {profileId: newId(), createdAt: new Date().toISOString(), email: null, linkedAt: null, consents: {}};
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  // Серверный id принадлежит профилю, а локальный id — лишь имя его ключей на этом
-  // устройстве. Запоминаем связь один раз; профиль, приехавший с сервера, наоборот,
-  // диктует identity свой уже существующий id.
-  const owner = curUser();
-  if(owner && owner.profileId && owner.profileId !== identity.profileId){
-    identity.profileId = owner.profileId;
-    await kvSet(pk('identity'), JSON.stringify(identity));
+  const owner = users.find(u => u.id === ownerId);
+  if(owner && owner.profileId && owner.profileId !== nextIdentity.profileId){
+    nextIdentity.profileId = owner.profileId;
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   } else if(owner && !owner.profileId){
-    owner.profileId = identity.profileId;
+    owner.profileId = nextIdentity.profileId;
     await saveUsers();
   }
-  if(!identity.consents) identity.consents = {};
-  identity.deviceId = dev;
-  // отметки, поставленные до создания профиля, переносим на него — но не затираем
-  // уже существующие: повторное знакомство не должно сдвигать дату первого согласия
-  if(pendingConsents.length){
-    pendingConsents.forEach(({kind, rec}) => { if(!identity.consents[kind]) identity.consents[kind] = rec; });
+  if(!nextIdentity.consents) nextIdentity.consents = {};
+  nextIdentity.deviceId = dev;
+  if(pendingConsents.length && currentUser === ownerId){
+    pendingConsents.forEach(({kind, rec}) => { if(!nextIdentity.consents[kind]) nextIdentity.consents[kind] = rec; });
     pendingConsents = [];
-    await kvSet(pk('identity'), JSON.stringify(identity));
+    await kvSet(ownerKey('identity'), JSON.stringify(nextIdentity));
   }
-  try{ docMeta = JSON.parse(await kvGet(pk('docMeta'))) || {}; }catch(e){ docMeta = {}; }
-  try{ outbox  = JSON.parse(await kvGet(pk('outbox')))  || []; }catch(e){ outbox  = []; }
+  let nextMeta = {}, nextOutbox = [];
+  try{ nextMeta = JSON.parse(await kvGet(ownerKey('docMeta'))) || {}; }catch(e){ nextMeta = {}; }
+  try{ nextOutbox = JSON.parse(await kvGet(ownerKey('outbox'))) || []; }catch(e){ nextOutbox = []; }
+  if(currentUser !== ownerId) return false;
+  identity = nextIdentity;
+  docMeta = nextMeta;
+  outbox = nextOutbox;
+  return true;
 }
 async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
 
@@ -5641,6 +5657,9 @@ function mergeStatsDocs(local, remote, preferRemote){
 }
 
 async function applyRemoteSync(result){
+  return queueProfileState(()=> applyRemoteSyncNow(result));
+}
+async function applyRemoteSyncNow(result){
   await applyRemoteAccountDocs(result);
   const remote = Array.isArray(result && result.profiles) ? result.profiles : [];
   if(!remote.length) return;
@@ -5778,10 +5797,11 @@ async function applyRemoteSync(result){
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadIdentity();
+  const activeOwner = currentUser;
+  await loadIdentity(activeOwner);
   identity.email = account.email;
   await saveIdentity();
-  await loadData();
+  await loadData(activeOwner);
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
@@ -6181,9 +6201,9 @@ async function savePrograms(){
 }
 async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
-async function loadProgWeights(){
-  progWeights = {};
-  await kvSet(pk('progWeights'), '{}');
+async function loadProgWeights(ownerId = currentUser){
+  await kvSet('progWeights_' + ownerId, '{}');
+  if(currentUser === ownerId) progWeights = {};
 }
 
 function fmtLong(sec){
@@ -11875,6 +11895,629 @@ function autoReport(p){
   apiPost('/api/report', Object.assign({link: p.src, report: rep}, accountAuth())).catch(()=>{});
 }
 
+/* ---- экран аккаунта: карточка «Тренер» ---- */
+function renderTrainerCard(){
+  syncDockTabs();
+  renderCatalogRow();
+  if(!$('tglTrainer')) return;
+  const accountReady = trainerAccountReady();
+  const modeOn = !!(accountReady && trainer && trainer.on);
+  $('tglTrainer').classList.toggle('on', modeOn);
+  setShown('coachFields', modeOn);
+  setShown('coachDeleteBlock', modeOn);
+  if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
+  const ph = trainer && trainer.photo;
+  coachPhotoDraft = ph || '';
+  $('coachPhotoPrev').innerHTML = ph ? `<img src="${esc(ph)}" alt="">` : icon('camera');
+  if(document.activeElement !== $('coachLinks')){
+    $('coachLinks').value = ((trainer && trainer.links) || '').replace(/^https?:\/\//i, '');
+    $('coachLinksErr').textContent = '';
+  }
+  if(document.activeElement !== $('coachAbout'))  $('coachAbout').value  = (trainer && trainer.about) || '';
+  if(document.activeElement !== $('coachYears'))  $('coachYears').value  = (trainer && trainer.years) || '';
+  // Ник принадлежит аккаунту, и без аккаунта он уйдёт вместе с телефоном. Говорим
+  // об этом там, где ник заводят, а не постфактум.
+  setShown('coachNoAcc', !accountReady);
+}
+
+/* ---- экран «Подопечные» ---- */
+function renderClientsSkeleton(){
+  const box = $('clsList');
+  if(!box) return;
+  box.innerHTML = Array.from({length:3}, () =>
+    '<div class="cl-row cl-row-skeleton" aria-hidden="true">'
+      + '<div class="ua sk"></div>'
+      + '<div class="ub"><i class="sk cl-sk-name"></i><i class="sk cl-sk-sub"></i></div>'
+      + '<i class="sk cl-sk-state"></i>'
+    + '</div>'
+  ).join('');
+}
+async function refreshClientsScreen(){
+  const box = $('clsList');
+  if(box && !box.children.length) renderClientsSkeleton();
+  await loadTrainer();
+  renderClients();
+  await pullAll();
+}
+function openClients(){
+  if(show._last === 'scrTrainer'){ refreshClientsScreen(); return; }
+  goTab('scrTrainer');
+}
+async function pullAll(){
+  const list = clients.filter(c => clProgs(c).some(pr => pr.link && pr.link.id));
+  if(!list.length) return;
+  let any = false;
+  for(const c of list){ if(await pullClient(c)) any = true; }
+  if(show._last === 'scrTrainer'){ renderClients(); renderTrainerCard(); }
+  if(any && show._last === 'scrClient') fillClient();
+}
+function clientDayWord(n){
+  return appLocale === 'ru' ? plural(n, 'день', 'дня', 'дней') : (n === 1 ? 'day' : 'days');
+}
+function renderClients(){
+  const n = clients.length;
+  const live = clients.filter(c => clientSum(c).n > 0).length;
+  const total = clients.reduce((a, c) => a + clientSum(c).n, 0);
+  setShown('clsSumCard', n > 0);
+  if(n){
+    const sum = $('clsSum');
+    sum.innerHTML = '';
+    // Подпись под числом, а не после него: тогда она не зависит от числа и её не
+    // надо согласовывать. Заодно все три видны сразу, а не через точку в строке.
+    [[t('clients.statClients'), n], [t('clients.statActive'), live], [t('clients.statWorkouts'), total]].forEach(([label, v]) => {
+      const el = document.createElement('div');
+      el.className = 'cl-stat' + (v ? '' : ' zero');
+      el.innerHTML = '<b></b><small></small>';
+      el.querySelector('b').textContent = v;
+      el.querySelector('small').textContent = label;
+      sum.appendChild(el);
+    });
+  }
+  const box = $('clsList');
+  box.innerHTML = '';
+  clients.forEach((c, i) => {
+    const sum = clientSum(c);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'cl-row';
+    // Состояние говорится СЛОВОМ, а не одной приглушённостью: «ждёт» и «молчит 12 дней»
+    // читаются с расстояния, а серый оттенок — нет.
+    const newest = clProgs(c).slice().reverse().find(pr => pr.sentAt) || null;
+    let state, tone = 'wait';
+    if(sum.n > 0){
+      const d = daysSince(sum.last);
+      state = sum.n + ' ' + (appLocale === 'ru' ? plural(sum.n, t('clients.sessionOne'), t('clients.sessionFew'), t('clients.sessionMany')) : t(sum.n === 1 ? 'clients.sessionOne' : 'clients.sessionFew'));
+      tone = (d != null && d > 10) ? 'cold' : 'ok';
+      if(d != null && d > 10) state += ' · ' + t('clients.silent',{count:d,days:clientDayWord(d)});
+    } else if(newest){
+      const d = daysSince(newest.sentAt);
+      // «Открыл, но не занимался» и «даже не открыл» — разные разговоры с человеком,
+      // и тренеру нужно видеть, какой из них его.
+      if(sum.opens > 0) state = t('clients.openedNoSessions');
+      else state = d === 0 ? t('clients.sentToday') : t('clients.waiting',{count:d,days:clientDayWord(d)});
+    } else state = t('clients.notSent');
+    const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
+    row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
+      + `<span class="cl-state ${tone}"></span>`;
+    row.querySelector('b').textContent = c.name || t('profile.noName');
+    row.querySelector('.ub small').textContent = !sum.progs ? t('clients.noPrograms')
+      : sum.progs === 1 ? (newest ? (newest.name || t('clients.programFallback')) : t('clients.programFallback'))
+      : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
+    row.querySelector('.cl-state').textContent = state;
+    row.onclick = ()=> openClient(i);
+    box.appendChild(row);
+  });
+  $('clsHint').textContent = n
+    ? t('clients.hintHas')
+    : t('clients.hintEmpty');
+}
+
+/* ---- карточка подопечного ---- */
+function openClient(i){
+  clientIdx = i;
+  fillClient();                 // сначала показываем что есть — экран не ждёт сети
+  show('scrClient');
+  const c = curClient();
+  if(c && clProgs(c).length) pullClient(c).then(got => {
+    if(got && curClient() === c){ fillClient(); renderClients(); renderTrainerCard(); }
+  });
+}
+const curClient = () => clients[clientIdx] || null;
+
+function fillClient(){
+  const c = curClient();
+  if(!c) return;
+  $('clTitle').textContent = c.name || t('clients.default');
+  if(document.activeElement !== $('clName')) $('clName').value = c.name || '';
+  if(document.activeElement !== $('clNote')) $('clNote').value = c.note || '';
+
+  const box = $('clProgs');
+  box.innerHTML = '';
+  const list = clProgs(c);
+  $('btnClSendTxt').textContent = list.length ? t('clients.sendMore') : t('clients.send');
+  $('clSendHint').textContent = list.length
+    ? t('clients.sendHintMany')
+    : t('clients.sendHintFirst');
+
+  if(!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'card-block';
+    empty.innerHTML = '<p class="field-hint">' + esc(t('clients.emptyCard')) + '</p>';
+    box.appendChild(empty);
+    return;
+  }
+
+  // Каждая программа — своя карточка со своими занятиями. Складывать занятия по
+  // разным курсам в одну кучу нельзя: «двенадцать тренировок» ни о чём не говорит,
+  // если восемь из них по программе, которую человек уже закончил.
+  list.slice().reverse().forEach(pr => box.appendChild(progCard(c, pr)));
+}
+
+function progCard(c, pr){
+  const el = document.createElement('div');
+  el.className = 'card-block';
+  const prog = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
+
+  const head = document.createElement('div');
+  head.className = 'cb-head';
+  head.innerHTML = '<p class="cb-title"></p>';
+  head.querySelector('.cb-title').textContent = pr.name || t('clients.programFallback');
+  el.appendChild(head);
+
+  const bits = [];
+  if(pr.sentAt) bits.push(t('clients.sentOn',{date:humanDay(pr.sentAt)}));
+  if(pr.link) bits.push(pr.opens > 0
+    ? (pr.firstOpen ? t('clients.openedOn',{date:humanDay((pr.firstOpen || '').slice(0, 10))}) : t('clients.opened'))
+    : t('clients.notOpened'));
+  if(pr.sentAt && !prog) bits.push(t('clients.localMissing'));
+  const sub = document.createElement('p');
+  sub.className = 'field-hint';
+  sub.textContent = bits.join(' · ');
+  el.appendChild(sub);
+
+  // Ссылка, отправленная старой версией приложения, сервера не знает — отметок по
+  // ней не будет никогда, и молчать об этом нельзя: тренер ждёт того, что не придёт.
+  const stale = !!pr.sentAt && !pr.link;
+  if(pr.err || stale){
+    const st = document.createElement('p');
+    st.className = 'field-hint warn';
+    st.textContent = pr.err || t('clients.oldLink');
+    el.appendChild(st);
+  }
+
+  renderReport(el, pr);
+
+  const acts = document.createElement('div');
+  acts.className = 'list-rows';
+  const again = document.createElement('button');
+  again.type = 'button';
+  again.className = 'choice ico-row';
+  again.innerHTML = icon('share') + '<b>' + esc(t('clients.resend')) + '</b>';
+  again.onclick = ()=> resendProgram(c, pr);
+  acts.appendChild(again);
+  const drop = document.createElement('button');
+  drop.type = 'button';
+  drop.className = 'link-btn';
+  drop.textContent = t('clients.remove');
+  drop.onclick = async ()=>{
+    if(!(await appDialog(t('clients.removeQuestion',{name:pr.name}),
+      {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
+    c.progs = clProgs(c).filter(x => x !== pr);
+    await saveClients();
+    fillClient();
+    renderClients();
+  };
+  acts.appendChild(drop);
+  el.appendChild(acts);
+  return el;
+}
+
+/* ОТЧЁТ ПО ОДНОЙ ПРОГРАММЕ. Что тренер должен видеть — разобрано в
+   docs/trainer-ui.md: держит ли расписание, что именно делает, как растёт и не
+   переделал ли программу. */
+function renderReport(box, pr){
+  const r = lastReport(pr);
+  if(!r){
+    const h = document.createElement('p');
+    h.className = 'field-hint';
+    h.textContent = t('report.none');
+    box.appendChild(h);
+    return;
+  }
+
+  const add = (cls, html) => {
+    const el = document.createElement('div');
+    el.className = cls;
+    el.innerHTML = html || '';
+    box.appendChild(el);
+    return el;
+  };
+  const line = (label, value, tone) => {
+    const el = add('cl-grow', '<span></span><b></b>');
+    el.querySelector('span').textContent = label;
+    const b = el.querySelector('b');
+    b.textContent = value;
+    if(tone) b.className = tone;
+  };
+  // Было → стало. Старое перечёркнутым и приглушённым: стрелка между двумя
+  // одинаково яркими числами заставляет разбираться, где какое.
+  const change = (label, a, b2, tone) => {
+    const el = add('cl-grow', '<span></span><b><s></s> <i></i></b>');
+    el.querySelector('span').textContent = label;
+    el.querySelector('s').textContent = a;
+    el.querySelector('i').textContent = b2;
+    if(tone) el.querySelector('b').className = tone;
+  };
+
+  // ---- сколько и когда ----
+  const head = add('tr-sum cls-sum', '<b></b><small></small>');
+  head.querySelector('b').textContent = r.n + ' ' + (appLocale === 'ru' ? plural(r.n,t('report.workoutOne'),t('report.workoutFew'),t('report.workoutMany')) : t(r.n === 1 ? 'report.workoutOne' : 'report.workoutFew'));
+  const bits = [];
+  if(r.last) bits.push(t('report.last',{date:humanDay(r.last)}));
+  if(r.streak > 1) bits.push(t('report.streak',{count:r.streak}));
+  head.querySelector('small').textContent = bits.join(' · ');
+
+  /* ---- четыре недели ----
+     Главное число не «сколько всего», а «сколько за последние недели»: двенадцать
+     за полгода и двенадцать за месяц — два разных человека. */
+  const log = r.log || [];
+  if(log.length){
+    const now = new Date();
+    const weeks = [0, 0, 0, 0];
+    log.forEach(x => {
+      const d = daysSince(x.d);
+      if(d != null && d >= 0 && d < 28) weeks[Math.floor(d / 7)]++;
+    });
+    const top = Math.max(1, ...weeks);
+    add('cls-label', t('report.byWeeks'));
+    const wrap = add('cl-weeks', '');
+    const dm = t => t.getDate() + '.' + String(t.getMonth() + 1).padStart(2, '0');
+    weeks.slice().reverse().forEach((n, i) => {
+      const back = 3 - i;
+      const to = new Date(now); to.setDate(to.getDate() - back * 7);
+      const from = new Date(to); from.setDate(from.getDate() - 6);
+      const w = document.createElement('div');
+      w.className = 'cw' + (n ? ' on' : '') + (back === 0 ? ' now' : '');
+      // Столбик, а не рамка с числом: провал должен читаться формой, а не чтением.
+      w.innerHTML = `<b></b><span class="cw-bar"><i style="height:${Math.round(n / top * 100)}%"></i></span><small></small>`;
+      w.querySelector('b').textContent = n;
+      w.querySelector('small').textContent = back === 0 ? t('report.now') : dm(from);
+      wrap.appendChild(w);
+    });
+  }
+
+  /* ---- какие дни делает ---- */
+  const plans = (r.plans || []).filter(x => x.days || x.n);
+  if(plans.length > 1){
+    add('cls-label', t('report.byDays'));
+    plans.forEach(pl => line(pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : (t('builder.variant') + ' ' + (pl.i + 1)),
+      pl.n ? String(pl.n) : t('report.never'),
+      pl.n ? '' : 'muted'));
+  }
+
+  /* ---- каждая тренировка отдельно ----
+     Средняя длительность скрывает то, ради чего её смотрят: одна тренировка на
+     двадцать минут и одна на час дают «сорок минут», которых не было ни разу. */
+  if(log.length){
+    add('cls-label', t('report.workouts'));
+    const wd = null;
+    // Сортируем сами: порядок записей в журнале — это порядок, в котором они легли,
+    // а не порядок дней. Список тренировок, идущий вразнобой, нельзя читать вовсе.
+    const sorted = log.slice().sort((a2, b2) => String(b2.d).localeCompare(String(a2.d)));
+    sorted.slice(0, 8).forEach(x => {
+      const pl = plans.find(y => y.i === x.p);
+      let when = humanDay(x.d);
+      try{ when += ', ' + new Intl.DateTimeFormat(localeTag(),{weekday:'short'}).format(new Date(x.d + 'T12:00:00')); }catch(e){}
+      // Вариант в скобках, как у упражнений. Через точку он читался как второй день
+      // («17 сентября, чт · Пн» выглядит ошибкой), хотя говорит другое: человек
+      // сделал понедельничную тренировку в четверг, и это как раз стоит заметить.
+      if(plans.length > 1 && pl && pl.days) when += ` (${pl.days})`;
+      const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' ' + t('store.minuteShort') : '';
+      line(when, mins || '—', mins ? '' : 'muted');
+    });
+    if(log.length > 8) add('field-hint', '').textContent = t('report.moreEarlier',{count:log.length - 8});
+  }
+
+  /* ---- что подопечный поменял ---- */
+  const d = r.diff || {};
+  const changed = (d.add || []).length + (d.del || []).length + (d.mod || []).length;
+  if(changed){
+    add('cls-label warn', t('report.changed'));
+    (d.del || []).forEach(n => line(n, t('report.removed'), 'warn'));
+    (d.add || []).forEach(n => line(n, t('report.added'), 'warn'));
+    (d.mod || []).forEach(m => change(m.n, m.a, m.b, 'warn'));
+  }
+
+  // ---- рост нагрузки ----
+  const ex = r.ex || [];
+  if(ex.length){
+    add('cls-label', t('report.growth'));
+    const many = plans.length > 1;
+    ex.forEach(e => {
+      const pl = plans.find(x => x.i === e.p);
+      const tag = [e.w ? t('report.warmup') : '', many && pl && pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : ''].filter(Boolean).join(' · ');
+      change(e.n + (tag ? ` (${tag})` : ''), e.a, e.b, 'ok');
+    });
+  }
+
+  add('field-hint', '').textContent = t('report.reportOn',{date:humanDay(r.at)}) + (pr.reports.length > 1 ? ' · ' + t('report.totalReports',{count:pr.reports.length}) : '');
+}
+
+/* ---- отправка программы подопечному ----
+   Программа уходит короткой ссылкой через сервер: по ней видно, открыл ли её
+   подопечный, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
+   подопечного, от кого она пришла. */
+async function sendProgramToClient(c, p){
+  if(!p){ appAlert(t('clients.chooseProgram')); return; }
+
+  // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
+  // иначе у подопечного в карточке две одинаковые строки с разными половинами занятий.
+  let pr = clProgs(c).find(x => x.pid === p.id);
+  let link = null, failed = null;
+  try{ link = await programLink(p, {to: c.name, existing: pr && pr.link ? pr.link : null}); }
+  catch(e){ failed = e; }
+
+  if(!link){ appAlert(linkFailNote(failed) + FILE_HINT); return; }
+
+  if(!pr){
+    pr = {pid: p.id, name: p.name, reports: []};
+    c.progs = clProgs(c).concat([pr]);
+  }
+  pr.name = p.name;
+  pr.sentAt = localISO(new Date());
+  pr.link = {id: link.id, key: link.key};
+  pr.opens = 0;
+  pr.firstOpen = null;
+  await saveClients();
+  fillClient();
+  renderClients();
+  renderTrainerCard();
+
+  await shareLink(link.url, c.name, p.name);
+}
+
+// Повторная отправка ТОЙ ЖЕ ссылки: отметки и занятия по ней остаются на месте.
+async function resendProgram(c, pr){
+  if(!pr.link || !pr.link.id){
+    const p = pr.pid ? customPrograms.find(x => x.id === pr.pid) : null;
+    if(p) return sendProgramToClient(c, p);
+    appAlert(t('clients.programGone'));
+    return;
+  }
+  await shareLink(PUBLIC_APP_URL + 'p/' + encodeURIComponent(pr.link.id),
+                  c.name, pr.name);
+}
+
+async function shareLink(url, who, what){
+  const text = t('clients.shareText',{program:what,forClient:who ? t('clients.forClient',{name:who}) : ''});
+  if(navigator.share){
+    try{ await navigator.share({title: 'Fit Timer', text, url}); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    appAlert(t('clients.linkCopied'));
+  }catch(e){ appAlert(t('clients.copyLink'), {code: url}); }
+}
+
+/* Что стало со ссылкой: открытия и отчёты. Ключ лежит только в телефоне тренера —
+   в саму ссылку он не попадает, иначе доступ к отчётам пересылался бы вместе с ней.
+
+   Ошибку ЗАПОМИНАЕМ и показываем. Раньше здесь стоял пустой catch, и тренер видел
+   ровно то же самое при «сети нет», «ссылка старая», «база не настроена» и «всё
+   в порядке, но подопечный ещё не занимался»: пустую карточку. */
+const PULL_ERR = {
+  no_store: 'clients.pullNoStore',
+  not_found: 'clients.pullNotFound',
+  bad_key: 'clients.pullBadKey',
+  rate_limited: 'clients.pullRate'
+};
+async function pullProgram(pr){
+  if(!pr || !pr.link || !pr.link.id) return false;
+  let d;
+  try{
+    // Ключ превращает тот же адрес из «отдай программу» в «отдай отметки и отчёты».
+    d = await apiFetch(`/api/p/${encodeURIComponent(pr.link.id)}`, {headers:{'X-Fit-Link-Key':pr.link.key}});
+  }catch(e){
+    pr.err = t(PULL_ERR[e && e.code] || 'clients.pullOffline');
+    return false;
+  }
+  pr.err = null;
+  pr.checkedAt = Date.now();
+  pr.opens = d.opens || 0;
+  pr.firstOpen = d.firstOpen || null;
+  // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
+  // иначе после переустановки у тренера задвоится всё, что уже было.
+  pr.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
+    streak: r.streak, first: r.first, last: r.last, ex: r.ex || [],
+    log: r.log || [], plans: r.plans || [], diff: r.diff || null}));
+  return true;
+}
+// Обновить все программы подопечного разом.
+async function pullClient(c){
+  let any = false;
+  for(const pr of clProgs(c)){ if(await pullProgram(pr)) any = true; }
+  await saveClients();
+  return any;
+}
+
+async function addClient(){
+  const c = {id: 'c' + Date.now(), name: t('clients.defaultName',{count:clients.length + 1}), note: '',
+             programId: null, programName: '', sentAt: null, reports: []};
+  clients.push(c);
+  await saveClients();
+  return c;
+}
+
+// «Отправить подопечному» из меню программы: выбрать, кому, — и сразу отправить.
+function pickClientFor(p){
+  const box = $('pickClientList');
+  box.innerHTML = '';
+  $('pickClientModal').querySelector('.mini-label').textContent = t('clients.sendTo');
+  clients.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'choice';
+    b.innerHTML = '<b></b><small></small>';
+    b.querySelector('b').textContent = c.name || t('profile.noName');
+    const has = clProgs(c).find(x => x.pid === p.id);
+    const sum = clientSum(c);
+    b.querySelector('small').textContent = has ? t('clients.alreadyHas')
+      : !sum.progs ? t('clients.noPrograms').toLowerCase()
+      : t('clients.alreadyCount',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
+    b.onclick = async ()=>{
+      $('pickClientModal').classList.remove('open');
+      await sendProgramToClient(c, p);
+    };
+    box.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'choice add-row';
+  add.innerHTML = icon('plus') + '<b>' + esc(t('clients.new')) + '</b>';
+  add.onclick = async ()=>{
+    $('pickClientModal').classList.remove('open');
+    const c = await addClient();
+    await sendProgramToClient(c, p);
+  };
+  box.appendChild(add);
+  $('pickClientModal').classList.add('open');
+}
+
+/* ---- сторона подопечного: отчёт тренеру ----
+   Отчёт собирает и отправляет САМ человек, кнопкой. Приложение не следит за ним и не
+   отсылает ничего без ведома — иначе «тренер видит мои тренировки» превращается в то,
+   на что никто не соглашался. */
+/* ЧТО ТРЕНЕР ДОЛЖЕН ВИДЕТЬ.
+
+   Первая версия отчёта показывала четыре упражнения из ПЕРВОГО варианта без
+   разминки — то есть отвечала на вопрос «что-то растёт?» и ни на один из
+   настоящих. Тренер ведёт человека и должен понимать четыре вещи:
+
+   1. ДЕРЖИТ ЛИ РАСПИСАНИЕ. Не «сколько всего», а сколько за последние недели и
+      попадает ли в назначенные дни. «12 тренировок» без срока не значит ничего.
+   2. ЧТО ИМЕННО ДЕЛАЕТ. У программы бывает несколько вариантов по дням, и
+      «делает только лёгкий, тяжёлый пропускает» — это разговор, который надо
+      завести. Без разбивки по вариантам он невозможен.
+   3. КАК РАСТЁТ. По ВСЕМ вариантам и с разминкой: разминка не растёт сама, но
+      человек мог поменять её руками, и это тоже сведения.
+   4. НЕ ПЕРЕДЕЛАЛ ЛИ ПРОГРАММУ. Упражнения можно править, выбрасывать и
+      добавлять. Тренер, уверенный, что подопечный делает присланное, а тот выкинул
+      половину, — худший вид слепоты, и раньше отчёт о ней молчал.
+
+   Отчёт по-прежнему НАКОПИТЕЛЬНЫЙ: всё состояние целиком, поэтому неудачная
+   отправка ничего не теряет. */
+
+// Снимок присланного: с чем сравнивать правки подопечного. Снимается один раз, при
+// получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
+function snapshotEx(p){
+  const out = [];
+  normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach(e => {
+    out.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
+              v: String(e.value == null ? '' : e.value),
+              s: +e.sets || 1, kg: +e.weight || 0});
+  }));
+  return out;
+}
+
+// Ключ упражнения — вариант плюс название: одно и то же движение в разных днях
+// это разные строки программы, и путать их нельзя.
+const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
+const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
+
+function buildReport(p){
+  const mine = stats.history.filter(h => h.pid === p.id);
+  const me = users.find(u => u.id === currentUser);
+  const plans = normPlans(p);
+
+  // 1. Журнал: что и когда. Тридцати тренировок хватает на два месяца занятий —
+  // дальше тренеру интересна не история, а то, что происходит сейчас.
+  const log = mine.slice(-30).map(h => ({d: h.d, p: +h.plan || 0, sec: h.sec || 0}));
+
+  // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
+  const planStats = plans.map((pl, i) => {
+    const own = mine.filter(h => (+h.plan || 0) === i);
+    // Сколько это занимает У ПОДОПЕЧНОГО. Тренер планировал одно, а человек делает
+    // сорок минут вместо двадцати или пятнадцать вместо тридцати — и то и другое
+    // повод поговорить, но узнать об этом иначе неоткуда.
+    // Шесть часов — заведомо не тренировка, а забытый на ночь таймер или сбой.
+    // Одна такая запись сдвигает среднее так, что число перестаёт что-то значить.
+    const secs = own.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
+    return {
+      i, days: (pl.days || []).join('·'), n: own.length,
+      sec: secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
+    };
+  });
+
+  /* 3. Рост — по всем вариантам, разминка помечена отдельно.
+
+     Сравнивать СТРОКИ нельзя. При двойной прогрессии цель — одно число, а не
+     диапазон, поэтому «12-15» превращается в «12» уже на нулевом шаге: ничего не
+     выросло, а строки разные. В отчёт попадало «12-15 × 6 кг → 12 × 6 кг», и это
+     читалось как падение нагрузки там, где её вообще не трогали.
+     Сравниваем числа: выросла нижняя граница повторов или вес. */
+  const ex = [];
+  plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
+    if(ex.length >= 40) return;
+    const was = String(e.value == null ? '' : e.value);
+    const now = e.warmup ? was : progressedRepsRange(p.id, e, p);
+    const kgWas = hasWeight(e) ? (+e.weight || 0) : 0;
+    const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
+    const grew = parseValue(now).min > parseValue(was).min || kgNow > kgWas;
+    if(!grew) return;
+    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || t('common.exerciseFallback'),
+             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} ${t('progress.kg')}` : ''),
+             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} ${t('progress.kg')}` : '')});
+  }));
+
+  // 4. Правки: что подопечный убрал, добавил и поменял руками.
+  const diff = {add: [], del: [], mod: []};
+  if(Array.isArray(p.origEx)){
+    const now = snapshotEx(p);
+    const byKey = new Map(now.map(x => [exKey(x), x]));
+    const wasKeys = new Set();
+    p.origEx.forEach(o => {
+      wasKeys.add(exKey(o));
+      const cur = byKey.get(exKey(o));
+      if(!cur){ if(diff.del.length < 12) diff.del.push(o.n); return; }
+      // Поправку от прогрессии за правку не считаем: она и так в списке роста.
+      if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg){
+        if(diff.mod.length < 12) diff.mod.push({n: o.n, a: exVal(o), b: exVal(cur)});
+      }
+    });
+    now.forEach(x => { if(!wasKeys.has(exKey(x)) && diff.add.length < 12) diff.add.push(x.n); });
+  }
+
+  return {
+    v: 2, by: p.by || '', who: (me && me.name) || '', name: p.name,
+    n: mine.length,
+    sec: mine.reduce((a, h) => a + (h.sec || 0), 0),
+    first: mine.length ? mine[0].d : null,
+    last: mine.length ? mine[mine.length - 1].d : null,
+    streak: calcStreakInfo().n,
+    log, plans: planStats, ex, diff
+  };
+}
+
+/* Отчёт тренеру — сам, после каждой законченной тренировки.
+
+   Отчёт НАКОПИТЕЛЬНЫЙ: в нём всегда всё состояние целиком, а не «что нового».
+   Из этого следует главное свойство — неудачная отправка ничего не теряет.
+   Нет сети, сервер не отвечает, человек тренировался в подвале — следующая
+   отправка увезёт и это тоже. Поэтому здесь нет ни очереди, ни повторов, ни
+   сообщений об ошибке: всё это чинило бы беду, которой нет.
+
+   Молчим и при успехе: человек закончил тренировку и смотрит на свой результат,
+   а не на отчётность. О том, что тренер видит занятия, сказано один раз — когда
+   программа принималась (см. importProgramLink). */
+function autoReport(p){
+  if(!p || !p.src) return;
+  let rep;
+  try{ rep = buildReport(p); }catch(e){ return; }
+  if(!rep.n) return;
+  apiPost('/api/report', Object.assign({link: p.src, report: rep}, accountAuth())).catch(()=>{});
+}
+
 /* ================= КАТАЛОГ ПРОГРАММ =================
    Готовые программы от тренеров. Оплаты нет: программу добавляют в библиотеку,
    а не покупают, и слова «купить», «цена», «бесплатно» на экране не встречаются
@@ -12760,6 +13403,21 @@ function renderCatalogRow(){
       .filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(' · ');
 }
 
+function compactProgramDays(days){
+  const ordered = DAYS.filter(d => Array.isArray(days) && days.includes(d));
+  if(!ordered.length) return '';
+  const parts = [];
+  for(let i = 0; i < ordered.length; ){
+    let j = i;
+    while(j + 1 < ordered.length && DAYS.indexOf(ordered[j + 1]) === DAYS.indexOf(ordered[j]) + 1) j++;
+    const run = j - i + 1;
+    if(run >= 3) parts.push(canonicalLabel(ordered[i]) + '–' + canonicalLabel(ordered[j]));
+    else for(let k = i; k <= j; k++) parts.push(canonicalLabel(ordered[k]));
+    i = j + 1;
+  }
+  return parts.join(' · ');
+}
+
 function renderMine(){
   renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
@@ -12789,7 +13447,7 @@ function renderMine(){
     const daysU = programDaysUnion(p);
     // расписание — один чип, очередь вариантов — отдельный: длинная строка
     // «Пн · Ср · 07:30 · варианты по очереди» разрывалась посреди фразы
-    const schedule = [daysU.length ? daysU.map(canonicalLabel).join(' · ') : '', p.time].filter(Boolean).join(' · ');
+    const schedule = [compactProgramDays(daysU), p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
@@ -12893,78 +13551,6 @@ function renderMine(){
     box.appendChild(wrap);
   });
   renderToday();
-}
-
-/* ================= ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (за ручку, с задержкой) ================= */
-function enableDrag(wrap, handle, selector, onDrop){
-  selector = selector || '.mine-card';
-  handle.oncontextmenu = e => e.preventDefault();
-  handle.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    const startY = e.clientY;
-    let active = false, baseY = 0;
-
-    const holdT = setTimeout(startDragging, 260); // задержка против случайного скролла
-
-    function startDragging(){
-      active = true;
-      wrap.classList.add('dragging');
-      try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
-      document.body.style.userSelect = 'none';
-      baseY = lastY;
-    }
-    let lastY = startY;
-
-    const move = ev => {
-      lastY = ev.clientY;
-      if(!active){
-        if(Math.abs(ev.clientY - startY) > 8){ cleanup(); } // дёрнулись до задержки — отмена
-        return;
-      }
-      wrap.style.transform = `translateY(${ev.clientY - baseY}px) scale(1.02)`;
-      const sibs = [...wrap.parentNode.querySelectorAll(selector)].filter(x => x !== wrap);
-      for(const s of sibs){
-        const r = s.getBoundingClientRect();
-        if(ev.clientY > r.top && ev.clientY < r.bottom){
-          const before = ev.clientY < r.top + r.height / 2;
-          const target = before ? s : s.nextSibling;
-          if(target !== wrap && target !== wrap.nextSibling){
-            wrap.parentNode.insertBefore(wrap, target);
-            baseY = ev.clientY;
-            wrap.style.transform = 'translateY(0) scale(1.02)';
-          }
-          break;
-        }
-      }
-    };
-    const finish = async () => {
-      const wasActive = active;
-      cleanup();
-      if(wasActive){
-        const nodes = [...wrap.parentNode.querySelectorAll(selector)];
-        if(onDrop){ onDrop(nodes); return; }
-        const order = nodes.map(x => x.dataset.pid);
-        customPrograms.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-        await savePrograms();
-      }
-    };
-    function cleanup(){
-      clearTimeout(holdT);
-      active = false;
-      wrap.classList.remove('dragging');
-      wrap.style.transform = '';
-      document.body.style.userSelect = '';
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', finish);
-      window.removeEventListener('pointercancel', finish);
-      window.removeEventListener('blur', finish);
-    }
-    // слушаем на window — событие не потеряется, карточка не «зависнет»
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', finish);
-    window.addEventListener('pointercancel', finish);
-    window.addEventListener('blur', finish);
-  });
 }
 
 /* ================= КОНСТРУКТОР ================= */
