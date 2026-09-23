@@ -1456,6 +1456,10 @@ const I18N_RU = {
   'program.createdEdited': "Готово: создана «{name}».\n\nИсходная программа осталась без изменений.",
   'program.imagesCarried': "\nПеренесено картинок: {count}.",
   'ai.parseProblems': "Что не так:",
+  'ai.editAdded': "\nДобавлено: {names}.",
+  'ai.editRemoved': "\nУбрано: {names}.",
+  'ai.editReordered': "\nПорядок упражнений изменён.",
+  'ai.editTimeChanged': "\nВремя тренировки: ≈{before} → {after} мин.",
   'import.linkExpired': "Ссылка не открывается: её уже нет. Попроси тренера прислать новую.",
   'import.linkOffline': "Не получилось загрузить программу — похоже, нет связи. Попробуй ещё раз, когда появится интернет.",
   'import.noProgram': "По ссылке нет программы с упражнениями.",
@@ -3013,6 +3017,10 @@ const I18N_EN = {
   'program.createdEdited': "Done: “{name}” was created.\n\nThe original program was not changed.",
   'program.imagesCarried': "\nImages carried over: {count}.",
   'ai.parseProblems': "Problems:",
+  'ai.editAdded': "\nAdded: {names}.",
+  'ai.editRemoved': "\nRemoved: {names}.",
+  'ai.editReordered': "\nExercise order changed.",
+  'ai.editTimeChanged': "\nWorkout time: ≈{before} → {after} min.",
   'import.linkExpired': "This link no longer works. Ask the trainer to send a new one.",
   'import.linkOffline': "Couldn’t load the program. Check your connection and try again.",
   'import.noProgram': "The link does not contain a program with exercises.",
@@ -3415,20 +3423,18 @@ Workout variants:
 
 ${exerciseSchema(outputLanguage)}`;
 
-  const editRules = allowStructure => allowStructure
-    ? `=== EDIT RULES ===
-- Apply only the requested structural changes. Preserve unrelated variants, exercises, protocol fields and values.
-- You may add/remove/reorder an exercise or variant ONLY where the user's request explicitly requires it.
-- Never silently drop a protocol line because it looks unnecessary.
-- You may add valid optional exercise fields when needed by the requested change.
-- If the user asks to disable/remove a numeric setting while keeping the same structure, prefer keeping its existing label with value 0.`
-    : `=== EDIT RULES ===
-- Preserve the number and order of workout variants and exercises.
-- Preserve every existing protocol line unless its VALUE is being changed.
-- Never delete or rename an existing protocol label.
-- You MAY add only valid optional exercise fields when the requested change requires them.
-- If the user asks to disable/remove a numeric setting, keep its existing label and set a neutral value such as 0.
-- Do not change unrelated fields.`;
+  // Раньше здесь было два жёстко разных набора правил (свободная перестройка /
+  // запрет структуры), а клиент выбирал между ними regex-угадайкой по тексту
+  // запроса — и либо душил «добавь упражнение», либо разрешал больше, чем
+  // просили. Один набор правил учит модель судить о масштабе изменения сама,
+  // а итог всё равно проверяется после генерации (парсинг + семантический diff),
+  // а не запрещается заранее.
+  const editRules = () => `=== EDIT RULES ===
+- Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
+- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
+- Preserve every existing protocol line whose value the request does not change. Never delete or rename a protocol label just because it looks unnecessary.
+- If the user asks to disable/remove a numeric setting while keeping the same structure, keep its existing label and set a neutral value such as 0.
+- You may add valid optional exercise fields when the requested change needs them.`;
 
   const programPrompt = outputLanguage => [
     'You are a fitness-program assistant for home workouts.',
@@ -3472,9 +3478,13 @@ ${exerciseSchema(outputLanguage)}`;
     const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
     const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
     const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
-    const days = (text.match(/(?:^|\n)ДЕНЬ:/g) || []).length;
-    return {ok: !missing.length && exercises > 0 && days > 0, text, missing,
-      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : ''))};
+    // каждый вариант начинается со своей строки ДЕНЬ: — делим по ней и отбрасываем
+    // преамбулу (ПРОГРАММА/ОПИСАНИЕ/ВРЕМЯ) до первого варианта
+    const variants = text.split(/(?:^|\n)ДЕНЬ:/).slice(1);
+    const days = variants.length;
+    const emptyVariant = variants.some(v => !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(v));
+    return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
+      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
 
   function validateResponse(kind, raw){
@@ -3489,6 +3499,106 @@ ${exerciseSchema(outputLanguage)}`;
     return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
   }
 
+  // Одна строка протокола → {key, value}. Общая для клиента и сервера: обе стороны
+  // разбирали её независимо и чуть по-разному, хотя формат один и тот же.
+  function protocolLine(line){
+    const m = String(line || '').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+    return m ? {key:m[1], value:m[2]} : null;
+  }
+
+  // Поля, которые нельзя терять молча при правке ОДНОГО упражнения. Раньше вся
+  // правка шла через позиционный merge каждого поля (что не даёт ИИ ни удалить,
+  // ни переставить строки) — теперь ответ ИИ принимается как есть, а сюда
+  // подставляются только описательные поля техники, если ответ их не вернул.
+  const DESCRIPTIVE_EXERCISE_LABELS = ['ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ','ВИДЕО'];
+  function carryExerciseFields(sourceText, candidateText){
+    const srcByKey = {};
+    String(sourceText || '').split(/\r?\n/).forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim() && srcByKey[p.key] == null) srcByKey[p.key] = p.value.trim();
+    });
+    const candLines = String(candidateText || '').split(/\r?\n/);
+    const candHasValue = new Set();
+    candLines.forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim()) candHasValue.add(p.key);
+    });
+    const extra = DESCRIPTIVE_EXERCISE_LABELS.filter(k => !candHasValue.has(k) && srcByKey[k] != null);
+    if(!extra.length) return candidateText;
+    return candLines.concat(extra.map(k => k + ': ' + srcByKey[k])).join('\n');
+  }
+
+  function normExName(s){
+    return String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  }
+  // длина наидлиннейшей возрастающей подпоследовательности — сколько сопоставленных
+  // упражнений уже стоят в правильном относительном порядке без переноса
+  function longestIncreasingRun(seq){
+    const tails = [];
+    seq.forEach(x => {
+      let lo = 0, hi = tails.length;
+      while(lo < hi){ const mid = (lo + hi) >> 1; if(tails[mid] < x) lo = mid + 1; else hi = mid; }
+      tails[lo] = x;
+    });
+    return tails.length;
+  }
+
+  // Семантическое сравнение программ по упражнениям: что добавлено, что убрано,
+  // сколько переставлено — вместо принудительного «то же количество, тот же
+  // порядок» (aiMergeProgramEdit/sameProgramShape), которое молча душило любую
+  // структурную правку. Работает на {plans:[{exercises:[{id,name,...}]}]} —
+  // тот же вид, что у customProgram после normPlans()/parseProgramText().
+  // Сопоставление: сперва по стабильному id (если он совпал напрямую), затем по
+  // технической метке КОД в новом упражнении (её кладёт клиент в текст для
+  // AI-правки и не показывает пользователю), затем по точному имени — сначала в
+  // том же варианте, потом в любом. Совпадение не гарантирует, что это буквально
+  // то же движение — это лишь лучшая доступная оценка непрерывности.
+  function diffPrograms(oldP, newP){
+    const oldPlans = (oldP && Array.isArray(oldP.plans)) ? oldP.plans : [];
+    const newPlans = (newP && Array.isArray(newP.plans)) ? newP.plans : [];
+    const oldFlat = [], newFlat = [];
+    oldPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => oldFlat.push({ex, pi})));
+    newPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => newFlat.push({ex, pi})));
+
+    const usedNew = new Array(newFlat.length).fill(false);
+    const matches = [];
+    const alreadyMatched = new Set();
+    const matchPass = test => {
+      oldFlat.forEach((o, oi) => {
+        if(alreadyMatched.has(oi)) return;
+        let ni = -1;
+        for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(newFlat[j].pi === o.pi && test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni < 0) for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni >= 0){
+          usedNew[ni] = true; alreadyMatched.add(oi);
+          matches.push({oi, ni, oldEx:o.ex, newEx:newFlat[ni].ex});
+        }
+      });
+    };
+    matchPass((a, b) => a.id && b.id && a.id === b.id);
+    matchPass((a, b) => a.id && b._code && a.id === b._code);
+    matchPass((a, b) => normExName(a.name) && normExName(a.name) === normExName(b.name));
+
+    const matchedOld = new Set(matches.map(m => m.oi));
+    const removed = oldFlat.filter((_, oi) => !matchedOld.has(oi)).map(o => o.ex);
+    const added = newFlat.filter((_, ni) => !usedNew[ni]).map(n => n.ex);
+
+    const orderedNewIdx = matches.slice().sort((a, b) => a.oi - b.oi).map(m => m.ni);
+    const moved = matches.length ? matches.length - longestIncreasingRun(orderedNewIdx) : 0;
+
+    return {
+      matches: matches.map(m => ({oldEx:m.oldEx, newEx:m.newEx})),
+      added, removed, moved,
+      oldVariants: oldPlans.length, newVariants: newPlans.length
+    };
+  }
+
   const api = {
     OPTIONAL_EXERCISE_LABELS,
     normalizeResponse,
@@ -3500,7 +3610,10 @@ ${exerciseSchema(outputLanguage)}`;
     exerciseSchema,
     programSchema,
     editRules,
-    programPrompt
+    programPrompt,
+    protocolLine,
+    carryExerciseFields,
+    diffPrograms
   };
   root.FitAIProtocol = api;
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -8813,6 +8926,9 @@ function sanitizeProgram(p){
 }
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
+  // упражнения из старых данных (созданы до появления id) или пришедшие по
+  // сети без него — см. newExId() в 60-builder.js
+  if(!ex.id) ex.id = newExId();
   ex.name = clampLine(ex.name, LIM.exName);
   if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
   if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -11004,11 +11120,15 @@ function exRestLines(ex){
 // что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
 // Сериализуем только оси, которые реально что-то значат для этого формата: для
 // «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
-function exProgToLines(ex){
+function exProgToLines(ex, opts){
+  // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
+  // а не базу — см. exCurrentValueText/programToText выше
+  const p = opts && opts.program;
+  const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
-      if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
+      if(weightNow) L.push('ВЕС: ' + fmtKg(weightNow));
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -11032,8 +11152,8 @@ function exProgToLines(ex){
       L.push('ЗАМЕНА: ' + ex.swapName.trim());
       if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
-  } else if(hasWeight(ex) && +ex.weight){
-    L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
+  } else if(hasWeight(ex) && weightNow){
+    L.push('ВЕС: ' + fmtKg(weightNow)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
   return L;
 }
@@ -11083,19 +11203,6 @@ function aiClientVerdict(kind, raw, opts){
   return verdict.text;
 }
 
-function sameProgramShape(a, b){
-  const ap = normPlans(a), bp = normPlans(b);
-  if(ap.length !== bp.length) return false;
-  for(let i=0;i<ap.length;i++){
-    const ae=(ap[i].exercises||[]), be=(bp[i].exercises||[]);
-    if(ae.length !== be.length) return false;
-    for(let j=0;j<ae.length;j++){
-      if(String(ae[j].name||'').trim().toLowerCase() !== String(be[j].name||'').trim().toLowerCase()) return false;
-    }
-  }
-  return true;
-}
-
 function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
@@ -11111,7 +11218,7 @@ function exePrompt(){
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
-    FitAIProtocol.editRules(false),
+    FitAIProtocol.editRules(),
     'USER: '+userForAI(draft&&draft.locale),
     'REQUEST: '+wish,
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
@@ -11125,11 +11232,13 @@ async function applyExEdit(){
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
-  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
-  // в два упражнения или потерять старые служебные поля.
+  // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
-  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  // Ответ ИИ используется как есть; carryExerciseFields лишь подставляет описание/
+  // мышцы/ошибки/видео из старого блока, если ИИ их не вернул — раньше здесь был
+  // позиционный merge всех полей, который не давал ИИ ни убрать, ни переставить строку.
+  const merged=FitAIProtocol.carryExerciseFields(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
@@ -11137,6 +11246,8 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  // это правка, а не замена: то же самое упражнение сохраняет свой id
+  upd.id=oldEx.id;
   list[exeIdx]=upd;
   $('aiResult').value='';
   await afterExChange();
@@ -11322,9 +11433,24 @@ function ytCheckUrl(){
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
 let editAIProg = null; // программа-исходник
 
+// текущее (уже прогрессированное) значение упражнения — то, что человек реально
+// делает сейчас, а не база из редактора. Используется только для AI-правки всей
+// программы (см. programToText forEdit): она создаёт НОВУЮ программу со своим
+// счётчиком прогрессии с нуля, поэтому если отдать ИИ базу, правка отбросит
+// пользователя к исходным цифрам — а если отдать текущее и принять его как
+// новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
+function exCurrentValueText(p, ex){
+  if(ex.type === 'time') return String(getExProgValue(p.id, ex, p, 'time'));
+  return progressedRepsRange(p.id, ex, p).replace('–', '-');
+}
+
 // программа → текст того же формата, который понимает парсер
-// картинки и svg НЕ включаем: они длинные, а перенесём их сами по названиям
-function programToText(p){
+// картинки и svg НЕ включаем: они длинные, а перенесём их сами по id (см. carryMedia)
+// opts.forEdit: для AI-правки всей программы — добавляет техническую метку КОД:
+// у каждого упражнения (не видна пользователю) и отдаёт текущую прогрессированную
+// нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
+function programToText(p, opts){
+  const forEdit = !!(opts && opts.forEdit);
   const L = [];
   L.push('ПРОГРАММА: ' + (p.name || ''));
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
@@ -11346,17 +11472,18 @@ function programToText(p){
     (pl.exercises || []).forEach(ex => {
       L.push('');
       L.push('УПРАЖНЕНИЕ: ' + (ex.name || ''));
+      if(forEdit && ex.id) L.push('КОД: ' + ex.id);
       if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
       const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : valueText(ex.value).replace('–', '-')));
       if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex));
+      L.push(...exProgToLines(ex, forEdit ? {program:p} : null));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -11365,14 +11492,16 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish=clampText($('eaWish').value,LIM.wish);
-  const structural=aiStructureChangeRequested(wish);
   return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
-    FitAIProtocol.editRules(structural)+'\n'+
+    FitAIProtocol.editRules()+'\n'+
+    // КОД — только для сопоставления «то же упражнение / новое», сюда не входит в
+    // обычный протокол и не должна попасть в пользовательский текст (ОПИСАНИЕ и т.п.)
+    'Each УПРАЖНЕНИЕ line may be followed by a КОД: <code> line — an internal reference tag, never user-visible text. Repeat the SAME КОД for the same movement even if you rename it, move it, or change its format; give a genuinely new exercise no КОД line at all; never move a КОД onto a different exercise.\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
-    '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
+    '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
 }
 
 function openEditAI(p){
@@ -11400,41 +11529,68 @@ function versionedName(base){
   return clean + ' (' + t('program.updatedN',{count:Date.now()}) + ')';
 }
 
-// переносит картинки и обложку из исходной программы по совпадению названий
-function carryMedia(oldProg, newProg){
-  const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-  const byName = new Map();
-  normPlans(oldProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(ex.media && !byName.has(norm(ex.name))) byName.set(norm(ex.name), ex.media);
-  }));
+// переносит картинки и обложку из исходной программы. Упражнения сопоставлены
+// заранее через FitAIProtocol.diffPrograms (id/КОД/имя, см. createEditedProgram)
+// — так перестановка и лёгкое переименование сохраняют картинку, а настоящая
+// замена движения (новое упражнение без пары) — нет: старая картинка от другого
+// движения только запутала бы.
+function carryMedia(oldProg, newProg, diff){
   let carried = 0;
-  normPlans(newProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(!ex.media){
-      const m = byName.get(norm(ex.name));
-      if(m){ ex.media = JSON.parse(JSON.stringify(m)); carried++; }
-    }
-  }));
+  diff.matches.forEach(({oldEx, newEx}) => {
+    if(!newEx.media && oldEx.media){ newEx.media = JSON.parse(JSON.stringify(oldEx.media)); carried++; }
+  });
   if(!newProg.cover && oldProg.cover) newProg.cover = oldProg.cover;
   return carried;
+}
+
+// расчётная (не по истории) длительность одного варианта — используется только
+// для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
+// и та же основа: реальная история новой программы всегда пуста (свежий id), а у
+// старой может быть — сравнение «средняя реальная» против «расчётная» было бы
+// нечестным. Подменяем id, чтобы estimatedWorkoutMinutes не подобрала историю.
+function structuralMinutes(p, planIdx){
+  return estimatedWorkoutMinutes(Object.assign({}, p, {id:'~diff~'}), planIdx || 0, []).n;
+}
+
+// «Было / стало» после AI-правки: коротко, без похода в текст ответа. Плюс
+// хардовые проверки итога (пачка 1, п.4) — то, что не запретить заранее в
+// промте, но можно и нужно поймать после генерации.
+function editSummaryText(diff, oldProg, newProg){
+  const bits = [];
+  if(diff.added.length) bits.push(t('ai.editAdded', {names: diff.added.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.removed.length) bits.push(t('ai.editRemoved', {names: diff.removed.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.moved > 0) bits.push(t('ai.editReordered'));
+  const before = structuralMinutes(oldProg, 0), after = structuralMinutes(newProg, 0);
+  // порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%
+  const notable = before > 0 && Math.abs(after - before) > (before <= 20 ? 5 : Math.max(5, before * 0.2));
+  if(notable) bits.push(t('ai.editTimeChanged', {before, after}));
+  return bits.join('');
 }
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
-  const wish = clampText($('eaWish').value, LIM.wish);
-  const structural = aiStructureChangeRequested(wish);
-  const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
-  const checkedRaw = aiClientVerdict('program.modify', safeRaw);
+  // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
+  // упражнения теперь в промте (FitAIProtocol.editRules), а не в клиенте через
+  // regex-угадайку «structural» и принудительный merge старой структуры.
+  const checkedRaw = aiClientVerdict('program.modify', raw);
   if(!checkedRaw) return;
   const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
-  if(!structural && !sameProgramShape(editAIProg, program)){
+  // жёсткая проверка итога: программа не развалилась на пустые варианты — иначе
+  // за «улучшением» на деле нет тренировки
+  const newPlans = normPlans(program);
+  if(!newPlans.length || newPlans.some(pl => !(pl.exercises || []).length)){
     appAlert(MSG_AI_PARSE());
     return;
   }
+  const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
+  // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
+  newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
+
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
@@ -11442,7 +11598,7 @@ async function createEditedProgram(){
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
-  const carried = carryMedia(editAIProg, program);
+  carryMedia(editAIProg, program, diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;
   if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
@@ -11452,7 +11608,7 @@ async function createEditedProgram(){
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(t('program.createdEdited',{name:program.name}) + (carried?t('program.imagesCarried',{count:carried}):''));
+  appAlert(t('program.createdEdited',{name:program.name}) + editSummaryText(diff, editAIProg, program));
 }
 
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в
@@ -13462,8 +13618,19 @@ const MAX_MAIN = 20;  // основных упражнений на вариан
 const MAX_EX = MAX_WARM + MAX_MAIN; // общий потолок списка
 let draft = null;
 
+// Внутренний id упражнения — не показывается человеку и не входит в обычный
+// текстовый протокол (импорт/каталог/«скопировать программу» его не видят).
+// Нужен, чтобы при AI-правке отличать «то же упражнение переставили или
+// переименовали» от «это другое упражнение»: раньше всё определялось по имени,
+// и «Жим гантелей лёжа» → «Жим гантелей на полу» выглядело новым упражнением.
+// Уникальности достаточно внутри одной программы (десятки строк), поэтому без
+// проверки на коллизии: 36^6 комбинаций с большим запасом хватает.
+function newExId(){
+  return 'e' + Math.random().toString(36).slice(2, 8);
+}
+
 function blankExercise(){
-  return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
+  return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
@@ -13486,6 +13653,8 @@ function normalizeExercise(ex){
      становится упражнением: через неё проходит и набранное руками, и ответ
      нейросети, и чужая программа. Раньше длина названия и описаний тут не
      проверялась вовсе, и название в мегабайт доезжало до карточки как есть. */
+  // упражнения из старых данных (созданы до id) или пришедшие по сети без него
+  if(!ex.id) ex.id = newExId();
   ex.name  = clampLine(ex.name, LIM.exName);
   ex.desc  = clampText(ex.desc, LIM.exDesc);
   ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -14735,11 +14904,6 @@ function aiPrompt(locale){
   return FitAIProtocol.programPrompt(lang);
 }
 
-function aiStructureChangeRequested(text){
-  const s=String(text||'').toLowerCase();
-  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
-    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
-}
 function aiProtocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
   return m?{key:m[1],value:m[2]}:null;
@@ -14755,67 +14919,12 @@ function aiExerciseBlocks(text){
   }
   return out;
 }
-function aiMergeExerciseBlock(sourceText,candidateText){
-  const src=String(sourceText||'').split(/\r?\n/);
-  const cand=String(candidateText||'').split(/\r?\n/);
-  const values={},used={},existing=new Set();
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!values[p.key])values[p.key]=[];
-    values[p.key].push(p.value);
-  });
-  const merged=src.map(line=>{
-    const p=aiProtocolLine(line);if(!p)return line;
-    existing.add(p.key);
-    const idx=used[p.key]||0;used[p.key]=idx+1;
-    const arr=values[p.key]||[];
-    return idx<arr.length?p.key+': '+String(arr[idx]||'').trim():line;
-  });
-  const allowed=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS||[]);
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);
-    if(!p||existing.has(p.key)||!allowed.has(p.key))return;
-    merged.push(p.key+': '+String(p.value||'').trim());
-    existing.add(p.key);
-  });
-  return merged.join('\n');
-}
-function aiMergeProgramEdit(sourceText,candidateText){
-  const srcLines=String(sourceText||'').split(/\r?\n/);
-  const candLines=String(candidateText||'').split(/\r?\n/);
-  const srcBlocks=aiExerciseBlocks(sourceText),candBlocks=aiExerciseBlocks(candidateText);
-  const candExerciseLine=new Set();
-  candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLine.add(i);});
-  const topValues={};
-  candLines.forEach((line,i)=>{
-    if(candExerciseLine.has(i))return;
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!topValues[p.key])topValues[p.key]=[];
-    topValues[p.key].push(p.value);
-  });
-  const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
-  const usedCand=new Set();
-  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
-  const out=[];
-  for(let i=0;i<srcLines.length;i++){
-    const entry=blockByStart.get(i);
-    if(entry){
-      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
-      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
-      const cb=ci>=0?candBlocks[ci]:null;
-      if(ci>=0)usedCand.add(ci);
-      out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
-      i=entry.b.end-1;
-      continue;
-    }
-    const p=aiProtocolLine(srcLines[i]);
-    if(!p){out.push(srcLines[i]);continue;}
-    const idx=topUsed[p.key]||0;topUsed[p.key]=idx+1;
-    const arr=topValues[p.key]||[];
-    out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
-  }
-  return out.join('\n');
-}
+// Раньше здесь жили aiMergeExerciseBlock/aiMergeProgramEdit — они принудительно
+// возвращали старую структуру (порядок, число упражнений) и подставляли от ИИ
+// только значения полей. Простые запросы вроде «поменяй порядок» или «добавь
+// упражнение» либо тихо ничего не меняли, либо ловили ошибку разбора. Теперь
+// ответ ИИ принимается как есть (см. createEditedProgram/applyExEdit), а его
+// итог проверяется парсингом и FitAIProtocol.diffPrograms — не запрещается заранее.
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -14985,6 +15094,9 @@ function parseProgramText(txt){
         plan.exercises.push(cur);
         break;
       }
+      // техническая метка сопоставления при AI-правке (см. programToText(…,{forEdit:true}));
+      // человеку не показывается и никогда не сохраняется — см. createEditedProgram
+      case 'КОД': if(cur) cur._code = val.trim().slice(0, 20); break;
       case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
       case 'ФОРМАТ':
         if(cur){

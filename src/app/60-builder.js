@@ -76,8 +76,19 @@ const MAX_MAIN = 20;  // основных упражнений на вариан
 const MAX_EX = MAX_WARM + MAX_MAIN; // общий потолок списка
 let draft = null;
 
+// Внутренний id упражнения — не показывается человеку и не входит в обычный
+// текстовый протокол (импорт/каталог/«скопировать программу» его не видят).
+// Нужен, чтобы при AI-правке отличать «то же упражнение переставили или
+// переименовали» от «это другое упражнение»: раньше всё определялось по имени,
+// и «Жим гантелей лёжа» → «Жим гантелей на полу» выглядело новым упражнением.
+// Уникальности достаточно внутри одной программы (десятки строк), поэтому без
+// проверки на коллизии: 36^6 комбинаций с большим запасом хватает.
+function newExId(){
+  return 'e' + Math.random().toString(36).slice(2, 8);
+}
+
 function blankExercise(){
-  return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
+  return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
@@ -100,6 +111,8 @@ function normalizeExercise(ex){
      становится упражнением: через неё проходит и набранное руками, и ответ
      нейросети, и чужая программа. Раньше длина названия и описаний тут не
      проверялась вовсе, и название в мегабайт доезжало до карточки как есть. */
+  // упражнения из старых данных (созданы до id) или пришедшие по сети без него
+  if(!ex.id) ex.id = newExId();
   ex.name  = clampLine(ex.name, LIM.exName);
   ex.desc  = clampText(ex.desc, LIM.exDesc);
   ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -1349,11 +1362,6 @@ function aiPrompt(locale){
   return FitAIProtocol.programPrompt(lang);
 }
 
-function aiStructureChangeRequested(text){
-  const s=String(text||'').toLowerCase();
-  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
-    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
-}
 function aiProtocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
   return m?{key:m[1],value:m[2]}:null;
@@ -1369,67 +1377,12 @@ function aiExerciseBlocks(text){
   }
   return out;
 }
-function aiMergeExerciseBlock(sourceText,candidateText){
-  const src=String(sourceText||'').split(/\r?\n/);
-  const cand=String(candidateText||'').split(/\r?\n/);
-  const values={},used={},existing=new Set();
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!values[p.key])values[p.key]=[];
-    values[p.key].push(p.value);
-  });
-  const merged=src.map(line=>{
-    const p=aiProtocolLine(line);if(!p)return line;
-    existing.add(p.key);
-    const idx=used[p.key]||0;used[p.key]=idx+1;
-    const arr=values[p.key]||[];
-    return idx<arr.length?p.key+': '+String(arr[idx]||'').trim():line;
-  });
-  const allowed=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS||[]);
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);
-    if(!p||existing.has(p.key)||!allowed.has(p.key))return;
-    merged.push(p.key+': '+String(p.value||'').trim());
-    existing.add(p.key);
-  });
-  return merged.join('\n');
-}
-function aiMergeProgramEdit(sourceText,candidateText){
-  const srcLines=String(sourceText||'').split(/\r?\n/);
-  const candLines=String(candidateText||'').split(/\r?\n/);
-  const srcBlocks=aiExerciseBlocks(sourceText),candBlocks=aiExerciseBlocks(candidateText);
-  const candExerciseLine=new Set();
-  candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLine.add(i);});
-  const topValues={};
-  candLines.forEach((line,i)=>{
-    if(candExerciseLine.has(i))return;
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!topValues[p.key])topValues[p.key]=[];
-    topValues[p.key].push(p.value);
-  });
-  const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
-  const usedCand=new Set();
-  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
-  const out=[];
-  for(let i=0;i<srcLines.length;i++){
-    const entry=blockByStart.get(i);
-    if(entry){
-      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
-      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
-      const cb=ci>=0?candBlocks[ci]:null;
-      if(ci>=0)usedCand.add(ci);
-      out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
-      i=entry.b.end-1;
-      continue;
-    }
-    const p=aiProtocolLine(srcLines[i]);
-    if(!p){out.push(srcLines[i]);continue;}
-    const idx=topUsed[p.key]||0;topUsed[p.key]=idx+1;
-    const arr=topValues[p.key]||[];
-    out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
-  }
-  return out.join('\n');
-}
+// Раньше здесь жили aiMergeExerciseBlock/aiMergeProgramEdit — они принудительно
+// возвращали старую структуру (порядок, число упражнений) и подставляли от ИИ
+// только значения полей. Простые запросы вроде «поменяй порядок» или «добавь
+// упражнение» либо тихо ничего не меняли, либо ловили ошибку разбора. Теперь
+// ответ ИИ принимается как есть (см. createEditedProgram/applyExEdit), а его
+// итог проверяется парсингом и FitAIProtocol.diffPrograms — не запрещается заранее.
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -1599,6 +1552,9 @@ function parseProgramText(txt){
         plan.exercises.push(cur);
         break;
       }
+      // техническая метка сопоставления при AI-правке (см. programToText(…,{forEdit:true}));
+      // человеку не показывается и никогда не сохраняется — см. createEditedProgram
+      case 'КОД': if(cur) cur._code = val.trim().slice(0, 20); break;
       case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
       case 'ФОРМАТ':
         if(cur){

@@ -833,101 +833,17 @@ module.exports = async (req, res) => {
     }
     return {lines,start,end};
   }
-  const EXERCISE_OPTIONAL_LABELS=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS);
+  // Правка одного упражнения раньше сливалась позиционно по каждому полю
+  // (тот же приём, что был у клиента в aiMergeExerciseBlock) — ответ ИИ не мог
+  // ни убрать поле, ни переставить строки. Теперь ответ используется как есть,
+  // carryExerciseFields лишь подставляет описание/мышцы/ошибки/видео, если ИИ
+  // их не вернул.
   function replaceExerciseBlock(text, exerciseName, candidate){
     const src=exerciseBlockRange(text,exerciseName);
     if(src.start<0) return text;
-    const sourceLines=src.lines.slice(src.start,src.end);
-    const candidateLines=String(candidate||'').split(/\r?\n/);
-    const candidateByKey={};
-    candidateLines.forEach(line=>{
-      const p=protocolLine(line);
-      if(!p) return;
-      if(!candidateByKey[p.key]) candidateByKey[p.key]=[];
-      candidateByKey[p.key].push(p.value);
-    });
-
-    const used={};
-    const existingKeys=new Set();
-    const merged=sourceLines.map(line=>{
-      const p=protocolLine(line);
-      if(!p) return line;
-      existingKeys.add(p.key);
-      const idx=used[p.key]||0;
-      used[p.key]=idx+1;
-      const vals=candidateByKey[p.key]||[];
-      if(idx>=vals.length) return line;
-      return p.key+': '+String(vals[idx]||'').trim();
-    });
-
-    // Для редактирования упражнения разрешаем ДОБАВИТЬ только официальные
-    // optional-поля парсера. Это позволяет превратить упражнение без веса в
-    // «повторения и вес», задать 8 кг, шаг/потолок и т.п., но не даёт модели
-    // изобретать новые служебные labels.
-    candidateLines.forEach(line=>{
-      const p=protocolLine(line);
-      if(!p || existingKeys.has(p.key) || !EXERCISE_OPTIONAL_LABELS.has(p.key)) return;
-      merged.push(p.key+': '+String(p.value||'').trim());
-      existingKeys.add(p.key);
-    });
-
+    const sourceBlock=src.lines.slice(src.start,src.end).join('\n');
+    const merged=FitAIProtocol.carryExerciseFields(sourceBlock,candidate).split('\n');
     return src.lines.slice(0,src.start).concat(merged,src.lines.slice(src.end)).join('\n');
-  }
-  function structureChangeRequested(text){
-    const s=String(text||'').toLowerCase();
-    return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
-      || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
-  }
-  function programExerciseBlocks(text){
-    const lines=String(text||'').split(/\r?\n/),out=[];
-    for(let i=0;i<lines.length;i++){
-      if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i]))continue;
-      let end=i+1;
-      while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-      out.push({start:i,end,lines:lines.slice(i,end),name:(protocolLine(lines[i])||{}).value||''});
-      i=end-1;
-    }
-    return out;
-  }
-  function mergeProgramEditText(sourceText,candidateText){
-    const srcLines=String(sourceText||'').split(/\r?\n/);
-    const candLines=String(candidateText||'').split(/\r?\n/);
-    const srcBlocks=programExerciseBlocks(sourceText),candBlocks=programExerciseBlocks(candidateText);
-    const candExerciseLines=new Set();
-    candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLines.add(i);});
-    const vals={};
-    candLines.forEach((line,i)=>{
-      if(candExerciseLines.has(i))return;
-      const p=protocolLine(line);if(!p)return;
-      if(!vals[p.key])vals[p.key]=[];
-      vals[p.key].push(p.value);
-    });
-    const used={},blockMap=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}])),out=[];
-    const usedCand=new Set();
-    const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
-    for(let i=0;i<srcLines.length;i++){
-      const entry=blockMap.get(i);
-      if(entry){
-        let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
-        if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i))ci=entry.i;
-        const cb=ci>=0?candBlocks[ci]:null;
-        if(ci>=0)usedCand.add(ci);
-        const sourceBlock=entry.b.lines.join('\n');
-        const candidateBlock=cb?cb.lines.join('\n'):'';
-        const tempName=(protocolLine(entry.b.lines[0])||{}).value||'';
-        const wrapped='УПРАЖНЕНИЕ: '+tempName+'\n'+entry.b.lines.slice(1).join('\n');
-        // same merger, addressed by the source exercise name
-        out.push(...replaceExerciseBlock(wrapped,tempName,candidateBlock).split('\n'));
-        i=entry.b.end-1;
-        continue;
-      }
-      const p=protocolLine(srcLines[i]);
-      if(!p){out.push(srcLines[i]);continue;}
-      const idx=used[p.key]||0;used[p.key]=idx+1;
-      const arr=vals[p.key]||[];
-      out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
-    }
-    return out.join('\n');
   }
 
   if(a === 'catalog_ai_edit'){
@@ -955,7 +871,7 @@ module.exports = async (req, res) => {
           FitAIProtocol.machineLanguageRules(language),
           FitAIProtocol.exerciseSchema(language),
           FitAIProtocol.progressionRules(),
-          FitAIProtocol.editRules(false),
+          FitAIProtocol.editRules(),
           'Instruction: '+instruction,
           '=== CURRENT EXERCISE ===\n'+sourceBlock
         ].join('\n\n');
@@ -972,14 +888,13 @@ module.exports = async (req, res) => {
         return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
       }
 
-      const structural=structureChangeRequested(instruction);
       const prompt=[
         'Edit this Fit Timer catalog program according to the instruction.',
         'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
         FitAIProtocol.machineLanguageRules(language),
         FitAIProtocol.programSchema(language),
         FitAIProtocol.progressionRules(),
-        FitAIProtocol.editRules(structural),
+        FitAIProtocol.editRules(),
         'Instruction: '+instruction,
         'PROGRAM JSON:',
         JSON.stringify(locale)
@@ -991,11 +906,12 @@ module.exports = async (req, res) => {
       const rawEdited=cleanLocaleBlock(parsed);
       const miss=localeMiss(rawEdited,'AI');
       if(miss.length)return fail(res,502,'ai_incomplete',{miss});
-      const edited={
-        name:rawEdited.name,
-        gives:rawEdited.gives,
-        text:structural?rawEdited.text:mergeProgramEditText(locale.text,rawEdited.text)
-      };
+      // ответ используется как есть — тот же принцип, что и в клиентской правке
+      // программы (createEditedProgram): не запрещаем структурные изменения
+      // заранее регуляркой, а проверяем итоговый протокол
+      const checked=FitAIProtocol.validateProgramResponse(rawEdited.text);
+      if(!checked.ok)return fail(res,502,'ai_invalid_program',{detail:checked.reason,miss:checked.missing||[]});
+      const edited={name:rawEdited.name,gives:rawEdited.gives,text:rawEdited.text};
       return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){
       return fail(res,502,'ai_edit_failed',{detail:String(e.message||e).slice(0,500)});

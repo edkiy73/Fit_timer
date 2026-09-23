@@ -795,6 +795,9 @@ function sanitizeProgram(p){
 }
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
+  // упражнения из старых данных (созданы до появления id) или пришедшие по
+  // сети без него — см. newExId() в 60-builder.js
+  if(!ex.id) ex.id = newExId();
   ex.name = clampLine(ex.name, LIM.exName);
   if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
   if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
