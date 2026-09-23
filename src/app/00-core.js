@@ -793,6 +793,9 @@ function show(id, push = true){
   // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
   // бросив тренировку на середине.
   if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); exFromWork = false; }
+  // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
+  // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
+  if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) settleQuickFinish(true);
   if(push && show._last !== id){
     if(tabSwitch){
       navStack[navStack.length - 1] = id;

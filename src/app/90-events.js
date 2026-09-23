@@ -1176,7 +1176,13 @@ $('finNoteToggle').onclick = ()=>{
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
+  settleQuickFinish(true);            // у короткой тренировки это кнопка «Засчитать»
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
+  document.body.classList.remove('phase-rest');
+  goTab('scrMenu');
+};
+$('btnDiscardResult').onclick = ()=>{
+  settleQuickFinish(false);           // ничего не записываем и тренеру не отправляем
   document.body.classList.remove('phase-rest');
   goTab('scrMenu');
 };

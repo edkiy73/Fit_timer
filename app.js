@@ -1127,6 +1127,11 @@ const I18N_RU = {
   'finish.streak': "подряд",
   'finish.shareTitle': "Поделиться",
   'finish.done': "Готово",
+  'finish.keep': "Засчитать",
+  'finish.discard': "Не засчитывать",
+  'finish.quickTitle': "Слишком быстро",
+  'finish.quickHeading': "Тренировка завершена",
+  'finish.quickText': "Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.",
   'progress.title': "Прогресс",
   'progress.tabWorkouts': "Тренировки",
   'progress.tabBody': "Тело",
@@ -2666,6 +2671,11 @@ const I18N_EN = {
   'finish.streak': "straight",
   'finish.shareTitle': "Share",
   'finish.done': "Done",
+  'finish.keep': "Count it",
+  'finish.discard': "Don't count",
+  'finish.quickTitle': "That was quick",
+  'finish.quickHeading': "Workout finished",
+  'finish.quickText': "This workout took less than 30 seconds — it looks like it was finished by accident. You can leave it uncounted.",
   'progress.title': "Progress",
   'progress.tabWorkouts': "Workouts",
   'progress.tabBody': "Body",
@@ -4234,6 +4244,9 @@ function show(id, push = true){
   // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
   // бросив тренировку на середине.
   if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); exFromWork = false; }
+  // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
+  // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
+  if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) settleQuickFinish(true);
   if(push && show._last !== id){
     if(tabSwitch){
       navStack[navStack.length - 1] = id;
@@ -15899,26 +15912,15 @@ async function maybeRequestAppReview(count){
   return true;
 }
 
-function finishWorkout(){
-  trackProductEvent('workout_completed').catch(()=>{});
-  state.live = false;
-  setPause(false);
-  stopHandsFree();
-  stopSpeech();
-  clearSession(); // тренировка пройдена до конца — продолжать больше нечего
-  const totalSec = stopGlobal();
-  // статистика: общее время + счётчик прохождений программы
-  state.lastTotalSec = totalSec;
-  state.lastKcal = estimateKcal(totalSec, 100);
-  $('finKcal').textContent = '≈' + state.lastKcal;
-  // Отключённую программу (progActive(p) === false) запускать можно — предупредили
-  // об этом ДО старта (#btnStart) — но раз человек всё равно начал, держим слово:
-  // результат нигде не оседает, будто его не было. Финал при этом доигрывает как
-  // обычно — это про текущую сессию, а не про то, что сохранится.
-  const srcProgram = (state.current && state.current.sourceId)
-    ? customPrograms.find(x => x.id === state.current.sourceId) : null;
-  const countsToStats = !srcProgram || progActive(srcProgram);
-  if(countsToStats){
+const QUICK_FINISH_SEC = 30;
+
+// Запись законченной тренировки: история, минуты, серия, достижения, счётчик
+// прохождений программы и отчёт тренеру. Для обычной тренировки вызывается сразу,
+// для слишком короткой — только когда человек нажал «Засчитать» (или ушёл с экрана).
+function commitFinish(ctx){
+  const totalSec = ctx.totalSec, srcProgram = ctx.srcProgram;
+  const now = ctx.at || Date.now();
+  {
     stats.totalSec += totalSec;
     stats.count = (stats.count || 0) + 1;
     if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
@@ -15926,12 +15928,12 @@ function finishWorkout(){
     else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
     const histEntry = {
       id: newId(),
-      d: localISO(new Date()),
+      d: localISO(new Date(now)),
       // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
       // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
-      t: new Date(Date.now() - totalSec * 1000).getHours(),
+      t: new Date(now - totalSec * 1000).getHours(),
       pid: (state.current && state.current.sourceId) || null,
-      note: '', sec: totalSec, kcal: state.lastKcal || 0,
+      note: clampText($('finNote').value || '', LIM.note), sec: totalSec, kcal: state.lastKcal || 0,
       // Снимок названий нужен истории: программа потом может измениться, а попап дня
       // должен показывать именно то, что человек реально делал тогда.
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
@@ -15973,24 +15975,15 @@ function finishWorkout(){
     // тренировка без рук: голос или гарнитура — считаем сам факт, не режим
     if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
   }
-  // сколько разных упражнений пройдено — третья цифра карточки результата (текущая
-  // сессия, показываем всегда — это не то, что сохраняется)
-  const exNames = new Set();
-  (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
-  state.lastExCount = exNames.size;
-  $('finExLabel').textContent = storeCountText(exNames.size,'exercise').replace(/^\d+\s+/,'');
-  $('finNote').value = '';
-  setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
-  setShown('finNoteToggle', countsToStats); // нечего комментировать у того, что не сохранится
   renderBadges();
   saveStats();
   syncNativeNotifications();
   renderStats();
-  if(countsToStats){
+  {
     const completedCount = stats.count || 0;
     setTimeout(()=>{ maybeRequestAppReview(completedCount).catch(()=>{}); }, 2500);
   }
-  if(countsToStats && srcProgram){
+  if(srcProgram){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
     p.stats.completions++;
@@ -16009,6 +16002,69 @@ function finishWorkout(){
     autoReport(p);
   }
   renderMine();
+}
+
+// Решение по слишком короткой тренировке. keep — засчитать как обычно.
+function settleQuickFinish(keep){
+  const pending = state.pendingFinish;
+  if(!pending) return;
+  state.pendingFinish = null;
+  setShown('finQuick', false);
+  if(keep) commitFinish(pending);
+}
+
+function finishWorkout(){
+  trackProductEvent('workout_completed').catch(()=>{});
+  state.live = false;
+  setPause(false);
+  stopHandsFree();
+  stopSpeech();
+  clearSession(); // тренировка пройдена до конца — продолжать больше нечего
+  // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
+  // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
+  state.lastHist = null;
+  const totalSec = stopGlobal();
+  // статистика: общее время + счётчик прохождений программы
+  state.lastTotalSec = totalSec;
+  state.lastKcal = estimateKcal(totalSec, 100);
+  $('finKcal').textContent = '≈' + state.lastKcal;
+  // Отключённую программу (progActive(p) === false) запускать можно — предупредили
+  // об этом ДО старта (#btnStart) — но раз человек всё равно начал, держим слово:
+  // результат нигде не оседает, будто его не было. Финал при этом доигрывает как
+  // обычно — это про текущую сессию, а не про то, что сохранится.
+  const srcProgram = (state.current && state.current.sourceId)
+    ? customPrograms.find(x => x.id === state.current.sourceId) : null;
+  const countsToStats = !srcProgram || progActive(srcProgram);
+  // Меньше QUICK_FINISH_SEC — похоже на случайное завершение. Такую тренировку НЕ
+  // записываем сразу: человек решает на экране результата. Отменять задним числом
+  // нельзя — отчёт тренеру к тому моменту уже ушёл бы.
+  const quick = countsToStats && totalSec < QUICK_FINISH_SEC;
+  state.pendingFinish = quick ? {totalSec, srcProgram, at:Date.now()} : null;
+  // сколько разных упражнений пройдено — третья цифра карточки результата (текущая
+  // сессия, показываем всегда — это не то, что сохраняется)
+  const exNames = new Set();
+  (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
+  state.lastExCount = exNames.size;
+  $('finExLabel').textContent = storeCountText(exNames.size,'exercise').replace(/^\d+\s+/,'');
+  $('finNote').value = '';
+  setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
+  setShown('finNoteToggle', countsToStats); // нечего комментировать у того, что не сохранится
+  if(countsToStats && !quick) commitFinish({totalSec, srcProgram, at:Date.now()});
+  else {
+    if(quick){
+      $('badgeRow').innerHTML = '';    // достижений и рекорда ещё нет — ничего не записано
+      setShown('finStreakBox', false);
+    } else renderBadges();
+    saveStats();
+    syncNativeNotifications();
+    renderStats();
+    renderMine();
+  }
+  setShown('finQuick', quick);
+  // «Отличная работа!» над тремя секундами звучит издёвкой
+  $('finTitle').textContent = t(quick ? 'finish.quickHeading' : 'workout.great');
+  $('btnAgain').className = quick ? 'btn-secondary' : 'btn-primary';
+  $('btnAgain').textContent = t(quick ? 'finish.keep' : 'finish.done');
   releaseWake();
   document.body.classList.remove('phase-rest');
   const m = Math.floor(totalSec/60), s = totalSec%60;
@@ -18291,7 +18347,13 @@ $('finNoteToggle').onclick = ()=>{
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
+  settleQuickFinish(true);            // у короткой тренировки это кнопка «Засчитать»
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
+  document.body.classList.remove('phase-rest');
+  goTab('scrMenu');
+};
+$('btnDiscardResult').onclick = ()=>{
+  settleQuickFinish(false);           // ничего не записываем и тренеру не отправляем
   document.body.classList.remove('phase-rest');
   goTab('scrMenu');
 };

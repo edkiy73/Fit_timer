@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1261,
-      "chars": 60802,
+      "lines": 1264,
+      "chars": 61072,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -691,8 +691,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1420,
-      "chars": 65676,
+      "lines": 1463,
+      "chars": 67558,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -706,6 +706,7 @@
         "clearStepTimer",
         "closeSwapHint",
         "col",
+        "commitFinish",
         "countUp",
         "cvar",
         "earnBadges",
@@ -744,6 +745,7 @@
         "saveExToWorkout",
         "setFinRing",
         "setPause",
+        "settleQuickFinish",
         "shareResult",
         "startGlobal",
         "startWorkout",
@@ -799,8 +801,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2150,
-      "chars": 89542,
+      "lines": 2156,
+      "chars": 89823,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1211,11 +1213,12 @@
     },
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
-      "lines": 133,
-      "chars": 8087,
+      "lines": 139,
+      "chars": 8599,
       "ids": [
         "badgeRow",
         "btnAgain",
+        "btnDiscardResult",
         "btnDone",
         "btnPause",
         "btnPrev",
@@ -1236,10 +1239,12 @@
         "finNote",
         "finNoteField",
         "finNoteToggle",
+        "finQuick",
         "finRingGrad",
         "finStreak",
         "finStreakBox",
         "finStreakWord",
+        "finTitle",
         "illoBox",
         "illoWrap",
         "nextUp",

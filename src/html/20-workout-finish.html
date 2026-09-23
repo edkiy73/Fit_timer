@@ -102,7 +102,7 @@
         <span class="fin-bloom" aria-hidden="true"></span>
         <div class="medal" data-icon="medal"></div>
       </div>
-      <h2 class="fin-rise" data-i18n="workout.great">Отличная работа!</h2>
+      <h2 class="fin-rise" id="finTitle" data-i18n="workout.great">Отличная работа!</h2>
       <div class="result-card fin-rise">
         <div class="rc-main">
           <div class="rc-time" id="finalTime">0:00</div>
@@ -114,6 +114,12 @@
           <div class="rc-stat hidden" id="finStreakBox"><b id="finStreak">—</b><small id="finStreakWord" data-i18n="finish.streak">подряд</small></div>
         </div>
         <div class="badge-row" id="badgeRow"></div>
+      </div>
+      <!-- тренировка короче 30 секунд: похоже на случайное завершение, решает человек -->
+      <div class="fin-quick fin-rise hidden" id="finQuick">
+        <b data-i18n="finish.quickTitle">Слишком быстро</b>
+        <p data-i18n="finish.quickText">Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.</p>
+        <button type="button" class="btn-primary" id="btnDiscardResult" data-i18n="finish.discard">Не засчитывать</button>
       </div>
       <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
       <div class="field fin-note hidden" id="finNoteField">
