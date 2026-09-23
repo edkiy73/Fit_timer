@@ -43,15 +43,43 @@ function t(key, vars){
   }
   return out;
 }
+// data-i18n задаёт перевод по умолчанию, но не должен отбирать элемент у runtime-renderer.
+// После первого применения запоминаем ровно то DOM-значение, которое поставил i18n.
+// Если код экрана позже изменил тот же текст/HTML/атрибут, считаем его владельцем до
+// следующего собственного render. Это не даёт фоновому sync/смене профиля на секунду
+// возвращать кнопки из «Переключиться / Остаться» в «Понятно / Отмена».
+function applyI18nValue(el, slot, next, attr){
+  const mark = 'i18nApplied' + slot;
+  const read = () => {
+    if(attr){
+      const value = el.getAttribute(attr);
+      return value == null ? '' : value;
+    }
+    // Для data-i18n сравниваем именно innerHTML: runtime может добавить иконку,
+    // оставив тот же textContent, и такой элемент тоже нельзя потом разрушать.
+    return el.innerHTML;
+  };
+  const last = el.dataset[mark];
+  if(last != null && read() !== last) return false;
+
+  if(attr) el.setAttribute(attr, next);
+  else if(slot === 'Html') el.innerHTML = next;
+  else el.textContent = next;
+
+  // Браузер может нормализовать HTML/атрибут, поэтому сохраняем фактическое значение.
+  el.dataset[mark] = read();
+  return true;
+}
+
 function applyI18n(root){
   root = root || document;
   document.documentElement.lang = appLocale;
   document.title = t('app.title');
-  root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-  root.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
-  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder)); });
-  root.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
-  root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  root.querySelectorAll('[data-i18n]').forEach(el => { applyI18nValue(el, 'Text', t(el.dataset.i18n)); });
+  root.querySelectorAll('[data-i18n-html]').forEach(el => { applyI18nValue(el, 'Html', t(el.dataset.i18nHtml)); });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { applyI18nValue(el, 'Placeholder', t(el.dataset.i18nPlaceholder), 'placeholder'); });
+  root.querySelectorAll('[data-i18n-title]').forEach(el => { applyI18nValue(el, 'Title', t(el.dataset.i18nTitle), 'title'); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => { applyI18nValue(el, 'Aria', t(el.dataset.i18nAria), 'aria-label'); });
   syncAccessibility(root);
 }
 
