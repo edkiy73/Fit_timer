@@ -82,6 +82,7 @@ const I18N_RU = {
   'common.fromVideo': "Из видео",
   'programs.title': "Тренировки",
   'programs.addTitle': "Добавить программу",
+  'programs.newShort': "Новая",
   'programs.catalogRequests': "Заявки в каталог",
   'programs.programKicker': "Программа",
   'programs.disabled': "Отключена",
@@ -1639,6 +1640,7 @@ const I18N_EN = {
   'common.fromVideo': "From video",
   'programs.title': "Workouts",
   'programs.addTitle': "Add program",
+  'programs.newShort': "New",
   'programs.catalogRequests': "Catalog submissions",
   'programs.programKicker': "Program",
   'programs.disabled': "Disabled",
@@ -19405,7 +19407,6 @@ $('btnMicW').innerHTML = icon('mic');
 // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
 $('storeIcoMenu').innerHTML = $('storeIcoProg').innerHTML = icon('book');
 $('storeArrowMenu').innerHTML = $('storeArrowProg').innerHTML = icon('chevR');
-$('btnAddProgram').innerHTML = icon('plus');
 $('storeBackTop').innerHTML = icon('chevL');
 $('siBackTop').innerHTML = icon('chevL');
 $('storeSearchIco').innerHTML = icon('search');
@@ -19420,6 +19421,7 @@ $('qsIco3').innerHTML = icon('camera');
 // Раньше подпись ставилась один раз при запуске и при смене языка оставалась прежней:
 // экран результата выходил английским, а «Поделиться» — русским.
 function renderIconLabels(){
+  $('btnAddProgram').innerHTML = icon('plus') + '<span>' + esc(t('programs.newShort')) + '</span>';
   $('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
   $('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
   $('btnAddPhoto').innerHTML = icon('camera') + esc(t('progress.addPhoto'));

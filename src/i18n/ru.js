@@ -82,6 +82,7 @@ const I18N_RU = {
   'common.fromVideo': "Из видео",
   'programs.title': "Тренировки",
   'programs.addTitle': "Добавить программу",
+  'programs.newShort': "Новая",
   'programs.catalogRequests': "Заявки в каталог",
   'programs.programKicker': "Программа",
   'programs.disabled': "Отключена",
