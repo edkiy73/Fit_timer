@@ -7,6 +7,8 @@
    Запуск:  ADMIN_KEY=... node tests/dev-server.js 8124
             node tests/report-detail.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -75,10 +77,9 @@ async function boot(b, label, errs, url){
   const NICK = '@rep.' + Math.random().toString(36).slice(2, 8);
 
   const tp = await boot(b, 'тренер', errs);
+  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
   const link = await tp.evaluate(async ({txt, nick}) => {
-    const me = users.find(u => u.id === currentUser); me.name = 'Лена';
-    trainer = {on: true, handle: nick, about: '', years: null, links: ''};
-    await saveTrainer();
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'tp1';
     customPrograms.push(p); await savePrograms();
@@ -153,7 +154,7 @@ async function boot(b, label, errs, url){
   // Средней длительности по варианту тут нет намеренно: одна тренировка на двадцать
   // минут и одна на час дают «сорок минут», которых не было ни разу. Минуты стоят
   // у КАЖДОЙ тренировки в журнале — см. проверку ниже.
-  ok('в разбивке по дням только счёт раз', /Пн\s*5 раз/.test(card.replace(/\s+/g, ' ')),
+  ok('в разбивке по дням только счёт раз', /Пн\s*5(?![\d:])(?!\s*мин)/.test(card.replace(/\s+/g, ' ')),
      (card.match(/Пн[^А-Я]*/)||[''])[0].slice(0, 30));
 
   // Вторая программа тому же клиенту не должна затирать первую вместе с занятиями.

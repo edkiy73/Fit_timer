@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, interactive-widget=resizes-content">
+<!-- Ссылка на программу открывается как /p/<id> (rewrite в vercel.json). Без base
+     относительные app.js/style.css уходили бы в /p/app.js и получали ту же страницу. -->
+<base href="/">
 <title data-i18n="app.title">Fit Timer — домашние тренировки</title>
 <meta name="theme-color" content="#0C0916">
 <script src="app.config.js"></script>

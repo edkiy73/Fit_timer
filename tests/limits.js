@@ -8,6 +8,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/limits.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -22,7 +24,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 (async () => {
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
-  const page = await (await b.newContext({viewport: {width: 412, height: 900}})).newPage();
+  const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -47,11 +49,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('data: отбивается', links['data:text/html,x'] === null);
 
   /* ---- поле в интерфейсе: непохожее не сохраняется, и человеку сказано почему ---- */
-  await page.evaluate(async () => {
-    trainer = {on: true, handle: '@lena.doma', name: 'Лена'};
-    await saveTrainer();
-    goTab('scrAccount');
-  });
+  await becomeTrainer(page, {handle: '@lena.' + Math.random().toString(36).slice(2, 8), trainer: {name: 'Лена'}});
+  await page.evaluate(() => { goTab('scrAccount'); renderTrainerCard(); });
   await page.waitForTimeout(400);
   await page.evaluate(() => switchMoreTab('coach'));
   await page.waitForTimeout(300);
@@ -66,7 +65,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.fill('#coachLinks', 't.me/lena.doma');
   await page.evaluate(() => $('coachLinks').blur());
-  await page.waitForTimeout(300);
+  await page.click('#btnSaveCoach');     // страница тренера сохраняется явной кнопкой
+  await page.waitForTimeout(800);
   ok('нормальный адрес сохраняется',
      await page.evaluate(() => trainer.links === 'https://t.me/lena.doma'),
      await page.evaluate(() => trainer.links));

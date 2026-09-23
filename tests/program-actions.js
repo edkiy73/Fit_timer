@@ -8,6 +8,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/program-actions.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -28,9 +30,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
+  await becomeTrainer(page, {handle: '@act.' + Math.random().toString(36).slice(2, 8)});
   await page.evaluate(async () => {
-    trainer = {on: true, handle: '@act.coach', about: '', years: null, links: ''};
-    await saveTrainer();
     const r = parseProgramText(`ПРОГРАММА: Проба
 ДНИ: Пн
 КРУГИ: 2

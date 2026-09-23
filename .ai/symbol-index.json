@@ -355,7 +355,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2721,
-      "chars": 124009,
+      "chars": 124052,
       "symbols": [
         "add",
         "ageError",
@@ -875,8 +875,8 @@
     },
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
-      "lines": 201,
-      "chars": 11425,
+      "lines": 204,
+      "chars": 11614,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",

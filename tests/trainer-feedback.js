@@ -9,6 +9,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/trainer-feedback.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -48,18 +50,16 @@ async function boot(b, label, errs, url){
 
   const tp = await boot(b, 'тренер', errs);
 
-  // ---- профиль уезжает при ПРАВКЕ, до всякой отправки программы ----
-  await tp.evaluate(async (nick) => {
-    const me = users.find(u => u.id === currentUser); me.name = 'Лена';
-    trainer = {on: true, handle: nick, links: '', about: '', years: null};
-    await saveTrainer();
-  }, NICK);
-  await tp.evaluate(() => { goTab('scrAccount'); switchMoreTab('coach'); });
+  // ---- профиль уезжает по «Сохранить», до всякой отправки программы ----
+  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await becomeTrainer(tp, {handle: NICK, trainer: {links: '', about: '', years: null}});
+  await tp.evaluate(() => { goTab('scrAccount'); switchMoreTab('coach'); renderTrainerCard(); });
   await tp.waitForTimeout(600);
   await tp.fill('#coachAbout', 'Домашний фитнес, только коврик.');
   await tp.fill('#coachYears', '8');
   await tp.fill('#coachLinks', 't.me/coach');
-  await tp.waitForTimeout(2200);   // отправка профиля идёт с задержкой
+  await tp.click('#btnSaveCoach');
+  await tp.waitForTimeout(1500);
 
   const prof = await tp.evaluate(async (nick) => {
     try{ return await apiFetch('/api/trainer/' + encodeURIComponent(nick)); }

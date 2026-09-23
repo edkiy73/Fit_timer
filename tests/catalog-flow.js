@@ -7,6 +7,8 @@
    Запуск:  ADMIN_KEY=... node tests/dev-server.js 8124
             node tests/catalog-flow.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -67,13 +69,9 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
-  // ник закрепляем через правку профиля
-  await page.evaluate(async (nick) => {
-    const me = users.find(u => u.id === currentUser); me.name = 'Лена';
-    trainer = {on: true, handle: nick, about: 'Домашний фитнес.', years: 5, links: ''};
-    await saveTrainer();
-    await pushProfile();
-  }, NICK);
+  // тренер — режим аккаунта: вход, ник, сохранение страницы
+  await page.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await becomeTrainer(page, {handle: NICK, trainer: {about: 'Домашний фитнес.', years: 5, links: ''}});
   ok('ник закреплён', await page.evaluate(() => !!trainer.key));
 
   const add = (name) => page.evaluate(async ({txt, name}) => {
@@ -103,7 +101,7 @@ const progEn = (name) => `ПРОГРАММА: ${name}
     return {status: pubProg.pub && pubProg.pub.status, msg: document.getElementById('dlgMsg').textContent};
   });
   ok('заявка ушла и ждёт проверки', sent.status === 'pending', sent.status);
-  ok('человеку сказано, что смотрит человек', /посмотрит человек/.test(sent.msg));
+  ok('человеку сказано, что заявка ушла на проверку', /на проверку/.test(sent.msg), sent.msg.slice(0, 60));
   await page.click('#dlgOk'); await page.waitForTimeout(300);
 
   // ---- в каталоге её ещё нет ----
@@ -160,9 +158,10 @@ const progEn = (name) => `ПРОГРАММА: ${name}
     locales: {
       ru: {name: asked.name, gives: asked.gives, text: asked.text},
       en: {name: ENAME, gives: 'Three basic movements in a simple home circuit workout.',
-        // Даже если внешний переводчик полез в служебные строки, сервер должен
-        // восстановить протокол из оригинала и оставить только переведённый текст.
-        text: progEn(ENAME).replace(/УПРАЖНЕНИЕ:/g, 'EXERCISE:').replace(/ЗНАЧЕНИЕ: 12/g, 'VALUE: 999')}
+        // Даже если внешний переводчик полез в механику, сервер должен восстановить
+        // её из оригинала и оставить только переведённый текст (ключи протокола
+        // всегда русские — по ним сервер и находит переводимые поля).
+        text: progEn(ENAME).replace(/ЗНАЧЕНИЕ: 12/g, 'ЗНАЧЕНИЕ: 999')}
     }
   }});
   ok('модератор добавил второй язык', prepared.ok === true, prepared.error || 'ok');
@@ -243,11 +242,16 @@ const progEn = (name) => `ПРОГРАММА: ${name}
      было» стояла навсегда, и тренер видел «уже отправлена» про то, чего в каталоге
      нет: заслон от двойного нажатия превращался в запрет на вторую попытку.
      Проверяем в самом конце, чтобы не ломать порядок остального сценария. */
-  const again = await page.evaluate(async ({base, admin}) => {
-    // Свой ник: у прежнего уже выбран суточный предел проверкой выше.
-    const nick = '@rej.' + Math.random().toString(36).slice(2, 7);
-    const pr = await apiPost('/api/trainer/' + encodeURIComponent(nick), {trainer: {name: 'Т'}});
-    const key = pr.trainerKey;
+  // Свой ник и свой аккаунт: у прежнего уже выбран суточный предел проверкой выше.
+  const rej = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  rej.on('pageerror', e => errs.push(String(e)));
+  await rej.goto(BASE + '/index.html', {waitUntil: 'load'});
+  await rej.waitForTimeout(1500);
+  if(await rej.isVisible('#obStart')){ await rej.click('#obStart'); await rej.waitForTimeout(1000); }
+  await becomeTrainer(rej, {handle: '@rej.' + Math.random().toString(36).slice(2, 7), trainer: {name: 'Т'}});
+  const again = await rej.evaluate(async ({base, admin}) => {
+    const nick = normHandle(trainer.handle);
+    const key = trainer.key;
     const name = 'Отклонённая ' + Math.random().toString(36).slice(2, 6);
     const item = {name, gives: 'двадцать символов здесь точно наберётся, поверь мне',
                   cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: 'x'.repeat(100)};

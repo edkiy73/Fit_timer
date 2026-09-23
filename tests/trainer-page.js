@@ -9,6 +9,8 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/trainer-page.js */
 
+const { becomeTrainer } = require('./helpers/trainer-account');
+
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -52,12 +54,10 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
 
   // ---- тренер заполняет о себе и отправляет программу ----
   const tp = await boot(b, 'тренер', errs);
+  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await becomeTrainer(tp, {handle: NICK, trainer: {name: 'Лена', links: 't.me/' + NICK.slice(1),
+    about: 'Тренер по домашнему фитнесу. Веду тех, у кого дома только коврик.', years: 8}});
   const link = await tp.evaluate(async ({txt, nick}) => {
-    const me = users.find(u => u.id === currentUser);
-    me.name = 'Лена';
-    trainer = {on: true, handle: nick, links: 't.me/' + nick.slice(1),
-               about: 'Тренер по домашнему фитнесу. Веду тех, у кого дома только коврик.', years: 8};
-    await saveTrainer();
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'tp1';
     customPrograms.push(p); await savePrograms();
@@ -111,13 +111,17 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
   // Аккаунтов нет, и единственная защита ника — «кто первый, того и ник».
   // Без неё чужой человек переписал бы страницу, просто назвавшись так же.
   const hijack = await tp.evaluate(async (nick) => {
-    await apiPost('/api/share', {
-      program: {name: 'Чужая', plans: [{days: ['Пн'], exercises: [{name: 'x'}]}]},
-      by: nick, trainerKey: 'подобранный-ключ',
-      trainer: {name: 'Самозванец', about: 'я тут главный', years: 99, links: 't.me/bad'}
-    });
-    return await apiFetch('/api/trainer/' + encodeURIComponent(nick));
+    let refused = '';
+    try{
+      await apiPost('/api/share', {
+        program: {name: 'Чужая', plans: [{days: ['Пн'], exercises: [{name: 'x'}]}]},
+        by: nick, trainerKey: 'подобранный-ключ',
+        trainer: {name: 'Самозванец', about: 'я тут главный', years: 99, links: 't.me/bad'}
+      });
+    }catch(e){ refused = e.code || String(e); }
+    return Object.assign({refused}, await apiFetch('/api/trainer/' + encodeURIComponent(nick)));
   }, NICK);
+  ok('чужой ключ сервер отклоняет', hijack.refused === 'not_yours', hijack.refused || 'принял');
   ok('чужой не перепишет страницу тренера', hijack.name === 'Лена' && hijack.years === 8,
      `${hijack.name}, стаж ${hijack.years}`);
 
