@@ -916,6 +916,7 @@ const I18N_RU = {
   'video.noTranscript': "У видео не удалось получить субтитры, а безопасно разобрать его напрямую сейчас нельзя. Попробуй другое видео.",
   'video.insufficient': "В видео недостаточно подтверждённых данных об упражнениях, повторах или времени. Я не стал заполнять пропуски догадками.",
   'video.unavailable': "YouTube не дал прочитать это видео. Проверь, что оно публичное и доступно по ссылке.",
+  'video.analysisTimeout': "Разбор видео занял слишком много времени. Попробуй ещё раз или выбери ролик с доступными субтитрами.",
   'video.processingSafe': "Получаю субтитры, проверяю, что это тренировка, и только потом собираю программу.",
   'common.copyFailedRetry': "Не удалось скопировать. Попробуй ещё раз.",
   'common.copied': "✓ Скопировано",
@@ -2460,6 +2461,7 @@ const I18N_EN = {
   'video.noTranscript': "Captions could not be read, and the video cannot be analyzed safely right now. Try another video.",
   'video.insufficient': "The video does not contain enough verified exercise, rep, or timing data. I did not fill the gaps by guessing.",
   'video.unavailable': "YouTube would not let Fit Timer read this video. Check that it is public and available from the link.",
+  'video.analysisTimeout': "Video analysis took too long. Try again or use a video with available captions.",
   'video.processingSafe': "Getting captions, checking that this is a workout, then building the program from verified details.",
   'common.copyFailedRetry': "Couldn’t copy. Try again.",
   'common.copied': "✓ Copied",
@@ -9837,6 +9839,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_no_transcript') throw new Error(t('video.noTranscript'));
     if(j.error === 'video_insufficient') throw new Error(t('video.insufficient'));
     if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
+    if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
@@ -18455,9 +18458,10 @@ $('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExMa
 $('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 
 /* ---- окно ожидания генерации ---- */
-let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
+let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null, aiRunCancelled = false;
 // title — заголовок; onCancel — необязательный колбэк для многошаговых задач (генерация картинок)
 function aiRunOpen(title, onCancel){
+  aiRunCancelled = false;
   aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
   aiRunOnCancel = onCancel || null;
   $('aiRunTitle').textContent = title || t('ai.workingDefault');
@@ -18483,6 +18487,7 @@ function aiRunClose(){
   $('aiRunModal').classList.remove('open');
 }
 $('aiRunCancel').onclick = ()=>{
+  aiRunCancelled = true;
   try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
   aiRunCtl = null;
   const cb = aiRunOnCancel;
@@ -18512,8 +18517,9 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
   }catch(e){
     aiRunClose();
-    const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
-    if(aborted) return; // отменили — молча
+    if(aiRunCancelled) return; // пользователь сам нажал «Отмена» — тогда молча
+    // AbortError от сети/серверного таймаута — это ошибка, а не пользовательская
+    // отмена. Раньше такой сбой выглядел ровно как «спиннер исчез и ничего нет».
     const retry = await aiRetryDialog(e);
     if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);
     // «Изменить запрос» ничего не закрывает и ничего не очищает: человек остаётся
