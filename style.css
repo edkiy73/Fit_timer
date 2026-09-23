@@ -803,15 +803,10 @@ body.booting .app{visibility:hidden}
   .sess-head{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
   .sess-head b{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.3}
   .sess-date{flex:none;font-size:11.5px;color:var(--muted);padding-top:1px}
-  .sess-plan{font-size:12px;color:var(--muted);margin-top:4px}
-  .sess-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .sess-facts span{font-size:11.5px;font-weight:500;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 8px}
   /* карточка программы в попапе дня целиком ведёт на страницу программы */
   .sess-link{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
-  .sess-link .sess-head{display:flex;align-items:center;gap:8px}
-  .sess-link .sess-head b{flex:1;min-width:0}
-  .sess-link .sess-head svg{flex:none;width:16px;height:16px;color:var(--muted)}
-  .sess-row .sess-note{display:block;font-size:12.5px;color:var(--muted);margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-style:italic}
+  .sess-line{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+  .sess-row .sess-note{display:block;font-size:12.5px;line-height:1.45;color:var(--muted);margin-top:4px;font-style:italic}
   .sess-empty{font-size:13.5px;color:var(--muted);line-height:1.5;margin:2px 0 6px}
   .ph-tools{display:flex;flex-direction:column;gap:8px;margin-top:14px}
   .ph-tools .btn-ghost{min-height:46px}
@@ -947,6 +942,15 @@ body.booting .app{visibility:hidden}
   }
   .note-toggle svg{width:16px;height:16px}
   .fin-note{margin-top:var(--sp-4);text-align:left}
+  /* тренировка короче 30 секунд: спрашиваем, засчитывать ли. Акцент — на «Не засчитывать» */
+  .fin-quick{
+    margin-top:var(--sp-4);padding:var(--sp-4);border-radius:var(--r-lg);
+    background:var(--warn-soft);border:1px solid var(--warn-line);text-align:left;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .fin-quick b{font-size:15px;font-weight:600;color:var(--ink)}
+  .fin-quick p{margin:0;font-size:13.5px;line-height:1.45;color:var(--muted)}
+  .fin-quick .btn-primary{margin-top:var(--sp-2);width:100%}
   .finish .time small{display:block;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.2em;margin-top:8px}
 
   /* ---------- финал: «круг замкнулся» ----------
@@ -1146,6 +1150,8 @@ body.booting .app{visibility:hidden}
   .mc-meta .chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12.5px;color:var(--muted)}
   .mc-meta .chip b{color:var(--ink);font-weight:600}
   .mc-empty{color:var(--muted);font-size:14px;line-height:1.5;margin-top:16px;padding:22px 16px;text-align:center;background:var(--bg-2);border-radius:var(--r-lg);border:1px dashed var(--line-2)}
+  /* пустое состояние прямо во вкладке стоит в одном ряду с карточками — тот же отступ снизу */
+  .tab-pane > .mc-empty{margin:0 0 20px}
   .mc-charts{margin-top:18px;display:flex;flex-direction:column;gap:16px}
   .metric-graph{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px}
   .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
@@ -1456,9 +1462,13 @@ body.booting .app{visibility:hidden}
      края, а ручка у нижнего, и на высокой карточке они разъезжались. */
   .mine-card > .more-btn{top:50%;transform:translateY(-100%)}
   .mine-card > .ctx-menu{top:calc(50% + 2px)}
+  /* меню, развёрнутое вверх, встаёт над «⋮», а не над всей карточкой */
+  .mine-card > .ctx-menu.up,
+  .ex-row > .ctx-menu.up{top:auto;bottom:calc(50% + 36px)}
+  /* ширина как у «⋮» (44 — зона нажатия): при 34 центры иконок расходились на 5 px */
   .drag-handle{
     position:absolute;top:50%;right:6px;z-index:5;
-    width:34px;height:34px;border:none;background:none;border-radius:10px;
+    width:44px;height:34px;border:none;background:none;border-radius:10px;
     color:var(--muted);cursor:grab;line-height:1;
     touch-action:none;display:flex;align-items:center;justify-content:center;
   }
@@ -1534,7 +1544,7 @@ body.booting .app{visibility:hidden}
   .ex-row{
     position:relative;display:flex;align-items:flex-start;gap:10px;min-height:80px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:12px 44px 12px 12px;cursor:pointer;box-sizing:border-box;
+    padding:12px 50px 12px 12px;cursor:pointer;box-sizing:border-box;
     -webkit-touch-callout:none;user-select:none;
   }
   .ex-row.dragging{z-index:25;border-color:var(--accent-line);box-shadow:0 14px 32px rgba(0,0,0,.28)}
@@ -1545,7 +1555,7 @@ body.booting .app{visibility:hidden}
   .ex-row > .more-btn{top:50%;right:4px;transform:translateY(-100%)}
   .ex-row > .ctx-menu{top:calc(50% + 2px);right:6px}
   .ex-grip{
-    position:absolute;top:50%;right:4px;width:34px;height:34px;
+    position:absolute;top:50%;right:4px;width:44px;height:34px;
     display:flex;align-items:center;justify-content:center;
     color:var(--muted);cursor:grab;border-radius:10px;
     touch-action:none; /* иначе жест уходит в прокрутку страницы */

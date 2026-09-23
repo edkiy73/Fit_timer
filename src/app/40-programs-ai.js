@@ -345,7 +345,7 @@ function openDayProgram(pid, pi){
 function openWeekDay(d){
   const entries = (stats.history || []).filter(h => h.d === d.iso);
   const title = canonicalLabel(DAY_FULL[d.idx]) + ', ' + dayTitle(d.iso);
-  openSessions(t('sessions.dayLabel'), title, entries, '');
+  openSessions(t('sessions.dayLabel'), title, entries, '', {status:true});
   const box = $('sessList');
   let plannedRows = 0;
 
@@ -366,36 +366,19 @@ function openWeekDay(d){
     }
     const plan = plans[planIdx] || plans[0] || null;
     const moved = slot.from !== null && slot.from !== d.idx;
-    const status = moved ? t('week.dayMoved') : (d.past ? t('week.dayMakeUp') : t('week.dayPlanned'));
+    // Обычный текст вместо плашек: что с этой тренировкой в этот день.
+    const parts = [moved
+      ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
+      : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
+    if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}));
 
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'sess-row sess-link';
-    row.innerHTML =
-      '<div class="sess-head"><b></b>' + icon('chevR') + '</div>' +
-      '<div class="sess-facts"></div>' +
-      '<div class="sess-plan hidden"></div>';
+    row.innerHTML = '<div class="sess-head"><b></b></div><p class="sess-line"></p>';
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
+    row.querySelector('.sess-line').textContent = parts.join(' ');
     row.onclick = () => openDayProgram(p.id, plans.indexOf(plan));
-
-    const facts = row.querySelector('.sess-facts');
-    const stateChip = document.createElement('span');
-    stateChip.textContent = status;
-    facts.appendChild(stateChip);
-    if(p.rotate && plans.length > 1){
-      const variantChip = document.createElement('span');
-      variantChip.textContent = t('today.variant',{current:planIdx+1,total:plans.length});
-      facts.appendChild(variantChip);
-    }
-
-    const note = row.querySelector('.sess-plan');
-    if(moved){
-      note.textContent = t('week.dayMovedOn',{day:canonicalLabel(DAY_FULL[slot.from])});
-      note.classList.remove('hidden');
-    }else if(d.debt){
-      note.textContent = t('week.canStillMakeUp');
-      note.classList.remove('hidden');
-    }
 
     box.appendChild(row);
     plannedRows++;
