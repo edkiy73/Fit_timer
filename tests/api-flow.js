@@ -18,7 +18,18 @@ const ok = (name, cond, extra) => {
 (async () => {
   const program = {name: 'Сила дома', plans: [{days: ['Пн'], exercises: [{name: 'Приседания'}]}]};
 
-  const a = await post('/api/share', {program, by: '@lena.doma', to: 'Марина'});
+  // Подписать программу ником можно только от страницы тренера, а она живёт внутри
+  // аккаунта: вход по коду → ник → сохранение страницы → ключ страницы.
+  const NICK = '@lena.' + Math.random().toString(36).slice(2, 8);
+  const MAIL = 'flow.' + Math.random().toString(36).slice(2, 8) + '@example.com';
+  const sent = await post('/api/auth', {action: 'send', email: MAIL});
+  const acc = await post('/api/auth', {action: 'verify', email: MAIL, code: sent.j.devCode, deviceId: 'flow-dev'});
+  await post('/api/auth', {action: 'set_handle', email: MAIL, deviceId: 'flow-dev', syncToken: acc.j.syncToken, handle: NICK});
+  const page = await post('/api/trainer/' + encodeURIComponent(NICK),
+    {email: MAIL, deviceId: 'flow-dev', token: acc.j.syncToken, trainer: {name: 'Лена'}});
+  ok('страница тренера создана', page.s === 200 && !!page.j.trainerKey, page.j.error);
+
+  const a = await post('/api/share', {program, by: NICK, trainerKey: page.j.trainerKey, to: 'Марина'});
   ok('ссылка создаётся', a.s === 200 && a.j.id && a.j.key, a.j.id);
   const {id, key} = a.j;
 
@@ -26,7 +37,7 @@ const ok = (name, cond, extra) => {
 
   const open1 = await get('/api/p/' + id);
   ok('программа отдаётся по ссылке', open1.s === 200 && open1.j.program.name === 'Сила дома');
-  ok('ник тренера на месте', open1.j.by === '@lena.doma');
+  ok('ник тренера на месте', open1.j.by === NICK, open1.j.by);
   ok('секрет наружу не уходит', open1.j.keyHash === undefined && open1.j.key === undefined);
   await get('/api/p/' + id);
 

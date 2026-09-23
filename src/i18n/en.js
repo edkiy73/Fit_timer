@@ -941,6 +941,7 @@ const I18N_EN = {
   'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
   'images.removeAction': "Remove",
   'images.loadFailed': "Couldn’t load the image.",
+  'storage.full': "Your phone is out of space — the latest changes weren’t saved. Free up some space or delete extra progress photos and try again.",
   'images.needProgramName': "Name the program first — a cover can’t be generated without a program name.",
   'images.needExerciseName': "Name the exercise first — the AI uses the name to know what to draw.",
   'images.needAllExerciseNames': "Name every exercise first. The images section is unavailable while {count} exercise(s) have no name.",

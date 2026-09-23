@@ -50,8 +50,45 @@ function routes(){
 }
 const ROUTES = routes();
 
+// rewrites из vercel.json — тем же порядком, что у Vercel: сначала функция или файл
+// по исходному пути, и только если их нет — rewrite. Иначе тестовый сервер расходился
+// с продом (/api/ai, /api/config, /p/<id>).
+const REWRITES = (() => {
+  try{
+    const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+    return (cfg.rewrites || []).map(r => {
+      const names = [];
+      const re = new RegExp('^' + r.source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/:(\w+)/g, (_, n) => { names.push(n); return '([^/]+)'; }) + '/?$');
+      return {re, names, destination: r.destination};
+    });
+  }catch(e){ return []; }
+})();
+function rewrite(u){
+  for(const r of REWRITES){
+    const m = u.pathname.match(r.re);
+    if(!m) continue;
+    let dest = r.destination;
+    r.names.forEach((n, i) => { dest = dest.split(':' + n).join(m[i + 1]); });
+    const next = new URL(dest, 'http://localhost');
+    u.searchParams.forEach((v, k) => { if(!next.searchParams.has(k)) next.searchParams.set(k, v); });
+    return next;
+  }
+  return null;
+}
+const staticFile = pathname => {
+  let rel = decodeURIComponent(pathname);
+  if(rel === '/' || rel === '') rel = '/index.html';
+  const file = path.join(ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
+  return (file.startsWith(ROOT) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) ? file : null;
+};
+
 http.createServer(async (req, res) => {
-  const u = new URL(req.url, 'http://localhost');
+  let u = new URL(req.url, 'http://localhost');
+  if(!ROUTES.some(r => r.re.test(u.pathname)) && !staticFile(u.pathname)){
+    const next = rewrite(u);
+    if(next) u = next;
+  }
   const hit = ROUTES.find(r => r.re.test(u.pathname));
   if(hit){
     const m = u.pathname.match(hit.re);
@@ -68,14 +105,8 @@ http.createServer(async (req, res) => {
     return;
   }
   // статика
-  let rel = decodeURIComponent(u.pathname);
-  if(rel === '/' || rel === '') rel = '/index.html';
-  // как rewrite /p/:id в vercel.json: ссылка на программу открывает приложение
-  if(/^\/p\/[^/]+\/?$/.test(rel)) rel = '/index.html';
-  const file = path.join(ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
-  if(!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()){
-    res.statusCode = 404; res.end('not found'); return;
-  }
+  const file = staticFile(u.pathname);
+  if(!file){ res.statusCode = 404; res.end('not found'); return; }
   res.setHeader('Content-Type', TYPES[path.extname(file)] || 'application/octet-stream');
   res.setHeader('Cache-Control', 'no-store');
   fs.createReadStream(file).pipe(res);

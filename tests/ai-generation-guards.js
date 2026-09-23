@@ -28,7 +28,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(800);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
-  await page.evaluate(() => openAI('text'));
+  // Без пола и возраста экран ИИ сначала спрашивает анкету («Кто ты») — заполняем, как в остальных тестах.
+  await page.evaluate(async () => { const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers(); });
+  await page.evaluate(() => { initAIForm(); openAI('text'); });   // как кнопка «Через ИИ»
   await page.waitForTimeout(150);
 
   const initialDuration = await page.evaluate(() => {

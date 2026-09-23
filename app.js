@@ -941,6 +941,7 @@ const I18N_RU = {
   'images.removeQuestion': "Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.",
   'images.removeAction': "Убрать",
   'images.loadFailed': "Не удалось загрузить картинку.",
+  'storage.full': "Не хватает места на телефоне — последние изменения не сохранились. Освободи место или удали лишние фото прогресса и попробуй ещё раз.",
   'images.needProgramName': "Сначала назови программу — без названия обложку генерировать нельзя.",
   'images.needExerciseName': "Сначала назови упражнение — по названию нейросеть поймёт, что рисовать.",
   'images.needAllExerciseNames': "Сначала назови все упражнения. Без названий раздел картинок недоступен. Без названия: {count}.",
@@ -2496,6 +2497,7 @@ const I18N_EN = {
   'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
   'images.removeAction': "Remove",
   'images.loadFailed': "Couldn’t load the image.",
+  'storage.full': "Your phone is out of space — the latest changes weren’t saved. Free up some space or delete extra progress photos and try again.",
   'images.needProgramName': "Name the program first — a cover can’t be generated without a program name.",
   'images.needExerciseName': "Name the exercise first — the AI uses the name to know what to draw.",
   'images.needAllExerciseNames': "Name every exercise first. The images section is unavailable while {count} exercise(s) have no name.",
@@ -4774,6 +4776,7 @@ const curUser = () => users.find(u => u.id === currentUser) || users[0];
 async function saveUsers(){ await kvSet('users', JSON.stringify(users)); }
 async function kvDel(key){
   try{ if(window.storage){ await window.storage.delete(key); return; } }catch(e){}
+  try{ await kvReq('readwrite', st => st.delete(key)); }catch(e){}
   try{ localStorage.removeItem(key); }catch(e){}
 }
 function validAge(v){
@@ -4815,19 +4818,96 @@ let dataOwner = null;
 // показывалось уже 4 кг. Такой второй источник веса удалён.
 let progWeights = {};
 
+/* Хранилище данных — IndexedDB, а не localStorage.
+   Программы лежат вместе с картинками (data URL по 60–120 КБ), фото прогресса — тоже.
+   У localStorage около 5 МБ на всё приложение: после нескольких программ с картинками
+   запись начинала падать, ошибка проглатывалась, и правка молча пропадала после
+   перезапуска. IndexedDB даёт сотни мегабайт.
+   Старые значения переезжают сами при первом чтении. localStorage остаётся запасным
+   путём (если IndexedDB недоступна) и зеркалом для ключей, которые нужно прочитать
+   синхронно на старте (KV_MIRROR). Если не удалось записать никуда — говорим человеку. */
+const KV_DB = 'fittimer', KV_STORE = 'kv';
+const KV_MIRROR = new Set(['account']);   // читается синхронно до первой отрисовки (замок)
+let kvDbPromise = null;
+function kvDb(){
+  if(kvDbPromise) return kvDbPromise;
+  kvDbPromise = new Promise(res => {
+    try{
+      if(!window.indexedDB){ res(null); return; }
+      const rq = indexedDB.open(KV_DB, 1);
+      rq.onupgradeneeded = () => { try{ rq.result.createObjectStore(KV_STORE); }catch(_){} };
+      rq.onsuccess = () => {
+        const db = rq.result;
+        db.onversionchange = () => { try{ db.close(); }catch(_){} kvDbPromise = null; };
+        res(db);
+      };
+      rq.onerror = () => res(null);
+      rq.onblocked = () => res(null);
+    }catch(_){ res(null); }
+  });
+  return kvDbPromise;
+}
+function kvReq(mode, fn){
+  return kvDb().then(db => new Promise((res, rej) => {
+    if(!db){ rej(new Error('no_idb')); return; }
+    try{
+      const tx = db.transaction(KV_STORE, mode);
+      const rq = fn(tx.objectStore(KV_STORE));
+      tx.oncomplete = () => res(rq ? rq.result : undefined);
+      tx.onerror = () => rej(tx.error || new Error('idb_tx'));
+      tx.onabort = () => rej(tx.error || new Error('idb_abort'));
+    }catch(e){ rej(e); }
+  }));
+}
+// Полная очистка (удаление всех данных): и база, и localStorage.
+async function kvClearAll(){
+  try{ await kvReq('readwrite', st => st.clear()); }catch(_){}
+  try{ localStorage.clear(); }catch(_){}
+}
+let kvFullWarned = false;
+function kvWriteFailed(){
+  if(kvFullWarned) return;
+  kvFullWarned = true;
+  try{ appAlert(t('storage.full')); }catch(_){}
+}
+// Просим браузер не вытеснять данные при нехватке места (где это поддерживается).
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(_){}
+
 async function kvGet(key){
-  // artifact-хранилище, если доступно; иначе localStorage
+  // artifact-хранилище, если доступно
   try{
     if(window.storage){
       try{ const r = await window.storage.get(key); return r ? r.value : null; }
       catch(e){ return null; }
     }
   }catch(e){}
-  try{ return localStorage.getItem(key); }catch(e){ return null; }
+  let idbOk = true;
+  try{
+    const v = await kvReq('readonly', st => st.get(key));
+    if(v !== undefined && v !== null) return v;
+  }catch(e){ idbOk = false; }
+  let ls = null;
+  try{ ls = localStorage.getItem(key); }catch(e){ ls = null; }
+  // перенос старого значения в IndexedDB; из localStorage убираем, чтобы освободить место
+  if(ls !== null && idbOk){
+    try{
+      await kvReq('readwrite', st => st.put(ls, key));
+      if(!KV_MIRROR.has(key)) try{ localStorage.removeItem(key); }catch(_){}
+    }catch(_){}
+  }
+  return ls;
 }
+// true — записано. Ошибку записи больше не проглатываем молча.
 async function kvSet(key, val){
-  try{ if(window.storage){ await window.storage.set(key, val); return; } }catch(e){}
-  try{ localStorage.setItem(key, val); }catch(e){}
+  try{ if(window.storage){ await window.storage.set(key, val); return true; } }catch(e){}
+  try{
+    await kvReq('readwrite', st => st.put(val, key));
+    if(KV_MIRROR.has(key)) try{ localStorage.setItem(key, val); }catch(_){}
+    else try{ localStorage.removeItem(key); }catch(_){}   // не держим устаревшую копию
+    return true;
+  }catch(e){}
+  try{ localStorage.setItem(key, val); return true; }
+  catch(e){ kvWriteFailed(); return false; }
 }
 
 async function analyticsDeviceId(){
@@ -5495,7 +5575,8 @@ async function saveDoc(key, value){
   const valueJson = JSON.stringify(value);
   let meta = docMeta;
   let queue = outbox.slice();
-  await kvSet(key + '_' + uid, valueJson);
+  // не записалось — в очередь синхронизации не ставим: отправлять нечего
+  if(!(await kvSet(key + '_' + uid, valueJson))) return;
   if(!isSyncKey(key)) return;
 
   const prev = meta[key] || {rev:0};
@@ -6258,7 +6339,7 @@ async function savePrograms(){
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
-  await kvSet('customPrograms_' + uid, JSON.stringify(programs));
+  if(!(await kvSet('customPrograms_' + uid, JSON.stringify(programs)))) return;
 
   const bump = (key, extra)=>{
     const prev = meta[key] || {rev:0};
@@ -7117,7 +7198,7 @@ async function wipeAccount(){
     for(const k of PROFILE_KEYS){ try{ await kvDel(k + '_' + id); }catch(e){} }
   }
   for(const k of GLOBAL_KEYS){ try{ await kvDel(k); }catch(e){} }
-  try{ localStorage.clear(); }catch(e){}
+  await kvClearAll();   // и IndexedDB, и localStorage
   location.reload();
 }
 

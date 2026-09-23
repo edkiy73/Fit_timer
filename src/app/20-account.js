@@ -174,7 +174,7 @@ async function wipeAccount(){
     for(const k of PROFILE_KEYS){ try{ await kvDel(k + '_' + id); }catch(e){} }
   }
   for(const k of GLOBAL_KEYS){ try{ await kvDel(k); }catch(e){} }
-  try{ localStorage.clear(); }catch(e){}
+  await kvClearAll();   // и IndexedDB, и localStorage
   location.reload();
 }
 

@@ -1,0 +1,69 @@
+name: Browser tests
+
+# Сквозные и браузерные тесты приложения. Раньше их в CI не было, и они незаметно
+# ломались. Список тестов и проверка «каждый тест где-то запускается» —
+# в scripts/run-browser-tests.mjs.
+on:
+  pull_request:
+    paths: &browser_paths
+      - 'src/**'
+      - 'api/**'
+      - 'lib/**'
+      - 'tests/**'
+      - 'app.js'
+      - 'style.css'
+      - 'index.html'
+      - 'mobile.js'
+      - 'app.config.js'
+      - 'vercel.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/run-browser-tests.mjs'
+      - '.github/workflows/browser-tests.yml'
+  push:
+    branches: [main]
+    paths: *browser_paths
+
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Браузер для тестов
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+          echo "FIT_CHROME=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+
+      - name: Браузерные и сквозные тесты
+        env:
+          ADMIN_KEY: testadminkey123456
+          GEMINI_API_KEY: test
+          AI_TEST_MODE: '1'
+        run: |
+          node tests/dev-server.js 8124 > /tmp/fittimer-browser-server.log 2>&1 &
+          SERVER_PID=$!
+          # link-length проверяет поведение без сервера API — нужна голая статика
+          python3 -m http.server 8123 --bind 127.0.0.1 > /tmp/fittimer-static.log 2>&1 &
+          STATIC_PID=$!
+          trap 'kill $SERVER_PID $STATIC_PID 2>/dev/null || true' EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8124/index.html >/dev/null && curl -fsS http://127.0.0.1:8123/index.html >/dev/null; then break; fi
+            sleep 0.25
+          done
+          node scripts/run-browser-tests.mjs
+
+      - name: Лог тестового сервера
+        if: failure()
+        run: tail -n 200 /tmp/fittimer-browser-server.log || true

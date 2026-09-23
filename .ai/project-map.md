@@ -148,6 +148,8 @@ Current Capacitor dependencies include App, Filesystem, Haptics, Local Notificat
 | diagnostics | `tests/diagnostics-unit.js` |
 | mobile shell | `npm run build`, `npm run check:mobile` |
 | broad invariants | `python3 check.py` |
+| all browser/e2e flows | `node scripts/run-browser-tests.mjs` (dev-server on 8124 + static on 8123; CI: `browser-tests.yml`) |
+| local storage | `tests/storage-idb.js` |
 
 Do not run every test by default. Run targeted tests first, then broaden only when the change crosses domains.
 

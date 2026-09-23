@@ -37,8 +37,10 @@ const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : 
   ok('лимиты сохраняются', saved.status === 200 && saved.body.settings.limits.heavy === 1);
 
   const auth = {email:MAIL,token:login.body.syncToken,deviceId:'ai-device'};
-  const one = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Собери тестовую программу'},auth));
-  ok('серверная генерация отвечает', one.status === 200 && one.body.text === 'ТЕСТОВЫЙ ОТВЕТ ИИ');
+  // Сервер проверяет ответ нейросети по протоколу, поэтому заглушка должна быть
+  // настоящей программой: маркер заставляет тестовый режим lib/ai.js вернуть её.
+  const one = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Собери тестовую программу\n=== ADMIN CATALOG REQUEST ==='},auth));
+  ok('серверная генерация отвечает', one.status === 200 && /ПРОГРАММА: Тестовая программа/.test(one.body.text || ''));
   ok('ответ сообщает расход лимита', one.body.usage && one.body.usage.used === 1 && one.body.usage.limit === 1);
   const two = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Ещё одна'},auth));
   ok('месячный лимит защищает бюджет', two.status === 429 && two.body.error === 'ai_limit');
