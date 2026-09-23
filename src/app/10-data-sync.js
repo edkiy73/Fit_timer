@@ -1957,7 +1957,6 @@ function sessRow(en, withDate, withStatus){
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
-  if(en.step > 0) parts.push(t('sessions.progStep',{count:en.step}));
   // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
@@ -2104,7 +2103,7 @@ function customToProgram(p, planIdx = 0){
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
-      weightBase: +ex.weight || 0,   // нужно попапу после подхода, чтобы не задваивать уже применённые шаги
+      weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name
     };

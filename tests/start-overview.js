@@ -63,9 +63,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('отдых в строках не показывается', !before.rests);
   ok('показана сегодняшняя цель и точное изменение', /12 повторений/.test(before.second) && /было 11 → сегодня 12/.test(before.second), before.second);
 
-  await page.click('#psPlus');
-  const after = await page.locator('#startOverviewList .ex-row').nth(1).textContent();
-  ok('кнопка повышения сразу обновляет обзор', /13 повторений/.test(after), after);
+  // общего счётчика «Нагрузка сегодня» с ±  больше нет — правка веса теперь
+  // per-упражнение: строка с форматом «…и вес» кликабельна и открывает попап
+  await page.click('#startOverviewList .ex-row.tappable');
+  ok('попап открылся с текущим весом упражнения', await page.isVisible('#weightModal'));
+  await page.fill('#weightModalInput', '9');
+  await page.click('#weightModalDone');
+  const afterWeight = await page.locator('#startOverviewList .ex-row.tappable').textContent();
+  ok('правка веса нажатием на строку сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

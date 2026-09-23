@@ -1,18 +1,18 @@
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
-// Раз в progression дней рабочие веса растут на свой шаг.
-// Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
-// гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
-// включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
-// Счётчик шагов у программы (p.progSteps) — единственный источник роста по расписанию.
-// Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
-// (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
-// вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по календарю.
-// Раньше вес рос просто оттого, что прошло время: уехал в отпуск на месяц — вернулся,
-// а программа подняла нагрузку на четыре шага, хотя ты не тренировался. Это и демотивирует,
-// и травмоопасно. Теперь p.progression — это «повышать раз в N тренировок».
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам. Отдельная функция не нужна —
-// значение выводится на лету в progSteps(), поэтому здесь только миграция старых программ.
+// Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
+// шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
+// ex.ps.n в commitFinish (70-workout.js). Раньше был один счётчик на программу
+// (p.progSteps, потом progStepsAdj поверх floor(completions/progression)):
+// удобно для отката, но при чередовании вариантов A/Б каждое упражнение
+// получало +1 шаг за КАЖДУЮ тренировку программы, включая дни, где его вообще
+// не было. Состояние теперь у каждого упражнения отдельно и растёт только тогда,
+// когда это упражнение реально выполнено.
+// Прогрессия по-прежнему считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по
+// календарю: раньше вес рос просто оттого, что прошло время (отпуск на месяц —
+// и программа подняла нагрузку на четыре шага без единой тренировки), что и
+// демотивирует, и травмоопасно.
+// applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
+// а только про одноразовую миграцию старых программ на эту модель.
 function applyProgressionAll(){
   let changed = false;
   customPrograms.forEach(p => {
@@ -31,7 +31,42 @@ function applyProgressionAll(){
       changed = true;
     }
   });
+  if(applyPerExerciseProgressionMigration()) changed = true;
   if(changed) savePrograms();
+}
+
+// Переход с одного счётчика шагов на программу (progSteps = floor(completions/
+// progression) + progStepsAdj, читался на лету) на состояние у каждого
+// упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
+// Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
+// упражнения прогоняется через advanceExerciseProgression() ровно столько раз,
+// сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
+// ограничения (потолок, двойная прогрессия) применяются как всегда, а не
+// переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
+// не обновил мобильное приложение, оно продолжит показывать те же числа, что и
+// раньше — база и общий счётчик программы у него по-прежнему на месте, ex.ps
+// он просто не знает. Дрейф возможен, только если тренировки на старом
+// приложении продолжаются ПОСЛЕ того, как программа уже росла на новом —
+// тот же класс риска, что и у любого другого различия версий приложения.
+function applyPerExerciseProgressionMigration(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    if(p.psMigrated) return;
+    p.psMigrated = true;
+    changed = true;
+    if(!p.progression) return;
+    const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+    const oldProgramSteps = Math.max(0, Math.floor(done / p.progression) + Math.round(+p.progStepsAdj || 0));
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
+      delete ex.progFrom;
+      if(ex.warmup || progAxis(ex) === 'none') return;
+      ensurePs(ex).n = done % p.progression;
+      const exSteps = Math.max(0, oldProgramSteps - progFrom);
+      for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+    }));
+  });
+  return changed;
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
@@ -371,8 +406,6 @@ function openWeekDay(d){
       ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
       : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
     if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}) + '.');
-    const step = progSteps(p);
-    if(step > 0) parts.push(t('week.progStepText',{count:step}));
 
     const row = document.createElement('button');
     row.type = 'button';
@@ -559,6 +592,8 @@ async function duplicateProgram(p){
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
+  // прогресс каждого упражнения (ex.ps) — тоже часть «пройденного», копия начинает с базы
+  normPlans(copy).forEach(pl => (pl.exercises || []).forEach(ex => { delete ex.ps; }));
   delete copy.storeId;      // не «из каталога»: это уже своя программа
   delete copy.pub;          // заявка в каталог принадлежит оригиналу
   delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны

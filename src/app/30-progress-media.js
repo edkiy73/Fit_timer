@@ -807,6 +807,17 @@ function sanitizeExercise(ex){
   if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
   const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
   ex.media = pic ? {kind: 'img', data: pic} : null;
+  // ex.ps — фактическая прогрессия (см. 60-builder.js), сюда же может прийти
+  // что угодно из чужой ссылки/синка — те же ограничения, что у остальных полей
+  if(ex.ps && typeof ex.ps === 'object'){
+    ex.ps.n = Math.max(0, Math.min(9999, Math.round(+ex.ps.n || 0)));
+    const cur = ex.ps.cur;
+    ex.ps.cur = (cur && typeof cur === 'object') ? {
+      reps: cur.reps != null ? clampLine(String(cur.reps), LIM.exValue) : undefined,
+      sec: cur.sec != null ? Math.max(0, Math.min(3600, Math.round(+cur.sec || 0))) : undefined,
+      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined
+    } : {};
+  } else delete ex.ps;
 }
 
 // Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.

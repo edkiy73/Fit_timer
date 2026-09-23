@@ -652,13 +652,10 @@ async function swapViaAI(){
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
   normalizeExercise(got);
-  // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
-  got.progFrom = progSteps(src.p);
+  // новое упражнение начинает с собственной базы: у него свежий id (см. blankExercise)
+  // и нет ex.ps — состояние прогрессии читается как «ещё на базе», ничего переносить не нужно
   if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
   src.plan.exercises[src.idx] = got;
-  // ручная поправка веса относилась к прежнему упражнению — новому она не подходит
-  delete progWeights[exWeightKey(src.p.id, got.name)];
-  saveProgWeights();
   await savePrograms();
   renderMine();
 
@@ -819,8 +816,6 @@ function commitFinish(ctx){
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
         .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-      // шаг прогрессии, с которым тренировка пройдена (до повышения этой тренировкой)
-      step: srcProgram ? progSteps(srcProgram) : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
       // нельзя было восстановить без догадок.
@@ -869,6 +864,24 @@ function commitFinish(ctx){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
     p.stats.completions++;
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    // программы: иначе при чередовании A/Б упражнение варианта А получало бы
+    // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
+    // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
+    // варианта — они и есть «реально выполненные».
+    if(p.progression){
+      const every = Math.max(1, +p.progression || 1);
+      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      ((pl && pl.exercises) || []).forEach(ex => {
+        if(ex.warmup || progAxis(ex) === 'none') return;
+        const ps = ensurePs(ex);
+        ps.n++;
+        if(ps.n >= every){
+          advanceExerciseProgression(ex);
+          ps.n = 0;
+        }
+      });
+    }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
       const plansN = normPlans(p).length;

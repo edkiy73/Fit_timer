@@ -87,9 +87,6 @@ const I18N_RU = {
   'programs.disabled': "Отключена",
   'programs.about': "О программе",
   'programs.variant': "Вариант тренировки",
-  'programs.loadToday': "Нагрузка сегодня",
-  'programs.loadHint': "Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.",
-  'programs.currentStep': "текущий шаг",
   'programs.exercises': "Упражнения",
   'programs.startWorkout': "Начать тренировку",
   'programs.newProgram': "Новая программа",
@@ -310,8 +307,6 @@ const I18N_RU = {
   'ai.copyProgramSub': "Только текст программы, без задания для ИИ — можно вставить в любой чат",
   'ai.step3': "Шаг 3 · Ответ из чата",
   'ai.build': "Собрать",
-  'builder.lessProgress': "Меньше повышений",
-  'builder.moreProgress': "Больше повышений",
   'builder.programNameExample': "Например: Утренний блиц",
   'builder.secondsExample': "Например: 120",
   'builder.descriptionExample': "Для кого программа, чего ждать, как часто заниматься",
@@ -990,7 +985,7 @@ const I18N_RU = {
   'notify.returnTitle': "Fit Timer ждёт",
   'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
   'notify.progressTitle': "Сегодня нагрузка выше",
-  'notify.progressBody': "В «{name}» уже {steps} шагов прогрессии. Проверь новые повторы, время или вес перед стартом.",
+  'notify.progressBody': "В «{name}» сегодня можно повысить нагрузку. Проверь новые повторы, время или вес перед стартом.",
   'notify.unfinishedTitle': "Продолжить тренировку?",
   'notify.unfinishedBody': "«{name}» осталась незавершённой. Можно вернуться с сохранённого места.",
   'notify.premiumTitle': "Больше возможностей Fit Timer",
@@ -1068,7 +1063,6 @@ const I18N_RU = {
   'sessions.variant': "вариант {count}",
   'sessions.variantDays': "вариант {days}",
   'sessions.doneText': "Тренировка пройдена",
-  'sessions.progStep': "шаг прогрессии {count}",
   'sessions.weekLabel': "Тренировки за неделю",
   'sessions.weekEmpty': "На этой неделе тренировок не было.",
   'sessions.dayLabel': "Тренировки за день",
@@ -1357,7 +1351,6 @@ const I18N_RU = {
   'week.plannedMissed': "Тренировок не было. По плану было: {names}.",
   'week.canStillMakeUp': "Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.",
   'week.plannedText': "Тренировка запланирована.",
-  'week.progStepText': "Шаг прогрессии: {count}.",
   'week.nonePlanned': "В этот день тренировок не было и не планировалось.",
   'week.dayMovedOn': "Засчитано тренировкой из другого дня: {day}.",
   'today.programsOff': "Программы отключены",
@@ -1650,9 +1643,6 @@ const I18N_EN = {
   'programs.disabled': "Disabled",
   'programs.about': "About the program",
   'programs.variant': "Workout variant",
-  'programs.loadToday': "Today’s load",
-  'programs.loadHint': "Steps increase reps, time, or weight depending on each exercise’s settings.",
-  'programs.currentStep': "current step",
   'programs.exercises': "Exercises",
   'programs.startWorkout': "Start workout",
   'programs.newProgram': "New program",
@@ -1873,8 +1863,6 @@ const I18N_EN = {
   'ai.copyProgramSub': "Program text only, without an AI task — paste it into any chat",
   'ai.step3': "Step 3 · Response from chat",
   'ai.build': "Build",
-  'builder.lessProgress': "Fewer progression steps",
-  'builder.moreProgress': "More progression steps",
   'builder.programNameExample': "For example: Morning Blitz",
   'builder.secondsExample': "For example: 120",
   'builder.descriptionExample': "Who the program is for, what to expect, how often to train",
@@ -2553,7 +2541,7 @@ const I18N_EN = {
   'notify.returnTitle': "Fit Timer is waiting",
   'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
   'notify.progressTitle': "Your load is higher today",
-  'notify.progressBody': "“{name}” is now at progression step {steps}. Check the new reps, time, or weight before you start.",
+  'notify.progressBody': "“{name}” may get a higher load today. Check the new reps, time, or weight before you start.",
   'notify.unfinishedTitle': "Continue your workout?",
   'notify.unfinishedBody': "“{name}” is unfinished. You can continue from where you left off.",
   'notify.premiumTitle': "Get more from Fit Timer",
@@ -2631,7 +2619,6 @@ const I18N_EN = {
   'sessions.variant': "variant {count}",
   'sessions.variantDays': "variant {days}",
   'sessions.doneText': "Workout done",
-  'sessions.progStep': "progression step {count}",
   'sessions.weekLabel': "Workouts for the week",
   'sessions.weekEmpty': "No workouts this week.",
   'sessions.dayLabel': "Workouts for the day",
@@ -2920,7 +2907,6 @@ const I18N_EN = {
   'week.plannedMissed': "No workout was completed. Planned: {names}.",
   'week.canStillMakeUp': "You can still make it up: complete the program by Sunday to close the week.",
   'week.plannedText': "Workout planned.",
-  'week.progStepText': "Progression step: {count}.",
   'week.nonePlanned': "No workout was completed or planned for this day.",
   'week.dayMovedOn': "Counted from the workout on {day}.",
   'today.programsOff': "Programs disabled",
@@ -4549,7 +4535,6 @@ function openStart(raw){
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
-  renderProgSteps();
   renderStartInfo();
   syncPrefs();
   show('scrStart');
@@ -4724,9 +4709,18 @@ function renderStartOverview(){
       changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     }
   } else if(p.progression){
-    const done = (p.stats && p.stats.completions) || 0;
-    const left = p.progression - (done % p.progression);
-    changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    // прогрессия у каждого упражнения своя (ex.ps.n) — «осталось N тренировок»
+    // считаем по ближайшему к порогу упражнению этого варианта, а не по общему
+    // счётчику программы
+    const every = Math.max(1, +p.progression || 1);
+    const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
+      .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
+    if(ns.length){
+      const left = Math.max(1, every - Math.max(...ns));
+      changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    } else {
+      changeText(t('start.noChangesOff'));
+    }
   } else {
     changeText(t('start.noChangesOff'));
   }
@@ -4755,35 +4749,39 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
-    // формат с весом, а снаряд ещё не выбран — предлагаем задать прямо тут,
-    // а не заставлять сначала открывать конструктор
-    if(weightPending(ex)){
-      const w = document.createElement('span');
-      w.className = 'weight-pending';
-      w.textContent = t('start.weightPending');
-      w.onclick = () => openWeightPendingModal(i);
-      tags.appendChild(w);
+    // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
+    // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
+    // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
+    // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
+    if(hasWeight(ex)){
+      row.classList.add('tappable');
+      row.onclick = () => openWeightModal(i);
+      if(weightPending(ex)) tag(t('start.weightPending'), 'weight-pending');
     }
     box.appendChild(row);
   });
 }
 
-// вес формата «повторения и вес» / «время и вес» ещё не выбран — попап на все
-// упражнения списка сразу, какое открыто, помнит weightModalIdx (тот же приём,
-// что у #restModal в конструкторе)
+// правка веса одного упражнения — общий попап на весь список, какое открыто,
+// помнит weightModalIdx (тот же приём, что у #restModal в конструкторе).
+// Если вес ещё не был выбран — записываем в базу (ex.weight), она же и есть
+// текущая нагрузка, пока прогрессия её не сдвинула. Если уже была выбрана —
+// это разовая правка «сегодня беру другой снаряд», она идёт в ex.ps.cur и
+// не переписывает исходную базу упражнения.
 let weightModalIdx = -1;
-function openWeightPendingModal(i){
+function openWeightModal(i){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[i];
   if(!ex) return;
   weightModalIdx = i;
   $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
-  $('weightModalInput').value = '';
+  const now = getExWeight(p.id, ex, p);
+  $('weightModalInput').value = now > 0 ? fmtKg(now) : '';
   $('weightModal').classList.add('open');
   $('weightModalInput').focus();
 }
-async function commitWeightPending(){
+async function commitWeightModal(){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
@@ -4792,33 +4790,9 @@ async function commitWeightPending(){
   if(!ex) return;
   const kg = parseKg($('weightModalInput').value);
   if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
-  ex.weight = kg;
+  if(weightPending(ex)) ex.weight = kg;
+  else setExWeight(ex, kg);
   await savePrograms();
-  renderStartOverview();
-}
-
-// показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
-// Видно, только если у программы есть хоть одно упражнение с осью прогрессии — иначе
-// счётчику попросту нечего показывать, а пустая карточка только путает.
-function renderProgSteps(){
-  const p = state.raw;
-  const hasProgAxis = normPlans(p).some(pl => (pl.exercises || []).some(ex => progAxis(ex) !== 'none'));
-  const on = p.progression && hasProgAxis;
-  setShown('progStepsBlock', on);
-  if(!on) return;
-  const steps = progSteps(p);
-  $('psCount').textContent = steps;
-  $('psMinus').disabled = steps <= 0;
-}
-// кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
-// пройденных тренировок и пересчитался бы заново, затерев ручное изменение
-function bumpProgSteps(dir){
-  const p = state.raw;
-  const cur = progSteps(p);
-  if(dir < 0 && cur <= 0) return;
-  p.progStepsAdj = Math.round(+p.progStepsAdj || 0) + dir;
-  savePrograms();
-  renderProgSteps();
   renderStartOverview();
 }
 
@@ -6884,7 +6858,6 @@ function sessRow(en, withDate, withStatus){
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
-  if(en.step > 0) parts.push(t('sessions.progStep',{count:en.step}));
   // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
@@ -7031,7 +7004,7 @@ function customToProgram(p, planIdx = 0){
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
-      weightBase: +ex.weight || 0,   // нужно попапу после подхода, чтобы не задваивать уже применённые шаги
+      weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name
     };
@@ -8980,6 +8953,17 @@ function sanitizeExercise(ex){
   if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
   const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
   ex.media = pic ? {kind: 'img', data: pic} : null;
+  // ex.ps — фактическая прогрессия (см. 60-builder.js), сюда же может прийти
+  // что угодно из чужой ссылки/синка — те же ограничения, что у остальных полей
+  if(ex.ps && typeof ex.ps === 'object'){
+    ex.ps.n = Math.max(0, Math.min(9999, Math.round(+ex.ps.n || 0)));
+    const cur = ex.ps.cur;
+    ex.ps.cur = (cur && typeof cur === 'object') ? {
+      reps: cur.reps != null ? clampLine(String(cur.reps), LIM.exValue) : undefined,
+      sec: cur.sec != null ? Math.max(0, Math.min(3600, Math.round(+cur.sec || 0))) : undefined,
+      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined
+    } : {};
+  } else delete ex.ps;
 }
 
 // Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.
@@ -9091,20 +9075,20 @@ window.addEventListener('appLocaleChanged', async ()=>{
   try{ renderMine(); renderToday(); }catch(_){}
 });
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
-// Раз в progression дней рабочие веса растут на свой шаг.
-// Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
-// гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
-// включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
-// Счётчик шагов у программы (p.progSteps) — единственный источник роста по расписанию.
-// Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
-// (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
-// вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по календарю.
-// Раньше вес рос просто оттого, что прошло время: уехал в отпуск на месяц — вернулся,
-// а программа подняла нагрузку на четыре шага, хотя ты не тренировался. Это и демотивирует,
-// и травмоопасно. Теперь p.progression — это «повышать раз в N тренировок».
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам. Отдельная функция не нужна —
-// значение выводится на лету в progSteps(), поэтому здесь только миграция старых программ.
+// Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
+// шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
+// ex.ps.n в commitFinish (70-workout.js). Раньше был один счётчик на программу
+// (p.progSteps, потом progStepsAdj поверх floor(completions/progression)):
+// удобно для отката, но при чередовании вариантов A/Б каждое упражнение
+// получало +1 шаг за КАЖДУЮ тренировку программы, включая дни, где его вообще
+// не было. Состояние теперь у каждого упражнения отдельно и растёт только тогда,
+// когда это упражнение реально выполнено.
+// Прогрессия по-прежнему считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по
+// календарю: раньше вес рос просто оттого, что прошло время (отпуск на месяц —
+// и программа подняла нагрузку на четыре шага без единой тренировки), что и
+// демотивирует, и травмоопасно.
+// applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
+// а только про одноразовую миграцию старых программ на эту модель.
 function applyProgressionAll(){
   let changed = false;
   customPrograms.forEach(p => {
@@ -9123,7 +9107,42 @@ function applyProgressionAll(){
       changed = true;
     }
   });
+  if(applyPerExerciseProgressionMigration()) changed = true;
   if(changed) savePrograms();
+}
+
+// Переход с одного счётчика шагов на программу (progSteps = floor(completions/
+// progression) + progStepsAdj, читался на лету) на состояние у каждого
+// упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
+// Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
+// упражнения прогоняется через advanceExerciseProgression() ровно столько раз,
+// сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
+// ограничения (потолок, двойная прогрессия) применяются как всегда, а не
+// переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
+// не обновил мобильное приложение, оно продолжит показывать те же числа, что и
+// раньше — база и общий счётчик программы у него по-прежнему на месте, ex.ps
+// он просто не знает. Дрейф возможен, только если тренировки на старом
+// приложении продолжаются ПОСЛЕ того, как программа уже росла на новом —
+// тот же класс риска, что и у любого другого различия версий приложения.
+function applyPerExerciseProgressionMigration(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    if(p.psMigrated) return;
+    p.psMigrated = true;
+    changed = true;
+    if(!p.progression) return;
+    const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+    const oldProgramSteps = Math.max(0, Math.floor(done / p.progression) + Math.round(+p.progStepsAdj || 0));
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
+      delete ex.progFrom;
+      if(ex.warmup || progAxis(ex) === 'none') return;
+      ensurePs(ex).n = done % p.progression;
+      const exSteps = Math.max(0, oldProgramSteps - progFrom);
+      for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+    }));
+  });
+  return changed;
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
@@ -9463,8 +9482,6 @@ function openWeekDay(d){
       ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
       : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
     if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}) + '.');
-    const step = progSteps(p);
-    if(step > 0) parts.push(t('week.progStepText',{count:step}));
 
     const row = document.createElement('button');
     row.type = 'button';
@@ -9651,6 +9668,8 @@ async function duplicateProgram(p){
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
+  // прогресс каждого упражнения (ex.ps) — тоже часть «пройденного», копия начинает с базы
+  normPlans(copy).forEach(pl => (pl.exercises || []).forEach(ex => { delete ex.ps; }));
   delete copy.storeId;      // не «из каталога»: это уже своя программа
   delete copy.pub;          // заявка в каталог принадлежит оригиналу
   delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны
@@ -13923,43 +13942,48 @@ function progRound(axis, v){
   return axis === 'weight' ? Math.round(v * 2) / 2 : Math.round(v);
 }
 
+/* ---- состояние прогрессии У КАЖДОГО УПРАЖНЕНИЯ (ex.ps) ----
+   Раньше был один счётчик шагов на программу (progSteps), вычисленный на лету
+   из floor(пройденных тренировок / progression) — и все упражнения программы
+   получали одно и то же число шагов. Это ломалось на чередовании A/Б: упражнение
+   варианта А получало +1 шаг за КАЖДУЮ тренировку программы, в том числе за дни
+   варианта Б, и росло вдвое быстрее задуманного.
+   Теперь у каждого упражнения своё состояние ex.ps:
+     n    — сколько раз это упражнение выполнено с последней проверки прогресса
+     cur  — фактическая текущая нагрузка {reps, sec, kg}; отсутствующее поле
+            означает «ещё равна базе» (ex.value/ex.weight)
+   Состояние живёт внутри упражнения и синхронизируется вместе с программой —
+   отдельного места хранения не нужно. advanceExerciseProgression() сдвигает
+   cur на один шаг; вызывающий код (commitFinish в 70-workout.js) решает, когда
+   это делать — см. также docs/ai-edit-progression-plan.md, пачка 4. */
+function ensurePs(ex){
+  if(!ex.ps || typeof ex.ps !== 'object') ex.ps = {n:0, cur:{}};
+  else{
+    ex.ps.n = Math.max(0, Math.round(+ex.ps.n || 0));
+    if(!ex.ps.cur || typeof ex.ps.cur !== 'object') ex.ps.cur = {};
+  }
+  return ex.ps;
+}
+// текущий диапазон повторов: из ex.ps.cur.reps, если прогрессия уже сдвигала его,
+// иначе — база из ex.value (та же строка «12» / «8-12», что хранится в редакторе)
+function psReps(ex){
+  const ps = ensurePs(ex);
+  return parseValue(ps.cur.reps != null ? ps.cur.reps : ex.value);
+}
+function psSec(ex){
+  const ps = ensurePs(ex);
+  return ps.cur.sec != null ? +ps.cur.sec : parseValue(ex.value).min;
+}
+function psKg(ex){
+  const ps = ensurePs(ex);
+  return ps.cur.kg != null ? +ps.cur.kg : (+ex.weight || 0);
+}
+
 // текущий рабочий вес упражнения: то, что человек поднимает сейчас (растёт от тренировки к тренировке)
 function exWeightKey(pid, name){
   return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
 }
 
-// Сколько раз уже сработала прогрессия. Считается на лету из числа пройденных тренировок
-// (а не из календаря), плюс ручная поправка кнопками ± на экране перед стартом.
-// Поправка хранится отдельно, иначе автоматический пересчёт затирал бы ручное изменение.
-function progAutoSteps(p){
-  if(!p || !p.progression) return 0;
-  const done = (p.stats && p.stats.completions) || 0;
-  return Math.floor(done / p.progression);
-}
-function progSteps(p){
-  if(!p) return 0;
-  return Math.max(0, progAutoSteps(p) + Math.round(+p.progStepsAdj || 0));
-}
-// сколько шагов прогрессии прошло У КОНКРЕТНОГО УПРАЖНЕНИЯ. Счётчик один на программу,
-// но упражнение могло появиться позже — тогда в ex.progFrom записано, сколько шагов у
-// программы уже было на тот момент, и они этому упражнению не засчитываются. Иначе
-// свежая замена в программе с двадцатью повышениями мгновенно улетела бы в свой потолок.
-function exProgSteps(ex, program){
-  return Math.max(0, progSteps(program) - Math.max(0, Math.round(+(ex && ex.progFrom) || 0)));
-}
-
-// Совместимые заглушки для старых мест вызова. Ручной второй источник веса отключён.
-function progDelta(){ return 0; }
-function setProgDelta(){ return 0; }
-
-// Сдвиг от базы создаёт только автоматическая прогрессия программы.
-// Отдельная функция нужна не только для одиночных значений (вес, время), но и для диапазона
-// повторов «8-12» — там сдвигаются сразу обе границы на одно и то же число.
-function progOffset(pid, ex, program, axis){
-  axis = axis || progAxis(ex);
-  const steps = program ? exProgSteps(ex, program) : 0;
-  return steps * progStepSize(ex, axis) + progDelta(pid, ex, axis);
-}
 // потолок оси: 0 или пусто = потолка нет (растём без ограничения, как раньше)
 function progCeil(ex, axis){
   const v = axis === 'weight' ? ex.weightMax : axis === 'time' ? ex.timeMax : ex.repsMax;
@@ -13970,54 +13994,42 @@ function progCeil(ex, axis){
 function isDualProg(ex){
   return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
 }
-// сколько шагов прогрессии умещается в один цикл «повторы от низа до потолка + сброс»
-function dualCycleLen(ex){
-  const base = parseValue(ex.value).min;
-  const top = progCeil(ex, 'reps');
-  const step = progStepSize(ex, 'reps') || 1;
-  return Math.max(1, Math.floor((top - base) / step)) + 1; // +1 — сам шаг сброса с прибавкой веса
-}
 
-// итоговое значение упражнения сейчас: база + суммарный сдвиг, но НЕ выше потолка.
-// При двойной прогрессии вес растёт не каждый шаг, а раз в цикл (когда повторы упёрлись в потолок).
+// итоговое значение упражнения сейчас — читает фактическое состояние (ex.ps),
+// а не вычисляет его из числа шагов программы. pid/program больше не нужны для
+// самого чтения (совместимость со старыми вызовами — аргументы просто игнорируются),
+// но getExWeight/exBits/exerciseLoad и т.п. по-прежнему передают их, поэтому сигнатура
+// сохранена, чтобы не переписывать десятки мест вызова.
 function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
-  const base = progBaseValue(ex, axis);
-  // вес 0 — это «снаряд ещё не выбран», а не «стартуем с нуля кг»: прогрессия
-  // не должна копиться поверх несуществующей базы (иначе вес сначала не
-  // показывается вовсе, а после пары тренировок вдруг появляется «4 кг» из
-  // воздуха). Как только человек выберет вес на экране старта, ex.weight
-  // перестанет быть 0 и прогрессия пойдёт как обычно от этой новой базы.
-  if(axis === 'weight' && base <= 0) return 0;
-  const ceil = progCeil(ex, axis);
-  let v;
-  if(axis === 'weight' && isDualProg(ex)){
-    const steps = program ? exProgSteps(ex, program) : 0;
-    const cycles = Math.floor(steps / dualCycleLen(ex));
-    v = base + cycles * progStepSize(ex, 'weight') + progDelta(pid, ex, 'weight');
-  } else {
-    v = base + progOffset(pid, ex, program, axis);
+  if(axis === 'weight'){
+    // вес 0 — это «снаряд ещё не выбран», а не «стартуем с нуля кг»: пока он не
+    // выбран, прогрессия не копится поверх несуществующей базы (иначе вес сначала
+    // не показывается вовсе, а после пары тренировок вдруг появляется «4 кг» из
+    // воздуха). Как только человек выберет вес на экране старта, психология та же:
+    // это станет новой базой, и прогрессия пойдёт от неё.
+    const kg = psKg(ex);
+    if(kg <= 0) return 0;
+    const ceil = progCeil(ex, 'weight');
+    return Math.max(0, progRound('weight', ceil != null ? Math.min(ceil, kg) : kg));
   }
-  if(ceil != null) v = Math.min(ceil, v);
-  return Math.max(progFloor(axis), progRound(axis, v));
-}
-// диапазон повторов «8-12»: при обычной прогрессии сдвигаются обе границы (но не выше потолка),
-// при двойной — повторы ходят по кругу внутри диапазона и сбрасываются, когда растёт вес
-function progressedRepsRange(pid, ex, program){
-  const r = parseValue(ex.value);
+  if(axis === 'time'){
+    const ceil = progCeil(ex, 'time');
+    const v = psSec(ex);
+    return Math.max(1, progRound('time', ceil != null ? Math.min(ceil, v) : v));
+  }
+  // reps: одно число — минимум текущего диапазона (см. progressedRepsRange для диапазона целиком)
   const ceil = progCeil(ex, 'reps');
-  let min, max;
-  if(isDualProg(ex)){
-    const steps = program ? exProgSteps(ex, program) : 0;
-    const pos = steps % dualCycleLen(ex);
-    min = r.min + pos * progStepSize(ex, 'reps');
-    max = min; // при двойной прогрессии цель — одно число, а диапазон служит рамками
-  } else {
-    const off = progOffset(pid, ex, program, 'reps');
-    min = Math.round(r.min + off);
-    max = Math.round(r.max + off);
-  }
+  const v = psReps(ex).min;
+  return Math.max(1, progRound('reps', ceil != null ? Math.min(ceil, v) : v));
+}
+// диапазон повторов «8-12»: границы читаются из текущего состояния целиком (обе
+// сдвинуты вместе), потолок применяется к обеим
+function progressedRepsRange(pid, ex, program){
+  const r = psReps(ex);
+  const ceil = progCeil(ex, 'reps');
+  let min = r.min, max = r.max;
   if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
   min = Math.max(1, min);
   max = Math.max(min, max);
@@ -14049,9 +14061,59 @@ function progAtCeiling(pid, ex, program){
   if(!growing.length) return false;
   return growing.every(a => axisAtCeiling(pid, ex, program, a));
 }
-// сдвинуть ручную поправку веса на dir «шагов» (±1 обычно) — используют кнопки на тренировке
-function bumpProgDelta(pid, ex, dir, axis){
-  return 0;
+
+// ОДИН шаг прогрессии для упражнения — вызывается, когда ex.ps.n достиг порога
+// (см. commitFinish в 70-workout.js). Мутирует ex.ps.cur; счётчик n сбрасывает
+// вызывающий код. Правила те же, что раньше вычислялись «на лету» из номера шага:
+// при двойной прогрессии повторы растут до потолка, затем сбрасываются к базе и
+// добавляется шаг веса; иначе каждая растущая ось просто сдвигается на свой шаг.
+function advanceExerciseProgression(ex){
+  const axis = progAxis(ex);
+  if(axis === 'none') return;
+  ensurePs(ex);
+  if(axis === 'weight' && isDualProg(ex)){
+    const base = parseValue(ex.value).min;
+    const repsCeil = progCeil(ex, 'reps');
+    const repsStep = progStepSize(ex, 'reps') || 1;
+    const curReps = psReps(ex).min;
+    const next = curReps + repsStep;
+    if(repsCeil != null && next > repsCeil){
+      const weightCeil = progCeil(ex, 'weight');
+      const nextKg = psKg(ex) + progStepSize(ex, 'weight');
+      ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
+      ex.ps.cur.reps = String(base);
+    } else {
+      ex.ps.cur.reps = String(Math.max(1, next));
+    }
+    return;
+  }
+  if(ex.type === 'time'){
+    const step = progStepSize(ex, 'time');
+    if(step > 0){
+      const ceil = progCeil(ex, 'time');
+      const next = psSec(ex) + step;
+      ex.ps.cur.sec = Math.max(1, ceil != null ? Math.min(ceil, next) : next);
+    }
+  } else {
+    const step = progStepSize(ex, 'reps');
+    if(step > 0){
+      const ceil = progCeil(ex, 'reps');
+      const r = psReps(ex);
+      const min = Math.max(1, r.min + step), max = Math.max(min, r.max + step);
+      ex.ps.cur.reps = String(ceil != null ? Math.min(ceil, min) : min) +
+        (max !== min ? '-' + (ceil != null ? Math.min(ceil, max) : max) : '');
+    }
+  }
+  // вес — независимая ось при формате «…и вес» вне двойной прогрессии
+  if(hasWeight(ex)){
+    const wStep = progStepSize(ex, 'weight');
+    const base = psKg(ex);
+    if(wStep > 0 && base > 0){ // 0 — вес ещё не выбран, расти нечему (см. getExProgValue)
+      const ceil = progCeil(ex, 'weight');
+      const next = base + wStep;
+      ex.ps.cur.kg = progRound('weight', ceil != null ? Math.min(ceil, next) : next);
+    }
+  }
 }
 
 // вес отдельно — то же самое, но только для оси «вес» (используется в старых местах интерфейса).
@@ -14061,10 +14123,10 @@ function bumpProgDelta(pid, ex, dir, axis){
 function getExWeight(pid, ex, program){
   return hasWeight(ex) ? getExProgValue(pid, ex, program, 'weight') : 0;
 }
-// абсолютное значение переводим в ручную поправку ОТНОСИТЕЛЬНО текущих шагов программы —
-// без program это посчитать нельзя, иначе поправка задвоит уже накопленные шаги
-function setExWeight(pid, ex, kg, program){
-  return getExWeight(pid, ex, program);
+// прямая правка текущего веса (нажатие на строку экрана старта, см. 00-core.js) —
+// пишет в ex.ps.cur.kg напрямую, база (ex.weight) не трогается
+function setExWeight(ex, kg){
+  ensurePs(ex).cur.kg = Math.max(0, progRound('weight', +kg || 0));
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -16263,13 +16325,10 @@ async function swapViaAI(){
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
   normalizeExercise(got);
-  // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
-  got.progFrom = progSteps(src.p);
+  // новое упражнение начинает с собственной базы: у него свежий id (см. blankExercise)
+  // и нет ex.ps — состояние прогрессии читается как «ещё на базе», ничего переносить не нужно
   if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
   src.plan.exercises[src.idx] = got;
-  // ручная поправка веса относилась к прежнему упражнению — новому она не подходит
-  delete progWeights[exWeightKey(src.p.id, got.name)];
-  saveProgWeights();
   await savePrograms();
   renderMine();
 
@@ -16430,8 +16489,6 @@ function commitFinish(ctx){
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
         .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-      // шаг прогрессии, с которым тренировка пройдена (до повышения этой тренировкой)
-      step: srcProgram ? progSteps(srcProgram) : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
       // нельзя было восстановить без догадок.
@@ -16480,6 +16537,24 @@ function commitFinish(ctx){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
     p.stats.completions++;
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    // программы: иначе при чередовании A/Б упражнение варианта А получало бы
+    // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
+    // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
+    // варианта — они и есть «реально выполненные».
+    if(p.progression){
+      const every = Math.max(1, +p.progression || 1);
+      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      ((pl && pl.exercises) || []).forEach(ex => {
+        if(ex.warmup || progAxis(ex) === 'none') return;
+        const ps = ensurePs(ex);
+        ps.n++;
+        if(ps.n >= every){
+          advanceExerciseProgression(ex);
+          ps.n = 0;
+        }
+      });
+    }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
       const plansN = normPlans(p).length;
@@ -17456,11 +17531,23 @@ function notifyScheduledPlan(p, dayName){
   if(planDays(p).includes(dayName)) return {plan:null, time:p.time || ''};
   return null;
 }
-function notifyProgressionChanged(p){
+// какой вариант должен сработать в этот день: если он не привязан к конкретным
+// дням (чередование A/Б), берём тот, что следующим по очереди — лучшая доступная
+// оценка для уведомления «наперёд», без гарантии, что расписание не сдвинется
+function notifyPlanFor(p, scheduledPlan){
+  if(scheduledPlan) return scheduledPlan;
+  const plans = normPlans(p);
+  return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
+}
+// вырастет ли нагрузка ХОТЯ БЫ У ОДНОГО упражнения сегодняшнего варианта, если
+// тренировку сегодня выполнить: прогрессия — состояние у каждого упражнения
+// (ex.ps.n), а не общий счётчик программы — см. 60-builder.js
+function notifyProgressionChanged(p, scheduledPlan){
   if(!p || !p.progression) return false;
-  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
   const every = Math.max(1, +p.progression || 1);
-  return done > 0 && done % every === 0 && typeof progSteps === 'function' && progSteps(p) > 0;
+  const pl = notifyPlanFor(p, scheduledPlan);
+  return ((pl && pl.exercises) || []).some(ex => !ex.warmup && progAxis(ex) !== 'none'
+    && Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)) + 1 >= every);
 }
 function notifyThirdWorkoutDate(){
   const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
@@ -17533,7 +17620,7 @@ async function syncNativeNotifications(){
         const scheduled = notifyScheduledPlan(p, dayName);
         if(!scheduled || done.has(iso + '|' + p.id)) return;
         const time = scheduled.time;
-        const grew = prefs.progress !== false && notifyProgressionChanged(p);
+        const grew = prefs.progress !== false && notifyProgressionChanged(p, scheduled.plan);
         if(time){
           const hm = time.split(':').map(Number);
           if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
@@ -17542,7 +17629,7 @@ async function syncNativeNotifications(){
           const missed = new Date(start.getTime() + 2 * 3600000);
           add({at:pre.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.beforeTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.beforeBody',{name:p.name,time}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.beforeBody',{name:p.name,time}),
             priority:90, extra:{programId:p.id, stage:grew ? 'progress' : 'before', category:'workouts'}});
           add({at:start.toISOString(), title:t('notify.startTitleShort'),
             body:t('notify.todayPlan',{name:p.name}), priority:85,
@@ -17556,7 +17643,7 @@ async function syncNativeNotifications(){
           const evening = notifyAt(day, 20, 0);
           add({at:morning.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.todayTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.todayBody',{name:p.name}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.todayBody',{name:p.name}),
             priority:80, extra:{programId:p.id, stage:grew ? 'progress' : 'today', category:'workouts'}});
           add({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
             body:t('notify.dontForgetBody',{name:p.name}), priority:65,
@@ -17961,9 +18048,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
 $('btnResume').onclick = ()=> setPause(false);
-$('psMinus').onclick = ()=> bumpProgSteps(-1);
-$('psPlus').onclick = ()=> bumpProgSteps(1);
-$('weightModalDone').onclick = ()=> commitWeightPending();
+$('weightModalDone').onclick = ()=> commitWeightModal();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){

@@ -521,8 +521,12 @@
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
   /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
   .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
-  /* вес формата «…и вес» ещё не выбран — метка кликабельна, открывает #weightModal */
-  .ex-meta .weight-pending{color:var(--danger);background:none;border:1px dashed var(--danger);cursor:pointer}
+  /* вес формата «…и вес» ещё не выбран — метка выделена цветом (кликабельна вместе
+     со всей строкой — см. .ex-row.tappable ниже, открывает #weightModal) */
+  .ex-meta .weight-pending{color:var(--danger);background:none;border:1px dashed var(--danger)}
+  /* строка экрана старта, по которой можно поправить вес (замена бывшему общему
+     блоку «Нагрузка сегодня» с «±» — правка теперь per-упражнение) */
+  .ex-row.tappable{cursor:pointer}
   /* На старте вариант, нагрузка и состав — одна сущность, поэтому одна карточка.
      Строки упражнений сохраняют знакомую внутренность .ex-row, но разделяются
      линиями вместо собственных рамок и скруглений. */
@@ -565,7 +569,7 @@
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ps-row):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow):not(.cl-stats),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow):not(.cl-stats),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -619,29 +623,6 @@
 
   /* рабочий вес прямо на тренировке — можно поправить, не выходя из упражнения */
 
-  /* счётчик повышений на экране старта — ОДИН элемент управления, а не две
-     самостоятельные кнопки с цифрой между ними: та же поверхность, рамка и радиус,
-     что у полей ввода и сегментов, значение и подпись на общей базовой линии */
-  .ps-row{
-    display:flex;align-items:center;gap:8px;
-    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
-    padding:8px 8px 8px 14px;
-  }
-  .ps-btn{
-    flex:0 0 46px;height:46px;border-radius:var(--r-sm);border:1px solid var(--line);
-    background:var(--card);color:var(--ink);
-    font-family:var(--font-display);font-weight:500;font-size:23px;line-height:1;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .ps-btn:active{background-color:var(--accent-soft);color:var(--accent-ink)}
-  .ps-btn:disabled{opacity:.3;pointer-events:none}
-  /* значение слева, кнопки справа — та же схема, что у строк с переключателями */
-  .ps-val{order:-1;flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
-  .ps-val b{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--accent-ink);line-height:1}
-  .ps-val small{
-    font-family:var(--font-display);font-size:11.5px;color:var(--muted);
-    letter-spacing:.1em;text-transform:uppercase;
-  }
 
   .ai-spin{width:52px;height:52px;margin:6px auto 16px;border-radius:50%;
     border:4px solid var(--line);border-top-color:var(--accent-ink);animation:aiSpin .9s linear infinite}

@@ -297,9 +297,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
 $('btnResume').onclick = ()=> setPause(false);
-$('psMinus').onclick = ()=> bumpProgSteps(-1);
-$('psPlus').onclick = ()=> bumpProgSteps(1);
-$('weightModalDone').onclick = ()=> commitWeightPending();
+$('weightModalDone').onclick = ()=> commitWeightModal();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){

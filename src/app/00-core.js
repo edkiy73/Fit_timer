@@ -925,7 +925,6 @@ function openStart(raw){
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
-  renderProgSteps();
   renderStartInfo();
   syncPrefs();
   show('scrStart');
@@ -1100,9 +1099,18 @@ function renderStartOverview(){
       changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     }
   } else if(p.progression){
-    const done = (p.stats && p.stats.completions) || 0;
-    const left = p.progression - (done % p.progression);
-    changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    // прогрессия у каждого упражнения своя (ex.ps.n) — «осталось N тренировок»
+    // считаем по ближайшему к порогу упражнению этого варианта, а не по общему
+    // счётчику программы
+    const every = Math.max(1, +p.progression || 1);
+    const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
+      .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
+    if(ns.length){
+      const left = Math.max(1, every - Math.max(...ns));
+      changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    } else {
+      changeText(t('start.noChangesOff'));
+    }
   } else {
     changeText(t('start.noChangesOff'));
   }
@@ -1131,35 +1139,39 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
-    // формат с весом, а снаряд ещё не выбран — предлагаем задать прямо тут,
-    // а не заставлять сначала открывать конструктор
-    if(weightPending(ex)){
-      const w = document.createElement('span');
-      w.className = 'weight-pending';
-      w.textContent = t('start.weightPending');
-      w.onclick = () => openWeightPendingModal(i);
-      tags.appendChild(w);
+    // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
+    // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
+    // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
+    // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
+    if(hasWeight(ex)){
+      row.classList.add('tappable');
+      row.onclick = () => openWeightModal(i);
+      if(weightPending(ex)) tag(t('start.weightPending'), 'weight-pending');
     }
     box.appendChild(row);
   });
 }
 
-// вес формата «повторения и вес» / «время и вес» ещё не выбран — попап на все
-// упражнения списка сразу, какое открыто, помнит weightModalIdx (тот же приём,
-// что у #restModal в конструкторе)
+// правка веса одного упражнения — общий попап на весь список, какое открыто,
+// помнит weightModalIdx (тот же приём, что у #restModal в конструкторе).
+// Если вес ещё не был выбран — записываем в базу (ex.weight), она же и есть
+// текущая нагрузка, пока прогрессия её не сдвинула. Если уже была выбрана —
+// это разовая правка «сегодня беру другой снаряд», она идёт в ex.ps.cur и
+// не переписывает исходную базу упражнения.
 let weightModalIdx = -1;
-function openWeightPendingModal(i){
+function openWeightModal(i){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[i];
   if(!ex) return;
   weightModalIdx = i;
   $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
-  $('weightModalInput').value = '';
+  const now = getExWeight(p.id, ex, p);
+  $('weightModalInput').value = now > 0 ? fmtKg(now) : '';
   $('weightModal').classList.add('open');
   $('weightModalInput').focus();
 }
-async function commitWeightPending(){
+async function commitWeightModal(){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
@@ -1168,33 +1180,9 @@ async function commitWeightPending(){
   if(!ex) return;
   const kg = parseKg($('weightModalInput').value);
   if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
-  ex.weight = kg;
+  if(weightPending(ex)) ex.weight = kg;
+  else setExWeight(ex, kg);
   await savePrograms();
-  renderStartOverview();
-}
-
-// показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
-// Видно, только если у программы есть хоть одно упражнение с осью прогрессии — иначе
-// счётчику попросту нечего показывать, а пустая карточка только путает.
-function renderProgSteps(){
-  const p = state.raw;
-  const hasProgAxis = normPlans(p).some(pl => (pl.exercises || []).some(ex => progAxis(ex) !== 'none'));
-  const on = p.progression && hasProgAxis;
-  setShown('progStepsBlock', on);
-  if(!on) return;
-  const steps = progSteps(p);
-  $('psCount').textContent = steps;
-  $('psMinus').disabled = steps <= 0;
-}
-// кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
-// пройденных тренировок и пересчитался бы заново, затерев ручное изменение
-function bumpProgSteps(dir){
-  const p = state.raw;
-  const cur = progSteps(p);
-  if(dir < 0 && cur <= 0) return;
-  p.progStepsAdj = Math.round(+p.progStepsAdj || 0) + dir;
-  savePrograms();
-  renderProgSteps();
   renderStartOverview();
 }
 
