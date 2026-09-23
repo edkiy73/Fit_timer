@@ -103,7 +103,7 @@ jobs:
       - name: Проверочная debug-сборка
         if: github.event_name == 'pull_request'
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDirectDebug assemblePlayDebug --no-daemon
 
       - name: Release AAB и APK
         if: github.event_name != 'pull_request'
@@ -113,12 +113,12 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew bundleRelease assembleRelease --no-daemon
+        run: ./gradlew bundlePlayRelease assemblePlayRelease assembleDirectRelease --no-daemon
 
       - name: Проверить подпись APK
         if: github.event_name != 'pull_request'
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
@@ -127,7 +127,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: fittimer-ci-check-not-for-update
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: |
+            android/app/build/outputs/apk/direct/debug/*.apk
+            android/app/build/outputs/apk/play/debug/*.apk
           if-no-files-found: error
 
       - name: Выложить файлы для Google Play
@@ -136,14 +138,15 @@ jobs:
         with:
           name: fittimer-android-${{ env.VERSION_NAME }}
           path: |
-            android/app/build/outputs/bundle/release/*.aab
-            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/playRelease/*.aab
+            android/app/build/outputs/apk/play/release/*.apk
+            android/app/build/outputs/apk/direct/release/*.apk
           if-no-files-found: error
 
       - name: Подготовить постоянный APK
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           test -n "$APK"
           cp "$APK" FitTimer-latest.apk
           node <<'NODE'

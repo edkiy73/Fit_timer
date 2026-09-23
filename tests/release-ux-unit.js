@@ -28,6 +28,9 @@ need(gradle.includes('versionCode = Integer.parseInt(System.getenv("VERSION_CODE
 need(workflow.includes('260000000 + GITHUB_RUN_NUMBER'), 'automatic Android versionCode must monotonically increase');
 need(workflow.includes('KEYSTORE_BASE64'), 'release signing key must be required');
 need(workflow.includes('apksigner') && workflow.includes('verify --verbose --print-certs'), 'release APK signature must be verified');
+need(gradle.includes('productFlavors') && gradle.includes('DIRECT_UPDATES'), 'Android must have direct and store-safe build flavors');
+need(workflow.includes('bundlePlayRelease') && workflow.includes('assembleDirectRelease'), 'CI must build store AAB separately from direct APK');
+need(workflow.includes('outputs/apk/direct/release'), 'latest APK must come from the direct flavor');
 need(workflow.includes('FitTimer-release.json'), 'latest APK release must publish machine-readable metadata');
 need(workflow.includes('const versionCode = Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
 need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest release must upload APK and metadata together');
