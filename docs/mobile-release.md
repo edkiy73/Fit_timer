@@ -263,14 +263,16 @@ https://fittimer99.vercel.app/p/<id>
 
 The installed Android app checks the existing public `/api/config` response after startup.
 
-Admin → **Релиз Android** controls:
-- `latestCode` — latest available Android `versionCode`;
-- `minimumCode` — oldest still-supported `versionCode`; keep `0` unless an old build must be blocked;
-- `latestName` — user-facing version label;
-- update URL — Google Play, RuStore or trusted HTTPS APK page;
-- optional RU/EN message.
+Admin → **Обновление Android** is intentionally product-level rather than a raw version form:
 
-The GitHub `latest-apk` release also publishes `FitTimer-release.json` next to the APK. The admin release screen reads that metadata, shows the exact signed `versionCode` / `versionName`, and can fill empty release fields or replace them with the latest build in one click. This only edits the form: the user-facing update banner is not published until **Сохранить релиз** is pressed. Automatic fill never changes `minimumCode`.
+- the latest signed APK is read automatically from the GitHub `latest-apk` release;
+- the primary action is **Опубликовать обновление**;
+- the live-state card says whether an update is currently published, where the update button leads, and whether a mandatory threshold is enabled;
+- `versionCode`, `minimumCode`, destination URL and optional RU/EN override copy live under **Дополнительные настройки**;
+- publishing a normal release updates `latestCode`, `latestName` and the managed APK URL but never raises `minimumCode`;
+- old auto-filled RU/EN release copy is normalized back to the app's built-in copy when the latest release is published.
+
+The GitHub `latest-apk` release publishes `FitTimer-release.json` next to the APK so the admin always uses the exact signed `versionCode` / `versionName`.
 
 Behavior:
 - current build >= latest: nothing is shown;
