@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2175,
-      "chars": 98903,
+      "lines": 2165,
+      "chars": 98559,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -354,8 +354,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2735,
-      "chars": 124649,
+      "lines": 2714,
+      "chars": 123617,
       "symbols": [
         "add",
         "ageError",
@@ -439,7 +439,7 @@
         "normHandle",
         "note",
         "openAI",
-        "openDayExercise",
+        "openDayProgram",
         "openEditAI",
         "openExAI",
         "openExEdAI",

@@ -1536,5 +1536,4 @@ const I18N_EN = {
   'handsfree.commandResume': 'Continue',
   'handsfree.commandResumeExamples': '“continue”, “resume”, “go on”, “keep going”',
   'handsfree.commandsLanguageNote': 'Commands are recognized in the language selected under “Command language”.',
-  'sessions.exercisesDone': 'Completed',
 };

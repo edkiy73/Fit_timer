@@ -1536,5 +1536,4 @@ const I18N_RU = {
   'handsfree.commandResume': 'Продолжить',
   'handsfree.commandResumeExamples': '«продолжить», «продолжай», «поехали», «можно продолжать»',
   'handsfree.commandsLanguageNote': 'Команды распознаются на языке, выбранном в «Язык команд».',
-  'sessions.exercisesDone': 'Выполнено',
 };
