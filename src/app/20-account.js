@@ -347,7 +347,7 @@ async function applyAndroidUpdateConfig(raw){
     if(gate) gate.classList.remove('hidden');
     return;
   }
-  if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle',{version:suffix});
+  if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle');
   if($('appUpdateText')) $('appUpdateText').textContent=custom||t('update.availableText');
   if(banner){
     banner.onclick=()=>openAndroidUpdate();

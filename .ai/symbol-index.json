@@ -222,7 +222,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 869,
-      "chars": 38188,
+      "chars": 38171,
       "symbols": [
         "accountBucketKey",
         "applyAndroidUpdateConfig",
@@ -349,8 +349,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2653,
-      "chars": 121560,
+      "lines": 2721,
+      "chars": 124009,
       "symbols": [
         "add",
         "ageError",
@@ -870,8 +870,8 @@
     },
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
-      "lines": 199,
-      "chars": 11269,
+      "lines": 201,
+      "chars": 11425,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
