@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2143,
-      "chars": 97547,
+      "lines": 2163,
+      "chars": 98170,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -95,6 +95,7 @@
         "analyticsPlatform",
         "applyRemoteAccountDocs",
         "applyRemoteSync",
+        "applyRemoteSyncNow",
         "avg",
         "bump",
         "bumpDoc",
@@ -146,6 +147,7 @@
         "openSessions",
         "openWellAdd",
         "openWellHist",
+        "ownerKey",
         "parsed",
         "pendingProfileSnapshot",
         "pk",
@@ -161,6 +163,7 @@
         "pushPendingProfiles",
         "put",
         "queueAccountSync",
+        "queueProfileState",
         "recordConsent",
         "remoteProfileHasData",
         "remoteWins",
@@ -481,8 +484,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1644,
-      "chars": 74922,
+      "lines": 1659,
+      "chars": 75460,
       "symbols": [
         "add",
         "addClient",
@@ -494,6 +497,7 @@
         "catalogItemFull",
         "change",
         "clientDayWord",
+        "compactProgramDays",
         "curClient",
         "dm",
         "doPublish",
