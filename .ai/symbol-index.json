@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1264,
-      "chars": 61072,
+      "lines": 1266,
+      "chars": 61248,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -356,8 +356,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2700,
-      "chars": 123398,
+      "lines": 2720,
+      "chars": 124119,
       "symbols": [
         "add",
         "ageError",
@@ -397,6 +397,7 @@
         "exerciseImagePrompt",
         "exerciseToText",
         "exFormatLine",
+        "exImageItem",
         "exitExAI",
         "exportProgram",
         "exportProgramFile",
@@ -411,6 +412,7 @@
         "geminiModelOrder",
         "geminiTry",
         "generateAllImagesViaAI",
+        "generateOneImageViaAI",
         "generateSlotImageViaAI",
         "hasGemini",
         "humanDay",
@@ -803,8 +805,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2159,
-      "chars": 90010,
+      "lines": 2173,
+      "chars": 90620,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -956,8 +958,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 633,
-      "chars": 41468,
+      "lines": 635,
+      "chars": 41651,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -998,6 +1000,7 @@
         "aiSubjSum",
         "aiTabs",
         "aiTitle",
+        "bCoverAI",
         "bCoverBtn",
         "bCoverFile",
         "bCoverNone",
@@ -1063,6 +1066,7 @@
         "exMaxReps",
         "exMaxTime",
         "exMaxWeight",
+        "exMediaAI",
         "exMediaBtn",
         "exMediaFile",
         "exMediaNone",

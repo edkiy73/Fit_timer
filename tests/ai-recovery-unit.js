@@ -11,7 +11,7 @@ const need = (ok, msg) => { if(!ok) throw new Error(msg); };
 need(events.includes('async function aiRetryDialog(error)'), 'shared AI recovery dialog is missing');
 need(events.includes("if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);"), 'text AI retry must rerun the same request');
 need(events.includes("cancelText:t('ai.editRequest')"), 'text AI failure must offer request editing');
-need(programs.includes("if(retry) return generateSlotImageViaAI();"), 'single-image retry is missing');
+need(programs.includes("if(retry) return generateOneImageViaAI(kind, item, title, apply);"), 'single-image retry is missing');
 need(programs.includes("if(retry) return generateAllImagesViaAI('missing');"), 'batch image retry must regenerate only missing images');
 need(programs.includes("await finishImgGen(done, total, failed);"), 'batch image recovery must be awaited');
 need(workout.includes("if(retry) return swapViaAI();"), 'workout exercise replacement retry is missing');

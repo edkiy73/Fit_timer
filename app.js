@@ -359,6 +359,7 @@ const I18N_RU = {
   'builder.generateMissingImages': "Только недостающие",
   'builder.generateMissingImagesSub': "Оставить готовые картинки и сделать только пустые",
   'builder.generateOneAI': "Сделать через ИИ",
+  'builder.imageAI': "Через ИИ",
   'builder.remove': "Убрать",
   'builder.assignOrder': "Разложить по порядку",
   'builder.assignWhere': "Куда подставить",
@@ -940,6 +941,7 @@ const I18N_RU = {
   'images.removeQuestion': "Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.",
   'images.removeAction': "Убрать",
   'images.loadFailed': "Не удалось загрузить картинку.",
+  'images.needExerciseName': "Сначала назови упражнение — по названию нейросеть поймёт, что рисовать.",
   'builder.unsavedProgram': "Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.",
   'ai.unsavedSwitch': "Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.",
   'common.switch': "Переключиться",
@@ -1908,6 +1910,7 @@ const I18N_EN = {
   'builder.generateMissingImages': "Missing only",
   'builder.generateMissingImagesSub': "Keep existing images and generate only empty slots",
   'builder.generateOneAI': "Generate with AI",
+  'builder.imageAI': "With AI",
   'builder.remove': "Remove",
   'builder.assignOrder': "Assign in order",
   'builder.assignWhere': "Where to place",
@@ -2489,6 +2492,7 @@ const I18N_EN = {
   'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
   'images.removeAction': "Remove",
   'images.loadFailed': "Couldn’t load the image.",
+  'images.needExerciseName': "Name the exercise first — the AI uses the name to know what to draw.",
   'builder.unsavedProgram': "Program changes have not been saved. If you leave now, they will be lost.",
   'ai.unsavedSwitch': "The filled request has not been saved. If you switch modes now, it will be lost.",
   'common.switch': "Switch",
@@ -4018,7 +4022,9 @@ function syncSoundCascade(p){
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
 function appDialog(msg, opts = {}){
   return new Promise(res => {
-    $('dlgMsg').textContent = msg;
+    // текст передают и готовой строкой, и функцией от t(): на экран не должен
+    // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
+    $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
     const codeEl = $('dlgCode');
     if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
     else setShown(codeEl, false);
@@ -10518,44 +10524,64 @@ async function generateAllImagesViaAI(scope){
   await finishImgGen(done, total, failed);
 }
 
-async function generateSlotImageViaAI(){
-  if(!premiumGate()) return;
-  const s = imageSlots()[slotTarget];
-  if(!s || s.kind !== 'ex') return;
-  const pl = (draft.plans || [])[s.plan];
-  const ex = pl && pl.exercises ? pl.exercises[s.idx] : null;
-  if(!ex) return;
-  $('slotModal').classList.remove('open');
+// Что рисовать для упражнения: название, техника и мышцы.
+function exImageItem(ex){
+  return {
+    name:(ex && ex.name || '').trim(),
+    desc:(ex && ex.desc || '').trim(),
+    muscles:((ex && ex.muscles) || []).map(id => M_LABEL[id]).filter(Boolean)
+  };
+}
+
+// Одна картинка через ИИ — общая для экрана картинок, редактора упражнения и
+// обложки в настройках программы: тот же прогресс, отмена и «Попробовать снова».
+// apply(data) получает уже ужатую картинку.
+async function generateOneImageViaAI(kind, item, title, apply){
+  if(!premiumGate()) return false;
   imgGenCancelled = false;
   aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
   $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
-  $('aiRunText').textContent = s.title;
+  $('aiRunText').textContent = title;
   try{
-    const item = {
-      name:(ex.name || '').trim(),
-      desc:(ex.desc || '').trim(),
-      muscles:(ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean)
-    };
-    const raw = await callGeminiImage(singleImagePrompt('ex', item), aiRunCtl ? aiRunCtl.signal : undefined, 'image.exercise');
+    const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
+      kind === 'cover' ? 'image.cover' : 'image.exercise');
+    let applied = false;
     await new Promise(res => shrinkDataUrl(raw, 640, data => {
-      if(data){
-        s.set(data);
-        if(!imgTray.includes(data)) imgTray.push(data);
-      }
+      if(data){ apply(data); applied = true; }
       res();
     }));
     aiRunClose();
-    renderTray(); renderSlots();
+    if(!applied) appAlert(t('images.loadFailed'));
+    return applied;
   }catch(e){
     aiRunClose();
-    if(imgGenCancelled) return;
+    if(imgGenCancelled) return false;
     const retry = await appDialog(
       t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
       {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
     );
-    if(retry) return generateSlotImageViaAI();
-    // слот, выбранное упражнение и все уже созданные изображения остаются на месте.
+    if(retry) return generateOneImageViaAI(kind, item, title, apply);
+    return false;   // всё, что уже было, остаётся на месте
   }
+}
+
+async function generateSlotImageViaAI(){
+  const s = imageSlots()[slotTarget];
+  if(!s) return;
+  let kind = 'cover', item = null;
+  if(s.kind === 'ex'){
+    const pl = (draft.plans || [])[s.plan];
+    const ex = pl && pl.exercises ? pl.exercises[s.idx] : null;
+    if(!ex) return;
+    kind = 'ex';
+    item = exImageItem(ex);
+  }
+  $('slotModal').classList.remove('open');
+  await generateOneImageViaAI(kind, item, s.title, data => {
+    s.set(data);
+    if(!imgTray.includes(data)) imgTray.push(data);
+    renderTray(); renderSlots();
+  });
 }
 
 async function finishImgGen(done, total, failed){
@@ -10751,7 +10777,7 @@ function openSlotPicker(i){
     };
     box.appendChild(el);
   });
-  setShown('slotGenerateAI', s.kind === 'ex');
+  // обложку тоже можно нарисовать — как и картинку упражнения
   setShown('slotRemove', s.get());
   $('slotModal').classList.add('open');
 }
@@ -10868,11 +10894,11 @@ function aiClientVerdict(kind, raw, opts){
   const verdict = FitAIProtocol.validateResponse(kind, raw);
   if(!verdict.ok){
     const miss = (verdict.missing || []).slice(0,6).join(', ');
-    appAlert(MSG_AI_PARSE + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
+    appAlert(MSG_AI_PARSE() + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
     return null;
   }
   if(opts && opts.expectedCount != null && verdict.count != null && verdict.count !== opts.expectedCount){
-    appAlert(MSG_AI_PARSE);
+    appAlert(MSG_AI_PARSE());
     return null;
   }
   return verdict.text;
@@ -10916,20 +10942,20 @@ function exePrompt(){
 
 async function applyExEdit(){
   const raw=($('aiResult').value||'').trim();
-  if(!raw){appAlert(MSG_AI_EMPTY);return;}
+  if(!raw){appAlert(MSG_AI_EMPTY());return;}
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
   // Защитный merge: правка одного упражнения не имеет права тихо превратиться
   // в два упражнения или потерять старые служебные поля.
   const candidateBlocks=aiExerciseBlocks(raw);
-  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX);return;}
+  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
   const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
-  if(got.length!==1){appAlert(MSG_AI_NOEX);return;}
+  if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
   list[exeIdx]=upd;
@@ -11019,7 +11045,7 @@ function exaPrompt(){
 
 async function exaAddExercise(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
   const checkedRaw = aiClientVerdict('exercise.create', raw);
   if(!checkedRaw) return;
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
@@ -11027,7 +11053,7 @@ async function exaAddExercise(){
   const {program, errors} = parseProgramText(wrapped);
   const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
   if(!list.length){
-    appAlert(MSG_AI_NOEX);
+    appAlert(MSG_AI_NOEX());
     return;
   }
   const target = curPlan().exercises;
@@ -11198,7 +11224,7 @@ function carryMedia(oldProg, newProg){
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
   const wish = clampText($('eaWish').value, LIM.wish);
   const structural = aiStructureChangeRequested(wish);
   const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
@@ -11206,11 +11232,11 @@ async function createEditedProgram(){
   if(!checkedRaw) return;
   const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   if(!structural && !sameProgramShape(editAIProg, program)){
-    appAlert(MSG_AI_PARSE);
+    appAlert(MSG_AI_PARSE());
     return;
   }
   program.id = 'p' + Date.now();
@@ -18451,13 +18477,13 @@ async function ytCopyPrompt(){
 }
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
   const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
   const checked = aiClientVerdict(kind, raw);
   if(!checked) return;
   const {program, errors} = parseProgramText(checked);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE() + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
@@ -19007,6 +19033,17 @@ $('exMediaNone').onclick = ()=>{
   $('exMediaFile').value = '';
   renderExMedia(); syncExDetailsSum();
 };
+// картинка упражнения через ИИ — по тому, что уже набрано в форме
+$('exMediaAI').onclick = ()=>{
+  const item = exImageItem(Object.assign({}, exDraft, {
+    name:$('exName').value, desc:$('exDesc').value
+  }));
+  if(!item.name){ appAlert(t('images.needExerciseName')); $('exName').focus(); return; }
+  generateOneImageViaAI('ex', item, item.name, data => {
+    setExImg(exDraft, data);
+    renderExMedia(); syncExDetailsSum();
+  });
+};
 $('exMediaFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
@@ -19077,6 +19114,9 @@ $('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('p
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
+$('bCoverAI').onclick = ()=> generateOneImageViaAI('cover', null, t('images.coverProgram'), data => {
+  draft.cover = data; $('bCoverFile').value = ''; syncCover();
+});
 $('bCoverFile').onchange = e=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;

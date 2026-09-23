@@ -419,8 +419,9 @@ body.booting .app{visibility:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
   .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
   .seg button.act{background:var(--work);color:var(--on-accent)}
-  .media-row{display:flex;gap:8px}
-  .media-row button{flex:1;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
+  .media-row{display:flex;flex-wrap:wrap;gap:8px}
+  /* три кнопки в ряд (фото · через ИИ · убрать): ширина по подписи, без переноса строк */
+  .media-row button{flex:1 1 auto;white-space:nowrap;padding-left:10px !important;padding-right:10px !important;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:9px 4px;font-size:13px;font-family:var(--font-text);cursor:pointer}
   .media-row button.act{border-color:var(--accent-line);color:var(--ink)}
   /* семь дней недели — всегда одна строка: перенос одного дня на вторую строку
      выглядел как сбой вёрстки. Чипы ужимаются, а не переносятся. */
@@ -1461,9 +1462,12 @@ body.booting .app{visibility:hidden}
   /* «⋮» у верхнего края, ручка перетаскивания у нижнего — на одной вертикали.
      Ширина ручки как у «⋮» (44 — зона нажатия): при 34 центры иконок расходились
      на 5 px, и пара выглядела кривой. */
+  /* обе кнопки 44×44 (как «⋮»): чтобы они не наезжали друг на друга, карточка не ниже 96 px */
+  .mine-card > .more-btn{top:2px}
+  .mine-card > .month-card{min-height:96px;box-sizing:border-box}
   .drag-handle{
-    position:absolute;bottom:6px;right:6px;z-index:5;
-    width:44px;height:34px;border:none;background:none;border-radius:10px;
+    position:absolute;bottom:2px;right:6px;z-index:5;
+    width:44px;height:44px;border:none;background:none;border-radius:10px;
     color:var(--muted);cursor:grab;line-height:1;
     touch-action:none;display:flex;align-items:center;justify-content:center;
   }
@@ -1537,7 +1541,7 @@ body.booting .app{visibility:hidden}
      «⋮» сверху, ручка перетаскивания снизу, на одной вертикали. Нажатие на саму строку открывает
      редактор. */
   .ex-row{
-    position:relative;display:flex;align-items:flex-start;gap:10px;min-height:80px;
+    position:relative;display:flex;align-items:flex-start;gap:10px;min-height:96px;
     background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:12px 50px 12px 12px;cursor:pointer;box-sizing:border-box;
     -webkit-touch-callout:none;user-select:none;
@@ -1547,11 +1551,11 @@ body.booting .app{visibility:hidden}
   /* превью состава в каталоге: ни «⋮», ни ручки перетаскивания — правый отступ
      под них не нужен, и метки жались в две строки при живом месте справа */
   .ex-row.static{padding-right:12px;cursor:default}
-  .ex-row > .more-btn{top:6px;right:4px}
-  .ex-row > .ctx-menu{top:40px;right:6px}
+  .ex-row > .more-btn{top:2px;right:4px}
+  .ex-row > .ctx-menu{top:44px;right:6px}
   .ex-row > .ctx-menu.up{top:auto}   /* иначе top и bottom сразу — меню схлопывалось в линию */
   .ex-grip{
-    position:absolute;bottom:6px;right:4px;width:44px;height:34px;
+    position:absolute;bottom:2px;right:4px;width:44px;height:44px;
     display:flex;align-items:center;justify-content:center;
     color:var(--muted);cursor:grab;border-radius:10px;
     touch-action:none; /* иначе жест уходит в прокрутку страницы */

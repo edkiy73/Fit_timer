@@ -1210,13 +1210,13 @@ async function ytCopyPrompt(){
 }
 async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY); return; }
+  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
   const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
   const checked = aiClientVerdict(kind, raw);
   if(!checked) return;
   const {program, errors} = parseProgramText(checked);
   if(errors.length){
-    appAlert(MSG_AI_PARSE + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
+    appAlert(MSG_AI_PARSE() + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   program.id = 'p' + Date.now();
@@ -1766,6 +1766,17 @@ $('exMediaNone').onclick = ()=>{
   $('exMediaFile').value = '';
   renderExMedia(); syncExDetailsSum();
 };
+// картинка упражнения через ИИ — по тому, что уже набрано в форме
+$('exMediaAI').onclick = ()=>{
+  const item = exImageItem(Object.assign({}, exDraft, {
+    name:$('exName').value, desc:$('exDesc').value
+  }));
+  if(!item.name){ appAlert(t('images.needExerciseName')); $('exName').focus(); return; }
+  generateOneImageViaAI('ex', item, item.name, data => {
+    setExImg(exDraft, data);
+    renderExMedia(); syncExDetailsSum();
+  });
+};
 $('exMediaFile').onchange = e => {
   const file = e.target.files && e.target.files[0];
   if(!file) return;
@@ -1836,6 +1847,9 @@ $('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('p
 // обложка программы
 $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
 $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
+$('bCoverAI').onclick = ()=> generateOneImageViaAI('cover', null, t('images.coverProgram'), data => {
+  draft.cover = data; $('bCoverFile').value = ''; syncCover();
+});
 $('bCoverFile').onchange = e=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
