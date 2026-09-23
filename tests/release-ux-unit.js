@@ -38,6 +38,12 @@ need(home.indexOf('id="appUpdateBanner"') < home.indexOf('id="todayBox"'), 'soft
 need(ru.includes("'update.availableTitle': \"Доступно обновление\""), 'RU soft update title must stay version-free');
 need(en.includes("'update.availableTitle': \"Update available\""), 'EN soft update title must stay version-free');
 need(account.includes("t('update.availableTitle');"), 'soft update title must not append versionName');
+need(account.includes("distribution==='store'"), 'client must select update config from its compiled distribution');
+need(account.includes("window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest)"), 'direct channel must download/install inside Fit Timer');
+need(account.includes("window.FitNative.openExternal(APP_UPDATE.url)"), 'store channel must keep external store routing');
+need(account.indexOf("APP_UPDATE.channel==='direct'") < account.indexOf("window.FitNative.openExternal(APP_UPDATE.url)"), 'direct branch must run before external store routing');
+need(mobile.includes("fitSystem.downloadUpdate"), 'mobile bridge must call native direct updater');
+need(mobile.includes("fitUpdateProgress"), 'mobile bridge must forward direct-update progress');
 
 need(mobile.includes('requestMicrophone'), 'native microphone permission handling is missing');
 need(mobile.includes('requestNotifications'), 'native notification permission handling is missing');
