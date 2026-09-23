@@ -10637,11 +10637,6 @@ function imageStaticExercise(item){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
-function imageLocalMotionExercise(item){
-  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
-  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
-}
-
 function imageProgramContext(){
   const parts = [
     draft && draft.goal, draft && draft.cat, draft && draft.category,
@@ -10715,14 +10710,17 @@ function imageCharacterStyle(genderTxt){
 function exerciseImagePrompt(item, genderTxt){
   const equipment = imageEquipment(item);
   const isStatic = imageStaticExercise(item);
-  const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
   const regions = imageMuscleRegions(item);
   const muscles = regions.length ? regions.join(', ') : 'only the primary working muscles required by this movement';
+  // Раньше немоторные (не изометрические, не изолированные суставом) движения
+  // просили «два полупрозрачных наложенных фото одного атлета» — нейросеть
+  // регулярно рисовала это как двух слипшихся людей друг в друге, а не как
+  // внятное до/после. Один чёткий кадр самой показательной фазы + стрелки —
+  // тот же приём, что уже нормально работал для локальных движений (сгибания
+  // рук и т.п.), теперь единый для всех не-статичных упражнений.
   const motion = isStatic
     ? 'Show ONE clear final pose only. No ghost pose or movement trail.'
-    : isLocalMotion
-      ? 'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
-      : 'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
+    : 'Show ONE full athlete only, in the single clearest and most demonstrative phase of the movement (usually peak contraction or full range of motion). Exactly one solid, fully opaque figure — no second body, no duplicated limbs, no ghost pose, no semi-transparent overlay, no motion blur, no double exposure. Show the direction of motion only with one or two small violet-lavender trajectory arrows beside the moving body part(s) or equipment.';
   return [
     `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
     `Style: premium stylized-realistic 3D, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, polished high-end rendering.`,
@@ -10730,12 +10728,11 @@ function exerciseImagePrompt(item, genderTxt){
     'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
     item.desc ? `Technique: ${item.desc}` : null,
     equipment.length
-      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position in every visible phase.`
+      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position.`
       : 'Do not invent equipment that the exercise does not require.',
     motion,
-    !isStatic && !isLocalMotion ? 'Add one or two small violet-lavender arrows showing movement direction.' : null,
     `Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: ${muscles}.`,
-    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong between male and female versions.',
     'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
     'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
     'No extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, collage, borders or watermarks.'
