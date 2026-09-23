@@ -25,7 +25,7 @@ need(workflow.includes('260000000 + GITHUB_RUN_NUMBER'), 'automatic Android vers
 need(workflow.includes('KEYSTORE_BASE64'), 'release signing key must be required');
 need(workflow.includes('apksigner') && workflow.includes('verify --verbose --print-certs'), 'release APK signature must be verified');
 need(workflow.includes('FitTimer-release.json'), 'latest APK release must publish machine-readable metadata');
-need(workflow.includes('versionCode: Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
+need(workflow.includes('const versionCode = Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
 need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest release must upload APK and metadata together');
 
 need(mobile.includes('requestMicrophone'), 'native microphone permission handling is missing');
