@@ -1249,6 +1249,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как внести правки',
     self: 'Изменить за меня',
     selfTitle: 'Вношу изменения',
+    guard: ()=> aiEditRequestGuard('eaWish'),
     selfNote: ['check', 'Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.'],
     chatNote: ['chat', 'Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.'],
     copyFull: true,
@@ -1292,6 +1293,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как применить',
     self: 'Изменить за меня',
     selfTitle: 'Меняю упражнение',
+    guard: ()=> aiEditRequestGuard('exeWish'),
     selfNote: ['image', 'Картинка упражнения останется на месте.'],
     answerHint: 'Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.',
     action: 'Применить изменения',
@@ -1314,6 +1316,17 @@ const AI_SOURCES = {
 function exitExAI(){
   if(exFromWork) backToWorkout(false);
   else goBackTo('scrBuilder');
+}
+
+// Любая AI-правка существующего объекта требует явного задания от пользователя.
+// Сам факт наличия программы/упражнения — это контекст, а не запрос на изменение.
+function aiEditRequestGuard(fieldId){
+  const field = $(fieldId);
+  const wish = clampText(field && field.value || '', LIM.wish).trim();
+  if(wish) return true;
+  appAlert(t('ai.needEditRequest'));
+  if(field) field.focus();
+  return false;
 }
 
 // собирает экран под источник и показывает его
@@ -2166,7 +2179,7 @@ function exePrompt(){
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(false),
     'USER: '+userForAI(draft&&draft.locale),
-    'REQUEST: '+(wish||'(No specific request. Improve clarity and technique guidance while preserving the exercise intent and training mechanics.)'),
+    'REQUEST: '+wish,
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
     exAnswerFormat(draft&&draft.locale)
   ].join('\n\n');
@@ -2424,7 +2437,7 @@ function editAIPrompt(){
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
     FitAIProtocol.editRules(structural)+'\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
-    'USER REQUEST: '+(wish||'(No specific request. Improve clarity while preserving purpose, structure and sensible load.)')+'\n\n'+
+    'USER REQUEST: '+wish+'\n\n'+
     '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
 }
 
