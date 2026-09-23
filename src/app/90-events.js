@@ -976,20 +976,15 @@ $('btnSignOut').onclick = signOut;
 // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
 // сохраняем и их, иначе выбор молча пропадёт
 $('lockGo').onclick = ()=> tryUnlock();
-$('lockEmail').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
-// Ссылка внизу переключает два способа входа и всегда называет тот, куда ведёт:
-// «Войти по почте», когда открыт отпечаток, и наоборот.
-$('lockMail').onclick = ()=>{
-  lockMode = lockMode === 'mail' ? 'bio' : 'mail';
-  const mail = lockMode === 'mail';
-  setShown('lockMailBox', mail);
-  $('lockMsg').textContent = mail
-    ? t('lock.enterEmail')
-    : t('lock.prompt');
-  $('lockGo').textContent = mail ? t('login.signIn') : t('lock.unlock');
-  $('lockMail').textContent = mail ? t('lock.backBiometric') : t('lock.email');
-  if(mail) $('lockEmail').focus();
-};
+// Биометрия не является авторизацией аккаунта. Если она недоступна или человек
+// просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
+$('lockMail').onclick = ()=> openLogin(
+  ()=> $('lockModal').classList.remove('open'),
+  {email:(account && account.email) || '', label:t('lock.email'), msg:t('login.intro')}
+);
+window.addEventListener('fitAppForeground', e=>{
+  maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
+});
 
 $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
 $('importProgFile').onchange = async e => {
@@ -1994,7 +1989,9 @@ try{
   // аккаунта асинхронное. Поэтому признак замка снимаем синхронно, до первого await.
   try{
     const raw = localStorage.getItem('account');
-    if(raw && JSON.parse(raw).biometry) $('lockModal').classList.add('open');
+    const saved = raw && JSON.parse(raw);
+    if(window.FitNative && window.FitNative.isNative
+      && saved && saved.biometry && saved.biometry.enabled) $('lockModal').classList.add('open');
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
