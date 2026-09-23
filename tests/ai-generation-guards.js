@@ -86,6 +86,27 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('явный запрос изменения программы проходит',
     await page.evaluate(() => aiEditRequestGuard('eaWish')) === true);
 
+  const copiedProgram = await page.evaluate(async () => {
+    window.__copiedProgramText = '';
+    try{
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {writeText: async text => { window.__copiedProgramText = text; }}
+      });
+    }catch(e){
+      navigator.clipboard.writeText = async text => { window.__copiedProgramText = text; };
+    }
+    const expected = programToText(editAIProg);
+    $('aiCopyFull').click();
+    await new Promise(r => setTimeout(r, 20));
+    return {expected, actual: window.__copiedProgramText};
+  });
+  ok('«Скопировать саму программу» копирует только programToText',
+    copiedProgram.actual === copiedProgram.expected, copiedProgram.actual.slice(0,80));
+  ok('в копии программы нет системного AI-промта',
+    !copiedProgram.actual.includes('You are a fitness-program assistant') &&
+    !copiedProgram.actual.includes('=== TASK ==='));
+
   await page.evaluate(() => { openBuilder('guard-edit'); openExEdAI(0); });
   await page.waitForTimeout(100);
   ok('пустое изменение упражнения блокируется общим guard',
