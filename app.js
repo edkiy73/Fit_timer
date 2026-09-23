@@ -10679,7 +10679,7 @@ function uniqueProgramExercises(){
 function imagesPromptText(){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
-  const name = (draft.name || '').trim() || 'Workout program';
+  const name = imageProgramName();
   const exList = uniqueProgramExercises();
   const L = [
     'Generate a coherent image set for the Fit Timer fitness app.',
