@@ -1094,6 +1094,136 @@ async function grantUserPremium(u,days,card,managed){
   }
 }
 
+async function renderAnalytics(b){
+  b.innerHTML=pageHead('Аналитика','Анонимная продуктовая воронка за последние 30 дней. Без email, имён, программ и фото.')
+    + '<div class="empty">Загрузка…</div>';
+  try{
+    if(!analyticsCache) analyticsCache=(await api('analytics_stats',{days:30})).stats;
+  }catch(e){
+    b.innerHTML=pageHead('Аналитика','Не удалось загрузить данные.')
+      + '<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
+    return;
+  }
+  const a=analyticsCache||{}, t=a.totals||{}, cohort=a.cohort||{};
+  const rows=[
+    ['Первый запуск','install'],
+    ['Завершили onboarding','onboarding_complete'],
+    ['Создали аккаунт','account_created'],
+    ['Добавили программу','program_added'],
+    ['Начали тренировку','workout_started'],
+    ['Завершили тренировку','workout_completed'],
+    ['Дошли до 3 тренировок','workout_3'],
+    ['Дошли до 5 тренировок','workout_5'],
+    ['Дошли до 10 тренировок','workout_10'],
+    ['Успешно использовали AI','ai_used'],
+    ['Открыли Premium','premium_opened'],
+    ['Начали покупку','purchase_started']
+  ];
+  const val=k=>t[k]||{count:0,unique:0};
+  const base=Math.max(1,(cohort.devices||val('install').unique||0));
+  const cards=rows.map(([label,key])=>{
+    const v=val(key), pct=key==='install'?100:Math.round(v.unique/base*100);
+    return '<div class="entity-card"><div class="entity-card-title">'+esc(label)+'</div>'
+      +'<div class="entity-meta"><div><b>'+v.unique+'</b><span>устройств</span></div>'
+      +'<div><b>'+v.count+'</b><span>событий</span></div><div><b>'+pct+'%</b><span>от cohort</span></div></div></div>';
+  }).join('');
+  const dayRows=(a.rows||[]).slice().reverse().map(r=>{
+    const e=r.events||{};
+    const u=k=>((e[k]||{}).unique||0);
+    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td>'
+      +'<td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td>'
+      +'<td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td>'
+      +'<td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
+  }).join('');
+  const p=cohort.platform||{}, l=cohort.locale||{};
+  const cohortInfo='<div class="status-row">'
+    +'<span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span>'
+    +'<span class="status-chip">Android '+(p.android||0)+'</span>'
+    +'<span class="status-chip">iOS '+(p.ios||0)+'</span>'
+    +'<span class="status-chip">Web '+(p.web||0)+'</span>'
+    +'<span class="status-chip">RU '+(l.ru||0)+'</span>'
+    +'<span class="status-chip">EN '+(l.en||0)+'</span></div>';
+  b.innerHTML=pageHead('Аналитика','Exact unique = один анонимный device hash за весь выбранный период. Первый запуск у старых пользователей означает первый запуск после появления аналитики.')
+    +cohortInfo
+    +'<div class="entity-grid">'+cards+'</div>'
+    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+}
+
+async function renderErrors(b){
+  b.innerHTML=pageHead('Ошибки','Непойманные JS/WebView ошибки за последние 90 дней. Пользовательские данные не сохраняются.',
+    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
+    +'<div class="empty">Загрузка…</div>';
+  $('errorsRefresh').onclick=()=>renderErrors(b);
+  let d;
+  try{d=(await api('client_errors')).stats||{};}catch(e){
+    b.innerHTML=pageHead('Ошибки','Не удалось загрузить диагностику.',
+      '<div class="dashboard-actions"><button class="b" id="errorsRetry">Повторить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
+      +'<div class="empty">Ошибка: '+esc(e.message||e)+'</div>';
+    $('errorsRetry').onclick=()=>renderErrors(b);
+    return;
+  }
+  const list=d.items||[];
+  const head=pageHead('Ошибки','Сгруппировано по сигнатуре · всего срабатываний: '+(+d.total||0),
+    '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>');
+  if(!list.length){
+    b.innerHTML=head+'<div class="empty">Ошибок не зафиксировано.</div>';
+    $('errorsRefresh').onclick=()=>renderErrors(b);
+    return;
+  }
+  b.innerHTML=head
+    +'<div class="toolbar"><div class="grow"><input id="errorSearch" type="search" placeholder="Поиск по сообщению, сборке или сигнатуре"></div><span class="status-chip">'+list.length+' групп</span></div>'
+    +'<div class="entity-grid" id="errorCards"></div>';
+  $('errorsRefresh').onclick=()=>renderErrors(b);
+  const box=$('errorCards');
+  list.forEach(x=>{
+    const sig=String(x.sig||'');
+    const detail=[
+      (x.name||'Error')+': '+(x.message||''),
+      'sig: '+sig,
+      'first: '+(x.first||'—'),
+      'last: '+(x.last||'—'),
+      'count: '+((+x.count)||0),
+      'build: '+(x.build||'—'),
+      'platform: '+JSON.stringify(x.platform||{}),
+      x.stack?'stack: '+x.stack:''
+    ].filter(Boolean).join('\n');
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((x.name||'')+' '+(x.message||'')+' '+(x.build||'')+' '+sig).toLowerCase();
+    card.innerHTML='<div class="entity-card-head"><div style="min-width:0;flex:1">'
+      +'<div class="entity-card-title">'+esc((x.name||'Error')+': '+(x.message||''))+'</div>'
+      +'<div class="entity-card-sub">Сигнатура '+esc(sig||'—')+' · последняя '+esc(fmtDay(x.last))+(x.build?' · сборка '+esc(x.build):'')+'</div></div></div>'
+      +'<div class="entity-meta"><div><b>'+((+x.count)||0)+'</b><span>срабатываний</span></div>'
+      +'<div><b>'+(((x.platform||{}).android)||0)+'</b><span>Android</span></div>'
+      +'<div><b>'+((((x.platform||{}).ios)||0)+(((x.platform||{}).web)||0))+'</b><span>iOS / Web</span></div></div>'
+      +(x.stack?'<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:10px 0 0">'+esc(x.stack)+'</pre>':'')
+      +'<div class="moderation-actions"><button class="b" data-copy>Скопировать детали</button>'
+      +'<button class="b quiet" data-resolve>Считать исправленной</button></div>';
+    card.querySelector('[data-copy]').onclick=async()=>{
+      try{await navigator.clipboard.writeText(detail);adminNotice('Детали ошибки скопированы.');}
+      catch(_){adminNotice('Буфер обмена недоступен.','err');}
+    };
+    card.querySelector('[data-resolve]').onclick=async e=>{
+      if(!sig||!confirm('Убрать эту группу ошибок из списка? Если ошибка повторится, она появится снова.'))return;
+      const btn=e.currentTarget,old=btn.textContent;btn.disabled=true;btn.textContent='Убираю…';
+      try{
+        await api('client_error_clear',{sig});
+        card.remove();
+        adminNotice('Ошибка отмечена исправленной.');
+        if(!box.children.length)renderErrors(b);
+      }catch(err){
+        btn.disabled=false;btn.textContent=old;
+        adminNotice('Не получилось убрать ошибку: '+err.message,'err');
+      }
+    };
+    box.appendChild(card);
+  });
+  $('errorSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
+}
+
 let campaignLang='ru';
 let campaignPreviewKey='';
 function setCampaignLang(lang){
