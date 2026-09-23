@@ -146,6 +146,23 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
           test -n "$APK"
           cp "$APK" FitTimer-latest.apk
+          node <<'NODE'
+          const fs = require('fs');
+          const versionCode = Number(process.env.VERSION_CODE);
+          const versionName = String(process.env.VERSION_NAME || '');
+          if(!Number.isInteger(versionCode) || versionCode < 1 || !versionName){
+            throw new Error('Invalid Android release metadata');
+          }
+          const repo = process.env.GITHUB_REPOSITORY;
+          const meta = {
+            versionCode,
+            versionName,
+            apkUrl: `https://github.com/${repo}/releases/download/latest-apk/FitTimer-latest.apk`,
+            commit: process.env.GITHUB_SHA || '',
+            builtAt: new Date().toISOString()
+          };
+          fs.writeFileSync('FitTimer-release.json', JSON.stringify(meta, null, 2) + '\n');
+          NODE
 
       - name: Обновить постоянный релиз latest-apk
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -157,5 +174,5 @@ jobs:
           gh release create latest-apk \
             --target "$GITHUB_SHA" \
             --title "FitTimer — последний APK" \
-            --notes "Автоматическая release-сборка из main. Commit: $GITHUB_SHA"
-          gh release upload latest-apk FitTimer-latest.apk --clobber
+            --notes "Автоматическая release-сборка из main. versionName: $VERSION_NAME | versionCode: $VERSION_CODE | Commit: $GITHUB_SHA"
+          gh release upload latest-apk FitTimer-latest.apk FitTimer-release.json --clobber
