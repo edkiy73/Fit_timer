@@ -1207,6 +1207,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как собрать',
     self: 'Собрать за меня',
     selfTitle: 'Собираю программу',
+    guard: ()=> aiCreateProgramGuard(),
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
@@ -1270,6 +1271,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как подобрать упражнение',
     self: ()=> exaSelfLabel(),
     selfTitle: 'Подбираю упражнение',
+    guard: ()=> aiCreateExerciseGuard(),
     chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
     answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
     action: 'Добавить в программу',
@@ -1628,11 +1630,51 @@ function coverImagePrompt(name, genderTxt){
   ].filter(Boolean).join('\n');
 }
 
-// Промт под ОДНО конкретное изображение.
+function imageProgramName(){
+  const field = $('bName');
+  const typed = field && field.value != null ? String(field.value).trim() : '';
+  return typed || String(draft && draft.name || '').trim();
+}
+
+function unnamedImageExerciseCount(){
+  let count = 0;
+  ((draft && draft.plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+    if(!String(ex && ex.name || '').trim()) count++;
+  }));
+  return count;
+}
+
+function imageGenerationGuard(kind, item){
+  if(kind === 'cover'){
+    if(imageProgramName()) return true;
+    appAlert(t('images.needProgramName'));
+    return false;
+  }
+  if(String(item && item.name || '').trim()) return true;
+  appAlert(t('images.needExerciseName'));
+  return false;
+}
+
+function imageWorkspaceGuard(){
+  if(!imageProgramName()){
+    appAlert(t('images.needProgramName'));
+    return false;
+  }
+  const unnamed = unnamedImageExerciseCount();
+  if(unnamed){
+    appAlert(t('images.needAllExerciseNames',{count:unnamed}));
+    return false;
+  }
+  return true;
+}
+
+// Промт под ОДНО конкретное изображение. До этой точки всегда проходит общий
+// guard, поэтому скрытого fallback-названия нет: картинка строится только из
+// реального названия программы/упражнения.
 function singleImagePrompt(kind, item){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
-  const name = (draft.name || '').trim() || 'Workout program';
+  const name = imageProgramName();
   return kind === 'cover'
     ? coverImagePrompt(name, genderTxt)
     : exerciseImagePrompt(item || {}, genderTxt);
@@ -1642,6 +1684,7 @@ let imgGenCancelled = false;
 
 async function generateAllImagesViaAI(scope){
   if(!premiumGate()) return;
+  if(!imageWorkspaceGuard()) return;
   scope = scope === 'missing' ? 'missing' : 'all';
 
   const exList = uniqueProgramExercises().filter(ex => {
@@ -1725,6 +1768,7 @@ function exImageItem(ex){
 // apply(data) получает уже ужатую картинку.
 async function generateOneImageViaAI(kind, item, title, apply){
   if(!premiumGate()) return false;
+  if(!imageGenerationGuard(kind, item)) return false;
   imgGenCancelled = false;
   aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
   $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
@@ -1849,6 +1893,7 @@ function shrinkAll(files, maxSide, done){
 // всегда в конструктор.
 let imagesFrom = 'scrBuilder';
 function openImages(){
+  if(!imageWorkspaceGuard()) return false;
   imagesFrom = show._last || 'scrBuilder';
   // «Доступные» всегда начинается с картинок, которые уже используются в программе.
   // Поэтому после сохранения и повторного открытия назначенные изображения не исчезают.
@@ -2199,6 +2244,23 @@ function openExAI(){
   autoGrow($('exaWish'));
   autoGrow($('exaContext'));
   openAI('exNew');
+}
+
+function aiExerciseHasUserInput(){
+  const wish = clampText((($('exaWish') && $('exaWish').value) || ''), LIM.wish).trim();
+  const context = clampText((($('exaContext') && $('exaContext').value) || ''), 600).trim();
+  return !!(
+    exa.format || exa.level ||
+    (exa.muscles && exa.muscles.length) ||
+    (exa.equip && exa.equip.length) ||
+    wish || context
+  );
+}
+
+function aiCreateExerciseGuard(){
+  if(aiExerciseHasUserInput()) return true;
+  appAlert(t('ai.needExerciseInput'));
+  return false;
 }
 
 function exaPrompt(){
