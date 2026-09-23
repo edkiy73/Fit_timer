@@ -20,7 +20,7 @@ if(!process.env.KV_REST_API_URL) process.env.ALLOW_MEMORY_STORE = '1';
 const PORT = +(process.argv[2] || process.env.PORT || 8124);
 
 const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
-               '.json':'application/json; charset=utf-8', '.webmanifest':'application/manifest+json',
+               '.json':'application/json; charset=utf-8',
                '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml'};
 
 // api/p/[id].js → {re: /^\/api\/p\/([^/]+)$/, params: ['id']}
