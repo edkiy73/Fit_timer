@@ -29,6 +29,16 @@ need(programs.includes('function aiExerciseHasUserInput()') && programs.includes
   'exercise creation owns one semantic input guard');
 need(programs.includes('guard: ()=> aiCreateExerciseGuard()'),
   'exercise AI source uses the exercise guard');
+need(programs.includes("function aiEditRequestGuard(fieldId)"),
+  'program and exercise edits share one explicit-request guard');
+need(programs.includes("guard: ()=> aiEditRequestGuard('eaWish')"),
+  'program edit requires an explicit user request');
+need(programs.includes("guard: ()=> aiEditRequestGuard('exeWish')"),
+  'exercise edit requires an explicit user request');
+need(!programs.includes('No specific request. Improve clarity'),
+  'program edit has no hidden empty-request fallback');
+need(!programs.includes('No specific request. Improve clarity and technique guidance'),
+  'exercise edit has no hidden empty-request fallback');
 
 need(programs.includes('function imageGenerationGuard(kind, item)'),
   'single-image naming rules are centralized');
@@ -53,7 +63,7 @@ need(prompt.includes('rep-based work ≈ reps × 3 seconds × sides'),
 need(prompt.includes('5 to 20 minutes, aim to stay within about ±5 minutes'),
   'short workouts use the ±5-minute planning tolerance');
 
-for(const key of ['ai.needProgramInput','ai.needExerciseInput','images.needProgramName','images.needExerciseName','images.needAllExerciseNames']){
+for(const key of ['ai.needProgramInput','ai.needExerciseInput','ai.needEditRequest','images.needProgramName','images.needExerciseName','images.needAllExerciseNames']){
   need(ru.includes("'"+key+"'") && en.includes("'"+key+"'"), key+' exists in RU and EN');
 }
 
