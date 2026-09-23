@@ -478,8 +478,9 @@ module.exports = async (req, res) => {
 
   /* ---- что происходит в каталоге ---- */
   if(a === 'overview'){
-    const [pending, approved, settings] = await Promise.all([
+    const [pending, drafts, approved, settings] = await Promise.all([
       readItems('c:pending', 'pending'),
+      readItems('c:drafts', 'draft'),
       readItems('c:approved', 'approved'),
       getSettings()
     ]);
@@ -501,7 +502,7 @@ module.exports = async (req, res) => {
                        programs: +counts[i * 2] || 0, opens: +counts[i * 2 + 1] || 0});
       }catch(e){}
     });
-    return send(res, 200, {pending, approved, trainers, settings, providers:providerStatus(), billingProviders:billingProviderStatus()});
+    return send(res, 200, {pending, drafts, approved, trainers, settings, providers:providerStatus(), billingProviders:billingProviderStatus()});
   }
 
   /* ---- пользователи / ручной Premium / тестовый вход ---- */
@@ -1019,6 +1020,86 @@ module.exports = async (req, res) => {
     t.banned = a === 'ban';
     await store.set(`t:${handle}`, JSON.stringify(t));
     return send(res, 200, {ok: true, banned: t.banned});
+  }
+
+  /* ---- черновики админских программ ----
+     Черновик живёт на сервере и никогда не попадает в c:approved до явной
+     публикации. В отличие от add он намеренно допускает незаполненный RU/EN:
+     проверка полного каталожного контракта выполняется только publish_draft. */
+  if(a === 'save_draft'){
+    const incoming = (body && body.item) || {};
+    let current = null;
+    let draftId = id;
+    if(draftId){
+      const raw = await store.get('c:' + draftId);
+      if(!raw) return fail(res, 404, 'not_found');
+      try{ current = JSON.parse(raw); }catch(_){}
+      if(!current || current.status !== 'draft') return fail(res, 409, 'not_draft');
+    }else{
+      draftId = 'd' + rndId(7);
+    }
+
+    const merged = Object.assign({}, current || {}, incoming);
+    if(incoming.locales !== undefined){
+      merged.locales = Object.assign({}, (current && current.locales) || {}, incoming.locales || {});
+    }
+    const norm = normalizeCatalogText(merged, (current && current.sourceLocale) || 'ru');
+    const sourceLocale = norm.sourceLocale;
+    const src = norm.locales[sourceLocale] || {name:'', gives:'', text:''};
+    const now = new Date().toISOString();
+    const c = {
+      id:draftId,
+      by:clampLine(merged.by,40),
+      cat:GOALS.includes(merged.cat) ? merged.cat : ((current && current.cat) || 'tone'),
+      level:LEVELS.includes(merged.level) ? merged.level : ((current && current.level) || 'Новичок'),
+      min:Math.max(1,Math.min(180,Math.round(+merged.min || 20))),
+      cover:cleanPic(merged.cover,90000) || null,
+      media:pics(merged.media),
+      exCount:Math.max(0,Math.round(+merged.exCount || 0)),
+      pro:!!merged.pro,
+      status:'draft',
+      at:(current && current.at) || now,
+      updatedAt:now,
+      mine:true,
+      sourceLocale,
+      locales:norm.locales,
+      name:src.name || '',
+      gives:src.gives || '',
+      text:src.text || ''
+    };
+    await store.set('c:' + draftId, JSON.stringify(c));
+    if(!current) await store.push('c:drafts', draftId);
+    return send(res, 200, {ok:true, id:draftId, status:'draft', updatedAt:now});
+  }
+
+  if(a === 'publish_draft'){
+    const raw = await store.get('c:' + id);
+    if(!raw) return fail(res, 404, 'not_found');
+    const c = JSON.parse(raw);
+    if(c.status !== 'draft') return fail(res, 409, 'not_draft');
+    const checked = checkItem(c, {requireBoth:true, fallbackSource:c.sourceLocale || 'ru'});
+    if(checked.miss.length) return fail(res, 400, 'catalog_not_ready', {miss:checked.miss});
+    syncSourceFields(c, checked);
+    c.status = 'approved';
+    c.pro = body && body.pro !== undefined ? !!body.pro : !!c.pro;
+    c.publishedAt = new Date().toISOString();
+    await store.set('c:' + id, JSON.stringify(c));
+    await store.removeFromList('c:drafts', id);
+    const approvedIds = await store.list('c:approved');
+    if(!approvedIds.includes(id)) await store.push('c:approved', id);
+    return send(res, 200, {ok:true, id, status:'approved', pro:!!c.pro});
+  }
+
+  if(a === 'delete_draft'){
+    const raw = await store.get('c:' + id);
+    if(!raw) return fail(res, 404, 'not_found');
+    const c = JSON.parse(raw);
+    if(c.status !== 'draft') return fail(res, 409, 'not_draft');
+    c.status = 'removed';
+    c.removedAt = new Date().toISOString();
+    await store.set('c:' + id, JSON.stringify(c));
+    await store.removeFromList('c:drafts', id);
+    return send(res, 200, {ok:true});
   }
 
   /* ---- добавить программу от себя ---- */

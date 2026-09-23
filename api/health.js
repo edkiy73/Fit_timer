@@ -1,203 +1,94 @@
-/* GET /api/health — «работает или нет», человеческим языком.
+const { collectHealth } = require('../lib/health');
 
-   Нужен затем, что настройка хранилища — единственный шаг, который нельзя сделать
-   из кода: его делают мышкой в панели Vercel. Без такой страницы человек не может
-   отличить «я неправильно нажал» от «нажал правильно, но приложение не видит», и
-   это худшее место, где можно застрять.
+const esc = v => String(v == null ? '' : v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-   Поэтому страница показывает НЕ ВЫВОД, а факты: какие переменные функция видит и
-   какая сборка запущена. Вывод из них человек сделает и сам, а с одним «не
-   подключено» сделать нельзя ничего.
+function label(status){
+  if(status === 'ok') return 'Работает';
+  if(status === 'warning') return 'Требует внимания';
+  return 'Ошибка';
+}
+function yes(v){ return v ? 'Настроено' : 'Не настроено'; }
+function chip(ok, text){ return '<span class="chip '+(ok?'ok':'warn')+'">'+esc(text)+'</span>'; }
 
-   Отвечает простым текстом: это страница, которую открывают в браузере и читают
-   глазами. Секретов не показывает — только имена переменных. */
+function renderHtml(h){
+  const p = Object.fromEntries((h.probes || []).map(x=>[x.name,x]));
+  const build = h.deployment || {};
+  const service = h.services || {};
+  const storage = h.storage || {};
+  const steps = (storage.steps || []).map(x =>
+    '<li><span class="'+(x.ok?'dot ok':'dot bad')+'"></span><b>'+esc(x.name)+'</b>'
+      +(x.err?'<small>'+esc(x.err)+'</small>':'')+'</li>'
+  ).join('');
+  const warnings = (h.warnings || []).map(x=>'<li>'+esc(x)+'</li>').join('');
+  const provider = service.ai && service.ai.providers || {};
+  const billing = service.billing && service.billing.providers || {};
+  const commit = build.commit || '—';
 
-const { store } = require('../lib/store');
-const { mailInfo } = require('../lib/mail');
-const { pushInfo } = require('../lib/push');
-const { billingProviderStatus } = require('../lib/ai');
-
-/* Метка сборки руками. Номер коммита Vercel подставляет сам, но дата и короткое имя
-   правки быстрее показывают, та ли это версия. */
-const BUILT = '2026-09-22 · privacy cleanup и push verification';
+  return '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<meta name="robots" content="noindex,nofollow"><title>Fit Timer — Health</title>'
+    +'<style>'
+    +':root{color-scheme:dark;--bg:#0d0b13;--card:#17131f;--line:#2a2435;--ink:#f5f1fa;--muted:#9d95a8;--ok:#4fd18b;--warn:#f1b94c;--bad:#ff6b78}'
+    +'*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}'
+    +'.wrap{max-width:980px;margin:auto;padding:28px 18px 48px}.head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}'
+    +'h1{font-size:24px;margin:0 0 5px}.muted{color:var(--muted)}.overall{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700}'
+    +'.overall.ok{color:var(--ok)}.overall.warning{color:var(--warn)}.overall.error{color:var(--bad)}'
+    +'.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px;min-width:0}'
+    +'.card h2{font-size:14px;margin:0 0 10px}.metric{font-size:24px;font-weight:750}.sub{font-size:12px;color:var(--muted);margin-top:3px}'
+    +'.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}.chip{font-size:11px;padding:4px 7px;border-radius:999px;background:#211c29;color:var(--muted)}'
+    +'.chip.ok{color:var(--ok)}.chip.warn{color:var(--warn)}.section{margin-top:16px}.section h2{font-size:16px;margin:0 0 9px}'
+    +'ul{list-style:none;padding:0;margin:0}.checks li{display:grid;grid-template-columns:12px minmax(0,1fr);gap:7px 8px;padding:8px 0;border-bottom:1px solid var(--line)}'
+    +'.checks li:last-child{border-bottom:0}.checks small{grid-column:2;color:var(--muted);word-break:break-word}.dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--muted)}'
+    +'.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}.warnings li{padding:7px 0;border-bottom:1px solid var(--line);color:var(--warn)}'
+    +'details{margin-top:14px}.facts{font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);white-space:pre-wrap;word-break:break-word}'
+    +'a{color:inherit} @media(max-width:720px){.grid{grid-template-columns:1fr}.head{display:block}.overall{display:inline-block;margin-top:12px}.wrap{padding:20px 12px 36px}}'
+    +'</style></head><body><main class="wrap">'
+    +'<div class="head"><div><h1>Fit Timer — состояние сервера</h1><div class="muted">Активная проверка · '+esc(new Date(h.checkedAt).toLocaleString('ru-RU'))+'</div></div>'
+    +'<div class="overall '+esc(h.status)+'">'+esc(label(h.status))+'</div></div>'
+    +'<div class="grid">'
+    +'<section class="card"><h2>Хранилище</h2><div class="metric">'+(storage.status==='ok'?'OK':'ERROR')+'</div><div class="sub">'+esc(storage.mode)+' · '+esc(storage.latencyMs==null?'—':storage.latencyMs+' мс')+'</div>'
+    +'<div class="chips">'+chip(storage.status==='ok','запись/чтение')+chip(!!(p.catalog&&p.catalog.ok),'каталог')+chip(!!(p.accounts&&p.accounts.ok),'аккаунты')+'</div></section>'
+    +'<section class="card"><h2>Сервисы</h2><div class="chips">'
+    +chip(!!(service.mail&&service.mail.configured),'Email · '+yes(service.mail&&service.mail.configured))
+    +chip(!!(service.ai&&service.ai.configured),'AI · '+yes(service.ai&&service.ai.configured))
+    +chip(!!(service.push&&service.push.android),'Push Android · '+yes(service.push&&service.push.android))
+    +chip(!!(service.push&&service.push.ios),'Push iOS · '+yes(service.push&&service.push.ios))
+    +'</div></section>'
+    +'<section class="card"><h2>Деплой</h2><div class="metric">'+esc(commit)+'</div><div class="sub">'+esc(build.env||'локально')+(build.region?' · '+esc(build.region):'')+'</div>'
+    +'<div class="chips">'+chip(!!build.onVercel,build.onVercel?'Vercel':'локальный запуск')+'</div></section>'
+    +'</div>'
+    +'<section class="section card"><h2>Критичные проверки</h2><ul class="checks">'
+    +(h.probes||[]).map(x=>'<li><span class="'+(x.ok?'dot ok':'dot bad')+'"></span><b>'+esc(x.name)+' · '+(x.ok?'OK':'ERROR')+' · '+esc(x.latencyMs)+' мс</b>'+(x.error?'<small>'+esc(x.error)+'</small>':'')+'</li>').join('')
+    +(steps?'<li><span class="dot '+(storage.status==='ok'?'ok':'bad')+'"></span><b>Redis-команды</b><small><ul class="checks">'+steps+'</ul></small></li>':'')
+    +'</ul></section>'
+    +(warnings?'<section class="section card"><h2>Что требует внимания</h2><ul class="warnings">'+warnings+'</ul></section>':'')
+    +'<details class="section card"><summary>Технические факты</summary><div class="facts">storage env: '+esc((storage.envSeen||[]).join(', ')||'—')
+    +'\nmail env: '+esc((service.mail&&service.mail.envSeen||[]).join(', ')||'—')
+    +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')
+    +'\nbilling: Google '+(billing.google?'yes':'no')+', RuStore '+(billing.rustore?'yes':'no')+', YooKassa '+(billing.yookassa?'yes':'no')
+    +'\n\nЗначения секретов никогда не выводятся.</div></details>'
+    +'</main></body></html>';
+}
 
 module.exports = async (req, res) => {
-  const i = store.info();
-  const m = mailInfo();
-  const p = pushInfo();
-  const billing = billingProviderStatus();
-  const L = [];
-
-  L.push('Fit Timer — состояние сервера');
-  L.push('');
-  /* Первым делом — ЧТО ЗАПУЩЕНО. Это первый вопрос при «я всё сделал, а ничего не
-     изменилось»: переменные и код попадают в функцию в момент сборки, поэтому
-     работающий деплой может ничего не знать о том, что уже лежит в репозитории.
-     Раньше это стояло в самом низу мелким шрифтом, и разбор начинался не с него. */
-  L.push(`Сейчас работает: ${i.build.onVercel
-    ? (i.build.commit ? 'коммит ' + i.build.commit : 'сборка без метки')
-      + (i.build.env ? ', ' + i.build.env : '')
-      + (i.build.region ? ', регион ' + i.build.region : '')
-    : 'локальный запуск (не Vercel)'}`);
-  L.push(`Собрано: ${BUILT}`);
-  L.push('');
-  L.push('Если коммит не тот, которого ты ждёшь, — Vercel ещё не пересобрал проект');
-  L.push('или собирает не ту ветку: Deployments, верхний деплой должен быть Ready');
-  L.push('и от нужной ветки. Settings → Git → Production Branch.');
-  L.push('');
-  L.push('— — — — — — — — — — — — — — — — —');
-  L.push('');
-
-  if(i.connected){
-    let err = null, steps = null;
-    try{ steps = await store.selfTest(); }
-    catch(e){ err = e && e.message; steps = e && e.steps; }
-    if(!err){
-      L.push('ХРАНИЛИЩЕ: подключено, все операции проходят.');
-      L.push(`Переменные: ${i.vars[0]}, ${i.vars[1]}`);
-      L.push('');
-      L.push('Всё готово: и ссылки, и отметки об открытии, и отчёты.');
-    } else {
-      L.push('ХРАНИЛИЩЕ: подключено, но не все операции работают.');
-      L.push(`Переменные: ${i.vars[0]}, ${i.vars[1]}`);
-      L.push('');
-      // Именно ради этого списка проверка и разбита по шагам: «база не отвечает»
-      // не отличает «всё сломано» от «списки не поддерживаются, и поэтому пропали
-      // ровно отчёты» — а лечится это совершенно по-разному.
-      (steps || []).forEach(s2 => L.push(`  ${s2.ok ? 'ок    ' : 'СЛОМАНО'}  ${s2.name}`
-        + (s2.err ? ` — ${s2.err}` : '')));
-      L.push('');
-      L.push('Что это значит:');
-      L.push('  SET/GET не работают — база выключена или токен устарел.');
-      L.push('  RPUSH/LRANGE не работают — хранилище без списков: ссылки будут');
-      L.push('  работать, а отчёты от клиентов молча пропадать. Нужен именно');
-      L.push('  Upstash for Redis, а не другой тип хранилища.');
-    }
-  } else if(i.memory){
-    L.push('ХРАНИЛИЩЕ: память процесса (локальный запуск).');
-    L.push('Так можно только на своём компьютере: на сервере данные пропадут.');
-  } else {
-    L.push('ХРАНИЛИЩЕ: НЕ ПОДКЛЮЧЕНО.');
-    L.push('');
-
-    if(!i.seen.length){
-      // Переменных нет вовсе. На Vercel это почти всегда одно и то же: базу
-      // подключили уже ПОСЛЕ последней сборки. Переменные попадают в функцию в
-      // момент сборки, поэтому работающий деплой о новой базе не знает.
-      L.push('Функция не видит ни одной переменной от базы.');
-      L.push('');
-      if(i.build.onVercel){
-        L.push('Если базу ты уже подключил — значит, работает сборка, сделанная');
-        L.push('ДО этого. Переменные попадают в функцию только при сборке.');
-        L.push('');
-        L.push('Лечится пересборкой:');
-        L.push('');
-        L.push('  1. vercel.com → проект fittimer99 → вкладка Deployments');
-        L.push('  2. у самого верхнего деплоя справа кнопка «...»');
-        L.push('  3. Redeploy → снять галочку «Use existing Build Cache» → Redeploy');
-        L.push('  4. подождать, пока станет Ready (~минута)');
-        L.push('  5. обновить эту страницу');
-        L.push('');
-        L.push('Если базы ещё нет: Storage → Create Database → Upstash → Redis,');
-        L.push('план Free, регион Frankfurt, затем Connect к проекту fittimer99.');
-      } else {
-        L.push('Запущено не на Vercel. Для локальной работы используй');
-        L.push('node tests/dev-server.js — он держит данные в памяти.');
-      }
-    } else if(i.restUrl){
-      L.push('Адрес базы есть, а токена для записи нет.');
-      L.push('');
-      L.push('Чаще всего подставился только KV_REST_API_READ_ONLY_TOKEN — им');
-      L.push('можно читать, но не писать, а ссылки надо сохранять.');
-      L.push('Нужен KV_REST_API_TOKEN (без READ_ONLY в имени).');
-      L.push('');
-      L.push('Vercel → Settings → Environment Variables: проверь, что он есть');
-      L.push('и задан для окружения Production. После правки — пересобрать');
-      L.push('(Deployments → «...» у верхнего → Redeploy).');
-    } else if(i.redisUrlOnly){
-      L.push('База подключена не тем способом: есть адрес для обычного клиента');
-      L.push('(REDIS_URL), а функции ходят по HTTP и таким адресом пользоваться');
-      L.push('не могут. Нужен Upstash for Redis — он даёт доступ по HTTP сам.');
-    } else {
-      L.push('Переменные от базы есть, но не хватает пары «адрес + токен».');
-      L.push('Vercel → Settings → Environment Variables: обе переменные должны');
-      L.push('быть заданы для окружения Production.');
-    }
-
-    L.push('');
-    L.push('Пока базы нет, приложение работает, но ссылки на программы');
-    L.push('не создаются — программу можно передать только файлом.');
+  const h = await collectHealth();
+  res.statusCode = h.ok ? 200 : 503;
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('X-Robots-Tag','noindex, nofollow');
+  const format = String(req.query && req.query.format || '').toLowerCase();
+  if(format === 'json'){
+    res.setHeader('Content-Type','application/json; charset=utf-8');
+    return res.end(JSON.stringify(h));
   }
-
-  L.push('');
-  L.push('— — — — — — — — — — — — — — — — —');
-  L.push('');
-  L.push(`PUSH ANDROID: ${p.android ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
-  L.push(`PUSH iOS: ${p.ios ? 'настроен на сервере' : 'НЕ настроен на сервере'}.`);
-  L.push(`BILLING Google Play: ${billing.google ? 'серверный ключ есть' : 'НЕ настроен'}.`);
-  L.push(`BILLING RuStore: ${billing.rustore ? 'серверный ключ есть' : 'НЕ настроен'}.`);
-  L.push(`BILLING ЮKassa: ${billing.yookassa ? 'серверные ключи есть' : 'НЕ настроена'}.`);
-  if(!p.android){
-    L.push('Для Android нужен FIREBASE_SERVICE_ACCOUNT_JSON или FIREBASE_SERVICE_ACCOUNT_BASE64 в Vercel.');
+  if(format === 'text'){
+    res.setHeader('Content-Type','text/plain; charset=utf-8');
+    return res.end([
+      'Fit Timer — '+label(h.status),
+      'commit: '+((h.deployment&&h.deployment.commit)||'—'),
+      ...(h.probes||[]).map(x=>x.name+': '+(x.ok?'OK':'ERROR')+' ('+x.latencyMs+' ms)'+(x.error?' — '+x.error:''))
+    ].join('\n'));
   }
-  if(!p.ios){
-    L.push('Для iOS нужны APNS_KEY_ID, APNS_TEAM_ID и APNS_PRIVATE_KEY в Vercel.');
-  }
-  L.push('');
-  L.push(`переменные Firebase: ${p.firebaseVars.length ? p.firebaseVars.join(', ') : '(ни одной)'}`);
-  L.push(`переменные APNs: ${p.apnsVars.length ? p.apnsVars.join(', ') : '(ни одной)'}`);
-  L.push('Значения ключей здесь не показываются.');
-  L.push('');
-
-  /* Почта — вторая настройка, которую нельзя сделать из кода, и ломается она
-     ровно так же молча: ключ есть, письма не идут. Поэтому она здесь рядом. */
-  L.push('— — — — — — — — — — — — — — — — —');
-  L.push('');
-  if(!m.ready){
-    L.push('ПОЧТА: не настроена.');
-    L.push('');
-    L.push('Без неё тренер не сможет вернуть свою страницу после переустановки');
-    L.push('приложения: ник останется занятым, а ключ уйдёт вместе с телефоном.');
-    L.push('Всё остальное работает.');
-    L.push('');
-    L.push('Как включить:');
-    L.push('');
-    L.push('  1. resend.com → зарегистрироваться (бесплатно)');
-    L.push('  2. API Keys → Create API Key → скопировать');
-    L.push('  3. vercel.com → проект fittimer99 → Settings → Environment');
-    L.push('     Variables → Add: имя RESEND_API_KEY, значение — ключ,');
-    L.push('     окружение Production');
-    L.push('  4. Deployments → «...» у верхнего → Redeploy');
-    L.push('');
-    L.push('ВАЖНО про адрес отправителя. Пока своего домена нет, письма уходят');
-    L.push('с onboarding@resend.dev, а с него Resend разрешает писать ТОЛЬКО на');
-    L.push('почту, на которую зарегистрирован сам ключ. Для проверки этого хватит;');
-    L.push('чтобы писать другим, нужен свой домен: Resend → Domains → Add Domain,');
-    L.push('прописать выданные записи в DNS, потом добавить переменную MAIL_FROM');
-    L.push('вида  Fit Timer <hi@твойдомен.ru>  и снова пересобрать.');
-  } else {
-    L.push('ПОЧТА: настроена.');
-    L.push(`Отправитель: ${m.from}`);
-    if(m.testDomain){
-      L.push('');
-      L.push('Это тестовый домен Resend. С него письма доходят ТОЛЬКО на адрес,');
-      L.push('на который зарегистрирован ключ. Всем остальным Resend откажет —');
-      L.push('это не поломка, а его правило. Чтобы писать кому угодно, подтверди');
-      L.push('свой домен и задай переменную MAIL_FROM.');
-    }
-  }
-
-  // Факты в конце: по ним разбирают, если написанное выше не помогло.
-  L.push('');
-  L.push('— — — что видит сама функция — — —');
-  L.push(`переменные про базу: ${i.seen.length ? i.seen.join(', ') : '(ни одной)'}`);
-  L.push(`переменные про почту: ${m.seen.length ? m.seen.join(', ') : '(ни одной)'}`);
-  L.push(`переменные Firebase: ${p.firebaseVars.length ? p.firebaseVars.join(', ') : '(ни одной)'}`);
-  L.push(`переменные APNs: ${p.apnsVars.length ? p.apnsVars.join(', ') : '(ни одной)'}`);
-  L.push('Значения переменных не показываются никогда — только имена.');
-
-  res.statusCode = i.connected ? 200 : 503;
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.end(L.join('\n'));
+  res.setHeader('Content-Type','text/html; charset=utf-8');
+  res.end(renderHtml(h));
 };

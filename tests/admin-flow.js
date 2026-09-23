@@ -67,6 +67,39 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
     return api('add', {item});
   };
 
+  // ---- серверный черновик -> явная публикация ----
+  const draftText = 'ПРОГРАММА: Черновик для публикации\nДНИ: Пн\nКРУГИ: 2\n\nУПРАЖНЕНИЕ: Приседания\nОПИСАНИЕ: Контролируемое движение.\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45';
+  const draftItem = {
+    sourceLocale:'ru',cat:'power',level:'Средний',min:25,by:'',exCount:1,pro:false,
+    name:'Черновик для публикации',
+    gives:'Полная программа для проверки безопасного цикла черновик и публикация.',
+    text:draftText,
+    locales:{
+      ru:{name:'Черновик для публикации',gives:'Полная программа для проверки безопасного цикла черновик и публикация.',text:draftText},
+      en:{name:'Publish draft test',gives:'Complete program for testing the safe draft and publish workflow.',text:draftText}
+    }
+  };
+  const draftSaved=await api('save_draft',{item:draftItem});
+  ok('готовую программу можно сначала сохранить черновиком',draftSaved.s===200&&/^d/.test(draftSaved.j.id||''),draftSaved.j.id);
+  const draftOverview=(await api('overview')).j;
+  ok('черновик виден в админке', (draftOverview.drafts||[]).some(x=>x.id===draftSaved.j.id));
+  const draftHidden=await fetch(BASE+'/api/catalog').then(r=>r.json());
+  ok('черновик не виден публичному каталогу',!(draftHidden.items||[]).some(x=>x.id===draftSaved.j.id));
+  const draftPublished=await api('publish_draft',{id:draftSaved.j.id,pro:false});
+  ok('черновик публикуется только отдельным действием',draftPublished.s===200&&draftPublished.j.status==='approved');
+  const draftVisible=await fetch(BASE+'/api/catalog').then(r=>r.json());
+  ok('после публикации программа появилась в каталоге',(draftVisible.items||[]).some(x=>x.id===draftSaved.j.id));
+  await api('remove',{id:draftSaved.j.id});
+
+  const incomplete=await api('save_draft',{item:{
+    sourceLocale:'ru',cat:'tone',level:'Новичок',min:20,
+    locales:{ru:{name:'Проба',gives:'',text:''}}
+  }});
+  ok('незавершённый черновик тоже сохраняется',incomplete.s===200,incomplete.j.id);
+  const blocked=await api('publish_draft',{id:incomplete.j.id,pro:false});
+  ok('незавершённый черновик нельзя опубликовать',blocked.s===400&&(blocked.j.miss||[]).length>0,(blocked.j.miss||[]).join(', '));
+  ok('черновик можно удалить',(await api('delete_draft',{id:incomplete.j.id})).s===200);
+
   const bad1 = await добавь({gives: 'коротко'});
   ok('недобор полей не проходит', bad1.s === 400 && (bad1.j.miss || []).length > 0,
      (bad1.j.miss || []).join(', '));
@@ -138,6 +171,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.click('#enter');
   await page.waitForTimeout(900);
   ok('с ключом открывается', await page.isVisible('#app'));
+  ok('по умолчанию открывается полезный обзор', /Что требует внимания/.test(await page.textContent('#body')));
   await page.click('#navOpen');
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
@@ -153,6 +187,8 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.waitForTimeout(300);
   ok('у новой программы есть полноценный режим создания через ИИ',
      await page.isVisible('#aiCreateCard') && await page.isVisible('#fAiCreate'));
+  ok('новая программа сначала предлагает черновик и отдельную публикацию',
+     /черновик/i.test(await page.textContent('#fSave')) && await page.isVisible('#fPublish'));
   await page.fill('#aiCreateWish','Собери тестовую силовую программу');
   await page.click('#fAiCreate');
   await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Тестовая программа'

@@ -402,6 +402,22 @@
   .media-progress{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;min-height:28px}
   .media-progress .muted{margin-right:auto}
   .b[disabled]{opacity:.55;cursor:default}
+  .dashboard-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 10px}
+  .dashboard-kpi{appearance:none;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;font:inherit}
+  .dashboard-kpi:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+  .dashboard-kpi b{display:block;font-size:25px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .dashboard-kpi span{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+  .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:10px}
+  .dashboard-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .health-summary{display:grid;gap:8px}
+  .health-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .health-line:last-child{border-bottom:0}
+  .health-line b{font-size:12px}
+  .health-line span{font-size:11.5px;color:var(--muted);text-align:right}
+  @media(max-width:760px){
+    .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dashboard-grid{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
@@ -419,8 +435,13 @@
     <aside class="side" id="adminNav">
       <div class="brand-admin"><b>FIT / ADMIN</b><button class="b quiet" id="out">Выйти</button></div>
       <div class="nav-group">
+        <div class="nav-label">Главное</div>
+        <button class="nav-btn on" data-tab="dashboard"><span>Обзор</span></button>
+      </div>
+      <div class="nav-group">
         <div class="nav-label">Каталог</div>
-        <button class="nav-btn on" data-tab="pending"><span>На проверке</span><span class="nav-count" id="nPending"></span></button>
+        <button class="nav-btn" data-tab="pending"><span>На проверке</span><span class="nav-count" id="nPending"></span></button>
+        <button class="nav-btn" data-tab="drafts"><span>Черновики</span><span class="nav-count" id="nDrafts"></span></button>
         <button class="nav-btn" data-tab="approved"><span>В каталоге</span><span class="nav-count" id="nApproved"></span></button>
         <button class="nav-btn" data-tab="add"><span>Добавить программу</span></button>
         <button class="nav-btn" data-tab="trainers"><span>Тренеры</span><span class="nav-count" id="nTrainers"></span></button>
@@ -497,14 +518,14 @@ function translationPrompt(source, from, to){
 }
 
 let KEY = localStorage.getItem('adminKey') || '';
-let data = {pending: [], approved: [], trainers: [], settings: null, providers: {}};
+let data = {pending: [], drafts: [], approved: [], trainers: [], settings: null, providers: {}, billingProviders: {}};
 let usersCache = null;
 let analyticsCache = null;
 const savedTab = localStorage.getItem('adminTab');
-let tab = ['pending','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'pending';
+let tab = ['dashboard','pending','drafts','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'dashboard';
 
 const PAGE_TITLES = {
-  pending:'На проверке', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
+  dashboard:'Обзор', pending:'На проверке', drafts:'Черновики', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
   users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи', release:'Релиз Android'
 };
 function closeNav(){
@@ -593,6 +614,7 @@ async function load(){
   }
   $('gate').hidden = true; $('app').hidden = false;
   $('nPending').textContent = data.pending.length || '';
+  $('nDrafts').textContent = (data.drafts || []).length || '';
   $('nApproved').textContent = data.approved.length || '';
   $('nTrainers').textContent = data.trainers.length || '';
   if(tab !== 'users') usersCache = null;
@@ -602,7 +624,7 @@ async function load(){
   render();
   if(tab === 'add'){
     const editId=localStorage.getItem('adminEditingId');
-    const item=[...(data.pending||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId));
+    const item=[...(data.pending||[]),...(data.drafts||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId));
     if(item) fillForm(item);
   }
 }
@@ -615,7 +637,9 @@ const fmtDay = v => v ? new Date(v).toLocaleDateString('ru-RU',{day:'numeric',mo
 function render(){
   const b = $('body');
   b.innerHTML = '';
+  if(tab === 'dashboard') return renderDashboard(b);
   if(tab === 'add') return renderAdd(b);
+  if(tab === 'drafts') return renderDrafts(b);
   if(tab === 'trainers') return renderTrainers(b);
   if(tab === 'users') return renderUsers(b);
   if(tab === 'analytics') return renderAnalytics(b);
@@ -626,6 +650,88 @@ function render(){
   if(tab === 'payments') return renderPayments(b);
   if(tab === 'release') return renderRelease(b);
   return renderCatalog(b);
+}
+
+async function loadDashboardHealth(){
+  const box=$('dashboardHealth');
+  if(!box)return;
+  try{
+    const res=await fetch('/api/health?format=json',{cache:'no-store'});
+    const h=await res.json();
+    const probe=name=>(h.probes||[]).find(x=>x.name===name)||{};
+    const ai=h.services&&h.services.ai||{},mail=h.services&&h.services.mail||{},push=h.services&&h.services.push||{};
+    const state=h.status==='ok'?'Работает':h.status==='warning'?'Требует внимания':'Ошибка';
+    box.innerHTML='<div class="health-line"><b>Общий статус</b><span class="status-chip '+(h.status==='ok'?'ok':'')+'">'+esc(state)+'</span></div>'
+      +'<div class="health-line"><b>Хранилище</b><span>'+esc((h.storage&&h.storage.mode)||'—')+' · '+esc((h.storage&&h.storage.latencyMs)!=null?h.storage.latencyMs+' мс':'—')+'</span></div>'
+      +'<div class="health-line"><b>Каталог</b><span>'+(probe('catalog').ok?'OK':'Ошибка')+'</span></div>'
+      +'<div class="health-line"><b>Email / AI</b><span>'+(mail.configured?'Email OK':'Email нет')+' · '+(ai.configured?'AI OK':'AI нет')+'</span></div>'
+      +'<div class="health-line"><b>Push</b><span>Android '+(push.android?'OK':'—')+' · iOS '+(push.ios?'OK':'—')+'</span></div>';
+  }catch(e){
+    box.innerHTML='<div class="health-line"><b>Диагностика</b><span class="danger-text">Не удалось загрузить</span></div>';
+  }
+}
+
+function renderDashboard(b){
+  const pending=(data.pending||[]).length,drafts=(data.drafts||[]).length,approved=(data.approved||[]).length,trainers=(data.trainers||[]).length;
+  const aiReady=!!(data.providers&&(data.providers.gemini||data.providers.openai));
+  const bp=data.billingProviders||{},billingReady=!!(bp.google||bp.rustore||bp.yookassa);
+  b.innerHTML=pageHead('Обзор','Что требует внимания и быстрые действия по продукту.')
+    +'<div class="dashboard-kpis">'
+      +'<button class="dashboard-kpi" data-go="pending"><b>'+pending+'</b><span>заявок на проверке</span></button>'
+      +'<button class="dashboard-kpi" data-go="drafts"><b>'+drafts+'</b><span>черновиков программ</span></button>'
+      +'<button class="dashboard-kpi" data-go="approved"><b>'+approved+'</b><span>программ в каталоге</span></button>'
+      +'<button class="dashboard-kpi" data-go="trainers"><b>'+trainers+'</b><span>тренеров</span></button>'
+    +'</div>'
+    +'<div class="dashboard-grid">'
+      +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Сейчас</h3><div class="status-row">'
+        +'<span class="status-chip '+(aiReady?'ok':'')+'">AI · '+(aiReady?'готов':'нет ключа')+'</span>'
+        +'<span class="status-chip '+(billingReady?'ok':'')+'">Платежи · '+(billingReady?'есть провайдер':'не настроены')+'</span>'
+      +'</div></div><div class="form-card-body">'
+        +'<div class="dashboard-actions"><button class="b ok" data-go="add">Новая программа</button><button class="b" data-go="pending">Открыть модерацию</button><button class="b" data-go="users">Пользователи</button><button class="b" data-go="analytics">Аналитика</button></div>'
+        +'<p class="compact-note" style="margin-top:10px">'+(pending?'Есть заявки, которые ждут решения: '+pending+'.':'Новых заявок на модерацию нет.')+(drafts?' Черновиков в работе: '+drafts+'.':'')+'</p>'
+      +'</div></section>'
+      +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Система</h3><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Полная диагностика</a></div>'
+        +'<div class="form-card-body health-summary" id="dashboardHealth"><div class="muted">Проверяю критичные сервисы…</div></div></section>'
+    +'</div>';
+  b.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>setTab(x.dataset.go));
+  loadDashboardHealth();
+}
+
+function renderDrafts(b){
+  const list=(data.drafts||[]).slice().reverse();
+  b.innerHTML=pageHead('Черновики','Сохраняются на сервере и не видны пользователям до явной публикации.','<button class="b ok" id="draftAdd">+ Новая программа</button>');
+  $('draftAdd').onclick=()=>setTab('add');
+  if(!list.length){
+    b.insertAdjacentHTML('beforeend','<div class="empty">Черновиков нет. Незаконченную программу можно сохранить здесь и продолжить позже.</div>');
+    return;
+  }
+  b.insertAdjacentHTML('beforeend','<div class="toolbar"><div class="grow"><input id="draftSearch" type="search" placeholder="Поиск по черновикам"></div><span class="status-chip">'+list.length+' шт.</span></div><div class="entity-grid" id="draftCards"></div>');
+  const box=$('draftCards');
+  list.forEach(item=>{
+    const src=localeBlock(item,sourceLocaleOf(item));
+    const ready=localeReady(item,'ru')&&localeReady(item,'en');
+    const card=document.createElement('article');
+    card.className='entity-card';
+    card.dataset.search=((src.name||'')+' '+(item.by||'')+' '+goalName(item.cat)).toLowerCase();
+    const cover=item.cover?'<img class="catalog-cover" src="'+esc(item.cover)+'" alt="">':'<span class="catalog-cover empty">FIT</span>';
+    card.innerHTML='<div class="entity-card-head">'+cover+'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(src.name||'Без названия')+'</div><div class="entity-card-sub">'+esc((src.gives||'').slice(0,120)||'Черновик ещё не заполнен полностью')+'</div></div></div>'
+      +'<div class="td-actions"><details class="row-menu"><summary>•••</summary><div class="row-menu-pop"><button data-act="edit">Продолжить редактирование</button><button class="positive" data-act="publish">Опубликовать</button><button class="positive" data-act="publishPro">Опубликовать в Premium</button><button class="danger" data-act="delete">Удалить черновик</button></div></details></div>'
+      +'<div class="entity-tags"><span class="status-chip">'+esc(goalName(item.cat))+'</span><span class="status-chip">'+esc(item.level||'—')+'</span><span class="status-chip '+(ready?'ok':'')+'">'+(ready?'Готов к публикации':'Нужно заполнить')+'</span><span class="status-chip">'+esc(localeMarks(item))+'</span></div>'
+      +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
+    card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
+      const a=btn.dataset.act;
+      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='publish')return act('publish_draft',{id:item.id,pro:false});
+      if(a==='publishPro')return act('publish_draft',{id:item.id,pro:true});
+      if(a==='delete'&&confirm('Удалить этот черновик?'))return act('delete_draft',{id:item.id});
+    });
+    box.appendChild(card);
+  });
+  wireRowMenus(box);
+  $('draftSearch').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase();
+    box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
+  };
 }
 
 function renderCatalog(b){
@@ -1540,7 +1646,7 @@ function setEditorLang(lang){
   renderExerciseCards();
 }
 function cancelProgramEdit(){
-  const back=editingStatus==='pending'?'pending':'approved';
+  const back=editingStatus==='pending'?'pending':editingStatus==='draft'?'drafts':'approved';
   editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
   localStorage.removeItem('adminEditingId');
   setTab(back);
@@ -1596,7 +1702,8 @@ async function generateAdminProgram(){
 }
 
 function renderAdd(b){
-  b.innerHTML=pageHead(editing?'Редактирование программы':'Новая программа','Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
+  const editorTitle=editingStatus==='draft'?'Черновик программы':editing?'Редактирование программы':'Новая программа';
+  b.innerHTML=pageHead(editorTitle,'Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
     <div class="form-card">
       <div class="form-card-head"><h3>Основное</h3><span class="status-chip" id="programAccessState">Free</span></div>
       <div class="form-card-body">
@@ -1718,14 +1825,16 @@ function renderAdd(b){
     <input type="file" id="fFile" accept="image/*" hidden>
     <p class="err" id="fErr"></p>
     <div class="sticky-save">
-      <span class="save-state" id="programSaveState"></span>
+      <span class="save-state" id="programSaveState">${editingStatus==='draft'?'Черновик · не опубликован':''}</span>
       <div class="save-actions">
         <button class="b quiet" id="fClear">Отмена</button>
-        <button class="b ok" id="fSave">Сохранить</button>
+        <button class="b ${editingStatus==='pending'||editingStatus==='approved'?'ok':'quiet'}" id="fSave">${editingStatus==='pending'||editingStatus==='approved'?'Сохранить':'Сохранить черновик'}</button>
+        ${editingStatus==='pending'||editingStatus==='approved'?'':'<button class="b ok" id="fPublish">Опубликовать</button>'}
       </div>
     </div>`;
 
-  $('fSave').onclick=saveForm;
+  $('fSave').onclick=()=>saveForm(editingStatus==='pending'||editingStatus==='approved'?'save':'draft');
+  if($('fPublish'))$('fPublish').onclick=()=>saveForm('publish');
   $('fClear').onclick=cancelProgramEdit;
   document.querySelectorAll('[data-create-mode]').forEach(x=>x.onclick=()=>setAdminCreateMode(x.dataset.createMode));
   if($('fAiCreate'))$('fAiCreate').onclick=generateAdminProgram;
@@ -1780,36 +1889,55 @@ function fillForm(c){
   updateLocaleStates();setEditorLang(editorLang);renderPics();
 }
 
-async function saveForm(){
-  const saveBtn=$('fSave'), saveState=$('programSaveState');
-  if(saveBtn) saveBtn.disabled=true;
-  if(saveState) saveState.textContent='Сохраняю…';
-  const source = form.sourceLocale === 'en' ? 'en' : 'ru';
-  const locales = {ru: localeFromForm('ru'), en: localeFromForm('en')};
-  const src = locales[source];
-  const item = {
-    sourceLocale: source, locales,
-    // Верхний уровень оставляем для совместимости со старыми клиентами и записями.
-    name: src.name, gives: src.gives, text: src.text,
-    cat: $('fCat').value, level: $('fLevel').value,
-    min: +$('fMin').value, by: $('fBy').value.trim(),
-    exCount: exNames().length, pro: $('fPro').checked,
-    cover: form.cover, media: form.media
+async function saveForm(mode){
+  mode=mode||'save';
+  const saveBtn=$('fSave'),publishBtn=$('fPublish'),saveState=$('programSaveState');
+  if(saveBtn)saveBtn.disabled=true;
+  if(publishBtn)publishBtn.disabled=true;
+  if(saveState)saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';
+  const source=form.sourceLocale==='en'?'en':'ru';
+  const locales={ru:localeFromForm('ru'),en:localeFromForm('en')};
+  const src=locales[source];
+  const item={
+    sourceLocale:source,locales,
+    name:src.name,gives:src.gives,text:src.text,
+    cat:$('fCat').value,level:$('fLevel').value,
+    min:+$('fMin').value,by:$('fBy').value.trim(),
+    exCount:exNames().length,pro:$('fPro').checked,
+    cover:form.cover,media:form.media
   };
   try{
-    if(editing) await api('edit', {id: editing, item});
-    else await api('add', {item});
-    const backTo = editingStatus === 'pending' ? 'pending' : 'approved';
-    editing = null; editingStatus = null;
+    let backTo='approved';
+    if(mode==='draft'||mode==='publish'){
+      const draftId=editingStatus==='draft'?editing:null;
+      const saved=await api('save_draft',{id:draftId,item});
+      editing=saved.id;
+      editingStatus='draft';
+      localStorage.setItem('adminEditingId',editing);
+      if(mode==='publish'){
+        if(saveState)saveState.textContent='Черновик сохранён · публикую…';
+        await api('publish_draft',{id:editing,pro:item.pro});
+        backTo='approved';
+      }else{
+        backTo='drafts';
+      }
+    }else{
+      if(!editing)throw new Error('nothing_to_edit');
+      await api('edit',{id:editing,item});
+      backTo=editingStatus==='pending'?'pending':'approved';
+    }
+    editing=null;editingStatus=null;
     localStorage.removeItem('adminEditingId');
-    form = {cover:null, media:{}, sourceLocale:'ru', imageGender:'f'};
-    tab = backTo;
-    localStorage.setItem('adminTab', tab);
+    form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
+    tab=backTo;
+    localStorage.setItem('adminTab',tab);
     await load();
   }catch(e){
-    $('fErr').textContent = e.miss ? 'Не хватает: ' + e.miss.join(', ') : 'Не сохранилось: ' + e.message;
-    if(saveState) saveState.textContent='Ошибка сохранения';
-    if(saveBtn) saveBtn.disabled=false;
+    $('fErr').textContent=e.miss?'Не хватает для публикации: '+e.miss.join(', '):'Не сохранилось: '+e.message;
+    if(saveState)saveState.textContent=mode==='publish'&&editingStatus==='draft'?'Черновик сохранён · исправь замечания и повтори публикацию':'Ошибка сохранения';
+  }finally{
+    if(saveBtn)saveBtn.disabled=false;
+    if(publishBtn)publishBtn.disabled=false;
   }
 }
 
@@ -1819,7 +1947,7 @@ async function act(action, extra){
     const details = Array.isArray(e.miss) && e.miss.length
       ? '\n\n— ' + e.miss.join('\n— ')
       : '';
-    const head = action === 'approve'
+    const head = action === 'approve' || action === 'publish_draft'
       ? 'Не получилось опубликовать программу'
       : 'Не получилось выполнить действие';
     alert(head + details + (details ? '' : ': ' + e.message));
