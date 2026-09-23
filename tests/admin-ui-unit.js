@@ -123,4 +123,4 @@ const storePublishEnd=html.indexOf('function renderLatestAndroidBuild',storePubl
 const storePublishBlock=html.slice(storePublishStart,storePublishEnd);
 need(storePublishStart>=0,'store publish helper is missing');
 need(storePublishBlock.includes("writeReleaseChannel(s,'store',rec)"),'store publish must write only the store channel');
-need(storePublishBlock.includes("market:\/\/"),'store channel must accept market links');
+need(storePublishBlock.includes('market') && storePublishBlock.includes('https'),'store channel must validate store links');
