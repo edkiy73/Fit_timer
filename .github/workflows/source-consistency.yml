@@ -65,4 +65,4 @@ jobs:
             if curl -fsS http://127.0.0.1:8124/ >/dev/null; then break; fi
             sleep 0.25
           done
-          node tests/ai-api.js
+          node tests/admin-ai-api.js
