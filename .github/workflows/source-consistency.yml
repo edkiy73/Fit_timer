@@ -51,3 +51,18 @@ jobs:
           node tests/accessibility-unit.js
           node tests/release-ux-unit.js
           node tests/admin-ui-unit.js
+
+      - name: Проверить AI API админки
+        env:
+          ADMIN_KEY: testadminkey123456
+          GEMINI_API_KEY: test
+          AI_TEST_MODE: '1'
+        run: |
+          node tests/dev-server.js 8124 > /tmp/fittimer-ai-api.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8124/ >/dev/null; then break; fi
+            sleep 0.25
+          done
+          node tests/ai-api.js
