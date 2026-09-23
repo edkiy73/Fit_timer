@@ -252,6 +252,18 @@
     justify-content:space-between;gap:10px}
   .form-card-head h3{font-size:14px;margin:0}
   .form-card-body{padding:12px 14px}
+  details.release-advanced{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0;margin:10px 0}
+  details.release-advanced>summary{list-style:none;padding:12px 14px;margin:0;color:var(--ink);font-size:14px;font-weight:650;
+    display:flex;align-items:center;justify-content:space-between;gap:10px}
+  details.release-advanced>summary::-webkit-details-marker{display:none}
+  details.release-advanced>summary::after{content:'⌄';color:var(--muted);font-size:16px;line-height:1;transition:transform .15s}
+  details.release-advanced[open]>summary{border-bottom:1px solid var(--line)}
+  details.release-advanced[open]>summary::after{transform:rotate(180deg)}
+  .release-advanced-body{padding:12px 14px}
+  .release-primary{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .release-primary-copy{min-width:220px;flex:1}
+  .release-primary-copy b{display:block;font-size:16px;line-height:1.3;margin-bottom:3px}
+  .release-primary-copy small{display:block;color:var(--muted);font-size:12px;line-height:1.4}
   .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
   .field-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
   .field-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -1676,10 +1688,10 @@ async function savePaymentSettings(){
 
 function renderRelease(b){
   const s=data.settings||{},u=(s.update&&s.update.android)||{};
-  b.innerHTML=pageHead('Релиз Android','Последняя APK определяется автоматически. Публикация обновления происходит только после сохранения этого экрана.')+`
+  b.innerHTML=pageHead('Обновление Android','Для обычного релиза достаточно проверить последнюю сборку и нажать «Опубликовать обновление».')+`
     <div class="form-card">
       <div class="form-card-head">
-        <h3>Последняя собранная APK</h3>
+        <h3>Последняя сборка</h3>
         <button class="b quiet" id="releaseRefreshBuild" type="button">Проверить снова</button>
       </div>
       <div class="form-card-body" id="releaseBuildInfo">
@@ -1687,42 +1699,65 @@ function renderRelease(b){
       </div>
     </div>
     <div class="form-card">
-      <div class="form-card-head"><h3>Что показывать пользователям</h3></div>
-      <div class="form-card-body">
-        <div class="field-grid">
-          <div><label>Последний versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(u.latestCode||0)}"></div>
-          <div><label>Минимальный versionCode</label><input id="relMinimumCode" type="number" min="0" step="1" value="${esc(u.minimumCode||0)}"></div>
+      <div class="form-card-head"><h3>Сейчас у пользователей</h3></div>
+      <div class="form-card-body" id="releaseLiveState"></div>
+    </div>
+    <details class="release-advanced">
+      <summary>Дополнительные настройки</summary>
+      <div class="release-advanced-body">
+        <label class="check">
+          <input id="relRequired" type="checkbox" ${u.minimumCode>0?'checked':''}>
+          Обязательное обновление
+          <small>Включай только если старую версию действительно нельзя больше использовать. Обычно этот переключатель выключен.</small>
+        </label>
+        <div id="relMinimumWrap" class="${u.minimumCode>0?'':'hidden'}">
+          <label>Минимально поддерживаемый versionCode</label>
+          <input id="relMinimumCode" type="number" min="0" step="1" value="${esc(u.minimumCode||0)}">
+          <p class="compact-note">Сборки ниже этого кода будут заблокированы экраном обновления.</p>
+        </div>
+        <div class="field-grid" style="margin-top:12px">
+          <div><label>Опубликованный versionCode</label><input id="relLatestCode" type="number" min="0" step="1" value="${esc(u.latestCode||0)}"></div>
           <div><label>Название версии</label><input id="relLatestName" maxlength="40" value="${esc(u.latestName||'')}" placeholder="Например: 1.2.0"></div>
-          <div class="wide"><label>Ссылка обновления</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="Будет подставлена из последней APK"></div>
+          <div class="wide"><label>Куда ведёт кнопка «Обновить»</label><input id="relUrl" maxlength="500" value="${esc(u.url||'')}" placeholder="GitHub APK, Google Play или RuStore"></div>
         </div>
-        <p class="compact-note">Если текущий build ниже «Последнего» — покажется мягкий баннер. «Минимальный» оставляй 0 для обычных релизов: значение выше 0 блокирует старые версии до обновления.</p>
-        <div class="status-row" id="releasePreview"></div>
-      </div>
-    </div>
-    <div class="form-card">
-      <div class="form-card-head"><h3>Текст</h3></div>
-      <div class="form-card-body">
-        <div class="field-grid">
-          <div class="wide"><label>RU</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Доступна новая версия Fit Timer.">${esc(u.messageRu||'')}</textarea></div>
-          <div class="wide"><label>EN</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="A new Fit Timer version is available.">${esc(u.messageEn||'')}</textarea></div>
+        <p class="compact-note">Эти поля заполняются автоматически при публикации. Менять их вручную нужно только для другого канала обновления или аварийного сценария.</p>
+        <div class="field-grid" style="margin-top:12px">
+          <div class="wide"><label>Дополнительный текст RU · необязательно</label><textarea id="relMessageRu" class="compact-text" maxlength="240" placeholder="Пусто = стандартный текст приложения">${esc(u.messageRu||'')}</textarea></div>
+          <div class="wide"><label>Дополнительный текст EN · необязательно</label><textarea id="relMessageEn" class="compact-text" maxlength="240" placeholder="Empty = standard app copy">${esc(u.messageEn||'')}</textarea></div>
+        </div>
+        <div class="action-row" style="margin-top:12px">
+          <div class="action-stack">
+            <span class="action-feedback" id="releaseSettingsState"></span>
+            <button class="b" id="releaseSettingsSave" type="button">Сохранить дополнительные настройки</button>
+          </div>
         </div>
       </div>
-    </div>
-    ${saveBar('releaseSettings','Сохранить релиз')}`;
+    </details>`;
   $('releaseSettingsSave').onclick=saveReleaseSettings;
   $('releaseRefreshBuild').onclick=()=>loadLatestAndroidBuild(true);
-  ['relLatestCode','relMinimumCode','relLatestName','relUrl','relMessageRu','relMessageEn'].forEach(id=>$(id).addEventListener('input',()=>{
+  $('relRequired').onchange=()=>{
+    const on=$('relRequired').checked;
+    setShown('relMinimumWrap',on);
+    if(on && !(+$('relMinimumCode').value||0)){
+      const current=Math.max(0,Math.round(+$('relLatestCode').value||0));
+      $('relMinimumCode').value=current || (latestAndroidBuild&&latestAndroidBuild.versionCode) || 0;
+    }
     updateReleasePreview();
-    renderLatestAndroidBuild();
-  }));
+  };
+  ['relLatestCode','relMinimumCode','relLatestName','relUrl','relMessageRu','relMessageEn'].forEach(id=>$(id).addEventListener('input',updateReleasePreview));
   updateReleasePreview();
+  renderReleaseLiveState();
   renderLatestAndroidBuild();
   loadLatestAndroidBuild();
 }
+function releaseSettings(){
+  return ((data.settings||{}).update||{}).android||{};
+}
 function releaseValues(){
+  const required=$('relRequired')&&$('relRequired').checked;
   return {
     latest:Math.max(0,Math.round(+$('relLatestCode').value||0)),
-    minimum:Math.max(0,Math.round(+$('relMinimumCode').value||0)),
+    minimum:required?Math.max(0,Math.round(+$('relMinimumCode').value||0)):0,
     name:$('relLatestName').value.trim(),
     url:$('relUrl').value.trim(),
     ru:$('relMessageRu').value.trim(),
@@ -1731,31 +1766,86 @@ function releaseValues(){
 }
 function releaseProblems(v){
   const out=[];
-  if(v.minimum&&!v.latest)out.push('Сначала укажи последний versionCode');
-  if(v.latest&&v.minimum>v.latest)out.push('Минимальная версия выше последней');
+  if(v.minimum&&!v.latest)out.push('Сначала укажи опубликованный versionCode');
+  if($('relRequired')&&$('relRequired').checked&&!v.minimum)out.push('Укажи минимально поддерживаемый versionCode');
+  if(v.latest&&v.minimum>v.latest)out.push('Минимальная версия выше опубликованной');
   if(v.latest&&!v.url)out.push('Для обновления нужна ссылка');
-  if(v.latest&&!/^https:\/\//i.test(v.url))out.push('Ссылка обновления должна начинаться с https://');
-  if(v.latest&&(!v.ru||!v.en))out.push('Заполни RU и EN текст обновления');
+  if(v.latest&&!/^https:\/\/+/i.test(v.url))out.push('Ссылка обновления должна начинаться с https://');
   return out;
 }
-function updateReleasePreview(){
-  const el=$('releasePreview');if(!el)return;
-  const v=releaseValues(),problems=releaseProblems(v),hard=v.minimum>0;
-  el.innerHTML='<span class="status-chip '+(v.latest?'ok':'')+'">Последняя · '+(v.latest||'не задана')+'</span>'
-    +'<span class="status-chip '+(hard?'':'ok')+'">'+(hard?'Обязательное обновление от '+v.minimum:'Без обязательного обновления')+'</span>'
-    +(problems.length?'<span class="status-chip">'+esc(problems[0])+'</span>':'');
+function releaseChannel(url){
+  const v=String(url||'');
+  if(/play\.google\.com/i.test(v))return 'Google Play';
+  if(/rustore/i.test(v))return 'RuStore';
+  if(/github\.com\/[^/]+\/[^/]+\/releases\/download\/latest-apk/i.test(v))return 'GitHub APK';
+  return v?'Другая HTTPS-ссылка':'не задано';
 }
-function applyLatestAndroidBuild(silent){
+function updateReleasePreview(){
+  const v=releaseValues();
+  const feedback=$('releaseSettingsState');
+  if(!feedback)return;
+  const problems=releaseProblems(v);
+  if(problems.length)setActionFeedback('releaseSettingsState',problems[0],'err');
+  else if(v.minimum>0)setActionFeedback('releaseSettingsState','Обязательное обновление включено для сборок ниже '+v.minimum+'.','busy');
+  else if(feedback.classList.contains('err')||feedback.classList.contains('busy'))setActionFeedback('releaseSettingsState','');
+}
+function renderReleaseLiveState(){
+  const box=$('releaseLiveState');if(!box)return;
+  const u=releaseSettings();
+  const latest=Math.max(0,Math.round(+u.latestCode||0));
+  const minimum=Math.max(0,Math.round(+u.minimumCode||0));
+  if(!latest){
+    box.innerHTML='<div class="release-primary"><div class="release-primary-copy"><b>Обновление не опубликовано</b><small>Установленные версии ничего не показывают. Когда новая APK готова, опубликуй её кнопкой выше.</small></div><span class="status-chip">Баннер выключен</span></div>';
+    return;
+  }
+  const label=u.latestName?String(u.latestName):String(latest);
+  box.innerHTML='<div class="release-primary"><div class="release-primary-copy"><b>Доступно обновление · '+esc(label)+'</b>'
+    +'<small>Старые сборки видят на главной баннер «Доступно обновление».</small></div>'
+    +'<span class="status-chip ok">Опубликовано</span></div>'
+    +'<div class="status-row"><span class="status-chip">'+esc(releaseChannel(u.url))+'</span>'
+    +'<span class="status-chip '+(minimum?'':'ok')+'">'+(minimum?'Обязательное ниже '+esc(minimum):'Обязательное обновление выключено')+'</span></div>';
+}
+function managedLatestApkUrl(url){
+  return /github\.com\/[^/]+\/[^/]+\/releases\/download\/latest-apk\/FitTimer-latest\.apk/i.test(String(url||''));
+}
+function syncReleaseForm(){
+  if(!$('relLatestCode'))return;
+  const u=releaseSettings();
+  $('relLatestCode').value=u.latestCode||0;
+  $('relMinimumCode').value=u.minimumCode||0;
+  $('relLatestName').value=u.latestName||'';
+  $('relUrl').value=u.url||'';
+  $('relMessageRu').value=u.messageRu||'';
+  $('relMessageEn').value=u.messageEn||'';
+  $('relRequired').checked=+(u.minimumCode||0)>0;
+  setShown('relMinimumWrap',$('relRequired').checked);
+}
+async function publishLatestAndroidBuild(){
   const r=latestAndroidBuild;
-  if(!r||!$('relLatestCode'))return;
-  $('relLatestCode').value=r.versionCode;
-  $('relLatestName').value=r.versionName;
-  $('relUrl').value=r.apkUrl;
-  if(!$('relMessageRu').value.trim())$('relMessageRu').value='Доступна новая версия Fit Timer.';
-  if(!$('relMessageEn').value.trim())$('relMessageEn').value='A new Fit Timer version is available.';
-  updateReleasePreview();
-  renderLatestAndroidBuild();
-  if(!silent)setActionFeedback('releaseSettingsState','Последняя APK подставлена. Нажми «Сохранить релиз», чтобы включить баннер.','busy');
+  if(!r){
+    setActionFeedback('releasePublishState','Последняя сборка ещё не загружена.','err');
+    return;
+  }
+  const u=releaseSettings();
+  const targetUrl=u.url&&!managedLatestApkUrl(u.url)?u.url:r.apkUrl;
+  const s=settingsClone();s.update=s.update||{};
+  s.update.android={
+    latestCode:r.versionCode,
+    minimumCode:Math.max(0,Math.round(+u.minimumCode||0)),
+    latestName:r.versionName,
+    url:targetUrl,
+    messageRu:u.messageRu==='Доступна новая версия Fit Timer.'?'':(u.messageRu||''),
+    messageEn:u.messageEn==='A new Fit Timer version is available.'?'':(u.messageEn||'')
+  };
+  setActionFeedback('releasePublishState','Публикую…','busy');
+  if(await persistSettings(s,'releasePublishState')){
+    data.settings=s;
+    syncReleaseForm();
+    renderReleaseLiveState();
+    renderLatestAndroidBuild();
+    setActionFeedback('releasePublishState','Обновление опубликовано. Старые сборки увидят баннер.','ok');
+    adminNotice('Android-обновление опубликовано.');
+  }
 }
 function renderLatestAndroidBuild(){
   const box=$('releaseBuildInfo');if(!box)return;
@@ -1763,18 +1853,18 @@ function renderLatestAndroidBuild(){
     box.innerHTML='<p class="compact-note">Данные сборки ещё не загружены.</p>';
     return;
   }
-  const r=latestAndroidBuild,v=releaseValues();
-  const matches=v.latest===r.versionCode&&v.name===r.versionName&&v.url===r.apkUrl;
-  const behind=v.latest>0&&v.latest<r.versionCode;
-  box.innerHTML='<div class="status-row">'
-    +'<span class="status-chip ok">APK · '+esc(r.versionName)+'</span>'
-    +'<span class="status-chip">versionCode · '+esc(r.versionCode)+'</span>'
-    +'<span class="status-chip '+(matches?'ok':'')+'">'+(matches?'Эта сборка выбрана':behind?'Есть более новая сборка':'Не выбрана')+'</span>'
-    +'</div>'
-    +'<p class="compact-note">Собрана '+esc(fmtDay(r.builtAt))+(r.commit?' · commit '+esc(String(r.commit).slice(0,7)):'')+'. Поля ниже можно менять вручную, но для обычного релиза достаточно использовать эту сборку.</p>'
-    +'<div class="action-row"><button class="b '+(matches?'quiet':'ok')+'" id="releaseUseLatest" type="button">'+(matches?'Подставить заново':'Использовать последнюю сборку')+'</button>'
-    +'<a class="b quiet" href="'+esc(r.releaseUrl)+'" target="_blank" rel="noopener">Открыть GitHub release</a></div>';
-  $('releaseUseLatest').onclick=()=>applyLatestAndroidBuild(false);
+  const r=latestAndroidBuild,u=releaseSettings();
+  const published=Math.max(0,Math.round(+u.latestCode||0))===r.versionCode;
+  const older=Math.max(0,Math.round(+u.latestCode||0))>0&&Math.max(0,Math.round(+u.latestCode||0))<r.versionCode;
+  box.innerHTML='<div class="release-primary"><div class="release-primary-copy"><b>Fit Timer '+esc(r.versionName)+'</b>'
+    +'<small>Собрана '+esc(fmtDay(r.builtAt))+(r.commit?' · commit '+esc(String(r.commit).slice(0,7)):'')+'</small></div>'
+    +'<span class="status-chip '+(published?'ok':'')+'">'+(published?'Уже опубликована':older?'Есть новая сборка':'Не опубликована')+'</span></div>'
+    +'<div class="action-row" style="margin-top:12px"><a class="b quiet" href="'+esc(r.releaseUrl)+'" target="_blank" rel="noopener">GitHub release</a>'
+    +'<div class="action-stack"><span class="action-feedback" id="releasePublishState"></span>'
+    +'<button class="b '+(published?'quiet':'ok')+'" id="releasePublishLatest" type="button" '+(published?'disabled':'')+'>'
+    +(published?'Обновление опубликовано':'Опубликовать обновление')+'</button></div></div>';
+  const btn=$('releasePublishLatest');
+  if(btn&&!published)btn.onclick=publishLatestAndroidBuild;
 }
 async function loadLatestAndroidBuild(force){
   const box=$('releaseBuildInfo'),btn=$('releaseRefreshBuild');if(!box)return;
@@ -1788,16 +1878,11 @@ async function loadLatestAndroidBuild(force){
     const out=await api('android_release_latest');
     latestAndroidBuild=out.release||null;
     if(!latestAndroidBuild)throw new Error('empty_release');
-    const v=releaseValues();
-    if(!v.latest&&!v.name&&!v.url){
-      applyLatestAndroidBuild(true);
-      setActionFeedback('releaseSettingsState','Поля заполнены по последней APK. Нажми «Сохранить релиз», чтобы включить баннер.','busy');
-    }else{
-      renderLatestAndroidBuild();
-    }
+    renderLatestAndroidBuild();
+    renderReleaseLiveState();
   }catch(e){
     latestAndroidBuild=null;
-    box.innerHTML='<p class="compact-note">Не удалось получить последнюю APK. Поля ниже остаются доступны вручную; попробуй «Проверить снова» после завершения Android-сборки.</p>';
+    box.innerHTML='<p class="compact-note">Не удалось получить последнюю APK. Попробуй «Проверить снова» после завершения Android-сборки.</p>';
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -1809,16 +1894,19 @@ async function saveReleaseSettings(){
     flashActionButton($('releaseSettingsSave'),'Проверь поля','err');
     return;
   }
-  if(v.minimum>0&&!confirm('Сделать обновление обязательным для сборок ниже '+v.minimum+'?')){
-    setActionFeedback('releaseSettingsState','Сохранение отменено — minimum не изменён.','busy');
+  const before=releaseSettings(),oldMinimum=Math.max(0,Math.round(+before.minimumCode||0));
+  if(v.minimum>0&&v.minimum!==oldMinimum&&!confirm('Сделать обновление обязательным для сборок ниже '+v.minimum+'?')){
+    setActionFeedback('releaseSettingsState','Сохранение отменено.','busy');
     return;
   }
   const s=settingsClone();s.update=s.update||{};
   s.update.android={latestCode:v.latest,minimumCode:v.minimum,latestName:v.name,url:v.url,messageRu:v.ru,messageEn:v.en};
   if(await persistSettings(s,'releaseSettingsState')){
     data.settings=s;
+    renderReleaseLiveState();
     renderLatestAndroidBuild();
-    adminNotice('Настройки Android-релиза сохранены.');
+    setActionFeedback('releaseSettingsState','Дополнительные настройки сохранены.','ok');
+    adminNotice('Настройки Android-обновления сохранены.');
   }
 }
 
