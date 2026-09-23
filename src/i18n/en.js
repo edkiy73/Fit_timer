@@ -916,6 +916,7 @@ const I18N_EN = {
   'video.noTranscript': "Captions could not be read, and the video cannot be analyzed safely right now. Try another video.",
   'video.insufficient': "The video does not contain enough verified exercise, rep, or timing data. I did not fill the gaps by guessing.",
   'video.unavailable': "YouTube would not let Fit Timer read this video. Check that it is public and available from the link.",
+  'video.analysisTimeout': "Video analysis took too long. Try again or use a video with available captions.",
   'video.processingSafe': "Getting captions, checking that this is a workout, then building the program from verified details.",
   'common.copyFailedRetry': "Couldn’t copy. Try again.",
   'common.copied': "✓ Copied",

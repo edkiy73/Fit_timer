@@ -19,4 +19,6 @@ const protocol=['ПРОГРАММА: Test','ДЕНЬ:','КРУГИ: 1','ОТДЫ
 'ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 3','ОТДЫХ: 30','ВИДЕО: https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=12s'].join('\n');
 ok('неизменная механика проходит',yt._test.validateFinalProgram(protocol,facts).ok===true);
 ok('изменённые повторы блокируются',yt._test.validateFinalProgram(protocol.replace('ЗНАЧЕНИЕ: 10','ЗНАЧЕНИЕ: 15'),facts).ok===false);
+const built=yt._test.factsToProtocol(facts,'ru');
+ok('протокол собирается без второго вызова ИИ',yt._test.validateFinalProgram(built,facts).ok===true);
 process.exit(bad?1:0);

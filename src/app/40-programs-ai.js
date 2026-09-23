@@ -1095,6 +1095,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_no_transcript') throw new Error(t('video.noTranscript'));
     if(j.error === 'video_insufficient') throw new Error(t('video.insufficient'));
     if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
+    if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
     throw new Error(j.detail || t('ai.serviceFailed'));
   }

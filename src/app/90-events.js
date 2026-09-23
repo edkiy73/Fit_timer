@@ -1284,9 +1284,10 @@ $('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExMa
 $('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
 
 /* ---- окно ожидания генерации ---- */
-let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null;
+let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null, aiRunCancelled = false;
 // title — заголовок; onCancel — необязательный колбэк для многошаговых задач (генерация картинок)
 function aiRunOpen(title, onCancel){
+  aiRunCancelled = false;
   aiRunCtl = ('AbortController' in window) ? new AbortController() : null;
   aiRunOnCancel = onCancel || null;
   $('aiRunTitle').textContent = title || t('ai.workingDefault');
@@ -1312,6 +1313,7 @@ function aiRunClose(){
   $('aiRunModal').classList.remove('open');
 }
 $('aiRunCancel').onclick = ()=>{
+  aiRunCancelled = true;
   try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
   aiRunCtl = null;
   const cb = aiRunOnCancel;
@@ -1341,8 +1343,9 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
     await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
   }catch(e){
     aiRunClose();
-    const aborted = (e && (e.name === 'AbortError' || /abort/i.test(e.message || '')));
-    if(aborted) return; // отменили — молча
+    if(aiRunCancelled) return; // пользователь сам нажал «Отмена» — тогда молча
+    // AbortError от сети/серверного таймаута — это ошибка, а не пользовательская
+    // отмена. Раньше такой сбой выглядел ровно как «спиннер исчез и ничего нет».
     const retry = await aiRetryDialog(e);
     if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);
     // «Изменить запрос» ничего не закрывает и ничего не очищает: человек остаётся
