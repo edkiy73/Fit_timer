@@ -533,6 +533,7 @@ async function grantSub(email, sub){
 let loginDone = null;
 let loginStep = 1;
 let loginPending = null;
+let loginFixedEmail = '';
 /* Подписка, которую оформляют прямо сейчас. Лежит ОТДЕЛЬНО от account.sub и на
    диск не попадает: пока почта не подтверждена, подписки нет — ни на экране, ни
    после перезапуска. Уходит на сервер тем же запросом, которым подтверждается
@@ -544,12 +545,14 @@ function openLogin(after, opts){
   loginDone = after || null;
   pendingSub = opts.sub || null;
   loginPending = null;
+  loginFixedEmail = opts.fixedEmail ? String(opts.email || '').trim().toLowerCase() : '';
   loginStep = 1;
   $('loginLabel').textContent = opts.label
     || ((account && account.email) ? t('login.otherAccount') : t('common.account'));
   $('loginMsg').textContent = opts.msg
     || t('login.intro');
-  $('loginEmail').value = opts.email || (account && account.email) || '';
+  $('loginEmail').value = loginFixedEmail || opts.email || (account && account.email) || '';
+  $('loginEmail').readOnly = !!loginFixedEmail;
   $('loginCode').value = '';
   $('loginHandle').value = '';
   $('loginErr').textContent = '';
@@ -563,7 +566,7 @@ function openLogin(after, opts){
 }
 
 function loginUseExistingCode(){
-  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  const email = loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     $('loginErr').textContent = t('login.addressTypo');
@@ -624,6 +627,8 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   }
   $('loginModal').classList.remove('open');
   loginPending = null;
+  loginFixedEmail = '';
+  $('loginEmail').readOnly = false;
   const done = loginDone; loginDone = null;
   if(done) await done();
   if(done) return;
@@ -639,7 +644,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
 
 async function doLogin(){
   const btn = $('loginGo');
-  const email = loginPending ? loginPending.email : ($('loginEmail').value || '').trim().toLowerCase();
+  const email = loginPending ? loginPending.email : (loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase());
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     $('loginErr').textContent = t('login.addressTypo');
@@ -756,7 +761,7 @@ async function signOut(){
 let bioState = {available:false, reason:'unsupported'};
 let bioLastResult = null;
 let bioRelockDeferred = false;
-const BIO_RELOCK_MS = 5 * 60 * 1000;
+const BIO_RELOCK_MS = 10 * 60 * 1000;
 
 function nativeBiometryHost(){
   return !!(window.FitNative && window.FitNative.isNative
@@ -831,7 +836,8 @@ async function bioVerify(){
 }
 
 /* ---- мягкая блокировка приватности ---- */
-const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry && account.biometry.enabled);
+const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry
+  && account.biometry.enabled && account.biometry.kind === 'native');
 function openLock(){
   if(!lockNeeded()) return;
   bioRelockDeferred = false;
