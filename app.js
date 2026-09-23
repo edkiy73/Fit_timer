@@ -144,8 +144,8 @@ const I18N_RU = {
   'settings.autoRenew': "Продлевать автоматически",
   'settings.accountHint': "Быстрая регистрация в один шаг по почте. Аккаунт бесплатный: он сохранит твой ник, подписку и данные аккаунта, чтобы они вернулись на новом телефоне. Синхронизация тренировок доступна по подписке.",
   'settings.accountNick': "Ник аккаунта",
-  'settings.biometry': "Вход по биометрии",
-  'settings.biometrySub': "При запуске и после 5 минут вне приложения. Активную тренировку не прерывает.",
+  'settings.biometry': "Защита биометрией",
+  'settings.biometrySub': "При запуске и после 10 минут вне приложения. Активную тренировку не прерывает.",
   'settings.signOut': "Выйти из аккаунта",
   'settings.backup': "Резервная копия",
   'settings.backupHint': "Профили, программы, статистика, вес, замеры и фото — одним файлом.",
@@ -602,7 +602,7 @@ const I18N_RU = {
   'bio.refused': "устройство не смогло выполнить проверку.",
   'bio.needAccount': "Биометрия защищает уже авторизованный аккаунт — сначала войди по почте.",
   'bio.enableFailed': "Не получилось включить биометрию: {error}",
-  'bio.disableQuestion': "Выключить вход по биометрии? Приложение будет открываться сразу.",
+  'bio.disableQuestion': "Выключить защиту биометрией? Приложение будет открываться сразу.",
   'lock.prompt': "Подтверди отпечатком или лицом — и продолжим.",
   'lock.unlock': "Разблокировать",
   'lock.email': "Войти по почте",
@@ -1674,8 +1674,8 @@ const I18N_EN = {
   'settings.autoRenew': "Auto-renew",
   'settings.accountHint': "Sign up in one quick email step. The account is free and keeps your nickname, subscription and account data so they return on a new phone. Workout sync is available with Premium.",
   'settings.accountNick': "Account nickname",
-  'settings.biometry': "Biometric sign-in",
-  'settings.biometrySub': "On launch and after 5 minutes away. Never interrupts an active workout.",
+  'settings.biometry': "Biometric privacy lock",
+  'settings.biometrySub': "On launch and after 10 minutes away. Never interrupts an active workout.",
   'settings.signOut': "Sign out",
   'settings.backup': "Backup",
   'settings.backupHint': "Profiles, programs, stats, weight, measurements and photos in one file.",
@@ -2132,7 +2132,7 @@ const I18N_EN = {
   'bio.refused': "the device could not complete verification.",
   'bio.needAccount': "Biometrics protect an already signed-in account, so sign in with email first.",
   'bio.enableFailed': "Couldn’t enable biometrics: {error}",
-  'bio.disableQuestion': "Turn off biometric sign-in? The app will open without verification.",
+  'bio.disableQuestion': "Turn off the biometric privacy lock? The app will open without verification.",
   'lock.prompt': "Confirm with your fingerprint or face to continue.",
   'lock.unlock': "Unlock",
   'lock.email': "Sign in with email",
@@ -7358,6 +7358,7 @@ async function grantSub(email, sub){
 let loginDone = null;
 let loginStep = 1;
 let loginPending = null;
+let loginFixedEmail = '';
 /* Подписка, которую оформляют прямо сейчас. Лежит ОТДЕЛЬНО от account.sub и на
    диск не попадает: пока почта не подтверждена, подписки нет — ни на экране, ни
    после перезапуска. Уходит на сервер тем же запросом, которым подтверждается
@@ -7369,12 +7370,14 @@ function openLogin(after, opts){
   loginDone = after || null;
   pendingSub = opts.sub || null;
   loginPending = null;
+  loginFixedEmail = opts.fixedEmail ? String(opts.email || '').trim().toLowerCase() : '';
   loginStep = 1;
   $('loginLabel').textContent = opts.label
     || ((account && account.email) ? t('login.otherAccount') : t('common.account'));
   $('loginMsg').textContent = opts.msg
     || t('login.intro');
-  $('loginEmail').value = opts.email || (account && account.email) || '';
+  $('loginEmail').value = loginFixedEmail || opts.email || (account && account.email) || '';
+  $('loginEmail').readOnly = !!loginFixedEmail;
   $('loginCode').value = '';
   $('loginHandle').value = '';
   $('loginErr').textContent = '';
@@ -7388,7 +7391,7 @@ function openLogin(after, opts){
 }
 
 function loginUseExistingCode(){
-  const email = ($('loginEmail').value || '').trim().toLowerCase();
+  const email = loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     $('loginErr').textContent = t('login.addressTypo');
@@ -7449,6 +7452,8 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   }
   $('loginModal').classList.remove('open');
   loginPending = null;
+  loginFixedEmail = '';
+  $('loginEmail').readOnly = false;
   const done = loginDone; loginDone = null;
   if(done) await done();
   if(done) return;
@@ -7464,7 +7469,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
 
 async function doLogin(){
   const btn = $('loginGo');
-  const email = loginPending ? loginPending.email : ($('loginEmail').value || '').trim().toLowerCase();
+  const email = loginPending ? loginPending.email : (loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase());
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     $('loginErr').textContent = t('login.addressTypo');
@@ -7581,7 +7586,7 @@ async function signOut(){
 let bioState = {available:false, reason:'unsupported'};
 let bioLastResult = null;
 let bioRelockDeferred = false;
-const BIO_RELOCK_MS = 5 * 60 * 1000;
+const BIO_RELOCK_MS = 10 * 60 * 1000;
 
 function nativeBiometryHost(){
   return !!(window.FitNative && window.FitNative.isNative
@@ -7656,7 +7661,8 @@ async function bioVerify(){
 }
 
 /* ---- мягкая блокировка приватности ---- */
-const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry && account.biometry.enabled);
+const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry
+  && account.biometry.enabled && account.biometry.kind === 'native');
 function openLock(){
   if(!lockNeeded()) return;
   bioRelockDeferred = false;
@@ -17881,6 +17887,8 @@ $('loginHaveCode').onclick = loginUseExistingCode;
 const dropLogin = ()=>{
   loginDone = null;
   loginPending = null;
+  loginFixedEmail = '';
+  $('loginEmail').readOnly = false;
   pendingSub = null;   // ушёл с шага кода — подписки не случилось
   $('loginModal').classList.remove('open');
 };
@@ -17903,7 +17911,12 @@ $('lockGo').onclick = ()=> tryUnlock();
 // просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
 $('lockMail').onclick = ()=> openLogin(
   ()=> $('lockModal').classList.remove('open'),
-  {email:(account && account.email) || '', label:t('lock.email'), msg:t('login.intro')}
+  {
+    email:(account && account.email) || '',
+    fixedEmail:true,
+    label:t('lock.email'),
+    msg:t('login.intro')
+  }
 );
 window.addEventListener('fitAppForeground', e=>{
   maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
@@ -18914,7 +18927,9 @@ try{
     const raw = localStorage.getItem('account');
     const saved = raw && JSON.parse(raw);
     if(window.FitNative && window.FitNative.isNative
-      && saved && saved.biometry && saved.biometry.enabled) $('lockModal').classList.add('open');
+      && saved && saved.biometry && saved.biometry.enabled && saved.biometry.kind === 'native'){
+      $('lockModal').classList.add('open');
+    }
   }catch(e){}
   // Язык нужен до онбординга и первой отрисовки экранов.
   await loadAppLocale();
@@ -18922,6 +18937,16 @@ try{
   // Аккаунт не переопределяет язык устройства: по умолчанию приложение всегда
   // следует системе. account.locale нужен серверу и письмам как эффективный язык.
   await loadAccount();
+  // Старый TWA/WebAuthn credential относится к прежнему browser origin и не
+  // переносится в локальный Capacitor runtime. Снимаем старый флаг один раз:
+  // пользователь сможет включить новую нативную защиту в настройках.
+  if(account && account.biometry && account.biometry.enabled && account.biometry.kind !== 'native'){
+    account.biometry = null;
+    rememberAccount();
+    await saveAccount();
+    await saveKnown();
+    $('lockModal').classList.remove('open');
+  }
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
   bioOK = await bioSupported();
