@@ -941,7 +941,9 @@ const I18N_RU = {
   'images.removeQuestion': "Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.",
   'images.removeAction': "Убрать",
   'images.loadFailed': "Не удалось загрузить картинку.",
+  'images.needProgramName': "Сначала назови программу — без названия обложку генерировать нельзя.",
   'images.needExerciseName': "Сначала назови упражнение — по названию нейросеть поймёт, что рисовать.",
+  'images.needAllExerciseNames': "Сначала назови все упражнения. Без названий раздел картинок недоступен. Без названия: {count}.",
   'builder.unsavedProgram': "Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.",
   'ai.unsavedSwitch': "Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.",
   'common.switch': "Переключиться",
@@ -1316,6 +1318,8 @@ const I18N_RU = {
   'ai.parseProgramFailed': "Из вставленного текста не получилось собрать программу. Скорее всего, скопировано не всё: нужен весь ответ чата целиком, от первой до последней строки.",
   'ai.noExerciseResponse': "В тексте ответа не нашлось ни одного упражнения. Скорее всего, скопировано не всё — вернись в чат и скопируй ответ целиком.",
   'ai.pasteProgram': "Вставь текст программы в поле.",
+  'ai.needProgramInput': "Укажи хотя бы одно пожелание к программе — например цель, дни, инвентарь или свой запрос.",
+  'ai.needExerciseInput': "Укажи хотя бы одно пожелание к упражнению — например мышцы, формат, инвентарь или свой запрос.",
   'ai.problemList': "Что не так:",
   'ai.reviewSave': "Проверь и сохрани",
   'builder.needProgramName': "название программы",
@@ -2492,7 +2496,9 @@ const I18N_EN = {
   'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
   'images.removeAction': "Remove",
   'images.loadFailed': "Couldn’t load the image.",
+  'images.needProgramName': "Name the program first — a cover can’t be generated without a program name.",
   'images.needExerciseName': "Name the exercise first — the AI uses the name to know what to draw.",
+  'images.needAllExerciseNames': "Name every exercise first. The images section is unavailable while {count} exercise(s) have no name.",
   'builder.unsavedProgram': "Program changes have not been saved. If you leave now, they will be lost.",
   'ai.unsavedSwitch': "The filled request has not been saved. If you switch modes now, it will be lost.",
   'common.switch': "Switch",
@@ -2867,6 +2873,8 @@ const I18N_EN = {
   'ai.parseProgramFailed': "The pasted text could not be parsed into a program. The response may be incomplete; paste the entire AI response from the first line to the last.",
   'ai.noExerciseResponse': "No exercises were found in the response. It may be incomplete; return to the AI chat and copy the whole response.",
   'ai.pasteProgram': "Paste the program text into the field.",
+  'ai.needProgramInput': "Add at least one preference for the program — for example a goal, training days, equipment, or your own request.",
+  'ai.needExerciseInput': "Add at least one preference for the exercise — for example target muscles, format, equipment, or your own request.",
   'ai.problemList': "Problems:",
   'ai.reviewSave': "Review and save",
   'builder.needProgramName': "program name",
@@ -3398,7 +3406,9 @@ ${exerciseSchema(outputLanguage)}`;
     progressionRules(),
     'Quality checks before answering:',
     '- Make exercise selection, volume, intensity, rest and progression coherent as one program.',
-    '- If a target workout duration is supplied, estimate work + rest time and keep the expected duration roughly within ±20% when practical.',
+    '- Do not target a fixed number of exercises. Choose the exercise count, sets and rounds from the training goal, structure and time budget; a longer workout may intentionally use only a few exercises with more sets/rounds.',
+    '- When a target workout duration is supplied, estimate the whole session, not just active work: timed work = stated seconds × sides; rep-based work ≈ reps × 3 seconds × sides; multiply by sets and rounds; then add between-set rest, rest after exercises, side-switch time and between-round rest. Warm-up exercises run once before the main rounds.',
+    '- For target durations from 5 to 20 minutes, aim to stay within about ±5 minutes. For targets of 30 minutes or more, aim to stay within about ±20%. Treat an open-ended target such as 45+ minutes as a lower-bound preference rather than an exact cap.',
     '- Do not create conflicting progression fields.',
     '- Return only the protocol.'
   ].join('\n\n');
@@ -10020,6 +10030,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как собрать',
     self: 'Собрать за меня',
     selfTitle: 'Собираю программу',
+    guard: ()=> aiCreateProgramGuard(),
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
@@ -10083,6 +10094,7 @@ const AI_SOURCES = {
     step2: 'Шаг 2 · Как подобрать упражнение',
     self: ()=> exaSelfLabel(),
     selfTitle: 'Подбираю упражнение',
+    guard: ()=> aiCreateExerciseGuard(),
     chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
     answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
     action: 'Добавить в программу',
@@ -10441,11 +10453,51 @@ function coverImagePrompt(name, genderTxt){
   ].filter(Boolean).join('\n');
 }
 
-// Промт под ОДНО конкретное изображение.
+function imageProgramName(){
+  const field = $('bName');
+  if(field && field.value != null) return String(field.value).trim();
+  return String(draft && draft.name || '').trim();
+}
+
+function unnamedImageExerciseCount(){
+  let count = 0;
+  ((draft && draft.plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+    if(!String(ex && ex.name || '').trim()) count++;
+  }));
+  return count;
+}
+
+function imageGenerationGuard(kind, item){
+  if(kind === 'cover'){
+    if(imageProgramName()) return true;
+    appAlert(t('images.needProgramName'));
+    return false;
+  }
+  if(String(item && item.name || '').trim()) return true;
+  appAlert(t('images.needExerciseName'));
+  return false;
+}
+
+function imageWorkspaceGuard(){
+  if(!imageProgramName()){
+    appAlert(t('images.needProgramName'));
+    return false;
+  }
+  const unnamed = unnamedImageExerciseCount();
+  if(unnamed){
+    appAlert(t('images.needAllExerciseNames',{count:unnamed}));
+    return false;
+  }
+  return true;
+}
+
+// Промт под ОДНО конкретное изображение. До этой точки всегда проходит общий
+// guard, поэтому скрытого fallback-названия нет: картинка строится только из
+// реального названия программы/упражнения.
 function singleImagePrompt(kind, item){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
-  const name = (draft.name || '').trim() || 'Workout program';
+  const name = imageProgramName();
   return kind === 'cover'
     ? coverImagePrompt(name, genderTxt)
     : exerciseImagePrompt(item || {}, genderTxt);
@@ -10455,6 +10507,7 @@ let imgGenCancelled = false;
 
 async function generateAllImagesViaAI(scope){
   if(!premiumGate()) return;
+  if(!imageWorkspaceGuard()) return;
   scope = scope === 'missing' ? 'missing' : 'all';
 
   const exList = uniqueProgramExercises().filter(ex => {
@@ -10538,6 +10591,7 @@ function exImageItem(ex){
 // apply(data) получает уже ужатую картинку.
 async function generateOneImageViaAI(kind, item, title, apply){
   if(!premiumGate()) return false;
+  if(!imageGenerationGuard(kind, item)) return false;
   imgGenCancelled = false;
   aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
   $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
@@ -10662,6 +10716,7 @@ function shrinkAll(files, maxSide, done){
 // всегда в конструктор.
 let imagesFrom = 'scrBuilder';
 function openImages(){
+  if(!imageWorkspaceGuard()) return false;
   imagesFrom = show._last || 'scrBuilder';
   // «Доступные» всегда начинается с картинок, которые уже используются в программе.
   // Поэтому после сохранения и повторного открытия назначенные изображения не исчезают.
@@ -11012,6 +11067,23 @@ function openExAI(){
   autoGrow($('exaWish'));
   autoGrow($('exaContext'));
   openAI('exNew');
+}
+
+function aiExerciseHasUserInput(){
+  const wish = clampText((($('exaWish') && $('exaWish').value) || ''), LIM.wish).trim();
+  const context = clampText((($('exaContext') && $('exaContext').value) || ''), 600).trim();
+  return !!(
+    exa.format || exa.level ||
+    (exa.muscles && exa.muscles.length) ||
+    (exa.equip && exa.equip.length) ||
+    wish || context
+  );
+}
+
+function aiCreateExerciseGuard(){
+  if(aiExerciseHasUserInput()) return true;
+  appAlert(t('ai.needExerciseInput'));
+  return false;
 }
 
 function exaPrompt(){
@@ -14923,7 +14995,7 @@ async function pregnancyWarning(){
 const Q_OPTS = {
   goal: OPT_GOAL,
   level: OPT_LEVEL,
-  dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
+  dur: ['5 мин', '10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
   // мышцы — строгий список MUSCLES: его же понимает парсер и просит промт
   focus: MUSCLES.map(m => m[1]),
   equip: OPT_EQUIP,
@@ -14931,11 +15003,15 @@ const Q_OPTS = {
   style: ['Круговая', 'Силовая', 'Смешанная'],
   warm: ['С разминкой', 'Без разминки']
 };
-// пусто = «на усмотрение ИИ». Предзаполнены только уровень и ограничения.
-const q = {goal: [], level: 'Новичок', days: [], dur: '', focus: [], equip: [], limit: ['Без ограничений'],
+// Дефолты интерфейса не считаются осмысленным запросом пользователя: они лишь
+// дают ИИ безопасную отправную точку. Длительность обязательна и не может быть снята.
+const AI_DEFAULT_LEVEL = 'Новичок';
+const AI_DEFAULT_DURATION = '10 мин';
+const AI_DEFAULT_LIMITS = ['Без ограничений'];
+const q = {goal: [], level: AI_DEFAULT_LEVEL, days: [], dur: AI_DEFAULT_DURATION, focus: [], equip: [], limit: AI_DEFAULT_LIMITS.slice(),
            note: '', split: false, style: '', warm: '', rotate: false};
 
-function qChips(boxId, opts, isMulti, get, set){
+function qChips(boxId, opts, isMulti, get, set, requiredSingle = false){
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
@@ -14952,8 +15028,8 @@ function qChips(boxId, opts, isMulti, get, set){
           arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
         }
         set(arr);
-      } else set(get() === o ? '' : o);
-      qChips(boxId, opts, isMulti, get, set);
+      } else set(requiredSingle ? o : (get() === o ? '' : o));
+      qChips(boxId, opts, isMulti, get, set, requiredSingle);
     };
     box.appendChild(b);
   });
@@ -14989,7 +15065,7 @@ function initAIForm(){
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
   qCards('qWarm', Q_OPTS.warm, ()=> q.warm, v => q.warm = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
-  qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
+  qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v, true);
   qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
   qChips('qEquip', Q_OPTS.equip, true, ()=> q.equip, v => q.equip = v);
   // «Беременность» — не обычное ограничение: при выборе показываем предупреждение,
@@ -15042,6 +15118,36 @@ function aiChoiceEnglish(v){
 function aiListEnglish(arr){
   return (arr || []).map(aiChoiceEnglish).join(', ');
 }
+
+function aiProgramHasUserInput(){
+  const context = clampText((($('qContext') && $('qContext').value) || ''), 600).trim();
+  const realLimits = (q.limit || []).filter(x => x && !AI_DEFAULT_LIMITS.includes(x));
+  return !!(
+    (q.goal && q.goal.length) ||
+    (q.days && q.days.length) ||
+    (q.focus && q.focus.length) ||
+    (q.equip && q.equip.length) ||
+    realLimits.length ||
+    (q.level && q.level !== AI_DEFAULT_LEVEL) ||
+    q.style || q.warm || q.split ||
+    (q.note && q.note.trim()) ||
+    context
+  );
+}
+
+function aiCreateProgramGuard(){
+  if(aiProgramHasUserInput()) return true;
+  appAlert(t('ai.needProgramInput'));
+  return false;
+}
+
+function aiDurationEnglish(value){
+  const raw = String(value || '').trim();
+  const minutes = parseInt(raw, 10);
+  if(!minutes) return raw;
+  return raw.includes('+') ? `${minutes} minutes or longer` : `about ${minutes} minutes`;
+}
+
 function composeRequest(){
   const parts = [];
   const free = [];
@@ -15055,7 +15161,7 @@ function composeRequest(){
   if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
   else free.push('training days and weekly frequency');
 
-  if(q.dur) parts.push(`Target duration: about ${String(q.dur).replace('мин', 'minutes')}.`);
+  if(q.dur) parts.push(`Target duration: ${aiDurationEnglish(q.dur)}.`);
   else free.push('workout duration');
 
   if(q.focus.length) parts.push(`Extra focus: ${aiListEnglish(q.focus)}.`);
@@ -19038,7 +19144,6 @@ $('exMediaAI').onclick = ()=>{
   const item = exImageItem(Object.assign({}, exDraft, {
     name:$('exName').value, desc:$('exDesc').value
   }));
-  if(!item.name){ appAlert(t('images.needExerciseName')); $('exName').focus(); return; }
   generateOneImageViaAI('ex', item, item.name, data => {
     setExImg(exDraft, data);
     renderExMedia(); syncExDetailsSum();
