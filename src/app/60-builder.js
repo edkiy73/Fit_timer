@@ -1733,7 +1733,7 @@ async function pregnancyWarning(){
 const Q_OPTS = {
   goal: OPT_GOAL,
   level: OPT_LEVEL,
-  dur: ['10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
+  dur: ['5 мин', '10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин'],
   // мышцы — строгий список MUSCLES: его же понимает парсер и просит промт
   focus: MUSCLES.map(m => m[1]),
   equip: OPT_EQUIP,
@@ -1741,11 +1741,15 @@ const Q_OPTS = {
   style: ['Круговая', 'Силовая', 'Смешанная'],
   warm: ['С разминкой', 'Без разминки']
 };
-// пусто = «на усмотрение ИИ». Предзаполнены только уровень и ограничения.
-const q = {goal: [], level: 'Новичок', days: [], dur: '', focus: [], equip: [], limit: ['Без ограничений'],
+// Дефолты интерфейса не считаются осмысленным запросом пользователя: они лишь
+// дают ИИ безопасную отправную точку. Длительность обязательна и не может быть снята.
+const AI_DEFAULT_LEVEL = 'Новичок';
+const AI_DEFAULT_DURATION = '10 мин';
+const AI_DEFAULT_LIMITS = ['Без ограничений'];
+const q = {goal: [], level: AI_DEFAULT_LEVEL, days: [], dur: AI_DEFAULT_DURATION, focus: [], equip: [], limit: AI_DEFAULT_LIMITS.slice(),
            note: '', split: false, style: '', warm: '', rotate: false};
 
-function qChips(boxId, opts, isMulti, get, set){
+function qChips(boxId, opts, isMulti, get, set, requiredSingle = false){
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
@@ -1762,8 +1766,8 @@ function qChips(boxId, opts, isMulti, get, set){
           arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
         }
         set(arr);
-      } else set(get() === o ? '' : o);
-      qChips(boxId, opts, isMulti, get, set);
+      } else set(requiredSingle ? o : (get() === o ? '' : o));
+      qChips(boxId, opts, isMulti, get, set, requiredSingle);
     };
     box.appendChild(b);
   });
@@ -1799,7 +1803,7 @@ function initAIForm(){
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
   qCards('qWarm', Q_OPTS.warm, ()=> q.warm, v => q.warm = v);
   qChips('qLevel', Q_OPTS.level, false, ()=> q.level, v => q.level = v);
-  qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v);
+  qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur = v, true);
   qChips('qFocus', Q_OPTS.focus, true, ()=> q.focus, v => q.focus = v);
   qChips('qEquip', Q_OPTS.equip, true, ()=> q.equip, v => q.equip = v);
   // «Беременность» — не обычное ограничение: при выборе показываем предупреждение,
@@ -1852,6 +1856,36 @@ function aiChoiceEnglish(v){
 function aiListEnglish(arr){
   return (arr || []).map(aiChoiceEnglish).join(', ');
 }
+
+function aiProgramHasUserInput(){
+  const context = clampText((($('qContext') && $('qContext').value) || ''), 600).trim();
+  const realLimits = (q.limit || []).filter(x => x && !AI_DEFAULT_LIMITS.includes(x));
+  return !!(
+    (q.goal && q.goal.length) ||
+    (q.days && q.days.length) ||
+    (q.focus && q.focus.length) ||
+    (q.equip && q.equip.length) ||
+    realLimits.length ||
+    (q.level && q.level !== AI_DEFAULT_LEVEL) ||
+    q.style || q.warm || q.split ||
+    (q.note && q.note.trim()) ||
+    context
+  );
+}
+
+function aiCreateProgramGuard(){
+  if(aiProgramHasUserInput()) return true;
+  appAlert(t('ai.needProgramInput'));
+  return false;
+}
+
+function aiDurationEnglish(value){
+  const raw = String(value || '').trim();
+  const minutes = parseInt(raw, 10);
+  if(!minutes) return raw;
+  return raw.includes('+') ? `${minutes} minutes or longer` : `about ${minutes} minutes`;
+}
+
 function composeRequest(){
   const parts = [];
   const free = [];
@@ -1865,7 +1899,7 @@ function composeRequest(){
   if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
   else free.push('training days and weekly frequency');
 
-  if(q.dur) parts.push(`Target duration: about ${String(q.dur).replace('мин', 'minutes')}.`);
+  if(q.dur) parts.push(`Target duration: ${aiDurationEnglish(q.dur)}.`);
   else free.push('workout duration');
 
   if(q.focus.length) parts.push(`Extra focus: ${aiListEnglish(q.focus)}.`);
