@@ -50,7 +50,7 @@
 8. Для AI добавить язык результата через `LOCALE_META`; canonical prompt/schema не копировать на новый язык.
 9. В каталоге добавить перевод display-полей к существующему program id; структуру, progression, exercise ids, рейтинг и статистику не дублировать.
 10. Voice-command language добавлять только если реально есть поддерживаемая offline-модель.
-11. Проверить share/export/public links, legal, manifest и store metadata.
+11. Проверить share/export/public links, legal, AndroidManifest/Info.plist и store metadata.
 12. Прогнать:
    ```bash
    npm run build:sources
