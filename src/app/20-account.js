@@ -312,6 +312,10 @@ function money(v, cur){
 const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
 
 let APP_UPDATE = null;
+let APP_UPDATE_PREV = null;
+// Один вид баннера на одно состояние загрузки. Раньше проценты стояли дважды (в тексте
+// и на кнопке), отменить было нельзя, а после сворачивания баннер пересобирался с нуля
+// и терял идущую загрузку. Состояние теперь берём у нативной стороны.
 function androidUpdateAction(text, disabled){
   const action=$('appUpdateBanner')&&$('appUpdateBanner').querySelector('.ub-action');
   if(action) action.textContent=text||t('update.action');
@@ -326,51 +330,69 @@ function androidUpdateStatus(text, action, busy){
   if(target)target.textContent=text;
   androidUpdateAction(action, busy);
 }
+// phase: idle | downloading | verifying | permission | installer | error
+function renderAndroidUpdate(phase, progress){
+  if(!APP_UPDATE)return;
+  APP_UPDATE.phase=phase;
+  if(phase==='downloading'){
+    androidUpdateStatus(progress>=0?t('update.downloading',{progress}):t('update.downloadingUnknown'),t('update.cancel'),false);
+  }else if(phase==='verifying'){
+    androidUpdateStatus(t('update.verifying'),'…',true);
+  }else if(phase==='permission'){
+    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+  }else if(phase==='installer'){
+    androidUpdateStatus(t('update.installer'),t('update.action'),false);
+  }else if(phase==='error'){
+    androidUpdateStatus(t('update.failed'),t('update.retry'),false);
+  }else{
+    androidUpdateStatus(APP_UPDATE.idleText||t('update.availableText'),t('update.action'),false);
+  }
+}
 function renderAndroidUpdateProgress(event){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct')return;
   const status=String((event&&event.status)||'');
   const progress=Math.max(-1,Math.min(100,Math.round(+(event&&event.progress)||0)));
-  if(status==='downloading'){
-    androidUpdateStatus(progress>=0?t('update.downloading',{progress}):t('update.downloadingUnknown'),progress>=0?progress+'%':'…',true);
-  }else if(status==='verifying'||status==='ready'){
-    androidUpdateStatus(t('update.verifying'),'…',true);
-  }else if(status==='permission'){
-    androidUpdateStatus(t('update.permission'),t('update.action'),false);
-  }else if(status==='installer'){
-    androidUpdateStatus(t('update.installer'),t('update.action'),false);
-  }else if(status==='error'){
-    APP_UPDATE.busy=false;
-    androidUpdateStatus(t('update.failed'),t('update.action'),false);
-  }
+  if(status==='downloading'){ APP_UPDATE.busy=true; renderAndroidUpdate('downloading',progress); }
+  else if(status==='verifying'||status==='ready'){ APP_UPDATE.busy=true; renderAndroidUpdate('verifying'); }
+  else if(status==='permission'){ renderAndroidUpdate('permission'); }
+  else if(status==='installer'){ APP_UPDATE.busy=false; renderAndroidUpdate('installer'); }
+  else if(status==='cancelled'){ APP_UPDATE.busy=false; renderAndroidUpdate('idle'); }
+  else if(status==='error'){ APP_UPDATE.busy=false; renderAndroidUpdate('error'); }
 }
 async function finishDirectUpdateResult(result){
+  if(!APP_UPDATE)return false;
   const status=String((result&&result.status)||'');
+  // загрузка уже шла — прогресс продолжит приходить событиями, баннер уже показывает её
+  if(status==='in_progress'){ APP_UPDATE.busy=true; return true; }
   APP_UPDATE.busy=false;
   if(status==='permission_required'){
     APP_UPDATE.awaitingPermission=true;
-    androidUpdateStatus(t('update.permission'),t('update.action'),false);
+    renderAndroidUpdate('permission');
     return true;
   }
   APP_UPDATE.awaitingPermission=false;
-  if(status==='installer_opened'){
-    androidUpdateStatus(t('update.installer'),t('update.action'),false);
-    return true;
-  }
+  if(status==='installer_opened'){ renderAndroidUpdate('installer'); return true; }
+  if(status==='cancelled'){ renderAndroidUpdate('idle'); return false; }
   if(status==='missing'||status==='error'||status==='unsupported'){
-    androidUpdateStatus(t('update.failed'),t('update.action'),false);
+    renderAndroidUpdate('error');
     return false;
   }
   return true;
 }
 async function openAndroidUpdate(){
-  if(!APP_UPDATE || !APP_UPDATE.url || APP_UPDATE.busy) return false;
+  if(!APP_UPDATE || !APP_UPDATE.url) return false;
   if(APP_UPDATE.channel==='direct'){
     if(!window.FitNative || !window.FitNative.installUpdate){
-      androidUpdateStatus(t('update.failed'),t('update.action'),false);
+      renderAndroidUpdate('error');
+      return false;
+    }
+    // нажатие во время загрузки — «Отменить»; во время проверки файла — ничего
+    if(APP_UPDATE.busy){
+      if(APP_UPDATE.phase==='downloading' && window.FitNative.cancelUpdate) await window.FitNative.cancelUpdate();
       return false;
     }
     APP_UPDATE.busy=true;
-    androidUpdateStatus(t('update.downloadingUnknown'),'…',true);
+    renderAndroidUpdate('downloading',-1);
     const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
@@ -379,6 +401,21 @@ async function openAndroidUpdate(){
     if(ok) return true;
   }
   return false;
+}
+// Баннер пересобирается при каждом обновлении настроек (в том числе после
+// сворачивания): подхватываем загрузку, которая уже идёт или оборвалась.
+async function restoreAndroidUpdateState(){
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!window.FitNative||!window.FitNative.getUpdateState)return;
+  const st=await window.FitNative.getUpdateState();
+  if(!APP_UPDATE||!st)return;
+  const status=String(st.status||'');
+  if(st.running){
+    APP_UPDATE.busy=true;
+    if(status==='verifying'||status==='ready') renderAndroidUpdate('verifying');
+    else renderAndroidUpdate('downloading',Math.max(-1,Math.round(+st.progress||-1)));
+  }else if(status==='error'){
+    renderAndroidUpdate('error');
+  }
 }
 async function resumePendingAndroidUpdate(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
@@ -395,6 +432,7 @@ async function applyAndroidUpdateConfig(raw){
   const banner=$('appUpdateBanner'),gate=$('appUpdateGate');
   if(banner) banner.classList.add('hidden');
   if(gate) gate.classList.add('hidden');
+  APP_UPDATE_PREV=APP_UPDATE;
   APP_UPDATE=null;
   if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
@@ -413,13 +451,17 @@ async function applyAndroidUpdateConfig(raw){
   const required=minimum>0 && current<minimum;
   const suffix=cfg.latestName ? ' · '+String(cfg.latestName) : '';
   const custom=(appLocale==='en' ? cfg.messageEn : cfg.messageRu) || '';
-  APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,awaitingPermission:false};
+  const prev=APP_UPDATE_PREV;
+  APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,
+    awaitingPermission:!!(prev&&prev.latest===latest&&prev.awaitingPermission),phase:'idle',
+    idleText:custom||t(required?'update.requiredText':'update.availableText')};
 
   if(required){
     if($('appUpdateGateTitle')) $('appUpdateGateTitle').textContent=t('update.requiredTitle',{version:suffix});
     if($('appUpdateGateText')) $('appUpdateGateText').textContent=custom||t('update.requiredText');
     if($('appUpdateNow')) $('appUpdateNow').onclick=()=>openAndroidUpdate();
     if(gate) gate.classList.remove('hidden');
+    await restoreAndroidUpdateState();
     return;
   }
   if($('appUpdateTitle')) $('appUpdateTitle').textContent=t('update.availableTitle');
@@ -429,6 +471,7 @@ async function applyAndroidUpdateConfig(raw){
     banner.onclick=()=>openAndroidUpdate();
     banner.classList.remove('hidden');
   }
+  await restoreAndroidUpdateState();
 }
 async function loadPublicConfig(){
   try{

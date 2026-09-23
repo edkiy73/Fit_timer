@@ -282,6 +282,8 @@ CI builds:
 
 The GitHub `latest-apk` release publishes `FitTimer-release.json` next to the direct APK, so the admin uses the exact signed `versionCode` / `versionName`.
 
+Direct download state lives in `FitSystemPlugin` (`getUpdateState`, `cancelUpdate`), not only in the WebView. The Home banner is rebuilt whenever `/api/config` is reloaded (e.g. after returning to the app), and it re-attaches to a running download instead of starting over. While downloading, the banner shows the percentage once and its action is «Отменить». After a network error it offers «Повторить», which resumes the partial file with an HTTP `Range` request (same URL only; a 416 or 200 restarts from zero). Tapping during a download never starts a second one: the plugin answers `in_progress`.
+
 Every `main` build also uploads an immutable copy `FitTimer-<versionCode>.apk` to the `apk-archive` release (last 20 kept), and `FitTimer-release.json` points `apkUrl` there. The admin publishes that exact URL. Do not point direct updates at `latest-apk/FitTimer-latest.apk`: the next push to `main` replaces that file, and the phone then rejects it as `version_mismatch` ("Не удалось скачать или проверить обновление").
 
 Behavior:

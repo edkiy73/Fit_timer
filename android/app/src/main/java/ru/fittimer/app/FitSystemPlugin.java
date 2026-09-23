@@ -40,6 +40,14 @@ public class FitSystemPlugin extends Plugin {
     private static final String APK_MIME = "application/vnd.android.package-archive";
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private volatile boolean updateRunning = false;
+    // Состояние загрузки живёт здесь, а не только в WebView: интерфейс пересобирается
+    // (сворачивание, обновление конфигурации) и должен уметь спросить, что происходит.
+    private volatile boolean cancelRequested = false;
+    private volatile String updStatus = "idle";
+    private volatile int updProgress = -1;
+    private volatile long updReceived = 0;
+    private volatile long updTotal = 0;
+    private volatile String updError = "";
 
     @PluginMethod
     public void openExternal(PluginCall call) {
@@ -82,10 +90,18 @@ public class FitSystemPlugin extends Plugin {
         }
         synchronized (this) {
             if (updateRunning) {
-                call.reject("update_in_progress");
+                // Загрузка уже идёт (например, интерфейс пересобрался после сворачивания):
+                // не ошибка — прогресс продолжит приходить событиями.
+                JSObject busy = new JSObject();
+                busy.put("status", "in_progress");
+                call.resolve(busy);
                 return;
             }
             updateRunning = true;
+            cancelRequested = false;
+            updStatus = "downloading";
+            updProgress = -1;
+            updError = "";
         }
         updateExecutor.execute(() -> {
             try {
@@ -107,11 +123,46 @@ public class FitSystemPlugin extends Plugin {
                 emitUpdate("ready", 100, apk.length(), apk.length(), "");
                 finishInstallRequest(call, apk, true);
             } catch (Exception e) {
-                emitUpdate("error", -1, 0, 0, safeError(e));
-                resolveOnUi(call, "error", safeError(e));
-                synchronized (this) { updateRunning = false; }
+                if (cancelRequested) {
+                    deletePartial();
+                    emitUpdate("cancelled", -1, 0, 0, "");
+                    resolveOnUi(call, "cancelled", "");
+                } else {
+                    // недокачанный файл оставляем: «Повторить» продолжит с того же места
+                    emitUpdate("error", -1, updReceived, updTotal, safeError(e));
+                    resolveOnUi(call, "error", safeError(e));
+                }
+                synchronized (this) { updateRunning = false; cancelRequested = false; }
             }
         });
+    }
+
+    @PluginMethod
+    public void cancelUpdate(PluginCall call) {
+        if (updateRunning) cancelRequested = true;
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getUpdateState(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("running", updateRunning);
+        result.put("status", updStatus);
+        result.put("progress", updProgress);
+        result.put("received", updReceived);
+        result.put("total", updTotal);
+        if (updError != null && !updError.isEmpty()) result.put("error", updError);
+        call.resolve(result);
+    }
+
+    private void deletePartial() {
+        try {
+            File apk = updateFile();
+            //noinspection ResultOfMethodCallIgnored
+            new File(apk.getParentFile(), apk.getName() + ".part").delete();
+            //noinspection ResultOfMethodCallIgnored
+            new File(apk.getParentFile(), apk.getName() + ".src").delete();
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -144,28 +195,42 @@ public class FitSystemPlugin extends Plugin {
     }
 
     private void downloadApk(String initialUrl, File target) throws Exception {
-        HttpURLConnection connection = openDownload(initialUrl);
-        long total = connection.getContentLengthLong();
+        File temp = new File(target.getParentFile(), target.getName() + ".part");
+        File source = new File(target.getParentFile(), target.getName() + ".src");
+        // Недокачанный файл продолжаем только для того же адреса: у другой версии
+        // байты другие, и склейка дала бы битый APK (его всё равно отбросит проверка).
+        long offset = 0;
+        if (temp.isFile() && temp.length() > 0 && initialUrl.equals(readText(source))) offset = temp.length();
+        else {
+            //noinspection ResultOfMethodCallIgnored
+            temp.delete();
+            writeText(source, initialUrl);
+        }
+        HttpURLConnection connection = openDownload(initialUrl, offset);
+        boolean resumed = offset > 0 && connection.getResponseCode() == HttpURLConnection.HTTP_PARTIAL;
+        if (!resumed) offset = 0;          // сервер отдал файл целиком — начинаем сначала
+        long length = connection.getContentLengthLong();
+        long total = length > 0 ? offset + length : -1;
         if (total > MAX_UPDATE_BYTES) {
             connection.disconnect();
             throw new Exception("update_too_large");
         }
-        File temp = new File(target.getParentFile(), target.getName() + ".part");
-        //noinspection ResultOfMethodCallIgnored
-        temp.delete();
-        long received = 0;
+        long received = offset;
         int lastProgress = -2;
         long lastEmit = 0;
         try (InputStream in = connection.getInputStream();
-             FileOutputStream out = new FileOutputStream(temp)) {
+             FileOutputStream out = new FileOutputStream(temp, resumed)) {
             byte[] buffer = new byte[64 * 1024];
             int count;
+            emitUpdate("downloading", total > 0 ? (int)Math.min(99, (received * 100L) / total) : -1, received, total, "");
             while ((count = in.read(buffer)) != -1) {
+                if (cancelRequested) throw new Exception("cancelled");
                 received += count;
                 if (received > MAX_UPDATE_BYTES) throw new Exception("update_too_large");
                 out.write(buffer, 0, count);
                 int progress = total > 0 ? (int)Math.min(99, (received * 100L) / total) : -1;
                 long now = System.currentTimeMillis();
+                updReceived = received;
                 if (progress != lastProgress && (now - lastEmit > 180 || progress < 0)) {
                     emitUpdate("downloading", progress, received, total, "");
                     lastProgress = progress;
@@ -176,13 +241,33 @@ public class FitSystemPlugin extends Plugin {
         } finally {
             connection.disconnect();
         }
+        if (cancelRequested) throw new Exception("cancelled");
         if (received <= 0) throw new Exception("empty_update");
+        if (total > 0 && received != total) throw new Exception("update_incomplete");
         //noinspection ResultOfMethodCallIgnored
         target.delete();
         if (!temp.renameTo(target)) throw new Exception("update_cache_commit_failed");
+        //noinspection ResultOfMethodCallIgnored
+        source.delete();
     }
 
-    private HttpURLConnection openDownload(String initialUrl) throws Exception {
+    private static String readText(File file) {
+        try (InputStream in = new java.io.FileInputStream(file)) {
+            byte[] data = new byte[(int)Math.min(4096, file.length())];
+            int n = in.read(data);
+            return n > 0 ? new String(data, 0, n, java.nio.charset.StandardCharsets.UTF_8) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static void writeText(File file, String value) {
+        try (FileOutputStream out = new FileOutputStream(file, false)) {
+            out.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception ignored) {}
+    }
+
+    private HttpURLConnection openDownload(String initialUrl, long offset) throws Exception {
         URL current = new URL(initialUrl);
         for (int redirects = 0; redirects < 6; redirects++) {
             if (!"https".equalsIgnoreCase(current.getProtocol())) throw new Exception("unsafe_update_redirect");
@@ -192,6 +277,7 @@ public class FitSystemPlugin extends Plugin {
             connection.setReadTimeout(30000);
             connection.setRequestProperty("User-Agent", "FitTimer-Android-Updater");
             connection.setRequestProperty("Accept", APK_MIME + ",application/octet-stream;q=0.9,*/*;q=0.1");
+            if (offset > 0) connection.setRequestProperty("Range", "bytes=" + offset + "-");
             int code = connection.getResponseCode();
             if (code >= 300 && code < 400) {
                 String location = connection.getHeaderField("Location");
@@ -200,7 +286,12 @@ public class FitSystemPlugin extends Plugin {
                 current = new URL(current, location);
                 continue;
             }
-            if (code != HttpURLConnection.HTTP_OK) {
+            if (code == 416 && offset > 0) {
+                // докачивать нечего или файл на сервере другой — качаем заново целиком
+                connection.disconnect();
+                return openDownload(initialUrl, 0);
+            }
+            if (code != HttpURLConnection.HTTP_OK && code != HttpURLConnection.HTTP_PARTIAL) {
                 connection.disconnect();
                 throw new Exception("update_http_" + code);
             }
@@ -310,6 +401,11 @@ public class FitSystemPlugin extends Plugin {
     }
 
     private void emitUpdate(String status, int progress, long received, long total, String error) {
+        updStatus = status;
+        updProgress = progress;
+        updReceived = received;
+        updTotal = total;
+        updError = error == null ? "" : error;
         JSObject data = new JSObject();
         data.put("status", status);
         data.put("progress", progress);

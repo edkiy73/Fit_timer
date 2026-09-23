@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2164,
-      "chars": 98981,
+      "lines": 2176,
+      "chars": 99646,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -221,8 +221,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 950,
-      "chars": 42029,
+      "lines": 993,
+      "chars": 44366,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -262,11 +262,13 @@
         "readAccountData",
         "refreshServerSubscription",
         "rememberAccount",
+        "renderAndroidUpdate",
         "renderAndroidUpdateProgress",
         "renderBuild",
         "renderPlan",
         "renderPremium",
         "requestNativeBiometry",
+        "restoreAndroidUpdateState",
         "resumePendingAndroidUpdate",
         "saveAccount",
         "saveKnown",
@@ -354,8 +356,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2698,
-      "chars": 123295,
+      "lines": 2700,
+      "chars": 123398,
       "symbols": [
         "add",
         "ageError",
@@ -691,8 +693,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1463,
-      "chars": 67558,
+      "lines": 1465,
+      "chars": 67697,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
