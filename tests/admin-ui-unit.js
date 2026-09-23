@@ -70,8 +70,11 @@ need(!html.slice(html.indexOf('async function saveReleaseSettings(){'),html.inde
 need(api.includes("if(a === 'android_release_latest')"),'admin API must expose latest Android release metadata');
 need(api.includes('FitTimer-release.json'),'admin API must read CI-published Android release metadata');
 need(html.includes("api('android_release_latest')"),'release screen must load the latest built APK automatically');
-need(html.includes('Опубликовать обновление'),'release screen needs a one-click publish action');
-need(html.includes('Сейчас у пользователей'),'release screen must explain the live state in product language');
+need(html.includes('Опубликовать Direct APK'),'release screen needs a one-click direct publish action');
+need(html.includes('Опубликовать для магазина'),'release screen needs a separate store publish action');
+need(html.includes('Direct APK скачивается внутри Fit Timer'),'release screen must explain direct in-app downloading');
+need(html.includes('function writeReleaseChannel('),'release settings must preserve independent direct/store channels');
+need(html.includes('Каналы обновления'),'release screen must explain both live update channels');
 need(html.includes('<details class="release-advanced">'),'technical release fields must be collapsed under advanced settings');
 need(html.includes('id="relRequired"'),'mandatory update must be an explicit advanced toggle');
 need(html.includes('Пусто = стандартный текст приложения'),'custom release copy must be optional');
@@ -80,7 +83,8 @@ const publishReleaseStart=html.indexOf('async function publishLatestAndroidBuild
 const publishReleaseEnd=html.indexOf('function renderLatestAndroidBuild',publishReleaseStart);
 const publishReleaseBlock=html.slice(publishReleaseStart,publishReleaseEnd);
 need(publishReleaseStart>=0,'latest Android publish helper is missing');
-need(publishReleaseBlock.includes('minimumCode:Math.max(0,Math.round(+u.minimumCode||0))'),'normal publishing must preserve the mandatory-update threshold');
+need(publishReleaseBlock.includes("writeReleaseChannel(s,'direct',rec)"),'direct publishing must write only the direct channel');
+need(publishReleaseBlock.includes('minimumCode:Math.max(0,Math.round(+u.minimumCode||0))'),'normal publishing must preserve the direct mandatory-update threshold');
 need(!publishReleaseBlock.includes('minimumCode:r.versionCode'),'normal publishing must never make the latest build mandatory automatically');
 const releaseProblemsStart=html.indexOf('function releaseProblems(');
 const releaseProblemsEnd=html.indexOf('function releaseChannel',releaseProblemsStart);
@@ -113,3 +117,10 @@ need(smokeWorkflow.includes('node tests/admin-flow.js'),'real admin browser smok
 need(smokeWorkflow.includes('AI_TEST_MODE'),'admin browser smoke must use deterministic AI test mode');
 
 console.log('Admin AI workflow and CI invariants are valid.');
+
+const storePublishStart=html.indexOf('async function publishLatestStoreBuild()');
+const storePublishEnd=html.indexOf('function renderLatestAndroidBuild',storePublishStart);
+const storePublishBlock=html.slice(storePublishStart,storePublishEnd);
+need(storePublishStart>=0,'store publish helper is missing');
+need(storePublishBlock.includes("writeReleaseChannel(s,'store',rec)"),'store publish must write only the store channel');
+need(storePublishBlock.includes("market:\/\/"),'store channel must accept market links');
