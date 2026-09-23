@@ -1109,7 +1109,7 @@ async function renderAnalytics(b){
     +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
 }
 
-async async function renderErrors(b){
+async function renderErrors(b){
   b.innerHTML=pageHead('Ошибки','Непойманные JS/WebView ошибки за последние 90 дней. Пользовательские данные не сохраняются.',
     '<div class="dashboard-actions"><button class="b" id="errorsRefresh">Обновить</button><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Health</a></div>')
     +'<div class="empty">Загрузка…</div>';
