@@ -1340,7 +1340,6 @@ const I18N_RU = {
   'week.dayMakeUp': "Можно отработать",
   'week.dayMoved': "Отработано в другой день",
   'week.dayMovedOn': "Засчитано тренировкой в {day}.",
-  'week.plannedExercises': "Упражнения по плану",
   'today.programsOff': "Программы отключены",
   'today.noSchedule': "Расписание не задано",
   'today.warmupOnly': "Пока только разминка",
@@ -1537,7 +1536,6 @@ const I18N_RU = {
   'handsfree.commandResume': 'Продолжить',
   'handsfree.commandResumeExamples': '«продолжить», «продолжай», «поехали», «можно продолжать»',
   'handsfree.commandsLanguageNote': 'Команды распознаются на языке, выбранном в «Язык команд».',
-  'sessions.exercisesDone': 'Выполнено',
 };
 const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
@@ -2881,7 +2879,6 @@ const I18N_EN = {
   'week.dayMakeUp': "Can make up",
   'week.dayMoved': "Completed on another day",
   'week.dayMovedOn': "Counted from the workout on {day}.",
-  'week.plannedExercises': "Planned exercises",
   'today.programsOff': "Programs disabled",
   'today.noSchedule': "Schedule not set",
   'today.warmupOnly': "Warm-up only",
@@ -3078,7 +3075,6 @@ const I18N_EN = {
   'handsfree.commandResume': 'Continue',
   'handsfree.commandResumeExamples': '“continue”, “resume”, “go on”, “keep going”',
   'handsfree.commandsLanguageNote': 'Commands are recognized in the language selected under “Command language”.',
-  'sessions.exercisesDone': 'Completed',
 };
 /* ================= ЛОКАЛИЗАЦИЯ ================= */
 const I18N = {ru: I18N_RU, en: I18N_EN};
@@ -6576,13 +6572,15 @@ function sessRow(en, withDate){
     if(en.planDays) variant = String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ');
     else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
-  const row = document.createElement('div');
-  row.className = 'sess-row';
+  // Упражнений здесь нет намеренно: попап — про то, какие тренировки были. Состав
+  // смотрят на странице программы, куда ведёт нажатие по строке.
+  const row = document.createElement(p ? 'button' : 'div');
+  row.className = 'sess-row' + (p ? ' sess-link' : '');
+  if(p){ row.type = 'button'; row.onclick = () => openDayProgram(p.id, typeof en.plan === 'number' ? en.plan : -1); }
   row.innerHTML =
-    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
+    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + (p ? icon('chevR') : '') + '</div>' +
     (variant ? '<div class="sess-plan"></div>' : '') +
     '<div class="sess-facts"></div>' +
-    (Array.isArray(en.exercises) && en.exercises.length ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>' : '') +
     (en.note ? '<span class="sess-note"></span>' : '');
   row.querySelector('.sess-head b').textContent = name;
   if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
@@ -6599,18 +6597,6 @@ function sessRow(en, withDate){
     facts.appendChild(chip);
   }
   if(!facts.children.length) facts.remove();
-  if(Array.isArray(en.exercises) && en.exercises.length){
-    row.querySelector('.sess-ex-label').textContent = t('sessions.exercisesDone');
-    const list = row.querySelector('.sess-ex-list');
-    en.exercises.forEach((name, i)=>{
-      const item = document.createElement('div');
-      item.className = 'sess-ex';
-      item.innerHTML = '<span></span><b></b>';
-      item.querySelector('span').textContent = i + 1;
-      item.querySelector('b').textContent = name;
-      list.appendChild(item);
-    });
-  }
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }
@@ -7873,6 +7859,13 @@ async function ensureWarmup(){
     if((await kvGet(pk('warmupAdded'))) !== '1') kvSet(pk('warmupAdded'),'1');
     return;
   }
+  // Разминку добавляем один раз. Если её уже добавляли (флаг) или удалили на другом
+  // устройстве (надгробие синхронизации), значит человек её удалил сам — раньше она
+  // возвращалась при каждом запуске и переключении профиля.
+  const owner = currentUser;
+  const tomb = docMeta && docMeta[PROGRAM_DOC('warmup')];
+  if((await kvGet(pk('warmupAdded'))) === '1' || (tomb && tomb.gone)) return;
+  if(owner !== currentUser) return;
   customPrograms.unshift(warmupProgram());
   await savePrograms();
   kvSet(pk('warmupAdded'),'1');
@@ -9065,6 +9058,18 @@ function renderWeekStrip(){
   setShown('weekStripHint', !!hint);
 }
 
+// Программа из попапа дня: закрываем попап и открываем страницу программы на том
+// варианте, который стоит в этот день. Состав смотрят уже там, а не в попапе.
+function openDayProgram(pid, pi){
+  const p = customPrograms.find(x => x.id === pid);
+  if(!p) return;
+  $('sessModal').classList.remove('open');
+  openStart(p);
+  if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
+    state.planIdx = pi; renderPlanRow(); renderStartInfo();
+  }
+}
+
 // нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
 // план показываем отдельными карточками программ — не строкой названий через запятую.
 function openWeekDay(d){
@@ -9093,26 +9098,20 @@ function openWeekDay(d){
     const moved = slot.from !== null && slot.from !== d.idx;
     const status = moved ? t('week.dayMoved') : (d.past ? t('week.dayMakeUp') : t('week.dayPlanned'));
 
-    const row = document.createElement('div');
-    row.className = 'sess-row';
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'sess-row sess-link';
     row.innerHTML =
-      '<div class="sess-head"><b></b></div>' +
+      '<div class="sess-head"><b></b>' + icon('chevR') + '</div>' +
       '<div class="sess-facts"></div>' +
-      '<div class="sess-plan hidden"></div>' +
-      (plan && Array.isArray(plan.exercises) && plan.exercises.length
-        ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>'
-        : '');
+      '<div class="sess-plan hidden"></div>';
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
+    row.onclick = () => openDayProgram(p.id, plans.indexOf(plan));
 
     const facts = row.querySelector('.sess-facts');
     const stateChip = document.createElement('span');
     stateChip.textContent = status;
     facts.appendChild(stateChip);
-    if(plan && Array.isArray(plan.exercises)){
-      const countChip = document.createElement('span');
-      countChip.textContent = t('program.exerciseSummary',{count:plan.exercises.length});
-      facts.appendChild(countChip);
-    }
     if(p.rotate && plans.length > 1){
       const variantChip = document.createElement('span');
       variantChip.textContent = t('today.variant',{current:planIdx+1,total:plans.length});
@@ -9126,19 +9125,6 @@ function openWeekDay(d){
     }else if(d.debt){
       note.textContent = t('week.canStillMakeUp');
       note.classList.remove('hidden');
-    }
-
-    if(plan && Array.isArray(plan.exercises) && plan.exercises.length){
-      row.querySelector('.sess-ex-label').textContent = t('week.plannedExercises');
-      const list = row.querySelector('.sess-ex-list');
-      plan.exercises.forEach((ex, i) => {
-        const item = document.createElement('div');
-        item.className = 'sess-ex';
-        item.innerHTML = '<span></span><b></b>';
-        item.querySelector('span').textContent = i + 1;
-        item.querySelector('b').textContent = ex.name || t('sessions.workoutFallback');
-        list.appendChild(item);
-      });
     }
 
     box.appendChild(row);
@@ -18155,7 +18141,6 @@ $('btnWipeAccount').onclick = wipeAccount;
 $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
 $('btnWeightHist').onclick = openWeightHist;
 $('btnShareWeight').onclick = shareWeightChart;
-$('btnAddPhoto').innerHTML = icon('camera') + t('progress.addPhoto');
 $('btnAddPhoto').onclick = ()=> $('photoFile').click();
 $('photoFile').onchange = e => {
   const f = e.target.files && e.target.files[0];
@@ -18309,12 +18294,10 @@ $('videoLink').addEventListener('click', ()=>{
 });
 // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
 // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-$('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
 $('btnShareResult').onclick = shareResult;
 $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
 $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
 // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-$('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
 $('finNoteToggle').onclick = ()=>{
   setShown('finNoteToggle', false);
   setShown('finNoteField', true);
@@ -19050,8 +19033,18 @@ $('btnAddWell').innerHTML = icon('plus');
 $('qsIco1').innerHTML = icon('chart');
 $('qsIco2').innerHTML = icon('weight');
 $('qsIco3').innerHTML = icon('camera');
-$('btnCompare').innerHTML = icon('image') + t('progress.comparePhotos');
-$('btnDeleteAllPhotos').innerHTML = icon('trash') + t('progress.deleteAllPhotosBtn');
+// Кнопки «иконка + подпись» задаются кодом, а не data-i18n (иконку applyI18n стёр бы).
+// Раньше подпись ставилась один раз при запуске и при смене языка оставалась прежней:
+// экран результата выходил английским, а «Поделиться» — русским.
+function renderIconLabels(){
+  $('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
+  $('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
+  $('btnAddPhoto').innerHTML = icon('camera') + esc(t('progress.addPhoto'));
+  $('btnCompare').innerHTML = icon('image') + esc(t('progress.comparePhotos'));
+  $('btnDeleteAllPhotos').innerHTML = icon('trash') + esc(t('progress.deleteAllPhotosBtn'));
+}
+renderIconLabels();
+window.addEventListener('appLocaleChanged', renderIconLabels);
 $('btnResume').innerHTML = icon('play');
 $('calPrev').innerHTML = icon('chevL');
 $('calNext').innerHTML = icon('chevR');

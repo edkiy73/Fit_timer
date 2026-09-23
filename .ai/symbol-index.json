@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2175,
-      "chars": 98903,
+      "lines": 2165,
+      "chars": 98559,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -286,8 +286,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 910,
-      "chars": 40712,
+      "lines": 917,
+      "chars": 41144,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -354,8 +354,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2721,
-      "chars": 124052,
+      "lines": 2714,
+      "chars": 123617,
       "symbols": [
         "add",
         "ageError",
@@ -439,6 +439,7 @@
         "normHandle",
         "note",
         "openAI",
+        "openDayProgram",
         "openEditAI",
         "openExAI",
         "openExEdAI",
@@ -798,8 +799,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2143,
-      "chars": 89162,
+      "lines": 2150,
+      "chars": 89542,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -852,6 +853,7 @@
         "readTimings",
         "refreshAfterForeground",
         "refreshVoicePackUI",
+        "renderIconLabels",
         "runSelfAI",
         "saveExAndBack",
         "saveSettingsSoon",

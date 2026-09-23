@@ -1340,7 +1340,6 @@ const I18N_RU = {
   'week.dayMakeUp': "Можно отработать",
   'week.dayMoved': "Отработано в другой день",
   'week.dayMovedOn': "Засчитано тренировкой в {day}.",
-  'week.plannedExercises': "Упражнения по плану",
   'today.programsOff': "Программы отключены",
   'today.noSchedule': "Расписание не задано",
   'today.warmupOnly': "Пока только разминка",
@@ -1537,5 +1536,4 @@ const I18N_RU = {
   'handsfree.commandResume': 'Продолжить',
   'handsfree.commandResumeExamples': '«продолжить», «продолжай», «поехали», «можно продолжать»',
   'handsfree.commandsLanguageNote': 'Команды распознаются на языке, выбранном в «Язык команд».',
-  'sessions.exercisesDone': 'Выполнено',
 };

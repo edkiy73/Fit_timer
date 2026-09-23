@@ -149,6 +149,9 @@ jobs:
           APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           test -n "$APK"
           cp "$APK" FitTimer-latest.apk
+          # Неизменяемая копия под своим versionCode: опубликованная в админке версия
+          # всегда ведёт на свой файл, даже когда следующая сборка заменит latest.
+          cp "$APK" "FitTimer-${VERSION_CODE}.apk"
           node <<'NODE'
           const fs = require('fs');
           const versionCode = Number(process.env.VERSION_CODE);
@@ -160,12 +163,30 @@ jobs:
           const meta = {
             versionCode,
             versionName,
-            apkUrl: `https://github.com/${repo}/releases/download/latest-apk/FitTimer-latest.apk`,
+            apkUrl: `https://github.com/${repo}/releases/download/apk-archive/FitTimer-${versionCode}.apk`,
             commit: process.env.GITHUB_SHA || '',
             builtAt: new Date().toISOString()
           };
           fs.writeFileSync('FitTimer-release.json', JSON.stringify(meta, null, 2) + '\n');
           NODE
+
+      # Раньше админка публиковала versionCode, а телефон качал latest-apk/FitTimer-latest.apk.
+      # Следующий пуш в main подменял файл, и телефон отклонял его как version_mismatch.
+      - name: Сохранить APK в архив версий
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view apk-archive >/dev/null 2>&1 || gh release create apk-archive \
+            --target "$GITHUB_SHA" \
+            --title "FitTimer — архив APK" \
+            --notes "Неизменяемые APK по versionCode. Обновление внутри приложения качает отсюда ровно опубликованную версию." \
+            --latest=false
+          gh release upload apk-archive "FitTimer-${VERSION_CODE}.apk" --clobber
+          # держим последние 20 сборок, остальные удаляем
+          gh release view apk-archive --json assets --jq '.assets[].name' \
+            | grep -E '^FitTimer-[0-9]+\.apk$' | sort -t- -k2 -n | head -n -20 \
+            | while read -r name; do gh release delete-asset apk-archive "$name" -y; done
 
       - name: Обновить постоянный релиз latest-apk
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

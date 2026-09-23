@@ -26,6 +26,10 @@ const ANDROID_RELEASE_REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(process.e
 const ANDROID_RELEASE_TAG = 'latest-apk';
 const ANDROID_RELEASE_META = 'FitTimer-release.json';
 
+function archivedApkUrl(url, versionCode){
+  const want = `https://github.com/${ANDROID_RELEASE_REPO}/releases/download/apk-archive/FitTimer-${versionCode}.apk`;
+  return String(url || '') === want ? want : '';
+}
 async function latestAndroidRelease(){
   const base = `https://github.com/${ANDROID_RELEASE_REPO}/releases/download/${ANDROID_RELEASE_TAG}`;
   const metaRes = await fetch(`${base}/${ANDROID_RELEASE_META}`, {
@@ -39,7 +43,9 @@ async function latestAndroidRelease(){
   return {
     versionCode,
     versionName,
-    apkUrl: `${base}/FitTimer-latest.apk`,
+    // Неизменяемый адрес именно этой сборки. latest-apk перезаписывается каждым
+    // пушем в main, и опубликованный versionCode переставал совпадать с файлом.
+    apkUrl: archivedApkUrl(meta && meta.apkUrl, versionCode) || `${base}/FitTimer-latest.apk`,
     releaseUrl: `https://github.com/${ANDROID_RELEASE_REPO}/releases/tag/${ANDROID_RELEASE_TAG}`,
     commit: clampLine(meta && meta.commit, 80),
     builtAt: clampLine(meta && meta.builtAt, 80)

@@ -45,6 +45,13 @@ async function ensureWarmup(){
     if((await kvGet(pk('warmupAdded'))) !== '1') kvSet(pk('warmupAdded'),'1');
     return;
   }
+  // Разминку добавляем один раз. Если её уже добавляли (флаг) или удалили на другом
+  // устройстве (надгробие синхронизации), значит человек её удалил сам — раньше она
+  // возвращалась при каждом запуске и переключении профиля.
+  const owner = currentUser;
+  const tomb = docMeta && docMeta[PROGRAM_DOC('warmup')];
+  if((await kvGet(pk('warmupAdded'))) === '1' || (tomb && tomb.gone)) return;
+  if(owner !== currentUser) return;
   customPrograms.unshift(warmupProgram());
   await savePrograms();
   kvSet(pk('warmupAdded'),'1');

@@ -1871,13 +1871,15 @@ function sessRow(en, withDate){
     if(en.planDays) variant = String(en.planDays).split(/[·,]/).map(x=>canonicalLabel(x.trim())).filter(Boolean).join(' · ');
     else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
-  const row = document.createElement('div');
-  row.className = 'sess-row';
+  // Упражнений здесь нет намеренно: попап — про то, какие тренировки были. Состав
+  // смотрят на странице программы, куда ведёт нажатие по строке.
+  const row = document.createElement(p ? 'button' : 'div');
+  row.className = 'sess-row' + (p ? ' sess-link' : '');
+  if(p){ row.type = 'button'; row.onclick = () => openDayProgram(p.id, typeof en.plan === 'number' ? en.plan : -1); }
   row.innerHTML =
-    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
+    '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + (p ? icon('chevR') : '') + '</div>' +
     (variant ? '<div class="sess-plan"></div>' : '') +
     '<div class="sess-facts"></div>' +
-    (Array.isArray(en.exercises) && en.exercises.length ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>' : '') +
     (en.note ? '<span class="sess-note"></span>' : '');
   row.querySelector('.sess-head b').textContent = name;
   if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
@@ -1894,18 +1896,6 @@ function sessRow(en, withDate){
     facts.appendChild(chip);
   }
   if(!facts.children.length) facts.remove();
-  if(Array.isArray(en.exercises) && en.exercises.length){
-    row.querySelector('.sess-ex-label').textContent = t('sessions.exercisesDone');
-    const list = row.querySelector('.sess-ex-list');
-    en.exercises.forEach((name, i)=>{
-      const item = document.createElement('div');
-      item.className = 'sess-ex';
-      item.innerHTML = '<span></span><b></b>';
-      item.querySelector('span').textContent = i + 1;
-      item.querySelector('b').textContent = name;
-      list.appendChild(item);
-    });
-  }
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }

@@ -328,6 +328,18 @@ function renderWeekStrip(){
   setShown('weekStripHint', !!hint);
 }
 
+// Программа из попапа дня: закрываем попап и открываем страницу программы на том
+// варианте, который стоит в этот день. Состав смотрят уже там, а не в попапе.
+function openDayProgram(pid, pi){
+  const p = customPrograms.find(x => x.id === pid);
+  if(!p) return;
+  $('sessModal').classList.remove('open');
+  openStart(p);
+  if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
+    state.planIdx = pi; renderPlanRow(); renderStartInfo();
+  }
+}
+
 // нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
 // план показываем отдельными карточками программ — не строкой названий через запятую.
 function openWeekDay(d){
@@ -356,26 +368,20 @@ function openWeekDay(d){
     const moved = slot.from !== null && slot.from !== d.idx;
     const status = moved ? t('week.dayMoved') : (d.past ? t('week.dayMakeUp') : t('week.dayPlanned'));
 
-    const row = document.createElement('div');
-    row.className = 'sess-row';
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'sess-row sess-link';
     row.innerHTML =
-      '<div class="sess-head"><b></b></div>' +
+      '<div class="sess-head"><b></b>' + icon('chevR') + '</div>' +
       '<div class="sess-facts"></div>' +
-      '<div class="sess-plan hidden"></div>' +
-      (plan && Array.isArray(plan.exercises) && plan.exercises.length
-        ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>'
-        : '');
+      '<div class="sess-plan hidden"></div>';
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
+    row.onclick = () => openDayProgram(p.id, plans.indexOf(plan));
 
     const facts = row.querySelector('.sess-facts');
     const stateChip = document.createElement('span');
     stateChip.textContent = status;
     facts.appendChild(stateChip);
-    if(plan && Array.isArray(plan.exercises)){
-      const countChip = document.createElement('span');
-      countChip.textContent = t('program.exerciseSummary',{count:plan.exercises.length});
-      facts.appendChild(countChip);
-    }
     if(p.rotate && plans.length > 1){
       const variantChip = document.createElement('span');
       variantChip.textContent = t('today.variant',{current:planIdx+1,total:plans.length});
@@ -389,19 +395,6 @@ function openWeekDay(d){
     }else if(d.debt){
       note.textContent = t('week.canStillMakeUp');
       note.classList.remove('hidden');
-    }
-
-    if(plan && Array.isArray(plan.exercises) && plan.exercises.length){
-      row.querySelector('.sess-ex-label').textContent = t('week.plannedExercises');
-      const list = row.querySelector('.sess-ex-list');
-      plan.exercises.forEach((ex, i) => {
-        const item = document.createElement('div');
-        item.className = 'sess-ex';
-        item.innerHTML = '<span></span><b></b>';
-        item.querySelector('span').textContent = i + 1;
-        item.querySelector('b').textContent = ex.name || t('sessions.workoutFallback');
-        list.appendChild(item);
-      });
     }
 
     box.appendChild(row);

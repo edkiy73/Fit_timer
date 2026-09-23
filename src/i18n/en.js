@@ -1340,7 +1340,6 @@ const I18N_EN = {
   'week.dayMakeUp': "Can make up",
   'week.dayMoved': "Completed on another day",
   'week.dayMovedOn': "Counted from the workout on {day}.",
-  'week.plannedExercises': "Planned exercises",
   'today.programsOff': "Programs disabled",
   'today.noSchedule': "Schedule not set",
   'today.warmupOnly': "Warm-up only",
@@ -1537,5 +1536,4 @@ const I18N_EN = {
   'handsfree.commandResume': 'Continue',
   'handsfree.commandResumeExamples': '“continue”, “resume”, “go on”, “keep going”',
   'handsfree.commandsLanguageNote': 'Commands are recognized in the language selected under “Command language”.',
-  'sessions.exercisesDone': 'Completed',
 };
