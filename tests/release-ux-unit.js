@@ -5,6 +5,10 @@ const sync = await readFile('src/app/10-data-sync.js', 'utf8');
 const workflow = await readFile('.github/workflows/android.yml', 'utf8');
 const gradle = await readFile('android/app/build.gradle', 'utf8');
 const mobile = await readFile('mobile.js', 'utf8');
+const home = await readFile('src/html/00-shell-home.html', 'utf8');
+const account = await readFile('src/app/20-account.js', 'utf8');
+const ru = await readFile('src/i18n/ru.js', 'utf8');
+const en = await readFile('src/i18n/en.js', 'utf8');
 
 const need = (ok, msg) => { if(!ok) throw new Error(msg); };
 
@@ -27,6 +31,10 @@ need(workflow.includes('apksigner') && workflow.includes('verify --verbose --pri
 need(workflow.includes('FitTimer-release.json'), 'latest APK release must publish machine-readable metadata');
 need(workflow.includes('const versionCode = Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
 need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest release must upload APK and metadata together');
+need(home.indexOf('id="appUpdateBanner"') < home.indexOf('id="todayBox"'), 'soft update banner must sit above Today');
+need(ru.includes("'update.availableTitle': \"Доступно обновление\""), 'RU soft update title must stay version-free');
+need(en.includes("'update.availableTitle': \"Update available\""), 'EN soft update title must stay version-free');
+need(account.includes("t('update.availableTitle');"), 'soft update title must not append versionName');
 
 need(mobile.includes('requestMicrophone'), 'native microphone permission handling is missing');
 need(mobile.includes('requestNotifications'), 'native notification permission handling is missing');

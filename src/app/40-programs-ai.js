@@ -228,6 +228,7 @@ function weekPlanInfo(date){
       name: nm, iso, idx: i,
       planned: mine.length,
       done: shut.length,
+      slots: mine.map(s => ({pid:s.pid, from:s.from})),
       moved: shut.filter(s => s.from !== i).length,
       movedFrom: [...new Set(shut.filter(s => s.from !== i).map(s => s.from))],
       help: slots.filter(s => s.from === i && s.idx !== i).length, // закрыл чужой пропуск
@@ -327,25 +328,92 @@ function renderWeekStrip(){
   setShown('weekStripHint', !!hint);
 }
 
-// нажатие по дню недели: что в этот день сделано — и что было назначено, если не сделано
+// нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
+// план показываем отдельными карточками программ — не строкой названий через запятую.
 function openWeekDay(d){
   const entries = (stats.history || []).filter(h => h.d === d.iso);
   const title = canonicalLabel(DAY_FULL[d.idx]) + ', ' + dayTitle(d.iso);
-  let empty = '';
-  if(!entries.length){
-    const names = customPrograms.filter(p => planDays(p).includes(d.name)).map(p => p.name);
-    if(d.full && d.movedFrom.length){
-      // день закрыт отработкой: тренировки в нём нет, но план выполнен — иначе
-      // человек видит галочку и пустой список и думает, что приложение врёт
-      // день недели ставим после тире — именительным падежом: «в четверг» требует
-      // винительного («в субботу»), а склонять семь названий на лету незачем
-      empty = t('week.noWorkoutMoved',{days:d.movedFrom.map(i=>canonicalLabel(DAY_FULL[i])).join(appLocale==='ru'?' и ':' and ')});
-    } else if(names.length){
-      empty = t(d.future?'week.plannedFuture':'week.plannedMissed',{names:names.join(', ')});
-      if(d.debt) empty += ' ' + t('week.canStillMakeUp');
-    } else empty = t('week.nonePlanned');
+  openSessions(t('sessions.dayLabel'), title, entries, '');
+  const box = $('sessList');
+  let plannedRows = 0;
+
+  (d.slots || []).forEach(slot => {
+    // Слот, закрытый тренировкой именно в этот день, уже показан выше как sessRow.
+    // Здесь нужны только будущие/пропущенные планы и отработки в другой день.
+    if(slot.from === d.idx) return;
+    const p = customPrograms.find(x => x.id === slot.pid);
+    if(!p) return;
+
+    const plans = normPlans(p);
+    let planIdx = 0;
+    if(p.rotate && plans.length > 1){
+      planIdx = defaultPlanIdx(plans, p);
+    }else{
+      const found = plans.findIndex(pl => (pl.days || []).includes(d.name));
+      if(found >= 0) planIdx = found;
+    }
+    const plan = plans[planIdx] || plans[0] || null;
+    const moved = slot.from !== null && slot.from !== d.idx;
+    const status = moved ? t('week.dayMoved') : (d.past ? t('week.dayMakeUp') : t('week.dayPlanned'));
+
+    const row = document.createElement('div');
+    row.className = 'sess-row';
+    row.innerHTML =
+      '<div class="sess-head"><b></b></div>' +
+      '<div class="sess-facts"></div>' +
+      '<div class="sess-plan hidden"></div>' +
+      (plan && Array.isArray(plan.exercises) && plan.exercises.length
+        ? '<div class="sess-exercises"><span class="sess-ex-label"></span><div class="sess-ex-list"></div></div>'
+        : '');
+    row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
+
+    const facts = row.querySelector('.sess-facts');
+    const stateChip = document.createElement('span');
+    stateChip.textContent = status;
+    facts.appendChild(stateChip);
+    if(plan && Array.isArray(plan.exercises)){
+      const countChip = document.createElement('span');
+      countChip.textContent = t('program.exerciseSummary',{count:plan.exercises.length});
+      facts.appendChild(countChip);
+    }
+    if(p.rotate && plans.length > 1){
+      const variantChip = document.createElement('span');
+      variantChip.textContent = t('today.variant',{current:planIdx+1,total:plans.length});
+      facts.appendChild(variantChip);
+    }
+
+    const note = row.querySelector('.sess-plan');
+    if(moved){
+      note.textContent = t('week.dayMovedOn',{day:canonicalLabel(DAY_FULL[slot.from])});
+      note.classList.remove('hidden');
+    }else if(d.debt){
+      note.textContent = t('week.canStillMakeUp');
+      note.classList.remove('hidden');
+    }
+
+    if(plan && Array.isArray(plan.exercises) && plan.exercises.length){
+      row.querySelector('.sess-ex-label').textContent = t('week.plannedExercises');
+      const list = row.querySelector('.sess-ex-list');
+      plan.exercises.forEach((ex, i) => {
+        const item = document.createElement('div');
+        item.className = 'sess-ex';
+        item.innerHTML = '<span></span><b></b>';
+        item.querySelector('span').textContent = i + 1;
+        item.querySelector('b').textContent = ex.name || t('sessions.workoutFallback');
+        list.appendChild(item);
+      });
+    }
+
+    box.appendChild(row);
+    plannedRows++;
+  });
+
+  if(!entries.length && !plannedRows){
+    const empty = document.createElement('p');
+    empty.className = 'sess-empty';
+    empty.textContent = t('week.nonePlanned');
+    box.appendChild(empty);
   }
-  openSessions(t('sessions.dayLabel'), title, entries, empty);
 }
 
 function renderToday(){
