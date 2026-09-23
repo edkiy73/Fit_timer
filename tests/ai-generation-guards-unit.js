@@ -55,6 +55,12 @@ need(singlePrompt.includes('const name = imageProgramName();') && !singlePrompt.
 need(!events.includes("if(!item.name){ appAlert(t('images.needExerciseName'))"),
   'exercise editor has no duplicate local image-name guard');
 
+const copyFullHandler = events.slice(events.indexOf("$('aiCopyFull').onclick"), events.indexOf('async function copyEditPrompt'));
+need(copyFullHandler.includes('const text = programToText(editAIProg);'),
+  'copy-program action exports the raw FitTimer program text');
+need(!copyFullHandler.includes('aiPrompt(') && !copyFullHandler.includes('=== TASK ===') && !copyFullHandler.includes('CURRENT PROGRAM'),
+  'copy-program action does not prepend AI protocol or hidden task');
+
 const prompt = FitAIProtocol.programPrompt('Russian');
 need(prompt.includes('Do not target a fixed number of exercises'),
   'AI protocol does not target a fixed exercise count');
