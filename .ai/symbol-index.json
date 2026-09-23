@@ -360,14 +360,15 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2782,
-      "chars": 125951,
+      "lines": 2795,
+      "chars": 126225,
       "symbols": [
         "add",
         "ageError",
         "aiAuth",
         "aiClientVerdict",
         "aiCreateExerciseGuard",
+        "aiEditRequestGuard",
         "aiExerciseHasUserInput",
         "aiUiText",
         "apiFetch",
