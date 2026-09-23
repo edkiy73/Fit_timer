@@ -7,6 +7,7 @@
   const plugins = (cap && cap.Plugins) || {};
   const fitAudio = plugins.FitAudio;
   const fitSystem = plugins.FitSystem;
+  const fitBiometric = plugins.FitBiometric;
   const pushNotifications = plugins.PushNotifications;
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
@@ -16,6 +17,7 @@
   let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
   let pendingProgramLink = '';
+  let appInactiveAt = 0;
 
   function programIdFromAppUrl(value){
     try{
@@ -365,6 +367,7 @@
     plugins.App.addListener('appStateChange', event=>{
       const active = !!(event && event.isActive);
       if(!active){
+        appInactiveAt = Date.now();
         if(typeof window.stopListening === 'function') window.stopListening();
         else stopVoiceRecognition();
         stopSpeaking();
@@ -373,6 +376,9 @@
         try{ if(typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
         return;
       }
+      const awayMs = appInactiveAt ? Math.max(0, Date.now() - appInactiveAt) : 0;
+      appInactiveAt = 0;
+      try{ window.dispatchEvent(new CustomEvent('fitAppForeground', {detail:{awayMs}})); }catch(_){}
       try{
         const work = document.getElementById('scrWork');
         if(work && work.classList.contains('on')){
@@ -409,11 +415,25 @@
     try{ await fitSystem.requestReview(); return true; }catch(_){ return false; }
   }
 
+  async function biometricStatus(){
+    if(!native || !fitBiometric || !fitBiometric.status) return {available:false, reason:'unsupported'};
+    try{ return await fitBiometric.status(); }
+    catch(_){ return {available:false, reason:'temporarily_unavailable'}; }
+  }
+
+  async function authenticateBiometric(options){
+    if(!native || !fitBiometric || !fitBiometric.authenticate) return {ok:false, error:'unsupported'};
+    try{ return await fitBiometric.authenticate(options || {}); }
+    catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
     getAppInfo,
     openExternal,
     requestReview,
+    biometricStatus,
+    authenticateBiometric,
     consumeProgramLink,
     requestNotifications,
     registerRemotePush,
