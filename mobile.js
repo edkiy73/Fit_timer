@@ -493,6 +493,13 @@
     catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
   }
 
+  // Native workout surfaces deliberately outlive the WebView. A cold WebView start
+  // cannot have a live in-memory workout, so remove a stale notification/Live Activity
+  // left by process death before exposing the bridge to the app.
+  if(native && fitWorkout && fitWorkout.clear){
+    try{ fitWorkout.clear().catch(()=>{}); }catch(_){}
+  }
+
   window.FitNative = Object.freeze({
     isNative: native,
     getAppInfo,
