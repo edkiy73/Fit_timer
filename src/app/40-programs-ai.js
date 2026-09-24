@@ -369,10 +369,12 @@ function renderWeekStrip(){
 function openDayProgram(pid, pi){
   const p = customPrograms.find(x => x.id === pid);
   if(!p) return;
-  closeModalThen('sessModal', ()=> openStart(p));
-  if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
-    state.planIdx = pi; renderPlanRow(); renderStartInfo();
-  }
+  closeModalThen('sessModal', ()=>{
+    openStart(p);
+    if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
+      state.planIdx = pi; renderPlanRow(); renderStartInfo();
+    }
+  });
 }
 
 // нажатие по дню недели: выполненное остаётся подробной историей, а незакрытый
