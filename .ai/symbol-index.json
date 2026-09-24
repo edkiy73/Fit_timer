@@ -1692,18 +1692,6 @@
       "actions": [
         "closeModal"
       ]
-    },
-    "src/i18n/ru.js": {
-      "kind": "frontend-js",
-      "lines": 1587,
-      "chars": 106583,
-      "symbols": []
-    },
-    "src/i18n/en.js": {
-      "kind": "frontend-js",
-      "lines": 1587,
-      "chars": 106877,
-      "symbols": []
     }
   }
 }
