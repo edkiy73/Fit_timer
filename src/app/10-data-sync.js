@@ -1647,6 +1647,7 @@ async function saveSession(){
     : 0;
   const data = {
     pid: raw.id,
+    sessionId: String(state.workoutSessionId || ''),
     planIdx: state.planIdx || 0,
     stepIdx: state.stepIdx || 0,
     total: state.steps.length,
