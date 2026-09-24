@@ -1,0 +1,329 @@
+/* Полная матрица навигационных переходов.
+
+Проверяет не только видимый экран, но и browser history/navStack. Главный инвариант:
+после явного возврата старые глубокие экраны не должны оставаться за «Сегодня»
+и воскресать следующим системным Back.
+
+Запуск:
+  node tests/dev-server.js 8124
+  node tests/nav-transitions.js
+*/
+
+const { becomeTrainer } = require('./helpers/trainer-account');
+
+let chromium;
+try{ chromium = require('playwright-core').chromium; }
+catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
+
+const BASE = process.env.FIT_URL || 'http://localhost:8124';
+const CHROME = process.env.FIT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+
+let bad = 0;
+const ok = (name, cond, extra) => {
+  if(!cond) bad++;
+  console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : ''));
+};
+const nap = (page, ms=350) => page.waitForTimeout(ms);
+
+async function state(page){
+  return page.evaluate(() => ({
+    screen: (document.querySelector('.screen.on') || {}).id || '',
+    historyScreen: history.state && history.state.scr || '',
+    modal: !!document.querySelector('.modal.open'),
+    depth: navDepth,
+    stack: [...navStack]
+  }));
+}
+async function aligned(page, label, expected){
+  const s = await state(page);
+  ok(label + ': видимый экран', s.screen === expected, JSON.stringify(s));
+  ok(label + ': history совпадает с экраном', s.historyScreen === expected, JSON.stringify(s));
+  ok(label + ': navStack заканчивается экраном', s.stack[s.stack.length - 1] === expected, JSON.stringify(s));
+  return s;
+}
+async function seedProgram(page, id='nav-matrix'){
+  await page.evaluate(async id => {
+    const p = {
+      id, name:'Навигация', desc:'', progression:0, stats:{completions:0},
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[
+        {id:id+'-e1', name:'Присед', type:'reps', value:'10', sets:1, rest:30}
+      ]}]
+    };
+    const at = customPrograms.findIndex(x => x.id === id);
+    if(at >= 0) customPrograms[at] = p; else customPrograms.push(p);
+    await savePrograms();
+    renderMine();
+  }, id);
+}
+async function newAppPage(ctx, opts={}){
+  const page = await ctx.newPage();
+  page.on('pageerror', e => opts.errs && opts.errs.push(String(e)));
+  await page.goto('data:text/html,<title>nav-sentinel</title>');
+  await page.goto(BASE + '/index.html', {waitUntil:'load'});
+  await nap(page, 1000);
+  if(!opts.keepOnboarding && await page.isVisible('#obStart')){
+    await page.click('#obStart');
+    await nap(page, 900);
+  }
+  if(!opts.keepOnboarding){
+    await page.evaluate(() => goTab('scrMenu'));
+    await nap(page);
+    await aligned(page, 'нормализация старта', 'scrMenu');
+  }
+  return page;
+}
+async function homeThenExit(page, label){
+  if((await state(page)).screen !== 'scrMenu'){
+    await page.evaluate(() => goTab('scrMenu'));
+    await nap(page, 500);
+  }
+  await aligned(page, label + ': Сегодня', 'scrMenu');
+  await page.goBack({waitUntil:'load', timeout:5000}).catch(()=>{});
+  await nap(page, 250);
+  ok(label + ': Back с «Сегодня» выходит из приложения, а не в старый экран',
+    page.url().startsWith('data:text/html'), page.url());
+  await page.close();
+}
+async function scenario(ctx, name, fn, errs){
+  const page = await newAppPage(ctx, {errs});
+  console.log('\n— ' + name);
+  try{ await fn(page); }
+  catch(e){ bad++; console.log(' ПЛОХО  ' + name + ': исключение → ' + (e && e.stack || e)); }
+  if(!page.isClosed()) await page.close();
+}
+
+(async()=>{
+  const browser = await chromium.launch({executablePath:CHROME});
+  const errs = [];
+  const ctx = await browser.newContext({viewport:{width:412,height:900}, locale:'ru-RU'});
+
+  // Один раз создаём профиль/хранилище; следующие страницы в этом context уже без онбординга.
+  const init = await newAppPage(ctx, {errs});
+  await init.close();
+
+  await scenario(ctx, 'корневые вкладки не копят историю', async page => {
+    await page.evaluate(() => { goTab('scrPrograms'); goTab('scrStats'); goTab('scrAccount'); goTab('scrPrograms'); });
+    await nap(page, 500);
+    await aligned(page, 'последняя вкладка', 'scrPrograms');
+    await homeThenExit(page, 'корневые вкладки');
+  }, errs);
+
+  await scenario(ctx, 'старт программы → назад', async page => {
+    await seedProgram(page, 'nav-start');
+    await page.evaluate(() => { goTab('scrPrograms'); openStart(customPrograms.find(x=>x.id==='nav-start')); });
+    await nap(page);
+    await aligned(page, 'экран старта', 'scrStart');
+    await page.click('#startBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад со старта', 'scrPrograms');
+    await homeThenExit(page, 'старт программы');
+  }, errs);
+
+  await scenario(ctx, 'каталог → назад', async page => {
+    await page.evaluate(() => goTab('scrPrograms'));
+    await nap(page);
+    await page.click('#btnToStore');
+    await nap(page, 500);
+    await aligned(page, 'каталог', 'scrStore');
+    await page.click('#storeBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад из каталога', 'scrPrograms');
+    await homeThenExit(page, 'каталог');
+  }, errs);
+
+  await scenario(ctx, 'модалка создания → ручной конструктор → назад', async page => {
+    await page.evaluate(() => goTab('scrPrograms'));
+    await nap(page);
+    await page.click('#btnAddProgram');
+    await nap(page, 150);
+    ok('модалка создания открыта', await page.isVisible('#createModal'));
+    await page.click('#chManual');
+    await nap(page, 500);
+    await aligned(page, 'конструктор из модалки', 'scrBuilder');
+    await page.click('#builderBackTop');
+    await nap(page, 650);
+    await aligned(page, 'назад из конструктора', 'scrPrograms');
+    await homeThenExit(page, 'ручной конструктор');
+  }, errs);
+
+  await scenario(ctx, 'модалка создания → ИИ → назад', async page => {
+    await page.evaluate(() => goTab('scrPrograms'));
+    await nap(page);
+    await page.click('#btnAddProgram');
+    await nap(page, 120);
+    await page.click('#chAI');
+    await nap(page, 500);
+    await aligned(page, 'ИИ из модалки', 'scrAI');
+    await page.click('#aiBackTop');
+    await nap(page, 650);
+    await aligned(page, 'назад из ИИ', 'scrPrograms');
+    await homeThenExit(page, 'создание через ИИ');
+  }, errs);
+
+  await scenario(ctx, 'системный Back закрывает модалку, а не экран', async page => {
+    await page.evaluate(() => goTab('scrPrograms'));
+    await nap(page);
+    await page.click('#btnAddProgram');
+    await nap(page, 150);
+    await page.goBack();
+    await nap(page, 450);
+    await aligned(page, 'после системного Back модалки', 'scrPrograms');
+    ok('модалка закрыта', !(await page.isVisible('#createModal')));
+    await homeThenExit(page, 'системный Back модалки');
+  }, errs);
+
+  await scenario(ctx, 'конструктор → настройки → Готово → системный Back', async page => {
+    await seedProgram(page, 'nav-settings');
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-settings'); });
+    await nap(page, 450);
+    await page.click('#bSettingsToggle');
+    await nap(page, 300);
+    await aligned(page, 'настройки программы', 'scrProgSettings');
+    await page.click('#btnPsDone');
+    await nap(page, 500);
+    await aligned(page, 'возврат из настроек', 'scrBuilder');
+    await page.goBack();
+    await nap(page, 550);
+    await aligned(page, 'Back из конструктора после настроек', 'scrPrograms');
+    await homeThenExit(page, 'настройки программы');
+  }, errs);
+
+  await scenario(ctx, 'новое упражнение → ИИ → назад не воскресит ИИ', async page => {
+    await seedProgram(page, 'nav-new-ex');
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-new-ex'); addExManual(); });
+    await nap(page, 450);
+    await aligned(page, 'новое упражнение', 'scrExercise');
+    await page.click('#exModeTabs .tab[data-m="ai"]');
+    await nap(page, 450);
+    await aligned(page, 'ИИ нового упражнения', 'scrAI');
+    await page.click('#aiBackTop');
+    await nap(page, 550);
+    await aligned(page, 'назад из ИИ нового упражнения', 'scrBuilder');
+    await page.goBack();
+    await nap(page, 550);
+    await aligned(page, 'Back после возврата из ИИ ведёт к тренировкам', 'scrPrograms');
+    await homeThenExit(page, 'новое упражнение / ИИ');
+  }, errs);
+
+  await scenario(ctx, 'существующее упражнение → ИИ → назад', async page => {
+    await seedProgram(page, 'nav-edit-ex');
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-edit-ex'); openExercise(0); });
+    await nap(page, 450);
+    await page.click('#exModeTabs .tab[data-m="ai"]');
+    await nap(page, 450);
+    await aligned(page, 'ИИ существующего упражнения', 'scrAI');
+    await page.click('#aiBackTop');
+    await nap(page, 500);
+    await aligned(page, 'назад из ИИ существующего упражнения', 'scrBuilder');
+    await page.goBack();
+    await nap(page, 500);
+    await aligned(page, 'Back после редактирования упражнения', 'scrPrograms');
+    await homeThenExit(page, 'существующее упражнение / ИИ');
+  }, errs);
+
+  await scenario(ctx, 'несохранённый конструктор: Остаться / Выйти', async page => {
+    await seedProgram(page, 'nav-dirty');
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-dirty'); });
+    await nap(page, 350);
+    await page.fill('#bName', 'Навигация изменена');
+    await page.goBack();
+    await nap(page, 300);
+    ok('системный Back спрашивает про несохранённое', await page.isVisible('#dlgCancel'));
+    await page.click('#dlgCancel');
+    await nap(page, 400);
+    await aligned(page, 'после «Остаться»', 'scrBuilder');
+    await page.goBack();
+    await nap(page, 300);
+    ok('повторный Back снова спрашивает', await page.isVisible('#dlgOk'));
+    await page.click('#dlgOk');
+    await nap(page, 700);
+    await aligned(page, 'после «Выйти без сохранения»', 'scrPrograms');
+    await homeThenExit(page, 'несохранённый конструктор');
+  }, errs);
+
+  await scenario(ctx, 'профиль из главной → назад в Другое', async page => {
+    await page.evaluate(() => {
+      goTab('scrMenu');
+      const u = curUser();
+      openUserEdit(u && u.id);
+    });
+    await nap(page, 350);
+    await aligned(page, 'редактор профиля', 'scrUserEdit');
+    await page.click('#ueBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад из профиля', 'scrAccount');
+    await homeThenExit(page, 'редактор профиля');
+  }, errs);
+
+  await scenario(ctx, 'Другое → правила → назад', async page => {
+    await page.evaluate(() => { goTab('scrAccount'); openLegal('privacy'); });
+    await nap(page, 350);
+    await aligned(page, 'правила', 'scrLegal');
+    await page.click('#legalBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад из правил', 'scrAccount');
+    await homeThenExit(page, 'правила из Другое');
+  }, errs);
+
+  await scenario(ctx, 'ИИ → подробности здоровья → назад в тот же ИИ', async page => {
+    await page.evaluate(() => { goTab('scrPrograms'); initAIForm(); openAI('text'); pregnancyWarning(); });
+    await nap(page, 250);
+    ok('предупреждение беременности открыто', await page.isVisible('#dlgCancel'));
+    await page.click('#dlgCancel');
+    await nap(page, 450);
+    await aligned(page, 'раздел здоровья', 'scrLegal');
+    await page.click('#btnLegalDone');
+    await nap(page, 500);
+    await aligned(page, 'возврат из здоровья', 'scrAI');
+    await page.click('#aiBackTop');
+    await nap(page, 650);
+    await aligned(page, 'выход из ИИ после здоровья', 'scrPrograms');
+    await homeThenExit(page, 'здоровье из ИИ');
+  }, errs);
+
+  await scenario(ctx, 'тренер → подопечный → назад', async page => {
+    await page.evaluate(() => goTab('scrAccount'));
+    await becomeTrainer(page, {handle:'@navmatrix.' + Math.random().toString(36).slice(2,7)});
+    await page.evaluate(async () => {
+      renderTrainerCard(); syncDockTabs(); goTab('scrTrainer');
+      const c = await addClient();
+      renderClients();
+      openClient(clients.indexOf(c));
+    });
+    await nap(page, 500);
+    await aligned(page, 'подопечный', 'scrClient');
+    await page.click('#clBackTop');
+    await nap(page, 500);
+    await aligned(page, 'назад к подопечным', 'scrTrainer');
+    await homeThenExit(page, 'подопечный');
+  }, errs);
+
+  // Отдельный чистый context: проверяем навигацию до создания первого профиля.
+  console.log('\n— онбординг → правила → онбординг');
+  const obCtx = await browser.newContext({viewport:{width:412,height:900}, locale:'ru-RU'});
+  const obPage = await newAppPage(obCtx, {keepOnboarding:true, errs});
+  ok('онбординг открыт', await obPage.isVisible('#obStart'));
+  await obPage.click('#obLegal1');
+  await nap(obPage, 350);
+  await aligned(obPage, 'правила из онбординга', 'scrLegal');
+  await obPage.click('#btnLegalDone');
+  await nap(obPage, 450);
+  await aligned(obPage, 'возврат в онбординг', 'scrOnboard');
+  await obPage.click('#obStart');
+  await nap(obPage, 900);
+  await obPage.evaluate(() => goTab('scrMenu'));
+  await nap(obPage, 450);
+  await aligned(obPage, 'после завершения онбординга', 'scrMenu');
+  await obPage.goBack({waitUntil:'load', timeout:5000}).catch(()=>{});
+  await nap(obPage, 250);
+  ok('Back после завершения онбординга не возвращает правила/онбординг',
+    obPage.url().startsWith('data:text/html'), obPage.url());
+  await obCtx.close();
+
+  console.log('\npageerror:', errs.length ? errs : 'нет');
+  if(errs.length) bad += errs.length;
+  console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'вся матрица переходов сошлась');
+  await ctx.close();
+  await browser.close();
+  process.exit(bad ? 1 : 0);
+})();
