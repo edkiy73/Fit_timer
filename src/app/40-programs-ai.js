@@ -2378,7 +2378,7 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  goBackTo('scrBuilder');
+  await goBackTo('scrBuilder');
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
