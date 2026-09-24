@@ -105,11 +105,6 @@ function imageStaticExercise(name, description){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
-function imageLocalMotionExercise(name, description){
-  const s=(String(name||'')+' '+String(description||'')).toLowerCase();
-  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
-}
-
 function adminMuscleRegions(meta){
   const exercise=(String(meta.name||'')+' '+String(meta.description||'')).toLowerCase();
   const out=[];
@@ -151,25 +146,27 @@ function adminImageCharacterStyle(gender){
 function adminExerciseImagePrompt(meta){
   const equipment=imageEquipment(meta.name,meta.description);
   const isStatic=imageStaticExercise(meta.name,meta.description);
-  const isLocalMotion=!isStatic&&imageLocalMotionExercise(meta.name,meta.description);
   const regions=adminMuscleRegions(meta);
   const muscles=regions.length?regions.join(', '):'only the primary working muscles required by this movement';
+  // Раньше немоторные (не изометрические, не изолированные суставом) движения
+  // просили «два полупрозрачных наложенных фото одного атлета» — нейросеть
+  // регулярно рисовала это как двух слипшихся людей друг в друге, а не как
+  // внятное до/после. Один чёткий кадр самой показательной фазы + стрелки —
+  // тот же приём, что уже нормально работал для локальных движений, теперь
+  // единый для всех не-статичных упражнений.
   const motion=isStatic
     ?'Show ONE clear final pose only. No ghost pose or movement trail.'
-    :isLocalMotion
-      ?'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
-      :'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
+    :'Show ONE full athlete only, in the single clearest and most demonstrative phase of the movement (usually peak contraction or full range of motion). Exactly one solid, fully opaque figure — no second body, no duplicated limbs, no ghost pose, no semi-transparent overlay, no motion blur, no double exposure. Show the direction of motion only with one or two small violet-lavender trajectory arrows beside the moving body part(s) or equipment.';
   return [
     'Create a 4:3 instructional fitness illustration for "'+meta.name+'" in the Fit Timer app.',
     'Style: premium stylized-realistic 3D, '+adminImageCharacterStyle(meta.gender)+', realistic dark sportswear, polished high-end rendering.',
     'Background: premium modern gym with depth and good lighting, softly blurred and secondary; avoid flat gray studio backgrounds.',
     'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
     meta.description?'Technique: '+meta.description:null,
-    equipment.length?'Equipment: '+equipment.join(', ')+'. Show correct quantity, scale, grip/contact and position in every visible phase.':'Do not invent equipment that the exercise does not require.',
+    equipment.length?'Equipment: '+equipment.join(', ')+'. Show correct quantity, scale, grip/contact and position.':'Do not invent equipment that the exercise does not require.',
     motion,
-    !isStatic&&!isLocalMotion?'Add one or two small violet-lavender arrows showing movement direction.':null,
     'Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: '+muscles+'.',
-    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong between male and female versions.',
     meta.format?'Exercise format: '+meta.format+'.':null,
     'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
     'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
@@ -805,7 +802,7 @@ module.exports = async (req, res) => {
     try{
       const settings=await getSettings();
       const out=await generate('text',settings,prompt);
-      const checked=FitAIProtocol.validateProgramResponse(out.text);
+      const checked=FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true});
       if(!checked.ok)return fail(res,502,'ai_invalid_program',{detail:checked.reason,miss:checked.missing||[]});
       const fields=translationFieldsFromText(checked.text);
       const locale=cleanLocaleBlock({
@@ -833,101 +830,17 @@ module.exports = async (req, res) => {
     }
     return {lines,start,end};
   }
-  const EXERCISE_OPTIONAL_LABELS=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS);
+  // Правка одного упражнения раньше сливалась позиционно по каждому полю
+  // (тот же приём, что был у клиента в aiMergeExerciseBlock) — ответ ИИ не мог
+  // ни убрать поле, ни переставить строки. Теперь ответ используется как есть,
+  // carryExerciseFields лишь подставляет описание/мышцы/ошибки/видео, если ИИ
+  // их не вернул.
   function replaceExerciseBlock(text, exerciseName, candidate){
     const src=exerciseBlockRange(text,exerciseName);
     if(src.start<0) return text;
-    const sourceLines=src.lines.slice(src.start,src.end);
-    const candidateLines=String(candidate||'').split(/\r?\n/);
-    const candidateByKey={};
-    candidateLines.forEach(line=>{
-      const p=protocolLine(line);
-      if(!p) return;
-      if(!candidateByKey[p.key]) candidateByKey[p.key]=[];
-      candidateByKey[p.key].push(p.value);
-    });
-
-    const used={};
-    const existingKeys=new Set();
-    const merged=sourceLines.map(line=>{
-      const p=protocolLine(line);
-      if(!p) return line;
-      existingKeys.add(p.key);
-      const idx=used[p.key]||0;
-      used[p.key]=idx+1;
-      const vals=candidateByKey[p.key]||[];
-      if(idx>=vals.length) return line;
-      return p.key+': '+String(vals[idx]||'').trim();
-    });
-
-    // Для редактирования упражнения разрешаем ДОБАВИТЬ только официальные
-    // optional-поля парсера. Это позволяет превратить упражнение без веса в
-    // «повторения и вес», задать 8 кг, шаг/потолок и т.п., но не даёт модели
-    // изобретать новые служебные labels.
-    candidateLines.forEach(line=>{
-      const p=protocolLine(line);
-      if(!p || existingKeys.has(p.key) || !EXERCISE_OPTIONAL_LABELS.has(p.key)) return;
-      merged.push(p.key+': '+String(p.value||'').trim());
-      existingKeys.add(p.key);
-    });
-
+    const sourceBlock=src.lines.slice(src.start,src.end).join('\n');
+    const merged=FitAIProtocol.carryExerciseFields(sourceBlock,candidate).split('\n');
     return src.lines.slice(0,src.start).concat(merged,src.lines.slice(src.end)).join('\n');
-  }
-  function structureChangeRequested(text){
-    const s=String(text||'').toLowerCase();
-    return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
-      || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
-  }
-  function programExerciseBlocks(text){
-    const lines=String(text||'').split(/\r?\n/),out=[];
-    for(let i=0;i<lines.length;i++){
-      if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i]))continue;
-      let end=i+1;
-      while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-      out.push({start:i,end,lines:lines.slice(i,end),name:(protocolLine(lines[i])||{}).value||''});
-      i=end-1;
-    }
-    return out;
-  }
-  function mergeProgramEditText(sourceText,candidateText){
-    const srcLines=String(sourceText||'').split(/\r?\n/);
-    const candLines=String(candidateText||'').split(/\r?\n/);
-    const srcBlocks=programExerciseBlocks(sourceText),candBlocks=programExerciseBlocks(candidateText);
-    const candExerciseLines=new Set();
-    candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLines.add(i);});
-    const vals={};
-    candLines.forEach((line,i)=>{
-      if(candExerciseLines.has(i))return;
-      const p=protocolLine(line);if(!p)return;
-      if(!vals[p.key])vals[p.key]=[];
-      vals[p.key].push(p.value);
-    });
-    const used={},blockMap=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}])),out=[];
-    const usedCand=new Set();
-    const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
-    for(let i=0;i<srcLines.length;i++){
-      const entry=blockMap.get(i);
-      if(entry){
-        let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
-        if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i))ci=entry.i;
-        const cb=ci>=0?candBlocks[ci]:null;
-        if(ci>=0)usedCand.add(ci);
-        const sourceBlock=entry.b.lines.join('\n');
-        const candidateBlock=cb?cb.lines.join('\n'):'';
-        const tempName=(protocolLine(entry.b.lines[0])||{}).value||'';
-        const wrapped='УПРАЖНЕНИЕ: '+tempName+'\n'+entry.b.lines.slice(1).join('\n');
-        // same merger, addressed by the source exercise name
-        out.push(...replaceExerciseBlock(wrapped,tempName,candidateBlock).split('\n'));
-        i=entry.b.end-1;
-        continue;
-      }
-      const p=protocolLine(srcLines[i]);
-      if(!p){out.push(srcLines[i]);continue;}
-      const idx=used[p.key]||0;used[p.key]=idx+1;
-      const arr=vals[p.key]||[];
-      out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
-    }
-    return out.join('\n');
   }
 
   if(a === 'catalog_ai_edit'){
@@ -955,7 +868,7 @@ module.exports = async (req, res) => {
           FitAIProtocol.machineLanguageRules(language),
           FitAIProtocol.exerciseSchema(language),
           FitAIProtocol.progressionRules(),
-          FitAIProtocol.editRules(false),
+          FitAIProtocol.editRules(),
           'Instruction: '+instruction,
           '=== CURRENT EXERCISE ===\n'+sourceBlock
         ].join('\n\n');
@@ -972,14 +885,13 @@ module.exports = async (req, res) => {
         return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
       }
 
-      const structural=structureChangeRequested(instruction);
       const prompt=[
         'Edit this Fit Timer catalog program according to the instruction.',
         'Return ONLY valid JSON with exactly the keys name, gives, text. No Markdown.',
         FitAIProtocol.machineLanguageRules(language),
         FitAIProtocol.programSchema(language),
         FitAIProtocol.progressionRules(),
-        FitAIProtocol.editRules(structural),
+        FitAIProtocol.editRules(),
         'Instruction: '+instruction,
         'PROGRAM JSON:',
         JSON.stringify(locale)
@@ -991,11 +903,12 @@ module.exports = async (req, res) => {
       const rawEdited=cleanLocaleBlock(parsed);
       const miss=localeMiss(rawEdited,'AI');
       if(miss.length)return fail(res,502,'ai_incomplete',{miss});
-      const edited={
-        name:rawEdited.name,
-        gives:rawEdited.gives,
-        text:structural?rawEdited.text:mergeProgramEditText(locale.text,rawEdited.text)
-      };
+      // ответ используется как есть — тот же принцип, что и в клиентской правке
+      // программы (createEditedProgram): не запрещаем структурные изменения
+      // заранее регуляркой, а проверяем итоговый протокол
+      const checked=FitAIProtocol.validateProgramResponse(rawEdited.text);
+      if(!checked.ok)return fail(res,502,'ai_invalid_program',{detail:checked.reason,miss:checked.missing||[]});
+      const edited={name:rawEdited.name,gives:rawEdited.gives,text:rawEdited.text};
       return send(res,200,{ok:true,locale:edited,provider:out.provider,model:out.model,fallback:out.fallback});
     }catch(e){
       return fail(res,502,'ai_edit_failed',{detail:String(e.message||e).slice(0,500)});

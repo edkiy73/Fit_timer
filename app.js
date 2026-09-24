@@ -88,9 +88,6 @@ const I18N_RU = {
   'programs.disabled': "Отключена",
   'programs.about': "О программе",
   'programs.variant': "Вариант тренировки",
-  'programs.loadToday': "Нагрузка сегодня",
-  'programs.loadHint': "Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.",
-  'programs.currentStep': "текущий шаг",
   'programs.exercises': "Упражнения",
   'programs.startWorkout': "Начать тренировку",
   'programs.newProgram': "Новая программа",
@@ -238,8 +235,8 @@ const I18N_RU = {
   'builder.restRounds': "Отдых между кругами, сек",
   'builder.progressionTitle': "Со временем сложнее",
   'builder.progressionSub': "повторения и вес станут чуть больше по мере занятий",
-  'builder.progressionFrequency': "Как часто повышать",
-  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.",
+  'builder.progressionFrequency': "Как часто проверять",
+  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок этого упражнения, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Когда пора проверить — спросим сразу после тренировки, получилось ли, и повысим нагрузку одним нажатием.",
   'builder.descriptionCover': "Описание и обложка",
   'builder.descriptionOptional': "Описание (необязательно)",
   'builder.coverOptional': "Обложка (необязательно)",
@@ -311,8 +308,6 @@ const I18N_RU = {
   'ai.copyProgramSub': "Только текст программы, без задания для ИИ — можно вставить в любой чат",
   'ai.step3': "Шаг 3 · Ответ из чата",
   'ai.build': "Собрать",
-  'builder.lessProgress': "Меньше повышений",
-  'builder.moreProgress': "Больше повышений",
   'builder.programNameExample': "Например: Утренний блиц",
   'builder.secondsExample': "Например: 120",
   'builder.descriptionExample': "Для кого программа, чего ждать, как часто заниматься",
@@ -991,7 +986,7 @@ const I18N_RU = {
   'notify.returnTitle': "Fit Timer ждёт",
   'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
   'notify.progressTitle': "Сегодня нагрузка выше",
-  'notify.progressBody': "В «{name}» уже {steps} шагов прогрессии. Проверь новые повторы, время или вес перед стартом.",
+  'notify.progressBody': "В «{name}» сегодня нагрузка выше. Проверь новые повторы, время или вес перед стартом.",
   'notify.unfinishedTitle': "Продолжить тренировку?",
   'notify.unfinishedBody': "«{name}» осталась незавершённой. Можно вернуться с сохранённого места.",
   'notify.premiumTitle': "Больше возможностей Fit Timer",
@@ -1027,6 +1022,9 @@ const I18N_RU = {
   'start.workoutMany': "тренировок",
   'start.setShort': "подх.",
   'start.roundShort': "кр.",
+  'start.weightPending': "вес не задан",
+  'start.pickWeightTitle': "Рабочий вес",
+  'start.pickWeightHint': "Такой, чтобы последние повторения давались с усилием, но не в отказ",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",
@@ -1067,7 +1065,6 @@ const I18N_RU = {
   'sessions.variant': "вариант {count}",
   'sessions.variantDays': "вариант {days}",
   'sessions.doneText': "Тренировка пройдена",
-  'sessions.progStep': "шаг прогрессии {count}",
   'sessions.weekLabel': "Тренировки за неделю",
   'sessions.weekEmpty': "На этой неделе тренировок не было.",
   'sessions.dayLabel': "Тренировки за день",
@@ -1142,6 +1139,10 @@ const I18N_RU = {
   'finish.quickTitle': "Слишком быстро",
   'finish.quickHeading': "Тренировка завершена",
   'finish.quickText': "Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.",
+  'finish.progCheckTitle': "Всё получилось? Нагрузку повысим",
+  'finish.progCheckYes': "Да, повышаем",
+  'finish.progCheckHardLink': "Где-то было тяжело",
+  'finish.progCheckApplied': "Готово — нагрузка вырастет со следующей тренировки.",
   'progress.title': "Прогресс",
   'progress.tabWorkouts': "Тренировки",
   'progress.tabBody': "Тело",
@@ -1356,7 +1357,6 @@ const I18N_RU = {
   'week.plannedMissed': "Тренировок не было. По плану было: {names}.",
   'week.canStillMakeUp': "Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.",
   'week.plannedText': "Тренировка запланирована.",
-  'week.progStepText': "Шаг прогрессии: {count}.",
   'week.nonePlanned': "В этот день тренировок не было и не планировалось.",
   'week.dayMovedOn': "Засчитано тренировкой из другого дня: {day}.",
   'today.programsOff': "Программы отключены",
@@ -1457,6 +1457,10 @@ const I18N_RU = {
   'program.createdEdited': "Готово: создана «{name}».\n\nИсходная программа осталась без изменений.",
   'program.imagesCarried': "\nПеренесено картинок: {count}.",
   'ai.parseProblems': "Что не так:",
+  'ai.editAdded': "\nДобавлено: {names}.",
+  'ai.editRemoved': "\nУбрано: {names}.",
+  'ai.editReordered': "\nПорядок упражнений изменён.",
+  'ai.editTimeChanged': "\nВремя тренировки: ≈{before} → {after} мин.",
   'import.linkExpired': "Ссылка не открывается: её уже нет. Попроси тренера прислать новую.",
   'import.linkOffline': "Не получилось загрузить программу — похоже, нет связи. Попробуй ещё раз, когда появится интернет.",
   'import.noProgram': "По ссылке нет программы с упражнениями.",
@@ -1646,9 +1650,6 @@ const I18N_EN = {
   'programs.disabled': "Disabled",
   'programs.about': "About the program",
   'programs.variant': "Workout variant",
-  'programs.loadToday': "Today’s load",
-  'programs.loadHint': "Steps increase reps, time, or weight depending on each exercise’s settings.",
-  'programs.currentStep': "current step",
   'programs.exercises': "Exercises",
   'programs.startWorkout': "Start workout",
   'programs.newProgram': "New program",
@@ -1796,8 +1797,8 @@ const I18N_EN = {
   'builder.restRounds': "Rest between rounds, sec",
   'builder.progressionTitle': "Progress over time",
   'builder.progressionSub': "reps and weight will gradually increase as you train",
-  'builder.progressionFrequency': "How often to progress",
-  'builder.progressionHint': "Load increases based on completed workouts, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. Before starting, you can see and adjust how many progressions have happened.",
+  'builder.progressionFrequency': "How often to check",
+  'builder.progressionHint': "Load increases based on how many times this exercise has been done, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. When it's time to check, we'll ask right after the workout, and raising the load takes one tap.",
   'builder.descriptionCover': "Description & cover",
   'builder.descriptionOptional': "Description (optional)",
   'builder.coverOptional': "Cover (optional)",
@@ -1869,8 +1870,6 @@ const I18N_EN = {
   'ai.copyProgramSub': "Program text only, without an AI task — paste it into any chat",
   'ai.step3': "Step 3 · Response from chat",
   'ai.build': "Build",
-  'builder.lessProgress': "Fewer progression steps",
-  'builder.moreProgress': "More progression steps",
   'builder.programNameExample': "For example: Morning Blitz",
   'builder.secondsExample': "For example: 120",
   'builder.descriptionExample': "Who the program is for, what to expect, how often to train",
@@ -2549,7 +2548,7 @@ const I18N_EN = {
   'notify.returnTitle': "Fit Timer is waiting",
   'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
   'notify.progressTitle': "Your load is higher today",
-  'notify.progressBody': "“{name}” is now at progression step {steps}. Check the new reps, time, or weight before you start.",
+  'notify.progressBody': "“{name}” has a higher load today. Check the new reps, time, or weight before you start.",
   'notify.unfinishedTitle': "Continue your workout?",
   'notify.unfinishedBody': "“{name}” is unfinished. You can continue from where you left off.",
   'notify.premiumTitle': "Get more from Fit Timer",
@@ -2585,6 +2584,9 @@ const I18N_EN = {
   'start.workoutMany': "workouts",
   'start.setShort': "sets",
   'start.roundShort': "rnd",
+  'start.weightPending': "weight not set",
+  'start.pickWeightTitle': "Working weight",
+  'start.pickWeightHint': "Heavy enough that the last reps take real effort, but not to failure",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",
@@ -2625,7 +2627,6 @@ const I18N_EN = {
   'sessions.variant': "variant {count}",
   'sessions.variantDays': "variant {days}",
   'sessions.doneText': "Workout done",
-  'sessions.progStep': "progression step {count}",
   'sessions.weekLabel': "Workouts for the week",
   'sessions.weekEmpty': "No workouts this week.",
   'sessions.dayLabel': "Workouts for the day",
@@ -2700,6 +2701,10 @@ const I18N_EN = {
   'finish.quickTitle': "That was quick",
   'finish.quickHeading': "Workout finished",
   'finish.quickText': "This workout took less than 30 seconds — it looks like it was finished by accident. You can leave it uncounted.",
+  'finish.progCheckTitle': "Everything felt fine? Let's raise the load",
+  'finish.progCheckYes': "Yes, raise it",
+  'finish.progCheckHardLink': "Something felt hard",
+  'finish.progCheckApplied': "Done — the load goes up from your next workout.",
   'progress.title': "Progress",
   'progress.tabWorkouts': "Workouts",
   'progress.tabBody': "Body",
@@ -2914,7 +2919,6 @@ const I18N_EN = {
   'week.plannedMissed': "No workout was completed. Planned: {names}.",
   'week.canStillMakeUp': "You can still make it up: complete the program by Sunday to close the week.",
   'week.plannedText': "Workout planned.",
-  'week.progStepText': "Progression step: {count}.",
   'week.nonePlanned': "No workout was completed or planned for this day.",
   'week.dayMovedOn': "Counted from the workout on {day}.",
   'today.programsOff': "Programs disabled",
@@ -3015,6 +3019,10 @@ const I18N_EN = {
   'program.createdEdited': "Done: “{name}” was created.\n\nThe original program was not changed.",
   'program.imagesCarried': "\nImages carried over: {count}.",
   'ai.parseProblems': "Problems:",
+  'ai.editAdded': "\nAdded: {names}.",
+  'ai.editRemoved': "\nRemoved: {names}.",
+  'ai.editReordered': "\nExercise order changed.",
+  'ai.editTimeChanged': "\nWorkout time: ≈{before} → {after} min.",
   'import.linkExpired': "This link no longer works. Ask the trainer to send a new one.",
   'import.linkOffline': "Couldn’t load the program. Check your connection and try again.",
   'import.noProgram': "The link does not contain a program with exercises.",
@@ -3348,13 +3356,14 @@ try{
   const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
 Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Treat all explicitly provided user data as authoritative constraints and build a program that genuinely matches the stated goal, level, equipment, schedule, duration and preferences. Do not make the whole program easier just because some unrelated details are unknown. Use extra caution only where uncertainty truly matters: absolute starting loads when strength is unknown, medical or pain-related risk, and unusually aggressive progression. Do not invent facts about the user or pretend certainty where context is missing.
 
-- ПРОГРЕССИЯ at PROGRAM level means WHEN the next progression step happens: after N completed workouts. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between increases and experienced users roughly 2-4, but adapt to the actual program and recovery.
+- ПРОГРЕССИЯ at PROGRAM level means: after N completions of a given exercise, the app checks with the user whether to raise its load — it does NOT raise the load automatically, and it is per exercise, not a single program-wide counter. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between checks and experienced users roughly 2-4, but adapt to the actual program and recovery.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
 - For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
 - For weighted reps, distinguish three cases:
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
   2) rep progression: positive ШАГ ПОВТОРОВ;
   3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
+- Whenever ШАГ ВЕСА is positive (cases 1 and 3 above), always give ПОТОЛОК ВЕСА — weight that grows without any realistic cap is the actual injury/plateau risk, not a missing field. This applies even when the user hasn't picked a starting weight yet.
 - ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
@@ -3388,7 +3397,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ПОТОЛОК: required ceiling for progressive unweighted formats
 ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
 ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: realistic kg ceiling for weighted formats
+ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
 ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
 ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
 ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
@@ -3417,20 +3426,18 @@ Workout variants:
 
 ${exerciseSchema(outputLanguage)}`;
 
-  const editRules = allowStructure => allowStructure
-    ? `=== EDIT RULES ===
-- Apply only the requested structural changes. Preserve unrelated variants, exercises, protocol fields and values.
-- You may add/remove/reorder an exercise or variant ONLY where the user's request explicitly requires it.
-- Never silently drop a protocol line because it looks unnecessary.
-- You may add valid optional exercise fields when needed by the requested change.
-- If the user asks to disable/remove a numeric setting while keeping the same structure, prefer keeping its existing label with value 0.`
-    : `=== EDIT RULES ===
-- Preserve the number and order of workout variants and exercises.
-- Preserve every existing protocol line unless its VALUE is being changed.
-- Never delete or rename an existing protocol label.
-- You MAY add only valid optional exercise fields when the requested change requires them.
-- If the user asks to disable/remove a numeric setting, keep its existing label and set a neutral value such as 0.
-- Do not change unrelated fields.`;
+  // Раньше здесь было два жёстко разных набора правил (свободная перестройка /
+  // запрет структуры), а клиент выбирал между ними regex-угадайкой по тексту
+  // запроса — и либо душил «добавь упражнение», либо разрешал больше, чем
+  // просили. Один набор правил учит модель судить о масштабе изменения сама,
+  // а итог всё равно проверяется после генерации (парсинг + семантический diff),
+  // а не запрещается заранее.
+  const editRules = () => `=== EDIT RULES ===
+- Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
+- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
+- Preserve every existing protocol line whose value the request does not change. Never delete or rename a protocol label just because it looks unnecessary.
+- If the user asks to disable/remove a numeric setting while keeping the same structure, keep its existing label and set a neutral value such as 0.
+- You may add valid optional exercise fields when the requested change needs them.`;
 
   const programPrompt = outputLanguage => [
     'You are a fitness-program assistant for home workouts.',
@@ -3454,14 +3461,34 @@ ${exerciseSchema(outputLanguage)}`;
       .trim();
   }
 
+  // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
+  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Промт просит эту строку
+  // всегда, когда сам вес растёт (см. exerciseSchema/progressionRules), но
+  // промт — не гарантия; поэтому НОВЫЕ упражнения/программы (kind *.create)
+  // проверяются и после генерации. Правки (*.modify) — нет: старые упражнения
+  // сериализуются с «ШАГ ВЕСА: 2» и без потолка (так их создавали раньше), и
+  // узкая правка вроде «отдых 60 сек» законно возвращает их как есть —
+  // требовать потолок там значило бы отклонять обычные правки.
+  function exerciseBlockMissingWeightCeiling(block){
+    const stepM = block.match(/(?:^|\n)ШАГ ВЕСА:\s*([\d.,]+)/);
+    if(!stepM) return false;
+    const step = parseFloat(stepM[1].replace(',', '.'));
+    if(!(step > 0)) return false;
+    return !/(?:^|\n)ПОТОЛОК ВЕСА:\s*\S/.test(block);
+  }
+
   function validateExerciseResponse(raw, opts){
+    const needCeiling = !!(opts && opts.requireWeightCeiling);
     const text = normalizeResponse(raw);
     const blocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).map(x=>x.trim()).filter(Boolean);
     const required = ['УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
     const missing = [];
-    blocks.forEach((block, i) => required.forEach(label => {
-      if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
-    }));
+    blocks.forEach((block, i) => {
+      required.forEach(label => {
+        if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
+      });
+      if(needCeiling && exerciseBlockMissingWeightCeiling(block)) missing.push((i+1)+':ПОТОЛОК ВЕСА');
+    });
     const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
     const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
     const countOk = blocks.length >= min && blocks.length <= max;
@@ -3469,14 +3496,21 @@ ${exerciseSchema(outputLanguage)}`;
       reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
   }
 
-  function validateProgramResponse(raw){
+  function validateProgramResponse(raw, opts){
     const text = normalizeResponse(raw);
     const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
     const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
     const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
-    const days = (text.match(/(?:^|\n)ДЕНЬ:/g) || []).length;
-    return {ok: !missing.length && exercises > 0 && days > 0, text, missing,
-      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : ''))};
+    // каждый вариант начинается со своей строки ДЕНЬ: — делим по ней и отбрасываем
+    // преамбулу (ПРОГРАММА/ОПИСАНИЕ/ВРЕМЯ) до первого варианта
+    const variants = text.split(/(?:^|\n)ДЕНЬ:/).slice(1);
+    const days = variants.length;
+    const emptyVariant = variants.some(v => !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(v));
+    const exBlocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm);
+    const weightCeilingMissing = !!(opts && opts.requireWeightCeiling) && exBlocks.some(exerciseBlockMissingWeightCeiling);
+    if(weightCeilingMissing) missing.push('ПОТОЛОК ВЕСА');
+    return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
+      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
 
   function validateResponse(kind, raw){
@@ -3485,10 +3519,111 @@ ${exerciseSchema(outputLanguage)}`;
       return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
         text:image, missing:[], reason:'bad_image'};
     }
-    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10});
+    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true});
     if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
-    if(/^(?:program\.(?:create|modify)|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
+    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true});
+    if(/^(?:program\.modify|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
     return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
+  }
+
+  // Одна строка протокола → {key, value}. Общая для клиента и сервера: обе стороны
+  // разбирали её независимо и чуть по-разному, хотя формат один и тот же.
+  function protocolLine(line){
+    const m = String(line || '').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+    return m ? {key:m[1], value:m[2]} : null;
+  }
+
+  // Поля, которые нельзя терять молча при правке ОДНОГО упражнения. Раньше вся
+  // правка шла через позиционный merge каждого поля (что не даёт ИИ ни удалить,
+  // ни переставить строки) — теперь ответ ИИ принимается как есть, а сюда
+  // подставляются только описательные поля техники, если ответ их не вернул.
+  const DESCRIPTIVE_EXERCISE_LABELS = ['ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ','ВИДЕО'];
+  function carryExerciseFields(sourceText, candidateText){
+    const srcByKey = {};
+    String(sourceText || '').split(/\r?\n/).forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim() && srcByKey[p.key] == null) srcByKey[p.key] = p.value.trim();
+    });
+    const candLines = String(candidateText || '').split(/\r?\n/);
+    const candHasValue = new Set();
+    candLines.forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim()) candHasValue.add(p.key);
+    });
+    const extra = DESCRIPTIVE_EXERCISE_LABELS.filter(k => !candHasValue.has(k) && srcByKey[k] != null);
+    if(!extra.length) return candidateText;
+    return candLines.concat(extra.map(k => k + ': ' + srcByKey[k])).join('\n');
+  }
+
+  function normExName(s){
+    return String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  }
+  // длина наидлиннейшей возрастающей подпоследовательности — сколько сопоставленных
+  // упражнений уже стоят в правильном относительном порядке без переноса
+  function longestIncreasingRun(seq){
+    const tails = [];
+    seq.forEach(x => {
+      let lo = 0, hi = tails.length;
+      while(lo < hi){ const mid = (lo + hi) >> 1; if(tails[mid] < x) lo = mid + 1; else hi = mid; }
+      tails[lo] = x;
+    });
+    return tails.length;
+  }
+
+  // Семантическое сравнение программ по упражнениям: что добавлено, что убрано,
+  // сколько переставлено — вместо принудительного «то же количество, тот же
+  // порядок» (aiMergeProgramEdit/sameProgramShape), которое молча душило любую
+  // структурную правку. Работает на {plans:[{exercises:[{id,name,...}]}]} —
+  // тот же вид, что у customProgram после normPlans()/parseProgramText().
+  // Сопоставление: сперва по стабильному id (если он совпал напрямую), затем по
+  // технической метке КОД в новом упражнении (её кладёт клиент в текст для
+  // AI-правки и не показывает пользователю), затем по точному имени — сначала в
+  // том же варианте, потом в любом. Совпадение не гарантирует, что это буквально
+  // то же движение — это лишь лучшая доступная оценка непрерывности.
+  function diffPrograms(oldP, newP){
+    const oldPlans = (oldP && Array.isArray(oldP.plans)) ? oldP.plans : [];
+    const newPlans = (newP && Array.isArray(newP.plans)) ? newP.plans : [];
+    const oldFlat = [], newFlat = [];
+    oldPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => oldFlat.push({ex, pi})));
+    newPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => newFlat.push({ex, pi})));
+
+    const usedNew = new Array(newFlat.length).fill(false);
+    const matches = [];
+    const alreadyMatched = new Set();
+    const matchPass = test => {
+      oldFlat.forEach((o, oi) => {
+        if(alreadyMatched.has(oi)) return;
+        let ni = -1;
+        for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(newFlat[j].pi === o.pi && test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni < 0) for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni >= 0){
+          usedNew[ni] = true; alreadyMatched.add(oi);
+          matches.push({oi, ni, oldEx:o.ex, newEx:newFlat[ni].ex});
+        }
+      });
+    };
+    matchPass((a, b) => a.id && b.id && a.id === b.id);
+    matchPass((a, b) => a.id && b._code && a.id === b._code);
+    matchPass((a, b) => normExName(a.name) && normExName(a.name) === normExName(b.name));
+
+    const matchedOld = new Set(matches.map(m => m.oi));
+    const removed = oldFlat.filter((_, oi) => !matchedOld.has(oi)).map(o => o.ex);
+    const added = newFlat.filter((_, ni) => !usedNew[ni]).map(n => n.ex);
+
+    const orderedNewIdx = matches.slice().sort((a, b) => a.oi - b.oi).map(m => m.ni);
+    const moved = matches.length ? matches.length - longestIncreasingRun(orderedNewIdx) : 0;
+
+    return {
+      matches: matches.map(m => ({oldEx:m.oldEx, newEx:m.newEx})),
+      added, removed, moved,
+      oldVariants: oldPlans.length, newVariants: newPlans.length
+    };
   }
 
   const api = {
@@ -3502,7 +3637,10 @@ ${exerciseSchema(outputLanguage)}`;
     exerciseSchema,
     programSchema,
     editRules,
-    programPrompt
+    programPrompt,
+    protocolLine,
+    carryExerciseFields,
+    diffPrograms
   };
   root.FitAIProtocol = api;
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -4434,7 +4572,6 @@ function openStart(raw){
   $('startNum').textContent = '';
   $('startTitle').textContent = raw.name;
   renderPlanRow();
-  renderProgSteps();
   renderStartInfo();
   syncPrefs();
   show('scrStart');
@@ -4609,9 +4746,18 @@ function renderStartOverview(){
       changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
     }
   } else if(p.progression){
-    const done = (p.stats && p.stats.completions) || 0;
-    const left = p.progression - (done % p.progression);
-    changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    // прогрессия у каждого упражнения своя (ex.ps.n) — «осталось N тренировок»
+    // считаем по ближайшему к порогу упражнению этого варианта, а не по общему
+    // счётчику программы
+    const every = Math.max(1, +p.progression || 1);
+    const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
+      .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
+    if(ns.length){
+      const left = Math.max(1, every - Math.max(...ns));
+      changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
+    } else {
+      changeText(t('start.noChangesOff'));
+    }
   } else {
     changeText(t('start.noChangesOff'));
   }
@@ -4640,32 +4786,54 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach(x => tag(x.text, x.cls));
     if(delta) tag(delta.text, 'grow');
+    // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
+    // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
+    // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
+    // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
+    if(hasWeight(ex)){
+      row.classList.add('tappable');
+      row.onclick = () => openWeightModal(i);
+      if(weightPending(ex)) tag(t('start.weightPending'), 'weight-pending');
+    }
     box.appendChild(row);
   });
 }
 
-// показывает и позволяет поправить счётчик шагов прогрессии на экране перед стартом.
-// Видно, только если у программы есть хоть одно упражнение с осью прогрессии — иначе
-// счётчику попросту нечего показывать, а пустая карточка только путает.
-function renderProgSteps(){
+// правка веса одного упражнения — общий попап на весь список, какое открыто,
+// помнит weightModalIdx (тот же приём, что у #restModal в конструкторе).
+// Если вес ещё не был выбран — записываем в базу (ex.weight), она же и есть
+// текущая нагрузка, пока прогрессия её не сдвинула. Если уже была выбрана —
+// это разовая правка «сегодня беру другой снаряд», она идёт в ex.ps.cur и
+// не переписывает исходную базу упражнения.
+let weightModalIdx = -1;
+function openWeightModal(i){
   const p = state.raw;
-  const hasProgAxis = normPlans(p).some(pl => (pl.exercises || []).some(ex => progAxis(ex) !== 'none'));
-  const on = p.progression && hasProgAxis;
-  setShown('progStepsBlock', on);
-  if(!on) return;
-  const steps = progSteps(p);
-  $('psCount').textContent = steps;
-  $('psMinus').disabled = steps <= 0;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[i];
+  if(!ex) return;
+  weightModalIdx = i;
+  $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
+  const now = getExWeight(p.id, ex, p);
+  $('weightModalInput').value = now > 0 ? fmtKg(now) : '';
+  $('weightModal').classList.add('open');
+  $('weightModalInput').focus();
 }
-// кнопки ± двигают РУЧНУЮ ПОПРАВКУ, а не сам счётчик: сам счётчик считается из числа
-// пройденных тренировок и пересчитался бы заново, затерев ручное изменение
-function bumpProgSteps(dir){
+async function commitWeightModal(){
   const p = state.raw;
-  const cur = progSteps(p);
-  if(dir < 0 && cur <= 0) return;
-  p.progStepsAdj = Math.round(+p.progStepsAdj || 0) + dir;
-  savePrograms();
-  renderProgSteps();
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
+  weightModalIdx = -1;
+  $('weightModal').classList.remove('open');
+  if(!ex) return;
+  const kg = parseKg($('weightModalInput').value);
+  if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
+  if(weightPending(ex)){
+    ex.weight = kg;
+    // первая база веса: никаких «накопленных» кг поверх неё быть не может
+    if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+  }
+  else setExWeight(ex, kg);
+  await savePrograms();
   renderStartOverview();
 }
 
@@ -6730,7 +6898,6 @@ function sessRow(en, withDate, withStatus){
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
-  if(en.step > 0) parts.push(t('sessions.progStep',{count:en.step}));
   // Упражнений здесь нет намеренно. Состав смотрят на странице программы, куда ведёт
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
@@ -6877,7 +7044,7 @@ function customToProgram(p, planIdx = 0){
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
-      weightBase: +ex.weight || 0,   // нужно попапу после подхода, чтобы не задваивать уже применённые шаги
+      weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name
     };
@@ -8814,6 +8981,9 @@ function sanitizeProgram(p){
 }
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
+  // упражнения из старых данных (созданы до появления id) или пришедшие по
+  // сети без него — см. newExId() в 60-builder.js
+  if(!ex.id) ex.id = newExId();
   ex.name = clampLine(ex.name, LIM.exName);
   if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
   if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -8823,6 +8993,17 @@ function sanitizeExercise(ex){
   if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
   const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
   ex.media = pic ? {kind: 'img', data: pic} : null;
+  // ex.ps — фактическая прогрессия (см. 60-builder.js), сюда же может прийти
+  // что угодно из чужой ссылки/синка — те же ограничения, что у остальных полей
+  if(ex.ps && typeof ex.ps === 'object'){
+    ex.ps.n = Math.max(0, Math.min(9999, Math.round(+ex.ps.n || 0)));
+    const cur = ex.ps.cur;
+    ex.ps.cur = (cur && typeof cur === 'object') ? {
+      reps: cur.reps != null ? clampLine(String(cur.reps), LIM.exValue) : undefined,
+      sec: cur.sec != null ? Math.max(0, Math.min(3600, Math.round(+cur.sec || 0))) : undefined,
+      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined
+    } : {};
+  } else delete ex.ps;
 }
 
 // Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.
@@ -8934,20 +9115,20 @@ window.addEventListener('appLocaleChanged', async ()=>{
   try{ renderMine(); renderToday(); }catch(_){}
 });
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
-// Раз в progression дней рабочие веса растут на свой шаг.
-// Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
-// гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
-// включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
-// Счётчик шагов у программы (p.progSteps) — единственный источник роста по расписанию.
-// Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
-// (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
-// вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по календарю.
-// Раньше вес рос просто оттого, что прошло время: уехал в отпуск на месяц — вернулся,
-// а программа подняла нагрузку на четыре шага, хотя ты не тренировался. Это и демотивирует,
-// и травмоопасно. Теперь p.progression — это «повышать раз в N тренировок».
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам. Отдельная функция не нужна —
-// значение выводится на лету в progSteps(), поэтому здесь только миграция старых программ.
+// Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
+// шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
+// ex.ps.n в commitFinish (70-workout.js). Раньше был один счётчик на программу
+// (p.progSteps, потом progStepsAdj поверх floor(completions/progression)):
+// удобно для отката, но при чередовании вариантов A/Б каждое упражнение
+// получало +1 шаг за КАЖДУЮ тренировку программы, включая дни, где его вообще
+// не было. Состояние теперь у каждого упражнения отдельно и растёт только тогда,
+// когда это упражнение реально выполнено.
+// Прогрессия по-прежнему считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по
+// календарю: раньше вес рос просто оттого, что прошло время (отпуск на месяц —
+// и программа подняла нагрузку на четыре шага без единой тренировки), что и
+// демотивирует, и травмоопасно.
+// applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
+// а только про одноразовую миграцию старых программ на эту модель.
 function applyProgressionAll(){
   let changed = false;
   customPrograms.forEach(p => {
@@ -8966,7 +9147,42 @@ function applyProgressionAll(){
       changed = true;
     }
   });
+  if(applyPerExerciseProgressionMigration()) changed = true;
   if(changed) savePrograms();
+}
+
+// Переход с одного счётчика шагов на программу (progSteps = floor(completions/
+// progression) + progStepsAdj, читался на лету) на состояние у каждого
+// упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
+// Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
+// упражнения прогоняется через advanceExerciseProgression() ровно столько раз,
+// сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
+// ограничения (потолок, двойная прогрессия) применяются как всегда, а не
+// переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
+// не обновил мобильное приложение, оно продолжит показывать те же числа, что и
+// раньше — база и общий счётчик программы у него по-прежнему на месте, ex.ps
+// он просто не знает. Дрейф возможен, только если тренировки на старом
+// приложении продолжаются ПОСЛЕ того, как программа уже росла на новом —
+// тот же класс риска, что и у любого другого различия версий приложения.
+function applyPerExerciseProgressionMigration(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    if(p.psMigrated) return;
+    p.psMigrated = true;
+    changed = true;
+    if(!p.progression) return;
+    const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+    const oldProgramSteps = Math.max(0, Math.floor(done / p.progression) + Math.round(+p.progStepsAdj || 0));
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
+      delete ex.progFrom;
+      if(ex.warmup || progAxis(ex) === 'none') return;
+      ensurePs(ex).n = done % p.progression;
+      const exSteps = Math.max(0, oldProgramSteps - progFrom);
+      for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+    }));
+  });
+  return changed;
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
@@ -9306,8 +9522,6 @@ function openWeekDay(d){
       ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
       : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
     if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}) + '.');
-    const step = progSteps(p);
-    if(step > 0) parts.push(t('week.progStepText',{count:step}));
 
     const row = document.createElement('button');
     row.type = 'button';
@@ -9494,6 +9708,8 @@ async function duplicateProgram(p){
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
+  // прогресс каждого упражнения (ex.ps) — тоже часть «пройденного», копия начинает с базы
+  normPlans(copy).forEach(pl => (pl.exercises || []).forEach(ex => { delete ex.ps; }));
   delete copy.storeId;      // не «из каталога»: это уже своя программа
   delete copy.pub;          // заявка в каталог принадлежит оригиналу
   delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны
@@ -10453,11 +10669,6 @@ function imageStaticExercise(item){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
-function imageLocalMotionExercise(item){
-  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
-  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
-}
-
 function imageProgramContext(){
   const parts = [
     draft && draft.goal, draft && draft.cat, draft && draft.category,
@@ -10531,14 +10742,17 @@ function imageCharacterStyle(genderTxt){
 function exerciseImagePrompt(item, genderTxt){
   const equipment = imageEquipment(item);
   const isStatic = imageStaticExercise(item);
-  const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
   const regions = imageMuscleRegions(item);
   const muscles = regions.length ? regions.join(', ') : 'only the primary working muscles required by this movement';
+  // Раньше немоторные (не изометрические, не изолированные суставом) движения
+  // просили «два полупрозрачных наложенных фото одного атлета» — нейросеть
+  // регулярно рисовала это как двух слипшихся людей друг в друге, а не как
+  // внятное до/после. Один чёткий кадр самой показательной фазы + стрелки —
+  // тот же приём, что уже нормально работал для локальных движений (сгибания
+  // рук и т.п.), теперь единый для всех не-статичных упражнений.
   const motion = isStatic
     ? 'Show ONE clear final pose only. No ghost pose or movement trail.'
-    : isLocalMotion
-      ? 'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
-      : 'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
+    : 'Show ONE full athlete only, in the single clearest and most demonstrative phase of the movement (usually peak contraction or full range of motion). Exactly one solid, fully opaque figure — no second body, no duplicated limbs, no ghost pose, no semi-transparent overlay, no motion blur, no double exposure. Show the direction of motion only with one or two small violet-lavender trajectory arrows beside the moving body part(s) or equipment.';
   return [
     `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
     `Style: premium stylized-realistic 3D, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, polished high-end rendering.`,
@@ -10546,12 +10760,11 @@ function exerciseImagePrompt(item, genderTxt){
     'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
     item.desc ? `Technique: ${item.desc}` : null,
     equipment.length
-      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position in every visible phase.`
+      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position.`
       : 'Do not invent equipment that the exercise does not require.',
     motion,
-    !isStatic && !isLocalMotion ? 'Add one or two small violet-lavender arrows showing movement direction.' : null,
     `Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: ${muscles}.`,
-    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong between male and female versions.',
     'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
     'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
     'No extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, collage, borders or watermarks.'
@@ -11005,11 +11218,19 @@ function exRestLines(ex){
 // что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
 // Сериализуем только оси, которые реально что-то значат для этого формата: для
 // «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
-function exProgToLines(ex){
+function exProgToLines(ex, opts){
+  // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
+  // а не базу — см. exCurrentValueText/programToText выше
+  const p = opts && opts.program;
+  const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
+  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
+  // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
+  // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
+  // вовсе, а прогрессия молча копилась поверх несуществующей базы.
+  if(hasWeight(ex)) L.push('ВЕС: ' + fmtKg(weightNow));
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
-      if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -11033,8 +11254,6 @@ function exProgToLines(ex){
       L.push('ЗАМЕНА: ' + ex.swapName.trim());
       if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
-  } else if(hasWeight(ex) && +ex.weight){
-    L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
   return L;
 }
@@ -11084,19 +11303,6 @@ function aiClientVerdict(kind, raw, opts){
   return verdict.text;
 }
 
-function sameProgramShape(a, b){
-  const ap = normPlans(a), bp = normPlans(b);
-  if(ap.length !== bp.length) return false;
-  for(let i=0;i<ap.length;i++){
-    const ae=(ap[i].exercises||[]), be=(bp[i].exercises||[]);
-    if(ae.length !== be.length) return false;
-    for(let j=0;j<ae.length;j++){
-      if(String(ae[j].name||'').trim().toLowerCase() !== String(be[j].name||'').trim().toLowerCase()) return false;
-    }
-  }
-  return true;
-}
-
 function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
@@ -11112,7 +11318,7 @@ function exePrompt(){
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
-    FitAIProtocol.editRules(false),
+    FitAIProtocol.editRules(),
     'USER: '+userForAI(draft&&draft.locale),
     'REQUEST: '+wish,
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
@@ -11126,11 +11332,13 @@ async function applyExEdit(){
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
-  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
-  // в два упражнения или потерять старые служебные поля.
+  // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
-  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  // Ответ ИИ используется как есть; carryExerciseFields лишь подставляет описание/
+  // мышцы/ошибки/видео из старого блока, если ИИ их не вернул — раньше здесь был
+  // позиционный merge всех полей, который не давал ИИ ни убрать, ни переставить строку.
+  const merged=FitAIProtocol.carryExerciseFields(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
@@ -11138,6 +11346,10 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  // это правка, а не замена: то же самое упражнение сохраняет свой id, а
+  // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
+  upd.id=oldEx.id;
+  carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
   $('aiResult').value='';
   await afterExChange();
@@ -11323,15 +11535,35 @@ function ytCheckUrl(){
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
 let editAIProg = null; // программа-исходник
 
+// текущее (уже прогрессированное) значение упражнения — то, что человек реально
+// делает сейчас, а не база из редактора. Используется только для AI-правки всей
+// программы (см. programToText forEdit): она создаёт НОВУЮ программу со своим
+// счётчиком прогрессии с нуля, поэтому если отдать ИИ базу, правка отбросит
+// пользователя к исходным цифрам — а если отдать текущее и принять его как
+// новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
+function exCurrentValueText(p, ex){
+  if(ex.type === 'time') return String(getExProgValue(p.id, ex, p, 'time'));
+  // двойная прогрессия: текущие повторы — одна точка внутри диапазона. Отдать
+  // её как новую базу значит потерять низ диапазона, к которому повторы
+  // сбрасываются при прибавке веса. Отдаём диапазон как есть — после правки
+  // повторы начнут цикл снизу с текущим (уже выросшим) весом.
+  if(isDualProg(ex)) return valueText(ex.value).replace('–', '-');
+  return progressedRepsRange(p.id, ex, p).replace('–', '-');
+}
+
 // программа → текст того же формата, который понимает парсер
-// картинки и svg НЕ включаем: они длинные, а перенесём их сами по названиям
-function programToText(p){
+// картинки и svg НЕ включаем: они длинные, а перенесём их сами по id (см. carryMedia)
+// opts.forEdit: для AI-правки всей программы — добавляет техническую метку КОД:
+// у каждого упражнения (не видна пользователю) и отдаёт текущую прогрессированную
+// нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
+function programToText(p, opts){
+  const forEdit = !!(opts && opts.forEdit);
   const L = [];
   L.push('ПРОГРАММА: ' + (p.name || ''));
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
-    L.push(`ПРОГРЕССИЯ: ${p.progression} — повышать нагрузку раз в ${p.progression} ${plural(p.progression, 'пройденную тренировку', 'пройденные тренировки', 'пройденных тренировок')}`);
+    L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
@@ -11347,17 +11579,18 @@ function programToText(p){
     (pl.exercises || []).forEach(ex => {
       L.push('');
       L.push('УПРАЖНЕНИЕ: ' + (ex.name || ''));
+      if(forEdit && ex.id) L.push('КОД: ' + ex.id);
       if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
       const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : valueText(ex.value).replace('–', '-')));
       if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex));
+      L.push(...exProgToLines(ex, forEdit ? {program:p} : null));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -11366,14 +11599,16 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish=clampText($('eaWish').value,LIM.wish);
-  const structural=aiStructureChangeRequested(wish);
   return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
-    FitAIProtocol.editRules(structural)+'\n'+
+    FitAIProtocol.editRules()+'\n'+
+    // КОД — только для сопоставления «то же упражнение / новое», сюда не входит в
+    // обычный протокол и не должна попасть в пользовательский текст (ОПИСАНИЕ и т.п.)
+    'Each УПРАЖНЕНИЕ line may be followed by a КОД: <code> line — an internal reference tag, never user-visible text. Repeat the SAME КОД for the same movement even if you rename it, move it, or change its format; give a genuinely new exercise no КОД line at all; never move a КОД onto a different exercise.\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
-    '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
+    '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
 }
 
 function openEditAI(p){
@@ -11401,41 +11636,68 @@ function versionedName(base){
   return clean + ' (' + t('program.updatedN',{count:Date.now()}) + ')';
 }
 
-// переносит картинки и обложку из исходной программы по совпадению названий
-function carryMedia(oldProg, newProg){
-  const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-  const byName = new Map();
-  normPlans(oldProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(ex.media && !byName.has(norm(ex.name))) byName.set(norm(ex.name), ex.media);
-  }));
+// переносит картинки и обложку из исходной программы. Упражнения сопоставлены
+// заранее через FitAIProtocol.diffPrograms (id/КОД/имя, см. createEditedProgram)
+// — так перестановка и лёгкое переименование сохраняют картинку, а настоящая
+// замена движения (новое упражнение без пары) — нет: старая картинка от другого
+// движения только запутала бы.
+function carryMedia(oldProg, newProg, diff){
   let carried = 0;
-  normPlans(newProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(!ex.media){
-      const m = byName.get(norm(ex.name));
-      if(m){ ex.media = JSON.parse(JSON.stringify(m)); carried++; }
-    }
-  }));
+  diff.matches.forEach(({oldEx, newEx}) => {
+    if(!newEx.media && oldEx.media){ newEx.media = JSON.parse(JSON.stringify(oldEx.media)); carried++; }
+  });
   if(!newProg.cover && oldProg.cover) newProg.cover = oldProg.cover;
   return carried;
+}
+
+// расчётная (не по истории) длительность одного варианта — используется только
+// для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
+// и та же основа: реальная история новой программы всегда пуста (свежий id), а у
+// старой может быть — сравнение «средняя реальная» против «расчётная» было бы
+// нечестным. Подменяем id, чтобы estimatedWorkoutMinutes не подобрала историю.
+function structuralMinutes(p, planIdx){
+  return estimatedWorkoutMinutes(Object.assign({}, p, {id:'~diff~'}), planIdx || 0, []).n;
+}
+
+// «Было / стало» после AI-правки: коротко, без похода в текст ответа. Плюс
+// хардовые проверки итога (пачка 1, п.4) — то, что не запретить заранее в
+// промте, но можно и нужно поймать после генерации.
+function editSummaryText(diff, oldProg, newProg){
+  const bits = [];
+  if(diff.added.length) bits.push(t('ai.editAdded', {names: diff.added.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.removed.length) bits.push(t('ai.editRemoved', {names: diff.removed.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.moved > 0) bits.push(t('ai.editReordered'));
+  const before = structuralMinutes(oldProg, 0), after = structuralMinutes(newProg, 0);
+  // порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%
+  const notable = before > 0 && Math.abs(after - before) > (before <= 20 ? 5 : Math.max(5, before * 0.2));
+  if(notable) bits.push(t('ai.editTimeChanged', {before, after}));
+  return bits.join('');
 }
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
-  const wish = clampText($('eaWish').value, LIM.wish);
-  const structural = aiStructureChangeRequested(wish);
-  const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
-  const checkedRaw = aiClientVerdict('program.modify', safeRaw);
+  // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
+  // упражнения теперь в промте (FitAIProtocol.editRules), а не в клиенте через
+  // regex-угадайку «structural» и принудительный merge старой структуры.
+  const checkedRaw = aiClientVerdict('program.modify', raw);
   if(!checkedRaw) return;
   const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
-  if(!structural && !sameProgramShape(editAIProg, program)){
+  // жёсткая проверка итога: программа не развалилась на пустые варианты — иначе
+  // за «улучшением» на деле нет тренировки
+  const newPlans = normPlans(program);
+  if(!newPlans.length || newPlans.some(pl => !(pl.exercises || []).length)){
     appAlert(MSG_AI_PARSE());
     return;
   }
+  const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
+  // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
+  newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
+
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
@@ -11443,7 +11705,7 @@ async function createEditedProgram(){
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
-  const carried = carryMedia(editAIProg, program);
+  carryMedia(editAIProg, program, diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;
   if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
@@ -11453,7 +11715,7 @@ async function createEditedProgram(){
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(t('program.createdEdited',{name:program.name}) + (carried?t('program.imagesCarried',{count:carried}):''));
+  appAlert(t('program.createdEdited',{name:program.name}) + editSummaryText(diff, editAIProg, program));
 }
 
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в
@@ -13463,8 +13725,19 @@ const MAX_MAIN = 20;  // основных упражнений на вариан
 const MAX_EX = MAX_WARM + MAX_MAIN; // общий потолок списка
 let draft = null;
 
+// Внутренний id упражнения — не показывается человеку и не входит в обычный
+// текстовый протокол (импорт/каталог/«скопировать программу» его не видят).
+// Нужен, чтобы при AI-правке отличать «то же упражнение переставили или
+// переименовали» от «это другое упражнение»: раньше всё определялось по имени,
+// и «Жим гантелей лёжа» → «Жим гантелей на полу» выглядело новым упражнением.
+// Уникальности достаточно внутри одной программы (десятки строк), поэтому без
+// проверки на коллизии: 36^6 комбинаций с большим запасом хватает.
+function newExId(){
+  return 'e' + Math.random().toString(36).slice(2, 8);
+}
+
 function blankExercise(){
-  return {name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
+  return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
@@ -13487,6 +13760,8 @@ function normalizeExercise(ex){
      становится упражнением: через неё проходит и набранное руками, и ответ
      нейросети, и чужая программа. Раньше длина названия и описаний тут не
      проверялась вовсе, и название в мегабайт доезжало до карточки как есть. */
+  // упражнения из старых данных (созданы до id) или пришедшие по сети без него
+  if(!ex.id) ex.id = newExId();
   ex.name  = clampLine(ex.name, LIM.exName);
   ex.desc  = clampText(ex.desc, LIM.exDesc);
   ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -13595,6 +13870,11 @@ function hasWeight(ex){
   if(ex.trackWeight != null) return !!ex.trackWeight;
   if(ex.progOn != null) return false;          // новая модель, но формат без веса
   return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
+}
+// формат включает вес, но снаряд ещё не выбран (0 — не «нулевой вес», а «неизвестный»,
+// см. getExProgValue): прогрессия по весу не копится, экран старта предлагает выбрать
+function weightPending(ex){
+  return hasWeight(ex) && !(+ex.weight > 0);
 }
 // отдых после ВСЕГО упражнения (перед следующим), а не между его подходами.
 // У старых упражнений (и когда явно не задан) поле пустое — запасной вариант
@@ -13706,43 +13986,48 @@ function progRound(axis, v){
   return axis === 'weight' ? Math.round(v * 2) / 2 : Math.round(v);
 }
 
+/* ---- состояние прогрессии У КАЖДОГО УПРАЖНЕНИЯ (ex.ps) ----
+   Раньше был один счётчик шагов на программу (progSteps), вычисленный на лету
+   из floor(пройденных тренировок / progression) — и все упражнения программы
+   получали одно и то же число шагов. Это ломалось на чередовании A/Б: упражнение
+   варианта А получало +1 шаг за КАЖДУЮ тренировку программы, в том числе за дни
+   варианта Б, и росло вдвое быстрее задуманного.
+   Теперь у каждого упражнения своё состояние ex.ps:
+     n    — сколько раз это упражнение выполнено с последней проверки прогресса
+     cur  — фактическая текущая нагрузка {reps, sec, kg}; отсутствующее поле
+            означает «ещё равна базе» (ex.value/ex.weight)
+   Состояние живёт внутри упражнения и синхронизируется вместе с программой —
+   отдельного места хранения не нужно. advanceExerciseProgression() сдвигает
+   cur на один шаг; вызывающий код (commitFinish в 70-workout.js) решает, когда
+   это делать — см. также docs/ai-edit-progression-plan.md, пачка 4. */
+function ensurePs(ex){
+  if(!ex.ps || typeof ex.ps !== 'object') ex.ps = {n:0, cur:{}};
+  else{
+    ex.ps.n = Math.max(0, Math.round(+ex.ps.n || 0));
+    if(!ex.ps.cur || typeof ex.ps.cur !== 'object') ex.ps.cur = {};
+  }
+  return ex.ps;
+}
+// текущий диапазон повторов: из ex.ps.cur.reps, если прогрессия уже сдвигала его,
+// иначе — база из ex.value (та же строка «12» / «8-12», что хранится в редакторе)
+function psReps(ex){
+  const ps = ensurePs(ex);
+  return parseValue(ps.cur.reps != null ? ps.cur.reps : ex.value);
+}
+function psSec(ex){
+  const ps = ensurePs(ex);
+  return ps.cur.sec != null ? +ps.cur.sec : parseValue(ex.value).min;
+}
+function psKg(ex){
+  const ps = ensurePs(ex);
+  return ps.cur.kg != null ? +ps.cur.kg : (+ex.weight || 0);
+}
+
 // текущий рабочий вес упражнения: то, что человек поднимает сейчас (растёт от тренировки к тренировке)
 function exWeightKey(pid, name){
   return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
 }
 
-// Сколько раз уже сработала прогрессия. Считается на лету из числа пройденных тренировок
-// (а не из календаря), плюс ручная поправка кнопками ± на экране перед стартом.
-// Поправка хранится отдельно, иначе автоматический пересчёт затирал бы ручное изменение.
-function progAutoSteps(p){
-  if(!p || !p.progression) return 0;
-  const done = (p.stats && p.stats.completions) || 0;
-  return Math.floor(done / p.progression);
-}
-function progSteps(p){
-  if(!p) return 0;
-  return Math.max(0, progAutoSteps(p) + Math.round(+p.progStepsAdj || 0));
-}
-// сколько шагов прогрессии прошло У КОНКРЕТНОГО УПРАЖНЕНИЯ. Счётчик один на программу,
-// но упражнение могло появиться позже — тогда в ex.progFrom записано, сколько шагов у
-// программы уже было на тот момент, и они этому упражнению не засчитываются. Иначе
-// свежая замена в программе с двадцатью повышениями мгновенно улетела бы в свой потолок.
-function exProgSteps(ex, program){
-  return Math.max(0, progSteps(program) - Math.max(0, Math.round(+(ex && ex.progFrom) || 0)));
-}
-
-// Совместимые заглушки для старых мест вызова. Ручной второй источник веса отключён.
-function progDelta(){ return 0; }
-function setProgDelta(){ return 0; }
-
-// Сдвиг от базы создаёт только автоматическая прогрессия программы.
-// Отдельная функция нужна не только для одиночных значений (вес, время), но и для диапазона
-// повторов «8-12» — там сдвигаются сразу обе границы на одно и то же число.
-function progOffset(pid, ex, program, axis){
-  axis = axis || progAxis(ex);
-  const steps = program ? exProgSteps(ex, program) : 0;
-  return steps * progStepSize(ex, axis) + progDelta(pid, ex, axis);
-}
 // потолок оси: 0 или пусто = потолка нет (растём без ограничения, как раньше)
 function progCeil(ex, axis){
   const v = axis === 'weight' ? ex.weightMax : axis === 'time' ? ex.timeMax : ex.repsMax;
@@ -13753,48 +14038,42 @@ function progCeil(ex, axis){
 function isDualProg(ex){
   return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
 }
-// сколько шагов прогрессии умещается в один цикл «повторы от низа до потолка + сброс»
-function dualCycleLen(ex){
-  const base = parseValue(ex.value).min;
-  const top = progCeil(ex, 'reps');
-  const step = progStepSize(ex, 'reps') || 1;
-  return Math.max(1, Math.floor((top - base) / step)) + 1; // +1 — сам шаг сброса с прибавкой веса
-}
 
-// итоговое значение упражнения сейчас: база + суммарный сдвиг, но НЕ выше потолка.
-// При двойной прогрессии вес растёт не каждый шаг, а раз в цикл (когда повторы упёрлись в потолок).
+// итоговое значение упражнения сейчас — читает фактическое состояние (ex.ps),
+// а не вычисляет его из числа шагов программы. pid/program больше не нужны для
+// самого чтения (совместимость со старыми вызовами — аргументы просто игнорируются),
+// но getExWeight/exBits/exerciseLoad и т.п. по-прежнему передают их, поэтому сигнатура
+// сохранена, чтобы не переписывать десятки мест вызова.
 function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
-  const base = progBaseValue(ex, axis);
-  const ceil = progCeil(ex, axis);
-  let v;
-  if(axis === 'weight' && isDualProg(ex)){
-    const steps = program ? exProgSteps(ex, program) : 0;
-    const cycles = Math.floor(steps / dualCycleLen(ex));
-    v = base + cycles * progStepSize(ex, 'weight') + progDelta(pid, ex, 'weight');
-  } else {
-    v = base + progOffset(pid, ex, program, axis);
+  if(axis === 'weight'){
+    // вес 0 — это «снаряд ещё не выбран», а не «стартуем с нуля кг»: пока он не
+    // выбран, прогрессия не копится поверх несуществующей базы (иначе вес сначала
+    // не показывается вовсе, а после пары тренировок вдруг появляется «4 кг» из
+    // воздуха). Как только человек выберет вес на экране старта, психология та же:
+    // это станет новой базой, и прогрессия пойдёт от неё.
+    const kg = psKg(ex);
+    if(kg <= 0) return 0;
+    const ceil = progCeil(ex, 'weight');
+    return Math.max(0, progRound('weight', ceil != null ? Math.min(ceil, kg) : kg));
   }
-  if(ceil != null) v = Math.min(ceil, v);
-  return Math.max(progFloor(axis), progRound(axis, v));
-}
-// диапазон повторов «8-12»: при обычной прогрессии сдвигаются обе границы (но не выше потолка),
-// при двойной — повторы ходят по кругу внутри диапазона и сбрасываются, когда растёт вес
-function progressedRepsRange(pid, ex, program){
-  const r = parseValue(ex.value);
+  if(axis === 'time'){
+    const ceil = progCeil(ex, 'time');
+    const v = psSec(ex);
+    return Math.max(1, progRound('time', ceil != null ? Math.min(ceil, v) : v));
+  }
+  // reps: одно число — минимум текущего диапазона (см. progressedRepsRange для диапазона целиком)
   const ceil = progCeil(ex, 'reps');
-  let min, max;
-  if(isDualProg(ex)){
-    const steps = program ? exProgSteps(ex, program) : 0;
-    const pos = steps % dualCycleLen(ex);
-    min = r.min + pos * progStepSize(ex, 'reps');
-    max = min; // при двойной прогрессии цель — одно число, а диапазон служит рамками
-  } else {
-    const off = progOffset(pid, ex, program, 'reps');
-    min = Math.round(r.min + off);
-    max = Math.round(r.max + off);
-  }
+  const v = psReps(ex).min;
+  return Math.max(1, progRound('reps', ceil != null ? Math.min(ceil, v) : v));
+}
+// диапазон повторов «8-12»: границы читаются из текущего состояния целиком (обе
+// сдвинуты вместе), потолок применяется к обеим
+function progressedRepsRange(pid, ex, program){
+  const r = psReps(ex);
+  const ceil = progCeil(ex, 'reps');
+  let min = r.min, max = r.max;
   if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
   min = Math.max(1, min);
   max = Math.max(min, max);
@@ -13826,9 +14105,89 @@ function progAtCeiling(pid, ex, program){
   if(!growing.length) return false;
   return growing.every(a => axisAtCeiling(pid, ex, program, a));
 }
-// сдвинуть ручную поправку веса на dir «шагов» (±1 обычно) — используют кнопки на тренировке
-function bumpProgDelta(pid, ex, dir, axis){
-  return 0;
+
+// ОДИН шаг прогрессии для упражнения — вызывается, когда ex.ps.n достиг порога
+// (см. commitFinish в 70-workout.js). Мутирует ex.ps.cur; счётчик n сбрасывает
+// вызывающий код. Правила те же, что раньше вычислялись «на лету» из номера шага:
+// при двойной прогрессии повторы растут до потолка, затем сбрасываются к базе и
+// добавляется шаг веса; иначе каждая растущая ось просто сдвигается на свой шаг.
+function advanceExerciseProgression(ex){
+  const axis = progAxis(ex);
+  if(axis === 'none') return;
+  ensurePs(ex);
+  if(axis === 'weight' && isDualProg(ex)){
+    const base = parseValue(ex.value).min;
+    const repsCeil = progCeil(ex, 'reps');
+    const repsStep = progStepSize(ex, 'reps') || 1;
+    const curReps = psReps(ex).min;
+    const next = curReps + repsStep;
+    if(repsCeil != null && next > repsCeil && psKg(ex) <= 0){
+      // вес ещё не выбран — прибавлять не к чему (см. getExProgValue): повторы
+      // остаются на потолке, пока человек не задаст вес на экране старта
+      ex.ps.cur.reps = String(repsCeil);
+    } else if(repsCeil != null && next > repsCeil){
+      const weightCeil = progCeil(ex, 'weight');
+      const nextKg = psKg(ex) + progStepSize(ex, 'weight');
+      ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
+      ex.ps.cur.reps = String(base);
+    } else {
+      ex.ps.cur.reps = String(Math.max(1, next));
+    }
+    return;
+  }
+  if(ex.type === 'time'){
+    const step = progStepSize(ex, 'time');
+    if(step > 0){
+      const ceil = progCeil(ex, 'time');
+      const next = psSec(ex) + step;
+      ex.ps.cur.sec = Math.max(1, ceil != null ? Math.min(ceil, next) : next);
+    }
+  } else {
+    const step = progStepSize(ex, 'reps');
+    if(step > 0){
+      const ceil = progCeil(ex, 'reps');
+      const r = psReps(ex);
+      const min = Math.max(1, r.min + step), max = Math.max(min, r.max + step);
+      ex.ps.cur.reps = String(ceil != null ? Math.min(ceil, min) : min) +
+        (max !== min ? '-' + (ceil != null ? Math.min(ceil, max) : max) : '');
+    }
+  }
+  // вес — независимая ось при формате «…и вес» вне двойной прогрессии
+  if(hasWeight(ex)){
+    const wStep = progStepSize(ex, 'weight');
+    const base = psKg(ex);
+    if(wStep > 0 && base > 0){ // 0 — вес ещё не выбран, расти нечему (см. getExProgValue)
+      const ceil = progCeil(ex, 'weight');
+      const next = base + wStep;
+      ex.ps.cur.kg = progRound('weight', ceil != null ? Math.min(ceil, next) : next);
+    }
+  }
+}
+
+// База упражнения (числа, которые задают человек в конструкторе или ИИ) поменялась —
+// прежняя фактическая нагрузка ex.ps.cur к ней больше не относится: новые числа и
+// есть текущая нагрузка, иначе правка значения/веса в конструкторе просто не
+// действовала бы, пока прогрессия уже сдвинула cur. Счётчик до проверки (n)
+// сохраняем — упражнение то же. База не менялась (правили описание, отдых,
+// подходы, название) — прогресс переносится целиком.
+function progBaseKey(ex){
+  return [ex.type === 'time' ? 'time' : 'reps', hasWeight(ex) ? 1 : 0,
+    normValue(ex.value, ex.type), +ex.weight || 0, ex.dualProg ? 1 : 0].join('|');
+}
+function carryExerciseProgress(oldEx, newEx){
+  if(!newEx) return newEx;
+  if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
+  if(progBaseKey(oldEx) === progBaseKey(newEx)) newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
+  else newEx.ps = {n: Math.max(0, Math.round(+oldEx.ps.n || 0)), cur: {}};
+  return newEx;
+}
+// копия упражнения — отдельное упражнение: свой id (по нему сопоставляются
+// правки ИИ и отметки «тяжело» на экране финала) и прогресс с нуля
+function cloneExerciseAsNew(ex){
+  const c = JSON.parse(JSON.stringify(ex));
+  c.id = newExId();
+  delete c.ps;
+  return c;
 }
 
 // вес отдельно — то же самое, но только для оси «вес» (используется в старых местах интерфейса).
@@ -13838,10 +14197,10 @@ function bumpProgDelta(pid, ex, dir, axis){
 function getExWeight(pid, ex, program){
   return hasWeight(ex) ? getExProgValue(pid, ex, program, 'weight') : 0;
 }
-// абсолютное значение переводим в ручную поправку ОТНОСИТЕЛЬНО текущих шагов программы —
-// без program это посчитать нельзя, иначе поправка задвоит уже накопленные шаги
-function setExWeight(pid, ex, kg, program){
-  return getExWeight(pid, ex, program);
+// прямая правка текущего веса (нажатие на строку экрана старта, см. 00-core.js) —
+// пишет в ex.ps.cur.kg напрямую, база (ex.weight) не трогается
+function setExWeight(ex, kg){
+  ensurePs(ex).cur.kg = Math.max(0, progRound('weight', +kg || 0));
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -14527,7 +14886,9 @@ function exDirty(){
 }
 
 function commitExercise(){
-  return applyFormTo(exDraft);
+  const old = (curPlan().exercises || [])[exIdx];
+  const upd = applyFormTo(exDraft);
+  return old ? carryExerciseProgress(old, upd) : upd;
 }
 
 // Разминка выполняется один раз ДО кругов, где бы она ни лежала в списке
@@ -14631,7 +14992,7 @@ function dupExerciseAt(i){
       : t('builder.mainLimit',{count:MAX_MAIN}));
     return;
   }
-  list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
+  list.splice(i + 1, 0, cloneExerciseAsNew(ex));
   renderExList();
 }
 async function delExerciseAt(i){
@@ -14736,11 +15097,6 @@ function aiPrompt(locale){
   return FitAIProtocol.programPrompt(lang);
 }
 
-function aiStructureChangeRequested(text){
-  const s=String(text||'').toLowerCase();
-  return /(?:добав\w*|убер\w*|удал\w*|замен\w*|перестав\w*|перенес\w*)\s+(?:нов\w+\s+)?(?:упражнен\w*|день\w*|вариант\w*|трениров\w*)/i.test(s)
-    || /(?:add|remove|delete|replace|reorder|move)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:exercise|day|variant|workout)/i.test(s);
-}
 function aiProtocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
   return m?{key:m[1],value:m[2]}:null;
@@ -14756,67 +15112,12 @@ function aiExerciseBlocks(text){
   }
   return out;
 }
-function aiMergeExerciseBlock(sourceText,candidateText){
-  const src=String(sourceText||'').split(/\r?\n/);
-  const cand=String(candidateText||'').split(/\r?\n/);
-  const values={},used={},existing=new Set();
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!values[p.key])values[p.key]=[];
-    values[p.key].push(p.value);
-  });
-  const merged=src.map(line=>{
-    const p=aiProtocolLine(line);if(!p)return line;
-    existing.add(p.key);
-    const idx=used[p.key]||0;used[p.key]=idx+1;
-    const arr=values[p.key]||[];
-    return idx<arr.length?p.key+': '+String(arr[idx]||'').trim():line;
-  });
-  const allowed=new Set(FitAIProtocol.OPTIONAL_EXERCISE_LABELS||[]);
-  cand.forEach(line=>{
-    const p=aiProtocolLine(line);
-    if(!p||existing.has(p.key)||!allowed.has(p.key))return;
-    merged.push(p.key+': '+String(p.value||'').trim());
-    existing.add(p.key);
-  });
-  return merged.join('\n');
-}
-function aiMergeProgramEdit(sourceText,candidateText){
-  const srcLines=String(sourceText||'').split(/\r?\n/);
-  const candLines=String(candidateText||'').split(/\r?\n/);
-  const srcBlocks=aiExerciseBlocks(sourceText),candBlocks=aiExerciseBlocks(candidateText);
-  const candExerciseLine=new Set();
-  candBlocks.forEach(b=>{for(let i=b.start;i<b.end;i++)candExerciseLine.add(i);});
-  const topValues={};
-  candLines.forEach((line,i)=>{
-    if(candExerciseLine.has(i))return;
-    const p=aiProtocolLine(line);if(!p)return;
-    if(!topValues[p.key])topValues[p.key]=[];
-    topValues[p.key].push(p.value);
-  });
-  const topUsed={},blockByStart=new Map(srcBlocks.map((b,i)=>[b.start,{b,i}]));
-  const usedCand=new Set();
-  const norm=s=>String(s||'').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
-  const out=[];
-  for(let i=0;i<srcLines.length;i++){
-    const entry=blockByStart.get(i);
-    if(entry){
-      let ci=candBlocks.findIndex((b,j)=>!usedCand.has(j)&&norm(b.name)===norm(entry.b.name));
-      if(ci<0 && candBlocks[entry.i] && !usedCand.has(entry.i)) ci=entry.i;
-      const cb=ci>=0?candBlocks[ci]:null;
-      if(ci>=0)usedCand.add(ci);
-      out.push(...aiMergeExerciseBlock(entry.b.lines.join('\n'),cb?cb.lines.join('\n'):'').split('\n'));
-      i=entry.b.end-1;
-      continue;
-    }
-    const p=aiProtocolLine(srcLines[i]);
-    if(!p){out.push(srcLines[i]);continue;}
-    const idx=topUsed[p.key]||0;topUsed[p.key]=idx+1;
-    const arr=topValues[p.key]||[];
-    out.push(idx<arr.length?p.key+': '+String(arr[idx]||'').trim():srcLines[i]);
-  }
-  return out.join('\n');
-}
+// Раньше здесь жили aiMergeExerciseBlock/aiMergeProgramEdit — они принудительно
+// возвращали старую структуру (порядок, число упражнений) и подставляли от ИИ
+// только значения полей. Простые запросы вроде «поменяй порядок» или «добавь
+// упражнение» либо тихо ничего не меняли, либо ловили ошибку разбора. Теперь
+// ответ ИИ принимается как есть (см. createEditedProgram/applyExEdit), а его
+// итог проверяется парсингом и FitAIProtocol.diffPrograms — не запрещается заранее.
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -14986,6 +15287,9 @@ function parseProgramText(txt){
         plan.exercises.push(cur);
         break;
       }
+      // техническая метка сопоставления при AI-правке (см. programToText(…,{forEdit:true}));
+      // человеку не показывается и никогда не сохраняется — см. createEditedProgram
+      case 'КОД': if(cur) cur._code = val.trim().slice(0, 20); break;
       case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
       case 'ФОРМАТ':
         if(cur){
@@ -15642,6 +15946,14 @@ function startWorkout(fromIdx, elapsed){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  // Упражнения, до которых тренировка реально дошла: только они считаются
+  // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
+  // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
+  // упражнения» — пропущенные до него не в счёт.
+  state.reachedEx = new Set();
+  if(state.resumeElapsed > 0){
+    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exName || s.title); });
+  }
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -15742,6 +16054,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -16097,13 +16410,10 @@ async function swapViaAI(){
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
   normalizeExercise(got);
-  // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
-  got.progFrom = progSteps(src.p);
+  // новое упражнение начинает с собственной базы: у него свежий id (см. blankExercise)
+  // и нет ex.ps — состояние прогрессии читается как «ещё на базе», ничего переносить не нужно
   if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
   src.plan.exercises[src.idx] = got;
-  // ручная поправка веса относилась к прежнему упражнению — новому она не подходит
-  delete progWeights[exWeightKey(src.p.id, got.name)];
-  saveProgWeights();
   await savePrograms();
   renderMine();
 
@@ -16264,8 +16574,6 @@ function commitFinish(ctx){
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
         .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-      // шаг прогрессии, с которым тренировка пройдена (до повышения этой тренировкой)
-      step: srcProgram ? progSteps(srcProgram) : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
       // нельзя было восстановить без догадок.
@@ -16314,6 +16622,33 @@ function commitFinish(ctx){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
     p.stats.completions++;
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    // программы: иначе при чередовании A/Б упражнение варианта А получало бы
+    // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
+    // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
+    // варианта — они и есть «реально выполненные».
+    // Раньше по достижении порога нагрузка росла сама, без участия человека:
+    // вес прибавлялся, даже если предыдущий подход дался тяжело. Теперь порог
+    // только открывает ПРОВЕРКУ — она показывается на экране финала
+    // (renderProgCheck) и требует явного «Да, повышаем»; отклонённое или
+    // непросмотренное упражнение спросит о том же на следующей тренировке.
+    state.progCheck = null;
+    if(p.progression){
+      const every = Math.max(1, +p.progression || 1);
+      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      const eligible = [];
+      ((pl && pl.exercises) || []).forEach(ex => {
+        if(ex.warmup || progAxis(ex) === 'none') return;
+        // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
+        if(state.reachedEx && !state.reachedEx.has(ex.name)) return;
+        const ps = ensurePs(ex);
+        ps.n++;
+        if(ps.n >= every) eligible.push(ex.id);
+      });
+      // храним id, а не сами объекты: пока открыт экран финала, синхронизация
+      // может заменить customPrograms новыми объектами (см. progCheckExercises)
+      if(eligible.length) state.progCheck = {pid: p.id, ids: eligible, hard: new Set()};
+    }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
       const plansN = normPlans(p).length;
@@ -16329,6 +16664,63 @@ function commitFinish(ctx){
     autoReport(p);
   }
   renderMine();
+  renderProgCheck();
+}
+
+/* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
+// Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
+// (см. p.progression), и ни одно ещё не отмечено «тяжело».
+function progCheckExercises(chk){
+  const p = chk && customPrograms.find(x => x.id === chk.pid);
+  if(!p) return [];
+  const all = [];
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => all.push(ex)));
+  return chk.ids.map(id => all.find(ex => ex.id === id)).filter(Boolean);
+}
+function renderProgCheck(){
+  const chk = state.progCheck;
+  const exercises = progCheckExercises(chk);
+  const on = exercises.length > 0;
+  setShown('finProgCheck', on);
+  setShown('finProgCheckList', false);
+  if(!on) return;
+  setShown('finProgCheckAsk', true);
+  setShown('finProgCheckDone', false);
+  const box = $('finProgCheckList');
+  box.innerHTML = '';
+  exercises.forEach(ex => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
+    b.textContent = ex.name || t('common.exerciseFallback');
+    b.onclick = () => {
+      if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
+      renderProgCheck();
+    };
+    box.appendChild(b);
+  });
+}
+function toggleProgCheckList(){
+  setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
+}
+// «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
+// отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
+// вернётся после следующей тренировки, где это упражнение снова встретится.
+async function applyProgCheck(){
+  const chk = state.progCheck;
+  if(!chk) return;
+  // сразу снимаем проверку и прячем кнопку: второй быстрый тап не должен
+  // добавить ещё один шаг, пока идёт сохранение
+  state.progCheck = null;
+  setShown('finProgCheckAsk', false);
+  setShown('finProgCheckList', false);
+  setShown('finProgCheckDone', true);
+  progCheckExercises(chk).forEach(ex => {
+    if(chk.hard.has(ex.id)) return;
+    advanceExerciseProgression(ex);
+    ensurePs(ex).n = 0;
+  });
+  await savePrograms();
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.
@@ -16350,6 +16742,10 @@ function finishWorkout(){
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;
+  // то же для проверки прогресса: пока неясно, засчитается ли тренировка
+  // (см. quick ниже), блок с предыдущей проверки показывать не должен
+  state.progCheck = null;
+  renderProgCheck();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
@@ -17290,11 +17686,29 @@ function notifyScheduledPlan(p, dayName){
   if(planDays(p).includes(dayName)) return {plan:null, time:p.time || ''};
   return null;
 }
-function notifyProgressionChanged(p){
+// какой вариант должен сработать в этот день: если он не привязан к конкретным
+// дням (чередование A/Б), берём тот, что следующим по очереди — лучшая доступная
+// оценка для уведомления «наперёд», без гарантии, что расписание не сдвинется
+function notifyPlanFor(p, scheduledPlan){
+  if(scheduledPlan) return scheduledPlan;
+  const plans = normPlans(p);
+  return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
+}
+// выросла ли нагрузка сегодняшнего варианта по сравнению с прошлым разом:
+// прогрессия теперь повышается только после «Да, повышаем» на финише
+// (ex.ps, см. 60-builder.js), поэтому смотрим на факт — текущие значения
+// против снимка нагрузки из последней записи истории этого варианта
+function notifyProgressionChanged(p, scheduledPlan){
   if(!p || !p.progression) return false;
-  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
-  const every = Math.max(1, +p.progression || 1);
-  return done > 0 && done % every === 0 && typeof progSteps === 'function' && progSteps(p) > 0;
+  const pl = notifyPlanFor(p, scheduledPlan);
+  const idx = Math.max(0, normPlans(p).indexOf(pl));
+  const prev = previousWorkoutLoad(p, idx);
+  if(!prev.exact) return false;
+  const byIdx = new Map(prev.rows.map(r => [r.i, r]));
+  return workoutLoadSnapshot(p, idx).some(row => {
+    const before = byIdx.get(row.i);
+    return !!before && before.n === row.n && loadDelta(before, row).dir === 'up';
+  });
 }
 function notifyThirdWorkoutDate(){
   const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
@@ -17367,7 +17781,7 @@ async function syncNativeNotifications(){
         const scheduled = notifyScheduledPlan(p, dayName);
         if(!scheduled || done.has(iso + '|' + p.id)) return;
         const time = scheduled.time;
-        const grew = prefs.progress !== false && notifyProgressionChanged(p);
+        const grew = prefs.progress !== false && notifyProgressionChanged(p, scheduled.plan);
         if(time){
           const hm = time.split(':').map(Number);
           if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
@@ -17376,7 +17790,7 @@ async function syncNativeNotifications(){
           const missed = new Date(start.getTime() + 2 * 3600000);
           add({at:pre.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.beforeTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.beforeBody',{name:p.name,time}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.beforeBody',{name:p.name,time}),
             priority:90, extra:{programId:p.id, stage:grew ? 'progress' : 'before', category:'workouts'}});
           add({at:start.toISOString(), title:t('notify.startTitleShort'),
             body:t('notify.todayPlan',{name:p.name}), priority:85,
@@ -17390,7 +17804,7 @@ async function syncNativeNotifications(){
           const evening = notifyAt(day, 20, 0);
           add({at:morning.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.todayTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.todayBody',{name:p.name}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.todayBody',{name:p.name}),
             priority:80, extra:{programId:p.id, stage:grew ? 'progress' : 'today', category:'workouts'}});
           add({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
             body:t('notify.dontForgetBody',{name:p.name}), priority:65,
@@ -17809,8 +18223,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
 $('btnResume').onclick = ()=> setPause(false);
-$('psMinus').onclick = ()=> bumpProgSteps(-1);
-$('psPlus').onclick = ()=> bumpProgSteps(1);
+$('weightModalDone').onclick = ()=> commitWeightModal();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
@@ -18684,6 +19097,8 @@ $('finNoteToggle').onclick = ()=>{
   // поле не должно остаться под клавиатурой
   setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
 };
+$('finProgCheckYes').onclick = ()=> applyProgCheck();
+$('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 // подсказка прокрутки на экране тренировки
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
@@ -19155,7 +19570,7 @@ function dupExercise(){
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
-  list.splice(exIdx + 1, 0, JSON.parse(JSON.stringify(list[exIdx])));
+  list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   exDraft = null; exIdx = -1; exOrig = '';
   afterExChange();
 }

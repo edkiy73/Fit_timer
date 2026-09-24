@@ -22,7 +22,7 @@ new vm.Script(adminJs,{filename:'admin.js'});
 need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
 
 need(api.includes("if(a === 'catalog_ai_create')"),'admin AI-create API is missing');
-need(api.includes('FitAIProtocol.validateProgramResponse(out.text)'),'AI-created program must be protocol-validated');
+need(api.includes('FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true})'),'AI-created program must be protocol-validated, including the weight ceiling');
 need(html.includes('id="fAiCreate"'),'admin AI-create button is missing');
 need(html.includes('id="aiCreateDays"'),'admin AI-create form is incomplete');
 need(html.includes("api('translate_catalog',{from:lang,to:other"),'AI-create must prepare the second catalog language');

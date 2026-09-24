@@ -197,6 +197,14 @@ function startWorkout(fromIdx, elapsed){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  // Упражнения, до которых тренировка реально дошла: только они считаются
+  // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
+  // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
+  // упражнения» — пропущенные до него не в счёт.
+  state.reachedEx = new Set();
+  if(state.resumeElapsed > 0){
+    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exName || s.title); });
+  }
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -297,6 +305,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -652,13 +661,10 @@ async function swapViaAI(){
   }
   got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
   normalizeExercise(got);
-  // новое упражнение начинает с собственной базы, а не с двадцатого шага программы
-  got.progFrom = progSteps(src.p);
+  // новое упражнение начинает с собственной базы: у него свежий id (см. blankExercise)
+  // и нет ex.ps — состояние прогрессии читается как «ещё на базе», ничего переносить не нужно
   if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
   src.plan.exercises[src.idx] = got;
-  // ручная поправка веса относилась к прежнему упражнению — новому она не подходит
-  delete progWeights[exWeightKey(src.p.id, got.name)];
-  saveProgWeights();
   await savePrograms();
   renderMine();
 
@@ -819,8 +825,6 @@ function commitFinish(ctx){
       exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
         .map(s => s.exName || s.title).filter(Boolean))),
       plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-      // шаг прогрессии, с которым тренировка пройдена (до повышения этой тренировкой)
-      step: srcProgram ? progSteps(srcProgram) : 0,
       // Следующий старт покажет точное «было → сегодня». Раньше история знала
       // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
       // нельзя было восстановить без догадок.
@@ -869,6 +873,33 @@ function commitFinish(ctx){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
     p.stats.completions++;
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    // программы: иначе при чередовании A/Б упражнение варианта А получало бы
+    // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
+    // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
+    // варианта — они и есть «реально выполненные».
+    // Раньше по достижении порога нагрузка росла сама, без участия человека:
+    // вес прибавлялся, даже если предыдущий подход дался тяжело. Теперь порог
+    // только открывает ПРОВЕРКУ — она показывается на экране финала
+    // (renderProgCheck) и требует явного «Да, повышаем»; отклонённое или
+    // непросмотренное упражнение спросит о том же на следующей тренировке.
+    state.progCheck = null;
+    if(p.progression){
+      const every = Math.max(1, +p.progression || 1);
+      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      const eligible = [];
+      ((pl && pl.exercises) || []).forEach(ex => {
+        if(ex.warmup || progAxis(ex) === 'none') return;
+        // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
+        if(state.reachedEx && !state.reachedEx.has(ex.name)) return;
+        const ps = ensurePs(ex);
+        ps.n++;
+        if(ps.n >= every) eligible.push(ex.id);
+      });
+      // храним id, а не сами объекты: пока открыт экран финала, синхронизация
+      // может заменить customPrograms новыми объектами (см. progCheckExercises)
+      if(eligible.length) state.progCheck = {pid: p.id, ids: eligible, hard: new Set()};
+    }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
       const plansN = normPlans(p).length;
@@ -884,6 +915,63 @@ function commitFinish(ctx){
     autoReport(p);
   }
   renderMine();
+  renderProgCheck();
+}
+
+/* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
+// Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
+// (см. p.progression), и ни одно ещё не отмечено «тяжело».
+function progCheckExercises(chk){
+  const p = chk && customPrograms.find(x => x.id === chk.pid);
+  if(!p) return [];
+  const all = [];
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => all.push(ex)));
+  return chk.ids.map(id => all.find(ex => ex.id === id)).filter(Boolean);
+}
+function renderProgCheck(){
+  const chk = state.progCheck;
+  const exercises = progCheckExercises(chk);
+  const on = exercises.length > 0;
+  setShown('finProgCheck', on);
+  setShown('finProgCheckList', false);
+  if(!on) return;
+  setShown('finProgCheckAsk', true);
+  setShown('finProgCheckDone', false);
+  const box = $('finProgCheckList');
+  box.innerHTML = '';
+  exercises.forEach(ex => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
+    b.textContent = ex.name || t('common.exerciseFallback');
+    b.onclick = () => {
+      if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
+      renderProgCheck();
+    };
+    box.appendChild(b);
+  });
+}
+function toggleProgCheckList(){
+  setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
+}
+// «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
+// отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
+// вернётся после следующей тренировки, где это упражнение снова встретится.
+async function applyProgCheck(){
+  const chk = state.progCheck;
+  if(!chk) return;
+  // сразу снимаем проверку и прячем кнопку: второй быстрый тап не должен
+  // добавить ещё один шаг, пока идёт сохранение
+  state.progCheck = null;
+  setShown('finProgCheckAsk', false);
+  setShown('finProgCheckList', false);
+  setShown('finProgCheckDone', true);
+  progCheckExercises(chk).forEach(ex => {
+    if(chk.hard.has(ex.id)) return;
+    advanceExerciseProgression(ex);
+    ensurePs(ex).n = 0;
+  });
+  await savePrograms();
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.
@@ -905,6 +993,10 @@ function finishWorkout(){
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;
+  // то же для проверки прогресса: пока неясно, засчитается ли тренировка
+  // (см. quick ниже), блок с предыдущей проверки показывать не должен
+  state.progCheck = null;
+  renderProgCheck();
   const totalSec = stopGlobal();
   // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;

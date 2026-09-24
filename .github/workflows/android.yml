@@ -103,7 +103,7 @@ jobs:
       - name: Проверочная debug-сборка
         if: github.event_name == 'pull_request'
         working-directory: android
-        run: ./gradlew assembleDirectDebug assemblePlayDebug --no-daemon
+        run: ./gradlew assembleDirectDebug assemblePlayDebug testDirectDebugUnitTest --no-daemon
 
       - name: Release AAB и APK
         if: github.event_name != 'pull_request'

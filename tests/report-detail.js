@@ -119,6 +119,12 @@ async function boot(b, label, errs, url){
     plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
     plans[0].exercises.push({name: 'Планка', type: 'time', value: '45', sets: 3, rest: 30}); // добавил своё
     plans[1].exercises[0].value = '15';                                            // поменял руками
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    // программы: раньше один счётчик программы прибавлял шаг всем упражнениям
+    // сразу, даже тем, что не участвовали в сегодняшней тренировке. Чтобы
+    // отчёт показал рост по ВТОРОМУ варианту, у него должно реально вырасти
+    // своё упражнение — задаём это явно, а не через общий completions.
+    ensurePs(plans[1].exercises[0]).cur.kg = 14; // Тяга в наклоне: было 12 кг
     p.stats = {completions: 6};
     await savePrograms();
 

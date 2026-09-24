@@ -270,16 +270,6 @@
           <div class="load-row" id="planRow"></div>
         </div>
 
-        <div class="start-section hidden" id="progStepsBlock">
-          <p class="cb-title" data-i18n="programs.loadToday">Нагрузка сегодня</p>
-          <p class="field-hint" data-i18n="programs.loadHint">Шаги увеличивают повторы, время или вес — в зависимости от настроек упражнения.</p>
-          <div class="ps-row">
-            <button type="button" class="ps-btn" id="psMinus" title="Меньше повышений" data-i18n-title="builder.lessProgress">−</button>
-            <div class="ps-val"><b id="psCount">0</b><small data-i18n="programs.currentStep">текущий шаг</small></div>
-            <button type="button" class="ps-btn" id="psPlus" title="Больше повышений" data-i18n-title="builder.moreProgress">+</button>
-          </div>
-        </div>
-
         <div class="start-section">
           <p class="cb-title" data-i18n="programs.exercises">Упражнения</p>
           <p class="field-hint" id="startOverviewSummary"></p>
@@ -428,6 +418,19 @@
       <button class="choice" id="startPick"><b data-i18n="workout.chooseExercise">Выбрать упражнение</b><small data-i18n="workout.chooseExerciseSub">Начать с любого места программы</small></button>
       <button class="choice" id="startResume"><b data-i18n="workout.continue">Продолжить</b><small id="startResumeSub"></small></button>
       <button class="choice primary" id="startFresh"><b data-i18n="workout.startOver">Начать сначала</b><small data-i18n="workout.startOverSub">С первого упражнения</small></button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
+    </div>
+  </div>
+
+  <!-- «Формат с весом» без выбранного веса — снаряд ещё не выбран, прогрессия
+       по весу не копится (см. weightPending в 60-builder.js). Один попап на все
+       упражнения списка: какое сейчас открыто, помнит weightModalIdx. -->
+  <div class="modal" id="weightModal">
+    <div class="modal-card">
+      <span class="mini-label" id="weightModalTitle" data-i18n="start.pickWeightTitle">Рабочий вес</span>
+      <div class="field"><input type="number" id="weightModalInput" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
+      <p class="field-hint" data-i18n="start.pickWeightHint">Такой, чтобы последние повторения давались с усилием, но не в отказ</p>
+      <button type="button" class="btn-primary" id="weightModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
@@ -957,6 +960,18 @@
         <b data-i18n="finish.quickTitle">Слишком быстро</b>
         <p data-i18n="finish.quickText">Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.</p>
         <button type="button" class="btn-primary" id="btnDiscardResult" data-i18n="finish.discard">Не засчитывать</button>
+      </div>
+      <!-- Прогрессия — состояние у каждого упражнения: показывается, только если
+           хоть одно из сегодняшних дошло до своей проверки. Автоматического
+           повышения больше нет — решает человек, одним нажатием. -->
+      <div class="fin-progcheck fin-rise hidden" id="finProgCheck">
+        <div id="finProgCheckAsk">
+          <b data-i18n="finish.progCheckTitle">Всё получилось? Нагрузку повысим</b>
+          <button type="button" class="btn-primary" id="finProgCheckYes" data-i18n="finish.progCheckYes">Да, повышаем</button>
+          <button type="button" class="fpc-toggle" id="finProgCheckToggle" data-i18n="finish.progCheckHardLink">Где-то было тяжело</button>
+          <div class="fpc-list hidden" id="finProgCheckList"></div>
+        </div>
+        <p class="fpc-done hidden" id="finProgCheckDone" data-i18n="finish.progCheckApplied">Готово — нагрузка вырастет со следующей тренировки.</p>
       </div>
       <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
       <div class="field fin-note hidden" id="finNoteField">

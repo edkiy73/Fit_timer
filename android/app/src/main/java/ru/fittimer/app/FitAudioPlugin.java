@@ -30,7 +30,6 @@ import org.json.JSONObject;
 import org.vosk.Model;
 import org.vosk.Recognizer;
 import org.vosk.android.RecognitionListener;
-import org.vosk.android.SpeechService;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -62,7 +61,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
 
     private Model voskModel;
     private String loadedModelLanguage = "";
-    private SpeechService speechService;
+    // свой захват с автоусилением вместо org.vosk.android.SpeechService — см. FitSpeechCapture
+    private FitSpeechCapture speechService;
     private volatile boolean recognitionWanted = false;
     private boolean commandFiredForUtterance = false;
     private String pendingPartialText = "";
@@ -313,15 +313,16 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                         return;
                     }
                     stopSpeechService();
+                    Recognizer recognizer = null;
                     try {
-                        Recognizer recognizer = new Recognizer(voskModel, 16000.0f);
+                        recognizer = new Recognizer(voskModel, (float) VoiceAutoGain.SAMPLE_RATE);
                         recognizer.setWords(true);
                         recognizer.setPartialWords(true);
                         // Workout commands are one or two short words. The default endpoint
                         // waits too long for trailing silence and makes "готово" feel laggy.
                         recognizer.setEndpointerMode(Recognizer.EndpointerMode.SHORT);
                         recognizer.setEndpointerDelays(4.0f, 0.28f, 8.0f);
-                        speechService = new SpeechService(recognizer, 16000.0f);
+                        speechService = new FitSpeechCapture(recognizer);
                         commandFiredForUtterance = false;
                         speechService.startListening(this);
                         JSObject result = new JSObject();
@@ -330,6 +331,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                         result.put("language", language);
                         call.resolve(result);
                     } catch (Exception e) {
+                        // захват не поднялся — распознаватель ему так и не передан, закрываем здесь
+                        if (speechService == null && recognizer != null) {
+                            try { recognizer.close(); } catch (Exception ignored) {}
+                        }
                         recognitionWanted = false;
                         emitSpeechError("recognition");
                         call.reject("Could not start offline recognition", e);
@@ -511,7 +516,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
 
     private void stopSpeechService() {
         if (speechService != null) {
-            try { speechService.cancel(); } catch (Exception ignored) {}
+            // shutdown() сам останавливает поток и освобождает микрофон и Recognizer
             try { speechService.shutdown(); } catch (Exception ignored) {}
             speechService = null;
         }

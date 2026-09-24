@@ -311,8 +311,7 @@ document.querySelectorAll('#hfSeg button').forEach(b => {
   b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
 });
 $('btnResume').onclick = ()=> setPause(false);
-$('psMinus').onclick = ()=> bumpProgSteps(-1);
-$('psPlus').onclick = ()=> bumpProgSteps(1);
+$('weightModalDone').onclick = ()=> commitWeightModal();
 
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
@@ -1186,6 +1185,8 @@ $('finNoteToggle').onclick = ()=>{
   // поле не должно остаться под клавиатурой
   setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
 };
+$('finProgCheckYes').onclick = ()=> applyProgCheck();
+$('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 // подсказка прокрутки на экране тренировки
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
@@ -1657,7 +1658,7 @@ function dupExercise(){
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
-  list.splice(exIdx + 1, 0, JSON.parse(JSON.stringify(list[exIdx])));
+  list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   exDraft = null; exIdx = -1; exOrig = '';
   afterExChange();
 }

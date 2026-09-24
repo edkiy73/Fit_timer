@@ -1,18 +1,18 @@
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
-// Раз в progression дней рабочие веса растут на свой шаг.
-// Раньше здесь рос глобальный множитель в процентах — но проценты ломают дискретность
-// гантелей (+30% от 10 кг = 13 кг, которых не существует) и умножали всё подряд,
-// включая разминку. Теперь повышаем именно вес и именно шагами, заданными в упражнении.
-// Счётчик шагов у программы (p.progSteps) — единственный источник роста по расписанию.
-// Он не трогает упражнения напрямую: итоговые вес/повторы/время считаются на лету
-// (см. getExProgValue/progressedRepsRange), поэтому счётчик можно откатить или сдвинуть
-// вручную на экране перед стартом без риска что-то испортить — это и есть его смысл.
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по календарю.
-// Раньше вес рос просто оттого, что прошло время: уехал в отпуск на месяц — вернулся,
-// а программа подняла нагрузку на четыре шага, хотя ты не тренировался. Это и демотивирует,
-// и травмоопасно. Теперь p.progression — это «повышать раз в N тренировок».
-// Прогрессия считается по ФАКТИЧЕСКИ пройденным тренировкам. Отдельная функция не нужна —
-// значение выводится на лету в progSteps(), поэтому здесь только миграция старых программ.
+// Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
+// шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
+// ex.ps.n в commitFinish (70-workout.js). Раньше был один счётчик на программу
+// (p.progSteps, потом progStepsAdj поверх floor(completions/progression)):
+// удобно для отката, но при чередовании вариантов A/Б каждое упражнение
+// получало +1 шаг за КАЖДУЮ тренировку программы, включая дни, где его вообще
+// не было. Состояние теперь у каждого упражнения отдельно и растёт только тогда,
+// когда это упражнение реально выполнено.
+// Прогрессия по-прежнему считается по ФАКТИЧЕСКИ пройденным тренировкам, а не по
+// календарю: раньше вес рос просто оттого, что прошло время (отпуск на месяц —
+// и программа подняла нагрузку на четыре шага без единой тренировки), что и
+// демотивирует, и травмоопасно.
+// applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
+// а только про одноразовую миграцию старых программ на эту модель.
 function applyProgressionAll(){
   let changed = false;
   customPrograms.forEach(p => {
@@ -31,7 +31,42 @@ function applyProgressionAll(){
       changed = true;
     }
   });
+  if(applyPerExerciseProgressionMigration()) changed = true;
   if(changed) savePrograms();
+}
+
+// Переход с одного счётчика шагов на программу (progSteps = floor(completions/
+// progression) + progStepsAdj, читался на лету) на состояние у каждого
+// упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
+// Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
+// упражнения прогоняется через advanceExerciseProgression() ровно столько раз,
+// сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
+// ограничения (потолок, двойная прогрессия) применяются как всегда, а не
+// переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
+// не обновил мобильное приложение, оно продолжит показывать те же числа, что и
+// раньше — база и общий счётчик программы у него по-прежнему на месте, ex.ps
+// он просто не знает. Дрейф возможен, только если тренировки на старом
+// приложении продолжаются ПОСЛЕ того, как программа уже росла на новом —
+// тот же класс риска, что и у любого другого различия версий приложения.
+function applyPerExerciseProgressionMigration(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    if(p.psMigrated) return;
+    p.psMigrated = true;
+    changed = true;
+    if(!p.progression) return;
+    const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+    const oldProgramSteps = Math.max(0, Math.floor(done / p.progression) + Math.round(+p.progStepsAdj || 0));
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
+      delete ex.progFrom;
+      if(ex.warmup || progAxis(ex) === 'none') return;
+      ensurePs(ex).n = done % p.progression;
+      const exSteps = Math.max(0, oldProgramSteps - progFrom);
+      for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+    }));
+  });
+  return changed;
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
@@ -371,8 +406,6 @@ function openWeekDay(d){
       ? t('week.dayMovedOn',{day:appLocale === 'ru' ? canonicalLabel(DAY_FULL[slot.from]).toLowerCase() : canonicalLabel(DAY_FULL[slot.from])})
       : (d.past ? t('week.canStillMakeUp') : t('week.plannedText'))];
     if(p.rotate && plans.length > 1) parts.push(t('today.variant',{current:planIdx+1,total:plans.length}) + '.');
-    const step = progSteps(p);
-    if(step > 0) parts.push(t('week.progStepText',{count:step}));
 
     const row = document.createElement('button');
     row.type = 'button';
@@ -559,6 +592,8 @@ async function duplicateProgram(p){
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
   delete copy.progStepsAdj; delete copy.progLast;
+  // прогресс каждого упражнения (ex.ps) — тоже часть «пройденного», копия начинает с базы
+  normPlans(copy).forEach(pl => (pl.exercises || []).forEach(ex => { delete ex.ps; }));
   delete copy.storeId;      // не «из каталога»: это уже своя программа
   delete copy.pub;          // заявка в каталог принадлежит оригиналу
   delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны
@@ -1518,11 +1553,6 @@ function imageStaticExercise(item){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
-function imageLocalMotionExercise(item){
-  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
-  return /сгибан.*(рук|бицепс)|бицепс|biceps? curl|hammer curl|разгибан.*(рук|трицепс)|трицепс|triceps? extension|lateral raise|front raise|подъем.*гантел.*(в стороны|перед собой)|махи.*гантел|wrist curl|сгибан.*кист/.test(s);
-}
-
 function imageProgramContext(){
   const parts = [
     draft && draft.goal, draft && draft.cat, draft && draft.category,
@@ -1596,14 +1626,17 @@ function imageCharacterStyle(genderTxt){
 function exerciseImagePrompt(item, genderTxt){
   const equipment = imageEquipment(item);
   const isStatic = imageStaticExercise(item);
-  const isLocalMotion = !isStatic && imageLocalMotionExercise(item);
   const regions = imageMuscleRegions(item);
   const muscles = regions.length ? regions.join(', ') : 'only the primary working muscles required by this movement';
+  // Раньше немоторные (не изометрические, не изолированные суставом) движения
+  // просили «два полупрозрачных наложенных фото одного атлета» — нейросеть
+  // регулярно рисовала это как двух слипшихся людей друг в друге, а не как
+  // внятное до/после. Один чёткий кадр самой показательной фазы + стрелки —
+  // тот же приём, что уже нормально работал для локальных движений (сгибания
+  // рук и т.п.), теперь единый для всех не-статичных упражнений.
   const motion = isStatic
     ? 'Show ONE clear final pose only. No ghost pose or movement trail.'
-    : isLocalMotion
-      ? 'Show ONE full athlete only in the clearest phase of the movement. No second body or duplicated limbs. Show motion only with small violet-lavender trajectory arrows beside the moving limbs/equipment.'
-      : 'Show exactly TWO phases of the SAME athlete: one main detailed pose and one lighter semi-transparent pose for the other endpoint. Keep them close and partially overlapping; both phases must use the same required equipment. Never show a third phase.';
+    : 'Show ONE full athlete only, in the single clearest and most demonstrative phase of the movement (usually peak contraction or full range of motion). Exactly one solid, fully opaque figure — no second body, no duplicated limbs, no ghost pose, no semi-transparent overlay, no motion blur, no double exposure. Show the direction of motion only with one or two small violet-lavender trajectory arrows beside the moving body part(s) or equipment.';
   return [
     `Create a 4:3 instructional fitness illustration for "${item.name}" in the Fit Timer app.`,
     `Style: premium stylized-realistic 3D, ${imageCharacterStyle(genderTxt)}, realistic dark sportswear, polished high-end rendering.`,
@@ -1611,12 +1644,11 @@ function exerciseImagePrompt(item, genderTxt){
     'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
     item.desc ? `Technique: ${item.desc}` : null,
     equipment.length
-      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position in every visible phase.`
+      ? `Equipment: ${equipment.join(', ')}. Show correct quantity, scale, grip/contact and position.`
       : 'Do not invent equipment that the exercise does not require.',
     motion,
-    !isStatic && !isLocalMotion ? 'Add one or two small violet-lavender arrows showing movement direction.' : null,
     `Highlight ONLY these muscle regions with a clearly visible localized warm red to red-orange glow: ${muscles}.`,
-    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong across visible phases and male/female versions.',
+    'Do not highlight unrelated muscles. Keep muscle glow anatomically consistent, symmetrical and equally strong between male and female versions.',
     'Choose the clearest side or three-quarter camera angle. Keep important joints, limbs and equipment visible.',
     'Prioritize correct biomechanics: realistic joint alignment, spine, stance, grip, range of motion and equipment placement.',
     'No extra limbs, merged hands, duplicated equipment, text, labels, logos, UI, collage, borders or watermarks.'
@@ -2070,11 +2102,19 @@ function exRestLines(ex){
 // что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
 // Сериализуем только оси, которые реально что-то значат для этого формата: для
 // «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
-function exProgToLines(ex){
+function exProgToLines(ex, opts){
+  // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
+  // а не базу — см. exCurrentValueText/programToText выше
+  const p = opts && opts.program;
+  const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
+  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
+  // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
+  // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
+  // вовсе, а прогрессия молча копилась поверх несуществующей базы.
+  if(hasWeight(ex)) L.push('ВЕС: ' + fmtKg(weightNow));
   if(progAxis(ex) !== 'none'){
     if(hasWeight(ex)){
-      if(+ex.weight) L.push('ВЕС: ' + fmtKg(ex.weight));
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -2098,8 +2138,6 @@ function exProgToLines(ex){
       L.push('ЗАМЕНА: ' + ex.swapName.trim());
       if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
     }
-  } else if(hasWeight(ex) && +ex.weight){
-    L.push('ВЕС: ' + fmtKg(ex.weight)); // вес зафиксирован, но не растёт — само число всё равно нужно
   }
   return L;
 }
@@ -2149,19 +2187,6 @@ function aiClientVerdict(kind, raw, opts){
   return verdict.text;
 }
 
-function sameProgramShape(a, b){
-  const ap = normPlans(a), bp = normPlans(b);
-  if(ap.length !== bp.length) return false;
-  for(let i=0;i<ap.length;i++){
-    const ae=(ap[i].exercises||[]), be=(bp[i].exercises||[]);
-    if(ae.length !== be.length) return false;
-    for(let j=0;j<ae.length;j++){
-      if(String(ae[j].name||'').trim().toLowerCase() !== String(be[j].name||'').trim().toLowerCase()) return false;
-    }
-  }
-  return true;
-}
-
 function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
@@ -2177,7 +2202,7 @@ function exePrompt(){
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
-    FitAIProtocol.editRules(false),
+    FitAIProtocol.editRules(),
     'USER: '+userForAI(draft&&draft.locale),
     'REQUEST: '+wish,
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
@@ -2191,11 +2216,13 @@ async function applyExEdit(){
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){show('scrBuilder');return;}
-  // Защитный merge: правка одного упражнения не имеет права тихо превратиться
-  // в два упражнения или потерять старые служебные поля.
+  // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
-  const merged=aiMergeExerciseBlock(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
+  // Ответ ИИ используется как есть; carryExerciseFields лишь подставляет описание/
+  // мышцы/ошибки/видео из старого блока, если ИИ их не вернул — раньше здесь был
+  // позиционный merge всех полей, который не давал ИИ ни убрать, ни переставить строку.
+  const merged=FitAIProtocol.carryExerciseFields(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
   const {program}=parseProgramText(wrapped);
@@ -2203,6 +2230,10 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  // это правка, а не замена: то же самое упражнение сохраняет свой id, а
+  // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
+  upd.id=oldEx.id;
+  carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
   $('aiResult').value='';
   await afterExChange();
@@ -2388,15 +2419,35 @@ function ytCheckUrl(){
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
 let editAIProg = null; // программа-исходник
 
+// текущее (уже прогрессированное) значение упражнения — то, что человек реально
+// делает сейчас, а не база из редактора. Используется только для AI-правки всей
+// программы (см. programToText forEdit): она создаёт НОВУЮ программу со своим
+// счётчиком прогрессии с нуля, поэтому если отдать ИИ базу, правка отбросит
+// пользователя к исходным цифрам — а если отдать текущее и принять его как
+// новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
+function exCurrentValueText(p, ex){
+  if(ex.type === 'time') return String(getExProgValue(p.id, ex, p, 'time'));
+  // двойная прогрессия: текущие повторы — одна точка внутри диапазона. Отдать
+  // её как новую базу значит потерять низ диапазона, к которому повторы
+  // сбрасываются при прибавке веса. Отдаём диапазон как есть — после правки
+  // повторы начнут цикл снизу с текущим (уже выросшим) весом.
+  if(isDualProg(ex)) return valueText(ex.value).replace('–', '-');
+  return progressedRepsRange(p.id, ex, p).replace('–', '-');
+}
+
 // программа → текст того же формата, который понимает парсер
-// картинки и svg НЕ включаем: они длинные, а перенесём их сами по названиям
-function programToText(p){
+// картинки и svg НЕ включаем: они длинные, а перенесём их сами по id (см. carryMedia)
+// opts.forEdit: для AI-правки всей программы — добавляет техническую метку КОД:
+// у каждого упражнения (не видна пользователю) и отдаёт текущую прогрессированную
+// нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
+function programToText(p, opts){
+  const forEdit = !!(opts && opts.forEdit);
   const L = [];
   L.push('ПРОГРАММА: ' + (p.name || ''));
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
-    L.push(`ПРОГРЕССИЯ: ${p.progression} — повышать нагрузку раз в ${p.progression} ${plural(p.progression, 'пройденную тренировку', 'пройденные тренировки', 'пройденных тренировок')}`);
+    L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
@@ -2412,17 +2463,18 @@ function programToText(p){
     (pl.exercises || []).forEach(ex => {
       L.push('');
       L.push('УПРАЖНЕНИЕ: ' + (ex.name || ''));
+      if(forEdit && ex.id) L.push('КОД: ' + ex.id);
       if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
       const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : valueText(ex.value).replace('–', '-')));
       if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex));
+      L.push(...exProgToLines(ex, forEdit ? {program:p} : null));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -2431,14 +2483,16 @@ function programToText(p){
 
 function editAIPrompt(){
   const wish=clampText($('eaWish').value,LIM.wish);
-  const structural=aiStructureChangeRequested(wish);
   return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
-    FitAIProtocol.editRules(structural)+'\n'+
+    FitAIProtocol.editRules()+'\n'+
+    // КОД — только для сопоставления «то же упражнение / новое», сюда не входит в
+    // обычный протокол и не должна попасть в пользовательский текст (ОПИСАНИЕ и т.п.)
+    'Each УПРАЖНЕНИЕ line may be followed by a КОД: <code> line — an internal reference tag, never user-visible text. Repeat the SAME КОД for the same movement even if you rename it, move it, or change its format; give a genuinely new exercise no КОД line at all; never move a КОД onto a different exercise.\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
-    '=== CURRENT PROGRAM ===\n'+programToText(editAIProg);
+    '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
 }
 
 function openEditAI(p){
@@ -2466,41 +2520,68 @@ function versionedName(base){
   return clean + ' (' + t('program.updatedN',{count:Date.now()}) + ')';
 }
 
-// переносит картинки и обложку из исходной программы по совпадению названий
-function carryMedia(oldProg, newProg){
-  const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-  const byName = new Map();
-  normPlans(oldProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(ex.media && !byName.has(norm(ex.name))) byName.set(norm(ex.name), ex.media);
-  }));
+// переносит картинки и обложку из исходной программы. Упражнения сопоставлены
+// заранее через FitAIProtocol.diffPrograms (id/КОД/имя, см. createEditedProgram)
+// — так перестановка и лёгкое переименование сохраняют картинку, а настоящая
+// замена движения (новое упражнение без пары) — нет: старая картинка от другого
+// движения только запутала бы.
+function carryMedia(oldProg, newProg, diff){
   let carried = 0;
-  normPlans(newProg).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(!ex.media){
-      const m = byName.get(norm(ex.name));
-      if(m){ ex.media = JSON.parse(JSON.stringify(m)); carried++; }
-    }
-  }));
+  diff.matches.forEach(({oldEx, newEx}) => {
+    if(!newEx.media && oldEx.media){ newEx.media = JSON.parse(JSON.stringify(oldEx.media)); carried++; }
+  });
   if(!newProg.cover && oldProg.cover) newProg.cover = oldProg.cover;
   return carried;
+}
+
+// расчётная (не по истории) длительность одного варианта — используется только
+// для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
+// и та же основа: реальная история новой программы всегда пуста (свежий id), а у
+// старой может быть — сравнение «средняя реальная» против «расчётная» было бы
+// нечестным. Подменяем id, чтобы estimatedWorkoutMinutes не подобрала историю.
+function structuralMinutes(p, planIdx){
+  return estimatedWorkoutMinutes(Object.assign({}, p, {id:'~diff~'}), planIdx || 0, []).n;
+}
+
+// «Было / стало» после AI-правки: коротко, без похода в текст ответа. Плюс
+// хардовые проверки итога (пачка 1, п.4) — то, что не запретить заранее в
+// промте, но можно и нужно поймать после генерации.
+function editSummaryText(diff, oldProg, newProg){
+  const bits = [];
+  if(diff.added.length) bits.push(t('ai.editAdded', {names: diff.added.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.removed.length) bits.push(t('ai.editRemoved', {names: diff.removed.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
+  if(diff.moved > 0) bits.push(t('ai.editReordered'));
+  const before = structuralMinutes(oldProg, 0), after = structuralMinutes(newProg, 0);
+  // порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%
+  const notable = before > 0 && Math.abs(after - before) > (before <= 20 ? 5 : Math.max(5, before * 0.2));
+  if(notable) bits.push(t('ai.editTimeChanged', {before, after}));
+  return bits.join('');
 }
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
-  const wish = clampText($('eaWish').value, LIM.wish);
-  const structural = aiStructureChangeRequested(wish);
-  const safeRaw = structural ? raw : aiMergeProgramEdit(programToText(editAIProg), raw);
-  const checkedRaw = aiClientVerdict('program.modify', safeRaw);
+  // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
+  // упражнения теперь в промте (FitAIProtocol.editRules), а не в клиенте через
+  // regex-угадайку «structural» и принудительный merge старой структуры.
+  const checkedRaw = aiClientVerdict('program.modify', raw);
   if(!checkedRaw) return;
   const {program, errors} = parseProgramText(checkedRaw);
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
-  if(!structural && !sameProgramShape(editAIProg, program)){
+  // жёсткая проверка итога: программа не развалилась на пустые варианты — иначе
+  // за «улучшением» на деле нет тренировки
+  const newPlans = normPlans(program);
+  if(!newPlans.length || newPlans.some(pl => !(pl.exercises || []).length)){
     appAlert(MSG_AI_PARSE());
     return;
   }
+  const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
+  // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
+  newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
+
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
@@ -2508,7 +2589,7 @@ async function createEditedProgram(){
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
-  const carried = carryMedia(editAIProg, program);
+  carryMedia(editAIProg, program, diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;
   if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
@@ -2518,7 +2599,7 @@ async function createEditedProgram(){
   renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(t('program.createdEdited',{name:program.name}) + (carried?t('program.imagesCarried',{count:carried}):''));
+  appAlert(t('program.createdEdited',{name:program.name}) + editSummaryText(diff, editAIProg, program));
 }
 
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в

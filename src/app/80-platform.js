@@ -381,11 +381,29 @@ function notifyScheduledPlan(p, dayName){
   if(planDays(p).includes(dayName)) return {plan:null, time:p.time || ''};
   return null;
 }
-function notifyProgressionChanged(p){
+// какой вариант должен сработать в этот день: если он не привязан к конкретным
+// дням (чередование A/Б), берём тот, что следующим по очереди — лучшая доступная
+// оценка для уведомления «наперёд», без гарантии, что расписание не сдвинется
+function notifyPlanFor(p, scheduledPlan){
+  if(scheduledPlan) return scheduledPlan;
+  const plans = normPlans(p);
+  return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
+}
+// выросла ли нагрузка сегодняшнего варианта по сравнению с прошлым разом:
+// прогрессия теперь повышается только после «Да, повышаем» на финише
+// (ex.ps, см. 60-builder.js), поэтому смотрим на факт — текущие значения
+// против снимка нагрузки из последней записи истории этого варианта
+function notifyProgressionChanged(p, scheduledPlan){
   if(!p || !p.progression) return false;
-  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
-  const every = Math.max(1, +p.progression || 1);
-  return done > 0 && done % every === 0 && typeof progSteps === 'function' && progSteps(p) > 0;
+  const pl = notifyPlanFor(p, scheduledPlan);
+  const idx = Math.max(0, normPlans(p).indexOf(pl));
+  const prev = previousWorkoutLoad(p, idx);
+  if(!prev.exact) return false;
+  const byIdx = new Map(prev.rows.map(r => [r.i, r]));
+  return workoutLoadSnapshot(p, idx).some(row => {
+    const before = byIdx.get(row.i);
+    return !!before && before.n === row.n && loadDelta(before, row).dir === 'up';
+  });
 }
 function notifyThirdWorkoutDate(){
   const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
@@ -458,7 +476,7 @@ async function syncNativeNotifications(){
         const scheduled = notifyScheduledPlan(p, dayName);
         if(!scheduled || done.has(iso + '|' + p.id)) return;
         const time = scheduled.time;
-        const grew = prefs.progress !== false && notifyProgressionChanged(p);
+        const grew = prefs.progress !== false && notifyProgressionChanged(p, scheduled.plan);
         if(time){
           const hm = time.split(':').map(Number);
           if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
@@ -467,7 +485,7 @@ async function syncNativeNotifications(){
           const missed = new Date(start.getTime() + 2 * 3600000);
           add({at:pre.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.beforeTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.beforeBody',{name:p.name,time}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.beforeBody',{name:p.name,time}),
             priority:90, extra:{programId:p.id, stage:grew ? 'progress' : 'before', category:'workouts'}});
           add({at:start.toISOString(), title:t('notify.startTitleShort'),
             body:t('notify.todayPlan',{name:p.name}), priority:85,
@@ -481,7 +499,7 @@ async function syncNativeNotifications(){
           const evening = notifyAt(day, 20, 0);
           add({at:morning.toISOString(),
             title:grew ? t('notify.progressTitle') : t('notify.todayTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name,steps:progSteps(p)}) : t('notify.todayBody',{name:p.name}),
+            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.todayBody',{name:p.name}),
             priority:80, extra:{programId:p.id, stage:grew ? 'progress' : 'today', category:'workouts'}});
           add({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
             body:t('notify.dontForgetBody',{name:p.name}), priority:65,
