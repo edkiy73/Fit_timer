@@ -861,6 +861,11 @@ function startOnboarding(){
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   themeLight = !dark;
   applyTheme();
+  // Знакомство — временный корневой экран первого запуска. Оно должно само быть
+  // базовой записью history: иначе «Правила → Back» попадал на невидимую главную.
+  navDepth = 0;
+  navStack = ['scrOnboard'];
+  try{ history.replaceState({scr:'scrOnboard', d:0}, ''); }catch(_){}
   show('scrOnboard', false);
 }
 
