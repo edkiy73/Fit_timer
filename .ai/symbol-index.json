@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2257,
-      "chars": 103229,
+      "lines": 2263,
+      "chars": 103657,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -711,14 +711,15 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1595,
-      "chars": 73943,
+      "lines": 1632,
+      "chars": 75523,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
         "applyProgCheck",
         "autoGrow",
         "autoGrowMax",
+        "autosaveNativeWorkoutSession",
         "backToWorkout",
         "badgeDesc",
         "badgeName",
@@ -828,8 +829,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2239,
-      "chars": 94150,
+      "lines": 2315,
+      "chars": 97229,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -885,6 +886,7 @@
         "refreshAfterForeground",
         "refreshVoicePackUI",
         "renderIconLabels",
+        "resumeWorkoutFromNativeNotification",
         "runSelfAI",
         "saveExAndBack",
         "saveSettingsSoon",

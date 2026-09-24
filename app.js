@@ -6666,8 +6666,9 @@ function sessionKey(){ return pk('workoutSession'); }
 async function saveSession(){
   const raw = state.raw, cur = state.current;
   if(!raw || !cur || !state.steps.length) return;
+  const pausedNow = state.paused && state.pausedAt ? Math.max(0, Date.now() - state.pausedAt) : 0;
   const elapsed = state.globalStart
-    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal)
+    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal - pausedNow)
     : 0;
   const data = {
     pid: raw.id,
@@ -6676,6 +6677,11 @@ async function saveSession(){
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    // Absolute deadline lets a cold notification launch distinguish three cases:
+    // timer still running, timer expired while WebView was dead, or non-timed step.
+    stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
+    remaining: Math.max(0, Number(state.remaining) || 0),
+    paused: !!state.paused,
     at: Date.now()
   };
   await kvSet(sessionKey(), JSON.stringify(data));
@@ -16099,7 +16105,8 @@ function paintPause(){
 /* ================= ДВИЖОК ШАГОВ ================= */
 // fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
-function startWorkout(fromIdx, elapsed){
+function startWorkout(fromIdx, elapsed, options){
+  const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
   if(window.FitNative) window.FitNative.requestNotifications();
@@ -16108,6 +16115,8 @@ function startWorkout(fromIdx, elapsed){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
+  state.globalStart = 0;
   // Упражнения, до которых тренировка реально дошла: только они считаются
   // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
   // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
@@ -16121,7 +16130,7 @@ function startWorkout(fromIdx, elapsed){
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
   $('prepTitle').textContent = state.current.title;
-  let n = Math.max(0, prepSec);
+  let n = opts.skipPrep ? 0 : Math.max(0, prepSec);
   if(n === 0){
     ov.classList.remove('on');
     document.body.classList.remove('prep-on');
@@ -16155,6 +16164,7 @@ function startWorkout(fromIdx, elapsed){
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
+  state.remaining = 0;
   if(window.FitNative) window.FitNative.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -16197,6 +16207,23 @@ function nextNativeWorkStep(){
   return null;
 }
 
+let nativeSessionSaveT = 0;
+function autosaveNativeWorkoutSession(delay){
+  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = setTimeout(()=>{
+    nativeSessionSaveT = 0;
+    if(state.live) saveSession().catch(()=>{});
+  }, Math.max(0, Number(delay) || 0));
+}
+
+window.addEventListener('fitAppBackground', ()=>{
+  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
+  saveSession().catch(()=>{});
+});
+
 function syncNativeWorkoutState(step, endsAt){
   if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
   const next = nextNativeWorkStep();
@@ -16219,6 +16246,7 @@ function syncNativeWorkoutState(step, endsAt){
     alertTitle: t('notify.timerDoneTitle'),
     alertBody: nextName ? t('notify.timerDoneNext',{name:nextName}) : t('notify.timerDoneBody')
   });
+  autosaveNativeWorkoutSession(40);
 }
 
 function exerciseProgressLabel(step){
@@ -16248,6 +16276,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
   if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
@@ -16425,11 +16454,21 @@ function renderStep(){
 
     const cd = $('countdown');
     setShown(cd, true);
-    state.remaining = step.seconds;
+    const resumeDeadline = Math.max(0, Number(state.resumeStepDeadline) || 0);
+    state.resumeStepDeadline = 0;
+    state.remaining = resumeDeadline > Date.now()
+      ? Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)))
+      : step.seconds;
     cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
     const launch = ()=>{
-      state.stepDeadline = Date.now() + state.remaining * 1000;
+      if(resumeDeadline > 0){
+        state.remaining = Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)));
+        cd.innerHTML = tnum(fmt(state.remaining));
+      }
+      state.stepDeadline = resumeDeadline > Date.now()
+        ? resumeDeadline
+        : Date.now() + state.remaining * 1000;
       syncNativeWorkoutState(step, state.stepDeadline);
       state.stepTimer = setInterval(()=>{
         if(state.paused || document.hidden) return;
@@ -16934,6 +16973,8 @@ function settleQuickFinish(keep){
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();
@@ -17492,6 +17533,8 @@ function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 function tearDownWorkout(){
   state.live = false;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();
@@ -18159,6 +18202,54 @@ $('btnStart').onclick = async ()=>{
   $('startModal').classList.add('open');
 };
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
+
+async function resumeWorkoutFromNativeNotification(){
+  // Warm process: the real workout engine is still alive. Do not rebuild the step or
+  // restart its timer; simply return to the existing workout screen.
+  if(state.live && state.steps && state.steps.length){
+    show('scrWork');
+    window.scrollTo(0, 0);
+    return true;
+  }
+
+  const s = await loadSession();
+  if(!s){
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+  const p = customPrograms.find(x => x && x.id === s.pid);
+  if(!p){
+    await clearSession();
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+
+  const plans = normPlans(p);
+  const planIdx = plans.length
+    ? Math.min(Math.max(0, parseInt(s.planIdx) || 0), plans.length - 1)
+    : 0;
+  state.raw = p;
+  state.planIdx = planIdx;
+  state.current = customToProgram(p, planIdx);
+  state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
+
+  // Rebuild once to decide what should have happened while the WebView was dead.
+  // We advance at most one step: only the timer that was already running had a native
+  // deadline; the following step never started while JavaScript was gone.
+  const preview = buildSteps();
+  let stepIdx = Math.min(Math.max(0, parseInt(s.stepIdx) || 0), Math.max(0, preview.length - 1));
+  let resumeDeadline = 0;
+  const savedDeadline = Math.max(0, Number(s.stepDeadline) || 0);
+  if(s.paused && Number(s.remaining) > 0){
+    resumeDeadline = Date.now() + Math.max(1, Number(s.remaining)) * 1000;
+  } else if(savedDeadline > 0){
+    if(savedDeadline <= Date.now() && stepIdx < preview.length - 1) stepIdx++;
+    else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
+  }
+
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline});
+  return true;
+}
 
 $('startResume').onclick = ()=>{
   const s = window.__pendingSession;
@@ -20166,8 +20257,21 @@ show('scrMenu', false);
 let pendingImport = null;
 let pendingLink = null;
 let pendingNativeLink = null;
+let pendingNativeWorkoutResume = false;
+let workoutResumeReady = false;
 let programLinksReady = false;
 let pendingAction = null;
+
+window.addEventListener('fitWorkoutResumeRequest', ()=>{
+  try{
+    if(window.FitNative && window.FitNative.consumeWorkoutResume) window.FitNative.consumeWorkoutResume();
+  }catch(_){}
+  if(workoutResumeReady){
+    resumeWorkoutFromNativeNotification().catch(()=>{});
+    return;
+  }
+  pendingNativeWorkoutResume = true;
+});
 
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
@@ -20198,6 +20302,9 @@ try{
   if(window.FitNative && window.FitNative.consumeProgramLink){
     const nativeId = String(window.FitNative.consumeProgramLink() || '');
     if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
+  }
+  if(window.FitNative && window.FitNative.consumeWorkoutResume){
+    pendingNativeWorkoutResume = !!window.FitNative.consumeWorkoutResume();
   }
 }catch(e){}
 
@@ -20316,6 +20423,18 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
+
+  // Only now are profile/program/session data and workout preferences ready. A notification
+  // tap can restore locally without waiting for subscription/trainer network requests.
+  workoutResumeReady = true;
+  if(pendingNativeWorkoutResume){
+    pendingNativeWorkoutResume = false;
+    await resumeWorkoutFromNativeNotification();
+  } else if(window.FitNative && window.FitNative.isNative && window.FitNative.clearWorkoutState){
+    // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
+    const bootSession = await loadSession();
+    if(!bootSession) window.FitNative.clearWorkoutState();
+  }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
   await refreshServerSubscription(true);

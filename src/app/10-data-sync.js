@@ -1641,8 +1641,9 @@ function sessionKey(){ return pk('workoutSession'); }
 async function saveSession(){
   const raw = state.raw, cur = state.current;
   if(!raw || !cur || !state.steps.length) return;
+  const pausedNow = state.paused && state.pausedAt ? Math.max(0, Date.now() - state.pausedAt) : 0;
   const elapsed = state.globalStart
-    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal)
+    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal - pausedNow)
     : 0;
   const data = {
     pid: raw.id,
@@ -1651,6 +1652,11 @@ async function saveSession(){
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    // Absolute deadline lets a cold notification launch distinguish three cases:
+    // timer still running, timer expired while WebView was dead, or non-timed step.
+    stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
+    remaining: Math.max(0, Number(state.remaining) || 0),
+    paused: !!state.paused,
     at: Date.now()
   };
   await kvSet(sessionKey(), JSON.stringify(data));

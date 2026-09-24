@@ -187,7 +187,8 @@ function paintPause(){
 /* ================= ДВИЖОК ШАГОВ ================= */
 // fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
-function startWorkout(fromIdx, elapsed){
+function startWorkout(fromIdx, elapsed, options){
+  const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
   if(window.FitNative) window.FitNative.requestNotifications();
@@ -196,6 +197,8 @@ function startWorkout(fromIdx, elapsed){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
+  state.globalStart = 0;
   // Упражнения, до которых тренировка реально дошла: только они считаются
   // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
   // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
@@ -209,7 +212,7 @@ function startWorkout(fromIdx, elapsed){
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
   $('prepTitle').textContent = state.current.title;
-  let n = Math.max(0, prepSec);
+  let n = opts.skipPrep ? 0 : Math.max(0, prepSec);
   if(n === 0){
     ov.classList.remove('on');
     document.body.classList.remove('prep-on');
@@ -243,6 +246,7 @@ function startWorkout(fromIdx, elapsed){
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
+  state.remaining = 0;
   if(window.FitNative) window.FitNative.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -285,6 +289,23 @@ function nextNativeWorkStep(){
   return null;
 }
 
+let nativeSessionSaveT = 0;
+function autosaveNativeWorkoutSession(delay){
+  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = setTimeout(()=>{
+    nativeSessionSaveT = 0;
+    if(state.live) saveSession().catch(()=>{});
+  }, Math.max(0, Number(delay) || 0));
+}
+
+window.addEventListener('fitAppBackground', ()=>{
+  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
+  saveSession().catch(()=>{});
+});
+
 function syncNativeWorkoutState(step, endsAt){
   if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
   const next = nextNativeWorkStep();
@@ -307,6 +328,7 @@ function syncNativeWorkoutState(step, endsAt){
     alertTitle: t('notify.timerDoneTitle'),
     alertBody: nextName ? t('notify.timerDoneNext',{name:nextName}) : t('notify.timerDoneBody')
   });
+  autosaveNativeWorkoutSession(40);
 }
 
 function exerciseProgressLabel(step){
@@ -336,6 +358,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
   if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
@@ -513,11 +536,21 @@ function renderStep(){
 
     const cd = $('countdown');
     setShown(cd, true);
-    state.remaining = step.seconds;
+    const resumeDeadline = Math.max(0, Number(state.resumeStepDeadline) || 0);
+    state.resumeStepDeadline = 0;
+    state.remaining = resumeDeadline > Date.now()
+      ? Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)))
+      : step.seconds;
     cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
     const launch = ()=>{
-      state.stepDeadline = Date.now() + state.remaining * 1000;
+      if(resumeDeadline > 0){
+        state.remaining = Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)));
+        cd.innerHTML = tnum(fmt(state.remaining));
+      }
+      state.stepDeadline = resumeDeadline > Date.now()
+        ? resumeDeadline
+        : Date.now() + state.remaining * 1000;
       syncNativeWorkoutState(step, state.stepDeadline);
       state.stepTimer = setInterval(()=>{
         if(state.paused || document.hidden) return;
@@ -1022,6 +1055,8 @@ function settleQuickFinish(keep){
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();
@@ -1580,6 +1615,8 @@ function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 function tearDownWorkout(){
   state.live = false;
+  clearTimeout(nativeSessionSaveT);
+  nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();

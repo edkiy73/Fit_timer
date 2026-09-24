@@ -19,6 +19,7 @@
   let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
   let pendingProgramLink = '';
+  let pendingWorkoutResume = false;
   let appInactiveAt = 0;
   let updateProgressHandle = null;
 
@@ -47,10 +48,35 @@
     return id;
   }
 
+  function isWorkoutResumeUrl(value){
+    try{
+      const url = new URL(String(value || ''));
+      return url.protocol === 'fittimer:' && url.host === 'workout' && /^\/resume\/?$/.test(url.pathname);
+    }catch(_){ return false; }
+  }
+
+  function rememberWorkoutResume(value){
+    if(!isWorkoutResumeUrl(value)) return false;
+    pendingWorkoutResume = true;
+    try{ window.dispatchEvent(new CustomEvent('fitWorkoutResumeRequest')); }catch(_){}
+    return true;
+  }
+
+  function consumeWorkoutResume(){
+    const value = pendingWorkoutResume;
+    pendingWorkoutResume = false;
+    return value;
+  }
+
+  function rememberAppUrl(value){
+    if(rememberWorkoutResume(value)) return true;
+    return rememberProgramLink(value);
+  }
+
   if(native && plugins.App && plugins.App.addListener){
-    try{ plugins.App.addListener('appUrlOpen', event=> rememberProgramLink(event && event.url)); }catch(_){}
+    try{ plugins.App.addListener('appUrlOpen', event=> rememberAppUrl(event && event.url)); }catch(_){}
     if(plugins.App.getLaunchUrl){
-      try{ plugins.App.getLaunchUrl().then(result=> rememberProgramLink(result && result.url)).catch(()=>{}); }catch(_){}
+      try{ plugins.App.getLaunchUrl().then(result=> rememberAppUrl(result && result.url)).catch(()=>{}); }catch(_){}
     }
   }
   function installRemotePushListeners(){
@@ -395,6 +421,7 @@
       const active = !!(event && event.isActive);
       if(!active){
         appInactiveAt = Date.now();
+        try{ window.dispatchEvent(new CustomEvent('fitAppBackground')); }catch(_){}
         if(typeof window.stopListening === 'function') window.stopListening();
         else stopVoiceRecognition();
         stopSpeaking();
@@ -493,13 +520,9 @@
     catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
   }
 
-  // Native workout surfaces deliberately outlive the WebView. A cold WebView start
-  // cannot have a live in-memory workout, so remove a stale notification/Live Activity
-  // left by process death before exposing the bridge to the app.
-  if(native && fitWorkout && fitWorkout.clear){
-    try{ fitWorkout.clear().catch(()=>{}); }catch(_){}
-  }
-
+  // The workout notification / Live Activity deliberately survives WebView process death.
+  // App boot reconciles it against workoutSession after profile data is loaded, so a tap
+  // can restore the interrupted workout instead of destroying the recovery surface here.
   window.FitNative = Object.freeze({
     isNative: native,
     getAppInfo,
@@ -512,6 +535,7 @@
     biometricStatus,
     authenticateBiometric,
     consumeProgramLink,
+    consumeWorkoutResume,
     requestNotifications,
     registerRemotePush,
     scheduleRest,

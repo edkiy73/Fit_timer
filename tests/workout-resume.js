@@ -49,7 +49,19 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     state.globalStart = Date.now() - 90000;
     state.pausedTotal = 0;
     state.paused = false;
+    state.stepDeadline = Date.now() + 42000;
+    state.remaining = 42;
     prepSec = 0;
+    await saveSession();
+
+    const saved = await loadSession();
+    if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
+      throw new Error('timer recovery fields were not saved');
+    }
+    // The saved resume point below is a reps step; keep that session realistic after
+    // separately proving that timer recovery fields persist.
+    state.stepDeadline = 0;
+    state.remaining = 0;
     await saveSession();
 
     openStart(p);
@@ -81,6 +93,29 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('продолжили именно вторничный вариант',
     resumed.planIdx === 1 && resumed.title === 'Вт 5', JSON.stringify(resumed));
   ok('сохранённое место не превратилось в упражнение понедельника', resumed.title !== 'Пн 5', resumed.title);
+
+  const nativeResumed = await page.evaluate(async () => {
+    // Имитируем уничтоженный WebView: живого workout state больше нет, но session осталась.
+    tearDownWorkout();
+    prepSec = 5; // notification recovery должна миновать обычный предстартовый countdown
+    const ok = await resumeWorkoutFromNativeNotification();
+    return {
+      ok,
+      live:state.live,
+      screen:show._last,
+      planIdx:state.planIdx,
+      title:state.steps[state.stepIdx] && state.steps[state.stepIdx].title,
+      prepOpen:$('prepOverlay').classList.contains('on')
+    };
+  });
+  ok('тап системного уведомления восстанавливает сохранённую тренировку',
+    nativeResumed.ok && nativeResumed.live && nativeResumed.screen === 'scrWork',
+    JSON.stringify(nativeResumed));
+  ok('native recovery возвращает тот же вариант и шаг',
+    nativeResumed.planIdx === 1 && nativeResumed.title === 'Вт 5',
+    JSON.stringify(nativeResumed));
+  ok('native recovery не запускает повторный предстартовый countdown',
+    !nativeResumed.prepOpen, JSON.stringify(nativeResumed));
 
   const choices = await page.evaluate(() => {
     tearDownWorkout();

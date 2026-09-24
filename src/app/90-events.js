@@ -46,6 +46,54 @@ $('btnStart').onclick = async ()=>{
 };
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
 
+async function resumeWorkoutFromNativeNotification(){
+  // Warm process: the real workout engine is still alive. Do not rebuild the step or
+  // restart its timer; simply return to the existing workout screen.
+  if(state.live && state.steps && state.steps.length){
+    show('scrWork');
+    window.scrollTo(0, 0);
+    return true;
+  }
+
+  const s = await loadSession();
+  if(!s){
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+  const p = customPrograms.find(x => x && x.id === s.pid);
+  if(!p){
+    await clearSession();
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+
+  const plans = normPlans(p);
+  const planIdx = plans.length
+    ? Math.min(Math.max(0, parseInt(s.planIdx) || 0), plans.length - 1)
+    : 0;
+  state.raw = p;
+  state.planIdx = planIdx;
+  state.current = customToProgram(p, planIdx);
+  state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
+
+  // Rebuild once to decide what should have happened while the WebView was dead.
+  // We advance at most one step: only the timer that was already running had a native
+  // deadline; the following step never started while JavaScript was gone.
+  const preview = buildSteps();
+  let stepIdx = Math.min(Math.max(0, parseInt(s.stepIdx) || 0), Math.max(0, preview.length - 1));
+  let resumeDeadline = 0;
+  const savedDeadline = Math.max(0, Number(s.stepDeadline) || 0);
+  if(s.paused && Number(s.remaining) > 0){
+    resumeDeadline = Date.now() + Math.max(1, Number(s.remaining)) * 1000;
+  } else if(savedDeadline > 0){
+    if(savedDeadline <= Date.now() && stepIdx < preview.length - 1) stepIdx++;
+    else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
+  }
+
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline});
+  return true;
+}
+
 $('startResume').onclick = ()=>{
   const s = window.__pendingSession;
   $('startModal').classList.remove('open');
@@ -2052,8 +2100,21 @@ show('scrMenu', false);
 let pendingImport = null;
 let pendingLink = null;
 let pendingNativeLink = null;
+let pendingNativeWorkoutResume = false;
+let workoutResumeReady = false;
 let programLinksReady = false;
 let pendingAction = null;
+
+window.addEventListener('fitWorkoutResumeRequest', ()=>{
+  try{
+    if(window.FitNative && window.FitNative.consumeWorkoutResume) window.FitNative.consumeWorkoutResume();
+  }catch(_){}
+  if(workoutResumeReady){
+    resumeWorkoutFromNativeNotification().catch(()=>{});
+    return;
+  }
+  pendingNativeWorkoutResume = true;
+});
 
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
@@ -2084,6 +2145,9 @@ try{
   if(window.FitNative && window.FitNative.consumeProgramLink){
     const nativeId = String(window.FitNative.consumeProgramLink() || '');
     if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
+  }
+  if(window.FitNative && window.FitNative.consumeWorkoutResume){
+    pendingNativeWorkoutResume = !!window.FitNative.consumeWorkoutResume();
   }
 }catch(e){}
 
@@ -2202,6 +2266,18 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
+
+  // Only now are profile/program/session data and workout preferences ready. A notification
+  // tap can restore locally without waiting for subscription/trainer network requests.
+  workoutResumeReady = true;
+  if(pendingNativeWorkoutResume){
+    pendingNativeWorkoutResume = false;
+    await resumeWorkoutFromNativeNotification();
+  } else if(window.FitNative && window.FitNative.isNative && window.FitNative.clearWorkoutState){
+    // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
+    const bootSession = await loadSession();
+    if(!bootSession) window.FitNative.clearWorkoutState();
+  }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
   await refreshServerSubscription(true);
