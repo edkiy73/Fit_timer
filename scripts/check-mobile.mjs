@@ -16,6 +16,9 @@ const required = [
   'android/app/src/main/java/ru/fittimer/app/WorkoutAlarmReceiver.java',
   'ios/App/App/FitBiometricPlugin.swift',
   'ios/App/App/FitWorkoutPlugin.swift',
+  'ios/App/App/WorkoutActivityAttributes.swift',
+  'ios/App/App/WorkoutLiveActivity/WorkoutLiveActivity.swift',
+  'ios/App/App/WorkoutLiveActivity/Info.plist',
   'ios/App/App/Info.plist'
 ];
 for(const file of required) await access(file);
@@ -63,6 +66,14 @@ const fitBiometricAndroid = await readFile('android/app/src/main/java/ru/fittime
 if(!fitBiometricAndroid.includes('BiometricPrompt') || !fitBiometricAndroid.includes('BIOMETRIC_WEAK')) throw new Error('Android native biometric flow is missing');
 const iosBiometric = await readFile('ios/App/App/FitBiometricPlugin.swift', 'utf8');
 if(!iosBiometric.includes('LocalAuthentication') || !iosBiometric.includes('deviceOwnerAuthenticationWithBiometrics')) throw new Error('iOS native biometric flow is missing');
+const iosWorkout = await readFile('ios/App/App/FitWorkoutPlugin.swift', 'utf8');
+const iosInfo = await readFile('ios/App/App/Info.plist', 'utf8');
+const iosWidget = await readFile('ios/App/App/WorkoutLiveActivity/WorkoutLiveActivity.swift', 'utf8');
+const iosProject = await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+if(!iosWorkout.includes('Activity<WorkoutActivityAttributes>') || !iosWorkout.includes('interruptionLevel = .timeSensitive')) throw new Error('iOS workout Live Activity / timer notification bridge is missing');
+if(!iosInfo.includes('NSSupportsLiveActivities')) throw new Error('iOS Live Activities capability flag is missing');
+if(!iosWidget.includes('ActivityConfiguration') || !iosWidget.includes('DynamicIsland') || !iosWidget.includes('timerInterval:')) throw new Error('iOS workout Live Activity view is incomplete');
+if(!iosProject.includes('FitTimerWorkoutLiveActivity.appex') || !iosProject.includes('Embed App Extensions')) throw new Error('iOS Live Activity extension is not embedded');
 
 const androidRoot = await readFile('android/build.gradle', 'utf8');
 const androidApp = await readFile('android/app/build.gradle', 'utf8');
