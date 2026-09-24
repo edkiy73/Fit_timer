@@ -2221,7 +2221,7 @@ async function applyExEdit(){
   if(!raw){appAlert(MSG_AI_EMPTY());return;}
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
-  if(!oldEx){show('scrBuilder');return;}
+  if(!oldEx){goBackTo('scrBuilder');return;}
   // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
@@ -2378,7 +2378,7 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  show('scrBuilder');
+  goBackTo('scrBuilder');
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
