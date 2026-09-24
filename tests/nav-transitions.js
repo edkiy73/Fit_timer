@@ -281,6 +281,113 @@ async function scenario(ctx, name, fn, errs){
     await homeThenExit(page, 'здоровье из ИИ');
   }, errs);
 
+  await scenario(ctx, 'каталог → карточка программы → назад', async page => {
+    await page.evaluate(() => {
+      goTab('scrPrograms');
+      openStore('scrPrograms');
+      storeServer = [{
+        id:'nav-store-item', by:'@nav.trainer', cat:'tone', level:'Средний', min:20,
+        name:'Навигация каталога', gives:'Проверка возврата из карточки.',
+        cover:null,
+        text:'ПРОГРАММА: Навигация каталога\\nДНИ: Пн\\nКРУГИ: 1\\n\\nУПРАЖНЕНИЕ: Планка\\nФОРМАТ: время\\nЗНАЧЕНИЕ: 30\\nПОДХОДЫ: 1\\nОТДЫХ: 20'
+      }];
+      openStoreItem('nav-store-item');
+    });
+    await nap(page, 450);
+    await aligned(page, 'карточка каталога', 'scrStoreItem');
+    await page.click('#siBackTop');
+    await nap(page, 450);
+    await aligned(page, 'назад к каталогу', 'scrStore');
+    await page.click('#storeBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад из каталога после карточки', 'scrPrograms');
+    await homeThenExit(page, 'карточка каталога');
+  }, errs);
+
+  await scenario(ctx, 'конструктор → картинки → Готово', async page => {
+    await seedProgram(page, 'nav-images');
+    await page.evaluate(() => {
+      premiumGate = () => true;
+      goTab('scrPrograms');
+      openBuilder('nav-images');
+      openImages();
+    });
+    await nap(page, 500);
+    await aligned(page, 'картинки программы', 'scrImages');
+    await page.click('#imgDone');
+    await nap(page, 500);
+    await aligned(page, 'возврат из картинок', 'scrBuilder');
+    await page.goBack();
+    await nap(page, 500);
+    await aligned(page, 'Back после картинок', 'scrPrograms');
+    await homeThenExit(page, 'картинки программы');
+  }, errs);
+
+  await scenario(ctx, 'страница тренера → назад к источнику', async page => {
+    await page.evaluate(() => { goTab('scrPrograms'); openTrainer('@nav.public'); });
+    await nap(page, 450);
+    await aligned(page, 'страница тренера', 'scrTrainerPage');
+    await page.click('#tpBackTop');
+    await nap(page, 500);
+    await aligned(page, 'назад со страницы тренера', 'scrPrograms');
+    await homeThenExit(page, 'страница тренера');
+  }, errs);
+
+  await scenario(ctx, 'Другое → В каталоге → публикация → назад', async page => {
+    await seedProgram(page, 'nav-publish');
+    await page.evaluate(() => {
+      const p = customPrograms.find(x => x.id === 'nav-publish');
+      p.pub = {id:'nav-pub-id', status:'pending'};
+      goTab('scrAccount');
+      openMyCatalog();
+      openPublish(p);
+    });
+    await nap(page, 450);
+    await aligned(page, 'экран публикации', 'scrPublish');
+    await page.click('#pubBackTop');
+    await nap(page, 450);
+    await aligned(page, 'назад в список публикаций', 'scrMyCatalog');
+    await page.click('#mcBackTop');
+    await nap(page, 600);
+    await aligned(page, 'назад из списка публикаций', 'scrAccount');
+    await homeThenExit(page, 'публикация');
+  }, errs);
+
+  await scenario(ctx, 'активная тренировка → упражнение → ИИ → тренировка', async page => {
+    await seedProgram(page, 'nav-live-workout');
+    await page.evaluate(() => {
+      goTab('scrPrograms');
+      const p = customPrograms.find(x => x.id === 'nav-live-workout');
+      openStart(p);
+      startWorkout();
+      const at = state.steps.findIndex(s => s && s.exName);
+      if(at >= 0){
+        state.stepIdx = at;
+        renderStep();
+      }
+      const prep = $('prepOverlay');
+      if(prep) prep.classList.remove('on');
+      editExerciseFromWorkout();
+    });
+    await nap(page, 500);
+    await aligned(page, 'упражнение из тренировки', 'scrExercise');
+    await page.click('#exModeTabs .tab[data-m="ai"]');
+    await nap(page, 450);
+    await aligned(page, 'ИИ из активной тренировки', 'scrAI');
+    await page.click('#aiBackTop');
+    await nap(page, 600);
+    await aligned(page, 'возврат в активную тренировку', 'scrWork');
+
+    await page.goBack();
+    await nap(page, 450);
+    await aligned(page, 'системный Back не бросает тренировку', 'scrWork');
+    ok('системный Back на тренировке открывает выход', await page.isVisible('#exitModal'));
+    await page.click('#exitDrop');
+    await nap(page, 700);
+    await aligned(page, 'выход без сохранения из тренировки', 'scrMenu');
+    await homeThenExit(page, 'активная тренировка');
+  }, errs);
+
   await scenario(ctx, 'тренер → подопечный → назад', async page => {
     await page.evaluate(() => goTab('scrAccount'));
     await becomeTrainer(page, {handle:'@navmatrix.' + Math.random().toString(36).slice(2,7)});
