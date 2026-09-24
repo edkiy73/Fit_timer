@@ -64,6 +64,10 @@ if(!fitSystem.includes('ReviewManagerFactory') || !fitSystem.includes('launchRev
 
 const fitBiometricAndroid = await readFile('android/app/src/main/java/ru/fittimer/app/FitBiometricPlugin.java', 'utf8');
 if(!fitBiometricAndroid.includes('BiometricPrompt') || !fitBiometricAndroid.includes('BIOMETRIC_WEAK')) throw new Error('Android native biometric flow is missing');
+const androidWorkoutNotifications = await readFile('android/app/src/main/java/ru/fittimer/app/WorkoutNotifications.java', 'utf8');
+if(androidWorkoutNotifications.includes('AudioAttributes.USAGE_ALARM')) throw new Error('Workout timer notification must not use alarm audio volume');
+if(!androidWorkoutNotifications.includes('"workout_timer_v2"') || !androidWorkoutNotifications.includes('AudioAttributes.USAGE_NOTIFICATION')) throw new Error('Workout timer notification channel must use normal notification audio');
+if(!androidWorkoutNotifications.includes('notifySafe(context, LIVE_ID, alert.build())')) throw new Error('Workout timer end must replace the ongoing notification instead of posting a duplicate');
 const iosBiometric = await readFile('ios/App/App/FitBiometricPlugin.swift', 'utf8');
 if(!iosBiometric.includes('LocalAuthentication') || !iosBiometric.includes('deviceOwnerAuthenticationWithBiometrics')) throw new Error('iOS native biometric flow is missing');
 const iosWorkout = await readFile('ios/App/App/FitWorkoutPlugin.swift', 'utf8');

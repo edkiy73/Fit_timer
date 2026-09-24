@@ -21,10 +21,14 @@ import com.getcapacitor.JSObject;
 
 final class WorkoutNotifications {
     private static final String LIVE_CHANNEL = "workout_live";
-    private static final String ALERT_CHANNEL = "workout_alert";
+    // v2 intentionally uses normal notification audio semantics. The previous
+    // workout_alert channel was created as USAGE_ALARM, and Android keeps a
+    // channel's audio attributes across app updates.
+    private static final String ALERT_CHANNEL = "workout_timer_v2";
+    private static final String LEGACY_ALERT_CHANNEL = "workout_alert";
     private static final String ACTION_TIMER = "ru.fittimer.app.WORKOUT_TIMER";
     private static final int LIVE_ID = 903001;
-    private static final int ALERT_ID = 903002;
+    private static final int LEGACY_ALERT_ID = 903002;
     private static final int ALARM_REQUEST = 903003;
 
     private WorkoutNotifications() {}
@@ -32,7 +36,8 @@ final class WorkoutNotifications {
     static void update(Context context, JSObject data) {
         ensureChannels(context);
         cancelAlarm(context);
-        NotificationManagerCompat.from(context).cancel(ALERT_ID);
+        // Upgrade cleanup: older builds posted a second notification with this id.
+        NotificationManagerCompat.from(context).cancel(LEGACY_ALERT_ID);
 
         boolean paused = data.optBoolean("paused", false);
         boolean timed = data.optBoolean("timed", false);
@@ -76,7 +81,7 @@ final class WorkoutNotifications {
         cancelAlarm(context);
         NotificationManagerCompat manager = NotificationManagerCompat.from(context);
         manager.cancel(LIVE_ID);
-        manager.cancel(ALERT_ID);
+        manager.cancel(LEGACY_ALERT_ID);
     }
 
     static boolean canScheduleExact(Context context) {
@@ -91,32 +96,25 @@ final class WorkoutNotifications {
         String body = clean(intent == null ? null : intent.getStringExtra("body"), "");
         String workoutTitle = clean(intent == null ? null : intent.getStringExtra("workoutTitle"), "Fit Timer");
 
-        NotificationCompat.Builder live = new NotificationCompat.Builder(context, LIVE_CHANNEL)
+        // Replace the existing ongoing card instead of posting a second one.
+        // This update uses the user-configurable alert channel, so Android itself
+        // decides whether to play sound/vibrate according to system channel settings.
+        NotificationCompat.Builder alert = new NotificationCompat.Builder(context, ALERT_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_fittimer)
             .setContentTitle(title)
             .setContentText(body)
             .setSubText(workoutTitle)
             .setContentIntent(openAppIntent(context))
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(false)
             .setOngoing(true)
-            .setSilent(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setShowWhen(false);
-        notifySafe(context, LIVE_ID, live.build());
-
-        NotificationCompat.Builder alert = new NotificationCompat.Builder(context, ALERT_CHANNEL)
-            .setSmallIcon(R.drawable.ic_stat_fittimer)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setContentIntent(openAppIntent(context))
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND);
-        notifySafe(context, ALERT_ID, alert.build());
+            .setShowWhen(false);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            alert.setDefaults(NotificationCompat.DEFAULT_ALL);
+        }
+        notifySafe(context, LIVE_ID, alert.build());
     }
 
     private static void scheduleAlarm(Context context, long at, String title, String body, String workoutTitle) {
@@ -185,16 +183,22 @@ final class WorkoutNotifications {
         live.enableVibration(false);
         manager.createNotificationChannel(live);
 
+        // Remove the old alarm-style channel so it does not remain as a confusing
+        // extra category in Android settings after upgrading.
+        manager.deleteNotificationChannel(LEGACY_ALERT_CHANNEL);
+
         NotificationChannel alert = new NotificationChannel(
             ALERT_CHANNEL, "Таймер тренировки", NotificationManager.IMPORTANCE_HIGH);
         alert.setDescription("Сигнал об окончании этапа тренировки");
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         AudioAttributes attrs = new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build();
         alert.setSound(sound, attrs);
-        alert.enableVibration(false);
+        // This is only the initial channel default. Android's notification settings
+        // remain authoritative: the user can disable vibration/sound or choose another sound.
+        alert.enableVibration(true);
         manager.createNotificationChannel(alert);
     }
 
