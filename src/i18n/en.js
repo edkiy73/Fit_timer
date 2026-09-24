@@ -976,6 +976,8 @@ const I18N_EN = {
   'notify.timerDoneTitle': "Time to continue",
   'notify.timerDoneNext': "Next — {name}",
   'notify.timerDoneBody': "The timer is done. Return to your workout.",
+  'notify.activeForgotTitle': "Don’t forget your workout 💪",
+  'notify.activeForgotBody': "It’s still active. Come back to continue or finish it.",
   'notify.startBody': "Time for “{name}”. Let’s go!",
   'notify.startTitleShort': "Time to work out",
   'notify.todayPlan': "Today’s plan: “{name}”.",
