@@ -791,8 +791,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 613,
-      "chars": 28947,
+      "lines": 740,
+      "chars": 32160,
       "symbols": [
         "add",
         "advance",
@@ -800,17 +800,27 @@
         "applyThemeFor",
         "applyVoiceCommand",
         "buildRecog",
+        "buildWorkoutNotificationCandidates",
         "checkSchedules",
         "hfHintText",
         "limitNotificationCandidates",
         "notifyAt",
         "notifyDayKey",
+        "notifyEveningCopy",
         "notifyHasWorkoutOn",
+        "notifyMorningCopy",
+        "notifyNames",
         "notifyPlanFor",
         "notifyPremiumCandidate",
         "notifyProgressionChanged",
+        "notifyRowsByTime",
+        "notifyRowsExtra",
         "notifyScheduledPlan",
+        "notifyScheduleRowsForDay",
         "notifyThirdWorkoutDate",
+        "notifyTimedGroupCopy",
+        "notifyTimeParts",
+        "notifyWorkoutCount",
         "resetVoiceDedup",
         "setHfMode",
         "showNotification",
@@ -829,8 +839,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2315,
-      "chars": 97277,
+      "lines": 2319,
+      "chars": 97381,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1682,6 +1692,18 @@
       "actions": [
         "closeModal"
       ]
+    },
+    "src/i18n/ru.js": {
+      "kind": "frontend-js",
+      "lines": 1587,
+      "chars": 106583,
+      "symbols": []
+    },
+    "src/i18n/en.js": {
+      "kind": "frontend-js",
+      "lines": 1587,
+      "chars": 106877,
+      "symbols": []
     }
   }
 }
