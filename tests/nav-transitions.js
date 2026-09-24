@@ -405,16 +405,28 @@ async function scenario(ctx, name, fn, errs){
 
   await scenario(ctx, 'ИИ добавляет упражнение → Builder без возврата в ИИ', async page => {
     await seedProgram(page, 'nav-ai-add');
-    await page.evaluate(() => {
+    const aiAdd = await page.evaluate(async () => {
       goTab('scrPrograms');
       openBuilder('nav-ai-add');
       openExAI();
-      $('aiResult').value = 'УПРАЖНЕНИЕ: Выпады\\nФОРМАТ: повторения\\nЗНАЧЕНИЕ: 10\\nПОДХОДЫ: 1\\nОТДЫХ: 30';
-      exaAddExercise();
+      const raw = 'УПРАЖНЕНИЕ: Выпады\\nФОРМАТ: повторения\\nЗНАЧЕНИЕ: 10\\nПОДХОДЫ: 1\\nОТДЫХ: 30';
+      const verdict = FitAIProtocol.validateResponse('exercise.create', raw);
+      $('aiResult').value = raw;
+      await exaAddExercise();
+      return {
+        verdict,
+        screen: show._last,
+        historyScreen: history.state && history.state.scr,
+        stack: [...navStack],
+        dialog: $('dlg').classList.contains('open'),
+        message: $('dlgMsg').textContent || ''
+      };
     });
-    await page.waitForFunction(() => show._last === 'scrBuilder' && document.querySelector('#dlg.open'), null, {timeout:5000});
+    ok('тестовый ответ ИИ валиден', !!(aiAdd.verdict && aiAdd.verdict.ok), JSON.stringify(aiAdd.verdict));
+    ok('AI-добавление вернуло в Builder', aiAdd.screen === 'scrBuilder' && aiAdd.historyScreen === 'scrBuilder',
+      JSON.stringify(aiAdd));
     await aligned(page, 'после добавления через ИИ', 'scrBuilder');
-    ok('success-попап открыт уже поверх Builder', await page.isVisible('#dlgOk'));
+    ok('success-попап открыт уже поверх Builder', aiAdd.dialog && await page.isVisible('#dlgOk'), aiAdd.message);
     await page.click('#dlgOk');
     await nap(page, 650);
     await page.goBack();
