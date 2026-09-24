@@ -2378,9 +2378,10 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  // Успешное применение завершает режим ИИ: Builder заменяет его в текущей
-  // позиции истории, чтобы Back не возвращал к уже использованному ответу ИИ.
-  asTab(()=> show('scrBuilder'));
+  // Успешное применение завершает режим ИИ. Builder уже лежит под экраном ИИ,
+  // поэтому именно ВОЗВРАЩАЕМСЯ к нему и ждём popstate. Простая замена текущей
+  // записи делала два Builder подряд, из-за чего следующий Back оставался в Builder.
+  await goBackTo('scrBuilder');
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
