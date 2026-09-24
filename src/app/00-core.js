@@ -822,8 +822,15 @@ window.addEventListener('popstate', async e => {
 // кнопка «назад» тридцать раз подряд не выводила из конструктора.
 // Экран покажет сам popstate — здесь только отматываем.
 function goBackTo(id){
-  if(navStack.length > 1 && navStack[navStack.length - 2] === id && show._last === navStack[navStack.length - 1]){
-    try{ history.back(); return; }catch(e){}
+  // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
+  // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
+  // копию родителя поверх истории.
+  if(show._last === navStack[navStack.length - 1]){
+    const at = navStack.lastIndexOf(id);
+    const distance = navStack.length - 1 - at;
+    if(at >= 0 && distance > 0){
+      try{ history.go(-distance); return; }catch(e){}
+    }
   }
   show(id);
 }
