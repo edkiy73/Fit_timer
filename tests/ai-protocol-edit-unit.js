@@ -26,6 +26,14 @@ function need(cond, msg){
   const allEmpty = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\nОТДЫХ: 0';
   need(FitAIProtocol.validateProgramResponse(allEmpty).ok === false, 'program with no exercises at all is still rejected');
 }
+/* ---- программа «по кругам» без строк ПОДХОДЫ — не «неполная»: разбор ставит 1 ---- */
+{
+  const circuit = 'ПРОГРАММА: Т\n\nДЕНЬ: Пн\nКРУГИ: 2\nОТДЫХ МЕЖДУ КРУГАМИ: 60\n\n'
+    + 'УПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 15\nОТДЫХ: 30\n\n'
+    + 'УПРАЖНЕНИЕ: Отжимания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nОТДЫХ: 30';
+  const v = FitAIProtocol.validateResponse('program.modify', circuit);
+  need(v.ok === true, 'circuit program without ПОДХОДЫ passes: ' + v.reason + ' ' + v.missing);
+}
 /* ---- Markdown-оформление протокола не делает ответ «неполным» ---- */
 {
   const md = '```plaintext\n**ПРОГРАММА:** Т\n### ДЕНЬ: Пн\n- КРУГИ: 1\n**УПРАЖНЕНИЕ**: Присед\n'

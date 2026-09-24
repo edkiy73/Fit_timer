@@ -1135,6 +1135,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
     if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
+    if(j.error === 'ai_timeout') throw new Error(t('ai.timeout'));
     if(j.error === 'ai_bad_response'){
       const miss = Array.isArray(j.missing) ? j.missing.filter(Boolean).slice(0,6).join(', ') : '';
       throw new Error(t('ai.badResponse') + (miss ? ' ' + t('ai.badResponseMissing',{fields:miss}) : ''));
@@ -2484,7 +2485,9 @@ function programToText(p, opts){
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
       L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : valueText(ex.value).replace('–', '-')));
-      if((parseInt(ex.sets) || 1) > 1) L.push('ПОДХОДЫ: ' + ex.sets);
+      // всегда, даже при 1 подходе: ИИ повторяет формат исходника, и без строки
+      // возвращал программу без ПОДХОДЫ вовсе
+      L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
@@ -2504,6 +2507,10 @@ function editAIPrompt(){
     // КОД — только для сопоставления «то же упражнение / новое», сюда не входит в
     // обычный протокол и не должна попасть в пользовательский текст (ОПИСАНИЕ и т.п.)
     'Each УПРАЖНЕНИЕ line may be followed by a КОД: <code> line — an internal reference tag, never user-visible text. Repeat the SAME КОД for the same movement even if you rename it, move it, or change its format; give a genuinely new exercise no КОД line at all; never move a КОД onto a different exercise.\n'+
+    // Длинная программа (20+ упражнений) переписывалась целиком вместе с
+    // описаниями техники по 600 знаков и не успевала за время ответа сервера.
+    // Описания неизменных упражнений приложение подставит само (carryExerciseText).
+    'Keep the answer short: for an exercise you keep (it has a КОД) whose ОПИСАНИЕ, МЫШЦЫ and ОШИБКИ stay accurate after the change, OMIT those three lines — the app keeps the existing text. Write them in full for new exercises and whenever the movement, equipment or technique changes.\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
     '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
@@ -2558,6 +2565,18 @@ function carryMedia(oldProg, newProg, diff){
 // переносится и ps.cur, иначе повторы двойной прогрессии откатывались к началу.
 function carryProgressCounters(diff){
   diff.matches.forEach(({oldEx, newEx}) => { carryExerciseProgress(oldEx, newEx); });
+}
+
+// Описание, мышцы, ошибки и видео у сопоставленного упражнения, которые ИИ не
+// вернул (так просит editAIPrompt — ради короткого ответа), берём из исходника.
+// Вернул — значит поменял: его текст не трогаем.
+function carryExerciseText(diff){
+  diff.matches.forEach(({oldEx, newEx}) => {
+    if(!(newEx.desc || '').trim() && (oldEx.desc || '').trim()) newEx.desc = oldEx.desc;
+    if(!(newEx.muscles || []).length && (oldEx.muscles || []).length) newEx.muscles = oldEx.muscles.slice();
+    if(!(newEx.mistakes || '').trim() && (oldEx.mistakes || '').trim()) newEx.mistakes = oldEx.mistakes;
+    if(!(newEx.video || '').trim() && (oldEx.video || '').trim()) newEx.video = oldEx.video;
+  });
 }
 
 // расчётная (не по истории) длительность одного варианта — используется только
@@ -2625,6 +2644,7 @@ async function createEditedProgram(){
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
   carryMedia(editAIProg, program, diff);
+  carryExerciseText(diff);
   carryProgressCounters(diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;

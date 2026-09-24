@@ -1436,6 +1436,7 @@ const I18N_EN = {
   'ai.premiumRequired': "An active Premium subscription is required for generation.",
   'ai.disabled': "Generation is temporarily disabled. Try again later.",
   'ai.exerciseUpdated': "“{name}” updated.",
+  'ai.timeout': "The AI did not answer in time. Try again — it usually works the second time. For a big program, ask for smaller changes at once.",
   'ai.badResponse': "The AI sent an incomplete answer. Try again — it usually works the second time.",
   'ai.badResponseMissing': "Missing: {fields}.",
   'ai.serviceFailed': "The AI service did not respond. Try again.",

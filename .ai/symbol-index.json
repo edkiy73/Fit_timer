@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1311,
-      "chars": 63515,
+      "lines": 1324,
+      "chars": 64395,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -361,8 +361,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2912,
-      "chars": 133967,
+      "lines": 2932,
+      "chars": 135396,
       "symbols": [
         "add",
         "ageError",
@@ -383,6 +383,7 @@
         "callGemini",
         "callGeminiImage",
         "callServerAI",
+        "carryExerciseText",
         "carryMedia",
         "carryProgressCounters",
         "chip",
