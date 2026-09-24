@@ -369,8 +369,7 @@ function renderWeekStrip(){
 function openDayProgram(pid, pi){
   const p = customPrograms.find(x => x.id === pid);
   if(!p) return;
-  $('sessModal').classList.remove('open');
-  openStart(p);
+  closeModalThen('sessModal', ()=> openStart(p));
   if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
     state.planIdx = pi; renderPlanRow(); renderStartInfo();
   }
@@ -2723,8 +2722,7 @@ function importProgramCode(code){
   const short = code.match(/[?&]p=([0-9a-z]{4,16})\b/i)
     || (/^[0-9a-z]{4,16}$/i.test(code) && !/^FIT1/i.test(code) ? [null, code] : null);
   if(short){
-    $('importModal').classList.remove('open');
-    importProgramLink(short[1]);
+    closeModalThen('importModal', ()=> importProgramLink(short[1]));
     return;
   }
 
@@ -2750,8 +2748,7 @@ function importProgramCode(code){
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
-  $('importModal').classList.remove('open');
-  fillBuilder(t('import.reviewSave'));
+  closeModalThen('importModal', ()=> fillBuilder(t('import.reviewSave')));
 }
 
 /* ================= СЕРВЕРНАЯ ЧАСТЬ =================
