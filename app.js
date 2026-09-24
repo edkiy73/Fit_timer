@@ -1220,12 +1220,13 @@ const I18N_RU = {
   'clients.delete': "Удалить подопечного",
   'voicetest.open': "Проверить, как слышит",
   'voicetest.title': "Проверка распознавания",
-  'voicetest.hint': "Скажи «готово», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Здесь видно, что услышал телефон.",
+  'voicetest.hint': "Скажи «готово», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Говори команду отдельно: слова посреди разговора или из телевизора не считаются. Здесь видно, что услышал телефон.",
   'voicetest.listening': "Слушаю…",
   'voicetest.failed': "Не удалось включить микрофон. Проверь разрешение и голосовой пакет.",
   'voicetest.noise': "посторонний звук",
   'voicetest.notCommand': "не команда",
   'voicetest.unsure': "не расслышал уверенно",
+  'voicetest.inSpeech': "звучало посреди разговора — пропущено",
   'common.close': "Закрыть",
   'who.title': "Пара уточнений",
   'who.female': "Женский",
@@ -2806,12 +2807,13 @@ const I18N_EN = {
   'clients.delete': "Delete client",
   'voicetest.open': "Test how it hears",
   'voicetest.title': "Recognition test",
-  'voicetest.hint': "Say “done”, “pause” or “continue” the way you do in a workout, from your usual distance. You will see what the phone heard.",
+  'voicetest.hint': "Say “done”, “pause” or “continue” the way you do in a workout, from your usual distance. Say the command on its own: words in the middle of talk or from the TV don’t count. You will see what the phone heard.",
   'voicetest.listening': "Listening…",
   'voicetest.failed': "Could not turn on the microphone. Check the permission and the voice pack.",
   'voicetest.noise': "background sound",
   'voicetest.notCommand': "not a command",
   'voicetest.unsure': "not heard clearly",
+  'voicetest.inSpeech': "came in the middle of talk — ignored",
   'common.close': "Close",
   'who.title': "A couple of details",
   'who.female': "Female",
@@ -19079,6 +19081,7 @@ function voiceTestRow(d){
   row.innerHTML = '<b></b><span></span>';
   row.querySelector('b').textContent = text ? `«${text}»` : t('voicetest.noise');
   row.querySelector('span').textContent = d.accepted && VT_KIND[d.kind] ? t(VT_KIND[d.kind])
+    : d.kind && d.source === 'in_speech' ? t('voicetest.inSpeech')
     : d.kind ? t('voicetest.unsure') : t('voicetest.notCommand');
   box.prepend(row);
   while(box.children.length > 8) box.lastChild.remove();
