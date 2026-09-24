@@ -49,8 +49,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     state.globalStart = Date.now() - 90000;
     state.pausedTotal = 0;
     state.paused = false;
+    state.stepDeadline = Date.now() + 42000;
+    state.remaining = 42;
     prepSec = 0;
     await saveSession();
+
+    const saved = await loadSession();
+    if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
+      throw new Error('timer recovery fields were not saved');
+    }
 
     openStart(p);
     state.planIdx = 0;
