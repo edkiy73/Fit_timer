@@ -405,9 +405,16 @@ async function scenario(ctx, name, fn, errs){
 
   await scenario(ctx, 'ИИ добавляет упражнение → Builder без возврата в ИИ', async page => {
     await seedProgram(page, 'nav-ai-add');
-    const aiAdd = await page.evaluate(async () => {
+    await page.evaluate(() => {
       goTab('scrPrograms');
       openBuilder('nav-ai-add');
+    });
+    // fillBuilder фиксирует исходный snapshot в setTimeout(0). В реальном UI человек
+    // физически не успевает открыть ИИ раньше; тест обязан дать этому тика случиться,
+    // иначе snapshot снимется уже ПОСЛЕ добавленного упражнения и programDirty() ложно
+    // решит, что изменений нет.
+    await nap(page, 80);
+    const aiAdd = await page.evaluate(async () => {
       openExAI();
       const raw = ['УПРАЖНЕНИЕ: Выпады','ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 1','ОТДЫХ: 30'].join('\n');
       const verdict = FitAIProtocol.validateResponse('exercise.create', raw);
