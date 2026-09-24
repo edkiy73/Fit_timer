@@ -2378,7 +2378,9 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  await goBackTo('scrBuilder');
+  // Успешное применение завершает режим ИИ: Builder заменяет его в текущей
+  // позиции истории, чтобы Back не возвращал к уже использованному ответу ИИ.
+  asTab(()=> show('scrBuilder'));
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
