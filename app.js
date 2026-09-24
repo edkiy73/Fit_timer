@@ -4277,6 +4277,20 @@ function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
+// Переход, который начинается кнопкой ВНУТРИ попапа, ждёт снятия служебной
+// history-записи точно так же, как appDialog. Иначе под новым экраном остаётся
+// «призрак» старого попапа, и следующий Back/Home может вернуть не туда.
+function closeModalThen(id, next){
+  const modal = $(id);
+  const run = typeof next === 'function' ? next : ()=>{};
+  if(!modal){ run(); return; }
+  const waitHistory = modal.classList.contains('open')
+    && !!(history.state && history.state.m)
+    && ![...document.querySelectorAll('.modal.open')].some(m => m !== modal);
+  modal.classList.remove('open');
+  if(waitHistory) modalHistoryWaiters.push(run);
+  else run();
+}
 function appDialog(msg, opts = {}){
   return new Promise(res => {
     // текст передают и готовой строкой, и функцией от t(): на экран не должен
@@ -4305,18 +4319,11 @@ function appDialog(msg, opts = {}){
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
     const done = v => {
-      // Если это последний открытый попап и сверху лежит его history-запись,
-      // сначала даём MutationObserver снять её. Продолжение (например goTab())
-      // запускаем уже после соответствующего popstate — без гонки со старым экраном.
-      const waitHistory = !!(history.state && history.state.m)
-        && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
-      $('dlg').classList.remove('open');
       $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
       $('dlgOk').disabled = false;
       setShown('dlgTypeBox', false);
       typed.oninput = null;
-      if(waitHistory) modalHistoryWaiters.push(()=> res(v));
-      else res(v);
+      closeModalThen('dlg', ()=> res(v));
     };
     $('dlgOk').onclick = () => done(true);
     $('dlgCancel').onclick = () => done(false);
@@ -4475,9 +4482,19 @@ window.addEventListener('popstate', async e => {
     waiters.forEach(fn => fn());
     return;
   }   // это мы сами сняли запись закрытого попапа
-  // открытый попап забирает жест себе — экран под ним остаётся на месте
+  // Открытый попап забирает жест себе — экран под ним остаётся на месте.
+  // Sentinel с m:1 возвращаем КАЖДЫЙ раз. Иначе при двух вложенных попапах первый
+  // Back снимал m-флаг, а после закрытия второго в history оставалась лишняя копия
+  // экрана: следующий Back визуально ничего не делал.
   if(document.querySelector('.modal.open')){
-    try{ history.pushState(history.state || e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
+    const base = (e.state && typeof e.state === 'object') ? e.state : {};
+    try{
+      history.pushState({
+        scr: base.scr || show._last,
+        d: typeof base.d === 'number' ? base.d : navDepth,
+        m: 1
+      }, '');
+    }catch(_){}
     dismissTopModal();
     return;
   }
@@ -4488,24 +4505,26 @@ window.addEventListener('popstate', async e => {
     return;
   }
   let targetScreen = (e.state && e.state.scr) || 'scrMenu';
-  navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
-  {
-    const at = navStack.lastIndexOf(targetScreen);
-    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
-  }
+  let targetDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
   // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
   // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
   // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
   // на «Сегодня», бросив занятие на середине.
-  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
+  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard'){
+    targetScreen = 'scrMenu';
+    targetDepth = 0;
+  }
 
+  // ВАЖНО: navDepth/navStack пока не трогаем. Browser Back уже сдвинул свою
+  // историю, но если человек на предупреждении выберет «Остаться», приложение
+  // должно сохранить СТАРЫЙ стек текущего экрана. Раньше мы сначала обрезали
+  // navStack до targetScreen, а потом показывали диалог — визуально экран оставался,
+  // но следующий вложенный переход уже работал с испорченной историей.
   if(!guardBypass){
     const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
     let g = null;
     try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
     if(g){
-      // возвращаем позицию в истории, чтобы «Вернуться» действительно вернуло
-      navDepth++;
       try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
         t('common.unsaved',{what:g.what}),
@@ -4518,7 +4537,13 @@ window.addEventListener('popstate', async e => {
       return;
     }
   }
+
   guardBypass = false;
+  navDepth = targetDepth;
+  {
+    const at = navStack.lastIndexOf(targetScreen);
+    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
+  }
   show(targetScreen, false);
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
@@ -9634,8 +9659,7 @@ function renderWeekStrip(){
 function openDayProgram(pid, pi){
   const p = customPrograms.find(x => x.id === pid);
   if(!p) return;
-  $('sessModal').classList.remove('open');
-  openStart(p);
+  closeModalThen('sessModal', ()=> openStart(p));
   if(pi >= 0 && pi < normPlans(p).length && pi !== state.planIdx){
     state.planIdx = pi; renderPlanRow(); renderStartInfo();
   }
@@ -11988,8 +12012,7 @@ function importProgramCode(code){
   const short = code.match(/[?&]p=([0-9a-z]{4,16})\b/i)
     || (/^[0-9a-z]{4,16}$/i.test(code) && !/^FIT1/i.test(code) ? [null, code] : null);
   if(short){
-    $('importModal').classList.remove('open');
-    importProgramLink(short[1]);
+    closeModalThen('importModal', ()=> importProgramLink(short[1]));
     return;
   }
 
@@ -12015,8 +12038,7 @@ function importProgramCode(code){
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
   planIdx = 0;
-  $('importModal').classList.remove('open');
-  fillBuilder(t('import.reviewSave'));
+  closeModalThen('importModal', ()=> fillBuilder(t('import.reviewSave')));
 }
 
 /* ================= СЕРВЕРНАЯ ЧАСТЬ =================
@@ -18480,18 +18502,16 @@ $('btnPrev').innerHTML = icon('chevL');
 $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
 $('btnExit').onclick  = exitWorkout;
 $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
-$('exitSave').onclick = async ()=>{
-  $('exitModal').classList.remove('open');
+$('exitSave').onclick = ()=> closeModalThen('exitModal', async ()=>{
   await saveSession();
   tearDownWorkout();
   if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
   appAlert(t('workout.sessionSaved'));
-};
-$('exitDrop').onclick = async ()=>{
-  $('exitModal').classList.remove('open');
+});
+$('exitDrop').onclick = ()=> closeModalThen('exitModal', async ()=>{
   await clearSession();
   tearDownWorkout();
-};
+});
 $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
@@ -19056,8 +19076,8 @@ $('storeClear').onclick = ()=>{
 };
 
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
-$('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
-$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(); openAI('text'); };
+$('chManual').onclick = ()=> closeModalThen('createModal', ()=> openBuilder());
+$('chAI').onclick = ()=> closeModalThen('createModal', ()=>{ initAIForm(); openAI('text'); });
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
@@ -19651,7 +19671,7 @@ $('btnDiscardResult').onclick = ()=>{
   goTab('scrMenu');
 };
 /* ---- программа из видео ---- */
-$('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
+$('chYT').onclick = ()=> closeModalThen('createModal', ()=> openYouTube());
 $('ytUrl').oninput = ytCheckUrl;
 async function ytGuard(){
   const v = ($('ytUrl').value || '').trim();
@@ -19741,8 +19761,8 @@ $('swapCopy').onclick = async ()=>{
 
 $('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
 $('addExModal').onclick = e=>{ if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
-$('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
-$('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
+$('aemManual').onclick = ()=> closeModalThen('addExModal', ()=> addExManual());
+$('aemAI').onclick = ()=> closeModalThen('addExModal', ()=> openExAI());
 
 /* ---- окно ожидания генерации ---- */
 let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null, aiRunCancelled = false;

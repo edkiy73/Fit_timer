@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1347,
-      "chars": 65438,
+      "lines": 1372,
+      "chars": 66346,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -26,6 +26,7 @@
         "check",
         "clearSnap",
         "clicks",
+        "closeModalThen",
         "commitWeightModal",
         "defaultPlanIdx",
         "dismissTopModal",
@@ -361,8 +362,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2932,
-      "chars": 135396,
+      "lines": 2929,
+      "chars": 135367,
       "symbols": [
         "add",
         "ageError",
@@ -839,8 +840,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2319,
-      "chars": 97381,
+      "lines": 2317,
+      "chars": 97312,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
