@@ -155,6 +155,36 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const back = await page.evaluate(() => show._last);
   ok('«Готово» после правки через ИИ возвращает в конструктор', back === 'scrBuilder', back);
 
+  // Регрессия: подтверждение «Выйти без сохранения» раньше отпускало код до того,
+  // как служебная запись попапа снималась из history. Визуально мы уже были в
+  // «Тренировках», но следующий тап по «Сегодня» возвращал старый конструктор.
+  await page.click('#builderBackTop');
+  await page.waitForTimeout(150);
+  ok('выход из изменённой программы спрашивает подтверждение', await page.isVisible('#dlgOk'));
+  await page.click('#dlgOk');
+  await page.waitForTimeout(600);
+  const afterLeave = await page.evaluate(() => ({
+    screen: show._last,
+    historyScreen: history.state && history.state.scr,
+    depth: navDepth,
+    stack: [...navStack]
+  }));
+  ok('после выхода без сохранения открыт список тренировок',
+    afterLeave.screen === 'scrPrograms' && afterLeave.historyScreen === 'scrPrograms',
+    JSON.stringify(afterLeave));
+
+  await page.click('.dock-btn[data-scr="scrMenu"]');
+  await page.waitForTimeout(600);
+  const afterHome = await page.evaluate(() => ({
+    screen: show._last,
+    historyScreen: history.state && history.state.scr,
+    depth: navDepth,
+    stack: [...navStack]
+  }));
+  ok('после выхода без сохранения «Сегодня» не возвращает в редактор',
+    afterHome.screen === 'scrMenu' && afterHome.historyScreen === 'scrMenu' && afterHome.depth === 0,
+    JSON.stringify(afterHome));
+
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');
