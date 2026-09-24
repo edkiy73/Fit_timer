@@ -633,6 +633,7 @@ let navStack = ['scrMenu'];
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+let navBackWaiters = []; // программный возврат, которому нужно дождаться фактического popstate
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -757,10 +758,16 @@ window.addEventListener('popstate', async e => {
     waiters.forEach(fn => fn());
     return;
   }   // это мы сами сняли запись закрытого попапа
-  // открытый попап забирает жест себе — экран под ним остаётся на месте
+  // Открытый попап забирает системный Back себе. Сам Back уже снял его
+  // служебную history-запись и вернул нас на запись экрана под ним — повторно
+  // pushState делать нельзя: получалась вторая копия того же экрана, и следующий
+  // Back с вкладки визуально «ничего не делал». Если под верхним попапом остался
+  // ещё один, только тогда заводим новую служебную запись для следующего Back.
   if(document.querySelector('.modal.open')){
-    try{ history.pushState(history.state || e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
     dismissTopModal();
+    if(document.querySelector('.modal.open')){
+      try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(_){}
+    }
     return;
   }
   if($('scrWork').classList.contains('on')){
@@ -786,8 +793,11 @@ window.addEventListener('popstate', async e => {
     let g = null;
     try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
     if(g){
-      // возвращаем позицию в истории, чтобы «Вернуться» действительно вернуло
+      // Возвращаем и browser history, и логический navStack на экран, с которого
+      // человек попытался уйти. Раньше history снова был Builder, а navStack уже
+      // успевал обрезаться до Programs — после «Остаться» два источника расходились.
       navDepth++;
+      if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
       try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
         t('common.unsaved',{what:g.what}),
@@ -802,6 +812,19 @@ window.addEventListener('popstate', async e => {
   }
   guardBypass = false;
   show(targetScreen, false);
+  resolveNavBack(targetScreen);
+
+  // После явного выхода из глубокого сценария его текущая запись превращается
+  // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
+  // сюда с корневого таба, сразу перескакиваем через старый глубокий путь к
+  // исходной «Сегодня». Так Builder/AI/Store не воскресают следующим Back, но
+  // сам goTab остаётся синхронным и не ломает действия сразу после перехода.
+  const collapse = e.state && Number(e.state.collapse || 0);
+  if(targetScreen === 'scrMenu' && collapse > 0){
+    navDepth = 0;
+    navStack = ['scrMenu'];
+    try{ history.go(-collapse); }catch(_){}
+  }
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
 // экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
@@ -809,11 +832,38 @@ window.addEventListener('popstate', async e => {
 // по записи на каждый шаг: сорок переходов давали сорок одну запись, и системная
 // кнопка «назад» тридцать раз подряд не выводила из конструктора.
 // Экран покажет сам popstate — здесь только отматываем.
+function resolveNavBack(target){
+  if(!navBackWaiters.length) return;
+  const keep = [];
+  navBackWaiters.forEach(w => {
+    if(w.id === target) w.resolve(true);
+    else keep.push(w);
+  });
+  navBackWaiters = keep;
+}
 function goBackTo(id){
-  if(navStack.length > 1 && navStack[navStack.length - 2] === id && show._last === navStack[navStack.length - 1]){
-    try{ history.back(); return; }catch(e){}
+  // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
+  // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
+  // копию родителя поверх истории. Возвращаем Promise, чтобы сценарии вроде
+  // «ИИ применён → Builder → success-попап» могли дождаться реального popstate.
+  if(show._last === navStack[navStack.length - 1]){
+    const at = navStack.lastIndexOf(id);
+    const distance = navStack.length - 1 - at;
+    if(at >= 0 && distance > 0){
+      return new Promise(resolve => {
+        const waiter = {id, resolve};
+        navBackWaiters.push(waiter);
+        try{ history.go(-distance); }
+        catch(e){
+          navBackWaiters = navBackWaiters.filter(w => w !== waiter);
+          show(id);
+          resolve(false);
+        }
+      });
+    }
   }
   show(id);
+  return Promise.resolve(true);
 }
 
 function show(id, push = true){
@@ -841,7 +891,14 @@ function show(id, push = true){
     } else {
       navStack.push(id);
       navDepth++;
-      try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+      // Если новый экран открывается прямо из закрывающейся модалки, её служебная
+      // запись уже и есть место этого перехода. Превращаем её в экран, а не кладём
+      // экран поверх неё — иначе «назад» позже воскресит невидимую модалку/старый экран.
+      if(history.state && history.state.m){
+        try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+      } else {
+        try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+      }
     }
   }
   if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
@@ -920,11 +977,21 @@ function goTab(id){
     return;
   }
   if(!ROOT_TABS.includes(cur)){
-    // возврат из глубины: текущая запись становится «Сегодня», вкладка ложится поверх
+    // Выход из глубины должен быть мгновенным: многие сценарии сразу после него
+    // показывают результат/диалог. Поэтому не делаем асинхронный history.go() здесь.
+    // Вместо этого текущую глубокую запись превращаем в «Сегодня» и запоминаем,
+    // сколько старых шагов лежит под ней. При будущем Back до этой записи popstate
+    // автоматически схлопнет старый путь (см. collapse выше).
+    const collapse = Math.max(0, navDepth);
     navDepth = 0;
     navStack = ['scrMenu'];
-    try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
-    if(id === 'scrMenu'){ show('scrMenu', false); window.scrollTo(0, 0); return; }
+    try{ history.replaceState({scr:'scrMenu', d:0, collapse}, ''); }catch(e){}
+    if(id === 'scrMenu'){
+      show('scrMenu', false);
+      if(collapse > 0) try{ history.go(-collapse); }catch(e){}
+      window.scrollTo(0, 0);
+      return;
+    }
     show(id, true);
     window.scrollTo(0, 0);
     return;

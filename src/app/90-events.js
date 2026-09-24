@@ -1159,7 +1159,7 @@ $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 // онбординг
 // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
-$('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
+$('obLegal1').onclick = ()=> openLegal('privacy', ()=> asTab(()=> show('scrOnboard')));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){

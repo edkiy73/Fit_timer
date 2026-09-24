@@ -1322,7 +1322,7 @@ const AI_SOURCES = {
     apply:  ()=> exaAddExercise(),
     dirty: ['exaWish', 'exaContext', 'aiResult'],
     manual: ()=> addExManual(),
-    back:  ()=> show('scrBuilder')
+    back:  ()=> goBackTo('scrBuilder')
   },
   exEdit: {
     kind: 'exercise.modify',
@@ -2221,7 +2221,7 @@ async function applyExEdit(){
   if(!raw){appAlert(MSG_AI_EMPTY());return;}
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
-  if(!oldEx){show('scrBuilder');return;}
+  if(!oldEx){goBackTo('scrBuilder');return;}
   // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
@@ -2378,7 +2378,10 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  show('scrBuilder');
+  // Успешное применение завершает режим ИИ. Builder уже лежит под экраном ИИ,
+  // поэтому именно ВОЗВРАЩАЕМСЯ к нему и ждём popstate. Простая замена текущей
+  // записи делала два Builder подряд, из-за чего следующий Back оставался в Builder.
+  await goBackTo('scrBuilder');
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
