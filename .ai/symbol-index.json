@@ -711,8 +711,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1563,
-      "chars": 72458,
+      "lines": 1595,
+      "chars": 73899,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -748,6 +748,7 @@
         "lastWorkStep",
         "launch",
         "maybeRequestAppReview",
+        "nextNativeWorkStep",
         "nextStep",
         "openSwapHint",
         "paintPause",
@@ -779,6 +780,7 @@
         "swapAIPrompt",
         "swapSourceExercise",
         "swapViaAI",
+        "syncNativeWorkoutState",
         "tearDownWorkout",
         "textH",
         "tnum",
