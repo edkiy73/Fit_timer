@@ -75,7 +75,22 @@ async function resumeWorkoutFromNativeNotification(){
   state.planIdx = planIdx;
   state.current = customToProgram(p, planIdx);
   state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
-  startWorkout(s.stepIdx, s.elapsed, {skipPrep:true});
+
+  // Rebuild once to decide what should have happened while the WebView was dead.
+  // We advance at most one step: only the timer that was already running had a native
+  // deadline; the following step never started while JavaScript was gone.
+  const preview = buildSteps();
+  let stepIdx = Math.min(Math.max(0, parseInt(s.stepIdx) || 0), Math.max(0, preview.length - 1));
+  let resumeDeadline = 0;
+  const savedDeadline = Math.max(0, Number(s.stepDeadline) || 0);
+  if(s.paused && Number(s.remaining) > 0){
+    resumeDeadline = Date.now() + Math.max(1, Number(s.remaining)) * 1000;
+  } else if(savedDeadline > 0){
+    if(savedDeadline <= Date.now() && stepIdx < preview.length - 1) stepIdx++;
+    else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
+  }
+
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline});
   return true;
 }
 
