@@ -66,7 +66,17 @@ async function newAppPage(ctx, opts={}){
     await nap(page, 900);
   }
   if(!opts.keepOnboarding){
-    await page.evaluate(() => goTab('scrMenu'));
+    // Навигационный тест не должен сам провоцировать обязательный вопрос профиля:
+    // Builder/AI требуют пол и возраст и иначе whoModal закономерно перекрывает экран.
+    await page.evaluate(async () => {
+      const u = curUser();
+      if(u){
+        u.gender = u.gender || 'f';
+        u.age = u.age || 30;
+        await saveUsers();
+      }
+      goTab('scrMenu');
+    });
     await nap(page);
     await aligned(page, 'нормализация старта', 'scrMenu');
   }
