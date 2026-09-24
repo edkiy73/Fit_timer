@@ -32,6 +32,9 @@ final class FitSpeechCapture {
     private volatile boolean running = false;
     private volatile boolean shutdownRequested = false;
     private final AtomicBoolean released = new AtomicBoolean(false);
+    // До этого момента (System.currentTimeMillis) микрофон слушает, но звук в
+    // распознаватель не идёт: приложение само говорит (см. holdFor).
+    private volatile long holdUntilMs = 0L;
 
     FitSpeechCapture(Recognizer recognizer) throws IOException {
         this.recognizer = recognizer;
@@ -46,6 +49,16 @@ final class FitSpeechCapture {
             throw new IOException("Failed to initialize recorder. Microphone might be already in use.");
         }
         this.recorder = rec;
+    }
+
+    /**
+     * Не слушать ms миллисекунд. Озвучка приложения («Пауза», «Осталось 15
+     * секунд») иначе попадает в микрофон и через ~0,5 с возвращается итоговым
+     * результатом — уже после того, как JS перестал считать её своим звуком:
+     * нажатая «продолжить» снова ставилась на паузу, «осталось…» листало шаг.
+     */
+    void holdFor(long ms) {
+        holdUntilMs = System.currentTimeMillis() + Math.max(0L, ms);
     }
 
     void startListening(final RecognitionListener listener) {
@@ -81,6 +94,7 @@ final class FitSpeechCapture {
         }
         VoiceAutoGain agc = new VoiceAutoGain(VoiceAutoGain.SAMPLE_RATE, VoiceAutoGain.FRAME_SAMPLES);
         short[] buf = new short[VoiceAutoGain.FRAME_SAMPLES];
+        boolean held = false;
         while (running && !Thread.currentThread().isInterrupted()) {
             int n = recorder.read(buf, 0, buf.length);
             if (!running) break;
@@ -90,6 +104,17 @@ final class FitSpeechCapture {
                 break;
             }
             if (n == 0) continue;
+            if (System.currentTimeMillis() < holdUntilMs) {
+                // микрофон всё равно читаем — иначе буфер записи копит звук
+                // приложения и отдаст его сразу после паузы
+                held = true;
+                continue;
+            }
+            if (held) {
+                // начало фразы приложения могло попасть в декодер до паузы — забываем его
+                held = false;
+                recognizer.reset();
+            }
             agc.process(buf, n);
             if (recognizer.acceptWaveForm(buf, n)) {
                 final String result = recognizer.getResult();

@@ -446,7 +446,10 @@
       if(typeof voiceActive !== 'undefined') voiceActive = true;
       startVoiceRecognition(
         (text,event)=>{
-          if(typeof lastAppSoundT === 'undefined' || Date.now() >= lastAppSoundT){
+          // Сравниваем звук приложения с НАЧАЛОМ фразы: итог приходит на ~0,5 с
+          // позже, и гонг/озвучка, закончившиеся за это время, иначе проходили командой.
+          const startedAt = Date.now() - (Number(event && event.utteranceMs) || 0);
+          if(typeof lastAppSoundT === 'undefined' || startedAt >= lastAppSoundT){
             if(typeof applyVoiceCommand === 'function') applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
           }
         },
