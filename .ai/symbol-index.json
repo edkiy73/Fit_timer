@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1372,
-      "chars": 66346,
+      "lines": 1397,
+      "chars": 67447,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -293,8 +293,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 947,
-      "chars": 42649,
+      "lines": 952,
+      "chars": 42928,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -841,7 +841,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2317,
-      "chars": 97312,
+      "chars": 97316,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
