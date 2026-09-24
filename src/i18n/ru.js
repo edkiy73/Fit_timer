@@ -976,6 +976,8 @@ const I18N_RU = {
   'notify.timerDoneTitle': "Пора продолжать",
   'notify.timerDoneNext': "Дальше — {name}",
   'notify.timerDoneBody': "Таймер закончен. Возвращайся к тренировке.",
+  'notify.activeForgotTitle': "Не забудь про тренировку 💪",
+  'notify.activeForgotBody': "Она всё ещё идёт. Вернись, чтобы продолжить или завершить.",
   'notify.startBody': "Пора выполнить «{name}». Вперёд!",
   'notify.startTitleShort': "Пора тренироваться",
   'notify.todayPlan': "Сегодня по плану «{name}».",
