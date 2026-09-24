@@ -82,6 +82,7 @@ const I18N_EN = {
   'common.fromVideo': "From video",
   'programs.title': "Workouts",
   'programs.addTitle': "Add program",
+  'programs.newShort': "New",
   'programs.catalogRequests': "Catalog submissions",
   'programs.programKicker': "Program",
   'programs.disabled': "Disabled",

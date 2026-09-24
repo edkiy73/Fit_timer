@@ -82,6 +82,7 @@ const I18N_RU = {
   'common.fromVideo': "Из видео",
   'programs.title': "Тренировки",
   'programs.addTitle': "Добавить программу",
+  'programs.newShort': "Новая",
   'programs.catalogRequests': "Заявки в каталог",
   'programs.programKicker': "Программа",
   'programs.disabled': "Отключена",
@@ -1643,6 +1644,7 @@ const I18N_EN = {
   'common.fromVideo': "From video",
   'programs.title': "Workouts",
   'programs.addTitle': "Add program",
+  'programs.newShort': "New",
   'programs.catalogRequests': "Catalog submissions",
   'programs.programKicker': "Program",
   'programs.disabled': "Disabled",
@@ -6632,18 +6634,17 @@ function sessionAgeText(at){
   return t('session.daysAgo',{count:days,days:word});
 }
 
-// список рабочих шагов для выбора «с какого упражнения начать»
+// список упражнений для выбора «с какого упражнения начать».
+// Выбирается именно упражнение, а не отдельный подход/сторона/круг:
+// всегда начинаем с его первого подхода, первой стороны и первого круга.
 function workStepChoices(){
   const out = [];
   (state.steps || []).forEach((s, i) => {
     if(s.phase !== 'work') return;
-    let label = s.title;
+    if((s.setNo || 1) !== 1 || (s.side || 1) !== 1 || s.round > 1) return;
     const meta = [];
     if(s.round === 0) meta.push(t('start.metaWarmup'));
-    else if(state.current && state.current.rounds > 1) meta.push(t('start.metaRound',{count:s.round}));
-    if(s.setsTotal > 1) meta.push(t('start.metaSet',{current:s.setNo,total:s.setsTotal}));
-    if(s.side) meta.push(t('start.metaSide',{count:s.side}));
-    out.push({idx: i, label, meta: meta.join(' · ')});
+    out.push({idx: i, label:s.title, meta:meta.join(' · ')});
   });
   return out;
 }
@@ -17928,13 +17929,23 @@ $('btnStart').onclick = async ()=>{
     );
     if(!go) return;
   }
-  state.current = customToProgram(state.raw, state.planIdx);
+  const selectedPlanIdx = state.planIdx;
+  state.current = customToProgram(state.raw, selectedPlanIdx);
   const sess = await sessionForProgram(state.raw.id);
+  const planCount = normPlans(state.raw).length;
+  const sessionPlanIdx = sess && planCount
+    ? Math.min(Math.max(0, parseInt(sess.planIdx) || 0), planCount - 1)
+    : selectedPlanIdx;
   state.startLoad = sess && Array.isArray(sess.load)
     ? sess.load
-    : workoutLoadSnapshot(state.raw, state.planIdx);
-  // без незавершённой сессии не спрашиваем лишнего — но выбор упражнения всё равно доступен
+    : workoutLoadSnapshot(state.raw, sess ? sessionPlanIdx : selectedPlanIdx);
+  // Для сводки незавершённой тренировки шаги нужно считать из того же варианта,
+  // в котором она была сохранена. Сам экран программы при этом остаётся на варианте,
+  // выбранном сейчас (например, на сегодняшнем дне).
+  const selectedCurrent = state.current;
+  if(sess) state.current = customToProgram(state.raw, sessionPlanIdx);
   const steps = buildSteps();
+  state.current = selectedCurrent;
   setShown('startResume', !!sess);
   if(sess){
     const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
@@ -17942,7 +17953,7 @@ $('btnStart').onclick = async ()=>{
     $('startResumeSub').textContent =
       t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
   }
-  window.__pendingSession = sess || null;
+  window.__pendingSession = sess ? {...sess, planIdx:sessionPlanIdx} : null;
   $('startModal').classList.add('open');
 };
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
@@ -17951,6 +17962,10 @@ $('startResume').onclick = ()=>{
   const s = window.__pendingSession;
   $('startModal').classList.remove('open');
   if(!s){ startWorkout(); return; }
+  // stepIdx имеет смысл только внутри того варианта, где сессия была сохранена.
+  // Сначала восстанавливаем вариант, затем строим его шаги в startWorkout().
+  state.planIdx = s.planIdx;
+  state.current = customToProgram(state.raw, state.planIdx);
   startWorkout(s.stepIdx, s.elapsed);
 };
 $('startFresh').onclick = async ()=>{
@@ -19820,7 +19835,6 @@ $('btnMicW').innerHTML = icon('mic');
 // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
 $('storeIcoMenu').innerHTML = $('storeIcoProg').innerHTML = icon('book');
 $('storeArrowMenu').innerHTML = $('storeArrowProg').innerHTML = icon('chevR');
-$('btnAddProgram').innerHTML = icon('plus');
 $('storeBackTop').innerHTML = icon('chevL');
 $('siBackTop').innerHTML = icon('chevL');
 $('storeSearchIco').innerHTML = icon('search');
@@ -19835,6 +19849,7 @@ $('qsIco3').innerHTML = icon('camera');
 // Раньше подпись ставилась один раз при запуске и при смене языка оставалась прежней:
 // экран результата выходил английским, а «Поделиться» — русским.
 function renderIconLabels(){
+  $('btnAddProgram').innerHTML = icon('plus') + '<span>' + esc(t('programs.newShort')) + '</span>';
   $('btnShareResult').innerHTML = icon('share') + '<span>' + esc(t('finish.share')) + '</span>';
   $('finNoteToggle').innerHTML = icon('pencil') + '<span>' + esc(t('finish.addNote')) + '</span>';
   $('btnAddPhoto').innerHTML = icon('camera') + esc(t('progress.addPhoto'));
