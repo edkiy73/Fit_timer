@@ -976,6 +976,12 @@ const I18N_RU = {
   'notify.timerDoneTitle': "Пора продолжать",
   'notify.timerDoneNext': "Дальше — {name}",
   'notify.timerDoneBody': "Таймер закончен. Возвращайся к тренировке.",
+  'notify.todayManyTitle': "Сегодня — {count}",
+  'notify.beforeManyTitle': "Через 15 минут — {count}",
+  'notify.beforeManyBody': "В {time}: {names}.",
+  'notify.remainingManyTitle': "На сегодня осталось: {count}",
+  'notify.moreCount': "ещё {count}",
+  'notify.progressManySuffix': "Нагрузка выше в {count}.",
   'notify.activeForgotTitle': "Не забудь про тренировку 💪",
   'notify.activeForgotBody': "Она всё ещё идёт. Вернись, чтобы продолжить или завершить.",
   'notify.startBody': "Пора выполнить «{name}». Вперёд!",
@@ -2556,6 +2562,12 @@ const I18N_EN = {
   'notify.timerDoneTitle': "Time to continue",
   'notify.timerDoneNext': "Next — {name}",
   'notify.timerDoneBody': "The timer is done. Return to your workout.",
+  'notify.todayManyTitle': "Today — {count}",
+  'notify.beforeManyTitle': "In 15 minutes — {count}",
+  'notify.beforeManyBody': "At {time}: {names}.",
+  'notify.remainingManyTitle': "Still left today: {count}",
+  'notify.moreCount': "{count} more",
+  'notify.progressManySuffix': "Load is higher in {count}.",
   'notify.activeForgotTitle': "Don’t forget your workout 💪",
   'notify.activeForgotBody': "It’s still active. Come back to continue or finish it.",
   'notify.startBody': "Time for “{name}”. Let’s go!",
@@ -17918,53 +17930,59 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 /* ================= УВЕДОМЛЕНИЯ ПО РАСПИСАНИЮ ================= */
-// проверяем раз в 20 секунд: не пора ли напомнить о тренировке
+// В браузере оставляем только ближайшее напоминание для явно заданного времени.
+// В native всю очередь строит единый менеджер ниже; второй web Notification там был
+// бы дублем системного уведомления.
 const notifiedKeys = new Set();
 async function showNotification(title, body){
   try{ new Notification(title, {body, tag:'fittimer'}); }catch(e){}
 }
 function checkSchedules(){
   if(document.hidden) return;
-  try{ if(typeof getNotificationPrefs === 'function' && getNotificationPrefs().workouts === false) return; }catch(_){}
+  if(window.FitNative && window.FitNative.isNative) return;
+  const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
+  if(prefs.workouts === false) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
-  const today = DAYS[(now.getDay() + 6) % 7]; // JS: 0=Вс -> наш индекс 6
   const cur = now.getHours() * 60 + now.getMinutes();
-  const dateKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
-  customPrograms.forEach(p=>{
-    // время сегодняшнего варианта важнее общего времени программы
-    const plansT = normPlans(p);
-    const todayPlan = plansT.find(pl => (pl.days || []).includes(today));
-    const useTime = (todayPlan && todayPlan.time) || p.time;
-    if(!useTime || !planDays(p).includes(today)) return;
-    const [h, m] = useTime.split(':').map(Number);
-    const minuteOfDay = h * 60 + m;
-    const preKey = p.id + '-pre-' + dateKey, goKey = p.id + '-go-' + dateKey;
-    if(cur === minuteOfDay - 15 && !notifiedKeys.has(preKey)){
-      notifiedKeys.add(preKey);
-      showNotification(t('notify.beforeTitle'), t('notify.beforeBody',{name:p.name,time:useTime}));
-    }
-    if(cur === minuteOfDay && !notifiedKeys.has(goKey)){
-      notifiedKeys.add(goKey);
-      showNotification(t('notify.startTitle'), t('notify.startBody',{name:p.name}));
-    }
+  const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
+  const rows = notifyScheduleRowsForDay(now, done, new Set(), prefs).filter(r => r.time);
+  const groups = notifyRowsByTime(rows);
+  groups.forEach((group, time) => {
+    const hm = notifyTimeParts(time);
+    if(!hm) return;
+    const minuteOfDay = hm[0] * 60 + hm[1];
+    const key = notifyDayKey(now) + '|pre|' + time;
+    if(cur !== minuteOfDay - 15 || notifiedKeys.has(key)) return;
+    notifiedKeys.add(key);
+    const copy = notifyTimedGroupCopy(group, time);
+    showNotification(copy.title, copy.body);
   });
 }
 setInterval(checkSchedules, 20000);
 
-// Нативные напоминания переживают закрытие приложения. Планируем ближайшую неделю
-// заново при старте, правке расписания и завершении тренировки: так уведомление
-// «пропустил» исчезает, если занятие всё-таки выполнено.
 /* ================= МЕНЕДЖЕР УВЕДОМЛЕНИЙ =================
-   Фичи не планируют push каждая сама по себе. Здесь собираются кандидаты, применяются
-   категории, частотные ограничения и только потом готовый список отдаётся нативному
-   планировщику. При каждом пересчёте старый список заменяется целиком. */
-const NOTIFY_HORIZON_DAYS = 35;
+   Уведомляем о плане человека, а не о каждой записи отдельно:
+   - программы без времени: один утренний digest + один вечерний итог;
+   - одинаковое точное время: одна группа;
+   - точное время: только -15 минут, без дубля ровно в старт и без отдельного +2ч;
+   - незавершённая сохранённая тренировка сильнее обычного reminder той же программы;
+   - engagement/premium не конкурируют с тренировочным днём.
+   Очередь ограничена безопасным для iOS/Android запасом в 60 локальных уведомлений. */
+const NOTIFY_HORIZON_DAYS = 14;
+const NOTIFY_NATIVE_LIMIT = 60;
+const NOTIFY_PASSIVE_DAILY_LIMIT = 3;
 const NOTIFY_DAY = 86400000;
 
 function notifyDayKey(d){ return localISO(d); }
 function notifyAt(day, hour, minute){
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute || 0);
+}
+function notifyTimeParts(value){
+  const m = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  const h = +m[1], min = +m[2];
+  return h >= 0 && h <= 23 && min >= 0 && min <= 59 ? [h,min] : null;
 }
 function notifyScheduledPlan(p, dayName){
   const plans = normPlans(p);
@@ -17974,17 +17992,12 @@ function notifyScheduledPlan(p, dayName){
   return null;
 }
 // какой вариант должен сработать в этот день: если он не привязан к конкретным
-// дням (чередование A/Б), берём тот, что следующим по очереди — лучшая доступная
-// оценка для уведомления «наперёд», без гарантии, что расписание не сдвинется
+// дням (чередование A/Б), берём следующий по очереди — лучшая оценка для напоминания.
 function notifyPlanFor(p, scheduledPlan){
   if(scheduledPlan) return scheduledPlan;
   const plans = normPlans(p);
   return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
 }
-// выросла ли нагрузка сегодняшнего варианта по сравнению с прошлым разом:
-// прогрессия теперь повышается только после «Да, повышаем» на финише
-// (ex.ps, см. 60-builder.js), поэтому смотрим на факт — текущие значения
-// против снимка нагрузки из последней записи истории этого варианта
 function notifyProgressionChanged(p, scheduledPlan){
   if(!p || !p.progression) return false;
   const pl = notifyPlanFor(p, scheduledPlan);
@@ -17996,6 +18009,141 @@ function notifyProgressionChanged(p, scheduledPlan){
     const before = byIdx.get(row.i);
     return !!before && before.n === row.n && loadDelta(before, row).dir === 'up';
   });
+}
+function notifyWorkoutCount(n){
+  n = Math.max(0, Math.round(+n || 0));
+  if(appLocale === 'ru') return n + ' ' + plural(n, t('calendar.workoutOne'), t('calendar.workoutFew'), t('calendar.workoutMany'));
+  return n + ' ' + t(n === 1 ? 'calendar.workoutOne' : 'calendar.workoutFew');
+}
+function notifyNames(rows, max){
+  const names = (rows || []).map(r => String(r && r.p && r.p.name || '')).filter(Boolean);
+  const take = names.slice(0, Math.max(1, max || 3));
+  const quoted = take.map(name => appLocale === 'ru' ? '«' + name + '»' : '“' + name + '”');
+  const left = names.length - take.length;
+  if(left > 0) quoted.push(t('notify.moreCount',{count:left}));
+  return quoted.join(', ');
+}
+function notifyRowsExtra(rows, stage){
+  const ids = (rows || []).map(r => r && r.p && r.p.id).filter(Boolean);
+  const extra = {stage, category:'workouts'};
+  if(ids.length === 1) extra.programId = ids[0];
+  else if(ids.length > 1) extra.programIds = ids;
+  return extra;
+}
+function notifyRowsByTime(rows){
+  const groups = new Map();
+  (rows || []).forEach(row => {
+    if(!row.time) return;
+    if(!groups.has(row.time)) groups.set(row.time, []);
+    groups.get(row.time).push(row);
+  });
+  return groups;
+}
+function notifyScheduleRowsForDay(day, done, blockedKeys, prefs){
+  const iso = notifyDayKey(day);
+  const dayName = DAYS[(day.getDay() + 6) % 7];
+  const out = [];
+  customPrograms.filter(p => p && p.id !== 'warmup' && progActive(p)).forEach(p => {
+    const scheduled = notifyScheduledPlan(p, dayName);
+    if(!scheduled) return;
+    const key = iso + '|' + p.id;
+    if((done && done.has(key)) || (blockedKeys && blockedKeys.has(key))) return;
+    const time = notifyTimeParts(scheduled.time) ? scheduled.time : '';
+    out.push({
+      p,
+      scheduled,
+      time,
+      grew: !!(prefs && prefs.progress !== false && notifyProgressionChanged(p, scheduled.plan))
+    });
+  });
+  return out;
+}
+function notifyTimedGroupCopy(rows, time){
+  const group = rows || [];
+  if(group.length === 1){
+    const row = group[0];
+    return row.grew
+      ? {title:t('notify.progressTitle'), body:t('notify.progressBody',{name:row.p.name})}
+      : {title:t('notify.beforeTitle'), body:t('notify.beforeBody',{name:row.p.name,time})};
+  }
+  const grew = group.filter(r => r.grew).length;
+  const body = t('notify.beforeManyBody',{time,names:notifyNames(group,3)});
+  const suffix = grew ? ' ' + t('notify.progressManySuffix',{count:notifyWorkoutCount(grew)}) : '';
+  return {
+    title:t('notify.beforeManyTitle',{count:notifyWorkoutCount(group.length)}),
+    body,
+    largeBody:t('notify.beforeManyBody',{time,names:notifyNames(group,8)}) + suffix
+  };
+}
+function notifyMorningCopy(rows){
+  const group = rows || [];
+  if(group.length === 1){
+    const row = group[0];
+    return row.grew
+      ? {title:t('notify.progressTitle'), body:t('notify.progressBody',{name:row.p.name})}
+      : {title:t('notify.todayTitle'), body:t('notify.todayBody',{name:row.p.name})};
+  }
+  const grew = group.filter(r => r.grew).length;
+  const suffix = grew ? ' ' + t('notify.progressManySuffix',{count:notifyWorkoutCount(grew)}) : '';
+  return {
+    title:t('notify.todayManyTitle',{count:notifyWorkoutCount(group.length)}),
+    body:notifyNames(group,3),
+    largeBody:notifyNames(group,8) + suffix
+  };
+}
+function notifyEveningCopy(rows){
+  const group = rows || [];
+  if(group.length === 1){
+    const row = group[0];
+    return {title:t('notify.dontForgetTitle'), body:t('notify.dontForgetBody',{name:row.p.name})};
+  }
+  return {
+    title:t('notify.remainingManyTitle',{count:notifyWorkoutCount(group.length)}),
+    body:notifyNames(group,3),
+    largeBody:notifyNames(group,8)
+  };
+}
+function buildWorkoutNotificationCandidates(now, prefs, blockedKeys){
+  const out = [];
+  const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
+  for(let offset = 0; offset < NOTIFY_HORIZON_DAYS; offset++){
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const rows = notifyScheduleRowsForDay(day, done, blockedKeys, prefs);
+    if(!rows.length) continue;
+
+    const untimed = rows.filter(r => !r.time);
+    if(untimed.length){
+      const copy = notifyMorningCopy(untimed);
+      out.push({
+        at:notifyAt(day,9,0).toISOString(),
+        title:copy.title, body:copy.body, largeBody:copy.largeBody || copy.body,
+        priority:80,
+        extra:notifyRowsExtra(untimed, untimed.length === 1 && untimed[0].grew ? 'progress' : (untimed.length === 1 ? 'today' : 'today-summary'))
+      });
+    }
+
+    notifyRowsByTime(rows).forEach((group, time) => {
+      const hm = notifyTimeParts(time);
+      if(!hm) return;
+      const startAt = notifyAt(day, hm[0], hm[1]);
+      const copy = notifyTimedGroupCopy(group, time);
+      out.push({
+        at:new Date(startAt.getTime() - 15 * 60000).toISOString(),
+        title:copy.title, body:copy.body, largeBody:copy.largeBody || copy.body,
+        priority:90, budgetExempt:true,
+        extra:notifyRowsExtra(group, group.length === 1 && group[0].grew ? 'progress' : (group.length === 1 ? 'before' : 'before-summary'))
+      });
+    });
+
+    const evening = notifyEveningCopy(rows);
+    out.push({
+      at:notifyAt(day,20,0).toISOString(),
+      title:evening.title, body:evening.body, largeBody:evening.largeBody || evening.body,
+      priority:65,
+      extra:notifyRowsExtra(rows, rows.length === 1 ? 'missed' : 'missed-summary')
+    });
+  }
+  return out;
 }
 function notifyThirdWorkoutDate(){
   const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
@@ -18012,8 +18160,6 @@ function notifyPremiumCandidate(anchor, now){
   let at = notifyAt(new Date(anchor), 18, 0);
   at.setDate(at.getDate() + 14);
   while(at <= now) at.setDate(at.getDate() + 14);
-  // Не продаём подписку в тот же день, когда человек должен тренироваться:
-  // предложение не должно спорить с основной задачей приложения.
   for(let i=0; i<3 && notifyHasWorkoutOn(at); i++) at.setDate(at.getDate() + 1);
   return at;
 }
@@ -18021,29 +18167,46 @@ function limitNotificationCandidates(items){
   const out = [];
   const engagementDay = new Set();
   const engagementWeek = new Map();
-  const workoutMissDays = new Set(items.filter(x => x.extra && x.extra.stage === 'missed').map(x => notifyDayKey(new Date(x.at))));
+  const passiveDayCount = new Map();
+  const workoutDays = new Set(
+    items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
+      .map(x => notifyDayKey(new Date(x.at)))
+  );
   items.sort((a,b) => (+new Date(a.at) - +new Date(b.at)) || ((b.priority||0) - (a.priority||0)));
   for(const item of items){
     const at = new Date(item.at);
     if(isNaN(at)) continue;
     const day = notifyDayKey(at);
+
     if(item.engagement){
+      // Ни «вернись», ни Premium не конкурируют с днём, где уже есть тренировка.
+      if(workoutDays.has(day) || notifyHasWorkoutOn(at)) continue;
       if(engagementDay.has(day)) continue;
-      const monday = new Date(at); monday.setHours(0,0,0,0); monday.setDate(monday.getDate() - ((monday.getDay()+6)%7));
+      const monday = new Date(at);
+      monday.setHours(0,0,0,0);
+      monday.setDate(monday.getDate() - ((monday.getDay()+6)%7));
       const week = notifyDayKey(monday);
       const n = engagementWeek.get(week) || 0;
       if(n >= 3) continue;
-      if(item.extra && item.extra.stage === 'premium' && workoutMissDays.has(day)) continue;
       engagementDay.add(day);
       engagementWeek.set(week, n + 1);
     }
+
+    // Явное точное время — осознанный reminder пользователя и не режется этим
+    // защитным лимитом. Все пассивные digest/unfinished/engagement — максимум три в сутки.
+    if(!item.budgetExempt){
+      const n = passiveDayCount.get(day) || 0;
+      if(n >= NOTIFY_PASSIVE_DAILY_LIMIT) continue;
+      passiveDayCount.set(day, n + 1);
+    }
     out.push(item);
+    if(out.length >= NOTIFY_NATIVE_LIMIT) break;
   }
   return out;
 }
 
-// Нативные уведомления переживают закрытие приложения. Планируем ограниченный горизонт
-// и полностью пересобираем его при старте, правке расписания и завершении тренировки.
+// Нативные уведомления переживают закрытие приложения. Пересобираем две недели
+// вперёд при старте, изменении расписания и завершении тренировки.
 async function syncNativeNotifications(){
   if(!window.FitNative || !window.FitNative.syncWorkoutNotifications) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
@@ -18057,94 +18220,70 @@ async function syncNativeNotifications(){
     if(!item || isNaN(at) || at <= new Date(now.getTime() + 10000) || at > horizon) return;
     items.push(item);
   };
-  const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
 
-  if(prefs.workouts !== false){
-    for(let offset = 0; offset < 8; offset++){
-      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-      const iso = localISO(day);
-      const dayName = DAYS[(day.getDay() + 6) % 7];
-      customPrograms.filter(p => p && p.id !== 'warmup' && progActive(p)).forEach(p => {
-        const scheduled = notifyScheduledPlan(p, dayName);
-        if(!scheduled || done.has(iso + '|' + p.id)) return;
-        const time = scheduled.time;
-        const grew = prefs.progress !== false && notifyProgressionChanged(p, scheduled.plan);
-        if(time){
-          const hm = time.split(':').map(Number);
-          if(hm.length !== 2 || !isFinite(hm[0]) || !isFinite(hm[1])) return;
-          const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hm[0], hm[1]);
-          const pre = new Date(start.getTime() - 15 * 60000);
-          const missed = new Date(start.getTime() + 2 * 3600000);
-          add({at:pre.toISOString(),
-            title:grew ? t('notify.progressTitle') : t('notify.beforeTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.beforeBody',{name:p.name,time}),
-            priority:90, extra:{programId:p.id, stage:grew ? 'progress' : 'before', category:'workouts'}});
-          add({at:start.toISOString(), title:t('notify.startTitleShort'),
-            body:t('notify.todayPlan',{name:p.name}), priority:85,
-            extra:{programId:p.id, stage:'start', category:'workouts'}});
-          add({at:missed.toISOString(), title:t('notify.waitingTitle'),
-            body:t('notify.waitingBodyShort',{name:p.name}),
-            largeBody:t('notify.waitingBody',{name:p.name}), priority:70,
-            extra:{programId:p.id, stage:'missed', category:'workouts'}});
-        }else{
-          const morning = notifyAt(day, 9, 0);
-          const evening = notifyAt(day, 20, 0);
-          add({at:morning.toISOString(),
-            title:grew ? t('notify.progressTitle') : t('notify.todayTitle'),
-            body:grew ? t('notify.progressBody',{name:p.name}) : t('notify.todayBody',{name:p.name}),
-            priority:80, extra:{programId:p.id, stage:grew ? 'progress' : 'today', category:'workouts'}});
-          add({at:evening.toISOString(), title:t('notify.dontForgetTitle'),
-            body:t('notify.dontForgetBody',{name:p.name}), priority:65,
-            extra:{programId:p.id, stage:'missed', category:'workouts'}});
-        }
-      });
-    }
-
-    // Незавершённая СОХРАНЁННАЯ тренировка: один мягкий возврат через 2 часа.
-    // Для прямо сейчас активной тренировки работает отдельный one-shot reminder через
-    // 20 минут бездействия; планировать оба одновременно было бы дублем.
-    try{
-      const session = (state && state.live)
-        ? null
-        : ((typeof loadSession === 'function') ? await loadSession() : null);
-      if(session && session.at){
-        const at = new Date(+session.at + 2 * 3600000);
-        if(+at > +now && +at - +new Date(session.at) < NOTIFY_DAY){
-          const p = customPrograms.find(x => x.id === session.pid);
-          add({at:at.toISOString(), title:t('notify.unfinishedTitle'),
-            body:t('notify.unfinishedBody',{name:(p && p.name) || t('sessions.workoutFallback')}),
-            priority:75, extra:{programId:session.pid, stage:'unfinished', category:'workouts'}});
-        }
-      }
-    }catch(_){}
+  let savedSession = null;
+  try{
+    if(!(state && state.live) && typeof loadSession === 'function') savedSession = await loadSession();
+  }catch(_){}
+  const blockedKeys = new Set();
+  if(state && state.live && state.raw && state.raw.id){
+    blockedKeys.add(notifyDayKey(now) + '|' + state.raw.id);
+  }
+  if(savedSession && savedSession.pid && savedSession.at){
+    const sessionDay = new Date(+savedSession.at);
+    if(!isNaN(sessionDay)) blockedKeys.add(notifyDayKey(sessionDay) + '|' + savedSession.pid);
   }
 
-  // Возврат после паузы: максимум три мягких касания — через 3, 7 и 14 дней.
-  // После двух недель не продолжаем догонять человека уведомлениями. Интервалы
-  // привязаны к последней реальной тренировке, а не к моменту открытия приложения.
+  if(prefs.workouts !== false){
+    buildWorkoutNotificationCandidates(now, prefs, blockedKeys).forEach(add);
+
+    // Сохранённая незавершённая тренировка сильнее обычного расписания этой же
+    // программы: одно конкретное «продолжить с места», без второго общего reminder.
+    if(savedSession && savedSession.at){
+      const at = new Date(+savedSession.at + 2 * 3600000);
+      if(+at > +now && +at - +new Date(savedSession.at) < NOTIFY_DAY){
+        const p = customPrograms.find(x => x.id === savedSession.pid);
+        add({
+          at:at.toISOString(),
+          title:t('notify.unfinishedTitle'),
+          body:t('notify.unfinishedBody',{name:(p && p.name) || t('sessions.workoutFallback')}),
+          priority:85,
+          extra:{programId:savedSession.pid, stage:'unfinished', category:'workouts'}
+        });
+      }
+    }
+  }
+
+  // Возврат после паузы: не ставим его вообще на день, где есть план тренировки.
   if(prefs.workouts !== false && (stats.history || []).length){
     const last = (stats.history || []).filter(h=>h && h.d).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
     if(last){
       const base = new Date(last.d + 'T12:00:00');
       [3,7,14].forEach(days => {
-        const day = new Date(base); day.setDate(day.getDate() + days);
-        const at = notifyAt(day, 19, 0);
-        if(notifyDayKey(day) === notifyDayKey(now)) return; // приложение уже открыто сегодня
-        add({at:at.toISOString(), title:t('notify.returnTitle'), body:t('notify.returnBody'),
-          priority:30, engagement:true, extra:{stage:'inactive', category:'workouts', days}});
+        const day = new Date(base);
+        day.setDate(day.getDate() + days);
+        if(notifyDayKey(day) === notifyDayKey(now) || notifyHasWorkoutOn(day)) return;
+        add({
+          at:notifyAt(day,19,0).toISOString(),
+          title:t('notify.returnTitle'), body:t('notify.returnBody'),
+          priority:30, engagement:true,
+          extra:{stage:'inactive', category:'workouts', days}
+        });
       });
     }
   }
 
-  // Premium: только после того, как человек уже получил пользу от приложения —
-  // минимум три завершённые тренировки. Повтор — не чаще одного раза в 14 дней.
   if(prefs.offers !== false && !isPremium()){
     const anchor = notifyThirdWorkoutDate();
     let promo = notifyPremiumCandidate(anchor, now);
     for(let i=0; promo && i<2; i++){
       if(notifyDayKey(promo) !== notifyDayKey(now)){
-        add({at:promo.toISOString(), title:t('notify.premiumTitle'), body:t('notify.premiumBody'),
-          priority:10, engagement:true, extra:{stage:'premium', category:'offers'}});
+        add({
+          at:promo.toISOString(),
+          title:t('notify.premiumTitle'), body:t('notify.premiumBody'),
+          priority:10, engagement:true,
+          extra:{stage:'premium', category:'offers'}
+        });
       }
       promo = new Date(promo.getTime() + 14 * NOTIFY_DAY);
       for(let j=0; j<3 && notifyHasWorkoutOn(promo); j++) promo.setDate(promo.getDate() + 1);
@@ -18470,6 +18609,10 @@ window.addEventListener('fitNotificationAction', e => {
   }
   if(extra.stage === 'trainer-program' && extra.linkId){
     if(typeof importProgramLink === 'function') importProgramLink(String(extra.linkId));
+    return;
+  }
+  if(Array.isArray(extra.programIds) && extra.programIds.length){
+    goTab('scrMenu');
     return;
   }
   if(extra.programId){
