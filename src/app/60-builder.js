@@ -425,6 +425,10 @@ function progressedRepsRange(pid, ex, program){
   const r = psReps(ex);
   const ceil = progCeil(ex, 'reps');
   let min = r.min, max = r.max;
+  // при двойной прогрессии цель — одно число (8 → 9 → … → потолок, затем +вес
+  // и снова 8), а диапазон из ЗНАЧЕНИЯ служит только рамками; без этого первый
+  // круг показывал «8-12», а следующие — одиночные числа
+  if(isDualProg(ex)) max = min;
   if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
   min = Math.max(1, min);
   max = Math.max(min, max);

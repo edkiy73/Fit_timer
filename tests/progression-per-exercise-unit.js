@@ -88,6 +88,15 @@ function runWorkout(exercises, every){
   need(resetHappened, 'reps cycle back to base at least once');
   need(seen[seen.length - 1].kg > 20, 'weight increases once reps hit the ceiling: ' + seen[seen.length - 1].kg);
 }
+{
+  // цель при двойной прогрессии — одно число с первого же круга, а не «8-12»,
+  // сменяющееся одиночными числами
+  const ex = mkEx('Жим лёжа', {value:'8-12', type:'reps', progOn:true, trackWeight:true, weight:20, wStep:2.5, repsStep:1, repsMax:12, dualProg:true});
+  const p = {id:'p1'};
+  const seq = [progressedRepsRange('p1', ex, p) + '@' + getExWeight('p1', ex, p)];
+  for(let i = 0; i < 5; i++){ advanceExerciseProgression(ex); seq.push(progressedRepsRange('p1', ex, p) + '@' + getExWeight('p1', ex, p)); }
+  need(seq.join(' ') === '8@20 9@20 10@20 11@20 12@20 8@22.5', 'dual progression sequence: ' + seq.join(' '));
+}
 
 /* ---- фактический баг с чередованием A/Б: правильно исправлен ---- */
 {

@@ -360,8 +360,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2876,
-      "chars": 132058,
+      "lines": 2898,
+      "chars": 133078,
       "symbols": [
         "add",
         "ageError",
@@ -383,6 +383,7 @@
         "callGeminiImage",
         "callServerAI",
         "carryMedia",
+        "carryProgressCounters",
         "chip",
         "claimProgramLink",
         "clientSum",
@@ -583,8 +584,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2101,
-      "chars": 97095,
+      "lines": 2105,
+      "chars": 97344,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
