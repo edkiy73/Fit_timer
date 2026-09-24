@@ -1652,6 +1652,11 @@ async function saveSession(){
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    // Absolute deadline lets a cold notification launch distinguish three cases:
+    // timer still running, timer expired while WebView was dead, or non-timed step.
+    stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
+    remaining: Math.max(0, Number(state.remaining) || 0),
+    paused: !!state.paused,
     at: Date.now()
   };
   await kvSet(sessionKey(), JSON.stringify(data));
