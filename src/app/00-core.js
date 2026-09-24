@@ -633,6 +633,7 @@ let navStack = ['scrMenu'];
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+let navBackWaiters = []; // программный возврат, которому нужно дождаться фактического popstate
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -811,6 +812,7 @@ window.addEventListener('popstate', async e => {
   }
   guardBypass = false;
   show(targetScreen, false);
+  resolveNavBack(targetScreen);
 
   // После явного выхода из глубокого сценария его текущая запись превращается
   // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
@@ -830,18 +832,38 @@ window.addEventListener('popstate', async e => {
 // по записи на каждый шаг: сорок переходов давали сорок одну запись, и системная
 // кнопка «назад» тридцать раз подряд не выводила из конструктора.
 // Экран покажет сам popstate — здесь только отматываем.
+function resolveNavBack(target){
+  if(!navBackWaiters.length) return;
+  const keep = [];
+  navBackWaiters.forEach(w => {
+    if(w.id === target) w.resolve(true);
+    else keep.push(w);
+  });
+  navBackWaiters = keep;
+}
 function goBackTo(id){
   // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
   // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
-  // копию родителя поверх истории.
+  // копию родителя поверх истории. Возвращаем Promise, чтобы сценарии вроде
+  // «ИИ применён → Builder → success-попап» могли дождаться реального popstate.
   if(show._last === navStack[navStack.length - 1]){
     const at = navStack.lastIndexOf(id);
     const distance = navStack.length - 1 - at;
     if(at >= 0 && distance > 0){
-      try{ history.go(-distance); return; }catch(e){}
+      return new Promise(resolve => {
+        const waiter = {id, resolve};
+        navBackWaiters.push(waiter);
+        try{ history.go(-distance); }
+        catch(e){
+          navBackWaiters = navBackWaiters.filter(w => w !== waiter);
+          show(id);
+          resolve(false);
+        }
+      });
     }
   }
   show(id);
+  return Promise.resolve(true);
 }
 
 function show(id, push = true){
