@@ -166,6 +166,7 @@ final class WorkoutNotifications {
         Intent intent = new Intent(context, MainActivity.class)
             .setAction(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_LAUNCHER)
+            .setData(Uri.parse("fittimer://workout/resume"))
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
