@@ -70,6 +70,9 @@ if(androidWorkoutNotifications.includes('AudioAttributes.USAGE_ALARM')) throw ne
 if(!androidWorkoutNotifications.includes('"workout_timer_v2"') || !androidWorkoutNotifications.includes('AudioAttributes.USAGE_NOTIFICATION')) throw new Error('Workout timer notification channel must use normal notification audio');
 if(!androidWorkoutNotifications.includes('notifySafe(context, LIVE_ID, alert.build())')) throw new Error('Workout timer end must replace the ongoing notification instead of posting a duplicate');
 if(!androidWorkoutNotifications.includes('fittimer://workout/resume')) throw new Error('Workout notification must deep-link back into the saved workout');
+if(!androidWorkoutNotifications.includes('ACTION_INACTIVITY') || !androidWorkoutNotifications.includes('INACTIVITY_ID')) throw new Error('Android active-workout inactivity reminder is missing');
+if(!androidWorkoutNotifications.includes('setAndAllowWhileIdle') || !androidWorkoutNotifications.includes('PREF_FIRED')) throw new Error('Android inactivity reminder must survive process death and fire once per workout');
+if(!mobileBridge.includes('WORKOUT_INACTIVITY_NOTIFICATION_ID') || !mobileBridge.includes('localNotificationActionPerformed')) throw new Error('iOS active-workout inactivity reminder / tap bridge is missing');
 const iosBiometric = await readFile('ios/App/App/FitBiometricPlugin.swift', 'utf8');
 if(!iosBiometric.includes('LocalAuthentication') || !iosBiometric.includes('deviceOwnerAuthenticationWithBiometrics')) throw new Error('iOS native biometric flow is missing');
 const iosWorkout = await readFile('ios/App/App/FitWorkoutPlugin.swift', 'utf8');
