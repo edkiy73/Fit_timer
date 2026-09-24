@@ -622,6 +622,7 @@ let navStack = ['scrMenu'];
 // иначе двадцать переключений туда-сюда давали двадцать записей, и «назад»
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
+let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -726,10 +727,16 @@ new MutationObserver(()=>{
 }).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
 
 window.addEventListener('popstate', async e => {
+  // запись попапа снята (нами или жестом) — теперь можно переписать запись
+  // экрана под ней на вкладку, сменённую, пока попап был открыт
+  if(pendingTabScreen && !(history.state && history.state.m)){
+    try{ history.replaceState({scr: pendingTabScreen, d: navDepth}, ''); }catch(_){}
+    pendingTabScreen = null;
+  }
   if(skipPop > 0){ skipPop--; return; }   // это мы сами сняли запись закрытого попапа
   // открытый попап забирает жест себе — экран под ним остаётся на месте
   if(document.querySelector('.modal.open')){
-    try{ history.pushState(e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
+    try{ history.pushState(history.state || e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
     dismissTopModal();
     return;
   }
@@ -801,7 +808,13 @@ function show(id, push = true){
   if(push && show._last !== id){
     if(tabSwitch){
       navStack[navStack.length - 1] = id;
-      try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+      // Сверху может лежать запись попапа, который только что закрыли, а его
+      // history.back() ещё не отработал (например, окно ожидания ИИ закрылось
+      // и сразу применился ответ). Заменить её — значит оставить под ней старую
+      // вкладку: «Готово» потом возвращало на «Через ИИ». Меняем запись экрана,
+      // когда запись попапа уже снята (см. popstate ниже).
+      if(history.state && history.state.m) pendingTabScreen = id;
+      else try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
     } else {
       navStack.push(id);
       navDepth++;

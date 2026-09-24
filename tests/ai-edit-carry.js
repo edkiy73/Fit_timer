@@ -24,6 +24,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
+  // профиль нужен любому запросу к ИИ, иначе поверх всего встанет «Расскажи о себе»
+  await page.evaluate(async () => { const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers(); });
 
   const r = await page.evaluate(async () => {
     const ex = (id, name, extra) => Object.assign({id, name, type:'reps', value:'10', sets:3, rest:60,
@@ -97,6 +99,61 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('после правки упражнения открыт его редактор', exEdit.screen === 'scrExercise', exEdit.screen);
   ok('упражнение обновлено, запрос очищен', exEdit.value === '15' && exEdit.wish === '', JSON.stringify(exEdit));
   ok('сообщение о правке на языке интерфейса', /Упражнение «Присед» обновлено/.test(exEdit.dialog), exEdit.dialog);
+
+  // ---- ИИ не повторил описания неизменных упражнений — берём из исходника;
+  //      строка ПОДХОДЫ уходит к ИИ всегда, даже при одном подходе ----
+  const text = await page.evaluate(async () => {
+    const p = {id:'ect', name:'Круговая', progression:0, stats:{completions:0}, plans:[
+      {days:['Пн'], rounds:2, roundRest:60, exercises:[
+        {id:'t1', name:'Приседания', desc:'Стопы на ширине плеч.', muscles:['glutes'], mistakes:'Колени внутрь.',
+         type:'reps', value:'15', sets:1, rest:30},
+        {id:'t2', name:'Отжимания', desc:'Корпус прямой.', type:'reps', value:'10', sets:1, rest:30}]}]};
+    customPrograms.push(p);
+    const sent = programToText(p, {forEdit:true});
+    editAIProg = p;
+    // ответ без описаний: первое упражнение то же, второе заменено на новое
+    $('aiResult').value = 'ПРОГРАММА: Круговая\nДЕНЬ: Пн\nКРУГИ: 2\nОТДЫХ МЕЖДУ КРУГАМИ: 60\n\n'
+      + 'УПРАЖНЕНИЕ: Приседания\nКОД: t1\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nОТДЫХ: 30\n\n'
+      + 'УПРАЖНЕНИЕ: Отжимания от стены\nОПИСАНИЕ: Ладони на стене.\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nОТДЫХ: 30';
+    await Promise.race([createEditedProgram(), new Promise(r => setTimeout(r, 1500))]);
+    const made = customPrograms.find(x => x.id !== 'ect' && /Круговая/.test(x.name || ''));
+    const exs = made ? normPlans(made)[0].exercises : [];
+    return {sent, sq: exs[0] && {desc: exs[0].desc, muscles: exs[0].muscles, mistakes: exs[0].mistakes, value: exs[0].value},
+      wall: exs[1] && exs[1].desc};
+  });
+  ok('ПОДХОДЫ отправляются даже при одном подходе', (text.sent.match(/^ПОДХОДЫ: 1$/gm) || []).length === 2);
+  ok('описание неизменного упражнения взято из исходника',
+     !!text.sq && text.sq.desc === 'Стопы на ширине плеч.' && text.sq.mistakes === 'Колени внутрь.' && text.sq.muscles.includes('glutes') && String(text.sq.value) === '12',
+     JSON.stringify(text.sq));
+  ok('у нового упражнения — его собственное описание', text.wall === 'Ладони на стене.', text.wall);
+
+  // ---- «Изменить за меня» у упражнения → «Готово» возвращает в конструктор,
+  //      а не на вкладку «Через ИИ» (запись окна ожидания в истории) ----
+  for(let i = 0; i < 5 && await page.isVisible('#dlgOk'); i++){ await page.click('#dlgOk'); await page.waitForTimeout(200); }
+  await page.evaluate(async () => {
+    const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
+      {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
+    customPrograms.push(p);
+    premiumGate = () => true;
+    callGemini = async () => 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60';
+    openBuilder('exn');
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => openExercise(0));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { asTab(() => openExEdAI(0)); $('exeWish').value = 'на время'; });
+  await page.waitForTimeout(300);
+  await page.click('#aiSelf');
+  await page.waitForTimeout(800);
+  if(await page.isVisible('#dlgOk')) await page.click('#dlgOk');
+  await page.waitForTimeout(500);
+  const afterAi = await page.evaluate(() => ({screen: show._last, value: curPlan().exercises[0].value, type: curPlan().exercises[0].type}));
+  ok('после «Изменить за меня» открыт редактор упражнения с результатом',
+     afterAi.screen === 'scrExercise' && afterAi.type === 'time', JSON.stringify(afterAi));
+  await page.click('#btnSaveEx');
+  await page.waitForTimeout(600);
+  const back = await page.evaluate(() => show._last);
+  ok('«Готово» после правки через ИИ возвращает в конструктор', back === 'scrBuilder', back);
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 

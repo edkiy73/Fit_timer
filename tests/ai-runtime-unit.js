@@ -35,6 +35,7 @@ ok('внешняя ссылка вместо изображения блокир
 (async()=>{
   process.env.GEMINI_API_KEY = 'unit';
   process.env.OPENAI_API_KEY = 'unit';
+  process.env.AI_TEXT_TIMEOUT_MS = '60';
   const { generate } = require('../lib/ai');
   const originalFetch = global.fetch;
   let calls = 0;
@@ -67,6 +68,20 @@ ok('внешняя ссылка вместо изображения блокир
        JSON.stringify({fallback:out.fallback,provider:out.provider,calls}));
   }catch(e){
     ok('fallback-тест не падает', false, e && e.message);
+  }finally{
+    global.fetch = originalFetch;
+  }
+  // провайдер не успел: вместо английского «This operation was aborted» —
+  // понятный код ai_timeout, по которому приложение пишет по-русски
+  global.fetch = (url, opts) => new Promise((resolve, reject) => {
+    opts.signal.addEventListener('abort', () => reject(Object.assign(new Error('This operation was aborted'), {name:'AbortError'})));
+  });
+  try{
+    const same = {provider:'gemini', model:'slow'};
+    await generate('text', {text:{primary:same, backup:same}}, 'prompt', {});
+    ok('медленный провайдер даёт ai_timeout', false, 'no error');
+  }catch(e){
+    ok('медленный провайдер даёт ai_timeout', e && e.code === 'ai_timeout' && e.status === 504, e && (e.code + ' ' + e.message));
   }finally{
     global.fetch = originalFetch;
   }
