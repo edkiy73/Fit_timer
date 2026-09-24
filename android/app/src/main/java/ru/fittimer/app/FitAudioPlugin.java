@@ -263,6 +263,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             private void finish(boolean spoken) {
                 if (!finished.compareAndSet(false, true)) return;
+                // хвост: звук ещё выходит из динамика и отражается от стен
+                holdRecognition(TTS_TAIL_MS);
                 JSObject result = new JSObject();
                 result.put("spoken", spoken);
                 call.resolve(result);
@@ -273,7 +275,11 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             @Override public void onStop(String id, boolean interrupted) { if (utteranceId.equals(id)) finish(false); }
         });
 
+        // Пока приложение говорит, распознаватель не слушает. Потолок — на случай,
+        // если TTS не сообщит о конце фразы.
+        holdRecognition(TTS_HOLD_MAX_MS);
         int status = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+        if (status == TextToSpeech.ERROR) holdRecognition(0L);
         if (status == TextToSpeech.ERROR && finished.compareAndSet(false, true)) {
             JSObject result = new JSObject();
             result.put("spoken", false);
@@ -409,6 +415,15 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         } catch (Exception ignored) { return 0.0; }
     }
 
+    private static final long TTS_HOLD_MAX_MS = 10000L;
+    private static final long TTS_TAIL_MS = 400L;
+    /** Порог конца фразы Vosk (0,28 с) + буфер захвата (0,2 с) + декодирование. */
+    private static final long RESULT_LAG_MS = 700L;
+
+    private void holdRecognition(long ms) {
+        main.post(() -> { if (speechService != null) speechService.holdFor(ms); });
+    }
+
     private List<VoiceCommands.Word> hypothesisWords(String json) {
         List<VoiceCommands.Word> out = new ArrayList<>();
         if (json == null || json.isEmpty()) return out;
@@ -453,6 +468,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     }
 
     private void emitCommand(String text, String kind, double confidence, String source) {
+        emitCommand(text, kind, confidence, source, 0.0);
+    }
+
+    private void emitCommand(String text, String kind, double confidence, String source, double spanSec) {
         if (commandFiredForUtterance || kind == null || kind.isEmpty()) return;
         commandFiredForUtterance = true;
         cancelPendingPartial();
@@ -462,6 +481,9 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         event.put("confidence", confidence);
         event.put("kind", kind);
         event.put("source", source);
+        // сколько назад началась фраза: JS сверяет это со своими звуками (гонг,
+        // бип), а не момент прихода результата — тот запаздывает на ~0,5 с
+        event.put("utteranceMs", Math.round(spanSec * 1000.0) + RESULT_LAG_MS);
         notifyListeners("speechResult", event);
         emitHeard(text, kind, confidence, source, true);
     }
@@ -546,7 +568,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             return;
         }
 
-        emitCommand(text, kind, confidence, "final");
+        emitCommand(text, kind, confidence, "final", VoiceCommands.spanSec(words));
     }
 
     private void emitSpeechError(String error) {
