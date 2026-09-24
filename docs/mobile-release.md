@@ -210,7 +210,9 @@ node --check scripts/build-web.mjs
 
 The Android Capacitor shell uses Vosk for continuous hands-free commands instead of Android SpeechRecognizer. The small Russian model (`vosk-model-small-ru-0.22`, about 45 MB) is downloaded from the official Vosk model host on first use and stored in app-private storage. After that, recognition is fully on-device and needs no network.
 
-The recognizer uses a narrow FitTimer command grammar and keeps one continuous microphone capture session, avoiding repeated Android SpeechRecognizer start/stop tones. Browser web builds keep the Web Speech fallback.
+The recognizer keeps one continuous microphone capture session, avoiding repeated Android SpeechRecognizer start/stop tones. Browser web builds keep the Web Speech fallback.
+
+Microphone capture is `FitSpeechCapture` (not `org.vosk.android.SpeechService`): same `VOICE_RECOGNITION` source, 16 kHz mono, 0.2 s buffers and the same `RecognitionListener` callbacks, plus software automatic gain (`VoiceAutoGain`). Android disables AGC on `VOICE_RECOGNITION` by design, so normal speech from 1.5–2 m (phone on the floor next to the mat) reached the small Vosk model at roughly −50…−60 dBFS, and people had to shout or lean into the phone; Google's recognizer applied its own gain, Vosk does not. The AGC starts at its maximum, attacks fast on loud speech, recovers ~10 dB/s in pauses (a dropped dumbbell does not deafen the next command), caps gain at +24 dB and never lifts the background noise floor above ≈ −38 dBFS. JVM unit test: `android/app/src/test/java/ru/fittimer/app/VoiceAutoGainTest.java` (`./gradlew testDirectDebugUnitTest`). `FitSpeechCapture` also closes the native `Recognizer` on stop — `SpeechService` never did, so every restart leaked one.
 
 
 The voice model is explicitly downloaded by the user from the hands-free settings. The UI exposes Russian (~45 MB) and English (~40 MB), shows download progress, and will not enable native voice mode until the selected model is installed. TTS language/voice and command-recognition language are separate settings.
@@ -220,7 +222,7 @@ The voice model is explicitly downloaded by the user from the hands-free setting
 
 Android WorkManager owns voice-model downloads. They continue when the user leaves the settings screen or backgrounds the app, wait for connectivity when necessary, and post a completion notification. The web layer only polls WorkManager progress while the app is visible.
 
-Recognition uses the unrestricted small Vosk language model, ignores partial hypotheses, validates only complete command phrases, and applies confidence thresholds (stricter for next/skip than pause/resume) to reduce accidental advances.
+Recognition uses the unrestricted small Vosk language model (a narrow command grammar was tried first and removed: with only a dozen words, short sounds like «про» / «го» were forced into commands). Partial hypotheses are used only when they match a whole command or a long distinctive stem and hold for two consecutive partials or a short debounce; final results additionally pass confidence thresholds (stricter for next/skip than pause/resume) to reduce accidental advances.
 
 
 ## In-app review
