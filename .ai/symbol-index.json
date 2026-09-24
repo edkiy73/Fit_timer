@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1347,
-      "chars": 65438,
+      "lines": 1378,
+      "chars": 66954,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -362,7 +362,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2932,
-      "chars": 135396,
+      "chars": 135400,
       "symbols": [
         "add",
         "ageError",
@@ -587,7 +587,7 @@
     "src/app/60-builder.js": {
       "kind": "frontend-js",
       "lines": 2105,
-      "chars": 97344,
+      "chars": 97347,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -840,7 +840,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2319,
-      "chars": 97381,
+      "chars": 97393,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

@@ -4351,6 +4351,7 @@ let navStack = ['scrMenu'];
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+let pendingRootScreen = null; // корневой раздел, к которому сворачиваем весь глубокий путь
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -4519,6 +4520,20 @@ window.addEventListener('popstate', async e => {
     }
   }
   guardBypass = false;
+  if(pendingRootScreen){
+    const rootTarget = pendingRootScreen;
+    pendingRootScreen = null;
+    // После history.go(-navDepth) текущая запись должна быть базовой. Даже если
+    // старый сеанс оставил лишний хвост, нормализуем её и обрезаем forward-ветку
+    // первым же push нужного корневого раздела.
+    navDepth = 0;
+    navStack = ['scrMenu'];
+    try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(_){}
+    show('scrMenu', false);
+    if(rootTarget !== 'scrMenu') show(rootTarget, true);
+    window.scrollTo(0, 0);
+    return;
+  }
   show(targetScreen, false);
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
@@ -4559,7 +4574,14 @@ function show(id, push = true){
     } else {
       navStack.push(id);
       navDepth++;
-      try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+      // Если новый экран открывается прямо из закрывающейся модалки, её служебная
+      // запись уже и есть место этого перехода. Превращаем её в экран, а не кладём
+      // экран поверх неё — иначе «назад» позже воскресит невидимую модалку/старый экран.
+      if(history.state && history.state.m){
+        try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+      } else {
+        try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+      }
     }
   }
   if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
@@ -4638,7 +4660,16 @@ function goTab(id){
     return;
   }
   if(!ROOT_TABS.includes(cur)){
-    // возврат из глубины: текущая запись становится «Сегодня», вкладка ложится поверх
+    // Корневой раздел — это выход ИЗ глубины, а не ещё один экран поверх неё.
+    // Сначала реально отматываем весь логический путь до «Сегодня», затем popstate
+    // откроет нужный таб. Иначе за видимой главной оставались старые Builder/Store/
+    // Start, и системный Back неожиданно «воскрешал» их.
+    if(navDepth > 0){
+      pendingRootScreen = id;
+      guardBypass = true; // явные кнопки выхода уже сами спросили про несохранённое
+      try{ history.go(-navDepth); return; }
+      catch(e){ pendingRootScreen = null; guardBypass = false; }
+    }
     navDepth = 0;
     navStack = ['scrMenu'];
     try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
@@ -10587,7 +10618,7 @@ const AI_SOURCES = {
     apply:  ()=> exaAddExercise(),
     dirty: ['exaWish', 'exaContext', 'aiResult'],
     manual: ()=> addExManual(),
-    back:  ()=> show('scrBuilder')
+    back:  ()=> goBackTo('scrBuilder')
   },
   exEdit: {
     kind: 'exercise.modify',
@@ -15627,7 +15658,7 @@ async function pregnancyWarning(){
     t('pregnancy.warning'),
     {confirm:true,okText:t('common.ok'),cancelText:t('common.details')}
   );
-  if(!go) openLegal('health', ()=> openAI('text'));
+  if(!go) openLegal('health', ()=> goBackTo('scrAI'));
 }
 
 const Q_OPTS = {
@@ -19500,7 +19531,7 @@ $('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
 // онбординг
 // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
-$('obLegal1').onclick = ()=> openLegal('privacy', ()=> show('scrOnboard'));
+$('obLegal1').onclick = ()=> openLegal('privacy', ()=> asTab(()=> show('scrOnboard')));
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
 async function leaveOnboarding(){
