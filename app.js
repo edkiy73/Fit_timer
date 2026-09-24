@@ -3372,7 +3372,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 - Respect the declared fitness level. Beginner, intermediate and advanced programs should differ meaningfully in exercise complexity, volume, density and progression where appropriate; do not silently turn an intermediate or advanced request into a beginner workout.
 - Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
 - Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
-- Preserve unilateral/bilateral movement nature unless the user explicitly requests a different movement.
+- Keep an exercise unilateral or bilateral unless the request gives a reason to change it (e.g. equipment, a limitation, back support); do not switch it arbitrarily.
 - Never invent equipment the user does not have.
 - Do not diagnose or claim medical safety. Respect stated limitations and avoid exercises that clearly conflict with them.`;
 
@@ -3407,7 +3407,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ПРОГРАММА: program name in ${outputLanguage}
 ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line in ${outputLanguage}; explain purpose, frequency, expected result, what to watch, and when to reduce load
 ВРЕМЯ: HH:MM (optional)
-ПРОГРЕССИЯ: integer 1-15 or "нет"; number of COMPLETED workouts between progression steps
+ПРОГРЕССИЯ: integer 1-15 or "нет"; number of completed executions of each progressive exercise between checks whether to raise its load
 ЧЕРЕДОВАНИЕ: "да" or "нет"; "да" means variants rotate A-B-A independently of weekdays
 ДНИ ТРЕНИРОВОК: comma-separated canonical tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only for shared schedule when ЧЕРЕДОВАНИЕ: да
 
@@ -3435,8 +3435,9 @@ ${exerciseSchema(outputLanguage)}`;
   const editRules = () => `=== EDIT RULES ===
 - Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
 - When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
-- Preserve every existing protocol line whose value the request does not change. Never delete or rename a protocol label just because it looks unnecessary.
-- If the user asks to disable/remove a numeric setting while keeping the same structure, keep its existing label and set a neutral value such as 0.
+- Keep existing protocol lines that stay relevant after the change; never drop a line only because it looks unnecessary (a missing ШАГ / ШАГ ВЕСА silently turns progression off).
+- Remove an optional line when the requested change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
+- If the user asks to disable a numeric setting while keeping the exercise, set a neutral value such as 0.
 - You may add valid optional exercise fields when the requested change needs them.`;
 
   const programPrompt = outputLanguage => [
@@ -11650,6 +11651,18 @@ function carryMedia(oldProg, newProg, diff){
   return carried;
 }
 
+// Счётчик «сколько раз выполнено до проверки повышения» (ex.ps.n) — у того же
+// упражнения после правки он продолжается, а не начинается с нуля. Текущие
+// значения (ps.cur) не переносим: ИИ получил их в тексте программы
+// (programToText forEdit) и вернул как новую базу — иначе прибавка
+// посчиталась бы дважды.
+function carryProgressCounters(diff){
+  diff.matches.forEach(({oldEx, newEx}) => {
+    const n = Math.max(0, Math.round(+(oldEx.ps && oldEx.ps.n) || 0));
+    if(n > 0) newEx.ps = {n, cur: {}};
+  });
+}
+
 // расчётная (не по истории) длительность одного варианта — используется только
 // для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
 // и та же основа: реальная история новой программы всегда пуста (свежий id), а у
@@ -11667,10 +11680,19 @@ function editSummaryText(diff, oldProg, newProg){
   if(diff.added.length) bits.push(t('ai.editAdded', {names: diff.added.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
   if(diff.removed.length) bits.push(t('ai.editRemoved', {names: diff.removed.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
   if(diff.moved > 0) bits.push(t('ai.editReordered'));
-  const before = structuralMinutes(oldProg, 0), after = structuralMinutes(newProg, 0);
-  // порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%
-  const notable = before > 0 && Math.abs(after - before) > (before <= 20 ? 5 : Math.max(5, before * 0.2));
-  if(notable) bits.push(t('ai.editTimeChanged', {before, after}));
+  // сравниваем КАЖДЫЙ вариант (Пн/Чт…): ИИ мог раздуть только один из них.
+  // Вариант, которого до правки не было или который убрали, в сравнение не
+  // идёт — его упражнения уже названы выше как добавленные/убранные.
+  // Порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%.
+  const n = Math.min(normPlans(oldProg).length, normPlans(newProg).length);
+  let worst = null;
+  for(let i = 0; i < n; i++){
+    const before = structuralMinutes(oldProg, i), after = structuralMinutes(newProg, i);
+    const d = Math.abs(after - before);
+    const notable = before > 0 && d > (before <= 20 ? 5 : Math.max(5, before * 0.2));
+    if(notable && (!worst || d > worst.d)) worst = {before, after, d};
+  }
+  if(worst) bits.push(t('ai.editTimeChanged', {before: worst.before, after: worst.after}));
   return bits.join('');
 }
 
@@ -11706,6 +11728,7 @@ async function createEditedProgram(){
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
   carryMedia(editAIProg, program, diff);
+  carryProgressCounters(diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;
   if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
@@ -14074,6 +14097,10 @@ function progressedRepsRange(pid, ex, program){
   const r = psReps(ex);
   const ceil = progCeil(ex, 'reps');
   let min = r.min, max = r.max;
+  // при двойной прогрессии цель — одно число (8 → 9 → … → потолок, затем +вес
+  // и снова 8), а диапазон из ЗНАЧЕНИЯ служит только рамками; без этого первый
+  // круг показывал «8-12», а следующие — одиночные числа
+  if(isDualProg(ex)) max = min;
   if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
   min = Math.max(1, min);
   max = Math.max(min, max);

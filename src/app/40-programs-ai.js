@@ -2534,6 +2534,18 @@ function carryMedia(oldProg, newProg, diff){
   return carried;
 }
 
+// Счётчик «сколько раз выполнено до проверки повышения» (ex.ps.n) — у того же
+// упражнения после правки он продолжается, а не начинается с нуля. Текущие
+// значения (ps.cur) не переносим: ИИ получил их в тексте программы
+// (programToText forEdit) и вернул как новую базу — иначе прибавка
+// посчиталась бы дважды.
+function carryProgressCounters(diff){
+  diff.matches.forEach(({oldEx, newEx}) => {
+    const n = Math.max(0, Math.round(+(oldEx.ps && oldEx.ps.n) || 0));
+    if(n > 0) newEx.ps = {n, cur: {}};
+  });
+}
+
 // расчётная (не по истории) длительность одного варианта — используется только
 // для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
 // и та же основа: реальная история новой программы всегда пуста (свежий id), а у
@@ -2551,10 +2563,19 @@ function editSummaryText(diff, oldProg, newProg){
   if(diff.added.length) bits.push(t('ai.editAdded', {names: diff.added.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
   if(diff.removed.length) bits.push(t('ai.editRemoved', {names: diff.removed.map(e => e.name || t('common.exerciseFallback')).join(', ')}));
   if(diff.moved > 0) bits.push(t('ai.editReordered'));
-  const before = structuralMinutes(oldProg, 0), after = structuralMinutes(newProg, 0);
-  // порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%
-  const notable = before > 0 && Math.abs(after - before) > (before <= 20 ? 5 : Math.max(5, before * 0.2));
-  if(notable) bits.push(t('ai.editTimeChanged', {before, after}));
+  // сравниваем КАЖДЫЙ вариант (Пн/Чт…): ИИ мог раздуть только один из них.
+  // Вариант, которого до правки не было или который убрали, в сравнение не
+  // идёт — его упражнения уже названы выше как добавленные/убранные.
+  // Порог как в самой генерации: короткие тренировки — ±5 минут, длинные — ±20%.
+  const n = Math.min(normPlans(oldProg).length, normPlans(newProg).length);
+  let worst = null;
+  for(let i = 0; i < n; i++){
+    const before = structuralMinutes(oldProg, i), after = structuralMinutes(newProg, i);
+    const d = Math.abs(after - before);
+    const notable = before > 0 && d > (before <= 20 ? 5 : Math.max(5, before * 0.2));
+    if(notable && (!worst || d > worst.d)) worst = {before, after, d};
+  }
+  if(worst) bits.push(t('ai.editTimeChanged', {before: worst.before, after: worst.after}));
   return bits.join('');
 }
 
@@ -2590,6 +2611,7 @@ async function createEditedProgram(){
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
   carryMedia(editAIProg, program, diff);
+  carryProgressCounters(diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
   if(!program.time && editAIProg.time) program.time = editAIProg.time;
   if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;

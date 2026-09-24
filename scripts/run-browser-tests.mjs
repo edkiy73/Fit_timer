@@ -26,7 +26,7 @@ export const BROWSER_TESTS = [
   'csp', 'parse-flat', 'start-overview', 'workout-resume', 'profile-switch', 'quick-finish', 'update-banner',
   'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow',
   'limits', 'link-length', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
-  'report-auto', 'report-detail', 'prog-check-flow', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
+  'report-auto', 'report-detail', 'prog-check-flow', 'ai-edit-carry', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
 ];
 // Не тесты: сервер и общий хелпер.
 const NOT_TESTS = new Set(['dev-server']);
