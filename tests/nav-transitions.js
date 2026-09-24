@@ -247,11 +247,7 @@ async function scenario(ctx, name, fn, errs){
     ok('системный Back спрашивает про несохранённое', await page.isVisible('#dlgCancel'));
     await page.click('#dlgCancel');
     await nap(page, 400);
-    {
-      const s = await state(page);
-      ok('после «Остаться»: видимый экран', s.screen === 'scrBuilder', JSON.stringify(s));
-      ok('после «Остаться»: history совпадает с экраном', s.historyScreen === 'scrBuilder', JSON.stringify(s));
-    }
+    await aligned(page, 'после «Остаться»', 'scrBuilder');
     await page.goBack();
     await nap(page, 300);
     ok('повторный Back снова спрашивает', await page.isVisible('#dlgOk'));
@@ -378,16 +374,14 @@ async function scenario(ctx, name, fn, errs){
     await page.evaluate(() => {
       goTab('scrPrograms');
       const p = customPrograms.find(x => x.id === 'nav-live-workout');
-      openStart(p);
-      state.current = customToProgram(p, 0);
-      startWorkout();
-      const at = state.steps.findIndex(s => s && s.exName);
-      if(at >= 0){
-        state.stepIdx = at;
-        renderStep();
-      }
-      const prep = $('prepOverlay');
-      if(prep) prep.classList.remove('on');
+      state.raw = p;
+      state.planIdx = 0;
+      state.current = {sourceId:p.id, title:p.name, cycle:[], warmup:[], rounds:1};
+      state.steps = [{phase:'work', kind:'click', exName:'Присед', exId:'nav-live-workout-e1', title:'Присед', reps:'10'}];
+      state.stepIdx = 0;
+      state.live = true;
+      state.paused = false;
+      show('scrWork');
       editExerciseFromWorkout();
     });
     await nap(page, 500);
