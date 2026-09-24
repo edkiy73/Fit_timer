@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FitAudioPlugin.class);
         registerPlugin(FitSystemPlugin.class);
         registerPlugin(FitBiometricPlugin.class);
+        registerPlugin(FitWorkoutPlugin.class);
         super.onCreate(savedInstanceState);
         applySystemFontScale();
     }
