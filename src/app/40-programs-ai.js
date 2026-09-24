@@ -1322,7 +1322,7 @@ const AI_SOURCES = {
     apply:  ()=> exaAddExercise(),
     dirty: ['exaWish', 'exaContext', 'aiResult'],
     manual: ()=> addExManual(),
-    back:  ()=> show('scrBuilder')
+    back:  ()=> goBackTo('scrBuilder')
   },
   exEdit: {
     kind: 'exercise.modify',
