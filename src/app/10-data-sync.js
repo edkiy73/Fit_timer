@@ -1641,8 +1641,9 @@ function sessionKey(){ return pk('workoutSession'); }
 async function saveSession(){
   const raw = state.raw, cur = state.current;
   if(!raw || !cur || !state.steps.length) return;
+  const pausedNow = state.paused && state.pausedAt ? Math.max(0, Date.now() - state.pausedAt) : 0;
   const elapsed = state.globalStart
-    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal)
+    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal - pausedNow)
     : 0;
   const data = {
     pid: raw.id,
