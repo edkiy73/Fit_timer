@@ -1773,7 +1773,7 @@ async function pregnancyWarning(){
     t('pregnancy.warning'),
     {confirm:true,okText:t('common.ok'),cancelText:t('common.details')}
   );
-  if(!go) openLegal('health', ()=> openAI('text'));
+  if(!go) openLegal('health', ()=> goBackTo('scrAI'));
 }
 
 const Q_OPTS = {
