@@ -11,7 +11,11 @@ const required = [
   'android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/FitBiometricPlugin.java',
+  'android/app/src/main/java/ru/fittimer/app/FitWorkoutPlugin.java',
+  'android/app/src/main/java/ru/fittimer/app/WorkoutNotifications.java',
+  'android/app/src/main/java/ru/fittimer/app/WorkoutAlarmReceiver.java',
   'ios/App/App/FitBiometricPlugin.swift',
+  'ios/App/App/FitWorkoutPlugin.swift',
   'ios/App/App/Info.plist'
 ];
 for(const file of required) await access(file);
@@ -30,6 +34,7 @@ if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal'
 if(!mobileBridge.includes('installUpdate') || !mobileBridge.includes('resumeUpdateInstall')) throw new Error('Native direct-update bridge is incomplete');
 if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app review bridge is missing');
 if(!mobileBridge.includes('biometricStatus') || !mobileBridge.includes('authenticateBiometric')) throw new Error('Native biometric bridge is missing');
+if(!mobileBridge.includes('updateWorkoutState') || !mobileBridge.includes('clearWorkoutState')) throw new Error('Native workout-state bridge is missing');
 if(!mobileBridge.includes('appUrlOpen') || !mobileBridge.includes('getLaunchUrl') || !mobileBridge.includes('consumeProgramLink')) throw new Error('Native App Link bridge is incomplete');
 const manifest = await readFile('android/app/src/main/AndroidManifest.xml', 'utf8');
 const directManifest = await readFile('android/app/src/direct/AndroidManifest.xml', 'utf8');
