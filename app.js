@@ -16210,7 +16210,7 @@ function syncNativeWorkoutState(step, endsAt){
     phase: step.phase === 'rest' ? 'rest' : 'work',
     phaseLabel: paused ? t('workout.pause') : (step.phase === 'rest' ? t('workout.rest') : t('workout.exercise')),
     current: step.phase === 'rest' ? t('workout.rest') : (step.title || step.exName || t('workout.exercise')),
-    next: nextName,
+    next: nextName ? t('workout.next') + ' · ' + nextName : '',
     meta,
     paused,
     timed,
