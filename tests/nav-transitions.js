@@ -328,6 +328,26 @@ async function boot(browser, errs){
     await page.close();
   }
 
+  // ---- обычный Finish -> Готово: старые Work/Start не остаются под Сегодня ----
+  {
+    const page = await boot(b, errs);
+    await page.evaluate(async () => {
+      openStart(customPrograms.find(x=>x.id==='nav-audit'));
+      $('btnStart').click();
+      await new Promise(r => setTimeout(r, 500));
+      state.globalStart = Date.now() - 120000;
+      state.pausedTotal = 0;
+      finishWorkout();
+    });
+    await pause(page,900);
+    let s = await nav(page);
+    ok('обычная тренировка приходит на Finish', s.screen === 'scrFinish', JSON.stringify(s));
+    await page.click('#btnAgain'); await pause(page,650);
+    s = await nav(page);
+    ok('Готово с Finish схлопывает Start/Work и ведёт на Сегодня', good(s,'scrMenu',0), JSON.stringify(s));
+    await page.close();
+  }
+
   // ---- системный Back во время тренировки: попап, затем чистый выход на Сегодня ----
   {
     const page = await boot(b, errs);
