@@ -472,7 +472,11 @@ function advanceExerciseProgression(ex){
     const repsStep = progStepSize(ex, 'reps') || 1;
     const curReps = psReps(ex).min;
     const next = curReps + repsStep;
-    if(repsCeil != null && next > repsCeil){
+    if(repsCeil != null && next > repsCeil && psKg(ex) <= 0){
+      // вес ещё не выбран — прибавлять не к чему (см. getExProgValue): повторы
+      // остаются на потолке, пока человек не задаст вес на экране старта
+      ex.ps.cur.reps = String(repsCeil);
+    } else if(repsCeil != null && next > repsCeil){
       const weightCeil = progCeil(ex, 'weight');
       const nextKg = psKg(ex) + progStepSize(ex, 'weight');
       ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
@@ -509,6 +513,32 @@ function advanceExerciseProgression(ex){
       ex.ps.cur.kg = progRound('weight', ceil != null ? Math.min(ceil, next) : next);
     }
   }
+}
+
+// База упражнения (числа, которые задают человек в конструкторе или ИИ) поменялась —
+// прежняя фактическая нагрузка ex.ps.cur к ней больше не относится: новые числа и
+// есть текущая нагрузка, иначе правка значения/веса в конструкторе просто не
+// действовала бы, пока прогрессия уже сдвинула cur. Счётчик до проверки (n)
+// сохраняем — упражнение то же. База не менялась (правили описание, отдых,
+// подходы, название) — прогресс переносится целиком.
+function progBaseKey(ex){
+  return [ex.type === 'time' ? 'time' : 'reps', hasWeight(ex) ? 1 : 0,
+    normValue(ex.value, ex.type), +ex.weight || 0, ex.dualProg ? 1 : 0].join('|');
+}
+function carryExerciseProgress(oldEx, newEx){
+  if(!newEx) return newEx;
+  if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
+  if(progBaseKey(oldEx) === progBaseKey(newEx)) newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
+  else newEx.ps = {n: Math.max(0, Math.round(+oldEx.ps.n || 0)), cur: {}};
+  return newEx;
+}
+// копия упражнения — отдельное упражнение: свой id (по нему сопоставляются
+// правки ИИ и отметки «тяжело» на экране финала) и прогресс с нуля
+function cloneExerciseAsNew(ex){
+  const c = JSON.parse(JSON.stringify(ex));
+  c.id = newExId();
+  delete c.ps;
+  return c;
 }
 
 // вес отдельно — то же самое, но только для оси «вес» (используется в старых местах интерфейса).
@@ -1207,7 +1237,9 @@ function exDirty(){
 }
 
 function commitExercise(){
-  return applyFormTo(exDraft);
+  const old = (curPlan().exercises || [])[exIdx];
+  const upd = applyFormTo(exDraft);
+  return old ? carryExerciseProgress(old, upd) : upd;
 }
 
 // Разминка выполняется один раз ДО кругов, где бы она ни лежала в списке
@@ -1311,7 +1343,7 @@ function dupExerciseAt(i){
       : t('builder.mainLimit',{count:MAX_MAIN}));
     return;
   }
-  list.splice(i + 1, 0, JSON.parse(JSON.stringify(ex)));
+  list.splice(i + 1, 0, cloneExerciseAsNew(ex));
   renderExList();
 }
 async function delExerciseAt(i){

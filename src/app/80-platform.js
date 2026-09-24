@@ -389,15 +389,21 @@ function notifyPlanFor(p, scheduledPlan){
   const plans = normPlans(p);
   return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
 }
-// вырастет ли нагрузка ХОТЯ БЫ У ОДНОГО упражнения сегодняшнего варианта, если
-// тренировку сегодня выполнить: прогрессия — состояние у каждого упражнения
-// (ex.ps.n), а не общий счётчик программы — см. 60-builder.js
+// выросла ли нагрузка сегодняшнего варианта по сравнению с прошлым разом:
+// прогрессия теперь повышается только после «Да, повышаем» на финише
+// (ex.ps, см. 60-builder.js), поэтому смотрим на факт — текущие значения
+// против снимка нагрузки из последней записи истории этого варианта
 function notifyProgressionChanged(p, scheduledPlan){
   if(!p || !p.progression) return false;
-  const every = Math.max(1, +p.progression || 1);
   const pl = notifyPlanFor(p, scheduledPlan);
-  return ((pl && pl.exercises) || []).some(ex => !ex.warmup && progAxis(ex) !== 'none'
-    && Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)) + 1 >= every);
+  const idx = Math.max(0, normPlans(p).indexOf(pl));
+  const prev = previousWorkoutLoad(p, idx);
+  if(!prev.exact) return false;
+  const byIdx = new Map(prev.rows.map(r => [r.i, r]));
+  return workoutLoadSnapshot(p, idx).some(row => {
+    const before = byIdx.get(row.i);
+    return !!before && before.n === row.n && loadDelta(before, row).dir === 'up';
+  });
 }
 function notifyThirdWorkoutDate(){
   const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));

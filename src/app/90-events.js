@@ -1644,7 +1644,7 @@ function dupExercise(){
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
-  list.splice(exIdx + 1, 0, JSON.parse(JSON.stringify(list[exIdx])));
+  list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   exDraft = null; exIdx = -1; exOrig = '';
   afterExChange();
 }

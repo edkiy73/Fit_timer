@@ -118,6 +118,27 @@ function runWorkout(exercises, every){
   need(getExWeight('p1', ex, {id:'p1'}) === 0, 'weight stays 0 (unset) no matter how many steps are applied');
 }
 
+/* ---- правка упражнения в сборщике/через ИИ: прогресс сохраняется, пока
+   база та же; при смене базы — сброс текущих значений, счётчик остаётся ---- */
+{
+  const old = mkEx('Присед', {value:'10', type:'reps', progOn:true, trackWeight:false, repsStep:1, repsMax:20});
+  old.ps = {n:2, cur:{reps:'13'}};
+  const same = carryExerciseProgress(old, Object.assign(JSON.parse(JSON.stringify(old)), {rest:90, ps:undefined}));
+  need(same.ps && same.ps.cur.reps === '13' && same.ps.n === 2, 'rest-only edit keeps the reached reps');
+  const rebased = carryExerciseProgress(old, Object.assign(JSON.parse(JSON.stringify(old)), {value:'8'}));
+  need(rebased.ps && !rebased.ps.cur.reps && rebased.ps.n === 2, 'new base value drops old current values but keeps the counter');
+  const copy = cloneExerciseAsNew(old);
+  need(copy.id !== old.id && !copy.ps, 'duplicate gets its own id and starts without progress');
+}
+
+/* ---- двойная прогрессия без заданного веса: повторы упираются в потолок,
+   вес из ничего не создаётся ---- */
+{
+  const ex = mkEx('Тяга гантели', {value:'8-12', type:'reps', progOn:true, trackWeight:true, dualProg:true, weight:0, wStep:2, repsStep:1});
+  for(let i = 0; i < 10; i++) advanceExerciseProgression(ex);
+  need(getExWeight('p1', ex, {id:'p1'}) === 0, 'dual progression does not invent a weight from 0');
+}
+
 if(bad){
   console.error('\nFailed:', bad);
   process.exit(1);

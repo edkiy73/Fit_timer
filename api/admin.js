@@ -802,7 +802,7 @@ module.exports = async (req, res) => {
     try{
       const settings=await getSettings();
       const out=await generate('text',settings,prompt);
-      const checked=FitAIProtocol.validateProgramResponse(out.text);
+      const checked=FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true});
       if(!checked.ok)return fail(res,502,'ai_invalid_program',{detail:checked.reason,miss:checked.missing||[]});
       const fields=translationFieldsFromText(checked.text);
       const locale=cleanLocaleBlock({

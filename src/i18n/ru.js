@@ -985,7 +985,7 @@ const I18N_RU = {
   'notify.returnTitle': "Fit Timer ждёт",
   'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
   'notify.progressTitle': "Сегодня нагрузка выше",
-  'notify.progressBody': "В «{name}» сегодня можно повысить нагрузку. Проверь новые повторы, время или вес перед стартом.",
+  'notify.progressBody': "В «{name}» сегодня нагрузка выше. Проверь новые повторы, время или вес перед стартом.",
   'notify.unfinishedTitle': "Продолжить тренировку?",
   'notify.unfinishedBody': "«{name}» осталась незавершённой. Можно вернуться с сохранённого места.",
   'notify.premiumTitle': "Больше возможностей Fit Timer",

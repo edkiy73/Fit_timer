@@ -197,6 +197,14 @@ function startWorkout(fromIdx, elapsed){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  // Упражнения, до которых тренировка реально дошла: только они считаются
+  // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
+  // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
+  // упражнения» — пропущенные до него не в счёт.
+  state.reachedEx = new Set();
+  if(state.resumeElapsed > 0){
+    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exName || s.title); });
+  }
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -297,6 +305,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -881,11 +890,15 @@ function commitFinish(ctx){
       const eligible = [];
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
+        // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
+        if(state.reachedEx && !state.reachedEx.has(ex.name)) return;
         const ps = ensurePs(ex);
         ps.n++;
-        if(ps.n >= every) eligible.push(ex);
+        if(ps.n >= every) eligible.push(ex.id);
       });
-      if(eligible.length) state.progCheck = {pid: p.id, exercises: eligible, hard: new Set()};
+      // храним id, а не сами объекты: пока открыт экран финала, синхронизация
+      // может заменить customPrograms новыми объектами (см. progCheckExercises)
+      if(eligible.length) state.progCheck = {pid: p.id, ids: eligible, hard: new Set()};
     }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
@@ -908,9 +921,17 @@ function commitFinish(ctx){
 /* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
 // Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
 // (см. p.progression), и ни одно ещё не отмечено «тяжело».
+function progCheckExercises(chk){
+  const p = chk && customPrograms.find(x => x.id === chk.pid);
+  if(!p) return [];
+  const all = [];
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => all.push(ex)));
+  return chk.ids.map(id => all.find(ex => ex.id === id)).filter(Boolean);
+}
 function renderProgCheck(){
   const chk = state.progCheck;
-  const on = !!(chk && chk.exercises.length);
+  const exercises = progCheckExercises(chk);
+  const on = exercises.length > 0;
   setShown('finProgCheck', on);
   setShown('finProgCheckList', false);
   if(!on) return;
@@ -918,7 +939,7 @@ function renderProgCheck(){
   setShown('finProgCheckDone', false);
   const box = $('finProgCheckList');
   box.innerHTML = '';
-  chk.exercises.forEach(ex => {
+  exercises.forEach(ex => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
@@ -938,16 +959,19 @@ function toggleProgCheckList(){
 // вернётся после следующей тренировки, где это упражнение снова встретится.
 async function applyProgCheck(){
   const chk = state.progCheck;
-  if(!chk || !chk.exercises.length) return;
-  chk.exercises.forEach(ex => {
+  if(!chk) return;
+  // сразу снимаем проверку и прячем кнопку: второй быстрый тап не должен
+  // добавить ещё один шаг, пока идёт сохранение
+  state.progCheck = null;
+  setShown('finProgCheckAsk', false);
+  setShown('finProgCheckList', false);
+  setShown('finProgCheckDone', true);
+  progCheckExercises(chk).forEach(ex => {
     if(chk.hard.has(ex.id)) return;
     advanceExerciseProgression(ex);
     ensurePs(ex).n = 0;
   });
   await savePrograms();
-  setShown('finProgCheckAsk', false);
-  setShown('finProgCheckList', false);
-  setShown('finProgCheckDone', true);
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.

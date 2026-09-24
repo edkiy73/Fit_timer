@@ -2230,8 +2230,10 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
-  // это правка, а не замена: то же самое упражнение сохраняет свой id
+  // это правка, а не замена: то же самое упражнение сохраняет свой id, а
+  // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
   upd.id=oldEx.id;
+  carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
   $('aiResult').value='';
   await afterExChange();
@@ -2425,6 +2427,11 @@ let editAIProg = null; // программа-исходник
 // новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
 function exCurrentValueText(p, ex){
   if(ex.type === 'time') return String(getExProgValue(p.id, ex, p, 'time'));
+  // двойная прогрессия: текущие повторы — одна точка внутри диапазона. Отдать
+  // её как новую базу значит потерять низ диапазона, к которому повторы
+  // сбрасываются при прибавке веса. Отдаём диапазон как есть — после правки
+  // повторы начнут цикл снизу с текущим (уже выросшим) весом.
+  if(isDualProg(ex)) return valueText(ex.value).replace('–', '-');
   return progressedRepsRange(p.id, ex, p).replace('–', '-');
 }
 

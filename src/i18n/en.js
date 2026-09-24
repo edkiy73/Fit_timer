@@ -985,7 +985,7 @@ const I18N_EN = {
   'notify.returnTitle': "Fit Timer is waiting",
   'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
   'notify.progressTitle': "Your load is higher today",
-  'notify.progressBody': "“{name}” may get a higher load today. Check the new reps, time, or weight before you start.",
+  'notify.progressBody': "“{name}” has a higher load today. Check the new reps, time, or weight before you start.",
   'notify.unfinishedTitle': "Continue your workout?",
   'notify.unfinishedBody': "“{name}” is unfinished. You can continue from where you left off.",
   'notify.premiumTitle': "Get more from Fit Timer",

@@ -1180,7 +1180,11 @@ async function commitWeightModal(){
   if(!ex) return;
   const kg = parseKg($('weightModalInput').value);
   if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
-  if(weightPending(ex)) ex.weight = kg;
+  if(weightPending(ex)){
+    ex.weight = kg;
+    // первая база веса: никаких «накопленных» кг поверх неё быть не может
+    if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+  }
   else setExWeight(ex, kg);
   await savePrograms();
   renderStartOverview();

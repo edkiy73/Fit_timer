@@ -35,21 +35,31 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await savePrograms();
   });
 
-  const run = async () => {
-    await page.evaluate(async () => {
+  // reach=false — тренировку завершили, не дойдя до упражнения: оно не
+  // считается выполненным и не участвует в проверке прогресса
+  const run = async (reach = true) => {
+    await page.evaluate(async (reach) => {
       openStart(customPrograms.find(x => x.id === 'pc'));
       $('btnStart').click();
       await new Promise(r => setTimeout(r, 500));
+      state.reachedEx = new Set();
+      if(reach) normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises.forEach(ex => state.reachedEx.add(ex.name));
       state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
       finishWorkout();
       document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
-    });
+    }, reach);
     await page.waitForTimeout(1200);
   };
   const reps = () => page.evaluate(() => {
     const ex = normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises[0];
     return getExProgValue('pc', ex, customPrograms.find(x => x.id === 'pc'), 'reps');
   });
+
+  // ---- тренировка 0: до упражнения не дошли — счётчик не растёт, вопроса нет ----
+  await run(false);
+  ok('недостигнутое упражнение не попадает в проверку', !(await page.isVisible('#finProgCheck')));
+  ok('счётчик недостигнутого упражнения не растёт', (await page.evaluate(() =>
+    +((normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises[0].ps || {}).n || 0))) === 0);
 
   // ---- тренировка 1: порог достигнут (progression=1), нагрузка НЕ растёт сама ----
   await run();

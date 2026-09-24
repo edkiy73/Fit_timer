@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1292,
-      "chars": 62589,
+      "lines": 1296,
+      "chars": 62721,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -360,8 +360,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2872,
-      "chars": 131743,
+      "lines": 2876,
+      "chars": 132058,
       "symbols": [
         "add",
         "ageError",
@@ -430,7 +430,6 @@
         "imageCoverTone",
         "imageEquipment",
         "imageGenerationGuard",
-        "imageLocalMotionExercise",
         "imageMuscleRegions",
         "imageProgramContext",
         "imageProgramName",
@@ -584,8 +583,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2069,
-      "chars": 95500,
+      "lines": 2101,
+      "chars": 97095,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -601,8 +600,10 @@
         "blankExercise",
         "blankPlan",
         "buildPlanTabs",
+        "carryExerciseProgress",
         "clampProgEvery",
         "cleanup",
+        "cloneExerciseAsNew",
         "commitExercise",
         "commitPlanFields",
         "composeRequest",
@@ -659,6 +660,7 @@
         "pregnancyWarning",
         "progAtCeiling",
         "progAxis",
+        "progBaseKey",
         "progBaseValue",
         "progCeil",
         "progFloor",
@@ -706,8 +708,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1533,
-      "chars": 70590,
+      "lines": 1557,
+      "chars": 71932,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -749,6 +751,7 @@
         "playFinishFx",
         "prep",
         "prevStep",
+        "progCheckExercises",
         "pruneBadges",
         "refreshDetailsFade",
         "refreshLiveSteps",
@@ -782,8 +785,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 602,
-      "chars": 28424,
+      "lines": 608,
+      "chars": 28643,
       "symbols": [
         "add",
         "advance",
@@ -821,7 +824,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2170,
-      "chars": 90311,
+      "chars": 90303,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -973,8 +976,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 637,
-      "chars": 41778,
+      "lines": 638,
+      "chars": 41911,
       "ids": [
         "aiActions",
         "aiAnswer",
