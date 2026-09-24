@@ -712,7 +712,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1646,
-      "chars": 76266,
+      "chars": 76270,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
