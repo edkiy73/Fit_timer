@@ -90,7 +90,7 @@ async function resumeWorkoutFromNativeNotification(){
     else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
   }
 
-  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline});
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline, sessionId:s.sessionId});
   return true;
 }
 
@@ -102,7 +102,7 @@ $('startResume').onclick = ()=>{
   // Сначала восстанавливаем вариант, затем строим его шаги в startWorkout().
   state.planIdx = s.planIdx;
   state.current = customToProgram(state.raw, state.planIdx);
-  startWorkout(s.stepIdx, s.elapsed);
+  startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId});
 };
 $('startFresh').onclick = async ()=>{
   $('startModal').classList.remove('open');

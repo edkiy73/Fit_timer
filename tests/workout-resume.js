@@ -52,11 +52,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     state.stepDeadline = Date.now() + 42000;
     state.remaining = 42;
     prepSec = 0;
+    state.workoutSessionId = 'test-session-inactivity';
     await saveSession();
 
     const saved = await loadSession();
     if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
       throw new Error('timer recovery fields were not saved');
+    }
+    if(saved.sessionId !== 'test-session-inactivity'){
+      throw new Error('workout session id was not saved for inactivity reminder');
     }
     // The saved resume point below is a reps step; keep that session realistic after
     // separately proving that timer recovery fields persist.

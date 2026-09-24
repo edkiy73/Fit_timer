@@ -195,6 +195,10 @@ function startWorkout(fromIdx, elapsed, options){
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
+  state.workoutSessionId = String(opts.sessionId || state.workoutSessionId || '');
+  if(!state.workoutSessionId){
+    state.workoutSessionId = 'ws_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+  }
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
   state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
@@ -310,11 +314,16 @@ function syncNativeWorkoutState(step, endsAt){
   if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
   const next = nextNativeWorkStep();
   const paused = !!state.paused;
-  const timed = !paused && Number(endsAt) > Date.now() + 100;
+  const now = Date.now();
+  const timed = !paused && Number(endsAt) > now + 100;
   const nextName = next ? (next.title || next.exName || '') : '';
   const meta = (($('roundLabel') && $('roundLabel').textContent) || '').trim();
+  // A running timer is intentional activity. Start the 20-minute "forgotten workout"
+  // window after that timer should finish, not in the middle of a long timed exercise.
+  const inactivityBase = timed ? Number(endsAt) : now;
   window.FitNative.updateWorkoutState({
     active: true,
+    sessionId: String(state.workoutSessionId || ''),
     workoutTitle: (state.current && state.current.title) || 'Fit Timer',
     phase: step.phase === 'rest' ? 'rest' : 'work',
     phaseLabel: paused ? t('workout.pause') : (step.phase === 'rest' ? t('workout.rest') : t('workout.exercise')),
@@ -326,7 +335,10 @@ function syncNativeWorkoutState(step, endsAt){
     startedAt: timed ? Date.now() : 0,
     endsAt: timed ? Number(endsAt) : 0,
     alertTitle: t('notify.timerDoneTitle'),
-    alertBody: nextName ? t('notify.timerDoneNext',{name:nextName}) : t('notify.timerDoneBody')
+    alertBody: nextName ? t('notify.timerDoneNext',{name:nextName}) : t('notify.timerDoneBody'),
+    inactivityAt: inactivityBase + 20 * 60 * 1000,
+    inactivityTitle: t('notify.activeForgotTitle'),
+    inactivityBody: t('notify.activeForgotBody')
   });
   autosaveNativeWorkoutSession(40);
 }
@@ -1055,6 +1067,7 @@ function settleQuickFinish(keep){
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
+  state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
@@ -1615,6 +1628,7 @@ function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 function tearDownWorkout(){
   state.live = false;
+  state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
   if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();

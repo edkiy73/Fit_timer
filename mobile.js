@@ -13,11 +13,14 @@
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
   const PLAN_NOTIFICATION_MAX = 902999;
+  const WORKOUT_INACTIVITY_NOTIFICATION_ID = 903010;
+  const WORKOUT_INACTIVITY_STATE_KEY = 'fitWorkoutInactivityV1';
   let speechResultHandle = null;
   let speechErrorHandle = null;
   let speechHeardHandle = null;
   let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
+  let localNotificationListenersInstalled = false;
   let pendingProgramLink = '';
   let pendingWorkoutResume = false;
   let appInactiveAt = 0;
@@ -85,11 +88,94 @@
     pushNotifications.addListener('registration',token=>{try{window.dispatchEvent(new CustomEvent('fitRemotePushToken',{detail:{token:String((token&&token.value)||''),platform:(cap.getPlatform&&cap.getPlatform())||''}}));}catch(_){}});
     pushNotifications.addListener('pushNotificationActionPerformed',event=>{const n=(event&&event.notification)||{};try{window.dispatchEvent(new CustomEvent('fitNotificationAction',{detail:{notification:{extra:n.data||{},data:n.data||{}},remote:true}}));}catch(_){}});
   }
+
+  function readWorkoutInactivityState(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(WORKOUT_INACTIVITY_STATE_KEY) || '{}');
+      return raw && typeof raw === 'object' ? raw : {};
+    }catch(_){ return {}; }
+  }
+
+  function writeWorkoutInactivityState(value){
+    try{ localStorage.setItem(WORKOUT_INACTIVITY_STATE_KEY, JSON.stringify(value || {})); }catch(_){}
+  }
+
+  function installLocalNotificationListeners(){
+    const local = plugins.LocalNotifications;
+    if(localNotificationListenersInstalled || !native || !local || !local.addListener) return;
+    localNotificationListenersInstalled = true;
+    local.addListener('localNotificationActionPerformed', event=>{
+      const n = (event && event.notification) || {};
+      const extra = n.extra || n.data || {};
+      if(extra && extra.fitAction === 'resumeWorkout'){
+        const st = readWorkoutInactivityState();
+        if(!extra.sessionId || st.sessionId === extra.sessionId){
+          st.fired = true;
+          writeWorkoutInactivityState(st);
+        }
+        pendingWorkoutResume = true;
+        try{ window.dispatchEvent(new CustomEvent('fitWorkoutResumeRequest')); }catch(_){}
+        return;
+      }
+      try{ window.dispatchEvent(new CustomEvent('fitNotificationAction',{detail:{notification:{extra,data:extra},remote:false}})); }catch(_){}
+    });
+  }
+
+  async function clearIosWorkoutInactivity(resetState){
+    if(!native || !plugins.LocalNotifications || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
+    try{ await plugins.LocalNotifications.cancel({notifications:[{id:WORKOUT_INACTIVITY_NOTIFICATION_ID}]}); }catch(_){}
+    try{
+      if(plugins.LocalNotifications.removeDeliveredNotificationsById){
+        await plugins.LocalNotifications.removeDeliveredNotificationsById({ids:[WORKOUT_INACTIVITY_NOTIFICATION_ID]});
+      }
+    }catch(_){}
+    if(resetState) writeWorkoutInactivityState({});
+  }
+
+  async function syncIosWorkoutInactivity(payload){
+    if(!native || !plugins.LocalNotifications || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
+    installLocalNotificationListeners();
+    const sessionId = String((payload && payload.sessionId) || '');
+    const at = Math.max(0, Number(payload && payload.inactivityAt) || 0);
+    if(!sessionId || !at){
+      await clearIosWorkoutInactivity(false);
+      return;
+    }
+
+    let st = readWorkoutInactivityState();
+    if(st.sessionId !== sessionId) st = {sessionId, scheduledAt:0, fired:false};
+    // If the previous deadline has already passed, that was this workout's one reminder.
+    // Do not arm a second one when the user later returns and performs another action.
+    if(!st.fired && Number(st.scheduledAt) > 0 && Date.now() >= Number(st.scheduledAt)) st.fired = true;
+
+    await clearIosWorkoutInactivity(false);
+    if(st.fired){
+      writeWorkoutInactivityState(st);
+      return;
+    }
+
+    st.scheduledAt = at;
+    writeWorkoutInactivityState(st);
+    if(at <= Date.now() + 1000) return;
+    try{
+      await plugins.LocalNotifications.schedule({notifications:[{
+        id: WORKOUT_INACTIVITY_NOTIFICATION_ID,
+        title: String(payload.inactivityTitle || 'Fit Timer'),
+        body: String(payload.inactivityBody || ''),
+        schedule: {at:new Date(at)},
+        sound: '',
+        interruptionLevel: 'active',
+        extra: {kind:'workout-inactivity', fitAction:'resumeWorkout', sessionId}
+      }]});
+    }catch(_){}
+  }
   async function registerRemotePush(requestPermission){
     if(!native||!pushNotifications)return false;
     installRemotePushListeners();
     try{let p=await pushNotifications.checkPermissions();if(p.receive==='prompt'&&requestPermission)p=await pushNotifications.requestPermissions();if(p.receive!=='granted')return false;await pushNotifications.register();return true;}catch(_){return false;}
   }
+
+  installLocalNotificationListeners();
 
   async function requestNotifications(){
     if(!native || !plugins.LocalNotifications) return false;
@@ -165,11 +251,15 @@
 
   async function updateWorkoutState(payload){
     if(!native || !fitWorkout || !fitWorkout.update) return false;
-    try{ await fitWorkout.update(payload || {}); return true; }catch(_){ return false; }
+    let ok = true;
+    try{ await fitWorkout.update(payload || {}); }catch(_){ ok = false; }
+    try{ await syncIosWorkoutInactivity(payload || {}); }catch(_){}
+    return ok;
   }
 
   async function clearWorkoutState(){
     if(!native || !fitWorkout || !fitWorkout.clear) return false;
+    try{ await clearIosWorkoutInactivity(true); }catch(_){}
     try{ await fitWorkout.clear(); return true; }catch(_){ return false; }
   }
 
