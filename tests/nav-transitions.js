@@ -244,11 +244,46 @@ async function boot(browser, errs){
     let s = await nav(page);
     ok('Start из Тренировок возвращается в Тренировки', good(s,'scrPrograms',1), JSON.stringify(s));
 
-    await page.evaluate(() => { goTab('scrMenu'); openStart(customPrograms.find(x=>x.id==='nav-audit')); });
+    // goTab('scrMenu') из корневой вкладки использует history.go(), то есть
+    // переход асинхронный. В реальном UI следующий тап возможен только после него.
+    await page.evaluate(() => goTab('scrMenu'));
+    await pause(page,450);
+    await page.evaluate(() => openStart(customPrograms.find(x=>x.id==='nav-audit')));
     await pause(page,300);
     await page.click('#startBackTop'); await pause(page,450);
     s = await nav(page);
     ok('Start с Сегодня возвращается на Сегодня', good(s,'scrMenu',0), JSON.stringify(s));
+    await page.close();
+  }
+
+  // ---- глубокий экран -> другой root: старый стек должен физически схлопнуться ----
+  {
+    const page = await boot(b, errs);
+    const baseLen = await page.evaluate(() => history.length);
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-audit'); });
+    await pause(page,350);
+    await page.evaluate(() => goTab('scrAccount'));
+    await pause(page,600);
+    let s = await nav(page);
+    const collapsedLen = await page.evaluate(() => history.length);
+    ok('из глубины в другой root приходит с чистым стеком', good(s,'scrAccount',1), JSON.stringify(s));
+    ok('старый deep forward-хвост обрезан новым root push', collapsedLen === baseLen + 1, baseLen + ' → ' + collapsedLen);
+    await page.goBack(); await pause(page,400);
+    s = await nav(page);
+    ok('один Back после deep→root ведёт на Сегодня', good(s,'scrMenu',0), JSON.stringify(s));
+    await page.close();
+  }
+
+  // ---- картинки программы — обычный вложенный экран Builder ----
+  {
+    const page = await boot(b, errs);
+    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-audit'); openImages(); });
+    await pause(page,350);
+    let s = await nav(page);
+    ok('Картинки открываются поверх Builder', good(s,'scrImages',3), JSON.stringify(s));
+    await page.click('#imgBackTop'); await pause(page,400);
+    s = await nav(page);
+    ok('назад из Картинок возвращает ровно в Builder', good(s,'scrBuilder',2), JSON.stringify(s));
     await page.close();
   }
 
@@ -310,6 +345,30 @@ async function boot(browser, errs){
     s = await nav(page);
     ok('завершить без сохранения ведёт на Сегодня без modal-хвоста', good(s,'scrMenu',0) && s.modals.length===0, JSON.stringify(s));
     await page.close();
+  }
+
+  // ---- первый запуск: Onboarding сам является корнем history ----
+  {
+    const ctx = await b.newContext({viewport:{width:412,height:900}, locale:'ru-RU'});
+    const page = await ctx.newPage();
+    page.on('pageerror', e => errs.push(String(e)));
+    await page.goto(BASE + '/index.html', {waitUntil:'load'});
+    await pause(page,1800);
+    let s = await nav(page);
+    ok('Onboarding записан как корень history', good(s,'scrOnboard',0), JSON.stringify(s));
+
+    await page.click('#obLegal1'); await pause(page,350);
+    s = await nav(page);
+    ok('Правила с Onboarding лежат одним уровнем выше', good(s,'scrLegal',1), JSON.stringify(s));
+    await page.goBack(); await pause(page,450);
+    s = await nav(page);
+    ok('системный Back из Правил возвращает в Onboarding', good(s,'scrOnboard',0), JSON.stringify(s));
+
+    await page.click('#obLegal1'); await pause(page,300);
+    await page.click('#legalBackTop'); await pause(page,450);
+    s = await nav(page);
+    ok('собственная кнопка Назад из Правил тоже возвращает в Onboarding', good(s,'scrOnboard',0), JSON.stringify(s));
+    await ctx.close();
   }
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
