@@ -4,6 +4,7 @@ import Capacitor
 class FitBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(FitBiometricPlugin())
+        bridge?.registerPluginInstance(FitWorkoutPlugin())
     }
 }
 
