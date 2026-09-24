@@ -6677,6 +6677,11 @@ async function saveSession(){
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    // Absolute deadline lets a cold notification launch distinguish three cases:
+    // timer still running, timer expired while WebView was dead, or non-timed step.
+    stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
+    remaining: Math.max(0, Number(state.remaining) || 0),
+    paused: !!state.paused,
     at: Date.now()
   };
   await kvSet(sessionKey(), JSON.stringify(data));
@@ -16110,6 +16115,7 @@ function startWorkout(fromIdx, elapsed, options){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
   state.globalStart = 0;
   // Упражнения, до которых тренировка реально дошла: только они считаются
   // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
@@ -16158,6 +16164,7 @@ function startWorkout(fromIdx, elapsed, options){
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
+  state.remaining = 0;
   if(window.FitNative) window.FitNative.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -16269,6 +16276,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
   if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
@@ -16446,11 +16454,21 @@ function renderStep(){
 
     const cd = $('countdown');
     setShown(cd, true);
-    state.remaining = step.seconds;
+    const resumeDeadline = Math.max(0, Number(state.resumeStepDeadline) || 0);
+    state.resumeStepDeadline = 0;
+    state.remaining = resumeDeadline > Date.now()
+      ? Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)))
+      : step.seconds;
     cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
     const launch = ()=>{
-      state.stepDeadline = Date.now() + state.remaining * 1000;
+      if(resumeDeadline > 0){
+        state.remaining = Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)));
+        cd.innerHTML = tnum(fmt(state.remaining));
+      }
+      state.stepDeadline = resumeDeadline > Date.now()
+        ? resumeDeadline
+        : Date.now() + state.remaining * 1000;
       syncNativeWorkoutState(step, state.stepDeadline);
       state.stepTimer = setInterval(()=>{
         if(state.paused || document.hidden) return;
@@ -18214,7 +18232,22 @@ async function resumeWorkoutFromNativeNotification(){
   state.planIdx = planIdx;
   state.current = customToProgram(p, planIdx);
   state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
-  startWorkout(s.stepIdx, s.elapsed, {skipPrep:true});
+
+  // Rebuild once to decide what should have happened while the WebView was dead.
+  // We advance at most one step: only the timer that was already running had a native
+  // deadline; the following step never started while JavaScript was gone.
+  const preview = buildSteps();
+  let stepIdx = Math.min(Math.max(0, parseInt(s.stepIdx) || 0), Math.max(0, preview.length - 1));
+  let resumeDeadline = 0;
+  const savedDeadline = Math.max(0, Number(s.stepDeadline) || 0);
+  if(s.paused && Number(s.remaining) > 0){
+    resumeDeadline = Date.now() + Math.max(1, Number(s.remaining)) * 1000;
+  } else if(savedDeadline > 0){
+    if(savedDeadline <= Date.now() && stepIdx < preview.length - 1) stepIdx++;
+    else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
+  }
+
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline});
   return true;
 }
 
