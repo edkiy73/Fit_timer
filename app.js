@@ -1207,6 +1207,14 @@ const I18N_RU = {
   'clients.notePlaceholder': "Например: колено, без прыжков",
   'clients.noteHint': "Только для тебя. Подопечному не уходит.",
   'clients.delete': "Удалить подопечного",
+  'voicetest.open': "Проверить, как слышит",
+  'voicetest.title': "Проверка распознавания",
+  'voicetest.hint': "Скажи «готово», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Здесь видно, что услышал телефон.",
+  'voicetest.listening': "Слушаю…",
+  'voicetest.failed': "Не удалось включить микрофон. Проверь разрешение и голосовой пакет.",
+  'voicetest.noise': "посторонний звук",
+  'voicetest.notCommand': "не команда",
+  'voicetest.unsure': "не расслышал уверенно",
   'common.close': "Закрыть",
   'who.title': "Пара уточнений",
   'who.female': "Женский",
@@ -2773,6 +2781,14 @@ const I18N_EN = {
   'clients.notePlaceholder': "For example: knee, no jumping",
   'clients.noteHint': "Only you can see this. It is not sent to the client.",
   'clients.delete': "Delete client",
+  'voicetest.open': "Test how it hears",
+  'voicetest.title': "Recognition test",
+  'voicetest.hint': "Say “done”, “pause” or “continue” the way you do in a workout, from your usual distance. You will see what the phone heard.",
+  'voicetest.listening': "Listening…",
+  'voicetest.failed': "Could not turn on the microphone. Check the permission and the voice pack.",
+  'voicetest.noise': "background sound",
+  'voicetest.notCommand': "not a command",
+  'voicetest.unsure': "not heard clearly",
   'common.close': "Close",
   'who.title': "A couple of details",
   'who.female': "Female",
@@ -17494,8 +17510,9 @@ function applyVoiceCommand(input){
   const text = input && typeof input === 'object' ? String(input.text || '') : String(input || '');
   const t = text.toLowerCase().trim().replace(/\s+/g, ' ');
   const pause = new Set(['пауза','на паузу','поставь на паузу','стоп','подожди','остановись','pause','stop','wait']);
-  const resume = new Set(['продолжить','продолжай','продолжаем','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
-  const next = new Set(['дальше','готово','готов','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
+  // те же фразы, что в словаре распознавателя Android (VoiceCommands.java)
+  const resume = new Set(['продолжить','продолжай','продолжаем','продолжи','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
+  const next = new Set(['дальше','готово','готов','готова','готовы','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
 
   let kind = ['pause','resume','next'].includes(nativeKind) ? nativeKind : '';
   if(!kind && resume.has(t)) kind = 'resume';
@@ -18534,6 +18551,7 @@ async function refreshVoicePackUI(progressEvent){
     button=t('voicepack.retry');
     disabled=false;
   }
+  setShown('btnVoiceTest', !!(status && status.installed));
   const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
   for(const row of [
     ['voicePackStatus','btnVoicePack','voicePackProgress','voicePackProgressBar'],
@@ -18619,6 +18637,49 @@ function openHfCommands(){
 }
 ['btnHfCommands','btnHfCommandsModal'].forEach(id => { if($(id)) $(id).onclick = openHfCommands; });
 $('hfCommandsModal').onclick = e => { if(e.target === $('hfCommandsModal')) $('hfCommandsModal').classList.remove('open'); };
+
+/* ---- проверка распознавания (Настройки → Управление без рук) ----
+   Говоришь команду с привычного расстояния и видишь цепочку «что услышал
+   телефон → что сделает приложение». Так понятно, где рвётся: микрофон не
+   слышит (строк нет), слышит, но не то слово («не команда»), или слышит
+   неуверенно. Работает только вне тренировки: тот же микрофон занят ею. */
+let voiceTestOn = false;
+const VT_KIND = {next:'handsfree.commandNext', pause:'handsfree.commandPause', resume:'handsfree.commandResume'};
+function voiceTestRow(d){
+  const box = $('voiceTestList');
+  const row = document.createElement('div');
+  const text = String(d.text || '').replace(/\[unk\]/g, '').trim();
+  row.className = 'vt-row' + (d.accepted ? ' ok' : '');
+  row.innerHTML = '<b></b><span></span>';
+  row.querySelector('b').textContent = text ? `«${text}»` : t('voicetest.noise');
+  row.querySelector('span').textContent = d.accepted && VT_KIND[d.kind] ? t(VT_KIND[d.kind])
+    : d.kind ? t('voicetest.unsure') : t('voicetest.notCommand');
+  box.prepend(row);
+  while(box.children.length > 8) box.lastChild.remove();
+}
+function onVoiceTestHeard(e){ if(voiceTestOn) voiceTestRow(e.detail || {}); }
+async function openVoiceTest(){
+  if(state.live || !(window.FitNative && window.FitNative.offlineVoice)) return;
+  $('voiceTestList').innerHTML = '';
+  $('voiceTestStatus').textContent = t('voicetest.listening');
+  $('voiceTestModal').classList.add('open');
+  voiceTestOn = true;
+  const ok = await window.FitNative.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
+  if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
+  if(!voiceTestOn) window.FitNative.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
+}
+function stopVoiceTest(){
+  if(!voiceTestOn) return;
+  voiceTestOn = false;
+  if(window.FitNative && window.FitNative.stopVoiceRecognition) window.FitNative.stopVoiceRecognition();
+}
+window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
+if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
+$('voiceTestModal').onclick = e => { if(e.target === $('voiceTestModal')) $('voiceTestModal').classList.remove('open'); };
+// окно закрывают кнопкой, тапом мимо и системным «назад» — микрофон
+// отпускаем в любом из этих случаев, следя за самим окном
+new MutationObserver(()=>{ if(!$('voiceTestModal').classList.contains('open')) stopVoiceTest(); })
+  .observe($('voiceTestModal'), {attributes:true, attributeFilter:['class']});
 // создание программы: одна кнопка + выбор способа
 $('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
 $('greetAva').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };

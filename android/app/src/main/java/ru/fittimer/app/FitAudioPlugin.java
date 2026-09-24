@@ -60,6 +60,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private boolean ttsReady = false;
 
     private Model voskModel;
+    private boolean grammarActive = false;
     private String loadedModelLanguage = "";
     // свой захват с автоусилением вместо org.vosk.android.SpeechService — см. FitSpeechCapture
     private FitSpeechCapture speechService;
@@ -315,7 +316,19 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                     stopSpeechService();
                     Recognizer recognizer = null;
                     try {
-                        recognizer = new Recognizer(voskModel, (float) VoiceAutoGain.SAMPLE_RATE);
+                        // Словарь команд + [unk] (см. VoiceCommands): модель выбирает
+                        // между десятком команд и «не команда», а не угадывает
+                        // произвольное русское слово. Маленькие модели Vosk это
+                        // поддерживают; если модель грамматику не примет — работаем
+                        // по-старому, со свободной речью.
+                        grammarActive = true;
+                        try {
+                            recognizer = new Recognizer(voskModel, (float) VoiceAutoGain.SAMPLE_RATE,
+                                VoiceCommands.grammarJson(language));
+                        } catch (Exception grammarFailed) {
+                            grammarActive = false;
+                            recognizer = new Recognizer(voskModel, (float) VoiceAutoGain.SAMPLE_RATE);
+                        }
                         recognizer.setWords(true);
                         recognizer.setPartialWords(true);
                         // Workout commands are one or two short words. The default endpoint
@@ -328,6 +341,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                         JSObject result = new JSObject();
                         result.put("started", true);
                         result.put("offline", true);
+                        result.put("grammar", grammarActive);
                         result.put("language", language);
                         call.resolve(result);
                     } catch (Exception e) {
@@ -392,44 +406,25 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         } catch (Exception ignored) { return 0.0; }
     }
 
-    private String commandKind(String text) {
-        String t = text == null ? "" : text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
-        switch (t) {
-            case "пауза": case "на паузу": case "поставь на паузу": case "стоп":
-            case "подожди": case "остановись":
-            case "pause": case "stop": case "wait":
-                return "pause";
-            case "продолжить": case "продолжай": case "продолжаем": case "продолжи":
-            case "можно продолжать": case "поехали": case "дальше пошли":
-            case "continue": case "resume": case "go on": case "keep going":
-                return "resume";
-            case "дальше": case "готово": case "готов": case "готова": case "готовы":
-            case "пропустить": case "пропусти":
-            case "следующее": case "следующий": case "сделал": case "закончил": case "завершить":
-            case "next": case "done": case "skip": case "finished":
-                return "next";
-            default:
-                return "";
-        }
+    private String commandKindFlexible(String text) {
+        return VoiceCommands.kindFlexible(text);
     }
 
-    private String commandKindFlexible(String text) {
-        String t = text == null ? "" : text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
-        String exact = commandKind(t);
-        if (!exact.isEmpty()) return exact;
-
-        // Vosk often returns a grammatical variant before the exact word. Accept only
-        // distinctive stems long enough that random speech like "го" / "про" cannot match.
-        if (t.length() >= 4 && (t.startsWith("пауз") || t.startsWith("останов"))) return "pause";
-        if (t.length() >= 7 && t.startsWith("продолж")) return "resume";
-        if (t.length() >= 5 && t.startsWith("готов")) return "next";
-        if (t.length() >= 6 && (t.startsWith("пропуст") || t.startsWith("следующ") || t.startsWith("закончил"))) return "next";
-        if (t.length() >= 7 && t.startsWith("заверш")) return "next";
-
-        if (t.length() >= 4 && ("pause".startsWith(t) || "stop".equals(t))) return "pause";
-        if (t.length() >= 5 && ("continue".startsWith(t) || "resume".startsWith(t))) return "resume";
-        if (t.length() >= 4 && ("next".equals(t) || "done".equals(t) || "skip".equals(t))) return "next";
-        return "";
+    /**
+     * Диагностика: что распознаватель услышал и во что это превратилось. Нужна,
+     * чтобы понять, где рвётся цепочка — микрофон не слышит, или слышит, но
+     * пишет другое слово. Приложение показывает это в проверке распознавания
+     * (Настройки → Управление без рук).
+     */
+    private void emitHeard(String text, String kind, double confidence, String source, boolean accepted) {
+        JSObject event = new JSObject();
+        event.put("text", text == null ? "" : text.toLowerCase(Locale.ROOT).trim());
+        event.put("kind", kind == null ? "" : kind);
+        event.put("confidence", confidence);
+        event.put("source", source);
+        event.put("accepted", accepted);
+        event.put("grammar", grammarActive);
+        notifyListeners("speechHeard", event);
     }
 
     private void cancelPendingPartial() {
@@ -451,10 +446,18 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         event.put("kind", kind);
         event.put("source", source);
         notifyListeners("speechResult", event);
+        emitHeard(text, kind, confidence, source, true);
     }
 
     private void considerPartialCommand(String hypothesis) {
         if (commandFiredForUtterance || hypothesis == null || hypothesis.isEmpty()) return;
+        // Со словарём команд промежуточные гипотезы ненадёжны: в начале ЛЮБОГО
+        // слова декодер сразу прыгает на ближайшую команду («про…» → «продолжить»,
+        // «го…» → «готово»), а итог того же слова оказывается [unk]. Именно так
+        // первая версия со словарём (58d28f4) ловила ложные команды и была убрана.
+        // Поэтому в этом режиме решает только итоговый результат с порогом
+        // уверенности — он приходит через ~0.3 с тишины после слова.
+        if (grammarActive) return;
         String text = hypothesisText(hypothesis, "partial");
         String kind = commandKindFlexible(text);
         if (kind.isEmpty()) {
@@ -494,16 +497,23 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     }
 
     private void emitFinalCommand(String hypothesis) {
-        if (hypothesis == null || hypothesis.isEmpty() || commandFiredForUtterance) return;
+        if (hypothesis == null || hypothesis.isEmpty()) return;
         String text = hypothesisText(hypothesis, "text");
+        if (text.isEmpty()) return;
+        if (commandFiredForUtterance) return; // команда уже ушла по partial — это её же конец
         String kind = commandKindFlexible(text);
-        if (kind.isEmpty()) return;
-
         double confidence = hypothesisConfidence(hypothesis);
+        if (kind.isEmpty()) {
+            emitHeard(text, "", confidence, "final", false);
+            return;
+        }
         // Финальный результат уже обязан совпасть с целой командой. Поэтому порог
         // ниже прежнего: высокий 0.74 отбрасывал нормальное "готово" при обычной речи.
         double threshold = "next".equals(kind) ? 0.42 : 0.34;
-        if (confidence > 0.0 && confidence < threshold) return;
+        if (confidence > 0.0 && confidence < threshold) {
+            emitHeard(text, kind, confidence, "final_low_confidence", false);
+            return;
+        }
 
         emitCommand(text, kind, confidence, "final");
     }

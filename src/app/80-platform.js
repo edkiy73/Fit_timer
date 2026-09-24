@@ -80,8 +80,9 @@ function applyVoiceCommand(input){
   const text = input && typeof input === 'object' ? String(input.text || '') : String(input || '');
   const t = text.toLowerCase().trim().replace(/\s+/g, ' ');
   const pause = new Set(['пауза','на паузу','поставь на паузу','стоп','подожди','остановись','pause','stop','wait']);
-  const resume = new Set(['продолжить','продолжай','продолжаем','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
-  const next = new Set(['дальше','готово','готов','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
+  // те же фразы, что в словаре распознавателя Android (VoiceCommands.java)
+  const resume = new Set(['продолжить','продолжай','продолжаем','продолжи','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
+  const next = new Set(['дальше','готово','готов','готова','готовы','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
 
   let kind = ['pause','resume','next'].includes(nativeKind) ? nativeKind : '';
   if(!kind && resume.has(t)) kind = 'resume';
