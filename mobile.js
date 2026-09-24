@@ -14,6 +14,7 @@
   const PLAN_NOTIFICATION_MAX = 902999;
   let speechResultHandle = null;
   let speechErrorHandle = null;
+  let speechHeardHandle = null;
   let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
   let pendingProgramLink = '';
@@ -212,6 +213,7 @@
     try{ if(speechResultHandle){ await speechResultHandle.remove(); speechResultHandle = null; } }catch(_){}
     try{ if(speechErrorHandle){ await speechErrorHandle.remove(); speechErrorHandle = null; } }catch(_){}
     try{ if(speechStatusHandle){ await speechStatusHandle.remove(); speechStatusHandle = null; } }catch(_){}
+    try{ if(speechHeardHandle){ await speechHeardHandle.remove(); speechHeardHandle = null; } }catch(_){}
   }
 
   async function startVoiceRecognition(onResult, onError, onStatus){
@@ -230,6 +232,11 @@
       });
       speechStatusHandle = await fitAudio.addListener('speechStatus', event=>{
         if(onStatus) onStatus(event || {});
+      });
+      // что распознаватель услышал и во что это превратилось (в том числе «не
+      // команда») — для проверки распознавания в настройках
+      speechHeardHandle = await fitAudio.addListener('speechHeard', event=>{
+        try{ window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail:event || {}})); }catch(_){}
       });
       const language = (typeof recognitionLang !== 'undefined' && recognitionLang) ? recognitionLang : 'ru';
       const started = await fitAudio.startRecognition({language});
