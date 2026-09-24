@@ -235,6 +235,33 @@ async function boot(browser, errs){
     await page.close();
   }
 
+  // ---- календарный попап -> Start: выбранный вариант применяется после закрытия modal history ----
+  {
+    const page = await boot(b, errs);
+    await page.evaluate(async () => {
+      const p = {
+        id:'nav-session', name:'Календарь', progression:0, stats:{completions:0},
+        plans:[
+          {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'s1',name:'Первый',type:'reps',value:'10',sets:1,rest:10}]},
+          {days:['Вт'], rounds:1, roundRest:0, exercises:[{id:'s2',name:'Второй',type:'reps',value:'12',sets:1,rest:10}]}
+        ]
+      };
+      customPrograms.push(p); await savePrograms();
+      $('sessModal').classList.add('open');
+    });
+    await pause(page,180);
+    await page.evaluate(() => openDayProgram('nav-session', 1));
+    await pause(page,500);
+    let s = await nav(page);
+    const picked = await page.evaluate(() => ({pid:state.raw && state.raw.id, plan:state.planIdx}));
+    ok('календарь открывает Start без modal-хвоста', good(s,'scrStart',1) && s.modals.length===0, JSON.stringify(s));
+    ok('календарь применяет вариант уже к открытой программе', picked.pid==='nav-session' && picked.plan===1, JSON.stringify(picked));
+    await page.click('#startBackTop'); await pause(page,450);
+    s = await nav(page);
+    ok('назад после календарного Start возвращает на Сегодня', good(s,'scrMenu',0), JSON.stringify(s));
+    await page.close();
+  }
+
   // ---- экран старта возвращает именно в тот root, откуда его открыли ----
   {
     const page = await boot(b, errs);
