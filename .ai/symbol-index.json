@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1392,
-      "chars": 67747,
+      "lines": 1414,
+      "chars": 68497,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -65,6 +65,7 @@
         "renderPlanRow",
         "renderStartInfo",
         "renderStartOverview",
+        "resolveNavBack",
         "roundDone",
         "runReadyBar",
         "setShown",
@@ -361,8 +362,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2934,
-      "chars": 135571,
+      "lines": 2935,
+      "chars": 135659,
       "symbols": [
         "add",
         "ageError",
