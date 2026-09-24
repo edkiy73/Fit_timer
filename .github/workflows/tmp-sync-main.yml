@@ -1,0 +1,55 @@
+name: Temp sync latest main
+
+on:
+  push:
+    branches:
+      - audit/navigation-transitions-20260924
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Merge latest main and rebuild generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          rc=$?
+          set -e
+
+          conflicts="$(git diff --name-only --diff-filter=U)"
+          bad="$(printf '%s\n' "$conflicts" | grep -v -E '^(app\.js|\.ai/symbol-index\.json)$' | sed '/^$/d' || true)"
+          if [ -n "$bad" ]; then
+            echo "Unexpected merge conflicts:"
+            echo "$bad"
+            exit 1
+          fi
+
+          for f in app.js .ai/symbol-index.json; do
+            if printf '%s\n' "$conflicts" | grep -Fxq "$f"; then
+              git checkout --ours -- "$f"
+              git add "$f"
+            fi
+          done
+
+          if [ "$rc" -ne 0 ] && git diff --name-only --diff-filter=U | grep -q .; then
+            exit 1
+          fi
+
+          npm run build:sources
+          npm run ai:index
+          git add -A
+          git commit -m "merge: sync latest main before navigation merge [skip vercel]"
+          git push
