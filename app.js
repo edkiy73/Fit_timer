@@ -4351,6 +4351,7 @@ let navStack = ['scrMenu'];
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+let navBackWaiters = []; // программный возврат, после которого следующий UI должен дождаться popstate
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -4520,6 +4521,7 @@ window.addEventListener('popstate', async e => {
   }
   guardBypass = false;
   show(targetScreen, false);
+  resolveNavBack(targetScreen);
 
   // После явного выхода из глубокого сценария его текущая запись превращается
   // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
@@ -4539,11 +4541,37 @@ window.addEventListener('popstate', async e => {
 // по записи на каждый шаг: сорок переходов давали сорок одну запись, и системная
 // кнопка «назад» тридцать раз подряд не выводила из конструктора.
 // Экран покажет сам popstate — здесь только отматываем.
+function resolveNavBack(target){
+  if(!navBackWaiters.length) return;
+  const keep = [];
+  navBackWaiters.forEach(w => {
+    if(w.id === target) w.resolve(true);
+    else keep.push(w);
+  });
+  navBackWaiters = keep;
+}
 function goBackTo(id){
-  if(navStack.length > 1 && navStack[navStack.length - 2] === id && show._last === navStack[navStack.length - 1]){
-    try{ history.back(); return; }catch(e){}
+  // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
+  // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
+  // копию родителя поверх истории.
+  if(show._last === navStack[navStack.length - 1]){
+    const at = navStack.lastIndexOf(id);
+    const distance = navStack.length - 1 - at;
+    if(at >= 0 && distance > 0){
+      return new Promise(resolve => {
+        const waiter = {id, resolve};
+        navBackWaiters.push(waiter);
+        try{ history.go(-distance); }
+        catch(e){
+          navBackWaiters = navBackWaiters.filter(w => w !== waiter);
+          show(id);
+          resolve(false);
+        }
+      });
+    }
   }
   show(id);
+  return Promise.resolve(true);
 }
 
 function show(id, push = true){
@@ -11515,7 +11543,7 @@ async function applyExEdit(){
   if(!raw){appAlert(MSG_AI_EMPTY());return;}
   const list=curPlan().exercises;
   const oldEx=list[exeIdx];
-  if(!oldEx){show('scrBuilder');return;}
+  if(!oldEx){goBackTo('scrBuilder');return;}
   // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
   const candidateBlocks=aiExerciseBlocks(raw);
   if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
@@ -11672,7 +11700,7 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   renderExList();
-  show('scrBuilder');
+  await goBackTo('scrBuilder');
   appAlert(added === 1
     ? t('exercise.addedOne',{name:list[0].name})
     : t('exercise.addedMany',{count:added}));
