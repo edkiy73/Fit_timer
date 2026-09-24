@@ -8,6 +8,7 @@
   const fitAudio = plugins.FitAudio;
   const fitSystem = plugins.FitSystem;
   const fitBiometric = plugins.FitBiometric;
+  const fitWorkout = plugins.FitWorkout;
   const pushNotifications = plugins.PushNotifications;
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
@@ -134,6 +135,16 @@
       if(list.length) await plugins.LocalNotifications.schedule({notifications:list});
       return true;
     }catch(_){ return false; }
+  }
+
+  async function updateWorkoutState(payload){
+    if(!native || !fitWorkout || !fitWorkout.update) return false;
+    try{ await fitWorkout.update(payload || {}); return true; }catch(_){ return false; }
+  }
+
+  async function clearWorkoutState(){
+    if(!native || !fitWorkout || !fitWorkout.clear) return false;
+    try{ await fitWorkout.clear(); return true; }catch(_){ return false; }
   }
 
   async function setSystemTheme(light){
@@ -499,6 +510,8 @@
     scheduleRest,
     cancelRest,
     syncWorkoutNotifications,
+    updateWorkoutState,
+    clearWorkoutState,
     setSystemTheme,
     shareFile,
     haptic,
