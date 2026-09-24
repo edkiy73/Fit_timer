@@ -4476,10 +4476,16 @@ window.addEventListener('popstate', async e => {
     waiters.forEach(fn => fn());
     return;
   }   // это мы сами сняли запись закрытого попапа
-  // открытый попап забирает жест себе — экран под ним остаётся на месте
+  // Открытый попап забирает системный Back себе. Сам Back уже снял его
+  // служебную history-запись и вернул нас на запись экрана под ним — повторно
+  // pushState делать нельзя: получалась вторая копия того же экрана, и следующий
+  // Back с вкладки визуально «ничего не делал». Если под верхним попапом остался
+  // ещё один, только тогда заводим новую служебную запись для следующего Back.
   if(document.querySelector('.modal.open')){
-    try{ history.pushState(history.state || e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
     dismissTopModal();
+    if(document.querySelector('.modal.open')){
+      try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(_){}
+    }
     return;
   }
   if($('scrWork').classList.contains('on')){
@@ -4505,8 +4511,11 @@ window.addEventListener('popstate', async e => {
     let g = null;
     try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
     if(g){
-      // возвращаем позицию в истории, чтобы «Вернуться» действительно вернуло
+      // Возвращаем и browser history, и логический navStack на экран, с которого
+      // человек попытался уйти. Раньше history снова был Builder, а navStack уже
+      // успевал обрезаться до Programs — после «Остаться» два источника расходились.
       navDepth++;
+      if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
       try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
       const ok = await appDialog(
         t('common.unsaved',{what:g.what}),

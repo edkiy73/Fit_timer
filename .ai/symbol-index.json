@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1404,
-      "chars": 67788,
+      "lines": 1413,
+      "chars": 68382,
       "symbols": [
         "$",
         "aiScreenDirty",
