@@ -41,6 +41,7 @@ final class WorkoutNotifications {
         String phaseLabel = clean(data.optString("phaseLabel", "Fit Timer"), "Fit Timer");
         String current = clean(data.optString("current", workoutTitle), workoutTitle);
         String meta = clean(data.optString("meta", ""), "");
+        String next = clean(data.optString("next", ""), "");
         String alertTitle = clean(data.optString("alertTitle", "Fit Timer"), "Fit Timer");
         String alertBody = clean(data.optString("alertBody", current), current);
 
@@ -56,6 +57,10 @@ final class WorkoutNotifications {
             .setSilent(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_LOW);
+        if (!next.isEmpty()) {
+            live.setStyle(new NotificationCompat.BigTextStyle()
+                .bigText(current + "\n" + next));
+        }
 
         if (timed && !paused && endsAt > System.currentTimeMillis()) {
             live.setWhen(endsAt).setShowWhen(true).setUsesChronometer(true);
@@ -110,7 +115,7 @@ final class WorkoutNotifications {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setDefaults(NotificationCompat.DEFAULT_ALL);
+            .setDefaults(NotificationCompat.DEFAULT_SOUND);
         notifySafe(context, ALERT_ID, alert.build());
     }
 
@@ -189,7 +194,7 @@ final class WorkoutNotifications {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build();
         alert.setSound(sound, attrs);
-        alert.enableVibration(true);
+        alert.enableVibration(false);
         manager.createNotificationChannel(alert);
     }
 
