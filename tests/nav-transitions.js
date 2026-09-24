@@ -409,7 +409,7 @@ async function scenario(ctx, name, fn, errs){
       goTab('scrPrograms');
       openBuilder('nav-ai-add');
       openExAI();
-      const raw = 'УПРАЖНЕНИЕ: Выпады\\nФОРМАТ: повторения\\nЗНАЧЕНИЕ: 10\\nПОДХОДЫ: 1\\nОТДЫХ: 30';
+      const raw = ['УПРАЖНЕНИЕ: Выпады','ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 1','ОТДЫХ: 30'].join('\n');
       const verdict = FitAIProtocol.validateResponse('exercise.create', raw);
       $('aiResult').value = raw;
       await exaAddExercise();
