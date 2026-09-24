@@ -197,6 +197,7 @@ function startWorkout(fromIdx, elapsed, options){
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
   state.stepIdx = Math.min(Math.max(0, parseInt(fromIdx) || 0), Math.max(0, state.steps.length - 1));
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
+  state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
   state.globalStart = 0;
   // Упражнения, до которых тренировка реально дошла: только они считаются
   // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
@@ -533,11 +534,21 @@ function renderStep(){
 
     const cd = $('countdown');
     setShown(cd, true);
-    state.remaining = step.seconds;
+    const resumeDeadline = Math.max(0, Number(state.resumeStepDeadline) || 0);
+    state.resumeStepDeadline = 0;
+    state.remaining = resumeDeadline > Date.now()
+      ? Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)))
+      : step.seconds;
     cd.innerHTML = tnum(fmt(state.remaining));
     cd.classList.remove('warn');
     const launch = ()=>{
-      state.stepDeadline = Date.now() + state.remaining * 1000;
+      if(resumeDeadline > 0){
+        state.remaining = Math.max(1, Math.min(step.seconds, Math.ceil((resumeDeadline - Date.now()) / 1000)));
+        cd.innerHTML = tnum(fmt(state.remaining));
+      }
+      state.stepDeadline = resumeDeadline > Date.now()
+        ? resumeDeadline
+        : Date.now() + state.remaining * 1000;
       syncNativeWorkoutState(step, state.stepDeadline);
       state.stepTimer = setInterval(()=>{
         if(state.paused || document.hidden) return;
