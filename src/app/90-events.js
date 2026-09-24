@@ -46,6 +46,39 @@ $('btnStart').onclick = async ()=>{
 };
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
 
+async function resumeWorkoutFromNativeNotification(){
+  // Warm process: the real workout engine is still alive. Do not rebuild the step or
+  // restart its timer; simply return to the existing workout screen.
+  if(state.live && state.steps && state.steps.length){
+    show('scrWork');
+    window.scrollTo(0, 0);
+    return true;
+  }
+
+  const s = await loadSession();
+  if(!s){
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+  const p = customPrograms.find(x => x && x.id === s.pid);
+  if(!p){
+    await clearSession();
+    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    return false;
+  }
+
+  const plans = normPlans(p);
+  const planIdx = plans.length
+    ? Math.min(Math.max(0, parseInt(s.planIdx) || 0), plans.length - 1)
+    : 0;
+  state.raw = p;
+  state.planIdx = planIdx;
+  state.current = customToProgram(p, planIdx);
+  state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
+  startWorkout(s.stepIdx, s.elapsed, {skipPrep:true});
+  return true;
+}
+
 $('startResume').onclick = ()=>{
   const s = window.__pendingSession;
   $('startModal').classList.remove('open');
@@ -2052,8 +2085,21 @@ show('scrMenu', false);
 let pendingImport = null;
 let pendingLink = null;
 let pendingNativeLink = null;
+let pendingNativeWorkoutResume = false;
+let workoutResumeReady = false;
 let programLinksReady = false;
 let pendingAction = null;
+
+window.addEventListener('fitWorkoutResumeRequest', ()=>{
+  try{
+    if(window.FitNative && window.FitNative.consumeWorkoutResume) window.FitNative.consumeWorkoutResume();
+  }catch(_){}
+  if(workoutResumeReady){
+    resumeWorkoutFromNativeNotification().catch(()=>{});
+    return;
+  }
+  pendingNativeWorkoutResume = true;
+});
 
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
@@ -2084,6 +2130,9 @@ try{
   if(window.FitNative && window.FitNative.consumeProgramLink){
     const nativeId = String(window.FitNative.consumeProgramLink() || '');
     if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
+  }
+  if(window.FitNative && window.FitNative.consumeWorkoutResume){
+    pendingNativeWorkoutResume = !!window.FitNative.consumeWorkoutResume();
   }
 }catch(e){}
 
@@ -2202,6 +2251,18 @@ try{
   const u = curUser();
   applyThemeFor(u);
   syncSettingsForm();
+
+  // Only now are profile/program/session data and workout preferences ready. A notification
+  // tap can restore locally without waiting for subscription/trainer network requests.
+  workoutResumeReady = true;
+  if(pendingNativeWorkoutResume){
+    pendingNativeWorkoutResume = false;
+    await resumeWorkoutFromNativeNotification();
+  } else if(window.FitNative && window.FitNative.isNative && window.FitNative.clearWorkoutState){
+    // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
+    const bootSession = await loadSession();
+    if(!bootSession) window.FitNative.clearWorkoutState();
+  }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
   await refreshServerSubscription(true);
