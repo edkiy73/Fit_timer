@@ -246,6 +246,7 @@ function startWorkout(fromIdx, elapsed, options){
 function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
+  state.remaining = 0;
   if(window.FitNative) window.FitNative.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
@@ -357,6 +358,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
+  if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
   if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
