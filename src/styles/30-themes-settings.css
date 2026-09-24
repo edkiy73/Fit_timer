@@ -521,10 +521,19 @@
   }
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
   /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
-  .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
+  /* длинная строка «было → сегодня» переносится, а не уезжает за край карточки */
+  .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink);white-space:normal;max-width:100%}
+  /* вес на старте — единственное, что правится касанием: метка с карандашом
+     выглядит как кнопка, чтобы это было видно без объяснений */
+  .ex-meta .kg-edit{
+    display:inline-flex;align-items:center;gap:4px;
+    color:var(--accent-ink);background:none;border:1px solid var(--accent-line);
+  }
+  .ex-meta .kg-edit svg{width:11px;height:11px}
+  .ex-meta .kg-edit i{font-style:normal}
   /* вес формата «…и вес» ещё не выбран — метка выделена цветом (кликабельна вместе
      со всей строкой — см. .ex-row.tappable ниже, открывает #weightModal) */
-  .ex-meta .weight-pending{color:var(--danger);background:none;border:1px dashed var(--danger)}
+  .ex-meta .kg-edit.weight-pending{color:var(--danger);border:1px dashed var(--danger)}
   /* строка экрана старта, по которой можно поправить вес (замена бывшему общему
      блоку «Нагрузка сегодня» с «±» — правка теперь per-упражнение) */
   .ex-row.tappable{cursor:pointer}

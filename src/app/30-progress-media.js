@@ -791,7 +791,23 @@ function sanitizeProgram(p){
     (Array.isArray(pl.exercises) ? pl.exercises : []).forEach(sanitizeExercise);
   });
   (Array.isArray(p.exercises) ? p.exercises : []).forEach(sanitizeExercise);
+  uniqueExerciseIds(p);
   return p;
+}
+// id упражнения обязан быть уникальным в программе: по нему сопоставляются
+// AI-правки и проверка прогресса на финише. Раньше «дублировать упражнение»
+// копировало id вместе со всем остальным — такие копии получают свой.
+function uniqueExerciseIds(p){
+  let changed = false;
+  const seen = new Set();
+  (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
+    (pl && Array.isArray(pl.exercises) ? pl.exercises : []).forEach(ex => {
+      if(!ex || typeof ex !== 'object') return;
+      if(!ex.id || seen.has(ex.id)){ ex.id = newExId(); changed = true; }
+      seen.add(ex.id);
+    });
+  });
+  return changed;
 }
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;

@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1296,
-      "chars": 62721,
+      "lines": 1311,
+      "chars": 63515,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -85,8 +85,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2253,
-      "chars": 102878,
+      "lines": 2257,
+      "chars": 103229,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -292,8 +292,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 931,
-      "chars": 41973,
+      "lines": 947,
+      "chars": 42649,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -352,6 +352,7 @@
         "shareWellLanes",
         "shortD",
         "startOnboarding",
+        "uniqueExerciseIds",
         "warmupProgram",
         "whoFinish",
         "whoSyncForm",
@@ -360,8 +361,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2898,
-      "chars": 133078,
+      "lines": 2912,
+      "chars": 133967,
       "symbols": [
         "add",
         "ageError",
@@ -709,8 +710,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1557,
-      "chars": 71932,
+      "lines": 1563,
+      "chars": 72458,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -824,8 +825,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2184,
-      "chars": 91173,
+      "lines": 2195,
+      "chars": 91574,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

@@ -32,6 +32,7 @@ function applyProgressionAll(){
     }
   });
   if(applyPerExerciseProgressionMigration()) changed = true;
+  customPrograms.forEach(p => { if(uniqueExerciseIds(p)) changed = true; });
   if(changed) savePrograms();
 }
 
@@ -1134,6 +1135,10 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
     if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
+    if(j.error === 'ai_bad_response'){
+      const miss = Array.isArray(j.missing) ? j.missing.filter(Boolean).slice(0,6).join(', ') : '';
+      throw new Error(t('ai.badResponse') + (miss ? ' ' + t('ai.badResponseMissing',{fields:miss}) : ''));
+    }
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
   trackProductEvent('ai_used').catch(()=>{});
@@ -2235,9 +2240,18 @@ async function applyExEdit(){
   upd.id=oldEx.id;
   carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
+  // запрос тоже очищаем: пока в нём был текст, экран считался несохранённым,
+  // и возврат назад молча не срабатывал — человек оставался на «Через ИИ»
   $('aiResult').value='';
-  await afterExChange();
-  appAlert(`Упражнение «${upd.name}» обновлено.`);
+  $('exeWish').value='';
+  if(exFromWork) await afterExChange();
+  else{
+    // показываем результат там, где его видно и можно сразу поправить руками
+    renderExList();
+    const keep=exeIdx;
+    asTab(()=> openExercise(keep));
+  }
+  appAlert(t('ai.exerciseUpdated',{name:upd.name||t('common.exerciseFallback')}));
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
@@ -2539,11 +2553,11 @@ function carryMedia(oldProg, newProg, diff){
 // значения (ps.cur) не переносим: ИИ получил их в тексте программы
 // (programToText forEdit) и вернул как новую базу — иначе прибавка
 // посчиталась бы дважды.
+// Исключение — база упражнения не изменилась (правили описание, отдых, порядок;
+// у двойной прогрессии ИИ видит исходный диапазон, а не текущее число): тогда
+// переносится и ps.cur, иначе повторы двойной прогрессии откатывались к началу.
 function carryProgressCounters(diff){
-  diff.matches.forEach(({oldEx, newEx}) => {
-    const n = Math.max(0, Math.round(+(oldEx.ps && oldEx.ps.n) || 0));
-    if(n > 0) newEx.ps = {n, cur: {}};
-  });
+  diff.matches.forEach(({oldEx, newEx}) => { carryExerciseProgress(oldEx, newEx); });
 }
 
 // расчётная (не по истории) длительность одного варианта — используется только

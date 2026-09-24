@@ -1015,16 +1015,17 @@ const I18N_RU = {
   'start.loadChanged': "Нагрузка изменилась в {count} {exercises}. В строках показано: было → сегодня.",
   'start.exerciseLocOne': "упражнении",
   'start.exerciseLocMany': "упражнениях",
-  'start.noChangesNext': "Без изменений · следующее повышение через {count} {workouts}.",
+  'start.noChanges': "Без изменений",
+  'start.nextCheck': "Спросим о повышении через {count} {workouts}.",
   'start.noChangesOff': "Без изменений · автоматическое повышение выключено.",
   'start.workoutOne': "тренировку",
   'start.workoutFew': "тренировки",
   'start.workoutMany': "тренировок",
   'start.setShort': "подх.",
   'start.roundShort': "кр.",
-  'start.weightPending': "вес не задан",
+  'start.weightPending': "указать вес",
   'start.pickWeightTitle': "Рабочий вес",
-  'start.pickWeightHint': "Такой, чтобы последние повторения давались с усилием, но не в отказ",
+  'start.pickWeightHint': "Повторы и время растут по плану, а вес зависит от твоего снаряда. Бери такой, чтобы последние повторения давались с усилием, но не в отказ",
   'start.schedule': "Расписание: {schedule}",
   'start.variantSequence': "вариант {current} из {total} по очереди",
   'time.hoursMinutes': "{hours} ч {minutes} мин",
@@ -1426,6 +1427,9 @@ const I18N_RU = {
   'ai.limitReached': "Лимит генераций на этот месяц исчерпан ({used}/{limit}).",
   'ai.premiumRequired': "Для генерации нужна активная подписка Premium.",
   'ai.disabled': "Генерация временно отключена. Попробуй позже.",
+  'ai.exerciseUpdated': "Упражнение «{name}» обновлено.",
+  'ai.badResponse': "ИИ прислал неполный ответ. Попробуй ещё раз — обычно со второго раза получается.",
+  'ai.badResponseMissing': "Не хватило: {fields}.",
   'ai.serviceFailed': "Сервис ИИ сейчас не ответил. Попробуй ещё раз.",
   'images.draw': "Нарисовать",
   'images.generating': "Генерирую картинки",
@@ -2577,16 +2581,17 @@ const I18N_EN = {
   'start.loadChanged': "Load changed in {count} {exercises}. Rows show: before → today.",
   'start.exerciseLocOne': "exercise",
   'start.exerciseLocMany': "exercises",
-  'start.noChangesNext': "No changes · next increase after {count} {workouts}.",
+  'start.noChanges': "No changes",
+  'start.nextCheck': "We'll ask about an increase in {count} {workouts}.",
   'start.noChangesOff': "No changes · automatic progression is off.",
   'start.workoutOne': "workout",
   'start.workoutFew': "workouts",
   'start.workoutMany': "workouts",
   'start.setShort': "sets",
   'start.roundShort': "rnd",
-  'start.weightPending': "weight not set",
+  'start.weightPending': "set weight",
   'start.pickWeightTitle': "Working weight",
-  'start.pickWeightHint': "Heavy enough that the last reps take real effort, but not to failure",
+  'start.pickWeightHint': "Reps and time grow by the plan, but weight depends on your equipment. Pick one where the last reps take real effort, but not to failure",
   'start.schedule': "Schedule: {schedule}",
   'start.variantSequence': "variant {current} of {total} in sequence",
   'time.hoursMinutes': "{hours} h {minutes} min",
@@ -2988,6 +2993,9 @@ const I18N_EN = {
   'ai.limitReached': "Your generation limit for this month has been reached ({used}/{limit}).",
   'ai.premiumRequired': "An active Premium subscription is required for generation.",
   'ai.disabled': "Generation is temporarily disabled. Try again later.",
+  'ai.exerciseUpdated': "“{name}” updated.",
+  'ai.badResponse': "The AI sent an incomplete answer. Try again — it usually works the second time.",
+  'ai.badResponseMissing': "Missing: {fields}.",
   'ai.serviceFailed': "The AI service did not respond. Try again.",
   'images.draw': "Generate",
   'images.generating': "Generating images",
@@ -3455,11 +3463,18 @@ ${exerciseSchema(outputLanguage)}`;
     '- Return only the protocol.'
   ].join('\n\n');
 
+  // Модели нередко оформляют протокол Markdown'ом: «**ПРОГРАММА:** …»,
+  // «### ДЕНЬ: Пн», «- ФОРМАТ: …», ограждение \`\`\`plaintext. Раньше такой ответ
+  // отклонялся целиком как «неполный», хотя все данные в нём есть. Снимаем
+  // оформление только у строк, которые начинаются с метки протокола, — текст
+  // описаний не трогаем.
   function normalizeResponse(raw){
-    return String(raw == null ? '' : raw).trim()
-      .replace(/^\`\`\`(?:text|txt|markdown)?\s*/i, '')
-      .replace(/\s*\`\`\`$/,'')
-      .trim();
+    return String(raw == null ? '' : raw).replace(/\r\n?/g, '\n').split('\n')
+      .filter(line => !/^\s*\`\`\`/.test(line))
+      .map(line => line.replace(
+        /^\s*(?:#{1,6}\s*|[-*•]\s+|\d+[.)]\s+)?(?:\*\*|__)?([А-ЯЁ][А-ЯЁ ]{1,40}?)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?[ \t]*/,
+        (m, label) => label + ': '))
+      .join('\n').trim();
   }
 
   // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
@@ -3497,8 +3512,20 @@ ${exerciseSchema(outputLanguage)}`;
       reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
   }
 
+  // Вариант без единого упражнения — это лишняя строка «ДЕНЬ:», а не повод
+  // выбросить весь ответ: модели иногда оставляют пустой заголовок в конце или
+  // между вариантами. Убираем такие варианты; ответ отклоняется, только если
+  // упражнений не осталось вовсе.
+  function dropEmptyVariants(text){
+    const parts = text.split(/(?=^ДЕНЬ:)/m);
+    const kept = parts.filter((part, i) => !(/^ДЕНЬ:/.test(part) && !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(part)));
+    // все варианты пустые — оставляем как было, пусть сработает no_exercises
+    if(!kept.some(part => /^ДЕНЬ:/.test(part))) return text;
+    return kept.join('').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
   function validateProgramResponse(raw, opts){
-    const text = normalizeResponse(raw);
+    const text = dropEmptyVariants(normalizeResponse(raw));
     const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
     const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
     const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
@@ -4680,7 +4707,12 @@ function loadDelta(a, b){
     bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
-  const dir = directional.length && directional.every(x => x > 0) ? 'up'
+  // вес вырос, а повторы вернулись к началу диапазона — это шаг двойной
+  // прогрессии, то есть нагрузка ВЫШЕ, а не «изменилась»
+  const kgUp = (+b.kg || 0) > (+a.kg || 0);
+  const secSame = (+a.sec || 0) === (+b.sec || 0);
+  const dir = kgUp && secSame ? 'up'
+    : directional.length && directional.every(x => x > 0) ? 'up'
     : directional.length && directional.every(x => x < 0) ? 'down'
     : directional.length ? 'mixed' : 'same';
   return {text:bits.join(' · '), dir};
@@ -4734,31 +4766,30 @@ function renderStartOverview(){
 
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
-  if(previous.first){
-    changeText(t('start.firstWorkout'));
-  } else if(changes.length){
-    const direction = changes.every(x => x.dir === 'up') ? 'up'
-      : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
-    if(direction === 'up'){
-      changeText(t('start.loadHigher',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    } else if(direction === 'down'){
-      changeText(t('start.loadLower',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    } else {
-      changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    }
-  } else if(p.progression){
-    // прогрессия у каждого упражнения своя (ex.ps.n) — «осталось N тренировок»
-    // считаем по ближайшему к порогу упражнению этого варианта, а не по общему
-    // счётчику программы
+  // через сколько тренировок приложение спросит о повышении: прогрессия у каждого
+  // упражнения своя (ex.ps.n) — берём ближайшее к порогу упражнение варианта.
+  // Показываем и тогда, когда нагрузка уже изменилась, — иначе после первого
+  // повышения человек терял из виду, когда будет следующее.
+  let nextText = '';
+  if(p.progression){
     const every = Math.max(1, +p.progression || 1);
     const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
       .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
     if(ns.length){
       const left = Math.max(1, every - Math.max(...ns));
-      changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
-    } else {
-      changeText(t('start.noChangesOff'));
+      nextText = t('start.nextCheck',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')});
     }
+  }
+  if(previous.first){
+    changeText(t('start.firstWorkout'));
+  } else if(changes.length){
+    const direction = changes.every(x => x.dir === 'up') ? 'up'
+      : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
+    const key = direction === 'up' ? 'start.loadHigher' : direction === 'down' ? 'start.loadLower' : 'start.loadChanged';
+    const text = t(key,{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')});
+    changeText(nextText ? text + ' ' + nextText : text);
+  } else if(nextText){
+    changeText(t('start.noChanges') + ' · ' + nextText);
   } else {
     changeText(t('start.noChangesOff'));
   }
@@ -4772,7 +4803,9 @@ function renderStartOverview(){
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const meta = [];
     if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
-    meta.push({text:loadTargetText(ex, current[i]), cls:''});
+    // вес — отдельной кнопкой-меткой с карандашом (см. ниже): так видно, что
+    // нажимается именно он, а повторы и время растут сами по плану
+    meta.push({text:loadTargetText(ex, hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
     if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
     else meta.push({text:storeCountText(sets,'set'), cls:''});
     const delta = changes.find(x => x.i === i);
@@ -4785,7 +4818,17 @@ function renderStartOverview(){
     row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
-    meta.forEach(x => tag(x.text, x.cls));
+    meta.forEach((x, k) => {
+      tag(x.text, x.cls);
+      if(k === (ex.warmup ? 1 : 0) && hasWeight(ex)){
+        const pending = weightPending(ex) || !(+current[i].kg > 0);
+        const kg = document.createElement('span');
+        kg.className = 'kg-edit' + (pending ? ' weight-pending' : '');
+        kg.innerHTML = icon('pencil') + '<i></i>';
+        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${fmtKg(current[i].kg)} ${t('progress.kg')}`;
+        tags.appendChild(kg);
+      }
+    });
     if(delta) tag(delta.text, 'grow');
     // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
     // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
@@ -4794,7 +4837,6 @@ function renderStartOverview(){
     if(hasWeight(ex)){
       row.classList.add('tappable');
       row.onclick = () => openWeightModal(i);
-      if(weightPending(ex)) tag(t('start.weightPending'), 'weight-pending');
     }
     box.appendChild(row);
   });
@@ -6509,6 +6551,9 @@ async function savePrograms(){
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
+  // id упражнений уникальны в программе (см. uniqueExerciseIds) — чиним на месте,
+  // чтобы копия, заведённая старым способом, не жила с чужим id до перезапуска
+  customPrograms.forEach(p => { if(p && typeof p === 'object') uniqueExerciseIds(p); });
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -7047,7 +7092,8 @@ function customToProgram(p, planIdx = 0){
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
-      exName: ex.name
+      exName: ex.name,
+      exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };
     // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
     if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){
@@ -8978,7 +9024,23 @@ function sanitizeProgram(p){
     (Array.isArray(pl.exercises) ? pl.exercises : []).forEach(sanitizeExercise);
   });
   (Array.isArray(p.exercises) ? p.exercises : []).forEach(sanitizeExercise);
+  uniqueExerciseIds(p);
   return p;
+}
+// id упражнения обязан быть уникальным в программе: по нему сопоставляются
+// AI-правки и проверка прогресса на финише. Раньше «дублировать упражнение»
+// копировало id вместе со всем остальным — такие копии получают свой.
+function uniqueExerciseIds(p){
+  let changed = false;
+  const seen = new Set();
+  (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
+    (pl && Array.isArray(pl.exercises) ? pl.exercises : []).forEach(ex => {
+      if(!ex || typeof ex !== 'object') return;
+      if(!ex.id || seen.has(ex.id)){ ex.id = newExId(); changed = true; }
+      seen.add(ex.id);
+    });
+  });
+  return changed;
 }
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
@@ -9149,6 +9211,7 @@ function applyProgressionAll(){
     }
   });
   if(applyPerExerciseProgressionMigration()) changed = true;
+  customPrograms.forEach(p => { if(uniqueExerciseIds(p)) changed = true; });
   if(changed) savePrograms();
 }
 
@@ -10251,6 +10314,10 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_unavailable') throw new Error(t('video.unavailable'));
     if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
+    if(j.error === 'ai_bad_response'){
+      const miss = Array.isArray(j.missing) ? j.missing.filter(Boolean).slice(0,6).join(', ') : '';
+      throw new Error(t('ai.badResponse') + (miss ? ' ' + t('ai.badResponseMissing',{fields:miss}) : ''));
+    }
     throw new Error(j.detail || t('ai.serviceFailed'));
   }
   trackProductEvent('ai_used').catch(()=>{});
@@ -11352,9 +11419,18 @@ async function applyExEdit(){
   upd.id=oldEx.id;
   carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
+  // запрос тоже очищаем: пока в нём был текст, экран считался несохранённым,
+  // и возврат назад молча не срабатывал — человек оставался на «Через ИИ»
   $('aiResult').value='';
-  await afterExChange();
-  appAlert(`Упражнение «${upd.name}» обновлено.`);
+  $('exeWish').value='';
+  if(exFromWork) await afterExChange();
+  else{
+    // показываем результат там, где его видно и можно сразу поправить руками
+    renderExList();
+    const keep=exeIdx;
+    asTab(()=> openExercise(keep));
+  }
+  appAlert(t('ai.exerciseUpdated',{name:upd.name||t('common.exerciseFallback')}));
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
@@ -11656,11 +11732,11 @@ function carryMedia(oldProg, newProg, diff){
 // значения (ps.cur) не переносим: ИИ получил их в тексте программы
 // (programToText forEdit) и вернул как новую базу — иначе прибавка
 // посчиталась бы дважды.
+// Исключение — база упражнения не изменилась (правили описание, отдых, порядок;
+// у двойной прогрессии ИИ видит исходный диапазон, а не текущее число): тогда
+// переносится и ps.cur, иначе повторы двойной прогрессии откатывались к началу.
 function carryProgressCounters(diff){
-  diff.matches.forEach(({oldEx, newEx}) => {
-    const n = Math.max(0, Math.round(+(oldEx.ps && oldEx.ps.n) || 0));
-    if(n > 0) newEx.ps = {n, cur: {}};
-  });
+  diff.matches.forEach(({oldEx, newEx}) => { carryExerciseProgress(oldEx, newEx); });
 }
 
 // расчётная (не по истории) длительность одного варианта — используется только
@@ -15979,7 +16055,7 @@ function startWorkout(fromIdx, elapsed){
   // упражнения» — пропущенные до него не в счёт.
   state.reachedEx = new Set();
   if(state.resumeElapsed > 0){
-    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exName || s.title); });
+    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exId || s.exName || s.title); });
   }
   show('scrWork');
   startHandsFree();
@@ -16081,7 +16157,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
-  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exName || step.title);
+  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -16667,14 +16743,14 @@ function commitFinish(ctx){
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
-        if(state.reachedEx && !state.reachedEx.has(ex.name)) return;
+        if(state.reachedEx && !state.reachedEx.has(ex.id) && !state.reachedEx.has(ex.name)) return;
         const ps = ensurePs(ex);
         ps.n++;
         if(ps.n >= every) eligible.push(ex.id);
       });
       // храним id, а не сами объекты: пока открыт экран финала, синхронизация
       // может заменить customPrograms новыми объектами (см. progCheckExercises)
-      if(eligible.length) state.progCheck = {pid: p.id, ids: eligible, hard: new Set()};
+      if(eligible.length) state.progCheck = {pid: p.id, plan: normPlans(p).indexOf(pl), ids: eligible, hard: new Set()};
     }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
@@ -16697,12 +16773,16 @@ function commitFinish(ctx){
 /* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
 // Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
 // (см. p.progression), и ни одно ещё не отмечено «тяжело».
+// Ищем только в том варианте, по которому шла тренировка, и только среди
+// основных упражнений: при совпавших id (старые копии упражнений) поиск по всей
+// программе находил чужое — например, упражнение из разминки другого варианта.
 function progCheckExercises(chk){
   const p = chk && customPrograms.find(x => x.id === chk.pid);
   if(!p) return [];
-  const all = [];
-  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => all.push(ex)));
-  return chk.ids.map(id => all.find(ex => ex.id === id)).filter(Boolean);
+  const plans = normPlans(p);
+  const pl = plans[chk.plan] || plans[0];
+  const pool = ((pl && pl.exercises) || []).filter(ex => !ex.warmup);
+  return chk.ids.map(id => pool.find(ex => ex.id === id)).filter(Boolean);
 }
 function renderProgCheck(){
   const chk = state.progCheck;
@@ -16720,9 +16800,11 @@ function renderProgCheck(){
     b.type = 'button';
     b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
     b.textContent = ex.name || t('common.exerciseFallback');
+    // только переключаем отметку: перерисовка всего блока сворачивала список,
+    // и второе упражнение уже нельзя было отметить
     b.onclick = () => {
       if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
-      renderProgCheck();
+      b.classList.toggle('act', chk.hard.has(ex.id));
     };
     box.appendChild(b);
   });
@@ -19130,7 +19212,18 @@ $('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
-  settleQuickFinish(true);            // у короткой тренировки это кнопка «Засчитать»
+  // у короткой тренировки это кнопка «Засчитать». Если после засчёта подошла
+  // проверка прогресса, остаёмся на экране: иначе вопрос «Всё получилось?»
+  // считался бы и тут же пропадал вместе с экраном, так и не показавшись.
+  if(state.pendingFinish){
+    settleQuickFinish(true);
+    if(state.progCheck){
+      $('finTitle').textContent = t('workout.great');
+      $('btnAgain').className = 'btn-primary';
+      $('btnAgain').textContent = t('finish.done');
+      return;
+    }
+  }
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
   document.body.classList.remove('phase-rest');
   goTab('scrMenu');

@@ -1191,7 +1191,18 @@ $('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
 $('scrollCue').innerHTML = icon('chevD');
 $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
 $('btnAgain').onclick = async ()=>{
-  settleQuickFinish(true);            // у короткой тренировки это кнопка «Засчитать»
+  // у короткой тренировки это кнопка «Засчитать». Если после засчёта подошла
+  // проверка прогресса, остаёмся на экране: иначе вопрос «Всё получилось?»
+  // считался бы и тут же пропадал вместе с экраном, так и не показавшись.
+  if(state.pendingFinish){
+    settleQuickFinish(true);
+    if(state.progCheck){
+      $('finTitle').textContent = t('workout.great');
+      $('btnAgain').className = 'btn-primary';
+      $('btnAgain').textContent = t('finish.done');
+      return;
+    }
+  }
   if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
   document.body.classList.remove('phase-rest');
   goTab('scrMenu');

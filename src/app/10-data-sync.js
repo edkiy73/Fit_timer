@@ -1566,6 +1566,9 @@ async function savePrograms(){
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
+  // id упражнений уникальны в программе (см. uniqueExerciseIds) — чиним на месте,
+  // чтобы копия, заведённая старым способом, не жила с чужим id до перезапуска
+  customPrograms.forEach(p => { if(p && typeof p === 'object') uniqueExerciseIds(p); });
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -2104,7 +2107,8 @@ function customToProgram(p, planIdx = 0){
       weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
-      exName: ex.name
+      exName: ex.name,
+      exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };
     // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
     if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){

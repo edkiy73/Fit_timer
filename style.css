@@ -961,13 +961,16 @@ body.booting .app{visibility:hidden}
   }
   .fin-progcheck b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
   .fin-progcheck .btn-primary{margin-top:var(--sp-2);width:100%}
+  /* вторая кнопка, а не мелкая ссылка: полная ширина, та же высота касания
+     44px и заметный отступ от «Да, повышаем», чтобы не промахнуться */
   .fpc-toggle{
-    display:block;margin:8px auto 0;padding:4px;background:none;border:none;
-    color:var(--accent-ink);font-family:var(--font-text);font-size:13px;cursor:pointer;
+    display:block;width:100%;min-height:44px;margin-top:var(--sp-3);padding:0 16px;
+    border-radius:var(--r-pill);background:none;border:1px solid var(--accent-line);
+    color:var(--accent-ink);font-family:var(--font-text);font-size:14px;cursor:pointer;
   }
-  .fpc-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .fpc-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--sp-3)}
   .fpc-chip{
-    padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--line);
+    min-height:40px;padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--line);
     background:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13px;cursor:pointer;
   }
   .fpc-chip.act{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger)}
@@ -1603,10 +1606,19 @@ body.booting .app{visibility:hidden}
   }
   .ex-meta .wm{color:var(--accent-ink);background:var(--accent-soft)}
   /* нагрузка растёт: контур, а не заливка — метка не должна спорить с «Разминкой» */
-  .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink)}
+  /* длинная строка «было → сегодня» переносится, а не уезжает за край карточки */
+  .ex-meta .grow{background:none;border:1px solid var(--accent-line);color:var(--accent-ink);white-space:normal;max-width:100%}
+  /* вес на старте — единственное, что правится касанием: метка с карандашом
+     выглядит как кнопка, чтобы это было видно без объяснений */
+  .ex-meta .kg-edit{
+    display:inline-flex;align-items:center;gap:4px;
+    color:var(--accent-ink);background:none;border:1px solid var(--accent-line);
+  }
+  .ex-meta .kg-edit svg{width:11px;height:11px}
+  .ex-meta .kg-edit i{font-style:normal}
   /* вес формата «…и вес» ещё не выбран — метка выделена цветом (кликабельна вместе
      со всей строкой — см. .ex-row.tappable ниже, открывает #weightModal) */
-  .ex-meta .weight-pending{color:var(--danger);background:none;border:1px dashed var(--danger)}
+  .ex-meta .kg-edit.weight-pending{color:var(--danger);border:1px dashed var(--danger)}
   /* строка экрана старта, по которой можно поправить вес (замена бывшему общему
      блоку «Нагрузка сегодня» с «±» — правка теперь per-упражнение) */
   .ex-row.tappable{cursor:pointer}

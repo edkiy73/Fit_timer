@@ -1032,7 +1032,12 @@ function loadDelta(a, b){
     bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
-  const dir = directional.length && directional.every(x => x > 0) ? 'up'
+  // вес вырос, а повторы вернулись к началу диапазона — это шаг двойной
+  // прогрессии, то есть нагрузка ВЫШЕ, а не «изменилась»
+  const kgUp = (+b.kg || 0) > (+a.kg || 0);
+  const secSame = (+a.sec || 0) === (+b.sec || 0);
+  const dir = kgUp && secSame ? 'up'
+    : directional.length && directional.every(x => x > 0) ? 'up'
     : directional.length && directional.every(x => x < 0) ? 'down'
     : directional.length ? 'mixed' : 'same';
   return {text:bits.join(' · '), dir};
@@ -1086,31 +1091,30 @@ function renderStartOverview(){
 
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
-  if(previous.first){
-    changeText(t('start.firstWorkout'));
-  } else if(changes.length){
-    const direction = changes.every(x => x.dir === 'up') ? 'up'
-      : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
-    if(direction === 'up'){
-      changeText(t('start.loadHigher',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    } else if(direction === 'down'){
-      changeText(t('start.loadLower',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    } else {
-      changeText(t('start.loadChanged',{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')}));
-    }
-  } else if(p.progression){
-    // прогрессия у каждого упражнения своя (ex.ps.n) — «осталось N тренировок»
-    // считаем по ближайшему к порогу упражнению этого варианта, а не по общему
-    // счётчику программы
+  // через сколько тренировок приложение спросит о повышении: прогрессия у каждого
+  // упражнения своя (ex.ps.n) — берём ближайшее к порогу упражнение варианта.
+  // Показываем и тогда, когда нагрузка уже изменилась, — иначе после первого
+  // повышения человек терял из виду, когда будет следующее.
+  let nextText = '';
+  if(p.progression){
     const every = Math.max(1, +p.progression || 1);
     const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
       .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
     if(ns.length){
       const left = Math.max(1, every - Math.max(...ns));
-      changeText(t('start.noChangesNext',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')}));
-    } else {
-      changeText(t('start.noChangesOff'));
+      nextText = t('start.nextCheck',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')});
     }
+  }
+  if(previous.first){
+    changeText(t('start.firstWorkout'));
+  } else if(changes.length){
+    const direction = changes.every(x => x.dir === 'up') ? 'up'
+      : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
+    const key = direction === 'up' ? 'start.loadHigher' : direction === 'down' ? 'start.loadLower' : 'start.loadChanged';
+    const text = t(key,{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')});
+    changeText(nextText ? text + ' ' + nextText : text);
+  } else if(nextText){
+    changeText(t('start.noChanges') + ' · ' + nextText);
   } else {
     changeText(t('start.noChangesOff'));
   }
@@ -1124,7 +1128,9 @@ function renderStartOverview(){
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const meta = [];
     if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
-    meta.push({text:loadTargetText(ex, current[i]), cls:''});
+    // вес — отдельной кнопкой-меткой с карандашом (см. ниже): так видно, что
+    // нажимается именно он, а повторы и время растут сами по плану
+    meta.push({text:loadTargetText(ex, hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
     if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
     else meta.push({text:storeCountText(sets,'set'), cls:''});
     const delta = changes.find(x => x.i === i);
@@ -1137,7 +1143,17 @@ function renderStartOverview(){
     row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
-    meta.forEach(x => tag(x.text, x.cls));
+    meta.forEach((x, k) => {
+      tag(x.text, x.cls);
+      if(k === (ex.warmup ? 1 : 0) && hasWeight(ex)){
+        const pending = weightPending(ex) || !(+current[i].kg > 0);
+        const kg = document.createElement('span');
+        kg.className = 'kg-edit' + (pending ? ' weight-pending' : '');
+        kg.innerHTML = icon('pencil') + '<i></i>';
+        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${fmtKg(current[i].kg)} ${t('progress.kg')}`;
+        tags.appendChild(kg);
+      }
+    });
     if(delta) tag(delta.text, 'grow');
     // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
     // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
@@ -1146,7 +1162,6 @@ function renderStartOverview(){
     if(hasWeight(ex)){
       row.classList.add('tappable');
       row.onclick = () => openWeightModal(i);
-      if(weightPending(ex)) tag(t('start.weightPending'), 'weight-pending');
     }
     box.appendChild(row);
   });

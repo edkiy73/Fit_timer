@@ -99,6 +99,50 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await run();
   ok('блок проверки не показывается, пока порог не достигнут', !(await page.isVisible('#finProgCheck')));
 
+  // ---- находки с устройства: разминка с тем же id, два чипа подряд,
+  //      тренировка короче 30 секунд ----
+  await page.evaluate(async () => {
+    const ex = (id, name, extra) => Object.assign({id, name, type:'reps', value:'10', sets:1, rest:5,
+      progOn:true, trackWeight:false, repsStep:1}, extra || {});
+    customPrograms.push({id:'pc2', name:'Два варианта', progression:1, stats:{completions:0}, plans:[
+      {days:['Пн'], rounds:1, roundRest:0, exercises:[
+        // старая копия: разминка унаследовала id основного упражнения
+        ex('dup', 'Махи руками', {warmup:true, progOn:false}),
+        ex('dup', 'Присед'), ex('e2', 'Отжимания')
+      ]},
+      {days:['Чт'], rounds:1, roundRest:0, exercises:[ex('e3', 'Выпады')]}
+    ]});
+    await savePrograms();
+  });
+  const ids = await page.evaluate(() => normPlans(customPrograms.find(x => x.id === 'pc2'))[0].exercises.map(e => e.id));
+  ok('повторяющийся id получает свой при сохранении', new Set(ids).size === ids.length, ids.join(','));
+
+  await page.evaluate(async () => {
+    const p = customPrograms.find(x => x.id === 'pc2');
+    openStart(p); state.planIdx = 0;
+    $('btnStart').click();
+    await new Promise(r => setTimeout(r, 500));
+    state.reachedEx = new Set(normPlans(p)[0].exercises.map(e => e.id));
+    // короче 30 секунд: финал сначала спрашивает, засчитывать ли
+    state.globalStart = Date.now() - 10 * 1000; state.pausedTotal = 0;
+    finishWorkout();
+    document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+  });
+  await page.waitForTimeout(1200);
+  ok('короткая тренировка: сначала вопрос «засчитать?»', await page.isVisible('#finQuick'));
+  await page.click('#btnAgain');
+  await page.waitForTimeout(400);
+  ok('после «Засчитать» экран финала остаётся и спрашивает про повышение',
+     await page.isVisible('#scrFinish') && await page.isVisible('#finProgCheck'));
+  await page.click('#finProgCheckToggle');
+  const chips = await page.$$eval('.fpc-chip', xs => xs.map(x => x.textContent));
+  ok('в проверке основные упражнения, а не разминка', chips.join('|') === 'Присед|Отжимания', chips.join('|'));
+  await page.click('.fpc-chip >> nth=0');
+  ok('после отметки список не сворачивается', await page.isVisible('#finProgCheckList'));
+  await page.click('.fpc-chip >> nth=1');
+  const marked = await page.$$eval('.fpc-chip.act', xs => xs.length);
+  ok('можно отметить два упражнения подряд', marked === 2, marked);
+
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');
