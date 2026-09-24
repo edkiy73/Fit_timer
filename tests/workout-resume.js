@@ -82,6 +82,29 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     resumed.planIdx === 1 && resumed.title === 'Вт 5', JSON.stringify(resumed));
   ok('сохранённое место не превратилось в упражнение понедельника', resumed.title !== 'Пн 5', resumed.title);
 
+  const nativeResumed = await page.evaluate(async () => {
+    // Имитируем уничтоженный WebView: живого workout state больше нет, но session осталась.
+    tearDownWorkout();
+    prepSec = 5; // notification recovery должна миновать обычный предстартовый countdown
+    const ok = await resumeWorkoutFromNativeNotification();
+    return {
+      ok,
+      live:state.live,
+      screen:show._last,
+      planIdx:state.planIdx,
+      title:state.steps[state.stepIdx] && state.steps[state.stepIdx].title,
+      prepOpen:$('prepOverlay').classList.contains('on')
+    };
+  });
+  ok('тап системного уведомления восстанавливает сохранённую тренировку',
+    nativeResumed.ok && nativeResumed.live && nativeResumed.screen === 'scrWork',
+    JSON.stringify(nativeResumed));
+  ok('native recovery возвращает тот же вариант и шаг',
+    nativeResumed.planIdx === 1 && nativeResumed.title === 'Вт 5',
+    JSON.stringify(nativeResumed));
+  ok('native recovery не запускает повторный предстартовый countdown',
+    !nativeResumed.prepOpen, JSON.stringify(nativeResumed));
+
   const choices = await page.evaluate(() => {
     tearDownWorkout();
     const p = customPrograms.find(x => x.id === 'resume-variant-test');
