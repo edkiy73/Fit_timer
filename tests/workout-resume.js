@@ -58,6 +58,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
       throw new Error('timer recovery fields were not saved');
     }
+    // The saved resume point below is a reps step; keep that session realistic after
+    // separately proving that timer recovery fields persist.
+    state.stepDeadline = 0;
+    state.remaining = 0;
+    await saveSession();
 
     openStart(p);
     state.planIdx = 0;
