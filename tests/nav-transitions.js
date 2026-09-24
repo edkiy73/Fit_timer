@@ -85,7 +85,7 @@ async function newAppPage(ctx, opts={}){
 async function homeThenExit(page, label){
   if((await state(page)).screen !== 'scrMenu'){
     await page.evaluate(() => goTab('scrMenu'));
-    await nap(page, 500);
+    await nap(page, 900);
   }
   await aligned(page, label + ': Сегодня', 'scrMenu');
   await page.goBack({waitUntil:'load', timeout:5000}).catch(()=>{});
@@ -210,7 +210,10 @@ async function scenario(ctx, name, fn, errs){
     await nap(page, 550);
     await aligned(page, 'назад из ИИ нового упражнения', 'scrBuilder');
     await page.goBack();
-    await nap(page, 550);
+    await nap(page, 300);
+    ok('Back после нового упражнения спрашивает про несохранённое', await page.isVisible('#dlgOk'));
+    await page.click('#dlgOk');
+    await nap(page, 700);
     await aligned(page, 'Back после возврата из ИИ ведёт к тренировкам', 'scrPrograms');
     await homeThenExit(page, 'новое упражнение / ИИ');
   }, errs);
@@ -226,7 +229,10 @@ async function scenario(ctx, name, fn, errs){
     await nap(page, 500);
     await aligned(page, 'назад из ИИ существующего упражнения', 'scrBuilder');
     await page.goBack();
-    await nap(page, 500);
+    await nap(page, 300);
+    ok('Back после редактирования спрашивает про несохранённое', await page.isVisible('#dlgOk'));
+    await page.click('#dlgOk');
+    await nap(page, 700);
     await aligned(page, 'Back после редактирования упражнения', 'scrPrograms');
     await homeThenExit(page, 'существующее упражнение / ИИ');
   }, errs);
@@ -241,7 +247,11 @@ async function scenario(ctx, name, fn, errs){
     ok('системный Back спрашивает про несохранённое', await page.isVisible('#dlgCancel'));
     await page.click('#dlgCancel');
     await nap(page, 400);
-    await aligned(page, 'после «Остаться»', 'scrBuilder');
+    {
+      const s = await state(page);
+      ok('после «Остаться»: видимый экран', s.screen === 'scrBuilder', JSON.stringify(s));
+      ok('после «Остаться»: history совпадает с экраном', s.historyScreen === 'scrBuilder', JSON.stringify(s));
+    }
     await page.goBack();
     await nap(page, 300);
     ok('повторный Back снова спрашивает', await page.isVisible('#dlgOk'));
@@ -369,6 +379,7 @@ async function scenario(ctx, name, fn, errs){
       goTab('scrPrograms');
       const p = customPrograms.find(x => x.id === 'nav-live-workout');
       openStart(p);
+      state.current = customToProgram(p, 0);
       startWorkout();
       const at = state.steps.findIndex(s => s && s.exName);
       if(at >= 0){
@@ -400,18 +411,18 @@ async function scenario(ctx, name, fn, errs){
 
   await scenario(ctx, 'ИИ добавляет упражнение → Builder без возврата в ИИ', async page => {
     await seedProgram(page, 'nav-ai-add');
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       goTab('scrPrograms');
       openBuilder('nav-ai-add');
       openExAI();
       $('aiResult').value = 'УПРАЖНЕНИЕ: Выпады\\nФОРМАТ: повторения\\nЗНАЧЕНИЕ: 10\\nПОДХОДЫ: 1\\nОТДЫХ: 30';
-      await exaAddExercise();
+      exaAddExercise();
     });
-    await nap(page, 450);
+    await page.waitForFunction(() => show._last === 'scrBuilder' && document.querySelector('#dlg.open'), null, {timeout:5000});
     await aligned(page, 'после добавления через ИИ', 'scrBuilder');
     ok('success-попап открыт уже поверх Builder', await page.isVisible('#dlgOk'));
     await page.click('#dlgOk');
-    await nap(page, 450);
+    await nap(page, 650);
     await page.goBack();
     await nap(page, 300);
     ok('Back из изменённого Builder спрашивает о несохранённом', await page.isVisible('#dlgOk'));
