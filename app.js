@@ -4261,6 +4261,10 @@ function syncSoundCascade(p){
 }
 
 /* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
+// appDialog должен завершаться только после того, как служебная запись открытого
+// попапа реально снята из browser history. Иначе следующий переход успевает
+// построить новую навигацию поверх ещё не завершившегося history.back().
+let modalHistoryWaiters = [];
 function appDialog(msg, opts = {}){
   return new Promise(res => {
     // текст передают и готовой строкой, и функцией от t(): на экран не должен
@@ -4289,12 +4293,18 @@ function appDialog(msg, opts = {}){
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
     const done = v => {
+      // Если это последний открытый попап и сверху лежит его history-запись,
+      // сначала даём MutationObserver снять её. Продолжение (например goTab())
+      // запускаем уже после соответствующего popstate — без гонки со старым экраном.
+      const waitHistory = !!(history.state && history.state.m)
+        && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
       $('dlg').classList.remove('open');
       $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
       $('dlgOk').disabled = false;
       setShown('dlgTypeBox', false);
       typed.oninput = null;
-      res(v);
+      if(waitHistory) modalHistoryWaiters.push(()=> res(v));
+      else res(v);
     };
     $('dlgOk').onclick = () => done(true);
     $('dlgCancel').onclick = () => done(false);
@@ -4428,7 +4438,15 @@ new MutationObserver(()=>{
   // и тогда наш history.back() отменил бы этот переход.
   if(history.state && history.state.m){
     skipPop++;
-    try{ history.back(); }catch(e){ skipPop = Math.max(0, skipPop - 1); }
+    try{ history.back(); }
+    catch(e){
+      skipPop = Math.max(0, skipPop - 1);
+      const waiters = modalHistoryWaiters.splice(0);
+      waiters.forEach(fn => fn());
+    }
+  } else if(modalHistoryWaiters.length){
+    const waiters = modalHistoryWaiters.splice(0);
+    waiters.forEach(fn => fn());
   }
 }).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
 
@@ -4439,7 +4457,12 @@ window.addEventListener('popstate', async e => {
     try{ history.replaceState({scr: pendingTabScreen, d: navDepth}, ''); }catch(_){}
     pendingTabScreen = null;
   }
-  if(skipPop > 0){ skipPop--; return; }   // это мы сами сняли запись закрытого попапа
+  if(skipPop > 0){
+    skipPop--;
+    const waiters = modalHistoryWaiters.splice(0);
+    waiters.forEach(fn => fn());
+    return;
+  }   // это мы сами сняли запись закрытого попапа
   // открытый попап забирает жест себе — экран под ним остаётся на месте
   if(document.querySelector('.modal.open')){
     try{ history.pushState(history.state || e.state || {scr: show._last, d: navDepth}, ''); }catch(_){}
