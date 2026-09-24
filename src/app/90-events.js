@@ -269,6 +269,10 @@ window.addEventListener('fitNotificationAction', e => {
     if(typeof importProgramLink === 'function') importProgramLink(String(extra.linkId));
     return;
   }
+  if(Array.isArray(extra.programIds) && extra.programIds.length){
+    goTab('scrMenu');
+    return;
+  }
   if(extra.programId){
     const p = customPrograms.find(x => x && x.id === extra.programId);
     if(p){
