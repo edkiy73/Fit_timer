@@ -18077,9 +18077,13 @@ async function syncNativeNotifications(){
       });
     }
 
-    // Незавершённая тренировка: один мягкий возврат через 2 часа, только в первые сутки.
+    // Незавершённая СОХРАНЁННАЯ тренировка: один мягкий возврат через 2 часа.
+    // Для прямо сейчас активной тренировки работает отдельный one-shot reminder через
+    // 20 минут бездействия; планировать оба одновременно было бы дублем.
     try{
-      const session = (typeof loadSession === 'function') ? await loadSession() : null;
+      const session = (state && state.live)
+        ? null
+        : ((typeof loadSession === 'function') ? await loadSession() : null);
       if(session && session.at){
         const at = new Date(+session.at + 2 * 3600000);
         if(+at > +now && +at - +new Date(session.at) < NOTIFY_DAY){
