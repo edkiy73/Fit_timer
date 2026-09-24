@@ -117,6 +117,88 @@ final class VoiceCommands {
         return "";
     }
 
+    /** Слово итоговой гипотезы Vosk со временем в секундах. */
+    static final class Word {
+        final String text;
+        final double start;
+        final double end;
+        Word(String text, double start, double end) {
+            this.text = text == null ? "" : text.toLowerCase(Locale.ROOT).trim();
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    /**
+     * Одиночный посторонний звук короче этого — вдох, выдох, кашель, стук
+     * гантели. Он не делает фразу «разговором»: после подхода человек дышит
+     * тяжело, и «[unk] готово» должно работать.
+     */
+    static final double NOISE_MAX_SEC = 0.4;
+    /**
+     * Сколько тишины нужно между посторонней речью и командой. Телевизор и
+     * живой разговор идут сплошным потоком с паузами в доли секунды, а команду
+     * человек говорит отдельно.
+     */
+    static final double QUIET_BEFORE_SEC = 0.6;
+
+    /**
+     * Во фразе есть посторонняя речь, а не просто звук: два и больше чужих
+     * слова или одно, но длинное. Так выглядит «мы пошли дальше» из телевизора:
+     * со словарём оно приходит как «[unk] [unk] дальше», и раньше [unk]
+     * отбрасывались, а «дальше» срабатывало.
+     */
+    static boolean hasForeignSpeech(String text, List<Word> words) {
+        int foreign = 0;
+        double foreignSec = 0.0;
+        if (words != null) {
+            for (Word w : words) {
+                if (w.text.isEmpty() || isCommandWord(w.text)) continue;
+                foreign++;
+                foreignSec += Math.max(0.0, w.end - w.start);
+            }
+        }
+        // Слова со временем есть не всегда (и [unk] туда может не попасть) —
+        // считаем чужие слова и по самому тексту.
+        int foreignInText = 0;
+        String t = text == null ? "" : text.toLowerCase(Locale.ROOT).trim();
+        for (String part : t.split("\\s+")) {
+            if (!part.isEmpty() && !isCommandWord(part)) foreignInText++;
+        }
+        return Math.max(foreign, foreignInText) >= 2 || foreignSec > NOISE_MAX_SEC;
+    }
+
+    /** Длительность фразы от начала первого слова до конца последнего. */
+    static double spanSec(List<Word> words) {
+        if (words == null || words.isEmpty()) return 0.0;
+        return Math.max(0.0, words.get(words.size() - 1).end - words.get(0).start);
+    }
+
+    /**
+     * Команда началась слишком скоро после посторонней речи — это продолжение
+     * чужого разговора, а не обращение к приложению. Время считается по часам
+     * итоговых результатов: у обеих фраз одинаковая задержка конца фразы, поэтому
+     * начало текущей ≈ nowMs − её длительность.
+     */
+    static boolean tooSoonAfterSpeech(long nowMs, double commandSpanSec, long lastForeignSpeechMs) {
+        if (lastForeignSpeechMs <= 0) return false;
+        double gapSec = (nowMs - lastForeignSpeechMs) / 1000.0 - commandSpanSec;
+        return gapSec < QUIET_BEFORE_SEC;
+    }
+
+    /** Слово входит в какую-нибудь команду (с теми же допусками, что kindFlexible). */
+    private static boolean isCommandWord(String w) {
+        if (!stemKind(w).isEmpty()) return true;
+        for (String[] list : ALL) {
+            for (String phrase : list) {
+                for (String part : phrase.split(" ")) if (part.equals(w)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static final String[][] ALL = {RU_PAUSE, RU_RESUME, RU_NEXT, EN_PAUSE, EN_RESUME, EN_NEXT};
+
     private static boolean in(String t, String[] list) {
         for (String s : list) if (s.equals(t)) return true;
         return false;

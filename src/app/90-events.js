@@ -667,6 +667,7 @@ function voiceTestRow(d){
   row.innerHTML = '<b></b><span></span>';
   row.querySelector('b').textContent = text ? `«${text}»` : t('voicetest.noise');
   row.querySelector('span').textContent = d.accepted && VT_KIND[d.kind] ? t(VT_KIND[d.kind])
+    : d.kind && d.source === 'in_speech' ? t('voicetest.inSpeech')
     : d.kind ? t('voicetest.unsure') : t('voicetest.notCommand');
   box.prepend(row);
   while(box.children.length > 8) box.lastChild.remove();

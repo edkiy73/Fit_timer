@@ -38,6 +38,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -70,6 +71,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private String pendingPartialKind = "";
     private int pendingPartialHits = 0;
     private Runnable pendingPartialRunnable = null;
+    // когда последний раз слышали постороннюю речь (телевизор, разговор) — см. VoiceCommands
+    private long lastForeignSpeechMs = 0L;
 
     @Override
     public void load() {
@@ -406,6 +409,20 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         } catch (Exception ignored) { return 0.0; }
     }
 
+    private List<VoiceCommands.Word> hypothesisWords(String json) {
+        List<VoiceCommands.Word> out = new ArrayList<>();
+        if (json == null || json.isEmpty()) return out;
+        try {
+            JSONArray words = new JSONObject(json).optJSONArray("result");
+            if (words == null) return out;
+            for (int i = 0; i < words.length(); i++) {
+                JSONObject w = words.getJSONObject(i);
+                out.add(new VoiceCommands.Word(w.optString("word", ""), w.optDouble("start", 0.0), w.optDouble("end", 0.0)));
+            }
+        } catch (Exception ignored) {}
+        return out;
+    }
+
     private String commandKindFlexible(String text) {
         return VoiceCommands.kindFlexible(text);
     }
@@ -458,6 +475,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         // Поэтому в этом режиме решает только итоговый результат с порогом
         // уверенности — он приходит через ~0.3 с тишины после слова.
         if (grammarActive) return;
+        // только что шла посторонняя речь — ждём итог, там решит проверка паузы
+        if (VoiceCommands.tooSoonAfterSpeech(System.currentTimeMillis(), 0.0, lastForeignSpeechMs)) return;
         String text = hypothesisText(hypothesis, "partial");
         String kind = commandKindFlexible(text);
         if (kind.isEmpty()) {
@@ -503,8 +522,20 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         if (commandFiredForUtterance) return; // команда уже ушла по partial — это её же конец
         String kind = commandKindFlexible(text);
         double confidence = hypothesisConfidence(hypothesis);
+        List<VoiceCommands.Word> words = hypothesisWords(hypothesis);
+        long now = System.currentTimeMillis();
+        boolean foreign = VoiceCommands.hasForeignSpeech(text, words);
+        boolean tooSoon = VoiceCommands.tooSoonAfterSpeech(now, VoiceCommands.spanSec(words), lastForeignSpeechMs);
+        if (foreign) lastForeignSpeechMs = now;
         if (kind.isEmpty()) {
             emitHeard(text, "", confidence, "final", false);
+            return;
+        }
+        // Команда внутри сплошной речи или сразу за ней — это телевизор или
+        // разговор, где просто прозвучало «дальше» / «готово». Говоря с
+        // приложением, команду произносят отдельно.
+        if (foreign || tooSoon) {
+            emitHeard(text, kind, confidence, "in_speech", false);
             return;
         }
         // Финальный результат уже обязан совпасть с целой командой. Поэтому порог
@@ -531,6 +562,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             speechService = null;
         }
         commandFiredForUtterance = false;
+        lastForeignSpeechMs = 0L;
         cancelPendingPartial();
     }
 
