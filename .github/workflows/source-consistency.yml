@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'mobile.js', 'app.config.js', 'capacitor.config.json', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'mobile.js', 'app.config.js', 'capacitor.config.json', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
@@ -27,6 +27,13 @@ jobs:
           find api lib tests -name '*.js' -print0 | xargs -0 -n1 node --check
           find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
           python3 check.py
+
+      - name: Проверить веб-бандл для Android/iOS
+        # Нативные сборки в PR идут только при правках android/ или ios/, поэтому
+        # содержимое dist/ и мост mobile.js проверяются здесь, без SDK
+        run: |
+          npm run build
+          npm run check:mobile
 
       - name: Проверить серверные regression-сценарии
         run: |

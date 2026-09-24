@@ -4,21 +4,24 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: &mobile_paths
+    # Сборка для симулятора ничего не выпускает и проверяет только нативный
+    # проект. Веб-код в неё не компилируется: его упаковку проверяет
+    # check:mobile в source-consistency.yml.
+    paths: &ios_paths
       - 'ios/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'app.js'
-      - 'style.css'
-      - 'index.html'
-      - 'mobile.js'
-      - 'app.config.js'
       - 'capacitor.config.json'
+      - 'assets/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'scripts/build-web.mjs'
+      - 'scripts/check-mobile.mjs'
       - '.github/workflows/ios.yml'
   pull_request:
-    paths: *mobile_paths
+    paths: *ios_paths
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
 
 
 jobs:

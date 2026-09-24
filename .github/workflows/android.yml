@@ -28,8 +28,20 @@ on:
         description: "Версия для пользователя"
         required: true
         default: "1.0.0"
+  # В PR нативная сборка нужна только когда меняется нативная часть. Правки
+  # веб-кода (src/, app.js, mobile.js) в APK не компилируются — их упаковку
+  # проверяет check:mobile в source-consistency.yml за секунды. Push в main
+  # по-прежнему реагирует на веб-код: оттуда выходит release APK.
   pull_request:
-    paths: *mobile_paths
+    paths:
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'assets/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/build-web.mjs'
+      - 'scripts/check-mobile.mjs'
+      - '.github/workflows/android.yml'
 
 permissions:
   contents: write
