@@ -70,13 +70,16 @@
   }
   .fin-progcheck b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
   .fin-progcheck .btn-primary{margin-top:var(--sp-2);width:100%}
+  /* вторая кнопка, а не мелкая ссылка: полная ширина, та же высота касания
+     44px и заметный отступ от «Да, повышаем», чтобы не промахнуться */
   .fpc-toggle{
-    display:block;margin:8px auto 0;padding:4px;background:none;border:none;
-    color:var(--accent-ink);font-family:var(--font-text);font-size:13px;cursor:pointer;
+    display:block;width:100%;min-height:44px;margin-top:var(--sp-3);padding:0 16px;
+    border-radius:var(--r-pill);background:none;border:1px solid var(--accent-line);
+    color:var(--accent-ink);font-family:var(--font-text);font-size:14px;cursor:pointer;
   }
-  .fpc-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .fpc-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--sp-3)}
   .fpc-chip{
-    padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--line);
+    min-height:40px;padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--line);
     background:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13px;cursor:pointer;
   }
   .fpc-chip.act{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger)}

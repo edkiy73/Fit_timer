@@ -19,7 +19,21 @@ function need(cond, msg){
   const withEmptyVariant = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\nОТДЫХ: 0\n\n'
     + 'ДЕНЬ: \nКРУГИ: 1\nУПРАЖНЕНИЕ: A\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 3\nОТДЫХ: 30';
   const v = FitAIProtocol.validateProgramResponse(withEmptyVariant);
-  need(v.ok === false && v.reason === 'empty_variant', 'variant with no exercises is rejected');
+  need(v.ok === true && (v.text.match(/^ДЕНЬ:/gm) || []).length === 1,
+    'empty variant header is dropped instead of rejecting the whole answer');
+}
+{
+  const allEmpty = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\nОТДЫХ: 0';
+  need(FitAIProtocol.validateProgramResponse(allEmpty).ok === false, 'program with no exercises at all is still rejected');
+}
+/* ---- Markdown-оформление протокола не делает ответ «неполным» ---- */
+{
+  const md = '```plaintext\n**ПРОГРАММА:** Т\n### ДЕНЬ: Пн\n- КРУГИ: 1\n**УПРАЖНЕНИЕ**: Присед\n'
+    + 'ОПИСАНИЕ: Стопы на ширине плеч: колени по носкам.\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 3\nОТДЫХ: 60\n```';
+  const v = FitAIProtocol.validateResponse('program.modify', md);
+  need(v.ok === true, 'markdown-decorated protocol passes: ' + v.reason + ' ' + v.missing);
+  need(/^ПРОГРАММА: Т$/m.test(v.text) && /^УПРАЖНЕНИЕ: Присед$/m.test(v.text), 'labels are cleaned for the client parser');
+  need(v.text.includes('Стопы на ширине плеч: колени по носкам.'), 'description text with a colon is left untouched');
 }
 {
   const good = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\nУПРАЖНЕНИЕ: A\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 3\nОТДЫХ: 30';

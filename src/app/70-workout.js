@@ -203,7 +203,7 @@ function startWorkout(fromIdx, elapsed){
   // упражнения» — пропущенные до него не в счёт.
   state.reachedEx = new Set();
   if(state.resumeElapsed > 0){
-    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exName || s.title); });
+    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exId || s.exName || s.title); });
   }
   show('scrWork');
   startHandsFree();
@@ -305,7 +305,7 @@ function renderStep(){
   setPause(false); // новый шаг всегда начинается без паузы
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
-  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exName || step.title);
+  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -891,14 +891,14 @@ function commitFinish(ctx){
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
-        if(state.reachedEx && !state.reachedEx.has(ex.name)) return;
+        if(state.reachedEx && !state.reachedEx.has(ex.id) && !state.reachedEx.has(ex.name)) return;
         const ps = ensurePs(ex);
         ps.n++;
         if(ps.n >= every) eligible.push(ex.id);
       });
       // храним id, а не сами объекты: пока открыт экран финала, синхронизация
       // может заменить customPrograms новыми объектами (см. progCheckExercises)
-      if(eligible.length) state.progCheck = {pid: p.id, ids: eligible, hard: new Set()};
+      if(eligible.length) state.progCheck = {pid: p.id, plan: normPlans(p).indexOf(pl), ids: eligible, hard: new Set()};
     }
     // ротация вариантов: следующая тренировка — следующий вариант по очереди
     if(p.rotate){
@@ -921,12 +921,16 @@ function commitFinish(ctx){
 /* ================= ПРОВЕРКА ПРОГРЕССА (экран финала) ================= */
 // Заполняется в commitFinish(): упражнения, у которых подошёл порог проверки
 // (см. p.progression), и ни одно ещё не отмечено «тяжело».
+// Ищем только в том варианте, по которому шла тренировка, и только среди
+// основных упражнений: при совпавших id (старые копии упражнений) поиск по всей
+// программе находил чужое — например, упражнение из разминки другого варианта.
 function progCheckExercises(chk){
   const p = chk && customPrograms.find(x => x.id === chk.pid);
   if(!p) return [];
-  const all = [];
-  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => all.push(ex)));
-  return chk.ids.map(id => all.find(ex => ex.id === id)).filter(Boolean);
+  const plans = normPlans(p);
+  const pl = plans[chk.plan] || plans[0];
+  const pool = ((pl && pl.exercises) || []).filter(ex => !ex.warmup);
+  return chk.ids.map(id => pool.find(ex => ex.id === id)).filter(Boolean);
 }
 function renderProgCheck(){
   const chk = state.progCheck;
@@ -944,9 +948,11 @@ function renderProgCheck(){
     b.type = 'button';
     b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
     b.textContent = ex.name || t('common.exerciseFallback');
+    // только переключаем отметку: перерисовка всего блока сворачивала список,
+    // и второе упражнение уже нельзя было отметить
     b.onclick = () => {
       if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
-      renderProgCheck();
+      b.classList.toggle('act', chk.hard.has(ex.id));
     };
     box.appendChild(b);
   });

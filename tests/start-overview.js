@@ -62,6 +62,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('разминка стоит первой и фото загружено', before.warmFirst === 'Разминка' && before.photos === 1, `${before.warmFirst} · ${before.photos}`);
   ok('отдых в строках не показывается', !before.rests);
   ok('показана сегодняшняя цель и точное изменение', /12 повторений/.test(before.second) && /было 11 → сегодня 12/.test(before.second), before.second);
+  ok('при изменившейся нагрузке виден и срок следующего повышения', /Спросим о повышении через/.test(before.change), before.change);
+  const kgChip = await page.evaluate(() => {
+    const row = document.querySelectorAll('#startOverviewList .ex-row')[2];
+    const chip = row && row.querySelector('.kg-edit');
+    return {chip: chip ? chip.textContent : '', icon: !!(chip && chip.querySelector('svg')),
+      reps: row ? row.querySelector('.ex-meta span').textContent : ''};
+  });
+  ok("вес — отдельная метка-кнопка с карандашом", /\d+\s*кг/.test(kgChip.chip) && kgChip.icon, JSON.stringify(kgChip));
+  ok('вес не дублируется в метке повторов', !/кг/.test(kgChip.reps), kgChip.reps);
 
   // общего счётчика «Нагрузка сегодня» с ±  больше нет — правка веса теперь
   // per-упражнение: строка с форматом «…и вес» кликабельна и открывает попап
