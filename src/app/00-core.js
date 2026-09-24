@@ -640,6 +640,11 @@ let navStack = ['scrMenu'];
 // приходилось жать двадцать два раза вместо одного (измерено).
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+// Уход из глубокого экрана в корневой раздел сначала реально отматывает browser
+// history до базы, и только потом кладёт нужную вкладку поверх. Простого
+// replaceState недостаточно: старые Builder/Programs оставались ниже и оживали
+// после следующего Back с «Сегодня».
+let pendingRootTab = null;
 function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
@@ -792,9 +797,13 @@ window.addEventListener('popstate', async e => {
   // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
   // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
   // на «Сегодня», бросив занятие на середине.
-  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard'){
+  const staleTransient = (targetScreen === 'scrWork' && !state.live)
+    || targetScreen === 'scrFinish'
+    || (targetScreen === 'scrOnboard' && users.length > 0);
+  if(staleTransient){
     targetScreen = 'scrMenu';
     targetDepth = 0;
+    try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(_){}
   }
 
   // ВАЖНО: navDepth/navStack пока не трогаем. Browser Back уже сдвинул свою
@@ -812,7 +821,7 @@ window.addEventListener('popstate', async e => {
         t('common.unsaved',{what:g.what}),
         {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
       );
-      if(!ok) return;
+      if(!ok){ pendingRootTab = null; return; }
       if(g.clean) g.clean();
       guardBypass = true;
       history.back();
@@ -827,6 +836,15 @@ window.addEventListener('popstate', async e => {
     if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
   }
   show(targetScreen, false);
+
+  // goTab() из глубины пришёл сюда через history.go(-navDepth). Мы уже на
+  // настоящей базовой записи; новый push теперь обрежет весь старый forward-хвост.
+  if(pendingRootTab && targetScreen === 'scrMenu' && navDepth === 0){
+    const id = pendingRootTab;
+    pendingRootTab = null;
+    if(id !== 'scrMenu') show(id, true);
+    window.scrollTo(0, 0);
+  }
 });
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
 // экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
@@ -945,12 +963,19 @@ function goTab(id){
     return;
   }
   if(!ROOT_TABS.includes(cur)){
-    // возврат из глубины: текущая запись становится «Сегодня», вкладка ложится поверх
+    // Возврат из глубины — это ОТМОТКА, а не маскировка текущей записи под «Сегодня».
+    // Иначе физически получалось Menu → Programs → Menu → Programs, и второй Back
+    // с главной воскрешал старый раздел. На настоящей базе новый push обрежет хвост.
+    if(navDepth > 0){
+      pendingRootTab = id;
+      try{ history.go(-navDepth); return; }
+      catch(e){ pendingRootTab = null; }
+    }
     navDepth = 0;
     navStack = ['scrMenu'];
     try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
-    if(id === 'scrMenu'){ show('scrMenu', false); window.scrollTo(0, 0); return; }
-    show(id, true);
+    show('scrMenu', false);
+    if(id !== 'scrMenu') show(id, true);
     window.scrollTo(0, 0);
     return;
   }
