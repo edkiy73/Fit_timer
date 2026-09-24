@@ -973,6 +973,9 @@ const I18N_RU = {
   'notify.beforeTitle': "Тренировка через 15 минут",
   'notify.beforeBody': "«{name}» начнётся в {time}. Приготовься!",
   'notify.startTitle': "Наступило время тренировки",
+  'notify.timerDoneTitle': "Пора продолжать",
+  'notify.timerDoneNext': "Дальше — {name}",
+  'notify.timerDoneBody': "Таймер закончен. Возвращайся к тренировке.",
   'notify.startBody': "Пора выполнить «{name}». Вперёд!",
   'notify.startTitleShort': "Пора тренироваться",
   'notify.todayPlan': "Сегодня по плану «{name}».",
@@ -2548,6 +2551,9 @@ const I18N_EN = {
   'notify.beforeTitle': "Workout in 15 minutes",
   'notify.beforeBody': "“{name}” starts at {time}. Get ready!",
   'notify.startTitle': "Time to work out",
+  'notify.timerDoneTitle': "Time to continue",
+  'notify.timerDoneNext': "Next — {name}",
+  'notify.timerDoneBody': "The timer is done. Return to your workout.",
   'notify.startBody': "Time for “{name}”. Let’s go!",
   'notify.startTitleShort': "Time to work out",
   'notify.todayPlan': "Today’s plan: “{name}”.",
@@ -16057,15 +16063,14 @@ function setPause(p, silent){
     state.paused = true;
     state.pausedAt = Date.now();
     if(window.FitNative) window.FitNative.cancelRest();
+    syncNativeWorkoutState(state.steps[state.stepIdx], 0);
   } else {
     const pausedFor = Date.now() - state.pausedAt;
     state.pausedTotal += pausedFor;
     if(state.stepDeadline) state.stepDeadline += pausedFor;
     state.paused = false;
     const step = state.steps[state.stepIdx];
-    if(step && step.phase === 'rest' && state.remaining > 0 && window.FitNative){
-      window.FitNative.scheduleRest(state.remaining);
-    }
+    syncNativeWorkoutState(step, state.stepDeadline || 0);
   }
   // Голосом отмечаем только ВХОД в паузу: на выходе и так идёт отсчёт, а второе
   // слово поверх него только мешает. silent — когда пауза не новость: мы её и не
@@ -16184,6 +16189,38 @@ function warmupPosition(step){
   return i < 0 ? null : {idx: i + 1, total: order.length};
 }
 
+function nextNativeWorkStep(){
+  for(let i = state.stepIdx + 1; i < (state.steps || []).length; i++){
+    const s = state.steps[i];
+    if(s && s.phase === 'work') return s;
+  }
+  return null;
+}
+
+function syncNativeWorkoutState(step, endsAt){
+  if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
+  const next = nextNativeWorkStep();
+  const paused = !!state.paused;
+  const timed = !paused && Number(endsAt) > Date.now() + 100;
+  const nextName = next ? (next.title || next.exName || '') : '';
+  const meta = (($('roundLabel') && $('roundLabel').textContent) || '').trim();
+  window.FitNative.updateWorkoutState({
+    active: true,
+    workoutTitle: (state.current && state.current.title) || 'Fit Timer',
+    phase: step.phase === 'rest' ? 'rest' : 'work',
+    phaseLabel: paused ? t('workout.pause') : (step.phase === 'rest' ? t('workout.rest') : t('workout.exercise')),
+    current: step.phase === 'rest' ? t('workout.rest') : (step.title || step.exName || t('workout.exercise')),
+    next: nextName,
+    meta,
+    paused,
+    timed,
+    startedAt: timed ? Date.now() : 0,
+    endsAt: timed ? Number(endsAt) : 0,
+    alertTitle: t('notify.timerDoneTitle'),
+    alertBody: nextName ? t('notify.timerDoneNext',{name:nextName}) : t('notify.timerDoneBody')
+  });
+}
+
 function exerciseProgressLabel(step){
   const warmupOrder = [], mainOrder = [];
   // список основного круга берём ВСЕГДА по кругу 1 — он одинаков в любом круге (программа
@@ -16232,6 +16269,7 @@ function renderStep(){
   $('stepLabel').textContent = exerciseProgressLabel(labelStep);
   $('btnPrev').disabled = state.stepIdx === 0;
   $('progressFill').style.width = ((state.stepIdx)/total*100) + '%';
+  syncNativeWorkoutState(step, 0);
 
   setShown('phaseTag', false);
   $('stepTitle').textContent = step.title;
@@ -16392,9 +16430,7 @@ function renderStep(){
     cd.classList.remove('warn');
     const launch = ()=>{
       state.stepDeadline = Date.now() + state.remaining * 1000;
-      if(step.phase === 'rest' && window.FitNative){
-        window.FitNative.scheduleRest(state.remaining);
-      }
+      syncNativeWorkoutState(step, state.stepDeadline);
       state.stepTimer = setInterval(()=>{
         if(state.paused || document.hidden) return;
         state.remaining = Math.max(0, Math.ceil((state.stepDeadline - Date.now()) / 1000));
@@ -16898,6 +16934,7 @@ function settleQuickFinish(keep){
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
   state.live = false;
+  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -17455,6 +17492,7 @@ function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 function tearDownWorkout(){
   state.live = false;
+  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
