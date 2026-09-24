@@ -138,18 +138,16 @@ $('btnPrev').innerHTML = icon('chevL');
 $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
 $('btnExit').onclick  = exitWorkout;
 $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
-$('exitSave').onclick = async ()=>{
-  $('exitModal').classList.remove('open');
+$('exitSave').onclick = ()=> closeModalThen('exitModal', async ()=>{
   await saveSession();
   tearDownWorkout();
   if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
   appAlert(t('workout.sessionSaved'));
-};
-$('exitDrop').onclick = async ()=>{
-  $('exitModal').classList.remove('open');
+});
+$('exitDrop').onclick = ()=> closeModalThen('exitModal', async ()=>{
   await clearSession();
   tearDownWorkout();
-};
+});
 $('btnPause').onclick = ()=> setPause(!state.paused);
 /* ================= НАСТРОЙКИ =================
    Отдельный корневой экран без кнопки «Сохранить»: всё применяется сразу, поэтому
@@ -714,8 +712,8 @@ $('storeClear').onclick = ()=>{
 };
 
 $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
-$('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
-$('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(); openAI('text'); };
+$('chManual').onclick = ()=> closeModalThen('createModal', ()=> openBuilder());
+$('chAI').onclick = ()=> closeModalThen('createModal', ()=>{ initAIForm(); openAI('text'); });
 $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
 $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
 $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
@@ -1309,7 +1307,7 @@ $('btnDiscardResult').onclick = ()=>{
   goTab('scrMenu');
 };
 /* ---- программа из видео ---- */
-$('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
+$('chYT').onclick = ()=> closeModalThen('createModal', ()=> openYouTube());
 $('ytUrl').oninput = ytCheckUrl;
 async function ytGuard(){
   const v = ($('ytUrl').value || '').trim();
@@ -1399,8 +1397,8 @@ $('swapCopy').onclick = async ()=>{
 
 $('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
 $('addExModal').onclick = e=>{ if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
-$('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
-$('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
+$('aemManual').onclick = ()=> closeModalThen('addExModal', ()=> addExManual());
+$('aemAI').onclick = ()=> closeModalThen('addExModal', ()=> openExAI());
 
 /* ---- окно ожидания генерации ---- */
 let aiRunCtl = null, aiRunT0 = 0, aiRunTick = 0, aiRunOnCancel = null, aiRunCancelled = false;
