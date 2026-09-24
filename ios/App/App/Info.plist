@@ -30,6 +30,8 @@
 	<string>Микрофон нужен для управления тренировкой голосовыми командами.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Распознавание речи нужно, чтобы управлять тренировкой голосовыми командами.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
