@@ -398,6 +398,48 @@ async function scenario(ctx, name, fn, errs){
     await homeThenExit(page, 'активная тренировка');
   }, errs);
 
+  await scenario(ctx, 'ИИ добавляет упражнение → Builder без возврата в ИИ', async page => {
+    await seedProgram(page, 'nav-ai-add');
+    await page.evaluate(async () => {
+      goTab('scrPrograms');
+      openBuilder('nav-ai-add');
+      openExAI();
+      $('aiResult').value = 'УПРАЖНЕНИЕ: Выпады\\nФОРМАТ: повторения\\nЗНАЧЕНИЕ: 10\\nПОДХОДЫ: 1\\nОТДЫХ: 30';
+      await exaAddExercise();
+    });
+    await nap(page, 450);
+    await aligned(page, 'после добавления через ИИ', 'scrBuilder');
+    ok('success-попап открыт уже поверх Builder', await page.isVisible('#dlgOk'));
+    await page.click('#dlgOk');
+    await nap(page, 450);
+    await page.goBack();
+    await nap(page, 300);
+    ok('Back из изменённого Builder спрашивает о несохранённом', await page.isVisible('#dlgOk'));
+    await page.click('#dlgOk');
+    await nap(page, 650);
+    await aligned(page, 'выход после AI-добавления', 'scrPrograms');
+    await homeThenExit(page, 'AI-добавление упражнения');
+  }, errs);
+
+  await scenario(ctx, 'финал тренировки → Готово → Сегодня', async page => {
+    await seedProgram(page, 'nav-finish');
+    await page.evaluate(() => {
+      goTab('scrPrograms');
+      const p = customPrograms.find(x => x.id === 'nav-finish');
+      openStart(p);
+      state.current = customToProgram(p, 0);
+      startWorkout();
+      state.globalStart = Date.now() - 40000;
+      finishWorkout();
+    });
+    await nap(page, 550);
+    await aligned(page, 'экран результата', 'scrFinish');
+    await page.click('#btnAgain');
+    await nap(page, 700);
+    await aligned(page, 'Готово с результата', 'scrMenu');
+    await homeThenExit(page, 'финал тренировки');
+  }, errs);
+
   await scenario(ctx, 'тренер → подопечный → назад', async page => {
     await page.evaluate(() => goTab('scrAccount'));
     await becomeTrainer(page, {handle:'@navmatrix.' + Math.random().toString(36).slice(2,7)});
