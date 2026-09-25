@@ -18,6 +18,9 @@ if(CHECK){
   const current = await readFile(runtimePath, 'utf8');
   if(current !== output){
     console.error(`${runtimePath} is stale. Run: npm run build:core`);
+    console.error('--- expected generated runtime ---');
+    console.error(output);
+    console.error('--- end expected generated runtime ---');
     process.exit(1);
   }
   console.log(`${runtimePath}: TypeScript runtime is in sync`);
