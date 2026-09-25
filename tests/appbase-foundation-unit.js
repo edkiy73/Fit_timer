@@ -57,5 +57,20 @@ ok('generic profile defaults are domain-free',
   profileDraft.name === 'Demo' && profileDraft.theme === 'system' && profileDraft.locale === 'system'
   && !('gender' in profileDraft) && !('age' in profileDraft));
 
+const documentsContext = {AppBaseDocuments: undefined};
+vm.createContext(documentsContext);
+vm.runInContext(fs.readFileSync('src/core/documents.runtime.js', 'utf8'), documentsContext);
+const registry = documentsContext.AppBaseDocuments.createRegistry([
+  {id:'demo.note', scope:'profile', exact:'note'},
+  {id:'demo.item', scope:'profile', prefix:'item:'},
+  {id:'account.prefs', scope:'account', exact:'prefs'}
+]);
+ok('generic document registry supports non-fitness profile docs',
+  registry.accepts('profile', 'note') && registry.accepts('profile', 'item:123'));
+ok('document registry keeps scopes separate',
+  !registry.accepts('account', 'note') && registry.accepts('account', 'prefs'));
+ok('document registry can enumerate exact keys',
+  registry.exactKeys('profile').join(',') === 'note');
+
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);
