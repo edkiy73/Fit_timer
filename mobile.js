@@ -503,7 +503,6 @@
           if(typeof keepAwake === 'function') keepAwake();
           if(typeof startHandsFree === 'function') startHandsFree();
         }
-        if(typeof window.syncNativeNotifications === 'function') window.syncNativeNotifications();
       }catch(_){}
     }).catch(()=>{});
   }
