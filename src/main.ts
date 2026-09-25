@@ -10,6 +10,7 @@ import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY
 import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
 import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild } from './app/runtime-environment.js';
+import { createProductBootstrap } from './app/bootstrap.js';
 
 /**
  * Future ESM application entry point.
@@ -82,4 +83,8 @@ export const runtimeEnvironment = {
   platform: runtimePlatform,
   setBuild: setRuntimeBuild,
   build: getRuntimeBuild
+};
+
+export const productBootstrap = {
+  create: createProductBootstrap
 };
