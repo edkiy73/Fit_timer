@@ -1,10 +1,14 @@
 "use strict";
-var AppBaseStorage;
-(function (AppBaseStorage) {
+var AppBaseStorage = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.namespacedKey = namespacedKey;
+    exports.createStorage = createStorage;
     function namespacedKey(key, namespace) {
         return `${key}_${namespace}`;
     }
-    AppBaseStorage.namespacedKey = namespacedKey;
     function createStorage(options) {
         const mirrorKeys = new Set(options.mirrorKeys || []);
         let dbPromise = null;
@@ -197,8 +201,9 @@ var AppBaseStorage;
             }
         };
     }
-    AppBaseStorage.createStorage = createStorage;
-})(AppBaseStorage || (AppBaseStorage = {}));
+    
+    return module.exports;
+})();
 "use strict";
 var AppBaseIdentity = (() => {
     const module = { exports: {} };
