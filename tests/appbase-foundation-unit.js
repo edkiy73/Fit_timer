@@ -367,6 +367,14 @@ ok('ESM entry composes product sync schema explicitly',
   /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
   && /productSyncSchema/.test(esmEntrySource));
 
+const syncCompatSource = fs.readFileSync('src/app/11-sync-schema.js', 'utf8');
+ok('legacy sync schema is generated from the canonical ESM module',
+  /Generated from src\/app\/sync-schema\.ts/.test(syncCompatSource)
+  && /__fitSyncSchemaCompat/.test(syncCompatSource));
+ok('product compatibility build owns the legacy sync schema output',
+  /src\/app\/sync-schema\.ts/.test(fs.readFileSync('scripts/build-product-compat.mjs','utf8'))
+  && /src\/app\/11-sync-schema\.js/.test(fs.readFileSync('scripts/build-product-compat.mjs','utf8')));
+
 const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
 ok('product infrastructure composes Core through explicit imports',
   /from ['"]\.\.\/core\/storage\.js['"]/.test(productInfrastructureSource)
