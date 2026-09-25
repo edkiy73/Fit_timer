@@ -5214,6 +5214,27 @@ const appRuntimeCompat = Object.freeze({
     }
     try{ return await candidate.authenticateBiometric(options || {}); }
     catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
+  },
+
+  async requestNotifications(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.requestNotifications !== 'function') return false;
+    try{ return !!(await candidate.requestNotifications()); }
+    catch(_){ return false; }
+  },
+
+  async registerRemotePush(requestPermission){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.registerRemotePush !== 'function') return false;
+    try{ return !!(await candidate.registerRemotePush(!!requestPermission)); }
+    catch(_){ return false; }
+  },
+
+  async syncWorkoutNotifications(items){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.syncWorkoutNotifications !== 'function') return false;
+    try{ return !!(await candidate.syncWorkoutNotifications(items)); }
+    catch(_){ return false; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -16002,8 +16023,8 @@ async function saveProgram(){
   if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
-  if(planDays(draft).length && window.FitNative && window.FitNative.requestNotifications){
-    window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+  if(planDays(draft).length){
+    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   }
   if(anyTime && planDays(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}
@@ -16206,7 +16227,7 @@ function startWorkout(fromIdx, elapsed, options){
   const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
-  if(window.FitNative) window.FitNative.requestNotifications();
+  appRuntimeCompat.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
@@ -18251,7 +18272,7 @@ function limitNotificationCandidates(items){
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
 // вперёд при старте, изменении расписания и завершении тренировки.
 async function syncNativeNotifications(){
-  if(!window.FitNative || !window.FitNative.syncWorkoutNotifications) return;
+  if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
     workouts:true, trainer:true, progress:true, offers:true
   };
@@ -18334,7 +18355,7 @@ async function syncNativeNotifications(){
   }
 
   const finalItems = limitNotificationCandidates(items);
-  await window.FitNative.syncWorkoutNotifications(finalItems);
+  await appRuntimeCompat.syncWorkoutNotifications(finalItems);
 }
 window.syncNativeNotifications = syncNativeNotifications;
 
@@ -18586,10 +18607,8 @@ async function setNotificationPref(key, value){
   prefs[key] = !!value;
   await persistNotificationPrefs(prefs);
   syncNotificationSettings();
-  if(['workouts','trainer','progress','offers'].includes(key) && value
-    && window.FitNative && window.FitNative.requestNotifications){
-    let granted = false;
-    try{ granted = await window.FitNative.requestNotifications(); }catch(_){}
+  if(['workouts','trainer','progress','offers'].includes(key) && value){
+    const granted = await appRuntimeCompat.requestNotifications();
     if(!granted){
       prefs[key] = false;
       await persistNotificationPrefs(prefs);
@@ -18606,9 +18625,9 @@ async function setNotificationPref(key, value){
   }
 }
 async function syncRemotePushRegistration(requestPermission){
-  if(!(window.FitNative&&window.FitNative.registerRemotePush)||!account||!account.email||!account.syncToken)return false;
+  if(!account||!account.email||!account.syncToken)return false;
   const p=getNotificationPrefs(); if(p.trainer===false&&p.progress===false&&p.offers===false)return false;
-  return window.FitNative.registerRemotePush(!!requestPermission);
+  return appRuntimeCompat.registerRemotePush(!!requestPermission);
 }
 async function unregisterRemotePushServer(){
   if(!account||!account.email||!account.syncToken)return;
@@ -20626,8 +20645,8 @@ try{
   document.body.classList.remove('booting');
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
-  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false && window.FitNative && window.FitNative.requestNotifications){
-    window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false){
+    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
   // Удалённый режим мог остаться в старой резервной копии или localStorage.
