@@ -11,24 +11,30 @@ const web=fs.readFileSync('scripts/build-web.mjs','utf8');
 const mobile=fs.readFileSync('scripts/check-mobile.mjs','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const app=fs.readFileSync('app.js','utf8');
+const deps=fs.readFileSync('src/app/00-dependencies.js','utf8');
 
 ok('legacy AppBase Core target is removed from source build',
   !build.includes("target: 'appbase-core.js'"));
 ok('product app target no longer lists Core runtimes',
   !build.slice(build.indexOf("target: 'app.js'"),build.indexOf("target: 'style.css'")).includes('src/core/'));
-ok('ESM entry exposes one product-module bridge and no AppBase globals',
+ok('ESM entry exposes only a temporary product-module bridge',
   /FitTimerModules/.test(fs.readFileSync('src/main.ts','utf8'))
+  && /clearLegacyProductModules/.test(fs.readFileSync('src/main.ts','utf8'))
   && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
-ok('product app no longer embeds reusable Core namespace declarations',
-  !app.includes('var AppBaseStorage;')
-  && !app.includes('var AppBaseIdentity;')
-  && !app.includes('var AppBaseSync;')
-  && !app.includes('var AppBaseObservability;')
-  && !app.includes('var FitTimerModules.notifications;')
-  && !app.includes('var FitTimerModules.ui;'));
+ok('legacy product captures startup dependencies once',
+  /globalThis\.FitTimerModules/.test(deps)
+  && /const appInfrastructure = fitLegacyModules\.infrastructure/.test(deps)
+  && /const appIdentity = fitLegacyModules\.identity/.test(deps)
+  && /const appSync = fitLegacyModules\.sync/.test(deps)
+  && /const appNotifications = fitLegacyModules\.notifications/.test(deps)
+  && /const appUi = fitLegacyModules\.ui/.test(deps));
 ok('product runtime contains no AppBase Core references',
   !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(app)
   && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
+ok('FitTimerModules is isolated to the dependency prelude inside app.js',
+  (app.match(/FitTimerModules/g) || []).length === 2
+  && !fs.readdirSync('src/app').filter(name => name.endsWith('.js') && name !== '00-dependencies.js')
+    .some(name => /FitTimerModules/.test(fs.readFileSync('src/app/' + name,'utf8'))));
 
 ok('HTML loads only the ESM startup entry for Core/product runtimes',
   html.includes('<script type="module" src="esm/main.js"></script>')
