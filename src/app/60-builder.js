@@ -2092,7 +2092,7 @@ async function saveProgram(){
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
   if(planDays(draft).length){
-    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+    FitTimerModules.runtimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   }
   if(anyTime && planDays(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}
