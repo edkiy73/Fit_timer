@@ -8,7 +8,7 @@ const targets = [
   ['src/core/sync.ts', 'src/core/sync.runtime.js', 'commonjs-bridge', 'AppBaseSync'],
   ['src/core/observability.ts', 'src/core/observability.runtime.js', 'commonjs-bridge', 'AppBaseObservability'],
   ['src/core/notifications.ts', 'src/core/notifications.runtime.js', 'commonjs-bridge', 'AppBaseNotifications'],
-  ['src/core/ui.ts', 'src/core/ui.runtime.js'],
+  ['src/core/ui.ts', 'src/core/ui.runtime.js', 'commonjs-bridge', 'AppBaseUI'],
   ['src/core/native-notifications.ts', 'native-notifications.js'],
   ['src/core/mobile.ts', 'mobile-core.js']
 ];

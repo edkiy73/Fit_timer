@@ -3,6 +3,7 @@ import { createRegistry } from './core/sync.js';
 import { createStorage, namespacedKey } from './core/storage.js';
 import { createClient } from './core/observability.js';
 import { createPreferenceStore, limitCandidates } from './core/notifications.js';
+import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
 
 /**
  * Future ESM application entry point.
@@ -34,4 +35,15 @@ export const observabilityCore = {
 export const notificationsCore = {
   createPreferenceStore,
   limitCandidates
+};
+
+export const uiCore = {
+  setShown,
+  setText,
+  applyCssVars,
+  openModal,
+  closeModal,
+  closestModal,
+  setBusy,
+  bindActions
 };

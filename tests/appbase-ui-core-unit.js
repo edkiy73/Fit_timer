@@ -18,6 +18,6 @@ ok('UI Core stays product-neutral',
 ok('UI Core has no app-specific selectors',
   !/#\w+|scrWork|btnDone|modal-card/.test(source));
 ok('generated UI runtime exposes AppBaseUI',
-  runtime.includes('var AppBaseUI')&&runtime.includes('AppBaseUI.bindActions = bindActions'));
+  runtime.includes('var AppBaseUI')&&runtime.includes('exports.bindActions = bindActions'));
 
 process.exit(bad?1:0);

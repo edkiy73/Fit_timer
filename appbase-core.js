@@ -399,20 +399,29 @@ var AppBaseNotifications = (() => {
     return module.exports;
 })();
 "use strict";
-var AppBaseUI;
-(function (AppBaseUI) {
+var AppBaseUI = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.setShown = setShown;
+    exports.setText = setText;
+    exports.applyCssVars = applyCssVars;
+    exports.openModal = openModal;
+    exports.closeModal = closeModal;
+    exports.closestModal = closestModal;
+    exports.setBusy = setBusy;
+    exports.bindActions = bindActions;
     function setShown(element, shown, hiddenClass = 'hidden') {
         if (!element)
             return;
         element.classList.toggle(hiddenClass, !shown);
     }
-    AppBaseUI.setShown = setShown;
     function setText(element, value) {
         if (!element)
             return;
         element.textContent = String(value == null ? '' : value);
     }
-    AppBaseUI.setText = setText;
     function applyCssVars(element, vars) {
         if (!element)
             return;
@@ -424,28 +433,24 @@ var AppBaseUI;
                 element.style.setProperty(key, String(value));
         });
     }
-    AppBaseUI.applyCssVars = applyCssVars;
     function openModal(modal, openClass = 'open') {
         if (!modal)
             return false;
         modal.classList.add(openClass);
         return true;
     }
-    AppBaseUI.openModal = openModal;
     function closeModal(modal, openClass = 'open') {
         if (!modal)
             return false;
         modal.classList.remove(openClass);
         return true;
     }
-    AppBaseUI.closeModal = closeModal;
     function closestModal(element, selector = '.modal') {
         if (!element)
             return null;
         const modal = element.closest(selector);
         return modal instanceof HTMLElement ? modal : null;
     }
-    AppBaseUI.closestModal = closestModal;
     function setBusy(button, busy, options = {}) {
         if (!button)
             return;
@@ -460,7 +465,6 @@ var AppBaseUI;
         if (!busy)
             button.textContent = options.idleText ?? button.dataset.idleText ?? idleText;
     }
-    AppBaseUI.setBusy = setBusy;
     function bindActions(root, actions, attribute = 'data-act') {
         const selector = '[' + attribute + ']';
         const listener = (event) => {
@@ -478,5 +482,6 @@ var AppBaseUI;
         root.addEventListener('click', listener);
         return () => root.removeEventListener('click', listener);
     }
-    AppBaseUI.bindActions = bindActions;
-})(AppBaseUI || (AppBaseUI = {}));
+    
+    return module.exports;
+})();
