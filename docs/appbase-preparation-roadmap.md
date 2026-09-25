@@ -17,6 +17,76 @@ Core ✕→ Product Domain
 
 This roadmap is a working architecture proposal, not a claim that every step is uniquely correct. Before each phase, the Architect should re-check the current repository and constraints. If a simpler or safer approach becomes available, update the roadmap rather than following it mechanically.
 
+## Long-term repository topology
+
+The target after the first stable AppBase extraction is:
+
+```text
+        AppBase Core
+        /    |     \
+       ↓     ↓      ↓
+   FitTimer Lingua TaskApp
+```
+
+This is an ownership model, not necessarily a specific packaging technology.
+
+### Bootstrap phase
+
+Initially FitTimer contains the proven production infrastructure, so extraction naturally starts there:
+
+```text
+FitTimer generic code → AppBase bootstrap
+```
+
+This is temporary. Do not build a permanent architecture where AppBase is continuously overwritten from FitTimer.
+
+### Mature phase
+
+After AppBase has:
+- stable Core boundaries;
+- its own build/tests;
+- proof-product validation;
+- a defined version/update mechanism;
+
+AppBase becomes canonical upstream.
+
+Then the normal flow is:
+
+```text
+AppBase Core change
+      ↓
+reviewable/versioned update
+      ↓
+FitTimer / Lingua / TaskApp
+```
+
+Product-domain changes remain local.
+
+If FitTimer or another product discovers a reusable Core bug, two flows are acceptable depending on urgency:
+
+```text
+preferred:
+AppBase fix → downstream update
+
+urgent production exception:
+Product hotfix → generalize/backport to AppBase → downstream reconciliation
+```
+
+The second route is an exception, not the default ownership model.
+
+### Delivery mechanism
+
+Do not lock the project prematurely to one transport. Re-evaluate when the Core boundary exists.
+
+Plausible options:
+- versioned Core package;
+- automated Core update PRs;
+- another explicit versioned dependency/copy mechanism.
+
+Current preference is reviewable automated PRs first because they preserve product autonomy and make diffs/tests visible without forcing all apps into lockstep. A package may become preferable later if Core APIs stabilize enough.
+
+Avoid permanent bidirectional automatic sync.
+
 ## Coupling points already identified
 
 - `src/app/10-data-sync.js` mixes generic storage/profiles/analytics/sync with fitness programs, stats and progression state.
@@ -305,6 +375,20 @@ Before fork/snapshot:
 - Core → Domain imports are prevented;
 - profile/auth/sync/backup regressions remain green.
 
+## Phase 16 — Core upstream transition
+
+After the AppBase extraction and proof-product checks, explicitly switch ownership:
+
+1. mark AppBase Core as canonical upstream;
+2. record the AppBase Core version/commit consumed by each product;
+3. create a repeatable downstream update path;
+4. start with reviewable automated PRs unless a different mechanism proves simpler;
+5. verify one generic Core change can update FitTimer and one non-fitness app;
+6. retire the temporary FitTimer → AppBase bootstrap sync path;
+7. document the hotfix/backport procedure for urgent product-first fixes.
+
+Do not call this phase complete merely because repositories share similar files; ownership and update direction must be explicit.
+
 ## After the fork: AppBase extraction
 
 Delete fitness programs, exercises, workout engine, progression, warm-up, fitness progress, trainer/trainee, fitness catalog, fitness AI actions/prompts, fitness notifications and fitness deep links.
@@ -339,5 +423,7 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 13. Retire remaining legacy global/concatenation compatibility.
 14. Dependency checks + stricter TS settings.
 15. Readiness audit.
+16. Extract AppBase and validate proof products.
+17. Switch Core ownership to AppBase and establish downstream update PRs.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.
