@@ -88,6 +88,27 @@ ok('legacy workout native calls are isolated to compatibility boundary',
   legacyWorkoutCalls.every(token => !workoutNativeSources.includes(token))
   && ['candidate.cancelRest','candidate.updateWorkoutState','candidate.clearWorkoutState','candidate.requestReview']
     .every(token => runtimeCompatSource.includes(token)));
+const voiceNativeSources = [
+  'src/app/70-workout.js',
+  'src/app/80-platform.js',
+  'src/app/90-events.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+const legacyVoiceCalls = [
+  'window.FitNative.offlineVoice',
+  'window.FitNative.getVoiceModelStatus',
+  'window.FitNative.listTtsVoices',
+  'window.FitNative.downloadVoiceModel',
+  'window.FitNative.startVoiceRecognition',
+  'window.FitNative.stopVoiceRecognition',
+  'window.FitNative.stopSpeaking'
+];
+ok('legacy voice native calls are isolated to compatibility boundary',
+  legacyVoiceCalls.every(token => !voiceNativeSources.includes(token))
+  && ['candidate.offlineVoice','candidate.getVoiceModelStatus','candidate.listTtsVoices',
+      'candidate.downloadVoiceModel','candidate.startVoiceRecognition',
+      'candidate.stopVoiceRecognition','candidate.stopSpeaking']
+    .every(token => runtimeCompatSource.includes(token)));
+
 
 
 
