@@ -1,4 +1,5 @@
 name: Temporary generated-source sync native notifications
+# trigger
 
 on:
   push:
