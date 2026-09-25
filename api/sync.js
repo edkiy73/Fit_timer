@@ -7,6 +7,7 @@
 const { store } = require('../lib/store');
 const { send, fail, rateOk, sameSecret, cors } = require('../lib/util');
 const { ACCOUNT_PROFILE, registry: SYNC_REGISTRY } = require('../lib/fit-sync-schema');
+const SyncShadow = require('../lib/sync-shadow');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 const YEAR = 365 * 24 * 3600;
@@ -122,6 +123,7 @@ module.exports = async (req, res) => {
       if(prev.userAt && !newerProfile({at: rec.at, deviceId}, {at: prev.userAt, deviceId: prev.userDevice})) continue;
       if(rec && rec.deleted){
         for(const d of Object.values(prev.docs)) if(d && d.storeKey) await store.del(d.storeKey);
+        await SyncShadow.purgeProfile(mh,user.id);
         manifest.profiles[user.id] = {user, userAt:rec.at || now, userDevice:deviceId,
           deleted:true, docs:{}};
         continue;
@@ -145,6 +147,11 @@ module.exports = async (req, res) => {
         const storeKey = `sa:${mh}:${key}`;
         if(meta.deleted) await store.del(storeKey);
         else await store.set(storeKey, value || '', YEAR);
+        await SyncShadow.writeDocument({
+          accountHash:mh, profileId:ACCOUNT_PROFILE, key,
+          rev:meta.rev, schema:meta.schema, deviceId:meta.deviceId,
+          deleted:meta.deleted, value:meta.deleted?null:(value || ''), at:meta.at
+        });
         manifest.accountDocs[key] = Object.assign(meta, {storeKey});
         continue;
       }
@@ -162,6 +169,11 @@ module.exports = async (req, res) => {
       const storeKey = `sd:${mh}:${sha(pid + '\n' + key).slice(0, 32)}`;
       if(meta.deleted) await store.del(storeKey);
       else await store.set(storeKey, value || '', YEAR);
+      await SyncShadow.writeDocument({
+        accountHash:mh, profileId:pid, key,
+        rev:meta.rev, schema:meta.schema, deviceId:meta.deviceId,
+        deleted:meta.deleted, value:meta.deleted?null:(value || ''), at:meta.at
+      });
       prof.docs[key] = Object.assign(meta, {storeKey});
       manifest.profiles[pid] = prof;
     }
@@ -196,6 +208,20 @@ module.exports = async (req, res) => {
       key, rev:d.rev, at:d.at, schema:d.schema, deviceId:d.deviceId,
       deleted:!!d.deleted, value:d.deleted ? null : (accountByStore.get(d.storeKey) ?? null)
     }));
+
+    if(premium && SyncShadow.status().compareEnabled){
+      const authoritative = [];
+      out.forEach(p => (p.docs || []).forEach(d => authoritative.push(Object.assign({profileId:p.user.id}, d))));
+      accountDocs.forEach(d => authoritative.push(Object.assign({profileId:ACCOUNT_PROFILE}, d)));
+      const parity = await SyncShadow.compareAccount(mh, authoritative);
+      if(parity && parity.enabled){
+        const summary = Object.assign({at:new Date().toISOString()}, parity);
+        delete summary.error;
+        await store.set('migration:supabase:parity:last', JSON.stringify(summary), 7 * 24 * 3600);
+        if(parity.ok && !parity.parity) await store.incr('migration:supabase:parity:mismatch', 30 * 24 * 3600);
+      }
+    }
+
     return send(res, 200, {ok: true, profiles: out, accountDocs});
   }
 
