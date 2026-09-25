@@ -1,6 +1,10 @@
 "use strict";
-var AppBaseMobile;
-(function (AppBaseMobile) {
+var AppBaseMobile = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createBridge = createBridge;
     function blobBase64(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -186,5 +190,6 @@ var AppBaseMobile;
             }
         };
     }
-    AppBaseMobile.createBridge = createBridge;
-})(AppBaseMobile || (AppBaseMobile = {}));
+    
+    return module.exports;
+})();
