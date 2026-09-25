@@ -5,6 +5,7 @@ import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
 import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild } from './app/runtime-environment.js';
 import { createProductBootstrap } from './app/bootstrap.js';
+import { appRuntimeCompat } from './app/runtime-compat.js';
 
 /**
  * Production ESM composition entry point.
@@ -64,6 +65,7 @@ type LegacyProductModules = {
   sync: typeof productSyncSchema;
   notifications: typeof notificationsCore;
   ui: typeof uiCore;
+  runtimeCompat: typeof appRuntimeCompat;
 };
 
 function exposeLegacyProductModules(): void {
@@ -73,7 +75,8 @@ function exposeLegacyProductModules(): void {
     identity: productIdentity,
     sync: productSyncSchema,
     notifications: notificationsCore,
-    ui: uiCore
+    ui: uiCore,
+    runtimeCompat: appRuntimeCompat
   };
 }
 
