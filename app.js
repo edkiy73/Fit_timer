@@ -3946,6 +3946,52 @@ var AppBaseIdentity;
     }
     AppBaseIdentity.createProfileDraft = createProfileDraft;
 })(AppBaseIdentity || (AppBaseIdentity = {}));
+"use strict";
+var AppBaseDocuments;
+(function (AppBaseDocuments) {
+    function validRule(rule) {
+        if (!rule || !rule.id || !rule.scope)
+            return false;
+        const exact = typeof rule.exact === 'string' && rule.exact.length > 0;
+        const prefix = typeof rule.prefix === 'string' && rule.prefix.length > 0;
+        return exact !== prefix;
+    }
+    function createRegistry(rules) {
+        const safe = rules.map(rule => ({ ...rule }));
+        if (!safe.every(validRule))
+            throw new Error('invalid_document_rule');
+        const ids = new Set();
+        for (const rule of safe) {
+            if (ids.has(rule.id))
+                throw new Error('duplicate_document_rule');
+            ids.add(rule.id);
+        }
+        const resolve = (scope, key) => {
+            const raw = String(key || '');
+            for (const rule of safe) {
+                if (rule.scope !== scope)
+                    continue;
+                if (rule.exact && raw === rule.exact)
+                    return rule;
+                if (rule.prefix && raw.startsWith(rule.prefix))
+                    return rule;
+            }
+            return null;
+        };
+        return {
+            resolve,
+            accepts(scope, key) {
+                return !!resolve(scope, key);
+            },
+            exactKeys(scope) {
+                return safe
+                    .filter(rule => rule.scope === scope && !!rule.exact)
+                    .map(rule => rule.exact);
+            }
+        };
+    }
+    AppBaseDocuments.createRegistry = createRegistry;
+})(AppBaseDocuments || (AppBaseDocuments = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -5989,9 +6035,18 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = ['stats'];
+const FIT_SYNC_DOCUMENTS = AppBaseDocuments.createRegistry([
+  {id:'fitness.stats', scope:'profile', exact:'stats'},
+  {id:'fitness.program.index', scope:'profile', exact:'index'},
+  {id:'fitness.program', scope:'profile', prefix:'program:'},
+  {id:'fitness.trainer', scope:'account', exact:'trainer'},
+  {id:'fitness.clients', scope:'account', exact:'clients'},
+  {id:'app.notificationPrefs', scope:'account', exact:'notificationPrefs'}
+]);
+const PROFILE_SYNC_KEYS = FIT_SYNC_DOCUMENTS.exactKeys('profile').filter(key => key !== 'index');
+const ACCOUNT_SYNC_KEYS = FIT_SYNC_DOCUMENTS.exactKeys('account');
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => SYNC_KEYS.includes(key) || key === 'index' || key.startsWith('program:');
+const isSyncKey = key => FIT_SYNC_DOCUMENTS.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -6122,7 +6177,7 @@ async function docValue(key, uid){
 // помечается изменённым и уходит наверх обычной очередью — тем же путём, что и правки,
 // сделанные офлайн. Резервная копия файлом остаётся отдельной ручной функцией.
 async function markAllForSync(){
-  for(const key of SYNC_KEYS) bumpDoc(key);
+  for(const key of PROFILE_SYNC_KEYS) bumpDoc(key);
   for(const p of customPrograms) bumpDoc(PROGRAM_DOC(p.id), {h: docHash(JSON.stringify(p))});
   bumpDoc('index', {h: docHash(customPrograms.map(p => p.id).join(','))});
   await flushMeta();
@@ -6524,7 +6579,7 @@ async function applyRemoteAccountDocs(result){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
-    if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
+    if(!d || !FIT_SYNC_DOCUMENTS.accepts('account', d.key) || d.deleted) continue;
     const localMeta = rec.bucket.meta[d.key];
     const takeRemote = !localMeta || remoteWins(d, localMeta);
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
@@ -6580,7 +6635,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of ['trainer','clients','notificationPrefs']){
+  for(const key of ACCOUNT_SYNC_KEYS){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
