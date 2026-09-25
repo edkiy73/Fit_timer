@@ -13,7 +13,7 @@ const html=fs.readFileSync('index.html','utf8');
 const core=fs.readFileSync('appbase-core.js','utf8');
 const app=fs.readFileSync('app.js','utf8');
 
-ok('build has a dedicated AppBase Core target',
+ok('legacy AppBase Core target is no longer required by production startup',
   build.includes("target: 'appbase-core.js'"));
 ok('product app target no longer lists Core runtimes',
   !build.slice(build.indexOf("target: 'app.js'"),build.indexOf("target: 'style.css'")).includes('src/core/'));
@@ -26,13 +26,16 @@ ok('product app no longer embeds reusable Core namespace declarations',
   && !app.includes('var AppBaseObservability;')
   && !app.includes('var AppBaseNotifications;')
   && !app.includes('var AppBaseUI;'));
-const coreScript='<script src="appbase-core.js"></script>';
-const appScript='<script src="app.js"></script>';
-ok('HTML loads Core before product app',
-  html.includes(coreScript)
-  && html.includes(appScript)
-  && html.indexOf(coreScript) < html.indexOf(appScript));
-ok('mobile build copies Core bundle',web.includes("'appbase-core.js'"));
-ok('mobile validation requires Core bundle',mobile.includes("'dist/appbase-core.js'"));
+ok('HTML loads ESM entry instead of legacy Core and product scripts',
+  html.includes('<script type="module" src="esm/main.js"></script>')
+  && !html.includes('<script src="appbase-core.js"></script>')
+  && !html.includes('<script src="app.js"></script>'));
+ok('web build no longer ships legacy Core bundle',
+  !web.includes("'appbase-core.js'"));
+ok('mobile validation no longer requires legacy Core bundle',
+  !mobile.includes("'dist/appbase-core.js'"));
+ok('ESM entry exposes legacy Core names before loading product runtime',
+  /exposeLegacyCoreGlobals/.test(fs.readFileSync('src/main.ts','utf8'))
+  && /loadLegacyProductRuntime/.test(fs.readFileSync('src/main.ts','utf8')));
 
 process.exit(bad?1:0);
