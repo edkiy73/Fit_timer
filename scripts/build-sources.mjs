@@ -14,6 +14,7 @@ const targets = [
       'src/core/storage.runtime.js',
       'src/core/identity.runtime.js',
       'src/core/sync.runtime.js',
+      'src/core/observability.runtime.js',
       'src/app/00-core.js',
       'src/app/11-sync-schema.js',
       'src/app/10-data-sync.js',

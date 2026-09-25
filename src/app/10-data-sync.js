@@ -73,59 +73,37 @@ function analyticsPlatform(){
   }catch(_){}
   return 'web';
 }
-async function trackProductEvent(event){
-  try{
-    const body = {
-      action:'analytics',
-      event:String(event||''),
-      deviceId:await analyticsDeviceId(),
-      platform:analyticsPlatform(),
-      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-      premium:(typeof isPremium === 'function') ? !!isPremium() : false
-    };
-    const res = await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-}
+const appObservability = AppBaseObservability.createClient({
+  post: async body => {
+    try{
+      const res = await fetch('/api/auth',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        keepalive:true,
+        cache:'no-store'
+      });
+      return !!res.ok;
+    }catch(_){ return false; }
+  },
+  deviceId: analyticsDeviceId,
+  context: ()=> ({
+    platform:analyticsPlatform(),
+    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+    build:String(window.FIT_TIMER_BUILD || ''),
+    premium:(typeof isPremium === 'function') ? !!isPremium() : false
+  })
+});
+async function trackProductEvent(event){ return appObservability.track(event); }
 async function trackInstallOnce(){
   if((await kvGet('analyticsInstallSent')) === '1') return;
   if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
 }
-
-let clientErrorReporting = false;
 function clientErrorPayload(kind, error, fallbackMessage){
-  const e = error && typeof error === 'object' ? error : null;
-  return {
-    action:'client_error',
-    kind:kind === 'rejection' ? 'rejection' : 'error',
-    name:String((e && e.name) || 'Error').slice(0,80),
-    message:String((e && e.message) || fallbackMessage || 'unknown').slice(0,700),
-    stack:String((e && e.stack) || '').slice(0,4000),
-    build:String(window.FIT_TIMER_BUILD || '').slice(0,80),
-    platform:analyticsPlatform(),
-    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
-  };
+  return appObservability.diagnosticPayload(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
 async function reportClientError(kind, error, fallbackMessage){
-  if(clientErrorReporting) return false;
-  clientErrorReporting = true;
-  try{
-    const res=await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(clientErrorPayload(kind,error,fallbackMessage)),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-  finally{ clientErrorReporting=false; }
+  return appObservability.capture(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
 window.addEventListener('error',e=>{
   reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});

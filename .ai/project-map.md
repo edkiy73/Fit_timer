@@ -73,6 +73,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/storage.ts` | generic local KV storage | storage/Core work |
 | `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
 | `src/core/sync.ts` | generic client document registry/scopes | sync/Core work |
+| `src/core/observability.ts` | generic client analytics/diagnostic transport | analytics/diagnostics Core work |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
@@ -126,8 +127,10 @@ Shared backend modules:
 - `lib/seed.js` — seed/catalog data.
 - `lib/ai.js` — AI provider/runtime logic.
 - `lib/ai-endpoint.js` — AI endpoint orchestration.
-- `lib/analytics.js` — anonymous product funnel and retention milestones.
-- `lib/diagnostics.js` — redacted client error aggregation.
+- `lib/analytics-core.js` — generic analytics storage/aggregation engine.
+- `lib/fit-analytics-schema.js` — FitTimer analytics event taxonomy.
+- `lib/analytics.js` — compatibility wrapper binding FitTimer taxonomy to generic analytics Core.
+- `lib/diagnostics.js` — generic redacted client error aggregation.
 
 Rule: helper modules go in `lib/`, not `api/`, because every API JS file can become a Vercel function.
 

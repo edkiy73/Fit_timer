@@ -3971,6 +3971,66 @@ var AppBaseSync;
     }
     AppBaseSync.createRegistry = createRegistry;
 })(AppBaseSync || (AppBaseSync = {}));
+"use strict";
+var AppBaseObservability;
+(function (AppBaseObservability) {
+    function createClient(options) {
+        let reporting = false;
+        const diagnosticPayload = (kind, error, fallbackMessage) => {
+            const e = error && typeof error === 'object'
+                ? error
+                : null;
+            const ctx = options.context();
+            return {
+                action: 'client_error',
+                kind: kind === 'rejection' ? 'rejection' : 'error',
+                name: String((e && e.name) || 'Error').slice(0, 80),
+                message: String((e && e.message) || fallbackMessage || 'unknown').slice(0, 700),
+                stack: String((e && e.stack) || '').slice(0, 4000),
+                build: String(ctx.build || '').slice(0, 80),
+                platform: ctx.platform,
+                locale: String(ctx.locale || '').slice(0, 20)
+            };
+        };
+        return {
+            async track(event) {
+                const name = String(event || '').trim();
+                if (!name)
+                    return false;
+                try {
+                    const ctx = options.context();
+                    return await options.post({
+                        action: 'analytics',
+                        event: name,
+                        deviceId: await options.deviceId(),
+                        platform: ctx.platform,
+                        locale: String(ctx.locale || '').slice(0, 20),
+                        premium: !!ctx.premium
+                    });
+                }
+                catch (_) {
+                    return false;
+                }
+            },
+            diagnosticPayload,
+            async capture(kind, error, fallbackMessage) {
+                if (reporting)
+                    return false;
+                reporting = true;
+                try {
+                    return await options.post(diagnosticPayload(kind, error, fallbackMessage));
+                }
+                catch (_) {
+                    return false;
+                }
+                finally {
+                    reporting = false;
+                }
+            }
+        };
+    }
+    AppBaseObservability.createClient = createClient;
+})(AppBaseObservability || (AppBaseObservability = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -5469,59 +5529,37 @@ function analyticsPlatform(){
   }catch(_){}
   return 'web';
 }
-async function trackProductEvent(event){
-  try{
-    const body = {
-      action:'analytics',
-      event:String(event||''),
-      deviceId:await analyticsDeviceId(),
-      platform:analyticsPlatform(),
-      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-      premium:(typeof isPremium === 'function') ? !!isPremium() : false
-    };
-    const res = await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-}
+const appObservability = AppBaseObservability.createClient({
+  post: async body => {
+    try{
+      const res = await fetch('/api/auth',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        keepalive:true,
+        cache:'no-store'
+      });
+      return !!res.ok;
+    }catch(_){ return false; }
+  },
+  deviceId: analyticsDeviceId,
+  context: ()=> ({
+    platform:analyticsPlatform(),
+    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+    build:String(window.FIT_TIMER_BUILD || ''),
+    premium:(typeof isPremium === 'function') ? !!isPremium() : false
+  })
+});
+async function trackProductEvent(event){ return appObservability.track(event); }
 async function trackInstallOnce(){
   if((await kvGet('analyticsInstallSent')) === '1') return;
   if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
 }
-
-let clientErrorReporting = false;
 function clientErrorPayload(kind, error, fallbackMessage){
-  const e = error && typeof error === 'object' ? error : null;
-  return {
-    action:'client_error',
-    kind:kind === 'rejection' ? 'rejection' : 'error',
-    name:String((e && e.name) || 'Error').slice(0,80),
-    message:String((e && e.message) || fallbackMessage || 'unknown').slice(0,700),
-    stack:String((e && e.stack) || '').slice(0,4000),
-    build:String(window.FIT_TIMER_BUILD || '').slice(0,80),
-    platform:analyticsPlatform(),
-    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
-  };
+  return appObservability.diagnosticPayload(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
 async function reportClientError(kind, error, fallbackMessage){
-  if(clientErrorReporting) return false;
-  clientErrorReporting = true;
-  try{
-    const res=await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(clientErrorPayload(kind,error,fallbackMessage)),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-  finally{ clientErrorReporting=false; }
+  return appObservability.capture(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
 window.addEventListener('error',e=>{
   reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
