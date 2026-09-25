@@ -45,24 +45,39 @@ Before broad extraction, keep regression coverage around:
 
 Profile isolation is a Core invariant, not a FitTimer detail.
 
-## Phase 1 — Type-safety foundation
+## Phase 1 — TypeScript + module foundation
 
 Owner: Architect + DevOps. Implementation: Extraction Engineer.
 
-Introduce TypeScript as a checker first, not as a mass rewrite:
+The migration should start **before substantial Core extraction** and then move quickly by converting infrastructure at the moment it is meaningfully touched.
+
+First establish:
 
 ```text
 typescript
 tsconfig.json
+JS/TS coexistence
 src/types or equivalent contract location
 npm run typecheck
 ```
 
-Allow JS/TS coexistence. Start with contracts for AppConfig, Account, Profile, entitlement/subscription, sync envelope/document, AI request/response, notification preferences, analytics/error payloads and public config.
+Start contracts for AppConfig, Account, Profile, entitlement/subscription, sync envelope/document, AI request/response, notification preferences, analytics/error payloads and public config.
 
-Keep FitTimer models separate: Program, Plan, Exercise, WorkoutSession, WorkoutStats, Trainer, CatalogEntry.
+Migration rule from this point forward:
 
-Add runtime validation at external boundaries when useful; TypeScript alone does not validate API/Redis/backup/AI input.
+- new Core/reusable modules are TypeScript by default;
+- when an existing JS module is substantially extracted/refactored into Core, convert the touched module to TypeScript in that same task unless a concrete compatibility/build blocker makes that unsafe;
+- do not convert untouched stable UI/domain files merely to increase a migration percentage;
+- do not leave materially touched Core modules in JS for a future cleanup pass without documenting the blocker;
+- tighten strictness progressively instead of using broad `any`, unsafe casts or giant global declarations.
+
+Because the current frontend is concatenated into a shared global scope, introduce ES modules + a lightweight bundler **when the first real Core extraction needs explicit imports/exports**. This is expected early (around the first AppConfig/Storage/Core slices), but the exact task boundary should be chosen from the current dependency graph rather than forced blindly.
+
+Keep FitTimer domain models separate: Program, Plan, Exercise, WorkoutSession, WorkoutStats, Trainer, CatalogEntry.
+
+Add runtime validation at external boundaries; TypeScript alone does not validate API/Redis/backup/AI/deep-link/billing input.
+
+The objective is fast convergence to TypeScript without either a risky full-app rewrite or double work where modules are deeply refactored in JS and then rewritten again shortly afterward.
 
 ## Phase 2 — Central AppConfig
 
@@ -235,13 +250,19 @@ Candidate primitives: Button, Input, Select, Switch, Tabs, Card/ListRow, Modal/S
 
 Brand tokens should allow a future product to stop looking like FitTimer without rewriting every screen.
 
-## Phase 12 — ES Modules + TypeScript runtime
+## Phase 12 — Retire legacy JS/global build path
 
 Owner: Architect + DevOps. Review: QA.
 
-Do this after boundaries exist. The current concatenation build hides dependencies; a lightweight bundler such as esbuild is a plausible direction, but should be re-evaluated at implementation time.
+ES modules/bundling should already have been introduced earlier when typed Core modules needed explicit imports/exports. This later phase is for finishing the transition:
 
-Do not combine module-system migration with major data/protocol changes.
+- migrate remaining high-value infrastructure still on legacy globals;
+- shrink/remove temporary global compatibility declarations;
+- retire concatenation paths that no longer serve untouched legacy code;
+- raise TypeScript strictness where temporary allowances remain;
+- ensure production web/mobile builds use the same typed module graph where practical.
+
+Do not combine final legacy-build removal with unrelated data/protocol migrations.
 
 ## Phase 13 — Dependency rules
 
@@ -303,19 +324,20 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 
 ## Suggested task sequence
 
-1. Type-safety foundation.
-2. Central AppConfig.
-3. Storage facade.
-4. Account/Profile contracts.
-5. Generic Sync facade.
-6. Analytics/Diagnostics extraction.
-7. AI runtime split.
-8. Notifications split.
-9. Mobile bridge split.
-10. Admin internal decomposition.
-11. UI primitives/tokens.
-12. ES modules/TS runtime build.
-13. Dependency checks.
-14. Readiness audit.
+1. TypeScript/typecheck foundation.
+2. Introduce ES modules/bundler at the first Core slice that needs explicit imports/exports; likely AppConfig/Storage, but verify current dependencies first.
+3. Central AppConfig — TypeScript.
+4. Storage facade — migrate touched storage/Core code to TypeScript.
+5. Account/Profile contracts — migrate touched infrastructure to TypeScript.
+6. Generic Sync facade — TypeScript for new Core surface.
+7. Analytics/Diagnostics extraction — TypeScript.
+8. AI runtime split — migrate touched reusable runtime modules to TypeScript.
+9. Notifications split — migrate reusable engine/platform surface to TypeScript.
+10. Mobile bridge split — type the JS/TS boundary as far as the current Capacitor setup safely allows.
+11. Admin internal decomposition — new Core internals TypeScript where build/runtime permits.
+12. UI primitives/tokens — TypeScript for new reusable behavior modules; stable markup/CSS remain as appropriate.
+13. Retire remaining legacy global/concatenation compatibility.
+14. Dependency checks + stricter TS settings.
+15. Readiness audit.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.
