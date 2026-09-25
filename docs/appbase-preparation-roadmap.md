@@ -117,6 +117,17 @@ Profile isolation is a Core invariant, not a FitTimer detail.
 
 ## Phase 1 — TypeScript + module foundation
 
+### Current implementation status
+
+Foundation work now has a concrete starting point on the AppBase preparation branch:
+- strict TypeScript/no-emit configuration and reusable Core contracts;
+- canonical `config/product.json` with generated public runtime config;
+- CI typecheck/foundation checks;
+- existing browser regression suite already covers profile switching, storage migration, sync, backup and account flows.
+
+This does **not** mean Core extraction is complete. Storage, Account/Profile, Sync and other runtime owners still remain in legacy FitTimer modules until their dedicated extraction tasks.
+
+
 Owner: Architect + DevOps. Implementation: Extraction Engineer.
 
 The migration should start **before substantial Core extraction** and then move quickly by converting infrastructure at the moment it is meaningfully touched.
