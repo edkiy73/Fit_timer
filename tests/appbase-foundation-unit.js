@@ -38,12 +38,12 @@ ok('root runtime keeps API relative for local/web fallback', runtime.apiBase ===
 const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts', 'utf8');
 const dataSyncSource = fs.readFileSync('src/app/10-data-sync.js', 'utf8');
 const sourceBuild = fs.readFileSync('scripts/build-sources.mjs', 'utf8');
-ok('legacy storage global is isolated to compatibility boundary',
-  /window\.storage/.test(runtimeCompatSource) && !/window\.storage/.test(dataSyncSource));
+ok('legacy storage global is isolated to ESM runtime compatibility boundary',
+  /\.storage/.test(runtimeCompatSource) && !/window\.storage/.test(dataSyncSource));
 ok('storage compatibility adapter validates the external KV contract',
   ['get','set','delete'].every(name => runtimeCompatSource.includes(`candidate.${name}`)));
-ok('Capacitor platform global is isolated to compatibility boundary',
-  runtimeCompatSource.includes('window.Capacitor')
+ok('Capacitor platform global is isolated to ESM runtime compatibility boundary',
+  /Capacitor/.test(runtimeCompatSource)
   && !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.Capacitor')
   && runtimeCompatSource.includes('candidate.getPlatform'));
 const buildMetadataSources = [
@@ -52,12 +52,13 @@ const buildMetadataSources = [
 ].map(path => fs.readFileSync(path, 'utf8')).join('\n');
 ok('runtime build metadata stays out of window globals',
   !buildMetadataSources.includes('window.FIT_TIMER_BUILD')
-  && runtimeCompatSource.includes('setBuild(value)')
-  && runtimeCompatSource.includes('build()'));
-const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
+  && /setBuild\(value: unknown\)/.test(runtimeCompatSource)
+  && /setRuntimeBuild\(value\)/.test(runtimeCompatSource)
+  && /getRuntimeBuild\(\)/.test(runtimeCompatSource));
+const runtimeDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
 ok('runtime compatibility is supplied through the startup dependency capture',
   /runtimeCompat:\s*appRuntimeCompat/.test(fs.readFileSync('src/main.ts','utf8'))
-  && /appRuntimeCompat\s*=\s*fitLegacyModules\.runtimeCompat/.test(legacyDependencySource)
+  && /appRuntimeCompat\s*=\s*fitLegacyModules\.runtimeCompat/.test(runtimeDependencySource)
   && !sourceBuild.includes("'src/app/05-runtime-compat.js'"));
 const genericNativeProductSources = [
   'src/app/00-core.js',
