@@ -195,5 +195,33 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.consumeWorkoutResume !== 'function') return false;
     try{ return !!candidate.consumeWorkoutResume(); }
     catch(_){ return false; }
+  },
+
+  async installUpdate(url, expectedVersionCode){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.installUpdate !== 'function') return {status:'unsupported'};
+    try{ return await candidate.installUpdate(url, expectedVersionCode); }
+    catch(_){ return {status:'error'}; }
+  },
+
+  async cancelUpdate(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.cancelUpdate !== 'function') return false;
+    try{ return !!(await candidate.cancelUpdate()); }
+    catch(_){ return false; }
+  },
+
+  async getUpdateState(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.getUpdateState !== 'function') return {running:false, status:'idle'};
+    try{ return await candidate.getUpdateState(); }
+    catch(_){ return {running:false, status:'idle'}; }
+  },
+
+  async resumeUpdateInstall(expectedVersionCode){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.resumeUpdateInstall !== 'function') return {status:'unsupported'};
+    try{ return await candidate.resumeUpdateInstall(expectedVersionCode); }
+    catch(_){ return {status:'error'}; }
   }
 });
