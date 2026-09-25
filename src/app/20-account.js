@@ -382,28 +382,28 @@ async function finishDirectUpdateResult(result){
 async function openAndroidUpdate(){
   if(!APP_UPDATE || !APP_UPDATE.url) return false;
   if(APP_UPDATE.channel==='direct'){
-    if(!appRuntimeCompat.hasNative('installUpdate')){
+    if(!FitTimerModules.runtimeCompat.hasNative('installUpdate')){
       renderAndroidUpdate('error');
       return false;
     }
     // нажатие во время загрузки — «Отменить»; во время проверки файла — ничего
     if(APP_UPDATE.busy){
-      if(APP_UPDATE.phase==='downloading') await appRuntimeCompat.cancelUpdate();
+      if(APP_UPDATE.phase==='downloading') await FitTimerModules.runtimeCompat.cancelUpdate();
       return false;
     }
     APP_UPDATE.busy=true;
     renderAndroidUpdate('downloading',-1);
-    const result=await appRuntimeCompat.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
+    const result=await FitTimerModules.runtimeCompat.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
-  if(await appRuntimeCompat.openExternal(APP_UPDATE.url)) return true;
+  if(await FitTimerModules.runtimeCompat.openExternal(APP_UPDATE.url)) return true;
   return false;
 }
 // Баннер пересобирается при каждом обновлении настроек (в том числе после
 // сворачивания): подхватываем загрузку, которая уже идёт или оборвалась.
 async function restoreAndroidUpdateState(){
-  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!appRuntimeCompat.hasNative('getUpdateState'))return;
-  const st=await appRuntimeCompat.getUpdateState();
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!FitTimerModules.runtimeCompat.hasNative('getUpdateState'))return;
+  const st=await FitTimerModules.runtimeCompat.getUpdateState();
   if(!APP_UPDATE||!st)return;
   const status=String(st.status||'');
   if(st.running){
@@ -416,10 +416,10 @@ async function restoreAndroidUpdateState(){
 }
 async function resumePendingAndroidUpdate(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
-  if(!appRuntimeCompat.hasNative('resumeUpdateInstall'))return;
+  if(!FitTimerModules.runtimeCompat.hasNative('resumeUpdateInstall'))return;
   APP_UPDATE.busy=true;
   APP_UPDATE.awaitingPermission=false;
-  const result=await appRuntimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
+  const result=await FitTimerModules.runtimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
   await finishDirectUpdateResult(result);
 }
 window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
@@ -431,10 +431,10 @@ async function applyAndroidUpdateConfig(raw){
   if(gate) gate.classList.add('hidden');
   APP_UPDATE_PREV=APP_UPDATE;
   APP_UPDATE=null;
-  if(!raw || !appRuntimeCompat.isNative()) return;
+  if(!raw || !FitTimerModules.runtimeCompat.isNative()) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
 
-  const info=await appRuntimeCompat.getAppInfo();
+  const info=await FitTimerModules.runtimeCompat.getAppInfo();
   const distribution=String((info&&info.distribution)||'direct')==='store'?'store':'direct';
   const cfg=distribution==='store'
     ? ((raw.store&&typeof raw.store==='object')?raw.store:{})
@@ -539,7 +539,7 @@ function renderPremium(){
 /* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
    какая сборка сейчас у человека на телефоне. */
 const BUILD = '20.09 · v22';
-appRuntimeCompat.setBuild(BUILD);
+FitTimerModules.runtimeCompat.setBuild(BUILD);
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
@@ -885,7 +885,7 @@ let bioRelockDeferred = false;
 const BIO_RELOCK_MS = 10 * 60 * 1000;
 
 function nativeBiometryHost(){
-  return appRuntimeCompat.hasNative('biometricStatus','authenticateBiometric');
+  return FitTimerModules.runtimeCompat.hasNative('biometricStatus','authenticateBiometric');
 }
 function bioReason(reason){
   if(reason === 'not_enrolled') return t('bio.notEnrolled');
@@ -901,7 +901,7 @@ async function bioSupported(){
     return false;
   }
   try{
-    const state = await appRuntimeCompat.biometricStatus();
+    const state = await FitTimerModules.runtimeCompat.biometricStatus();
     bioState = state && typeof state === 'object' ? state : {available:false, reason:'unsupported'};
     return bioState.available === true;
   }catch(e){
@@ -912,7 +912,7 @@ async function bioSupported(){
 async function requestNativeBiometry(){
   if(!nativeBiometryHost()) return {ok:false, error:'unsupported'};
   try{
-    return await appRuntimeCompat.authenticateBiometric({
+    return await FitTimerModules.runtimeCompat.authenticateBiometric({
       title:t('lock.title'),
       reason:t('lock.prompt'),
       cancelText:t('common.cancel')
