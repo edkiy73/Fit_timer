@@ -2,19 +2,19 @@ import type { ExternalStorage } from '../core/storage.js';
 import type { Platform } from '../core/observability.js';
 import type { AppFeatureFlags, RuntimeAppConfig } from '../types/core.js';
 
-interface LegacyRuntimeWindow extends Window {
+type LegacyRuntimeWindow = {
   APP_CONFIG?: Partial<RuntimeAppConfig>;
   storage?: ExternalStorage;
   FitNative?: unknown;
   Capacitor?: {
     getPlatform?: () => string;
   };
-}
+};
 
 let runtimeBuild = '';
 
 function runtimeWindow(): LegacyRuntimeWindow {
-  return window as LegacyRuntimeWindow;
+  return window as unknown as LegacyRuntimeWindow;
 }
 
 export function externalStorage(): ExternalStorage | null {
