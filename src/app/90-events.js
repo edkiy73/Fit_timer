@@ -164,7 +164,7 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   emailNews:false,
   emailOffers:false
 });
-const notificationPreferenceStore = AppBaseNotifications.createPreferenceStore({
+const notificationPreferenceStore = FitTimerModules.notifications.createPreferenceStore({
   key:NOTIFICATION_PREFS_KEY,
   defaults:NOTIFICATION_PREF_DEFAULTS,
   storage:localStorage
@@ -571,7 +571,7 @@ async function refreshVoicePackUI(progressEvent){
   ]){
     const s=$(row[0]), b=$(row[1]), p=$(row[2]), bar=$(row[3]); if(!s||!b) continue;
     s.textContent=label;
-    AppBaseUI.setBusy(b, running, {busyText:button, idleText:button, disabled});
+    FitTimerModules.ui.setBusy(b, running, {busyText:button, idleText:button, disabled});
     if(p) setShown(row[2], running);
     if(bar) bar.style.width = (status && status.status === 'queued' ? 3 : pct) + '%';
   }
@@ -585,7 +585,7 @@ async function refreshVoicePackUI(progressEvent){
 async function downloadSelectedVoicePack(){
   if(!appRuntimeCompat.hasNative('downloadVoiceModel')) return;
   for(const id of ['btnVoicePack','btnHfVoicePack']){
-    AppBaseUI.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
+    FitTimerModules.ui.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
   }
   const ok=await appRuntimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
