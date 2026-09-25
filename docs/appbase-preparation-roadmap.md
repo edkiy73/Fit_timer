@@ -206,7 +206,7 @@ The first real Core extraction now moves low-level local storage into `src/core/
 
 FitTimer keeps the existing `kvGet/kvSet/kvDel/kvClearAll` adapter and the existing `fittimer/kv` database/key formats, so this phase does not intentionally migrate user data.
 
-The current `storage.runtime.js` is a generated compatibility bridge for the existing concatenated frontend. It is **not** the intended permanent module architecture. ES modules/bundling should still be introduced before Core develops cross-module imports/exports that make this bridge awkward.
+The current `storage.runtime.js` is a generated compatibility bridge for the existing concatenated frontend. It is **not** the intended permanent module architecture. While that bridge exists, `verbatimModuleSyntax` stays disabled because the runtime intentionally compiles a global namespace; strict TypeScript checks remain enabled. ES modules/bundling should restore normal module semantics before Core develops cross-module imports/exports that make this bridge awkward.
 
 ## Phase 4 — Account / Profile boundary
 
