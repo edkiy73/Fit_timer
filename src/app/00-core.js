@@ -457,7 +457,7 @@ const M_LABEL = Object.fromEntries(MUSCLES);
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
 function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
-  AppBaseUI.setShown(node, !!on);
+  FitTimerModules.ui.setShown(node, !!on);
 }
 
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
