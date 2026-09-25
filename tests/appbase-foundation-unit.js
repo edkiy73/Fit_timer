@@ -202,6 +202,18 @@ ok('ESM entry owns an explicit Storage Core dependency',
   && /createStorage/.test(esmEntrySource)
   && /namespacedKey/.test(esmEntrySource));
 
+const observabilityModuleSource = fs.readFileSync('src/core/observability.ts', 'utf8');
+ok('Observability Core uses ESM exports instead of a namespace global',
+  /export function createClient/.test(observabilityModuleSource)
+  && !/namespace AppBaseObservability/.test(observabilityModuleSource));
+ok('Observability Core keeps analytics and diagnostic contracts intact',
+  /action: 'analytics'/.test(observabilityModuleSource)
+  && /action: 'client_error'/.test(observabilityModuleSource)
+  && /diagnosticPayload/.test(observabilityModuleSource));
+ok('ESM entry owns an explicit Observability Core dependency',
+  /from ['"]\.\/core\/observability\.js['"]/.test(esmEntrySource)
+  && /createClient/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))

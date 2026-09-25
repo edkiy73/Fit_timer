@@ -1,6 +1,10 @@
 "use strict";
-var AppBaseObservability;
-(function (AppBaseObservability) {
+var AppBaseObservability = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createClient = createClient;
     function createClient(options) {
         let reporting = false;
         const diagnosticPayload = (kind, error, fallbackMessage) => {
@@ -56,5 +60,6 @@ var AppBaseObservability;
             }
         };
     }
-    AppBaseObservability.createClient = createClient;
-})(AppBaseObservability || (AppBaseObservability = {}));
+    
+    return module.exports;
+})();
