@@ -46,6 +46,8 @@ export const productIdentity = {
 };
 
 
+type SharedAIProtocol = Record<string, any>;
+
 type LegacyProductModules = {
   infrastructure: typeof productInfrastructure;
   identity: typeof productIdentity;
@@ -53,11 +55,12 @@ type LegacyProductModules = {
   notifications: typeof notificationsCore;
   ui: typeof uiCore;
   runtimeCompat: typeof appRuntimeCompat;
+  aiProtocol: SharedAIProtocol;
 };
 
 type LegacyProductGlobal = typeof globalThis & {FitTimerModules?: LegacyProductModules};
 
-function exposeLegacyProductModules(): void {
+function exposeLegacyProductModules(aiProtocol: SharedAIProtocol): void {
   const legacy = globalThis as LegacyProductGlobal;
   legacy.FitTimerModules = {
     infrastructure: productInfrastructure,
@@ -65,7 +68,8 @@ function exposeLegacyProductModules(): void {
     sync: productSyncSchema,
     notifications: notificationsCore,
     ui: uiCore,
-    runtimeCompat: appRuntimeCompat
+    runtimeCompat: appRuntimeCompat,
+    aiProtocol
   };
 }
 
@@ -95,6 +99,20 @@ function loadLegacyScript(
   });
 }
 
+async function loadSharedAIProtocol(): Promise<SharedAIProtocol> {
+  await loadLegacyScript(
+    'lib/ai-protocol.js',
+    'data-shared-ai-protocol',
+    'shared_ai_protocol_failed',
+    true
+  );
+  const legacy = globalThis as typeof globalThis & {FitAIProtocol?: SharedAIProtocol};
+  const protocol = legacy.FitAIProtocol;
+  delete legacy.FitAIProtocol;
+  if(!protocol) throw new Error('shared_ai_protocol_missing');
+  return protocol;
+}
+
 export function loadLegacyMobileRuntime(): Promise<void> {
   return loadLegacyScript(
     'mobile.js',
@@ -108,12 +126,14 @@ export function loadLegacyProductRuntime(): Promise<void> {
   return loadLegacyScript('app.js', 'data-legacy-product-runtime', 'legacy_product_runtime_failed');
 }
 
-exposeLegacyProductModules();
 try{
+  const aiProtocol = await loadSharedAIProtocol();
+  exposeLegacyProductModules(aiProtocol);
   await loadLegacyMobileRuntime();
   await loadLegacyProductRuntime();
   clearLegacyProductModules();
 }catch(error){
+  clearLegacyProductModules();
   console.error('Failed to start product runtime', error);
   document.body.classList.remove('booting');
 }
