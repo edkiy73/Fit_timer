@@ -5,6 +5,7 @@ const required = [
   'dist/style.css',
   'dist/app.js',
   'dist/app.config.js',
+  'dist/mobile.js',
   'dist/esm/main.js',
   '.well-known/assetlinks.json',
   'android/app/src/main/AndroidManifest.xml',
@@ -38,7 +39,7 @@ const nativeNotificationCore = await readFile('dist/esm/core/native-notification
 if(!nativeNotificationCore.includes('createTransport') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification ESM transport is missing');
 const mobileCore = await readFile('dist/esm/core/mobile.js', 'utf8');
 if(!mobileCore.includes('createBridge') || !mobileCore.includes('shareBlob') || !mobileCore.includes('onLifecycle')) throw new Error('Generic mobile Core ESM bridge is missing');
-const mobileBridge = await readFile('mobile.js', 'utf8');
+const mobileBridge = await readFile('dist/mobile.js', 'utf8');
 if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal')) throw new Error('Native update bridge is incomplete');
 if(!mobileBridge.includes('installUpdate') || !mobileBridge.includes('resumeUpdateInstall')) throw new Error('Native direct-update bridge is incomplete');
 if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app review bridge is missing');
