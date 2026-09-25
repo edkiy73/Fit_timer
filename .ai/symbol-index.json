@@ -84,6 +84,11 @@
         "workoutLoadSnapshot"
       ]
     },
+    "src/app/00-dependencies.js": {
+      "kind": "frontend-js",
+      "lines": 12,
+      "chars": 615
+    },
     "src/app/05-runtime-compat.js": {
       "kind": "frontend-js",
       "lines": 248,
@@ -1693,11 +1698,6 @@
       "actions": [
         "closeModal"
       ]
-    },
-    "src/app/00-dependencies.js": {
-      "kind": "frontend-js",
-      "lines": 12,
-      "chars": 615
     }
   }
 }
