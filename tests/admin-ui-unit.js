@@ -122,7 +122,7 @@ need(vercelConfig.includes('"ignoreCommand": "node scripts/vercel-ignore.mjs"'),
 need(vercelIgnore.includes('[skip vercel]') && vercelIgnore.includes('[deploy]'),'Vercel deploy markers are missing');
 need(healthApi.includes("format === 'json'"),'health JSON mode is missing');
 need(healthLib.includes("store.selfTest()"),'health must actively exercise storage');
-need(healthLib.includes("store.list('c:approved')"),'health must probe catalog reads');
+need(healthApi.includes("store.list('c:approved')") && healthApi.includes('collectHealth({probes:FIT_HEALTH_PROBES})'),'health must probe catalog reads');
 need(healthLib.includes("store.list('a:all')"),'health must probe account index reads');
 
 need(sourceWorkflow.includes("'admin.html'"),'admin.html must trigger source consistency CI');
