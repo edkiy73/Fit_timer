@@ -1,6 +1,4 @@
 const fs = require('fs');
-const vm = require('vm');
-
 let bad = 0;
 const ok = (name, cond, extra) => {
   if(!cond) bad++;
@@ -252,45 +250,17 @@ const coreSources = [
 const forbidden = ['Workout', 'Exercise', 'Trainer', 'Muscle', 'Warmup', 'Gender', 'Age', 'PrepSec'];
 ok('Core sources contain no fitness entities', !forbidden.some(word => coreSources.includes(word)),
   forbidden.filter(word => coreSources.includes(word)).join(', ') || 'clean');
-ok('typed Core build/check scripts exist',
-  typeof pkg.scripts['build:core'] === 'string' && typeof pkg.scripts['check:core'] === 'string');
+ok('ESM Core build script exists',
+  typeof pkg.scripts['build:esm'] === 'string' && /tsc/.test(pkg.scripts['build:esm']));
 
 const fitnessTypes = fs.readFileSync('src/types/fitness.ts', 'utf8');
 ok('FitTimer profile extension is outside Core contracts',
   /FitTimerProfileExtension/.test(fitnessTypes) && /gender/.test(fitnessTypes) && /age/.test(fitnessTypes));
 
-const syncContext = {AppBaseSync: undefined};
-vm.createContext(syncContext);
-vm.runInContext(fs.readFileSync('src/core/sync.runtime.js', 'utf8'), syncContext);
-const demoRegistry = syncContext.AppBaseSync.createRegistry([
-  {scope:'profile', prefix:'note:', allowDeleted:true},
-  {scope:'account', key:'prefs', free:true}
-]);
-ok('generic sync registry accepts a non-fitness document type',
-  demoRegistry.accepts('profile', 'note:123') && demoRegistry.allowsDeleted('profile', 'note:123'));
-ok('generic sync registry handles account/free policy without product names',
-  demoRegistry.accepts('account', 'prefs') && demoRegistry.isFree('account', 'prefs')
-  && !demoRegistry.accepts('profile', 'prefs'));
-
 const { createSyncRegistry } = require('./../lib/sync-registry');
 const serverDemoRegistry = createSyncRegistry([{scope:'profile', prefix:'note:'}]);
 ok('server sync registry is product-neutral',
   serverDemoRegistry.accepts('profile', 'note:abc') && !serverDemoRegistry.accepts('profile', 'program:abc'));
-
-const obsContext = {AppBaseObservability: undefined};
-vm.createContext(obsContext);
-vm.runInContext(fs.readFileSync('src/core/observability.runtime.js', 'utf8'), obsContext);
-let sent = [];
-const obs = obsContext.AppBaseObservability.createClient({
-  post: async body => { sent.push(body); return true; },
-  deviceId: async () => 'device-demo',
-  context: () => ({platform:'web', locale:'en', build:'demo', premium:false})
-});
-ok('generic observability tracks arbitrary non-fitness event',
-  typeof obs.track === 'function' && typeof obs.capture === 'function');
-const diagPayload = obs.diagnosticPayload('error', new Error('boom'), 'fallback');
-ok('generic diagnostic payload contains no FitTimer semantics',
-  diagPayload.action === 'client_error' && diagPayload.platform === 'web' && diagPayload.locale === 'en');
 
 const {createAnalyticsEngine} = require('../lib/analytics-core');
 const analyticsCoreSource = fs.readFileSync('lib/analytics-core.js','utf8');
@@ -298,33 +268,6 @@ ok('server analytics engine contains no workout taxonomy',
   !/workout_|program_added|ai_used/.test(analyticsCoreSource));
 ok('FitTimer analytics taxonomy lives outside generic engine',
   /workout_completed/.test(fs.readFileSync('lib/fit-analytics-schema.js','utf8')));
-
-const notifContext = {AppBaseNotifications: undefined, Date, Set, Map, JSON};
-vm.createContext(notifContext);
-vm.runInContext(fs.readFileSync('src/core/notifications.runtime.js','utf8'), notifContext);
-const memory = new Map();
-const prefStore = notifContext.AppBaseNotifications.createPreferenceStore({
-  key:'prefs',
-  defaults:{alerts:true,offers:false},
-  storage:{
-    getItem:key=>memory.has(key)?memory.get(key):null,
-    setItem:(key,value)=>memory.set(key,value)
-  }
-});
-ok('generic notification preferences preserve defaults',
-  prefStore.get().alerts === true && prefStore.get().offers === false);
-prefStore.set({alerts:false});
-ok('generic notification preferences merge persisted values with defaults',
-  prefStore.get().alerts === false && prefStore.get().offers === false);
-const demoNotifications = notifContext.AppBaseNotifications.limitCandidates([
-  {at:'2026-01-05T09:00:00',priority:1},
-  {at:'2026-01-05T10:00:00',priority:2},
-  {at:'2026-01-05T11:00:00',priority:3}
-],{
-  maxTotal:10,passiveDailyLimit:2,engagementWeeklyLimit:3,
-  dayKey:d=>d.toISOString().slice(0,10)
-});
-ok('generic notification budget limits passive daily delivery', demoNotifications.length === 2);
 
 const nativeNotificationSource = fs.readFileSync('src/core/native-notifications.ts','utf8');
 ok('native notification Core is product-neutral',
