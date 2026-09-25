@@ -1,3 +1,4 @@
+"use strict";
 var AppBaseStorage;
 (function (AppBaseStorage) {
     function namespacedKey(key, namespace) {
