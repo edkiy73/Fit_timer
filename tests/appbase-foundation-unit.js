@@ -359,6 +359,15 @@ ok('ESM entry composes runtime environment explicitly',
   /from ['"]\.\/app\/runtime-environment\.js['"]/.test(esmEntrySource)
   && /runtimeEnvironment/.test(esmEntrySource));
 
+const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts','utf8');
+ok('runtime compatibility adapter is an ESM product module',
+  /from ['"]\.\/runtime-environment\.js['"]/.test(runtimeCompatSource)
+  && /export const appRuntimeCompat/.test(runtimeCompatSource));
+ok('legacy product consumes runtime compatibility through FitTimerModules',
+  /runtimeCompat: appRuntimeCompat/.test(esmEntrySource)
+  && /FitTimerModules\.runtimeCompat/.test(dataSyncSource)
+  && !fs.existsSync('src/app/05-runtime-compat.js'));
+
 const productBootstrapSource = fs.readFileSync('src/app/bootstrap.ts', 'utf8');
 ok('product bootstrap is the ESM composition root',
   /from ['"]\.\/infrastructure\.js['"]/.test(productBootstrapSource)
