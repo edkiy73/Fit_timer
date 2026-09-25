@@ -8,6 +8,7 @@ on:
     paths: &browser_paths
       - 'src/**'
       - 'api/**'
+      - 'config/**'
       - 'lib/**'
       - 'tests/**'
       - 'app.js'
@@ -20,6 +21,7 @@ on:
       - 'admin.js'
       - 'package.json'
       - 'package-lock.json'
+      - 'tsconfig.json'
       - 'scripts/run-browser-tests.mjs'
       - '.github/workflows/browser-tests.yml'
   push:

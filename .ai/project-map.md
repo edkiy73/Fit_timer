@@ -66,8 +66,15 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
 | `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
-| `app.config.js` | runtime public config bootstrap | API/public URL behavior |
+| `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
+| `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
+| `src/types/*.ts` | TypeScript contracts for reusable Core boundaries | Core/AppBase/type changes |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
+
+Foundation checks:
+- `npm run typecheck` — strict TypeScript contracts/Core check.
+- `npm run test:foundation` — product config/AppBase foundation invariants.
+- `npm run build:config` / `npm run check:config` — generate/verify public runtime config from `config/product.json`.
 
 Localization:
 - `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
