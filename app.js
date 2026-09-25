@@ -5314,6 +5314,20 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.stopSpeaking !== 'function') return false;
     try{ await candidate.stopSpeaking(); return true; }
     catch(_){ return false; }
+  },
+
+  consumeProgramLink(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.consumeProgramLink !== 'function') return '';
+    try{ return String(candidate.consumeProgramLink() || ''); }
+    catch(_){ return ''; }
+  },
+
+  consumeWorkoutResume(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.consumeWorkoutResume !== 'function') return false;
+    try{ return !!candidate.consumeWorkoutResume(); }
+    catch(_){ return false; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -16410,7 +16424,7 @@ function nextNativeWorkStep(){
 
 let nativeSessionSaveT = 0;
 function autosaveNativeWorkoutSession(delay){
-  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = setTimeout(()=>{
     nativeSessionSaveT = 0;
@@ -16419,7 +16433,7 @@ function autosaveNativeWorkoutSession(delay){
 }
 
 window.addEventListener('fitAppBackground', ()=>{
-  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
   saveSession().catch(()=>{});
@@ -18109,7 +18123,7 @@ async function showNotification(title, body){
 }
 function checkSchedules(){
   if(document.hidden) return;
-  if(window.FitNative && window.FitNative.isNative) return;
+  if(appRuntimeCompat.isNative()) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
   if(prefs.workouts === false) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -20588,9 +20602,7 @@ let programLinksReady = false;
 let pendingAction = null;
 
 window.addEventListener('fitWorkoutResumeRequest', ()=>{
-  try{
-    if(window.FitNative && window.FitNative.consumeWorkoutResume) window.FitNative.consumeWorkoutResume();
-  }catch(_){}
+  appRuntimeCompat.consumeWorkoutResume();
   if(workoutResumeReady){
     resumeWorkoutFromNativeNotification().catch(()=>{});
     return;
@@ -20601,9 +20613,7 @@ window.addEventListener('fitWorkoutResumeRequest', ()=>{
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
   if(!/^[0-9a-z]{4,16}$/.test(id)) return;
-  try{
-    if(window.FitNative && window.FitNative.consumeProgramLink) window.FitNative.consumeProgramLink();
-  }catch(_){}
+  appRuntimeCompat.consumeProgramLink();
   if(programLinksReady){
     importProgramLink(id);
     return;
@@ -20624,13 +20634,9 @@ try{
   if(pendingImport || pendingLink || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', '/'); // чистим адрес после разбора ссылки
   }
-  if(window.FitNative && window.FitNative.consumeProgramLink){
-    const nativeId = String(window.FitNative.consumeProgramLink() || '');
-    if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
-  }
-  if(window.FitNative && window.FitNative.consumeWorkoutResume){
-    pendingNativeWorkoutResume = !!window.FitNative.consumeWorkoutResume();
-  }
+  const nativeId = appRuntimeCompat.consumeProgramLink();
+  if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
+  pendingNativeWorkoutResume = appRuntimeCompat.consumeWorkoutResume();
 }catch(e){}
 
 (async ()=>{
@@ -20639,7 +20645,7 @@ try{
   try{
     const raw = localStorage.getItem('account');
     const saved = raw && JSON.parse(raw);
-    if(window.FitNative && window.FitNative.isNative
+    if(appRuntimeCompat.isNative()
       && saved && saved.biometry && saved.biometry.enabled && saved.biometry.kind === 'native'){
       $('lockModal').classList.add('open');
     }
