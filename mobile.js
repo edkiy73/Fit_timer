@@ -49,7 +49,7 @@
   function programIdFromAppUrl(value){
     try{
       const url = new URL(String(value || ''));
-      const runtimeConfig = window.APP_CONFIG || window.FIT_TIMER_CONFIG;
+      const runtimeConfig = window.APP_CONFIG;
       const configured = runtimeConfig && runtimeConfig.publicAppUrl;
       const expected = new URL(configured || 'https://fittimer99.vercel.app');
       if(url.protocol !== 'https:' || url.host !== expected.host) return '';

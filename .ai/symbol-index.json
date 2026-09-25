@@ -370,7 +370,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2935,
-      "chars": 135662,
+      "chars": 135635,
       "symbols": [
         "add",
         "ageError",
@@ -800,7 +800,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 719,
-      "chars": 31322,
+      "chars": 31295,
       "symbols": [
         "add",
         "advance",
