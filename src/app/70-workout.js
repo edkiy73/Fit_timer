@@ -295,7 +295,7 @@ function nextNativeWorkStep(){
 
 let nativeSessionSaveT = 0;
 function autosaveNativeWorkoutSession(delay){
-  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = setTimeout(()=>{
     nativeSessionSaveT = 0;
@@ -304,7 +304,7 @@ function autosaveNativeWorkoutSession(delay){
 }
 
 window.addEventListener('fitAppBackground', ()=>{
-  if(!(window.FitNative && window.FitNative.isNative) || !state.live || typeof saveSession !== 'function') return;
+  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
   saveSession().catch(()=>{});
