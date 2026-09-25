@@ -539,7 +539,7 @@ function renderPremium(){
 /* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
    какая сборка сейчас у человека на телефоне. */
 const BUILD = '20.09 · v22';
-try{ window.FIT_TIMER_BUILD = BUILD; }catch(_){}
+appRuntimeCompat.setBuild(BUILD);
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
