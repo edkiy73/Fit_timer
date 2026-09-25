@@ -15,6 +15,7 @@ const targets = [
       'src/core/identity.runtime.js',
       'src/core/sync.runtime.js',
       'src/core/observability.runtime.js',
+      'src/core/notifications.runtime.js',
       'src/app/00-core.js',
       'src/app/11-sync-schema.js',
       'src/app/10-data-sync.js',
