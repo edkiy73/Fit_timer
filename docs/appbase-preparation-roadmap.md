@@ -125,7 +125,7 @@ Foundation work now has a concrete starting point on the AppBase preparation bra
 - CI typecheck/foundation checks;
 - existing browser regression suite already covers profile switching, storage migration, sync, backup and account flows.
 
-This does **not** mean Core extraction is complete. Storage, Account/Profile, Sync and other runtime owners still remain in legacy FitTimer modules until their dedicated extraction tasks.
+This does **not** mean Core extraction is complete. Account/Profile, Sync and other runtime owners still remain in legacy FitTimer modules until their dedicated extraction tasks.
 
 
 Owner: Architect + DevOps. Implementation: Extraction Engineer.
@@ -194,6 +194,19 @@ global/profile namespace helpers
 Core storage must not know `customPrograms`, `stats`, `progWeights`, warm-up or trainer semantics.
 
 Preserve existing persisted keys unless migration is explicitly required.
+
+### Storage implementation status
+
+The first real Core extraction now moves low-level local storage into `src/core/storage.ts`:
+- IndexedDB + localStorage fallback/migration;
+- optional external storage bridge;
+- mirror-key behavior;
+- namespace-key helper;
+- write-failure callback.
+
+FitTimer keeps the existing `kvGet/kvSet/kvDel/kvClearAll` adapter and the existing `fittimer/kv` database/key formats, so this phase does not intentionally migrate user data.
+
+The current `storage.runtime.js` is a generated compatibility bridge for the existing concatenated frontend. It is **not** the intended permanent module architecture. While that bridge exists, `verbatimModuleSyntax` stays disabled because the runtime intentionally compiles a global namespace; strict TypeScript checks remain enabled. ES modules/bundling should restore normal module semantics before Core develops cross-module imports/exports that make this bridge awkward.
 
 ## Phase 4 — Account / Profile boundary
 

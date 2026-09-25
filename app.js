@@ -3718,6 +3718,207 @@ ${exerciseSchema(outputLanguage)}`;
   root.FitAIProtocol = api;
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+"use strict";
+var AppBaseStorage;
+(function (AppBaseStorage) {
+    function namespacedKey(key, namespace) {
+        return `${key}_${namespace}`;
+    }
+    AppBaseStorage.namespacedKey = namespacedKey;
+    function createStorage(options) {
+        const mirrorKeys = new Set(options.mirrorKeys || []);
+        let dbPromise = null;
+        let fullWarned = false;
+        const external = () => {
+            try {
+                return options.externalStorage?.() || null;
+            }
+            catch (_) {
+                return null;
+            }
+        };
+        const openDb = () => {
+            if (dbPromise)
+                return dbPromise;
+            dbPromise = new Promise((resolve) => {
+                try {
+                    if (!window.indexedDB) {
+                        resolve(null);
+                        return;
+                    }
+                    const request = indexedDB.open(options.dbName, 1);
+                    request.onupgradeneeded = () => {
+                        try {
+                            request.result.createObjectStore(options.storeName);
+                        }
+                        catch (_) { }
+                    };
+                    request.onsuccess = () => {
+                        const db = request.result;
+                        db.onversionchange = () => {
+                            try {
+                                db.close();
+                            }
+                            catch (_) { }
+                            dbPromise = null;
+                        };
+                        resolve(db);
+                    };
+                    request.onerror = () => resolve(null);
+                    request.onblocked = () => resolve(null);
+                }
+                catch (_) {
+                    resolve(null);
+                }
+            });
+            return dbPromise;
+        };
+        const requestStore = (mode, operation) => openDb().then((db) => new Promise((resolve, reject) => {
+            if (!db) {
+                reject(new Error('no_idb'));
+                return;
+            }
+            try {
+                const transaction = db.transaction(options.storeName, mode);
+                const request = operation(transaction.objectStore(options.storeName));
+                transaction.oncomplete = () => resolve(request ? request.result : undefined);
+                transaction.onerror = () => reject(transaction.error || new Error('idb_tx'));
+                transaction.onabort = () => reject(transaction.error || new Error('idb_abort'));
+            }
+            catch (error) {
+                reject(error);
+            }
+        }));
+        const notifyWriteFailure = () => {
+            if (fullWarned)
+                return;
+            fullWarned = true;
+            try {
+                options.onWriteFailure?.();
+            }
+            catch (_) { }
+        };
+        try {
+            if (navigator.storage?.persist)
+                navigator.storage.persist().catch(() => { });
+        }
+        catch (_) { }
+        return {
+            async get(key) {
+                const ext = external();
+                if (ext) {
+                    try {
+                        const result = await ext.get(key);
+                        return result ? result.value : null;
+                    }
+                    catch (_) {
+                        return null;
+                    }
+                }
+                let indexedDbAvailable = true;
+                try {
+                    const value = await requestStore('readonly', (store) => store.get(key));
+                    if (value !== undefined && value !== null)
+                        return String(value);
+                }
+                catch (_) {
+                    indexedDbAvailable = false;
+                }
+                let localValue = null;
+                try {
+                    localValue = localStorage.getItem(key);
+                }
+                catch (_) {
+                    localValue = null;
+                }
+                if (localValue !== null && indexedDbAvailable) {
+                    try {
+                        await requestStore('readwrite', (store) => store.put(localValue, key));
+                        if (!mirrorKeys.has(key)) {
+                            try {
+                                localStorage.removeItem(key);
+                            }
+                            catch (_) { }
+                        }
+                    }
+                    catch (_) { }
+                }
+                return localValue;
+            },
+            async set(key, value) {
+                const ext = external();
+                if (ext) {
+                    try {
+                        await ext.set(key, value);
+                        return true;
+                    }
+                    catch (_) { }
+                }
+                try {
+                    await requestStore('readwrite', (store) => store.put(value, key));
+                    if (mirrorKeys.has(key)) {
+                        try {
+                            localStorage.setItem(key, value);
+                        }
+                        catch (_) { }
+                    }
+                    else {
+                        try {
+                            localStorage.removeItem(key);
+                        }
+                        catch (_) { }
+                    }
+                    return true;
+                }
+                catch (_) { }
+                try {
+                    localStorage.setItem(key, value);
+                    return true;
+                }
+                catch (_) {
+                    notifyWriteFailure();
+                    return false;
+                }
+            },
+            async delete(key) {
+                const ext = external();
+                if (ext) {
+                    try {
+                        await ext.delete(key);
+                        return;
+                    }
+                    catch (_) { }
+                }
+                try {
+                    await requestStore('readwrite', (store) => store.delete(key));
+                }
+                catch (_) { }
+                try {
+                    localStorage.removeItem(key);
+                }
+                catch (_) { }
+            },
+            async clearAll() {
+                try {
+                    await requestStore('readwrite', (store) => store.clear());
+                }
+                catch (_) { }
+                try {
+                    localStorage.clear();
+                }
+                catch (_) { }
+            },
+            namespacedKey,
+            async __testReadIndexedDb(key) {
+                return requestStore('readonly', (store) => store.get(key));
+            },
+            __testDisableIndexedDb() {
+                dbPromise = Promise.resolve(null);
+            }
+        };
+    }
+    AppBaseStorage.createStorage = createStorage;
+})(AppBaseStorage || (AppBaseStorage = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -5134,14 +5335,20 @@ function renderStartInfo(){
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
-const pk = key => key + '_' + currentUser;
+const fitStorage = AppBaseStorage.createStorage({
+  dbName: 'fittimer',
+  storeName: 'kv',
+  mirrorKeys: ['account'],
+  externalStorage: () => window.storage || null,
+  onWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} }
+});
+const pk = key => fitStorage.namespacedKey(key, currentUser);
 const curUser = () => users.find(u => u.id === currentUser) || users[0];
+async function kvGet(key){ return fitStorage.get(key); }
+async function kvSet(key, val){ return fitStorage.set(key, val); }
+async function kvDel(key){ await fitStorage.delete(key); }
+async function kvClearAll(){ await fitStorage.clearAll(); }
 async function saveUsers(){ await kvSet('users', JSON.stringify(users)); }
-async function kvDel(key){
-  try{ if(window.storage){ await window.storage.delete(key); return; } }catch(e){}
-  try{ await kvReq('readwrite', st => st.delete(key)); }catch(e){}
-  try{ localStorage.removeItem(key); }catch(e){}
-}
 function validAge(v){
   if(v === '' || v == null) return null;
   const n = Number(v);
@@ -5181,98 +5388,8 @@ let dataOwner = null;
 // показывалось уже 4 кг. Такой второй источник веса удалён.
 let progWeights = {};
 
-/* Хранилище данных — IndexedDB, а не localStorage.
-   Программы лежат вместе с картинками (data URL по 60–120 КБ), фото прогресса — тоже.
-   У localStorage около 5 МБ на всё приложение: после нескольких программ с картинками
-   запись начинала падать, ошибка проглатывалась, и правка молча пропадала после
-   перезапуска. IndexedDB даёт сотни мегабайт.
-   Старые значения переезжают сами при первом чтении. localStorage остаётся запасным
-   путём (если IndexedDB недоступна) и зеркалом для ключей, которые нужно прочитать
-   синхронно на старте (KV_MIRROR). Если не удалось записать никуда — говорим человеку. */
-const KV_DB = 'fittimer', KV_STORE = 'kv';
-const KV_MIRROR = new Set(['account']);   // читается синхронно до первой отрисовки (замок)
-let kvDbPromise = null;
-function kvDb(){
-  if(kvDbPromise) return kvDbPromise;
-  kvDbPromise = new Promise(res => {
-    try{
-      if(!window.indexedDB){ res(null); return; }
-      const rq = indexedDB.open(KV_DB, 1);
-      rq.onupgradeneeded = () => { try{ rq.result.createObjectStore(KV_STORE); }catch(_){} };
-      rq.onsuccess = () => {
-        const db = rq.result;
-        db.onversionchange = () => { try{ db.close(); }catch(_){} kvDbPromise = null; };
-        res(db);
-      };
-      rq.onerror = () => res(null);
-      rq.onblocked = () => res(null);
-    }catch(_){ res(null); }
-  });
-  return kvDbPromise;
-}
-function kvReq(mode, fn){
-  return kvDb().then(db => new Promise((res, rej) => {
-    if(!db){ rej(new Error('no_idb')); return; }
-    try{
-      const tx = db.transaction(KV_STORE, mode);
-      const rq = fn(tx.objectStore(KV_STORE));
-      tx.oncomplete = () => res(rq ? rq.result : undefined);
-      tx.onerror = () => rej(tx.error || new Error('idb_tx'));
-      tx.onabort = () => rej(tx.error || new Error('idb_abort'));
-    }catch(e){ rej(e); }
-  }));
-}
-// Полная очистка (удаление всех данных): и база, и localStorage.
-async function kvClearAll(){
-  try{ await kvReq('readwrite', st => st.clear()); }catch(_){}
-  try{ localStorage.clear(); }catch(_){}
-}
-let kvFullWarned = false;
-function kvWriteFailed(){
-  if(kvFullWarned) return;
-  kvFullWarned = true;
-  try{ appAlert(t('storage.full')); }catch(_){}
-}
-// Просим браузер не вытеснять данные при нехватке места (где это поддерживается).
-try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(_){}
-
-async function kvGet(key){
-  // artifact-хранилище, если доступно
-  try{
-    if(window.storage){
-      try{ const r = await window.storage.get(key); return r ? r.value : null; }
-      catch(e){ return null; }
-    }
-  }catch(e){}
-  let idbOk = true;
-  try{
-    const v = await kvReq('readonly', st => st.get(key));
-    if(v !== undefined && v !== null) return v;
-  }catch(e){ idbOk = false; }
-  let ls = null;
-  try{ ls = localStorage.getItem(key); }catch(e){ ls = null; }
-  // перенос старого значения в IndexedDB; из localStorage убираем, чтобы освободить место
-  if(ls !== null && idbOk){
-    try{
-      await kvReq('readwrite', st => st.put(ls, key));
-      if(!KV_MIRROR.has(key)) try{ localStorage.removeItem(key); }catch(_){}
-    }catch(_){}
-  }
-  return ls;
-}
-// true — записано. Ошибку записи больше не проглатываем молча.
-async function kvSet(key, val){
-  try{ if(window.storage){ await window.storage.set(key, val); return true; } }catch(e){}
-  try{
-    await kvReq('readwrite', st => st.put(val, key));
-    if(KV_MIRROR.has(key)) try{ localStorage.setItem(key, val); }catch(_){}
-    else try{ localStorage.removeItem(key); }catch(_){}   // не держим устаревшую копию
-    return true;
-  }catch(e){}
-  try{ localStorage.setItem(key, val); return true; }
-  catch(e){ kvWriteFailed(); return false; }
-}
-
+/* Низкоуровневое local/IndexedDB-хранилище теперь принадлежит AppBase Storage Core.
+   Здесь остаётся только FitTimer-конфигурация и совместимые kv* вызовы. */
 async function analyticsDeviceId(){
   let id = await kvGet('deviceId');
   if(!id){

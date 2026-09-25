@@ -31,10 +31,16 @@ ok('TypeScript typecheck script exists', typeof pkg.scripts.typecheck === 'strin
 ok('TypeScript strict mode enabled', tsconfig.compilerOptions.strict === true);
 ok('TypeScript is noEmit during foundation', tsconfig.compilerOptions.noEmit === true);
 
-const contracts = fs.readFileSync('src/types/core.ts', 'utf8');
+const coreSources = [
+  fs.readFileSync('src/types/core.ts', 'utf8'),
+  ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
+    .map(name => fs.readFileSync('src/core/' + name, 'utf8'))
+].join('\n');
 const forbidden = ['Workout', 'Exercise', 'Trainer', 'Muscle', 'Warmup'];
-ok('Core contracts contain no fitness entities', !forbidden.some(word => contracts.includes(word)),
-  forbidden.filter(word => contracts.includes(word)).join(', ') || 'clean');
+ok('Core sources contain no fitness entities', !forbidden.some(word => coreSources.includes(word)),
+  forbidden.filter(word => coreSources.includes(word)).join(', ') || 'clean');
+ok('typed Core build/check scripts exist',
+  typeof pkg.scripts['build:core'] === 'string' && typeof pkg.scripts['check:core'] === 'string');
 
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);

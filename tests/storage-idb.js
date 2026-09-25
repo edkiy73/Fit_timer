@@ -40,7 +40,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const mig = await page.evaluate(async () => ({
     prog: customPrograms.some(p => p.id === 'old'),
     lsProg: localStorage.getItem('customPrograms_u1'),
-    idb: await kvReq('readonly', st => st.get('customPrograms_u1')),
+    idb: await fitStorage.__testReadIndexedDb('customPrograms_u1'),
     lsAccount: localStorage.getItem('account')
   }));
   ok('данные старой версии на месте', mig.prog);
@@ -66,7 +66,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // 3) записать некуда: ни IndexedDB, ни localStorage
   const fail = await page.evaluate(async () => {
-    kvDbPromise = Promise.resolve(null);
+    fitStorage.__testDisableIndexedDb();
     const orig = Storage.prototype.setItem;
     Storage.prototype.setItem = function(){ throw new DOMException('full', 'QuotaExceededError'); };
     const before = outbox.length;
