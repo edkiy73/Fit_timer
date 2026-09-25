@@ -73,7 +73,7 @@ The current `lib/store.js` remains the compatibility owner until this contract i
 ### Phase S3 — PostgreSQL schema
 
 Implementation status:
-- migration `202609250730_create_appbase_documents_shadow.sql` is applied to project `FitT`;
+- migration `20260925073516_create_appbase_documents_shadow.sql` is applied to project `FitT`;
 - `public.appbase_documents` stores account hash, profile id, document key, revision, schema version, device id, tombstone state, payload and timestamps;
 - RLS is enabled and no anon/authenticated policies exist by design; browser/mobile clients have no direct access;
 - the table starts empty and is not authoritative.
