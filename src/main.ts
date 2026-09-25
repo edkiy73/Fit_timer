@@ -1,4 +1,5 @@
 import { createAccount, createProfileDraft } from './core/identity.js';
+import { createRegistry } from './core/sync.js';
 
 /**
  * Future ESM application entry point.
@@ -12,4 +13,8 @@ export const APPBASE_ESM_FOUNDATION = true;
 export const identityCore = {
   createAccount,
   createProfileDraft
+};
+
+export const syncCore = {
+  createRegistry
 };
