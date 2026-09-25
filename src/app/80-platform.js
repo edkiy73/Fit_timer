@@ -17,7 +17,7 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
-  const productConfig = window.APP_CONFIG || window.FIT_TIMER_CONFIG;
+  const productConfig = window.APP_CONFIG;
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
