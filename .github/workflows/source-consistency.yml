@@ -27,6 +27,7 @@ jobs:
           node tests/appbase-foundation-unit.js
           node tests/core-esm-runtime.mjs
           npm run test:boundaries
+          npm run test:appbase-readiness
           npm run check:sources
           npm run check:ai-index
           npm run i18n:check
