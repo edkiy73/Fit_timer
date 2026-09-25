@@ -228,8 +228,12 @@
     },
     "src/app/11-sync-schema.js": {
       "kind": "frontend-js",
-      "lines": 11,
-      "chars": 438
+      "lines": 29,
+      "chars": 1356,
+      "symbols": [
+        "__fitSyncSchemaCompat",
+        "require"
+      ]
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
