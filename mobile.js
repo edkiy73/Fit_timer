@@ -10,8 +10,9 @@
   const fitBiometric = plugins.FitBiometric;
   const fitWorkout = plugins.FitWorkout;
   const pushNotifications = plugins.PushNotifications;
-  const mobileBridgeCore = window.AppBaseMobile
-    ? window.AppBaseMobile.createBridge({
+  const productModules = window.FitTimerModules || {};
+  const mobileBridgeCore = productModules.mobile
+    ? productModules.mobile.createBridge({
         native,
         app:plugins.App || null,
         filesystem:plugins.Filesystem || null,
@@ -23,8 +24,8 @@
         openWeb:url=>{ try{ window.open(url,'_blank','noopener'); return true; }catch(_){ return false; } }
       })
     : null;
-  const nativeNotificationTransport = window.AppBaseNativeNotifications
-    ? window.AppBaseNativeNotifications.createTransport({
+  const nativeNotificationTransport = productModules.nativeNotifications
+    ? productModules.nativeNotifications.createTransport({
         native,
         local:plugins.LocalNotifications || null,
         push:pushNotifications || null,
