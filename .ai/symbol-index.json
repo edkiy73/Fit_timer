@@ -86,8 +86,8 @@
     },
     "src/app/05-runtime-compat.js": {
       "kind": "frontend-js",
-      "lines": 186,
-      "chars": 7063
+      "lines": 200,
+      "chars": 7583
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
@@ -720,7 +720,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1646,
-      "chars": 76013,
+      "chars": 75973,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -800,7 +800,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 719,
-      "chars": 31340,
+      "chars": 31322,
       "symbols": [
         "add",
         "advance",
@@ -847,8 +847,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2319,
-      "chars": 96901,
+      "lines": 2311,
+      "chars": 96557,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

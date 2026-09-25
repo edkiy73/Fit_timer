@@ -2110,9 +2110,7 @@ let programLinksReady = false;
 let pendingAction = null;
 
 window.addEventListener('fitWorkoutResumeRequest', ()=>{
-  try{
-    if(window.FitNative && window.FitNative.consumeWorkoutResume) window.FitNative.consumeWorkoutResume();
-  }catch(_){}
+  appRuntimeCompat.consumeWorkoutResume();
   if(workoutResumeReady){
     resumeWorkoutFromNativeNotification().catch(()=>{});
     return;
@@ -2123,9 +2121,7 @@ window.addEventListener('fitWorkoutResumeRequest', ()=>{
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
   if(!/^[0-9a-z]{4,16}$/.test(id)) return;
-  try{
-    if(window.FitNative && window.FitNative.consumeProgramLink) window.FitNative.consumeProgramLink();
-  }catch(_){}
+  appRuntimeCompat.consumeProgramLink();
   if(programLinksReady){
     importProgramLink(id);
     return;
@@ -2146,13 +2142,9 @@ try{
   if(pendingImport || pendingLink || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', '/'); // чистим адрес после разбора ссылки
   }
-  if(window.FitNative && window.FitNative.consumeProgramLink){
-    const nativeId = String(window.FitNative.consumeProgramLink() || '');
-    if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
-  }
-  if(window.FitNative && window.FitNative.consumeWorkoutResume){
-    pendingNativeWorkoutResume = !!window.FitNative.consumeWorkoutResume();
-  }
+  const nativeId = appRuntimeCompat.consumeProgramLink();
+  if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
+  pendingNativeWorkoutResume = appRuntimeCompat.consumeWorkoutResume();
 }catch(e){}
 
 (async ()=>{
@@ -2161,7 +2153,7 @@ try{
   try{
     const raw = localStorage.getItem('account');
     const saved = raw && JSON.parse(raw);
-    if(window.FitNative && window.FitNative.isNative
+    if(appRuntimeCompat.isNative()
       && saved && saved.biometry && saved.biometry.enabled && saved.biometry.kind === 'native'){
       $('lockModal').classList.add('open');
     }
