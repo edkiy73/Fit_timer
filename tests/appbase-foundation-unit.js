@@ -86,6 +86,33 @@ ok('server analytics engine contains no workout taxonomy',
 ok('FitTimer analytics taxonomy lives outside generic engine',
   /workout_completed/.test(fs.readFileSync('lib/fit-analytics-schema.js','utf8')));
 
+const notifContext = {AppBaseNotifications: undefined, Date, Set, Map, JSON};
+vm.createContext(notifContext);
+vm.runInContext(fs.readFileSync('src/core/notifications.runtime.js','utf8'), notifContext);
+const memory = new Map();
+const prefStore = notifContext.AppBaseNotifications.createPreferenceStore({
+  key:'prefs',
+  defaults:{alerts:true,offers:false},
+  storage:{
+    getItem:key=>memory.has(key)?memory.get(key):null,
+    setItem:(key,value)=>memory.set(key,value)
+  }
+});
+ok('generic notification preferences preserve defaults',
+  prefStore.get().alerts === true && prefStore.get().offers === false);
+prefStore.set({alerts:false});
+ok('generic notification preferences merge persisted values with defaults',
+  prefStore.get().alerts === false && prefStore.get().offers === false);
+const demoNotifications = notifContext.AppBaseNotifications.limitCandidates([
+  {at:'2026-01-05T09:00:00',priority:1},
+  {at:'2026-01-05T10:00:00',priority:2},
+  {at:'2026-01-05T11:00:00',priority:3}
+],{
+  maxTotal:10,passiveDailyLimit:2,engagementWeeklyLimit:3,
+  dayKey:d=>d.toISOString().slice(0,10)
+});
+ok('generic notification budget limits passive daily delivery', demoNotifications.length === 2);
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);

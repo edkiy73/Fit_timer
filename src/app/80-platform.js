@@ -561,45 +561,18 @@ function notifyPremiumCandidate(anchor, now){
   return at;
 }
 function limitNotificationCandidates(items){
-  const out = [];
-  const engagementDay = new Set();
-  const engagementWeek = new Map();
-  const passiveDayCount = new Map();
-  const workoutDays = new Set(
+  const reservedDays = new Set(
     items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
       .map(x => notifyDayKey(new Date(x.at)))
   );
-  items.sort((a,b) => (+new Date(a.at) - +new Date(b.at)) || ((b.priority||0) - (a.priority||0)));
-  for(const item of items){
-    const at = new Date(item.at);
-    if(isNaN(at)) continue;
-    const day = notifyDayKey(at);
-
-    if(item.engagement){
-      // Ни «вернись», ни Premium не конкурируют с днём, где уже есть тренировка.
-      if(workoutDays.has(day) || notifyHasWorkoutOn(at)) continue;
-      if(engagementDay.has(day)) continue;
-      const monday = new Date(at);
-      monday.setHours(0,0,0,0);
-      monday.setDate(monday.getDate() - ((monday.getDay()+6)%7));
-      const week = notifyDayKey(monday);
-      const n = engagementWeek.get(week) || 0;
-      if(n >= 3) continue;
-      engagementDay.add(day);
-      engagementWeek.set(week, n + 1);
-    }
-
-    // Явное точное время — осознанный reminder пользователя и не режется этим
-    // защитным лимитом. Все пассивные digest/unfinished/engagement — максимум три в сутки.
-    if(!item.budgetExempt){
-      const n = passiveDayCount.get(day) || 0;
-      if(n >= NOTIFY_PASSIVE_DAILY_LIMIT) continue;
-      passiveDayCount.set(day, n + 1);
-    }
-    out.push(item);
-    if(out.length >= NOTIFY_NATIVE_LIMIT) break;
-  }
-  return out;
+  return AppBaseNotifications.limitCandidates(items,{
+    maxTotal:NOTIFY_NATIVE_LIMIT,
+    passiveDailyLimit:NOTIFY_PASSIVE_DAILY_LIMIT,
+    engagementWeeklyLimit:3,
+    dayKey:notifyDayKey,
+    reservedDayKeys:reservedDays,
+    blocksEngagementOn:date=>notifyHasWorkoutOn(date)
+  });
 }
 
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
