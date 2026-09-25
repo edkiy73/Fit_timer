@@ -35,6 +35,10 @@ ok('legacy storage global is isolated to compatibility boundary',
   /window\.storage/.test(runtimeCompatSource) && !/window\.storage/.test(dataSyncSource));
 ok('storage compatibility adapter validates the external KV contract',
   ['get','set','delete'].every(name => runtimeCompatSource.includes(`candidate.${name}`)));
+ok('Capacitor platform global is isolated to compatibility boundary',
+  runtimeCompatSource.includes('window.Capacitor')
+  && !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.Capacitor')
+  && runtimeCompatSource.includes('candidate.getPlatform'));
 ok('runtime compatibility adapter loads before product data sync',
   sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
   && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));

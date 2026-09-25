@@ -5153,6 +5153,17 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return null; }
   },
 
+  runtimePlatform(){
+    try{
+      const candidate = window.Capacitor;
+      if(candidate && typeof candidate.getPlatform === 'function'){
+        const platform = candidate.getPlatform();
+        if(platform === 'android' || platform === 'ios') return platform;
+      }
+    }catch(_){}
+    return 'web';
+  },
+
   isNative(){
     const candidate = appRuntimeCompat.nativeBridge();
     return !!(candidate && candidate.isNative);
@@ -5435,13 +5446,7 @@ async function analyticsDeviceId(){
   return id;
 }
 function analyticsPlatform(){
-  try{
-    if(window.Capacitor && typeof window.Capacitor.getPlatform === 'function'){
-      const p = window.Capacitor.getPlatform();
-      if(p === 'android' || p === 'ios') return p;
-    }
-  }catch(_){}
-  return 'web';
+  return appRuntimeCompat.runtimePlatform();
 }
 const appObservability = AppBaseObservability.createClient({
   post: async body => {

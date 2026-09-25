@@ -20,6 +20,17 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return null; }
   },
 
+  runtimePlatform(){
+    try{
+      const candidate = window.Capacitor;
+      if(candidate && typeof candidate.getPlatform === 'function'){
+        const platform = candidate.getPlatform();
+        if(platform === 'android' || platform === 'ios') return platform;
+      }
+    }catch(_){}
+    return 'web';
+  },
+
   isNative(){
     const candidate = appRuntimeCompat.nativeBridge();
     return !!(candidate && candidate.isNative);
