@@ -28,6 +28,17 @@ ok('runtime config carries feature flags',
   runtime.features && Object.keys(product.features).every(k => runtime.features[k] === product.features[k]));
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');
 
+const runtimeCompatSource = fs.readFileSync('src/app/05-runtime-compat.js', 'utf8');
+const dataSyncSource = fs.readFileSync('src/app/10-data-sync.js', 'utf8');
+const sourceBuild = fs.readFileSync('scripts/build-sources.mjs', 'utf8');
+ok('legacy storage global is isolated to compatibility boundary',
+  /window\.storage/.test(runtimeCompatSource) && !/window\.storage/.test(dataSyncSource));
+ok('storage compatibility adapter validates the external KV contract',
+  ['get','set','delete'].every(name => runtimeCompatSource.includes(`candidate.${name}`)));
+ok('runtime compatibility adapter loads before product data sync',
+  sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
+  && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));
+
 ok('TypeScript typecheck script exists', typeof pkg.scripts.typecheck === 'string' && /tsc/.test(pkg.scripts.typecheck));
 ok('TypeScript strict mode enabled', tsconfig.compilerOptions.strict === true);
 ok('TypeScript is noEmit during foundation', tsconfig.compilerOptions.noEmit === true);
