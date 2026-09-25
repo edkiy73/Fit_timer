@@ -9,6 +9,7 @@ const home = await readFile('src/html/00-shell-home.html', 'utf8');
 const account = await readFile('src/app/20-account.js', 'utf8');
 const ru = await readFile('src/i18n/ru.js', 'utf8');
 const en = await readFile('src/i18n/en.js', 'utf8');
+const releaseCore = await readFile('lib/admin/core/release.js', 'utf8');
 
 const need = (ok, msg) => { if(!ok) throw new Error(msg); };
 
@@ -38,7 +39,7 @@ need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest rel
 // вести на свой неизменяемый файл, иначе телефон отклоняет его (version_mismatch).
 need(workflow.includes('releases/download/apk-archive/FitTimer-${versionCode}.apk'), 'release metadata must point to the immutable per-version APK');
 need(workflow.indexOf('gh release upload apk-archive') > 0 && workflow.indexOf('gh release upload apk-archive') < workflow.indexOf('gh release upload latest-apk'), 'archive APK must be uploaded before metadata references it');
-need((await readFile('api/admin.js', 'utf8')).includes('archivedApkUrl(meta && meta.apkUrl, versionCode)'), 'admin must publish the archived APK URL');
+need(releaseCore.includes('archivedApkUrl(meta&&meta.apkUrl,versionCode,cfg)'), 'Core release module must publish the archived APK URL');
 need(home.indexOf('id="appUpdateBanner"') < home.indexOf('id="todayBox"'), 'soft update banner must sit above Today');
 need(ru.includes("'update.availableTitle': \"Доступно обновление\""), 'RU soft update title must stay version-free');
 need(en.includes("'update.availableTitle': \"Update available\""), 'EN soft update title must stay version-free');
