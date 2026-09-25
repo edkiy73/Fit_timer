@@ -9,3 +9,4 @@ const appIdentity = fitLegacyModules.identity;
 const appSync = fitLegacyModules.sync;
 const appNotifications = fitLegacyModules.notifications;
 const appUi = fitLegacyModules.ui;
+const appRuntimeCompat = fitLegacyModules.runtimeCompat;
