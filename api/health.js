@@ -23,6 +23,11 @@ function renderHtml(h){
   const warnings = (h.warnings || []).map(x=>'<li>'+esc(x)+'</li>').join('');
   const provider = service.ai && service.ai.providers || {};
   const billing = service.billing && service.billing.providers || {};
+  const shadow = service.supabase && service.supabase.shadow || {};
+  const shadowStats = shadow.stats || {};
+  const shadowWrite = shadow.lastWrite || {};
+  const shadowParity = shadow.parity || {};
+  const shadowReady = shadow.readiness || {};
   const commit = build.commit || '—';
 
   return '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
