@@ -78,7 +78,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/native-notifications.ts` | generic Capacitor local/push notification transport | mobile notification/Core work |
 | `src/core/mobile.ts` | generic lifecycle/URL/share/haptic/theme/biometry bridge | mobile/Core work |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
-| `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
+| `lib/fit-sync-schema.js` + `src/app/sync-schema.ts` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
@@ -96,7 +96,7 @@ Localization:
 Canonical JS chunks:
 - `src/app/00-core.js` — shared core/navigation/start helpers.
 - `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`, document admission is delegated to AppBase Sync registry.
-- `src/app/11-sync-schema.js` — FitTimer document registration for the generic sync registry.
+- `src/app/sync-schema.ts` — canonical FitTimer document registration consumed through the ESM product modules.
 - `src/app/20-account.js` — profile/account/subscription/login/biometrics.
 - `src/app/30-progress-media.js` — warmup, photos, export/import, onboarding.
 - `src/app/40-programs-ai.js` — progression, home/programs, sharing, AI/images.

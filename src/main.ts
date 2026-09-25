@@ -99,6 +99,12 @@ type LegacyCoreGlobals = {
   AppBaseUI: typeof uiCore;
 };
 
+type LegacyProductModules = {
+  infrastructure: typeof productInfrastructure;
+  identity: typeof productIdentity;
+  sync: typeof productSyncSchema;
+};
+
 function exposeLegacyCoreGlobals(): void {
   const legacy = globalThis as typeof globalThis & Partial<LegacyCoreGlobals>;
   legacy.AppBaseStorage = storageCore;
@@ -107,6 +113,11 @@ function exposeLegacyCoreGlobals(): void {
   legacy.AppBaseObservability = observabilityCore;
   legacy.AppBaseNotifications = notificationsCore;
   legacy.AppBaseUI = uiCore;
+  (legacy as typeof legacy & {FitTimerModules?: LegacyProductModules}).FitTimerModules = {
+    infrastructure: productInfrastructure,
+    identity: productIdentity,
+    sync: productSyncSchema
+  };
 }
 
 export function loadLegacyProductRuntime(): Promise<void> {
@@ -126,7 +137,9 @@ export function loadLegacyProductRuntime(): Promise<void> {
 }
 
 exposeLegacyCoreGlobals();
-loadLegacyProductRuntime().catch(error => {
+try{
+  await loadLegacyProductRuntime();
+}catch(error){
   console.error('Failed to start product runtime', error);
   document.body.classList.remove('booting');
-});
+}

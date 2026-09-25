@@ -5378,44 +5378,31 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return {status:'error'}; }
   }
 });
-/* Generated from src/app/sync-schema.ts. Do not edit directly. */
-const __fitSyncSchemaCompat = (() => {
-  const module = { exports: {} };
-  const exports = module.exports;
-  const require = (specifier) => {
-    if(specifier === '../core/sync.js') return AppBaseSync;
-    throw new Error('Unsupported compatibility import: ' + specifier);
-  };
-  "use strict";
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.FIT_SYNC_REGISTRY = exports.FIT_SYNC_ACCOUNT_DOC_KEYS = exports.FIT_SYNC_PROFILE_DOC_KEYS = void 0;
-  const sync_js_1 = require("../core/sync.js");
-  exports.FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
-  exports.FIT_SYNC_ACCOUNT_DOC_KEYS = ['trainer', 'clients', 'notificationPrefs'];
-  exports.FIT_SYNC_REGISTRY = (0, sync_js_1.createRegistry)([
-      { scope: 'profile', key: 'stats' },
-      { scope: 'profile', key: 'index' },
-      { scope: 'profile', prefix: 'program:', allowDeleted: true },
-      { scope: 'account', key: 'trainer' },
-      { scope: 'account', key: 'clients' },
-      { scope: 'account', key: 'notificationPrefs', free: true }
-  ]);
-  
-  return module.exports;
-})();
-const FIT_SYNC_PROFILE_DOC_KEYS = __fitSyncSchemaCompat.FIT_SYNC_PROFILE_DOC_KEYS;
-const FIT_SYNC_ACCOUNT_DOC_KEYS = __fitSyncSchemaCompat.FIT_SYNC_ACCOUNT_DOC_KEYS;
-const FIT_SYNC_REGISTRY = __fitSyncSchemaCompat.FIT_SYNC_REGISTRY;
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
-const fitStorage = AppBaseStorage.createStorage({
-  dbName: 'fittimer',
-  storeName: 'kv',
-  mirrorKeys: ['account'],
+const fitProductInfrastructure = FitTimerModules.infrastructure.create({
   externalStorage: appRuntimeCompat.externalStorage,
-  onWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} }
+  onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
+  platform: appRuntimeCompat.runtimePlatform,
+  locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+  build: appRuntimeCompat.build,
+  premium: () => (typeof isPremium === 'function') ? !!isPremium() : false,
+  newId: () => newId(),
+  post: async body => {
+    try{
+      const res = await fetch('/api/auth',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        keepalive:true,
+        cache:'no-store'
+      });
+      return !!res.ok;
+    }catch(_){ return false; }
+  }
 });
+const fitStorage = fitProductInfrastructure.storage;
 const pk = key => fitStorage.namespacedKey(key, currentUser);
 const curUser = () => users.find(u => u.id === currentUser) || users[0];
 async function kvGet(key){ return fitStorage.get(key); }
@@ -5462,40 +5449,9 @@ let dataOwner = null;
 // показывалось уже 4 кг. Такой второй источник веса удалён.
 let progWeights = {};
 
-/* Низкоуровневое local/IndexedDB-хранилище теперь принадлежит AppBase Storage Core.
-   Здесь остаётся только FitTimer-конфигурация и совместимые kv* вызовы. */
-async function analyticsDeviceId(){
-  let id = await kvGet('deviceId');
-  if(!id){
-    id = newId();
-    await kvSet('deviceId', id);
-  }
-  return id;
-}
-function analyticsPlatform(){
-  return appRuntimeCompat.runtimePlatform();
-}
-const appObservability = AppBaseObservability.createClient({
-  post: async body => {
-    try{
-      const res = await fetch('/api/auth',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body),
-        keepalive:true,
-        cache:'no-store'
-      });
-      return !!res.ok;
-    }catch(_){ return false; }
-  },
-  deviceId: analyticsDeviceId,
-  context: ()=> ({
-    platform:analyticsPlatform(),
-    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-    build:appRuntimeCompat.build(),
-    premium:(typeof isPremium === 'function') ? !!isPremium() : false
-  })
-});
+/* Storage + observability are composed by the ESM product infrastructure.
+   Legacy data-sync only owns FitTimer data behavior and kv-compatible helpers. */
+const appObservability = fitProductInfrastructure.observability;
 async function trackProductEvent(event){ return appObservability.track(event); }
 async function trackInstallOnce(){
   if((await kvGet('analyticsInstallSent')) === '1') return;
@@ -6008,9 +5964,9 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = FIT_SYNC_PROFILE_DOC_KEYS;
+const SYNC_KEYS = FitTimerModules.sync.profileKeys;
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => FIT_SYNC_REGISTRY.accepts('profile', key);
+const isSyncKey = key => FitTimerModules.sync.registry.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -6168,7 +6124,7 @@ const SYNC = {
     const payload = [];
     for(const o of batch){
       const value = await docValue(o.key, uid);
-      const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', o.key);
+      const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
       payload.push({
         key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
@@ -6599,7 +6555,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of FIT_SYNC_ACCOUNT_DOC_KEYS){
+  for(const key of FitTimerModules.sync.accountKeys){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -6665,7 +6621,7 @@ async function pendingProfileSnapshot(uid){
       const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
       value = p ? JSON.stringify(p) : null;
     } else value = await kvGet(key + '_' + uid);
-    const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', key);
+    const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', key);
     if(value === null && !gone) continue;
     docs.push({
       key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,
