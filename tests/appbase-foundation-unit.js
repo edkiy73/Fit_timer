@@ -311,6 +311,15 @@ ok('FitTimer owns native voice policy behind runtime compatibility',
   && /candidate\.startVoiceRecognition\(onResult, onError, onStatus, language\)/.test(runtimeCompatSource));
 
 const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
+ok('shared AI protocol is loaded outside the legacy bundle and captured locally',
+  !sourceBuild.includes("'lib/ai-protocol.js'")
+  && /loadSharedAIProtocol/.test(esmEntrySource)
+  && /aiProtocol/.test(esmEntrySource)
+  && /const FitAIProtocol = fitLegacyModules\.aiProtocol/.test(legacyDependencySource)
+  && /lib\/ai-protocol\.js/.test(fs.readFileSync('scripts/build-web.mjs','utf8')));
+ok('legacy product bundle no longer embeds the shared AI protocol implementation',
+  !/Shared Fit Timer AI protocol contract/.test(fs.readFileSync('app.js','utf8')));
+
 const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');
 ok('product sync schema is a real ESM module',
   /from ['"]\.\.\/core\/sync\.js['"]/.test(productSyncModuleSource)
