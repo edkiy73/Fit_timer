@@ -214,6 +214,21 @@ ok('ESM entry owns an explicit Observability Core dependency',
   /from ['"]\.\/core\/observability\.js['"]/.test(esmEntrySource)
   && /createClient/.test(esmEntrySource));
 
+const notificationsModuleSource = fs.readFileSync('src/core/notifications.ts', 'utf8');
+ok('Notifications Core uses ESM exports instead of a namespace global',
+  /export function createPreferenceStore/.test(notificationsModuleSource)
+  && /export function limitCandidates/.test(notificationsModuleSource)
+  && !/namespace AppBaseNotifications/.test(notificationsModuleSource));
+ok('Notifications Core keeps preference and delivery-budget contracts intact',
+  /PreferenceStoreOptions/.test(notificationsModuleSource)
+  && /DeliveryBudgetOptions/.test(notificationsModuleSource)
+  && /engagementWeeklyLimit/.test(notificationsModuleSource)
+  && /passiveDailyLimit/.test(notificationsModuleSource));
+ok('ESM entry owns an explicit Notifications Core dependency',
+  /from ['"]\.\/core\/notifications\.js['"]/.test(esmEntrySource)
+  && /createPreferenceStore/.test(esmEntrySource)
+  && /limitCandidates/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
