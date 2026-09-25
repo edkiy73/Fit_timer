@@ -34,4 +34,3 @@ window.APP_CONFIG = Object.freeze({
   "apiBase": "",
   "publicAppUrl": ""
 });
-window.FIT_TIMER_CONFIG = window.APP_CONFIG;
