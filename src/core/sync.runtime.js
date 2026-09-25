@@ -1,6 +1,10 @@
 "use strict";
-var AppBaseSync;
-(function (AppBaseSync) {
+var AppBaseSync = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createRegistry = createRegistry;
     function validRule(rule) {
         return !!rule && (rule.scope === 'profile' || rule.scope === 'account')
             && ((typeof rule.key === 'string' && !!rule.key)
@@ -21,5 +25,6 @@ var AppBaseSync;
             isFree(scope, key) { return !!match(scope, key)?.free; }
         };
     }
-    AppBaseSync.createRegistry = createRegistry;
-})(AppBaseSync || (AppBaseSync = {}));
+    
+    return module.exports;
+})();

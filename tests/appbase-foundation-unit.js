@@ -179,6 +179,14 @@ ok('ESM entry owns an explicit Identity Core dependency',
   && /createAccount/.test(esmEntrySource)
   && /createProfileDraft/.test(esmEntrySource));
 
+const syncModuleSource = fs.readFileSync('src/core/sync.ts', 'utf8');
+ok('Sync Core uses ESM exports instead of a namespace global',
+  /export function createRegistry/.test(syncModuleSource)
+  && !/namespace AppBaseSync/.test(syncModuleSource));
+ok('ESM entry owns an explicit Sync Core dependency',
+  /from ['"]\.\/core\/sync\.js['"]/.test(esmEntrySource)
+  && /createRegistry/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
