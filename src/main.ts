@@ -7,6 +7,7 @@ import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, s
 import { createTransport } from './core/native-notifications.js';
 import { createBridge } from './core/mobile.js';
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
+import { createProductInfrastructure } from './app/infrastructure.js';
 
 /**
  * Future ESM application entry point.
@@ -63,4 +64,8 @@ export const productSyncSchema = {
   profileKeys: FIT_SYNC_PROFILE_DOC_KEYS,
   accountKeys: FIT_SYNC_ACCOUNT_DOC_KEYS,
   registry: FIT_SYNC_REGISTRY
+};
+
+export const productInfrastructure = {
+  create: createProductInfrastructure
 };
