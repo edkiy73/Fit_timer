@@ -628,9 +628,9 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = ['stats'];
+const SYNC_KEYS = FIT_SYNC_PROFILE_DOC_KEYS;
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => SYNC_KEYS.includes(key) || key === 'index' || key.startsWith('program:');
+const isSyncKey = key => FIT_SYNC_REGISTRY.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -788,7 +788,7 @@ const SYNC = {
     const payload = [];
     for(const o of batch){
       const value = await docValue(o.key, uid);
-      const gone = value === null && o.key.startsWith('program:');
+      const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
       payload.push({
         key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
@@ -1219,7 +1219,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of ['trainer','clients','notificationPrefs']){
+  for(const key of FIT_SYNC_ACCOUNT_DOC_KEYS){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -1285,7 +1285,7 @@ async function pendingProfileSnapshot(uid){
       const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
       value = p ? JSON.stringify(p) : null;
     } else value = await kvGet(key + '_' + uid);
-    const gone = value === null && key.startsWith('program:');
+    const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', key);
     if(value === null && !gone) continue;
     docs.push({
       key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,
