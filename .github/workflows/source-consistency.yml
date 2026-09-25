@@ -51,6 +51,7 @@ jobs:
           node tests/admin-core-accounts-unit.js
           node tests/admin-core-campaigns-unit.js
           node tests/admin-core-ai-settings-unit.js
+          node tests/admin-core-release-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js
