@@ -332,8 +332,13 @@ var AppBaseObservability = (() => {
     return module.exports;
 })();
 "use strict";
-var AppBaseNotifications;
-(function (AppBaseNotifications) {
+var AppBaseNotifications = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createPreferenceStore = createPreferenceStore;
+    exports.limitCandidates = limitCandidates;
     function createPreferenceStore(options) {
         const defaults = Object.freeze({ ...options.defaults });
         return {
@@ -351,7 +356,6 @@ var AppBaseNotifications;
             }
         };
     }
-    AppBaseNotifications.createPreferenceStore = createPreferenceStore;
     function limitCandidates(items, options) {
         const out = [];
         const engagementDay = new Set();
@@ -391,8 +395,9 @@ var AppBaseNotifications;
         }
         return out;
     }
-    AppBaseNotifications.limitCandidates = limitCandidates;
-})(AppBaseNotifications || (AppBaseNotifications = {}));
+    
+    return module.exports;
+})();
 "use strict";
 var AppBaseUI;
 (function (AppBaseUI) {
