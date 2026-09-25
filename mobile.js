@@ -10,6 +10,14 @@
   const fitBiometric = plugins.FitBiometric;
   const fitWorkout = plugins.FitWorkout;
   const pushNotifications = plugins.PushNotifications;
+  const nativeNotificationTransport = window.AppBaseNativeNotifications
+    ? window.AppBaseNativeNotifications.createTransport({
+        native,
+        local:plugins.LocalNotifications || null,
+        push:pushNotifications || null,
+        platform:()=> (cap.getPlatform && cap.getPlatform()) || 'web'
+      })
+    : null;
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
   const PLAN_NOTIFICATION_MAX = 902999;
@@ -122,13 +130,9 @@
   }
 
   async function clearIosWorkoutInactivity(resetState){
-    if(!native || !plugins.LocalNotifications || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
-    try{ await plugins.LocalNotifications.cancel({notifications:[{id:WORKOUT_INACTIVITY_NOTIFICATION_ID}]}); }catch(_){}
-    try{
-      if(plugins.LocalNotifications.removeDeliveredNotificationsById){
-        await plugins.LocalNotifications.removeDeliveredNotificationsById({ids:[WORKOUT_INACTIVITY_NOTIFICATION_ID]});
-      }
-    }catch(_){}
+    if(!nativeNotificationTransport || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
+    await nativeNotificationTransport.cancel([WORKOUT_INACTIVITY_NOTIFICATION_ID]);
+    await nativeNotificationTransport.removeDelivered([WORKOUT_INACTIVITY_NOTIFICATION_ID]);
     if(resetState) writeWorkoutInactivityState({});
   }
 
@@ -170,35 +174,25 @@
     }catch(_){}
   }
   async function registerRemotePush(requestPermission){
-    if(!native||!pushNotifications)return false;
+    if(!nativeNotificationTransport || !pushNotifications) return false;
     installRemotePushListeners();
-    try{let p=await pushNotifications.checkPermissions();if(p.receive==='prompt'&&requestPermission)p=await pushNotifications.requestPermissions();if(p.receive!=='granted')return false;await pushNotifications.register();return true;}catch(_){return false;}
+    return nativeNotificationTransport.registerPush(!!requestPermission);
   }
 
   installLocalNotificationListeners();
 
   async function requestNotifications(){
-    if(!native || !plugins.LocalNotifications) return false;
-    try{
-      const current = await plugins.LocalNotifications.checkPermissions();
-      const result = current.display === 'prompt'
-        ? await plugins.LocalNotifications.requestPermissions()
-        : current;
-      return result.display === 'granted';
-    }catch(_){ return false; }
+    if(!nativeNotificationTransport) return false;
+    return nativeNotificationTransport.localPermission(true);
   }
 
   async function scheduleRest(seconds, body){
     if(!native || !plugins.LocalNotifications || !(seconds > 0)) return false;
     if(!(await requestNotifications())) return false;
     try{
-      let exact = true;
-      if(cap.getPlatform && cap.getPlatform() === 'android'){
-        const setting = await plugins.LocalNotifications.checkExactNotificationSetting();
-        exact = setting.exact_alarm === 'granted';
-      }
-      await plugins.LocalNotifications.cancel({notifications:[{id:REST_NOTIFICATION_ID}]});
-      await plugins.LocalNotifications.schedule({notifications:[{
+      const exact = await nativeNotificationTransport.exactAllowed();
+      await nativeNotificationTransport.cancel([REST_NOTIFICATION_ID]);
+      await nativeNotificationTransport.schedule([{
         id: REST_NOTIFICATION_ID,
         title: 'Отдых закончен',
         body: body || 'Пора переходить к следующему подходу.',
@@ -208,45 +202,36 @@
         smallIcon: 'ic_stat_fittimer',
         iconColor: '#7047EB',
         extra: {kind:'rest-finished'}
-      }]});
+      }]);
       return true;
     }catch(_){ return false; }
   }
 
   async function cancelRest(){
-    if(!native || !plugins.LocalNotifications) return;
-    try{ await plugins.LocalNotifications.cancel({notifications:[{id:REST_NOTIFICATION_ID}]}); }catch(_){}
+    if(!nativeNotificationTransport) return;
+    await nativeNotificationTransport.cancel([REST_NOTIFICATION_ID]);
   }
 
   async function syncWorkoutNotifications(items){
-    if(!native || !plugins.LocalNotifications) return false;
-    try{
-      const permission = await plugins.LocalNotifications.checkPermissions();
-      if(permission.display !== 'granted') return false;
-      const pending = await plugins.LocalNotifications.getPending();
-      const old = ((pending && pending.notifications) || [])
-        .filter(n => n.id >= PLAN_NOTIFICATION_MIN && n.id <= PLAN_NOTIFICATION_MAX)
-        .map(n => ({id:n.id}));
-      if(old.length) await plugins.LocalNotifications.cancel({notifications:old});
-      let exact = true;
-      if(cap.getPlatform && cap.getPlatform() === 'android'){
-        const setting = await plugins.LocalNotifications.checkExactNotificationSetting();
-        exact = setting.exact_alarm === 'granted';
-      }
-      const list = (Array.isArray(items) ? items : []).slice(0, 60).map((item, i) => ({
-        id: PLAN_NOTIFICATION_MIN + i,
-        title: String(item.title || 'Fit Timer'),
-        body: String(item.body || ''),
-        largeBody: String(item.largeBody || item.body || ''),
-        schedule: {at:new Date(item.at), allowWhileIdle:true},
-        isExactNotification: exact,
-        smallIcon: 'ic_stat_fittimer',
-        iconColor: '#7047EB',
-        extra: Object.assign({kind:'fittimer-notification'}, item.extra || {})
-      })).filter(n => !isNaN(n.schedule.at.getTime()) && n.schedule.at.getTime() > Date.now() + 10000);
-      if(list.length) await plugins.LocalNotifications.schedule({notifications:list});
-      return true;
-    }catch(_){ return false; }
+    if(!nativeNotificationTransport || !nativeNotificationTransport.hasLocal()) return false;
+    if(!(await nativeNotificationTransport.localPermission(false))) return false;
+    const exact = await nativeNotificationTransport.exactAllowed();
+    const list = (Array.isArray(items) ? items : []).slice(0, 60).map((item, i) => ({
+      id: PLAN_NOTIFICATION_MIN + i,
+      title: String(item.title || 'Fit Timer'),
+      body: String(item.body || ''),
+      largeBody: String(item.largeBody || item.body || ''),
+      schedule: {at:new Date(item.at), allowWhileIdle:true},
+      isExactNotification: exact,
+      smallIcon: 'ic_stat_fittimer',
+      iconColor: '#7047EB',
+      extra: Object.assign({kind:'fittimer-notification'}, item.extra || {})
+    })).filter(n => !isNaN(n.schedule.at.getTime()) && n.schedule.at.getTime() > Date.now() + 10000);
+    return nativeNotificationTransport.replaceRange(
+      PLAN_NOTIFICATION_MIN,
+      PLAN_NOTIFICATION_MAX,
+      list
+    );
   }
 
   async function updateWorkoutState(payload){

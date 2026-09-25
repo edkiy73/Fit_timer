@@ -113,6 +113,14 @@ const demoNotifications = notifContext.AppBaseNotifications.limitCandidates([
 });
 ok('generic notification budget limits passive daily delivery', demoNotifications.length === 2);
 
+const nativeNotificationSource = fs.readFileSync('src/core/native-notifications.ts','utf8');
+ok('native notification Core is product-neutral',
+  !/workout|exercise|trainer|fittimer|premium/i.test(nativeNotificationSource));
+ok('native notification transport exposes generic local and push primitives',
+  /localPermission/.test(nativeNotificationSource)
+  && /replaceRange/.test(nativeNotificationSource)
+  && /registerPush/.test(nativeNotificationSource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
