@@ -6,6 +6,7 @@
 
 const { store } = require('../lib/store');
 const { send, fail, rateOk, sameSecret, cors } = require('../lib/util');
+const { ACCOUNT_PROFILE, registry: SYNC_REGISTRY } = require('../lib/fit-sync-schema');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 const YEAR = 365 * 24 * 3600;
@@ -13,9 +14,6 @@ const MAX_BODY = 4 * 1024 * 1024;
 const MAX_DOC = 3 * 1024 * 1024;
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROFILE = /^[a-z0-9_-]{1,80}$/i;
-const DOC = /^(stats|progWeights|index|program:[a-z0-9_-]{1,100})$/i;
-const ACCOUNT_PROFILE = '__account__';
-const ACCOUNT_DOC = /^(trainer|clients|notificationPrefs)$/;
 
 async function bodyOf(req){
   if(req.body && typeof req.body === 'object') return req.body;
@@ -109,8 +107,10 @@ module.exports = async (req, res) => {
     const docs = Array.isArray(body.docs) ? body.docs.slice(0, 80) : [];
     // Бесплатному аккаунту разрешён только документ настроек уведомлений:
     // маркетинговая отписка обязана работать независимо от тарифа.
-    if(!premium && (profiles.length || docs.some(d => String(d && d.key || '') !== 'notificationPrefs'
-      || String(d && d.profileId || '') !== ACCOUNT_PROFILE))){
+    if(!premium && (profiles.length || docs.some(d => {
+      const key = String(d && d.key || '');
+      return String(d && d.profileId || '') !== ACCOUNT_PROFILE || !SYNC_REGISTRY.isFree('account', key);
+    }))){
       return fail(res, 402, 'premium_required');
     }
     const now = new Date().toISOString();
@@ -134,7 +134,7 @@ module.exports = async (req, res) => {
     for(const d of docs){
       const pid = String(d && d.profileId || '');
       const key = String(d && d.key || '');
-      if(pid === ACCOUNT_PROFILE && ACCOUNT_DOC.test(key)){
+      if(pid === ACCOUNT_PROFILE && SYNC_REGISTRY.accepts('account', key)){
         const value = d.value == null ? null : String(d.value);
         if(value && Buffer.byteLength(value, 'utf8') > MAX_DOC) return fail(res, 413, 'doc_too_large', {key});
         const prev = manifest.accountDocs[key];
@@ -148,7 +148,7 @@ module.exports = async (req, res) => {
         manifest.accountDocs[key] = Object.assign(meta, {storeKey});
         continue;
       }
-      if(!PROFILE.test(pid) || !DOC.test(key)) continue;
+      if(!PROFILE.test(pid) || !SYNC_REGISTRY.accepts('profile', key)) continue;
       const value = d.value == null ? null : String(d.value);
       if(value && Buffer.byteLength(value, 'utf8') > MAX_DOC) return fail(res, 413, 'doc_too_large', {key});
       const prof = manifest.profiles[pid] || {user: cleanUser({id: pid}), docs: {}};
@@ -191,7 +191,7 @@ module.exports = async (req, res) => {
       }))
     }));
     const accountDocEntries = Object.entries(manifest.accountDocs)
-      .filter(([key]) => premium || key === 'notificationPrefs');
+      .filter(([key]) => premium || SYNC_REGISTRY.isFree('account', key));
     const accountDocs = accountDocEntries.map(([key, d]) => ({
       key, rev:d.rev, at:d.at, schema:d.schema, deviceId:d.deviceId,
       deleted:!!d.deleted, value:d.deleted ? null : (accountByStore.get(d.storeKey) ?? null)
