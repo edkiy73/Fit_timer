@@ -64,6 +64,28 @@ const serverDemoRegistry = createSyncRegistry([{scope:'profile', prefix:'note:'}
 ok('server sync registry is product-neutral',
   serverDemoRegistry.accepts('profile', 'note:abc') && !serverDemoRegistry.accepts('profile', 'program:abc'));
 
+const obsContext = {AppBaseObservability: undefined};
+vm.createContext(obsContext);
+vm.runInContext(fs.readFileSync('src/core/observability.runtime.js', 'utf8'), obsContext);
+let sent = [];
+const obs = obsContext.AppBaseObservability.createClient({
+  post: async body => { sent.push(body); return true; },
+  deviceId: async () => 'device-demo',
+  context: () => ({platform:'web', locale:'en', build:'demo', premium:false})
+});
+ok('generic observability tracks arbitrary non-fitness event',
+  typeof obs.track === 'function' && typeof obs.capture === 'function');
+const diagPayload = obs.diagnosticPayload('error', new Error('boom'), 'fallback');
+ok('generic diagnostic payload contains no FitTimer semantics',
+  diagPayload.action === 'client_error' && diagPayload.platform === 'web' && diagPayload.locale === 'en');
+
+const {createAnalyticsEngine} = require('../lib/analytics-core');
+const analyticsCoreSource = fs.readFileSync('lib/analytics-core.js','utf8');
+ok('server analytics engine contains no workout taxonomy',
+  !/workout_|program_added|ai_used/.test(analyticsCoreSource));
+ok('FitTimer analytics taxonomy lives outside generic engine',
+  /workout_completed/.test(fs.readFileSync('lib/fit-analytics-schema.js','utf8')));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
