@@ -3718,6 +3718,7 @@ ${exerciseSchema(outputLanguage)}`;
   root.FitAIProtocol = api;
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+"use strict";
 var AppBaseStorage;
 (function (AppBaseStorage) {
     function namespacedKey(key, namespace) {
