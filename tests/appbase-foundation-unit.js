@@ -39,6 +39,16 @@ ok('Capacitor platform global is isolated to compatibility boundary',
   runtimeCompatSource.includes('window.Capacitor')
   && !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.Capacitor')
   && runtimeCompatSource.includes('candidate.getPlatform'));
+const runtimeConfigProductSources = [
+  'src/app/40-programs-ai.js',
+  'src/app/80-platform.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+ok('runtime config globals are isolated to compatibility boundary',
+  runtimeCompatSource.includes('window.APP_CONFIG')
+  && runtimeCompatSource.includes('window.FIT_TIMER_CONFIG')
+  && !runtimeConfigProductSources.includes('window.APP_CONFIG')
+  && !runtimeConfigProductSources.includes('window.FIT_TIMER_CONFIG')
+  && runtimeConfigProductSources.includes('appRuntimeCompat.runtimeConfig()'));
 const buildMetadataSources = [
   'src/app/10-data-sync.js',
   'src/app/20-account.js'
