@@ -932,7 +932,7 @@ async function persistSettings(next,stateId,buttonId){
 function routePair(s,type,which){
   const x=(s[type]&&s[type][which])||{};
   return `<div class="pair">
-    <select id="${type}_${which}_provider">${['gemini','openai'].map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
+    <select id="${type}_${which}_provider">${(type==='text'?['gemini','openai','openrouter']:['gemini','openai']).map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
     <input id="${type}_${which}_model" value="${esc(x.model||'')}" maxlength="100" placeholder="model">
   </div>`;
 }
