@@ -4031,6 +4031,68 @@ var AppBaseObservability;
     }
     AppBaseObservability.createClient = createClient;
 })(AppBaseObservability || (AppBaseObservability = {}));
+"use strict";
+var AppBaseNotifications;
+(function (AppBaseNotifications) {
+    function createPreferenceStore(options) {
+        const defaults = Object.freeze({ ...options.defaults });
+        return {
+            get() {
+                try {
+                    const raw = JSON.parse(options.storage.getItem(options.key) || '{}');
+                    return { ...defaults, ...(raw && typeof raw === 'object' ? raw : {}) };
+                }
+                catch (_) {
+                    return { ...defaults };
+                }
+            },
+            set(next) {
+                options.storage.setItem(options.key, JSON.stringify({ ...defaults, ...(next || {}) }));
+            }
+        };
+    }
+    AppBaseNotifications.createPreferenceStore = createPreferenceStore;
+    function limitCandidates(items, options) {
+        const out = [];
+        const engagementDay = new Set();
+        const engagementWeek = new Map();
+        const passiveDayCount = new Map();
+        const reserved = options.reservedDayKeys || new Set();
+        const sorted = [...items].sort((a, b) => (+new Date(a.at) - +new Date(b.at)) || ((b.priority || 0) - (a.priority || 0)));
+        for (const item of sorted) {
+            const at = new Date(item.at);
+            if (Number.isNaN(at.getTime()))
+                continue;
+            const day = options.dayKey(at);
+            if (item.engagement) {
+                if (reserved.has(day) || options.blocksEngagementOn?.(at, item))
+                    continue;
+                if (engagementDay.has(day))
+                    continue;
+                const monday = new Date(at);
+                monday.setHours(0, 0, 0, 0);
+                monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+                const week = options.dayKey(monday);
+                const count = engagementWeek.get(week) || 0;
+                if (count >= options.engagementWeeklyLimit)
+                    continue;
+                engagementDay.add(day);
+                engagementWeek.set(week, count + 1);
+            }
+            if (!item.budgetExempt) {
+                const count = passiveDayCount.get(day) || 0;
+                if (count >= options.passiveDailyLimit)
+                    continue;
+                passiveDayCount.set(day, count + 1);
+            }
+            out.push(item);
+            if (out.length >= options.maxTotal)
+                break;
+        }
+        return out;
+    }
+    AppBaseNotifications.limitCandidates = limitCandidates;
+})(AppBaseNotifications || (AppBaseNotifications = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -18453,45 +18515,18 @@ function notifyPremiumCandidate(anchor, now){
   return at;
 }
 function limitNotificationCandidates(items){
-  const out = [];
-  const engagementDay = new Set();
-  const engagementWeek = new Map();
-  const passiveDayCount = new Map();
-  const workoutDays = new Set(
+  const reservedDays = new Set(
     items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
       .map(x => notifyDayKey(new Date(x.at)))
   );
-  items.sort((a,b) => (+new Date(a.at) - +new Date(b.at)) || ((b.priority||0) - (a.priority||0)));
-  for(const item of items){
-    const at = new Date(item.at);
-    if(isNaN(at)) continue;
-    const day = notifyDayKey(at);
-
-    if(item.engagement){
-      // Ни «вернись», ни Premium не конкурируют с днём, где уже есть тренировка.
-      if(workoutDays.has(day) || notifyHasWorkoutOn(at)) continue;
-      if(engagementDay.has(day)) continue;
-      const monday = new Date(at);
-      monday.setHours(0,0,0,0);
-      monday.setDate(monday.getDate() - ((monday.getDay()+6)%7));
-      const week = notifyDayKey(monday);
-      const n = engagementWeek.get(week) || 0;
-      if(n >= 3) continue;
-      engagementDay.add(day);
-      engagementWeek.set(week, n + 1);
-    }
-
-    // Явное точное время — осознанный reminder пользователя и не режется этим
-    // защитным лимитом. Все пассивные digest/unfinished/engagement — максимум три в сутки.
-    if(!item.budgetExempt){
-      const n = passiveDayCount.get(day) || 0;
-      if(n >= NOTIFY_PASSIVE_DAILY_LIMIT) continue;
-      passiveDayCount.set(day, n + 1);
-    }
-    out.push(item);
-    if(out.length >= NOTIFY_NATIVE_LIMIT) break;
-  }
-  return out;
+  return AppBaseNotifications.limitCandidates(items,{
+    maxTotal:NOTIFY_NATIVE_LIMIT,
+    passiveDailyLimit:NOTIFY_PASSIVE_DAILY_LIMIT,
+    engagementWeeklyLimit:3,
+    dayKey:notifyDayKey,
+    reservedDayKeys:reservedDays,
+    blocksEngagementOn:date=>notifyHasWorkoutOn(date)
+  });
 }
 
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
@@ -18794,14 +18829,12 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   emailNews:false,
   emailOffers:false
 });
-function getNotificationPrefs(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(NOTIFICATION_PREFS_KEY) || '{}');
-    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS, raw && typeof raw === 'object' ? raw : {});
-  }catch(_){
-    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS);
-  }
-}
+const notificationPreferenceStore = AppBaseNotifications.createPreferenceStore({
+  key:NOTIFICATION_PREFS_KEY,
+  defaults:NOTIFICATION_PREF_DEFAULTS,
+  storage:localStorage
+});
+function getNotificationPrefs(){ return notificationPreferenceStore.get(); }
 function syncNotificationSettings(){
   const prefs = getNotificationPrefs();
   const ids = {
@@ -18821,7 +18854,7 @@ function syncNotificationSettings(){
   });
 }
 async function persistNotificationPrefs(prefs){
-  try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
+  try{ notificationPreferenceStore.set(prefs); }catch(_){}
   // Настройки относятся ко всему аккаунту, а не к отдельному профилю.
   // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта.
   try{

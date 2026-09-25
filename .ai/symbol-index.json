@@ -794,8 +794,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 740,
-      "chars": 32160,
+      "lines": 713,
+      "chars": 31126,
       "symbols": [
         "add",
         "advance",
@@ -842,8 +842,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2320,
-      "chars": 97460,
+      "lines": 2318,
+      "chars": 97385,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
