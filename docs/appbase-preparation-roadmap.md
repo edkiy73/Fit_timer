@@ -554,6 +554,17 @@ domain may import core
 app/bootstrap may compose both
 ```
 
+### Dependency rule implementation status
+
+The Core dependency direction is now enforced automatically:
+- `scripts/check-appbase-boundaries.mjs` parses canonical `src/core/**` sources with the TypeScript AST rather than relying on text matching;
+- Core may import other Core modules, generic `src/types/core` contracts and external packages;
+- relative imports from Core into product runtime, FitTimer fitness contracts, product config or other repository-local product modules fail the check;
+- static imports, re-exports, dynamic `import()` and `require()` are covered;
+- `npm run check:boundaries` runs in Source consistency CI and negative unit tests verify that product imports are rejected.
+
+This establishes the dependency guard before the frontend moves further toward native ES modules.
+
 ## Phase 15 — Feature/capability config
 
 Only after real modules exist, support capabilities such as:
