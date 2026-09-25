@@ -3,8 +3,6 @@ import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, s
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
-import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild } from './app/runtime-environment.js';
-import { createProductBootstrap } from './app/bootstrap.js';
 
 /**
  * Production ESM composition entry point.
@@ -44,17 +42,6 @@ export const productInfrastructure = {
 export const productIdentity = {
   createAccount: createFitTimerAccount,
   createProfile: createFitTimerProfile
-};
-
-export const runtimeEnvironment = {
-  externalStorage,
-  platform: runtimePlatform,
-  setBuild: setRuntimeBuild,
-  build: getRuntimeBuild
-};
-
-export const productBootstrap = {
-  create: createProductBootstrap
 };
 
 
