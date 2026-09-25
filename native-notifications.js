@@ -1,6 +1,10 @@
 "use strict";
-var AppBaseNativeNotifications;
-(function (AppBaseNativeNotifications) {
+var AppBaseNativeNotifications = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createTransport = createTransport;
     function createTransport(options) {
         const local = options.local || null;
         const push = options.push || null;
@@ -114,5 +118,6 @@ var AppBaseNativeNotifications;
             }
         };
     }
-    AppBaseNativeNotifications.createTransport = createTransport;
-})(AppBaseNativeNotifications || (AppBaseNativeNotifications = {}));
+    
+    return module.exports;
+})();
