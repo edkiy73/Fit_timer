@@ -82,6 +82,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `lib/fit-account-extension.js` | FitTimer hooks for generic auth (trainer page/key, shared links) | auth/trainer/account deletion |
 | `lib/product-core.js` | product identity for generic server code | brand/name in server messages |
 | `lib/auth-core.js` / `lib/sync-core.js` | generic account/auth and document-sync handlers (factories) | auth/sync server logic; `api/auth.js`, `api/sync.js` only compose them |
+| `config/appbase-manifest.json`, `scripts/extract-appbase.mjs`, `scripts/appbase-sync.mjs` | AppBase Core file list, clean snapshot extraction/check, downstream update | Phase 17 / Core upstream |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/sync-schema.ts` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |

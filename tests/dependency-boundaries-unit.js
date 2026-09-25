@@ -96,5 +96,30 @@ ok('product TypeScript modules use explicit module imports',
       .test(fs.readFileSync(file,'utf8'))
   ));
 
+
+const appbaseManifest = JSON.parse(fs.readFileSync('config/appbase-manifest.json','utf8'));
+const manifestFiles = new Set([...appbaseManifest.client, ...appbaseManifest.server]);
+const expectedCore = [
+  ...walk('src/core').filter(file => file.endsWith('.ts')),
+  'src/types/core.ts',
+  ...walk('lib/admin/core').filter(file => file.endsWith('.js')),
+  ...walk('lib').filter(file => /^lib\/[^/]*-core\.js$/.test(normalized(file)))
+].map(normalized);
+const unlisted = expectedCore.filter(file => !manifestFiles.has(file));
+const missing = [...manifestFiles].filter(file => !fs.existsSync(file));
+ok('AppBase manifest lists every Core module', unlisted.length === 0, unlisted.join(', '));
+ok('AppBase manifest has no stale entries', missing.length === 0, missing.join(', '));
+const manifestFitImports = [];
+for(const file of manifestFiles){
+  if(!fs.existsSync(file)) continue;
+  for(const spec of specifiers(fs.readFileSync(file,'utf8'))){
+    const s = normalized(spec);
+    if(/(?:^|\/)fit[-_]/i.test(s) || s.includes('/fittimer/') || /(?:^|\/)analytics(?:\.js)?$/.test(s)){
+      manifestFitImports.push(file + ' -> ' + spec);
+    }
+  }
+}
+ok('AppBase Core files never import FitTimer composition modules', manifestFitImports.length === 0, manifestFitImports.join(', '));
+
 console.log(bad ? `\nDependency boundary failures: ${bad}` : '\nDependency boundaries are clean');
 process.exit(bad ? 1 : 0);

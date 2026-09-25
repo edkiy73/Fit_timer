@@ -23,7 +23,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test:foundation": "node tests/appbase-foundation-unit.js",
     "test:boundaries": "node tests/dependency-boundaries-unit.js",
-    "test:core-esm": "npm run build:esm && node tests/core-esm-runtime.mjs"
+    "test:core-esm": "npm run build:esm && node tests/core-esm-runtime.mjs",
+    "appbase:extract": "node scripts/extract-appbase.mjs",
+    "check:appbase": "node scripts/extract-appbase.mjs --check"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",

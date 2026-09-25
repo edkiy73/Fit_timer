@@ -650,6 +650,23 @@ After the AppBase extraction and proof-product checks, explicitly switch ownersh
 
 Do not call this phase complete merely because repositories share similar files; ownership and update direction must be explicit.
 
+### Upstream transition preparation status
+
+Everything that can be prepared inside FitTimer is in place; the remaining steps need a new repository and are owner decisions.
+
+Implemented:
+- `config/appbase-manifest.json` — the single list of Core files (client + server). `tests/dependency-boundaries-unit.js` fails when a Core module is missing from it, when it lists a stale path, or when a listed file imports FitTimer composition modules.
+- `npm run appbase:extract` (`scripts/extract-appbase.mjs`) writes a clean snapshot (`dist-appbase/`, git-ignored): the Core files verbatim, neutral composition templates (`api/auth.js`, `api/sync.js`, `api/admin.js`, `api/health.js`, empty sync/AI/analytics registries, neutral `config/product.json`), `package.json`, `tsconfig.json`, README with the composition contract, a smoke test and `APPBASE_SOURCE.json` (source commit + per-file hashes).
+- `npm run check:appbase` (CI) builds the snapshot in a temp dir and verifies it: no product vocabulary or brand, every relative import resolves inside the snapshot, client Core typechecks alone, the neutral server composition loads and passes the smoke test.
+- `scripts/appbase-sync.mjs --from <appbase-checkout> [--dry-run]` is the downstream update path: it copies only manifest files into a product and records the consumed AppBase commit in `config/appbase-version.json`, producing a reviewable diff/PR.
+- Remaining product-specific server seams were closed for the snapshot: the catalog health probe moved to `api/health.js`, and a comment in `lib/util.js` no longer references the trainer endpoint.
+
+Owner steps (in order):
+1. Create the AppBase repository (name/visibility are owner decisions) and push the output of `npm run appbase:extract` as its first commit.
+2. Add AppBase's own CI (`npm run typecheck`, `npm test`).
+3. From then on make Core changes in AppBase first and bring them into FitTimer with `scripts/appbase-sync.mjs` in a PR; urgent FitTimer hotfixes to Core files must be ported back to AppBase in the same week.
+4. Optionally automate step 3 with a scheduled workflow that runs the sync and opens a PR (needs a token with read access to the AppBase repository).
+
 ## After the fork: AppBase extraction
 
 Delete fitness programs, exercises, workout engine, progression, warm-up, fitness progress, trainer/trainee, fitness catalog, fitness AI actions/prompts, fitness notifications and fitness deep links.

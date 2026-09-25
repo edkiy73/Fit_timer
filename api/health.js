@@ -1,4 +1,15 @@
 const { collectHealth } = require('../lib/health');
+const { store } = require('../lib/store');
+
+// FitTimer-specific probe: the approved catalog must stay readable.
+const FIT_HEALTH_PROBES = [{
+  name:'catalog',
+  run: async () => {
+    const ids = await store.list('c:approved');
+    if(ids.length) await store.get('c:' + ids[ids.length - 1]);
+    return {items:ids.length};
+  }
+}];
 
 const esc = v => String(v == null ? '' : v)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -83,7 +94,7 @@ function renderHtml(h){
 }
 
 module.exports = async (req, res) => {
-  const h = await collectHealth();
+  const h = await collectHealth({probes:FIT_HEALTH_PROBES});
   res.statusCode = h.ok ? 200 : 503;
   res.setHeader('Cache-Control','no-store');
   res.setHeader('X-Robots-Tag','noindex, nofollow');
