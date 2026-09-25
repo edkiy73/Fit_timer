@@ -154,6 +154,10 @@ ok('legacy native lifecycle calls are isolated to compatibility boundary',
 ok('pending workout session stays module-local',
   !fs.readFileSync('src/app/90-events.js','utf8').includes('window.__pendingSession')
   && !fs.readFileSync('tests/workout-resume.js','utf8').includes('window.__pendingSession'));
+ok('native notification sync is not exposed as a product window callback',
+  !fs.readFileSync('src/app/80-platform.js','utf8').includes('window.syncNativeNotifications')
+  && !fs.readFileSync('mobile.js','utf8').includes('window.syncNativeNotifications')
+  && fs.readFileSync('src/app/80-platform.js','utf8').includes("window.addEventListener('fitAppForeground'"));
 
 
 
