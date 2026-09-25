@@ -30,6 +30,16 @@ requireHttps('defaultPublicUrl', product.defaultPublicUrl);
 
 if(!product.brand || typeof product.brand !== 'object') throw new Error('config/product.json: brand is required');
 if(!product.features || typeof product.features !== 'object') throw new Error('config/product.json: features are required');
+const uiThemes = product.brand.ui;
+if(!uiThemes || typeof uiThemes !== 'object') throw new Error('config/product.json: brand.ui is required');
+const uiKeys = ['background','card','surface','accent','accentInk'];
+for(const mode of ['dark','light']){
+  if(!uiThemes[mode] || typeof uiThemes[mode] !== 'object') throw new Error(`config/product.json: brand.ui.${mode} is required`);
+  for(const key of uiKeys){
+    const value = requireString(`brand.ui.${mode}.${key}`, uiThemes[mode][key]);
+    if(!/^#[0-9A-Fa-f]{6}$/.test(value)) throw new Error(`config/product.json: brand.ui.${mode}.${key} must be #RRGGBB`);
+  }
+}
 
 const featureKeys = ['profiles','premium','ai','notifications','biometrics','sharing'];
 for(const key of featureKeys){
