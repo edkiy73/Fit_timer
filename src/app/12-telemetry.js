@@ -44,3 +44,11 @@ function trackProductEvent(event, properties){
 function reportClientError(kind, error, fallbackMessage, context){
   return fitTelemetry.capture(kind, error, fallbackMessage, context);
 }
+
+window.addEventListener('error',e=>{
+  reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
+});
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;
+  reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
+});
