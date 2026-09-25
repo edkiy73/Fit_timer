@@ -174,6 +174,12 @@ ok('Core sources contain no fitness entities', !forbidden.some(word => coreSourc
   forbidden.filter(word => coreSources.includes(word)).join(', ') || 'clean');
 ok('typed Core build/check scripts exist',
   typeof pkg.scripts['build:core'] === 'string' && typeof pkg.scripts['check:core'] === 'string');
+const sourceConsistencyWorkflow = fs.readFileSync('.github/workflows/source-consistency.yml','utf8');
+ok('dependency boundary checker is wired into package scripts and CI',
+  typeof pkg.scripts['check:boundaries'] === 'string'
+  && /check-appbase-boundaries\.mjs/.test(pkg.scripts['check:boundaries'])
+  && sourceConsistencyWorkflow.includes('npm run check:boundaries')
+  && sourceConsistencyWorkflow.includes('node tests/appbase-boundaries-unit.js'));
 
 const fitnessTypes = fs.readFileSync('src/types/fitness.ts', 'utf8');
 ok('FitTimer profile extension is outside Core contracts',
