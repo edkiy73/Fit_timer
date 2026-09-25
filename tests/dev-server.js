@@ -93,8 +93,11 @@ function rewrite(u){
 const staticFile = pathname => {
   let rel = decodeURIComponent(pathname);
   if(rel === '/' || rel === '') rel = '/index.html';
-  const file = path.join(STATIC_ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
-  return (file.startsWith(STATIC_ROOT) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) ? file : null;
+  const safeRel = path.normalize(rel).replace(/^([/\\])+/, '');
+  const built = path.join(STATIC_ROOT, safeRel);
+  if(built.startsWith(STATIC_ROOT) && fs.existsSync(built) && !fs.statSync(built).isDirectory()) return built;
+  const source = path.join(ROOT, safeRel);
+  return (source.startsWith(ROOT) && fs.existsSync(source) && !fs.statSync(source).isDirectory()) ? source : null;
 };
 
 http.createServer(async (req, res) => {
