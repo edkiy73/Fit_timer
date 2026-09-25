@@ -513,6 +513,7 @@ The first reusable UI slice is now typed Core rather than product markup:
 - the module contains no FitTimer selectors, catalog/trainer/workout concepts or product copy;
 - FitTimer now adopts these primitives incrementally: the existing `setShown` compatibility helper delegates to UI Core, named `data-act` actions use Core delegation, and selected wellness/media/workout modals use Core open/close helpers;
 - adoption remains intentionally incremental so modal history, accessibility and current visual behavior stay stable.
+- product-level semantic UI tokens now live in `config/product.json` for dark/light background, card, surface, accent and accent text; FitTimer applies them through generic `AppBaseUI.applyCssVars`, while CSS keeps safe defaults.
 
 Phase 12 is therefore **in progress, not complete**. The next UI work should continue adopting proven primitives in touched screens and then extract only CSS primitives/tokens that demonstrate reuse in real product code.
 

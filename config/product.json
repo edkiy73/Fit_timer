@@ -6,7 +6,23 @@
   "defaultPublicUrl": "https://fittimer99.vercel.app",
   "brand": {
     "background": "#0C0916",
-    "notificationAccent": "#7047EB"
+    "notificationAccent": "#7047EB",
+    "ui": {
+      "dark": {
+        "background": "#0C0916",
+        "card": "#171126",
+        "surface": "#1F1733",
+        "accent": "#7C56F5",
+        "accentInk": "#B7A0FF"
+      },
+      "light": {
+        "background": "#F6F4FC",
+        "card": "#FFFFFF",
+        "surface": "#F2EEFC",
+        "accent": "#6B3FE0",
+        "accentInk": "#5A2ECB"
+      }
+    }
   },
   "features": {
     "profiles": true,

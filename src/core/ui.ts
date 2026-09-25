@@ -18,6 +18,15 @@ namespace AppBaseUI {
     element.textContent = String(value == null ? '' : value);
   }
 
+  export function applyCssVars(element: HTMLElement | null, vars: Record<string, string | null | undefined>): void {
+    if(!element) return;
+    Object.entries(vars).forEach(([name, value]) => {
+      const key = name.startsWith('--') ? name : '--' + name;
+      if(value == null || value === '') element.style.removeProperty(key);
+      else element.style.setProperty(key, String(value));
+    });
+  }
+
   export function openModal(modal: HTMLElement | null, openClass = 'open'): boolean {
     if(!modal) return false;
     modal.classList.add(openClass);
