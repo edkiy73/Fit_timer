@@ -1,3 +1,4 @@
+import { createCapabilities } from '../core/capabilities.js';
 import { createProductInfrastructure } from './infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './identity.js';
 import {
@@ -8,7 +9,8 @@ import {
 import {
   externalStorage,
   runtimePlatform,
-  getRuntimeBuild
+  getRuntimeBuild,
+  runtimeFeatures
 } from './runtime-environment.js';
 
 export interface ProductBootstrapOptions {
@@ -20,6 +22,7 @@ export interface ProductBootstrapOptions {
 }
 
 export function createProductBootstrap(options: ProductBootstrapOptions) {
+  const capabilities = createCapabilities(runtimeFeatures());
   const infrastructure = createProductInfrastructure({
     externalStorage,
     ...(options.onStorageWriteFailure
@@ -34,6 +37,7 @@ export function createProductBootstrap(options: ProductBootstrapOptions) {
   });
 
   return {
+    capabilities,
     infrastructure,
     identity: {
       createAccount: createFitTimerAccount,
