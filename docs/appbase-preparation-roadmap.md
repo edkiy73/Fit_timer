@@ -216,6 +216,17 @@ Separate Account, generic Profile and FitTimer profile extension.
 
 Generic Profile should not require age, gender, height, body measurements or fitness preferences. Profiles should eventually be an optional capability for products that do not need multiple people under one account.
 
+### Account/Profile implementation status
+
+The client boundary now keeps the persisted profile shape compatible while separating ownership:
+- `src/core/identity.ts` owns generic Account/Profile defaults only;
+- `src/types/core.ts` contains generic Account/Profile contracts;
+- `src/types/fitness.ts` contains FitTimer-only profile fields such as gender, age and workout timing/audio preferences;
+- existing stored/synced profile JSON stays flat for compatibility in this phase;
+- FitTimer adapters compose the generic profile draft with fitness fields.
+
+This is intentionally **not** the server sync split yet. `api/sync.js` still sanitizes the legacy flat profile record and should be separated in the next sync-focused phase rather than combined with this client boundary change.
+
 ## Phase 5 — Generic Document Sync facade
 
 Owner: Architect + Extraction Engineer. Review: Security + QA.

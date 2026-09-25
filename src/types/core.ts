@@ -45,23 +45,29 @@ export interface SubscriptionEntitlement {
   source?: string | null;
 }
 
+export interface DeletedProfileRef {
+  id: string;
+  at: string;
+}
+
 export interface Account {
   email: string;
   handle?: string;
-  locale?: AppLocale | '';
+  locale?: string;
   createdAt?: string;
   linkedAt?: string | null;
   sub?: SubscriptionEntitlement | null;
   biometry?: JsonValue;
-  deletedProfiles?: string[];
+  syncToken?: string | null;
+  deletedProfiles?: DeletedProfileRef[];
 }
 
 export interface Profile {
   id: string;
   name: string;
   theme?: ThemePreference;
-  locale?: AppLocale | 'system';
-  avatar?: string;
+  locale?: string;
+  photo?: string | null;
 }
 
 export type SyncScope = 'account' | 'profile';
