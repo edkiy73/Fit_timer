@@ -4093,6 +4093,75 @@ var AppBaseNotifications;
     }
     AppBaseNotifications.limitCandidates = limitCandidates;
 })(AppBaseNotifications || (AppBaseNotifications = {}));
+var AppBaseUI;
+(function (AppBaseUI) {
+    function setShown(element, shown, hiddenClass = 'hidden') {
+        if (!element)
+            return;
+        element.classList.toggle(hiddenClass, !shown);
+    }
+    AppBaseUI.setShown = setShown;
+    function setText(element, value) {
+        if (!element)
+            return;
+        element.textContent = String(value == null ? '' : value);
+    }
+    AppBaseUI.setText = setText;
+    function openModal(modal, openClass = 'open') {
+        if (!modal)
+            return false;
+        modal.classList.add(openClass);
+        return true;
+    }
+    AppBaseUI.openModal = openModal;
+    function closeModal(modal, openClass = 'open') {
+        if (!modal)
+            return false;
+        modal.classList.remove(openClass);
+        return true;
+    }
+    AppBaseUI.closeModal = closeModal;
+    function closestModal(element, selector = '.modal') {
+        if (!element)
+            return null;
+        const modal = element.closest(selector);
+        return modal instanceof HTMLElement ? modal : null;
+    }
+    AppBaseUI.closestModal = closestModal;
+    function setBusy(button, busy, options = {}) {
+        if (!button)
+            return;
+        const idleText = options.idleText ?? button.dataset.idleText ?? button.textContent ?? '';
+        if (!button.dataset.idleText)
+            button.dataset.idleText = idleText;
+        button.disabled = options.disabled === false ? false : busy;
+        if (options.ariaBusy !== false)
+            button.setAttribute('aria-busy', busy ? 'true' : 'false');
+        if (busy && options.busyText != null)
+            button.textContent = options.busyText;
+        if (!busy)
+            button.textContent = options.idleText ?? button.dataset.idleText ?? idleText;
+    }
+    AppBaseUI.setBusy = setBusy;
+    function bindActions(root, actions, attribute = 'data-act') {
+        const selector = '[' + attribute + ']';
+        const listener = (event) => {
+            const target = event.target;
+            if (!(target instanceof Element))
+                return;
+            const element = target.closest(selector);
+            if (!(element instanceof HTMLElement))
+                return;
+            const action = element.getAttribute(attribute) || '';
+            const handler = actions[action];
+            if (handler)
+                handler(element, event);
+        };
+        root.addEventListener('click', listener);
+        return () => root.removeEventListener('click', listener);
+    }
+    AppBaseUI.bindActions = bindActions;
+})(AppBaseUI || (AppBaseUI = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -4552,7 +4621,7 @@ const M_LABEL = Object.fromEntries(MUSCLES);
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
 function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
-  if(node) node.classList.toggle('hidden', !on);
+  AppBaseUI.setShown(node, !!on);
 }
 
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
@@ -18641,21 +18710,14 @@ window.syncNativeNotifications = syncNativeNotifications;
    Обработчик получает саму кнопку и событие: этого хватает, чтобы взять данные
    из data-атрибутов рядом, не заводя элементу имя. */
 const ACTIONS = {
-  // Закрыть попап, внутри которого стоит кнопка. Имя попапа не нужно: он и так
-  // ближайший предок. Восемнадцать одинаковых строк «найди кнопку, найди попап,
-  // сними класс» свелись к одной. Историю навигации трогать не надо — за ней
-  // следит MutationObserver по классу .modal.open.
+  // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
+  // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
   closeModal: btn => {
-    const m = btn.closest('.modal');
-    if(m) m.classList.remove('open');
+    const m = AppBaseUI.closestModal(btn);
+    AppBaseUI.closeModal(m);
   }
 };
-document.addEventListener('click', e => {
-  const btn = e.target.closest('[data-act]');
-  if(!btn) return;
-  const fn = ACTIONS[btn.dataset.act];
-  if(fn) fn(btn, e);
-});
+AppBaseUI.bindActions(document, ACTIONS);
 // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
 // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
 // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
