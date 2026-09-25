@@ -31,6 +31,15 @@ Do **not** combine the first database migration with:
 
 ### Phase S1 — connection foundation
 
+Implementation status:
+- the Supabase account already has an active project named `FitT`;
+- the project is currently empty (no public tables/migrations at the time of foundation work);
+- `lib/supabase.js` provides server-only env validation, REST connection and non-destructive connection self-test;
+- production Upstash remains authoritative; no Supabase reads/writes are used by product endpoints yet;
+- supported server secret env names are `SUPABASE_SECRET_KEY` (preferred) and legacy `SUPABASE_SERVICE_ROLE_KEY`.
+
+
+
 - create/select the Supabase project;
 - keep service credentials server-only;
 - add environment validation and a server client adapter;
@@ -139,6 +148,16 @@ OpenRouter must not know product actions such as:
 The action registry chooses the task semantics. The provider receives a normalized generation request.
 
 ### Phase O1 — provider adapter
+
+Implementation status:
+- `lib/ai-provider-openrouter.js` implements OpenRouter text generation via `/api/v1/chat/completions`;
+- `OPENROUTER_API_KEY` is server-only;
+- optional `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` populate attribution headers;
+- text AI routes may choose `openrouter` in Admin;
+- image routes remain limited to providers with implemented image adapters;
+- the default production route remains unchanged until an administrator explicitly selects OpenRouter.
+
+
 
 Add a server-only OpenRouter provider with:
 - API key from environment;
