@@ -66,7 +66,8 @@ function renderHtml(h){
     +(warnings?'<section class="section card"><h2>Что требует внимания</h2><ul class="warnings">'+warnings+'</ul></section>':'')
     +'<details class="section card"><summary>Технические факты</summary><div class="facts">storage env: '+esc((storage.envSeen||[]).join(', ')||'—')
     +'\nmail env: '+esc((service.mail&&service.mail.envSeen||[]).join(', ')||'—')
-    +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')
+    +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')+', OpenRouter '+(provider.openrouter?'yes':'no')
+    +'\nSupabase env: '+esc((service.supabase&&service.supabase.envSeen||[]).join(', ')||'—')
     +'\nbilling: Google '+(billing.google?'yes':'no')+', RuStore '+(billing.rustore?'yes':'no')+', YooKassa '+(billing.yookassa?'yes':'no')
     +'\n\nЗначения секретов никогда не выводятся.</div></details>'
     +'</main></body></html>';
