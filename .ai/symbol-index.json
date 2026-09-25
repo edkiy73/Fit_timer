@@ -84,6 +84,11 @@
         "workoutLoadSnapshot"
       ]
     },
+    "src/app/05-runtime-compat.js": {
+      "kind": "frontend-js",
+      "lines": 18,
+      "chars": 645
+    },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
       "lines": 2158,
