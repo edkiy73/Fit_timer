@@ -73,6 +73,9 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/storage.ts` | generic local KV storage | storage/Core work |
 | `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
 | `src/core/sync.ts` | generic client document registry/scopes | sync/Core work |
+| `src/core/telemetry.ts` | generic analytics/diagnostics client facade | telemetry/Core work |
+| `src/app/12-telemetry.js` | FitTimer telemetry transport/context adapter | product telemetry work |
+| `lib/fit-analytics-schema.js` | FitTimer analytics event taxonomy | product analytics changes |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
@@ -94,6 +97,7 @@ Canonical JS chunks:
 - `src/app/00-core.js` — shared core/navigation/start helpers.
 - `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`, document admission is delegated to AppBase Sync registry.
 - `src/app/11-sync-schema.js` — FitTimer document registration for the generic sync registry.
+- `src/app/12-telemetry.js` — FitTimer transport/context adapter for generic AppBase telemetry.
 - `src/app/20-account.js` — profile/account/subscription/login/biometrics.
 - `src/app/30-progress-media.js` — warmup, photos, export/import, onboarding.
 - `src/app/40-programs-ai.js` — progression, home/programs, sharing, AI/images.
