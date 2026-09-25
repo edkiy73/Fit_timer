@@ -1,3 +1,4 @@
+"use strict";
 var AppBaseIdentity;
 (function (AppBaseIdentity) {
     function createAccount(now = new Date()) {
