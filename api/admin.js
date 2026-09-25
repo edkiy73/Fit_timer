@@ -19,6 +19,7 @@ const { handleAdminObservability } = require('../lib/admin/core/observability');
 const { handleAdminAccounts } = require('../lib/admin/core/accounts');
 const { handleAdminCampaigns } = require('../lib/admin/core/campaigns');
 const { handleAdminAISettings } = require('../lib/admin/core/ai-settings');
+const { handleAdminRelease } = require('../lib/admin/core/release');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -28,31 +29,6 @@ const ANDROID_RELEASE_REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(process.e
 const ANDROID_RELEASE_TAG = 'latest-apk';
 const ANDROID_RELEASE_META = 'FitTimer-release.json';
 
-function archivedApkUrl(url, versionCode){
-  const want = `https://github.com/${ANDROID_RELEASE_REPO}/releases/download/apk-archive/FitTimer-${versionCode}.apk`;
-  return String(url || '') === want ? want : '';
-}
-async function latestAndroidRelease(){
-  const base = `https://github.com/${ANDROID_RELEASE_REPO}/releases/download/${ANDROID_RELEASE_TAG}`;
-  const metaRes = await fetch(`${base}/${ANDROID_RELEASE_META}`, {
-    redirect:'follow', headers:{'User-Agent':'FitTimer-admin'}
-  });
-  if(!metaRes.ok) throw new Error('release_metadata_' + metaRes.status);
-  const meta = await metaRes.json().catch(()=>null);
-  const versionCode = Math.max(0, Math.round(+(meta && meta.versionCode) || 0));
-  const versionName = clampLine(meta && meta.versionName, 40);
-  if(!versionCode || !versionName) throw new Error('release_metadata_invalid');
-  return {
-    versionCode,
-    versionName,
-    // Неизменяемый адрес именно этой сборки. latest-apk перезаписывается каждым
-    // пушем в main, и опубликованный versionCode переставал совпадать с файлом.
-    apkUrl: archivedApkUrl(meta && meta.apkUrl, versionCode) || `${base}/FitTimer-latest.apk`,
-    releaseUrl: `https://github.com/${ANDROID_RELEASE_REPO}/releases/tag/${ANDROID_RELEASE_TAG}`,
-    commit: clampLine(meta && meta.commit, 80),
-    builtAt: clampLine(meta && meta.builtAt, 80)
-  };
-}
 const IMAGE_GOAL_LABELS = {
   slim:'weight loss and calorie burn',
   tone:'full-body toning and general fitness',
@@ -447,17 +423,15 @@ module.exports = async (req, res) => {
     return send(res, 200, {pending, drafts, approved, trainers, settings, providers:providerStatus(), billingProviders:billingProviderStatus()});
   }
 
-  /* ---- последний собранный Android release ----
-     Админка не угадывает versionCode по номеру workflow. CI публикует рядом с APK
-     маленький JSON, поэтому здесь всегда показывается именно то, что реально было
-     подписано и выложено в latest-apk. */
-  if(a === 'android_release_latest'){
-    try{
-      return send(res,200,{ok:true,release:await latestAndroidRelease()});
-    }catch(e){
-      return fail(res,502,'android_release_unavailable',{detail:String(e.message||e).slice(0,120)});
-    }
-  }
+  if(await handleAdminRelease(a,res,{
+    repo:ANDROID_RELEASE_REPO,
+    tag:ANDROID_RELEASE_TAG,
+    archiveTag:'apk-archive',
+    metaName:ANDROID_RELEASE_META,
+    latestAsset:'FitTimer-latest.apk',
+    archivePrefix:'FitTimer',
+    userAgent:'FitTimer-admin'
+  })) return;
 
   /* ---- reusable Core Admin actions ---- */
   if(await handleAdminObservability(a, body, res)) return;
