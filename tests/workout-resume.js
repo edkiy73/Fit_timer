@@ -80,12 +80,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(80);
   const before = await page.evaluate(() => ({
     selected:state.planIdx,
-    pending:window.__pendingSession && window.__pendingSession.planIdx,
     resumeOpen:$('startResume') && !$('startResume').classList.contains('hidden'),
     summary:$('startResumeSub').textContent
   }));
   ok('до продолжения выбран сегодняшний вариант', before.selected === 0, before.selected);
-  ok('кнопка продолжения хранит сохранённый вариант', before.pending === 1, before.pending);
   ok('продолжение доступно', before.resumeOpen, before.summary);
 
   await page.click('#startResume');

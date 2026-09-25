@@ -18524,6 +18524,7 @@ document.addEventListener('click', e => {
 });
 
 /* ================= СОБЫТИЯ ================= */
+let pendingStartSession = null;
 $('startMore').innerHTML = icon('more');
 $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu')); };
 $('progDescMore').onclick = ()=>{
@@ -18566,7 +18567,7 @@ $('btnStart').onclick = async ()=>{
     $('startResumeSub').textContent =
       t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
   }
-  window.__pendingSession = sess ? {...sess, planIdx:sessionPlanIdx} : null;
+  pendingStartSession = sess ? {...sess, planIdx:sessionPlanIdx} : null;
   $('startModal').classList.add('open');
 };
 $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
@@ -18620,7 +18621,7 @@ async function resumeWorkoutFromNativeNotification(){
 }
 
 $('startResume').onclick = ()=>{
-  const s = window.__pendingSession;
+  const s = pendingStartSession;
   $('startModal').classList.remove('open');
   if(!s){ startWorkout(); return; }
   // stepIdx имеет смысл только внутри того варианта, где сессия была сохранена.
