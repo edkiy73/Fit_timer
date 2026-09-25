@@ -315,6 +315,17 @@ tasks.project.plan
 
 A simple demo action should be able to use AI runtime without importing fitness protocol code.
 
+### AI action registry implementation status
+
+The first AI boundary now separates product action semantics from the endpoint/runtime dispatcher:
+- `lib/ai-action-registry.js` is a generic registry for action id, mode, quota bucket and optional execution/validation metadata;
+- `lib/fit-ai-actions.js` owns the existing FitTimer actions (`program.*`, `exercise.*`, `video.parse`, `image.*`);
+- `lib/ai-endpoint.js` no longer contains the FitTimer action regex, quota classification, image aspect-ratio mapping or video dispatch branch;
+- current action ids remain unchanged for client compatibility;
+- current Premium/auth/quota/logging behavior and provider fallback stay unchanged.
+
+This is deliberately a first split. Provider/settings code in `lib/ai.js` still contains some product-adjacent test/config concerns and can be refined later without mixing that work into action routing.
+
 ## Phase 8 — Notification Core
 
 Owner: Architect + platform implementation. Review: UX + QA.
