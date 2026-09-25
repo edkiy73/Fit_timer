@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig.json', 'app.config.js', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'tests/**', '.ai/**', 'scripts/**', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig.json', 'app.config.js', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
@@ -17,8 +17,13 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: Установить зависимости для typecheck
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Проверить canonical/generated consistency
         run: |
+          npm run typecheck
+          npm run test:foundation
           npm run check:sources
           npm run check:ai-index
           npm run i18n:check
