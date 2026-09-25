@@ -409,6 +409,20 @@ ok('ESM entry composes runtime environment explicitly',
   /from ['"]\.\/app\/runtime-environment\.js['"]/.test(esmEntrySource)
   && /runtimeEnvironment/.test(esmEntrySource));
 
+const productBootstrapSource = fs.readFileSync('src/app/bootstrap.ts', 'utf8');
+ok('product bootstrap is the ESM composition root',
+  /from ['"]\.\/infrastructure\.js['"]/.test(productBootstrapSource)
+  && /from ['"]\.\/identity\.js['"]/.test(productBootstrapSource)
+  && /from ['"]\.\/sync-schema\.js['"]/.test(productBootstrapSource)
+  && /from ['"]\.\/runtime-environment\.js['"]/.test(productBootstrapSource));
+ok('product bootstrap assembles infrastructure, identity and sync',
+  /infrastructure/.test(productBootstrapSource)
+  && /identity:/.test(productBootstrapSource)
+  && /sync:/.test(productBootstrapSource));
+ok('ESM entry exposes the product bootstrap explicitly',
+  /from ['"]\.\/app\/bootstrap\.js['"]/.test(esmEntrySource)
+  && /productBootstrap/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
