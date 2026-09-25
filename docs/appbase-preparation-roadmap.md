@@ -336,6 +336,17 @@ FitTimer owns workout reminder, rest finished, missed/unfinished workout, progre
 
 Generic mobile primitive should schedule generic notification items rather than expose `scheduleWorkoutNotifications` as a Core API.
 
+### Notification policy implementation status
+
+The first notification boundary now moves product-neutral policy into typed Core:
+- `src/core/notifications.ts` owns a generic preference store and generic delivery-budget limiter;
+- FitTimer retains its categories, workout/premium candidate generation and copy;
+- existing account-level `notificationPrefs` sync shape is unchanged;
+- exact-time reminders still bypass the passive daily budget exactly as before;
+- engagement suppression against workout days is passed into Core as a product callback instead of being hard-coded into Core.
+
+Native permission/schedule/cancel/push transport still lives in `mobile.js`; moving that transport behind a generic bridge is intentionally deferred to the next notification/mobile slice.
+
 ## Phase 9 — Mobile bridge split
 
 Owner: Extraction Engineer + DevOps. Review: QA.
