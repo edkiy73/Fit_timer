@@ -68,6 +68,9 @@ function renderHtml(h){
     +'\nmail env: '+esc((service.mail&&service.mail.envSeen||[]).join(', ')||'—')
     +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')+', OpenRouter '+(provider.openrouter?'yes':'no')
     +'\nSupabase env: '+esc((service.supabase&&service.supabase.envSeen||[]).join(', ')||'—')
+    +'\nSupabase shadow write: '+((service.supabase&&service.supabase.shadow&&service.supabase.shadow.writeEnabled)?'yes':'no')
+    +'\nSupabase shadow compare: '+((service.supabase&&service.supabase.shadow&&service.supabase.shadow.compareEnabled)?'yes':'no')
+    +'\nSupabase parity: '+esc(service.supabase&&service.supabase.shadow&&service.supabase.shadow.parity?JSON.stringify(service.supabase.shadow.parity):'—')
     +'\nbilling: Google '+(billing.google?'yes':'no')+', RuStore '+(billing.rustore?'yes':'no')+', YooKassa '+(billing.yookassa?'yes':'no')
     +'\n\nЗначения секретов никогда не выводятся.</div></details>'
     +'</main></body></html>';
