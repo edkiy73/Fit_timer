@@ -480,6 +480,20 @@ FitTimer Admin candidates:
 
 Milestone: Core Admin can conceptually run without catalog/trainer modules.
 
+
+### Admin decomposition implementation status
+
+Phase 11 is now implemented as an internal module boundary while keeping one Vercel Admin endpoint:
+- `api/admin.js` is a thin authenticated/rate-limited dispatcher;
+- reusable admin behavior lives under `lib/admin/core/*` (accounts, analytics/diagnostics, campaigns, AI settings/testing, release checks);
+- FitTimer catalog/trainer behavior lives under `lib/admin/fittimer/*` (catalog text/protocol helpers, catalog AI editing/translation, image prompts/generation, moderation/drafts/CRUD/trainers/seed);
+- Core Admin does not import FitTimer Admin modules;
+- product-specific release asset names are injected by the FitTimer dispatcher rather than owned by Core;
+- generic AI usage buckets are exposed as `heavy/light/image`; FitTimer maps them to program/exercise/image labels in its Admin UI;
+- `/api/admin` remains a single Vercel function, so the split does not multiply serverless endpoints.
+
+The Phase 11 milestone is satisfied: Core Admin can conceptually be reused without catalog/trainer modules.
+
 ## Phase 12 — Reusable UI foundation
 
 Owner: UX/UI. Implementation: Extraction Engineer.

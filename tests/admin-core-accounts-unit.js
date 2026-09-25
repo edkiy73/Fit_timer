@@ -31,6 +31,8 @@ const mod=require('../lib/admin/core/accounts');
   const expected=['users_list','user_ai_reset','user_create','user_premium','user_test_code'];
   ok('Core Admin owns generic account actions',expected.every(x=>mod.ACTIONS.has(x)));
   ok('Core Admin does not own FitTimer catalog action',!mod.ACTIONS.has('catalog_ai_create'));
+  const source=require('fs').readFileSync(require.resolve('../lib/admin/core/accounts'),'utf8');
+  ok('Core AI usage buckets are product-neutral',!source.includes('programs:')&&!source.includes('exercises:'));
   ok('account hash is stable and anonymous',
     /^[a-f0-9]{32}$/.test(mod.accountHash('person@example.com'))
     && mod.accountHash('person@example.com')===mod.accountHash('person@example.com'));

@@ -546,6 +546,8 @@ async function renderUsers(b){
   const shortDate=v=>v?new Date(v+'T00:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'—';
   usersCache.forEach(u=>{
     const premium=u.premium&&u.sub,usage=u.aiUsage||{},limits=usage.limits||{};
+    const usagePrograms=usage.heavy||0,usageExercises=usage.light||0,usageImages=usage.image||0;
+    const limitPrograms=limits.heavy||0,limitExercises=limits.light||0,limitImages=limits.image||0;
     const provider=premium&&String(u.sub.provider||'server');
     const managed=provider&&provider!=='admin';
     const card=document.createElement('article');
@@ -570,9 +572,9 @@ async function renderUsers(b){
       </div>
       <div class="ai-box"><div class="ai-box-head"><b>AI за месяц</b><span class="ai-period">${shortDate(usage.periodStart)} — ${shortDate(usage.periodEnd)}</span></div>
         <div class="ai-stats">
-          <div class="ai-stat"><strong>${usage.programs||0} / ${limits.programs||0}</strong><span>программы</span></div>
-          <div class="ai-stat"><strong>${usage.exercises||0} / ${limits.exercises||0}</strong><span>упражнения</span></div>
-          <div class="ai-stat"><strong>${usage.images||0} / ${limits.images||0}</strong><span>картинки</span></div>
+          <div class="ai-stat"><strong>${usagePrograms} / ${limitPrograms}</strong><span>программы</span></div>
+          <div class="ai-stat"><strong>${usageExercises} / ${limitExercises}</strong><span>упражнения</span></div>
+          <div class="ai-stat"><strong>${usageImages} / ${limitImages}</strong><span>картинки</span></div>
         </div>
       </div>
       ${premium?'<div class="cell-sub" style="margin-top:8px">Premium до '+esc(fmtDay(u.sub.until))+' · '+esc(provider)+(managed?' · управляется платёжным провайдером':'')+'</div>':''}
