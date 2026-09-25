@@ -367,6 +367,20 @@ ok('ESM entry composes product sync schema explicitly',
   /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
   && /productSyncSchema/.test(esmEntrySource));
 
+const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
+ok('product infrastructure composes Core through explicit imports',
+  /from ['"]\.\.\/core\/storage\.js['"]/.test(productInfrastructureSource)
+  && /from ['"]\.\.\/core\/observability\.js['"]/.test(productInfrastructureSource)
+  && /createProductInfrastructure/.test(productInfrastructureSource));
+ok('product infrastructure owns FitTimer storage configuration outside Core',
+  /dbName: 'fittimer'/.test(productInfrastructureSource)
+  && /mirrorKeys: \['account'\]/.test(productInfrastructureSource));
+ok('product infrastructure has no direct legacy Core globals',
+  !/AppBaseStorage|AppBaseObservability/.test(productInfrastructureSource));
+ok('ESM entry composes product infrastructure explicitly',
+  /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
+  && /productInfrastructure/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
