@@ -10,15 +10,15 @@ const build=fs.readFileSync('scripts/build-sources.mjs','utf8');
 const web=fs.readFileSync('scripts/build-web.mjs','utf8');
 const mobile=fs.readFileSync('scripts/check-mobile.mjs','utf8');
 const html=fs.readFileSync('index.html','utf8');
-const core=fs.readFileSync('appbase-core.js','utf8');
 const app=fs.readFileSync('app.js','utf8');
 
-ok('legacy AppBase Core target is no longer required by production startup',
-  build.includes("target: 'appbase-core.js'"));
+ok('legacy AppBase Core target is removed from source build',
+  !build.includes("target: 'appbase-core.js'"));
 ok('product app target no longer lists Core runtimes',
   !build.slice(build.indexOf("target: 'app.js'"),build.indexOf("target: 'style.css'")).includes('src/core/'));
-ok('Core bundle contains reusable browser namespaces',
-  ['AppBaseStorage','AppBaseIdentity','AppBaseSync','AppBaseObservability','AppBaseNotifications','AppBaseUI'].every(x=>core.includes(x)));
+ok('ESM entry owns temporary compatibility namespaces',
+  ['AppBaseStorage','AppBaseIdentity','AppBaseSync','AppBaseObservability','AppBaseNotifications','AppBaseUI']
+    .every(x=>fs.readFileSync('src/main.ts','utf8').includes(x)));
 ok('product app no longer embeds reusable Core namespace declarations',
   !app.includes('var AppBaseStorage;')
   && !app.includes('var AppBaseIdentity;')
