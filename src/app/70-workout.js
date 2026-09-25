@@ -150,7 +150,7 @@ function setPause(p, silent){
   if(p){
     state.paused = true;
     state.pausedAt = Date.now();
-    if(window.FitNative) window.FitNative.cancelRest();
+    appRuntimeCompat.cancelRest();
     syncNativeWorkoutState(state.steps[state.stepIdx], 0);
   } else {
     const pausedFor = Date.now() - state.pausedAt;
@@ -251,7 +251,7 @@ function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
   state.remaining = 0;
-  if(window.FitNative) window.FitNative.cancelRest();
+  appRuntimeCompat.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
 }
@@ -311,7 +311,7 @@ window.addEventListener('fitAppBackground', ()=>{
 });
 
 function syncNativeWorkoutState(step, endsAt){
-  if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
+  if(!step || !appRuntimeCompat.hasNative('updateWorkoutState')) return;
   const next = nextNativeWorkStep();
   const paused = !!state.paused;
   const now = Date.now();
@@ -321,7 +321,7 @@ function syncNativeWorkoutState(step, endsAt){
   // A running timer is intentional activity. Start the 20-minute "forgotten workout"
   // window after that timer should finish, not in the middle of a long timed exercise.
   const inactivityBase = timed ? Number(endsAt) : now;
-  window.FitNative.updateWorkoutState({
+  appRuntimeCompat.updateWorkoutState({
     active: true,
     sessionId: String(state.workoutSessionId || ''),
     workoutTitle: (state.current && state.current.title) || 'Fit Timer',
@@ -863,8 +863,8 @@ function reviewMilestoneDue(count, now){
 
 async function maybeRequestAppReview(count){
   const milestone = reviewMilestoneDue(count);
-  if(!milestone || !(window.FitNative && window.FitNative.requestReview)) return false;
-  const ok = await window.FitNative.requestReview();
+  if(!milestone || !appRuntimeCompat.hasNative('requestReview')) return false;
+  const ok = await appRuntimeCompat.requestReview();
   if(!ok) return false;
   const state = reviewPromptState();
   state.attempts.push({count:Number(count) || milestone, milestone, at:Date.now()});
@@ -1070,7 +1070,7 @@ function finishWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+  appRuntimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -1631,7 +1631,7 @@ function tearDownWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+  appRuntimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
