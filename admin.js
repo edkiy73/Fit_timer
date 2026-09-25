@@ -278,12 +278,16 @@ async function loadDashboardHealth(){
     const h=await res.json();
     const probe=name=>(h.probes||[]).find(x=>x.name===name)||{};
     const ai=h.services&&h.services.ai||{},mail=h.services&&h.services.mail||{},push=h.services&&h.services.push||{};
+    const supa=h.services&&h.services.supabase||{},shadow=supa.shadow||{},ready=shadow.readiness||{},stats=shadow.stats||{},lastWrite=shadow.lastWrite||{},parity=shadow.parity||{};
     const state=h.status==='ok'?'Работает':h.status==='warning'?'Требует внимания':'Ошибка';
     box.innerHTML='<div class="health-line"><b>Общий статус</b><span class="status-chip '+(h.status==='ok'?'ok':'')+'">'+esc(state)+'</span></div>'
       +'<div class="health-line"><b>Хранилище</b><span>'+esc((h.storage&&h.storage.mode)||'—')+' · '+esc((h.storage&&h.storage.latencyMs)!=null?h.storage.latencyMs+' мс':'—')+'</span></div>'
       +'<div class="health-line"><b>Каталог</b><span>'+(probe('catalog').ok?'OK':'Ошибка')+'</span></div>'
       +'<div class="health-line"><b>Email / AI</b><span>'+(mail.configured?'Email OK':'Email нет')+' · '+(ai.configured?'AI OK':'AI нет')+'</span></div>'
-      +'<div class="health-line"><b>Push</b><span>Android '+(push.android?'OK':'—')+' · iOS '+(push.ios?'OK':'—')+'</span></div>';
+      +'<div class="health-line"><b>Push</b><span>Android '+(push.android?'OK':'—')+' · iOS '+(push.ios?'OK':'—')+'</span></div>'
+      +(supa.configured?'<div class="health-line"><b>Supabase shadow</b><span>'+esc(stats.documents==null?'—':stats.documents)+' docs · write errors '+esc(lastWrite.failed==null?'—':lastWrite.failed)+'</span></div>':'')
+      +(supa.configured?'<div class="health-line"><b>Migration</b><span class="status-chip '+(ready.readyForCompare?'ok':'')+'">'+esc(ready.stage||'—')+'</span></div>':'')
+      +(shadow.compareEnabled?'<div class="health-line"><b>Parity</b><span>'+esc(parity.missing==null?'—':parity.missing)+' / '+esc(parity.mismatched==null?'—':parity.mismatched)+' / '+esc(parity.extra==null?'—':parity.extra)+'</span></div>':'');
   }catch(e){
     box.innerHTML='<div class="health-line"><b>Диагностика</b><span class="danger-text">Не удалось загрузить</span></div>';
   }
