@@ -25,6 +25,26 @@ Language App stresses Profiles, AI, progress-like workflows, notifications and c
 
 A product should be able to use Auth, Account, optional Profiles, Storage, Sync, AI, Premium, Notifications, Analytics, Diagnostics, Mobile shell, Admin Core and AppConfig without copying FitTimer-domain code.
 
+## Upstream validation
+
+The intended mature ecosystem is:
+
+```text
+        AppBase Core
+        /    |     \
+       ↓     ↓      ↓
+   FitTimer Lingua TaskApp
+```
+
+Integration testing must prove not only that products can be created from AppBase, but also that later AppBase Core updates can reach at least two materially different products without product-specific logic being added to Core.
+
+A successful milestone should demonstrate:
+1. a generic Core change made in AppBase;
+2. propagation/update into FitTimer;
+3. propagation/update into at least one non-fitness proof product;
+4. product-specific tests remain responsible for acceptance;
+5. no reverse dependency from AppBase into either product domain.
+
 ## Red flags
 
 - Core requires `program` as a business entity.

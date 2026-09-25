@@ -36,6 +36,25 @@ core → domain = forbidden
 
 Core exposes capabilities such as generic document storage, analytics events, notification delivery, and AI action execution. FitTimer supplies fitness semantics.
 
+## Core ownership after extraction
+
+Architect toward a clear single upstream:
+
+```text
+AppBase Core → FitTimer / Lingua / TaskApp / future products
+```
+
+Do not design AppBase as a passive copy that is periodically overwritten from FitTimer forever.
+
+During bootstrap, FitTimer can be the source of extracted generic code. Once AppBase is independently buildable and passes proof-product checks:
+- declare AppBase the canonical owner of reusable Core;
+- move future generic changes to AppBase first when practical;
+- distribute them downstream through versioned updates or reviewable PRs;
+- if a product requires an urgent Core fix first, require a generic backport to AppBase and reconcile downstream versions;
+- keep product-specific adapters/config/domain code in product repos.
+
+When choosing between a shared package, subtree/submodule, generated copy, or automated PR sync, evaluate current repository/tooling constraints. The ownership rule matters more than the transport mechanism.
+
 ## Avoid speculative abstraction
 
 Do not introduce Universal Content, Universal Actor, Universal Program, Universal Trainer, or a plugin framework merely because they sound reusable. Prefer a small capability contract until reuse is demonstrated by more than one product.

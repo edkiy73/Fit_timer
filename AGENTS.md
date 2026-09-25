@@ -29,6 +29,26 @@ The repository contains a dedicated, token-conscious agent team for the planned 
 
 Default AppBase task flow is **Architect → Extraction Engineer → QA → Architect**. UX, Security, Release/DevOps and Product Integration are specialists activated only by the triggers in the orchestration file. Do not give every agent the full repository or full conversation history; pass the TASK CARD, targeted context/diff, required contracts and a short HANDOFF.
 
+### Target upstream model
+
+The long-term ownership model is:
+
+```text
+        AppBase Core
+        /    |     \
+       ↓     ↓      ↓
+   FitTimer Lingua TaskApp
+```
+
+Interpretation:
+- AppBase becomes the upstream source of reusable Core/infrastructure after the first stable extraction.
+- Product repositories consume Core updates; product-specific domain code must not flow back into Core automatically.
+- Before AppBase is mature enough to be upstream, FitTimer may temporarily be the source of newly extracted generic Core changes. Treat this only as a transition phase.
+- Once AppBase is established, reusable fixes/features should normally be implemented in AppBase Core first, then propagated to products through reviewed update PRs.
+- Product-discovered Core bugs may be fixed in the product first only when urgency requires it; then backport the generic fix to AppBase promptly and re-sync downstream products.
+- Never maintain permanent bidirectional automatic file synchronization between AppBase and products. Prefer explicit versioned Core updates or reviewable sync PRs.
+- Automatic propagation may create PRs, but should not silently merge Core changes into products unless that policy is explicitly proven safe for the relevant repository.
+
 ### TypeScript migration policy
 
 For AppBase preparation, migrate to TypeScript **as early and as quickly as it is useful, but not as a separate mass rewrite**:

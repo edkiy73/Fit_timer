@@ -28,6 +28,31 @@ Agents must distinguish:
 
 Do not call a design "ideal", "definitely correct", "the only right solution", or equivalent unless the claim is actually demonstrated. When reasonable alternatives exist, mention the material alternative and why the chosen option is preferred for the current constraints. Confidence should match evidence.
 
+## Upstream / downstream ownership
+
+The target model is:
+
+```text
+        AppBase Core
+        /    |     \
+       ↓     ↓      ↓
+   FitTimer Lingua TaskApp
+```
+
+After AppBase reaches a stable reusable boundary:
+- AppBase Core is upstream.
+- FitTimer and future products are downstream consumers.
+- Core changes propagate from AppBase to products through explicit, reviewable updates.
+- Product-domain changes do not propagate into AppBase.
+- A product may reveal a reusable Core defect or missing capability. In that case, generalize/backport it to AppBase, then update downstream products from AppBase.
+- Avoid permanent two-way file sync: it makes ownership ambiguous and can reintroduce product-specific assumptions into Core.
+- Automated tooling may open sync/update PRs in downstream repositories, but each product keeps its own tests and acceptance gate.
+
+Transition period:
+- before AppBase is ready to be upstream, FitTimer remains the practical source repository for extraction work;
+- generic Core changes may temporarily flow FitTimer → AppBase during bootstrap;
+- this direction is temporary and should end once AppBase has its own stable Core and proof-product validation.
+
 ## TypeScript migration rule
 
 AppBase work uses a **migrate-on-meaningful-touch** policy:

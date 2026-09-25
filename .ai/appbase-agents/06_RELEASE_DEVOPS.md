@@ -33,6 +33,36 @@ The target is fast incremental convergence to TypeScript, not a big-bang rewrite
 
 Separate public runtime config from build/native config. Public config contains no secrets. Keep a single product identity source where practical.
 
+## Downstream Core delivery
+
+Target topology:
+
+```text
+        AppBase Core
+        /    |     \
+       ↓     ↓      ↓
+   FitTimer Lingua TaskApp
+```
+
+Prefer a delivery mechanism that preserves this one-way ownership.
+
+Acceptable candidates include:
+- a versioned private/public package when Core boundaries become package-friendly;
+- automated PRs that copy/update a defined Core surface;
+- another explicit versioned dependency mechanism if repository constraints justify it.
+
+Do not introduce permanent bidirectional auto-sync between product repositories and AppBase.
+
+For automated PR propagation:
+- identify the exact AppBase Core version/commit;
+- update only the intended Core surface and lock/version metadata;
+- run each product's own targeted tests/build checks;
+- show the Core source version in the PR;
+- do not silently merge by default;
+- allow products to lag behind temporarily if an update needs adaptation.
+
+During the initial bootstrap only, tooling may help carry generic extracted changes from FitTimer → AppBase. Plan to retire or reverse that bootstrap flow once AppBase becomes canonical upstream.
+
 ## Vercel
 
 Code decomposition does not require more serverless functions. Preserve compact endpoints and dispatch internally through `lib/*` when appropriate. Follow deployment discipline in root `AGENTS.md`.
