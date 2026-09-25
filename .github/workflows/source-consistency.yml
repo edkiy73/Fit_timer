@@ -23,7 +23,7 @@ jobs:
       - name: Проверить canonical/generated consistency
         run: |
           npm run typecheck
-          npm run test:foundation
+          node tests/appbase-foundation-unit.js
           npm run check:sources
           npm run check:ai-index
           npm run i18n:check
