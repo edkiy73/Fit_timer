@@ -45,7 +45,7 @@ if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app revie
 if(!mobileBridge.includes('biometricStatus') || !mobileBridge.includes('authenticateBiometric')) throw new Error('Native biometric bridge is missing');
 if(!mobileBridge.includes('updateWorkoutState') || !mobileBridge.includes('clearWorkoutState')) throw new Error('Native workout-state bridge is missing');
 if(!mobileBridge.includes('consumeWorkoutResume') || !mobileBridge.includes('fitWorkoutResumeRequest')) throw new Error('Native workout notification resume bridge is missing');
-if(!mobileBridge.includes('appUrlOpen') || !mobileBridge.includes('getLaunchUrl') || !mobileBridge.includes('consumeProgramLink')) throw new Error('Native App Link bridge is incomplete');
+if(!mobileCore.includes('appUrlOpen') || !mobileCore.includes('getLaunchUrl') || !mobileBridge.includes('consumeProgramLink')) throw new Error('Native App Link bridge is incomplete');
 const manifest = await readFile('android/app/src/main/AndroidManifest.xml', 'utf8');
 const directManifest = await readFile('android/app/src/direct/AndroidManifest.xml', 'utf8');
 if(manifest.includes('REQUEST_INSTALL_PACKAGES')) throw new Error('Play/store base manifest must not request package install permission');
