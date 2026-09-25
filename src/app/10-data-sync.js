@@ -1,19 +1,19 @@
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
-const fitStorage = AppBaseStorage.createStorage({
+const fitStorageReady = import('./core/storage.js').then(({createStorage}) => createStorage({
   dbName: 'fittimer',
   storeName: 'kv',
   mirrorKeys: ['account'],
   externalStorage: () => window.storage || null,
   onWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} }
-});
-const pk = key => fitStorage.namespacedKey(key, currentUser);
+}));
+const pk = key => key + '_' + currentUser;
 const curUser = () => users.find(u => u.id === currentUser) || users[0];
-async function kvGet(key){ return fitStorage.get(key); }
-async function kvSet(key, val){ return fitStorage.set(key, val); }
-async function kvDel(key){ await fitStorage.delete(key); }
-async function kvClearAll(){ await fitStorage.clearAll(); }
+async function kvGet(key){ return (await fitStorageReady).get(key); }
+async function kvSet(key, val){ return (await fitStorageReady).set(key, val); }
+async function kvDel(key){ await (await fitStorageReady).delete(key); }
+async function kvClearAll(){ await (await fitStorageReady).clearAll(); }
 async function saveUsers(){ await kvSet('users', JSON.stringify(users)); }
 function validAge(v){
   if(v === '' || v == null) return null;
