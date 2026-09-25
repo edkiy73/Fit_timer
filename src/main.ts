@@ -68,25 +68,22 @@ export const productBootstrap = {
 };
 
 
-type LegacyCoreGlobals = {
-  AppBaseNotifications: typeof notificationsCore;
-  AppBaseUI: typeof uiCore;
-};
-
 type LegacyProductModules = {
   infrastructure: typeof productInfrastructure;
   identity: typeof productIdentity;
   sync: typeof productSyncSchema;
+  notifications: typeof notificationsCore;
+  ui: typeof uiCore;
 };
 
-function exposeLegacyCoreGlobals(): void {
-  const legacy = globalThis as typeof globalThis & Partial<LegacyCoreGlobals>;
-  legacy.AppBaseNotifications = notificationsCore;
-  legacy.AppBaseUI = uiCore;
-  (legacy as typeof legacy & {FitTimerModules?: LegacyProductModules}).FitTimerModules = {
+function exposeLegacyProductModules(): void {
+  const legacy = globalThis as typeof globalThis & {FitTimerModules?: LegacyProductModules};
+  legacy.FitTimerModules = {
     infrastructure: productInfrastructure,
     identity: productIdentity,
-    sync: productSyncSchema
+    sync: productSyncSchema,
+    notifications: notificationsCore,
+    ui: uiCore
   };
 }
 
@@ -106,7 +103,7 @@ export function loadLegacyProductRuntime(): Promise<void> {
   });
 }
 
-exposeLegacyCoreGlobals();
+exposeLegacyProductModules();
 try{
   await loadLegacyProductRuntime();
 }catch(error){

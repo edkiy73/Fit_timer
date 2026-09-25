@@ -16,17 +16,20 @@ ok('legacy AppBase Core target is removed from source build',
   !build.includes("target: 'appbase-core.js'"));
 ok('product app target no longer lists Core runtimes',
   !build.slice(build.indexOf("target: 'app.js'"),build.indexOf("target: 'style.css'")).includes('src/core/'));
-ok('ESM entry keeps only still-needed UI/notification compatibility namespaces',
-  ['AppBaseNotifications','AppBaseUI'].every(x=>fs.readFileSync('src/main.ts','utf8').includes(x))
-  && ['AppBaseStorage','AppBaseIdentity','AppBaseSync','AppBaseObservability']
-    .every(x=>!fs.readFileSync('src/main.ts','utf8').includes(x)));
+ok('ESM entry exposes one product-module bridge and no AppBase globals',
+  /FitTimerModules/.test(fs.readFileSync('src/main.ts','utf8'))
+  && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
 ok('product app no longer embeds reusable Core namespace declarations',
   !app.includes('var AppBaseStorage;')
   && !app.includes('var AppBaseIdentity;')
   && !app.includes('var AppBaseSync;')
   && !app.includes('var AppBaseObservability;')
-  && !app.includes('var AppBaseNotifications;')
-  && !app.includes('var AppBaseUI;'));
+  && !app.includes('var FitTimerModules.notifications;')
+  && !app.includes('var FitTimerModules.ui;'));
+ok('product runtime contains no AppBase Core references',
+  !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(app)
+  && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
+
 ok('HTML loads ESM entry instead of legacy Core and product scripts',
   html.includes('<script type="module" src="esm/main.js"></script>')
   && !html.includes('<script src="appbase-core.js"></script>')
@@ -35,8 +38,8 @@ ok('web build no longer ships legacy Core bundle',
   !web.includes("'appbase-core.js'"));
 ok('mobile validation no longer requires legacy Core bundle',
   !mobile.includes("'dist/appbase-core.js'"));
-ok('ESM entry exposes legacy Core names before loading product runtime',
-  /exposeLegacyCoreGlobals/.test(fs.readFileSync('src/main.ts','utf8'))
+ok('ESM entry exposes product modules before loading product runtime',
+  /exposeLegacyProductModules/.test(fs.readFileSync('src/main.ts','utf8'))
   && /loadLegacyProductRuntime/.test(fs.readFileSync('src/main.ts','utf8')));
 
 process.exit(bad?1:0);

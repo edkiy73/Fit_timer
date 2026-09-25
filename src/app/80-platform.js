@@ -21,7 +21,7 @@ function applyTheme(){
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
-    AppBaseUI.applyCssVars(document.body, {
+    FitTimerModules.ui.applyCssVars(document.body, {
       bg: productTheme.background,
       card: productTheme.card,
       surface: productTheme.surface,
@@ -578,7 +578,7 @@ function limitNotificationCandidates(items){
     items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
       .map(x => notifyDayKey(new Date(x.at)))
   );
-  return AppBaseNotifications.limitCandidates(items,{
+  return FitTimerModules.notifications.limitCandidates(items,{
     maxTotal:NOTIFY_NATIVE_LIMIT,
     passiveDailyLimit:NOTIFY_PASSIVE_DAILY_LIMIT,
     engagementWeeklyLimit:3,
@@ -705,11 +705,11 @@ const ACTIONS = {
   // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
   // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
   closeModal: btn => {
-    const m = AppBaseUI.closestModal(btn);
-    AppBaseUI.closeModal(m);
+    const m = FitTimerModules.ui.closestModal(btn);
+    FitTimerModules.ui.closeModal(m);
   }
 };
-AppBaseUI.bindActions(document, ACTIONS);
+FitTimerModules.ui.bindActions(document, ACTIONS);
 // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
 // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
 // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.

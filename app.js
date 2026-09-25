@@ -4177,7 +4177,7 @@ const M_LABEL = Object.fromEntries(MUSCLES);
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
 function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
-  AppBaseUI.setShown(node, !!on);
+  FitTimerModules.ui.setShown(node, !!on);
 }
 
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
@@ -5861,7 +5861,7 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  AppBaseUI.openModal($('wellModal'));
+  FitTimerModules.ui.openModal($('wellModal'));
 }
 async function saveWell(){
   const num = (id, k) => {
@@ -5883,7 +5883,7 @@ async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  AppBaseUI.closeModal($('wellModal'));
+  FitTimerModules.ui.closeModal($('wellModal'));
   renderWellness();
 }
 
@@ -8667,7 +8667,7 @@ function openCompare(bIdx){
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), b);
   renderCmp();
-  AppBaseUI.openModal($('cmpModal'));
+  FitTimerModules.ui.openModal($('cmpModal'));
 }
 
 // свайп по фото в сравнении: влево — следующая дата, вправо — предыдущая.
@@ -8688,7 +8688,7 @@ function openPhotoFull(i){
   if(!photos.length) return;
   pfIdx = Math.max(0, Math.min(photos.length - 1, i));
   renderPhotoFull();
-  AppBaseUI.openModal($('photoFullModal'));
+  FitTimerModules.ui.openModal($('photoFullModal'));
 }
 function renderPhotoFull(){
   const p = photos[pfIdx];
@@ -8725,7 +8725,7 @@ wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
 $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
 $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) AppBaseUI.closeModal($('photoFullModal')); };
+$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) FitTimerModules.ui.closeModal($('photoFullModal')); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -8734,7 +8734,7 @@ async function delCmpPhoto(which){
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
-  if(photos.length < 2){ AppBaseUI.closeModal($('cmpModal')); return; }
+  if(photos.length < 2){ FitTimerModules.ui.closeModal($('cmpModal')); return; }
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), photos.length - 1);
   renderCmp();
@@ -16796,9 +16796,9 @@ function openSwapHint(){
   setShown('swapAI', true);
   $('swapOk').className = 'btn-ghost';
   $('swapHint').textContent = t('workout.swapAIHint');
-  AppBaseUI.openModal($('swapModal'));
+  FitTimerModules.ui.openModal($('swapModal'));
 }
-function closeSwapHint(){ AppBaseUI.closeModal($('swapModal')); }
+function closeSwapHint(){ FitTimerModules.ui.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
@@ -17811,7 +17811,7 @@ function applyTheme(){
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
-    AppBaseUI.applyCssVars(document.body, {
+    FitTimerModules.ui.applyCssVars(document.body, {
       bg: productTheme.background,
       card: productTheme.card,
       surface: productTheme.surface,
@@ -18368,7 +18368,7 @@ function limitNotificationCandidates(items){
     items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
       .map(x => notifyDayKey(new Date(x.at)))
   );
-  return AppBaseNotifications.limitCandidates(items,{
+  return FitTimerModules.notifications.limitCandidates(items,{
     maxTotal:NOTIFY_NATIVE_LIMIT,
     passiveDailyLimit:NOTIFY_PASSIVE_DAILY_LIMIT,
     engagementWeeklyLimit:3,
@@ -18495,11 +18495,11 @@ const ACTIONS = {
   // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
   // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
   closeModal: btn => {
-    const m = AppBaseUI.closestModal(btn);
-    AppBaseUI.closeModal(m);
+    const m = FitTimerModules.ui.closestModal(btn);
+    FitTimerModules.ui.closeModal(m);
   }
 };
-AppBaseUI.bindActions(document, ACTIONS);
+FitTimerModules.ui.bindActions(document, ACTIONS);
 // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
 // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
 // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
@@ -18674,7 +18674,7 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   emailNews:false,
   emailOffers:false
 });
-const notificationPreferenceStore = AppBaseNotifications.createPreferenceStore({
+const notificationPreferenceStore = FitTimerModules.notifications.createPreferenceStore({
   key:NOTIFICATION_PREFS_KEY,
   defaults:NOTIFICATION_PREF_DEFAULTS,
   storage:localStorage
@@ -19081,7 +19081,7 @@ async function refreshVoicePackUI(progressEvent){
   ]){
     const s=$(row[0]), b=$(row[1]), p=$(row[2]), bar=$(row[3]); if(!s||!b) continue;
     s.textContent=label;
-    AppBaseUI.setBusy(b, running, {busyText:button, idleText:button, disabled});
+    FitTimerModules.ui.setBusy(b, running, {busyText:button, idleText:button, disabled});
     if(p) setShown(row[2], running);
     if(bar) bar.style.width = (status && status.status === 'queued' ? 3 : pct) + '%';
   }
@@ -19095,7 +19095,7 @@ async function refreshVoicePackUI(progressEvent){
 async function downloadSelectedVoicePack(){
   if(!appRuntimeCompat.hasNative('downloadVoiceModel')) return;
   for(const id of ['btnVoicePack','btnHfVoicePack']){
-    AppBaseUI.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
+    FitTimerModules.ui.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
   }
   const ok=await appRuntimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();

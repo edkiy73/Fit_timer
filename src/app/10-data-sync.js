@@ -481,7 +481,7 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  AppBaseUI.openModal($('wellModal'));
+  FitTimerModules.ui.openModal($('wellModal'));
 }
 async function saveWell(){
   const num = (id, k) => {
@@ -503,7 +503,7 @@ async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  AppBaseUI.closeModal($('wellModal'));
+  FitTimerModules.ui.closeModal($('wellModal'));
   renderWellness();
 }
 
