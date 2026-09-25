@@ -1,6 +1,7 @@
 /* ================= RUNTIME COMPATIBILITY BOUNDARY =================
    Legacy browser/native globals live here while the frontend is still concatenated.
    Product/domain code should depend on this adapter instead of reading globals directly. */
+let runtimeBuild = '';
 const appRuntimeCompat = Object.freeze({
   externalStorage(){
     try{
@@ -29,6 +30,14 @@ const appRuntimeCompat = Object.freeze({
       }
     }catch(_){}
     return 'web';
+  },
+
+  setBuild(value){
+    runtimeBuild = String(value || '');
+  },
+
+  build(){
+    return runtimeBuild;
   },
 
   isNative(){
