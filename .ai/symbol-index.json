@@ -86,13 +86,8 @@
     },
     "src/app/00-dependencies.js": {
       "kind": "frontend-js",
-      "lines": 12,
-      "chars": 615
-    },
-    "src/app/05-runtime-compat.js": {
-      "kind": "frontend-js",
-      "lines": 255,
-      "chars": 9516
+      "lines": 13,
+      "chars": 672
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
