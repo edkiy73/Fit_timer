@@ -36,7 +36,10 @@ const fake=createDocumentStore({
       return {ok:true,status:204,text:async()=>'',json:async()=>({})};
     }
     return {
-      ok:true,status:200,text:async()=>'',json:async()=>[
+      ok:true,status:200,text:async()=>'',headers:{get:name=>{
+        if(String(name).toLowerCase()!=='content-range')return null;
+        return String(url).includes('deleted=eq.true')?'*/0':'0-0/1';
+      }},json:async()=>[
         {
           account_hash:'acc123456',
           profile_id:'p1',
@@ -46,7 +49,8 @@ const fake=createDocumentStore({
           device_id:'d1',
           deleted:false,
           payload:'{"x":1}',
-          source_at:'2026-09-25T00:00:00.000Z'
+          source_at:'2026-09-25T00:00:00.000Z',
+          shadowed_at:'2026-09-25T00:01:00.000Z'
         }
       ]
     };
@@ -64,6 +68,10 @@ const fake=createDocumentStore({
       at:'2026-09-25T00:00:00.000Z'
     });
     ok('shadow write enabled and succeeds',write.enabled===true&&write.ok===true,JSON.stringify(write));
+    const writeBatch=await Shadow.recordWriteBatch([write]);
+    ok('shadow write batch monitoring records successful batch',
+      writeBatch.enabled===true&&writeBatch.summary.written===1&&writeBatch.summary.failed===0,
+      JSON.stringify(writeBatch));
 
     const post=requests.find(x=>x.opts.method==='POST');
     const payload=post&&JSON.parse(String(post.opts.body||'[]'))[0];
@@ -78,6 +86,12 @@ const fake=createDocumentStore({
     ok('shadow parity reports exact match',
       parity.ok===true&&parity.parity===true&&parity.matches===1,
       JSON.stringify(parity));
+
+    const migration=await Shadow.migrationStatus();
+    ok('migration monitoring exposes document count and readiness',
+      migration.stats&&migration.stats.documents===1
+      &&migration.readiness&&migration.readiness.readyForCompare===true,
+      JSON.stringify(migration));
 
     await Shadow.purgeProfile('acc123456','p1');
     await Shadow.purgeAccount('acc123456');

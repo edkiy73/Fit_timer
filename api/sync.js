@@ -134,6 +134,7 @@ module.exports = async (req, res) => {
       manifest.profiles[user.id] = prev;
     }
 
+    const shadowWriteResults = [];
     for(const d of docs){
       const pid = String(d && d.profileId || '');
       const key = String(d && d.key || '');
@@ -148,11 +149,11 @@ module.exports = async (req, res) => {
         const storeKey = `sa:${mh}:${key}`;
         if(meta.deleted) await store.del(storeKey);
         else await store.set(storeKey, value || '', YEAR);
-        await SyncShadow.writeDocument({
+        shadowWriteResults.push(await SyncShadow.writeDocument({
           accountHash:mh, profileId:ACCOUNT_PROFILE, key,
           rev:meta.rev, schema:meta.schema, deviceId:meta.deviceId,
           deleted:meta.deleted, value:meta.deleted?null:(value || ''), at:meta.at
-        });
+        }));
         manifest.accountDocs[key] = Object.assign(meta, {storeKey});
         continue;
       }
@@ -170,16 +171,17 @@ module.exports = async (req, res) => {
       const storeKey = `sd:${mh}:${sha(pid + '\n' + key).slice(0, 32)}`;
       if(meta.deleted) await store.del(storeKey);
       else await store.set(storeKey, value || '', YEAR);
-      await SyncShadow.writeDocument({
+      shadowWriteResults.push(await SyncShadow.writeDocument({
         accountHash:mh, profileId:pid, key,
         rev:meta.rev, schema:meta.schema, deviceId:meta.deviceId,
         deleted:meta.deleted, value:meta.deleted?null:(value || ''), at:meta.at
-      });
+      }));
       prof.docs[key] = Object.assign(meta, {storeKey});
       manifest.profiles[pid] = prof;
     }
     manifest.at = now;
     await store.set(manifestKey, JSON.stringify(manifest), YEAR);
+    if(shadowWriteResults.length) await SyncShadow.recordWriteBatch(shadowWriteResults);
     return send(res, 200, {ok: true});
   }
 
@@ -214,13 +216,7 @@ module.exports = async (req, res) => {
       const authoritative = [];
       out.forEach(p => (p.docs || []).forEach(d => authoritative.push(Object.assign({profileId:p.user.id}, d))));
       accountDocs.forEach(d => authoritative.push(Object.assign({profileId:ACCOUNT_PROFILE}, d)));
-      const parity = await SyncShadow.compareAccount(mh, authoritative);
-      if(parity && parity.enabled){
-        const summary = Object.assign({at:new Date().toISOString()}, parity);
-        delete summary.error;
-        await store.set('migration:supabase:parity:last', JSON.stringify(summary), 7 * 24 * 3600);
-        if(parity.ok && !parity.parity) await store.incr('migration:supabase:parity:mismatch', 30 * 24 * 3600);
-      }
+      await SyncShadow.compareAccount(mh, authoritative);
     }
 
     return send(res, 200, {ok: true, profiles: out, accountDocs});

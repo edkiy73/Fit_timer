@@ -23,6 +23,11 @@ function renderHtml(h){
   const warnings = (h.warnings || []).map(x=>'<li>'+esc(x)+'</li>').join('');
   const provider = service.ai && service.ai.providers || {};
   const billing = service.billing && service.billing.providers || {};
+  const shadow = service.supabase && service.supabase.shadow || {};
+  const shadowStats = shadow.stats || {};
+  const shadowWrite = shadow.lastWrite || {};
+  const shadowParity = shadow.parity || {};
+  const shadowReady = shadow.readiness || {};
   const commit = build.commit || '—';
 
   return '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
@@ -59,6 +64,7 @@ function renderHtml(h){
     +'<section class="card"><h2>Деплой</h2><div class="metric">'+esc(commit)+'</div><div class="sub">'+esc(build.env||'локально')+(build.region?' · '+esc(build.region):'')+'</div>'
     +'<div class="chips">'+chip(!!build.onVercel,build.onVercel?'Vercel':'локальный запуск')+'</div></section>'
     +'</div>'
+    +(service.supabase&&service.supabase.configured?'<section class="section card"><h2>Supabase migration</h2><div class="chips">'+chip(!!shadow.writeEnabled,'shadow write · '+(shadow.writeEnabled?'on':'off'))+chip(!!shadow.compareEnabled,'compare · '+(shadow.compareEnabled?'on':'off'))+chip(!!shadowReady.readyForCompare,'ready for compare · '+(shadowReady.readyForCompare?'yes':'no'))+'</div><div class="facts" style="margin-top:10px">documents: '+esc(shadowStats.documents==null?'—':shadowStats.documents)+'\nlast write failed: '+esc(shadowWrite.failed==null?'—':shadowWrite.failed)+'\nlast parity missing/mismatched/extra: '+esc(shadowParity.missing==null?'—':shadowParity.missing)+'/'+esc(shadowParity.mismatched==null?'—':shadowParity.mismatched)+'/'+esc(shadowParity.extra==null?'—':shadowParity.extra)+'\nstage: '+esc(shadowReady.stage||'—')+'\n'+esc(shadowReady.reason||'')+'</div></section>':'')
     +'<section class="section card"><h2>Критичные проверки</h2><ul class="checks">'
     +(h.probes||[]).map(x=>'<li><span class="'+(x.ok?'dot ok':'dot bad')+'"></span><b>'+esc(x.name)+' · '+(x.ok?'OK':'ERROR')+' · '+esc(x.latencyMs)+' мс</b>'+(x.error?'<small>'+esc(x.error)+'</small>':'')+'</li>').join('')
     +(steps?'<li><span class="dot '+(storage.status==='ok'?'ok':'bad')+'"></span><b>Redis-команды</b><small><ul class="checks">'+steps+'</ul></small></li>':'')
