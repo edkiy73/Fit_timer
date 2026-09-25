@@ -36,11 +36,26 @@ const coreSources = [
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
     .map(name => fs.readFileSync('src/core/' + name, 'utf8'))
 ].join('\n');
-const forbidden = ['Workout', 'Exercise', 'Trainer', 'Muscle', 'Warmup'];
+const forbidden = ['Workout', 'Exercise', 'Trainer', 'Muscle', 'Warmup', 'Gender', 'Age', 'PrepSec'];
 ok('Core sources contain no fitness entities', !forbidden.some(word => coreSources.includes(word)),
   forbidden.filter(word => coreSources.includes(word)).join(', ') || 'clean');
 ok('typed Core build/check scripts exist',
   typeof pkg.scripts['build:core'] === 'string' && typeof pkg.scripts['check:core'] === 'string');
+
+const fitnessTypes = fs.readFileSync('src/types/fitness.ts', 'utf8');
+ok('FitTimer profile extension is outside Core contracts',
+  /FitTimerProfileExtension/.test(fitnessTypes) && /gender/.test(fitnessTypes) && /age/.test(fitnessTypes));
+
+const identityContext = {AppBaseIdentity: undefined, Date};
+vm.createContext(identityContext);
+vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
+const accountDraft = identityContext.AppBaseIdentity.createAccount(new Date('2026-01-02T03:04:05.000Z'));
+const profileDraft = identityContext.AppBaseIdentity.createProfileDraft('Demo');
+ok('generic account defaults are domain-free',
+  accountDraft.email === '' && accountDraft.handle === '' && accountDraft.deletedProfiles.length === 0);
+ok('generic profile defaults are domain-free',
+  profileDraft.name === 'Demo' && profileDraft.theme === 'system' && profileDraft.locale === 'system'
+  && !('gender' in profileDraft) && !('age' in profileDraft));
 
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);
