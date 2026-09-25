@@ -173,18 +173,15 @@ ok('Identity Core uses ESM exports instead of a namespace global',
   /export function createAccount/.test(identityModuleSource)
   && /export function createProfileDraft/.test(identityModuleSource)
   && !/namespace AppBaseIdentity/.test(identityModuleSource));
-ok('ESM entry owns an explicit Identity Core dependency',
-  /from ['"]\.\/core\/identity\.js['"]/.test(esmEntrySource)
-  && /createAccount/.test(esmEntrySource)
-  && /createProfileDraft/.test(esmEntrySource));
+ok('product identity owns the explicit Identity Core dependency',
+  /from ['"]\.\.\/core\/identity\.js['"]/.test(fs.readFileSync('src/app/identity.ts','utf8')));
 
 const syncModuleSource = fs.readFileSync('src/core/sync.ts', 'utf8');
 ok('Sync Core uses ESM exports instead of a namespace global',
   /export function createRegistry/.test(syncModuleSource)
   && !/namespace AppBaseSync/.test(syncModuleSource));
-ok('ESM entry owns an explicit Sync Core dependency',
-  /from ['"]\.\/core\/sync\.js['"]/.test(esmEntrySource)
-  && /createRegistry/.test(esmEntrySource));
+ok('product sync schema owns the explicit Sync Core dependency',
+  /from ['"]\.\.\/core\/sync\.js['"]/.test(fs.readFileSync('src/app/sync-schema.ts','utf8')));
 
 const storageModuleSource = fs.readFileSync('src/core/storage.ts', 'utf8');
 ok('Storage Core uses ESM exports instead of a namespace global',
@@ -196,10 +193,8 @@ ok('Storage Core keeps external and IndexedDB contracts intact',
   && /indexedDB\.open/.test(storageModuleSource)
   && /localStorage\.getItem/.test(storageModuleSource)
   && /localStorage\.setItem/.test(storageModuleSource));
-ok('ESM entry owns an explicit Storage Core dependency',
-  /from ['"]\.\/core\/storage\.js['"]/.test(esmEntrySource)
-  && /createStorage/.test(esmEntrySource)
-  && /namespacedKey/.test(esmEntrySource));
+ok('product infrastructure owns the explicit Storage Core dependency',
+  /from ['"]\.\.\/core\/storage\.js['"]/.test(fs.readFileSync('src/app/infrastructure.ts','utf8')));
 
 const observabilityModuleSource = fs.readFileSync('src/core/observability.ts', 'utf8');
 ok('Observability Core uses ESM exports instead of a namespace global',
@@ -209,9 +204,8 @@ ok('Observability Core keeps analytics and diagnostic contracts intact',
   /action: 'analytics'/.test(observabilityModuleSource)
   && /action: 'client_error'/.test(observabilityModuleSource)
   && /diagnosticPayload/.test(observabilityModuleSource));
-ok('ESM entry owns an explicit Observability Core dependency',
-  /from ['"]\.\/core\/observability\.js['"]/.test(esmEntrySource)
-  && /createClient/.test(esmEntrySource));
+ok('product infrastructure owns the explicit Observability Core dependency',
+  /from ['"]\.\.\/core\/observability\.js['"]/.test(fs.readFileSync('src/app/infrastructure.ts','utf8')));
 
 const notificationsModuleSource = fs.readFileSync('src/core/notifications.ts', 'utf8');
 ok('Notifications Core uses ESM exports instead of a namespace global',
@@ -330,6 +324,7 @@ ok('ESM entry composes product infrastructure explicitly',
   /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
   && /productInfrastructure/.test(esmEntrySource));
 
+const accountProductSource = fs.readFileSync('src/app/20-account.js','utf8');
 const productIdentitySource = fs.readFileSync('src/app/identity.ts', 'utf8');
 ok('product identity composes generic Identity Core through imports',
   /from ['"]\.\.\/core\/identity\.js['"]/.test(productIdentitySource)
@@ -341,6 +336,10 @@ ok('FitTimer profile extension stays in product layer',
   && !/gender|age/.test(fs.readFileSync('src/core/identity.ts','utf8')));
 ok('product identity has no legacy AppBaseIdentity global',
   !/AppBaseIdentity/.test(productIdentitySource));
+ok('legacy account/profile flow consumes product identity instead of Core global',
+  /FitTimerModules\.identity\.createAccount/.test(accountProductSource)
+  && /FitTimerModules\.identity\.createProfile/.test(accountProductSource)
+  && !/AppBaseIdentity/.test(accountProductSource));
 ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));
