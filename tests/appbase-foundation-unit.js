@@ -131,6 +131,11 @@ ok('legacy native lifecycle calls are isolated to compatibility boundary',
   legacyLifecycleCalls.every(token => !lifecycleNativeSources.includes(token))
   && ['candidate.isNative','candidate.consumeProgramLink','candidate.consumeWorkoutResume']
     .every(token => runtimeCompatSource.includes(token)));
+const workoutResumeEventsSource = fs.readFileSync('src/app/90-events.js', 'utf8');
+ok('workout resume pending session stays module-local',
+  !workoutResumeEventsSource.includes('window.__pendingSession')
+  && workoutResumeEventsSource.includes('let pendingSession = null;'));
+
 
 
 
