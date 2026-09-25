@@ -345,7 +345,16 @@ The first notification boundary now moves product-neutral policy into typed Core
 - exact-time reminders still bypass the passive daily budget exactly as before;
 - engagement suppression against workout days is passed into Core as a product callback instead of being hard-coded into Core.
 
-Native permission/schedule/cancel/push transport still lives in `mobile.js`; moving that transport behind a generic bridge is intentionally deferred to the next notification/mobile slice.
+### Native notification transport implementation status
+
+The next slice moves product-neutral Capacitor notification transport into `src/core/native-notifications.ts`:
+- local notification permission checks/requests;
+- exact-alarm capability checks;
+- generic schedule/cancel/remove-delivered operations;
+- replace-a-reserved-ID-range scheduling;
+- push permission/registration.
+
+`mobile.js` remains the FitTimer adapter that constructs rest/workout/inactivity payloads and handles FitTimer action events. Core does not know workout, rest, program or Premium semantics.
 
 ## Phase 9 — Mobile bridge split
 
@@ -368,7 +377,45 @@ FitTimer side:
 - rest/workout notification construction;
 - fitness-specific custom event names.
 
-## Phase 10 — Admin decomposition
+## Phase 10 — Infrastructure adapters: Supabase + OpenRouter
+
+Owner: Architect + DevOps/Backend. Review: Security + QA.
+
+Detailed migration plan: `docs/infrastructure-adapters.md`.
+
+Target architecture:
+
+```text
+AppBase Core
+├─ Server Store interface
+│  ├─ current Upstash adapter
+│  └─ Supabase/Postgres adapter
+└─ AI Provider interface
+   ├─ direct providers
+   └─ OpenRouter adapter
+```
+
+Rules:
+- AppBase must not require Supabase or OpenRouter to function conceptually; both are provider adapters.
+- Supabase database migration is separate from authentication migration.
+- Do not expose Supabase service-role or OpenRouter keys to browser/APK.
+- Preserve current sync/account wire contracts during initial storage migration.
+- Start Supabase with shadow writes/parity checks before any authoritative cutover.
+- Keep direct AI provider paths while OpenRouter reliability/cost/capabilities are measured.
+- Do not keep permanent dual-write or bidirectional migration paths.
+
+Recommended order:
+1. Supabase project/env + server-only connection health.
+2. Provider-neutral server-store interface around actual AppBase needs.
+3. Supabase schema and shadow writes.
+4. Parity/revision/tombstone monitoring.
+5. OpenRouter provider adapter behind existing AI Runtime.
+6. Provider routing/fallback comparison.
+7. Controlled Supabase read/write cutover only after acceptance gates.
+
+Supabase Auth, Realtime and Storage are deferred unless a concrete product need justifies them.
+
+## Phase 11 — Admin decomposition
 
 Owner: Architect + Extraction Engineer. Review: Security + QA.
 
@@ -391,7 +438,7 @@ FitTimer Admin candidates:
 
 Milestone: Core Admin can conceptually run without catalog/trainer modules.
 
-## Phase 11 — Reusable UI foundation
+## Phase 12 — Reusable UI foundation
 
 Owner: UX/UI. Implementation: Extraction Engineer.
 
@@ -401,7 +448,7 @@ Candidate primitives: Button, Input, Select, Switch, Tabs, Card/ListRow, Modal/S
 
 Brand tokens should allow a future product to stop looking like FitTimer without rewriting every screen.
 
-## Phase 12 — Retire legacy JS/global build path
+## Phase 13 — Retire legacy JS/global build path
 
 Owner: Architect + DevOps. Review: QA.
 
@@ -415,7 +462,7 @@ ES modules/bundling should already have been introduced earlier when typed Core 
 
 Do not combine final legacy-build removal with unrelated data/protocol migrations.
 
-## Phase 13 — Dependency rules
+## Phase 14 — Dependency rules
 
 Automate:
 
@@ -425,7 +472,7 @@ domain may import core
 app/bootstrap may compose both
 ```
 
-## Phase 14 — Feature/capability config
+## Phase 15 — Feature/capability config
 
 Only after real modules exist, support capabilities such as:
 
@@ -440,7 +487,7 @@ sharing
 
 Do not create `if (app === 'fitness')` / `if (app === 'language')` branches inside Core.
 
-## Phase 15 — AppBase readiness audit
+## Phase 16 — AppBase readiness audit
 
 Before fork/snapshot:
 - typecheck/contracts exist;
@@ -456,7 +503,7 @@ Before fork/snapshot:
 - Core → Domain imports are prevented;
 - profile/auth/sync/backup regressions remain green.
 
-## Phase 16 — Core upstream transition
+## Phase 17 — Core upstream transition
 
 After the AppBase extraction and proof-product checks, explicitly switch ownership:
 
@@ -499,12 +546,13 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 8. AI runtime split — migrate touched reusable runtime modules to TypeScript.
 9. Notifications split — migrate reusable engine/platform surface to TypeScript.
 10. Mobile bridge split — type the JS/TS boundary as far as the current Capacitor setup safely allows.
-11. Admin internal decomposition — new Core internals TypeScript where build/runtime permits.
-12. UI primitives/tokens — TypeScript for new reusable behavior modules; stable markup/CSS remain as appropriate.
-13. Retire remaining legacy global/concatenation compatibility.
-14. Dependency checks + stricter TS settings.
-15. Readiness audit.
-16. Extract AppBase and validate proof products.
-17. Switch Core ownership to AppBase and establish downstream update PRs.
+11. Infrastructure adapters — Supabase foundation/shadow migration + OpenRouter provider.
+12. Admin internal decomposition — new Core internals TypeScript where build/runtime permits; surface provider health/config only after adapters exist.
+13. UI primitives/tokens — TypeScript for new reusable behavior modules; stable markup/CSS remain as appropriate.
+14. Retire remaining legacy global/concatenation compatibility.
+15. Dependency checks + stricter TS settings.
+16. Readiness audit.
+17. Extract AppBase and validate proof products.
+18. Switch Core ownership to AppBase and establish downstream update PRs.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.
