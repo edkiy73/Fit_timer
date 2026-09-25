@@ -5,8 +5,6 @@ const required = [
   'dist/style.css',
   'dist/app.js',
   'dist/app.config.js',
-  'dist/native-notifications.js',
-  'dist/mobile-core.js',
   'dist/esm/main.js',
   '.well-known/assetlinks.json',
   'android/app/src/main/AndroidManifest.xml',
@@ -33,13 +31,13 @@ if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 const html = await readFile('dist/index.html', 'utf8');
 const app = await readFile('dist/app.js', 'utf8');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
-if(!html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
+if(!html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="mobile.js"></script>') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
-const nativeNotificationCore = await readFile('native-notifications.js', 'utf8');
-if(!nativeNotificationCore.includes('AppBaseNativeNotifications') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification transport is missing');
-const mobileCore = await readFile('mobile-core.js', 'utf8');
-if(!mobileCore.includes('AppBaseMobile') || !mobileCore.includes('shareBlob') || !mobileCore.includes('onLifecycle')) throw new Error('Generic mobile Core bridge is missing');
+const nativeNotificationCore = await readFile('dist/esm/core/native-notifications.js', 'utf8');
+if(!nativeNotificationCore.includes('createTransport') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification ESM transport is missing');
+const mobileCore = await readFile('dist/esm/core/mobile.js', 'utf8');
+if(!mobileCore.includes('createBridge') || !mobileCore.includes('shareBlob') || !mobileCore.includes('onLifecycle')) throw new Error('Generic mobile Core ESM bridge is missing');
 const mobileBridge = await readFile('mobile.js', 'utf8');
 if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal')) throw new Error('Native update bridge is incomplete');
 if(!mobileBridge.includes('installUpdate') || !mobileBridge.includes('resumeUpdateInstall')) throw new Error('Native direct-update bridge is incomplete');
