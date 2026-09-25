@@ -17,7 +17,8 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
-  const productUi = window.FIT_TIMER_CONFIG && window.FIT_TIMER_CONFIG.brand && window.FIT_TIMER_CONFIG.brand.ui;
+  const productConfig = window.APP_CONFIG || window.FIT_TIMER_CONFIG;
+  const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
     AppBaseUI.applyCssVars(document.body, {

@@ -12002,7 +12002,7 @@ function importProgramCode(code){
 
    База по умолчанию — тот же адрес, откуда открыто приложение: функции лежат
    рядом со страницей (api/ в репозитории). */
-const RUNTIME_CONFIG = window.FIT_TIMER_CONFIG || {};
+const RUNTIME_CONFIG = window.APP_CONFIG || window.FIT_TIMER_CONFIG || {};
 const API_BASE = RUNTIME_CONFIG.apiBase
   ? String(RUNTIME_CONFIG.apiBase).replace(/\/$/, '')
   : (location.protocol.startsWith('http') ? '' : null);
@@ -17596,7 +17596,8 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
-  const productUi = window.FIT_TIMER_CONFIG && window.FIT_TIMER_CONFIG.brand && window.FIT_TIMER_CONFIG.brand.ui;
+  const productConfig = window.APP_CONFIG || window.FIT_TIMER_CONFIG;
+  const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
     AppBaseUI.applyCssVars(document.body, {
