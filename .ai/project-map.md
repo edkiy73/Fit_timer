@@ -72,6 +72,9 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/types/fitness.ts` | FitTimer-only extensions of generic contracts | fitness/domain type changes |
 | `src/core/storage.ts` | generic local KV storage | storage/Core work |
 | `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
+| `src/core/sync.ts` | generic client document registry/scopes | sync/Core work |
+| `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
+| `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
 | `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
@@ -89,7 +92,8 @@ Localization:
 
 Canonical JS chunks:
 - `src/app/00-core.js` — shared core/navigation/start helpers.
-- `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`.
+- `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`, document admission is delegated to AppBase Sync registry.
+- `src/app/11-sync-schema.js` — FitTimer document registration for the generic sync registry.
 - `src/app/20-account.js` — profile/account/subscription/login/biometrics.
 - `src/app/30-progress-media.js` — warmup, photos, export/import, onboarding.
 - `src/app/40-programs-ai.js` — progression, home/programs, sharing, AI/images.
