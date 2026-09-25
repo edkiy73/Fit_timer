@@ -24,6 +24,7 @@ const publicAppUrl = cleanOrigin(process.env.FIT_TIMER_PUBLIC_URL, product.defau
 await rm(out, {recursive:true, force:true});
 await mkdir(out, {recursive:true});
 await Promise.all(files.map(file => cp(path.join(root, file), path.join(out, file))));
+await cp(path.join(root, 'core'), path.join(out, 'core'), {recursive:true});
 
 const runtimeConfig = {
   appId: product.id,
@@ -42,7 +43,7 @@ if(!html.includes('app.config.js') || !html.includes('mobile.js') || !html.inclu
   throw new Error('index.html must load runtime scripts and stylesheet');
 }
 
-console.log(`Built ${files.length + 1} files in dist`);
+console.log(`Built ${files.length + 1} files plus Core modules in dist`);
 console.log(`App: ${product.name} (${product.id})`);
 console.log(`API: ${apiBase}`);
 console.log(`Public links: ${publicAppUrl}`);
