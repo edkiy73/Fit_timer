@@ -39,6 +39,14 @@ ok('Capacitor platform global is isolated to compatibility boundary',
   runtimeCompatSource.includes('window.Capacitor')
   && !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.Capacitor')
   && runtimeCompatSource.includes('candidate.getPlatform'));
+const buildLabelSources = [
+  fs.readFileSync('src/app/10-data-sync.js','utf8'),
+  fs.readFileSync('src/app/20-account.js','utf8')
+].join('\n');
+ok('build label stays out of window globals',
+  !buildLabelSources.includes('window.FIT_TIMER_BUILD')
+  && runtimeCompatSource.includes('setBuildLabel(value)')
+  && runtimeCompatSource.includes('buildLabel()'));
 ok('runtime compatibility adapter loads before product data sync',
   sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
   && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));
