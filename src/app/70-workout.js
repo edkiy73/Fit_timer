@@ -150,7 +150,7 @@ function setPause(p, silent){
   if(p){
     state.paused = true;
     state.pausedAt = Date.now();
-    appRuntimeCompat.cancelRest();
+    FitTimerModules.runtimeCompat.cancelRest();
     syncNativeWorkoutState(state.steps[state.stepIdx], 0);
   } else {
     const pausedFor = Date.now() - state.pausedAt;
@@ -191,7 +191,7 @@ function startWorkout(fromIdx, elapsed, options){
   const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
-  appRuntimeCompat.requestNotifications();
+  FitTimerModules.runtimeCompat.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»
@@ -251,7 +251,7 @@ function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
   state.remaining = 0;
-  appRuntimeCompat.cancelRest();
+  FitTimerModules.runtimeCompat.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
 }
@@ -295,7 +295,7 @@ function nextNativeWorkStep(){
 
 let nativeSessionSaveT = 0;
 function autosaveNativeWorkoutSession(delay){
-  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
+  if(!FitTimerModules.runtimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = setTimeout(()=>{
     nativeSessionSaveT = 0;
@@ -304,14 +304,14 @@ function autosaveNativeWorkoutSession(delay){
 }
 
 window.addEventListener('fitAppBackground', ()=>{
-  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
+  if(!FitTimerModules.runtimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
   saveSession().catch(()=>{});
 });
 
 function syncNativeWorkoutState(step, endsAt){
-  if(!step || !appRuntimeCompat.hasNative('updateWorkoutState')) return;
+  if(!step || !FitTimerModules.runtimeCompat.hasNative('updateWorkoutState')) return;
   const next = nextNativeWorkStep();
   const paused = !!state.paused;
   const now = Date.now();
@@ -321,7 +321,7 @@ function syncNativeWorkoutState(step, endsAt){
   // A running timer is intentional activity. Start the 20-minute "forgotten workout"
   // window after that timer should finish, not in the middle of a long timed exercise.
   const inactivityBase = timed ? Number(endsAt) : now;
-  appRuntimeCompat.updateWorkoutState({
+  FitTimerModules.runtimeCompat.updateWorkoutState({
     active: true,
     sessionId: String(state.workoutSessionId || ''),
     workoutTitle: (state.current && state.current.title) || 'Fit Timer',
@@ -820,7 +820,7 @@ window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){
-  appRuntimeCompat.stopSpeaking();
+  FitTimerModules.runtimeCompat.stopSpeaking();
   try{ speechSynthesis.cancel(); }catch(e){}
 }
 
@@ -863,8 +863,8 @@ function reviewMilestoneDue(count, now){
 
 async function maybeRequestAppReview(count){
   const milestone = reviewMilestoneDue(count);
-  if(!milestone || !appRuntimeCompat.hasNative('requestReview')) return false;
-  const ok = await appRuntimeCompat.requestReview();
+  if(!milestone || !FitTimerModules.runtimeCompat.hasNative('requestReview')) return false;
+  const ok = await FitTimerModules.runtimeCompat.requestReview();
   if(!ok) return false;
   const state = reviewPromptState();
   state.attempts.push({count:Number(count) || milestone, milestone, at:Date.now()});
@@ -1070,7 +1070,7 @@ function finishWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  appRuntimeCompat.clearWorkoutState();
+  FitTimerModules.runtimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -1631,7 +1631,7 @@ function tearDownWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  appRuntimeCompat.clearWorkoutState();
+  FitTimerModules.runtimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
