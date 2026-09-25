@@ -122,8 +122,9 @@ module.exports = async (req, res) => {
       if(!prev.docs) prev.docs = {};
       if(prev.userAt && !newerProfile({at: rec.at, deviceId}, {at: prev.userAt, deviceId: prev.userDevice})) continue;
       if(rec && rec.deleted){
+        const shadowPurge = await SyncShadow.purgeProfile(mh,user.id);
+        if(shadowPurge.enabled && !shadowPurge.ok) return fail(res,503,'shadow_delete_failed');
         for(const d of Object.values(prev.docs)) if(d && d.storeKey) await store.del(d.storeKey);
-        await SyncShadow.purgeProfile(mh,user.id);
         manifest.profiles[user.id] = {user, userAt:rec.at || now, userDevice:deviceId,
           deleted:true, docs:{}};
         continue;
