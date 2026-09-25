@@ -65,7 +65,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
 | `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
 | `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
-| `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
+| `mobile.js` | FitTimer mobile composition/adapters over AppBase mobile primitives | workout/voice/update/deep-link product behavior |
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
 | `src/types/core.ts` | reusable AppBase contracts | Core/AppBase/type changes |
@@ -76,6 +76,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/observability.ts` | generic client analytics/diagnostic transport | analytics/diagnostics Core work |
 | `src/core/notifications.ts` | generic notification preferences + delivery budget policy | notification/Core work |
 | `src/core/native-notifications.ts` | generic Capacitor local/push notification transport | mobile notification/Core work |
+| `src/core/mobile.ts` | generic lifecycle/URL/share/haptic/theme/biometry bridge | mobile/Core work |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
