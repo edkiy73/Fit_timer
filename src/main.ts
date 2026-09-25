@@ -8,6 +8,7 @@ import { createTransport } from './core/native-notifications.js';
 import { createBridge } from './core/mobile.js';
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 import { createProductInfrastructure } from './app/infrastructure.js';
+import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
 
 /**
  * Future ESM application entry point.
@@ -68,4 +69,9 @@ export const productSyncSchema = {
 
 export const productInfrastructure = {
   create: createProductInfrastructure
+};
+
+export const productIdentity = {
+  createAccount: createFitTimerAccount,
+  createProfile: createFitTimerProfile
 };
