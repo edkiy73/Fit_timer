@@ -273,6 +273,17 @@ diagnostics.capture(error, context?)
 
 Core must not own workout event names.
 
+### Telemetry implementation status
+
+The client telemetry boundary now separates mechanism from FitTimer taxonomy:
+- `src/core/telemetry.ts` owns generic `track(event, properties?)` and diagnostic `capture(...)` behavior;
+- `src/app/12-telemetry.js` supplies FitTimer device/platform/locale/Premium context and the current `/api/auth` transport;
+- global browser error/rejection listeners are wired by the FitTimer adapter, not by Storage/Data Sync;
+- the server analytics event allowlist moved to `lib/fit-analytics-schema.js`, so the reusable analytics runtime no longer contains workout/program event names;
+- `lib/diagnostics.js` already remains product-neutral and continues to own server-side redaction/aggregation.
+
+Existing event IDs, Redis keys, retention windows and admin analytics response shapes are intentionally unchanged in this phase.
+
 ## Phase 7 — AI Runtime / Product Actions split
 
 Owner: Architect. Implementation: Extraction Engineer. Review: Security + QA.
