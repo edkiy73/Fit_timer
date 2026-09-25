@@ -651,9 +651,9 @@ function openSwapHint(){
   setShown('swapAI', true);
   $('swapOk').className = 'btn-ghost';
   $('swapHint').textContent = t('workout.swapAIHint');
-  AppBaseUI.openModal($('swapModal'));
+  FitTimerModules.ui.openModal($('swapModal'));
 }
-function closeSwapHint(){ AppBaseUI.closeModal($('swapModal')); }
+function closeSwapHint(){ FitTimerModules.ui.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
