@@ -7,7 +7,7 @@ const ok=(name,cond)=>{
 };
 
 const source=fs.readFileSync('src/core/ui.ts','utf8');
-const runtime=fs.readFileSync('src/core/ui.runtime.js','utf8');
+const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
 [
   'setShown','setText','openModal','closeModal','closestModal','setBusy','bindActions'
@@ -17,7 +17,7 @@ ok('UI Core stays product-neutral',
   !/Fit ?Timer|workout|exercise|trainer|catalog|program/i.test(source));
 ok('UI Core has no app-specific selectors',
   !/#\w+|scrWork|btnDone|modal-card/.test(source));
-ok('generated UI runtime exposes AppBaseUI',
-  runtime.includes('var AppBaseUI')&&runtime.includes('exports.bindActions = bindActions'));
+ok('production ESM entry exposes temporary AppBaseUI compatibility',
+  /AppBaseUI/.test(esmEntry) && /uiCore/.test(esmEntry));
 
 process.exit(bad?1:0);
