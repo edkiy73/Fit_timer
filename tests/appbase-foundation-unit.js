@@ -138,6 +138,10 @@ ok('legacy native lifecycle calls are isolated to compatibility boundary',
 ok('pending workout session stays module-local',
   !fs.readFileSync('src/app/90-events.js','utf8').includes('window.__pendingSession')
   && !fs.readFileSync('tests/workout-resume.js','utf8').includes('window.__pendingSession'));
+ok('product build identifier stays out of window globals',
+  !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.FIT_TIMER_BUILD')
+  && !fs.readFileSync('src/app/20-account.js','utf8').includes('window.FIT_TIMER_BUILD')
+  && fs.readFileSync('src/app/10-data-sync.js','utf8').includes("const FIT_TIMER_BUILD = '20.09 · v22'"));
 
 
 
