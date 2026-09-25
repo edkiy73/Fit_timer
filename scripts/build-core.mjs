@@ -5,7 +5,8 @@ const CHECK = process.argv.includes('--check');
 const targets = [
   ['src/core/storage.ts', 'src/core/storage.runtime.js'],
   ['src/core/identity.ts', 'src/core/identity.runtime.js'],
-  ['src/core/sync.ts', 'src/core/sync.runtime.js']
+  ['src/core/sync.ts', 'src/core/sync.runtime.js'],
+  ['src/core/telemetry.ts', 'src/core/telemetry.runtime.js']
 ];
 
 let bad = false;
