@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1414,
-      "chars": 68482,
+      "chars": 68442,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -86,8 +86,8 @@
     },
     "src/app/05-runtime-compat.js": {
       "kind": "frontend-js",
-      "lines": 18,
-      "chars": 645
+      "lines": 86,
+      "chars": 3133
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
@@ -233,8 +233,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 993,
-      "chars": 44260,
+      "lines": 989,
+      "chars": 44065,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -301,7 +301,7 @@
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
       "lines": 947,
-      "chars": 42641,
+      "chars": 42623,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -370,7 +370,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2935,
-      "chars": 135680,
+      "chars": 135662,
       "symbols": [
         "add",
         "ageError",
@@ -800,7 +800,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 719,
-      "chars": 31424,
+      "chars": 31368,
       "symbols": [
         "add",
         "advance",
