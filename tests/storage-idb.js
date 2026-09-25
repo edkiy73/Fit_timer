@@ -37,12 +37,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   });
   await page.reload({waitUntil: 'load'});
   await page.waitForTimeout(1500);
-  const mig = await page.evaluate(async () => ({
-    prog: customPrograms.some(p => p.id === 'old'),
-    lsProg: localStorage.getItem('customPrograms_u1'),
-    idb: await fitStorage.__testReadIndexedDb('customPrograms_u1'),
-    lsAccount: localStorage.getItem('account')
-  }));
+  const mig = await page.evaluate(async () => {
+    const storage = await fitStorageReady;
+    return {
+      prog: customPrograms.some(p => p.id === 'old'),
+      lsProg: localStorage.getItem('customPrograms_u1'),
+      idb: await storage.__testReadIndexedDb('customPrograms_u1'),
+      lsAccount: localStorage.getItem('account')
+    };
+  });
   ok('данные старой версии на месте', mig.prog);
   ok('и переехали в IndexedDB', !!mig.idb && /Старая программа/.test(mig.idb));
   ok('копия в localStorage освобождена', mig.lsProg === null, String(mig.lsProg).slice(0, 20));
@@ -66,7 +69,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // 3) записать некуда: ни IndexedDB, ни localStorage
   const fail = await page.evaluate(async () => {
-    fitStorage.__testDisableIndexedDb();
+    const storage = await fitStorageReady;
+    storage.__testDisableIndexedDb();
     const orig = Storage.prototype.setItem;
     Storage.prototype.setItem = function(){ throw new DOMException('full', 'QuotaExceededError'); };
     const before = outbox.length;
