@@ -21,8 +21,9 @@ ok('notification accent matches Capacitor',
 
 const context = {window:{}};
 vm.runInNewContext(fs.readFileSync('app.config.js', 'utf8'), context);
-const runtime = context.window.FIT_TIMER_CONFIG || {};
-ok('runtime config carries app id', runtime.appId === product.id, runtime.appId);
+const runtime = context.window.APP_CONFIG || {};
+ok('generic runtime config carries app id', runtime.appId === product.id, runtime.appId);
+ok('FitTimer runtime config alias points to generic config', context.window.FIT_TIMER_CONFIG === context.window.APP_CONFIG);
 ok('runtime config carries feature flags',
   runtime.features && Object.keys(product.features).every(k => runtime.features[k] === product.features[k]));
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');
