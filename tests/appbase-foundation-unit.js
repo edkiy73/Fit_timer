@@ -187,6 +187,21 @@ ok('ESM entry owns an explicit Sync Core dependency',
   /from ['"]\.\/core\/sync\.js['"]/.test(esmEntrySource)
   && /createRegistry/.test(esmEntrySource));
 
+const storageModuleSource = fs.readFileSync('src/core/storage.ts', 'utf8');
+ok('Storage Core uses ESM exports instead of a namespace global',
+  /export function createStorage/.test(storageModuleSource)
+  && /export function namespacedKey/.test(storageModuleSource)
+  && !/namespace AppBaseStorage/.test(storageModuleSource));
+ok('Storage Core keeps external and IndexedDB contracts intact',
+  /externalStorage\?:/.test(storageModuleSource)
+  && /indexedDB\.open/.test(storageModuleSource)
+  && /localStorage\.getItem/.test(storageModuleSource)
+  && /localStorage\.setItem/.test(storageModuleSource));
+ok('ESM entry owns an explicit Storage Core dependency',
+  /from ['"]\.\/core\/storage\.js['"]/.test(esmEntrySource)
+  && /createStorage/.test(esmEntrySource)
+  && /namespacedKey/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
