@@ -57,13 +57,13 @@ async function resumeWorkoutFromNativeNotification(){
 
   const s = await loadSession();
   if(!s){
-    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    appRuntimeCompat.clearWorkoutState();
     return false;
   }
   const p = customPrograms.find(x => x && x.id === s.pid);
   if(!p){
     await clearSession();
-    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    appRuntimeCompat.clearWorkoutState();
     return false;
   }
 
@@ -2277,10 +2277,10 @@ try{
   if(pendingNativeWorkoutResume){
     pendingNativeWorkoutResume = false;
     await resumeWorkoutFromNativeNotification();
-  } else if(window.FitNative && window.FitNative.isNative && window.FitNative.clearWorkoutState){
+  } else if(appRuntimeCompat.hasNative('clearWorkoutState')){
     // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
     const bootSession = await loadSession();
-    if(!bootSession) window.FitNative.clearWorkoutState();
+    if(!bootSession) appRuntimeCompat.clearWorkoutState();
   }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.

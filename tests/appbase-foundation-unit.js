@@ -74,6 +74,21 @@ ok('legacy native notification calls are isolated to compatibility boundary',
   legacyNotificationCalls.every(token => !notificationProductSources.includes(token))
   && ['candidate.requestNotifications','candidate.registerRemotePush','candidate.syncWorkoutNotifications']
     .every(token => runtimeCompatSource.includes(token)));
+const workoutNativeSources = [
+  'src/app/70-workout.js',
+  'src/app/90-events.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+const legacyWorkoutCalls = [
+  'window.FitNative.cancelRest',
+  'window.FitNative.updateWorkoutState',
+  'window.FitNative.clearWorkoutState',
+  'window.FitNative.requestReview'
+];
+ok('legacy workout native calls are isolated to compatibility boundary',
+  legacyWorkoutCalls.every(token => !workoutNativeSources.includes(token))
+  && ['candidate.cancelRest','candidate.updateWorkoutState','candidate.clearWorkoutState','candidate.requestReview']
+    .every(token => runtimeCompatSource.includes(token)));
+
 
 
 
