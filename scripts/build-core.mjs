@@ -4,7 +4,7 @@ import ts from 'typescript';
 const CHECK = process.argv.includes('--check');
 const targets = [
   ['src/core/storage.ts', 'src/core/storage.runtime.js'],
-  ['src/core/identity.ts', 'src/core/identity.runtime.js'],
+  ['src/core/identity.ts', 'src/core/identity.runtime.js', 'commonjs-bridge', 'AppBaseIdentity'],
   ['src/core/sync.ts', 'src/core/sync.runtime.js'],
   ['src/core/observability.ts', 'src/core/observability.runtime.js'],
   ['src/core/notifications.ts', 'src/core/notifications.runtime.js'],
@@ -13,16 +13,31 @@ const targets = [
   ['src/core/mobile.ts', 'mobile-core.js']
 ];
 
-let bad = false;
-for (const [sourcePath, runtimePath] of targets) {
-  const source = await readFile(sourcePath, 'utf8');
-  const output = ts.transpileModule(source, {
+function buildRuntime(source, sourcePath, mode, globalName){
+  if(mode === 'commonjs-bridge'){
+    const commonJs = ts.transpileModule(source, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.CommonJS
+      },
+      fileName: sourcePath
+    }).outputText;
+    return `"use strict";\nvar ${globalName} = (() => {\n    const module = { exports: {} };\n    const exports = module.exports;\n${commonJs.split('\n').map(line => '    ' + line).join('\n')}\n    return module.exports;\n})();\n`;
+  }
+
+  return ts.transpileModule(source, {
     compilerOptions: {
       target: ts.ScriptTarget.ES2022,
       module: ts.ModuleKind.None
     },
     fileName: sourcePath
   }).outputText;
+}
+
+let bad = false;
+for (const [sourcePath, runtimePath, mode, globalName] of targets) {
+  const source = await readFile(sourcePath, 'utf8');
+  const output = buildRuntime(source, sourcePath, mode, globalName);
 
   if(CHECK){
     const current = await readFile(runtimePath, 'utf8').catch(() => '');

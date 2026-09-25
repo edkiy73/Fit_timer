@@ -168,6 +168,17 @@ ok('TypeScript typecheck script exists', typeof pkg.scripts.typecheck === 'strin
 ok('TypeScript strict mode enabled', tsconfig.compilerOptions.strict === true);
 ok('TypeScript is noEmit during foundation', tsconfig.compilerOptions.noEmit === true);
 
+const identityModuleSource = fs.readFileSync('src/core/identity.ts', 'utf8');
+const esmEntrySource = fs.readFileSync('src/main.ts', 'utf8');
+ok('Identity Core uses ESM exports instead of a namespace global',
+  /export function createAccount/.test(identityModuleSource)
+  && /export function createProfileDraft/.test(identityModuleSource)
+  && !/namespace AppBaseIdentity/.test(identityModuleSource));
+ok('ESM entry owns an explicit Identity Core dependency',
+  /from ['"]\.\/core\/identity\.js['"]/.test(esmEntrySource)
+  && /createAccount/.test(esmEntrySource)
+  && /createProfileDraft/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
