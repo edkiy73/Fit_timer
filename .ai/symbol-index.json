@@ -934,8 +934,8 @@
     },
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
-      "lines": 208,
-      "chars": 11791,
+      "lines": 207,
+      "chars": 11751,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
@@ -1510,8 +1510,8 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 611,
-      "chars": 39913,
+      "lines": 610,
+      "chars": 39882,
       "ids": [
         "addExModal",
         "aemAI",
