@@ -12,6 +12,7 @@ const targets = [
       'src/i18n/index.js',
       'lib/ai-protocol.js',
       'src/core/storage.runtime.js',
+      'src/core/identity.runtime.js',
       'src/app/00-core.js',
       'src/app/10-data-sync.js',
       'src/app/20-account.js',
