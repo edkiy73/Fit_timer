@@ -687,21 +687,14 @@ window.syncNativeNotifications = syncNativeNotifications;
    Обработчик получает саму кнопку и событие: этого хватает, чтобы взять данные
    из data-атрибутов рядом, не заводя элементу имя. */
 const ACTIONS = {
-  // Закрыть попап, внутри которого стоит кнопка. Имя попапа не нужно: он и так
-  // ближайший предок. Восемнадцать одинаковых строк «найди кнопку, найди попап,
-  // сними класс» свелись к одной. Историю навигации трогать не надо — за ней
-  // следит MutationObserver по классу .modal.open.
+  // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
+  // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
   closeModal: btn => {
-    const m = btn.closest('.modal');
-    if(m) m.classList.remove('open');
+    const m = AppBaseUI.closestModal(btn);
+    AppBaseUI.closeModal(m);
   }
 };
-document.addEventListener('click', e => {
-  const btn = e.target.closest('[data-act]');
-  if(!btn) return;
-  const fn = ACTIONS[btn.dataset.act];
-  if(fn) fn(btn, e);
-});
+AppBaseUI.bindActions(document, ACTIONS);
 // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
 // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
 // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
