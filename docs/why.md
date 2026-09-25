@@ -42,8 +42,9 @@ Manifest update сериализуется server-side lock, чтобы пара
 
 ## Локальные данные — в IndexedDB, не в localStorage
 
-`kvGet`/`kvSet` остаются совместимым FitTimer-адаптером, а низкоуровневое хранение теперь
-принадлежит `src/core/storage.ts`. Core пишет в тот же IndexedDB (`fittimer` / `kv`), поэтому
+`kvGet`/`kvSet` остаются совместимым асинхронным FitTimer-адаптером, а низкоуровневое хранение
+принадлежит ES-модулю `src/core/storage.ts` → generated `core/storage.js`. Адаптер грузит его
+через `import()` и Core пишет в тот же IndexedDB (`fittimer` / `kv`), поэтому
 существующие установки не мигрируют ключи или базу. Старые значения из localStorage
 переезжают сами при первом чтении. localStorage — запасной путь и зеркало для ключей,
 которые читаются синхронно на старте (сейчас только `account`). Ошибка записи возвращает
