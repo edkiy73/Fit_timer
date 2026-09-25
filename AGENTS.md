@@ -113,6 +113,7 @@ Use `.ai/project-map.md` to choose files. Typical routing:
 - Sync -> `api/sync.js`, sync symbols in `app.js`, `tests/sync-*.js`.
 - AI -> `lib/ai.js`, `lib/ai-endpoint.js`, `api/admin.js`, `docs/ai-runtime.md`.
 - Vercel/storage/env -> `vercel.json`, `lib/store.js`, `docs/setup-vercel.md`.
+- For Supabase/OpenRouter/provider migrations -> read `docs/infrastructure-adapters.md` first. Keep provider code behind Core/server adapters; never put service-role/API secrets in web or APK.
 - Android/iOS release -> read `docs/mobile-release.md` first.
 
 ## 4. Product invariants — preserve unless the user explicitly changes them
