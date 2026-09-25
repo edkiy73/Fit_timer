@@ -307,17 +307,10 @@ ok('product sync schema is a real ESM module',
 ok('product sync schema keeps FitTimer policy outside Core',
   /program:/.test(productSyncModuleSource)
   && /notificationPrefs/.test(productSyncModuleSource));
-ok('ESM entry composes product sync schema explicitly',
+ok('ESM entry composes product sync schema and exposes it to legacy product code',
   /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
-  && /productSyncSchema/.test(esmEntrySource));
-
-const syncCompatSource = fs.readFileSync('src/app/11-sync-schema.js', 'utf8');
-ok('legacy sync schema is generated from the canonical ESM module',
-  /Generated from src\/app\/sync-schema\.ts/.test(syncCompatSource)
-  && /__fitSyncSchemaCompat/.test(syncCompatSource));
-ok('product compatibility build owns the legacy sync schema output',
-  /src\/app\/sync-schema\.ts/.test(fs.readFileSync('scripts/build-product-compat.mjs','utf8'))
-  && /src\/app\/11-sync-schema\.js/.test(fs.readFileSync('scripts/build-product-compat.mjs','utf8')));
+  && /productSyncSchema/.test(esmEntrySource)
+  && /FitTimerModules/.test(esmEntrySource));
 
 const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
 ok('product infrastructure composes Core through explicit imports',
