@@ -377,6 +377,28 @@ FitTimer side:
 - rest/workout notification construction;
 - fitness-specific custom event names.
 
+### Mobile bridge implementation status
+
+The reusable mobile boundary now includes `src/core/mobile.ts`:
+- generic app lifecycle subscription with background duration;
+- raw app-URL/open + launch-URL primitives;
+- temporary-file native sharing;
+- haptic impact;
+- native theme bridge;
+- app version/build/distribution info;
+- external URL opening;
+- biometric status/authentication.
+
+FitTimer still owns:
+- validation/parsing of `/p/<id>` links;
+- `fittimer://workout/resume` semantics;
+- background behavior for voice/audio/wake-lock/workout state;
+- workout haptic choice/call sites;
+- custom updater/download/install flow;
+- microphone/TTS/SpeechRecognizer behavior.
+
+This keeps Core unaware of programs/workouts while preserving the existing `window.FitNative` compatibility surface for the current app.
+
 ## Phase 10 — Infrastructure adapters: Supabase + OpenRouter
 
 Owner: Architect + DevOps/Backend. Review: Security + QA.
