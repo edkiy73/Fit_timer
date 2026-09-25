@@ -799,8 +799,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 719,
-      "chars": 31295,
+      "lines": 721,
+      "chars": 31334,
       "symbols": [
         "add",
         "advance",
@@ -1699,6 +1699,57 @@
       ],
       "actions": [
         "closeModal"
+      ]
+    },
+    "mobile.js": {
+      "lines": 605,
+      "chars": 24890,
+      "kind": "frontend-js",
+      "symbols": [
+        "authenticateBiometric",
+        "biometricStatus",
+        "cancelRest",
+        "cancelUpdate",
+        "clearIosWorkoutInactivity",
+        "clearWorkoutState",
+        "consumeProgramLink",
+        "consumeWorkoutResume",
+        "deleteVoiceModel",
+        "done",
+        "downloadVoiceModel",
+        "getAppInfo",
+        "getUpdateState",
+        "getVoiceModelStatus",
+        "haptic",
+        "installLocalNotificationListeners",
+        "installNativeOverrides",
+        "installRemotePushListeners",
+        "installUpdate",
+        "isWorkoutResumeUrl",
+        "listTtsVoices",
+        "openExternal",
+        "programIdFromAppUrl",
+        "readWorkoutInactivityState",
+        "registerRemotePush",
+        "rememberAppUrl",
+        "rememberProgramLink",
+        "rememberWorkoutResume",
+        "requestMicrophone",
+        "requestNotifications",
+        "requestReview",
+        "resumeUpdateInstall",
+        "scheduleRest",
+        "setSystemTheme",
+        "shareFile",
+        "speak",
+        "startVoiceRecognition",
+        "stopSpeaking",
+        "stopVoiceRecognition",
+        "syncIosWorkoutInactivity",
+        "syncWorkoutNotifications",
+        "updateWorkoutState",
+        "workoutHaptic",
+        "writeWorkoutInactivityState"
       ]
     }
   }
