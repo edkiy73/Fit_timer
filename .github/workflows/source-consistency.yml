@@ -54,6 +54,7 @@ jobs:
           node tests/admin-core-release-unit.js
           node tests/admin-fittimer-catalog-text-unit.js
           node tests/admin-fittimer-catalog-images-unit.js
+          node tests/admin-fittimer-catalog-crud-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js
