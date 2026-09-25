@@ -318,10 +318,11 @@ ok('product infrastructure owns FitTimer storage configuration outside Core',
   && /mirrorKeys: \['account'\]/.test(productInfrastructureSource));
 ok('product infrastructure has no direct legacy Core globals',
   !/AppBaseStorage|AppBaseObservability/.test(productInfrastructureSource));
-ok('legacy data-sync consumes product modules instead of Core globals',
-  /FitTimerModules\.infrastructure\.create/.test(dataSyncSource)
-  && /FitTimerModules\.sync\.registry/.test(dataSyncSource)
-  && !/AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
+ok('legacy data-sync consumes captured product modules instead of Core globals',
+  /fitInfrastructure\.create/.test(dataSyncSource)
+  && /fitSync\.registry/.test(dataSyncSource)
+  && /fitSync\.accountKeys/.test(dataSyncSource)
+  && !/AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS|FIT_SYNC_ACCOUNT_DOC_KEYS|FitTimerModules/.test(dataSyncSource));
 ok('ESM entry composes product infrastructure explicitly',
   /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
   && /productInfrastructure/.test(esmEntrySource));
@@ -338,10 +339,10 @@ ok('FitTimer profile extension stays in product layer',
   && !/gender|age/.test(fs.readFileSync('src/core/identity.ts','utf8')));
 ok('product identity has no legacy AppBaseIdentity global',
   !/AppBaseIdentity/.test(productIdentitySource));
-ok('legacy account/profile flow consumes product identity instead of Core global',
-  /FitTimerModules\.identity\.createAccount/.test(accountProductSource)
-  && /FitTimerModules\.identity\.createProfile/.test(accountProductSource)
-  && !/AppBaseIdentity/.test(accountProductSource));
+ok('legacy account/profile flow consumes captured product identity instead of Core global',
+  /fitIdentity\.createAccount/.test(accountProductSource)
+  && /fitIdentity\.createProfile/.test(accountProductSource)
+  && !/AppBaseIdentity|FitTimerModules/.test(accountProductSource));
 ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));
