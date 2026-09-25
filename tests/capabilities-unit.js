@@ -63,7 +63,7 @@ async function withCapabilities(flags, fn){
       res.statusCode === 404 && JSON.parse(res.body).error === 'capability_disabled');
   });
 
-  const authSource = fs.readFileSync('api/auth.js','utf8');
+  const authSource = fs.readFileSync('lib/auth-core.js','utf8');
   ok('push device registration is gated by the notifications capability',
     /capabilities\(\)\.enabled\('notifications'\)/.test(authSource)
     && /body\.enabled === false/.test(authSource));

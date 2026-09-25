@@ -9,7 +9,9 @@ const { createAIHandler } = require('../lib/ai-endpoint');
 const { registry: fitAIActions } = require('../lib/fit-ai-actions');
 const handleAI = createAIHandler(fitAIActions);
 
-const { handleAdminObservability } = require('../lib/admin/core/observability');
+const { createAdminObservability } = require('../lib/admin/core/observability');
+const { analyticsStats } = require('../lib/analytics');
+const handleAdminObservability = createAdminObservability({analyticsStats});
 const { handleAdminAccounts } = require('../lib/admin/core/accounts');
 const { handleAdminCampaigns } = require('../lib/admin/core/campaigns');
 const { handleAdminAISettings } = require('../lib/admin/core/ai-settings');

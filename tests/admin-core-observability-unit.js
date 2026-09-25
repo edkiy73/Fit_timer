@@ -15,7 +15,8 @@ require.cache[diagnosticsPath]={id:diagnosticsPath,filename:diagnosticsPath,load
   clearClientError:async sig=>({sig})
 }};
 
-const {handleAdminObservability,ACTIONS}=require('../lib/admin/core/observability');
+const {createAdminObservability,ACTIONS}=require('../lib/admin/core/observability');
+const handleAdminObservability=createAdminObservability({analyticsStats:require('../lib/analytics').analyticsStats});
 
 function response(){
   return {

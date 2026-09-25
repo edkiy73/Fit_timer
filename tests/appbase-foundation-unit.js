@@ -391,10 +391,16 @@ const brandLeaks = Object.entries(genericServerSources)
   .map(([file]) => file);
 ok('generic server runtime has no FitTimer brand or fitness content', brandLeaks.length === 0, brandLeaks.join(', '));
 const authSource = fs.readFileSync('api/auth.js','utf8');
+const authCoreSource = fs.readFileSync('lib/auth-core.js','utf8');
 ok('generic auth delegates trainer page / shared links to the product account extension',
   /require\(['"]\.\.\/lib\/fit-account-extension['"]\)/.test(authSource)
-  && !/`t:\$\{/.test(authSource) && !/'p:\*'/.test(authSource) && !/publicTrainer/.test(authSource)
-  && !/Fit Timer/.test(authSource));
+  && /createAuthHandler\(/.test(authSource)
+  && !/fit-|`t:\$\{|'p:\*'|publicTrainer|Fit Timer/.test(authCoreSource));
+const syncSource = fs.readFileSync('api/sync.js','utf8');
+const syncCoreSource = fs.readFileSync('lib/sync-core.js','utf8');
+ok('generic sync handler receives registry and product profile fields from composition',
+  /createSyncHandler\(/.test(syncSource) && /sanitizeProfile/.test(syncSource)
+  && !/fit-|gender|prepSec|voiceVol|program/i.test(syncCoreSource));
 const fitAccountExtension = require('../lib/fit-account-extension');
 ok('FitTimer account extension implements every auth hook',
   ['wipePublicIdentity','purgeAccountData','purgeOwnedContent','claimHandle','onVerify']
