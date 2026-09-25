@@ -18,6 +18,7 @@ const { sendMail } = require('../lib/mail');
 const { handleAdminObservability } = require('../lib/admin/core/observability');
 const { handleAdminAccounts } = require('../lib/admin/core/accounts');
 const { handleAdminCampaigns } = require('../lib/admin/core/campaigns');
+const { handleAdminAISettings } = require('../lib/admin/core/ai-settings');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -464,28 +465,7 @@ module.exports = async (req, res) => {
 
   if(await handleAdminCampaigns(a, body, res)) return;
 
-  /* ---- ИИ, тариф и платёжные идентификаторы ----
-     Секретных ключей здесь нет: они остаются в окружении сервера. Админка меняет
-     только маршрутизацию, модели, лимиты и отображаемую цену. */
-  if(a === 'save_settings'){
-    const settings = sanitizeSettings(body && body.settings);
-    await store.set('settings:ai', JSON.stringify(settings));
-    return send(res, 200, {ok:true, settings});
-  }
-
-  if(a === 'test_ai'){
-    const type = body && body.type === 'image' ? 'image' : 'text';
-    const settings = body && body.settings ? sanitizeSettings(body.settings) : await getSettings();
-    try{
-      const out = await generate(type, settings, type === 'image'
-        ? 'Minimal flat fitness app icon, violet on dark background, no text'
-        : 'Ответь ровно одним словом: работает');
-      return send(res, 200, {ok:true, provider:out.provider, model:out.model,
-        fallback:out.fallback, result:type === 'text' ? out.text.slice(0,100) : 'image'});
-    }catch(e){
-      return fail(res, 502, 'ai_test_failed', {detail:String(e.message || e).slice(0,500)});
-    }
-  }
+  if(await handleAdminAISettings(a, body, res)) return;
 
   /* ---- перевод каталога по запросу модератора ----
      Никаких автоматических переводов при отправке: тратим ИИ только на заявку,
