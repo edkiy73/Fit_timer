@@ -36,7 +36,13 @@ async function coverageGaps(){
   const files = (await readdir(path.join(ROOT, 'tests'))).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3));
   const wfDir = path.join(ROOT, '.github', 'workflows');
   const workflows = (await Promise.all((await readdir(wfDir)).map(f => readFile(path.join(wfDir, f), 'utf8')))).join('\n');
-  return files.filter(n => !NOT_TESTS.has(n) && !BROWSER_TESTS.includes(n) && !workflows.includes(`tests/${n}.js`));
+  const pkg = await readFile(path.join(ROOT, 'package.json'), 'utf8');
+  return files.filter(n =>
+    !NOT_TESTS.has(n)
+    && !BROWSER_TESTS.includes(n)
+    && !workflows.includes(`tests/${n}.js`)
+    && !pkg.includes(`tests/${n}.js`)
+  );
 }
 
 function run(name){
