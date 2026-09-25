@@ -2,6 +2,7 @@ import { createAccount, createProfileDraft } from './core/identity.js';
 import { createRegistry } from './core/sync.js';
 import { createStorage, namespacedKey } from './core/storage.js';
 import { createClient } from './core/observability.js';
+import { createPreferenceStore, limitCandidates } from './core/notifications.js';
 
 /**
  * Future ESM application entry point.
@@ -28,4 +29,9 @@ export const storageCore = {
 
 export const observabilityCore = {
   createClient
+};
+
+export const notificationsCore = {
+  createPreferenceStore,
+  limitCandidates
 };
