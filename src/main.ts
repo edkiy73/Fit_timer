@@ -7,9 +7,9 @@ import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js'
 /**
  * Production ESM composition entry point.
  *
- * Core now loads through this module graph. The legacy product bundle still runs
- * temporarily, but only after the ESM Core exports are exposed through a narrow
- * compatibility surface.
+ * Core now loads through this module graph. The legacy product source is still
+ * concatenated into app.js temporarily, but app.js itself executes in ES-module
+ * scope after the ESM dependencies are exposed through a narrow startup bridge.
  */
 export const APPBASE_ESM_FOUNDATION = true;
 
@@ -102,7 +102,12 @@ export function loadLegacyMobileRuntime(): Promise<void> {
 }
 
 export function loadLegacyProductRuntime(): Promise<void> {
-  return loadLegacyScript('app.js', 'data-legacy-product-runtime', 'legacy_product_runtime_failed');
+  return loadLegacyScript(
+    'app.js',
+    'data-legacy-product-runtime',
+    'legacy_product_runtime_failed',
+    true
+  );
 }
 
 exposeLegacyProductModules();
