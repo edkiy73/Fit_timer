@@ -81,5 +81,26 @@ const appRuntimeCompat = Object.freeze({
     }
     try{ return await candidate.authenticateBiometric(options || {}); }
     catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
+  },
+
+  async requestNotifications(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.requestNotifications !== 'function') return false;
+    try{ return !!(await candidate.requestNotifications()); }
+    catch(_){ return false; }
+  },
+
+  async registerRemotePush(requestPermission){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.registerRemotePush !== 'function') return false;
+    try{ return !!(await candidate.registerRemotePush(!!requestPermission)); }
+    catch(_){ return false; }
+  },
+
+  async syncWorkoutNotifications(items){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.syncWorkoutNotifications !== 'function') return false;
+    try{ return !!(await candidate.syncWorkoutNotifications(items)); }
+    catch(_){ return false; }
   }
 });

@@ -591,7 +591,7 @@ function limitNotificationCandidates(items){
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
 // вперёд при старте, изменении расписания и завершении тренировки.
 async function syncNativeNotifications(){
-  if(!window.FitNative || !window.FitNative.syncWorkoutNotifications) return;
+  if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
     workouts:true, trainer:true, progress:true, offers:true
   };
@@ -674,7 +674,7 @@ async function syncNativeNotifications(){
   }
 
   const finalItems = limitNotificationCandidates(items);
-  await window.FitNative.syncWorkoutNotifications(finalItems);
+  await appRuntimeCompat.syncWorkoutNotifications(finalItems);
 }
 window.syncNativeNotifications = syncNativeNotifications;
 

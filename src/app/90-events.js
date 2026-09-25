@@ -208,10 +208,8 @@ async function setNotificationPref(key, value){
   prefs[key] = !!value;
   await persistNotificationPrefs(prefs);
   syncNotificationSettings();
-  if(['workouts','trainer','progress','offers'].includes(key) && value
-    && window.FitNative && window.FitNative.requestNotifications){
-    let granted = false;
-    try{ granted = await window.FitNative.requestNotifications(); }catch(_){}
+  if(['workouts','trainer','progress','offers'].includes(key) && value){
+    const granted = await appRuntimeCompat.requestNotifications();
     if(!granted){
       prefs[key] = false;
       await persistNotificationPrefs(prefs);
@@ -228,9 +226,9 @@ async function setNotificationPref(key, value){
   }
 }
 async function syncRemotePushRegistration(requestPermission){
-  if(!(window.FitNative&&window.FitNative.registerRemotePush)||!account||!account.email||!account.syncToken)return false;
+  if(!account||!account.email||!account.syncToken)return false;
   const p=getNotificationPrefs(); if(p.trainer===false&&p.progress===false&&p.offers===false)return false;
-  return window.FitNative.registerRemotePush(!!requestPermission);
+  return appRuntimeCompat.registerRemotePush(!!requestPermission);
 }
 async function unregisterRemotePushServer(){
   if(!account||!account.email||!account.syncToken)return;
@@ -2248,8 +2246,8 @@ try{
   document.body.classList.remove('booting');
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
-  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false && window.FitNative && window.FitNative.requestNotifications){
-    window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+  if(hasScheduledWorkout && getNotificationPrefs().workouts !== false){
+    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
   // Удалённый режим мог остаться в старой резервной копии или localStorage.

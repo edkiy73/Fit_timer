@@ -2091,8 +2091,8 @@ async function saveProgram(){
   if(draft.src && draft.by && typeof claimProgramLink === 'function') claimProgramLink(draft.src).catch(()=>{});
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
-  if(planDays(draft).length && window.FitNative && window.FitNative.requestNotifications){
-    window.FitNative.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+  if(planDays(draft).length){
+    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   }
   if(anyTime && planDays(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}

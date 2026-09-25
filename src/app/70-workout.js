@@ -191,7 +191,7 @@ function startWorkout(fromIdx, elapsed, options){
   const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
-  if(window.FitNative) window.FitNative.requestNotifications();
+  appRuntimeCompat.requestNotifications();
   try{ if('speechSynthesis' in window) speechSynthesis.getVoices(); }catch(e){} // прогрев списка голосов
   state.steps = buildSteps();
   state.live = true;   // тренировка идёт: на неё можно вернуться жестом «назад»

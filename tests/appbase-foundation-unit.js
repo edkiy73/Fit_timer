@@ -59,6 +59,22 @@ ok('generic legacy native calls are isolated to compatibility boundary',
   && genericLegacyNativeCalls.every(token => runtimeCompatSource.includes(token.replace('window.FitNative.', 'candidate.'))));
 ok('direct update capability stays product-owned for now',
   fs.readFileSync('src/app/20-account.js','utf8').includes('window.FitNative.installUpdate'));
+const notificationProductSources = [
+  'src/app/60-builder.js',
+  'src/app/70-workout.js',
+  'src/app/80-platform.js',
+  'src/app/90-events.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+const legacyNotificationCalls = [
+  'window.FitNative.requestNotifications',
+  'window.FitNative.registerRemotePush',
+  'window.FitNative.syncWorkoutNotifications'
+];
+ok('legacy native notification calls are isolated to compatibility boundary',
+  legacyNotificationCalls.every(token => !notificationProductSources.includes(token))
+  && ['candidate.requestNotifications','candidate.registerRemotePush','candidate.syncWorkoutNotifications']
+    .every(token => runtimeCompatSource.includes(token)));
+
 
 
 ok('TypeScript typecheck script exists', typeof pkg.scripts.typecheck === 'string' && /tsc/.test(pkg.scripts.typecheck));
