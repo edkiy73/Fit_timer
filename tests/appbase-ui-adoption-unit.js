@@ -8,12 +8,12 @@ const ok=(name,cond)=>{
 
 const core=fs.readFileSync('src/app/00-core.js','utf8');
 const platform=fs.readFileSync('src/app/80-platform.js','utf8');
-const build=fs.readFileSync('scripts/build-sources.mjs','utf8');
+const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
-ok('frontend bundle loads UI runtime',
-  build.includes("'src/core/ui.runtime.js'"));
-ok('UI runtime loads before application core',
-  build.indexOf("'src/core/ui.runtime.js'") < build.indexOf("'src/app/00-core.js'"));
+ok('ESM entry imports UI Core',
+  /from ['"]\.\/core\/ui\.js['"]/.test(esmEntry));
+ok('ESM startup exposes UI Core before loading legacy product runtime',
+  esmEntry.indexOf('exposeLegacyCoreGlobals()') < esmEntry.indexOf('loadLegacyProductRuntime()'));
 ok('FitTimer setShown delegates to AppBaseUI',
   core.includes('AppBaseUI.setShown(node, !!on)'));
 ok('named action delegation uses AppBaseUI',

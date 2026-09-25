@@ -25,12 +25,12 @@ jobs:
           npm run typecheck
           npm run build:esm
           node tests/appbase-foundation-unit.js
+          node tests/core-esm-runtime.mjs
           npm run test:boundaries
           npm run check:sources
           npm run check:ai-index
           npm run i18n:check
           npm run build:sources
-          node --check appbase-core.js
           node --check app.js
           find api lib tests -name '*.js' -print0 | xargs -0 -n1 node --check
           find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
