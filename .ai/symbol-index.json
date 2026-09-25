@@ -86,13 +86,13 @@
     },
     "src/app/05-runtime-compat.js": {
       "kind": "frontend-js",
-      "lines": 239,
-      "chars": 9105
+      "lines": 248,
+      "chars": 9235
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
       "lines": 2152,
-      "chars": 99669,
+      "chars": 99657,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -234,7 +234,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 989,
-      "chars": 44012,
+      "chars": 43997,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
