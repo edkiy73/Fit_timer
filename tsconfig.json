@@ -12,7 +12,7 @@
     "skipLibCheck": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": true
   },
   "include": [
     "src/types/**/*.ts",
