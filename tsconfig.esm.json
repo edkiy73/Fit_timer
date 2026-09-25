@@ -8,6 +8,8 @@
     "sourceMap": false
   },
   "include": [
-    "src/main.ts"
+    "src/main.ts",
+    "src/core/mobile.ts",
+    "src/core/native-notifications.ts"
   ]
 }

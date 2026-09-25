@@ -1,3 +1,6 @@
+import { createBridge } from './esm/core/mobile.js';
+import { createTransport } from './esm/core/native-notifications.js';
+
 /* Тонкий мост к нативным функциям. В обычном браузере все методы безопасно
    переходят на web fallback, поэтому index.html остаётся общей кодовой базой. */
 (function(){
@@ -10,9 +13,7 @@
   const fitBiometric = plugins.FitBiometric;
   const fitWorkout = plugins.FitWorkout;
   const pushNotifications = plugins.PushNotifications;
-  const productModules = window.FitTimerModules || {};
-  const mobileBridgeCore = productModules.mobile
-    ? productModules.mobile.createBridge({
+  const mobileBridgeCore = createBridge({
         native,
         app:plugins.App || null,
         filesystem:plugins.Filesystem || null,
@@ -22,16 +23,13 @@
         biometric:fitBiometric || null,
         platform:()=> (cap.getPlatform && cap.getPlatform()) || 'web',
         openWeb:url=>{ try{ window.open(url,'_blank','noopener'); return true; }catch(_){ return false; } }
-      })
-    : null;
-  const nativeNotificationTransport = productModules.nativeNotifications
-    ? productModules.nativeNotifications.createTransport({
+      });
+  const nativeNotificationTransport = createTransport({
         native,
         local:plugins.LocalNotifications || null,
         push:pushNotifications || null,
         platform:()=> (cap.getPlatform && cap.getPlatform()) || 'web'
-      })
-    : null;
+      });
   const REST_NOTIFICATION_ID = 901001;
   const PLAN_NOTIFICATION_MIN = 902000;
   const PLAN_NOTIFICATION_MAX = 902999;

@@ -273,6 +273,7 @@ ok('native notification transport exposes generic local and push primitives',
   && /registerPush/.test(nativeNotificationSource));
 
 const mobileCoreSource = fs.readFileSync('src/core/mobile.ts','utf8');
+const mobileAdapterSource = fs.readFileSync('mobile.js','utf8');
 ok('mobile Core is product-neutral',
   !/workout|exercise|trainer|fittimer|program/i.test(mobileCoreSource));
 ok('mobile Core exposes reusable lifecycle/url/share/theme/biometry primitives',
@@ -288,11 +289,12 @@ ok('native notification Core uses ESM exports instead of a namespace global',
 ok('mobile Core uses ESM exports instead of a namespace global',
   /export function createBridge/.test(mobileCoreSource)
   && !/namespace AppBaseMobile/.test(mobileCoreSource));
-ok('ESM entry owns explicit native/mobile Core dependencies',
-  /from ['"]\.\/core\/native-notifications\.js['"]/.test(esmEntrySource)
-  && /from ['"]\.\/core\/mobile\.js['"]/.test(esmEntrySource)
-  && /createTransport/.test(esmEntrySource)
-  && /createBridge/.test(esmEntrySource));
+ok('mobile adapter owns explicit native/mobile Core dependencies',
+  /from ['"]\.\/esm\/core\/native-notifications\.js['"]/.test(mobileAdapterSource)
+  && /from ['"]\.\/esm\/core\/mobile\.js['"]/.test(mobileAdapterSource)
+  && /createTransport/.test(mobileAdapterSource)
+  && /createBridge/.test(mobileAdapterSource)
+  && !/FitTimerModules/.test(mobileAdapterSource));
 
 const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');
 ok('product sync schema is a real ESM module',

@@ -1,7 +1,5 @@
 import { createPreferenceStore, limitCandidates } from './core/notifications.js';
 import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
-import { createTransport } from './core/native-notifications.js';
-import { createBridge } from './core/mobile.js';
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
@@ -31,14 +29,6 @@ export const uiCore = {
   closestModal,
   setBusy,
   bindActions
-};
-
-export const nativeNotificationsCore = {
-  createTransport
-};
-
-export const mobileCore = {
-  createBridge
 };
 
 export const productSyncSchema = {
@@ -74,8 +64,6 @@ type LegacyProductModules = {
   sync: typeof productSyncSchema;
   notifications: typeof notificationsCore;
   ui: typeof uiCore;
-  mobile: typeof mobileCore;
-  nativeNotifications: typeof nativeNotificationsCore;
 };
 
 function exposeLegacyProductModules(): void {
@@ -85,13 +73,16 @@ function exposeLegacyProductModules(): void {
     identity: productIdentity,
     sync: productSyncSchema,
     notifications: notificationsCore,
-    ui: uiCore,
-    mobile: mobileCore,
-    nativeNotifications: nativeNotificationsCore
+    ui: uiCore
   };
 }
 
-function loadLegacyScript(src: string, marker: string, failureCode: string): Promise<void> {
+function loadLegacyScript(
+  src: string,
+  marker: string,
+  failureCode: string,
+  module = false
+): Promise<void> {
   return new Promise((resolve, reject) => {
     if(document.querySelector(`script[${marker}]`)){
       resolve();
@@ -100,6 +91,7 @@ function loadLegacyScript(src: string, marker: string, failureCode: string): Pro
     const script = document.createElement('script');
     script.src = src;
     script.async = false;
+    if(module) script.type = 'module';
     script.setAttribute(marker, 'true');
     script.addEventListener('load', () => resolve(), {once:true});
     script.addEventListener('error', () => reject(new Error(failureCode)), {once:true});
@@ -108,7 +100,12 @@ function loadLegacyScript(src: string, marker: string, failureCode: string): Pro
 }
 
 export function loadLegacyMobileRuntime(): Promise<void> {
-  return loadLegacyScript('mobile.js', 'data-legacy-mobile-runtime', 'legacy_mobile_runtime_failed');
+  return loadLegacyScript(
+    'mobile.js',
+    'data-legacy-mobile-runtime',
+    'legacy_mobile_runtime_failed',
+    true
+  );
 }
 
 export function loadLegacyProductRuntime(): Promise<void> {
