@@ -17,7 +17,9 @@ ok('UI Core stays product-neutral',
   !/Fit ?Timer|workout|exercise|trainer|catalog|program/i.test(source));
 ok('UI Core has no app-specific selectors',
   !/#\w+|scrWork|btnDone|modal-card/.test(source));
-ok('production ESM entry exposes temporary FitTimerModules.ui compatibility',
-  /FitTimerModules.ui/.test(esmEntry) && /uiCore/.test(esmEntry));
+ok('production ESM entry exposes UI through the product module bridge',
+  /FitTimerModules/.test(esmEntry)
+  && /ui:\s*uiCore/.test(esmEntry)
+  && /uiCore/.test(esmEntry));
 
 process.exit(bad?1:0);
