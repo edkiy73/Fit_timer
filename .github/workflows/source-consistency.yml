@@ -47,6 +47,7 @@ jobs:
           node tests/ai-runtime-unit.js
           node tests/infrastructure-adapters-unit.js
           node tests/supabase-shadow-unit.js
+          node tests/admin-core-observability-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js
