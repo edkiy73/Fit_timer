@@ -1,0 +1,39 @@
+name: Temporary generated-source sync notifications
+
+on:
+  push:
+    branches:
+      - refactor/appbase-notification-policy
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/appbase-notification-policy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Regenerate deterministic outputs
+        run: |
+          npm run build:core
+          npm run build:sources
+          npm run ai:index
+      - name: Commit generated outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/core/*.runtime.js app.js .ai/symbol-index.json
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "[skip vercel] Regenerate notification Core outputs"
+          git push origin HEAD:refactor/appbase-notification-policy
