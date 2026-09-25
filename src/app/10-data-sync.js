@@ -65,13 +65,7 @@ async function analyticsDeviceId(){
   return id;
 }
 function analyticsPlatform(){
-  try{
-    if(window.Capacitor && typeof window.Capacitor.getPlatform === 'function'){
-      const p = window.Capacitor.getPlatform();
-      if(p === 'android' || p === 'ios') return p;
-    }
-  }catch(_){}
-  return 'web';
+  return appRuntimeCompat.runtimePlatform();
 }
 const appObservability = AppBaseObservability.createClient({
   post: async body => {
