@@ -130,5 +130,56 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.requestReview !== 'function') return false;
     try{ return !!(await candidate.requestReview()); }
     catch(_){ return false; }
+  },
+
+  offlineVoice(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    return !!(candidate && candidate.offlineVoice);
+  },
+
+  async getVoiceModelStatus(language){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.getVoiceModelStatus !== 'function'){
+      return {installed:false, unavailable:true, language:language || 'ru'};
+    }
+    try{ return await candidate.getVoiceModelStatus(language); }
+    catch(_){ return {installed:false, unavailable:true, language:language || 'ru'}; }
+  },
+
+  async listTtsVoices(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.listTtsVoices !== 'function') return [];
+    try{
+      const list = await candidate.listTtsVoices();
+      return Array.isArray(list) ? list : [];
+    }catch(_){ return []; }
+  },
+
+  async downloadVoiceModel(language, onStatus){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.downloadVoiceModel !== 'function') return false;
+    try{ return !!(await candidate.downloadVoiceModel(language, onStatus)); }
+    catch(_){ return false; }
+  },
+
+  async startVoiceRecognition(onResult, onError, onStatus){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.startVoiceRecognition !== 'function') return false;
+    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus)); }
+    catch(_){ return false; }
+  },
+
+  async stopVoiceRecognition(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.stopVoiceRecognition !== 'function') return false;
+    try{ await candidate.stopVoiceRecognition(); return true; }
+    catch(_){ return false; }
+  },
+
+  async stopSpeaking(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.stopSpeaking !== 'function') return false;
+    try{ await candidate.stopSpeaking(); return true; }
+    catch(_){ return false; }
   }
 });
