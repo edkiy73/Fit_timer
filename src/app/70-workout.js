@@ -820,7 +820,7 @@ window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){
-  if(window.FitNative && window.FitNative.stopSpeaking) window.FitNative.stopSpeaking();
+  appRuntimeCompat.stopSpeaking();
   try{ speechSynthesis.cancel(); }catch(e){}
 }
 
