@@ -68,7 +68,10 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `mobile.js` | Capacitor-aware mobile behavior/bridges | share, haptics, notifications, native differences |
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
-| `src/types/*.ts` | TypeScript contracts for reusable Core boundaries | Core/AppBase/type changes |
+| `src/types/core.ts` | reusable AppBase contracts | Core/AppBase/type changes |
+| `src/types/fitness.ts` | FitTimer-only extensions of generic contracts | fitness/domain type changes |
+| `src/core/storage.ts` | generic local KV storage | storage/Core work |
+| `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
 | `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
