@@ -12,6 +12,18 @@ var AppBaseUI;
         element.textContent = String(value == null ? '' : value);
     }
     AppBaseUI.setText = setText;
+    function applyCssVars(element, vars) {
+        if (!element)
+            return;
+        Object.entries(vars).forEach(([name, value]) => {
+            const key = name.startsWith('--') ? name : '--' + name;
+            if (value == null || value === '')
+                element.style.removeProperty(key);
+            else
+                element.style.setProperty(key, String(value));
+        });
+    }
+    AppBaseUI.applyCssVars = applyCssVars;
     function openModal(modal, openClass = 'open') {
         if (!modal)
             return false;
