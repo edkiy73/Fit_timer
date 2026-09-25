@@ -52,6 +52,7 @@ function renderHtml(h){
     +'<section class="card"><h2>Сервисы</h2><div class="chips">'
     +chip(!!(service.mail&&service.mail.configured),'Email · '+yes(service.mail&&service.mail.configured))
     +chip(!!(service.ai&&service.ai.configured),'AI · '+yes(service.ai&&service.ai.configured))
+    +chip(!!(service.supabase&&service.supabase.connected),'Supabase · '+(service.supabase&&service.supabase.configured?(service.supabase.connected?'подключён':'ошибка'):'не подключён'))
     +chip(!!(service.push&&service.push.android),'Push Android · '+yes(service.push&&service.push.android))
     +chip(!!(service.push&&service.push.ios),'Push iOS · '+yes(service.push&&service.push.ios))
     +'</div></section>'
