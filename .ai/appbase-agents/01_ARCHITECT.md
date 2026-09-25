@@ -41,15 +41,23 @@ Core exposes capabilities such as generic document storage, analytics events, no
 Do not introduce Universal Content, Universal Actor, Universal Program, Universal Trainer, or a plugin framework merely because they sound reusable. Prefer a small capability contract until reuse is demonstrated by more than one product.
 
 ## TypeScript strategy
-1. tooling/typecheck;
-2. contracts/interfaces;
-3. runtime schemas at external boundaries;
-4. typed new Core modules;
-5. migrate touched code;
-6. ES modules/bundler after boundaries exist;
-7. automated dependency rules.
 
-Do not approve a mass JS→TS rewrite with no boundary benefit.
+Use **migrate on meaningful touch**, with an aggressive bias toward finishing TS migration of infrastructure early:
+
+1. establish TypeScript/typecheck before substantial Core extraction;
+2. define contracts/interfaces and runtime schemas for boundaries;
+3. write every new Core/reusable module in TypeScript by default;
+4. when an existing JS module is substantially refactored or extracted into Core, migrate that touched module to TypeScript in the same task unless a concrete blocker makes that riskier;
+5. introduce ES modules/bundling as soon as the first real typed Core boundaries need explicit imports/exports — do not defer it to a late cleanup phase just to preserve global concatenation;
+6. keep stable untouched FitTimer domain/UI JS temporarily;
+7. progressively tighten strictness and remove temporary JS/global compatibility;
+8. add automated dependency rules once module boundaries are explicit.
+
+Do not approve either extreme:
+- a mass JS→TS rewrite with no architectural benefit;
+- repeated Core refactors in JS followed by a separate TS rewrite later.
+
+If a materially touched Core module remains JS, require the task to record the concrete reason.
 
 ## Migration safety
 

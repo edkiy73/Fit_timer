@@ -28,6 +28,20 @@ Agents must distinguish:
 
 Do not call a design "ideal", "definitely correct", "the only right solution", or equivalent unless the claim is actually demonstrated. When reasonable alternatives exist, mention the material alternative and why the chosen option is preferred for the current constraints. Confidence should match evidence.
 
+## TypeScript migration rule
+
+AppBase work uses a **migrate-on-meaningful-touch** policy:
+
+- TypeScript/typecheck foundation comes before substantial Core extraction.
+- New Core/reusable code is TypeScript by default.
+- A legacy JS module that is materially extracted/refactored into Core should normally become TypeScript in that same task.
+- Stable untouched JS is not converted just to chase a percentage.
+- If a touched Core module remains JS, the HANDOFF must state the concrete reason and when that blocker should disappear.
+- ES modules/bundling should arrive when the first typed Core boundaries need explicit imports/exports, not be postponed until the end solely to preserve concatenated globals.
+- Runtime schemas remain separate from static typing.
+
+This policy is intended to maximize migration speed while keeping each change reviewable.
+
 ## Context budget
 
 Each agent receives only:

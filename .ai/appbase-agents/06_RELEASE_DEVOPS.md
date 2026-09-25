@@ -15,12 +15,19 @@ A future AppBase consumer should be able to change app name, package/app ID, pub
 Before the AppBase fork, do not change `ru.fittimer.app`, signing material, stable upload key, production App Links or versionCode semantics unless a separate product task requires it. Never regenerate signing merely to make the base cleaner.
 
 ## TypeScript/build sequence
-1. TypeScript + noEmit typecheck.
-2. JS coexistence.
-3. Typed Core modules.
-4. ES modules/bundler after boundaries stabilize.
-5. Prefer a small bundler such as esbuild unless another requirement justifies more.
-6. Do not introduce React/Vue merely for TypeScript.
+
+Move quickly, but tie build changes to the first point where they remove real migration friction:
+
+1. Add TypeScript + typecheck with JS coexistence before substantial Core extraction.
+2. Make new Core/reusable modules TypeScript by default.
+3. Convert materially touched infrastructure modules to TypeScript during their extraction/refactor, not in a later cleanup project.
+4. Introduce ES modules and a small bundler when the first extracted typed modules need explicit imports/exports. Given the current concatenated-global build, this is expected relatively early; verify the exact timing against the first extraction slice rather than forcing it before any need exists.
+5. Keep legacy JS compatibility only as long as required for untouched modules, then shrink/remove the concatenation path progressively.
+6. Tighten strictness over time; do not make migration superficially green with widespread `any`, unsafe assertions, or giant global declaration files.
+7. Prefer a small bundler such as esbuild unless current constraints justify another choice.
+8. Do not introduce React/Vue merely for TypeScript.
+
+The target is fast incremental convergence to TypeScript, not a big-bang rewrite and not a long-lived hybrid architecture.
 
 ## Config
 

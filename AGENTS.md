@@ -29,6 +29,21 @@ The repository contains a dedicated, token-conscious agent team for the planned 
 
 Default AppBase task flow is **Architect → Extraction Engineer → QA → Architect**. UX, Security, Release/DevOps and Product Integration are specialists activated only by the triggers in the orchestration file. Do not give every agent the full repository or full conversation history; pass the TASK CARD, targeted context/diff, required contracts and a short HANDOFF.
 
+### TypeScript migration policy
+
+For AppBase preparation, migrate to TypeScript **as early and as quickly as it is useful, but not as a separate mass rewrite**:
+
+- establish TypeScript/typecheck before the first substantial Core extraction;
+- all new reusable/Core modules should be TypeScript by default;
+- when an existing module is substantially refactored, extracted, or given a new architectural boundary, migrate the touched module to TypeScript in the same task unless there is a concrete compatibility/build reason not to;
+- do not postpone a touched Core module's TS conversion to a later cleanup pass without recording the reason;
+- untouched stable FitTimer domain/UI code may remain JavaScript until it is materially changed;
+- introduce ES modules/bundling when explicit imports/exports are needed for the first real Core modules; do not keep new typed Core code dependent on global concatenation merely to delay build changes;
+- keep JS/TS coexistence during migration and tighten strictness progressively rather than filling the codebase with `any`, global declarations, or unsafe assertions;
+- TypeScript does not replace runtime validation for API, Redis, backup, AI, deep-link, billing, or other external data.
+
+The goal is to avoid two wasteful extremes: a risky all-at-once rewrite and a slow migration that makes us refactor the same modules twice.
+
 ### Evidence, uncertainty and recommendations
 
 Agents must calibrate claims to evidence:
