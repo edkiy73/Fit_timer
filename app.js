@@ -3718,6 +3718,17 @@ ${exerciseSchema(outputLanguage)}`;
   root.FitAIProtocol = api;
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+/* Temporary dependency capture for the legacy concatenated product runtime.
+   main.ts exposes FitTimerModules only for startup; this file captures the modules
+   into bundle-local bindings so the global bridge can be deleted immediately after load. */
+const fitLegacyModules = globalThis.FitTimerModules;
+if(!fitLegacyModules) throw new Error('fit_product_modules_missing');
+
+const appInfrastructure = fitLegacyModules.infrastructure;
+const appIdentity = fitLegacyModules.identity;
+const appSync = fitLegacyModules.sync;
+const appNotifications = fitLegacyModules.notifications;
+const appUi = fitLegacyModules.ui;
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -4177,7 +4188,7 @@ const M_LABEL = Object.fromEntries(MUSCLES);
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
 function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
-  FitTimerModules.ui.setShown(node, !!on);
+  appUi.setShown(node, !!on);
 }
 
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
@@ -5381,7 +5392,7 @@ const appRuntimeCompat = Object.freeze({
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
-const fitProductInfrastructure = FitTimerModules.infrastructure.create({
+const fitProductInfrastructure = appInfrastructure.create({
   externalStorage: appRuntimeCompat.externalStorage,
   onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
   platform: appRuntimeCompat.runtimePlatform,
@@ -5861,7 +5872,7 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  FitTimerModules.ui.openModal($('wellModal'));
+  appUi.openModal($('wellModal'));
 }
 async function saveWell(){
   const num = (id, k) => {
@@ -5883,7 +5894,7 @@ async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  FitTimerModules.ui.closeModal($('wellModal'));
+  appUi.closeModal($('wellModal'));
   renderWellness();
 }
 
@@ -5964,9 +5975,9 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = FitTimerModules.sync.profileKeys;
+const SYNC_KEYS = appSync.profileKeys;
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => FitTimerModules.sync.registry.accepts('profile', key);
+const isSyncKey = key => appSync.registry.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -6124,7 +6135,7 @@ const SYNC = {
     const payload = [];
     for(const o of batch){
       const value = await docValue(o.key, uid);
-      const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', o.key);
+      const gone = value === null && appSync.registry.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
       payload.push({
         key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
@@ -6555,7 +6566,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of FitTimerModules.sync.accountKeys){
+  for(const key of appSync.accountKeys){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -6621,7 +6632,7 @@ async function pendingProfileSnapshot(uid){
       const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
       value = p ? JSON.stringify(p) : null;
     } else value = await kvGet(key + '_' + uid);
-    const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', key);
+    const gone = value === null && appSync.registry.allowsDeleted('profile', key);
     if(value === null && !gone) continue;
     docs.push({
       key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,
@@ -7527,7 +7538,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : FitTimerModules.identity.createProfile(nextProfileName());
+  const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
@@ -7703,7 +7714,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> FitTimerModules.identity.createAccount();
+const blankAccount = ()=> appIdentity.createAccount();
 async function readAccountData(){
   return parsed(await kvGet('accountData'), {});
 }
@@ -8667,7 +8678,7 @@ function openCompare(bIdx){
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), b);
   renderCmp();
-  FitTimerModules.ui.openModal($('cmpModal'));
+  appUi.openModal($('cmpModal'));
 }
 
 // свайп по фото в сравнении: влево — следующая дата, вправо — предыдущая.
@@ -8688,7 +8699,7 @@ function openPhotoFull(i){
   if(!photos.length) return;
   pfIdx = Math.max(0, Math.min(photos.length - 1, i));
   renderPhotoFull();
-  FitTimerModules.ui.openModal($('photoFullModal'));
+  appUi.openModal($('photoFullModal'));
 }
 function renderPhotoFull(){
   const p = photos[pfIdx];
@@ -8725,7 +8736,7 @@ wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
 $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
 $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) FitTimerModules.ui.closeModal($('photoFullModal')); };
+$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) appUi.closeModal($('photoFullModal')); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -8734,7 +8745,7 @@ async function delCmpPhoto(which){
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
-  if(photos.length < 2){ FitTimerModules.ui.closeModal($('cmpModal')); return; }
+  if(photos.length < 2){ appUi.closeModal($('cmpModal')); return; }
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), photos.length - 1);
   renderCmp();
@@ -16796,9 +16807,9 @@ function openSwapHint(){
   setShown('swapAI', true);
   $('swapOk').className = 'btn-ghost';
   $('swapHint').textContent = t('workout.swapAIHint');
-  FitTimerModules.ui.openModal($('swapModal'));
+  appUi.openModal($('swapModal'));
 }
-function closeSwapHint(){ FitTimerModules.ui.closeModal($('swapModal')); }
+function closeSwapHint(){ appUi.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
@@ -17811,7 +17822,7 @@ function applyTheme(){
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
-    FitTimerModules.ui.applyCssVars(document.body, {
+    appUi.applyCssVars(document.body, {
       bg: productTheme.background,
       card: productTheme.card,
       surface: productTheme.surface,
@@ -18368,7 +18379,7 @@ function limitNotificationCandidates(items){
     items.filter(x => !x.engagement && x.extra && x.extra.category === 'workouts')
       .map(x => notifyDayKey(new Date(x.at)))
   );
-  return FitTimerModules.notifications.limitCandidates(items,{
+  return appNotifications.limitCandidates(items,{
     maxTotal:NOTIFY_NATIVE_LIMIT,
     passiveDailyLimit:NOTIFY_PASSIVE_DAILY_LIMIT,
     engagementWeeklyLimit:3,
@@ -18495,11 +18506,11 @@ const ACTIONS = {
   // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
   // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
   closeModal: btn => {
-    const m = FitTimerModules.ui.closestModal(btn);
-    FitTimerModules.ui.closeModal(m);
+    const m = appUi.closestModal(btn);
+    appUi.closeModal(m);
   }
 };
-FitTimerModules.ui.bindActions(document, ACTIONS);
+appUi.bindActions(document, ACTIONS);
 // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
 // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
 // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
@@ -18674,7 +18685,7 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   emailNews:false,
   emailOffers:false
 });
-const notificationPreferenceStore = FitTimerModules.notifications.createPreferenceStore({
+const notificationPreferenceStore = appNotifications.createPreferenceStore({
   key:NOTIFICATION_PREFS_KEY,
   defaults:NOTIFICATION_PREF_DEFAULTS,
   storage:localStorage
@@ -19081,7 +19092,7 @@ async function refreshVoicePackUI(progressEvent){
   ]){
     const s=$(row[0]), b=$(row[1]), p=$(row[2]), bar=$(row[3]); if(!s||!b) continue;
     s.textContent=label;
-    FitTimerModules.ui.setBusy(b, running, {busyText:button, idleText:button, disabled});
+    appUi.setBusy(b, running, {busyText:button, idleText:button, disabled});
     if(p) setShown(row[2], running);
     if(bar) bar.style.width = (status && status.status === 'queued' ? 3 : pct) + '%';
   }
@@ -19095,7 +19106,7 @@ async function refreshVoicePackUI(progressEvent){
 async function downloadSelectedVoicePack(){
   if(!appRuntimeCompat.hasNative('downloadVoiceModel')) return;
   for(const id of ['btnVoicePack','btnHfVoicePack']){
-    FitTimerModules.ui.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
+    appUi.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
   }
   const ok=await appRuntimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
