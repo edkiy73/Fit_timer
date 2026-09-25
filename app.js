@@ -5134,6 +5134,7 @@ function renderStartInfo(){
 /* ================= RUNTIME COMPATIBILITY BOUNDARY =================
    Legacy browser/native globals live here while the frontend is still concatenated.
    Product/domain code should depend on this adapter instead of reading globals directly. */
+let runtimeBuildLabel = '';
 const appRuntimeCompat = Object.freeze({
   externalStorage(){
     try{
@@ -5146,6 +5147,15 @@ const appRuntimeCompat = Object.freeze({
     }catch(_){
       return null;
     }
+  },
+
+  setBuildLabel(value){
+    runtimeBuildLabel = String(value || '');
+    return runtimeBuildLabel;
+  },
+
+  buildLabel(){
+    return runtimeBuildLabel;
   },
 
   nativeBridge(){
@@ -5465,7 +5475,7 @@ const appObservability = AppBaseObservability.createClient({
   context: ()=> ({
     platform:analyticsPlatform(),
     locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-    build:String(window.FIT_TIMER_BUILD || ''),
+    build:appRuntimeCompat.buildLabel(),
     premium:(typeof isPremium === 'function') ? !!isPremium() : false
   })
 });
@@ -8071,7 +8081,7 @@ function renderPremium(){
 /* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
    какая сборка сейчас у человека на телефоне. */
 const BUILD = '20.09 · v22';
-try{ window.FIT_TIMER_BUILD = BUILD; }catch(_){}
+appRuntimeCompat.setBuildLabel(BUILD);
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
