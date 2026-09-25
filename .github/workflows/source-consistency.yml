@@ -23,6 +23,7 @@ jobs:
       - name: Проверить canonical/generated consistency
         run: |
           npm run typecheck
+          npm run check:boundaries
           node tests/appbase-foundation-unit.js
           npm run check:sources
           npm run check:ai-index
@@ -62,6 +63,7 @@ jobs:
           node tests/appbase-ui-brand-unit.js
           node tests/appbase-ui-states-unit.js
           node tests/appbase-core-bundle-unit.js
+          node tests/appbase-boundaries-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js
