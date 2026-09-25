@@ -5,18 +5,23 @@ const CHECK = process.argv.includes('--check');
 
 const targets = [
   {
+    target: 'appbase-core.js',
+    parts: [
+      'src/core/storage.runtime.js',
+      'src/core/identity.runtime.js',
+      'src/core/sync.runtime.js',
+      'src/core/observability.runtime.js',
+      'src/core/notifications.runtime.js',
+      'src/core/ui.runtime.js'
+    ]
+  },
+  {
     target: 'app.js',
     parts: [
       'src/i18n/ru.js',
       'src/i18n/en.js',
       'src/i18n/index.js',
       'lib/ai-protocol.js',
-      'src/core/storage.runtime.js',
-      'src/core/identity.runtime.js',
-      'src/core/sync.runtime.js',
-      'src/core/observability.runtime.js',
-      'src/core/notifications.runtime.js',
-      'src/core/ui.runtime.js',
       'src/app/00-core.js',
       'src/app/11-sync-schema.js',
       'src/app/10-data-sync.js',
