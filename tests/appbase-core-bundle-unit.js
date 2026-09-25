@@ -26,6 +26,10 @@ ok('product app no longer embeds reusable Core namespace declarations',
   && !app.includes('var AppBaseObservability;')
   && !app.includes('var FitTimerModules.notifications;')
   && !app.includes('var FitTimerModules.ui;'));
+ok('product runtime contains no AppBase Core references',
+  !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(app)
+  && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
+
 ok('HTML loads ESM entry instead of legacy Core and product scripts',
   html.includes('<script type="module" src="esm/main.js"></script>')
   && !html.includes('<script src="appbase-core.js"></script>')
