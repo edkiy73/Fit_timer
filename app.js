@@ -5235,6 +5235,34 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.syncWorkoutNotifications !== 'function') return false;
     try{ return !!(await candidate.syncWorkoutNotifications(items)); }
     catch(_){ return false; }
+  },
+
+  async cancelRest(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.cancelRest !== 'function') return false;
+    try{ await candidate.cancelRest(); return true; }
+    catch(_){ return false; }
+  },
+
+  async updateWorkoutState(payload){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.updateWorkoutState !== 'function') return false;
+    try{ return !!(await candidate.updateWorkoutState(payload || {})); }
+    catch(_){ return false; }
+  },
+
+  async clearWorkoutState(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.clearWorkoutState !== 'function') return false;
+    try{ return !!(await candidate.clearWorkoutState()); }
+    catch(_){ return false; }
+  },
+
+  async requestReview(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.requestReview !== 'function') return false;
+    try{ return !!(await candidate.requestReview()); }
+    catch(_){ return false; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -16186,7 +16214,7 @@ function setPause(p, silent){
   if(p){
     state.paused = true;
     state.pausedAt = Date.now();
-    if(window.FitNative) window.FitNative.cancelRest();
+    appRuntimeCompat.cancelRest();
     syncNativeWorkoutState(state.steps[state.stepIdx], 0);
   } else {
     const pausedFor = Date.now() - state.pausedAt;
@@ -16287,7 +16315,7 @@ function clearStepTimer(){
   if(state.stepTimer){ clearInterval(state.stepTimer); state.stepTimer=null; }
   state.stepDeadline = 0;
   state.remaining = 0;
-  if(window.FitNative) window.FitNative.cancelRest();
+  appRuntimeCompat.cancelRest();
   state.beginTimer = null; // отменяем отложенный запуск (если шаг пропустили во время озвучки)
   hideReadyBar();
 }
@@ -16347,7 +16375,7 @@ window.addEventListener('fitAppBackground', ()=>{
 });
 
 function syncNativeWorkoutState(step, endsAt){
-  if(!step || !(window.FitNative && window.FitNative.updateWorkoutState)) return;
+  if(!step || !appRuntimeCompat.hasNative('updateWorkoutState')) return;
   const next = nextNativeWorkStep();
   const paused = !!state.paused;
   const now = Date.now();
@@ -16357,7 +16385,7 @@ function syncNativeWorkoutState(step, endsAt){
   // A running timer is intentional activity. Start the 20-minute "forgotten workout"
   // window after that timer should finish, not in the middle of a long timed exercise.
   const inactivityBase = timed ? Number(endsAt) : now;
-  window.FitNative.updateWorkoutState({
+  appRuntimeCompat.updateWorkoutState({
     active: true,
     sessionId: String(state.workoutSessionId || ''),
     workoutTitle: (state.current && state.current.title) || 'Fit Timer',
@@ -16899,8 +16927,8 @@ function reviewMilestoneDue(count, now){
 
 async function maybeRequestAppReview(count){
   const milestone = reviewMilestoneDue(count);
-  if(!milestone || !(window.FitNative && window.FitNative.requestReview)) return false;
-  const ok = await window.FitNative.requestReview();
+  if(!milestone || !appRuntimeCompat.hasNative('requestReview')) return false;
+  const ok = await appRuntimeCompat.requestReview();
   if(!ok) return false;
   const state = reviewPromptState();
   state.attempts.push({count:Number(count) || milestone, milestone, at:Date.now()});
@@ -17106,7 +17134,7 @@ function finishWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+  appRuntimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -17667,7 +17695,7 @@ function tearDownWorkout(){
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
-  if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+  appRuntimeCompat.clearWorkoutState();
   setPause(false);
   stopHandsFree();
   stopSpeech();
@@ -18456,13 +18484,13 @@ async function resumeWorkoutFromNativeNotification(){
 
   const s = await loadSession();
   if(!s){
-    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    appRuntimeCompat.clearWorkoutState();
     return false;
   }
   const p = customPrograms.find(x => x && x.id === s.pid);
   if(!p){
     await clearSession();
-    if(window.FitNative && window.FitNative.clearWorkoutState) window.FitNative.clearWorkoutState();
+    appRuntimeCompat.clearWorkoutState();
     return false;
   }
 
@@ -20676,10 +20704,10 @@ try{
   if(pendingNativeWorkoutResume){
     pendingNativeWorkoutResume = false;
     await resumeWorkoutFromNativeNotification();
-  } else if(window.FitNative && window.FitNative.isNative && window.FitNative.clearWorkoutState){
+  } else if(appRuntimeCompat.hasNative('clearWorkoutState')){
     // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
     const bootSession = await loadSession();
-    if(!bootSession) window.FitNative.clearWorkoutState();
+    if(!bootSession) appRuntimeCompat.clearWorkoutState();
   }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
