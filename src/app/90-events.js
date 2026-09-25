@@ -679,7 +679,7 @@ async function openVoiceTest(){
   $('voiceTestStatus').textContent = t('voicetest.listening');
   $('voiceTestModal').classList.add('open');
   voiceTestOn = true;
-  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
+  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); }, null, recognitionLang);
   if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
   if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
 }

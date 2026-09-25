@@ -294,11 +294,12 @@ import { createTransport } from './esm/core/native-notifications.js';
     }catch(_){ return false; }
   }
 
-  async function speak(text){
+  async function speak(text, options){
     if(!native || !fitAudio) return false;
     try{
-      const locale = (typeof voiceLang !== 'undefined' && voiceLang) ? voiceLang : 'ru-RU';
-      const voice = (typeof savedVoiceURI !== 'undefined' && savedVoiceURI) ? savedVoiceURI : '';
+      const opts = options && typeof options === 'object' ? options : {};
+      const locale = String(opts.locale || 'ru-RU');
+      const voice = String(opts.voice || '');
       const result = await fitAudio.speak({text: String(text || ''), locale, voice});
       return result.spoken === true;
     }catch(_){ return false; }
@@ -318,7 +319,7 @@ import { createTransport } from './esm/core/native-notifications.js';
     try{ if(speechHeardHandle){ await speechHeardHandle.remove(); speechHeardHandle = null; } }catch(_){}
   }
 
-  async function startVoiceRecognition(onResult, onError, onStatus){
+  async function startVoiceRecognition(onResult, onError, onStatus, language){
     if(!native || !fitAudio) return false;
     await stopVoiceRecognition();
     if(!(await requestMicrophone())){
@@ -340,8 +341,7 @@ import { createTransport } from './esm/core/native-notifications.js';
       speechHeardHandle = await fitAudio.addListener('speechHeard', event=>{
         try{ window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail:event || {}})); }catch(_){}
       });
-      const language = (typeof recognitionLang !== 'undefined' && recognitionLang) ? recognitionLang : 'ru';
-      const started = await fitAudio.startRecognition({language});
+      const started = await fitAudio.startRecognition({language: String(language || 'ru')});
       if(started && started.missingModel){
         if(onError) onError('model_missing');
         return false;
@@ -389,7 +389,7 @@ import { createTransport } from './esm/core/native-notifications.js';
     catch(_){ return []; }
   }
 
-  function installNativeOverrides(){
+  function installNativeListeners(){
     installRemotePushListeners();
     if(native && plugins.LocalNotifications && plugins.LocalNotifications.addListener){
       try{
@@ -397,70 +397,6 @@ import { createTransport } from './esm/core/native-notifications.js';
           try{ window.dispatchEvent(new CustomEvent('fitNotificationAction', {detail:event || {}})); }catch(_){}
         });
       }catch(_){}
-    }
-    if(!native || !fitAudio) return;
-
-    // Системный Android TTS вместо ненадёжного speechSynthesis внутри WebView.
-    window.speak = function(text, fallback, onDone){
-      const done = ()=>{ if(onDone){ const fn = onDone; onDone = null; fn(); } };
-      if(typeof soundOn !== 'undefined' && !soundOn){ done(); return; }
-      if(typeof voiceVol !== 'undefined' && voiceVol <= 0){ if(fallback) fallback(); done(); return; }
-      if(typeof musicMode !== 'undefined' && musicMode){ if(fallback) fallback(); done(); return; }
-      if(typeof lastAppSoundT !== 'undefined') lastAppSoundT = Date.now() + 8000;
-      speak(text).then(ok=>{
-        if(typeof lastAppSoundT !== 'undefined') lastAppSoundT = Date.now() + 250;
-        if(!ok && fallback) fallback();
-        done();
-      }).catch(()=>{ if(fallback) fallback(); done(); });
-    };
-
-    // Системный SpeechRecognizer вместо отсутствующего Web Speech API.
-    window.startListening = function(){
-      if(typeof voiceActive !== 'undefined' && voiceActive) return;
-      if(typeof stopRequested !== 'undefined') stopRequested = false;
-      if(typeof voiceActive !== 'undefined') voiceActive = true;
-      startVoiceRecognition(
-        (text,event)=>{
-          // Сравниваем звук приложения с НАЧАЛОМ фразы: итог приходит на ~0,5 с
-          // позже, и гонг/озвучка, закончившиеся за это время, иначе проходили командой.
-          const startedAt = Date.now() - (Number(event && event.utteranceMs) || 0);
-          if(typeof lastAppSoundT === 'undefined' || startedAt >= lastAppSoundT){
-            if(typeof applyVoiceCommand === 'function') applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
-          }
-        },
-        error=>{
-          if(typeof voiceActive !== 'undefined') voiceActive = false;
-          if(error === 'permission'){
-            if(typeof voiceWanted !== 'undefined') voiceWanted = false;
-            if(typeof syncPrefs === 'function') syncPrefs();
-            if(typeof appAlert === 'function') appAlert('Нет доступа к микрофону. Разреши микрофон для Fit Timer в настройках приложения.');
-          }else if(error === 'model_missing'){
-            if(typeof refreshVoicePackUI === 'function') refreshVoicePackUI();
-          }else if(error === 'model'){
-            if(typeof appAlert === 'function') appAlert('Не удалось запустить голосовое управление. Попробуй заново скачать голосовой пакет в настройках.');
-          }
-        },
-        status=>{
-          try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:status || {}})); }catch(_){}
-        }
-      ).then(ok=>{ if(!ok && typeof voiceActive !== 'undefined') voiceActive = false; });
-    };
-    window.stopListening = function(){
-      if(typeof stopRequested !== 'undefined') stopRequested = true;
-      if(typeof voiceActive !== 'undefined') voiceActive = false;
-      const stopped = stopVoiceRecognition();
-      if(typeof resetVoiceDedup === 'function') resetVoiceDedup();
-      return stopped;
-    };
-    window.stopSpeech = function(){
-      stopSpeaking();
-      try{ if('speechSynthesis' in window) speechSynthesis.cancel(); }catch(_){}
-    };
-
-    // Автозавершение не связано с кнопкой, поэтому добавляем отдачу обёрткой.
-    if(typeof window.finishWorkout === 'function'){
-      const originalFinish = window.finishWorkout;
-      window.finishWorkout = function(){ workoutHaptic(); return originalFinish.apply(this, arguments); };
     }
   }
 
@@ -471,8 +407,8 @@ import { createTransport } from './esm/core/native-notifications.js';
     if(target && !target.disabled) workoutHaptic();
   }, true);
 
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installNativeOverrides, {once:true});
-  else installNativeOverrides();
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installNativeListeners, {once:true});
+  else installNativeListeners();
 
   if(native && fitSystem && fitSystem.addListener){
     try{
@@ -487,22 +423,9 @@ import { createTransport } from './esm/core/native-notifications.js';
     mobileBridgeCore.onLifecycle(event=>{
       if(!event.active){
         try{ window.dispatchEvent(new CustomEvent('fitAppBackground')); }catch(_){}
-        if(typeof window.stopListening === 'function') window.stopListening();
-        else stopVoiceRecognition();
-        stopSpeaking();
-        try{ if(typeof stopHeadset === 'function') stopHeadset(); }catch(_){}
-        try{ if(typeof releaseWake === 'function') releaseWake(); }catch(_){}
-        try{ if(typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
         return;
       }
       try{ window.dispatchEvent(new CustomEvent('fitAppForeground', {detail:{awayMs:event.awayMs || 0}})); }catch(_){}
-      try{
-        const work = document.getElementById('scrWork');
-        if(work && work.classList.contains('on')){
-          if(typeof keepAwake === 'function') keepAwake();
-          if(typeof startHandsFree === 'function') startHandsFree();
-        }
-      }catch(_){}
     }).catch(()=>{});
   }
 

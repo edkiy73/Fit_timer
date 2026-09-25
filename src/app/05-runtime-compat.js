@@ -182,10 +182,10 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return false; }
   },
 
-  async startVoiceRecognition(onResult, onError, onStatus){
+  async startVoiceRecognition(onResult, onError, onStatus, language){
     const candidate = appRuntimeCompat.nativeBridge();
     if(!candidate || typeof candidate.startVoiceRecognition !== 'function') return false;
-    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus)); }
+    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus, language)); }
     catch(_){ return false; }
   },
 
@@ -193,6 +193,13 @@ const appRuntimeCompat = Object.freeze({
     const candidate = appRuntimeCompat.nativeBridge();
     if(!candidate || typeof candidate.stopVoiceRecognition !== 'function') return false;
     try{ await candidate.stopVoiceRecognition(); return true; }
+    catch(_){ return false; }
+  },
+
+  async speak(text, options){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.speak !== 'function') return false;
+    try{ return !!(await candidate.speak(text, options || {})); }
     catch(_){ return false; }
   },
 

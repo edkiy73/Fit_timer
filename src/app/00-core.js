@@ -149,6 +149,22 @@ function speak(text, fallback, onDone){
   if(!soundOn){ done(); return; }
   if(voiceVol <= 0){ if(fallback) fallback(); done(); return; } // голос выключен — фолбэк-звук
   if(musicMode){ if(fallback) fallback(); done(); return; }
+  if(appRuntimeCompat.hasNative('speak')){
+    lastAppSoundT = Date.now() + 8000;
+    appRuntimeCompat.speak(text, {
+      locale: voiceLang || 'ru-RU',
+      voice: savedVoiceURI || ''
+    }).then(ok=>{
+      lastAppSoundT = Date.now() + 250;
+      if(!ok && fallback) fallback();
+      done();
+    }).catch(()=>{
+      lastAppSoundT = Date.now() + 250;
+      if(fallback) fallback();
+      done();
+    });
+    return;
+  }
   try{
     if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
     const voices = speechSynthesis.getVoices();
