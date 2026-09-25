@@ -5388,7 +5388,7 @@ const fitProductInfrastructure = FitTimerModules.infrastructure.create({
   locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
   build: appRuntimeCompat.build,
   premium: () => (typeof isPremium === 'function') ? !!isPremium() : false,
-  newId,
+  newId: () => newId(),
   post: async body => {
     try{
       const res = await fetch('/api/auth',{
