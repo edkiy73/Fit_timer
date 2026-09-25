@@ -4,7 +4,6 @@ const required = [
   'dist/index.html',
   'dist/style.css',
   'dist/app.js',
-  'dist/appbase-core.js',
   'dist/app.config.js',
   'dist/native-notifications.js',
   'dist/mobile-core.js',
@@ -34,13 +33,9 @@ if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 const html = await readFile('dist/index.html', 'utf8');
 const app = await readFile('dist/app.js', 'utf8');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
-if(!html.includes('appbase-core.js') || !html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('type="module"') || !html.includes('esm/main.js') || !html.includes('app.js') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
+if(!html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
-const appBaseCore = await readFile('dist/appbase-core.js', 'utf8');
-if(!appBaseCore.includes('AppBaseStorage') || !appBaseCore.includes('AppBaseIdentity') || !appBaseCore.includes('AppBaseSync') || !appBaseCore.includes('AppBaseObservability') || !appBaseCore.includes('AppBaseNotifications') || !appBaseCore.includes('AppBaseUI')){
-  throw new Error('Reusable AppBase Core runtime bundle is incomplete');
-}
 const nativeNotificationCore = await readFile('native-notifications.js', 'utf8');
 if(!nativeNotificationCore.includes('AppBaseNativeNotifications') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification transport is missing');
 const mobileCore = await readFile('mobile-core.js', 'utf8');
