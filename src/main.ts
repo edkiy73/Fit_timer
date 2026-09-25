@@ -6,6 +6,7 @@ import { createPreferenceStore, limitCandidates } from './core/notifications.js'
 import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
 import { createTransport } from './core/native-notifications.js';
 import { createBridge } from './core/mobile.js';
+import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 
 /**
  * Future ESM application entry point.
@@ -56,4 +57,10 @@ export const nativeNotificationsCore = {
 
 export const mobileCore = {
   createBridge
+};
+
+export const productSyncSchema = {
+  profileKeys: FIT_SYNC_PROFILE_DOC_KEYS,
+  accountKeys: FIT_SYNC_ACCOUNT_DOC_KEYS,
+  registry: FIT_SYNC_REGISTRY
 };
