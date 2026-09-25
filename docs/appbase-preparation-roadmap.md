@@ -248,6 +248,22 @@ Prefer an adapter over the current Redis/protocol first. Do not migrate producti
 
 A good milestone: adding a test non-fitness document type should not require rewriting the sync engine.
 
+### Document registry implementation status
+
+The client now has a typed generic document registry in `src/core/documents.ts`.
+FitTimer registers its own document rules for profile and account scope:
+- profile: `stats`, `index`, `program:*`;
+- account: `trainer`, `clients`, `notificationPrefs`.
+
+The registry decides whether a key belongs to a scope; FitTimer still owns how each document value is created, merged, displayed or interpreted.
+
+This phase intentionally keeps:
+- the existing `/api/sync` request/response shape;
+- existing Redis keys and manifest layout;
+- existing document names on the wire.
+
+The server still has legacy allowlists in `api/sync.js`. Moving those allowlists/validation behind a generic server registry is the next sync-focused step and should be reviewed separately because it is an authorization boundary.
+
 ## Phase 6 — Analytics / Diagnostics Core
 
 Owner: Extraction Engineer. Review: QA/Privacy when identity changes.
