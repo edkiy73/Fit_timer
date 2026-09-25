@@ -5,7 +5,7 @@ const CHECK = process.argv.includes('--check');
 const targets = [
   ['src/core/storage.ts', 'src/core/storage.runtime.js'],
   ['src/core/identity.ts', 'src/core/identity.runtime.js', 'commonjs-bridge', 'AppBaseIdentity'],
-  ['src/core/sync.ts', 'src/core/sync.runtime.js'],
+  ['src/core/sync.ts', 'src/core/sync.runtime.js', 'commonjs-bridge', 'AppBaseSync'],
   ['src/core/observability.ts', 'src/core/observability.runtime.js'],
   ['src/core/notifications.ts', 'src/core/notifications.runtime.js'],
   ['src/core/ui.ts', 'src/core/ui.runtime.js'],
