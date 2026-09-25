@@ -18,6 +18,26 @@ Before editing:
 Do **not** read all of `CLAUDE.md`, `app.js`, `style.css`, or `index.html` by default.
 They are large. Fetch/search only relevant ranges. `CLAUDE.md` is detailed product history/reference, not the normal first read.
 
+
+### AppBase architecture work
+
+The repository contains a dedicated, token-conscious agent team for the planned FitTimer → AppBase extraction. Use it **only** for architecture/extraction work, not for ordinary FitTimer bugs or UI tasks:
+
+- entry/orchestration: `.ai/appbase-agents/00_TEAM_ORCHESTRATION.md`;
+- roles: `.ai/appbase-agents/01_ARCHITECT.md` through `07_PRODUCT_INTEGRATION.md`;
+- current roadmap: `docs/appbase-preparation-roadmap.md`.
+
+Default AppBase task flow is **Architect → Extraction Engineer → QA → Architect**. UX, Security, Release/DevOps and Product Integration are specialists activated only by the triggers in the orchestration file. Do not give every agent the full repository or full conversation history; pass the TASK CARD, targeted context/diff, required contracts and a short HANDOFF.
+
+### Evidence, uncertainty and recommendations
+
+Agents must calibrate claims to evidence:
+- distinguish verified repository/test/tool facts from reasoned conclusions, proposals and unknowns;
+- never describe a design as "ideal", "definitely correct", "the only right solution" or equivalent when material uncertainty or reasonable alternatives remain;
+- for architecture choices, mention a meaningful alternative when it affects the decision and briefly explain why the chosen option fits current constraints better;
+- if verification is incomplete, say exactly what was not verified instead of converting confidence into certainty;
+- update plans when new repository evidence invalidates an earlier assumption. Roadmaps are working guidance, not immutable truth.
+
 ### Repository freshness and concurrent work
 
 - Before starting any coding task, fetch/read the current `main` HEAD and base the work on that exact revision. Never assume a checkout, previous chat, cached file, or earlier connector result is still current.
