@@ -10,6 +10,19 @@
   const fitBiometric = plugins.FitBiometric;
   const fitWorkout = plugins.FitWorkout;
   const pushNotifications = plugins.PushNotifications;
+  const mobileBridgeCore = window.AppBaseMobile
+    ? window.AppBaseMobile.createBridge({
+        native,
+        app:plugins.App || null,
+        filesystem:plugins.Filesystem || null,
+        share:plugins.Share || null,
+        haptics:plugins.Haptics || null,
+        system:fitSystem || null,
+        biometric:fitBiometric || null,
+        platform:()=> (cap.getPlatform && cap.getPlatform()) || 'web',
+        openWeb:url=>{ try{ window.open(url,'_blank','noopener'); return true; }catch(_){ return false; } }
+      })
+    : null;
   const nativeNotificationTransport = window.AppBaseNativeNotifications
     ? window.AppBaseNativeNotifications.createTransport({
         native,
@@ -31,7 +44,6 @@
   let localNotificationListenersInstalled = false;
   let pendingProgramLink = '';
   let pendingWorkoutResume = false;
-  let appInactiveAt = 0;
   let updateProgressHandle = null;
 
   function programIdFromAppUrl(value){
@@ -84,11 +96,9 @@
     return rememberProgramLink(value);
   }
 
-  if(native && plugins.App && plugins.App.addListener){
-    try{ plugins.App.addListener('appUrlOpen', event=> rememberAppUrl(event && event.url)); }catch(_){}
-    if(plugins.App.getLaunchUrl){
-      try{ plugins.App.getLaunchUrl().then(result=> rememberAppUrl(result && result.url)).catch(()=>{}); }catch(_){}
-    }
+  if(mobileBridgeCore){
+    mobileBridgeCore.onUrl(rememberAppUrl).catch(()=>{});
+    mobileBridgeCore.launchUrl().then(url=>{ if(url) rememberAppUrl(url); }).catch(()=>{});
   }
   function installRemotePushListeners(){
     if(remotePushListenersInstalled||!native||!pushNotifications||!pushNotifications.addListener)return;
@@ -249,38 +259,17 @@
   }
 
   async function setSystemTheme(light){
-    if(!native || !fitSystem) return false;
-    try{ await fitSystem.setTheme({light:!!light}); return true; }catch(_){ return false; }
+    return mobileBridgeCore ? mobileBridgeCore.setTheme(!!light) : false;
   }
 
-  function blobBase64(blob){
-    return new Promise((resolve, reject)=>{
-      const reader = new FileReader();
-      reader.onload = ()=> resolve(String(reader.result || '').split(',')[1] || '');
-      reader.onerror = ()=> reject(reader.error || new Error('file_read_failed'));
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  // WebView не умеет надёжно передавать Blob через navigator.share. Кладём файл
-  // во временный Cache и отдаём его системному Android/iOS Share Sheet.
+  // Product copy stays here; temporary-file and native Share mechanics live in Core.
   async function shareFile(blob, fileName, title, text){
-    if(!native || !plugins.Filesystem || !plugins.Share || !blob) return false;
-    try{
-      const safe = String(fileName || 'fittimer-file').replace(/[^\wа-яёА-ЯЁ.\-]+/g, '-').slice(-100);
-      const result = await plugins.Filesystem.writeFile({
-        path: `fittimer-share-${Date.now()}-${safe}`,
-        data: await blobBase64(blob),
-        directory: 'CACHE'
-      });
-      await plugins.Share.share({
-        title: title || 'Fit Timer',
-        text: text || '',
-        files: [result.uri],
-        dialogTitle: 'Поделиться'
-      });
-      return true;
-    }catch(_){ return false; }
+    if(!mobileBridgeCore) return false;
+    return mobileBridgeCore.shareBlob(blob, fileName, {
+      title:title || 'Fit Timer',
+      text:text || '',
+      dialogTitle:'Поделиться'
+    });
   }
 
   // index.html исторически вызывает haptic на pointerdown почти всех кнопок.
@@ -291,8 +280,9 @@
   }
 
   function workoutHaptic(){
-    if(!native || !plugins.Haptics) return false;
-    try{ plugins.Haptics.impact({style:'LIGHT'}); return true; }catch(_){ return false; }
+    if(!mobileBridgeCore || !native) return false;
+    mobileBridgeCore.impact('LIGHT').catch(()=>{});
+    return true;
   }
 
   async function requestMicrophone(){
@@ -492,13 +482,10 @@
     }catch(_){}
   }
 
-  // visibilitychange в WebView бывает запоздалым. Нативное событие приложения
-  // немедленно освобождает микрофон, TTS, media loop, AudioContext и wake lock.
-  if(native && plugins.App && plugins.App.addListener){
-    plugins.App.addListener('appStateChange', event=>{
-      const active = !!(event && event.isActive);
-      if(!active){
-        appInactiveAt = Date.now();
+  // Core owns Capacitor lifecycle timing. FitTimer still owns what background/foreground means.
+  if(mobileBridgeCore){
+    mobileBridgeCore.onLifecycle(event=>{
+      if(!event.active){
         try{ window.dispatchEvent(new CustomEvent('fitAppBackground')); }catch(_){}
         if(typeof window.stopListening === 'function') window.stopListening();
         else stopVoiceRecognition();
@@ -508,9 +495,7 @@
         try{ if(typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
         return;
       }
-      const awayMs = appInactiveAt ? Math.max(0, Date.now() - appInactiveAt) : 0;
-      appInactiveAt = 0;
-      try{ window.dispatchEvent(new CustomEvent('fitAppForeground', {detail:{awayMs}})); }catch(_){}
+      try{ window.dispatchEvent(new CustomEvent('fitAppForeground', {detail:{awayMs:event.awayMs || 0}})); }catch(_){}
       try{
         const work = document.getElementById('scrWork');
         if(work && work.classList.contains('on')){
@@ -519,35 +504,15 @@
         }
         if(typeof window.syncNativeNotifications === 'function') window.syncNativeNotifications();
       }catch(_){}
-    });
+    }).catch(()=>{});
   }
 
   async function getAppInfo(){
-    if(!native || !plugins.App || !plugins.App.getInfo) return null;
-    try{
-      const info=await plugins.App.getInfo();
-      let distribution = '';
-      if(fitSystem && fitSystem.getDistribution){
-        try{
-          const d = await fitSystem.getDistribution();
-          distribution = String((d && d.channel) || '');
-        }catch(_){}
-      }
-      return {
-        version:String((info&&info.version)||''),
-        build:Number((info&&info.build)||0)||0,
-        distribution
-      };
-    }catch(_){ return null; }
+    return mobileBridgeCore ? mobileBridgeCore.appInfo() : null;
   }
 
   async function openExternal(url){
-    const value=String(url||'').trim();
-    if(!value) return false;
-    if(native && fitSystem && fitSystem.openExternal){
-      try{ await fitSystem.openExternal({url:value}); return true; }catch(_){}
-    }
-    try{ window.open(value,'_blank','noopener'); return true; }catch(_){ return false; }
+    return mobileBridgeCore ? mobileBridgeCore.openExternal(url) : false;
   }
 
   async function installUpdate(url, expectedVersionCode){
@@ -587,15 +552,15 @@
   }
 
   async function biometricStatus(){
-    if(!native || !fitBiometric || !fitBiometric.status) return {available:false, reason:'unsupported'};
-    try{ return await fitBiometric.status(); }
-    catch(_){ return {available:false, reason:'temporarily_unavailable'}; }
+    return mobileBridgeCore
+      ? mobileBridgeCore.biometricStatus()
+      : {available:false, reason:'unsupported'};
   }
 
   async function authenticateBiometric(options){
-    if(!native || !fitBiometric || !fitBiometric.authenticate) return {ok:false, error:'unsupported'};
-    try{ return await fitBiometric.authenticate(options || {}); }
-    catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
+    return mobileBridgeCore
+      ? mobileBridgeCore.authenticateBiometric(options || {})
+      : {ok:false, error:'unsupported'};
   }
 
   // The workout notification / Live Activity deliberately survives WebView process death.
