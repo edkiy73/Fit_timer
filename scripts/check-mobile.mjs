@@ -5,6 +5,7 @@ const required = [
   'dist/style.css',
   'dist/app.js',
   'dist/app.config.js',
+  'dist/lib/ai-protocol.js',
   'dist/mobile.js',
   'dist/esm/main.js',
   '.well-known/assetlinks.json',
@@ -32,8 +33,10 @@ if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 const html = await readFile('dist/index.html', 'utf8');
 const app = await readFile('dist/app.js', 'utf8');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
+const sharedAIProtocol = await readFile('dist/lib/ai-protocol.js', 'utf8');
 if(!html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="mobile.js"></script>') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');
+if(!sharedAIProtocol.includes('FitAIProtocol') || !sharedAIProtocol.includes('validateResponse')) throw new Error('Shared AI protocol runtime is missing');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
 const nativeNotificationCore = await readFile('dist/esm/core/native-notifications.js', 'utf8');
 if(!nativeNotificationCore.includes('createTransport') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification ESM transport is missing');
