@@ -447,7 +447,15 @@ The first adapter slice is now implemented without changing production authority
 - Gemini/OpenAI remain supported and the default route is unchanged;
 - health diagnostics expose only configuration/connectivity state, never secret values.
 
-The next Supabase slice should define the provider-neutral server-store contract and the first document/shadow-write schema before any production dual-write is enabled.
+The provider-neutral document store and first shadow schema are now implemented:
+- generic `lib/document-store.js` contract;
+- Supabase adapter in `lib/supabase-document-store.js`;
+- migrated `public.appbase_documents` table in `FitT`;
+- env-gated sync shadow writes and parity comparison;
+- privacy purge for profile/account deletion;
+- Upstash remains authoritative and Supabase reads never serve production sync responses.
+
+The next decision is operational rather than architectural: add Supabase server env to Vercel, enable shadow write first, observe parity, then enable compare. Do not switch authoritative reads yet.
 
 ## Phase 11 — Admin decomposition
 
