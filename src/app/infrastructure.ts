@@ -25,12 +25,16 @@ export interface ProductInfrastructure {
 export function createProductInfrastructure(
   options: ProductInfrastructureOptions
 ): ProductInfrastructure {
-  const storage = createStorage({
+  const storageOptions = {
     dbName: 'fittimer',
     storeName: 'kv',
-    mirrorKeys: ['account'],
-    externalStorage: options.externalStorage,
-    onWriteFailure: options.onStorageWriteFailure
+    mirrorKeys: ['account']
+  } satisfies import('../core/storage.js').StorageOptions;
+
+  const storage = createStorage({
+    ...storageOptions,
+    ...(options.externalStorage ? {externalStorage: options.externalStorage} : {}),
+    ...(options.onStorageWriteFailure ? {onWriteFailure: options.onStorageWriteFailure} : {})
   });
 
   const deviceId = async (): Promise<string> => {
