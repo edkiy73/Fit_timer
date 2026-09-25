@@ -29,7 +29,8 @@ window.APP_CONFIG = Object.freeze({
     "ai": true,
     "notifications": true,
     "biometrics": true,
-    "sharing": true
+    "sharing": true,
+    "voice": true
   },
   "apiBase": "",
   "publicAppUrl": ""

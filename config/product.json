@@ -30,6 +30,7 @@
     "ai": true,
     "notifications": true,
     "biometrics": true,
-    "sharing": true
+    "sharing": true,
+    "voice": true
   }
 }

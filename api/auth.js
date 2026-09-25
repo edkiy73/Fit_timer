@@ -37,6 +37,7 @@ const { sendMail } = require('../lib/mail');
 const { recordAnalytics, removeAnalyticsDevice } = require('../lib/analytics');
 const { recordClientError } = require('../lib/diagnostics');
 const SyncShadow = require('../lib/sync-shadow');
+const { capabilities } = require('../lib/capabilities-core');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -345,6 +346,8 @@ module.exports = async (req, res) => {
   }
 
   if(act === 'push_device'){
+    // Unregistering stays allowed so a product that turns push off can still clean up devices.
+    if(!capabilities().enabled('notifications') && !(body && body.enabled === false)) return fail(res, 404, 'capability_disabled');
     const deviceId=String((body&&body.deviceId)||'').trim().slice(0,80), token=String((body&&body.syncToken)||'');
     let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(e){}
     const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];

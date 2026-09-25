@@ -41,7 +41,7 @@ for(const mode of ['dark','light']){
   }
 }
 
-const featureKeys = ['profiles','premium','ai','notifications','biometrics','sharing'];
+const featureKeys = ['profiles','premium','ai','notifications','biometrics','sharing','voice'];
 for(const key of featureKeys){
   if(typeof product.features[key] !== 'boolean') throw new Error(`config/product.json: features.${key} must be boolean`);
 }

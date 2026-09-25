@@ -78,6 +78,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/native-notifications.ts` | generic Capacitor local/push notification transport | mobile notification/Core work |
 | `src/core/mobile.ts` | generic lifecycle/URL/share/haptic/theme/biometry bridge | mobile/Core work |
 | `src/core/speech.ts` | generic native TTS / speech recognition / offline model transport | voice/Core work |
+| `src/core/capabilities.ts` + `lib/capabilities-core.js` | product capability switches from `config/product.json` | enabling/disabling platform capabilities |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/sync-schema.ts` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |

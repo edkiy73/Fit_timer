@@ -584,6 +584,18 @@ sharing
 
 Do not create `if (app === 'fitness')` / `if (app === 'language')` branches inside Core.
 
+### Capability config implementation status
+
+`config/product.json → features` is now enforced instead of being documentation only:
+- `src/core/capabilities.ts` (client) and `lib/capabilities-core.js` (server) normalize the switches; missing, unknown or non-boolean values are **off**, so a product must opt in explicitly;
+- the known set is `profiles`, `premium`, `ai`, `notifications`, `biometrics`, `sharing`, `voice` (`voice` added together with the speech Core);
+- `mobile.js` wires native integrations only when enabled: `voice` → audio plugin, `biometrics` → biometric plugin, `notifications` → local + push plugins, `sharing` → Filesystem/Share;
+- the AI endpoint returns `404 capability_disabled` and public config reports AI as disabled when `ai` is off;
+- push-device registration requires `notifications` (unregistering stays allowed for cleanup);
+- `tests/capabilities-unit.js` covers normalization, the server gates and the mobile composition gates.
+
+FitTimer keeps every capability on, so its behavior is unchanged. `profiles` and `premium` are declared but still enforced only by product UI/billing code; a product without them simply does not render that UI. Core modules themselves stay unconditional — capabilities are applied at composition/endpoint boundaries.
+
 ## Phase 16 — AppBase readiness audit
 
 Before fork/snapshot:

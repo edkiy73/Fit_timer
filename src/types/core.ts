@@ -13,6 +13,7 @@ export interface AppFeatureFlags {
   notifications: boolean;
   biometrics: boolean;
   sharing: boolean;
+  voice: boolean;
 }
 
 export interface AppThemeTokens {

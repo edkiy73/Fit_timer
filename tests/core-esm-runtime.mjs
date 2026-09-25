@@ -10,6 +10,7 @@ const {createRegistry} = await import('../dist/esm/core/sync.js');
 const {createClient} = await import('../dist/esm/core/observability.js');
 const {createPreferenceStore, limitCandidates} = await import('../dist/esm/core/notifications.js');
 const {createSpeech} = await import('../dist/esm/core/speech.js');
+const {createCapabilities, CAPABILITY_NAMES} = await import('../dist/esm/core/capabilities.js');
 
 const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
 const profileDraft = createProfileDraft('Demo');
@@ -120,6 +121,12 @@ const webSpeech = createSpeech({native:false, audio:fakeAudio, defaultLanguage:'
 ok('ESM speech is unavailable outside native shell',
   !webSpeech.available() && !(await webSpeech.speak('x'))
   && (await webSpeech.modelStatus()).unavailable === true);
+
+const caps = createCapabilities({voice:true, sharing:'yes'});
+ok('ESM capabilities default missing/non-boolean switches to off',
+  caps.enabled('voice') && !caps.enabled('sharing') && !caps.enabled('ai')
+  && caps.when('voice', 'x') === 'x' && caps.when('ai', 'x') === null
+  && CAPABILITY_NAMES.length === Object.keys(caps.flags()).length);
 
 console.log(bad ? `\nESM Core failures: ${bad}` : '\nESM Core behavior is clean');
 process.exit(bad ? 1 : 0);

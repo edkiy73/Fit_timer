@@ -64,6 +64,7 @@ jobs:
           node tests/appbase-ui-brand-unit.js
           node tests/appbase-ui-states-unit.js
           node tests/appbase-core-bundle-unit.js
+          node tests/capabilities-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js

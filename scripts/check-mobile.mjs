@@ -39,6 +39,8 @@ const nativeNotificationCore = await readFile('dist/esm/core/native-notification
 if(!nativeNotificationCore.includes('createTransport') || !nativeNotificationCore.includes('replaceRange')) throw new Error('Generic native notification ESM transport is missing');
 const mobileCore = await readFile('dist/esm/core/mobile.js', 'utf8');
 if(!mobileCore.includes('createBridge') || !mobileCore.includes('shareBlob') || !mobileCore.includes('onLifecycle')) throw new Error('Generic mobile Core ESM bridge is missing');
+const capabilitiesCore = await readFile('dist/esm/core/capabilities.js', 'utf8');
+if(!capabilitiesCore.includes('createCapabilities')) throw new Error('Generic capability Core ESM module is missing');
 const speechCore = await readFile('dist/esm/core/speech.js', 'utf8');
 if(!speechCore.includes('createSpeech') || !speechCore.includes('startRecognition')) throw new Error('Generic speech Core ESM transport is missing');
 const mobileBridge = await readFile('dist/mobile.js', 'utf8');

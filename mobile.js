@@ -1,6 +1,7 @@
 import { createBridge } from './esm/core/mobile.js';
 import { createTransport } from './esm/core/native-notifications.js';
 import { createSpeech } from './esm/core/speech.js';
+import { createCapabilities } from './esm/core/capabilities.js';
 
 /* Тонкий мост к нативным функциям. В обычном браузере все методы безопасно
    переходят на web fallback, поэтому index.html остаётся общей кодовой базой. */
@@ -9,16 +10,19 @@ import { createSpeech } from './esm/core/speech.js';
   const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
   if(native) document.documentElement.classList.add('native-app');
   const plugins = (cap && cap.Plugins) || {};
-  const fitAudio = plugins.FitAudio;
+  // Product capability switches decide which native integrations are wired at all.
+  const capabilities = createCapabilities(window.APP_CONFIG && window.APP_CONFIG.features);
+  const fitAudio = capabilities.when('voice', plugins.FitAudio || null);
   const fitSystem = plugins.FitSystem;
-  const fitBiometric = plugins.FitBiometric;
+  const fitBiometric = capabilities.when('biometrics', plugins.FitBiometric || null);
   const fitWorkout = plugins.FitWorkout;
-  const pushNotifications = plugins.PushNotifications;
+  const pushNotifications = capabilities.when('notifications', plugins.PushNotifications || null);
+  const localNotifications = capabilities.when('notifications', plugins.LocalNotifications || null);
   const mobileBridgeCore = createBridge({
         native,
         app:plugins.App || null,
-        filesystem:plugins.Filesystem || null,
-        share:plugins.Share || null,
+        filesystem:capabilities.when('sharing', plugins.Filesystem || null),
+        share:capabilities.when('sharing', plugins.Share || null),
         haptics:plugins.Haptics || null,
         system:fitSystem || null,
         biometric:fitBiometric || null,
@@ -27,7 +31,7 @@ import { createSpeech } from './esm/core/speech.js';
       });
   const nativeNotificationTransport = createTransport({
         native,
-        local:plugins.LocalNotifications || null,
+        local:localNotifications,
         push:pushNotifications || null,
         platform:()=> (cap.getPlatform && cap.getPlatform()) || 'web'
       });
@@ -116,7 +120,7 @@ import { createSpeech } from './esm/core/speech.js';
   }
 
   function installLocalNotificationListeners(){
-    const local = plugins.LocalNotifications;
+    const local = localNotifications;
     if(localNotificationListenersInstalled || !native || !local || !local.addListener) return;
     localNotificationListenersInstalled = true;
     local.addListener('localNotificationActionPerformed', event=>{
@@ -144,7 +148,7 @@ import { createSpeech } from './esm/core/speech.js';
   }
 
   async function syncIosWorkoutInactivity(payload){
-    if(!native || !plugins.LocalNotifications || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
+    if(!native || !localNotifications || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
     installLocalNotificationListeners();
     const sessionId = String((payload && payload.sessionId) || '');
     const at = Math.max(0, Number(payload && payload.inactivityAt) || 0);
@@ -169,7 +173,7 @@ import { createSpeech } from './esm/core/speech.js';
     writeWorkoutInactivityState(st);
     if(at <= Date.now() + 1000) return;
     try{
-      await plugins.LocalNotifications.schedule({notifications:[{
+      await localNotifications.schedule({notifications:[{
         id: WORKOUT_INACTIVITY_NOTIFICATION_ID,
         title: String(payload.inactivityTitle || 'Fit Timer'),
         body: String(payload.inactivityBody || ''),
@@ -194,7 +198,7 @@ import { createSpeech } from './esm/core/speech.js';
   }
 
   async function scheduleRest(seconds, body){
-    if(!native || !plugins.LocalNotifications || !(seconds > 0)) return false;
+    if(!native || !localNotifications || !(seconds > 0)) return false;
     if(!(await requestNotifications())) return false;
     try{
       const exact = await nativeNotificationTransport.exactAllowed();
@@ -306,9 +310,9 @@ import { createSpeech } from './esm/core/speech.js';
 
   function installNativeListeners(){
     installRemotePushListeners();
-    if(native && plugins.LocalNotifications && plugins.LocalNotifications.addListener){
+    if(native && localNotifications && localNotifications.addListener){
       try{
-        plugins.LocalNotifications.addListener('localNotificationActionPerformed', event=>{
+        localNotifications.addListener('localNotificationActionPerformed', event=>{
           try{ window.dispatchEvent(new CustomEvent('fitNotificationAction', {detail:event || {}})); }catch(_){}
         });
       }catch(_){}
