@@ -1,11 +1,24 @@
 /* AI protocol/runtime regression without external providers. */
 const FitAIProtocol = require('../lib/ai-protocol');
+const {createAIActionRegistry} = require('../lib/ai-action-registry');
+const {registry: FitAIActions} = require('../lib/fit-ai-actions');
 
 let bad = 0;
 const ok = (name, cond, extra) => {
   if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra == null ? '' : ' → ' + extra));
 };
+
+const demoRegistry = createAIActionRegistry([
+  {id:'demo.echo',type:'text',bucket:'light'},
+  {id:'demo.image',type:'image',bucket:'image',aspectRatio:'1:1'}
+]);
+ok('generic AI registry accepts non-fitness action ids',
+  demoRegistry.has('demo.echo') && demoRegistry.get('demo.echo').bucket === 'light');
+ok('generic AI registry normalizes image actions without FitTimer knowledge',
+  demoRegistry.get('demo.image').type === 'image' && demoRegistry.get('demo.image').aspectRatio === '1:1');
+ok('FitTimer actions are registered outside generic registry',
+  FitAIActions.has('program.create') && FitAIActions.has('video.parse') && FitAIActions.has('image.exercise'));
 
 const goodProgram = ['ПРОГРАММА: Тест','ДЕНЬ: Пн','КРУГИ: 1','ОТДЫХ МЕЖДУ КРУГАМИ: 10','','УПРАЖНЕНИЕ: Приседания','ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 2','ОТДЫХ: 30'].join('\n');
 const badProgram = ['ПРОГРАММА: Тест','ДЕНЬ: Пн','КРУГИ: 1','УПРАЖНЕНИЕ: Приседания'].join('\n');
