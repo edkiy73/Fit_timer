@@ -344,6 +344,18 @@ ok('mobile Core exposes reusable lifecycle/url/share/theme/biometry primitives',
   && /setTheme/.test(mobileCoreSource)
   && /biometricStatus/.test(mobileCoreSource));
 
+ok('native notification Core uses ESM exports instead of a namespace global',
+  /export function createTransport/.test(nativeNotificationSource)
+  && !/namespace AppBaseNativeNotifications/.test(nativeNotificationSource));
+ok('mobile Core uses ESM exports instead of a namespace global',
+  /export function createBridge/.test(mobileCoreSource)
+  && !/namespace AppBaseMobile/.test(mobileCoreSource));
+ok('ESM entry owns explicit native/mobile Core dependencies',
+  /from ['"]\.\/core\/native-notifications\.js['"]/.test(esmEntrySource)
+  && /from ['"]\.\/core\/mobile\.js['"]/.test(esmEntrySource)
+  && /createTransport/.test(esmEntrySource)
+  && /createBridge/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
