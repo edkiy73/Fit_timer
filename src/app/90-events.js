@@ -58,13 +58,13 @@ async function resumeWorkoutFromNativeNotification(){
 
   const s = await loadSession();
   if(!s){
-    appRuntimeCompat.clearWorkoutState();
+    FitTimerModules.runtimeCompat.clearWorkoutState();
     return false;
   }
   const p = customPrograms.find(x => x && x.id === s.pid);
   if(!p){
     await clearSession();
-    appRuntimeCompat.clearWorkoutState();
+    FitTimerModules.runtimeCompat.clearWorkoutState();
     return false;
   }
 
@@ -210,7 +210,7 @@ async function setNotificationPref(key, value){
   await persistNotificationPrefs(prefs);
   syncNotificationSettings();
   if(['workouts','trainer','progress','offers'].includes(key) && value){
-    const granted = await appRuntimeCompat.requestNotifications();
+    const granted = await FitTimerModules.runtimeCompat.requestNotifications();
     if(!granted){
       prefs[key] = false;
       await persistNotificationPrefs(prefs);
@@ -229,7 +229,7 @@ async function setNotificationPref(key, value){
 async function syncRemotePushRegistration(requestPermission){
   if(!account||!account.email||!account.syncToken)return false;
   const p=getNotificationPrefs(); if(p.trainer===false&&p.progress===false&&p.offers===false)return false;
-  return appRuntimeCompat.registerRemotePush(!!requestPermission);
+  return FitTimerModules.runtimeCompat.registerRemotePush(!!requestPermission);
 }
 async function unregisterRemotePushServer(){
   if(!account||!account.email||!account.syncToken)return;
@@ -296,18 +296,18 @@ function readTimings(){
   uDraft.sideSec = num('ueSideSec', 10, 3, 60);
 }
 async function nativeVoiceReady(){
-  if(!appRuntimeCompat.offlineVoice()) return !!SR;
-  const s = await appRuntimeCompat.getVoiceModelStatus(recognitionLang);
+  if(!FitTimerModules.runtimeCompat.offlineVoice()) return !!SR;
+  const s = await FitTimerModules.runtimeCompat.getVoiceModelStatus(recognitionLang);
   return !!(s && s.installed);
 }
 
 async function chooseHandsFree(mode){
   if(mode === 'voice'){
-    if(!appRuntimeCompat.offlineVoice() && !SR){
+    if(!FitTimerModules.runtimeCompat.offlineVoice() && !SR){
       appAlert(t('handsfree.unavailable'));
       return false;
     }
-    if(appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
+    if(FitTimerModules.runtimeCompat.offlineVoice() && !(await nativeVoiceReady())){
       await refreshVoicePackUI();
       appAlert(t('handsfree.packFirst'));
       return false;
@@ -316,7 +316,7 @@ async function chooseHandsFree(mode){
   setHfMode(mode);
   if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
-    appAlert(t(appRuntimeCompat.offlineVoice() ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
+    appAlert(t(FitTimerModules.runtimeCompat.offlineVoice() ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
   }
   return true;
 }
@@ -479,8 +479,8 @@ wireLiveSoundCascade('st');
 wireLiveSoundCascade('snd');
 
 async function availableTtsVoices(){
-  if(appRuntimeCompat.hasNative('listTtsVoices')){
-    const list = await appRuntimeCompat.listTtsVoices();
+  if(FitTimerModules.runtimeCompat.hasNative('listTtsVoices')){
+    const list = await FitTimerModules.runtimeCompat.listTtsVoices();
     return list.map(v=>({id:v.name,name:v.name,lang:v.language || '',network:!!v.network}));
   }
   try{
@@ -531,7 +531,7 @@ async function syncTtsLocaleToApp(resetVoice){
 
 let voicePackPollTimer = 0;
 async function refreshVoicePackUI(progressEvent){
-  const native = appRuntimeCompat.offlineVoice();
+  const native = FitTimerModules.runtimeCompat.offlineVoice();
   ['voicePackBox','hfVoicePackBox'].forEach(id=>setShown(id,native));
   if(!native) return;
   if($('voiceRecLang')) $('voiceRecLang').value=recognitionLang;
@@ -539,7 +539,7 @@ async function refreshVoicePackUI(progressEvent){
 
   let status = null;
   if(progressEvent && progressEvent.language === recognitionLang) status=progressEvent;
-  else status = await appRuntimeCompat.getVoiceModelStatus(recognitionLang);
+  else status = await FitTimerModules.runtimeCompat.getVoiceModelStatus(recognitionLang);
 
   const size = (status && status.sizeMb) || (recognitionLang==='en' ? 40 : 45);
   let label = status && status.installed ? t('voicepack.ready') : t('voicepack.downloadOnce',{size});
@@ -583,11 +583,11 @@ async function refreshVoicePackUI(progressEvent){
 }
 
 async function downloadSelectedVoicePack(){
-  if(!appRuntimeCompat.hasNative('downloadVoiceModel')) return;
+  if(!FitTimerModules.runtimeCompat.hasNative('downloadVoiceModel')) return;
   for(const id of ['btnVoicePack','btnHfVoicePack']){
     FitTimerModules.ui.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
   }
-  const ok=await appRuntimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
+  const ok=await FitTimerModules.runtimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
   if(!ok) appAlert(t('voicepack.startError'));
 }
@@ -674,19 +674,19 @@ function voiceTestRow(d){
 }
 function onVoiceTestHeard(e){ if(voiceTestOn) voiceTestRow(e.detail || {}); }
 async function openVoiceTest(){
-  if(state.live || !appRuntimeCompat.offlineVoice()) return;
+  if(state.live || !FitTimerModules.runtimeCompat.offlineVoice()) return;
   $('voiceTestList').innerHTML = '';
   $('voiceTestStatus').textContent = t('voicetest.listening');
   $('voiceTestModal').classList.add('open');
   voiceTestOn = true;
-  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
+  const ok = await FitTimerModules.runtimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
   if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
-  if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
+  if(!voiceTestOn) FitTimerModules.runtimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
 }
 function stopVoiceTest(){
   if(!voiceTestOn) return;
   voiceTestOn = false;
-  appRuntimeCompat.stopVoiceRecognition();
+  FitTimerModules.runtimeCompat.stopVoiceRecognition();
 }
 window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
 if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
@@ -2111,7 +2111,7 @@ let programLinksReady = false;
 let pendingAction = null;
 
 window.addEventListener('fitWorkoutResumeRequest', ()=>{
-  appRuntimeCompat.consumeWorkoutResume();
+  FitTimerModules.runtimeCompat.consumeWorkoutResume();
   if(workoutResumeReady){
     resumeWorkoutFromNativeNotification().catch(()=>{});
     return;
@@ -2122,7 +2122,7 @@ window.addEventListener('fitWorkoutResumeRequest', ()=>{
 window.addEventListener('fitProgramLink', e => {
   const id = String((e && e.detail && e.detail.id) || '');
   if(!/^[0-9a-z]{4,16}$/.test(id)) return;
-  appRuntimeCompat.consumeProgramLink();
+  FitTimerModules.runtimeCompat.consumeProgramLink();
   if(programLinksReady){
     importProgramLink(id);
     return;
@@ -2143,9 +2143,9 @@ try{
   if(pendingImport || pendingLink || pendingAction){
     history.replaceState({scr: 'scrMenu'}, '', '/'); // чистим адрес после разбора ссылки
   }
-  const nativeId = appRuntimeCompat.consumeProgramLink();
+  const nativeId = FitTimerModules.runtimeCompat.consumeProgramLink();
   if(/^[0-9a-z]{4,16}$/.test(nativeId)) pendingNativeLink = nativeId;
-  pendingNativeWorkoutResume = appRuntimeCompat.consumeWorkoutResume();
+  pendingNativeWorkoutResume = FitTimerModules.runtimeCompat.consumeWorkoutResume();
 }catch(e){}
 
 (async ()=>{
@@ -2154,7 +2154,7 @@ try{
   try{
     const raw = localStorage.getItem('account');
     const saved = raw && JSON.parse(raw);
-    if(appRuntimeCompat.isNative()
+    if(FitTimerModules.runtimeCompat.isNative()
       && saved && saved.biometry && saved.biometry.enabled && saved.biometry.kind === 'native'){
       $('lockModal').classList.add('open');
     }
@@ -2240,7 +2240,7 @@ try{
   const hasScheduledWorkout = customPrograms.some(p => p && p.id !== 'warmup'
     && progActive(p) && planDays(p).length);
   if(hasScheduledWorkout && getNotificationPrefs().workouts !== false){
-    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+    FitTimerModules.runtimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
   hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
   // Удалённый режим мог остаться в старой резервной копии или localStorage.
@@ -2270,10 +2270,10 @@ try{
   if(pendingNativeWorkoutResume){
     pendingNativeWorkoutResume = false;
     await resumeWorkoutFromNativeNotification();
-  } else if(appRuntimeCompat.hasNative('clearWorkoutState')){
+  } else if(FitTimerModules.runtimeCompat.hasNative('clearWorkoutState')){
     // If Android/iOS kept a native surface but there is no matching saved session, it is stale.
     const bootSession = await loadSession();
-    if(!bootSession) appRuntimeCompat.clearWorkoutState();
+    if(!bootSession) FitTimerModules.runtimeCompat.clearWorkoutState();
   }
 
   // Серверное состояние обновляем уже поверх готового локального интерфейса.
