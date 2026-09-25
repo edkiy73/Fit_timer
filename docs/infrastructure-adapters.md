@@ -109,6 +109,8 @@ Implementation status:
 - `SUPABASE_SHADOW_WRITE=1` enables best-effort writes of accepted sync documents only after the authoritative Upstash write;
 - `SUPABASE_SHADOW_COMPARE=1` enables read-compare on Premium sync pulls;
 - compare results contain only counts and are exposed in health diagnostics without account identifiers or payloads;
+- migration monitoring exposes shadow document count, last write-batch errors, parity counters and a readiness stage in Admin/Health;
+- `ready_for_compare` means shadow writes are succeeding and shadow documents exist; it does not make Supabase authoritative;
 - account/profile privacy deletion purges Supabase before deleting authoritative identity/data when Supabase is configured;
 - production reads still come exclusively from Upstash.
 
