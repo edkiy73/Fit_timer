@@ -296,6 +296,7 @@ ok('mobile adapter owns explicit native/mobile Core dependencies',
   && /createBridge/.test(mobileAdapterSource)
   && !/FitTimerModules/.test(mobileAdapterSource));
 
+const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
 const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');
 ok('product sync schema is a real ESM module',
   /from ['"]\.\.\/core\/sync\.js['"]/.test(productSyncModuleSource)
@@ -303,10 +304,10 @@ ok('product sync schema is a real ESM module',
 ok('product sync schema keeps FitTimer policy outside Core',
   /program:/.test(productSyncModuleSource)
   && /notificationPrefs/.test(productSyncModuleSource));
-ok('ESM entry composes product sync schema and exposes it to legacy product code',
+ok('ESM entry composes product sync schema and startup bridge captures it once',
   /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
   && /productSyncSchema/.test(esmEntrySource)
-  && /FitTimerModules/.test(esmEntrySource));
+  && /const appSync = fitLegacyModules\.sync/.test(legacyDependencySource));
 
 const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
 ok('product infrastructure composes Core through explicit imports',
@@ -318,10 +319,10 @@ ok('product infrastructure owns FitTimer storage configuration outside Core',
   && /mirrorKeys: \['account'\]/.test(productInfrastructureSource));
 ok('product infrastructure has no direct legacy Core globals',
   !/AppBaseStorage|AppBaseObservability/.test(productInfrastructureSource));
-ok('legacy data-sync consumes product modules instead of Core globals',
-  /FitTimerModules\.infrastructure\.create/.test(dataSyncSource)
-  && /FitTimerModules\.sync\.registry/.test(dataSyncSource)
-  && !/AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
+ok('legacy data-sync consumes captured product dependencies instead of globals',
+  /appInfrastructure\.create/.test(dataSyncSource)
+  && /appSync\.registry/.test(dataSyncSource)
+  && !/FitTimerModules|AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
 ok('ESM entry composes product infrastructure explicitly',
   /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
   && /productInfrastructure/.test(esmEntrySource));
@@ -338,10 +339,10 @@ ok('FitTimer profile extension stays in product layer',
   && !/gender|age/.test(fs.readFileSync('src/core/identity.ts','utf8')));
 ok('product identity has no legacy AppBaseIdentity global',
   !/AppBaseIdentity/.test(productIdentitySource));
-ok('legacy account/profile flow consumes product identity instead of Core global',
-  /FitTimerModules\.identity\.createAccount/.test(accountProductSource)
-  && /FitTimerModules\.identity\.createProfile/.test(accountProductSource)
-  && !/AppBaseIdentity/.test(accountProductSource));
+ok('legacy account/profile flow consumes captured product identity',
+  /appIdentity\.createAccount/.test(accountProductSource)
+  && /appIdentity\.createProfile/.test(accountProductSource)
+  && !/FitTimerModules|AppBaseIdentity/.test(accountProductSource));
 ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));

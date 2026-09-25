@@ -54,6 +54,7 @@ async function watched(b){
   const dock = await app.page.$$('.dock-btn:not(.hidden)');
   for(const btn of dock){ await btn.click(); await app.page.waitForTimeout(500); }
   ok('обработчики работают: разделы переключаются', dock.length >= 3 && await app.page.evaluate(() => !!document.querySelector('.screen.on')), dock.length);
+  ok('временный FitTimerModules удалён после старта', await app.page.evaluate(() => typeof window.FitTimerModules === 'undefined'));
   ok('приложение без нарушений CSP', app.violations.length === 0, app.violations.slice(0, 3).join(' | '));
   ok('приложение без ошибок JS', app.errs.length === 0, app.errs.slice(0, 3).join(' | '));
 

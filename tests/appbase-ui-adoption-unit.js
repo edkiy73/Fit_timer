@@ -12,14 +12,14 @@ const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
 ok('ESM entry imports UI Core',
   /from ['"]\.\/core\/ui\.js['"]/.test(esmEntry));
-ok('ESM startup exposes UI Core before loading legacy product runtime',
-  esmEntry.indexOf('exposeLegacyCoreGlobals()') < esmEntry.indexOf('loadLegacyProductRuntime()'));
-ok('FitTimer setShown delegates to FitTimerModules.ui',
-  core.includes('FitTimerModules.ui.setShown(node, !!on)'));
-ok('named action delegation uses FitTimerModules.ui',
-  platform.includes('FitTimerModules.ui.bindActions(document, ACTIONS)'));
+ok('ESM startup exposes product dependencies before loading legacy product runtime',
+  esmEntry.indexOf('exposeLegacyProductModules()') < esmEntry.indexOf('loadLegacyProductRuntime()'));
+ok('FitTimer setShown delegates to appUi',
+  core.includes('appUi.setShown(node, !!on)'));
+ok('named action delegation uses appUi',
+  platform.includes('appUi.bindActions(document, ACTIONS)'));
 ok('closeModal uses generic modal helpers',
-  platform.includes('FitTimerModules.ui.closestModal(btn)')&&platform.includes('FitTimerModules.ui.closeModal(m)'));
+  platform.includes('appUi.closestModal(btn)')&&platform.includes('appUi.closeModal(m)'));
 ok('old manual data-act click dispatcher is gone',
   !platform.includes("e.target.closest('[data-act]')"));
 

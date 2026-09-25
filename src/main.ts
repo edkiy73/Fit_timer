@@ -66,8 +66,10 @@ type LegacyProductModules = {
   ui: typeof uiCore;
 };
 
+type LegacyProductGlobal = typeof globalThis & {FitTimerModules?: LegacyProductModules};
+
 function exposeLegacyProductModules(): void {
-  const legacy = globalThis as typeof globalThis & {FitTimerModules?: LegacyProductModules};
+  const legacy = globalThis as LegacyProductGlobal;
   legacy.FitTimerModules = {
     infrastructure: productInfrastructure,
     identity: productIdentity,
@@ -75,6 +77,10 @@ function exposeLegacyProductModules(): void {
     notifications: notificationsCore,
     ui: uiCore
   };
+}
+
+function clearLegacyProductModules(): void {
+  delete (globalThis as LegacyProductGlobal).FitTimerModules;
 }
 
 function loadLegacyScript(
@@ -116,6 +122,7 @@ exposeLegacyProductModules();
 try{
   await loadLegacyMobileRuntime();
   await loadLegacyProductRuntime();
+  clearLegacyProductModules();
 }catch(error){
   console.error('Failed to start product runtime', error);
   document.body.classList.remove('booting');

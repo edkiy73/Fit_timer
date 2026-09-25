@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1414,
-      "chars": 68451,
+      "chars": 68438,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -84,6 +84,11 @@
         "workoutLoadSnapshot"
       ]
     },
+    "src/app/00-dependencies.js": {
+      "kind": "frontend-js",
+      "lines": 12,
+      "chars": 615
+    },
     "src/app/05-runtime-compat.js": {
       "kind": "frontend-js",
       "lines": 248,
@@ -92,7 +97,7 @@
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
       "lines": 2136,
-      "chars": 99496,
+      "chars": 99392,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -227,7 +232,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 989,
-      "chars": 43970,
+      "chars": 43944,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -294,7 +299,7 @@
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
       "lines": 947,
-      "chars": 42659,
+      "chars": 42607,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -713,7 +718,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1646,
-      "chars": 75991,
+      "chars": 75965,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -793,7 +798,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 721,
-      "chars": 31379,
+      "chars": 31314,
       "symbols": [
         "add",
         "advance",
@@ -841,7 +846,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2312,
-      "chars": 96608,
+      "chars": 96569,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
