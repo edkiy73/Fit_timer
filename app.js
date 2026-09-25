@@ -5380,6 +5380,7 @@ const FIT_SYNC_REGISTRY = AppBaseSync.createRegistry([
   {scope:'account', key:'notificationPrefs', free:true}
 ]);
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
+const FIT_TIMER_BUILD = '20.09 · v22';
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
 const fitStorage = AppBaseStorage.createStorage({
@@ -5465,7 +5466,7 @@ const appObservability = AppBaseObservability.createClient({
   context: ()=> ({
     platform:analyticsPlatform(),
     locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-    build:String(window.FIT_TIMER_BUILD || ''),
+    build:String(FIT_TIMER_BUILD || ''),
     premium:(typeof isPremium === 'function') ? !!isPremium() : false
   })
 });
@@ -8070,11 +8071,9 @@ function renderPremium(){
 // показанное в трёх местах, поэтому и обновляются они одной функцией.
 /* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
    какая сборка сейчас у человека на телефоне. */
-const BUILD = '20.09 · v22';
-try{ window.FIT_TIMER_BUILD = BUILD; }catch(_){}
 function renderBuild(){
   const el = $('buildLine');
-  if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
+  if(el) el.textContent = t('account.version') + ' ' + FIT_TIMER_BUILD + ' · ' + t('account.buildNote');
 }
 
 function renderPlan(){
