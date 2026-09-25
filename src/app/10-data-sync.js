@@ -1,4 +1,5 @@
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
+const FIT_TIMER_BUILD = '20.09 · v22';
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
 const fitStorage = AppBaseStorage.createStorage({
@@ -84,7 +85,7 @@ const appObservability = AppBaseObservability.createClient({
   context: ()=> ({
     platform:analyticsPlatform(),
     locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-    build:String(window.FIT_TIMER_BUILD || ''),
+    build:String(FIT_TIMER_BUILD || ''),
     premium:(typeof isPremium === 'function') ? !!isPremium() : false
   })
 });
