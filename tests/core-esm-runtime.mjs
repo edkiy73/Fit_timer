@@ -5,9 +5,18 @@ const ok = (name, cond) => {
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name);
 };
 
+const {createAccount, createProfileDraft} = await import('../dist/esm/core/identity.js');
 const {createRegistry} = await import('../dist/esm/core/sync.js');
 const {createClient} = await import('../dist/esm/core/observability.js');
 const {createPreferenceStore, limitCandidates} = await import('../dist/esm/core/notifications.js');
+
+const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
+const profileDraft = createProfileDraft('Demo');
+ok('ESM identity account defaults are domain-free',
+  accountDraft.email === '' && accountDraft.handle === '' && accountDraft.deletedProfiles.length === 0);
+ok('ESM identity profile defaults are domain-free',
+  profileDraft.name === 'Demo' && profileDraft.theme === 'system' && profileDraft.locale === 'system'
+  && !('gender' in profileDraft) && !('age' in profileDraft));
 
 const demoRegistry = createRegistry([
   {scope:'profile', prefix:'note:', allowDeleted:true},
