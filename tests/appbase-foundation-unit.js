@@ -108,6 +108,21 @@ ok('legacy voice native calls are isolated to compatibility boundary',
       'candidate.downloadVoiceModel','candidate.startVoiceRecognition',
       'candidate.stopVoiceRecognition','candidate.stopSpeaking']
     .every(token => runtimeCompatSource.includes(token)));
+const lifecycleNativeSources = [
+  'src/app/70-workout.js',
+  'src/app/80-platform.js',
+  'src/app/90-events.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+const legacyLifecycleCalls = [
+  'window.FitNative.isNative',
+  'window.FitNative.consumeProgramLink',
+  'window.FitNative.consumeWorkoutResume'
+];
+ok('legacy native lifecycle calls are isolated to compatibility boundary',
+  legacyLifecycleCalls.every(token => !lifecycleNativeSources.includes(token))
+  && ['candidate.isNative','candidate.consumeProgramLink','candidate.consumeWorkoutResume']
+    .every(token => runtimeCompatSource.includes(token)));
+
 
 
 
