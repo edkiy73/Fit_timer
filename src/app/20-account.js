@@ -12,7 +12,7 @@ function userDirty(){ return isChanged('user', userState()); }
 
 function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : Object.assign(AppBaseIdentity.createProfileDraft(nextProfileName()), {gender: '', age: null});
+  const u = id ? users.find(x => x.id === id) : FitTimerModules.identity.createProfile(nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = uDraft.name || '';
@@ -188,7 +188,7 @@ let bioOK = false;   // устройство умеет проверять от�
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
 // биометрии переезжают сюда и возвращаются обратно при входе.
 let knownAccounts = [];
-const blankAccount = ()=> AppBaseIdentity.createAccount();
+const blankAccount = ()=> FitTimerModules.identity.createAccount();
 async function readAccountData(){
   return parsed(await kvGet('accountData'), {});
 }
