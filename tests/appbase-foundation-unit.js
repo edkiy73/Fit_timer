@@ -134,7 +134,7 @@ ok('legacy voice native calls are isolated to compatibility boundary',
   legacyVoiceCalls.every(token => !voiceNativeSources.includes(token))
   && ['candidate.offlineVoice','candidate.getVoiceModelStatus','candidate.listTtsVoices',
       'candidate.downloadVoiceModel','candidate.startVoiceRecognition',
-      'candidate.stopVoiceRecognition','candidate.stopSpeaking']
+      'candidate.stopVoiceRecognition','candidate.stopSpeaking','candidate.speak']
     .every(token => runtimeCompatSource.includes(token)));
 const lifecycleNativeSources = [
   'src/app/70-workout.js',
@@ -295,6 +295,17 @@ ok('mobile adapter owns explicit native/mobile Core dependencies',
   && /createTransport/.test(mobileAdapterSource)
   && /createBridge/.test(mobileAdapterSource)
   && !/FitTimerModules/.test(mobileAdapterSource));
+ok('mobile adapter does not read FitTimer voice/workout state',
+  !['soundOn','voiceVol','musicMode','lastAppSoundT','voiceActive','stopRequested',
+     'applyVoiceCommand','voiceWanted','syncPrefs','appAlert','refreshVoicePackUI',
+     'resetVoiceDedup','stopHeadset','releaseWake','audioCtx','keepAwake',
+     'startHandsFree','recognitionLang','voiceLang','savedVoiceURI','window.finishWorkout']
+    .some(token => mobileAdapterSource.includes(token)));
+ok('FitTimer owns native voice policy behind runtime compatibility',
+  /appRuntimeCompat\.speak\(text/.test(fs.readFileSync('src/app/00-core.js','utf8'))
+  && /handleNativeVoiceResult/.test(fs.readFileSync('src/app/80-platform.js','utf8'))
+  && /startVoiceRecognition\([\s\S]*recognitionLang/.test(fs.readFileSync('src/app/80-platform.js','utf8'))
+  && /candidate\.startVoiceRecognition\(onResult, onError, onStatus, language\)/.test(runtimeCompatSource));
 
 const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
 const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');
