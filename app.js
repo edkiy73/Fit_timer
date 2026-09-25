@@ -6555,7 +6555,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of FIT_SYNC_ACCOUNT_DOC_KEYS){
+  for(const key of FitTimerModules.sync.accountKeys){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
