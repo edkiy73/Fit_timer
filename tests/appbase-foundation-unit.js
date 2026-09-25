@@ -36,16 +36,19 @@ ok('runtime config carries feature flags',
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');
 
 const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts', 'utf8');
+const runtimeEnvironmentBoundarySource = fs.readFileSync('src/app/runtime-environment.ts', 'utf8');
 const dataSyncSource = fs.readFileSync('src/app/10-data-sync.js', 'utf8');
 const sourceBuild = fs.readFileSync('scripts/build-sources.mjs', 'utf8');
-ok('legacy storage global is isolated to compatibility boundary',
-  /window\.storage/.test(runtimeCompatSource) && !/window\.storage/.test(dataSyncSource));
-ok('storage compatibility adapter validates the external KV contract',
-  ['get','set','delete'].every(name => runtimeCompatSource.includes(`candidate.${name}`)));
-ok('Capacitor platform global is isolated to compatibility boundary',
-  runtimeCompatSource.includes('window.Capacitor')
+ok('legacy storage global is isolated to runtime environment boundary',
+  /\.storage/.test(runtimeEnvironmentBoundarySource)
+  && !/window\.storage/.test(runtimeCompatSource)
+  && !/window\.storage/.test(dataSyncSource));
+ok('runtime environment validates the external KV contract',
+  ['get','set','delete'].every(name => runtimeEnvironmentBoundarySource.includes(`candidate.${name}`)));
+ok('Capacitor platform global is isolated to runtime environment boundary',
+  /Capacitor/.test(runtimeEnvironmentBoundarySource)
   && !fs.readFileSync('src/app/10-data-sync.js','utf8').includes('window.Capacitor')
-  && runtimeCompatSource.includes('candidate.getPlatform'));
+  && runtimeEnvironmentBoundarySource.includes('candidate.getPlatform'));
 const buildMetadataSources = [
   'src/app/10-data-sync.js',
   'src/app/20-account.js'
@@ -54,9 +57,10 @@ ok('runtime build metadata stays out of window globals',
   !buildMetadataSources.includes('window.FIT_TIMER_BUILD')
   && runtimeCompatSource.includes('setBuild(value)')
   && runtimeCompatSource.includes('build()'));
-ok('runtime compatibility adapter loads before product data sync',
-  sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
-  && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));
+ok('ESM runtime compatibility is available before legacy product startup',
+  !sourceBuild.includes("'src/app/05-runtime-compat.js'")
+  && /runtimeCompat: appRuntimeCompat/.test(fs.readFileSync('src/main.ts','utf8'))
+  && /FitTimerModules\.runtimeCompat/.test(dataSyncSource));
 const genericNativeProductSources = [
   'src/app/00-core.js',
   'src/app/20-account.js',
