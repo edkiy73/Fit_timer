@@ -16,8 +16,9 @@ ok('legacy AppBase Core target is removed from source build',
   !build.includes("target: 'appbase-core.js'"));
 ok('product app target no longer lists Core runtimes',
   !build.slice(build.indexOf("target: 'app.js'"),build.indexOf("target: 'style.css'")).includes('src/core/'));
-ok('ESM entry exposes one product-module bridge and no AppBase globals',
+ok('ESM entry uses only a temporary product-module bootstrap bridge',
   /FitTimerModules/.test(fs.readFileSync('src/main.ts','utf8'))
+  && /clearLegacyProductModules/.test(fs.readFileSync('src/main.ts','utf8'))
   && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
 ok('product app no longer embeds reusable Core namespace declarations',
   !app.includes('var AppBaseStorage;')
@@ -29,6 +30,10 @@ ok('product app no longer embeds reusable Core namespace declarations',
 ok('product runtime contains no AppBase Core references',
   !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(app)
   && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
+ok('legacy bundle captures the temporary product bridge once and uses local module refs',
+  /const fitModules = globalThis\.FitTimerModules/.test(app)
+  && /const fitUi = fitModules\.ui/.test(app)
+  && !/FitTimerModules\.(?:ui|notifications|sync|identity|infrastructure)/.test(app));
 
 ok('HTML loads only the ESM startup entry for Core/product runtimes',
   html.includes('<script type="module" src="esm/main.js"></script>')
@@ -41,11 +46,12 @@ ok('web build no longer ships legacy Core bundle',
   !web.includes("'appbase-core.js'"));
 ok('mobile validation no longer requires legacy Core bundle',
   !mobile.includes("'dist/appbase-core.js'"));
-ok('ESM entry exposes product modules before loading mobile and product runtimes',
+ok('ESM entry exposes product modules only for product bootstrap lifetime',
   /exposeLegacyProductModules/.test(fs.readFileSync('src/main.ts','utf8'))
   && /loadLegacyMobileRuntime/.test(fs.readFileSync('src/main.ts','utf8'))
   && /loadLegacyProductRuntime/.test(fs.readFileSync('src/main.ts','utf8'))
-  && fs.readFileSync('src/main.ts','utf8').indexOf('await loadLegacyMobileRuntime()')
-     < fs.readFileSync('src/main.ts','utf8').indexOf('await loadLegacyProductRuntime()'));
+  && /clearLegacyProductModules/.test(fs.readFileSync('src/main.ts','utf8'))
+  && fs.readFileSync('src/main.ts','utf8').indexOf('await loadLegacyProductRuntime()')
+     < fs.readFileSync('src/main.ts','utf8').indexOf('clearLegacyProductModules()'));
 
 process.exit(bad?1:0);
