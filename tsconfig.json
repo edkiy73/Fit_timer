@@ -15,6 +15,7 @@
     "verbatimModuleSyntax": false
   },
   "include": [
+    "src/main.ts",
     "src/types/**/*.ts",
     "src/types/**/*.d.ts",
     "src/core/**/*.ts"
