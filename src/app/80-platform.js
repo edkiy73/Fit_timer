@@ -137,7 +137,7 @@ let hfMode = 'off'; // off | voice | headset
 
 function hfHintText(mode){
   if(mode === 'voice'){
-    return t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
+    return t(appRuntimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
   }
   if(mode === 'headset') return t('handsfree.headsetHint');
   return t('handsfree.offHint');
