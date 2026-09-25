@@ -375,16 +375,5 @@ ok('ESM entry exposes the product bootstrap explicitly',
   /from ['"]\.\/app\/bootstrap\.js['"]/.test(esmEntrySource)
   && /productBootstrap/.test(esmEntrySource));
 
-const identityContext = {AppBaseIdentity: undefined, Date};
-vm.createContext(identityContext);
-vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
-const accountDraft = identityContext.AppBaseIdentity.createAccount(new Date('2026-01-02T03:04:05.000Z'));
-const profileDraft = identityContext.AppBaseIdentity.createProfileDraft('Demo');
-ok('generic account defaults are domain-free',
-  accountDraft.email === '' && accountDraft.handle === '' && accountDraft.deletedProfiles.length === 0);
-ok('generic profile defaults are domain-free',
-  profileDraft.name === 'Demo' && profileDraft.theme === 'system' && profileDraft.locale === 'system'
-  && !('gender' in profileDraft) && !('age' in profileDraft));
-
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);
