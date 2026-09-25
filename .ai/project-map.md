@@ -42,6 +42,20 @@ Use `npm run ai:context -- "task description"` as the preferred first step for p
 
 `.ai/symbol-index.json` is a generated lookup table for canonical frontend sources. It maps files to function names, HTML element ids and `data-act` actions. Search it before opening source files. Regenerate after frontend source changes with `npm run ai:index`; verify with `npm run check:ai-index`.
 
+
+## AppBase architecture work
+
+For the planned extraction of a reusable application base, do not start with a repo-wide scan or load every specialist role.
+
+- Orchestration / routing: `.ai/appbase-agents/00_TEAM_ORCHESTRATION.md`.
+- Architect: `.ai/appbase-agents/01_ARCHITECT.md`.
+- Implementation: `.ai/appbase-agents/02_EXTRACTION_ENGINEER.md`.
+- Regression gate: `.ai/appbase-agents/03_QA_REGRESSION.md`.
+- On-demand specialists: `04_UX_UI_SYSTEM.md`, `05_SECURITY_PRIVACY.md`, `06_RELEASE_DEVOPS.md`, `07_PRODUCT_INTEGRATION.md` in the same folder.
+- Preparation phases and known coupling points: `docs/appbase-preparation-roadmap.md`.
+
+Normal AppBase route: Architect → Engineer → QA → Architect. Specialists join only when their trigger applies. The agent set is intentionally designed to avoid repeated full-context handoffs.
+
 ## Frontend
 
 | File | Owns | Read when |
@@ -155,7 +169,7 @@ Do not run every test by default. Run targeted tests first, then broaden only wh
 
 ## Product docs — open only when relevant
 
-- `docs/mobile-release.md` — mobile architecture/build/release.
+- `docs/appbase-preparation-roadmap.md` — FitTimer → reusable AppBase preparation roadmap.\n- `docs/mobile-release.md` — mobile architecture/build/release.
 - `docs/setup-vercel.md` — Vercel, Redis, email, backend setup.
 - `docs/ai-runtime.md` — current AI runtime/configuration.
 - `docs/ai-generation-plan.md` — AI generation design/history.
