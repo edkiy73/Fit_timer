@@ -346,6 +346,16 @@ ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));
 
+const capabilityCoreSource = fs.readFileSync('src/core/capabilities.ts', 'utf8');
+ok('capability Core is generic and typed',
+  /AppCapability/.test(capabilityCoreSource)
+  && /createCapabilities/.test(capabilityCoreSource)
+  && !/fitness|workout|trainer|catalog/i.test(capabilityCoreSource));
+ok('ESM entry composes capabilities from runtime product config',
+  /from ['"]\.\/core\/capabilities\.js['"]/.test(esmEntrySource)
+  && /runtimeFeatures/.test(esmEntrySource)
+  && /capabilitiesCore/.test(esmEntrySource));
+
 const runtimeEnvironmentSource = fs.readFileSync('src/app/runtime-environment.ts', 'utf8');
 ok('runtime environment isolates legacy window dependencies',
   /interface LegacyRuntimeWindow/.test(runtimeEnvironmentSource)
@@ -365,8 +375,9 @@ ok('product bootstrap is the ESM composition root',
   && /from ['"]\.\/identity\.js['"]/.test(productBootstrapSource)
   && /from ['"]\.\/sync-schema\.js['"]/.test(productBootstrapSource)
   && /from ['"]\.\/runtime-environment\.js['"]/.test(productBootstrapSource));
-ok('product bootstrap assembles infrastructure, identity and sync',
-  /infrastructure/.test(productBootstrapSource)
+ok('product bootstrap assembles capabilities, infrastructure, identity and sync',
+  /capabilities/.test(productBootstrapSource)
+  && /infrastructure/.test(productBootstrapSource)
   && /identity:/.test(productBootstrapSource)
   && /sync:/.test(productBootstrapSource));
 ok('ESM entry exposes the product bootstrap explicitly',
