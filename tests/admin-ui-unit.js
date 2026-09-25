@@ -5,7 +5,15 @@ const markup = await readFile('admin.html','utf8');
 const adminJs = await readFile('admin.js','utf8');
 // Проверки ниже ищут и разметку, и код — читаем их вместе.
 const html = markup + '\n' + adminJs;
-const api = await readFile('api/admin.js','utf8');
+const api = [
+  await readFile('api/admin.js','utf8'),
+  await readFile('lib/admin/fittimer/catalog-ai.js','utf8'),
+  await readFile('lib/admin/fittimer/catalog-admin.js','utf8'),
+  await readFile('lib/admin/core/release.js','utf8'),
+  await readFile('lib/admin/core/campaigns.js','utf8'),
+  await readFile('lib/admin/core/ai-settings.js','utf8'),
+  await readFile('lib/admin/core/observability.js','utf8')
+].join('\n');
 const sourceWorkflow = await readFile('.github/workflows/source-consistency.yml','utf8');
 const smokeWorkflow = await readFile('.github/workflows/admin-smoke.yml','utf8');
 const healthApi = await readFile('api/health.js','utf8');
@@ -21,7 +29,7 @@ need(!/<script>[\s\S]*?<\/script>/.test(markup) && !/ on[a-z]+="/i.test(markup),
 new vm.Script(adminJs,{filename:'admin.js'});
 need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
 
-need(api.includes("if(a === 'catalog_ai_create')"),'admin AI-create API is missing');
+need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
 need(api.includes('FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true})'),'AI-created program must be protocol-validated, including the weight ceiling');
 need(html.includes('id="fAiCreate"'),'admin AI-create button is missing');
 need(html.includes('id="aiCreateDays"'),'admin AI-create form is incomplete');
@@ -37,8 +45,8 @@ need(html.includes('let failedMediaJobs = []'),'failed media queue is missing');
 need(html.includes("generateMedia('retry')"),'failed media retry action is missing');
 need(html.includes('Уже готовые картинки сохранены'),'partial media generation must preserve successes');
 
-need(api.includes("if(a === 'save_draft')"),'server draft save action is missing');
-need(api.includes("if(a === 'publish_draft')"),'server draft publish action is missing');
+need(api.includes("'save_draft'"),'server draft save action is missing');
+need(api.includes("'publish_draft'"),'server draft publish action is missing');
 need(api.includes("readItems('c:drafts', 'draft')"),'overview must return server drafts');
 need(html.includes('data-tab="dashboard"'),'admin dashboard tab is missing');
 need(html.includes('data-tab="drafts"'),'admin drafts tab is missing');
@@ -72,7 +80,7 @@ need(html.includes('class="action-feedback"'),'save/action bars need feedback ne
 need(html.includes("flashActionButton($('releaseSettingsSave'),'Проверь поля'"),'release validation must be shown at the save action');
 need(html.includes("flashActionButton($('priceSettingsSave'),'Проверь цены'"),'pricing validation must be shown at the save action');
 need(!html.slice(html.indexOf('async function saveReleaseSettings(){'),html.indexOf('let editing = null')).includes("alert("),'release form must not report validation through alert');
-need(api.includes("if(a === 'android_release_latest')"),'admin API must expose latest Android release metadata');
+need(api.includes("'android_release_latest'"),'admin API must expose latest Android release metadata');
 need(api.includes('FitTimer-release.json'),'admin API must read CI-published Android release metadata');
 need(html.includes("api('android_release_latest')"),'release screen must load the latest built APK automatically');
 need(html.includes('Опубликовать Direct APK'),'release screen needs a one-click direct publish action');
@@ -106,7 +114,7 @@ need(api.includes("body && body.settings ? sanitizeSettings(body.settings)"),'AI
 need(html.includes('function moderatePendingFromEditor('),'pending program must be publishable from editor after saving edits');
 need(html.includes("api('client_error_clear'"),'error screen must support resolving one error group');
 need(html.includes('Считать исправленной'),'error screen needs an explicit resolved action');
-need(api.includes("if(a === 'client_error_clear')"),'admin API must clear resolved error groups');
+need(api.includes("'client_error_clear'"),'admin API must clear resolved error groups');
 need(html.includes("problems.push('Google Play:"),'payment settings must validate impossible provider states');
 need(html.includes("el.className='admin-notice "),'admin actions need non-blocking feedback');
 need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');
