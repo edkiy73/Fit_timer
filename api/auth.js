@@ -36,6 +36,7 @@ const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = 
 const { sendMail } = require('../lib/mail');
 const { recordAnalytics, removeAnalyticsDevice } = require('../lib/analytics');
 const { recordClientError } = require('../lib/diagnostics');
+const SyncShadow = require('../lib/sync-shadow');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -133,6 +134,7 @@ async function forget(req, res, body){
       const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
       if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
       await store.del(`a:${mh}`);
+      await SyncShadow.purgeAccount(mh);
       try{ await removeAnalyticsDevice(deviceId); }catch(_){}
       await store.del(`a:indexed:${mh}`);
       await store.removeFromList('a:all', mh);
