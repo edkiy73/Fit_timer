@@ -24,6 +24,8 @@ const publicAppUrl = cleanOrigin(process.env.FIT_TIMER_PUBLIC_URL, product.defau
 await rm(out, {recursive:true, force:true});
 await mkdir(out, {recursive:true});
 await Promise.all(files.map(file => cp(path.join(root, file), path.join(out, file))));
+await mkdir(path.join(out, 'lib'), {recursive:true});
+await cp(path.join(root, 'lib/ai-protocol.js'), path.join(out, 'lib/ai-protocol.js'));
 
 const runtimeConfig = {
   appId: product.id,
@@ -42,7 +44,7 @@ if(!html.includes('app.config.js') || !html.includes('type="module"') || !html.i
   throw new Error('index.html must load runtime scripts and stylesheet');
 }
 
-console.log(`Built ${files.length + 1} files in dist`);
+console.log(`Built ${files.length + 2} files in dist`);
 console.log(`App: ${product.name} (${product.id})`);
 console.log(`API: ${apiBase}`);
 console.log(`Public links: ${publicAppUrl}`);
