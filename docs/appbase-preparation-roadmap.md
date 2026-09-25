@@ -516,7 +516,7 @@ The first reusable UI slice is now typed Core rather than product markup:
 - product-level semantic UI tokens now live in `config/product.json` for dark/light background, card, surface, accent and accent text; FitTimer applies them through generic `AppBaseUI.applyCssVars`, while CSS keeps safe defaults.
 - reusable busy-button state is now used by the offline voice-model download flow; `.empty-state` is promoted to foundation CSS, and primary/secondary button + card geometry now depend on shared semantic UI variables rather than product-file hardcoded dimensions.
 
-Phase 12 is therefore **near completion, not yet closed**. One final audit should check generic loading/error states and verify that remaining one-off visual patterns are genuinely product-specific before moving to Phase 13.
+Phase 12 is **complete**. Final audit confirmed that loading already uses the reusable foundation skeleton primitive (`.sk`), inline warnings use shared field-hint semantics, and blocking errors use the common dialog flow. No additional generic ErrorState abstraction is justified by current product code.
 
 ## Phase 13 — Retire legacy JS/global build path
 
@@ -531,6 +531,18 @@ ES modules/bundling should already have been introduced earlier when typed Core 
 - ensure production web/mobile builds use the same typed module graph where practical.
 
 Do not combine final legacy-build removal with unrelated data/protocol migrations.
+
+
+### Legacy build migration status
+
+Phase 13 has started with the runtime boundary itself:
+- reusable browser Core runtimes are generated into `appbase-core.js`;
+- FitTimer `app.js` no longer owns/concatenates Storage, Identity, Sync, Observability, Notifications or UI Core runtimes;
+- the HTML bootstrap loads `appbase-core.js` before FitTimer product code;
+- the Capacitor web build copies and validates the same Core runtime bundle;
+- individual `src/core/*.runtime.js` files remain generated compatibility artifacts for now, so this is a transition away from the legacy global build rather than the final module-format cutover.
+
+Next: reduce remaining global compatibility surfaces in product code and remove concatenation only where the dependency graph is explicit enough to do so safely.
 
 ## Phase 14 — Dependency rules
 

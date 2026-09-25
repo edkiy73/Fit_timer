@@ -6,8 +6,8 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 
 ```text
 Web
-  src/html/* + src/styles/* + src/app/*
-  -> generated index.html + style.css + app.js
+  src/html/* + src/styles/* + src/app/* + src/core/*.runtime.js
+  -> generated index.html + style.css + appbase-core.js + app.js
           |
           +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage
           |
@@ -64,7 +64,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/styles/*.css` | canonical style chunks | layout/spacing/visual bugs |
 | `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
 | `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
-| `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
+| `index.html`, `style.css`, `app.js`, `appbase-core.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | FitTimer mobile composition/adapters over AppBase mobile primitives | workout/voice/update/deep-link product behavior |
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
