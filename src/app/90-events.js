@@ -163,14 +163,12 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
   emailNews:false,
   emailOffers:false
 });
-function getNotificationPrefs(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(NOTIFICATION_PREFS_KEY) || '{}');
-    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS, raw && typeof raw === 'object' ? raw : {});
-  }catch(_){
-    return Object.assign({}, NOTIFICATION_PREF_DEFAULTS);
-  }
-}
+const notificationPreferenceStore = AppBaseNotifications.createPreferenceStore({
+  key:NOTIFICATION_PREFS_KEY,
+  defaults:NOTIFICATION_PREF_DEFAULTS,
+  storage:localStorage
+});
+function getNotificationPrefs(){ return notificationPreferenceStore.get(); }
 function syncNotificationSettings(){
   const prefs = getNotificationPrefs();
   const ids = {
@@ -190,7 +188,7 @@ function syncNotificationSettings(){
   });
 }
 async function persistNotificationPrefs(prefs){
-  try{ localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs)); }catch(_){}
+  try{ notificationPreferenceStore.set(prefs); }catch(_){}
   // Настройки относятся ко всему аккаунту, а не к отдельному профилю.
   // localStorage — быстрый локальный кэш; авторитетная копия для вошедшего аккаунта.
   try{
