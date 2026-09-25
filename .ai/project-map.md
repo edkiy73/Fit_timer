@@ -74,6 +74,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
 | `src/core/sync.ts` | generic client document registry/scopes | sync/Core work |
 | `src/core/observability.ts` | generic client analytics/diagnostic transport | analytics/diagnostics Core work |
+| `src/core/notifications.ts` | generic notification preferences + delivery budget policy | notification/Core work |
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
