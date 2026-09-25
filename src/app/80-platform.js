@@ -46,7 +46,7 @@ function applyTheme(){
   // иначе полоса статус-бара сверху и системная полоса снизу (safe-area) остаются
   // тёмными даже в светлой теме, пока не отрисуется body
   document.documentElement.style.background = bg;
-  if(window.FitNative && window.FitNative.setSystemTheme) window.FitNative.setSystemTheme(themeLight);
+  appRuntimeCompat.setSystemTheme(themeLight);
 }
 
 /* ================= ГОЛОСОВОЕ УПРАВЛЕНИЕ ================= */

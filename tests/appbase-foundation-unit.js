@@ -38,6 +38,28 @@ ok('storage compatibility adapter validates the external KV contract',
 ok('runtime compatibility adapter loads before product data sync',
   sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
   && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));
+const genericNativeProductSources = [
+  'src/app/00-core.js',
+  'src/app/20-account.js',
+  'src/app/30-progress-media.js',
+  'src/app/40-programs-ai.js',
+  'src/app/80-platform.js'
+].map(path => fs.readFileSync(path, 'utf8')).join('\n');
+const genericLegacyNativeCalls = [
+  'window.FitNative.haptic',
+  'window.FitNative.shareFile',
+  'window.FitNative.setSystemTheme',
+  'window.FitNative.openExternal',
+  'window.FitNative.getAppInfo',
+  'window.FitNative.biometricStatus',
+  'window.FitNative.authenticateBiometric'
+];
+ok('generic legacy native calls are isolated to compatibility boundary',
+  genericLegacyNativeCalls.every(token => !genericNativeProductSources.includes(token))
+  && genericLegacyNativeCalls.every(token => runtimeCompatSource.includes(token.replace('window.FitNative.', 'candidate.'))));
+ok('direct update capability stays product-owned for now',
+  fs.readFileSync('src/app/20-account.js','utf8').includes('window.FitNative.installUpdate'));
+
 
 ok('TypeScript typecheck script exists', typeof pkg.scripts.typecheck === 'string' && /tsc/.test(pkg.scripts.typecheck));
 ok('TypeScript strict mode enabled', tsconfig.compilerOptions.strict === true);

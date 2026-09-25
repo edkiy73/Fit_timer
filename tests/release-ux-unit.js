@@ -46,8 +46,8 @@ need(en.includes("'update.availableTitle': \"Update available\""), 'EN soft upda
 need(account.includes("t('update.availableTitle');"), 'soft update title must not append versionName');
 need(account.includes("distribution==='store'"), 'client must select update config from its compiled distribution');
 need(account.includes("window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest)"), 'direct channel must download/install inside Fit Timer');
-need(account.includes("window.FitNative.openExternal(APP_UPDATE.url)"), 'store channel must keep external store routing');
-need(account.indexOf("APP_UPDATE.channel==='direct'") < account.indexOf("window.FitNative.openExternal(APP_UPDATE.url)"), 'direct branch must run before external store routing');
+need(account.includes("appRuntimeCompat.openExternal(APP_UPDATE.url)"), 'store channel must keep external store routing');
+need(account.indexOf("APP_UPDATE.channel==='direct'") < account.indexOf("appRuntimeCompat.openExternal(APP_UPDATE.url)"), 'direct branch must run before external store routing');
 need(mobile.includes("fitSystem.downloadUpdate"), 'mobile bridge must call native direct updater');
 need(mobile.includes("fitUpdateProgress"), 'mobile bridge must forward direct-update progress');
 
