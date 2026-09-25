@@ -356,6 +356,17 @@ ok('ESM entry owns explicit native/mobile Core dependencies',
   && /createTransport/.test(esmEntrySource)
   && /createBridge/.test(esmEntrySource));
 
+const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');
+ok('product sync schema is a real ESM module',
+  /from ['"]\.\.\/core\/sync\.js['"]/.test(productSyncModuleSource)
+  && /export const FIT_SYNC_REGISTRY/.test(productSyncModuleSource));
+ok('product sync schema keeps FitTimer policy outside Core',
+  /program:/.test(productSyncModuleSource)
+  && /notificationPrefs/.test(productSyncModuleSource));
+ok('ESM entry composes product sync schema explicitly',
+  /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
+  && /productSyncSchema/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
