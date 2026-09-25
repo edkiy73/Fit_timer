@@ -9,7 +9,7 @@ Web
   src/html/* + src/styles/* + src/app/*
   -> generated index.html + style.css + app.js
           |
-          +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage
+          +--> local state: FitTimer async kv* adapter -> `core/storage.js` ES module -> IndexedDB/localStorage
           |
           +--> API calls ------------------------------+
                                                        |
@@ -69,15 +69,15 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
 | `src/types/*.ts` | TypeScript contracts for reusable Core boundaries | Core/AppBase/type changes |
-| `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
-| `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
+| `src/core/*.ts` | canonical reusable AppBase Core ES modules | Core extraction/refactoring |
+| `core/*.js` | generated browser ES modules compiled from `src/core/*.ts` | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
 Foundation checks:
 - `npm run typecheck` — strict TypeScript contracts/Core check.
 - `npm run test:foundation` — product config/AppBase foundation invariants.
 - `npm run build:config` / `npm run check:config` — generate/verify public runtime config from `config/product.json`.
-- `npm run build:core` / `npm run check:core` — transpile/verify typed Core compatibility runtime.
+- `npm run build:core` / `npm run check:core` — transpile/verify browser ES modules under `core/`.
 
 Localization:
 - `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
