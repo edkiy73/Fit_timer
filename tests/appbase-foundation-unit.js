@@ -41,6 +41,9 @@ ok('Core sources contain no fitness entities', !forbidden.some(word => coreSourc
   forbidden.filter(word => coreSources.includes(word)).join(', ') || 'clean');
 ok('typed Core build/check scripts exist',
   typeof pkg.scripts['build:core'] === 'string' && typeof pkg.scripts['check:core'] === 'string');
+ok('Core uses ES module semantics', tsconfig.compilerOptions.verbatimModuleSyntax === true);
+ok('generated Storage Core is an ES module',
+  /export function createStorage/.test(fs.readFileSync('core/storage.js', 'utf8')));
 
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);
