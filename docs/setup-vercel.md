@@ -280,3 +280,18 @@ To enable OpenRouter as an optional text AI provider:
 - in Admin AI settings choose `openrouter` for a **text** primary/backup route and specify an OpenRouter model id.
 
 Existing Gemini/OpenAI routes remain available and the default route does not change automatically.
+
+
+### Включение shadow migration (не включать оба флага сразу)
+
+После того как `SUPABASE_URL` и server secret видны в Vercel и `/api/health` показывает Supabase как подключённый:
+
+1. Добавить `SUPABASE_SHADOW_WRITE=1`.
+2. Redeploy.
+3. Несколько дней оставить Upstash единственным источником чтения. Supabase только получает копии принятых sync-документов.
+4. Затем добавить `SUPABASE_SHADOW_COMPARE=1`.
+5. На `/api/health` проверить блок parity: `missing=0`, `mismatched=0`, `extra=0` после того, как аккаунты совершили свежий push/pull.
+
+Не включать Supabase как источник production reads на этом этапе.
+
+Удаление профиля/аккаунта отличается от обычного shadow-write: если Supabase настроен, privacy purge должен пройти до удаления основной записи. Это защищает от оставшейся копии данных при временном сбое миграционного хранилища.
