@@ -11,8 +11,8 @@
     "mobile:android": "npm run mobile:sync && cap open android",
     "mobile:ios": "npm run mobile:sync && cap open ios",
     "check:mobile": "node scripts/check-mobile.mjs",
-    "build:sources": "npm run build:config && npm run build:core && node scripts/build-sources.mjs",
-    "check:sources": "npm run check:config && npm run check:core && node scripts/build-sources.mjs --check",
+    "build:sources": "npm run build:config && npm run build:core && npm run build:product-compat && node scripts/build-sources.mjs",
+    "check:sources": "npm run check:config && npm run check:core && npm run check:product-compat && node scripts/build-sources.mjs --check",
     "ai:index": "node scripts/generate-ai-index.mjs",
     "check:ai-index": "node scripts/generate-ai-index.mjs --check",
     "i18n:check": "node scripts/check-i18n.mjs",
@@ -24,7 +24,9 @@
     "test:foundation": "node tests/appbase-foundation-unit.js",
     "build:core": "node scripts/build-core.mjs",
     "check:core": "node scripts/build-core.mjs --check",
-    "test:boundaries": "node tests/dependency-boundaries-unit.js"
+    "test:boundaries": "node tests/dependency-boundaries-unit.js",
+    "build:product-compat": "node scripts/build-product-compat.mjs",
+    "check:product-compat": "node scripts/build-product-compat.mjs --check"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
