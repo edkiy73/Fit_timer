@@ -396,10 +396,7 @@ async function openAndroidUpdate(){
     const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
-  if(window.FitNative && window.FitNative.openExternal){
-    const ok = await window.FitNative.openExternal(APP_UPDATE.url);
-    if(ok) return true;
-  }
+  if(await appRuntimeCompat.openExternal(APP_UPDATE.url)) return true;
   return false;
 }
 // Баннер пересобирается при каждом обновлении настроек (в том числе после
@@ -434,10 +431,10 @@ async function applyAndroidUpdateConfig(raw){
   if(gate) gate.classList.add('hidden');
   APP_UPDATE_PREV=APP_UPDATE;
   APP_UPDATE=null;
-  if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
+  if(!raw || !appRuntimeCompat.isNative()) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
 
-  const info=await window.FitNative.getAppInfo();
+  const info=await appRuntimeCompat.getAppInfo();
   const distribution=String((info&&info.distribution)||'direct')==='store'?'store':'direct';
   const cfg=distribution==='store'
     ? ((raw.store&&typeof raw.store==='object')?raw.store:{})
@@ -888,8 +885,7 @@ let bioRelockDeferred = false;
 const BIO_RELOCK_MS = 10 * 60 * 1000;
 
 function nativeBiometryHost(){
-  return !!(window.FitNative && window.FitNative.isNative
-    && window.FitNative.biometricStatus && window.FitNative.authenticateBiometric);
+  return appRuntimeCompat.hasNative('biometricStatus','authenticateBiometric');
 }
 function bioReason(reason){
   if(reason === 'not_enrolled') return t('bio.notEnrolled');
@@ -905,7 +901,7 @@ async function bioSupported(){
     return false;
   }
   try{
-    const state = await window.FitNative.biometricStatus();
+    const state = await appRuntimeCompat.biometricStatus();
     bioState = state && typeof state === 'object' ? state : {available:false, reason:'unsupported'};
     return bioState.available === true;
   }catch(e){
@@ -916,7 +912,7 @@ async function bioSupported(){
 async function requestNativeBiometry(){
   if(!nativeBiometryHost()) return {ok:false, error:'unsupported'};
   try{
-    return await window.FitNative.authenticateBiometric({
+    return await appRuntimeCompat.authenticateBiometric({
       title:t('lock.title'),
       reason:t('lock.prompt'),
       cancelText:t('common.cancel')
