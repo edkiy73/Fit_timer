@@ -1,3 +1,12 @@
+/* Product modules are captured once during legacy bundle startup.
+   main.ts removes window.FitTimerModules after app.js finishes loading. */
+const fitModules = globalThis.FitTimerModules;
+const fitUi = fitModules.ui;
+const fitNotifications = fitModules.notifications;
+const fitInfrastructure = fitModules.infrastructure;
+const fitSync = fitModules.sync;
+const fitIdentity = fitModules.identity;
+
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -457,7 +466,7 @@ const M_LABEL = Object.fromEntries(MUSCLES);
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
 function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
-  FitTimerModules.ui.setShown(node, !!on);
+  fitUi.setShown(node, !!on);
 }
 
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
