@@ -3919,6 +3919,7 @@ var AppBaseStorage;
     }
     AppBaseStorage.createStorage = createStorage;
 })(AppBaseStorage || (AppBaseStorage = {}));
+"use strict";
 var AppBaseIdentity;
 (function (AppBaseIdentity) {
     function createAccount(now = new Date()) {
