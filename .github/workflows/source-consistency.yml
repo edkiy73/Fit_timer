@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'supabase/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig.json', 'app.config.js', 'check.py', 'app.js', 'appbase-core.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'supabase/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig*.json', 'app.config.js', 'check.py', 'app.js', 'appbase-core.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig.json', 'app.config.js', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig*.json', 'app.config.js', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
@@ -23,6 +23,7 @@ jobs:
       - name: Проверить canonical/generated consistency
         run: |
           npm run typecheck
+          npm run build:esm
           node tests/appbase-foundation-unit.js
           npm run check:sources
           npm run check:ai-index
