@@ -250,3 +250,33 @@ No more than 12 Serverless Functions can be added to a Deployment on the Hobby p
 Счёт держит `check.py`: выше десяти функций он предупреждает, выше двенадцати —
 ошибка, и вспомогательный файл в `api/` называет отдельно. То есть узнать об этом
 можно до пуша, а не из упавшей сборки.
+
+
+---
+
+## Supabase foundation
+
+AppBase can now see a Supabase project through a server-only adapter, but production data still stays in Upstash.
+
+For the current FitTimer migration add these Vercel Production variables:
+
+- `SUPABASE_URL` — Project URL from Supabase Connect.
+- `SUPABASE_SECRET_KEY` — Supabase server secret key (recommended for new setup).
+- Legacy fallback only: `SUPABASE_SERVICE_ROLE_KEY`.
+
+Never put the secret key into `app.config.js`, browser code or the APK.
+
+After redeploy, `/api/health` shows Supabase connection status. This only checks connectivity; it does not switch storage and does not create tables.
+
+The current Supabase project `FitT` is intentionally left without application tables until the document schema/shadow-write migration is reviewed.
+
+## OpenRouter
+
+To enable OpenRouter as an optional text AI provider:
+
+- add `OPENROUTER_API_KEY` in Vercel Production;
+- optionally add `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME`;
+- redeploy;
+- in Admin AI settings choose `openrouter` for a **text** primary/backup route and specify an OpenRouter model id.
+
+Existing Gemini/OpenAI routes remain available and the default route does not change automatically.

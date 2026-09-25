@@ -52,6 +52,7 @@ function renderHtml(h){
     +'<section class="card"><h2>Сервисы</h2><div class="chips">'
     +chip(!!(service.mail&&service.mail.configured),'Email · '+yes(service.mail&&service.mail.configured))
     +chip(!!(service.ai&&service.ai.configured),'AI · '+yes(service.ai&&service.ai.configured))
+    +chip(!!(service.supabase&&service.supabase.connected),'Supabase · '+(service.supabase&&service.supabase.configured?(service.supabase.connected?'подключён':'ошибка'):'не подключён'))
     +chip(!!(service.push&&service.push.android),'Push Android · '+yes(service.push&&service.push.android))
     +chip(!!(service.push&&service.push.ios),'Push iOS · '+yes(service.push&&service.push.ios))
     +'</div></section>'
@@ -65,7 +66,8 @@ function renderHtml(h){
     +(warnings?'<section class="section card"><h2>Что требует внимания</h2><ul class="warnings">'+warnings+'</ul></section>':'')
     +'<details class="section card"><summary>Технические факты</summary><div class="facts">storage env: '+esc((storage.envSeen||[]).join(', ')||'—')
     +'\nmail env: '+esc((service.mail&&service.mail.envSeen||[]).join(', ')||'—')
-    +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')
+    +'\nAI: Gemini '+(provider.gemini?'yes':'no')+', OpenAI '+(provider.openai?'yes':'no')+', OpenRouter '+(provider.openrouter?'yes':'no')
+    +'\nSupabase env: '+esc((service.supabase&&service.supabase.envSeen||[]).join(', ')||'—')
     +'\nbilling: Google '+(billing.google?'yes':'no')+', RuStore '+(billing.rustore?'yes':'no')+', YooKassa '+(billing.yookassa?'yes':'no')
     +'\n\nЗначения секретов никогда не выводятся.</div></details>'
     +'</main></body></html>';

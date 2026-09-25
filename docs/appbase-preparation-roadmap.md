@@ -437,6 +437,18 @@ Recommended order:
 
 Supabase Auth, Realtime and Storage are deferred unless a concrete product need justifies them.
 
+### Infrastructure foundation implementation status
+
+The first adapter slice is now implemented without changing production authority:
+- active Supabase project `FitT` has a server-only connection adapter and health probe;
+- no product table schema or storage cutover is performed yet;
+- Upstash remains the authoritative store;
+- OpenRouter is available as an optional **text** provider in the existing AI routing/fallback system;
+- Gemini/OpenAI remain supported and the default route is unchanged;
+- health diagnostics expose only configuration/connectivity state, never secret values.
+
+The next Supabase slice should define the provider-neutral server-store contract and the first document/shadow-write schema before any production dual-write is enabled.
+
 ## Phase 11 — Admin decomposition
 
 Owner: Architect + Extraction Engineer. Review: Security + QA.

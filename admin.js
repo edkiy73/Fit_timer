@@ -932,7 +932,7 @@ async function persistSettings(next,stateId,buttonId){
 function routePair(s,type,which){
   const x=(s[type]&&s[type][which])||{};
   return `<div class="pair">
-    <select id="${type}_${which}_provider">${['gemini','openai'].map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
+    <select id="${type}_${which}_provider">${(type==='text'?['gemini','openai','openrouter']:['gemini','openai']).map(p=>`<option value="${p}"${x.provider===p?' selected':''}>${p}</option>`).join('')}</select>
     <input id="${type}_${which}_model" value="${esc(x.model||'')}" maxlength="100" placeholder="model">
   </div>`;
 }
@@ -960,7 +960,7 @@ function renderAI(b){
   const s=data.settings||{},lim=s.limits||{};
   const stat=(name,ok)=>'<span class="status-chip '+(ok?'ok':'')+'">'+name+' · '+(ok?'ключ есть':'нет ключа')+'</span>';
   b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium. Тесты не меняют production-настройки.')+`
-    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}
+    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}${stat('OpenRouter',data.providers&&data.providers.openrouter)}
       <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
     </div>
     <div class="form-card">

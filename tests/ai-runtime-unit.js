@@ -48,8 +48,18 @@ ok('внешняя ссылка вместо изображения блокир
 (async()=>{
   process.env.GEMINI_API_KEY = 'unit';
   process.env.OPENAI_API_KEY = 'unit';
+  process.env.OPENROUTER_API_KEY = 'unit';
   process.env.AI_TEXT_TIMEOUT_MS = '60';
-  const { generate } = require('../lib/ai');
+  const { generate, sanitizeSettings, providerStatus } = require('../lib/ai');
+  const sanitized = sanitizeSettings({
+    text:{primary:{provider:'openrouter',model:'openrouter/test'},backup:{provider:'gemini',model:'gemini-test'}},
+    image:{primary:{provider:'openrouter',model:'should-not-stick'},backup:{provider:'openai',model:'img'}}
+  });
+  ok('OpenRouter разрешён только для text route',
+    sanitized.text.primary.provider === 'openrouter' && sanitized.image.primary.provider === 'gemini',
+    JSON.stringify({text:sanitized.text.primary,image:sanitized.image.primary}));
+  ok('providerStatus видит OpenRouter env', providerStatus().openrouter === true);
+
   const originalFetch = global.fetch;
   let calls = 0;
   global.fetch = async (url) => {
@@ -84,6 +94,32 @@ ok('внешняя ссылка вместо изображения блокир
   }finally{
     global.fetch = originalFetch;
   }
+  calls = 0;
+  global.fetch = async (url, opts) => {
+    calls++;
+    if(String(url).includes('openrouter.ai')){
+      const body=JSON.parse(String(opts.body||'{}'));
+      return {
+        ok:true,status:200,
+        json:async()=>({choices:[{message:{content:goodProgram}}],usage:{prompt_tokens:10,completion_tokens:20}})
+      };
+    }
+    throw new Error('unexpected provider');
+  };
+  try{
+    const out = await generate('text', {
+      text:{primary:{provider:'openrouter',model:'demo/model'},backup:{provider:'openrouter',model:'demo/model'}},
+      image:{primary:{provider:'gemini',model:'img-a'},backup:{provider:'openai',model:'img-b'},size:'1K'}
+    }, 'prompt', {validate:x=>FitAIProtocol.validateResponse('program.create', x.text)});
+    ok('OpenRouter adapter работает через общий AI runtime',
+      out.provider === 'openrouter' && out.text === goodProgram && calls === 1,
+      JSON.stringify({provider:out.provider,calls}));
+  }catch(e){
+    ok('OpenRouter runtime test не падает', false, e && e.message);
+  }finally{
+    global.fetch = originalFetch;
+  }
+
   // провайдер не успел: вместо английского «This operation was aborted» —
   // понятный код ai_timeout, по которому приложение пишет по-русски
   global.fetch = (url, opts) => new Promise((resolve, reject) => {
