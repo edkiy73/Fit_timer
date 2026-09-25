@@ -35,7 +35,7 @@ ok('runtime config carries feature flags',
   runtime.features && Object.keys(product.features).every(k => runtime.features[k] === product.features[k]));
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');
 
-const runtimeCompatSource = fs.readFileSync('src/app/05-runtime-compat.js', 'utf8');
+const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts', 'utf8');
 const dataSyncSource = fs.readFileSync('src/app/10-data-sync.js', 'utf8');
 const sourceBuild = fs.readFileSync('scripts/build-sources.mjs', 'utf8');
 ok('legacy storage global is isolated to compatibility boundary',
@@ -359,7 +359,6 @@ ok('ESM entry composes runtime environment explicitly',
   /from ['"]\.\/app\/runtime-environment\.js['"]/.test(esmEntrySource)
   && /runtimeEnvironment/.test(esmEntrySource));
 
-const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts','utf8');
 ok('runtime compatibility adapter is an ESM product module',
   /from ['"]\.\/runtime-environment\.js['"]/.test(runtimeCompatSource)
   && /export const appRuntimeCompat/.test(runtimeCompatSource));
