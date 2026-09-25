@@ -5,17 +5,6 @@ const CHECK = process.argv.includes('--check');
 
 const targets = [
   {
-    target: 'appbase-core.js',
-    parts: [
-      'src/core/storage.runtime.js',
-      'src/core/identity.runtime.js',
-      'src/core/sync.runtime.js',
-      'src/core/observability.runtime.js',
-      'src/core/notifications.runtime.js',
-      'src/core/ui.runtime.js'
-    ]
-  },
-  {
     target: 'app.js',
     parts: [
       'src/i18n/ru.js',
