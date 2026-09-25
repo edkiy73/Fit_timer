@@ -5,6 +5,7 @@
   "description": "Fit Timer web app and Capacitor mobile shells",
   "scripts": {
     "build": "npm run build:sources && node scripts/build-web.mjs",
+    "build:esm": "tsc -p tsconfig.esm.json",
     "mobile:assets": "capacitor-assets generate --android --iconBackgroundColor '#0C0916' --iconBackgroundColorDark '#0C0916' --splashBackgroundColor '#0C0916' --splashBackgroundColorDark '#0C0916' && capacitor-assets generate --ios --iconBackgroundColor '#0C0916' --iconBackgroundColorDark '#0C0916' --splashBackgroundColor '#0C0916' --splashBackgroundColorDark '#0C0916'",
     "mobile:sync": "npm run build && cap sync && npm run mobile:assets",
     "mobile:android": "npm run mobile:sync && cap open android",
