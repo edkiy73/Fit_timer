@@ -3971,6 +3971,51 @@ var AppBaseSync;
     }
     AppBaseSync.createRegistry = createRegistry;
 })(AppBaseSync || (AppBaseSync = {}));
+"use strict";
+var AppBaseTelemetry;
+(function (AppBaseTelemetry) {
+    function createTelemetry(transport) {
+        let diagnosticBusy = false;
+        return {
+            async track(event, properties) {
+                const name = String(event || '').trim();
+                if (!name)
+                    return false;
+                try {
+                    return !!(await transport.sendAnalytics({ event: name, properties }));
+                }
+                catch (_) {
+                    return false;
+                }
+            },
+            async capture(kind, error, fallbackMessage, context) {
+                if (diagnosticBusy)
+                    return false;
+                diagnosticBusy = true;
+                try {
+                    const source = error && typeof error === 'object'
+                        ? error
+                        : null;
+                    const input = {
+                        kind: kind === 'rejection' ? 'rejection' : 'error',
+                        name: String(source?.name || 'Error').slice(0, 80),
+                        message: String(source?.message || fallbackMessage || 'unknown').slice(0, 700),
+                        stack: String(source?.stack || '').slice(0, 4000),
+                        context
+                    };
+                    return !!(await transport.sendDiagnostic(input));
+                }
+                catch (_) {
+                    return false;
+                }
+                finally {
+                    diagnosticBusy = false;
+                }
+            }
+        };
+    }
+    AppBaseTelemetry.createTelemetry = createTelemetry;
+})(AppBaseTelemetry || (AppBaseTelemetry = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -5469,67 +5514,10 @@ function analyticsPlatform(){
   }catch(_){}
   return 'web';
 }
-async function trackProductEvent(event){
-  try{
-    const body = {
-      action:'analytics',
-      event:String(event||''),
-      deviceId:await analyticsDeviceId(),
-      platform:analyticsPlatform(),
-      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-      premium:(typeof isPremium === 'function') ? !!isPremium() : false
-    };
-    const res = await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-}
 async function trackInstallOnce(){
   if((await kvGet('analyticsInstallSent')) === '1') return;
   if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
 }
-
-let clientErrorReporting = false;
-function clientErrorPayload(kind, error, fallbackMessage){
-  const e = error && typeof error === 'object' ? error : null;
-  return {
-    action:'client_error',
-    kind:kind === 'rejection' ? 'rejection' : 'error',
-    name:String((e && e.name) || 'Error').slice(0,80),
-    message:String((e && e.message) || fallbackMessage || 'unknown').slice(0,700),
-    stack:String((e && e.stack) || '').slice(0,4000),
-    build:String(window.FIT_TIMER_BUILD || '').slice(0,80),
-    platform:analyticsPlatform(),
-    locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
-  };
-}
-async function reportClientError(kind, error, fallbackMessage){
-  if(clientErrorReporting) return false;
-  clientErrorReporting = true;
-  try{
-    const res=await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(clientErrorPayload(kind,error,fallbackMessage)),
-      keepalive:true,
-      cache:'no-store'
-    });
-    return !!res.ok;
-  }catch(_){ return false; }
-  finally{ clientErrorReporting=false; }
-}
-window.addEventListener('error',e=>{
-  reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
-});
-window.addEventListener('unhandledrejection',e=>{
-  const r=e&&e.reason;
-  reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
-});
 
 async function loadData(ownerId = currentUser){
   // Все чтения привязываем к профилю, который начал загрузку. Раньше pk() вычислялся
@@ -7573,6 +7561,60 @@ document.addEventListener('click', e => {
   closeAllMenus();
 }, true);
 
+const fitTelemetry = AppBaseTelemetry.createTelemetry({
+  async sendAnalytics(input){
+    const body = {
+      action:'analytics',
+      event:String(input.event || ''),
+      deviceId:await analyticsDeviceId(),
+      platform:analyticsPlatform(),
+      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
+      premium:(typeof isPremium === 'function') ? !!isPremium() : false
+    };
+    const res = await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body),
+      keepalive:true,
+      cache:'no-store'
+    });
+    return !!res.ok;
+  },
+
+  async sendDiagnostic(input){
+    const body = Object.assign({
+      action:'client_error',
+      build:String(window.FIT_TIMER_BUILD || '').slice(0,80),
+      platform:analyticsPlatform(),
+      locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru'
+    }, input);
+    delete body.context;
+    const res=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body),
+      keepalive:true,
+      cache:'no-store'
+    });
+    return !!res.ok;
+  }
+});
+
+function trackProductEvent(event, properties){
+  return fitTelemetry.track(event, properties);
+}
+
+function reportClientError(kind, error, fallbackMessage, context){
+  return fitTelemetry.capture(kind, error, fallbackMessage, context);
+}
+
+window.addEventListener('error',e=>{
+  reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
+});
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;
+  reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
+});
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 let uDraft = null;
 // текущее состояние профиля для сравнения
