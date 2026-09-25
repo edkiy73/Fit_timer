@@ -3880,6 +3880,22 @@ function speak(text, fallback, onDone){
   if(!soundOn){ done(); return; }
   if(voiceVol <= 0){ if(fallback) fallback(); done(); return; } // голос выключен — фолбэк-звук
   if(musicMode){ if(fallback) fallback(); done(); return; }
+  if(appRuntimeCompat.hasNative('speak')){
+    lastAppSoundT = Date.now() + 8000;
+    appRuntimeCompat.speak(text, {
+      locale: voiceLang || 'ru-RU',
+      voice: savedVoiceURI || ''
+    }).then(ok=>{
+      lastAppSoundT = Date.now() + 250;
+      if(!ok && fallback) fallback();
+      done();
+    }).catch(()=>{
+      lastAppSoundT = Date.now() + 250;
+      if(fallback) fallback();
+      done();
+    });
+    return;
+  }
   try{
     if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
     const voices = speechSynthesis.getVoices();
@@ -5326,10 +5342,10 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return false; }
   },
 
-  async startVoiceRecognition(onResult, onError, onStatus){
+  async startVoiceRecognition(onResult, onError, onStatus, language){
     const candidate = appRuntimeCompat.nativeBridge();
     if(!candidate || typeof candidate.startVoiceRecognition !== 'function') return false;
-    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus)); }
+    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus, language)); }
     catch(_){ return false; }
   },
 
@@ -5337,6 +5353,13 @@ const appRuntimeCompat = Object.freeze({
     const candidate = appRuntimeCompat.nativeBridge();
     if(!candidate || typeof candidate.stopVoiceRecognition !== 'function') return false;
     try{ await candidate.stopVoiceRecognition(); return true; }
+    catch(_){ return false; }
+  },
+
+  async speak(text, options){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.speak !== 'function') return false;
+    try{ return !!(await candidate.speak(text, options || {})); }
     catch(_){ return false; }
   },
 
@@ -18056,9 +18079,43 @@ function buildRecog(){
 // метка «эта фраза уже сработала»: сбрасывается на каждый запуск распознавания,
 // потому что при старте браузер заводит новый список результатов с нуля
 function resetVoiceDedup(){ firedSeq = -1; firedIdx = -1; }
+function handleNativeVoiceResult(text, event){
+  const startedAt = Date.now() - (Number(event && event.utteranceMs) || 0);
+  if(startedAt < lastAppSoundT) return;
+  applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
+}
+function handleNativeVoiceError(error){
+  voiceActive = false;
+  if(error === 'permission'){
+    voiceWanted = false;
+    kvSet('voiceCtl', '0');
+    syncPrefs();
+    appAlert(t('handsfree.micDenied'));
+  }else if(error === 'model_missing'){
+    if(typeof refreshVoicePackUI === 'function') refreshVoicePackUI();
+  }else if(error === 'model'){
+    appAlert('Не удалось запустить голосовое управление. Попробуй заново скачать голосовой пакет в настройках.');
+  }
+}
+function handleNativeVoiceStatus(status){
+  try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:status || {}})); }catch(_){}
+}
 function startListening(){
-  if(!SR || voiceActive) return;
+  if(voiceActive) return;
   stopRequested = false;
+  if(appRuntimeCompat.offlineVoice()){
+    voiceActive = true;
+    resetVoiceDedup();
+    appRuntimeCompat.startVoiceRecognition(
+      handleNativeVoiceResult,
+      handleNativeVoiceError,
+      handleNativeVoiceStatus,
+      recognitionLang
+    ).then(ok=>{ if(!ok) voiceActive = false; });
+    return;
+  }
+  if(!SR) return;
+  lastRecogStart = Date.now();
   lastRecogStart = Date.now();
   // Прежний экземпляр мог остаться живым: сворачивание окна, возврат по видимости и
   // перезапуск по звуку вызывают startListening из трёх разных мест, и в промежутке
@@ -18119,6 +18176,11 @@ function startListening(){
 function stopListening(){
   stopRequested = true;
   clearTimeout(recogTimer);
+  if(appRuntimeCompat.offlineVoice()){
+    voiceActive = false;
+    resetVoiceDedup();
+    return appRuntimeCompat.stopVoiceRecognition();
+  }
   try{ if(recog){ recog.onend = null; recog.onresult = null; recog.stop(); recog.abort && recog.abort(); } }catch(e){}
   voiceActive = false;
   resetVoiceDedup();
@@ -18137,6 +18199,20 @@ document.addEventListener('visibilitychange', ()=>{
   if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
     recogFails = 0;              // счётчик срывов относится к прошлой сессии микрофона
     setTimeout(startListening, 300); // даём вкладке дорисоваться, иначе браузер снова оборвёт
+  }
+});
+
+window.addEventListener('fitAppBackground', ()=>{
+  stopListening();
+  stopHeadset();
+  stopSpeech();
+  releaseWake();
+  try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
+});
+window.addEventListener('fitAppForeground', ()=>{
+  if($('scrWork').classList.contains('on')){
+    keepAwake();
+    startHandsFree();
   }
 });
 
@@ -19200,7 +19276,7 @@ async function openVoiceTest(){
   $('voiceTestStatus').textContent = t('voicetest.listening');
   $('voiceTestModal').classList.add('open');
   voiceTestOn = true;
-  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
+  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); }, null, recognitionLang);
   if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
   if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
 }
