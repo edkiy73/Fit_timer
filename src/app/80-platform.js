@@ -676,7 +676,9 @@ async function syncNativeNotifications(){
   const finalItems = limitNotificationCandidates(items);
   await appRuntimeCompat.syncWorkoutNotifications(finalItems);
 }
-window.syncNativeNotifications = syncNativeNotifications;
+window.addEventListener('fitAppForeground', ()=>{
+  syncNativeNotifications().catch(()=>{});
+});
 
 /* ================= ДЕЙСТВИЯ ПО ИМЕНИ =================
    Обычный способ привязать кнопку в этом файле — найти её по имени и повесить
