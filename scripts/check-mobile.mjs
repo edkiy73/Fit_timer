@@ -8,6 +8,7 @@ const required = [
   'dist/app.config.js',
   'dist/native-notifications.js',
   'dist/mobile-core.js',
+  'dist/esm/main.js',
   '.well-known/assetlinks.json',
   'android/app/src/main/AndroidManifest.xml',
   'android/app/src/direct/AndroidManifest.xml',
@@ -33,7 +34,7 @@ if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 const html = await readFile('dist/index.html', 'utf8');
 const app = await readFile('dist/app.js', 'utf8');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
-if(!html.includes('appbase-core.js') || !html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('app.js') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
+if(!html.includes('appbase-core.js') || !html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('type="module"') || !html.includes('esm/main.js') || !html.includes('app.js') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
 const appBaseCore = await readFile('dist/appbase-core.js', 'utf8');
