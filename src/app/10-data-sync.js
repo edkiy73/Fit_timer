@@ -2,11 +2,11 @@
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
 const fitProductInfrastructure = FitTimerModules.infrastructure.create({
-  externalStorage: appRuntimeCompat.externalStorage,
+  externalStorage: FitTimerModules.runtimeCompat.externalStorage,
   onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
-  platform: appRuntimeCompat.runtimePlatform,
+  platform: FitTimerModules.runtimeCompat.runtimePlatform,
   locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-  build: appRuntimeCompat.build,
+  build: FitTimerModules.runtimeCompat.build,
   premium: () => (typeof isPremium === 'function') ? !!isPremium() : false,
   newId: () => newId(),
   post: async body => {
