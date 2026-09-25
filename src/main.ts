@@ -4,6 +4,8 @@ import { createStorage, namespacedKey } from './core/storage.js';
 import { createClient } from './core/observability.js';
 import { createPreferenceStore, limitCandidates } from './core/notifications.js';
 import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
+import { createTransport } from './core/native-notifications.js';
+import { createBridge } from './core/mobile.js';
 
 /**
  * Future ESM application entry point.
@@ -46,4 +48,12 @@ export const uiCore = {
   closestModal,
   setBusy,
   bindActions
+};
+
+export const nativeNotificationsCore = {
+  createTransport
+};
+
+export const mobileCore = {
+  createBridge
 };
