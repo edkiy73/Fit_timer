@@ -102,5 +102,33 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.syncWorkoutNotifications !== 'function') return false;
     try{ return !!(await candidate.syncWorkoutNotifications(items)); }
     catch(_){ return false; }
+  },
+
+  async cancelRest(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.cancelRest !== 'function') return false;
+    try{ await candidate.cancelRest(); return true; }
+    catch(_){ return false; }
+  },
+
+  async updateWorkoutState(payload){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.updateWorkoutState !== 'function') return false;
+    try{ return !!(await candidate.updateWorkoutState(payload || {})); }
+    catch(_){ return false; }
+  },
+
+  async clearWorkoutState(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.clearWorkoutState !== 'function') return false;
+    try{ return !!(await candidate.clearWorkoutState()); }
+    catch(_){ return false; }
+  },
+
+  async requestReview(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.requestReview !== 'function') return false;
+    try{ return !!(await candidate.requestReview()); }
+    catch(_){ return false; }
   }
 });
