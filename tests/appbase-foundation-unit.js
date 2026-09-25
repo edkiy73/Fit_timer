@@ -169,6 +169,8 @@ ok('TypeScript is noEmit during foundation', tsconfig.compilerOptions.noEmit ===
 
 const identityModuleSource = fs.readFileSync('src/core/identity.ts', 'utf8');
 const esmEntrySource = fs.readFileSync('src/main.ts', 'utf8');
+ok('legacy product bundle executes in ES module scope',
+  /loadLegacyScript\([\s\S]*?'app\.js'[\s\S]*?'legacy_product_runtime_failed'[\s\S]*?true[\s\S]*?\)/.test(esmEntrySource));
 ok('Identity Core uses ESM exports instead of a namespace global',
   /export function createAccount/.test(identityModuleSource)
   && /export function createProfileDraft/.test(identityModuleSource)
