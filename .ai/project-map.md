@@ -94,6 +94,7 @@ Localization:
 - `npm run i18n:check` — verifies dictionary parity and HTML translation keys.
 
 Canonical JS chunks:
+- `src/app/00-dependencies.js` — one-time capture of temporary ESM product dependencies for the legacy concatenated bundle; no other product JS should read `FitTimerModules`.
 - `src/app/00-core.js` — shared core/navigation/start helpers.
 - `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`, document admission is delegated to AppBase Sync registry.
 - `src/app/sync-schema.ts` — canonical FitTimer document registration consumed through the ESM product modules.
