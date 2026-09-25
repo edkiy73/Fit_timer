@@ -1,4 +1,5 @@
 const fs = require('fs');
+const vm = require('vm');
 let bad = 0;
 const ok = (name, cond, extra) => {
   if(!cond) bad++;
