@@ -164,7 +164,7 @@ function openCompare(bIdx){
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), b);
   renderCmp();
-  AppBaseUI.openModal($('cmpModal'));
+  FitTimerModules.ui.openModal($('cmpModal'));
 }
 
 // свайп по фото в сравнении: влево — следующая дата, вправо — предыдущая.
@@ -185,7 +185,7 @@ function openPhotoFull(i){
   if(!photos.length) return;
   pfIdx = Math.max(0, Math.min(photos.length - 1, i));
   renderPhotoFull();
-  AppBaseUI.openModal($('photoFullModal'));
+  FitTimerModules.ui.openModal($('photoFullModal'));
 }
 function renderPhotoFull(){
   const p = photos[pfIdx];
@@ -222,7 +222,7 @@ wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
 $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
 $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) AppBaseUI.closeModal($('photoFullModal')); };
+$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) FitTimerModules.ui.closeModal($('photoFullModal')); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -231,7 +231,7 @@ async function delCmpPhoto(which){
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
-  if(photos.length < 2){ AppBaseUI.closeModal($('cmpModal')); return; }
+  if(photos.length < 2){ FitTimerModules.ui.closeModal($('cmpModal')); return; }
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), photos.length - 1);
   renderCmp();
