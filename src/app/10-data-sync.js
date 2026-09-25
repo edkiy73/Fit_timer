@@ -5,7 +5,7 @@ const fitStorage = AppBaseStorage.createStorage({
   dbName: 'fittimer',
   storeName: 'kv',
   mirrorKeys: ['account'],
-  externalStorage: () => window.storage || null,
+  externalStorage: appRuntimeCompat.externalStorage,
   onWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} }
 });
 const pk = key => fitStorage.namespacedKey(key, currentUser);

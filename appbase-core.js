@@ -373,6 +373,7 @@ var AppBaseNotifications;
     }
     AppBaseNotifications.limitCandidates = limitCandidates;
 })(AppBaseNotifications || (AppBaseNotifications = {}));
+"use strict";
 var AppBaseUI;
 (function (AppBaseUI) {
     function setShown(element, shown, hiddenClass = 'hidden') {

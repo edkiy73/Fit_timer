@@ -5131,6 +5131,23 @@ function renderStartInfo(){
   renderStartOverview();
 }
 
+/* ================= RUNTIME COMPATIBILITY BOUNDARY =================
+   Legacy browser/native globals live here while the frontend is still concatenated.
+   Product/domain code should depend on this adapter instead of reading globals directly. */
+const appRuntimeCompat = Object.freeze({
+  externalStorage(){
+    try{
+      const candidate = window.storage;
+      if(!candidate) return null;
+      if(typeof candidate.get !== 'function') return null;
+      if(typeof candidate.set !== 'function') return null;
+      if(typeof candidate.delete !== 'function') return null;
+      return candidate;
+    }catch(_){
+      return null;
+    }
+  }
+});
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
 const FIT_SYNC_ACCOUNT_DOC_KEYS = ['trainer', 'clients', 'notificationPrefs'];
 const FIT_SYNC_REGISTRY = AppBaseSync.createRegistry([
@@ -5148,7 +5165,7 @@ const fitStorage = AppBaseStorage.createStorage({
   dbName: 'fittimer',
   storeName: 'kv',
   mirrorKeys: ['account'],
-  externalStorage: () => window.storage || null,
+  externalStorage: appRuntimeCompat.externalStorage,
   onWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} }
 });
 const pk = key => fitStorage.namespacedKey(key, currentUser);
