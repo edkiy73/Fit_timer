@@ -74,6 +74,8 @@ type LegacyProductModules = {
   sync: typeof productSyncSchema;
   notifications: typeof notificationsCore;
   ui: typeof uiCore;
+  mobile: typeof mobileCore;
+  nativeNotifications: typeof nativeNotificationsCore;
 };
 
 function exposeLegacyProductModules(): void {
@@ -83,28 +85,39 @@ function exposeLegacyProductModules(): void {
     identity: productIdentity,
     sync: productSyncSchema,
     notifications: notificationsCore,
-    ui: uiCore
+    ui: uiCore,
+    mobile: mobileCore,
+    nativeNotifications: nativeNotificationsCore
   };
 }
 
-export function loadLegacyProductRuntime(): Promise<void> {
+function loadLegacyScript(src: string, marker: string, failureCode: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if(document.querySelector('script[data-legacy-product-runtime]')){
+    if(document.querySelector(`script[${marker}]`)){
       resolve();
       return;
     }
     const script = document.createElement('script');
-    script.src = 'app.js';
+    script.src = src;
     script.async = false;
-    script.dataset.legacyProductRuntime = 'true';
+    script.setAttribute(marker, 'true');
     script.addEventListener('load', () => resolve(), {once:true});
-    script.addEventListener('error', () => reject(new Error('legacy_product_runtime_failed')), {once:true});
+    script.addEventListener('error', () => reject(new Error(failureCode)), {once:true});
     document.body.appendChild(script);
   });
 }
 
+export function loadLegacyMobileRuntime(): Promise<void> {
+  return loadLegacyScript('mobile.js', 'data-legacy-mobile-runtime', 'legacy_mobile_runtime_failed');
+}
+
+export function loadLegacyProductRuntime(): Promise<void> {
+  return loadLegacyScript('app.js', 'data-legacy-product-runtime', 'legacy_product_runtime_failed');
+}
+
 exposeLegacyProductModules();
 try{
+  await loadLegacyMobileRuntime();
   await loadLegacyProductRuntime();
 }catch(error){
   console.error('Failed to start product runtime', error);
