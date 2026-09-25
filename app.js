@@ -5263,6 +5263,57 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.requestReview !== 'function') return false;
     try{ return !!(await candidate.requestReview()); }
     catch(_){ return false; }
+  },
+
+  offlineVoice(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    return !!(candidate && candidate.offlineVoice);
+  },
+
+  async getVoiceModelStatus(language){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.getVoiceModelStatus !== 'function'){
+      return {installed:false, unavailable:true, language:language || 'ru'};
+    }
+    try{ return await candidate.getVoiceModelStatus(language); }
+    catch(_){ return {installed:false, unavailable:true, language:language || 'ru'}; }
+  },
+
+  async listTtsVoices(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.listTtsVoices !== 'function') return [];
+    try{
+      const list = await candidate.listTtsVoices();
+      return Array.isArray(list) ? list : [];
+    }catch(_){ return []; }
+  },
+
+  async downloadVoiceModel(language, onStatus){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.downloadVoiceModel !== 'function') return false;
+    try{ return !!(await candidate.downloadVoiceModel(language, onStatus)); }
+    catch(_){ return false; }
+  },
+
+  async startVoiceRecognition(onResult, onError, onStatus){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.startVoiceRecognition !== 'function') return false;
+    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus)); }
+    catch(_){ return false; }
+  },
+
+  async stopVoiceRecognition(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.stopVoiceRecognition !== 'function') return false;
+    try{ await candidate.stopVoiceRecognition(); return true; }
+    catch(_){ return false; }
+  },
+
+  async stopSpeaking(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.stopSpeaking !== 'function') return false;
+    try{ await candidate.stopSpeaking(); return true; }
+    catch(_){ return false; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -16884,7 +16935,7 @@ window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')
 
 /* ================= ФИНАЛ ================= */
 function stopSpeech(){
-  if(window.FitNative && window.FitNative.stopSpeaking) window.FitNative.stopSpeaking();
+  appRuntimeCompat.stopSpeaking();
   try{ speechSynthesis.cancel(); }catch(e){}
 }
 
@@ -17846,7 +17897,7 @@ let hfMode = 'off'; // off | voice | headset
 
 function hfHintText(mode){
   if(mode === 'voice'){
-    return t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
+    return t(appRuntimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
   }
   if(mode === 'headset') return t('handsfree.headsetHint');
   return t('handsfree.offHint');
@@ -18722,18 +18773,18 @@ function readTimings(){
   uDraft.sideSec = num('ueSideSec', 10, 3, 60);
 }
 async function nativeVoiceReady(){
-  if(!(window.FitNative && window.FitNative.offlineVoice)) return !!SR;
-  const s = await window.FitNative.getVoiceModelStatus(recognitionLang);
+  if(!appRuntimeCompat.offlineVoice()) return !!SR;
+  const s = await appRuntimeCompat.getVoiceModelStatus(recognitionLang);
   return !!(s && s.installed);
 }
 
 async function chooseHandsFree(mode){
   if(mode === 'voice'){
-    if(!(window.FitNative && window.FitNative.offlineVoice) && !SR){
+    if(!appRuntimeCompat.offlineVoice() && !SR){
       appAlert(t('handsfree.unavailable'));
       return false;
     }
-    if(window.FitNative && window.FitNative.offlineVoice && !(await nativeVoiceReady())){
+    if(appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
       await refreshVoicePackUI();
       appAlert(t('handsfree.packFirst'));
       return false;
@@ -18742,7 +18793,7 @@ async function chooseHandsFree(mode){
   setHfMode(mode);
   if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
-    appAlert(t((window.FitNative && window.FitNative.offlineVoice) ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
+    appAlert(t(appRuntimeCompat.offlineVoice() ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
   }
   return true;
 }
@@ -18905,8 +18956,8 @@ wireLiveSoundCascade('st');
 wireLiveSoundCascade('snd');
 
 async function availableTtsVoices(){
-  if(window.FitNative && window.FitNative.listTtsVoices){
-    const list = await window.FitNative.listTtsVoices();
+  if(appRuntimeCompat.hasNative('listTtsVoices')){
+    const list = await appRuntimeCompat.listTtsVoices();
     return list.map(v=>({id:v.name,name:v.name,lang:v.language || '',network:!!v.network}));
   }
   try{
@@ -18957,7 +19008,7 @@ async function syncTtsLocaleToApp(resetVoice){
 
 let voicePackPollTimer = 0;
 async function refreshVoicePackUI(progressEvent){
-  const native = !!(window.FitNative && window.FitNative.offlineVoice);
+  const native = appRuntimeCompat.offlineVoice();
   ['voicePackBox','hfVoicePackBox'].forEach(id=>setShown(id,native));
   if(!native) return;
   if($('voiceRecLang')) $('voiceRecLang').value=recognitionLang;
@@ -18965,7 +19016,7 @@ async function refreshVoicePackUI(progressEvent){
 
   let status = null;
   if(progressEvent && progressEvent.language === recognitionLang) status=progressEvent;
-  else status = await window.FitNative.getVoiceModelStatus(recognitionLang);
+  else status = await appRuntimeCompat.getVoiceModelStatus(recognitionLang);
 
   const size = (status && status.sizeMb) || (recognitionLang==='en' ? 40 : 45);
   let label = status && status.installed ? t('voicepack.ready') : t('voicepack.downloadOnce',{size});
@@ -19009,11 +19060,11 @@ async function refreshVoicePackUI(progressEvent){
 }
 
 async function downloadSelectedVoicePack(){
-  if(!(window.FitNative && window.FitNative.downloadVoiceModel)) return;
+  if(!appRuntimeCompat.hasNative('downloadVoiceModel')) return;
   for(const id of ['btnVoicePack','btnHfVoicePack']){
     AppBaseUI.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
   }
-  const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
+  const ok=await appRuntimeCompat.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
   if(!ok) appAlert(t('voicepack.startError'));
 }
@@ -19100,19 +19151,19 @@ function voiceTestRow(d){
 }
 function onVoiceTestHeard(e){ if(voiceTestOn) voiceTestRow(e.detail || {}); }
 async function openVoiceTest(){
-  if(state.live || !(window.FitNative && window.FitNative.offlineVoice)) return;
+  if(state.live || !appRuntimeCompat.offlineVoice()) return;
   $('voiceTestList').innerHTML = '';
   $('voiceTestStatus').textContent = t('voicetest.listening');
   $('voiceTestModal').classList.add('open');
   voiceTestOn = true;
-  const ok = await window.FitNative.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
+  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); });
   if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
-  if(!voiceTestOn) window.FitNative.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
+  if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
 }
 function stopVoiceTest(){
   if(!voiceTestOn) return;
   voiceTestOn = false;
-  if(window.FitNative && window.FitNative.stopVoiceRecognition) window.FitNative.stopVoiceRecognition();
+  appRuntimeCompat.stopVoiceRecognition();
 }
 window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
 if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
