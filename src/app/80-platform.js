@@ -349,7 +349,7 @@ async function showNotification(title, body){
 }
 function checkSchedules(){
   if(document.hidden) return;
-  if(window.FitNative && window.FitNative.isNative) return;
+  if(appRuntimeCompat.isNative()) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
   if(prefs.workouts === false) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
