@@ -8,7 +8,8 @@ const targets = [
   ['src/core/sync.ts', 'src/core/sync.runtime.js'],
   ['src/core/observability.ts', 'src/core/observability.runtime.js'],
   ['src/core/notifications.ts', 'src/core/notifications.runtime.js'],
-  ['src/core/native-notifications.ts', 'native-notifications.js']
+  ['src/core/native-notifications.ts', 'native-notifications.js'],
+  ['src/core/mobile.ts', 'mobile-core.js']
 ];
 
 let bad = false;
