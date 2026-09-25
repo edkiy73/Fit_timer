@@ -396,6 +396,19 @@ ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));
 
+const runtimeEnvironmentSource = fs.readFileSync('src/app/runtime-environment.ts', 'utf8');
+ok('runtime environment isolates legacy window dependencies',
+  /interface LegacyRuntimeWindow/.test(runtimeEnvironmentSource)
+  && /externalStorage/.test(runtimeEnvironmentSource)
+  && /runtimePlatform/.test(runtimeEnvironmentSource));
+ok('runtime environment keeps legacy globals behind one product boundary',
+  /window as LegacyRuntimeWindow/.test(runtimeEnvironmentSource)
+  && !/window\.storage|window\.Capacitor/.test(productInfrastructureSource)
+  && !/window\.storage|window\.Capacitor/.test(productIdentitySource));
+ok('ESM entry composes runtime environment explicitly',
+  /from ['"]\.\/app\/runtime-environment\.js['"]/.test(esmEntrySource)
+  && /runtimeEnvironment/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
