@@ -26,9 +26,12 @@ ok('product app no longer embeds reusable Core namespace declarations',
   && !app.includes('var AppBaseObservability;')
   && !app.includes('var AppBaseNotifications;')
   && !app.includes('var AppBaseUI;'));
+const coreScript='<script src="appbase-core.js"></script>';
+const appScript='<script src="app.js"></script>';
 ok('HTML loads Core before product app',
-  html.includes('appbase-core.js')
-  && html.indexOf('appbase-core.js') < html.indexOf('app.js'));
+  html.includes(coreScript)
+  && html.includes(appScript)
+  && html.indexOf(coreScript) < html.indexOf(appScript));
 ok('mobile build copies Core bundle',web.includes("'appbase-core.js'"));
 ok('mobile validation requires Core bundle',mobile.includes("'dist/appbase-core.js'"));
 
