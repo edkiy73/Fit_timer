@@ -4107,6 +4107,18 @@ var AppBaseUI;
         element.textContent = String(value == null ? '' : value);
     }
     AppBaseUI.setText = setText;
+    function applyCssVars(element, vars) {
+        if (!element)
+            return;
+        Object.entries(vars).forEach(([name, value]) => {
+            const key = name.startsWith('--') ? name : '--' + name;
+            if (value == null || value === '')
+                element.style.removeProperty(key);
+            else
+                element.style.setProperty(key, String(value));
+        });
+    }
+    AppBaseUI.applyCssVars = applyCssVars;
     function openModal(modal, openClass = 'open') {
         if (!modal)
             return false;
@@ -18040,6 +18052,17 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
+  const productUi = window.FIT_TIMER_CONFIG && window.FIT_TIMER_CONFIG.brand && window.FIT_TIMER_CONFIG.brand.ui;
+  const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
+  if(productTheme){
+    AppBaseUI.applyCssVars(document.body, {
+      bg: productTheme.background,
+      card: productTheme.card,
+      surface: productTheme.surface,
+      accent: productTheme.accent,
+      'accent-ink': productTheme.accentInk
+    });
+  }
   // color-scheme говорит браузеру, в каком свете рисовать СВОИ элементы: полосу
   // прокрутки, календарь в поле даты, список в select. Без него они остаются
   // системными светлыми поверх тёмной темы.
@@ -18047,9 +18070,10 @@ function applyTheme(){
   root.style.colorScheme = themeLight ? 'light' : 'dark';
   // цвет ползунка берём из палитры темы, а не дублируем константой: иначе при
   // правке палитры полоса останется от старой темы, и заметят это не сразу
-  const sb = getComputedStyle(document.body).getPropertyValue('--line-2').trim();
+  const computed = getComputedStyle(document.body);
+  const sb = computed.getPropertyValue('--line-2').trim();
   root.style.setProperty('--sb-thumb', sb || (themeLight ? '#CFC5EA' : '#3B2F58'));
-  const bg = themeLight ? '#F6F4FC' : '#0C0916';
+  const bg = computed.getPropertyValue('--bg').trim() || (themeLight ? '#F6F4FC' : '#0C0916');
   const meta = document.querySelector('meta[name=theme-color]');
   if(meta) meta.content = bg;
   // html — родитель body, поэтому не видит --bg из body.light; красим его напрямую,
