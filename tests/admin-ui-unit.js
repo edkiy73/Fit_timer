@@ -47,7 +47,7 @@ need(html.includes('Уже готовые картинки сохранены'),
 
 need(api.includes("'save_draft'"),'server draft save action is missing');
 need(api.includes("'publish_draft'"),'server draft publish action is missing');
-need(api.includes("readItems('c:drafts', 'draft')"),'overview must return server drafts');
+need(/readItems\('c:drafts',\s*'draft'\)/.test(api),'overview must return server drafts');
 need(html.includes('data-tab="dashboard"'),'admin dashboard tab is missing');
 need(html.includes('data-tab="drafts"'),'admin drafts tab is missing');
 need(html.includes('id="fPublish"'),'explicit publish action is missing from program editor');
@@ -107,10 +107,10 @@ need(html.includes('<option value="90">90 дней</option>'),'analytics must su
 need(html.includes('data-user-panel'),'user account actions need inline feedback panel');
 need(html.includes('function previewCampaign()'),'campaign audience preview is missing');
 need(html.includes('campaignPreviewKey'),'campaign send must be invalidated when copy/channels change');
-need(api.includes('const preview = !!(body && body.preview)'),'campaign API dry-run is missing');
+need(/const preview\s*=\s*!!\(body\s*&&\s*body\.preview\)/.test(api),'campaign API dry-run is missing');
 need(html.includes('Тест текста без сохранения'),'AI settings must clearly test without saving');
 need(html.includes("api('test_ai',{type,settings})"),'AI test must send unsaved settings directly');
-need(api.includes("body && body.settings ? sanitizeSettings(body.settings)"),'AI test API must use supplied unsaved settings');
+need(/body\s*&&\s*body\.settings\s*\?\s*sanitizeSettings\(body\.settings\)/.test(api),'AI test API must use supplied unsaved settings');
 need(html.includes('function moderatePendingFromEditor('),'pending program must be publishable from editor after saving edits');
 need(html.includes("api('client_error_clear'"),'error screen must support resolving one error group');
 need(html.includes('Считать исправленной'),'error screen needs an explicit resolved action');
