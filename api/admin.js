@@ -15,8 +15,7 @@ const FitAIProtocol = require('../lib/ai-protocol');
 const { handleAI } = require('../lib/ai-endpoint');
 const { sendPushToAccountHash, notificationPrefs } = require('../lib/push');
 const { sendMail } = require('../lib/mail');
-const { analyticsStats } = require('../lib/analytics');
-const { clientErrorStats, clearClientError } = require('../lib/diagnostics');
+const { handleAdminObservability } = require('../lib/admin/core/observability');
 const crypto = require('crypto');
 
 const GOALS = ['slim', 'tone', 'glut', 'core', 'power', 'relief', 'flex', 'back', 'post', 'cardio'];
@@ -563,20 +562,7 @@ module.exports = async (req, res) => {
     return send(res,200,{ok:true,email,month});
   }
 
-  if(a === 'analytics_stats'){
-    return send(res,200,{ok:true,stats:await analyticsStats(body&&body.days)});
-  }
-
-  if(a === 'client_errors'){
-    return send(res,200,{ok:true,stats:await clientErrorStats()});
-  }
-
-  if(a === 'client_error_clear'){
-    const sig=clampLine(body&&body.sig,40).toLowerCase();
-    if(!/^[a-f0-9]{20}$/.test(sig)) return fail(res,400,'bad_signature');
-    const cleared=await clearClientError(sig);
-    return send(res,200,{ok:true,cleared});
-  }
+  if(await handleAdminObservability(a, body, res)) return;
 
   if(a === 'user_create'){
     const email=accountMail(body&&body.email);
