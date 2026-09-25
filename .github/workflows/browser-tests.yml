@@ -52,6 +52,7 @@ jobs:
           # Browser CI runs the production-built frontend, but API calls must stay on the
           # local test server instead of escaping to the real production origin.
           cp app.config.js dist/app.config.js
+          printf '\nwindow.__FIT_TEST_MODE__ = true;\n' >> dist/app.config.js
           npx playwright install --with-deps chromium
           echo "FIT_CHROME=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
 
