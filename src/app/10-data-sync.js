@@ -84,7 +84,7 @@ const appObservability = AppBaseObservability.createClient({
   context: ()=> ({
     platform:analyticsPlatform(),
     locale:(typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
-    build:String(window.FIT_TIMER_BUILD || ''),
+    build:appRuntimeCompat.build(),
     premium:(typeof isPremium === 'function') ? !!isPremium() : false
   })
 });
