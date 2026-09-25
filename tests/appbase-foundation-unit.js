@@ -229,6 +229,21 @@ ok('ESM entry owns an explicit Notifications Core dependency',
   && /createPreferenceStore/.test(esmEntrySource)
   && /limitCandidates/.test(esmEntrySource));
 
+const uiModuleSource = fs.readFileSync('src/core/ui.ts', 'utf8');
+ok('UI Core uses ESM exports instead of a namespace global',
+  /export function setShown/.test(uiModuleSource)
+  && /export function bindActions/.test(uiModuleSource)
+  && !/namespace AppBaseUI/.test(uiModuleSource));
+ok('UI Core keeps generic modal, busy-state and action contracts intact',
+  /export function openModal/.test(uiModuleSource)
+  && /export function closeModal/.test(uiModuleSource)
+  && /export function setBusy/.test(uiModuleSource)
+  && /data-act/.test(fs.readFileSync('src/app/80-platform.js','utf8')));
+ok('ESM entry owns an explicit UI Core dependency',
+  /from ['"]\.\/core\/ui\.js['"]/.test(esmEntrySource)
+  && /setShown/.test(esmEntrySource)
+  && /bindActions/.test(esmEntrySource));
+
 const coreSources = [
   fs.readFileSync('src/types/core.ts', 'utf8'),
   ...fs.readdirSync('src/core').filter(name => name.endsWith('.ts'))
