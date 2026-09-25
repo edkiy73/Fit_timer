@@ -15,9 +15,21 @@ export interface AppFeatureFlags {
   sharing: boolean;
 }
 
+export interface AppThemeTokens {
+  background: string;
+  card: string;
+  surface: string;
+  accent: string;
+  accentInk: string;
+}
+
 export interface AppBrandConfig {
   background: string;
   notificationAccent: string;
+  ui: {
+    dark: AppThemeTokens;
+    light: AppThemeTokens;
+  };
 }
 
 export interface ProductConfig {
