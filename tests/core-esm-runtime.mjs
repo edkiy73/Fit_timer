@@ -9,6 +9,7 @@ const {createAccount, createProfileDraft} = await import('../dist/esm/core/ident
 const {createRegistry} = await import('../dist/esm/core/sync.js');
 const {createClient} = await import('../dist/esm/core/observability.js');
 const {createPreferenceStore, limitCandidates} = await import('../dist/esm/core/notifications.js');
+const {createSpeech} = await import('../dist/esm/core/speech.js');
 
 const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
 const profileDraft = createProfileDraft('Demo');
@@ -69,6 +70,56 @@ const demoNotifications = limitCandidates([
 });
 ok('ESM notification budget limits passive daily delivery',
   demoNotifications.length === 2);
+
+const audioCalls = [];
+const audioListeners = new Map();
+let removedListeners = 0;
+const fakeAudio = {
+  requestMicrophone: async () => ({granted:true}),
+  speak: async input => { audioCalls.push(['speak', input]); return {spoken:true}; },
+  addListener: async (name, fn) => {
+    audioListeners.set(name, fn);
+    return {remove: async () => { removedListeners++; audioListeners.delete(name); }};
+  },
+  startRecognition: async input => { audioCalls.push(['start', input]); return {started:true}; },
+  stopRecognition: async () => { audioCalls.push(['stop']); },
+  prepareRecognitionModel: async input => { audioCalls.push(['prepare', input]); return {installed:false, sizeMb:40}; }
+};
+let beforeDownload = 0;
+const speech = createSpeech({
+  native:true,
+  audio:fakeAudio,
+  defaultLanguage:'en',
+  defaultLocale:'en-US',
+  beforeModelDownload: async () => { beforeDownload++; }
+});
+ok('ESM speech uses product-supplied default locale',
+  await speech.speak('hello')
+  && audioCalls[0][1].locale === 'en-US' && audioCalls[0][1].text === 'hello');
+const heard = [];
+const results = [];
+ok('ESM speech starts recognition in product-supplied language',
+  await speech.startRecognition({
+    onResult: text => results.push(text),
+    onHeard: event => heard.push(event)
+  })
+  && audioCalls.some(call => call[0] === 'start' && call[1].language === 'en'));
+audioListeners.get('speechResult')({text:'next'});
+audioListeners.get('speechHeard')({text:'mumble'});
+ok('ESM speech routes results and raw heard events to handlers',
+  results[0] === 'next' && heard[0].text === 'mumble');
+await speech.stopRecognition();
+ok('ESM speech removes recognition listeners on stop',
+  removedListeners === 4 && audioListeners.size === 0);
+const downloadStatuses = [];
+ok('ESM speech queues model download after product hook',
+  await speech.downloadModel('de', status => downloadStatuses.push(status))
+  && beforeDownload === 1
+  && downloadStatuses[0].status === 'queued' && downloadStatuses[0].language === 'de');
+const webSpeech = createSpeech({native:false, audio:fakeAudio, defaultLanguage:'en', defaultLocale:'en-US'});
+ok('ESM speech is unavailable outside native shell',
+  !webSpeech.available() && !(await webSpeech.speak('x'))
+  && (await webSpeech.modelStatus()).unavailable === true);
 
 console.log(bad ? `\nESM Core failures: ${bad}` : '\nESM Core behavior is clean');
 process.exit(bad ? 1 : 0);

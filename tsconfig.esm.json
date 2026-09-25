@@ -10,6 +10,7 @@
   "include": [
     "src/main.ts",
     "src/core/mobile.ts",
-    "src/core/native-notifications.ts"
+    "src/core/native-notifications.ts",
+    "src/core/speech.ts"
   ]
 }

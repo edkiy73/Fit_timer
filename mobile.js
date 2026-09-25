@@ -1,5 +1,6 @@
 import { createBridge } from './esm/core/mobile.js';
 import { createTransport } from './esm/core/native-notifications.js';
+import { createSpeech } from './esm/core/speech.js';
 
 /* Тонкий мост к нативным функциям. В обычном браузере все методы безопасно
    переходят на web fallback, поэтому index.html остаётся общей кодовой базой. */
@@ -35,10 +36,6 @@ import { createTransport } from './esm/core/native-notifications.js';
   const PLAN_NOTIFICATION_MAX = 902999;
   const WORKOUT_INACTIVITY_NOTIFICATION_ID = 903010;
   const WORKOUT_INACTIVITY_STATE_KEY = 'fitWorkoutInactivityV1';
-  let speechResultHandle = null;
-  let speechErrorHandle = null;
-  let speechHeardHandle = null;
-  let speechStatusHandle = null;
   let remotePushListenersInstalled = false;
   let localNotificationListenersInstalled = false;
   let pendingProgramLink = '';
@@ -285,108 +282,26 @@ import { createTransport } from './esm/core/native-notifications.js';
     return true;
   }
 
-  async function requestMicrophone(){
-    if(!native) return true;
-    if(!fitAudio) return false;
-    try{
-      const result = await fitAudio.requestMicrophone();
-      return result.granted === true;
-    }catch(_){ return false; }
-  }
-
-  async function speak(text, options){
-    if(!native || !fitAudio) return false;
-    try{
-      const opts = options && typeof options === 'object' ? options : {};
-      const locale = String(opts.locale || 'ru-RU');
-      const voice = String(opts.voice || '');
-      const result = await fitAudio.speak({text: String(text || ''), locale, voice});
-      return result.spoken === true;
-    }catch(_){ return false; }
-  }
-
-  async function stopSpeaking(){
-    if(!native || !fitAudio) return;
-    try{ await fitAudio.stopSpeaking(); }catch(_){}
-  }
-
-  async function stopVoiceRecognition(){
-    if(!native || !fitAudio) return;
-    try{ await fitAudio.stopRecognition(); }catch(_){}
-    try{ if(speechResultHandle){ await speechResultHandle.remove(); speechResultHandle = null; } }catch(_){}
-    try{ if(speechErrorHandle){ await speechErrorHandle.remove(); speechErrorHandle = null; } }catch(_){}
-    try{ if(speechStatusHandle){ await speechStatusHandle.remove(); speechStatusHandle = null; } }catch(_){}
-    try{ if(speechHeardHandle){ await speechHeardHandle.remove(); speechHeardHandle = null; } }catch(_){}
-  }
+  // Core owns the native speech transport; FitTimer keeps its default language and events.
+  const speech = createSpeech({
+        native,
+        audio:fitAudio || null,
+        defaultLanguage:'ru',
+        defaultLocale:'ru-RU',
+        beforeModelDownload:requestNotifications
+      });
 
   async function startVoiceRecognition(onResult, onError, onStatus, language){
-    if(!native || !fitAudio) return false;
-    await stopVoiceRecognition();
-    if(!(await requestMicrophone())){
-      if(onError) onError('permission');
-      return false;
-    }
-    try{
-      speechResultHandle = await fitAudio.addListener('speechResult', event=>{
-        if(onResult && event && event.text) onResult(event.text, event);
-      });
-      speechErrorHandle = await fitAudio.addListener('speechError', event=>{
-        if(onError) onError((event && event.error) || 'recognition');
-      });
-      speechStatusHandle = await fitAudio.addListener('speechStatus', event=>{
-        if(onStatus) onStatus(event || {});
-      });
+    return speech.startRecognition({
+      onResult,
+      onError,
+      onStatus,
       // что распознаватель услышал и во что это превратилось (в том числе «не
       // команда») — для проверки распознавания в настройках
-      speechHeardHandle = await fitAudio.addListener('speechHeard', event=>{
-        try{ window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail:event || {}})); }catch(_){}
-      });
-      const started = await fitAudio.startRecognition({language: String(language || 'ru')});
-      if(started && started.missingModel){
-        if(onError) onError('model_missing');
-        return false;
+      onHeard:event=>{
+        try{ window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail:event})); }catch(_){}
       }
-      return !!(started && started.started);
-    }catch(_){
-      if(onError) onError('recognition');
-      return false;
-    }
-  }
-
-  async function getVoiceModelStatus(language){
-    if(!native || !fitAudio) return {installed:false, unavailable:true, language};
-    try{ return await fitAudio.getRecognitionModelStatus({language: language || 'ru'}); }
-    catch(_){ return {installed:false, unavailable:true, language}; }
-  }
-
-  async function downloadVoiceModel(language, onStatus){
-    if(!native || !fitAudio) return false;
-    try{
-      // Android WorkManager owns the transfer, so it keeps going when this screen
-      // closes or the app goes to background. JS only observes status.
-      try{ await requestNotifications(); }catch(_){}
-      const result = await fitAudio.prepareRecognitionModel({language: language || 'ru'});
-      if(onStatus) onStatus({
-        language: language || 'ru',
-        status: result && result.installed ? 'ready' : 'queued',
-        progress: result && result.installed ? 100 : 0,
-        installed: !!(result && result.installed),
-        sizeMb: result && result.sizeMb
-      });
-      return !!result;
-    }catch(_){ return false; }
-  }
-
-  async function deleteVoiceModel(language){
-    if(!native || !fitAudio) return false;
-    try{ const r = await fitAudio.deleteRecognitionModel({language:language || 'ru'}); return !!(r && r.deleted); }
-    catch(_){ return false; }
-  }
-
-  async function listTtsVoices(){
-    if(!native || !fitAudio) return [];
-    try{ const r = await fitAudio.listVoices(); return (r && Array.isArray(r.voices)) ? r.voices : []; }
-    catch(_){ return []; }
+    }, language);
   }
 
   function installNativeListeners(){
@@ -512,15 +427,15 @@ import { createTransport } from './esm/core/native-notifications.js';
     shareFile,
     haptic,
     workoutHaptic,
-    requestMicrophone,
-    speak,
-    stopSpeaking,
+    requestMicrophone:speech.requestMicrophone,
+    speak:speech.speak,
+    stopSpeaking:speech.stopSpeaking,
     startVoiceRecognition,
-    stopVoiceRecognition,
-    getVoiceModelStatus,
-    downloadVoiceModel,
-    deleteVoiceModel,
-    listTtsVoices,
-    offlineVoice: native && !!fitAudio
+    stopVoiceRecognition:speech.stopRecognition,
+    getVoiceModelStatus:speech.modelStatus,
+    downloadVoiceModel:speech.downloadModel,
+    deleteVoiceModel:speech.deleteModel,
+    listTtsVoices:speech.listVoices,
+    offlineVoice:speech.available()
   });
 })();

@@ -399,6 +399,16 @@ FitTimer still owns:
 
 This keeps Core unaware of programs/workouts while preserving the existing `window.FitNative` compatibility surface for the current app.
 
+### Speech transport implementation status
+
+Native voice transport is now Core in `src/core/speech.ts`:
+- microphone permission, native TTS and voice listing;
+- speech recognition start/stop with listener lifecycle (result/error/status/heard handlers);
+- offline recognition-model status/download/delete;
+- default recognition language/TTS locale and the pre-download hook are injected by the product.
+
+`mobile.js` still owns FitTimer policy: the `ru`/`ru-RU` defaults, the `fitVoiceHeard` diagnostics event, requesting notification permission before a model download, and everything voice commands mean during a workout. The `window.FitNative` voice surface is unchanged.
+
 ## Phase 10 — Infrastructure adapters: Supabase + OpenRouter
 
 Owner: Architect + DevOps/Backend. Review: Security + QA.
@@ -535,14 +545,15 @@ Do not combine final legacy-build removal with unrelated data/protocol migration
 
 ### Legacy build migration status
 
-Phase 13 has started with the runtime boundary itself:
-- reusable browser Core runtimes are generated into `appbase-core.js`;
-- FitTimer `app.js` no longer owns/concatenates Storage, Identity, Sync, Observability, Notifications or UI Core runtimes;
-- the HTML bootstrap loads `appbase-core.js` before FitTimer product code;
-- the Capacitor web build copies and validates the same Core runtime bundle;
-- individual `src/core/*.runtime.js` files remain generated compatibility artifacts for now, so this is a transition away from the legacy global build rather than the final module-format cutover.
+The Core side of Phase 13 is done:
+- every `src/core/*.ts` module is a real ES module compiled by `tsconfig.esm.json` into `dist/esm/`; the generated `appbase-core.js` and `src/core/*.runtime.js` namespace bundles are gone;
+- `src/main.ts` is the production entry point: it composes Core with the typed product modules (`src/app/identity.ts`, `src/app/infrastructure.ts`, `src/app/sync-schema.ts`) and then loads the legacy product bundle;
+- `mobile.js` is an ES module that imports Core (`mobile`, `native-notifications`, `speech`) explicitly and no longer reads FitTimer product state;
+- the legacy product bundle receives its dependencies once through a transient `FitTimerModules` bridge (`src/app/00-dependencies.js`) that is deleted right after startup.
 
-Next: reduce remaining global compatibility surfaces in product code and remove concatenation only where the dependency graph is explicit enough to do so safely.
+Product-side conversion is in progress and continues chunk by chunk:
+- runtime compatibility (the only reader of `window.FitNative`/`window.Capacitor`/`window.storage`) is now the ESM module `src/app/runtime-compat.ts`;
+- the remaining `src/app/*.js` chunks are still concatenated into `app.js` with a shared global scope.
 
 ## Phase 14 — Dependency rules
 
@@ -553,6 +564,10 @@ src/core/** cannot import src/domain/**
 domain may import core
 app/bootstrap may compose both
 ```
+
+### Dependency rules implementation status
+
+Implemented by `tests/dependency-boundaries-unit.js` (`npm run test:boundaries`, CI): client `src/core/**` cannot import `src/app/**`, `types/fitness` or `fit*` modules, and generic server Core (`lib/*core*`, `lib/admin/core/**`) cannot import FitTimer server modules. `tests/appbase-foundation-unit.js` additionally guards that each Core module contains no fitness vocabulary.
 
 ## Phase 15 — Feature/capability config
 

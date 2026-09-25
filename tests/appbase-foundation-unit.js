@@ -286,6 +286,20 @@ ok('mobile Core exposes reusable lifecycle/url/share/theme/biometry primitives',
   && /setTheme/.test(mobileCoreSource)
   && /biometricStatus/.test(mobileCoreSource));
 
+const speechCoreSource = fs.readFileSync('src/core/speech.ts','utf8');
+ok('speech Core is product-neutral',
+  !/workout|exercise|trainer|fittimer|program|premium/i.test(speechCoreSource)
+  && !/['"]ru(?:-RU)?['"]/.test(speechCoreSource));
+ok('speech Core exposes TTS, recognition and offline model primitives',
+  /export function createSpeech/.test(speechCoreSource)
+  && /startRecognition/.test(speechCoreSource)
+  && /downloadModel/.test(speechCoreSource)
+  && /listVoices/.test(speechCoreSource));
+ok('mobile adapter delegates native speech transport to Core',
+  /from ['"]\.\/esm\/core\/speech\.js['"]/.test(mobileAdapterSource)
+  && /createSpeech\(/.test(mobileAdapterSource)
+  && !/fitAudio\.(?:speak|startRecognition|prepareRecognitionModel)/.test(mobileAdapterSource));
+
 ok('native notification Core uses ESM exports instead of a namespace global',
   /export function createTransport/.test(nativeNotificationSource)
   && !/namespace AppBaseNativeNotifications/.test(nativeNotificationSource));
