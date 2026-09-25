@@ -6,7 +6,8 @@ const targets = [
   ['src/core/storage.ts', 'src/core/storage.runtime.js'],
   ['src/core/identity.ts', 'src/core/identity.runtime.js'],
   ['src/core/sync.ts', 'src/core/sync.runtime.js'],
-  ['src/core/observability.ts', 'src/core/observability.runtime.js']
+  ['src/core/observability.ts', 'src/core/observability.runtime.js'],
+  ['src/core/notifications.ts', 'src/core/notifications.runtime.js']
 ];
 
 let bad = false;
