@@ -23,7 +23,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test:foundation": "node tests/appbase-foundation-unit.js",
     "build:core": "node scripts/build-core.mjs",
-    "check:core": "node scripts/build-core.mjs --check"
+    "check:core": "node scripts/build-core.mjs --check",
+    "test:boundaries": "node tests/dependency-boundaries-unit.js"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",

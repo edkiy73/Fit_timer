@@ -25,6 +25,7 @@ jobs:
           npm run typecheck
           npm run build:esm
           node tests/appbase-foundation-unit.js
+          npm run test:boundaries
           npm run check:sources
           npm run check:ai-index
           npm run i18n:check
