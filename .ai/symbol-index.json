@@ -87,7 +87,7 @@
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
       "lines": 2180,
-      "chars": 100465,
+      "chars": 100476,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -220,6 +220,11 @@
         "xAt",
         "yAt"
       ]
+    },
+    "src/app/11-sync-schema.js": {
+      "kind": "frontend-js",
+      "lines": 11,
+      "chars": 438
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
