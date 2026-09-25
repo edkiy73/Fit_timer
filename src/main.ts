@@ -123,7 +123,12 @@ export function loadLegacyMobileRuntime(): Promise<void> {
 }
 
 export function loadLegacyProductRuntime(): Promise<void> {
-  return loadLegacyScript('app.js', 'data-legacy-product-runtime', 'legacy_product_runtime_failed');
+  return loadLegacyScript(
+    'app.js',
+    'data-legacy-product-runtime',
+    'legacy_product_runtime_failed',
+    true
+  );
 }
 
 try{
