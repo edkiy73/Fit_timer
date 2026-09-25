@@ -54,7 +54,6 @@ ok('ESM entry exposes product modules before loading mobile and product runtimes
   && fs.readFileSync('src/main.ts','utf8').indexOf('await loadLegacyMobileRuntime()')
      < fs.readFileSync('src/main.ts','utf8').indexOf('await loadLegacyProductRuntime()'));
 
-process.exit(bad?1:0);
 
 ok('legacy product bundle executes in ES module scope',
   /loadLegacyScript\([\s\S]*'app\.js'[\s\S]*true[\s\S]*\)/.test(fs.readFileSync('src/main.ts','utf8')));
@@ -62,3 +61,5 @@ ok('test-only binding bridge is gated and production config does not enable it',
   /__FIT_TEST_MODE__ === true/.test(fs.readFileSync('scripts/build-sources.mjs','utf8'))
   && /__FIT_TEST_MODE__ = true/.test(fs.readFileSync('.github/workflows/browser-tests.yml','utf8'))
   && !/__FIT_TEST_MODE__/.test(fs.readFileSync('app.config.js','utf8')));
+
+process.exit(bad?1:0);
