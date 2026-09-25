@@ -628,9 +628,18 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = ['stats'];
+const FIT_SYNC_DOCUMENTS = AppBaseDocuments.createRegistry([
+  {id:'fitness.stats', scope:'profile', exact:'stats'},
+  {id:'fitness.program.index', scope:'profile', exact:'index'},
+  {id:'fitness.program', scope:'profile', prefix:'program:'},
+  {id:'fitness.trainer', scope:'account', exact:'trainer'},
+  {id:'fitness.clients', scope:'account', exact:'clients'},
+  {id:'app.notificationPrefs', scope:'account', exact:'notificationPrefs'}
+]);
+const PROFILE_SYNC_KEYS = FIT_SYNC_DOCUMENTS.exactKeys('profile').filter(key => key !== 'index');
+const ACCOUNT_SYNC_KEYS = FIT_SYNC_DOCUMENTS.exactKeys('account');
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => SYNC_KEYS.includes(key) || key === 'index' || key.startsWith('program:');
+const isSyncKey = key => FIT_SYNC_DOCUMENTS.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -761,7 +770,7 @@ async function docValue(key, uid){
 // помечается изменённым и уходит наверх обычной очередью — тем же путём, что и правки,
 // сделанные офлайн. Резервная копия файлом остаётся отдельной ручной функцией.
 async function markAllForSync(){
-  for(const key of SYNC_KEYS) bumpDoc(key);
+  for(const key of PROFILE_SYNC_KEYS) bumpDoc(key);
   for(const p of customPrograms) bumpDoc(PROGRAM_DOC(p.id), {h: docHash(JSON.stringify(p))});
   bumpDoc('index', {h: docHash(customPrograms.map(p => p.id).join(','))});
   await flushMeta();
@@ -1163,7 +1172,7 @@ async function applyRemoteAccountDocs(result){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
-    if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
+    if(!d || !FIT_SYNC_DOCUMENTS.accepts('account', d.key) || d.deleted) continue;
     const localMeta = rec.bucket.meta[d.key];
     const takeRemote = !localMeta || remoteWins(d, localMeta);
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
@@ -1219,7 +1228,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of ['trainer','clients','notificationPrefs']){
+  for(const key of ACCOUNT_SYNC_KEYS){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
