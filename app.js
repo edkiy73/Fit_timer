@@ -4055,7 +4055,7 @@ const $ = id => document.getElementById(id);
 
 // лёгкая тактильная отдача на нажатия (где поддерживается)
 function haptic(ms){
-  if(window.FitNative && window.FitNative.haptic && window.FitNative.haptic()) return;
+  if(appRuntimeCompat.hapticHandled()) return;
   try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){}
 }
 document.addEventListener('pointerdown', e => {
@@ -5146,6 +5146,74 @@ const appRuntimeCompat = Object.freeze({
     }catch(_){
       return null;
     }
+  },
+
+  nativeBridge(){
+    try{ return window.FitNative || null; }
+    catch(_){ return null; }
+  },
+
+  isNative(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    return !!(candidate && candidate.isNative);
+  },
+
+  hasNative(...methods){
+    const candidate = appRuntimeCompat.nativeBridge();
+    return !!(candidate && candidate.isNative
+      && methods.every(name => typeof candidate[name] === 'function'));
+  },
+
+  hapticHandled(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    try{ return !!(candidate && typeof candidate.haptic === 'function' && candidate.haptic()); }
+    catch(_){ return false; }
+  },
+
+  async shareFile(blob, fileName, title, text){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || !candidate.isNative || typeof candidate.shareFile !== 'function') return false;
+    try{ return !!(await candidate.shareFile(blob, fileName, title, text)); }
+    catch(_){ return false; }
+  },
+
+  setSystemTheme(light){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.setSystemTheme !== 'function') return false;
+    try{ candidate.setSystemTheme(!!light); return true; }
+    catch(_){ return false; }
+  },
+
+  async openExternal(url){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.openExternal !== 'function') return false;
+    try{ return !!(await candidate.openExternal(url)); }
+    catch(_){ return false; }
+  },
+
+  async getAppInfo(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || !candidate.isNative || typeof candidate.getAppInfo !== 'function') return null;
+    try{ return await candidate.getAppInfo(); }
+    catch(_){ return null; }
+  },
+
+  async biometricStatus(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || !candidate.isNative || typeof candidate.biometricStatus !== 'function'){
+      return {available:false, reason:'unsupported'};
+    }
+    try{ return await candidate.biometricStatus(); }
+    catch(_){ return {available:false, reason:'temporarily_unavailable'}; }
+  },
+
+  async authenticateBiometric(options){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || !candidate.isNative || typeof candidate.authenticateBiometric !== 'function'){
+      return {ok:false, error:'unsupported'};
+    }
+    try{ return await candidate.authenticateBiometric(options || {}); }
+    catch(_){ return {ok:false, error:'temporarily_unavailable'}; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -7713,10 +7781,7 @@ async function openAndroidUpdate(){
     const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
-  if(window.FitNative && window.FitNative.openExternal){
-    const ok = await window.FitNative.openExternal(APP_UPDATE.url);
-    if(ok) return true;
-  }
+  if(await appRuntimeCompat.openExternal(APP_UPDATE.url)) return true;
   return false;
 }
 // Баннер пересобирается при каждом обновлении настроек (в том числе после
@@ -7751,10 +7816,10 @@ async function applyAndroidUpdateConfig(raw){
   if(gate) gate.classList.add('hidden');
   APP_UPDATE_PREV=APP_UPDATE;
   APP_UPDATE=null;
-  if(!raw || !window.FitNative || !window.FitNative.isNative || !window.FitNative.getAppInfo) return;
+  if(!raw || !appRuntimeCompat.isNative()) return;
   if(typeof analyticsPlatform === 'function' && analyticsPlatform() !== 'android') return;
 
-  const info=await window.FitNative.getAppInfo();
+  const info=await appRuntimeCompat.getAppInfo();
   const distribution=String((info&&info.distribution)||'direct')==='store'?'store':'direct';
   const cfg=distribution==='store'
     ? ((raw.store&&typeof raw.store==='object')?raw.store:{})
@@ -8205,8 +8270,7 @@ let bioRelockDeferred = false;
 const BIO_RELOCK_MS = 10 * 60 * 1000;
 
 function nativeBiometryHost(){
-  return !!(window.FitNative && window.FitNative.isNative
-    && window.FitNative.biometricStatus && window.FitNative.authenticateBiometric);
+  return appRuntimeCompat.hasNative('biometricStatus','authenticateBiometric');
 }
 function bioReason(reason){
   if(reason === 'not_enrolled') return t('bio.notEnrolled');
@@ -8222,7 +8286,7 @@ async function bioSupported(){
     return false;
   }
   try{
-    const state = await window.FitNative.biometricStatus();
+    const state = await appRuntimeCompat.biometricStatus();
     bioState = state && typeof state === 'object' ? state : {available:false, reason:'unsupported'};
     return bioState.available === true;
   }catch(e){
@@ -8233,7 +8297,7 @@ async function bioSupported(){
 async function requestNativeBiometry(){
   if(!nativeBiometryHost()) return {ok:false, error:'unsupported'};
   try{
-    return await window.FitNative.authenticateBiometric({
+    return await appRuntimeCompat.authenticateBiometric({
       title:t('lock.title'),
       reason:t('lock.prompt'),
       cancelText:t('common.cancel')
@@ -8559,8 +8623,8 @@ function drawCover(x, img, dx, dy, dw, dh, r){
   x.restore();
 }
 async function shareGeneratedFile(blob, fname, title, savedText){
-  if(window.FitNative && window.FitNative.isNative){
-    const ok = await window.FitNative.shareFile(blob, fname, title || 'Fit Timer');
+  if(appRuntimeCompat.isNative()){
+    const ok = await appRuntimeCompat.shareFile(blob, fname, title || 'Fit Timer');
     if(!ok) appAlert(t('share.openFailed'));
     return ok;
   }
@@ -10137,7 +10201,7 @@ async function exportProgramFile(p){
   const blob = new Blob([json], {type: 'application/json'});
 
   const sizeKb = Math.round(json.length / 1024);
-  if(window.FitNative && window.FitNative.isNative){
+  if(appRuntimeCompat.isNative()){
     await shareGeneratedFile(blob, fname, t('share.fileTitle',{name:p.name}));
     return;
   }
@@ -17642,7 +17706,7 @@ function applyTheme(){
   // иначе полоса статус-бара сверху и системная полоса снизу (safe-area) остаются
   // тёмными даже в светлой теме, пока не отрисуется body
   document.documentElement.style.background = bg;
-  if(window.FitNative && window.FitNative.setSystemTheme) window.FitNative.setSystemTheme(themeLight);
+  appRuntimeCompat.setSystemTheme(themeLight);
 }
 
 /* ================= ГОЛОСОВОЕ УПРАВЛЕНИЕ ================= */
