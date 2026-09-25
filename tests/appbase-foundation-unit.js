@@ -381,6 +381,21 @@ ok('ESM entry composes product infrastructure explicitly',
   /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
   && /productInfrastructure/.test(esmEntrySource));
 
+const productIdentitySource = fs.readFileSync('src/app/identity.ts', 'utf8');
+ok('product identity composes generic Identity Core through imports',
+  /from ['"]\.\.\/core\/identity\.js['"]/.test(productIdentitySource)
+  && /createFitTimerAccount/.test(productIdentitySource)
+  && /createFitTimerProfile/.test(productIdentitySource));
+ok('FitTimer profile extension stays in product layer',
+  /gender/.test(productIdentitySource)
+  && /age/.test(productIdentitySource)
+  && !/gender|age/.test(fs.readFileSync('src/core/identity.ts','utf8')));
+ok('product identity has no legacy AppBaseIdentity global',
+  !/AppBaseIdentity/.test(productIdentitySource));
+ok('ESM entry composes product identity explicitly',
+  /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
+  && /productIdentity/.test(esmEntrySource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
