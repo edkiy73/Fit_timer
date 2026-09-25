@@ -13,11 +13,11 @@ import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild } fr
 import { createProductBootstrap } from './app/bootstrap.js';
 
 /**
- * Future ESM application entry point.
+ * Production ESM composition entry point.
  *
- * Intentionally not wired into production HTML yet. It now owns one real
- * dependency edge: the generic Identity Core. More Core/product modules can
- * migrate here incrementally while the legacy concatenated runtime remains.
+ * Core now loads through this module graph. The legacy product bundle still runs
+ * temporarily, but only after the ESM Core exports are exposed through a narrow
+ * compatibility surface.
  */
 export const APPBASE_ESM_FOUNDATION = true;
 
@@ -88,3 +88,45 @@ export const runtimeEnvironment = {
 export const productBootstrap = {
   create: createProductBootstrap
 };
+
+
+type LegacyCoreGlobals = {
+  AppBaseStorage: typeof storageCore;
+  AppBaseIdentity: typeof identityCore;
+  AppBaseSync: typeof syncCore;
+  AppBaseObservability: typeof observabilityCore;
+  AppBaseNotifications: typeof notificationsCore;
+  AppBaseUI: typeof uiCore;
+};
+
+function exposeLegacyCoreGlobals(): void {
+  const legacy = globalThis as typeof globalThis & Partial<LegacyCoreGlobals>;
+  legacy.AppBaseStorage = storageCore;
+  legacy.AppBaseIdentity = identityCore;
+  legacy.AppBaseSync = syncCore;
+  legacy.AppBaseObservability = observabilityCore;
+  legacy.AppBaseNotifications = notificationsCore;
+  legacy.AppBaseUI = uiCore;
+}
+
+export function loadLegacyProductRuntime(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if(document.querySelector('script[data-legacy-product-runtime]')){
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'app.js';
+    script.async = false;
+    script.dataset.legacyProductRuntime = 'true';
+    script.addEventListener('load', () => resolve(), {once:true});
+    script.addEventListener('error', () => reject(new Error('legacy_product_runtime_failed')), {once:true});
+    document.body.appendChild(script);
+  });
+}
+
+exposeLegacyCoreGlobals();
+loadLegacyProductRuntime().catch(error => {
+  console.error('Failed to start product runtime', error);
+  document.body.classList.remove('booting');
+});
