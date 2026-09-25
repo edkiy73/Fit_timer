@@ -612,6 +612,30 @@ Before fork/snapshot:
 - Core → Domain imports are prevented;
 - profile/auth/sync/backup regressions remain green.
 
+### Readiness audit results
+
+Audit performed against the checklist above; items found and fixed in this pass:
+- **Account extension split.** `api/auth.js` no longer reads trainer pages (`t:<handle>`), trainer keys or shared links (`p:<id>`). Those live in `lib/fit-account-extension.js` behind five hooks (`wipePublicIdentity`, `purgeAccountData`, `purgeOwnedContent`, `claimHandle`, `onVerify`). The wire protocol, deletion order and responses are unchanged; a product without such data plugs in no-op hooks.
+- **Product identity on the server.** `lib/product-core.js` exposes `config/product.json` identity; `lib/push.js` (APNs bundle id, default title), `lib/mail.js` (default sender) and the sign-in email no longer hard-code "Fit Timer". The generic push default category is `general`; all current callers pass explicit categories.
+- **AI runtime without fitness content.** `lib/ai-endpoint.js` exports `createAIHandler(registry)` and `api/admin.js` composes it with the FitTimer registry; product validation codes that mean "unusable AI result" are declared by the product registry (`malformedPattern`); AI_TEST_MODE fitness fixtures moved to `lib/fit-ai-test-fixtures.js` via `registerTestResponder`.
+- Guarded by `tests/appbase-foundation-unit.js` (generic server runtime brand/fitness-free, auth delegates to the extension) and `tests/capabilities-unit.js`.
+
+Checklist status:
+- typecheck/contracts — ✅ (`npm run typecheck`, `src/types/core.ts`);
+- centralized product identity — ✅ (`config/product.json` → client config, Capacitor check, server `product-core`); FitTimer package id/signing/App Links intentionally untouched;
+- generic Storage API — ✅ `src/core/storage.ts`;
+- Account/Profile separated — ✅ client (`src/core/identity.ts`) and server auth (extension hooks);
+- generic document sync — ✅ registries (`src/core/sync.ts`, `lib/sync-registry.js`);
+- generic Analytics/Diagnostics — ✅;
+- AI runtime without fitness prompts/schemas — ✅;
+- notification Core without workout semantics — ✅ (`notifications.ts`, `native-notifications.ts`);
+- mobile Core without program/workout links — ✅ (`mobile.ts`, `speech.ts`);
+- Core Admin separated — ✅ (`lib/admin/core` vs `lib/admin/fittimer`);
+- Core → Domain imports prevented — ✅ (`tests/dependency-boundaries-unit.js`);
+- profile/auth/sync/backup regressions — ✅ (server regression suite + 32 browser scenarios).
+
+Known, accepted legacy names that stay for compatibility: `X-Fit-*` request headers, the APNs payload key `fit`, `window.FitNative`, the `fittimer/kv` local database and the `FitAudio`/`FitSystem`/`FitBiometric` native plugin names. Renaming them would break installed clients or native builds; an extracted product may choose its own names from day one.
+
 ## Phase 17 — Core upstream transition
 
 After the AppBase extraction and proof-product checks, explicitly switch ownership:

@@ -38,6 +38,9 @@ const { recordAnalytics, removeAnalyticsDevice } = require('../lib/analytics');
 const { recordClientError } = require('../lib/diagnostics');
 const SyncShadow = require('../lib/sync-shadow');
 const { capabilities } = require('../lib/capabilities-core');
+// Product-specific account extension (FitTimer: trainer page, trainer key, shared links).
+const accountExtension = require('../lib/fit-account-extension');
+const { productIdentity } = require('../lib/product-core');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -61,16 +64,6 @@ const digits = n => {
   return out;
 };
 
-// Что видно клиенту в профиле тренера. Ключи и хеши наружу не уходят никогда.
-const publicTrainer = t => ({
-  name: t.name || '', photo: t.photo || '', about: t.about || '',
-  years: t.years == null ? null : t.years, links: t.links || ''
-});
-
-// Что именно считается «сведениями о тренере». Список один на всё: расходясь с
-// тем, что показывает страница, он оставил бы на ней то, что человек стёр.
-const FACE = ['name', 'photo', 'about', 'years', 'links'];
-
 async function forget(req, res, body){
   if(!(await rateOk(req, 'forget', 20))) return fail(res, 429, 'rate_limited');
 
@@ -84,34 +77,9 @@ async function forget(req, res, body){
 
   let wiped = false;
 
-  /* ---- лицо тренера ---- */
-  if(okHandle){
-    const raw = await store.get(`t:${handle}`);
-    if(raw){
-      let t;
-      try{ t = JSON.parse(raw); }catch(e){ t = null; }
-      if(!t) return fail(res, 500, 'corrupt');
-      if(!sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '')){
-        return fail(res, 403, 'not_yours');
-      }
-      FACE.forEach(k => { delete t[k]; });
-      t.wiped = new Date().toISOString();
-      /* При удалении аккаунта ник остаётся закреплённым, но управлять им больше
-         нечем: ключ снимается, привязка к почте снимается. Освободить ник нельзя —
-         его носят программы, уже лежащие в каталоге, и чужой человек, назвавшись
-         так же, унаследовал бы их автора. */
-      if(all){
-        t.keyHash = '';
-        delete t.mailHash;
-        // Ник остаётся занятым ради уже опубликованного авторства, но хранить для
-        // этого hash удалённой почты не нужно. Tombstone не позволяет захватить ник
-        // заново и при этом не связывает его с удалённым email.
-        await store.set(`h:${handle}`, 'deleted');
-      }
-      await store.set(`t:${handle}`, JSON.stringify(t));
-      wiped = true;
-    }
-  }
+  const identity = await accountExtension.wipePublicIdentity({handle, okHandle, body, all});
+  if(identity.error) return fail(res, identity.error.status, identity.error.code);
+  wiped = !!identity.wiped;
 
   if(!all) return send(res, 200, {ok: true, wiped});
 
@@ -157,32 +125,7 @@ async function forget(req, res, body){
         }
       }
 
-      // Shared link принадлежит тренеру, поэтому при удалении аккаунта подопечного
-      // саму ссылку не трогаем. Убираем claim и только те отчёты, которые сервер
-      // ранее пометил hash этого аккаунта. Старые/анонимные link-scoped отчёты
-      // намеренно не угадываем по имени.
-      for(const key of await store.scan('p:*', 100000)){
-        const m = /^p:([0-9a-z]{4,16})$/.exec(String(key || ''));
-        if(!m) continue;
-        const raw = await store.get(key);
-        if(!raw) continue;
-        try{
-          const link = JSON.parse(raw);
-          if(link && link.clientMailHash === mh){
-            delete link.clientMailHash;
-            delete link.claimedAt;
-            await store.set(key, JSON.stringify(link));
-          }
-        }catch(_){}
-        const reportsKey = `p:${m[1]}:reports`;
-        const reports = await store.list(reportsKey);
-        for(const row of reports){
-          try{
-            const rec = JSON.parse(row);
-            if(rec && rec._account === mh) await store.removeFromList(reportsKey, row);
-          }catch(_){}
-        }
-      }
+      await accountExtension.purgeAccountData(mh);
 
       // Манифест знает все отдельные документы синхронизации. Сначала читаем его,
       // затем удаляем сами документы и только после этого манифест: иначе список
@@ -205,41 +148,8 @@ async function forget(req, res, body){
     }
   }
 
-  /* Ссылки, отправленные подопечным, вместе с отчётами и счётчиками открытий.
-     Список с телефона используем как быстрый путь, но он не может быть единственным:
-     после переустановки или удаления на другом устройстве локальная картотека бывает
-     неполной. Полное удаление — редкая операция, поэтому здесь допустим SCAN по p:*,
-     чтобы найти все server links этого trainer handle. */
-  const want = new Set((Array.isArray(body && body.links) ? body.links : [])
-    .map(x => String(x || '')).filter(x => /^[0-9a-z]{4,16}$/.test(x)).slice(0, 300));
-  if(okHandle){
-    const keys = await store.scan('p:*', 100000);
-    for(const key of keys){
-      const m = /^p:([0-9a-z]{4,16})$/.exec(String(key || ''));
-      if(!m) continue;
-      const rec = await store.get(key);
-      if(!rec) continue;
-      try{
-        const p = JSON.parse(rec);
-        if(p && p.by === handle) want.add(m[1]);
-      }catch(_){}
-    }
-  }
-  for(const id of want){
-    const rec = await store.get(`p:${id}`);
-    if(!rec) continue;
-    let p;
-    try{ p = JSON.parse(rec); }catch(e){ continue; }
-    if(okHandle && p.by !== handle) continue;   // чужую ссылку своим ключом не удалить
-    await store.del(`p:${id}`);
-    await store.del(`p:${id}:reports`);
-    await store.del(`p:${id}:opens`);
-    await store.del(`p:${id}:first`);
-    await store.del(`p:${id}:last`);
-    const reportDays = await store.scan(`reportday:${id}:*`, 400);
-    for(const key of reportDays) await store.del(key);
-    links++;
-  }
+  const owned = await accountExtension.purgeOwnedContent({handle, okHandle, body});
+  links = owned.links || 0;
 
   send(res, 200, {ok: true, wiped, account, links});
 }
@@ -301,17 +211,8 @@ module.exports = async (req, res) => {
     if(!HANDLE.test(handle)) return fail(res, 400, 'bad_handle');
     const owner = await store.get(`h:${handle}`);
     if(owner && owner !== mh) return fail(res, 409, 'handle_taken');
-    const traw = await store.get(`t:${handle}`);
-    if(traw){
-      let t = null;
-      try{ t = JSON.parse(traw); }catch(e){}
-      const legacyKeyOk = t && sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '');
-      if(!t || (t.mailHash && t.mailHash !== mh) || (!t.mailHash && !legacyKeyOk)){
-        return fail(res, 409, 'handle_taken');
-      }
-      t.mailHash = mh;
-      await store.set(`t:${handle}`, JSON.stringify(t));
-    }
+    const claimError = await accountExtension.claimHandle({handle, mh, body});
+    if(claimError) return fail(res, 409, claimError);
     acc.handle = handle;
     await store.set(`h:${handle}`, mh);
     await store.set(`a:${mh}`, JSON.stringify(acc));
@@ -402,11 +303,12 @@ module.exports = async (req, res) => {
     await store.set(`mail:${mh}`, JSON.stringify({h: sha(code), tries: 0, at: Date.now()}), CODE_TTL);
 
     const locale = (body && body.locale) === 'en' ? 'en' : 'ru';
+    const appName = productIdentity().name;
     const text = locale === 'en'
-      ? `Your Fit Timer sign-in code: ${code}\n\nEnter it in the app under More → Account.\nThe code is valid for 15 minutes.\n\nIf you didn’t request this, you can ignore this email.`
+      ? `Your ${appName} sign-in code: ${code}\n\nEnter it in the app under More → Account.\nThe code is valid for 15 minutes.\n\nIf you didn’t request this, you can ignore this email.`
       : `Код для входа: ${code}\n\nВведи его в приложении, в разделе «Другое» → «Аккаунт».\nКод действует 15 минут.\n\nЕсли ты этого не просил — просто удали письмо, ничего не произошло.`;
     const html = locale === 'en'
-      ? `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>Your Fit Timer sign-in code:</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p>Enter it in the app under More → Account. The code is valid for 15 minutes.</p><p style="color:#6C6785;font-size:14px">If you didn’t request this, you can ignore this email.</p></div>`
+      ? `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>Your ${appName} sign-in code:</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p>Enter it in the app under More → Account. The code is valid for 15 minutes.</p><p style="color:#6C6785;font-size:14px">If you didn’t request this, you can ignore this email.</p></div>`
       : `<div style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1B1630"><p>Код для входа:</p><p style="font:600 30px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;margin:18px 0">${code}</p><p>Введи его в приложении, в разделе «Другое» → «Аккаунт». Код действует 15 минут.</p><p style="color:#6C6785;font-size:14px">Если ты этого не просил — просто удали письмо, ничего не произошло.</p></div>`;
 
     /* На локальном запуске письмо не отправляется, а код возвращается в ответе.
@@ -415,7 +317,7 @@ module.exports = async (req, res) => {
        В боевом режиме этой ветки нет: там ALLOW_MEMORY_STORE не ставят. */
     const local = process.env.ALLOW_MEMORY_STORE === '1';
     try{
-      await sendMail({to: email, subject: locale === 'en' ? `Fit Timer code: ${code}` : `Код ${code} — Fit Timer`, text, html});
+      await sendMail({to: email, subject: locale === 'en' ? `${appName} code: ${code}` : `Код ${code} — ${appName}`, text, html});
     }catch(e){
       if(e.code === 'no_mail_key'){
         if(!local) return fail(res, 503, 'no_mail');
@@ -484,53 +386,13 @@ module.exports = async (req, res) => {
       acc.sub = sub;
     }
 
-    /* Ник тренера. Он тоже принадлежит аккаунту: отдельного «входа для тренеров»
+    /* Ник тоже принадлежит аккаунту: отдельного «входа для тренеров»
        нет, и потерять себя человек должен иметь возможность ровно в одном месте. */
     let handle = String((body && body.handle) || '').slice(0, 40);
     if(handle && handle[0] !== '@') handle = '@' + handle;
     const okHandle = /^@[\wа-яё.\-]{1,39}$/i.test(handle);
-    let trainerKey = null, trainer = null;
-
-    if(acc.handle){
-      // Ник у аккаунта уже есть — возвращаем его и выдаём новый ключ правки.
-      const traw = await store.get(`t:${acc.handle}`);
-      if(traw){
-        let t;
-        try{ t = JSON.parse(traw); }catch(e){ t = null; }
-        if(t){
-          // Ключ НЕ перевыпускаем тому, у кого он и так рабочий: человек вошёл
-          // на своём же телефоне, а не переехал, и выкидывать его из собственной
-          // страницы в ответ на «запомни меня» незачем.
-          const same = okHandle && handle === acc.handle
-            && sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '');
-          if(!same){
-            trainerKey = rndId(24);
-            t.keyHash = sha(trainerKey);
-          }
-          t.seen = now;
-          t.mailHash = mh;
-          await store.set(`t:${acc.handle}`, JSON.stringify(t));
-          trainer = publicTrainer(t);
-        }
-      }
-    } else if(okHandle){
-      /* Ника у аккаунта нет, а у телефона есть. Привязываем — но только если он
-         правда его: ник закрепляется за первым, кто им воспользовался, и войти
-         под чужим, просто назвавшись им, нельзя. */
-      const traw = await store.get(`t:${handle}`);
-      if(traw){
-        let t;
-        try{ t = JSON.parse(traw); }catch(e){ t = null; }
-        if(t && sameSecret(sha((body && body.trainerKey) || ''), t.keyHash || '')){
-          if(t.mailHash && t.mailHash !== mh) return fail(res, 409, 'handle_taken');
-          t.mailHash = mh;
-          t.seen = now;
-          await store.set(`t:${handle}`, JSON.stringify(t));
-          acc.handle = handle;
-          trainer = publicTrainer(t);
-        }
-      }
-    }
+    const extension = await accountExtension.onVerify({acc, mh, handle, okHandle, body, now});
+    if(extension.error) return fail(res, extension.error.status, extension.error.code);
 
     if(acc.handle) await store.set(`h:${acc.handle}`, mh);
     await store.set(`a:${mh}`, JSON.stringify(acc));
@@ -557,8 +419,7 @@ module.exports = async (req, res) => {
       sub: acc.sub || null,
       handle: acc.handle || '',
       needsHandle: !acc.handle,
-      trainerKey,           // null — значит прежний ключ остаётся рабочим
-      trainer,              // null — тренерской страницы у аккаунта нет
+      ...extension.fields,
       locale: acc.locale || 'ru',
       syncToken: deviceId ? syncToken : null
     });

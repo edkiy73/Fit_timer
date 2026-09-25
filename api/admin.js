@@ -5,7 +5,9 @@
 
 const { store } = require('../lib/store');
 const { fail, readBody, rateOkScoped, sameSecret, cors } = require('../lib/util');
-const { handleAI } = require('../lib/ai-endpoint');
+const { createAIHandler } = require('../lib/ai-endpoint');
+const { registry: fitAIActions } = require('../lib/fit-ai-actions');
+const handleAI = createAIHandler(fitAIActions);
 
 const { handleAdminObservability } = require('../lib/admin/core/observability');
 const { handleAdminAccounts } = require('../lib/admin/core/accounts');

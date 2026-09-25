@@ -375,5 +375,30 @@ ok('ESM entry composes product identity explicitly',
   /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
   && /productIdentity/.test(esmEntrySource));
 
+
+// Phase 16 readiness: generic server runtime carries no FitTimer identity or fitness content.
+const genericServerSources = {
+  'lib/ai.js': fs.readFileSync('lib/ai.js','utf8'),
+  'lib/push.js': fs.readFileSync('lib/push.js','utf8'),
+  'lib/mail.js': fs.readFileSync('lib/mail.js','utf8'),
+  'lib/ai-endpoint.js': fs.readFileSync('lib/ai-endpoint.js','utf8'),
+  'lib/ai-action-registry.js': fs.readFileSync('lib/ai-action-registry.js','utf8'),
+  'lib/product-core.js': fs.readFileSync('lib/product-core.js','utf8')
+};
+const brandLeaks = Object.entries(genericServerSources)
+  .filter(([, src]) => /Fit Timer|ru\.fittimer|fitness|exercise|workout|trainer|program/i.test(src
+))
+  .map(([file]) => file);
+ok('generic server runtime has no FitTimer brand or fitness content', brandLeaks.length === 0, brandLeaks.join(', '));
+const authSource = fs.readFileSync('api/auth.js','utf8');
+ok('generic auth delegates trainer page / shared links to the product account extension',
+  /require\(['"]\.\.\/lib\/fit-account-extension['"]\)/.test(authSource)
+  && !/`t:\$\{/.test(authSource) && !/'p:\*'/.test(authSource) && !/publicTrainer/.test(authSource)
+  && !/Fit Timer/.test(authSource));
+const fitAccountExtension = require('../lib/fit-account-extension');
+ok('FitTimer account extension implements every auth hook',
+  ['wipePublicIdentity','purgeAccountData','purgeOwnedContent','claimHandle','onVerify']
+    .every(name => typeof fitAccountExtension[name] === 'function'));
+
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);

@@ -55,7 +55,8 @@ async function withCapabilities(flags, fn){
 
 (async () => {
   const off = Object.fromEntries(CAPABILITY_NAMES.map(name => [name, name !== 'ai']));
-  await withCapabilities(off, async ({handleAI}) => {
+  await withCapabilities(off, async ({createAIHandler}) => {
+    const handleAI = createAIHandler(require('../lib/fit-ai-actions').registry);
     const res = fakeRes();
     await handleAI({method:'POST', headers:{}, body:{}}, res);
     ok('AI endpoint refuses requests when the ai capability is off',
