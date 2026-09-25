@@ -35,7 +35,7 @@ ok('runtime config carries feature flags',
   runtime.features && Object.keys(product.features).every(k => runtime.features[k] === product.features[k]));
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');
 
-const runtimeCompatSource = fs.readFileSync('src/app/05-runtime-compat.js', 'utf8');
+const runtimeCompatSource = fs.readFileSync('src/app/runtime-compat.ts', 'utf8');
 const dataSyncSource = fs.readFileSync('src/app/10-data-sync.js', 'utf8');
 const sourceBuild = fs.readFileSync('scripts/build-sources.mjs', 'utf8');
 ok('legacy storage global is isolated to compatibility boundary',
@@ -54,9 +54,11 @@ ok('runtime build metadata stays out of window globals',
   !buildMetadataSources.includes('window.FIT_TIMER_BUILD')
   && runtimeCompatSource.includes('setBuild(value)')
   && runtimeCompatSource.includes('build()'));
-ok('runtime compatibility adapter loads before product data sync',
-  sourceBuild.indexOf("'src/app/05-runtime-compat.js'") >= 0
-  && sourceBuild.indexOf("'src/app/05-runtime-compat.js'") < sourceBuild.indexOf("'src/app/10-data-sync.js'"));
+const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
+ok('runtime compatibility is supplied through the startup dependency capture',
+  /runtimeCompat:\s*appRuntimeCompat/.test(fs.readFileSync('src/main.ts','utf8'))
+  && /appRuntimeCompat\s*=\s*fitLegacyModules\.runtimeCompat/.test(legacyDependencySource)
+  && !sourceBuild.includes("'src/app/05-runtime-compat.js'"));
 const genericNativeProductSources = [
   'src/app/00-core.js',
   'src/app/20-account.js',
