@@ -43,7 +43,7 @@
   .chip.chip-off svg{width:14px;height:14px;color:var(--muted);display:block}
 
   .btn-primary{
-    width:100%;min-height:56px;border:none;cursor:pointer;border-radius:var(--r-md);
+    width:100%;min-height:var(--ui-button-primary-min-h);border:none;cursor:pointer;border-radius:var(--ui-control-radius);
     background:var(--grad-accent);color:var(--on-accent);
     box-shadow:var(--sh-accent);
     font-family:var(--font-display);font-weight:600;font-size:var(--fs-lg);letter-spacing:.09em;text-transform:uppercase;
