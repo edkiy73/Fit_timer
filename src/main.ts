@@ -107,7 +107,9 @@ export function loadLegacyProductRuntime(): Promise<void> {
 }
 
 exposeLegacyCoreGlobals();
-loadLegacyProductRuntime().catch(error => {
+try{
+  await loadLegacyProductRuntime();
+}catch(error){
   console.error('Failed to start product runtime', error);
   document.body.classList.remove('booting');
-});
+}
