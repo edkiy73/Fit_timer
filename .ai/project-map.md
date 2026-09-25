@@ -6,8 +6,8 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 
 ```text
 Web
-  src/html/* + src/styles/* + src/app/* + src/core/*.runtime.js
-  -> generated index.html + style.css + appbase-core.js + app.js
+  src/html/* + src/styles/* + src/app/* + src/core/*.ts
+  -> generated index.html + style.css + app.js + dist/esm/*
           |
           +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage
           |
@@ -64,7 +64,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/styles/*.css` | canonical style chunks | layout/spacing/visual bugs |
 | `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
 | `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
-| `index.html`, `style.css`, `app.js`, `appbase-core.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
+| `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | FitTimer mobile composition/adapters over AppBase mobile primitives | workout/voice/update/deep-link product behavior |
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
@@ -80,14 +80,13 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `lib/sync-registry.js` | generic server document registry/scopes | server sync/Core work |
 | `lib/fit-sync-schema.js` + `src/app/11-sync-schema.js` | FitTimer document registration | product sync semantics |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
-| `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
 Foundation checks:
 - `npm run typecheck` — strict TypeScript contracts/Core check.
 - `npm run test:foundation` — product config/AppBase foundation invariants.
 - `npm run build:config` / `npm run check:config` — generate/verify public runtime config from `config/product.json`.
-- `npm run build:core` / `npm run check:core` — transpile/verify typed Core compatibility runtime.
+- `npm run build:esm` — compile the production ESM module graph used by web and mobile builds.
 
 Localization:
 - `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
