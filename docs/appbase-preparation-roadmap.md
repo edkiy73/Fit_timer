@@ -248,6 +248,18 @@ Prefer an adapter over the current Redis/protocol first. Do not migrate producti
 
 A good milestone: adding a test non-fitness document type should not require rewriting the sync engine.
 
+### Sync registry implementation status
+
+The existing wire/storage protocol remains unchanged, but document admission is now separated from transport/conflict logic:
+- `src/core/sync.ts` provides a typed generic client document registry;
+- `lib/sync-registry.js` provides the equivalent generic server helper;
+- FitTimer registers `stats`, `index`, `program:*`, trainer/client documents and notification preferences outside Core;
+- the server keeps accepting legacy `progWeights` from older clients for compatibility;
+- free-account access for notification preferences is expressed as a document capability instead of a hard-coded branch in the sync engine;
+- tests prove the generic registry can accept a non-fitness `note:*` document without teaching Core about that domain.
+
+Redis keys, revisions, payload fields, profile IDs and current conflict rules are intentionally unchanged in this phase.
+
 ## Phase 6 — Analytics / Diagnostics Core
 
 Owner: Extraction Engineer. Review: QA/Privacy when identity changes.

@@ -3946,6 +3946,31 @@ var AppBaseIdentity;
     }
     AppBaseIdentity.createProfileDraft = createProfileDraft;
 })(AppBaseIdentity || (AppBaseIdentity = {}));
+"use strict";
+var AppBaseSync;
+(function (AppBaseSync) {
+    function validRule(rule) {
+        return !!rule && (rule.scope === 'profile' || rule.scope === 'account')
+            && ((typeof rule.key === 'string' && !!rule.key)
+                !== (typeof rule.prefix === 'string' && !!rule.prefix));
+    }
+    function createRegistry(rules) {
+        const clean = rules.map(rule => ({ ...rule })).filter(validRule);
+        const match = (scope, key) => {
+            const value = String(key || '');
+            const rule = clean.find(item => item.scope === scope
+                && (item.key ? item.key === value : value.startsWith(item.prefix || '')));
+            return rule ? { ...rule, keyValue: value } : null;
+        };
+        return {
+            match,
+            accepts(scope, key) { return !!match(scope, key); },
+            allowsDeleted(scope, key) { return !!match(scope, key)?.allowDeleted; },
+            isFree(scope, key) { return !!match(scope, key)?.free; }
+        };
+    }
+    AppBaseSync.createRegistry = createRegistry;
+})(AppBaseSync || (AppBaseSync = {}));
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -5359,6 +5384,16 @@ function renderStartInfo(){
   renderStartOverview();
 }
 
+const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
+const FIT_SYNC_ACCOUNT_DOC_KEYS = ['trainer', 'clients', 'notificationPrefs'];
+const FIT_SYNC_REGISTRY = AppBaseSync.createRegistry([
+  {scope:'profile', key:'stats'},
+  {scope:'profile', key:'index'},
+  {scope:'profile', prefix:'program:', allowDeleted:true},
+  {scope:'account', key:'trainer'},
+  {scope:'account', key:'clients'},
+  {scope:'account', key:'notificationPrefs', free:true}
+]);
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
@@ -5989,9 +6024,9 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = ['stats'];
+const SYNC_KEYS = FIT_SYNC_PROFILE_DOC_KEYS;
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => SYNC_KEYS.includes(key) || key === 'index' || key.startsWith('program:');
+const isSyncKey = key => FIT_SYNC_REGISTRY.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -6149,7 +6184,7 @@ const SYNC = {
     const payload = [];
     for(const o of batch){
       const value = await docValue(o.key, uid);
-      const gone = value === null && o.key.startsWith('program:');
+      const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
       payload.push({
         key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
@@ -6580,7 +6615,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of ['trainer','clients','notificationPrefs']){
+  for(const key of FIT_SYNC_ACCOUNT_DOC_KEYS){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -6646,7 +6681,7 @@ async function pendingProfileSnapshot(uid){
       const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
       value = p ? JSON.stringify(p) : null;
     } else value = await kvGet(key + '_' + uid);
-    const gone = value === null && key.startsWith('program:');
+    const gone = value === null && FIT_SYNC_REGISTRY.allowsDeleted('profile', key);
     if(value === null && !gone) continue;
     docs.push({
       key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,

@@ -46,6 +46,24 @@ const fitnessTypes = fs.readFileSync('src/types/fitness.ts', 'utf8');
 ok('FitTimer profile extension is outside Core contracts',
   /FitTimerProfileExtension/.test(fitnessTypes) && /gender/.test(fitnessTypes) && /age/.test(fitnessTypes));
 
+const syncContext = {AppBaseSync: undefined};
+vm.createContext(syncContext);
+vm.runInContext(fs.readFileSync('src/core/sync.runtime.js', 'utf8'), syncContext);
+const demoRegistry = syncContext.AppBaseSync.createRegistry([
+  {scope:'profile', prefix:'note:', allowDeleted:true},
+  {scope:'account', key:'prefs', free:true}
+]);
+ok('generic sync registry accepts a non-fitness document type',
+  demoRegistry.accepts('profile', 'note:123') && demoRegistry.allowsDeleted('profile', 'note:123'));
+ok('generic sync registry handles account/free policy without product names',
+  demoRegistry.accepts('account', 'prefs') && demoRegistry.isFree('account', 'prefs')
+  && !demoRegistry.accepts('profile', 'prefs'));
+
+const { createSyncRegistry } = require('./../lib/sync-registry');
+const serverDemoRegistry = createSyncRegistry([{scope:'profile', prefix:'note:'}]);
+ok('server sync registry is product-neutral',
+  serverDemoRegistry.accepts('profile', 'note:abc') && !serverDemoRegistry.accepts('profile', 'program:abc'));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
