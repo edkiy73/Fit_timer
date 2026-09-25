@@ -55,8 +55,9 @@ const buildMetadataSources = [
 ].map(path => fs.readFileSync(path, 'utf8')).join('\n');
 ok('runtime build metadata stays out of window globals',
   !buildMetadataSources.includes('window.FIT_TIMER_BUILD')
-  && runtimeCompatSource.includes('setBuild(value)')
-  && runtimeCompatSource.includes('build()'));
+  && /setBuild\(value: unknown\)/.test(runtimeCompatSource)
+  && /setRuntimeBuild\(value\)/.test(runtimeCompatSource)
+  && /getRuntimeBuild\(\)/.test(runtimeCompatSource));
 ok('ESM runtime compatibility is available before legacy product startup',
   !sourceBuild.includes("'src/app/05-runtime-compat.js'")
   && /runtimeCompat: appRuntimeCompat/.test(fs.readFileSync('src/main.ts','utf8'))
