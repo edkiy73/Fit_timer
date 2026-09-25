@@ -5,7 +5,27 @@ const ok = (name, cond) => {
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name);
 };
 
+const {createCapabilities} = await import('../dist/esm/core/capabilities.js');
 const {createAccount, createProfileDraft} = await import('../dist/esm/core/identity.js');
+
+const demoCapabilities = createCapabilities({
+  profiles:true,
+  premium:false,
+  ai:true,
+  notifications:false,
+  biometrics:false,
+  sharing:true
+});
+ok('ESM capabilities enable only configured generic features',
+  demoCapabilities.isEnabled('profiles')
+  && demoCapabilities.isEnabled('ai')
+  && demoCapabilities.isEnabled('sharing')
+  && !demoCapabilities.isEnabled('premium')
+  && !demoCapabilities.isEnabled('notifications')
+  && !demoCapabilities.isEnabled('biometrics'));
+ok('ESM capabilities snapshot is complete and immutable',
+  Object.isFrozen(demoCapabilities.snapshot())
+  && Object.keys(demoCapabilities.snapshot()).length === 6);
 const {createRegistry} = await import('../dist/esm/core/sync.js');
 const {createClient} = await import('../dist/esm/core/observability.js');
 const {createPreferenceStore, limitCandidates} = await import('../dist/esm/core/notifications.js');
