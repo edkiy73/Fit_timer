@@ -57,8 +57,17 @@ const genericLegacyNativeCalls = [
 ok('generic legacy native calls are isolated to compatibility boundary',
   genericLegacyNativeCalls.every(token => !genericNativeProductSources.includes(token))
   && genericLegacyNativeCalls.every(token => runtimeCompatSource.includes(token.replace('window.FitNative.', 'candidate.'))));
-ok('direct update capability stays product-owned for now',
-  fs.readFileSync('src/app/20-account.js','utf8').includes('window.FitNative.installUpdate'));
+const updaterNativeSource = fs.readFileSync('src/app/20-account.js','utf8');
+const legacyUpdaterCalls = [
+  'window.FitNative.installUpdate',
+  'window.FitNative.cancelUpdate',
+  'window.FitNative.getUpdateState',
+  'window.FitNative.resumeUpdateInstall'
+];
+ok('legacy Android updater calls are isolated to compatibility boundary',
+  legacyUpdaterCalls.every(token => !updaterNativeSource.includes(token))
+  && ['candidate.installUpdate','candidate.cancelUpdate','candidate.getUpdateState','candidate.resumeUpdateInstall']
+    .every(token => runtimeCompatSource.includes(token)));
 const notificationProductSources = [
   'src/app/60-builder.js',
   'src/app/70-workout.js',
