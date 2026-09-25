@@ -16,8 +16,8 @@ const trainer=fs.readFileSync('src/styles/50-components-trainer.css','utf8');
 ok('busy helper supports explicit disabled state',
   ui.includes('button.disabled = options.disabled ?? busy'));
 ok('voice model download adopts reusable busy state',
-  events.includes('FitTimerModules.ui.setBusy(b, running')
-  && events.includes("FitTimerModules.ui.setBusy($(id), true"));
+  events.includes('appUi.setBusy(b, running')
+  && events.includes("appUi.setBusy($(id), true"));
 ok('old voice button busy mutation is removed',
   !events.includes('s.textContent=label; b.textContent=button; b.disabled=disabled'));
 
