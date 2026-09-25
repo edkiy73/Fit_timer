@@ -5328,6 +5328,34 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.consumeWorkoutResume !== 'function') return false;
     try{ return !!candidate.consumeWorkoutResume(); }
     catch(_){ return false; }
+  },
+
+  async installUpdate(url, expectedVersionCode){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.installUpdate !== 'function') return {status:'unsupported'};
+    try{ return await candidate.installUpdate(url, expectedVersionCode); }
+    catch(_){ return {status:'error'}; }
+  },
+
+  async cancelUpdate(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.cancelUpdate !== 'function') return false;
+    try{ return !!(await candidate.cancelUpdate()); }
+    catch(_){ return false; }
+  },
+
+  async getUpdateState(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.getUpdateState !== 'function') return {running:false, status:'idle'};
+    try{ return await candidate.getUpdateState(); }
+    catch(_){ return {running:false, status:'idle'}; }
+  },
+
+  async resumeUpdateInstall(expectedVersionCode){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.resumeUpdateInstall !== 'function') return {status:'unsupported'};
+    try{ return await candidate.resumeUpdateInstall(expectedVersionCode); }
+    catch(_){ return {status:'error'}; }
   }
 });
 const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
@@ -7881,18 +7909,18 @@ async function finishDirectUpdateResult(result){
 async function openAndroidUpdate(){
   if(!APP_UPDATE || !APP_UPDATE.url) return false;
   if(APP_UPDATE.channel==='direct'){
-    if(!window.FitNative || !window.FitNative.installUpdate){
+    if(!appRuntimeCompat.hasNative('installUpdate')){
       renderAndroidUpdate('error');
       return false;
     }
     // нажатие во время загрузки — «Отменить»; во время проверки файла — ничего
     if(APP_UPDATE.busy){
-      if(APP_UPDATE.phase==='downloading' && window.FitNative.cancelUpdate) await window.FitNative.cancelUpdate();
+      if(APP_UPDATE.phase==='downloading') await appRuntimeCompat.cancelUpdate();
       return false;
     }
     APP_UPDATE.busy=true;
     renderAndroidUpdate('downloading',-1);
-    const result=await window.FitNative.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
+    const result=await appRuntimeCompat.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
     return finishDirectUpdateResult(result);
   }
   if(await appRuntimeCompat.openExternal(APP_UPDATE.url)) return true;
@@ -7901,8 +7929,8 @@ async function openAndroidUpdate(){
 // Баннер пересобирается при каждом обновлении настроек (в том числе после
 // сворачивания): подхватываем загрузку, которая уже идёт или оборвалась.
 async function restoreAndroidUpdateState(){
-  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!window.FitNative||!window.FitNative.getUpdateState)return;
-  const st=await window.FitNative.getUpdateState();
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!appRuntimeCompat.hasNative('getUpdateState'))return;
+  const st=await appRuntimeCompat.getUpdateState();
   if(!APP_UPDATE||!st)return;
   const status=String(st.status||'');
   if(st.running){
@@ -7915,10 +7943,10 @@ async function restoreAndroidUpdateState(){
 }
 async function resumePendingAndroidUpdate(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
-  if(!window.FitNative||!window.FitNative.resumeUpdateInstall)return;
+  if(!appRuntimeCompat.hasNative('resumeUpdateInstall'))return;
   APP_UPDATE.busy=true;
   APP_UPDATE.awaitingPermission=false;
-  const result=await window.FitNative.resumeUpdateInstall(APP_UPDATE.latest);
+  const result=await appRuntimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
   await finishDirectUpdateResult(result);
 }
 window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
