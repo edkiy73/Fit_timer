@@ -169,7 +169,8 @@ Do not run every test by default. Run targeted tests first, then broaden only wh
 
 ## Product docs — open only when relevant
 
-- `docs/appbase-preparation-roadmap.md` — FitTimer → reusable AppBase preparation roadmap.\n- `docs/mobile-release.md` — mobile architecture/build/release.
+- `docs/appbase-preparation-roadmap.md` — FitTimer → reusable AppBase preparation roadmap.
+- `docs/mobile-release.md` — mobile architecture/build/release.
 - `docs/setup-vercel.md` — Vercel, Redis, email, backend setup.
 - `docs/ai-runtime.md` — current AI runtime/configuration.
 - `docs/ai-generation-plan.md` — AI generation design/history.
