@@ -1,9 +1,10 @@
 import { createPreferenceStore, limitCandidates } from './core/notifications.js';
+import { createCapabilities } from './core/capabilities.js';
 import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
-import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild } from './app/runtime-environment.js';
+import { externalStorage, runtimePlatform, setRuntimeBuild, getRuntimeBuild, runtimeFeatures } from './app/runtime-environment.js';
 import { createProductBootstrap } from './app/bootstrap.js';
 
 /**
@@ -14,6 +15,8 @@ import { createProductBootstrap } from './app/bootstrap.js';
  * compatibility surface.
  */
 export const APPBASE_ESM_FOUNDATION = true;
+
+export const capabilitiesCore = createCapabilities(runtimeFeatures());
 
 export const notificationsCore = {
   createPreferenceStore,
@@ -50,7 +53,8 @@ export const runtimeEnvironment = {
   externalStorage,
   platform: runtimePlatform,
   setBuild: setRuntimeBuild,
-  build: getRuntimeBuild
+  build: getRuntimeBuild,
+  features: runtimeFeatures
 };
 
 export const productBootstrap = {
@@ -59,6 +63,7 @@ export const productBootstrap = {
 
 
 type LegacyProductModules = {
+  capabilities: typeof capabilitiesCore;
   infrastructure: typeof productInfrastructure;
   identity: typeof productIdentity;
   sync: typeof productSyncSchema;
@@ -69,6 +74,7 @@ type LegacyProductModules = {
 function exposeLegacyProductModules(): void {
   const legacy = globalThis as typeof globalThis & {FitTimerModules?: LegacyProductModules};
   legacy.FitTimerModules = {
+    capabilities: capabilitiesCore,
     infrastructure: productInfrastructure,
     identity: productIdentity,
     sync: productSyncSchema,
