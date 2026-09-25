@@ -227,7 +227,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 989,
-      "chars": 43997,
+      "chars": 43970,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
