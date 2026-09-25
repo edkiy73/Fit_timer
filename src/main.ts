@@ -1,7 +1,3 @@
-import { createAccount, createProfileDraft } from './core/identity.js';
-import { createRegistry } from './core/sync.js';
-import { createStorage, namespacedKey } from './core/storage.js';
-import { createClient } from './core/observability.js';
 import { createPreferenceStore, limitCandidates } from './core/notifications.js';
 import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from './core/ui.js';
 import { createTransport } from './core/native-notifications.js';
@@ -20,24 +16,6 @@ import { createProductBootstrap } from './app/bootstrap.js';
  * compatibility surface.
  */
 export const APPBASE_ESM_FOUNDATION = true;
-
-export const identityCore = {
-  createAccount,
-  createProfileDraft
-};
-
-export const syncCore = {
-  createRegistry
-};
-
-export const storageCore = {
-  createStorage,
-  namespacedKey
-};
-
-export const observabilityCore = {
-  createClient
-};
 
 export const notificationsCore = {
   createPreferenceStore,
@@ -91,10 +69,6 @@ export const productBootstrap = {
 
 
 type LegacyCoreGlobals = {
-  AppBaseStorage: typeof storageCore;
-  AppBaseIdentity: typeof identityCore;
-  AppBaseSync: typeof syncCore;
-  AppBaseObservability: typeof observabilityCore;
   AppBaseNotifications: typeof notificationsCore;
   AppBaseUI: typeof uiCore;
 };
@@ -107,10 +81,6 @@ type LegacyProductModules = {
 
 function exposeLegacyCoreGlobals(): void {
   const legacy = globalThis as typeof globalThis & Partial<LegacyCoreGlobals>;
-  legacy.AppBaseStorage = storageCore;
-  legacy.AppBaseIdentity = identityCore;
-  legacy.AppBaseSync = syncCore;
-  legacy.AppBaseObservability = observabilityCore;
   legacy.AppBaseNotifications = notificationsCore;
   legacy.AppBaseUI = uiCore;
   (legacy as typeof legacy & {FitTimerModules?: LegacyProductModules}).FitTimerModules = {
