@@ -4,7 +4,8 @@ import ts from 'typescript';
 const CHECK = process.argv.includes('--check');
 const targets = [
   ['src/core/storage.ts', 'src/core/storage.runtime.js'],
-  ['src/core/identity.ts', 'src/core/identity.runtime.js']
+  ['src/core/identity.ts', 'src/core/identity.runtime.js'],
+  ['src/core/documents.ts', 'src/core/documents.runtime.js']
 ];
 
 let bad = false;
