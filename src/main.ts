@@ -3,6 +3,7 @@ import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, s
 import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
 import { createProductInfrastructure } from './app/infrastructure.js';
 import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
+import { appRuntimeCompat } from './app/runtime-compat.js';
 
 /**
  * Production ESM composition entry point.
@@ -51,6 +52,7 @@ type LegacyProductModules = {
   sync: typeof productSyncSchema;
   notifications: typeof notificationsCore;
   ui: typeof uiCore;
+  runtimeCompat: typeof appRuntimeCompat;
 };
 
 type LegacyProductGlobal = typeof globalThis & {FitTimerModules?: LegacyProductModules};
@@ -62,7 +64,8 @@ function exposeLegacyProductModules(): void {
     identity: productIdentity,
     sync: productSyncSchema,
     notifications: notificationsCore,
-    ui: uiCore
+    ui: uiCore,
+    runtimeCompat: appRuntimeCompat
   };
 }
 
