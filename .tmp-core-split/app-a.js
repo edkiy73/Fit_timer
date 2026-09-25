@@ -1,0 +1,5143 @@
+const I18N_RU = {
+  'app.title': 'Fit Timer — домашние тренировки',
+  'common.start': 'Начать',
+  'common.loginOrRegister': 'Вход или регистрация',
+  'common.rules': 'правила',
+  'common.exit': 'Выйти',
+  'common.profile': 'Профиль',
+  'common.sound': 'Звук',
+  'common.trainer': 'Тренер',
+  'common.account': 'Аккаунт',
+  'common.today': 'Сегодня',
+  'common.workouts': 'Тренировки',
+  'common.trainees': 'Подопечные',
+  'common.progress': 'Прогресс',
+  'common.more': 'Другое',
+  'common.catalog': 'Каталог',
+  'common.program': 'Программа',
+  'common.weight': 'Вес',
+  'common.photo': 'Фото',
+  'common.goal': 'Цель',
+  'common.level': 'Уровень',
+  'common.add': 'Добавить',
+  'nav.sections': 'Разделы',
+  'top.soundTitle': 'Звук',
+  'top.voiceTitle': 'Голосовое управление',
+  'home.catalogTitle': 'Каталог программ',
+  'home.catalogSub': 'Тренировки от тренеров',
+  'home.week': 'Эта неделя',
+  'home.premiumSub': 'Тренировку соберёт ИИ. И весь каталог программ от тренеров.',
+  'home.progressWorkouts': 'Тренировки',
+  'home.progressWeight': 'Вес',
+  'home.progressPhoto': 'Фото',
+  'store.searchPlaceholder': 'Название программы',
+  'store.clearTitle': 'Очистить',
+  'store.roleTrainer': 'тренер',
+  'store.inside': 'Что внутри',
+  'store.locked': 'Состав открыт по подписке',
+  'onboarding.start': 'Выбрать тренировку',
+  'onboarding.title': 'Тренируйся<br>по своим правилам',
+  'onboarding.lead': 'Выбери готовую программу, получи её от тренера или собери свою. Fit Timer проведёт по тренировке и подскажет, когда пора повысить нагрузку.',
+  'onboarding.programTitle': 'Программа под тебя',
+  'onboarding.programBody': 'Собери сам или доверь программу ИИ',
+  'onboarding.trainerTitle': 'Тренер на связи',
+  'onboarding.trainerBody': 'Получай программы и отправляй отчёты',
+  'onboarding.progressTitle': 'Прогресс без расчётов',
+  'onboarding.progressBody': 'Вес, повторы и время растут по плану',
+  'onboarding.handsfreeTitle': 'Свободные руки',
+  'onboarding.handsfreeBody': 'Управляй голосом или кнопкой гарнитуры',
+  'onboarding.health': 'Беременность, болезни сердца, травма или долгий перерыв — сначала посоветуйся с врачом. Стало плохо — остановись.',
+  'onboarding.legalPrefix': 'Продолжая, ты принимаешь',
+  'onboarding.legalSuffix': ' приложения.',
+  'settings.pageTitle': 'Другое',
+  'settings.languageTitle': 'Язык',
+  'settings.appLanguage': 'Язык приложения',
+  'settings.languageHint': 'Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.',
+  'audio.systemVoice': 'Системный голос',
+  'audio.voiceSelected': 'Голос выбран',
+  'handsfree.offHint': 'Переключай этапы кнопками на экране.',
+  'handsfree.voiceHintNative': 'Выбери язык команд и скачай голосовой пакет. После этого Fit Timer слушает прямо на телефоне — без интернета и без системных сигналов.',
+  'handsfree.voiceHintWeb': 'Скажи «дальше», «пауза» или «продолжить». В браузере распознавание зависит от телефона и может требовать интернет.',
+  'handsfree.headsetHint': 'Кнопка play/pause на наушниках или гарнитуре — следующий этап. Идеально для тренировок в наушниках.',
+  'common.cancel': "Отмена",
+  'common.done': "Готово",
+  'common.save': "Сохранить",
+  'common.email': "Почта",
+  'common.name': "Имя",
+  'common.gender': "Пол",
+  'common.age': "Возраст, полных лет",
+  'common.female': "Женский",
+  'common.male': "Мужской",
+  'common.voice': "Голос",
+  'common.sounds': "Звуки",
+  'common.volume': "Громкость",
+  'common.off': "Выкл",
+  'common.headset': "Гарнитура",
+  'common.download': "Скачать",
+  'common.checking': "Проверяем…",
+  'common.back': 'Назад',
+  'common.actions': "Действия",
+  'common.manual': "Вручную",
+  'common.viaAI': "Через ИИ",
+  'common.fromVideo': "Из видео",
+  'programs.title': "Тренировки",
+  'programs.addTitle': "Добавить программу",
+  'programs.newShort': "Новая",
+  'programs.catalogRequests': "Заявки в каталог",
+  'programs.programKicker': "Программа",
+  'programs.disabled': "Отключена",
+  'programs.about': "О программе",
+  'programs.variant': "Вариант тренировки",
+  'programs.exercises': "Упражнения",
+  'programs.startWorkout': "Начать тренировку",
+  'programs.newProgram': "Новая программа",
+  'programs.programName': "Название программы",
+  'programs.settings': "Настройки программы",
+  'programs.exerciseImages': "Картинки упражнений",
+  'programs.uploadBatch': "Загрузить пачкой",
+  'programs.addExercise': "Добавить упражнение",
+  'programs.saveProgram': "Сохранить программу",
+  'workout.getReady': "Приготовься",
+  'workout.pause': "Пауза",
+  'workout.pauseSub': "Таймер стоит. Описание можно читать и листать",
+  'workout.resume': "Продолжить",
+  'workout.canProgress': "Можно усложнить",
+  'workout.watchVideo': "Смотреть видео",
+  'workout.previous': "Предыдущий этап",
+  'workout.done': "Готово",
+  'workout.skip': "Пропустить",
+  'workout.great': "Отличная работа!",
+  'workout.time': "время тренировки",
+  'workout.kcal': "ккал",
+  'workout.note': "Заметка о тренировке",
+  'workout.notePlaceholder': "Самочувствие, мысли, планы — останется в истории этого дня",
+  'settings.profiles': "Профили",
+  'settings.addProfile': "Добавить профиль",
+  'settings.soundVoice': "Звук и голос",
+  'settings.useSoundVoice': "Использовать звуки и/или голос",
+  'settings.speak': "Озвучивать",
+  'settings.speakSub': "названия упражнений, отдых и итог",
+  'settings.voiceLanguage': "Язык озвучки",
+  'settings.music': "Не прерывать музыку",
+  'settings.musicSub': "вместо голоса — короткие сигналы",
+  'settings.gong': "Гонг и отсчёт",
+  'settings.gongSub': "сигналы начала, конца и последних секунд",
+  'settings.handsfree': "Управление без рук",
+  'settings.commandLanguage': "Язык команд",
+  'settings.trainerMode': "Я тренирую других",
+  'settings.trainerModeSub': "Отправлять свои программы подопечным по ссылке и видеть, кто занимается",
+  'settings.createAccountFirst': "Сначала создай аккаунт",
+  'settings.createAccountFirstSub': "Без основного аккаунта по почте режим тренера недоступен",
+  'settings.profileName': "Имя в профиле",
+  'settings.aboutMe': "О себе",
+  'settings.aboutPlaceholder': "С кем работаешь и в чём помогаешь",
+  'settings.experience': "Стаж, лет",
+  'settings.link': "Ссылка на себя",
+  'settings.preview': "Предпросмотр моего профиля",
+  'settings.deleteData': "Удаление данных",
+  'settings.deleteCoachHint': "Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.",
+  'settings.deleteCoach': "Удалить данные о себе",
+  'settings.plan': "Тариф",
+  'settings.freePlan': "Бесплатный тариф",
+  'settings.autoRenew': "Продлевать автоматически",
+  'settings.accountHint': "Быстрая регистрация в один шаг по почте. Аккаунт бесплатный: он сохранит твой ник, подписку и данные аккаунта, чтобы они вернулись на новом телефоне. Синхронизация тренировок доступна по подписке.",
+  'settings.accountNick': "Ник аккаунта",
+  'settings.biometry': "Защита биометрией",
+  'settings.biometrySub': "При запуске и после 10 минут вне приложения. Активную тренировку не прерывает.",
+  'settings.signOut': "Выйти из аккаунта",
+  'settings.backup': "Резервная копия",
+  'settings.backupHint': "Профили, программы, статистика, вес, замеры и фото — одним файлом.",
+  'settings.saveFile': "Сохранить в файл",
+  'settings.saveFileSub': "Телефон предложит, куда его положить",
+  'settings.restoreFile': "Восстановить из файла",
+  'settings.restoreFileSub': "Всё, что сейчас в приложении, заменится содержимым файла",
+  'settings.notifications': "Уведомления",
+  'settings.notificationsSub': "Выбери, какие события могут приходить на телефон и почту.",
+  'settings.pushNotifications': "Push-уведомления",
+  'settings.emailNotifications': "По почте",
+  'settings.emailNews': "Новости и обновления",
+  'settings.emailNewsSub': "Крупные обновления и новые возможности Fit Timer",
+  'settings.emailOffers': "Акции и Premium",
+  'settings.emailOffersSub': "Редкие скидки, акции и предложения подписки",
+  'settings.emailServiceNote': "Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.",
+  'settings.notifWorkouts': "Тренировки",
+  'settings.notifWorkoutsSub': "Расписание, начало и пропущенные тренировки",
+  'settings.notifTrainer': "Тренер и программы",
+  'settings.notifTrainerSub': "Изменения от тренера и статусы программ в каталоге",
+  'settings.notifProgress': "Достижения и прогресс",
+  'settings.notifProgressSub': "Важные этапы прогрессии и достижения",
+  'settings.notifOffers': "Предложения и новости",
+  'settings.notifOffersSub': "Редкие новости приложения и предложения Premium",
+  'settings.dataRules': "Данные и правила",
+  'settings.privacy': "Политика конфиденциальности",
+  'settings.privacySub': "Что собирается, где хранится, что уходит наружу",
+  'settings.terms': "Пользовательское соглашение",
+  'settings.termsSub': "Что это за приложение и кто за что отвечает",
+  'settings.health': "Здоровье и безопасность",
+  'settings.healthSub': "Когда сначала к врачу и когда остановиться",
+  'settings.deleteAll': "Удалить все данные",
+  'handsfree.title': "Управление без рук",
+  'handsfree.offSub': "Переключение кнопками на экране",
+  'handsfree.voiceSub': "Команды без рук. В приложении работают офлайн после загрузки голосового пакета",
+  'handsfree.headsetSub': "Кнопка play/pause на наушниках — следующий этап",
+  'sound.title': "Звук тренировки",
+  'sound.use': "Использовать звуки и/или голос",
+  'sound.voiceVolume': "Громкость голоса — кнопками громкости телефона.",
+  'update.availableTitle': "Доступно обновление",
+  'update.availableText': "Обнови Fit Timer, когда будет удобно.",
+  'update.downloading': "Скачиваю обновление · {progress}%",
+  'update.downloadingUnknown': "Скачиваю обновление…",
+  'update.verifying': "Проверяю файл обновления…",
+  'update.permission': "Разреши Fit Timer устанавливать обновления. После возврата установка продолжится автоматически.",
+  'update.installer': "Обновление скачано. Подтверди установку в системном окне.",
+  'update.failed': "Не удалось скачать обновление — возможно, пропал интернет. Нажми «Повторить»: загрузка продолжится с того же места.",
+  'update.requiredTitle': "Нужно обновить Fit Timer{version}",
+  'update.requiredText': "Эта версия приложения больше не поддерживается. Обновление сохранит твои данные и настройки.",
+  'update.requiredHint': "Эта версия больше не совместима с текущим сервисом.",
+  'update.action': "Обновить",
+  'update.cancel': "Отменить",
+  'update.retry': "Повторить",
+  'premium.title': "Fit Timer Премиум",
+  'premium.lead': "Тренируйся проще: получай помощь с программой, выбирай готовые планы и сохраняй свой прогресс при смене телефона.",
+  'premium.ai': "ИИ поможет собрать программу и упражнения под твою цель",
+  'premium.catalog': "Выбирай любые программы из каталога тренеров",
+  'premium.images': "Добавляй понятные картинки к упражнениям",
+  'premium.sync': "Продолжай с того же места на новом телефоне",
+  'premium.active': "Премиум активен",
+  'premium.buy': "Оформить",
+  'login.title': "Вход в аккаунт",
+  'login.codeHint': "Пришлём код. Писем, кроме кода, не будет.",
+  'login.code': "Код входа",
+  'login.haveCode': "У меня уже есть код",
+  'login.haveCodeMsg': "Введи код для {email}. Письмо отправлять не будем.",
+  'login.haveCodeHint': "Подойдёт одноразовый код из письма или тестовый код, созданный в админке.",
+  'login.codePlaceholder': "6 цифр",
+  'login.nick': "Ник аккаунта",
+  'login.nickHint': "Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.",
+  'login.sendCode': "Прислать код",
+  'create.title': "Новая программа",
+  'create.aiSub': "Ответь на пару вопросов — остальное готово само",
+  'create.manual': "Собрать вручную",
+  'create.manualSub': "Добавляешь упражнения по одному",
+  'create.youtube': "Из видео с YouTube",
+  'create.youtubeSub': "Вставь ссылку на тренировку",
+  'create.import': "По ссылке или файлом",
+  'create.importSub': "Если программу прислали или сохраняли себе",
+  'builder.schedule': "Когда тренироваться",
+  'builder.scheduleByDays': "По дням недели",
+  'builder.scheduleSequence': "По очереди",
+  'builder.trainingDays': "Дни тренировок",
+  'builder.trainingTime': "Время тренировки",
+  'builder.reminderHint': "Напомним за 15 минут и в момент старта. Нужно разрешить уведомления.",
+  'builder.variants': "Варианты тренировки",
+  'builder.variantDays': "Дни этого варианта",
+  'builder.rounds': "Кругов",
+  'builder.restRounds': "Отдых между кругами, сек",
+  'builder.progressionTitle': "Со временем сложнее",
+  'builder.progressionSub': "повторения и вес станут чуть больше по мере занятий",
+  'builder.progressionFrequency': "Как часто проверять",
+  'builder.progressionHint': "Нагрузка растёт от пройденных тренировок этого упражнения, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Когда пора проверить — спросим сразу после тренировки, получилось ли, и повысим нагрузку одним нажатием.",
+  'builder.descriptionCover': "Описание и обложка",
+  'builder.descriptionOptional': "Описание (необязательно)",
+  'builder.coverOptional': "Обложка (необязательно)",
+  'builder.choosePhoto': "Выбрать фото",
+  'builder.noCover': "Без обложки",
+  'builder.exercise': "Упражнение",
+  'builder.name': "Название",
+  'builder.countMode': "Как считать",
+  'builder.reps': "Повторения",
+  'builder.time': "Время",
+  'builder.weightedSub': "снаряды, утяжелители и тп",
+  'builder.repsCount': "Повторений",
+  'builder.sets': "Подходов подряд",
+  'builder.weightKg': "Вес, кг",
+  'builder.restSets': "Отдых между подходами, сек",
+  'builder.restSetsHint': "Между каждым подходом, если их больше одного.",
+  'builder.restAfter': "Отдых после упражнения, сек",
+  'builder.restAfterHint': "После всего упражнения, перед следующим.",
+  'builder.warmupSub': "делается один раз в начале, до кругов",
+  'builder.eachSideSub': "выпады, боковая планка — считаем и левую, и правую как один подход",
+  'builder.stepReps': "Прибавка, повт.",
+  'builder.maxReps': "Максимум, повт.",
+  'builder.stepTime': "Прибавка, сек",
+  'builder.maxTime': "Максимум, сек",
+  'builder.stepWeight': "Прибавка, кг",
+  'builder.maxWeight': "Максимум, кг",
+  'builder.stepHint': "«Прибавка» — сколько добавится за раз, «максимум» — предел роста. Без максимума за год числа станут нереальными.",
+  'builder.resetRepsAddWeight': "повторения вернутся к началу, вес вырастет на прибавку",
+  'builder.swapSub': "подскажем на тренировке, когда дорастёшь до максимума",
+  'builder.swapWith': "Чем заменить",
+  'builder.swapHow': "Как выполнять замену",
+  'builder.swapHint': "Дойдёт до максимума — на тренировке появится значок «можно усложнить».",
+  'builder.details': "Детали",
+  'builder.howTo': "Как выполнять",
+  'builder.mistakesOptional': "Частые ошибки (необязательно)",
+  'builder.muscles': "Работающие мышцы",
+  'builder.videoOptional': "Ссылка на видео (необязательно)",
+  'ai.step1': "Шаг 1",
+  'ai.onlyImportant': "Отмечай только важное — остальное подберётся само.",
+  'ai.goal': "Цель",
+  'ai.level': "Уровень",
+  'ai.weekdays': "Дни недели",
+  'ai.duration': "Длительность",
+  'ai.bodyFocus': "Акцент на части тела",
+  'ai.equipment': "Инвентарь",
+  'ai.limitations': "Ограничения",
+  'ai.customRequestOptional': "Свой запрос (необязательно)",
+  'ai.selfContextOptional': "О себе и возможностях (необязательно)",
+  'ai.selfContextHint': "Используется только для этого запроса к ИИ и не сохраняется в программе или профиле.",
+  'ai.exerciseOrder': "Порядок упражнений",
+  'ai.warmup': "Разминка",
+  'ai.splitDaysSub': "например, ноги в понедельник, спина в четверг",
+  'ai.rotateSub': "сначала первый, потом второй, потом снова первый",
+  'ai.youtubeHint': "Обычная ссылка или короткая youtu.be.",
+  'ai.wishesOptional': "Пожелания (необязательно)",
+  'ai.editProgramHint': "Нейросеть получит программу целиком и поправит только то, о чём просишь.",
+  'ai.exerciseRequestHint': "Назови упражнение или опиши, что нужно, — подберётся само.",
+  'ai.exerciseCount': "Сколько упражнений",
+  'ai.formatOptional': "Формат (необязательно)",
+  'ai.levelOptional': "Уровень (необязательно)",
+  'ai.musclesOptional': "Целевые мышцы (необязательно)",
+  'ai.equipmentOptional': "Инвентарь (необязательно)",
+  'ai.autoPickHint': "Что не выберешь — подберётся само, исходя из описания.",
+  'ai.step2': "Шаг 2",
+  'ai.doForMe': "Сделать за меня",
+  'ai.appDoesIt': "Приложение сделает это само",
+  'ai.inChat': "Сделать в чате с ИИ",
+  'ai.copyProgram': "Скопировать саму программу",
+  'ai.copyProgramSub': "Только текст программы, без задания для ИИ — можно вставить в любой чат",
+  'ai.step3': "Шаг 3 · Ответ из чата",
+  'ai.build': "Собрать",
+  'builder.programNameExample': "Например: Утренний блиц",
+  'builder.secondsExample': "Например: 120",
+  'builder.descriptionExample': "Для кого программа, чего ждать, как часто заниматься",
+  'builder.exerciseNameExample': "Например: Приседания",
+  'builder.repsExample': "Например: 12-15",
+  'builder.setsExample': "Например: 3",
+  'builder.weightExample': "Например: 8",
+  'builder.stepRepsExample': "Например: 1",
+  'builder.maxRepsExample': "Например: 15",
+  'builder.stepTimeExample': "Например: 5",
+  'builder.maxTimeExample': "Например: 60",
+  'builder.stepWeightExample': "Например: 2",
+  'builder.maxWeightExample': "Например: 24",
+  'builder.swapNameExample': "Например: отжимания с ногами на возвышении",
+  'builder.swapDescExample': "Техника более сложного варианта: исходное положение, движение, на что следить",
+  'builder.howToExample': "Опиши технику: исходное положение, движение, дыхание",
+  'builder.mistakesExample': "Чего избегать при выполнении",
+  'ai.customRequestExample': "Например: люблю планку, добавь растяжку в конце, без музыки на полу",
+  'ai.selfContextExample': "Например: вешу 120 кг, могу отжаться только 1 раз, сломан палец на ноге, приседаю с гирей 16 кг",
+  'ai.youtubeWishExample': "Например: сделай попроще для новичка, убери прыжки, раздели на два дня, добавь разминку",
+  'ai.editWishExample': "Напиши своими словами. Например: убери прыжки, добавь больше на ягодицы, сделай короче — минут на 15, замени приседания на что-то мягче для коленей",
+  'ai.exerciseWishExample': "Опиши своими словами: «болгарские выпады с опорой на стул», «что-нибудь мягкое на пресс без нагрузки на шею», «упражнение на растяжку задней поверхности бедра»",
+  'ai.exerciseEditWishExample': "Например: сделай мягче для коленей, добавь вариант с опорой, распиши технику подробнее, поменяй на время вместо повторений",
+  'ai.resultPlaceholder': "Скопируй ответ нейросети целиком и вставь сюда",
+  'builder.exercisesSuffix': "упражнений",
+  'builder.roundsSuffix': "кругов",
+  'builder.showFull': "Показать полностью",
+  'builder.exercisesTitle': "Упражнения",
+  'builder.exerciseImagesTitle': "Картинки упражнений",
+  'builder.imagesIntro': "У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.",
+  'builder.imagesSource': "Откуда взять картинки",
+  'builder.chooseFromPhone': "Выбрать с телефона",
+  'builder.uploadAndAssign': "Загружаем и раскладываем",
+  'common.or': "или",
+  'builder.generateWithAI': "Нарисовать нейросетью",
+  'builder.generateAllSub': "Все картинки разом, в одном стиле — приложение сделает это само",
+  'builder.generateInChat': "Нарисовать в чате с ИИ",
+  'builder.generateInChatSub': "Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.",
+  'builder.copyPrompt': "Скопировать задание",
+  'builder.copyPromptSub': "Дальше его нужно вставить в любой чат",
+  'builder.uploaded': "Доступные",
+  'builder.generateScopeTitle': "Какие картинки сделать",
+  'builder.generateAllImages': "Сгенерировать все",
+  'builder.generateAllImagesSub': "Перерисовать обложку и все упражнения",
+  'builder.generateMissingImages': "Только недостающие",
+  'builder.generateMissingImagesSub': "Оставить готовые картинки и сделать только пустые",
+  'builder.generateOneAI': "Сделать через ИИ",
+  'builder.imageAI': "Через ИИ",
+  'builder.remove': "Убрать",
+  'builder.assignOrder': "Разложить по порядку",
+  'builder.assignWhere': "Куда подставить",
+  'builder.assignHint': "Нажми на место — можно выбрать доступную картинку, взять с телефона или сделать новую через ИИ.",
+  'workout.interrupt': "Прервать тренировку",
+  'workout.saveExit': "Сохранить и выйти",
+  'workout.saveExitSub': "В следующий раз продолжишь с этого места",
+  'workout.finishCompletely': "Завершить полностью",
+  'workout.finishCompletelySub': "Прогресс этой тренировки сбросится",
+  'workout.startFrom': "С чего начать",
+  'workout.chooseExercise': "Выбрать упражнение",
+  'workout.chooseExerciseSub': "Начать с любого места программы",
+  'workout.continue': "Продолжить",
+  'workout.startOver': "Начать сначала",
+  'workout.startOverSub': "С первого упражнения",
+  'workout.startExerciseTitle': "С какого упражнения начать",
+  'ai.working': "Нейросеть работает",
+  'ai.workingHint': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
+  'common.abort': "Отменить",
+  'builder.image': "Картинка",
+  'builder.noUploadedImages': "Доступных картинок пока нет — выбери их с телефона или создай через ИИ.",
+  'builder.removeImage': "Убрать картинку",
+  'option.level.beginner': "Новичок",
+  'option.level.intermediate': "Средний",
+  'option.level.advanced': "Продвинутый",
+  'option.goal.loseWeight': "Похудеть",
+  'option.goal.tone': "Подтянуть всё тело",
+  'option.goal.glutesCore': "Ягодицы и пресс",
+  'option.goal.flatStomach': "Плоский живот",
+  'option.goal.strength': "Сила и выносливость",
+  'option.goal.definition': "Рельеф мышц",
+  'option.goal.flexibility': "Растяжка и гибкость",
+  'option.goal.posture': "Осанка и спина",
+  'option.goal.postpartum': "Восстановиться после родов",
+  'option.goal.cardio': "Кардио и энергия",
+  'option.equip.none': "Без инвентаря",
+  'option.equip.mat': "Коврик",
+  'option.equip.dumbbells': "Гантели",
+  'option.equip.bands': "Резинки",
+  'option.equip.chair': "Стул",
+  'option.equip.ball': "Фитбол",
+  'option.equip.weights': "Утяжелители",
+  'option.equip.bar': "Турник",
+  'option.limit.none': "Без ограничений",
+  'option.limit.noJump': "Без прыжков",
+  'option.limit.quiet': "Тихо (соседи снизу)",
+  'option.limit.knees': "Берегу колени",
+  'option.limit.lowerBack': "Берегу поясницу",
+  'option.limit.wrists': "Берегу запястья",
+  'option.limit.neck': "Берегу шею",
+  'option.limit.pregnancy': "Беременность",
+  'option.style.circuit': "Круговая",
+  'option.style.strength': "Силовая",
+  'option.style.mixed': "Смешанная",
+  'option.warm.with': "С разминкой",
+  'option.warm.without': "Без разминки",
+  'option.format.reps': "Повторения",
+  'option.format.weight': "С весом",
+  'option.format.time': "Время",
+  'muscle.neck': "Шея",
+  'muscle.shoulders': "Плечи",
+  'muscle.chest': "Грудь",
+  'muscle.arms': "Руки",
+  'muscle.core': "Пресс",
+  'muscle.back': "Спина",
+  'muscle.glutes': "Ягодицы",
+  'muscle.quads': "Квадрицепс",
+  'muscle.hamstrings': "Задняя бедра",
+  'muscle.calves': "Икры",
+  'day.mon': "Пн",
+  'day.tue': "Вт",
+  'day.wed': "Ср",
+  'day.thu': "Чт",
+  'day.fri': "Пт",
+  'day.sat': "Сб",
+  'day.sun': "Вс",
+  'option.desc.circuit': "Проходишь весь список по разу и возвращаешься к началу: A, B, C → A, B, C. Пульс выше, скучать некогда.",
+  'option.desc.strength': "Сначала все подходы одного упражнения, потом следующее: A, A, A → B, B, B. Мышца устаёт сильнее.",
+  'option.desc.mixed': "Несколько упражнений идут блоком, и этот блок повторяется кругами.",
+  'option.desc.warm': "Пара лёгких упражнений в начале — один раз, до кругов.",
+  'option.desc.noWarm': "Сразу к основной части: если разминка уже сделана или это продолжение другой тренировки.",
+  'ai.createLead': "Пара вопросов — и готова программа: упражнения, повторения, круги и дни. Всё можно поправить.",
+  'ai.stepAbout': "Шаг 1 · О тебе и тренировке",
+  'ai.stepBuild': "Шаг 2 · Как собрать",
+  'ai.buildForMe': "Собрать за меня",
+  'ai.preparingProgram': "Собираю программу",
+  'ai.chatTaskNote': "Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.",
+  'ai.answerProgramHint': "Вставь ответ нейросети целиком — программа откроется в конструкторе.",
+  'ai.buildFromAnswer': "Собрать программу из ответа",
+  'ai.videoLead': "Ссылка на тренировку с YouTube — нейросеть разложит ролик на упражнения с таймингом.",
+  'ai.stepVideo': "Шаг 1 · Ссылка на видео",
+  'ai.stepParse': "Шаг 2 · Как разобрать",
+  'ai.parseForMe': "Разобрать за меня",
+  'ai.parsingVideo': "Разбираю видео",
+  'ai.videoChatNote': "Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.",
+  'ai.editTitle': "Редактирование",
+  'ai.stepWhatFix': "Шаг 1 · Что поправить",
+  'ai.stepHowApply': "Шаг 2 · Как внести правки",
+  'ai.changeForMe': "Изменить за меня",
+  'ai.applyingChanges': "Вношу изменения",
+  'ai.editCopyNote': "Старая программа останется, рядом появится изменённая копия. Картинки перенесутся сами.",
+  'ai.chatProgramNote': "Приложение подготовит задание с твоей программой. Передай его в чат, ответ вставь сюда.",
+  'ai.answerEditedHint': "Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.",
+  'ai.createEdited': "Создать изменённую программу",
+  'ai.exerciseLead': "Опиши упражнение словами — нейросеть добавит технику, мышцы и частые ошибки.",
+  'ai.stepExerciseNeed': "Шаг 1 · Какое упражнение нужно",
+  'ai.stepPickExercise': "Шаг 2 · Как подобрать упражнение",
+  'ai.pickingExercise': "Подбираю упражнение",
+  'ai.chatExerciseNote': "Приложение подготовит задание. Передай его в чат, ответ вставь сюда.",
+  'ai.answerExerciseHint': "Вставь ответ нейросети целиком — упражнение добавится в конец программы.",
+  'ai.addToProgram': "Добавить в программу",
+  'ai.stepWhatChange': "Шаг 1 · Что поменять",
+  'ai.stepApply': "Шаг 2 · Как применить",
+  'ai.changingExercise': "Меняю упражнение",
+  'ai.keepImageNote': "Картинка упражнения останется на месте.",
+  'ai.answerApplyHint': "Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.",
+  'ai.applyChanges': "Применить изменения",
+  'ai.pickOneExercise': "Подобрать упражнение",
+  'ai.pickExercises': "Подобрать {count} упражнений",
+  'handsfree.unavailable': "На этом устройстве голосовое управление недоступно. Можно использовать кнопку на гарнитуре.",
+  'handsfree.packFirst': "Сначала скачай голосовой пакет для выбранного языка. После загрузки команды будут работать без интернета.",
+  'handsfree.readyNative': "Готово. Во время тренировки скажи «дальше», «готово» или «пропустить», чтобы перейти дальше. «Пауза» остановит тренировку, «продолжить» — продолжит.",
+  'handsfree.readyWeb': "Голосовое управление включено. Скажи «дальше», «пауза» или «продолжить».",
+  'audio.voiceFallback': "Голос {count}",
+  'audio.online': "онлайн",
+  'voicepack.ready': "Готово к работе офлайн",
+  'voicepack.downloadOnce': "Нужно скачать один раз · около {size} МБ",
+  'voicepack.downloaded': "Скачано",
+  'voicepack.download': "Скачать",
+  'voicepack.queued': "Загрузка поставлена в очередь. Можно выйти с этого экрана.",
+  'voicepack.inQueue': "В очереди",
+  'voicepack.downloading': "Скачиваем… {progress}% · можно пользоваться приложением",
+  'voicepack.downloadingBtn': "Скачивается",
+  'voicepack.extracting': "Готовим пакет…",
+  'voicepack.almostReady': "Почти готово",
+  'voicepack.error': "Не удалось скачать. Проверь интернет и попробуй ещё раз.",
+  'voicepack.retry': "Повторить",
+  'voicepack.startError': "Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.",
+  'workout.editExercise': "Изменить упражнение",
+  'workout.editUnavailable': "Это упражнение не из сохранённой программы — менять нечего.",
+  'workout.rest': "Отдых",
+  'workout.exercise': "Упражнение",
+  'workout.exerciseProgress': "Упражнение {idx} / {total}",
+  'workout.warmupProgress': "Разминка {idx} / {total}",
+  'workout.warmup': "Разминка",
+  'workout.roundProgress': "Круг {idx} / {total}",
+  'workout.setProgress': "Подход {idx} / {total}",
+  'workout.eachSide': "на каждую сторону",
+  'workout.sideProgress': "сторона {idx} из {total}",
+  'workout.swapIntro': "«{title}» дошло до своего максимума — дальше нагрузка не растёт. Вот что можно делать вместо него:",
+  'workout.noDescription': "Описание не задано.",
+  'workout.copyNameDesc': "Скопировать название и описание",
+  'workout.swapAIHint': "Нейросеть подберёт технику и новые значения — упражнение заменится сразу.",
+  'workout.swapNotFound': "Не получилось найти это упражнение в программе — замени его через редактор программы.",
+  'workout.swapPicking': "Подбираю замену",
+  'workout.aiNoResponse': "ИИ не ответил:\n\n{error}\n\nМожно попробовать ещё раз или заменить упражнение вручную после тренировки.",
+  'common.unknownError': "неизвестная ошибка",
+  'workout.aiNoExercise': "В ответе нейросети не нашлось упражнения. Попробуй ещё раз.",
+  'workout.swapReplaced': "Теперь это «{name}». Подходы и отдых до конца тренировки останутся прежними, дальше программа пойдёт уже с новым упражнением.",
+  'workout.next': "Дальше",
+  'workout.repsShort': "повторений",
+  'workout.secShort': "сек",
+  'workout.setLower': "подход",
+  'workout.sideLower': "сторона",
+  'workout.finishedCanvas': "Тренировка завершена!",
+  'workout.timeFormat': "минуты : секунды",
+  'workout.shareTitle': "Результат тренировки — Fit Timer",
+  'workout.shareFallback': "Картинка сохранена в загрузки — отправь её из галереи.",
+  'workout.imageError': "Не удалось создать картинку.",
+  'workout.switchSide': "Смените сторону",
+  'workout.switchSideInstruction': "Поменяй сторону и займи исходное положение.",
+  'workout.restInstruction': "Восстанови дыхание.",
+  'profile.title': "Профиль",
+  'profile.new': "Новый профиль",
+  'profile.nameRequired': "Укажи имя.",
+  'profile.genderRequired': "Выбери пол — от него зависит подбор упражнений и нагрузка.",
+  'profile.onlyOne': "Это единственный профиль — без него приложению не с чем работать. Чтобы стереть всё, открой «Аккаунт» и выбери «Удалить все данные».",
+  'profile.deleteQuestion': "Удалить профиль «{name}» вместе со всеми его программами и статистикой?",
+  'common.delete': "Удалить",
+  'common.keep': "Оставить",
+  'common.wait': "Подождать",
+  'account.deleteAccountQuestion': "Удалить аккаунт и все данные? ",
+  'account.deleteDataQuestion': "Удалить все данные? ",
+  'account.deleteLocalWarning': "Профили, программы, статистика, вес, замеры и фото будут стёрты с телефона без возможности восстановить.",
+  'account.deleteCoachWarning': " Со страницы тренера уйдут сведения о тебе, отправленные подопечным ссылки перестанут открываться. Программы, отданные в каталог, там останутся: их уже взяли себе люди, и забирать сделанное задним числом — не то же самое, что стереть данные о себе.",
+  'account.deleteAll': "Удалить всё",
+  'account.deleteConfirmPhrase': "подтверждаю удаление",
+  'account.serverDeleteFailed': "Сервер не ответил, и на нём всё осталось. Если стереть телефон сейчас, удалить это потом будет нельзя: ключ хранится только здесь. Стереть всё равно?",
+  'account.eraseAnyway': "Стереть всё равно",
+  'premium.until': "Премиум до {date}",
+  'premium.autoYear': "Продлится сам — {price} в год",
+  'premium.autoMonth': "Продлится сам — {price} в месяц",
+  'premium.renewOff': "Продление выключено: после этой даты вернётся бесплатный тариф",
+  'premium.manageAccount': "Управление подпиской — в разделе «Аккаунт».",
+  'premium.month': "Месяц",
+  'premium.year': "Год",
+  'premium.perMonth': "{price} в месяц",
+  'premium.monthlyCharge': "списание раз в месяц",
+  'premium.saveBadge': "выгода {percent}%",
+  'premium.buyFor': "Оформить за {price}",
+  'premium.yearFine': "Списание сразу, дальше — раз в год по {price}. Отменить можно в любой момент.",
+  'premium.monthFine': "Списание сразу, дальше — раз в месяц по {price}. Отменить можно в любой момент.",
+  'account.version': "Версия",
+  'account.buildNote': "единый аккаунт и нативный обмен",
+  'premium.freePlan': "Бесплатный тариф",
+  'premium.untilShort': "До {date}",
+  'premium.renews': "продлится сам",
+  'premium.renewDisabled': "продление выключено",
+  'premium.freePitch': "ИИ, весь каталог тренеров и синхронизация — от {price} в месяц",
+  'premium.bannerPitch': "Тренировку соберёт ИИ, весь каталог тренеров и синхронизация. От {price} в месяц.",
+  'account.dataTitle': "Данные аккаунта",
+  'account.deleteAccountTitle': "Удаление аккаунта",
+  'account.deleteDataTitle': "Удаление данных",
+  'account.deleteAccountButton': "Удалить аккаунт и все данные",
+  'account.deleteAllButton': "Удалить все данные",
+  'account.deleteAccountNote': "Удалится всё, включая аккаунт и подписку. Вернуть можно только из резервной копии — если она сохранена. Программы, отданные в каталог, там останутся.",
+  'account.deleteLocalNote': "Удалятся все данные с этого телефона. Вернуть можно только из резервной копии — если она сохранена.",
+  'login.emailTypo': "Проверь почту — похоже, в адресе опечатка.",
+  'login.emailVerification': "Подтверждение почты",
+  'login.verificationMsg': "Пришлём код на {email}. Он подтвердит, что почта твоя, — с неё подписка вернётся на любом телефоне.",
+  'premium.purchaseSuccess': "Подписка действует до {date}. Аккаунт привязан к почте {email} — с неё вернутся программы, статистика, вес и замеры на любом телефоне. Фото-прогресс остаётся только на этом устройстве.",
+  'login.otherAccount': "Другой аккаунт",
+  'login.intro': "Вход и регистрация — один быстрый сценарий по почте. Аккаунт бесплатный: в нём хранятся твой ник и подписка. С Премиумом синхронизируются программы, статистика, вес и замеры между устройствами. Фото-прогресс остаётся только на этом телефоне.",
+  'login.syncing': "Синхронизируем…",
+  'login.syncingMsg': "Вход выполнен. Загружаем профили, программы и статистику — не закрывай приложение.",
+  'login.syncPending': "Вход выполнен, но синхронизация пока не закончилась. Данные отправятся автоматически, когда появится связь.",
+  'login.created': "Аккаунт заведён. Ник {handle} закреплён за ним. С Премиумом программы, статистика, вес и замеры будут возвращаться по этой почте.",
+  'login.welcomeTrainer': "С возвращением. Ник {handle} снова твой — на прежнем телефоне страницу править больше нельзя.",
+  'login.done': "Готово — вход выполнен.",
+  'login.addressTypo': "Проверь адрес — похоже, в нём опечатка.",
+  'login.handleRule': "Ник: минимум 2 символа после @. Можно буквы, цифры, точку и дефис.",
+  'login.savingHandle': "Сохраняем ник…",
+  'login.sending': "Отправляем…",
+  'login.sent': "Письмо ушло на {email}. Код действует 15 минут.",
+  'login.devCode': "Локальный запуск, код: {code}",
+  'login.signIn': "Войти",
+  'login.checking': "Проверяем…",
+  'login.createTitle': "Создание аккаунта",
+  'login.chooseHandle': "Почта подтверждена. Осталось выбрать единый ник — он будет у аккаунта и у страницы тренера.",
+  'login.createAccount': "Создать аккаунт",
+  'login.handleTaken': "Этот ник уже занят. Попробуй другой.",
+  'account.signOutQuestion': "Выйти из аккаунта {email}? Программы, статистика, вес и фото останутся на этом телефоне. Подписка и вход по биометрии отвяжутся — вернутся, когда войдёшь снова.",
+  'account.signOut': "Выйти",
+  'bio.cancelled': "проверка отменена.",
+  'bio.unsupported': "на этом устройстве биометрия недоступна.",
+  'bio.notEnrolled': "сначала добавь отпечаток или лицо в настройках телефона.",
+  'bio.unavailable': "биометрия сейчас временно недоступна.",
+  'bio.lockout': "система временно заблокировала биометрию после неудачных попыток.",
+  'bio.refused': "устройство не смогло выполнить проверку.",
+  'bio.needAccount': "Биометрия защищает уже авторизованный аккаунт — сначала войди по почте.",
+  'bio.enableFailed': "Не получилось включить биометрию: {error}",
+  'bio.disableQuestion': "Выключить защиту биометрией? Приложение будет открываться сразу.",
+  'lock.prompt': "Подтверди отпечатком или лицом — и продолжим.",
+  'lock.unlock': "Разблокировать",
+  'lock.email': "Войти по почте",
+  'lock.failed': "Проверка отменена. Можно попробовать ещё раз или войти по почте.",
+  'lock.failedReason': "Биометрия не сработала: {reason} Можно попробовать ещё раз или войти по почте.",
+  'progress.photoCount': "{count} фото",
+  'progress.photoUpdate': "пора обновить",
+  'progress.deleteAllPhotos': "Удалить все фото ({count})? Снимки прогресса нигде больше не хранятся — вернуть их будет неоткуда.",
+  'progress.deleteConfirmPhrase': "подтверждаю удаление",
+  'progress.todayReplace': "Снимок за сегодня уже есть. Новый заменит его — вернуть старый будет неоткуда.",
+  'common.replace': "Заменить",
+  'progress.daysBetween': "{count} {days} между фото",
+  'progress.sameDay': "Фото за один день",
+  'progress.photoPosition': "{current} из {total}",
+  'progress.deletePhoto': "Удалить фото от {date}?",
+  'share.openFailed': "Не удалось открыть системное меню «Поделиться». Попробуй ещё раз.",
+  'share.savedDownloads': "Файл сохранён в загрузки.",
+  'progress.preparePhotoFailed': "Не удалось подготовить фото.",
+  'progress.myProgress': "Мой прогресс",
+  'progress.daysWork': "{count} {days} РАБОТЫ НАД СОБОЙ",
+  'progress.journeyStart': "НАЧАЛО ПУТИ",
+  'progress.imageFailed': "Не удалось создать картинку.",
+  'progress.shareTitle': "Мой прогресс — Fit Timer",
+  'progress.shareFallback': "Картинка сохранена в загрузки — отправь её из галереи.",
+  'backup.saved': "Резервная копия сохранена в загрузки. В ней всё: профили, программы, статистика, вес, замеры, фото, аккаунт с подпиской и — если ты тренер — ник и подопечные.",
+  'backup.readFailed': "Не удалось прочитать файл.",
+  'backup.invalid': "Это не файл резервной копии Fit Timer.",
+  'backup.replaceAll': "Заменить ВСЕ данные приложения данными из файла? Текущие данные будут перезаписаны.",
+  'backup.noProfiles': "В файле нет ни одного профиля.",
+  'progress.bodyWeight': "ВЕС",
+  'progress.bodyFat': "ЖИР",
+  'progress.bodyMuscle': "МЫШЦЫ",
+  'progress.waist': "ТАЛИЯ",
+  'progress.hips': "БЁДРА",
+  'progress.chest': "ГРУДЬ",
+  'progress.kg': "кг",
+  'progress.cm': "см",
+  'progress.pressure': "ДАВЛЕНИЕ",
+  'progress.pulse': "ПУЛЬС",
+  'progress.sleep': "СОН",
+  'progress.bpm': "уд/мин",
+  'progress.hoursShort': "ч",
+  'progress.addMetricFirst': "Сначала запиши хотя бы одну метрику.",
+  'progress.myChanges': "Мои изменения",
+  'progress.addWellnessFirst': "Сначала запиши хотя бы одно измерение.",
+  'progress.myWellness': "Моё самочувствие",
+  'progress.deleteEntry': "Удалить запись",
+  'progress.fat': "Жир %",
+  'progress.muscle': "Мышцы %",
+  'progress.waistLabel': "Талия",
+  'progress.hipsLabel': "Бёдра",
+  'progress.chestLabel': "Грудь",
+  'progress.shareSaved': "Картинка сохранена в загрузки.",
+  'profile.switch': "переключиться",
+  'profile.now': "сейчас",
+  'profile.edit': "Изменить",
+  'profile.noName': "Без имени",
+  'profile.multiHint': "У каждого профиля свои программы, статистика, вес и фото.",
+  'profile.singleHint': "Второй профиль — например, для близкого человека. У каждого свои программы и статистика.",
+  'profile.ageYears': "{count} {years}",
+  'profile.yearOne': "год",
+  'profile.yearFew': "года",
+  'profile.yearMany': "лет",
+  'progress.history': "История",
+  'progress.share': "Поделиться",
+  'progress.noChange': "без изменений",
+  'progress.sinceLast': "{delta} {unit} с прошлого раза",
+  'progress.height': "Рост",
+  'progress.bmi': "ИМТ",
+  'progress.weight': "Вес",
+  'progress.fatShort': "Жир",
+  'progress.muscleShort': "Мышцы",
+  'progress.waistShort': "Талия",
+  'progress.hipsShort': "Бёдра",
+  'progress.chestShort': "Грудь",
+  'progress.records': "{count} {records}",
+  'progress.recordOne': "запись",
+  'progress.recordFew': "записи",
+  'progress.recordMany': "записей",
+  'progress.pressureShort': "Давление",
+  'progress.pulseShort': "Пульс",
+  'progress.sleepShort': "Сон",
+  'progress.recordedOn': "запись от {date}",
+  'well.pressurePair': "Давление записывают парой: верхнее и нижнее.",
+  'well.fillOne': "Заполни хотя бы одно поле.",
+  'well.sleepHours': "Сон, ч",
+  'sync.premiumOnly': "Синхронизация тренировок доступна в Премиум",
+  'sync.busy': "Синхронизируем данные…",
+  'sync.progress': "Синхронизация… {step}/{total} ({detail})",
+  'sync.progressShort': "Синхронизация… {step}/{total}",
+  'sync.stage.check': "проверка изменений",
+  'sync.stage.download': "загрузка данных",
+  'sync.stage.upload': "отправка изменений",
+  'sync.ok': "Данные сохранены на сервере · фото-прогресс только на этом телефоне",
+  'sync.error': "Нет связи с сервером · изменения отправятся позже",
+  'sync.account': "Данные синхронизируются с аккаунтом",
+  'store.alreadyOwned': "Уже у вас",
+  'store.programOne': "программа",
+  'store.programFew': "программы",
+  'store.programMany': "программ",
+  'store.emptyTitle': "Ничего не нашлось",
+  'store.emptyText': "Попробуй другое слово или сними фильтры — программ в каталоге пока немного.",
+  'store.minuteShort': "мин",
+  'store.secShort': "сек",
+  'store.repShort': "повт.",
+  'store.setOne': "подход",
+  'store.setFew': "подхода",
+  'store.setMany': "подходов",
+  'store.roundOne': "круг",
+  'store.roundFew': "круга",
+  'store.roundMany': "кругов",
+  'store.variantOne': "вариант",
+  'store.variantFew': "варианта",
+  'store.variantMany': "вариантов",
+  'store.exerciseOne': "упражнение",
+  'store.exerciseFew': "упражнения",
+  'store.exerciseMany': "упражнений",
+  'store.inSequence': "по очереди",
+  'store.perSide': "на сторону",
+  'store.warmup': "Разминка",
+  'store.untitled': "Без названия",
+  'store.open': "Открыть",
+  'store.addMine': "Добавить в мои тренировки",
+  'store.lockedText': "{count} {exercises} с техникой, частыми ошибками и ростом нагрузки. Откроются вместе с Премиумом.",
+  'store.addFailed': "Не удалось добавить программу. Попробуй ещё раз.",
+  'store.added': "«{name}» в твоих тренировках.",
+  'trainer.experienceOne': "год стажа",
+  'trainer.experienceFew': "года стажа",
+  'trainer.experienceMany': "лет стажа",
+  'trainer.programOne': "программа",
+  'trainer.programFew': "программы",
+  'trainer.programMany': "программ",
+  'trainer.opensOne': "человек взял",
+  'trainer.opensMany': "человек взяли",
+  'trainer.withUsMonth': "месяц с нами",
+  'trainer.withUsMonths': "месяцев с нами",
+  'trainer.withUsDay': "день с нами",
+  'trainer.withUsDays': "дней с нами",
+  'publish.pending': "на проверке",
+  'publish.approved': "в каталоге",
+  'publish.rejected': "не взяли",
+  'publish.gone': "заявка потерялась",
+  'publish.listHint': "Программы смотрит человек. Взятую увидят все в каталоге.",
+  'publish.emptyHint': "Пока ничего не отправлено. Открой свою программу, «⋮» → «Предложить в каталог».",
+  'publish.approx': "{count} {exercises} · примерно {minutes} мин",
+  'publish.pendingText': "На проверке. Обычно это занимает день-другой — программы смотрит человек.",
+  'publish.approvedText': "Программа в каталоге. Её видят все.",
+  'publish.rejectedText': "Не взяли. Можно поправить и предложить заново.",
+  'publish.goneText': "Заявка не нашлась. Можно отправить заново.",
+  'publish.needGoal': "цель",
+  'publish.needLevel': "уровень",
+  'publish.needGives': "«что она даёт» — хотя бы 20 символов",
+  'publish.needExercises': "хотя бы три упражнения в программе",
+  'publish.missing': "Не хватает: {items}.",
+  'publish.sent': 'Заявка отправлена на проверку. Статус можно отслеживать в «Другое → Тренер → Заявки в каталог».',
+  'publish.errNoTrainer': "Сначала отправь хоть одну программу подопечному или заполни профиль — ник должен быть закреплён за тобой.",
+  'publish.errNotYours': "Этот ник закреплён за другим тренером.",
+  'publish.errBanned': "Приём программ с этого ника закрыт.",
+  'publish.errTooMany': "Сегодня уже отправлено три программы. Продолжим завтра.",
+  'publish.errAlready': "Эта программа уже ждёт проверки или уже в каталоге.",
+  'publish.errStore': "На сервере не подключено хранилище — отправка пока не работает.",
+  'publish.errBad': "Не хватает данных: {items}.",
+  'publish.checkFields': "проверь поля",
+  'publish.errNetwork': "Не получилось отправить — похоже, нет связи с сервером.",
+  'catalog.fromTrainers': "{count} {programs} от тренеров",
+  'catalog.trainerWorkouts': "Тренировки от тренеров",
+  'builder.variant': "Вариант",
+  'publish.statusCatalog': "в каталоге",
+  'publish.statusReview': "на проверке",
+  'publish.statusRejected': "не взяли",
+  'clients.statClients': "Подопечных",
+  'clients.statActive': "Занимаются",
+  'clients.statWorkouts': "Тренировок",
+  'clients.noPrograms': "Программ пока нет",
+  'clients.programFallback': "Программа",
+  'clients.hintHas': "Подопечный занимается бесплатно и без аккаунта — ему достаточно открыть ссылку.",
+  'clients.hintEmpty': "Добавь подопечного, выбери его программу и отправь ссылку. Аккаунт для этого не нужен ни тебе, ни ему.",
+  'clients.default': "Подопечный",
+  'clients.sendMore': "Отправить ещё программу",
+  'clients.send': "Отправить программу",
+  'clients.sendHintMany': "У подопечного может быть несколько программ: курс сменился, добавили растяжку. У каждой своя ссылка и свои занятия.",
+  'clients.sendHintFirst': "Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.",
+  'clients.emptyCard': "Программ пока нет. Отправь первую — и здесь появятся её занятия.",
+  'clients.oldLink': "Эта ссылка отправлена старой версией: отметок и отчётов по ней не будет. Отправь программу заново.",
+  'clients.resend': "Отправить ссылку ещё раз",
+  'clients.remove': "Убрать эту программу",
+  'report.none': "Занятий пока нет. Отчёт придёт сам, как только подопечный закончит первую тренировку.",
+  'clients.chooseProgram': "Сначала выбери программу: пункт «Отправить подопечному» есть в меню любой программы в списке тренировок.",
+  'clients.programGone': "Этой программы уже нет в твоём списке — отправь любую другую.",
+  'clients.linkCopied': "Ссылка скопирована — отправь её подопечному любым мессенджером. Когда он её откроет, здесь появится отметка, а его занятия приедут сами.",
+  'clients.copyLink': "Скопируй ссылку и отправь подопечному:",
+  'clients.sendTo': "Кому отправить",
+  'clients.alreadyHas': "эта программа уже у него — отправим ссылку заново",
+  'clients.new': "Новый подопечный",
+  'clients.sessionOne': "занятие",
+  'clients.sessionFew': "занятия",
+  'clients.sessionMany': "занятий",
+  'clients.silent': "молчит {count} {days}",
+  'clients.openedNoSessions': "открыл, занятий нет",
+  'clients.sentToday': "отправлено сегодня",
+  'clients.waiting': "ждёт {count} {days}",
+  'clients.notSent': "не отправлено",
+  'clients.withPrograms': "{count} {programs}",
+  'clients.sentOn': "отправлена {date}",
+  'clients.openedOn': "открыл {date}",
+  'clients.opened': "открыл",
+  'clients.notOpened': "ещё не открывал",
+  'clients.localMissing': "программы уже нет в твоём списке",
+  'clients.removeQuestion': "Убрать «{name}» из карточки? Занятия по ней перестанут показываться, а у подопечного программа останется.",
+  'clients.removeAction': "Убрать",
+  'clients.shareText': "Программа «{program}»{forClient} — открой ссылку, и она добавится в Fit Timer:",
+  'clients.forClient': " для {name}",
+  'clients.pullNoStore': "На сервере не подключено хранилище — отметки и отчёты не сохраняются.",
+  'clients.pullNotFound': "Ссылка на сервере не найдена. Отправь программу заново.",
+  'clients.pullBadKey': "Нет доступа к этой ссылке. Отправь программу заново.",
+  'clients.pullRate': "Слишком много проверок подряд. Загляни через пару минут.",
+  'clients.pullOffline': "Нет связи с сервером — данные могут быть несвежими.",
+  'clients.defaultName': "Подопечный {count}",
+  'clients.alreadyCount': "уже {count} {programs}",
+  'report.workoutOne': "тренировка",
+  'report.workoutFew': "тренировки",
+  'report.workoutMany': "тренировок",
+  'report.last': "последняя {date}",
+  'report.streak': "серия {count}",
+  'report.byWeeks': "По неделям",
+  'report.now': "сейчас",
+  'report.byDays': "По дням",
+  'report.never': "ни разу",
+  'report.workouts': "Тренировки",
+  'report.moreEarlier': "и ещё {count} раньше",
+  'report.changed': "Поменял в программе",
+  'report.removed': "убрал",
+  'report.added': "добавил",
+  'report.growth': "Растёт",
+  'report.warmup': "разминка",
+  'report.reportOn': "Отчёт от {date}",
+  'report.totalReports': "всего отчётов {count}",
+  'report.setShort': "подх.",
+  'common.exerciseFallback': "Упражнение",
+  'programs.none': "Ни одной программы",
+  'programs.emptyTitle': "Своих программ пока нет",
+  'programs.emptyText': "Собери первую за пару минут: опиши, какая тренировка нужна, и её соберёт ИИ — или добавь упражнения руками.",
+  'programs.completed': "Пройдено раз: {count}",
+  'programs.offShort': "Откл",
+  'programs.sequence': "по очереди",
+  'common.edit': "Изменить",
+  'programs.disable': "Отключить",
+  'programs.enable': "Включить",
+  'programs.disableTitle': "Убрать из планов, не удаляя",
+  'programs.enableTitle': "Вернуть в расписание",
+  'programs.disabledAlert': "Программа отключена. Она не попадёт ни в план на сегодня, ни в счёт недели. Запустить вручную можно, но результат никуда не запишется — ни в статистику, ни в достижения.",
+  'programs.shareLink': "Поделиться ссылкой",
+  'programs.sendClient': "Отправить подопечному",
+  'programs.saveFile': "Сохранить в файл",
+  'programs.allImages': "Со всеми картинками",
+  'programs.deleteQuestion': "Удалить программу «{name}»? Вместе с ней сотрётся и её статистика.",
+  'common.duplicate': "Дублировать",
+  'programs.submitCatalog': "Предложить в каталог",
+  'programs.drag': "Перетащить",
+  'common.collapse': "Свернуть",
+  'programs.disabledStart': "Программа отключена. Результат никуда не попадёт: ни в статистику, ни в достижения.",
+  'programs.startAnyway': "Всё равно начать",
+  'workout.resumeSummary': "Остановились на {done} из {all} упражнений · {age}",
+  'workout.sessionSaved': "Место сохранено. В следующий раз сможешь продолжить отсюда.",
+  'trainer.needAccount': "Нужен аккаунт",
+  'trainer.needAccountMsg': "Без основного аккаунта по почте нельзя быть тренером. Заведи или верни бесплатный аккаунт — его единый ник будет использоваться и на странице тренера.",
+  'trainer.needAccountSaveMsg': "Без основного аккаунта по почте нельзя быть тренером. Сначала заведи или верни аккаунт, затем сохрани страницу тренера.",
+  'trainer.badLink': "Это не похоже на адрес. Нужен сайт или профиль: t.me/имя, vk.com/имя, instagram.com/имя.",
+  'trainer.photoFailed': "Не удалось загрузить фото.",
+  'common.saving': "Сохраняем…",
+  'common.saved': "Сохранено",
+  'trainer.saveFailed': "Не удалось сохранить. Проверь связь и попробуй ещё раз.",
+  'trainer.enableFirst': "Сначала включи режим тренера и укажи ник.",
+  'clients.removeClient': "Убрать «{name}» из списка? Программа у него останется — ссылка уже отправлена.",
+  'clients.unnamed': "подопечного",
+  'clients.buildFirst': "Сначала собери программу на экране «Тренировки» — её и отправим.",
+  'clients.sentAgain': "уже отправлена — пошлём ссылку заново",
+  'clients.exerciseCount': "{count} упражнений",
+  'clients.chooseWhichProgram': "Какую программу отправить",
+  'builder.deleteVariant': "Удалить этот вариант вместе с его упражнениями?",
+  'progress.weightRange': "Введи вес от 20 до 300 кг.",
+  'premium.payYear': "Премиум на год — {price}. Дальше столько же раз в год, пока не отменишь.",
+  'premium.payMonth': "Премиум на месяц — {price}. Дальше столько же каждый месяц, пока не отменишь.",
+  'premium.pay': "Оплатить {price}",
+  'premium.disableRenew': "Отключить автопродление? Премиум останется до {date}, дальше вернётся бесплатный тариф. Программы и статистика никуда не денутся.",
+  'premium.disableRenewAction': "Отключить",
+  'lock.enterEmail': "Введи почту, к которой привязан аккаунт.",
+  'lock.backBiometric': "Вернуться к отпечатку",
+  'progress.addPhoto': "Добавить фото",
+  'profile.changes': "Изменения профиля",
+  'profile.replacePhoto': "Заменить фото",
+  'profile.deletePhoto': "Удалить фото",
+  'finish.share': "Поделиться",
+  'finish.addNote': "Добавить заметку",
+  'video.addLink': "Вставь ссылку на видео.",
+  'video.badUrl': "Ссылка не похожа на YouTube. Возможно, адрес скопирован не полностью или это другой сервис.",
+  'video.tryAnyway': "Всё равно попробовать",
+  'video.checkAddress': "Проверить адрес",
+  'common.copyFailedManual': "Не удалось скопировать. Выдели текст вручную.",
+  'video.parseProblems': "Что не так:",
+  'video.defaultProgram': "Программа из видео",
+  'video.source': "Источник",
+  'video.added': "Готово: добавлена «{name}».",
+  'video.notWorkout': "Похоже, это не тренировочное видео. Я не стал собирать программу, чтобы ничего не придумывать.",
+  'video.noTranscript': "У видео не удалось получить субтитры, а безопасно разобрать его напрямую сейчас нельзя. Попробуй другое видео.",
+  'video.insufficient': "В видео недостаточно подтверждённых данных об упражнениях, повторах или времени. Я не стал заполнять пропуски догадками.",
+  'video.unavailable': "YouTube не дал прочитать это видео. Проверь, что оно публичное и доступно по ссылке.",
+  'video.analysisTimeout': "Разбор видео занял слишком много времени. Попробуй ещё раз или выбери ролик с доступными субтитрами.",
+  'video.processingSafe': "Получаю субтитры, проверяю, что это тренировка, и только потом собираю программу.",
+  'common.copyFailedRetry': "Не удалось скопировать. Попробуй ещё раз.",
+  'common.copied': "✓ Скопировано",
+  'common.copyManual': "Не удалось скопировать автоматически. Скопируй вручную:",
+  'ai.workingDefault': "Нейросеть работает",
+  'ai.workingLong': "Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.",
+  'ai.buildRequestFailed': "Не удалось собрать запрос.",
+  'ai.runFailed': "ИИ не ответил:\n\n{error}",
+  'ai.retryQuestion': "Запрос и все заполненные поля сохранены. Повторить генерацию сейчас?",
+  'ai.retry': "Повторить",
+  'ai.editRequest': "Изменить запрос",
+  'ai.notNow': "Не сейчас",
+  'ai.unsavedRequest': "Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.",
+  'common.leaveWithoutSaving': "Выйти без сохранения",
+  'common.stay': "Остаться",
+  'audio.voiceOn': "Голос включён",
+  'images.processing': "Обработка… {done}/{total}",
+  'images.uploaded': "Загружено картинок: {count}. Теперь разложи их по местам или нажми «Разложить по порядку».",
+  'images.removeQuestion': "Убрать загруженные картинки из этого списка? Те, что уже стоят у упражнений, останутся на местах.",
+  'images.removeAction': "Убрать",
+  'images.loadFailed': "Не удалось загрузить картинку.",
+  'storage.full': "Не хватает места на телефоне — последние изменения не сохранились. Освободи место или удали лишние фото прогресса и попробуй ещё раз.",
+  'images.needProgramName': "Сначала назови программу — без названия обложку генерировать нельзя.",
+  'images.needExerciseName': "Сначала назови упражнение — по названию нейросеть поймёт, что рисовать.",
+  'images.needAllExerciseNames': "Сначала назови все упражнения. Без названий раздел картинок недоступен. Без названия: {count}.",
+  'builder.unsavedProgram': "Изменения программы ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'ai.unsavedSwitch': "Заполненный запрос ещё не сохранён. Если переключиться, он пропадёт.",
+  'common.switch': "Переключиться",
+  'exercise.mainLimitAdd': "В основной части уже {count} упражнений — это предел. Удали что-нибудь, чтобы добавить новое.",
+  'exercise.nameRequired': "Упражнению нужно название — иначе в списке будет пустая строка.",
+  'exercise.warmLimitDuplicate': "В разминке уже {count} упражнений — это предел. Дублировать не получится.",
+  'exercise.mainLimitDuplicate': "В основной части уже {count} упражнений — это предел. Дублировать не получится.",
+  'exercise.this': "это упражнение",
+  'exercise.deleteQuestion': "Удалить «{name}»?",
+  'exercise.newUnsaved': "Упражнение ещё пустое. Если выйти сейчас, оно не добавится в список.",
+  'exercise.unsaved': "Изменения этого упражнения ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'exercise.warmMax': "В разминке можно до {count} упражнений.",
+  'exercise.mainMax': "В основной части можно до {count} упражнений.",
+  'images.summaryFilled': "Есть {filled} из {total}",
+  'images.summaryEmpty': "Ни одной из {total}",
+  'builder.anyDays': "по любым дням",
+  'builder.restSummary': "отдых {time}",
+  'builder.progressionAuto': "нагрузка растёт сама",
+  'builder.programChanges': "Изменения программы",
+  'stats.clearQuestion': "Очистить всю статистику? Исчезнут общее время, счётчик, история тренировок, календарь, недели, серии и достижения. Программы, вес, замеры, самочувствие и фото останутся.",
+  'stats.clear': "Очистить",
+  'progress.comparePhotos': "Показать «было / стало»",
+  'progress.deleteAllPhotosBtn': "Удалить все фото",
+  'profile.defaultNumber': "Профиль {count}",
+  'handsfree.headsetUnsupported': "Этот браузер не поддерживает управление с гарнитуры.",
+  'handsfree.mediaTitle': "Fit Timer — тренировка",
+  'handsfree.mediaArtist': "Кнопка гарнитуры = следующий этап",
+  'handsfree.micDenied': "Нет доступа к микрофону. Разреши его для этого сайта в настройках браузера.",
+  'notify.permissionDenied': "Уведомления запрещены в настройках системы. Разреши их для Fit Timer и включи нужный пункт ещё раз.",
+  'notify.beforeTitle': "Тренировка через 15 минут",
+  'notify.beforeBody': "«{name}» начнётся в {time}. Приготовься!",
+  'notify.startTitle': "Наступило время тренировки",
+  'notify.timerDoneTitle': "Пора продолжать",
+  'notify.timerDoneNext': "Дальше — {name}",
+  'notify.timerDoneBody': "Таймер закончен. Возвращайся к тренировке.",
+  'notify.todayManyTitle': "Сегодня — {count}",
+  'notify.beforeManyTitle': "Через 15 минут — {count}",
+  'notify.beforeManyBody': "В {time}: {names}.",
+  'notify.remainingManyTitle': "На сегодня осталось: {count}",
+  'notify.moreCount': "ещё {count}",
+  'notify.progressManySuffix': "Нагрузка выше в {count}.",
+  'notify.activeForgotTitle': "Не забудь про тренировку 💪",
+  'notify.activeForgotBody': "Она всё ещё идёт. Вернись, чтобы продолжить или завершить.",
+  'notify.startBody': "Пора выполнить «{name}». Вперёд!",
+  'notify.startTitleShort': "Пора тренироваться",
+  'notify.todayPlan': "Сегодня по плану «{name}».",
+  'notify.waitingTitle': "Тренировка ещё ждёт",
+  'notify.waitingBodyShort': "«{name}» — сегодня по плану.",
+  'notify.waitingBody': "«{name}» запланирована на сегодня. Открой Fit Timer и начни тренировку, когда будешь готов.",
+  'notify.todayTitle': "Сегодня тренировка",
+  'notify.todayBody': "По плану — «{name}».",
+  'notify.dontForgetTitle': "Не забудь про тренировку",
+  'notify.dontForgetBody': "«{name}» ещё можно выполнить сегодня.",
+  'notify.returnTitle': "Fit Timer ждёт",
+  'notify.returnBody': "Давно не виделись. Открой план и выбери короткую тренировку на сегодня.",
+  'notify.progressTitle': "Сегодня нагрузка выше",
+  'notify.progressBody': "В «{name}» сегодня нагрузка выше. Проверь новые повторы, время или вес перед стартом.",
+  'notify.unfinishedTitle': "Продолжить тренировку?",
+  'notify.unfinishedBody': "«{name}» осталась незавершённой. Можно вернуться с сохранённого места.",
+  'notify.premiumTitle': "Больше возможностей Fit Timer",
+  'notify.premiumBody': "Premium открывает расширенные функции тренировок и синхронизацию. Посмотри, что входит.",
+  'common.changes': "Изменения",
+  'common.unsaved': "{what} ещё не сохранены. Если выйти сейчас, они пропадут.",
+  'num.int': "Только целое число, например 3",
+  'num.range': "Число или диапазон: 12 или 12-15",
+  'num.dec': "Число, например 8 или 7.5",
+  'num.required': "Заполни поле — без него не сохранить",
+  'dialog.type': "Набери «{text}»",
+  'common.ok': "Понятно",
+  'common.confirm': "Подтвердить",
+  'exercise.changes': "Изменения упражнения",
+  'ai.filledRequest': "Заполненный запрос",
+  'start.current': "сейчас",
+  'start.deltaReps': "Повторы: было {before} → сегодня {today}",
+  'start.deltaTime': "Время: было {before} → сегодня {today} сек",
+  'start.deltaWeight': "Вес: было {before} → сегодня {today} кг",
+  'start.lastTime': "в прошлый раз {minutes} мин",
+  'start.usualTime': "обычно {minutes} мин",
+  'start.approxTime': "≈ {minutes} мин",
+  'start.firstWorkout': "Первая тренировка: начни с комфортного темпа.",
+  'start.loadHigher': "Нагрузка выше в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.loadLower': "Нагрузка ниже в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.loadChanged': "Нагрузка изменилась в {count} {exercises}. В строках показано: было → сегодня.",
+  'start.exerciseLocOne': "упражнении",
+  'start.exerciseLocMany': "упражнениях",
+  'start.noChanges': "Без изменений",
+  'start.nextCheck': "Спросим о повышении через {count} {workouts}.",
+  'start.noChangesOff': "Без изменений · автоматическое повышение выключено.",
+  'start.workoutOne': "тренировку",
+  'start.workoutFew': "тренировки",
+  'start.workoutMany': "тренировок",
+  'start.setShort': "подх.",
+  'start.roundShort': "кр.",
+  'start.weightPending': "указать вес",
+  'start.pickWeightTitle': "Рабочий вес",
+  'start.pickWeightHint': "Повторы и время растут по плану, а вес зависит от твоего снаряда. Бери такой, чтобы последние повторения давались с усилием, но не в отказ",
+  'start.schedule': "Расписание: {schedule}",
+  'start.variantSequence': "вариант {current} из {total} по очереди",
+  'time.hoursMinutes': "{hours} ч {minutes} мин",
+  'time.minutes': "{minutes} мин",
+  'time.lessMinute': "меньше минуты",
+  'session.justNow': "только что",
+  'session.minutesAgo': "{count} {minutes} назад",
+  'session.minuteOne': "минуту",
+  'session.minuteFew': "минуты",
+  'session.minuteMany': "минут",
+  'session.hoursAgo': "{count} {hours} назад",
+  'session.hourOne': "час",
+  'session.hourFew': "часа",
+  'session.hourMany': "часов",
+  'session.daysAgo': "{count} {days} назад",
+  'session.dayOne': "день",
+  'session.dayFew': "дня",
+  'session.dayMany': "дней",
+  'start.metaWarmup': "разминка",
+  'start.metaRound': "круг {count}",
+  'start.metaSet': "подход {current}/{total}",
+  'start.metaSide': "сторона {count}",
+  'streak.planShort': "трен. подряд",
+  'streak.dayOne': "день подряд",
+  'streak.dayFew': "дня подряд",
+  'streak.dayMany': "дней подряд",
+  'stats.thisWeek': "эта",
+  'stats.badgesCount': "{earned} из {total}",
+  'stats.nextBadge': "Следующее — «{name}»: {desc}",
+  'stats.allBadges': "Собраны все достижения",
+  'calendar.noWorkouts': "ни одной тренировки",
+  'calendar.workoutOne': "тренировка",
+  'calendar.workoutFew': "тренировки",
+  'calendar.workoutMany': "тренировок",
+  'calendar.prevCurrent': "к этому дню в {month} было {count}",
+  'calendar.prev': "в {month} было {count}",
+  'sessions.workoutFallback': "Тренировка",
+  'sessions.variant': "вариант {count}",
+  'sessions.variantDays': "вариант {days}",
+  'sessions.doneText': "Тренировка пройдена",
+  'sessions.weekLabel': "Тренировки за неделю",
+  'sessions.weekEmpty': "На этой неделе тренировок не было.",
+  'sessions.dayLabel': "Тренировки за день",
+  'workout.roundComplete': "Круг завершён",
+  'workout.roundRestInstruction': "Попей воды и готовься к следующему кругу.",
+  'program.defaultMine': "Моя программа",
+  'program.exerciseSummary': "Упражнений: {count}",
+  'program.scheduleSummary': "Расписание: {schedule}.",
+  'badge.first.name': "Первый шаг",
+  'badge.first.desc': "Первая тренировка",
+  'badge.h1.name': "Первый час",
+  'badge.h1.desc': "Час тренировок в сумме",
+  'badge.body.name': "Под наблюдением",
+  'badge.body.desc': "4 записи веса или замеров",
+  'badge.notes.name': "Дневник",
+  'badge.notes.desc': "Заметка после тренировки",
+  'badge.t5.name': "Первые пять",
+  'badge.t5.desc': "5 тренировок",
+  'badge.t10.name': "В ритме",
+  'badge.t10.desc': "10 тренировок",
+  'badge.wk.name': "Неделя по плану",
+  'badge.wk.desc': "Все тренировки недели закрыты",
+  'badge.ph2.name': "Было и стало",
+  'badge.ph2.desc': "Два снимка прогресса",
+  'badge.early.name': "Раннее утро",
+  'badge.early.desc': "Тренировка начата до 7 утра",
+  'badge.hands.name': "Без рук",
+  'badge.hands.desc': "Тренировка с голосом или гарнитурой",
+  'badge.long.name': "Долгая тренировка",
+  'badge.long.desc': "Одна тренировка на 45 минут",
+  'badge.s7.name': "Серия",
+  'badge.s7.desc': "7 тренировок подряд по плану",
+  'badge.record.name': "Личный рекорд",
+  'badge.record.desc': "Серия из 3 тренировок подряд",
+  'badge.well.name': "Слушаю себя",
+  'badge.well.desc': "7 записей самочувствия",
+  'badge.var3.name': "Разные тренировки",
+  'badge.var3.desc': "Пройдены 3 разные программы",
+  'badge.duo.name': "Не в одиночку",
+  'badge.duo.desc': "Второй профиль на устройстве",
+  'badge.month.name': "Четыре недели",
+  'badge.month.desc': "Тренировки 4 недели подряд",
+  'badge.season.name': "Три месяца",
+  'badge.season.desc': "Тренировки в трёх разных месяцах",
+  'badge.back.name': "Возвращение",
+  'badge.back.desc': "Снова в деле после перерыва в две недели",
+  'badge.heavy.name': "Тяжелее",
+  'badge.heavy.desc': "Упражнение доросло до потолка прогрессии",
+  'badge.tons.name': "Десять тонн",
+  'badge.tons.desc': "10 000 кг поднято за всё время",
+  'badge.h24.name': "Сутки в движении",
+  'badge.h24.desc': "24 часа тренировок в сумме",
+  'badge.s30.name': "Месяц без пропусков",
+  'badge.s30.desc': "30 тренировок подряд по плану",
+  'badge.t100.name': "Сотня",
+  'badge.t100.desc': "100 тренировок",
+  'badge.recordBest': "Лучшая серия: {count} {workouts} подряд",
+  'badge.new': "Новое достижение!",
+  'badge.personalRecord': "личный рекорд!",
+  'badge.streakPlan': "подряд по плану",
+  'badge.streakDays': "дней подряд",
+  'workout.exitProgress': "Пройдено упражнений: {done} из {all}.",
+  'home.profileTitle': "Профиль",
+  'home.todayPlan': "План на сегодня ·",
+  'finish.roundPlaceholder': "Круг 1 / 4",
+  'finish.exercises': "упражнений",
+  'finish.streak': "подряд",
+  'finish.shareTitle': "Поделиться",
+  'finish.done': "Готово",
+  'finish.keep': "Засчитать",
+  'finish.discard': "Не засчитывать",
+  'finish.quickTitle': "Слишком быстро",
+  'finish.quickHeading': "Тренировка завершена",
+  'finish.quickText': "Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.",
+  'finish.progCheckTitle': "Всё получилось? Нагрузку повысим",
+  'finish.progCheckYes': "Да, повышаем",
+  'finish.progCheckHardLink': "Где-то было тяжело",
+  'finish.progCheckApplied': "Готово — нагрузка вырастет со следующей тренировки.",
+  'progress.title': "Прогресс",
+  'progress.tabWorkouts': "Тренировки",
+  'progress.tabBody': "Тело",
+  'progress.tabPhotos': "Фото",
+  'progress.noWorkoutsTitle': "Тренировок пока нет",
+  'progress.noWorkoutsText': "Пройди первую — здесь появятся календарь, недели и достижения.",
+  'progress.prevMonth': "Прошлый месяц",
+  'progress.nextMonth': "Следующий месяц",
+  'progress.last8Weeks': "Последние 8 недель",
+  'progress.totalTime': "общее время",
+  'progress.clearStatsTitle': "Очистить всю статистику",
+  'progress.achievements': "Достижения",
+  'progress.bodyTitle': "Вес и объёмы",
+  'progress.record': "Записать",
+  'progress.noBodyTitle': "Записей пока нет",
+  'progress.noBodyText': "Запиши вес и замеры — появится график, по которому видно движение даже там, где глазами не заметно. Хватит одного раза в неделю.",
+  'progress.wellnessTitle': "Самочувствие",
+  'progress.noWellTitle': "Самочувствие не записано",
+  'progress.noWellText': "Давление, пульс и сон. Рядом с тренировками видно, чем отзывается нагрузка.",
+  'progress.photosTitle': "Фото-прогресс",
+  'progress.noPhotosTitle': "Фотографий пока нет",
+  'progress.noPhotosText': "Снимайся раз в неделю в одной и той же одежде и при одном свете — тогда прогресс видно, даже когда вес стоит на месте.",
+  'progress.compare': "Показать «было / стало»",
+  'settings.russian': "Русский",
+  'trainer.photoTitle': "Фото тренера",
+  'account.title': "Аккаунт",
+  'profile.name': "Имя",
+  'profile.namePlaceholder': "Как тебя зовут?",
+  'profile.photoTitle': "Фото профиля",
+  'profile.gender': "Пол",
+  'profile.femaleShort': "Ж",
+  'profile.maleShort': "М",
+  'profile.age': "Возраст, полных лет",
+  'profile.ageExample': "Например, 32",
+  'profile.ageHint': "От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.",
+  'profile.appearance': "Оформление и язык",
+  'profile.theme': "Тема",
+  'profile.themeSystem': "Как в системе",
+  'profile.themeLight': "Светлая",
+  'profile.themeDark': "Тёмная",
+  'profile.timers': "Отсчёты и паузы",
+  'profile.beforeStart': "Перед стартом",
+  'profile.beforeExercise': "Перед упражнением",
+  'profile.switchSide': "Смена стороны",
+  'profile.secondsHint': "Всё в секундах. Ноль выключает отсчёт.",
+  'profile.delete': "Удалить профиль",
+  'clients.title': "Подопечные",
+  'clients.list': "Список",
+  'clients.add': "Добавить подопечного",
+  'publish.catalogTitle': "В каталоге",
+  'publish.toCatalog': "В каталог",
+  'publish.discovery': "Как её найдут",
+  'publish.gives': "Что она даёт",
+  'publish.givesPlaceholder': "Одна-две фразы: что человек получит и чем эта программа отличается",
+  'publish.givesHint': "Это единственное, что читают в списке перед тем, как открыть. От 20 символов.",
+  'publish.submit': "Отправить на проверку",
+  'trainer.title': "Тренер",
+  'trainer.find': "Где его найти",
+  'clients.note': "Заметка",
+  'clients.namePlaceholder': "Как записать",
+  'clients.notePlaceholder': "Например: колено, без прыжков",
+  'clients.noteHint': "Только для тебя. Подопечному не уходит.",
+  'clients.delete': "Удалить подопечного",
+  'voicetest.open': "Проверить, как слышит",
+  'voicetest.title': "Проверка распознавания",
+  'voicetest.hint': "Скажи «готово», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Говори команду отдельно: слова посреди разговора или из телевизора не считаются. Здесь видно, что услышал телефон.",
+  'voicetest.listening': "Слушаю…",
+  'voicetest.failed': "Не удалось включить микрофон. Проверь разрешение и голосовой пакет.",
+  'voicetest.noise': "посторонний звук",
+  'voicetest.notCommand': "не команда",
+  'voicetest.unsure': "не расслышал уверенно",
+  'voicetest.inSpeech': "звучало посреди разговора — пропущено",
+  'common.close': "Закрыть",
+  'who.title': "Пара уточнений",
+  'who.female': "Женский",
+  'who.male': "Мужской",
+  'who.save': "Сохранить и продолжить",
+  'premium.checkout': "Оформление подписки",
+  'premium.emailHint': "На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.",
+  'premium.payBtn': "Оплатить",
+  'premium.termsHint': "Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.",
+  'bio.enable': "Включить вход по биометрии",
+  'bio.enableHint': "Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».",
+  'lock.title': "Вход в Fit Timer",
+  'lock.accountEmail': "Почта аккаунта",
+  'common.reset': "Сбросить",
+  'swap.title': "Можно усложнить",
+  'swap.replaceAI': "Заменить через ИИ сейчас",
+  'exercise.new': "Новое упражнение",
+  'exercise.aiSub': "Опиши, что нужно, — подберёт нейросеть",
+  'exercise.manualSub': "Задаёшь название, формат и подходы",
+  'rest.custom': "Свой отдых",
+  'rest.example': "Например: 20",
+  'compare.title': "Сравнение прогресса",
+  'compare.deletePhoto': "Удалить это фото",
+  'compare.hint': "Проведи по снимку вбок — сменится дата. Нажми — во весь экран.",
+  'compare.share': "Поделиться сравнением",
+  'weight.newEntry': "Новая запись",
+  'weight.kgLabel': "Вес, кг",
+  'weight.heightCm': "Рост, см",
+  'weight.fatPct': "Жир, %",
+  'weight.musclePct': "Мышцы, %",
+  'weight.waistCm': "Талия, см",
+  'weight.hipsCm': "Бёдра, см",
+  'weight.chestCm': "Грудь, см",
+  'weight.history': "История веса",
+  'well.today': "Как ты сегодня",
+  'well.pressure': "Давление",
+  'well.sysAria': "Давление, верхнее",
+  'well.diaAria': "Давление, нижнее",
+  'well.pulse': "Пульс",
+  'well.history': "История самочувствия",
+  'import.title': "Импорт программы",
+  'import.linkPlaceholder': "Вставь ссылку, которой поделились",
+  'import.openLink': "Открыть по ссылке",
+  'import.file': "Загрузить файл программы",
+  'import.hint': "Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.",
+  'trainer.presentPlaceholder': "Как тебя представить",
+  'legal.title': "Данные и правила",
+  'legal.note': "Храним только нужное для работы. Фото прогресса остаются на твоём устройстве и на наш сервер не загружаются. Без рекламы и трекеров. Данные не продаём.",
+  'legal.privacyTitle': "Политика конфиденциальности",
+  'legal.privacySub': "Что собирается, где хранится, что уходит наружу",
+  'legal.privacyHtml': "<h3>Какие данные приложение хранит</h3>\n          <ul>\n            <li><b>Имя, пол, возраст в полных годах.</b> Имя — чтобы обращаться к тебе по имени. Пол и возраст влияют на подбор упражнений и нагрузки. Точную дату рождения приложение не запрашивает и не хранит.</li>\n            <li><b>Цель тренировок и ограничения</b> — в том числе «берегу поясницу», «берегу колени», «беременность». Это сведения о здоровье, и мы относимся к ним как к особо чувствительным.</li>\n            <li><b>Вес, рост, обхваты талии, груди и бёдер</b> и рассчитанный по ним индекс массы тела — если ты их вводишь. Вводить их необязательно.</li>\n            <li><b>Фотографии прогресса</b> — если ты их делаешь. Они хранятся только на твоём устройстве. Если ты сам сохраняешь резервную копию, файл с фото попадёт в выбранное тобой хранилище.</li>\n            <li><b>История тренировок:</b> даты, длительность, какие упражнения и с каким весом выполнены, заметки к тренировке.</li>\n            <li><b>Твои программы</b> — собранные вручную, добавленные из каталога или полученные от нейросети.</li>\n            <li><b>Настройки приложения:</b> тема, звук, голос, расписание напоминаний.</li>\n          </ul>\n\n          <h3>Зачем это нужно</h3>\n          <p>Ровно для того, чтобы приложение работало: считало нагрузку и прогрессию, вело историю и календарь, показывало графики веса и замеров, напоминало о тренировке. Ни для чего другого эти данные не используются — ни для рекламы, ни для профилирования, ни для передачи кому-то ещё.</p>\n\n          <h3>Где эти данные хранятся</h3>\n          <p>При действующей подписке профили, программы, история тренировок, вес и замеры привязаны к аккаунту и хранятся в базе, физически расположенной <b>на территории Российской Федерации</b>. Обмен с сервером идёт по защищённому соединению. Фото прогресса на сервер приложения не загружаются. Локальная копия остальных данных остаётся на устройстве, чтобы тренировка работала без интернета.</p>\n          <p>Доступ к данным на нашей стороне есть только у тех, кому он нужен для работы сервиса, и только в объёме, который для этой работы требуется.</p>\n\n          <h3>Что уходит третьим лицам</h3>\n          <ul>\n            <li><b>Запрос к нейросети.</b> Только тогда, когда ты просишь собрать программу, упражнение или картинку. В запрос уходят: пол, возраст, цель, уровень, дни недели, длительность, инвентарь, выбранные ограничения и временный текст из поля «О себе и возможностях», если ты его заполнил — в том числе сведения о весе, травмах, боли или других ограничениях. Имени, почты и других контактов в запросе нет. Запрос передаётся выбранному нами сервису генерации; он может находиться за пределами России, поэтому приложение спрашивает отдельное согласие перед первой генерацией.</li>\n            <li><b>Имя, вес и другие данные профиля, замеры, фотографии и история тренировок автоматически в запрос к нейросети не добавляются. Но всё, что ты сам написал в поле «О себе и возможностях», отправляется выбранному ИИ-провайдеру вместе с конкретным запросом.</b></li>\n            <li><b>Шрифты</b> подгружаются с Google Fonts, поэтому Google видит факт обращения и твой IP-адрес. Без интернета приложение возьмёт системный шрифт и продолжит работать.</li>\n            <li><b>Оплата подписки.</b> Деньги принимает магазин приложений — App Store или Google Play. Номера карт и другие платёжные реквизиты в приложение не попадают и у нас не хранятся: мы узнаём только то, что подписка оплачена и до какого числа она действует.</li>\n            <li><b>Почта аккаунта.</b> Её ты вводишь при оформлении подписки. Она нужна, чтобы прислать чек и вернуть подписку вместе с данными на новом телефоне. Рассылок мы не делаем.</li>\n          </ul>\n\n          <h3>Чего приложение не делает</h3>\n          <p>Не показывает рекламу. Не содержит счётчиков, трекеров и рекламной аналитики. Не передаёт и не продаёт данные третьим лицам. Не запрашивает доступ к контактам, звонкам и переписке.</p>\n\n          <h3>Сколько это хранится</h3>\n          <p>Серверная копия профиля хранится, пока существует аккаунт. Обезличенный текст запроса к нейросети и её ответа хранится не более <b>30 дней</b> для разбора ошибок и улучшения качества, затем удаляется автоматически. Команда «Удалить аккаунт и все данные» удаляет с сервера профили, историю, вес, замеры и программы, а с телефона — ещё и локальные фотографии прогресса. Отменить удаление нельзя.</p>\n\n          <h3>Твои права</h3>\n          <p>Посмотреть свои данные можно прямо в приложении. Выгрузить их одним файлом — «Настройки → Резервная копия → Сохранить в файл». Удалить — удалить профиль. Исправить — в любом поле, где ты их вводила: имя, возраст, вес, замеры, заметки.</p>\n          <p>Ты вправе отозвать согласие на обработку, потребовать прекратить обработку и обжаловать наши действия — написав на почту выше или обратившись в Роскомнадзор как в уполномоченный орган по защите прав субъектов персональных данных.</p>\n\n          <h3>Дети</h3>\n          <p>Приложение не рассчитано на детей младше 12 лет и не собирает данные о них осознанно.</p>\n\n          <h3>Кто обрабатывает данные и как связаться</h3>\n          <p>Оператор персональных данных — <b>Лебедев Сергей Станиславович</b>, плательщик налога на профессиональный доход (самозанятый). Обработка ведётся в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».</p>\n          <p>Вопросы о данных, просьбы выгрузить, исправить или удалить их, отзыв согласия и жалобы — на почту:</p>\n          <p><a class=\"legal-mail\" href=\"mailto:edkiy73@gmail.com\">edkiy73@gmail.com</a></p>\n          <p>На обращения по персональным данным отвечаем в срок, установленный законом, — не позднее тридцати дней.</p>\n\n          <h3>На каком основании</h3>\n          <ul>\n            <li><b>Твоё согласие.</b> Ты даёшь его, когда начинаешь пользоваться приложением и когда вводишь данные о себе. Согласие можно отозвать в любой момент — написав на почту выше или удалив профиль.</li>\n            <li><b>Исполнение соглашения между нами.</b> Без имени, параметров тела и истории тренировок приложение не может делать то, ради чего его ставят.</li>\n          </ul>\n\n          <h3>Данные о здоровье — отдельно</h3>\n          <p>Вес, обхваты, фотографии прогресса, отметка о беременности и другие ограничения — это сведения о состоянии здоровья, то есть специальная категория персональных данных. Мы обрабатываем их <b>только с твоего отдельного согласия</b> и только для того, чтобы приложение считало нагрузку и показывало твою динамику. Не хочешь — не заполняй эти поля: тренировка работает и без них.</p>",
+  'legal.termsTitle': "Пользовательское соглашение",
+  'legal.termsSub': "Что это за приложение и кто за что отвечает",
+  'legal.termsHtml': "<h3>Что это такое</h3>\n          <p>Fit Timer — таймер и конструктор домашних тренировок. Он исполняет ту программу, которую собрали вручную, получили от нейросети, взяли из каталога или импортировали по ссылке. Пользоваться им можно бесплатно.</p>\n\n          <h3>Приложение не заменяет тренера и врача</h3>\n          <p>Оно не оценивает, подходит ли тебе программа, не видит твоей техники и не следит за самочувствием. Решение заниматься и решение, какую нагрузку взять, остаётся за тобой. Подробности — в разделе «Здоровье и безопасность».</p>\n\n          <h3>Ответственность</h3>\n          <p>Ты занимаешься самостоятельно и на свой риск. Разработчик не несёт ответственности за травмы, ухудшение самочувствия и любые последствия занятий.</p>\n\n          <h3>Содержимое каталога и ответы нейросети</h3>\n          <p>Программы в каталоге составляют их авторы, а не мы, и мы не проверяем каждую из них на пригодность лично тебе. Ответы нейросети создаются автоматически и могут содержать ошибки, бессмыслицу и небезопасные рекомендации. Проверяй и то и другое здравым смыслом, а при сомнениях — с врачом или тренером.</p>\n\n          <h3>Генерация с ИИ</h3>\n          <p>Встроенная генерация доступна с Premium. Провайдера и модель выбираем мы; ключи сервисов находятся только на сервере и в приложение не передаются. Созданную программу или упражнение проверяет пользователь до начала тренировки.</p>\n\n          <h3>Возраст</h3>\n          <p>Приложение не предназначено для детей младше 12 лет: в нём есть дневник веса, расчёт индекса массы тела и материалы о снижении веса.</p>\n\n          <h3>Подписка и деньги</h3>\n          <p>Приложение бесплатное: тренировка с таймером и голосом, конструктор программ, статистика, вес и фото работают без всякой оплаты и всегда будут работать.</p>\n          <p>Подписка «Премиум» открывает то, что стоит нам денег каждый раз: составление программ и упражнений нейросетью, весь каталог тренеров, картинки к упражнениям и хранение данных в аккаунте. Цена, срок и условия продления показываются до оплаты, в валюте твоей страны. Подписка продлевается автоматически; отключить продление можно в любой момент в разделе «Аккаунт» — оплаченный срок при этом дорабатывает до конца.</p>\n          <p>Всё, что уже собрано и накоплено, остаётся доступным и после окончания подписки: программы, история и статистика никуда не деваются, перестают работать только те функции, за которые платили.</p>\n          <p>Деньги принимает магазин приложений, и возврат тоже делается по его правилам — через App Store или Google Play.</p>\n\n          <h3>Вход по биометрии</h3>\n          <p>Отпечаток или снимок лица приложение не получает и не хранит: их проверяет сама операционная система телефона, а приложению достаётся только ответ «это владелец устройства». Выключить вход по биометрии можно в разделе «Аккаунт», запасной вход — по почте аккаунта.</p>\n\n          <h3>Изменения</h3>\n          <p>Условия могут меняться вместе с приложением. Дата последнего обновления указана внизу этой страницы.</p>\n\n          <h3>Кто отвечает за приложение</h3>\n          <p>Fit Timer делает и поддерживает Лебедев Сергей Станиславович, самозанятый. Написать можно на <a class=\"legal-mail\" href=\"mailto:edkiy73@gmail.com\">edkiy73@gmail.com</a>.</p>",
+  'legal.healthTitle': "Здоровье и безопасность",
+  'legal.healthSub': "Когда нужно сначала к врачу и когда остановиться",
+  'legal.healthHtml': "<h3>Главное</h3>\n          <p>Fit Timer — не медицинское изделие. Он не ставит диагнозов, не даёт медицинских рекомендаций и не заменяет консультацию врача.</p>\n\n          <h3>Сначала посоветуйся с врачом, если</h3>\n          <ul>\n            <li>беременность или недавние роды;</li>\n            <li>есть болезни сердца и сосудов, повышенное или пониженное давление;</li>\n            <li>есть травмы или боли в спине, коленях, плечах, шее;</li>\n            <li>за последний год была операция;</li>\n            <li>вес резко меняется без явной причины;</li>\n            <li>ты возвращаешься к нагрузке после долгого перерыва или тебе больше 50 лет.</li>\n          </ul>\n\n          <h3>Останови тренировку и обратись к врачу, если появились</h3>\n          <ul>\n            <li>боль или давление в груди;</li>\n            <li>сильное головокружение, потемнение в глазах, тошнота;</li>\n            <li>одышка, несоразмерная нагрузке;</li>\n            <li>резкая боль в суставе или спине.</li>\n          </ul>\n          <p>Дискомфорт от непривычной нагрузки — нормально. Боль — нет.</p>\n\n          <h3>Про программы от нейросети</h3>\n          <p>Нейросеть не знает твоих диагнозов, не видит, как ты двигаешься, и не отвечает за результат. Программу, которую она собрала, стоит прочитать целиком до первой тренировки, а при любых ограничениях по здоровью — обсудить с врачом.</p>\n\n          <h3>Про индекс массы тела</h3>\n          <p>ИМТ на вкладке «Тело» — грубая арифметика от роста и веса. Он не различает мышцы и жир, не учитывает телосложение и не является диагнозом.</p>\n\n          <h3>Беременность и период после родов</h3>\n          <p>Это тот случай, когда «попробую и посмотрю» не работает. И сам факт занятий, и набор упражнений, и нагрузку должен одобрить врач, который тебя наблюдает. Приложение не умеет определять срок и самочувствие и не остановит тебя само.</p>",
+  'legal.updated': "Обновлено 22 сентября 2026",
+  'builder.descCounterHint': "покажется перед стартом.",
+  'builder.progressOverTime': "Усложнять со временем",
+  'program.default': "Программа",
+  'profile.genderNeeded': "Выбери пол — от него зависит подбор упражнений.",
+  'builder.noProgress': "Не усложнять",
+  'builder.everyWorkout': "каждую тренировку",
+  'builder.everyNWorkouts': "каждые {count} {workouts}",
+  'builder.rotationHint': "Варианты идут по очереди: первый, второй, снова первый. Пропуск дня очередь не сбивает.",
+  'builder.weekdayHint': "У каждого варианта свои дни недели. В нужный день откроется именно он.",
+  'builder.variantDaysLabel': "Дни этого варианта",
+  'builder.variantDaysHint': "В эти дни вариант попадёт в план на сегодня.",
+  'builder.roundsRest': "Круги и отдых",
+  'builder.variantsRotate': "Варианты (идут по очереди)",
+  'builder.variantsWorkout': "Варианты тренировки",
+  'builder.addVariantHint': "Хочешь разные упражнения в разные дни — добавь вариант и отметь его дни.",
+  'builder.selectedVariantHint': "Всё ниже — про выбранный вариант. «Сейчас» — тот, что выпадет следующим.",
+  'builder.selectedVariantDaysHint': "Всё, что ниже, относится к выбранному варианту.",
+  'builder.current': "сейчас",
+  'builder.deleteVariantTitle': "Удалить этот вариант",
+  'builder.add': "Добавить",
+  'builder.addVariant': "Добавить вариант",
+  'builder.repsLabel': "Повторений",
+  'builder.secondsLabel': "Секунд",
+  'builder.repsExample2': "Например: 12-15",
+  'builder.secondsExample2': "Например: 45",
+  'builder.progressWarmupOff': "недоступно для разминки",
+  'builder.progressOffHint': "выключено — числа всегда одни и те же",
+  'builder.startNumbersHint': "{sentence}. В полях — стартовые числа.",
+  'builder.warmupNoGrowth': "у разминки не растёт",
+  'builder.noGrowth': "не растёт",
+  'builder.emptyProgress': "настройки пустые",
+  'builder.none': "без",
+  'builder.custom': "своё",
+  'builder.customRestSets': "Свой отдых между подходами",
+  'builder.customRestAfter': "Свой отдых после упражнения",
+  'builder.noImage': "Нет картинки",
+  'builder.detailDescription': "описание",
+  'builder.detailMistakes': "ошибки",
+  'builder.detailMuscles': "мышцы",
+  'builder.detailImage': "картинка",
+  'builder.detailVideo': "видео",
+  'builder.notFilled': "не заполнено",
+  'builder.noExercisesTitle': "Упражнений пока нет",
+  'builder.noExercisesText': "Добавь первое: хватит названия и того, сколько делать — повторения или время. Остальное по желанию.",
+  'builder.variantExercises': "Упражнения · вариант {current} из {total}",
+  'builder.variantExercisesHint': "Упражнения выбранного варианта. Переключай вкладками.",
+  'builder.variantOnDays': "Упражнения варианта на {days}. Переключай вкладками.",
+  'builder.variantNoDays': "Этому варианту можно добавить дни — иначе он будет просто запасным.",
+  'builder.scheduleExercises': "Тренировка по расписанию: {days}.",
+  'builder.anyDayExercises': "Можно тренироваться в любой день. Выбери дни в настройках — будут напоминания.",
+  'builder.warmLimit': "В разминке уже {count} упражнений — это предел.",
+  'builder.mainLimit': "В основной части уже {count} упражнений — это предел.",
+  'builder.imageReadFailed': "Не удалось прочитать файл изображения.",
+  'ai.emptyAnswer': "Поле с ответом нейросети пустое.\n\nЕсли запрос делали в чате (ChatGPT, Gemini — неважно каком), скопируй весь ответ и вставь его сюда. Проще всего — нажать «Сделать за меня» выше: приложение сделает всё само.",
+  'ai.parseProgramFailed': "Из вставленного текста не получилось собрать программу. Скорее всего, скопировано не всё: нужен весь ответ чата целиком, от первой до последней строки.",
+  'ai.noExerciseResponse': "В тексте ответа не нашлось ни одного упражнения. Скорее всего, скопировано не всё — вернись в чат и скопируй ответ целиком.",
+  'ai.pasteProgram': "Вставь текст программы в поле.",
+  'ai.needProgramInput': "Укажи хотя бы одно пожелание к программе — например цель, дни, инвентарь или свой запрос.",
+  'ai.needExerciseInput': "Укажи хотя бы одно пожелание к упражнению — например мышцы, формат, инвентарь или свой запрос.",
+  'ai.needEditRequest': "Напиши, что нужно изменить.",
+  'ai.problemList': "Что не так:",
+  'ai.reviewSave': "Проверь и сохрани",
+  'builder.needProgramName': "название программы",
+  'builder.duplicateDay': "день «{day}» указан сразу в двух вариантах — оставь его в одном",
+  'builder.noExercisesVariant': "в варианте {variant} нет ни одного упражнения",
+  'builder.noExercises': "нет ни одного упражнения",
+  'builder.unnamedVariant': "в варианте {variant} без названия: {count} {exercises}",
+  'builder.unnamed': "без названия: {count} {exercises}",
+  'builder.validationTip': "Подсвеченные поля тоже подскажут, где проблема.",
+  'builder.saveFailedOne': "Не получилось сохранить:\n— {item}.\n\n{tip}",
+  'builder.saveFailedMany': "Не получилось сохранить — вот что нужно поправить:\n— {items}\n\n{tip}",
+  'builder.volumeHint': "{exercises}{rounds} — {sets} за тренировку.",
+  'builder.nowPrefix': "Сейчас {parts}",
+  'builder.startValuesHint': "В полях — стартовые числа.",
+  'workout.switchSidesVoice': "Смените сторону",
+  'workout.sideVoice': "Сторона {current} из {total}",
+  'week.of': "из {total}",
+  'week.closed': "Неделя закрыта",
+  'week.closedWhy': "План недели выполнен: {done} из {total}. Что сделаешь сверх — пойдёт отдельной строкой и неделю уже не меняет.",
+  'week.makeUp': "можно отработать",
+  'week.makeUpWhy': "Незакрытых тренировок этой недели: {count}. Неделя идёт до воскресенья — пройди программу в любой день, и день закроется.",
+  'week.movedOne': "отработана",
+  'week.movedMany': "отработано",
+  'week.movedWhy': "Тренировок, прошедших не в назначенный день: {count}. Неделя их засчитала — план недельный, а не суточный.",
+  'week.extra': "сверх плана",
+  'week.extraWhy': "Тренировок сверх расписания: {count}. В счёт недели они не идут и ничего не закрывают — это работа в плюс.",
+  'week.doneThisWeek': "Сделано на этой неделе: {count} {workouts}",
+  'week.daysUnset': "Дни тренировок пока не выбраны",
+  'week.noWorkoutMoved': "Тренировки в этот день не было. Отработано в другой день — {days}.",
+  'week.plannedFuture': "По плану на этот день: {names}.",
+  'week.plannedMissed': "Тренировок не было. По плану было: {names}.",
+  'week.canStillMakeUp': "Это ещё можно отработать: пройди программу до воскресенья, и неделя закроется.",
+  'week.plannedText': "Тренировка запланирована.",
+  'week.nonePlanned': "В этот день тренировок не было и не планировалось.",
+  'week.dayMovedOn': "Засчитано тренировкой из другого дня: {day}.",
+  'today.programsOff': "Программы отключены",
+  'today.noSchedule': "Расписание не задано",
+  'today.warmupOnly': "Пока только разминка",
+  'today.noPrograms': "Программ пока нет",
+  'today.enableProgram': "Включи любую — и план вернётся сюда",
+  'today.chooseDays': "Выбери дни недели — и план появится здесь",
+  'today.buildProgram': "Собери свою программу за пару минут",
+  'today.open': "Открыть",
+  'today.create': "Создать",
+  'today.makeUp': "Можно отработать",
+  'today.makeUpSub': "{day}, «{name}»{more} — неделя ещё закроется",
+  'today.andMore': " и ещё {count}",
+  'today.start': "Начать",
+  'today.variant': "Вариант {current} из {total}",
+  'today.done': "Уже выполнено сегодня",
+  'today.again': "Ещё раз",
+  'today.tomorrow': "завтра",
+  'today.onDay': "в {day}",
+  'today.startToday': "Начни сегодня",
+  'today.rest': "Сегодня отдых",
+  'today.firstWorkout': "Первая тренировка: «{name}»",
+  'today.next': "Следующая — {when}",
+  'today.firstNote': "По расписанию она {when}, но ждать не обязательно: нагрузка растёт по пройденным тренировкам, а не по календарю.",
+  'today.restNote': "Отдых — часть плана. Но если хочется размяться, открой программу и начни раньше срока.",
+  'today.noWeekWorkouts': "В расписании на ближайшую неделю тренировок нет",
+  'trainer.needAccountPage': "Сначала заведи аккаунт — страница тренера привязана к нему.",
+  'trainer.handleTaken': "Этот ник уже занят другим тренером — возьми другой.",
+  'share.noStore': "Ссылки пока не работают: на сервере не подключено хранилище.",
+  'share.rate': "Слишком много ссылок подряд. Попробуй через несколько минут.",
+  'share.offline': "Ссылку сделать не удалось — нет связи с сервером. Попробуй ещё раз, когда появится интернет.",
+  'share.fileHint': "\n\nПередать программу прямо сейчас можно файлом: «Сохранить в файл» в том же меню. В файл входит всё, включая картинки.",
+  'share.programText': "Программа тренировки «{name}» — открой ссылку, и она добавится в Fit Timer:",
+  'share.linkCopied': "Ссылка на программу скопирована — отправь её любым мессенджером. Получатель просто откроет её, и программа добавится сама.\n\nКартинки в ссылку не помещаются. Чтобы передать всё целиком — «Сохранить в файл».",
+  'share.fileTitle': "Программа «{name}»",
+  'share.fileSaved': "Файл программы сохранён в загрузки ({size} КБ).\n\nВ нём есть всё: обложка и фото упражнений. Получатель откроет его через «Создать → Загрузить файл».",
+  'share.badFile': "Это не похоже на файл программы Fit Timer.",
+  'share.programAdded': "Программа «{name}» добавлена.",
+  'share.readFileFailed': "Не удалось прочитать файл: {error}",
+  'home.streakRisk': "под угрозой",
+  'home.streakRiskWhy': "Серия не сгорела, в ней тренировок: {count}. На этой неделе остался незакрытый день — пройди его программу до воскресенья, и серия продолжится.",
+  'home.streakWhy': "Тренировок подряд без пропусков: {count}. Один пропуск серию не обнуляет — пока идёт та же неделя, его можно отработать.",
+  'home.bestStreak': "лучшая серия",
+  'home.bestStreakWhy': "Личный рекорд, тренировок подряд: {count}. Рекорд остаётся навсегда, даже когда серия прервалась.",
+  'home.minutesTotal': "минут всего",
+  'home.hourTotalOne': "час всего",
+  'home.hourTotalMany': "часов всего",
+  'home.totalTimeWhy': "Всё время тренировок вместе, с самой первой. Минут: {minutes}. Тренировок: {workouts}.",
+  'home.firstAhead': "Первая тренировка ещё впереди",
+  'home.avgPressure': "Ср. давление",
+  'home.avgPulse': "Ср. пульс",
+  'home.avgSleep': "Ср. сон, ч",
+  'trainer.removeInfoQuestion': "Убрать данные о себе со страницы тренера? Уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся — на странице просто не будет сведений о тебе.",
+  'trainer.removeInfoFailed': "Сервер не ответил, и на странице всё осталось. Попробуй позже — убирать надо именно на сервере.",
+  'trainer.removeInfoDone': "Готово. На странице больше нет сведений о тебе.",
+  'age.required': "Укажи возраст — от него зависит подбор упражнений и нагрузки.",
+  'age.integer': "Возраст нужно указать целым числом полных лет.",
+  'age.tooYoung': "Проверь возраст — приложение рассчитано на пользователей старше 5 лет.",
+  'age.tooOld': "Проверь возраст — значение не может быть больше 100 лет.",
+  'ai.keyMissing': "Ключ Gemini не задан",
+  'ai.busyRetry': "Серверы заняты. Повтор через {seconds} с… (попытка {attempt} из {total})",
+  'ai.emptyResponse': "Модель вернула пустой ответ{reason}. Попробуй ещё раз или сформулируй запрос иначе.",
+  'ai.reason': " (причина: {reason})",
+  'ai.tooLong': "Ответ не поместился в лимит модели — программа слишком большая. Попробуй дорабатывать по одному варианту или сократить описания упражнений.",
+  'ai.signInPremium': "Для генерации войди в Premium-аккаунт в разделе «Аккаунт».",
+  'ai.limitReached': "Лимит генераций на этот месяц исчерпан ({used}/{limit}).",
+  'ai.premiumRequired': "Для генерации нужна активная подписка Premium.",
+  'ai.disabled': "Генерация временно отключена. Попробуй позже.",
+  'ai.exerciseUpdated': "Упражнение «{name}» обновлено.",
+  'ai.timeout': "ИИ не успел ответить. Повтори — обычно со второго раза получается. Для большой программы помогает просить изменения поменьше за раз.",
+  'ai.badResponse': "ИИ прислал неполный ответ. Попробуй ещё раз — обычно со второго раза получается.",
+  'ai.badResponseMissing': "Не хватило: {fields}.",
+  'ai.serviceFailed': "Сервис ИИ сейчас не ответил. Попробуй ещё раз.",
+  'images.draw': "Нарисовать",
+  'images.generating': "Генерирую картинки",
+  'images.progress': "Картинка {current} из {total}",
+  'images.cover': "Обложка",
+  'images.coverProgram': "Обложка программы",
+  'images.error': "ошибка",
+  'images.stopped': "Остановлено. Успели сгенерировать: {done} из {total}. Уже готовые картинки на месте — можно продолжить позже.",
+  'images.done': "Готово: сгенерировано {done} из {total}.",
+  'images.partial': "Готово: {done} из {total} успешно.\n\nНе получилось:\n• {failed}",
+  'images.trayLeft': "Ещё не разложено: {count}",
+  'images.trayAll': "Все разложены — можно поставить любую ещё раз",
+  'images.pickHint': "Нажми на место в списке «Куда подставить» — и выбери туда эту картинку. Одну картинку можно поставить в несколько мест.",
+  'images.exerciseGroup': "Упражнения",
+  'images.has': "картинка есть",
+  'images.none': "нет картинки",
+  'images.pickFirst': "Сначала выбери картинки с телефона.",
+  'images.allPlaced': "Все загруженные картинки уже стоят по местам. Нажми на нужное место, чтобы заменить картинку.",
+  'images.assigned': "Подставлено картинок: {count}.",
+  'images.noRoom': " Свободных мест не хватило: осталось {count}.",
+  'images.noSlots': "Свободных мест нет. Нажми на нужное место, чтобы заменить картинку.",
+  'exercise.addLimit': "Ничего не добавилось: в разминке бывает до 20, в основной части — тоже до 20 упражнений. Удали что-нибудь и попробуй ещё раз.",
+  'exercise.addedOne': "Упражнение «{name}» добавлено. Открой его, чтобы поправить детали.",
+  'exercise.addedMany': "Добавлено упражнений: {count}.",
+  'program.fallback': "Программа",
+  'program.updated': "обновлённая",
+  'program.updatedN': "обновлённая {count}",
+  'program.editSummary': "{variants}{exercises}",
+  'program.createdEdited': "Готово: создана «{name}».\n\nИсходная программа осталась без изменений.",
+  'program.imagesCarried': "\nПеренесено картинок: {count}.",
+  'ai.parseProblems': "Что не так:",
+  'ai.editAdded': "\nДобавлено: {names}.",
+  'ai.editRemoved': "\nУбрано: {names}.",
+  'ai.editReordered': "\nПорядок упражнений изменён.",
+  'ai.editTimeChanged': "\nВремя тренировки: ≈{before} → {after} мин.",
+  'import.linkExpired': "Ссылка не открывается: её уже нет. Попроси тренера прислать новую.",
+  'import.linkOffline': "Не получилось загрузить программу — похоже, нет связи. Попробуй ещё раз, когда появится интернет.",
+  'import.noProgram': "По ссылке нет программы с упражнениями.",
+  'import.reviewSave': "Проверь и сохрани",
+  'import.trainerNotice': "Программу прислал тренер {trainer}. Он будет видеть, как ты занимаешься именно по ней: сколько тренировок, когда была последняя и как растёт нагрузка.\n\nБольше ничего ему не видно — ни другие программы, ни вес, ни фото.",
+  'import.badLink': "Это не похоже на ссылку на программу. Вставь ссылку целиком — ту, что прислали, — или загрузи файл программы.",
+  'import.badCode': "Не удалось прочитать код. Проверь, что он скопирован целиком.",
+  'import.noProgramCode': "В коде нет программы с упражнениями.",
+  'home.goodNight': "Доброй ночи",
+  'home.goodMorning': "Доброе утро",
+  'home.goodDay': "Добрый день",
+  'home.goodEvening': "Добрый вечер",
+  'images.textInstead': "Модель ответила текстом вместо картинки: {text}",
+  'images.noImage': "Модель не вернула изображение.",
+  'profile.defaultMine': "Мой профиль",
+  'who.programMsg': "Чтобы правильно подобрать упражнения, нагрузку и время на восстановление, нужны пол и возраст. Спросим один раз — дальше это меняется в профиле.",
+  'who.aiMsg': "Нейросети нужно знать, для кого составлять программу: от пола и возраста зависят и упражнения, и нагрузка, и восстановление.",
+  'warmup.programName': "Разминка 10 минут",
+  'warmup.1.name': "Марш на месте",
+  'warmup.1.desc': "Шагай на месте в бодром темпе, высоко поднимая колени. Руки работают, как при ходьбе. Дыши ровно — задача разогреть тело, а не устать.",
+  'warmup.2.name': "Вращения плечами и руками",
+  'warmup.2.desc': "Сначала 20 секунд вращай плечами назад и вперёд, затем выпрями руки и рисуй ими большие круги. Двигайся плавно, с полной амплитудой.",
+  'warmup.3.name': "Наклоны корпуса в стороны",
+  'warmup.3.desc': "Ноги на ширине плеч, одна рука на поясе, вторая тянется над головой в сторону наклона. Наклоняйся строго вбок, не заваливаясь вперёд. Меняй стороны.",
+  'warmup.4.name': "Вращения тазом",
+  'warmup.4.desc': "Руки на пояс, ноги на ширине плеч. Рисуй тазом большие круги: сначала в одну сторону, на половине времени — в другую. Колени чуть согнуты.",
+  'warmup.5.name': "Приседания в лёгком темпе",
+  'warmup.5.desc': "Присядь до комфортной глубины, отводя таз назад, колени в сторону носков. Темп спокойный: это разогрев суставов, а не силовая работа.",
+  'warmup.6.name': "Выпады на месте попеременно",
+  'warmup.6.desc': "Шаг вперёд, заднее колено мягко опускается к полу, затем вернись и смени ногу. Корпус прямой, движение плавное, без рывков.",
+  'warmup.7.name': "Мельница",
+  'warmup.7.desc': "Ноги шире плеч, корпус наклонён вперёд, руки в стороны. Поочерёдно тянись рукой к противоположной стопе, вторая рука уходит вверх.",
+  'warmup.8.name': "Вращения коленями и стопами",
+  'warmup.8.desc': "Соедини колени, слегка присядь и повращай ими по кругу в обе стороны. Затем по очереди поставь стопы на носок и повращай голеностопом.",
+  'warmup.9.name': "Прыжки Jumping Jack",
+  'warmup.9.desc': "В прыжке разводи ноги и поднимай руки над головой, затем возвращайся. Если прыгать нельзя — шагай в стороны с подъёмом рук.",
+  'warmup.10.name': "Растяжка: наклон к стопам",
+  'warmup.10.desc': "Медленно наклонись вниз, расслабив спину и шею, и потянись к стопам. Колени можно слегка согнуть. Дыши глубоко и не пружинь.",
+  'common.details': "Подробнее",
+  'mail.noMail': "Отправка писем на сервере пока не включена.",
+  'mail.noStore': "Сервер сейчас недоступен. Попробуй позже.",
+  'mail.badEmail': "Проверь адрес — похоже, в нём опечатка.",
+  'mail.tooManyToday': "Сегодня уже отправляли код на этот адрес пять раз. Попробуй завтра.",
+  'mail.rateLimited': "Слишком часто. Подожди немного.",
+  'mail.codeExpired': "Код устарел. Запроси новый.",
+  'mail.tooManyTries': "Слишком много попыток. Запроси новый код.",
+  'mail.badCode': "Код не подошёл. Проверь, тот ли это код из письма.",
+  'mail.handleTaken': "Твой ник уже привязан к другому аккаунту.",
+  'mail.offline': "Нет связи с сервером. Проверь интернет.",
+  'mail.failed': "Письмо не ушло: {detail}",
+  'mail.serviceRefused': "почтовая служба отказала.",
+  'mail.generic': "Не вышло. Проверь связь и попробуй ещё раз.",
+  'ai.parseNoName': "в тексте нет названия программы",
+  'ai.parseNoExercises': "в тексте не найдено ни одного упражнения",
+  'ai.pregnancyWarning': "Беременность — не обычное ограничение.\n\nИ сам факт занятий, и упражнения, и нагрузку должен одобрить врач, который тебя наблюдает. Нейросеть не знает твоего срока и самочувствия — она просто составит программу.\n\nПрочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.",
+  'builder.daysRotateHint': "Дни говорят, когда тренироваться. Очередь вариантов они не сбивают.",
+  'builder.daysPlanHint': "В эти дни программа попадёт в план на сегодня.",
+  'builder.typeWeightedRepsHint': "Отмечаем и повторения, и килограммы — на тренировке поле веса появится отдельно.",
+  'builder.typeWeightedTimeHint': "Удержание или перенос с грузом — на тренировке рядом с секундами будут килограммы.",
+  'builder.typeRepsHint': "Считаем повторения — например «12-15».",
+  'builder.typeTimeHint': "Считаем время — например «45» секунд.",
+  'builder.progressAutoPeriod': "прибавляется автоматически: {period}",
+  'builder.progressProgramOff': "в настройках программы автоприбавка выключена — числа не растут",
+  'builder.summaryMax': "{value}, максимум {max}",
+  'day.monFull': "Понедельник",
+  'day.tueFull': "Вторник",
+  'day.wedFull': "Среда",
+  'day.thuFull': "Четверг",
+  'day.friFull': "Пятница",
+  'day.satFull': "Суббота",
+  'day.sunFull': "Воскресенье",
+  'program.copySuffix': "копия",
+  'parser.noName': "В тексте нет названия программы",
+  'parser.noExercises': "В тексте не найдено ни одного упражнения",
+  'pregnancy.warning': "Беременность — не обычное ограничение.\n\nИ сам факт занятий, и упражнения, и нагрузку должен одобрить врач, который тебя наблюдает. Нейросеть не знает твоего срока и самочувствия — она просто составит программу.\n\nПрочитай то, что получилось, целиком и обсуди с врачом до первой тренировки.",
+  'images.imageOne': "картинка",
+  'images.imageFew': "картинки",
+  'images.imageMany': "картинок",
+  'images.generateConfirm': "Будет нарисовано {count} {images}. Продолжить?",
+  'images.nothingMissing': "Все места уже с картинками — недостающих нет.",
+  'images.keyRejected': "Ключ отклонён. Проверь, что скопирован полностью.",
+  'images.rateLimited': "Слишком много запросов — подожди немного и попробуй снова.",
+  'images.billingRequired': "Доступ запрещён. Генерация картинок — платная функция Gemini: в Google-аккаунте должен быть включён биллинг.",
+  'images.providerBusy': "Модель для картинок сейчас перегружена у Google. Обычно проходит за пару минут — попробуй ещё раз.",
+  'youtube.hint': "Обычная ссылка или короткая youtu.be. Нейросеть разберёт видео в программу.",
+  'youtube.badLink': "Не похоже на ссылку YouTube. Нужен youtube.com/watch?v=… или youtu.be/…",
+
+  'progress.photoLocalOnly': 'Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.',
+  'handsfree.allCommands': 'Все команды',
+  'handsfree.commandsTitle': 'Голосовые команды',
+  'handsfree.commandsIntro': 'Можно говорить естественно — несколько вариантов фразы делают одно и то же действие.',
+  'handsfree.commandNext': 'Дальше',
+  'handsfree.commandNextExamples': '«дальше», «готово», «пропустить», «сделал», «закончил»',
+  'handsfree.commandPause': 'Пауза',
+  'handsfree.commandPauseExamples': '«пауза», «стоп», «подожди», «остановись»',
+  'handsfree.commandResume': 'Продолжить',
+  'handsfree.commandResumeExamples': '«продолжить», «продолжай», «поехали», «можно продолжать»',
+  'handsfree.commandsLanguageNote': 'Команды распознаются на языке, выбранном в «Язык команд».',
+};
+const I18N_EN = {
+  'app.title': 'Fit Timer — home workouts',
+  'common.start': 'Start',
+  'common.loginOrRegister': 'Sign in or register',
+  'common.rules': 'rules',
+  'common.exit': 'Exit',
+  'common.profile': 'Profile',
+  'common.sound': 'Sound',
+  'common.trainer': 'Trainer',
+  'common.account': 'Account',
+  'common.today': 'Today',
+  'common.workouts': 'Workouts',
+  'common.trainees': 'Clients',
+  'common.progress': 'Progress',
+  'common.more': 'More',
+  'common.catalog': 'Catalog',
+  'common.program': 'Program',
+  'common.weight': 'Weight',
+  'common.photo': 'Photos',
+  'common.goal': 'Goal',
+  'common.level': 'Level',
+  'common.add': 'Add',
+  'nav.sections': 'Sections',
+  'top.soundTitle': 'Sound',
+  'top.voiceTitle': 'Voice control',
+  'home.catalogTitle': 'Program catalog',
+  'home.catalogSub': 'Workouts from trainers',
+  'home.week': 'This week',
+  'home.premiumSub': 'Let AI build your workout and unlock the full trainer catalog.',
+  'home.progressWorkouts': 'Workouts',
+  'home.progressWeight': 'Weight',
+  'home.progressPhoto': 'Photos',
+  'store.searchPlaceholder': 'Program name',
+  'store.clearTitle': 'Clear',
+  'store.roleTrainer': 'trainer',
+  'store.inside': 'What’s inside',
+  'store.locked': 'Program details are available with Premium',
+  'onboarding.start': 'Choose a workout',
+  'onboarding.title': 'Train<br>your way',
+  'onboarding.lead': 'Choose a ready-made program, get one from your trainer, or build your own. Fit Timer guides you through the workout and tells you when it’s time to progress.',
+  'onboarding.programTitle': 'A program for you',
+  'onboarding.programBody': 'Build it yourself or let AI create it',
+  'onboarding.trainerTitle': 'Stay connected to your trainer',
+  'onboarding.trainerBody': 'Get programs and send workout reports',
+  'onboarding.progressTitle': 'Progress without calculations',
+  'onboarding.progressBody': 'Weight, reps and time increase according to plan',
+  'onboarding.handsfreeTitle': 'Hands-free workouts',
+  'onboarding.handsfreeBody': 'Use voice commands or your headset button',
+  'onboarding.health': 'Pregnancy, heart conditions, injuries, or a long break? Check with a doctor first. Stop if you feel unwell.',
+  'onboarding.legalPrefix': 'By continuing, you accept the app',
+  'onboarding.legalSuffix': '.',
+  'settings.pageTitle': 'More',
+  'settings.languageTitle': 'Language',
+  'settings.appLanguage': 'App language',
+  'settings.languageHint': 'Changes the interface and spoken voice language. Voice-command recognition can be configured separately.',
+  'audio.systemVoice': 'System voice',
+  'audio.voiceSelected': 'Voice selected',
+  'handsfree.offHint': 'Use the on-screen buttons to move through workout steps.',
+  'handsfree.voiceHintNative': 'Choose a command language and download its voice pack. After that Fit Timer listens on your phone — offline and without system microphone tones.',
+  'handsfree.voiceHintWeb': 'Say “next”, “pause”, or “continue”. In the browser, recognition depends on your phone and may require internet.',
+  'handsfree.headsetHint': 'Use the play/pause button on your headphones or headset to move to the next step.',
+  'common.cancel': "Cancel",
+  'common.done': "Done",
+  'common.save': "Save",
+  'common.email': "Email",
+  'common.name': "Name",
+  'common.gender': "Gender",
+  'common.age': "Age",
+  'common.female': "Female",
+  'common.male': "Male",
+  'common.voice': "Voice",
+  'common.sounds': "Sounds",
+  'common.volume': "Volume",
+  'common.off': "Off",
+  'common.headset': "Headset",
+  'common.download': "Download",
+  'common.checking': "Checking…",
+  'common.back': 'Back',
+  'common.actions': "Actions",
+  'common.manual': "Manual",
+  'common.viaAI': "With AI",
+  'common.fromVideo': "From video",
+  'programs.title': "Workouts",
+  'programs.addTitle': "Add program",
+  'programs.newShort': "New",
+  'programs.catalogRequests': "Catalog submissions",
+  'programs.programKicker': "Program",
+  'programs.disabled': "Disabled",
+  'programs.about': "About the program",
+  'programs.variant': "Workout variant",
+  'programs.exercises': "Exercises",
+  'programs.startWorkout': "Start workout",
+  'programs.newProgram': "New program",
+  'programs.programName': "Program name",
+  'programs.settings': "Program settings",
+  'programs.exerciseImages': "Exercise images",
+  'programs.uploadBatch': "Upload in bulk",
+  'programs.addExercise': "Add exercise",
+  'programs.saveProgram': "Save program",
+  'workout.getReady': "Get ready",
+  'workout.pause': "Paused",
+  'workout.pauseSub': "The timer is stopped. You can read and scroll the instructions",
+  'workout.resume': "Resume",
+  'workout.canProgress': "Ready to progress",
+  'workout.watchVideo': "Watch video",
+  'workout.previous': "Previous step",
+  'workout.done': "Done",
+  'workout.skip': "Skip",
+  'workout.great': "Great work!",
+  'workout.time': "workout time",
+  'workout.kcal': "kcal",
+  'workout.note': "Workout note",
+  'workout.notePlaceholder': "How you felt, thoughts, plans — saved with today’s workout",
+  'settings.profiles': "Profiles",
+  'settings.addProfile': "Add profile",
+  'settings.soundVoice': "Sound & voice",
+  'settings.useSoundVoice': "Use sounds and/or voice",
+  'settings.speak': "Speak out loud",
+  'settings.speakSub': "exercise names, rest and workout summary",
+  'settings.voiceLanguage': "Voice language",
+  'settings.music': "Don’t interrupt music",
+  'settings.musicSub': "use short sounds instead of speech",
+  'settings.gong': "Gong & countdown",
+  'settings.gongSub': "sounds for start, finish and final seconds",
+  'settings.handsfree': "Hands-free control",
+  'settings.commandLanguage': "Command language",
+  'settings.trainerMode': "I train other people",
+  'settings.trainerModeSub': "Send programs by link and see who is training",
+  'settings.createAccountFirst': "Create an account first",
+  'settings.createAccountFirstSub': "Trainer mode requires your main email account",
+  'settings.profileName': "Profile name",
+  'settings.aboutMe': "About me",
+  'settings.aboutPlaceholder': "Who you work with and how you help",
+  'settings.experience': "Years of experience",
+  'settings.link': "Your link",
+  'settings.preview': "Preview my profile",
+  'settings.deleteData': "Delete data",
+  'settings.deleteCoachHint': "Your name, photo, bio, experience and link will be removed. Your nickname stays yours, and catalog programs remain published.",
+  'settings.deleteCoach': "Delete my trainer data",
+  'settings.plan': "Plan",
+  'settings.freePlan': "Free plan",
+  'settings.autoRenew': "Auto-renew",
+  'settings.accountHint': "Sign up in one quick email step. The account is free and keeps your nickname, subscription and account data so they return on a new phone. Workout sync is available with Premium.",
+  'settings.accountNick': "Account nickname",
+  'settings.biometry': "Biometric privacy lock",
+  'settings.biometrySub': "On launch and after 10 minutes away. Never interrupts an active workout.",
+  'settings.signOut': "Sign out",
+  'settings.backup': "Backup",
+  'settings.backupHint': "Profiles, programs, stats, weight, measurements and photos in one file.",
+  'settings.saveFile': "Save to file",
+  'settings.saveFileSub': "Your phone will ask where to save it",
+  'settings.restoreFile': "Restore from file",
+  'settings.restoreFileSub': "Everything currently in the app will be replaced by the file contents",
+  'settings.notifications': "Notifications",
+  'settings.notificationsSub': "Choose which events can reach you on your phone and by email.",
+  'settings.pushNotifications': "Push notifications",
+  'settings.emailNotifications': "By email",
+  'settings.emailNews': "News & updates",
+  'settings.emailNewsSub': "Major updates and new Fit Timer features",
+  'settings.emailOffers': "Deals & Premium",
+  'settings.emailOffersSub': "Occasional discounts, promotions, and subscription offers",
+  'settings.emailServiceNote': "Sign-in codes, receipts, and important account messages may be sent regardless of these settings.",
+  'settings.notifWorkouts': "Workouts",
+  'settings.notifWorkoutsSub': "Schedule, workout starts, and missed workouts",
+  'settings.notifTrainer': "Trainer & programs",
+  'settings.notifTrainerSub': "Trainer changes and catalog program status",
+  'settings.notifProgress': "Achievements & progress",
+  'settings.notifProgressSub': "Important progression milestones and achievements",
+  'settings.notifOffers': "Offers & news",
+  'settings.notifOffersSub': "Occasional app news and Premium offers",
+  'settings.dataRules': "Data & rules",
+  'settings.privacy': "Privacy policy",
+  'settings.privacySub': "What is collected, where it is stored, and what leaves your device",
+  'settings.terms': "Terms of use",
+  'settings.termsSub': "What the app is and who is responsible for what",
+  'settings.health': "Health & safety",
+  'settings.healthSub': "When to check with a doctor first and when to stop",
+  'settings.deleteAll': "Delete all data",
+  'handsfree.title': "Hands-free control",
+  'handsfree.offSub': "Use the on-screen buttons",
+  'handsfree.voiceSub': "Control workouts by voice. In the app it works offline after you download a voice pack",
+  'handsfree.headsetSub': "Use the play/pause button on your headphones to move to the next step",
+  'sound.title': "Workout sound",
+  'sound.use': "Use sounds and/or voice",
+  'sound.voiceVolume': "Use your phone’s volume buttons to change voice volume.",
+  'update.availableTitle': "Update available",
+  'update.availableText': "Update Fit Timer when it’s convenient.",
+  'update.downloading': "Downloading update · {progress}%",
+  'update.downloadingUnknown': "Downloading update…",
+  'update.verifying': "Checking the update file…",
+  'update.permission': "Allow Fit Timer to install updates. Installation will continue when you return.",
+  'update.installer': "Update downloaded. Confirm installation in the system window.",
+  'update.failed': "Couldn’t download the update — the connection may have dropped. Tap Retry to continue where it stopped.",
+  'update.requiredTitle': "Fit Timer needs an update{version}",
+  'update.requiredText': "This app version is no longer supported. Updating keeps your data and settings.",
+  'update.requiredHint': "This version is no longer compatible with the current service.",
+  'update.action': "Update",
+  'update.cancel': "Cancel",
+  'update.retry': "Retry",
+  'premium.title': "Fit Timer Premium",
+  'premium.lead': "Make training easier: get help building programs, choose ready-made plans, and keep your progress when you change phones.",
+  'premium.ai': "Let AI build programs and exercises for your goal",
+  'premium.catalog': "Use any program from the trainer catalog",
+  'premium.images': "Add clear images to exercises",
+  'premium.sync': "Continue from the same place on a new phone",
+  'premium.active': "Premium active",
+  'premium.buy': "Get Premium",
+  'login.title': "Sign in",
+  'login.codeHint': "We’ll email you a code. No other emails.",
+  'login.code': "Sign-in code",
+  'login.haveCode': "I already have a code",
+  'login.haveCodeMsg': "Enter the code for {email}. We won’t send another email.",
+  'login.haveCodeHint': "Use a one-time email code or a test code created in the admin panel.",
+  'login.codePlaceholder': "6 digits",
+  'login.nick': "Account nickname",
+  'login.nickHint': "Set once. This is your Fit Timer nickname, including on your trainer page.",
+  'login.sendCode': "Send code",
+  'create.title': "New program",
+  'create.aiSub': "Answer a few questions and AI does the rest",
+  'create.manual': "Build manually",
+  'create.manualSub': "Add exercises one by one",
+  'create.youtube': "From a YouTube video",
+  'create.youtubeSub': "Paste a workout video link",
+  'create.import': "From a link or file",
+  'create.importSub': "For a program someone shared with you or one you saved",
+  'builder.schedule': "When to train",
+  'builder.scheduleByDays': "By weekdays",
+  'builder.scheduleSequence': "In sequence",
+  'builder.trainingDays': "Training days",
+  'builder.trainingTime': "Workout time",
+  'builder.reminderHint': "We’ll remind you 15 minutes before and when it starts. Notifications must be allowed.",
+  'builder.variants': "Workout variants",
+  'builder.variantDays': "Days for this variant",
+  'builder.rounds': "Rounds",
+  'builder.restRounds': "Rest between rounds, sec",
+  'builder.progressionTitle': "Progress over time",
+  'builder.progressionSub': "reps and weight will gradually increase as you train",
+  'builder.progressionFrequency': "How often to check",
+  'builder.progressionHint': "Load increases based on how many times this exercise has been done, not the calendar: skipped sessions do not raise it. Each exercise has its own increment and limit. When it's time to check, we'll ask right after the workout, and raising the load takes one tap.",
+  'builder.descriptionCover': "Description & cover",
+  'builder.descriptionOptional': "Description (optional)",
+  'builder.coverOptional': "Cover (optional)",
+  'builder.choosePhoto': "Choose photo",
+  'builder.noCover': "No cover",
+  'builder.exercise': "Exercise",
+  'builder.name': "Name",
+  'builder.countMode': "Tracking mode",
+  'builder.reps': "Reps",
+  'builder.time': "Time",
+  'builder.weightedSub': "equipment, weights, etc.",
+  'builder.repsCount': "Reps",
+  'builder.sets': "Sets",
+  'builder.weightKg': "Weight, kg",
+  'builder.restSets': "Rest between sets, sec",
+  'builder.restSetsHint': "Between each set when there is more than one.",
+  'builder.restAfter': "Rest after exercise, sec",
+  'builder.restAfterHint': "After the whole exercise, before the next one.",
+  'builder.warmupSub': "done once at the start, before rounds",
+  'builder.eachSideSub': "lunges, side plank — count left and right together as one set",
+  'builder.stepReps': "Increase, reps",
+  'builder.maxReps': "Maximum, reps",
+  'builder.stepTime': "Increase, sec",
+  'builder.maxTime': "Maximum, sec",
+  'builder.stepWeight': "Increase, kg",
+  'builder.maxWeight': "Maximum, kg",
+  'builder.stepHint': "“Increase” is how much gets added each time; “maximum” is the growth limit. Without a maximum, values can become unrealistic over time.",
+  'builder.resetRepsAddWeight': "reps return to the starting value and weight increases by the increment",
+  'builder.swapSub': "we’ll suggest it during the workout when you reach the maximum",
+  'builder.swapWith': "Replace with",
+  'builder.swapHow': "How to perform the replacement",
+  'builder.swapHint': "When you reach the maximum, the workout will show a “ready to progress” badge.",
+  'builder.details': "Details",
+  'builder.howTo': "How to perform",
+  'builder.mistakesOptional': "Common mistakes (optional)",
+  'builder.muscles': "Target muscles",
+  'builder.videoOptional': "Video link (optional)",
+  'ai.step1': "Step 1",
+  'ai.onlyImportant': "Select only what matters — the rest will be chosen automatically.",
+  'ai.goal': "Goal",
+  'ai.level': "Level",
+  'ai.weekdays': "Weekdays",
+  'ai.duration': "Duration",
+  'ai.bodyFocus': "Body focus",
+  'ai.equipment': "Equipment",
+  'ai.limitations': "Limitations",
+  'ai.customRequestOptional': "Custom request (optional)",
+  'ai.selfContextOptional': "About you & your capabilities (optional)",
+  'ai.selfContextHint': "Used only for this AI request and not saved to the program or profile.",
+  'ai.exerciseOrder': "Exercise order",
+  'ai.warmup': "Warm-up",
+  'ai.splitDaysSub': "for example, legs on Monday and back on Thursday",
+  'ai.rotateSub': "first one, then the second, then the first again",
+  'ai.youtubeHint': "A regular YouTube link or short youtu.be link.",
+  'ai.wishesOptional': "Preferences (optional)",
+  'ai.editProgramHint': "AI will receive the full program and change only what you ask for.",
+  'ai.exerciseRequestHint': "Name an exercise or describe what you need — AI will choose one.",
+  'ai.exerciseCount': "Number of exercises",
+  'ai.formatOptional': "Format (optional)",
+  'ai.levelOptional': "Level (optional)",
+  'ai.musclesOptional': "Target muscles (optional)",
+  'ai.equipmentOptional': "Equipment (optional)",
+  'ai.autoPickHint': "Anything you don’t choose will be selected automatically from your description.",
+  'ai.step2': "Step 2",
+  'ai.doForMe': "Do it for me",
+  'ai.appDoesIt': "The app will do it automatically",
+  'ai.inChat': "Do it in an AI chat",
+  'ai.copyProgram': "Copy the program itself",
+  'ai.copyProgramSub': "Program text only, without an AI task — paste it into any chat",
+  'ai.step3': "Step 3 · Response from chat",
+  'ai.build': "Build",
+  'builder.programNameExample': "For example: Morning Blitz",
+  'builder.secondsExample': "For example: 120",
+  'builder.descriptionExample': "Who the program is for, what to expect, how often to train",
+  'builder.exerciseNameExample': "For example: Squats",
+  'builder.repsExample': "For example: 12-15",
+  'builder.setsExample': "For example: 3",
+  'builder.weightExample': "For example: 8",
+  'builder.stepRepsExample': "For example: 1",
+  'builder.maxRepsExample': "For example: 15",
+  'builder.stepTimeExample': "For example: 5",
+  'builder.maxTimeExample': "For example: 60",
+  'builder.stepWeightExample': "For example: 2",
+  'builder.maxWeightExample': "For example: 24",
+  'builder.swapNameExample': "For example: decline push-ups",
+  'builder.swapDescExample': "Technique for the harder variation: starting position, movement, what to watch for",
+  'builder.howToExample': "Describe the technique: starting position, movement, breathing",
+  'builder.mistakesExample': "What to avoid while performing the exercise",
+  'ai.customRequestExample': "For example: I like planks, add stretching at the end, no floor music",
+  'ai.selfContextExample': "For example: I weigh 120 kg, can do only 1 push-up, have a broken toe, or squat with a 16 kg kettlebell",
+  'ai.youtubeWishExample': "For example: make it easier for a beginner, remove jumps, split it into two days, add a warm-up",
+  'ai.editWishExample': "Describe it in your own words. For example: remove jumps, add more glute work, make it about 15 minutes shorter, replace squats with something gentler on the knees",
+  'ai.exerciseWishExample': "Describe it in your own words: “Bulgarian split squats using a chair”, “a gentle core exercise without neck strain”, “a hamstring stretch”",
+  'ai.exerciseEditWishExample': "For example: make it gentler on the knees, add a supported variation, explain the technique in more detail, switch from reps to time",
+  'ai.resultPlaceholder': "Copy the full AI response and paste it here",
+  'builder.exercisesSuffix': "exercises",
+  'builder.roundsSuffix': "rounds",
+  'builder.showFull': "Show full",
+  'builder.exercisesTitle': "Exercises",
+  'builder.exerciseImagesTitle': "Exercise images",
+  'builder.imagesIntro': "The cover and each exercise can have their own image. Upload them in bulk and assign them to the right places.",
+  'builder.imagesSource': "Where to get images",
+  'builder.chooseFromPhone': "Choose from phone",
+  'builder.uploadAndAssign': "Upload and assign",
+  'common.or': "or",
+  'builder.generateWithAI': "Generate with AI",
+  'builder.generateAllSub': "Generate all images at once in one style — the app will do it automatically",
+  'builder.generateInChat': "Generate in an AI chat",
+  'builder.generateInChatSub': "The app will prepare a prompt for an image-generating chat. Save the generated images to your phone, then upload them with the button above.",
+  'builder.copyPrompt': "Copy prompt",
+  'builder.copyPromptSub': "Then paste it into any AI chat",
+  'builder.uploaded': "Available",
+  'builder.generateScopeTitle': "Which images to generate",
+  'builder.generateAllImages': "Generate all",
+  'builder.generateAllImagesSub': "Redraw the cover and every exercise image",
+  'builder.generateMissingImages': "Missing only",
+  'builder.generateMissingImagesSub': "Keep existing images and generate only empty slots",
+  'builder.generateOneAI': "Generate with AI",
+  'builder.imageAI': "With AI",
+  'builder.remove': "Remove",
+  'builder.assignOrder': "Assign in order",
+  'builder.assignWhere': "Where to place",
+  'builder.assignHint': "Tap a slot to choose an available image, pick one from your phone, or generate a new one with AI.",
+  'workout.interrupt': "Stop workout",
+  'workout.saveExit': "Save and exit",
+  'workout.saveExitSub': "Next time you’ll continue from this point",
+  'workout.finishCompletely': "Finish completely",
+  'workout.finishCompletelySub': "Progress for this workout will be reset",
+  'workout.startFrom': "Where to start",
+  'workout.chooseExercise': "Choose exercise",
+  'workout.chooseExerciseSub': "Start from any point in the program",
+  'workout.continue': "Continue",
+  'workout.startOver': "Start over",
+  'workout.startOverSub': "From the first exercise",
+  'workout.startExerciseTitle': "Which exercise to start with",
+  'ai.working': "AI is working",
+  'ai.workingHint': "Your request is being processed — usually from a few seconds to three minutes. Keep the app open.",
+  'common.abort': "Cancel",
+  'builder.image': "Image",
+  'builder.noUploadedImages': "No available images yet — choose one from your phone or generate it with AI.",
+  'builder.removeImage': "Remove image",
+  'option.level.beginner': "Beginner",
+  'option.level.intermediate': "Intermediate",
+  'option.level.advanced': "Advanced",
+  'option.goal.loseWeight': "Lose weight",
+  'option.goal.tone': "Tone whole body",
+  'option.goal.glutesCore': "Glutes & core",
+  'option.goal.flatStomach': "Flatter stomach",
+  'option.goal.strength': "Strength & endurance",
+  'option.goal.definition': "Muscle definition",
+  'option.goal.flexibility': "Stretching & flexibility",
+  'option.goal.posture': "Posture & back",
+  'option.goal.postpartum': "Postpartum recovery",
+  'option.goal.cardio': "Cardio & energy",
+  'option.equip.none': "No equipment",
+  'option.equip.mat': "Mat",
+  'option.equip.dumbbells': "Dumbbells",
+  'option.equip.bands': "Resistance bands",
+  'option.equip.chair': "Chair",
+  'option.equip.ball': "Stability ball",
+  'option.equip.weights': "Wearable weights",
+  'option.equip.bar': "Pull-up bar",
+  'option.limit.none': "No limitations",
+  'option.limit.noJump': "No jumping",
+  'option.limit.quiet': "Quiet / low-impact",
+  'option.limit.knees': "Protect knees",
+  'option.limit.lowerBack': "Protect lower back",
+  'option.limit.wrists': "Protect wrists",
+  'option.limit.neck': "Protect neck",
+  'option.limit.pregnancy': "Pregnancy",
+  'option.style.circuit': "Circuit",
+  'option.style.strength': "Strength",
+  'option.style.mixed': "Mixed",
+  'option.warm.with': "With warm-up",
+  'option.warm.without': "No warm-up",
+  'option.format.reps': "Reps",
+  'option.format.weight': "Weighted",
+  'option.format.time': "Time",
+  'muscle.neck': "Neck",
+  'muscle.shoulders': "Shoulders",
+  'muscle.chest': "Chest",
+  'muscle.arms': "Arms",
+  'muscle.core': "Core",
+  'muscle.back': "Back",
+  'muscle.glutes': "Glutes",
+  'muscle.quads': "Quadriceps",
+  'muscle.hamstrings': "Hamstrings",
+  'muscle.calves': "Calves",
+  'day.mon': "Mon",
+  'day.tue': "Tue",
+  'day.wed': "Wed",
+  'day.thu': "Thu",
+  'day.fri': "Fri",
+  'day.sat': "Sat",
+  'day.sun': "Sun",
+  'option.desc.circuit': "Go through the whole list once, then return to the start: A, B, C → A, B, C. Faster pace, less downtime.",
+  'option.desc.strength': "Finish all sets of one exercise before moving on: A, A, A → B, B, B. More focused muscle fatigue.",
+  'option.desc.mixed': "Several exercises form a block, and that block repeats for multiple rounds.",
+  'option.desc.warm': "A few light exercises at the start, done once before the rounds.",
+  'option.desc.noWarm': "Go straight to the main workout if you already warmed up or this continues another session.",
+  'ai.createLead': "Answer a few questions and the program is ready: exercises, reps, rounds, and days. You can edit everything.",
+  'ai.stepAbout': "Step 1 · About you and the workout",
+  'ai.stepBuild': "Step 2 · How to build it",
+  'ai.buildForMe': "Build it for me",
+  'ai.preparingProgram': "Building your program",
+  'ai.chatTaskNote': "The app will prepare a prompt for an AI chat. Send it there, then paste the response here. It takes longer, but it’s free.",
+  'ai.answerProgramHint': "Paste the full AI response — the program will open in the builder.",
+  'ai.buildFromAnswer': "Build program from response",
+  'ai.videoLead': "Paste a YouTube workout link and AI will turn the video into exercises with timestamps.",
+  'ai.stepVideo': "Step 1 · Video link",
+  'ai.stepParse': "Step 2 · How to process it",
+  'ai.parseForMe': "Process it for me",
+  'ai.parsingVideo': "Processing video",
+  'ai.videoChatNote': "Not every AI chat can access videos — use one with internet access.",
+  'ai.editTitle': "Editing",
+  'ai.stepWhatFix': "Step 1 · What to change",
+  'ai.stepHowApply': "Step 2 · How to apply changes",
+  'ai.changeForMe': "Change it for me",
+  'ai.applyingChanges': "Applying changes",
+  'ai.editCopyNote': "The original program stays. An edited copy will appear next to it, and images will carry over automatically.",
+  'ai.chatProgramNote': "The app will prepare a prompt containing your program. Send it to an AI chat, then paste the response here.",
+  'ai.answerEditedHint': "Paste the full AI response to create an edited copy. The original program will remain.",
+  'ai.createEdited': "Create edited program",
+  'ai.exerciseLead': "Describe the exercise in your own words — AI will add technique, target muscles, and common mistakes.",
+  'ai.stepExerciseNeed': "Step 1 · What exercise you need",
+  'ai.stepPickExercise': "Step 2 · How to choose it",
+  'ai.pickingExercise': "Choosing exercise",
+  'ai.chatExerciseNote': "The app will prepare a prompt. Send it to an AI chat, then paste the response here.",
+  'ai.answerExerciseHint': "Paste the full AI response — the exercise will be added to the end of the program.",
+  'ai.addToProgram': "Add to program",
+  'ai.stepWhatChange': "Step 1 · What to change",
+  'ai.stepApply': "Step 2 · How to apply it",
+  'ai.changingExercise': "Changing exercise",
+  'ai.keepImageNote': "The exercise image will stay in place.",
+  'ai.answerApplyHint': "Paste the full AI response — the app will apply everything it can extract.",
+  'ai.applyChanges': "Apply changes",
+  'ai.pickOneExercise': "Choose an exercise",
+  'ai.pickExercises': "Choose {count} exercises",
+  'handsfree.unavailable': "Voice control is not available on this device. You can use the headset button instead.",
+  'handsfree.packFirst': "Download the voice pack for the selected language first. After that, commands will work offline.",
+  'handsfree.readyNative': "Ready. During a workout, say “next”, “done”, or “skip” to move on. “Pause” pauses the workout and “continue” resumes it.",
+  'handsfree.readyWeb': "Voice control is on. Say “next”, “pause”, or “continue”.",
+  'audio.voiceFallback': "Voice {count}",
+  'audio.online': "online",
+  'voicepack.ready': "Ready for offline use",
+  'voicepack.downloadOnce': "One-time download · about {size} MB",
+  'voicepack.downloaded': "Downloaded",
+  'voicepack.download': "Download",
+  'voicepack.queued': "Download queued. You can leave this screen.",
+  'voicepack.inQueue': "Queued",
+  'voicepack.downloading': "Downloading… {progress}% · you can keep using the app",
+  'voicepack.downloadingBtn': "Downloading",
+  'voicepack.extracting': "Preparing voice pack…",
+  'voicepack.almostReady': "Almost ready",
+  'voicepack.error': "Download failed. Check your connection and try again.",
+  'voicepack.retry': "Retry",
+  'voicepack.startError': "Couldn’t start the download. Check your connection and try again.",
+  'workout.editExercise': "Edit exercise",
+  'workout.editUnavailable': "This exercise is not from a saved program, so there’s nothing to edit.",
+  'workout.rest': "Rest",
+  'workout.exercise': "Exercise",
+  'workout.exerciseProgress': "Exercise {idx} / {total}",
+  'workout.warmupProgress': "Warm-up {idx} / {total}",
+  'workout.warmup': "Warm-up",
+  'workout.roundProgress': "Round {idx} / {total}",
+  'workout.setProgress': "Set {idx} / {total}",
+  'workout.eachSide': "on each side",
+  'workout.sideProgress': "side {idx} of {total}",
+  'workout.swapIntro': "“{title}” has reached its progression ceiling. Here’s a harder option you can use instead:",
+  'workout.noDescription': "No description provided.",
+  'workout.copyNameDesc': "Copy name and description",
+  'workout.swapAIHint': "AI will choose technique and new starting values, then replace the exercise immediately.",
+  'workout.swapNotFound': "Couldn’t find this exercise in the program. Replace it through the program editor.",
+  'workout.swapPicking': "Choosing replacement",
+  'workout.aiNoResponse': "AI didn’t respond:\n\n{error}\n\nTry again or replace the exercise manually after the workout.",
+  'common.unknownError': "unknown error",
+  'workout.aiNoExercise': "No exercise was found in the AI response. Try again.",
+  'workout.swapReplaced': "It’s now “{name}”. Sets and rest stay the same for the rest of this workout; future steps will use the new exercise.",
+  'workout.next': "Next",
+  'workout.repsShort': "reps",
+  'workout.secShort': "sec",
+  'workout.setLower': "set",
+  'workout.sideLower': "side",
+  'workout.finishedCanvas': "Workout complete!",
+  'workout.timeFormat': "minutes : seconds",
+  'workout.shareTitle': "Workout result — Fit Timer",
+  'workout.shareFallback': "Image saved to Downloads — share it from your gallery.",
+  'workout.imageError': "Couldn’t create the image.",
+  'workout.switchSide': "Switch sides",
+  'workout.switchSideInstruction': "Switch sides and get into the starting position.",
+  'workout.restInstruction': "Catch your breath.",
+  'profile.title': "Profile",
+  'profile.new': "New profile",
+  'profile.nameRequired': "Enter a name.",
+  'profile.genderRequired': "Choose a gender — it affects exercise selection and training load.",
+  'profile.onlyOne': "This is the only profile. To erase everything, open Account and choose “Delete all data”.",
+  'profile.deleteQuestion': "Delete profile “{name}” together with all its programs and statistics?",
+  'common.delete': "Delete",
+  'common.keep': "Keep",
+  'common.wait': "Wait",
+  'account.deleteAccountQuestion': "Delete the account and all data? ",
+  'account.deleteDataQuestion': "Delete all data? ",
+  'account.deleteLocalWarning': "Profiles, programs, statistics, weight, measurements, and photos will be erased from this phone and cannot be restored.",
+  'account.deleteCoachWarning': " Your trainer-page information will be removed and links sent to clients will stop opening. Programs already published in the catalog will remain there because other people may already be using them.",
+  'account.deleteAll': "Delete everything",
+  'account.deleteConfirmPhrase': "confirm deletion",
+  'account.serverDeleteFailed': "The server did not respond, so the server copy was not deleted. If you erase this phone now, you may not be able to remove that data later because the key exists only here. Erase anyway?",
+  'account.eraseAnyway': "Erase anyway",
+  'premium.until': "Premium until {date}",
+  'premium.autoYear': "Renews automatically — {price} per year",
+  'premium.autoMonth': "Renews automatically — {price} per month",
+  'premium.renewOff': "Auto-renew is off. The free plan returns after this date.",
+  'premium.manageAccount': "Manage your subscription in Account.",
+  'premium.month': "Month",
+  'premium.year': "Year",
+  'premium.perMonth': "{price} / month",
+  'premium.monthlyCharge': "charged monthly",
+  'premium.saveBadge': "save {percent}%",
+  'premium.buyFor': "Subscribe for {price}",
+  'premium.yearFine': "Charged now, then {price} once a year. Cancel anytime.",
+  'premium.monthFine': "Charged now, then {price} once a month. Cancel anytime.",
+  'account.version': "Version",
+  'account.buildNote': "unified account and native sharing",
+  'premium.freePlan': "Free plan",
+  'premium.untilShort': "Until {date}",
+  'premium.renews': "renews automatically",
+  'premium.renewDisabled': "auto-renew off",
+  'premium.freePitch': "AI, the full trainer catalog, and sync — from {price} / month",
+  'premium.bannerPitch': "AI can build your workout, with the full trainer catalog and sync. From {price} / month.",
+  'account.dataTitle': "Account details",
+  'account.deleteAccountTitle': "Delete account",
+  'account.deleteDataTitle': "Delete data",
+  'account.deleteAccountButton': "Delete account and all data",
+  'account.deleteAllButton': "Delete all data",
+  'account.deleteAccountNote': "Everything will be deleted, including the account and subscription. It can only be restored from a backup if you have one. Programs already published in the catalog will remain there.",
+  'account.deleteLocalNote': "All data on this phone will be deleted. It can only be restored from a backup if you have one.",
+  'login.emailTypo': "Check the email address — it looks like there may be a typo.",
+  'login.emailVerification': "Verify email",
+  'login.verificationMsg': "We’ll send a code to {email}. It confirms the address is yours, so your subscription can be restored on another phone.",
+  'premium.purchaseSuccess': "Your subscription is active until {date}. The account is linked to {email}; programs, statistics, weight, and measurements can be restored on another phone. Progress photos stay only on this device.",
+  'login.otherAccount': "Another account",
+  'login.intro': "Sign-in and registration use the same quick email flow. The account is free and stores your username and subscription. Premium syncs programs, statistics, weight, and measurements between devices. Progress photos stay only on this phone.",
+  'login.syncing': "Syncing…",
+  'login.syncingMsg': "Signed in. Loading profiles, programs, and statistics — keep the app open.",
+  'login.syncPending': "Signed in, but sync has not finished yet. Data will upload automatically when a connection is available.",
+  'login.created': "Account created. Username {handle} is now attached to it. With Premium, programs, statistics, weight, and measurements can be restored through this email.",
+  'login.welcomeTrainer': "Welcome back. Username {handle} is yours again; the trainer page can no longer be edited from the previous phone.",
+  'login.done': "Done — you’re signed in.",
+  'login.addressTypo': "Check the address — it looks like there may be a typo.",
+  'login.handleRule': "Username: at least 2 characters after @. Letters, numbers, periods, and hyphens are allowed.",
+  'login.savingHandle': "Saving username…",
+  'login.sending': "Sending…",
+  'login.sent': "Email sent to {email}. The code is valid for 15 minutes.",
+  'login.devCode': "Local run, code: {code}",
+  'login.signIn': "Sign in",
+  'login.checking': "Checking…",
+  'login.createTitle': "Create account",
+  'login.chooseHandle': "Email verified. Choose one username for both your account and trainer page.",
+  'login.createAccount': "Create account",
+  'login.handleTaken': "That username is already taken. Try another one.",
+  'account.signOutQuestion': "Sign out of {email}? Programs, statistics, weight, and photos will stay on this phone. The subscription and biometric sign-in will be detached and return when you sign in again.",
+  'account.signOut': "Sign out",
+  'bio.cancelled': "verification was cancelled.",
+  'bio.unsupported': "biometrics are not available on this device.",
+  'bio.notEnrolled': "add a fingerprint or face in your phone settings first.",
+  'bio.unavailable': "biometrics are temporarily unavailable.",
+  'bio.lockout': "the system temporarily locked biometrics after unsuccessful attempts.",
+  'bio.refused': "the device could not complete verification.",
+  'bio.needAccount': "Biometrics protect an already signed-in account, so sign in with email first.",
+  'bio.enableFailed': "Couldn’t enable biometrics: {error}",
+  'bio.disableQuestion': "Turn off the biometric privacy lock? The app will open without verification.",
+  'lock.prompt': "Confirm with your fingerprint or face to continue.",
+  'lock.unlock': "Unlock",
+  'lock.email': "Sign in with email",
+  'lock.failed': "Verification was cancelled. Try again or sign in with email.",
+  'lock.failedReason': "Biometrics didn’t work: {reason} Try again or sign in with email.",
+  'progress.photoCount': "{count} photos",
+  'progress.photoUpdate': "time for a new photo",
+  'progress.deleteAllPhotos': "Delete all {count} photos? Progress photos are not stored anywhere else and cannot be recovered.",
+  'progress.deleteConfirmPhrase': "confirm deletion",
+  'progress.todayReplace': "There is already a photo for today. The new one will replace it and the old one cannot be recovered.",
+  'common.replace': "Replace",
+  'progress.daysBetween': "{count} {days} between photos",
+  'progress.sameDay': "Photos from the same day",
+  'progress.photoPosition': "{current} of {total}",
+  'progress.deletePhoto': "Delete the photo from {date}?",
+  'share.openFailed': "Couldn’t open the system Share menu. Try again.",
+  'share.savedDownloads': "File saved to Downloads.",
+  'progress.preparePhotoFailed': "Couldn’t prepare the photos.",
+  'progress.myProgress': "My progress",
+  'progress.daysWork': "{count} {days} OF PROGRESS",
+  'progress.journeyStart': "THE START",
+  'progress.imageFailed': "Couldn’t create the image.",
+  'progress.shareTitle': "My progress — Fit Timer",
+  'progress.shareFallback': "Image saved to Downloads — share it from your gallery.",
+  'backup.saved': "Backup saved to Downloads. It includes profiles, programs, statistics, weight, measurements, photos, account and subscription, and trainer data if you use trainer mode.",
+  'backup.readFailed': "Couldn’t read the file.",
+  'backup.invalid': "This is not a Fit Timer backup file.",
+  'backup.replaceAll': "Replace ALL app data with the data from this file? Current data will be overwritten.",
+  'backup.noProfiles': "The backup contains no profiles.",
+  'progress.bodyWeight': "WEIGHT",
+  'progress.bodyFat': "BODY FAT",
+  'progress.bodyMuscle': "MUSCLE",
+  'progress.waist': "WAIST",
+  'progress.hips': "HIPS",
+  'progress.chest': "CHEST",
+  'progress.kg': "kg",
+  'progress.cm': "cm",
+  'progress.pressure': "BLOOD PRESSURE",
+  'progress.pulse': "PULSE",
+  'progress.sleep': "SLEEP",
+  'progress.bpm': "bpm",
+  'progress.hoursShort': "h",
+  'progress.addMetricFirst': "Add at least one body metric first.",
+  'progress.myChanges': "My changes",
+  'progress.addWellnessFirst': "Add at least one wellness measurement first.",
+  'progress.myWellness': "My wellness",
+  'progress.deleteEntry': "Delete entry",
+  'progress.fat': "Body fat %",
+  'progress.muscle': "Muscle %",
+  'progress.waistLabel': "Waist",
+  'progress.hipsLabel': "Hips",
+  'progress.chestLabel': "Chest",
+  'progress.shareSaved': "Image saved to Downloads.",
+  'profile.switch': "switch",
+  'profile.now': "current",
+  'profile.edit': "Edit",
+  'profile.noName': "Unnamed",
+  'profile.multiHint': "Each profile has its own programs, statistics, weight, and photos.",
+  'profile.singleHint': "Add a second profile, for example for a family member. Each profile has its own programs and statistics.",
+  'profile.ageYears': "{count} {years}",
+  'profile.yearOne': "year",
+  'profile.yearFew': "years",
+  'profile.yearMany': "years",
+  'progress.history': "History",
+  'progress.share': "Share",
+  'progress.noChange': "no change",
+  'progress.sinceLast': "{delta} {unit} since last time",
+  'progress.height': "Height",
+  'progress.bmi': "BMI",
+  'progress.weight': "Weight",
+  'progress.fatShort': "Body fat",
+  'progress.muscleShort': "Muscle",
+  'progress.waistShort': "Waist",
+  'progress.hipsShort': "Hips",
+  'progress.chestShort': "Chest",
+  'progress.records': "{count} {records}",
+  'progress.recordOne': "entry",
+  'progress.recordFew': "entries",
+  'progress.recordMany': "entries",
+  'progress.pressureShort': "Blood pressure",
+  'progress.pulseShort': "Pulse",
+  'progress.sleepShort': "Sleep",
+  'progress.recordedOn': "recorded {date}",
+  'well.pressurePair': "Blood pressure needs both values: systolic and diastolic.",
+  'well.fillOne': "Fill in at least one field.",
+  'well.sleepHours': "Sleep, h",
+  'sync.premiumOnly': "Workout sync is available with Premium",
+  'sync.busy': "Syncing data…",
+  'sync.progress': "Syncing… {step}/{total} ({detail})",
+  'sync.progressShort': "Syncing… {step}/{total}",
+  'sync.stage.check': "checking changes",
+  'sync.stage.download': "downloading data",
+  'sync.stage.upload': "uploading changes",
+  'sync.ok': "Data saved to the server · progress photos stay only on this phone",
+  'sync.error': "No server connection · changes will upload later",
+  'sync.account': "Data syncs with your account",
+  'store.alreadyOwned': "Already yours",
+  'store.programOne': "program",
+  'store.programFew': "programs",
+  'store.programMany': "programs",
+  'store.emptyTitle': "Nothing found",
+  'store.emptyText': "Try another search or clear the filters — the catalog is still growing.",
+  'store.minuteShort': "min",
+  'store.secShort': "sec",
+  'store.repShort': "reps",
+  'store.setOne': "set",
+  'store.setFew': "sets",
+  'store.setMany': "sets",
+  'store.roundOne': "round",
+  'store.roundFew': "rounds",
+  'store.roundMany': "rounds",
+  'store.variantOne': "variant",
+  'store.variantFew': "variants",
+  'store.variantMany': "variants",
+  'store.exerciseOne': "exercise",
+  'store.exerciseFew': "exercises",
+  'store.exerciseMany': "exercises",
+  'store.inSequence': "in sequence",
+  'store.perSide': "per side",
+  'store.warmup': "Warm-up",
+  'store.untitled': "Untitled",
+  'store.open': "Open",
+  'store.addMine': "Add to my workouts",
+  'store.lockedText': "{count} {exercises} with technique guidance, common mistakes, and progression. Available with Premium.",
+  'store.addFailed': "Couldn’t add the program. Try again.",
+  'store.added': "“{name}” is now in your workouts.",
+  'trainer.experienceOne': "year of experience",
+  'trainer.experienceFew': "years of experience",
+  'trainer.experienceMany': "years of experience",
+  'trainer.programOne': "program",
+  'trainer.programFew': "programs",
+  'trainer.programMany': "programs",
+  'trainer.opensOne': "person added",
+  'trainer.opensMany': "people added",
+  'trainer.withUsMonth': "month with us",
+  'trainer.withUsMonths': "months with us",
+  'trainer.withUsDay': "day with us",
+  'trainer.withUsDays': "days with us",
+  'publish.pending': "under review",
+  'publish.approved': "in catalog",
+  'publish.rejected': "not approved",
+  'publish.gone': "submission missing",
+  'publish.listHint': "Programs are reviewed by a person. Approved programs become visible to everyone in the catalog.",
+  'publish.emptyHint': "Nothing has been submitted yet. Open one of your programs, then use “⋮” → “Submit to catalog”.",
+  'publish.approx': "{count} {exercises} · about {minutes} min",
+  'publish.pendingText': "Under review. A person reviews each program; this usually takes a day or two.",
+  'publish.approvedText': "The program is in the catalog and visible to everyone.",
+  'publish.rejectedText': "Not approved. You can edit it and submit again.",
+  'publish.goneText': "The submission could not be found. You can submit it again.",
+  'publish.needGoal': "goal",
+  'publish.needLevel': "level",
+  'publish.needGives': "“what it gives” — at least 20 characters",
+  'publish.needExercises': "at least three exercises in the program",
+  'publish.missing': "Missing: {items}.",
+  'publish.sent': 'Sent for review. Track its status in More → Trainer → Catalog submissions.',
+  'publish.errNoTrainer': "First complete your trainer profile or send a program to a client so the username is linked to you.",
+  'publish.errNotYours': "This username belongs to another trainer.",
+  'publish.errBanned': "Program submissions from this username are disabled.",
+  'publish.errTooMany': "You’ve already submitted three programs today. Try again tomorrow.",
+  'publish.errAlready': "This program is already under review or already in the catalog.",
+  'publish.errStore': "Catalog storage is not configured on the server yet.",
+  'publish.errBad': "Missing data: {items}.",
+  'publish.checkFields': "check the fields",
+  'publish.errNetwork': "Couldn’t submit the program — the server may be unavailable.",
+  'catalog.fromTrainers': "{count} {programs} from trainers",
+  'catalog.trainerWorkouts': "Trainer workouts",
+  'builder.variant': "Variant",
+  'publish.statusCatalog': "in catalog",
+  'publish.statusReview': "under review",
+  'publish.statusRejected': "not approved",
+  'clients.statClients': "Clients",
+  'clients.statActive': "Active",
+  'clients.statWorkouts': "Workouts",
+  'clients.noPrograms': "No programs yet",
+  'clients.programFallback': "Program",
+  'clients.hintHas': "A client can train without an account — they only need to open the link.",
+  'clients.hintEmpty': "Add a client, choose a program, and send the link. Neither of you needs an account for this.",
+  'clients.default': "Client",
+  'clients.sendMore': "Send another program",
+  'clients.send': "Send program",
+  'clients.sendHintMany': "A client can have multiple programs. Each one has its own link and workout history.",
+  'clients.sendHintFirst': "Anyone with the link can open it. The full program is embedded in the link, so it can be forwarded.",
+  'clients.emptyCard': "No programs yet. Send the first one and its workout history will appear here.",
+  'clients.oldLink': "This link was sent by an older app version, so opens and reports cannot be tracked. Send the program again.",
+  'clients.resend': "Send link again",
+  'clients.remove': "Remove this program",
+  'report.none': "No workouts yet. A report will appear after the client finishes the first workout.",
+  'clients.chooseProgram': "Choose a program first. “Send to client” is available in the menu of any program in your workout list.",
+  'clients.programGone': "This program is no longer in your list — send another one.",
+  'clients.linkCopied': "Link copied. Send it to the client in any messenger. Opens and workout reports will appear here automatically.",
+  'clients.copyLink': "Copy the link and send it to the client:",
+  'clients.sendTo': "Send to",
+  'clients.alreadyHas': "this client already has the program — the link will be sent again",
+  'clients.new': "New client",
+  'clients.sessionOne': "session",
+  'clients.sessionFew': "sessions",
+  'clients.sessionMany': "sessions",
+  'clients.silent': "inactive for {count} {days}",
+  'clients.openedNoSessions': "opened, no workouts",
+  'clients.sentToday': "sent today",
+  'clients.waiting': "waiting {count} {days}",
+  'clients.notSent': "not sent",
+  'clients.withPrograms': "{count} {programs}",
+  'clients.sentOn': "sent {date}",
+  'clients.openedOn': "opened {date}",
+  'clients.opened': "opened",
+  'clients.notOpened': "not opened yet",
+  'clients.localMissing': "program is no longer in your list",
+  'clients.removeQuestion': "Remove “{name}” from this client card? Its workouts will stop showing here, but the client will keep the program.",
+  'clients.removeAction': "Remove",
+  'clients.shareText': "Program “{program}”{forClient} — open the link to add it to Fit Timer:",
+  'clients.forClient': " for {name}",
+  'clients.pullNoStore': "Server storage is not configured, so opens and reports cannot be saved.",
+  'clients.pullNotFound': "The link was not found on the server. Send the program again.",
+  'clients.pullBadKey': "No access to this link. Send the program again.",
+  'clients.pullRate': "Too many checks in a row. Try again in a couple of minutes.",
+  'clients.pullOffline': "No server connection — the data may be outdated.",
+  'clients.defaultName': "Client {count}",
+  'clients.alreadyCount': "already {count} {programs}",
+  'report.workoutOne': "workout",
+  'report.workoutFew': "workouts",
+  'report.workoutMany': "workouts",
+  'report.last': "last {date}",
+  'report.streak': "streak {count}",
+  'report.byWeeks': "By week",
+  'report.now': "now",
+  'report.byDays': "By day",
+  'report.never': "never",
+  'report.workouts': "Workouts",
+  'report.moreEarlier': "and {count} more earlier",
+  'report.changed': "Changed in program",
+  'report.removed': "removed",
+  'report.added': "added",
+  'report.growth': "Progressing",
+  'report.warmup': "warm-up",
+  'report.reportOn': "Report from {date}",
+  'report.totalReports': "{count} reports total",
+  'report.setShort': "sets",
+  'common.exerciseFallback': "Exercise",
+  'programs.none': "No programs",
+  'programs.emptyTitle': "No programs yet",
+  'programs.emptyText': "Build your first program in a few minutes: describe the workout you want and let AI build it, or add exercises manually.",
+  'programs.completed': "Completed: {count}",
+  'programs.offShort': "Off",
+  'programs.sequence': "in sequence",
+  'common.edit': "Edit",
+  'programs.disable': "Disable",
+  'programs.enable': "Enable",
+  'programs.disableTitle': "Remove from schedule without deleting",
+  'programs.enableTitle': "Return to schedule",
+  'programs.disabledAlert': "Program disabled. It will not appear in today’s plan or weekly progress. You can still start it manually, but that workout will not count toward statistics or achievements.",
+  'programs.shareLink': "Share link",
+  'programs.sendClient': "Send to client",
+  'programs.saveFile': "Save to file",
+  'programs.allImages': "Includes all images",
+  'programs.deleteQuestion': "Delete program “{name}”? Its statistics will also be deleted.",
+  'common.duplicate': "Duplicate",
+  'programs.submitCatalog': "Submit to catalog",
+  'programs.drag': "Drag",
+  'common.collapse': "Collapse",
+  'programs.disabledStart': "This program is disabled. The workout will not count toward statistics or achievements.",
+  'programs.startAnyway': "Start anyway",
+  'workout.resumeSummary': "Stopped after {done} of {all} exercises · {age}",
+  'workout.sessionSaved': "Your place was saved. You can continue from here next time.",
+  'trainer.needAccount': "Account required",
+  'trainer.needAccountMsg': "Trainer mode requires the main email account. Create or restore the free account; its username will also be used on your trainer page.",
+  'trainer.needAccountSaveMsg': "Trainer mode requires the main email account. Create or restore the account first, then save your trainer page.",
+  'trainer.badLink': "This doesn’t look like a valid address. Use a website or profile link such as t.me/name, vk.com/name, or instagram.com/name.",
+  'trainer.photoFailed': "Couldn’t load the photo.",
+  'common.saving': "Saving…",
+  'common.saved': "Saved",
+  'trainer.saveFailed': "Couldn’t save. Check your connection and try again.",
+  'trainer.enableFirst': "Enable trainer mode and set a username first.",
+  'clients.removeClient': "Remove “{name}” from the list? They will keep the program because the link was already sent.",
+  'clients.unnamed': "client",
+  'clients.buildFirst': "Create a program on the Workouts screen first, then you can send it.",
+  'clients.sentAgain': "already sent — the link will be sent again",
+  'clients.exerciseCount': "{count} exercises",
+  'clients.chooseWhichProgram': "Which program to send",
+  'builder.deleteVariant': "Delete this variant and all of its exercises?",
+  'progress.weightRange': "Enter a weight from 20 to 300 kg.",
+  'premium.payYear': "Premium for one year — {price}. It renews yearly at the same price until you cancel.",
+  'premium.payMonth': "Premium for one month — {price}. It renews monthly at the same price until you cancel.",
+  'premium.pay': "Pay {price}",
+  'premium.disableRenew': "Turn off auto-renew? Premium will remain active until {date}, then the free plan returns. Your programs and statistics will stay.",
+  'premium.disableRenewAction': "Turn off",
+  'lock.enterEmail': "Enter the email linked to the account.",
+  'lock.backBiometric': "Back to biometrics",
+  'progress.addPhoto': "Add photo",
+  'profile.changes': "Profile changes",
+  'profile.replacePhoto': "Replace photo",
+  'profile.deletePhoto': "Delete photo",
+  'finish.share': "Share",
+  'finish.addNote': "Add note",
+  'video.addLink': "Paste a video link.",
+  'video.badUrl': "This doesn’t look like a YouTube link. The address may be incomplete or from another service.",
+  'video.tryAnyway': "Try anyway",
+  'video.checkAddress': "Check address",
+  'common.copyFailedManual': "Couldn’t copy automatically. Select the text manually.",
+  'video.parseProblems': "Problems:",
+  'video.defaultProgram': "Program from video",
+  'video.source': "Source",
+  'video.added': "Done: “{name}” was added.",
+  'video.notWorkout': "This does not appear to be a workout video. I did not build a program because that would require guessing.",
+  'video.noTranscript': "Captions could not be read, and the video cannot be analyzed safely right now. Try another video.",
+  'video.insufficient': "The video does not contain enough verified exercise, rep, or timing data. I did not fill the gaps by guessing.",
+  'video.unavailable': "YouTube would not let Fit Timer read this video. Check that it is public and available from the link.",
+  'video.analysisTimeout': "Video analysis took too long. Try again or use a video with available captions.",
+  'video.processingSafe': "Getting captions, checking that this is a workout, then building the program from verified details.",
+  'common.copyFailedRetry': "Couldn’t copy. Try again.",
+  'common.copied': "✓ Copied",
+  'common.copyManual': "Couldn’t copy automatically. Copy it manually:",
+  'ai.workingDefault': "AI is working",
+  'ai.workingLong': "Processing the request — this usually takes from a few seconds to three minutes. Keep the app open.",
+  'ai.buildRequestFailed': "Couldn’t build the request.",
+  'ai.runFailed': "AI didn’t respond:\n\n{error}",
+  'ai.retryQuestion': "Your request and all filled fields are still here. Retry generation now?",
+  'ai.retry': "Retry",
+  'ai.editRequest': "Edit request",
+  'ai.notNow': "Not now",
+  'ai.unsavedRequest': "The filled request has not been saved. If you leave now, it will be lost.",
+  'common.leaveWithoutSaving': "Leave without saving",
+  'common.stay': "Stay",
+  'audio.voiceOn': "Voice enabled",
+  'images.processing': "Processing… {done}/{total}",
+  'images.uploaded': "Uploaded images: {count}. Assign them to slots or use “Assign in order”.",
+  'images.removeQuestion': "Remove uploaded images from this list? Images already assigned to exercises will stay in place.",
+  'images.removeAction': "Remove",
+  'images.loadFailed': "Couldn’t load the image.",
+  'storage.full': "Your phone is out of space — the latest changes weren’t saved. Free up some space or delete extra progress photos and try again.",
+  'images.needProgramName': "Name the program first — a cover can’t be generated without a program name.",
+  'images.needExerciseName': "Name the exercise first — the AI uses the name to know what to draw.",
+  'images.needAllExerciseNames': "Name every exercise first. The images section is unavailable while {count} exercise(s) have no name.",
+  'builder.unsavedProgram': "Program changes have not been saved. If you leave now, they will be lost.",
+  'ai.unsavedSwitch': "The filled request has not been saved. If you switch modes now, it will be lost.",
+  'common.switch': "Switch",
+  'exercise.mainLimitAdd': "The main workout already has the maximum of {count} exercises. Remove one before adding another.",
+  'exercise.nameRequired': "The exercise needs a name; otherwise the list will contain an empty row.",
+  'exercise.warmLimitDuplicate': "The warm-up already has the maximum of {count} exercises, so this one can’t be duplicated.",
+  'exercise.mainLimitDuplicate': "The main workout already has the maximum of {count} exercises, so this one can’t be duplicated.",
+  'exercise.this': "this exercise",
+  'exercise.deleteQuestion': "Delete “{name}”?",
+  'exercise.newUnsaved': "This exercise is still empty. If you leave now, it will not be added.",
+  'exercise.unsaved': "Exercise changes have not been saved. If you leave now, they will be lost.",
+  'exercise.warmMax': "The warm-up can contain up to {count} exercises.",
+  'exercise.mainMax': "The main workout can contain up to {count} exercises.",
+  'images.summaryFilled': "{filled} of {total} set",
+  'images.summaryEmpty': "0 of {total} set",
+  'builder.anyDays': "any days",
+  'builder.restSummary': "rest {time}",
+  'builder.progressionAuto': "automatic progression",
+  'builder.programChanges': "Program changes",
+  'stats.clearQuestion': "Clear all workout statistics? Total time, workout count, history, calendar, weeks, streaks, and achievements will be deleted. Programs, weight, measurements, wellness, and photos will remain.",
+  'stats.clear': "Clear",
+  'progress.comparePhotos': "Show before / after",
+  'progress.deleteAllPhotosBtn': "Delete all photos",
+  'profile.defaultNumber': "Profile {count}",
+  'handsfree.headsetUnsupported': "This browser does not support headset controls.",
+  'handsfree.mediaTitle': "Fit Timer — workout",
+  'handsfree.mediaArtist': "Headset button = next step",
+  'handsfree.micDenied': "Microphone access is blocked. Allow it for this site in your browser settings.",
+  'notify.permissionDenied': "Notifications are blocked in system settings. Allow them for Fit Timer, then enable this option again.",
+  'notify.beforeTitle': "Workout in 15 minutes",
+  'notify.beforeBody': "“{name}” starts at {time}. Get ready!",
+  'notify.startTitle': "Time to work out",
+  'notify.timerDoneTitle': "Time to continue",
+  'notify.timerDoneNext': "Next — {name}",
+  'notify.timerDoneBody': "The timer is done. Return to your workout.",
+  'notify.todayManyTitle': "Today — {count}",
+  'notify.beforeManyTitle': "In 15 minutes — {count}",
+  'notify.beforeManyBody': "At {time}: {names}.",
+  'notify.remainingManyTitle': "Still left today: {count}",
+  'notify.moreCount': "{count} more",
+  'notify.progressManySuffix': "Load is higher in {count}.",
+  'notify.activeForgotTitle': "Don’t forget your workout 💪",
+  'notify.activeForgotBody': "It’s still active. Come back to continue or finish it.",
+  'notify.startBody': "Time for “{name}”. Let’s go!",
+  'notify.startTitleShort': "Time to work out",
+  'notify.todayPlan': "Today’s plan: “{name}”.",
+  'notify.waitingTitle': "Your workout is still waiting",
+  'notify.waitingBodyShort': "“{name}” is on today’s plan.",
+  'notify.waitingBody': "“{name}” is scheduled for today. Open Fit Timer and start whenever you’re ready.",
+  'notify.todayTitle': "Workout today",
+  'notify.todayBody': "On the plan: “{name}”.",
+  'notify.dontForgetTitle': "Don’t forget your workout",
+  'notify.dontForgetBody': "You still have time for “{name}” today.",
+  'notify.returnTitle': "Fit Timer is waiting",
+  'notify.returnBody': "It’s been a while. Open your plan and choose a short workout for today.",
+  'notify.progressTitle': "Your load is higher today",
+  'notify.progressBody': "“{name}” has a higher load today. Check the new reps, time, or weight before you start.",
+  'notify.unfinishedTitle': "Continue your workout?",
+  'notify.unfinishedBody': "“{name}” is unfinished. You can continue from where you left off.",
+  'notify.premiumTitle': "Get more from Fit Timer",
+  'notify.premiumBody': "Premium unlocks advanced workout features and sync. See what’s included.",
+  'common.changes': "Changes",
+  'common.unsaved': "{what} have not been saved. If you leave now, they will be lost.",
+  'num.int': "Whole number only, for example 3",
+  'num.range': "Number or range: 12 or 12-15",
+  'num.dec': "Number, for example 8 or 7.5",
+  'num.required': "Fill in this field before saving",
+  'dialog.type': "Type “{text}”",
+  'common.ok': "OK",
+  'common.confirm': "Confirm",
+  'exercise.changes': "Exercise changes",
+  'ai.filledRequest': "Filled request",
+  'start.current': "current",
+  'start.deltaReps': "Reps: {before} → {today} today",
+  'start.deltaTime': "Time: {before} → {today} sec today",
+  'start.deltaWeight': "Weight: {before} → {today} kg today",
+  'start.lastTime': "last time {minutes} min",
+  'start.usualTime': "usually {minutes} min",
+  'start.approxTime': "≈ {minutes} min",
+  'start.firstWorkout': "First workout: start at a comfortable pace.",
+  'start.loadHigher': "Load is higher in {count} {exercises}. Rows show: before → today.",
+  'start.loadLower': "Load is lower in {count} {exercises}. Rows show: before → today.",
+  'start.loadChanged': "Load changed in {count} {exercises}. Rows show: before → today.",
+  'start.exerciseLocOne': "exercise",
+  'start.exerciseLocMany': "exercises",
+  'start.noChanges': "No changes",
+  'start.nextCheck': "We'll ask about an increase in {count} {workouts}.",
+  'start.noChangesOff': "No changes · automatic progression is off.",
+  'start.workoutOne': "workout",
+  'start.workoutFew': "workouts",
+  'start.workoutMany': "workouts",
+  'start.setShort': "sets",
+  'start.roundShort': "rnd",
+  'start.weightPending': "set weight",
+  'start.pickWeightTitle': "Working weight",
+  'start.pickWeightHint': "Reps and time grow by the plan, but weight depends on your equipment. Pick one where the last reps take real effort, but not to failure",
+  'start.schedule': "Schedule: {schedule}",
+  'start.variantSequence': "variant {current} of {total} in sequence",
+  'time.hoursMinutes': "{hours} h {minutes} min",
+  'time.minutes': "{minutes} min",
+  'time.lessMinute': "less than a minute",
+  'session.justNow': "just now",
+  'session.minutesAgo': "{count} {minutes} ago",
+  'session.minuteOne': "minute",
+  'session.minuteFew': "minutes",
+  'session.minuteMany': "minutes",
+  'session.hoursAgo': "{count} {hours} ago",
+  'session.hourOne': "hour",
+  'session.hourFew': "hours",
+  'session.hourMany': "hours",
+  'session.daysAgo': "{count} {days} ago",
+  'session.dayOne': "day",
+  'session.dayFew': "days",
+  'session.dayMany': "days",
+  'start.metaWarmup': "warm-up",
+  'start.metaRound': "round {count}",
+  'start.metaSet': "set {current}/{total}",
+  'start.metaSide': "side {count}",
+  'streak.planShort': "workouts straight",
+  'streak.dayOne': "day straight",
+  'streak.dayFew': "days straight",
+  'streak.dayMany': "days straight",
+  'stats.thisWeek': "this",
+  'stats.badgesCount': "{earned} of {total}",
+  'stats.nextBadge': "Next — “{name}”: {desc}",
+  'stats.allBadges': "All achievements collected",
+  'calendar.noWorkouts': "no workouts",
+  'calendar.workoutOne': "workout",
+  'calendar.workoutFew': "workouts",
+  'calendar.workoutMany': "workouts",
+  'calendar.prevCurrent': "by this date in {month}: {count}",
+  'calendar.prev': "in {month}: {count}",
+  'sessions.workoutFallback': "Workout",
+  'sessions.variant': "variant {count}",
+  'sessions.variantDays': "variant {days}",
+  'sessions.doneText': "Workout done",
+  'sessions.weekLabel': "Workouts for the week",
+  'sessions.weekEmpty': "No workouts this week.",
+  'sessions.dayLabel': "Workouts for the day",
+  'workout.roundComplete': "Round complete",
+  'workout.roundRestInstruction': "Drink some water and get ready for the next round.",
+  'program.defaultMine': "My program",
+  'program.exerciseSummary': "Exercises: {count}",
+  'program.scheduleSummary': "Schedule: {schedule}.",
+  'badge.first.name': "First step",
+  'badge.first.desc': "First workout",
+  'badge.h1.name': "First hour",
+  'badge.h1.desc': "One hour of training in total",
+  'badge.body.name': "Tracking progress",
+  'badge.body.desc': "4 weight or measurement entries",
+  'badge.notes.name': "Journal",
+  'badge.notes.desc': "Added a note after a workout",
+  'badge.t5.name': "First five",
+  'badge.t5.desc': "5 workouts",
+  'badge.t10.name': "In rhythm",
+  'badge.t10.desc': "10 workouts",
+  'badge.wk.name': "Week completed",
+  'badge.wk.desc': "Completed every planned workout this week",
+  'badge.ph2.name': "Before & after",
+  'badge.ph2.desc': "Two progress photos",
+  'badge.early.name': "Early bird",
+  'badge.early.desc': "Started a workout before 7 AM",
+  'badge.hands.name': "Hands free",
+  'badge.hands.desc': "Completed a workout using voice or headset controls",
+  'badge.long.name': "Long workout",
+  'badge.long.desc': "One workout lasting at least 45 minutes",
+  'badge.s7.name': "Streak",
+  'badge.s7.desc': "7 planned workouts in a row",
+  'badge.record.name': "Personal best",
+  'badge.record.desc': "A streak of 3 workouts",
+  'badge.well.name': "Listening to yourself",
+  'badge.well.desc': "7 wellness entries",
+  'badge.var3.name': "Variety",
+  'badge.var3.desc': "Completed 3 different programs",
+  'badge.duo.name': "Not alone",
+  'badge.duo.desc': "Added a second profile on this device",
+  'badge.month.name': "Four weeks",
+  'badge.month.desc': "Worked out 4 weeks in a row",
+  'badge.season.name': "Three months",
+  'badge.season.desc': "Worked out in three different months",
+  'badge.back.name': "Comeback",
+  'badge.back.desc': "Returned after a two-week break",
+  'badge.heavy.name': "Level up",
+  'badge.heavy.desc': "An exercise reached its progression ceiling",
+  'badge.tons.name': "Ten tons",
+  'badge.tons.desc': "Lifted 10,000 kg in total",
+  'badge.h24.name': "24 hours moving",
+  'badge.h24.desc': "24 hours of training in total",
+  'badge.s30.name': "Month on track",
+  'badge.s30.desc': "30 planned workouts in a row",
+  'badge.t100.name': "The hundred",
+  'badge.t100.desc': "100 workouts",
+  'badge.recordBest': "Best streak: {count} {workouts} in a row",
+  'badge.new': "New achievement!",
+  'badge.personalRecord': "personal best!",
+  'badge.streakPlan': "planned workouts straight",
+  'badge.streakDays': "days straight",
+  'workout.exitProgress': "Exercises completed: {done} of {all}.",
+  'home.profileTitle': "Profile",
+  'home.todayPlan': "Today’s plan ·",
+  'finish.roundPlaceholder': "Round 1 / 4",
+  'finish.exercises': "exercises",
+  'finish.streak': "straight",
+  'finish.shareTitle': "Share",
+  'finish.done': "Done",
+  'finish.keep': "Count it",
+  'finish.discard': "Don't count",
+  'finish.quickTitle': "That was quick",
+  'finish.quickHeading': "Workout finished",
+  'finish.quickText': "This workout took less than 30 seconds — it looks like it was finished by accident. You can leave it uncounted.",
+  'finish.progCheckTitle': "Everything felt fine? Let's raise the load",
+  'finish.progCheckYes': "Yes, raise it",
+  'finish.progCheckHardLink': "Something felt hard",
+  'finish.progCheckApplied': "Done — the load goes up from your next workout.",
+  'progress.title': "Progress",
+  'progress.tabWorkouts': "Workouts",
+  'progress.tabBody': "Body",
+  'progress.tabPhotos': "Photos",
+  'progress.noWorkoutsTitle': "No workouts yet",
+  'progress.noWorkoutsText': "Complete your first workout to see the calendar, weekly progress, and achievements here.",
+  'progress.prevMonth': "Previous month",
+  'progress.nextMonth': "Next month",
+  'progress.last8Weeks': "Last 8 weeks",
+  'progress.totalTime': "total time",
+  'progress.clearStatsTitle': "Clear all statistics",
+  'progress.achievements': "Achievements",
+  'progress.bodyTitle': "Weight & measurements",
+  'progress.record': "Add entry",
+  'progress.noBodyTitle': "No entries yet",
+  'progress.noBodyText': "Add weight and measurements to see a trend chart. Once a week is enough.",
+  'progress.wellnessTitle': "Wellness",
+  'progress.noWellTitle': "No wellness data yet",
+  'progress.noWellText': "Track blood pressure, pulse, and sleep alongside workouts to see how your body responds.",
+  'progress.photosTitle': "Progress photos",
+  'progress.noPhotosTitle': "No photos yet",
+  'progress.noPhotosText': "Take a photo once a week in similar clothes and lighting to make visual progress easier to compare.",
+  'progress.compare': "Show before / after",
+  'settings.russian': "Russian",
+  'trainer.photoTitle': "Trainer photo",
+  'account.title': "Account",
+  'profile.name': "Name",
+  'profile.namePlaceholder': "What’s your name?",
+  'profile.photoTitle': "Profile photo",
+  'profile.gender': "Gender",
+  'profile.femaleShort': "F",
+  'profile.maleShort': "M",
+  'profile.age': "Age, full years",
+  'profile.ageExample': "For example, 32",
+  'profile.ageHint': "Gender and age affect exercise selection and load. They are included in AI requests.",
+  'profile.appearance': "Appearance & language",
+  'profile.theme': "Theme",
+  'profile.themeSystem': "System",
+  'profile.themeLight': "Light",
+  'profile.themeDark': "Dark",
+  'profile.timers': "Countdowns & pauses",
+  'profile.beforeStart': "Before start",
+  'profile.beforeExercise': "Before exercise",
+  'profile.switchSide': "Switch sides",
+  'profile.secondsHint': "All values are in seconds. Zero disables the countdown.",
+  'profile.delete': "Delete profile",
+  'clients.title': "Clients",
+  'clients.list': "List",
+  'clients.add': "Add client",
+  'publish.catalogTitle': "In catalog",
+  'publish.toCatalog': "Submit to catalog",
+  'publish.discovery': "How people will find it",
+  'publish.gives': "What it gives",
+  'publish.givesPlaceholder': "One or two sentences: what people get and what makes this program different",
+  'publish.givesHint': "This is what people read in the list before opening the program. Minimum 20 characters.",
+  'publish.submit': "Submit for review",
+  'trainer.title': "Trainer",
+  'trainer.find': "Where to find them",
+  'clients.note': "Note",
+  'clients.namePlaceholder': "Name this client",
+  'clients.notePlaceholder': "For example: knee, no jumping",
+  'clients.noteHint': "Only you can see this. It is not sent to the client.",
+  'clients.delete': "Delete client",
+  'voicetest.open': "Test how it hears",
+  'voicetest.title': "Recognition test",
+  'voicetest.hint': "Say “done”, “pause” or “continue” the way you do in a workout, from your usual distance. Say the command on its own: words in the middle of talk or from the TV don’t count. You will see what the phone heard.",
+  'voicetest.listening': "Listening…",
+  'voicetest.failed': "Could not turn on the microphone. Check the permission and the voice pack.",
+  'voicetest.noise': "background sound",
+  'voicetest.notCommand': "not a command",
+  'voicetest.unsure': "not heard clearly",
+  'voicetest.inSpeech': "came in the middle of talk — ignored",
+  'common.close': "Close",
+  'who.title': "A couple of details",
+  'who.female': "Female",
+  'who.male': "Male",
+  'who.save': "Save and continue",
+  'premium.checkout': "Subscription checkout",
+  'premium.emailHint': "Receipts will be sent here, and this email restores your subscription and data. No password needed.",
+  'premium.payBtn': "Pay",
+  'premium.termsHint': "By tapping Pay, you agree to the subscription terms. It renews automatically and can be cancelled anytime in Account; your paid period remains active.",
+  'bio.enable': "Enable biometric sign-in",
+  'bio.enableHint': "Use fingerprint or face verification instead of entering email. You can enable it later in Account.",
+  'lock.title': "Sign in to Fit Timer",
+  'lock.accountEmail': "Account email",
+  'common.reset': "Reset",
+  'swap.title': "Ready to progress",
+  'swap.replaceAI': "Replace with AI now",
+  'exercise.new': "New exercise",
+  'exercise.aiSub': "Describe what you need and AI will choose it",
+  'exercise.manualSub': "Set the name, format, and sets yourself",
+  'rest.custom': "Custom rest",
+  'rest.example': "For example: 20",
+  'compare.title': "Progress comparison",
+  'compare.deletePhoto': "Delete this photo",
+  'compare.hint': "Swipe a photo sideways to change the date. Tap it to view full screen.",
+  'compare.share': "Share comparison",
+  'weight.newEntry': "New entry",
+  'weight.kgLabel': "Weight, kg",
+  'weight.heightCm': "Height, cm",
+  'weight.fatPct': "Body fat, %",
+  'weight.musclePct': "Muscle, %",
+  'weight.waistCm': "Waist, cm",
+  'weight.hipsCm': "Hips, cm",
+  'weight.chestCm': "Chest, cm",
+  'weight.history': "Weight history",
+  'well.today': "How are you today?",
+  'well.pressure': "Blood pressure",
+  'well.sysAria': "Systolic blood pressure",
+  'well.diaAria': "Diastolic blood pressure",
+  'well.pulse': "Pulse",
+  'well.history': "Wellness history",
+  'import.title': "Import program",
+  'import.linkPlaceholder': "Paste a shared link",
+  'import.openLink': "Open link",
+  'import.file': "Upload program file",
+  'import.hint': "A file contains the complete program including images. A link does not; images will be fetched from the sender.",
+  'trainer.presentPlaceholder': "How should clients see your name?",
+  'legal.title': "Data & terms",
+  'legal.note': "We store only what the app needs. Progress photos stay on your device and are not uploaded to our server. No ads or advertising trackers. We do not sell your data.",
+  'legal.privacyTitle': "Privacy policy",
+  'legal.privacySub': "What is collected, where it is stored, and what is shared",
+  'legal.privacyHtml': "<h3>What data the app stores</h3>\n          <ul>\n            <li><b>Name, sex, and age in full years.</b> Your name is used to address you. Sex and age affect exercise selection and training load. The app does not request or store your exact date of birth.</li>\n            <li><b>Training goals and limitations</b>, including options such as protecting your lower back or knees, or pregnancy. These can be health-related data, so we treat them as especially sensitive.</li>\n            <li><b>Weight, height, waist, chest, and hip measurements</b>, plus body mass index calculated from them, if you choose to enter these values. They are optional.</li>\n            <li><b>Progress photos</b>, if you take them. They are stored only on your device. If you create a backup yourself, the backup file may contain the photos and will be stored wherever you choose to save it.</li>\n            <li><b>Workout history:</b> dates, duration, completed exercises and weights, and workout notes.</li>\n            <li><b>Your programs</b>, whether built manually, added from the catalog, or generated with AI.</li>\n            <li><b>App settings:</b> theme, sound, voice, and reminder schedule.</li>\n          </ul>\n\n          <h3>Why this data is used</h3>\n          <p>Only to make the app work: calculate training load and progression, keep history and the calendar, show weight and measurement charts, and remind you about workouts. We do not use this data for advertising, profiling, or unrelated disclosure.</p>\n\n          <h3>Where the data is stored</h3>\n          <p>With an active subscription, profiles, programs, workout history, weight, and measurements are linked to your account and stored in a database physically located <b>in the Russian Federation</b>. Data is transferred to the server over a protected connection. Progress photos are not uploaded to the app server. A local copy of other data remains on your device so workouts can work without internet access.</p>\n          <p>On our side, access is limited to people who need the data to operate the service, and only to the extent required for that work.</p>\n\n          <h3>What is sent to third parties</h3>\n          <ul>\n            <li><b>AI requests.</b> Only when you ask the app to generate a program, exercise, or image. The request may include sex, age, goal, level, weekdays, duration, equipment, selected limitations, and the temporary text from “About you & your capabilities” if you filled it in, including information about weight, injuries, or other limitations. Your name, email address, and other contact details are not included. The request is sent to a generation provider selected by us; that provider may be located outside Russia, so the app asks for separate consent before the first generation request.</li>\n            <li><b>Your name, weight and other profile data, measurements, photos, and workout history are not automatically included in AI requests. However, anything you type into the “About you & your capabilities” field during generation is sent to the AI provider with that request and may include weight, injuries, pain, or other limitations.</b></li>\n            <li><b>Fonts</b> are loaded from Google Fonts, so Google can see the request and your IP address. Without internet access, the app falls back to a system font and continues to work.</li>\n            <li><b>Subscription payment.</b> Payment is processed by the app store, such as the App Store or Google Play. Card numbers and other payment details are not sent to the app or stored by us; we only receive information that the subscription was paid and its validity period.</li>\n            <li><b>Account email.</b> You provide it when setting up the subscription. It is used to send receipts and restore the subscription and synced data on a new phone. We do not send marketing email.</li>\n          </ul>\n\n          <h3>What the app does not do</h3>\n          <p>It does not show ads, include advertising trackers or ad analytics, sell personal data, or request access to contacts, calls, or messages.</p>\n\n          <h3>How long data is stored</h3>\n          <p>The server copy of your profile is stored while the account exists. De-identified AI request and response text is kept for no more than <b>30 days</b> to investigate errors and improve quality, then deleted automatically. “Delete account and all data” removes profiles, history, weight, measurements, and programs from the server, and also removes local progress photos from the phone. Deletion cannot be undone.</p>\n\n          <h3>Your rights</h3>\n          <p>You can view your data directly in the app. You can export it as one file through Settings → Backup → Save to file. You can delete a profile, and edit information such as name, age, weight, measurements, and notes anywhere you entered it.</p>\n          <p>You may withdraw consent, request that processing stop, or challenge our actions by contacting the email below or Roskomnadzor, the Russian authority responsible for personal-data rights.</p>\n\n          <h3>Children</h3>\n          <p>The app is not intended for children under 12 and does not knowingly collect their data.</p>\n\n          <h3>Who processes the data and how to contact us</h3>\n          <p>The personal-data operator is <b>Sergey Stanislavovich Lebedev (Лебедев Сергей Станиславович)</b>, a professional-income taxpayer (self-employed). Processing is carried out under Russian Federal Law No. 152-FZ “On Personal Data”.</p>\n          <p>Questions about your data, requests to export, correct, or delete it, withdrawal of consent, and complaints can be sent to:</p>\n          <p><a class=\"legal-mail\" href=\"mailto:edkiy73@gmail.com\">edkiy73@gmail.com</a></p>\n          <p>Requests concerning personal data are answered within the period required by law, no later than thirty days.</p>\n\n          <h3>Legal basis</h3>\n          <ul>\n            <li><b>Your consent.</b> You provide it when you start using the app and when you enter information about yourself. You can withdraw consent at any time by emailing us or deleting your profile.</li>\n            <li><b>Performance of our agreement.</b> The app cannot provide its core functions without the information required for your profile, body metrics, and workout history.</li>\n          </ul>\n\n          <h3>Health data</h3>\n          <p>Weight, body measurements, progress photos, pregnancy status, and other limitations may be health data and therefore a special category of personal data. We process it <b>only with your separate consent</b> and only so the app can calculate training load and show your progress. If you do not want to provide it, leave those fields empty; workouts still work without them.</p>",
+  'legal.termsTitle': "Terms of use",
+  'legal.termsSub': "What the app is and who is responsible for what",
+  'legal.termsHtml': "<h3>What Fit Timer is</h3>\n          <p>Fit Timer is a timer and builder for home workouts. It runs a program that you create manually, receive from AI, add from the catalog, or import through a link. The app can be used for free.</p>\n\n          <h3>The app does not replace a trainer or doctor</h3>\n          <p>It does not determine whether a program is suitable for you, cannot see your exercise technique, and does not monitor how you feel. The decision to exercise and what load to use remains yours. See Health & Safety for more information.</p>\n\n          <h3>Responsibility</h3>\n          <p>You exercise independently and at your own risk. The developer is not responsible for injuries, worsening of your condition, or other consequences of training.</p>\n\n          <h3>Catalog content and AI responses</h3>\n          <p>Catalog programs are created by their authors, not by us, and we do not individually verify that each program is suitable for you. AI responses are generated automatically and may contain errors, nonsensical content, or unsafe recommendations. Review both carefully and consult a doctor or trainer if you are unsure.</p>\n\n          <h3>AI generation</h3>\n          <p>Built-in AI generation is available with Premium. We choose the provider and model; service keys remain on the server and are not sent to the app. The user reviews any generated program or exercise before starting a workout.</p>\n\n          <h3>Age</h3>\n          <p>The app is not intended for children under 12 because it includes weight tracking, body-mass-index calculations, and weight-loss content.</p>\n\n          <h3>Subscription and payment</h3>\n          <p>The app is free to use: workout timer and voice, program builder, statistics, weight tracking, and progress photos work without payment.</p>\n          <p>Premium unlocks features that create ongoing costs for us: AI generation of programs and exercises, the full trainer catalog, exercise images, and account data storage. Price, term, and renewal conditions are shown before payment in your local currency. The subscription renews automatically; renewal can be turned off at any time in Account, while the already-paid period remains active until it ends.</p>\n          <p>Programs, history, and statistics that you have already created remain available after the subscription ends. Only paid features stop being available.</p>\n          <p>Payments and refunds are handled under the rules of the relevant app store, such as the App Store or Google Play.</p>\n\n          <h3>Biometric sign-in</h3>\n          <p>The app does not receive or store your fingerprint or face image. Verification is performed by the phone operating system, and the app receives only the result. Biometric sign-in can be disabled in Account; email remains the fallback sign-in method.</p>\n\n          <h3>Changes</h3>\n          <p>These terms may change as the app changes. The latest update date is shown at the bottom of this page.</p>\n\n          <h3>Who is responsible for the app</h3>\n          <p>Fit Timer is developed and maintained by Sergey Stanislavovich Lebedev (Лебедев Сергей Станиславович), self-employed. Contact: <a class=\"legal-mail\" href=\"mailto:edkiy73@gmail.com\">edkiy73@gmail.com</a>.</p>",
+  'legal.healthTitle': "Health & safety",
+  'legal.healthSub': "When to talk to a doctor first and when to stop",
+  'legal.healthHtml': "<h3>Important</h3>\n          <p>Fit Timer is not a medical device. It does not diagnose conditions, provide medical advice, or replace consultation with a doctor.</p>\n\n          <h3>Talk to a doctor before training if</h3>\n          <ul>\n            <li>you are pregnant or recently gave birth;</li>\n            <li>you have cardiovascular disease or high or low blood pressure;</li>\n            <li>you have injuries or pain in your back, knees, shoulders, or neck;</li>\n            <li>you had surgery within the past year;</li>\n            <li>your weight is changing rapidly without an obvious reason;</li>\n            <li>you are returning to exercise after a long break or are over 50.</li>\n          </ul>\n\n          <h3>Stop training and seek medical advice if you experience</h3>\n          <ul>\n            <li>chest pain or pressure;</li>\n            <li>severe dizziness, vision darkening, or nausea;</li>\n            <li>shortness of breath that is out of proportion to the effort;</li>\n            <li>sudden sharp pain in a joint or your back.</li>\n          </ul>\n          <p>Discomfort from unfamiliar effort can be normal. Pain is not.</p>\n\n          <h3>AI-generated programs</h3>\n          <p>AI does not know your diagnoses, cannot see how you move, and cannot guarantee an outcome. Read a generated program completely before your first workout, and discuss it with a doctor if you have any health limitations.</p>\n\n          <h3>Body mass index</h3>\n          <p>BMI on the Body tab is a simple calculation based on height and weight. It does not distinguish muscle from fat, does not account for body composition, and is not a diagnosis.</p>\n\n          <h3>Pregnancy and postpartum</h3>\n          <p>This is not a situation for “trying it and seeing how it feels.” Both the decision to exercise and the specific exercises and load should be approved by the doctor who is caring for you. The app cannot determine gestational stage or your current condition and will not stop a workout automatically.</p>",
+  'legal.updated': "Updated September 22, 2026",
+  'builder.descCounterHint': "shown before the workout starts.",
+  'builder.progressOverTime': "Progress over time",
+  'program.default': "Program",
+  'profile.genderNeeded': "Choose a gender — it affects exercise selection.",
+  'builder.noProgress': "No progression",
+  'builder.everyWorkout': "every workout",
+  'builder.everyNWorkouts': "every {count} {workouts}",
+  'builder.rotationHint': "Variants rotate in order: first, second, then first again. Skipping a day does not change the order.",
+  'builder.weekdayHint': "Each variant has its own weekdays. The matching variant opens on that day.",
+  'builder.variantDaysLabel': "Days for this variant",
+  'builder.variantDaysHint': "This variant appears in Today on these days.",
+  'builder.roundsRest': "Rounds & rest",
+  'builder.variantsRotate': "Variants (rotate in order)",
+  'builder.variantsWorkout': "Workout variants",
+  'builder.addVariantHint': "Want different exercises on different days? Add a variant and select its days.",
+  'builder.selectedVariantHint': "Everything below applies to the selected variant. “Current” is the one scheduled next.",
+  'builder.selectedVariantDaysHint': "Everything below applies to the selected variant.",
+  'builder.current': "current",
+  'builder.deleteVariantTitle': "Delete this variant",
+  'builder.add': "Add",
+  'builder.addVariant': "Add variant",
+  'builder.repsLabel': "Reps",
+  'builder.secondsLabel': "Seconds",
+  'builder.repsExample2': "For example: 12-15",
+  'builder.secondsExample2': "For example: 45",
+  'builder.progressWarmupOff': "not available for warm-up",
+  'builder.progressOffHint': "off — values stay the same",
+  'builder.startNumbersHint': "{sentence}. The fields contain starting values.",
+  'builder.warmupNoGrowth': "warm-up does not progress",
+  'builder.noGrowth': "no progression",
+  'builder.emptyProgress': "no progression settings",
+  'builder.none': "none",
+  'builder.custom': "custom",
+  'builder.customRestSets': "Custom rest between sets",
+  'builder.customRestAfter': "Custom rest after exercise",
+  'builder.noImage': "No image",
+  'builder.detailDescription': "description",
+  'builder.detailMistakes': "mistakes",
+  'builder.detailMuscles': "muscles",
+  'builder.detailImage': "image",
+  'builder.detailVideo': "video",
+  'builder.notFilled': "not filled",
+  'builder.noExercisesTitle': "No exercises yet",
+  'builder.noExercisesText': "Add the first exercise. A name and reps or time are enough; everything else is optional.",
+  'builder.variantExercises': "Exercises · variant {current} of {total}",
+  'builder.variantExercisesHint': "Exercises in the selected variant. Switch using the tabs.",
+  'builder.variantOnDays': "Exercises for the variant on {days}. Switch using the tabs.",
+  'builder.variantNoDays': "Add days to this variant; otherwise it stays as a spare.",
+  'builder.scheduleExercises': "Scheduled workout: {days}.",
+  'builder.anyDayExercises': "You can train on any day. Select days in settings to get reminders.",
+  'builder.warmLimit': "The warm-up already has the maximum of {count} exercises.",
+  'builder.mainLimit': "The main workout already has the maximum of {count} exercises.",
+  'builder.imageReadFailed': "Couldn’t read the image file.",
+  'ai.emptyAnswer': "The AI response field is empty.\n\nIf you used an AI chat such as ChatGPT or Gemini, copy the entire response and paste it here. The easiest option is “Do it for me” above.",
+  'ai.parseProgramFailed': "The pasted text could not be parsed into a program. The response may be incomplete; paste the entire AI response from the first line to the last.",
+  'ai.noExerciseResponse': "No exercises were found in the response. It may be incomplete; return to the AI chat and copy the whole response.",
+  'ai.pasteProgram': "Paste the program text into the field.",
+  'ai.needProgramInput': "Add at least one preference for the program — for example a goal, training days, equipment, or your own request.",
+  'ai.needExerciseInput': "Add at least one preference for the exercise — for example target muscles, format, equipment, or your own request.",
+  'ai.needEditRequest': "Describe what you want to change.",
+  'ai.problemList': "Problems:",
+  'ai.reviewSave': "Review and save",
+  'builder.needProgramName': "program name",
+  'builder.duplicateDay': "day “{day}” is assigned to two variants — keep it in only one",
+  'builder.noExercisesVariant': "variant {variant} has no exercises",
+  'builder.noExercises': "there are no exercises",
+  'builder.unnamedVariant': "variant {variant} has {count} unnamed {exercises}",
+  'builder.unnamed': "{count} unnamed {exercises}",
+  'builder.validationTip': "Highlighted fields also show where the problem is.",
+  'builder.saveFailedOne': "Couldn’t save:\n— {item}.\n\n{tip}",
+  'builder.saveFailedMany': "Couldn’t save. Fix these items:\n— {items}\n\n{tip}",
+  'builder.volumeHint': "{exercises}{rounds} — {sets} per workout.",
+  'builder.nowPrefix': "Now {parts}",
+  'builder.startValuesHint': "The fields show starting values.",
+  'workout.switchSidesVoice': "Switch sides",
+  'workout.sideVoice': "Side {current} of {total}",
+  'week.of': "of {total}",
+  'week.closed': "Week complete",
+  'week.closedWhy': "Weekly plan completed: {done} of {total}. Extra workouts are tracked separately and do not change the completed week.",
+  'week.makeUp': "can make up",
+  'week.makeUpWhy': "Unfinished workouts this week: {count}. The week runs through Sunday; complete the program on any day to close the missed slot.",
+  'week.movedOne': "made up",
+  'week.movedMany': "made up",
+  'week.movedWhy': "Workouts completed on a different day: {count}. They still count because the plan is weekly, not daily.",
+  'week.extra': "extra",
+  'week.extraWhy': "Extra workouts outside the schedule: {count}. They do not close planned slots; they are additional work.",
+  'week.doneThisWeek': "Completed this week: {count} {workouts}",
+  'week.daysUnset': "Workout days are not selected yet",
+  'week.noWorkoutMoved': "No workout was done on this day. It was made up on another day — {days}.",
+  'week.plannedFuture': "Planned for this day: {names}.",
+  'week.plannedMissed': "No workout was completed. Planned: {names}.",
+  'week.canStillMakeUp': "You can still make it up: complete the program by Sunday to close the week.",
+  'week.plannedText': "Workout planned.",
+  'week.nonePlanned': "No workout was completed or planned for this day.",
+  'week.dayMovedOn': "Counted from the workout on {day}.",
+  'today.programsOff': "Programs disabled",
+  'today.noSchedule': "Schedule not set",
+  'today.warmupOnly': "Warm-up only",
+  'today.noPrograms': "No programs yet",
+  'today.enableProgram': "Enable any program to restore the plan here",
+  'today.chooseDays': "Choose workout days and the plan will appear here",
+  'today.buildProgram': "Build your own program in a few minutes",
+  'today.open': "Open",
+  'today.create': "Create",
+  'today.makeUp': "Can make up",
+  'today.makeUpSub': "{day}, “{name}”{more} — the week can still be completed",
+  'today.andMore': " and {count} more",
+  'today.start': "Start",
+  'today.variant': "Variant {current} of {total}",
+  'today.done': "Already completed today",
+  'today.again': "Again",
+  'today.tomorrow': "tomorrow",
+  'today.onDay': "on {day}",
+  'today.startToday': "Start today",
+  'today.rest': "Rest day",
+  'today.firstWorkout': "First workout: “{name}”",
+  'today.next': "Next — {when}",
+  'today.firstNote': "It is scheduled for {when}, but you do not have to wait: progression is based on completed workouts, not calendar dates.",
+  'today.restNote': "Rest is part of the plan. If you want to move, open a program and start it early.",
+  'today.noWeekWorkouts': "No workouts are scheduled for the next week",
+  'trainer.needAccountPage': "Create an account first — the trainer page is linked to it.",
+  'trainer.handleTaken': "This username is already used by another trainer. Choose another one.",
+  'share.noStore': "Sharing links are unavailable because server storage is not configured.",
+  'share.rate': "Too many links were created in a short time. Try again in a few minutes.",
+  'share.offline': "Couldn’t create the link because the server is unreachable. Try again when you are online.",
+  'share.fileHint': "\n\nYou can share the program as a file right now using “Save to file” in the same menu. The file includes everything, including images.",
+  'share.programText': "Workout program “{name}” — open the link to add it to Fit Timer:",
+  'share.linkCopied': "Program link copied. Send it in any messenger; the recipient can open it to add the program.\n\nImages are not included in the link. Use “Save to file” to share everything.",
+  'share.fileTitle': "Program “{name}”",
+  'share.fileSaved': "Program file saved to Downloads ({size} KB).\n\nIt includes the cover and exercise images. The recipient can open it through Create → Upload program file.",
+  'share.badFile': "This does not look like a Fit Timer program file.",
+  'share.programAdded': "Program “{name}” added.",
+  'share.readFileFailed': "Couldn’t read the file: {error}",
+  'home.streakRisk': "at risk",
+  'home.streakRiskWhy': "Your streak is still alive at {count} workouts. One planned workout is still open this week; complete it by Sunday to keep the streak going.",
+  'home.streakWhy': "Consecutive workouts without a missed week: {count}. A missed day does not immediately reset the streak while the current week can still be completed.",
+  'home.bestStreak': "best streak",
+  'home.bestStreakWhy': "Personal best: {count} consecutive workouts. The record remains even after a streak ends.",
+  'home.minutesTotal': "total minutes",
+  'home.hourTotalOne': "total hour",
+  'home.hourTotalMany': "total hours",
+  'home.totalTimeWhy': "Total training time since your first workout. Minutes: {minutes}. Workouts: {workouts}.",
+  'home.firstAhead': "Your first workout is still ahead",
+  'home.avgPressure': "Avg. pressure",
+  'home.avgPulse': "Avg. pulse",
+  'home.avgSleep': "Avg. sleep, h",
+  'trainer.removeInfoQuestion': "Remove your personal details from the trainer page? Your name, photo, bio, experience, and link will be removed. Your username and catalog programs will remain.",
+  'trainer.removeInfoFailed': "The server did not respond, so the trainer page was not changed. Try again later.",
+  'trainer.removeInfoDone': "Done. Your trainer page no longer contains personal details.",
+  'age.required': "Enter your age; it affects exercise selection and training load.",
+  'age.integer': "Enter age as a whole number of full years.",
+  'age.tooYoung': "Check the age value; the app is intended for users older than 5.",
+  'age.tooOld': "Check the age value; it cannot be greater than 100.",
+  'ai.keyMissing': "Gemini key is not set",
+  'ai.busyRetry': "Servers are busy. Retrying in {seconds}s… (attempt {attempt} of {total})",
+  'ai.emptyResponse': "The model returned an empty response{reason}. Try again or rephrase the request.",
+  'ai.reason': " (reason: {reason})",
+  'ai.tooLong': "The response exceeded the model limit. Edit one variant at a time or shorten exercise descriptions.",
+  'ai.signInPremium': "Sign in to your Premium account in Account to use generation.",
+  'ai.limitReached': "Your generation limit for this month has been reached ({used}/{limit}).",
+  'ai.premiumRequired': "An active Premium subscription is required for generation.",
+  'ai.disabled': "Generation is temporarily disabled. Try again later.",
+  'ai.exerciseUpdated': "“{name}” updated.",
+  'ai.timeout': "The AI did not answer in time. Try again — it usually works the second time. For a big program, ask for smaller changes at once.",
+  'ai.badResponse': "The AI sent an incomplete answer. Try again — it usually works the second time.",
+  'ai.badResponseMissing': "Missing: {fields}.",
+  'ai.serviceFailed': "The AI service did not respond. Try again.",
+  'images.draw': "Generate",
+  'images.generating': "Generating images",
+  'images.progress': "Image {current} of {total}",
+  'images.cover': "Cover",
+  'images.coverProgram': "Program cover",
+  'images.error': "error",
+  'images.stopped': "Stopped. Generated {done} of {total}. Finished images are already in place and you can continue later.",
+  'images.done': "Done: generated {done} of {total}.",
+  'images.partial': "Done: {done} of {total} succeeded.\n\nFailed:\n• {failed}",
+  'images.trayLeft': "Not assigned yet: {count}",
+  'images.trayAll': "All assigned — any image can still be reused",
+  'images.pickHint': "Tap a slot in “Where to place” and choose this image. The same image can be used in multiple slots.",
+  'images.exerciseGroup': "Exercises",
+  'images.has': "image set",
+  'images.none': "no image",
+  'images.pickFirst': "Choose images from your phone first.",
+  'images.allPlaced': "All uploaded images are already assigned. Tap a slot to replace its image.",
+  'images.assigned': "Assigned images: {count}.",
+  'images.noRoom': " Not enough empty slots: {count} remain.",
+  'images.noSlots': "There are no empty slots. Tap a slot to replace its image.",
+  'exercise.addLimit': "Nothing was added. Warm-up and main sections can each contain up to 20 exercises. Remove something and try again.",
+  'exercise.addedOne': "Exercise “{name}” added. Open it to adjust the details.",
+  'exercise.addedMany': "Exercises added: {count}.",
+  'program.fallback': "Program",
+  'program.updated': "updated",
+  'program.updatedN': "updated {count}",
+  'program.editSummary': "{variants}{exercises}",
+  'program.createdEdited': "Done: “{name}” was created.\n\nThe original program was not changed.",
+  'program.imagesCarried': "\nImages carried over: {count}.",
+  'ai.parseProblems': "Problems:",
+  'ai.editAdded': "\nAdded: {names}.",
+  'ai.editRemoved': "\nRemoved: {names}.",
+  'ai.editReordered': "\nExercise order changed.",
+  'ai.editTimeChanged': "\nWorkout time: ≈{before} → {after} min.",
+  'import.linkExpired': "This link no longer works. Ask the trainer to send a new one.",
+  'import.linkOffline': "Couldn’t load the program. Check your connection and try again.",
+  'import.noProgram': "The link does not contain a program with exercises.",
+  'import.reviewSave': "Review and save",
+  'import.trainerNotice': "This program was sent by trainer {trainer}. They can see activity for this program only: workout count, most recent workout, and load progression.\n\nThey cannot see your other programs, weight, or photos.",
+  'import.badLink': "This does not look like a program link. Paste the complete link you received or upload a program file.",
+  'import.badCode': "Couldn’t read the code. Make sure it was copied completely.",
+  'import.noProgramCode': "The code does not contain a program with exercises.",
+  'home.goodNight': "Good night",
+  'home.goodMorning': "Good morning",
+  'home.goodDay': "Good afternoon",
+  'home.goodEvening': "Good evening",
+  'images.textInstead': "The model returned text instead of an image: {text}",
+  'images.noImage': "The model did not return an image.",
+  'profile.defaultMine': "My profile",
+  'who.programMsg': "To choose exercises, load, and recovery time correctly, we need your sex and age. We’ll ask once; you can change them later in your profile.",
+  'who.aiMsg': "AI needs to know who the program is for: sex and age affect exercises, load, and recovery.",
+  'warmup.programName': "10-minute warm-up",
+  'warmup.1.name': "March in place",
+  'warmup.1.desc': "March in place at a brisk pace, lifting your knees high. Let your arms move naturally as when walking. Breathe evenly; the goal is to warm up, not tire yourself out.",
+  'warmup.2.name': "Shoulder and arm circles",
+  'warmup.2.desc': "Roll your shoulders backward and forward for 20 seconds, then straighten your arms and make large circles. Move smoothly through a comfortable full range.",
+  'warmup.3.name': "Side bends",
+  'warmup.3.desc': "Stand with feet shoulder-width apart. Keep one hand on your hip and reach the other overhead toward the bend. Lean directly to the side without folding forward, alternating sides.",
+  'warmup.4.name': "Hip circles",
+  'warmup.4.desc': "Hands on hips, feet shoulder-width apart. Make large circles with your hips, switching direction halfway through. Keep your knees slightly bent.",
+  'warmup.5.name': "Easy squats",
+  'warmup.5.desc': "Squat to a comfortable depth, sending your hips back and keeping your knees in line with your toes. Keep an easy pace; this is joint warm-up, not strength work.",
+  'warmup.6.name': "Alternating stationary lunges",
+  'warmup.6.desc': "Step forward and gently lower the back knee toward the floor, then return and switch legs. Keep your torso upright and move smoothly without jerking.",
+  'warmup.7.name': "Windmill",
+  'warmup.7.desc': "Stand with feet wider than shoulder-width, hinge forward, and extend your arms to the sides. Reach each hand toward the opposite foot while the other arm points upward.",
+  'warmup.8.name': "Knee and ankle circles",
+  'warmup.8.desc': "Bring your knees together, bend slightly, and make gentle circles in both directions. Then place each foot on the toes in turn and circle the ankle.",
+  'warmup.9.name': "Jumping jacks",
+  'warmup.9.desc': "Jump your feet apart while raising your arms overhead, then return. If jumping is not suitable, step side to side while raising your arms.",
+  'warmup.10.name': "Forward fold stretch",
+  'warmup.10.desc': "Fold forward slowly, relaxing your back and neck, and reach toward your feet. You may bend your knees slightly. Breathe deeply and avoid bouncing.",
+  'common.details': "Learn more",
+  'mail.noMail': "Email delivery is not enabled on the server yet.",
+  'mail.noStore': "The server is unavailable right now. Try again later.",
+  'mail.badEmail': "Check the email address — it looks like there may be a typo.",
+  'mail.tooManyToday': "A code has already been sent to this address five times today. Try again tomorrow.",
+  'mail.rateLimited': "Too many attempts. Try again in a little while.",
+  'mail.codeExpired': "The code has expired. Request a new one.",
+  'mail.tooManyTries': "Too many attempts. Request a new code.",
+  'mail.badCode': "The code did not match. Check that you entered the code from the email.",
+  'mail.handleTaken': "Your username is already linked to another account.",
+  'mail.offline': "Can’t reach the server. Check your internet connection.",
+  'mail.failed': "The email could not be sent: {detail}",
+  'mail.serviceRefused': "the email service rejected the request.",
+  'mail.generic': "Something went wrong. Check your connection and try again.",
+  'ai.parseNoName': "the response does not contain a program name",
+  'ai.parseNoExercises': "the response does not contain any exercises",
+  'ai.pregnancyWarning': "Pregnancy is not an ordinary training limitation.\n\nWhether to exercise at all, which exercises to do, and what load to use should be approved by the doctor caring for you. AI does not know your stage of pregnancy or how you feel; it only generates a program.\n\nRead the whole program before your first workout and discuss it with your doctor.",
+  'builder.daysRotateHint': "Days control when you train. They do not change the workout-variant sequence.",
+  'builder.daysPlanHint': "On these days the program appears in Today’s plan.",
+  'builder.typeWeightedRepsHint': "Track both reps and kilograms; weight will have its own field during the workout.",
+  'builder.typeWeightedTimeHint': "For loaded holds or carries, kilograms will appear next to seconds during the workout.",
+  'builder.typeRepsHint': "Track repetitions, for example “12–15”.",
+  'builder.typeTimeHint': "Track time, for example 45 seconds.",
+  'builder.progressAutoPeriod': "increases automatically: {period}",
+  'builder.progressProgramOff': "automatic progression is off in program settings, so values do not increase",
+  'builder.summaryMax': "{value}, max {max}",
+  'day.monFull': "Monday",
+  'day.tueFull': "Tuesday",
+  'day.wedFull': "Wednesday",
+  'day.thuFull': "Thursday",
+  'day.friFull': "Friday",
+  'day.satFull': "Saturday",
+  'day.sunFull': "Sunday",
+  'program.copySuffix': "copy",
+  'parser.noName': "The text does not contain a program name",
+  'parser.noExercises': "No exercises were found in the text",
+  'pregnancy.warning': "Pregnancy is not a routine training limitation.\n\nWhether to exercise, which exercises to use, and what load is appropriate should be approved by the doctor caring for you. AI does not know your stage of pregnancy or how you feel; it only generates a program.\n\nRead the full program and discuss it with your doctor before the first workout.",
+  'images.imageOne': "image",
+  'images.imageFew': "images",
+  'images.imageMany': "images",
+  'images.generateConfirm': "Generate {count} {images}. Continue?",
+  'images.nothingMissing': "Every slot already has an image — nothing is missing.",
+  'images.keyRejected': "The key was rejected. Make sure it was copied completely.",
+  'images.rateLimited': "Too many requests. Try again shortly.",
+  'images.billingRequired': "Access denied. Gemini image generation requires billing to be enabled on the Google account.",
+  'images.providerBusy': "Google’s image model is currently overloaded. Try again in a few minutes.",
+  'youtube.hint': "Use a regular YouTube link or a short youtu.be link. AI will turn the video into a program.",
+  'youtube.badLink': "This does not look like a YouTube link. Use youtube.com/watch?v=… or youtu.be/…",
+
+  'progress.photoLocalOnly': 'Photos are stored only on this device and are not synced with your account. This keeps your progress photos on your phone.',
+  'handsfree.allCommands': 'All commands',
+  'handsfree.commandsTitle': 'Voice commands',
+  'handsfree.commandsIntro': 'You can speak naturally — several phrases can trigger the same action.',
+  'handsfree.commandNext': 'Next',
+  'handsfree.commandNextExamples': '“next”, “done”, “skip”, “finished”',
+  'handsfree.commandPause': 'Pause',
+  'handsfree.commandPauseExamples': '“pause”, “stop”, “wait”',
+  'handsfree.commandResume': 'Continue',
+  'handsfree.commandResumeExamples': '“continue”, “resume”, “go on”, “keep going”',
+  'handsfree.commandsLanguageNote': 'Commands are recognized in the language selected under “Command language”.',
+};
+/* ================= ЛОКАЛИЗАЦИЯ ================= */
+const I18N = {ru: I18N_RU, en: I18N_EN};
+const LOCALE_META = Object.freeze({
+  ru: {tag:'ru-RU', ai:'Russian'},
+  en: {tag:'en-US', ai:'English'}
+});
+const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
+let appLocalePreference = 'system'; // system | supported locale
+let appLocale = systemLocale();       // effective locale used by UI/TTS/API
+let appLocaleStored = false;
+
+function normalizeLocale(value){
+  const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  const base = raw.split('-')[0];
+  return SUPPORTED_LOCALES.includes(base) ? base : 'en';
+}
+function systemLocale(){
+  try{
+    const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+    for(const value of langs){
+      const base = String(value || '').trim().toLowerCase().replace(/_/g, '-').split('-')[0];
+      if(SUPPORTED_LOCALES.includes(base)) return base;
+    }
+  }catch(_){}
+  return 'en';
+}
+function normalizeLocalePreference(value){
+  return String(value || '').toLowerCase() === 'system' ? 'system' : normalizeLocale(value);
+}
+function resolveLocalePreference(value){
+  const pref = normalizeLocalePreference(value);
+  return pref === 'system' ? systemLocale() : normalizeLocale(pref);
+}
+function profileLocalePreference(u){
+  return normalizeLocalePreference(u && u.locale ? u.locale : 'system');
+}
+function t(key, vars){
+  const dict = I18N[appLocale] || I18N.en;
+  const fallback = I18N.en[key] != null ? I18N.en[key] : I18N.ru[key];
+  let out = dict[key] != null ? dict[key] : (fallback != null ? fallback : key);
+  if(vars && typeof out === 'string'){
+    Object.keys(vars).forEach(k => { out = out.replaceAll('{' + k + '}', String(vars[k])); });
+  }
+  return out;
+}
+// data-i18n задаёт перевод по умолчанию, но не должен отбирать элемент у runtime-renderer.
+// После первого применения запоминаем ровно то DOM-значение, которое поставил i18n.
+// Если код экрана позже изменил тот же текст/HTML/атрибут, считаем его владельцем до
+// следующего собственного render. Это не даёт фоновому sync/смене профиля на секунду
+// возвращать кнопки из «Переключиться / Остаться» в «Понятно / Отмена».
+function applyI18nValue(el, slot, next, attr){
+  const mark = 'i18nApplied' + slot;
+  const read = () => {
+    if(attr){
+      const value = el.getAttribute(attr);
+      return value == null ? '' : value;
+    }
+    // Для data-i18n сравниваем именно innerHTML: runtime может добавить иконку,
+    // оставив тот же textContent, и такой элемент тоже нельзя потом разрушать.
+    return el.innerHTML;
+  };
+  const last = el.dataset[mark];
+  if(last != null && read() !== last) return false;
+
+  if(attr) el.setAttribute(attr, next);
+  else if(slot === 'Html') el.innerHTML = next;
+  else el.textContent = next;
+
+  // Браузер может нормализовать HTML/атрибут, поэтому сохраняем фактическое значение.
+  el.dataset[mark] = read();
+  return true;
+}
+
+function applyI18n(root){
+  root = root || document;
+  document.documentElement.lang = appLocale;
+  document.title = t('app.title');
+  root.querySelectorAll('[data-i18n]').forEach(el => { applyI18nValue(el, 'Text', t(el.dataset.i18n)); });
+  root.querySelectorAll('[data-i18n-html]').forEach(el => { applyI18nValue(el, 'Html', t(el.dataset.i18nHtml)); });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { applyI18nValue(el, 'Placeholder', t(el.dataset.i18nPlaceholder), 'placeholder'); });
+  root.querySelectorAll('[data-i18n-title]').forEach(el => { applyI18nValue(el, 'Title', t(el.dataset.i18nTitle), 'title'); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => { applyI18nValue(el, 'Aria', t(el.dataset.i18nAria), 'aria-label'); });
+  syncAccessibility(root);
+}
+
+function syncAccessibility(root){
+  root = root || document;
+  root.querySelectorAll('.back-chip').forEach(el => {
+    el.setAttribute('aria-label', t('common.back'));
+    if(!el.getAttribute('title')) el.setAttribute('title', t('common.back'));
+  });
+  root.querySelectorAll('button[title]').forEach(el => {
+    if(!el.getAttribute('aria-label')) el.setAttribute('aria-label', el.getAttribute('title'));
+  });
+  root.querySelectorAll('.switch').forEach(el => {
+    el.setAttribute('role', 'switch');
+    el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+    if(!el.getAttribute('aria-label')){
+      const row = el.closest('.pref-row');
+      const label = row && row.querySelector(':scope > span');
+      if(label) el.setAttribute('aria-label', (label.textContent || '').trim());
+    }
+  });
+}
+
+async function loadAppLocale(){
+  appLocaleStored = false;
+  appLocalePreference = 'system';
+  appLocale = systemLocale();
+  applyI18n();
+  return appLocale;
+}
+async function setAppLocale(value, opts){
+  const pref = normalizeLocalePreference(value);
+  const next = resolveLocalePreference(pref);
+  const changed = next !== appLocale;
+  appLocalePreference = pref;
+  appLocale = next;
+  applyI18n();
+  if(changed && !(opts && opts.silent)){
+    try{ window.dispatchEvent(new CustomEvent('appLocaleChanged', {detail:{locale:appLocale, preference:appLocalePreference}})); }catch(_){}
+  }
+  return appLocale;
+}
+try{
+  window.addEventListener('languagechange', ()=>{
+    if(appLocalePreference === 'system') setAppLocale('system', {persist:false});
+  });
+}catch(_){}
+function localeTag(value){
+  const code = value == null ? appLocale : normalizeLocale(value);
+  return (LOCALE_META[code] && LOCALE_META[code].tag) || code;
+}
+function aiOutputLanguage(){
+  const meta = LOCALE_META[appLocale] || LOCALE_META.en;
+  return meta.ai || 'English';
+}
+
+function aiCanonicalEnglish(value){
+  const map = {
+    'Новичок':'beginner','Средний':'intermediate','Продвинутый':'advanced',
+    'Похудеть':'lose weight','Подтянуть всё тело':'tone the whole body','Ягодицы и пресс':'glutes and core',
+    'Плоский живот':'flatter stomach','Сила и выносливость':'strength and endurance','Рельеф мышц':'muscle definition',
+    'Растяжка и гибкость':'stretching and flexibility','Осанка и спина':'posture and back',
+    'Восстановиться после родов':'postpartum recovery','Кардио и энергия':'cardio and energy',
+    'Без инвентаря':'no equipment','Коврик':'mat','Гантели':'dumbbells','Резинки':'resistance bands',
+    'Стул':'chair','Фитбол':'stability ball','Утяжелители':'wearable weights','Турник':'pull-up bar',
+    'Без ограничений':'no stated limitations','Без прыжков':'no jumping','Тихо (соседи снизу)':'quiet / low-impact',
+    'Берегу колени':'protect knees','Берегу поясницу':'protect lower back','Берегу запястья':'protect wrists',
+    'Берегу шею':'protect neck','Беременность':'pregnancy',
+    'Круговая':'circuit','Силовая':'strength','Смешанная':'mixed','С разминкой':'with warm-up','Без разминки':'without warm-up',
+    'Шея':'neck','Плечи':'shoulders','Грудь':'chest','Руки':'arms','Пресс':'core','Спина':'back',
+    'Ягодицы':'glutes','Квадрицепс':'quadriceps','Задняя бедра':'hamstrings','Икры':'calves',
+    'Повторения':'reps','С весом':'weighted reps','Время':'time'
+  };
+  return map[String(value || '')] || String(value || '');
+}
+function aiCanonicalListEnglish(values){
+  return (values || []).map(aiCanonicalEnglish).join(', ');
+}
+
+const CANONICAL_LABEL_KEYS = {
+  'Новичок':'option.level.beginner','Средний':'option.level.intermediate','Продвинутый':'option.level.advanced',
+  'Похудеть':'option.goal.loseWeight','Подтянуть всё тело':'option.goal.tone','Ягодицы и пресс':'option.goal.glutesCore',
+  'Плоский живот':'option.goal.flatStomach','Сила и выносливость':'option.goal.strength','Рельеф мышц':'option.goal.definition',
+  'Растяжка и гибкость':'option.goal.flexibility','Осанка и спина':'option.goal.posture',
+  'Восстановиться после родов':'option.goal.postpartum','Кардио и энергия':'option.goal.cardio',
+  'Без инвентаря':'option.equip.none','Коврик':'option.equip.mat','Гантели':'option.equip.dumbbells','Резинки':'option.equip.bands',
+  'Стул':'option.equip.chair','Фитбол':'option.equip.ball','Утяжелители':'option.equip.weights','Турник':'option.equip.bar',
+  'Без ограничений':'option.limit.none','Без прыжков':'option.limit.noJump','Тихо (соседи снизу)':'option.limit.quiet',
+  'Берегу колени':'option.limit.knees','Берегу поясницу':'option.limit.lowerBack','Берегу запястья':'option.limit.wrists',
+  'Берегу шею':'option.limit.neck','Беременность':'option.limit.pregnancy',
+  'Круговая':'option.style.circuit','Силовая':'option.style.strength','Смешанная':'option.style.mixed',
+  'С разминкой':'option.warm.with','Без разминки':'option.warm.without',
+  'Повторения':'option.format.reps','С весом':'option.format.weight','Время':'option.format.time',
+  'Шея':'muscle.neck','Плечи':'muscle.shoulders','Грудь':'muscle.chest','Руки':'muscle.arms','Пресс':'muscle.core',
+  'Спина':'muscle.back','Ягодицы':'muscle.glutes','Квадрицепс':'muscle.quads','Задняя бедра':'muscle.hamstrings','Икры':'muscle.calves',
+  'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun',
+  'Понедельник':'day.monFull','Вторник':'day.tueFull','Среда':'day.wedFull','Четверг':'day.thuFull','Пятница':'day.friFull','Суббота':'day.satFull','Воскресенье':'day.sunFull'
+};
+const CANONICAL_DESC_KEYS = {
+  'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
+  'С разминкой':'option.desc.warm','Без разминки':'option.desc.noWarm'
+};
+function canonicalLabel(value){
+  const raw=String(value == null ? '' : value);
+  const key=CANONICAL_LABEL_KEYS[raw];
+  if(key) return t(key);
+  const m=raw.match(/^(\d+)(\+?)\s*мин$/);
+  if(m) return appLocale === 'ru' ? raw : (m[1] + m[2] + ' min');
+  return raw;
+}
+function canonicalDescription(value){
+  const key=CANONICAL_DESC_KEYS[String(value || '')];
+  return key ? t(key) : '';
+}
+
+try{
+  const a11yObserver = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      const el = m.target;
+      if(el && el.classList && el.classList.contains('switch')){
+        el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+      }
+    });
+  });
+  a11yObserver.observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:['class']});
+}catch(_){}
+/* Shared Fit Timer AI protocol contract.
+   Browser: globalThis.FitAIProtocol
+   Server:  require('../lib/ai-protocol')
+   Keep this file dependency-free so the same rules are used by the app and admin API. */
+(function(root){
+  const OPTIONAL_EXERCISE_LABELS = [
+    'ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ',
+    'ФОРМАТ','ЗНАЧЕНИЕ','ВЕС','ПОДХОДЫ',
+    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА',
+    'ОТДЫХ','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
+    'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
+    'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
+    'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
+    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ',
+    'ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ','ЗАМЕНА ОПИСАНИЕ','ВИДЕО'
+  ];
+
+  const machineLanguageRules = outputLanguage => `IMPORTANT LANGUAGE RULE:
+- All instructions in this prompt are in English.
+- User-visible content values must be written in ${outputLanguage}.
+- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens below are machine-readable constants. Keep them EXACTLY unchanged even when user-visible content is English.
+- Never translate canonical muscle tokens or weekday tokens.`;
+
+  const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
+Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Treat all explicitly provided user data as authoritative constraints and build a program that genuinely matches the stated goal, level, equipment, schedule, duration and preferences. Do not make the whole program easier just because some unrelated details are unknown. Use extra caution only where uncertainty truly matters: absolute starting loads when strength is unknown, medical or pain-related risk, and unusually aggressive progression. Do not invent facts about the user or pretend certainty where context is missing.
+
+- ПРОГРЕССИЯ at PROGRAM level means: after N completions of a given exercise, the app checks with the user whether to raise its load — it does NOT raise the load automatically, and it is per exercise, not a single program-wide counter. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between checks and experienced users roughly 2-4, but adapt to the actual program and recovery.
+- Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
+- For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
+- For weighted reps, distinguish three cases:
+  1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
+  2) rep progression: positive ШАГ ПОВТОРОВ;
+  3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
+- Whenever ШАГ ВЕСА is positive (cases 1 and 3 above), always give ПОТОЛОК ВЕСА — weight that grows without any realistic cap is the actual injury/plateau risk, not a missing field. This applies even when the user hasn't picked a starting weight yet.
+- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
+- ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
+- СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
+- If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
+- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load without downgrading the overall program difficulty.
+- Respect the declared fitness level. Beginner, intermediate and advanced programs should differ meaningfully in exercise complexity, volume, density and progression where appropriate; do not silently turn an intermediate or advanced request into a beginner workout.
+- Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
+- Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
+- Keep an exercise unilateral or bilateral unless the request gives a reason to change it (e.g. equipment, a limitation, back support); do not switch it arbitrarily.
+- Never invent equipment the user does not have.
+- Do not diagnose or claim medical safety. Respect stated limitations and avoid exercises that clearly conflict with them.`;
+
+  const exerciseSchema = outputLanguage => `=== EXERCISE PROTOCOL ===
+УПРАЖНЕНИЕ: exercise name in ${outputLanguage}
+ОПИСАНИЕ: 3-4 practical sentences in ${outputLanguage} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
+МЫШЦЫ: comma-separated tokens STRICTLY from: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
+ОШИБКИ: 1-2 common mistakes in ${outputLanguage}, max 300 characters (optional)
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
+ВЕС: starting kilograms for weighted formats
+ПОДХОДЫ: consecutive sets before the next exercise, 1-10
+СТОРОНА: "да" if ЗНАЧЕНИЕ is performed separately for each side; omit otherwise
+РАЗМИНКА: "да" for warm-up exercises; omit otherwise
+ОТДЫХ: seconds between sets
+ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
+УСЛОЖНЯТЬ: "да" or "нет"
+ШАГ: progression increment for unweighted reps/time only
+ШАГ ПОВТОРОВ: reps increment for weighted reps, only when reps themselves should progress
+ШАГ ВРЕМЕНИ: seconds increment for weighted time, only when time itself should progress
+ШАГ ВЕСА: kg increment for weighted formats
+ПОТОЛОК: required ceiling for progressive unweighted formats
+ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
+ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
+ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
+ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
+ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
+ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
+ВИДЕО: real technique URL only if confident it exists; otherwise omit`;
+
+  const programSchema = outputLanguage => `=== PROGRAM PROTOCOL ===
+ПРОГРАММА: program name in ${outputLanguage}
+ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line in ${outputLanguage}; explain purpose, frequency, expected result, what to watch, and when to reduce load
+ВРЕМЯ: HH:MM (optional)
+ПРОГРЕССИЯ: integer 1-15 or "нет"; number of completed executions of each progressive exercise between checks whether to raise its load
+ЧЕРЕДОВАНИЕ: "да" or "нет"; "да" means variants rotate A-B-A independently of weekdays
+ДНИ ТРЕНИРОВОК: comma-separated canonical tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only for shared schedule when ЧЕРЕДОВАНИЕ: да
+
+Workout variants:
+- one repeating workout = one variant
+- different exercise sets = multiple variants, max 7
+- every variant starts with ДЕНЬ:
+ДЕНЬ: canonical weekday tokens for this variant; leave empty when ЧЕРЕДОВАНИЕ: да
+КРУГИ: 1-10; repetitions of the ENTIRE exercise list
+ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
+
+КРУГИ and ПОДХОДЫ are independent:
+- circuit: usually КРУГИ 2-5 and ПОДХОДЫ 1
+- strength: usually КРУГИ 1 and ПОДХОДЫ 3-4
+- mixed: both can be >1 when total volume remains sensible
+
+${exerciseSchema(outputLanguage)}`;
+
+  // Раньше здесь было два жёстко разных набора правил (свободная перестройка /
+  // запрет структуры), а клиент выбирал между ними regex-угадайкой по тексту
+  // запроса — и либо душил «добавь упражнение», либо разрешал больше, чем
+  // просили. Один набор правил учит модель судить о масштабе изменения сама,
+  // а итог всё равно проверяется после генерации (парсинг + семантический diff),
+  // а не запрещается заранее.
+  const editRules = () => `=== EDIT RULES ===
+- Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
+- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
+- Keep existing protocol lines that stay relevant after the change; never drop a line only because it looks unnecessary (a missing ШАГ / ШАГ ВЕСА silently turns progression off).
+- Remove an optional line when the requested change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
+- If the user asks to disable a numeric setting while keeping the exercise, set a neutral value such as 0.
+- You may add valid optional exercise fields when the requested change needs them.`;
+
+  const programPrompt = outputLanguage => [
+    'You are a fitness-program assistant for home workouts.',
+    'Return ONLY the plain-text protocol below: no Markdown and no commentary before or after it.',
+    machineLanguageRules(outputLanguage),
+    programSchema(outputLanguage),
+    progressionRules(),
+    'Quality checks before answering:',
+    '- Make exercise selection, volume, intensity, rest and progression coherent as one program.',
+    '- Do not target a fixed number of exercises. Choose the exercise count, sets and rounds from the training goal, structure and time budget; a longer workout may intentionally use only a few exercises with more sets/rounds.',
+    '- When a target workout duration is supplied, estimate the whole session, not just active work: timed work = stated seconds × sides; rep-based work ≈ reps × 3 seconds × sides; multiply by sets and rounds; then add between-set rest, rest after exercises, side-switch time and between-round rest. Warm-up exercises run once before the main rounds.',
+    '- For target durations from 5 to 20 minutes, aim to stay within about ±5 minutes. For targets of 30 minutes or more, aim to stay within about ±20%. Treat an open-ended target such as 45+ minutes as a lower-bound preference rather than an exact cap.',
+    '- Do not create conflicting progression fields.',
+    '- Return only the protocol.'
+  ].join('\n\n');
+
+  // Модели нередко оформляют протокол Markdown'ом: «**ПРОГРАММА:** …»,
+  // «### ДЕНЬ: Пн», «- ФОРМАТ: …», ограждение \`\`\`plaintext. Раньше такой ответ
+  // отклонялся целиком как «неполный», хотя все данные в нём есть. Снимаем
+  // оформление только у строк, которые начинаются с метки протокола, — текст
+  // описаний не трогаем.
+  function normalizeResponse(raw){
+    return String(raw == null ? '' : raw).replace(/\r\n?/g, '\n').split('\n')
+      .filter(line => !/^\s*\`\`\`/.test(line))
+      .map(line => line.replace(
+        /^\s*(?:#{1,6}\s*|[-*•]\s+|\d+[.)]\s+)?(?:\*\*|__)?([А-ЯЁ][А-ЯЁ ]{1,40}?)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?[ \t]*/,
+        (m, label) => label + ': '))
+      .join('\n').trim();
+  }
+
+  // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
+  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Промт просит эту строку
+  // всегда, когда сам вес растёт (см. exerciseSchema/progressionRules), но
+  // промт — не гарантия; поэтому НОВЫЕ упражнения/программы (kind *.create)
+  // проверяются и после генерации. Правки (*.modify) — нет: старые упражнения
+  // сериализуются с «ШАГ ВЕСА: 2» и без потолка (так их создавали раньше), и
+  // узкая правка вроде «отдых 60 сек» законно возвращает их как есть —
+  // требовать потолок там значило бы отклонять обычные правки.
+  function exerciseBlockMissingWeightCeiling(block){
+    const stepM = block.match(/(?:^|\n)ШАГ ВЕСА:\s*([\d.,]+)/);
+    if(!stepM) return false;
+    const step = parseFloat(stepM[1].replace(',', '.'));
+    if(!(step > 0)) return false;
+    return !/(?:^|\n)ПОТОЛОК ВЕСА:\s*\S/.test(block);
+  }
+
+  function validateExerciseResponse(raw, opts){
+    const needCeiling = !!(opts && opts.requireWeightCeiling);
+    const text = normalizeResponse(raw);
+    const blocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).map(x=>x.trim()).filter(Boolean);
+    const required = ['УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
+    const missing = [];
+    blocks.forEach((block, i) => {
+      required.forEach(label => {
+        if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
+      });
+      if(needCeiling && exerciseBlockMissingWeightCeiling(block)) missing.push((i+1)+':ПОТОЛОК ВЕСА');
+    });
+    const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
+    const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
+    const countOk = blocks.length >= min && blocks.length <= max;
+    return {ok: !!blocks.length && !missing.length && countOk, text, missing, count:blocks.length,
+      reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
+  }
+
+  // Вариант без единого упражнения — это лишняя строка «ДЕНЬ:», а не повод
+  // выбросить весь ответ: модели иногда оставляют пустой заголовок в конце или
+  // между вариантами. Убираем такие варианты; ответ отклоняется, только если
+  // упражнений не осталось вовсе.
+  function dropEmptyVariants(text){
+    const parts = text.split(/(?=^ДЕНЬ:)/m);
+    const kept = parts.filter((part, i) => !(/^ДЕНЬ:/.test(part) && !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(part)));
+    // все варианты пустые — оставляем как было, пусть сработает no_exercises
+    if(!kept.some(part => /^ДЕНЬ:/.test(part))) return text;
+    return kept.join('').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function validateProgramResponse(raw, opts){
+    const text = dropEmptyVariants(normalizeResponse(raw));
+    // ПОДХОДЫ не обязательны: без строки разбор ставит 1 подход, а программа
+    // «по кругам» (КРУГИ 2–5, по одному подходу) законно может её не содержать —
+    // раньше такой ответ целиком отклонялся как «неполный».
+    const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ОТДЫХ'];
+    const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
+    const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
+    // каждый вариант начинается со своей строки ДЕНЬ: — делим по ней и отбрасываем
+    // преамбулу (ПРОГРАММА/ОПИСАНИЕ/ВРЕМЯ) до первого варианта
+    const variants = text.split(/(?:^|\n)ДЕНЬ:/).slice(1);
+    const days = variants.length;
+    const emptyVariant = variants.some(v => !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(v));
+    const exBlocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm);
+    const weightCeilingMissing = !!(opts && opts.requireWeightCeiling) && exBlocks.some(exerciseBlockMissingWeightCeiling);
+    if(weightCeilingMissing) missing.push('ПОТОЛОК ВЕСА');
+    return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
+      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
+  }
+
+  function validateResponse(kind, raw){
+    if(String(kind || '').startsWith('image.')){
+      const image = String(raw == null ? '' : raw).trim();
+      return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
+        text:image, missing:[], reason:'bad_image'};
+    }
+    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true});
+    if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
+    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true});
+    if(/^(?:program\.modify|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
+    return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
+  }
+
+  // Одна строка протокола → {key, value}. Общая для клиента и сервера: обе стороны
+  // разбирали её независимо и чуть по-разному, хотя формат один и тот же.
+  function protocolLine(line){
+    const m = String(line || '').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
+    return m ? {key:m[1], value:m[2]} : null;
+  }
+
+  // Поля, которые нельзя терять молча при правке ОДНОГО упражнения. Раньше вся
+  // правка шла через позиционный merge каждого поля (что не даёт ИИ ни удалить,
+  // ни переставить строки) — теперь ответ ИИ принимается как есть, а сюда
+  // подставляются только описательные поля техники, если ответ их не вернул.
+  const DESCRIPTIVE_EXERCISE_LABELS = ['ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ','ВИДЕО'];
+  function carryExerciseFields(sourceText, candidateText){
+    const srcByKey = {};
+    String(sourceText || '').split(/\r?\n/).forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim() && srcByKey[p.key] == null) srcByKey[p.key] = p.value.trim();
+    });
+    const candLines = String(candidateText || '').split(/\r?\n/);
+    const candHasValue = new Set();
+    candLines.forEach(line => {
+      const p = protocolLine(line);
+      if(p && p.value.trim()) candHasValue.add(p.key);
+    });
+    const extra = DESCRIPTIVE_EXERCISE_LABELS.filter(k => !candHasValue.has(k) && srcByKey[k] != null);
+    if(!extra.length) return candidateText;
+    return candLines.concat(extra.map(k => k + ': ' + srcByKey[k])).join('\n');
+  }
+
+  function normExName(s){
+    return String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  }
+  // длина наидлиннейшей возрастающей подпоследовательности — сколько сопоставленных
+  // упражнений уже стоят в правильном относительном порядке без переноса
+  function longestIncreasingRun(seq){
+    const tails = [];
+    seq.forEach(x => {
+      let lo = 0, hi = tails.length;
+      while(lo < hi){ const mid = (lo + hi) >> 1; if(tails[mid] < x) lo = mid + 1; else hi = mid; }
+      tails[lo] = x;
+    });
+    return tails.length;
+  }
+
+  // Семантическое сравнение программ по упражнениям: что добавлено, что убрано,
+  // сколько переставлено — вместо принудительного «то же количество, тот же
+  // порядок» (aiMergeProgramEdit/sameProgramShape), которое молча душило любую
+  // структурную правку. Работает на {plans:[{exercises:[{id,name,...}]}]} —
+  // тот же вид, что у customProgram после normPlans()/parseProgramText().
+  // Сопоставление: сперва по стабильному id (если он совпал напрямую), затем по
+  // технической метке КОД в новом упражнении (её кладёт клиент в текст для
+  // AI-правки и не показывает пользователю), затем по точному имени — сначала в
+  // том же варианте, потом в любом. Совпадение не гарантирует, что это буквально
+  // то же движение — это лишь лучшая доступная оценка непрерывности.
+  function diffPrograms(oldP, newP){
+    const oldPlans = (oldP && Array.isArray(oldP.plans)) ? oldP.plans : [];
+    const newPlans = (newP && Array.isArray(newP.plans)) ? newP.plans : [];
+    const oldFlat = [], newFlat = [];
+    oldPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => oldFlat.push({ex, pi})));
+    newPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => newFlat.push({ex, pi})));
+
+    const usedNew = new Array(newFlat.length).fill(false);
+    const matches = [];
+    const alreadyMatched = new Set();
+    const matchPass = test => {
+      oldFlat.forEach((o, oi) => {
+        if(alreadyMatched.has(oi)) return;
+        let ni = -1;
+        for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(newFlat[j].pi === o.pi && test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni < 0) for(let j = 0; j < newFlat.length; j++){
+          if(usedNew[j]) continue;
+          if(test(o.ex, newFlat[j].ex)){ ni = j; break; }
+        }
+        if(ni >= 0){
+          usedNew[ni] = true; alreadyMatched.add(oi);
+          matches.push({oi, ni, oldEx:o.ex, newEx:newFlat[ni].ex});
+        }
+      });
+    };
+    matchPass((a, b) => a.id && b.id && a.id === b.id);
+    matchPass((a, b) => a.id && b._code && a.id === b._code);
+    matchPass((a, b) => normExName(a.name) && normExName(a.name) === normExName(b.name));
+
+    const matchedOld = new Set(matches.map(m => m.oi));
+    const removed = oldFlat.filter((_, oi) => !matchedOld.has(oi)).map(o => o.ex);
+    const added = newFlat.filter((_, ni) => !usedNew[ni]).map(n => n.ex);
+
+    const orderedNewIdx = matches.slice().sort((a, b) => a.oi - b.oi).map(m => m.ni);
+    const moved = matches.length ? matches.length - longestIncreasingRun(orderedNewIdx) : 0;
+
+    return {
+      matches: matches.map(m => ({oldEx:m.oldEx, newEx:m.newEx})),
+      added, removed, moved,
+      oldVariants: oldPlans.length, newVariants: newPlans.length
+    };
+  }
+
+  const api = {
+    OPTIONAL_EXERCISE_LABELS,
+    normalizeResponse,
+    validateExerciseResponse,
+    validateProgramResponse,
+    validateResponse,
+    machineLanguageRules,
+    progressionRules,
+    exerciseSchema,
+    programSchema,
+    editRules,
+    programPrompt,
+    protocolLine,
+    carryExerciseFields,
+    diffPrograms
+  };
+  root.FitAIProtocol = api;
+  if(typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+/* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
+const ILLO = {
+  water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
+  rest: `<svg viewBox="0 0 240 120"><path class="acc" d="M96 36 a28 28 0 1 0 52 34 a34 34 0 1 1 -52 -34 Z"/></svg>`
+};
+
+// дефолтная обложка программы — гантель
+const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15" y="19" width="9" height="26" rx="3.5"/><rect x="40" y="19" width="9" height="26" rx="3.5"/><rect x="6" y="25" width="6" height="14" rx="3"/><rect x="52" y="25" width="6" height="14" rx="3"/><rect x="24" y="29" width="16" height="6" rx="3"/></svg>`;
+
+
+
+
+/* ================= ЗВУК ================= */
+let soundOn = true; // общий выключатель звука
+let lastAppSoundT = 0; // когда приложение само издавало звук — не принимаем его за голосовую команду
+let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
+let readySec = 5;  // подготовка перед упражнением на время
+let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
+let fxVol = 1;    // громкость звуковых эффектов 0..1
+let voiceVol = 1; // громкость голоса 0..1
+let audioCtx = null, masterGain = null;
+function initAudio(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(!masterGain){ masterGain = audioCtx.createGain(); masterGain.gain.value = fxVol; masterGain.connect(audioCtx.destination); }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }catch(e){}
+}
+function fxDest(){ return masterGain || audioCtx.destination; }
+function beep(freq=880, dur=0.15, when=0, vol=0.25){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + (when + dur) * 1000;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type='sine'; o.frequency.value=freq;
+  g.gain.setValueAtTime(vol, audioCtx.currentTime + when);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + when + dur);
+  o.connect(g); g.connect(fxDest());
+  o.start(audioCtx.currentTime + when); o.stop(audioCtx.currentTime + when + dur + 0.05);
+}
+const tick = () => beep(660, .09, 0, .18);
+const endSignal = () => { beep(880,.14,0); beep(880,.14,.2); beep(1320,.3,.4,.3); };
+
+// гонг — начало нового упражнения
+function gong(){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
+  const t = audioCtx.currentTime;
+  [[110,1.6,.4],[164,1.2,.28],[218,1.0,.18],[329,1.9,.1]].forEach(([f,dur,vol])=>{
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.connect(g); g.connect(fxDest());
+    o.start(t); o.stop(t+dur+.1);
+  });
+}
+
+// СТАРТ УПРАЖНЕНИЯ — самый заметный сигнал, ни на что не похожий:
+// низкий удар + восходящий колокольный аккорд со звоном
+function exerciseGong(){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 2200;
+  const t = audioCtx.currentTime;
+
+  // плотный низкий удар — «вес» события
+  const bo = audioCtx.createOscillator(), bg = audioCtx.createGain();
+  bo.type = 'sine';
+  bo.frequency.setValueAtTime(200, t);
+  bo.frequency.exponentialRampToValueAtTime(70, t + .55);
+  bg.gain.setValueAtTime(.55, t);
+  bg.gain.exponentialRampToValueAtTime(.001, t + .8);
+  bo.connect(bg); bg.connect(fxDest());
+  bo.start(t); bo.stop(t + .85);
+
+  // восходящий колокольный аккорд до-ми-соль-до
+  [[523.25, 0, .30], [659.25, .075, .28], [783.99, .15, .26], [1046.5, .225, .34]].forEach(([f, dt, vol])=>{
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + dt);
+    g.gain.linearRampToValueAtTime(vol, t + dt + .012);
+    g.gain.exponentialRampToValueAtTime(.001, t + dt + .75);
+    o.connect(g); g.connect(fxDest());
+    o.start(t + dt); o.stop(t + dt + .8);
+  });
+
+  // высокий звон-послезвучие
+  const so = audioCtx.createOscillator(), sg = audioCtx.createGain();
+  so.type = 'sine'; so.frequency.value = 2093;
+  sg.gain.setValueAtTime(0, t + .22);
+  sg.gain.linearRampToValueAtTime(.14, t + .25);
+  sg.gain.exponentialRampToValueAtTime(.001, t + 1.15);
+  so.connect(sg); sg.connect(fxDest());
+  so.start(t + .22); so.stop(t + 1.2);
+}
+
+// фанфары — тренировка завершена
+function fanfare(){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  notes.forEach((f,i)=> {
+    beep(f, .22, i*.16, .25);
+  });
+  // финальный аккорд
+  [783.99, 1046.5, 1318.5].forEach(f=>{
+    const t = audioCtx.currentTime + notes.length*.16 + .05;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='triangle'; o.frequency.value=f;
+    g.gain.setValueAtTime(.18, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+1.1);
+    o.connect(g); g.connect(fxDest());
+    o.start(t); o.stop(t+1.2);
+  });
+}
+
+// щелчки — фолбэк голосового отсчёта: 1 щелчок = 15 сек, 2 = 30 и т.д.
+function clicks(n){
+  if(!audioCtx || !soundOn || fxVol<=0) return;
+  lastAppSoundT = Date.now() + 1500;
+  for(let i=0;i<n;i++){
+    const t = audioCtx.currentTime + i*0.22;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='square'; o.frequency.value=1600;
+    g.gain.setValueAtTime(.22, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+.04);
+    o.connect(g); g.connect(fxDest());
+    o.start(t); o.stop(t+.06);
+  }
+}
+
+// Язык озвучки всегда следует языку приложения. Отдельно выбирается только голос;
+// язык распознавания голосовых команд остаётся самостоятельной настройкой.
+let savedVoiceURI = '';
+let voiceLang = localeTag();
+function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
+function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
+  return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
+}
+function voicesForLang(lang){
+  const prefix = String(lang || 'ru-RU').toLowerCase().split('-')[0];
+  try{ return speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith(prefix)); }
+  catch(e){ return []; }
+}
+
+// если голоса нет или ошибка — фолбэк-звук
+let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
+function speak(text, fallback, onDone){
+  const done = ()=>{ if(onDone){ const f = onDone; onDone = null; f(); } };
+  if(!soundOn){ done(); return; }
+  if(voiceVol <= 0){ if(fallback) fallback(); done(); return; } // голос выключен — фолбэк-звук
+  if(musicMode){ if(fallback) fallback(); done(); return; }
+  try{
+    if(!('speechSynthesis' in window)){ if(fallback) fallback(); done(); return; }
+    const voices = speechSynthesis.getVoices();
+    const matching = voicesForLang(voiceLang);
+    if(voices.length && !matching.length){ if(fallback) fallback(); done(); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = voiceLang || 'ru-RU';
+    u.rate = 1.05;
+    u.volume = 1;
+    const chosen = matching.find(v => v.voiceURI === savedVoiceURI) || matching[0];
+    if(chosen) u.voice = chosen;
+    let started = false;
+    u.onstart = ()=>{ started = true; lastAppSoundT = Date.now() + 8000; }; // потолок на случай зависания
+    u.onend = ()=>{ lastAppSoundT = Date.now() + 250; done(); };            // фраза кончилась — быстро отпускаем детектор
+    u.onerror = ()=>{ lastAppSoundT = Date.now() + 250; if(!started && fallback) fallback(); done(); };
+    try{ speechSynthesis.cancel(); }catch(e){}
+    speechSynthesis.speak(u);
+    // предохранитель: если TTS завис и не дал ни onend, ни onerror
+    setTimeout(done, 6000);
+  }catch(e){ if(fallback) fallback(); done(); }
+}
+
+// «Осталось N секунд» на отметках 60/45/30/15
+function announceRemaining(sec){
+  speak(voiceIsEnglish() ? `${sec} seconds remaining` : `Осталось ${sec} секунд`, ()=> clicks(sec/15));
+}
+
+// круг завершён — голосом с временем отдыха и следующим упражнением
+function roundDone(seconds, nxt){
+  let text;
+  if(voiceIsEnglish()){
+    text = seconds ? `Round complete. Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}` : 'Round complete';
+  } else {
+    text = seconds ? `Круг завершён. Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}` : 'Круг завершён';
+  }
+  const nd = nextStepSpeech(nxt);
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
+  speak(text, ()=>{ gong(); setTimeout(gong, 550); });
+}
+
+// обычный отдых — «Отдохните 45 секунд. Далее — скручивания лёжа»
+// описание следующего шага для озвучки: «Планка, подход 2 из 3, сторона 1 из 2»
+function nextStepSpeech(nxt){
+  if(!nxt) return '';
+  let out = nxt.title;
+  if(nxt.setsTotal > 1) out += voiceIsEnglish()
+    ? `, set ${nxt.setNo} of ${nxt.setsTotal}`
+    : `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
+  if(nxt.side) out += voiceIsEnglish()
+    ? `, side ${nxt.side} of ${nxt.sidesTotal || 2}`
+    : `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
+  return out;
+}
+function announceRest(seconds, nxt){
+  let text = voiceIsEnglish()
+    ? `Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}`
+    : `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
+  const nd = nextStepSpeech(nxt);
+  if(nd) text += voiceIsEnglish() ? `. Next: ${nd}` : `. Далее — ${nd}`;
+  speak(text, ()=> beep(520, .18, 0, .2));
+}
+
+// склонение: 1 повторение, 2 повторения, 5 повторений
+function plural(n, one, few, many){
+  n = Math.abs(n) % 100;
+  if(n > 10 && n < 20) return many;
+  const n1 = n % 10;
+  if(n1 === 1) return one;
+  if(n1 > 1 && n1 < 5) return few;
+  return many;
+}
+
+// озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
+function announceExercise(step, onDone){
+  let text = step.title;
+  if(step.setsTotal > 1) text += voiceIsEnglish()
+    ? `, set ${step.setNo} of ${step.setsTotal}`
+    : `, подход ${step.setNo} из ${step.setsTotal}`;
+  if(step.kind === 'click'){
+    const r = parseValue(step.reps);
+    if(r.min === r.max){
+      text += voiceIsEnglish()
+        ? `, ${r.min} ${voicePlural(r.min,'повторение','повторения','повторений','rep','reps')}`
+        : `, ${r.min} ${plural(r.min, 'повторение', 'повторения', 'повторений')}`;
+    } else {
+      text += voiceIsEnglish()
+        ? `, ${r.min} to ${r.max} reps`
+        : `, от ${r.min} до ${r.max} ${plural(r.max, 'повторения', 'повторений', 'повторений')}`;
+    }
+    if(step.perSide) text += voiceIsEnglish() ? ', on each side' : ', на каждую сторону';
+  } else if(step.seconds){
+    text += voiceIsEnglish()
+      ? `, ${step.seconds} ${voicePlural(step.seconds,'секунда','секунды','секунд','second','seconds')}`
+      : `, ${step.seconds} ${plural(step.seconds, 'секунда', 'секунды', 'секунд')}`;
+    if(step.perSide){
+      text += step.side
+        ? (voiceIsEnglish() ? `, side ${step.side} of ${step.sidesTotal || 2}` : `, сторона ${step.side} из ${step.sidesTotal || 2}`)
+        : (voiceIsEnglish() ? ', on each side' : ', на каждую сторону');
+    }
+  }
+  if(step.weight > 0){
+    const kg = voiceIsEnglish() ? fmtKg(step.weight) : fmtKg(step.weight).replace('.', ',');
+    text += voiceIsEnglish()
+      ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
+      : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
+  }
+  speak(text, null, onDone);
+}
+
+// мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
+// считаем по кадрам, чтобы пауза реально останавливала подготовку
+const RR_LEN = 2 * Math.PI * 17; // длина окружности кольца подготовки (r=17 в svg 40×40)
+function runReadyBar(sec, done){
+  const box = $('readyRing'), arc = $('readyArc'), num = $('readyNum');
+  if(!box || sec <= 0){ done(); return; }
+  const totalMs = sec * 1000;
+  let left = totalMs, last = performance.now(), lastShown = sec;
+  setShown(box, true);
+  document.body.classList.add('readying'); // прячет вес рядом с таймером на время отсчёта — иначе им негде стоять вместе
+  arc.style.strokeDashoffset = RR_LEN;   // пустое кольцо в начале
+  num.innerHTML = tnum(sec);
+  beep(660, .08);
+  state.readyRAF = requestAnimationFrame(function tick(now){
+    if(!state.readyRAF) return; // отменили
+    const dt = now - last; last = now;
+    if(!state.paused){
+      left -= dt;
+      if(left <= 0){
+        state.readyRAF = 0;
+        hideReadyBar();
+        done();
+        return;
+      }
+      // кольцо заполняется к нулю: круг замкнулся — упражнение началось
+      arc.style.strokeDashoffset = (left / totalMs * RR_LEN).toFixed(2);
+      const s = Math.ceil(left / 1000);
+      if(s !== lastShown){ lastShown = s; num.innerHTML = tnum(s); beep(660, .08); }
+    }
+    state.readyRAF = requestAnimationFrame(tick);
+  });
+}
+function hideReadyBar(){
+  if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
+  if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
+  const box = $('readyRing');
+  if(box) setShown(box, false);
+  document.body.classList.remove('readying');
+}
+
+// бодрый сигнал «старт!» после озвучки упражнения
+function startSignal(){
+  beep(880, .1, 0, .3);
+  beep(1320, .28, .13, .35);
+}
+
+/* ================= WAKE LOCK ================= */
+let wakeLock = null;
+async function keepAwake(){
+  try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function releaseWake(){ try{ wakeLock && wakeLock.release(); wakeLock=null; }catch(e){} }
+
+/* ================= СОСТОЯНИЕ ================= */
+let state = {
+  current: null,   // выбранная программа (месяц или своя)
+  steps: [],       // развёрнутый список шагов на все 4 круга
+  startLoad: null, // нагрузка в момент старта — для точного сравнения в следующий раз
+  stepIdx: 0,
+  stepTimer: null, // interval текущего шага-таймера
+  remaining: 0,
+  load: 100,       // выбранная нагрузка в %
+  prepTimer: null, // отсчёт перед стартом тренировки
+  readyTimer: null, // (не используется, оставлено для совместимости)
+  readyRAF: 0,      // кадровый цикл подготовки перед упражнением на время
+  live: false,     // тренировка идёт прямо сейчас
+  paused: false,
+  pausedAt: 0,
+  pausedTotal: 0,  // суммарное время на паузе, мс
+  globalStart: 0,
+  globalInterval: null
+};
+
+const $ = id => document.getElementById(id);
+
+// лёгкая тактильная отдача на нажатия (где поддерживается)
+function haptic(ms){
+  if(window.FitNative && window.FitNative.haptic && window.FitNative.haptic()) return;
+  try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){}
+}
+document.addEventListener('pointerdown', e => {
+  const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
+  if(t && !t.disabled) haptic(8);
+}, {passive: true});
+
+/* ================= ИКОНКИ (единый стиль, stroke 2) ================= */
+/* ================= ИКОНКИ =================
+   ЕДИНСТВЕННЫЙ источник иконок в приложении — этот объект. Ни эмодзи, ни типографские
+   заменители («＋», «‹», «✕», «✓»), ни картинки со стороны: они не масштабируются, не
+   слушаются темы и на каждом устройстве выглядят по-своему.
+
+   Как пользоваться:
+   • в разметке — пустой элемент с атрибутом: <span data-icon="plus"></span>.
+     Один проход по документу на старте подставит SVG во все такие элементы, заводить
+     строку JS на каждую новую кнопку не нужно;
+   • из кода — icon('plus') возвращает готовую разметку <svg>.
+
+   Как добавлять новую иконку: только сюда, значением — ВНУТРЕННОСТИ svg (пути, круги),
+   без самого тега <svg>: обёртку с общими атрибутами добавляет icon(). Правила формы —
+   сетка 24×24, только контур (stroke), толщина 2, скругления на концах, никакой заливки
+   и никаких захардкоженных цветов: цвет наследуется через currentColor.
+
+   Единственное исключение — логотип YouTube в разметке: это чужой фирменный знак,
+   у него своя форма и заливка, и «привести его к сетке» значит нарисовать не его. */
+const ICONS = {
+  pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  grip: '<circle cx="9" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="19" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="19" r="1.3" fill="currentColor" stroke="none"/>',
+  plus: '<path d="M5 12h14M12 5v14"/>',
+  home: '<path d="M3.6 10.4 12 3.6l8.4 6.8V20a1 1 0 0 1-1 1h-4.6v-6.2H9.2V21H4.6a1 1 0 0 1-1-1Z"/>',
+  gear: '<circle cx="12" cy="12" r="3.1"/><path d="M19.3 13.6a7.8 7.8 0 0 0 0-3.2l1.8-1.4-1.9-3.3-2.1.8a7.7 7.7 0 0 0-2.8-1.6L13.9 2.7h-3.8l-.4 2.2a7.7 7.7 0 0 0-2.8 1.6l-2.1-.8-1.9 3.3 1.8 1.4a7.8 7.8 0 0 0 0 3.2l-1.8 1.4 1.9 3.3 2.1-.8a7.7 7.7 0 0 0 2.8 1.6l.4 2.2h3.8l.4-2.2a7.7 7.7 0 0 0 2.8-1.6l2.1.8 1.9-3.3Z"/>',
+  reset: '<path d="M3 3v6h6"/><path d="M3.8 9A9 9 0 1 0 6 5.3L3 8"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/>',
+  play: '<path d="M7 4.5 20 12 7 19.5Z" fill="currentColor" stroke-linejoin="round"/>',
+  vol: '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.4 5.6a9 9 0 0 1 0 12.8"/>',
+  volX: '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M22 9l-6 6M16 9l6 6"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.4l6.8 3.9M15.4 6.7 8.6 10.6"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>',
+  // искра и огонь нарисованы по центру сетки 24×24: раньше искра стояла на две
+  // единицы выше центра, а огонь — на полторы ниже, и в чипе рядом с часами
+  // огонёк заметно съезжал вниз относительно текста
+  sparkle: '<path d="M12 5l1.9 5.1L19 12l-5.1 1.9L12 19l-1.9-5.1L5 12l5.1-1.9Z"/>',
+  chevL: '<path d="M15 18l-6-6 6-6"/>',
+  chevR: '<path d="M9 18l6-6-6-6"/>',
+  chevD: '<path d="M6 9l6 6 6-6"/>',
+  more: '<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+  weight: '<circle cx="12" cy="6" r="3"/><path d="M6 21l1.5-9h9L18 21H6Z"/>',
+  camera: '<path d="M4 8h3l2-2h6l2 2h3v11H4V8Z"/><circle cx="12" cy="13" r="3.2"/>',
+  flame: '<path d="M12 20.4c4 0 6.5-2.6 6.5-6 0-4.5-4-6.4-3.4-10.8C12.8 4.8 10 7 10 9.4c-.9-.6-1.4-1.6-1.5-2.7C7 8.2 5.5 10.4 5.5 13.4c0 3.7 2.7 7 6.5 7Z"/>',
+  moon: '<path d="M20 14.5A8.3 8.3 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/>',
+  check: '<path d="M4 12.5 9.5 18 20 6.5"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.4v.2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M6 15H4.5A1.5 1.5 0 0 1 3 13.5V4.5A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V6"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12Z"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2.5 4 3.5"/>',
+  fingerprint: '<path d="M3.5 12.5a8.5 8.5 0 0 1 17 0v1.5"/><path d="M6.5 12.5a5.5 5.5 0 0 1 11 0v3.5"/><path d="M9.5 12.5a2.5 2.5 0 0 1 5 0v5"/><path d="M12 12.5V20"/><path d="M6.4 17.6A7 7 0 0 1 5 20"/>',
+  video: '<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="M16.5 10.5 22 7v10l-5.5-3.5Z"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  // щит — раздел о данных; сердце — раздел о здоровье. Та же сетка 24×24, контур,
+  // толщина 2, цвет через currentColor
+  // документ — пользовательское соглашение: «книга» уже занята обучением и
+  // каталогом, и два одинаковых значка в одном списке настроек читаются как ошибка
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',
+  shield: '<path d="M12 3l7 3v5.4c0 4.2-2.9 7.7-7 8.6-4.1-.9-7-4.4-7-8.6V6l7-3Z"/>',
+  heart: '<path d="M12 20.2C9.6 18.6 4 14.6 4 10.5A3.8 3.8 0 0 1 12 8.4a3.8 3.8 0 0 1 8 2.1c0 4.1-5.6 8.1-8 9.7Z"/>',
+  // давление: шкала со стрелкой. Рядом с пульсом нужен ДРУГОЙ знак — два сердца
+  // подряд читаются как одна метрика, показанная дважды
+  gauge: '<path d="M3.5 17.5a8.5 8.5 0 1 1 17 0"/><path d="M12 17.5 16.4 12"/><circle cx="12" cy="17.7" r="1.5"/>',
+  // включить / отключить программу
+  power: '<path d="M12 3v9"/><path d="M6.9 6.9a7.5 7.5 0 1 0 10.2 0"/>',
+  book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M8 3v18"/>',
+  user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.3a3.2 3.2 0 0 1 0 5.4"/><path d="M17.5 14.2A6.5 6.5 0 0 1 21.5 20"/>',
+  medal: '<circle cx="12" cy="15" r="6"/><path d="M9.2 9.6 6 2h4l2.4 5.6M14.8 9.6 18 2h-4l-1.2 2.8"/><path d="m12 12.6.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9 14.8l2-.3.9-1.9Z"/>',
+  crown: '<path d="M3.5 18h17l1.2-9.4-5 3.4L12 4.6 7.3 12l-5-3.4L3.5 18Z"/><path d="M4.4 21h15.2"/>',
+  trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.6a2 2 0 0 0 0 4H7M17 6h2.4a2 2 0 0 1 0 4H17"/><path d="M12 14v3M8.5 20.5h7M9.6 17.6h4.8l1 2.9H8.6l1-2.9Z"/>',
+  rocket: '<path d="M12 2.7c2.9 2.2 4.4 5.4 4.4 9.2l-1.7 3.4H9.3L7.6 11.9c0-3.8 1.5-7 4.4-9.2Z"/><circle cx="12" cy="10" r="1.9"/><path d="M9.3 15.3 6.6 17c-.5.3-.8.9-.7 1.5l.4 2.4 3.3-1.6M14.7 15.3l2.7 1.7c.5.3.8.9.7 1.5l-.4 2.4-3.3-1.6"/>',
+  gem: '<path d="M7.4 3.5h9.2l3.9 5.2L12 20.5 3.5 8.7l3.9-5.2Z"/><path d="M3.5 8.7h17M8.6 8.7 12 20.5l3.4-11.8M7.4 3.5l1.2 5.2M16.6 3.5l-1.2 5.2"/>',
+  sprout: '<path d="M12 21v-7.4"/><path d="M12 13.6C12 10.5 9.6 8 6.4 8c0 3.1 2.5 5.6 5.6 5.6Z"/><path d="M12 12.4c0-3.1 2.5-5.6 5.6-5.6 0 3.1-2.5 5.6-5.6 5.6Z"/><path d="M8 21h8"/>',
+  bolt: '<path d="M13.4 2.5 4.8 13.2h5.6l-.6 8.3 8.6-10.7h-5.6l.6-8.3Z"/>',
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  dumbbell: '<path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M7.5 12h9"/>'
+};
+function icon(name){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+}
+
+/* ================= МЫШЕЧНЫЕ ГРУППЫ ================= */
+// ОДИН набор на всё приложение. Списки чипов у программы и у упражнения разошлись:
+// инвентарь начинался то с «Нет», то с «Без инвентаря», «Резинки» против «Резинка»,
+// а «Утяжелители» и «Турник» были только у программы. Держим их здесь, до первого
+// использования, и подставляем в оба места.
+const OPT_LEVEL = ['Новичок', 'Средний', 'Продвинутый'];
+// Зачем человек тренируется. Один список и для вопроса при создании программы,
+// и для направлений каталога: «Похудение» в фильтре против «Похудеть» в чипах —
+// это два разных слова для одного и того же, и человек честно их не узнавал.
+const OPT_GOAL = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот',
+  'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина',
+  'Восстановиться после родов', 'Кардио и энергия'];
+// чипы-исключения: выбран такой — остальные снимаются, и наоборот
+const OPT_NONE = new Set(['Без инвентаря', 'Без ограничений']);
+const OPT_EQUIP = ['Без инвентаря', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'];
+
+const MUSCLES = [
+  ['ne','Шея'], ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
+  ['ba','Спина'], ['gl','Ягодицы'], ['le','Квадрицепс'], ['hm','Задняя бедра'], ['ca','Икры']
+];
+const M_LABEL = Object.fromEntries(MUSCLES);
+
+/* ================= ПОКАЗ И СКРЫТИЕ ================= */
+// единственный способ управлять видимостью: класс, а не инлайновый display.
+// инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
+function setShown(el, on){
+  const node = (typeof el === 'string') ? $(el) : el;
+  AppBaseUI.setShown(node, !!on);
+}
+
+/* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
+// снимки форм: сравниваем текущее состояние с тем, что было при открытии
+const snap = {};
+function takeSnap(key, val){ snap[key] = JSON.stringify(val ?? null); }
+function isChanged(key, val){ return snap[key] !== undefined && snap[key] !== JSON.stringify(val ?? null); }
+function clearSnap(key){ delete snap[key]; }
+
+// спрашивает подтверждение, если что-то менялось; иначе уходит молча
+// Формулировка одна на всё приложение: «ещё не сохранены» (а не «не сохранены» —
+// прошедшее время звучало как приговор), а кнопки всегда «Выйти без сохранения»
+// и «Остаться» — вместо пяти разных способов сказать «отменить».
+async function leaveGuard(changed, go, what){
+  if(changed){
+    const ok = await appDialog(
+      t('common.unsaved',{what:what || t('common.changes')}),
+      {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
+    );
+    if(!ok) return false;
+  }
+  go();
+  return true;
+}
+
+// текст в полях ИИ-экрана считается несохранённой работой
+function aiScreenDirty(ids){
+  return ids.some(id => { const el = $(id); return el && (el.value || '').trim(); });
+}
+
+/* ================= ПРОВЕРКА ЧИСЛОВЫХ ПОЛЕЙ =================
+   Раньше «абв» в поле повторений молча превращалось в 1 при сохранении.
+   Теперь поле краснеет прямо во время ввода и говорит, что от него хотят,
+   а сохранение не проходит, пока ошибка не исправлена. */
+const NUM_RULES = {
+  int:   {re: /^\s*\d{1,4}\s*$/,                          key: 'num.int'},
+  range: {re: /^\s*\d{1,3}\s*(?:[-–—]\s*\d{1,3}\s*)?$/, key: 'num.range'},
+  dec:   {re: /^\s*\d{1,4}(?:[.,]\d{1,2})?\s*$/,         key: 'num.dec'}
+};
+function markNum(el){
+  const kind = el.dataset.numKind;
+  const rule = NUM_RULES[kind];
+  if(!rule) return true;
+  const raw = el.value;
+  const empty = !raw.trim();
+  const bad = empty ? !!el.dataset.numReq : !rule.re.test(raw);
+  const field = el.closest('.field') || el.parentElement;
+  field.classList.toggle('bad', bad);
+  let hint = field.querySelector('.field-err');
+  if(bad){
+    if(!hint){
+      hint = document.createElement('p');
+      hint.className = 'field-err';
+      field.appendChild(hint);
+    }
+    hint.innerHTML = icon('alert') + '<span></span>';
+    hint.querySelector('span').textContent = empty ? t('num.required') : t(rule.key);
+  } else if(hint) hint.remove();
+  return !bad;
+}
+function guardNum(id, kind, required){
+  const el = $(id);
+  if(!el) return;
+  el.dataset.numKind = kind;
+  if(required) el.dataset.numReq = '1';
+  const check = () => markNum(el);
+  el.addEventListener('input', check);
+  el.addEventListener('blur', check);
+}
+// проверяет все видимые числовые поля экрана; на первую ошибку — прокрутка и фокус
+function numFieldsOk(scopeId){
+  const scope = $(scopeId);
+  if(!scope) return true;
+  let first = null;
+  scope.querySelectorAll('[data-num-kind]').forEach(el => {
+    if(el.offsetParent === null) return; // поле сейчас скрыто — не наша забота
+    if(!markNum(el) && !first) first = el;
+  });
+  if(first){
+    try{ first.scrollIntoView({block: 'center', behavior: 'smooth'}); }catch(_){}
+    first.focus();
+    return false;
+  }
+  return true;
+}
+
+/* ================= КАСКАД НАСТРОЕК ЗВУКА (общий для трёх мест) ================= */
+// показывает/прячет вложенные блоки по состоянию тумблеров; сама раскладка одна и та же
+// в профиле, на экране старта и в попапе на тренировке — меняются только префикс id и что именно сохраняется
+function syncSoundCascade(p){
+  const on = $(p + 'SoundOn').classList.contains('on');
+  setShown(p + 'SoundBox', on);
+  if(!on) return;
+  setShown(p + 'FxField', $(p + 'FxOn').classList.contains('on'));
+}
+
+/* ================= ДИАЛОГИ ПРИЛОЖЕНИЯ (вместо системных) ================= */
+// appDialog должен завершаться только после того, как служебная запись открытого
+// попапа реально снята из browser history. Иначе следующий переход успевает
+// построить новую навигацию поверх ещё не завершившегося history.back().
+let modalHistoryWaiters = [];
+function appDialog(msg, opts = {}){
+  return new Promise(res => {
+    // текст передают и готовой строкой, и функцией от t(): на экран не должен
+    // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
+    $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
+    const codeEl = $('dlgCode');
+    if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
+    else setShown(codeEl, false);
+    // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
+    const typed = $('dlgType');
+    setShown('dlgTypeBox', !!opts.type);
+    typed.oninput = null;
+    if(opts.type){
+      typed.value = '';
+      $('dlgTypeLabel').textContent = t('dialog.type',{text:opts.type});
+      const check = ()=>{ $('dlgOk').disabled = typed.value.trim().toLowerCase() !== opts.type.toLowerCase(); };
+      typed.oninput = check;
+      check();
+      setTimeout(()=> typed.focus(), 80);
+    } else {
+      $('dlgOk').disabled = false;
+    }
+    $('dlgOk').textContent = opts.okText || t('common.ok');
+    if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
+    else $('dlgCancel').textContent = t('common.cancel');
+    setShown('dlgCancel', opts.confirm);
+    $('dlg').classList.add('open');
+    const done = v => {
+      // Если это последний открытый попап и сверху лежит его history-запись,
+      // сначала даём MutationObserver снять её. Продолжение (например goTab())
+      // запускаем уже после соответствующего popstate — без гонки со старым экраном.
+      const waitHistory = !!(history.state && history.state.m)
+        && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
+      $('dlg').classList.remove('open');
+      $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
+      $('dlgOk').disabled = false;
+      setShown('dlgTypeBox', false);
+      typed.oninput = null;
+      if(waitHistory) modalHistoryWaiters.push(()=> res(v));
+      else res(v);
+    };
+    $('dlgOk').onclick = () => done(true);
+    $('dlgCancel').onclick = () => done(false);
+    $('dlg').onclick = e => { if(e.target === $('dlg')) done(opts.confirm ? false : true); };
+  });
+}
+const appAlert = (m, o) => appDialog(m, o);
+// Подтверждение действия. Кнопка по умолчанию — «Подтвердить», а не «Да»:
+// «Да» была безопасна только когда текст вопроса читается как «да/нет», а
+// у нас — «Удалить программу?».
+const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: t('common.confirm'), cancelText: t('common.cancel'), ...o});
+const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
+/* Корневые разделы: только у них внизу док и нет собственной панели действий.
+
+   «Подопечные» — раздел, который есть не у всех: он появляется вместе с режимом
+   тренера и исчезает вместе с ним. Держать его в списке всегда можно и нужно —
+   иначе show() не узнает в нём корневой экран, — а прячет кнопку сам док. */
+const ROOT_TABS = ['scrMenu','scrPrograms','scrTrainer','scrStats','scrAccount'];
+// Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
+// переживает и системную кнопку «назад», и перезаход по истории.
+let navDepth = 0;
+// Путь по экранам, каким его видит человек. Нужен, чтобы возврат на экран, где
+// он уже был, НЕ добавлял запись в историю: «конструктор → настройки → назад →
+// упражнение → назад → настройки → назад» копил по записи на каждый шаг, и
+// потом системная кнопка «назад» требовала столько же нажатий, сколько было
+// переходов. Теперь такой возврат отматывает историю назад, а не удлиняет её.
+let navStack = ['scrMenu'];
+// Вкладка — ДРУГОЙ ВИД ТОГО ЖЕ МЕСТА, а не шаг вглубь: «Вручную / Через ИИ / Из
+// видео» переключают способ, но человек всё это время делает одно и то же дело.
+// Поэтому переключение ЗАМЕНЯЕТ текущую запись истории, а не добавляет новую:
+// иначе двадцать переключений туда-сюда давали двадцать записей, и «назад»
+// приходилось жать двадцать два раза вместо одного (измерено).
+let tabSwitch = false;
+let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
+let navBackWaiters = []; // программный возврат, которому нужно дождаться фактического popstate
+function asTab(fn){
+  tabSwitch = true;
+  try{ fn(); } finally { tabSwitch = false; }
+}
+try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
+// Что считается несохранённой работой на каждом экране. Раньше эту проверку знали
+// только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
+// напрямую — и набранная программа исчезала молча.
+const LEAVE_GUARDS = {
+  scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
+  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
+  scrUserEdit: ()=> userDirty() ? {what:t('profile.changes')} : null,
+  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
+};
+let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
+// Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
+// Закрываем ровно тем же путём, что и собственная кнопка отмены: на ней у части
+// попапов висит возврат состояния, и простое снятие класса его бы потеряло.
+// #dlg проверяем первым: он лежит выше остальных (z-index 90) и может быть открыт
+// поверх другого попапа.
+function dismissTopModal(){
+  const dlg = $('dlg');
+  const m = dlg.classList.contains('open')
+    ? dlg
+    : [...document.querySelectorAll('.modal.open')].pop();
+  if(!m) return false;
+  // попап хода работы: пока идёт запрос к ИИ, закрывать нечего — жест просто гасим
+  if(m.dataset.locked === '1') return true;
+  if(m === dlg){
+    // тот же путь, что и нажатие мимо карточки: промис appDialog обязан завершиться
+    m.dispatchEvent(new MouseEvent('click', {bubbles: false}));
+    return true;
+  }
+  const cancel = m.querySelector('.modal-btn');
+  if(cancel){ cancel.click(); return true; }
+  m.classList.remove('open');
+  return true;
+}
+
+// Системная кнопка «назад» забирает у истории одну запись — и только тогда срабатывает
+// popstate. На корневом экране записей нет вообще: приложение просто сворачивалось,
+// даже когда поверх него был открыт попап. Поэтому попап сам добавляет себе запись —
+// её и заберёт жест «назад», а обработчик ниже закроет попап.
+let skipPop = 0;   // наш собственный history.back(), а не жест человека
+let modalsOpen = false;
+let lockedY = 0;
+// Пока страница зафиксирована, у неё нет прокрутки — и нижняя панель кнопок,
+// которая держалась на position:sticky, теряет то, к чему прилипала: она
+// подпрыгивала вверх ровно на величину прокрутки. На экране, пролистанном на
+// треть, «Готово» с открытием любого попапа улетало на середину экрана.
+// Поэтому на время попапа панель замирает там, где её видно.
+function freezeSticky(on){
+  document.querySelectorAll('.builder-actions, .actions').forEach(el => {
+    if(on){
+      if(!el.offsetParent) return;
+      const r = el.getBoundingClientRect();
+      el.dataset.froze = '1';
+      el.style.position = 'fixed';
+      // top у fixed задаёт край ПОЛЯ, а не рамки: собственный верхний отступ
+      // панели сдвинул бы её ещё на свою величину вниз
+      el.style.margin = '0';
+      el.style.top = Math.round(r.top) + 'px';
+      el.style.left = Math.round(r.left) + 'px';
+      el.style.width = Math.round(r.width) + 'px';
+    } else if(el.dataset.froze){
+      delete el.dataset.froze;
+      el.style.position = el.style.top = el.style.left = el.style.width = el.style.margin = '';
+    }
+  });
+}
+function lockPage(on){
+  const b = document.body;
+  if(on === b.classList.contains('modal-lock')) return;
+  if(on){
+    lockedY = window.scrollY || window.pageYOffset || 0;
+    freezeSticky(true);          // замеряем ДО фиксации страницы
+    b.style.top = `-${lockedY}px`;
+    b.classList.add('modal-lock');
+  } else {
+    b.classList.remove('modal-lock');
+    b.style.top = '';
+    window.scrollTo(0, lockedY);
+    freezeSticky(false);
+  }
+}
+new MutationObserver(()=>{
+  const now = !!document.querySelector('.modal.open');
+  if(now === modalsOpen) return;
+  modalsOpen = now;
+  lockPage(now);
+  if(now){
+    try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(e){}
+    return;
+  }
+  // Попап закрыли кнопкой — лишнюю запись надо убрать. Но только если она всё ещё
+  // сверху: попап мог увести на другой экран (например, «Вручную» → конструктор),
+  // и тогда наш history.back() отменил бы этот переход.
+  if(history.state && history.state.m){
+    skipPop++;
+    try{ history.back(); }
+    catch(e){
+      skipPop = Math.max(0, skipPop - 1);
+      const waiters = modalHistoryWaiters.splice(0);
+      waiters.forEach(fn => fn());
+    }
+  } else if(modalHistoryWaiters.length){
+    const waiters = modalHistoryWaiters.splice(0);
+    waiters.forEach(fn => fn());
+  }
+}).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
+
+window.addEventListener('popstate', async e => {
+  // запись попапа снята (нами или жестом) — теперь можно переписать запись
+  // экрана под ней на вкладку, сменённую, пока попап был открыт
+  if(pendingTabScreen && !(history.state && history.state.m)){
+    try{ history.replaceState({scr: pendingTabScreen, d: navDepth}, ''); }catch(_){}
+    pendingTabScreen = null;
+  }
+  if(skipPop > 0){
+    skipPop--;
+    const waiters = modalHistoryWaiters.splice(0);
+    waiters.forEach(fn => fn());
+    return;
+  }   // это мы сами сняли запись закрытого попапа
+  // Открытый попап забирает системный Back себе. Сам Back уже снял его
+  // служебную history-запись и вернул нас на запись экрана под ним — повторно
+  // pushState делать нельзя: получалась вторая копия того же экрана, и следующий
+  // Back с вкладки визуально «ничего не делал». Если под верхним попапом остался
+  // ещё один, только тогда заводим новую служебную запись для следующего Back.
+  if(document.querySelector('.modal.open')){
+    dismissTopModal();
+    if(document.querySelector('.modal.open')){
+      try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(_){}
+    }
+    return;
+  }
+  if($('scrWork').classList.contains('on')){
+    // назад во время тренировки — спрашиваем, а не выбрасываем
+    try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
+    exitWorkout();
+    return;
+  }
+  let targetScreen = (e.state && e.state.scr) || 'scrMenu';
+  navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
+  {
+    const at = navStack.lastIndexOf(targetScreen);
+    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
+  }
+  // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
+  // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
+  // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
+  // на «Сегодня», бросив занятие на середине.
+  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
+
+  if(!guardBypass){
+    const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
+    let g = null;
+    try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
+    if(g){
+      // Возвращаем и browser history, и логический navStack на экран, с которого
+      // человек попытался уйти. Раньше history снова был Builder, а navStack уже
+      // успевал обрезаться до Programs — после «Остаться» два источника расходились.
+      navDepth++;
+      if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
+      try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
+      const ok = await appDialog(
+        t('common.unsaved',{what:g.what}),
+        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
+      );
+      if(!ok) return;
+      if(g.clean) g.clean();
+      guardBypass = true;
+      history.back();
+      return;
+    }
+  }
+  guardBypass = false;
+  show(targetScreen, false);
+  resolveNavBack(targetScreen);
+
+  // После явного выхода из глубокого сценария его текущая запись превращается
+  // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
+  // сюда с корневого таба, сразу перескакиваем через старый глубокий путь к
+  // исходной «Сегодня». Так Builder/AI/Store не воскресают следующим Back, но
+  // сам goTab остаётся синхронным и не ломает действия сразу после перехода.
+  const collapse = e.state && Number(e.state.collapse || 0);
+  if(targetScreen === 'scrMenu' && collapse > 0){
+    navDepth = 0;
+    navStack = ['scrMenu'];
+    try{ history.go(-collapse); }catch(_){}
+  }
+});
+// «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
+// экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
+// класть новую. Иначе «конструктор → настройки → назад → упражнение → назад» копил
+// по записи на каждый шаг: сорок переходов давали сорок одну запись, и системная
+// кнопка «назад» тридцать раз подряд не выводила из конструктора.
+// Экран покажет сам popstate — здесь только отматываем.
+function resolveNavBack(target){
+  if(!navBackWaiters.length) return;
+  const keep = [];
+  navBackWaiters.forEach(w => {
+    if(w.id === target) w.resolve(true);
+    else keep.push(w);
+  });
+  navBackWaiters = keep;
+}
+function goBackTo(id){
+  // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
+  // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
+  // копию родителя поверх истории. Возвращаем Promise, чтобы сценарии вроде
+  // «ИИ применён → Builder → success-попап» могли дождаться реального popstate.
+  if(show._last === navStack[navStack.length - 1]){
+    const at = navStack.lastIndexOf(id);
+    const distance = navStack.length - 1 - at;
+    if(at >= 0 && distance > 0){
+      return new Promise(resolve => {
+        const waiter = {id, resolve};
+        navBackWaiters.push(waiter);
+        try{ history.go(-distance); }
+        catch(e){
+          navBackWaiters = navBackWaiters.filter(w => w !== waiter);
+          show(id);
+          resolve(false);
+        }
+      });
+    }
+  }
+  show(id);
+  return Promise.resolve(true);
+}
+
+function show(id, push = true){
+  // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
+  // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
+  // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
+  // Переключение ВКЛАДКИ уходом не считается: это тот же экран в другом виде.
+  // Из-за этого ломалась правка упражнения прямо с тренировки: сходил на вкладку
+  // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
+  // бросив тренировку на середине.
+  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); exFromWork = false; }
+  // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
+  // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
+  if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) settleQuickFinish(true);
+  if(push && show._last !== id){
+    if(tabSwitch){
+      navStack[navStack.length - 1] = id;
+      // Сверху может лежать запись попапа, который только что закрыли, а его
+      // history.back() ещё не отработал (например, окно ожидания ИИ закрылось
+      // и сразу применился ответ). Заменить её — значит оставить под ней старую
+      // вкладку: «Готово» потом возвращало на «Через ИИ». Меняем запись экрана,
+      // когда запись попапа уже снята (см. popstate ниже).
+      if(history.state && history.state.m) pendingTabScreen = id;
+      else try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+    } else {
+      navStack.push(id);
+      navDepth++;
+      // Если новый экран открывается прямо из закрывающейся модалки, её служебная
+      // запись уже и есть место этого перехода. Превращаем её в экран, а не кладём
+      // экран поверх неё — иначе «назад» позже воскресит невидимую модалку/старый экран.
+      if(history.state && history.state.m){
+        try{ history.replaceState({scr: id, d: navDepth}, ''); }catch(e){}
+      } else {
+        try{ history.pushState({scr: id, d: navDepth}, ''); }catch(e){}
+      }
+    }
+  }
+  if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
+  show._last = id;
+  screens.forEach(s => $(s).classList.toggle('on', s===id));
+  // верхняя полоса нужна ровно одному экрану — тренировке
+  setShown('topBar', id==='scrWork');
+  $('btnExit').classList.toggle('on', id==='scrWork');
+  $('btnSoundW').classList.toggle('on', id==='scrWork');
+  $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
+  document.querySelectorAll('.dock-btn').forEach(b => {
+    const on = b.dataset.scr === id;
+    b.classList.toggle('act', on);
+    b.setAttribute('aria-current', on ? 'page' : 'false');
+  });
+  syncDock();
+  // тренировка живёт ровно в один экран телефона: скроллится только описание,
+  // а панель управления всегда на одном месте (см. body.screen-work в стилях)
+  document.body.classList.toggle('screen-work', id==='scrWork');
+  if(ROOT_TABS.includes(id)) prepTab(id);
+  // Если приложение долго было в фоне посреди тренировки, не прерываем подход
+  // биометрией. Проверку откладываем до первого выхода с экрана тренировки.
+  if(id !== 'scrWork' && typeof maybeRunDeferredBiometricLock === 'function') maybeRunDeferredBiometricLock();
+}
+
+// содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
+// внутри приложения или системным «назад»
+function prepTab(id){
+  try{
+    if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
+    else if(id === 'scrPrograms'){ renderMine(); }
+    else if(id === 'scrAccount'){
+      switchMoreTab(typeof moreTab === 'string' ? moreTab : 'me');
+      renderUsers();
+      renderTrainerCard();
+      // звук и управление без рук переехали сюда из «Настроек»
+      syncSettingsForm();
+      fillLiveSoundCascade('st');
+      $('hfHint').textContent = hfHintText(hfMode);
+      document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
+    }
+    else if(id === 'scrTrainer'){ refreshClientsScreen(); }
+    else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
+  }catch(e){}
+}
+
+/* ---- док: показываем только на корневых разделах и только без клавиатуры ----
+   Правило владельца: две закреплённые полосы одновременно недопустимы. Панель
+   действий есть у каждого глубокого экрана, поэтому там дока нет вовсе, а на
+   корневых нет панели действий. Клавиатура — третий случай: пока в фокусе поле
+   ввода, док уезжает, иначе он сядет поверх клавиатуры на «Настройках». */
+function kbFocused(){
+  const el = document.activeElement;
+  return !!(el && el.matches && el.matches('input:not([type=range]):not([type=file]):not([type=checkbox]),textarea'));
+}
+// Кнопка «Подопечные» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
+// перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после
+// перезапуска.
+function syncDockTabs(){
+  const b = document.querySelector('.dock-btn[data-scr="scrTrainer"]');
+  if(b) setShown(b, trainerOn());
+}
+
+function syncDock(){
+  setShown('dock', ROOT_TABS.includes(show._last) && !kbFocused());
+}
+document.addEventListener('focusin', ()=> syncDock());
+document.addEventListener('focusout', ()=> setTimeout(syncDock, 60));
+
+// Переход по доку. Вкладки не копят историю: поверх «Сегодня» живёт максимум одна
+// запись, а «назад» с любой вкладки возвращает на «Сегодня».
+function goTab(id){
+  const cur = show._last;
+  if(cur === id){
+    try{ window.scrollTo({top: 0, behavior: 'smooth'}); }catch(e){ window.scrollTo(0, 0); }
+    return;
+  }
+  if(!ROOT_TABS.includes(cur)){
+    // Выход из глубины должен быть мгновенным: многие сценарии сразу после него
+    // показывают результат/диалог. Поэтому не делаем асинхронный history.go() здесь.
+    // Вместо этого текущую глубокую запись превращаем в «Сегодня» и запоминаем,
+    // сколько старых шагов лежит под ней. При будущем Back до этой записи popstate
+    // автоматически схлопнет старый путь (см. collapse выше).
+    const collapse = Math.max(0, navDepth);
+    navDepth = 0;
+    navStack = ['scrMenu'];
+    try{ history.replaceState({scr:'scrMenu', d:0, collapse}, ''); }catch(e){}
+    if(id === 'scrMenu'){
+      show('scrMenu', false);
+      if(collapse > 0) try{ history.go(-collapse); }catch(e){}
+      window.scrollTo(0, 0);
+      return;
+    }
+    show(id, true);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if(id === 'scrMenu'){
+    if(navDepth > 0){ history.go(-navDepth); return; }
+    navStack = ['scrMenu'];
+    show('scrMenu', false);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if(navDepth > 0){
+    navDepth = 1;
+    navStack = ['scrMenu', id];
+    try{ history.replaceState({scr: id, d: 1}, ''); }catch(e){}
+    show(id, false);
+  } else {
+    show(id, true);
+  }
+  window.scrollTo(0, 0);
+}
+
+/* ================= ЭКРАН 2: СТАРТ ================= */
+
+// с какой вкладки открыли программу — туда и вернёт «назад» с экрана старта
+let startFrom = 'scrMenu';
+function openStart(raw){
+  if(ROOT_TABS.includes(show._last)) startFrom = show._last;
+  applyProgressionAll();
+  applyAudioFromUser(curUser());
+  state.raw = raw;
+  const plans = normPlans(raw);
+  state.planIdx = defaultPlanIdx(plans, raw);
+  $('startNum').textContent = '';
+  $('startTitle').textContent = raw.name;
+  renderPlanRow();
+  renderStartInfo();
+  syncPrefs();
+  show('scrStart');
+  window.scrollTo(0, 0); // иначе экран открывается там же, где был прокручен предыдущий, — мимо названия
+}
+
+// по умолчанию выбираем вариант, в чьи дни попадает сегодня
+function defaultPlanIdx(plans, prog){
+  // режим ротации: варианты идут по очереди A-B-A-B независимо от календаря,
+  // пропуск дня не сбивает очередь
+  if(prog && prog.rotate && plans.length > 1){
+    const next = (typeof prog.rotIdx === 'number') ? prog.rotIdx : 0;
+    return ((next % plans.length) + plans.length) % plans.length;
+  }
+  const today = DAYS[(new Date().getDay() + 6) % 7];
+  const i = plans.findIndex(pl => (pl.days || []).includes(today));
+  return i >= 0 ? i : 0;
+}
+
+function renderPlanRow(){
+  const plans = normPlans(state.raw);
+  const block = $('planBlock'), row = $('planRow');
+  row.innerHTML = '';
+  if(plans.length < 2){ setShown(block, false); return; }
+  setShown(block, true);
+  plans.forEach((pl, i)=>{
+    const b = document.createElement('button');
+    b.className = 'load-chip plan-chip';
+    const rotOn = state.raw.rotate && plans.length > 1;
+    let lbl = (!rotOn && pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join('·') : `${t('builder.variant')} ${i+1}`;
+    if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • ' + t('start.current');
+    b.textContent = lbl;
+    b.classList.toggle('act', state.planIdx === i);
+    b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
+    row.appendChild(b);
+  });
+}
+
+// Нагрузка одного упражнения в том же виде, в каком она появится на тренировке.
+// Отдельная функция не даёт обзору и таймеру разойтись в формулах прогрессии.
+function exerciseLoad(p, ex){
+  const on = progAxis(ex) !== 'none';
+  const timed = ex.type === 'time';
+  const load = {reps:'', sec:0, kg:0};
+  if(timed){
+    load.sec = on && progStepSize(ex, 'time') > 0
+      ? getExProgValue(p.id, ex, p, 'time')
+      : progBaseValue(ex, 'time');
+  } else {
+    load.reps = on && progStepSize(ex, 'reps') > 0
+      ? progressedRepsRange(p.id, ex, p)
+      : normValue(ex.value, 'reps');
+  }
+  if(hasWeight(ex)){
+    load.kg = on && progStepSize(ex, 'weight') > 0
+      ? getExProgValue(p.id, ex, p, 'weight')
+      : progBaseValue(ex, 'weight');
+  }
+  return load;
+}
+
+// Снимок нужен следующей тренировке для честного «было → сегодня». Старые записи
+// снимка не имеют; для них ниже есть совместимый расчёт по предыдущему шагу.
+function workoutLoadSnapshot(p, planIdx){
+  const pl = normPlans(p)[planIdx] || normPlans(p)[0];
+  return ((pl && pl.exercises) || []).map((ex, i) => {
+    const v = exerciseLoad(p, ex);
+    return {i, n:ex.name || '', reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0};
+  });
+}
+
+function previousWorkoutLoad(p, planIdx){
+  const hist = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx);
+  const last = hist[hist.length - 1];
+  if(last && Array.isArray(last.load)) return {first:false, exact:true, rows:last.load};
+  const done = (p.stats && p.stats.completions) || 0;
+  if(!hist.length && done <= 0) return {first:true, exact:false, rows:[]};
+  const prev = Object.assign({}, p, {stats:Object.assign({}, p.stats || {}, {completions:Math.max(0, done - 1)})});
+  return {first:false, exact:false, rows:workoutLoadSnapshot(prev, planIdx)};
+}
+
+function loadTargetText(ex, v){
+  const bits = [];
+  if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
+  else bits.push(`${v.reps} ${t('workout.repsShort')}`);
+  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
+  let out = bits.join(' × ');
+  if(ex.perSide) out += ' ' + t('store.perSide');
+  return out;
+}
+
+function loadDelta(a, b){
+  if(!a) return {text:'', dir:'same'};
+  const bits = [];
+  const moves = [];
+  if(String(a.reps || '') !== String(b.reps || '')){
+    bits.push(t('start.deltaReps',{before:a.reps,today:b.reps}));
+    const av = parseValue(a.reps), bv = parseValue(b.reps);
+    moves.push(bv.min - av.min, bv.max - av.max);
+  }
+  if((+a.sec || 0) !== (+b.sec || 0)){
+    bits.push(t('start.deltaTime',{before:a.sec,today:b.sec})); moves.push((+b.sec || 0) - (+a.sec || 0));
+  }
+  if((+a.kg || 0) !== (+b.kg || 0)){
+    bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
+  }
+  const directional = moves.filter(x => x !== 0);
+  // вес вырос, а повторы вернулись к началу диапазона — это шаг двойной
+  // прогрессии, то есть нагрузка ВЫШЕ, а не «изменилась»
+  const kgUp = (+b.kg || 0) > (+a.kg || 0);
+  const secSame = (+a.sec || 0) === (+b.sec || 0);
+  const dir = kgUp && secSame ? 'up'
+    : directional.length && directional.every(x => x > 0) ? 'up'
+    : directional.length && directional.every(x => x < 0) ? 'down'
+    : directional.length ? 'mixed' : 'same';
+  return {text:bits.join(' · '), dir};
+}
+
+function estimatedWorkoutMinutes(p, planIdx, rows){
+  const own = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx
+    && +h.sec > 59 && +h.sec < 6 * 3600).slice(-5);
+  if(own.length){
+    const avg = own.reduce((n, h) => n + h.sec, 0) / own.length;
+    return {n:Math.max(1, Math.round(avg / 60)), history:true, samples:own.length};
+  }
+  const pl = normPlans(p)[planIdx] || normPlans(p)[0];
+  let sec = 0;
+  const lastMain = ((pl && pl.exercises) || []).map((ex, i) => ex.warmup ? -1 : i).filter(i => i >= 0).pop();
+  ((pl && pl.exercises) || []).forEach((ex, i) => {
+    const v = rows[i] || exerciseLoad(p, ex);
+    const sets = Math.max(1, parseInt(ex.sets) || 1);
+    const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
+    const sides = ex.perSide ? 2 : 1;
+    const work = ex.type === 'time' ? (+v.sec || 1) * sides : Math.max(1, parseValue(v.reps).min) * 3 * sides;
+    sec += work * sets * rounds;
+    sec += Math.max(0, sets - 1) * (+ex.rest || 0) * rounds;
+    if(ex.warmup || i !== lastMain) sec += exRestAfter(ex) * rounds;
+    if(ex.perSide && ex.type === 'time') sec += sideSec * sets * rounds;
+  });
+  sec += Math.max(0, (+pl.rounds || 1) - 1) * (+pl.roundRest || 0);
+  return {n:Math.max(5, Math.round(sec / 300) * 5), history:false, samples:0};
+}
+
+function renderStartOverview(){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  if(!p || !pl) return;
+  const exercises = pl.exercises || [];
+  const current = workoutLoadSnapshot(p, state.planIdx);
+  const previous = previousWorkoutLoad(p, state.planIdx);
+  const oldByIndex = new Map((previous.rows || []).map(x => [+x.i, x]));
+  const changes = [];
+  exercises.forEach((ex, i) => {
+    const old = oldByIndex.get(i);
+    if(old && old.n && ex.name && old.n.trim().toLowerCase() !== ex.name.trim().toLowerCase()) return;
+    const delta = loadDelta(old, current[i]);
+    if(delta.text) changes.push({i, text:delta.text, dir:delta.dir});
+  });
+
+  const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
+    * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
+  const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
+  $('startOverviewSummary').textContent = storeCountText(exercises.length,'exercise') + ' · ' + storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
+
+  const change = $('startLoadChange');
+  const changeText = text => { change.textContent = text; };
+  // через сколько тренировок приложение спросит о повышении: прогрессия у каждого
+  // упражнения своя (ex.ps.n) — берём ближайшее к порогу упражнение варианта.
+  // Показываем и тогда, когда нагрузка уже изменилась, — иначе после первого
+  // повышения человек терял из виду, когда будет следующее.
+  let nextText = '';
+  if(p.progression){
+    const every = Math.max(1, +p.progression || 1);
+    const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
+      .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
+    if(ns.length){
+      const left = Math.max(1, every - Math.max(...ns));
+      nextText = t('start.nextCheck',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')});
+    }
+  }
+  if(previous.first){
+    changeText(t('start.firstWorkout'));
+  } else if(changes.length){
+    const direction = changes.every(x => x.dir === 'up') ? 'up'
+      : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
+    const key = direction === 'up' ? 'start.loadHigher' : direction === 'down' ? 'start.loadLower' : 'start.loadChanged';
+    const text = t(key,{count:changes.length,exercises:t(changes.length === 1 ? 'start.exerciseLocOne' : 'start.exerciseLocMany')});
+    changeText(nextText ? text + ' ' + nextText : text);
+  } else if(nextText){
+    changeText(t('start.noChanges') + ' · ' + nextText);
+  } else {
+    changeText(t('start.noChangesOff'));
+  }
+
+  const box = $('startOverviewList');
+  box.innerHTML = '';
+  let mainNo = 0;
+  exercises.forEach((ex, i) => {
+    if(!ex.warmup) mainNo++;
+    const sets = Math.max(1, parseInt(ex.sets) || 1);
+    const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
+    const meta = [];
+    if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
+    // вес — отдельной кнопкой-меткой с карандашом (см. ниже): так видно, что
+    // нажимается именно он, а повторы и время растут сами по плану
+    meta.push({text:loadTargetText(ex, hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
+    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
+    else meta.push({text:storeCountText(sets,'set'), cls:''});
+    const delta = changes.find(x => x.i === i);
+    const row = document.createElement('div');
+    row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
+    const thumb = ex.media && ex.media.kind === 'img'
+      ? `<img src="${esc(ex.media.data)}" alt="">`
+      : (ex.warmup ? icon('flame') : mainNo);
+    row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
+    row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
+    const tags = row.querySelector('.ex-meta');
+    const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
+    meta.forEach((x, k) => {
+      tag(x.text, x.cls);
+      if(k === (ex.warmup ? 1 : 0) && hasWeight(ex)){
+        const pending = weightPending(ex) || !(+current[i].kg > 0);
+        const kg = document.createElement('span');
+        kg.className = 'kg-edit' + (pending ? ' weight-pending' : '');
+        kg.innerHTML = icon('pencil') + '<i></i>';
+        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${fmtKg(current[i].kg)} ${t('progress.kg')}`;
+        tags.appendChild(kg);
+      }
+    });
+    if(delta) tag(delta.text, 'grow');
+    // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
+    // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
+    // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
+    // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
+    if(hasWeight(ex)){
+      row.classList.add('tappable');
+      row.onclick = () => openWeightModal(i);
+    }
+    box.appendChild(row);
+  });
+}
+
+// правка веса одного упражнения — общий попап на весь список, какое открыто,
+// помнит weightModalIdx (тот же приём, что у #restModal в конструкторе).
+// Если вес ещё не был выбран — записываем в базу (ex.weight), она же и есть
+// текущая нагрузка, пока прогрессия её не сдвинула. Если уже была выбрана —
+// это разовая правка «сегодня беру другой снаряд», она идёт в ex.ps.cur и
+// не переписывает исходную базу упражнения.
+let weightModalIdx = -1;
+function openWeightModal(i){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[i];
+  if(!ex) return;
+  weightModalIdx = i;
+  $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
+  const now = getExWeight(p.id, ex, p);
+  $('weightModalInput').value = now > 0 ? fmtKg(now) : '';
+  $('weightModal').classList.add('open');
+  $('weightModalInput').focus();
+}
+async function commitWeightModal(){
+  const p = state.raw;
+  const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+  const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
+  weightModalIdx = -1;
+  $('weightModal').classList.remove('open');
+  if(!ex) return;
+  const kg = parseKg($('weightModalInput').value);
+  if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
+  if(weightPending(ex)){
+    ex.weight = kg;
+    // первая база веса: никаких «накопленных» кг поверх неё быть не может
+    if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+  }
+  else setExWeight(ex, kg);
+  await savePrograms();
+  renderStartOverview();
+}
+
+// меню действий на экране просмотра программы — те же пункты, что на карточке
+function buildStartMenu(){
+  const p = state.raw;
+  const menu = $('startMenu');
+  menu.innerHTML = '';
+  if(!p || p.id === 'warmup'){ $('startMore').style.display = p ? '' : 'none'; }
+  const mk = (html2, fn, cls)=>{
+    const b = document.createElement('button');
+    if(cls) b.className = cls;
+    b.innerHTML = html2;
+    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    return b;
+  };
+  const on = progActive(p);
+  setShown('startOffChip', !!p && !on);
+  // Программа пришла от тренера: показываем, от кого, и даём отчитаться.
+  const by = p && p.by ? String(p.by) : '';
+  setShown('startByChip', !!by);
+  if(by) $('startByName').textContent = by;
+  menu.append(
+    mk(icon('pencil') + t('common.edit'), ()=> openBuilder(p.id)),
+    // тот же переключатель, что в меню карточки в списке: экран программы — второе
+    // место, где о программе думают целиком, и искать выключатель в другом списке
+    // ради одного действия человек не станет
+    mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), async ()=>{
+      p.active = !on;
+      await savePrograms();
+      buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
+      renderMine();         // список под ним уже перерисован к возврату
+      if(on) appAlert(t('programs.disabledAlert'));
+    }),
+    // Порядок пунктов тот же, что в меню карточки списка: одно и то же меню в двух
+    // местах обязано читаться одинаково, иначе рука промахивается.
+    mk(icon('copy') + t('common.duplicate'), async ()=>{
+      const c = await duplicateProgram(p);
+      openBuilder(c.id);
+    }),
+    mk(icon('share') + t('programs.shareLink'), ()=> exportProgram(p)),
+    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), ()=> pickClientFor(p))] : []),
+    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), ()=> openPublish(p))] : []),
+    mk(icon('download') + t('programs.saveFile'), ()=> exportProgramFile(p)),
+    mk(icon('trash') + t('common.delete'), async ()=>{
+      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
+      customPrograms = customPrograms.filter(x => x.id !== p.id);
+      await savePrograms();
+      renderMine();
+      goTab('scrPrograms');
+    }, 'danger')
+  );
+}
+
+function renderStartInfo(){
+  buildStartMenu();
+  // описание программы: 4 строки с возможностью раскрыть
+  const dBox = $('progDescBox'), dTxt = $('progDescText');
+  const d = (state.raw.desc || '').trim();
+  if(d){
+    dTxt.textContent = d;
+    setShown(dBox, true);
+    dBox.classList.remove('open');
+    $('progDescMore').textContent = t('builder.showFull');
+    requestAnimationFrame(()=>{
+      const fits = dTxt.scrollHeight <= dTxt.clientHeight + 2;
+      setShown('progDescMore', !(fits));
+    });
+  } else setShown(dBox, false);
+
+  const plans = normPlans(state.raw);
+  const pl = plans[state.planIdx];
+  const rotOn = state.raw.rotate && plans.length > 1;
+  const timeText = pl.time || state.raw.time;
+  const daysTxt = rotOn
+    ? ((state.raw.days && state.raw.days.length) ? state.raw.days.map(canonicalLabel).join(', ') : '')
+    : ((pl.days && pl.days.length) ? pl.days.map(canonicalLabel).join(', ') : '');
+  const parts = [timeText, daysTxt].filter(Boolean);
+  if(rotOn) parts.push(t('start.variantSequence',{current:state.planIdx+1,total:plans.length}));
+  const schedule = parts.join(' · ');
+  $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
+  // объём: круги для круговых, подходы для силовых
+  const mainEx = (pl.exercises || []).filter(e => !e.warmup);
+  const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
+  if(pl.rounds > 1 || setsTotal <= mainEx.length){
+    $('startVolLabel').textContent = storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
+    $('startRounds').textContent = pl.rounds;
+  } else {
+    $('startVolLabel').textContent = storeCountText(setsTotal,'set').replace(/^\d+\s+/,'');
+    $('startRounds').textContent = setsTotal;
+  }
+  const nEx = pl.exercises.length;
+  $('startExCount').textContent = nEx;
+  $('startExLabel').textContent = storeCountText(nEx,'exercise').replace(/^\d+\s+/,'');
+  // обложка программы — если её нет, место не занимаем
+  const cov = $('startCover');
+  if(state.raw.cover){
+    cov.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = state.raw.cover; img.alt = '';
+    cov.appendChild(img);
+    setShown(cov, true);
+  } else setShown(cov, false);
+  renderStartOverview();
+}
+
+const FIT_SYNC_PROFILE_DOC_KEYS = ['stats'];
+const FIT_SYNC_ACCOUNT_DOC_KEYS = ['trainer', 'clients', 'notificationPrefs'];
+const FIT_SYNC_REGISTRY = AppBaseSync.createRegistry([
+  {scope:'profile', key:'stats'},
+  {scope:'profile', key:'index'},
+  {scope:'profile', prefix:'program:', allowDeleted:true},
+  {scope:'account', key:'trainer'},
+  {scope:'account', key:'clients'},
+  {scope:'account', key:'notificationPrefs', free:true}
+]);
