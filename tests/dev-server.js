@@ -14,6 +14,7 @@ const path = require('path');
 const { URL } = require('url');
 
 const ROOT = path.join(__dirname, '..');
+const STATIC_ROOT = fs.existsSync(path.join(ROOT, 'dist', 'index.html')) ? path.join(ROOT, 'dist') : ROOT;
 // без настроенной базы держим данные в памяти — это разрешение, а не умолчание,
 // см. api/_store.js
 if(!process.env.KV_REST_API_URL) process.env.ALLOW_MEMORY_STORE = '1';
@@ -92,8 +93,8 @@ function rewrite(u){
 const staticFile = pathname => {
   let rel = decodeURIComponent(pathname);
   if(rel === '/' || rel === '') rel = '/index.html';
-  const file = path.join(ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
-  return (file.startsWith(ROOT) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) ? file : null;
+  const file = path.join(STATIC_ROOT, path.normalize(rel).replace(/^([/\\])+/, ''));
+  return (file.startsWith(STATIC_ROOT) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) ? file : null;
 };
 
 http.createServer(async (req, res) => {
