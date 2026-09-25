@@ -21,6 +21,11 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return null; }
   },
 
+  runtimeConfig(){
+    try{ return window.APP_CONFIG || window.FIT_TIMER_CONFIG || {}; }
+    catch(_){ return {}; }
+  },
+
   runtimePlatform(){
     try{
       const candidate = window.Capacitor;
