@@ -50,6 +50,12 @@ No browser/APK code receives a service-role key.
 
 ### Phase S2 — generic store contract
 
+Implementation status:
+- `lib/document-store.js` defines a provider-neutral document persistence contract;
+- `lib/supabase-document-store.js` implements that contract through server-only PostgREST;
+- the contract is document/revision oriented rather than a copy of Redis commands.
+
+
 Introduce a provider-neutral server persistence interface around the capabilities actually used by AppBase, for example:
 
 ```text
@@ -65,6 +71,13 @@ Do not reproduce Redis commands as the permanent Core API if a higher-level docu
 The current `lib/store.js` remains the compatibility owner until this contract is proven.
 
 ### Phase S3 — PostgreSQL schema
+
+Implementation status:
+- migration `202609250730_create_appbase_documents_shadow.sql` is applied to project `FitT`;
+- `public.appbase_documents` stores account hash, profile id, document key, revision, schema version, device id, tombstone state, payload and timestamps;
+- RLS is enabled and no anon/authenticated policies exist by design; browser/mobile clients have no direct access;
+- the table starts empty and is not authoritative.
+
 
 Design the schema around the already-separated document contract rather than copying Redis keys one-for-one.
 
@@ -91,6 +104,14 @@ For generic documents, likely fields include:
 This schema is a proposal until current production access patterns and indexes are measured.
 
 ### Phase S4 — shadow migration
+
+Implementation status:
+- `SUPABASE_SHADOW_WRITE=1` enables best-effort writes of accepted sync documents only after the authoritative Upstash write;
+- `SUPABASE_SHADOW_COMPARE=1` enables read-compare on Premium sync pulls;
+- compare results contain only counts and are exposed in health diagnostics without account identifiers or payloads;
+- account/profile privacy deletion purges Supabase before deleting authoritative identity/data when Supabase is configured;
+- production reads still come exclusively from Upstash.
+
 
 Use staged migration:
 
@@ -120,6 +141,8 @@ Requirements:
 - rollback path.
 
 Do not dual-write indefinitely.
+
+Shadow activation is intentionally environment-gated. Deploying the code does not start dual-write automatically.
 
 ### Supabase Auth
 
