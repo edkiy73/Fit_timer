@@ -1,6 +1,11 @@
 "use strict";
-var AppBaseIdentity;
-(function (AppBaseIdentity) {
+var AppBaseIdentity = (() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.createAccount = createAccount;
+    exports.createProfileDraft = createProfileDraft;
     function createAccount(now = new Date()) {
         return {
             email: '',
@@ -13,7 +18,6 @@ var AppBaseIdentity;
             deletedProfiles: []
         };
     }
-    AppBaseIdentity.createAccount = createAccount;
     function createProfileDraft(name) {
         return {
             id: null,
@@ -23,5 +27,6 @@ var AppBaseIdentity;
             locale: 'system'
         };
     }
-    AppBaseIdentity.createProfileDraft = createProfileDraft;
-})(AppBaseIdentity || (AppBaseIdentity = {}));
+    
+    return module.exports;
+})();
