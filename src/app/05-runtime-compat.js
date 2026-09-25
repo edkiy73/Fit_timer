@@ -181,5 +181,19 @@ const appRuntimeCompat = Object.freeze({
     if(!candidate || typeof candidate.stopSpeaking !== 'function') return false;
     try{ await candidate.stopSpeaking(); return true; }
     catch(_){ return false; }
+  },
+
+  consumeProgramLink(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.consumeProgramLink !== 'function') return '';
+    try{ return String(candidate.consumeProgramLink() || ''); }
+    catch(_){ return ''; }
+  },
+
+  consumeWorkoutResume(){
+    const candidate = appRuntimeCompat.nativeBridge();
+    if(!candidate || typeof candidate.consumeWorkoutResume !== 'function') return false;
+    try{ return !!candidate.consumeWorkoutResume(); }
+    catch(_){ return false; }
   }
 });
