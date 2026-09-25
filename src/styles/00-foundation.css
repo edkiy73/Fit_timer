@@ -75,6 +75,14 @@ body.booting .app{visibility:hidden}
     /* ---- шкала радиусов ---- */
     --r-xs:8px; --r-sm:11px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
     --radius:var(--r-lg);
+    /* ---- reusable UI geometry ---- */
+    --ui-control-radius:var(--r-md);
+    --ui-button-primary-min-h:56px;
+    --ui-button-secondary-min-h:54px;
+    --ui-card-radius:var(--r-lg);
+    --ui-card-padding:16px;
+    --ui-card-gap:16px;
+    --ui-card-margin:14px;
     /* ---- типографическая шкала ---- */
     --fs-xs:11.5px; --fs-sm:13px; --fs-md:15px; --fs-lg:17px; --fs-xl:21px; --fs-2xl:27px;
     /* панели, которые остаются тёмными в обеих темах (пауза, попап веса) */
@@ -343,6 +351,19 @@ body.booting .app{visibility:hidden}
   /* Подсказка, которая сообщает о неполадке, — янтарная: тем же цветом в приложении
      помечен незакрытый долг. Одно незакрытое дело должно читаться одинаково. */
   .field-hint.warn{color:var(--warn)}
+
+  /* ---- reusable empty state ---- */
+  .empty-state{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sp-2);
+    padding:26px 18px;border:1px dashed var(--line-2);border-radius:var(--ui-card-radius);background:var(--bg-2);
+  }
+  .empty-state .es-ico{
+    width:52px;height:52px;border-radius:16px;background:var(--accent-soft);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;margin-bottom:2px;
+  }
+  .empty-state .es-ico svg{width:26px;height:26px}
+  .empty-state b{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+  .empty-state p{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0;max-width:32ch}
   /* ЗАГЛУШКА НА ВРЕМЯ ЗАГРУЗКИ. Раньше экран сначала рисовал одну раскладку, потом
      заменял её другой — и это читалось как сбой, хотя всё работало. Серые полосы
      той же формы, что и будущее содержимое, говорят «сейчас будет» и не врут: их

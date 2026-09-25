@@ -552,9 +552,9 @@
      карточка — флекс-колонка с gap, поэтому margin детей не важен
      и правила больше не конфликтуют по специфичности */
   .card-block{
-    background:var(--card);border:1px solid var(--line);border-radius:18px;
-    padding:16px;margin:0 0 14px;
-    display:flex;flex-direction:column;gap:16px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--ui-card-radius);
+    padding:var(--ui-card-padding);margin:0 0 var(--ui-card-margin);
+    display:flex;flex-direction:column;gap:var(--ui-card-gap);
   }
   .card-block > *{margin:0 !important}
   /* скрытие через класс: инлайновый display:block убивал flex и все отступы */

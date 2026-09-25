@@ -49,7 +49,7 @@ namespace AppBaseUI {
     if(!button) return;
     const idleText = options.idleText ?? button.dataset.idleText ?? button.textContent ?? '';
     if(!button.dataset.idleText) button.dataset.idleText = idleText;
-    button.disabled = options.disabled === false ? false : busy;
+    button.disabled = options.disabled ?? busy;
     if(options.ariaBusy !== false) button.setAttribute('aria-busy', busy ? 'true' : 'false');
     if(busy && options.busyText != null) button.textContent = options.busyText;
     if(!busy) button.textContent = options.idleText ?? button.dataset.idleText ?? idleText;

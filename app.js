@@ -4146,7 +4146,7 @@ var AppBaseUI;
         const idleText = options.idleText ?? button.dataset.idleText ?? button.textContent ?? '';
         if (!button.dataset.idleText)
             button.dataset.idleText = idleText;
-        button.disabled = options.disabled === false ? false : busy;
+        button.disabled = options.disabled ?? busy;
         if (options.ariaBusy !== false)
             button.setAttribute('aria-busy', busy ? 'true' : 'false');
         if (busy && options.busyText != null)
@@ -19317,13 +19317,14 @@ async function refreshVoicePackUI(progressEvent){
   }
   setShown('btnVoiceTest', !!(status && status.installed));
   const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
+  const running = !!(status && ['queued','downloading','extracting'].includes(status.status));
   for(const row of [
     ['voicePackStatus','btnVoicePack','voicePackProgress','voicePackProgressBar'],
     ['hfVoicePackStatus','btnHfVoicePack','hfVoicePackProgress','hfVoicePackProgressBar']
   ]){
     const s=$(row[0]), b=$(row[1]), p=$(row[2]), bar=$(row[3]); if(!s||!b) continue;
-    s.textContent=label; b.textContent=button; b.disabled=disabled;
-    const running = !!(status && ['queued','downloading','extracting'].includes(status.status));
+    s.textContent=label;
+    AppBaseUI.setBusy(b, running, {busyText:button, idleText:button, disabled});
     if(p) setShown(row[2], running);
     if(bar) bar.style.width = (status && status.status === 'queued' ? 3 : pct) + '%';
   }
@@ -19336,7 +19337,9 @@ async function refreshVoicePackUI(progressEvent){
 
 async function downloadSelectedVoicePack(){
   if(!(window.FitNative && window.FitNative.downloadVoiceModel)) return;
-  for(const id of ['btnVoicePack','btnHfVoicePack']) if($(id)) $(id).disabled=true;
+  for(const id of ['btnVoicePack','btnHfVoicePack']){
+    AppBaseUI.setBusy($(id), true, {busyText:t('voicepack.downloadingBtn')});
+  }
   const ok=await window.FitNative.downloadVoiceModel(recognitionLang, refreshVoicePackUI);
   await refreshVoicePackUI();
   if(!ok) appAlert(t('voicepack.startError'));

@@ -103,19 +103,6 @@
   .opt-card.act .oc-mark{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
   .opt-card.act small{color:var(--ink)}
 
-  /* ---- пустое состояние: часть дизайна, а не серая фраза ---- */
-  .empty-state{
-    display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sp-2);
-    padding:26px 18px;border:1px dashed var(--line-2);border-radius:var(--r-lg);background:var(--bg-2);
-  }
-  .empty-state .es-ico{
-    width:52px;height:52px;border-radius:16px;background:var(--accent-soft);color:var(--accent-ink);
-    display:flex;align-items:center;justify-content:center;margin-bottom:2px;
-  }
-  .empty-state .es-ico svg{width:26px;height:26px}
-  .empty-state b{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase}
-  .empty-state p{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0;max-width:32ch}
-
   /* ---- поясняющая плашка ---- */
   .note{
     display:flex;gap:10px;align-items:flex-start;
@@ -134,7 +121,7 @@
 
   /* ---- вторая по важности кнопка внизу экрана ---- */
   .btn-secondary{
-    width:100%;min-height:54px;border-radius:var(--r-md);cursor:pointer;
+    width:100%;min-height:var(--ui-button-secondary-min-h);border-radius:var(--ui-control-radius);cursor:pointer;
     background:var(--card);border:1px solid var(--line-2);color:var(--ink);
     font-family:var(--font-display);font-weight:600;font-size:var(--fs-lg);letter-spacing:.08em;
     text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;
