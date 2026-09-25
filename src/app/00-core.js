@@ -335,7 +335,7 @@ const $ = id => document.getElementById(id);
 
 // лёгкая тактильная отдача на нажатия (где поддерживается)
 function haptic(ms){
-  if(appRuntimeCompat.hapticHandled()) return;
+  if(FitTimerModules.runtimeCompat.hapticHandled()) return;
   try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){}
 }
 document.addEventListener('pointerdown', e => {
