@@ -64,6 +64,30 @@ const serverDemoRegistry = createSyncRegistry([{scope:'profile', prefix:'note:'}
 ok('server sync registry is product-neutral',
   serverDemoRegistry.accepts('profile', 'note:abc') && !serverDemoRegistry.accepts('profile', 'program:abc'));
 
+const telemetryContext = {AppBaseTelemetry: undefined};
+vm.createContext(telemetryContext);
+vm.runInContext(fs.readFileSync('src/core/telemetry.runtime.js', 'utf8'), telemetryContext);
+const sent = {events:[], errors:[]};
+const demoTelemetry = telemetryContext.AppBaseTelemetry.createTelemetry({
+  async sendAnalytics(input){ sent.events.push(input); return true; },
+  async sendDiagnostic(input){ sent.errors.push(input); return true; }
+});
+Promise.all([
+  demoTelemetry.track('lesson_opened', {source:'demo'}),
+  demoTelemetry.capture('error', new Error('demo failure'), 'fallback', {screen:'demo'})
+]).then(results => {
+  ok('generic telemetry tracks non-fitness events without Core changes',
+    results[0] === true && sent.events[0] && sent.events[0].event === 'lesson_opened');
+  ok('generic diagnostics captures normalized errors without product semantics',
+    results[1] === true && sent.errors[0] && sent.errors[0].message === 'demo failure');
+
+  finish();
+}).catch(error => {
+  console.error(error);
+  process.exit(1);
+});
+
+function finish(){
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
@@ -77,3 +101,4 @@ ok('generic profile defaults are domain-free',
 
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);
+}
