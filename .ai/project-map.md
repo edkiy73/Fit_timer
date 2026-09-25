@@ -88,6 +88,7 @@ Foundation checks:
 - `npm run test:foundation` — product config/AppBase foundation invariants.
 - `npm run build:config` / `npm run check:config` — generate/verify public runtime config from `config/product.json`.
 - `npm run build:core` / `npm run check:core` — transpile/verify typed Core compatibility runtime.
+- `npm run check:boundaries` — enforce Core → product dependency direction before module migration.
 
 Localization:
 - `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
