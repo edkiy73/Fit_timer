@@ -6090,7 +6090,7 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  $('wellModal').classList.add('open');
+  AppBaseUI.openModal($('wellModal'));
 }
 async function saveWell(){
   const num = (id, k) => {
@@ -6112,7 +6112,7 @@ async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  $('wellModal').classList.remove('open');
+  AppBaseUI.closeModal($('wellModal'));
   renderWellness();
 }
 
@@ -8900,7 +8900,7 @@ function openCompare(bIdx){
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), b);
   renderCmp();
-  $('cmpModal').classList.add('open');
+  AppBaseUI.openModal($('cmpModal'));
 }
 
 // свайп по фото в сравнении: влево — следующая дата, вправо — предыдущая.
@@ -8921,7 +8921,7 @@ function openPhotoFull(i){
   if(!photos.length) return;
   pfIdx = Math.max(0, Math.min(photos.length - 1, i));
   renderPhotoFull();
-  $('photoFullModal').classList.add('open');
+  AppBaseUI.openModal($('photoFullModal'));
 }
 function renderPhotoFull(){
   const p = photos[pfIdx];
@@ -8958,7 +8958,7 @@ wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
 wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
 $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
 $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) $('photoFullModal').classList.remove('open'); };
+$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) AppBaseUI.closeModal($('photoFullModal')); };
 async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
@@ -8967,7 +8967,7 @@ async function delCmpPhoto(which){
   photos.splice(idx, 1);
   await savePhotos();
   renderPhotos();
-  if(photos.length < 2){ $('cmpModal').classList.remove('open'); return; }
+  if(photos.length < 2){ AppBaseUI.closeModal($('cmpModal')); return; }
   fillCmpSel($('cmpA'), 0);
   fillCmpSel($('cmpB'), photos.length - 1);
   renderCmp();
@@ -17029,9 +17029,9 @@ function openSwapHint(){
   setShown('swapAI', true);
   $('swapOk').className = 'btn-ghost';
   $('swapHint').textContent = t('workout.swapAIHint');
-  $('swapModal').classList.add('open');
+  AppBaseUI.openModal($('swapModal'));
 }
-function closeSwapHint(){ $('swapModal').classList.remove('open'); }
+function closeSwapHint(){ AppBaseUI.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
