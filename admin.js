@@ -960,7 +960,7 @@ function renderAI(b){
   const s=data.settings||{},lim=s.limits||{};
   const stat=(name,ok)=>'<span class="status-chip '+(ok?'ok':'')+'">'+name+' · '+(ok?'ключ есть':'нет ключа')+'</span>';
   b.innerHTML=pageHead('ИИ','Маршрутизация моделей и лимиты Premium. Тесты не меняют production-настройки.')+`
-    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}
+    <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}${stat('OpenRouter',data.providers&&data.providers.openrouter)}
       <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
     </div>
     <div class="form-card">
