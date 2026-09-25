@@ -133,8 +133,9 @@ async function forget(req, res, body){
       const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
       const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
       if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
+      const shadowPurge = await SyncShadow.purgeAccount(mh);
+      if(shadowPurge.enabled && !shadowPurge.ok) return fail(res,503,'shadow_delete_failed');
       await store.del(`a:${mh}`);
-      await SyncShadow.purgeAccount(mh);
       try{ await removeAnalyticsDevice(deviceId); }catch(_){}
       await store.del(`a:indexed:${mh}`);
       await store.removeFromList('a:all', mh);
