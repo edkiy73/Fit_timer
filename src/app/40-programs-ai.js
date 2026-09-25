@@ -882,7 +882,7 @@ async function exportProgramFile(p){
   const blob = new Blob([json], {type: 'application/json'});
 
   const sizeKb = Math.round(json.length / 1024);
-  if(appRuntimeCompat.isNative()){
+  if(FitTimerModules.runtimeCompat.isNative()){
     await shareGeneratedFile(blob, fname, t('share.fileTitle',{name:p.name}));
     return;
   }
