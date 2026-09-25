@@ -121,6 +121,16 @@ ok('native notification transport exposes generic local and push primitives',
   && /replaceRange/.test(nativeNotificationSource)
   && /registerPush/.test(nativeNotificationSource));
 
+const mobileCoreSource = fs.readFileSync('src/core/mobile.ts','utf8');
+ok('mobile Core is product-neutral',
+  !/workout|exercise|trainer|fittimer|program/i.test(mobileCoreSource));
+ok('mobile Core exposes reusable lifecycle/url/share/theme/biometry primitives',
+  /onLifecycle/.test(mobileCoreSource)
+  && /onUrl/.test(mobileCoreSource)
+  && /shareBlob/.test(mobileCoreSource)
+  && /setTheme/.test(mobileCoreSource)
+  && /biometricStatus/.test(mobileCoreSource));
+
 const identityContext = {AppBaseIdentity: undefined, Date};
 vm.createContext(identityContext);
 vm.runInContext(fs.readFileSync('src/core/identity.runtime.js', 'utf8'), identityContext);
