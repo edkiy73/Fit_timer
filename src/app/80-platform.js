@@ -46,7 +46,7 @@ function applyTheme(){
   // иначе полоса статус-бара сверху и системная полоса снизу (safe-area) остаются
   // тёмными даже в светлой теме, пока не отрисуется body
   document.documentElement.style.background = bg;
-  appRuntimeCompat.setSystemTheme(themeLight);
+  FitTimerModules.runtimeCompat.setSystemTheme(themeLight);
 }
 
 /* ================= ГОЛОСОВОЕ УПРАВЛЕНИЕ ================= */
@@ -137,7 +137,7 @@ let hfMode = 'off'; // off | voice | headset
 
 function hfHintText(mode){
   if(mode === 'voice'){
-    return t(appRuntimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
+    return t(FitTimerModules.runtimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
   }
   if(mode === 'headset') return t('handsfree.headsetHint');
   return t('handsfree.offHint');
@@ -349,7 +349,7 @@ async function showNotification(title, body){
 }
 function checkSchedules(){
   if(document.hidden) return;
-  if(appRuntimeCompat.isNative()) return;
+  if(FitTimerModules.runtimeCompat.isNative()) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
   if(prefs.workouts === false) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -591,7 +591,7 @@ function limitNotificationCandidates(items){
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
 // вперёд при старте, изменении расписания и завершении тренировки.
 async function syncNativeNotifications(){
-  if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
+  if(!FitTimerModules.runtimeCompat.hasNative('syncWorkoutNotifications')) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
     workouts:true, trainer:true, progress:true, offers:true
   };
@@ -674,7 +674,7 @@ async function syncNativeNotifications(){
   }
 
   const finalItems = limitNotificationCandidates(items);
-  await appRuntimeCompat.syncWorkoutNotifications(finalItems);
+  await FitTimerModules.runtimeCompat.syncWorkoutNotifications(finalItems);
 }
 window.addEventListener('fitAppForeground', ()=>{
   syncNativeNotifications().catch(()=>{});
