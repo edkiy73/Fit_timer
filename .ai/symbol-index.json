@@ -923,8 +923,8 @@
     },
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
-      "lines": 207,
-      "chars": 11751,
+      "lines": 204,
+      "chars": 11630,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
