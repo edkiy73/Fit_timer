@@ -5154,6 +5154,11 @@ const appRuntimeCompat = Object.freeze({
     catch(_){ return null; }
   },
 
+  runtimeConfig(){
+    try{ return window.APP_CONFIG || window.FIT_TIMER_CONFIG || {}; }
+    catch(_){ return {}; }
+  },
+
   runtimePlatform(){
     try{
       const candidate = window.Capacitor;
@@ -12239,7 +12244,7 @@ function importProgramCode(code){
 
    База по умолчанию — тот же адрес, откуда открыто приложение: функции лежат
    рядом со страницей (api/ в репозитории). */
-const RUNTIME_CONFIG = window.APP_CONFIG || window.FIT_TIMER_CONFIG || {};
+const RUNTIME_CONFIG = appRuntimeCompat.runtimeConfig();
 const API_BASE = RUNTIME_CONFIG.apiBase
   ? String(RUNTIME_CONFIG.apiBase).replace(/\/$/, '')
   : (location.protocol.startsWith('http') ? '' : null);
@@ -17833,7 +17838,7 @@ try{
 }catch(e){}
 function applyTheme(){
   document.body.classList.toggle('light', themeLight);
-  const productConfig = window.APP_CONFIG || window.FIT_TIMER_CONFIG;
+  const productConfig = appRuntimeCompat.runtimeConfig();
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
