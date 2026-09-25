@@ -9,7 +9,7 @@ Web
   src/html/* + src/styles/* + src/app/*
   -> generated index.html + style.css + app.js
           |
-          +--> local state: kvGet/kvSet (IndexedDB -> localStorage fallback)
+          +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage
           |
           +--> API calls ------------------------------+
                                                        |
@@ -69,12 +69,15 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
 | `src/types/*.ts` | TypeScript contracts for reusable Core boundaries | Core/AppBase/type changes |
+| `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
+| `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
 
 Foundation checks:
 - `npm run typecheck` — strict TypeScript contracts/Core check.
 - `npm run test:foundation` — product config/AppBase foundation invariants.
 - `npm run build:config` / `npm run check:config` — generate/verify public runtime config from `config/product.json`.
+- `npm run build:core` / `npm run check:core` — transpile/verify typed Core compatibility runtime.
 
 Localization:
 - `src/i18n/ru.js` / `src/i18n/en.js` — user-facing dictionaries.
@@ -83,7 +86,7 @@ Localization:
 
 Canonical JS chunks:
 - `src/app/00-core.js` — shared core/navigation/start helpers.
-- `src/app/10-data-sync.js` — users, persistence, sync/calendar foundations.
+- `src/app/10-data-sync.js` — FitTimer storage adapter, users, sync/calendar foundations; low-level KV ownership is in `src/core/storage.ts`.
 - `src/app/20-account.js` — profile/account/subscription/login/biometrics.
 - `src/app/30-progress-media.js` — warmup, photos, export/import, onboarding.
 - `src/app/40-programs-ai.js` — progression, home/programs, sharing, AI/images.
