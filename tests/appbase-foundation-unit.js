@@ -322,6 +322,10 @@ ok('product infrastructure owns FitTimer storage configuration outside Core',
   && /mirrorKeys: \['account'\]/.test(productInfrastructureSource));
 ok('product infrastructure has no direct legacy Core globals',
   !/AppBaseStorage|AppBaseObservability/.test(productInfrastructureSource));
+ok('legacy data-sync consumes product modules instead of Core globals',
+  /FitTimerModules\.infrastructure\.create/.test(dataSyncSource)
+  && /FitTimerModules\.sync\.registry/.test(dataSyncSource)
+  && !/AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
 ok('ESM entry composes product infrastructure explicitly',
   /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
   && /productInfrastructure/.test(esmEntrySource));
