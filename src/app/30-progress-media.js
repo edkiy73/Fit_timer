@@ -250,8 +250,8 @@ function drawCover(x, img, dx, dy, dw, dh, r){
   x.restore();
 }
 async function shareGeneratedFile(blob, fname, title, savedText){
-  if(appRuntimeCompat.isNative()){
-    const ok = await appRuntimeCompat.shareFile(blob, fname, title || 'Fit Timer');
+  if(FitTimerModules.runtimeCompat.isNative()){
+    const ok = await FitTimerModules.runtimeCompat.shareFile(blob, fname, title || 'Fit Timer');
     if(!ok) appAlert(t('share.openFailed'));
     return ok;
   }
