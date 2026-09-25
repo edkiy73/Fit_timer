@@ -273,6 +273,18 @@ diagnostics.capture(error, context?)
 
 Core must not own workout event names.
 
+### Analytics / Diagnostics implementation status
+
+The first observability boundary now separates transport/aggregation from FitTimer semantics:
+- `src/core/observability.ts` owns generic client `track()` and `capture()` transport/payload construction;
+- FitTimer keeps only context wiring such as current locale, Premium state and device ID;
+- `lib/analytics-core.js` owns generic event counting, anonymized device cohorts and retention storage;
+- `lib/fit-analytics-schema.js` owns FitTimer event names such as workout milestones and AI usage;
+- `lib/analytics.js` remains a compatibility wrapper so existing API/admin callers do not change;
+- `lib/diagnostics.js` was already domain-neutral and remains the generic server-side redaction/aggregation implementation.
+
+Existing `/api/auth` actions, Redis analytics keys, retention TTLs and diagnostic payload shapes are intentionally preserved.
+
 ## Phase 7 — AI Runtime / Product Actions split
 
 Owner: Architect. Implementation: Extraction Engineer. Review: Security + QA.
