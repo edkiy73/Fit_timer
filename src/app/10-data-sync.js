@@ -1,7 +1,7 @@
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 let users = [];
 let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
-const fitProductInfrastructure = FitTimerModules.infrastructure.create({
+const fitProductInfrastructure = fitInfrastructure.create({
   externalStorage: appRuntimeCompat.externalStorage,
   onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
   platform: appRuntimeCompat.runtimePlatform,
@@ -481,7 +481,7 @@ function openWellAdd(){
   $('diaInput').value = en.dia || '';
   $('pulseInput').value = en.pulse || '';
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  FitTimerModules.ui.openModal($('wellModal'));
+  fitUi.openModal($('wellModal'));
 }
 async function saveWell(){
   const num = (id, k) => {
@@ -503,7 +503,7 @@ async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  FitTimerModules.ui.closeModal($('wellModal'));
+  fitUi.closeModal($('wellModal'));
   renderWellness();
 }
 
@@ -584,9 +584,9 @@ const SCHEMA_VERSION = 1;
    Локально программы по-прежнему лежат одним ключом customPrograms — поштучно они
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
-const SYNC_KEYS = FitTimerModules.sync.profileKeys;
+const SYNC_KEYS = fitSync.profileKeys;
 const PROGRAM_DOC = id => 'program:' + id;
-const isSyncKey = key => FitTimerModules.sync.registry.accepts('profile', key);
+const isSyncKey = key => fitSync.registry.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
 function docHash(s){
@@ -744,7 +744,7 @@ const SYNC = {
     const payload = [];
     for(const o of batch){
       const value = await docValue(o.key, uid);
-      const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', o.key);
+      const gone = value === null && fitSync.registry.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
       payload.push({
         key:o.key, rev:o.rev, at:o.at, schema:SCHEMA_VERSION,
@@ -1175,7 +1175,7 @@ async function accountDocsSnapshot(){
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
-  for(const key of FitTimerModules.sync.accountKeys){
+  for(const key of fitSync.accountKeys){
     if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
@@ -1241,7 +1241,7 @@ async function pendingProfileSnapshot(uid){
       const p = (Array.isArray(programs) ? programs : []).find(x => String(x.id) === id);
       value = p ? JSON.stringify(p) : null;
     } else value = await kvGet(key + '_' + uid);
-    const gone = value === null && FitTimerModules.sync.registry.allowsDeleted('profile', key);
+    const gone = value === null && fitSync.registry.allowsDeleted('profile', key);
     if(value === null && !gone) continue;
     docs.push({
       key, profileId:serverId, rev:+o.rev || +((meta[key]||{}).rev) || 1,
