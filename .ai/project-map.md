@@ -72,6 +72,7 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 | `src/types/fitness.ts` | FitTimer-only extensions of generic contracts | fitness/domain type changes |
 | `src/core/storage.ts` | generic local KV storage | storage/Core work |
 | `src/core/identity.ts` | generic Account/Profile defaults | account/profile Core boundary |
+| `src/core/documents.ts` | generic document scope/key registry | sync/Core document boundary |
 | `src/core/*.ts` | canonical reusable AppBase Core implementations | Core extraction/refactoring |
 | `src/core/*.runtime.js` | generated compatibility runtime for the current concatenated frontend | never edit directly; `npm run build:core` |
 | `admin.html` | admin UI | catalog/trainer/AI admin settings |
