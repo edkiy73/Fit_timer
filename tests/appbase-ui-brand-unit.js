@@ -21,7 +21,7 @@ for(const mode of ['dark','light']){
 
 ok('UI Core exports CSS variable helper',core.includes('export function applyCssVars'));
 ok('FitTimer theme composition reads product brand tokens',
-  platform.includes('window.APP_CONFIG || window.FIT_TIMER_CONFIG')
+  platform.includes('appRuntimeCompat.runtimeConfig()')
   && platform.includes('AppBaseUI.applyCssVars(document.body'));
 ok('generated runtime config carries UI theme tokens',
   runtime.includes('"ui"')&&runtime.includes('"dark"')&&runtime.includes('"light"'));
