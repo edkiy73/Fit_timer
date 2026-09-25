@@ -32,8 +32,9 @@ if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 
 const html = await readFile('dist/index.html', 'utf8');
 const app = await readFile('dist/app.js', 'utf8');
+const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
 if(!html.includes('appbase-core.js') || !html.includes('native-notifications.js') || !html.includes('mobile-core.js') || !html.includes('mobile.js') || !html.includes('app.js') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
-if(!app.includes('FIT_TIMER_CONFIG')) throw new Error('Runtime configuration is not used');
+if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
 const appBaseCore = await readFile('dist/appbase-core.js', 'utf8');
 if(!appBaseCore.includes('AppBaseStorage') || !appBaseCore.includes('AppBaseIdentity') || !appBaseCore.includes('AppBaseSync') || !appBaseCore.includes('AppBaseObservability') || !appBaseCore.includes('AppBaseNotifications') || !appBaseCore.includes('AppBaseUI')){
