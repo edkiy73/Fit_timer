@@ -103,8 +103,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2165,
-      "chars": 102193,
+      "lines": 2167,
+      "chars": 102369,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",

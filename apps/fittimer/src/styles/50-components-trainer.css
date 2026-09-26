@@ -748,17 +748,10 @@
   #accProfiles .user-row{background:var(--bg-2);border:1px solid transparent;margin:0}
   #accProfiles .user-row.act{border-color:var(--accent-line);background:var(--accent-soft)}
   .u-now{
-    flex:none;font-family:var(--font-display);font-size:10px;font-weight:600;
+    display:inline-block;margin-right:8px;vertical-align:1px;
+    font-family:var(--font-display);font-size:10px;font-weight:600;
     letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);
     background:var(--card);border-radius:var(--r-pill);padding:4px 9px;line-height:1.2;
-  }
-  /* На узком экране метка «сейчас» съедала место имени: «Мой п…». Метка компактнее,
-     аватар и карандаш чуть меньше — имя обычной длины помещается целиком. */
-  @media (max-width: 380px){
-    .u-now{letter-spacing:.06em;padding:3px 7px}
-    #accProfiles .user-row{gap:10px}
-    #accProfiles .user-row .ua{width:40px;height:40px;font-size:16px}
-    #accProfiles .user-row .ue{width:32px;height:32px}
   }
 
   /* Обводки здесь больше нет: удаление данных уже вынесено в отдельную карточку,
