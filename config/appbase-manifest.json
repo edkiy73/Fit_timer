@@ -1,5 +1,5 @@
 {
-  "$comment": "Files that form the reusable AppBase Core. scripts/extract-appbase.mjs copies exactly these; tests keep the list complete and domain-free.",
+  "$comment": "Files that form the reusable AppBase Core in this monorepo. npm run check:appbase verifies they stand alone; tests keep the list complete and domain-free.",
   "client": [
     "src/core/capabilities.ts",
     "src/core/identity.ts",

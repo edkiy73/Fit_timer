@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Extract a clean AppBase snapshot from this repository.
+/* Assemble AppBase Core on its own (monorepo Core isolation gate).
 
    node scripts/extract-appbase.mjs [--out <dir>]   write the snapshot (default: dist-appbase/)
    node scripts/extract-appbase.mjs --check         build into a temp dir and verify it:
@@ -8,8 +8,9 @@
        - the client Core typechecks on its own;
        - the neutral server composition loads and passes a smoke test.
 
-   The snapshot is the Phase 17 hand-off: Core files are copied verbatim; everything
-   product-specific is replaced by neutral composition templates generated below. */
+   Core files are copied verbatim; everything product-specific is replaced by neutral
+   composition templates generated below. The written assembly also serves as a starting
+   point for a new product's composition files (apps/<name>/). */
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';

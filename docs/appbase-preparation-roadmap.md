@@ -4,7 +4,7 @@ Baseline used when this document was introduced: `main` at `bfe07675d0061ef0a6ab
 
 ## Goal
 
-Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so a later snapshot/fork can delete the fitness domain and retain a strong reusable application base.
+Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so the reusable AppBase Core stays independent of the fitness domain and further products can be built on it in the same repository.
 
 Target dependency rule:
 
@@ -19,73 +19,29 @@ This roadmap is a working architecture proposal, not a claim that every step is 
 
 ## Long-term repository topology
 
-The target after the first stable AppBase extraction is:
+**Decision (2026-09-26): one repository (monorepo).** AppBase Core stays an independent layer architecturally, but all products live in this same Git repository. There is no separate AppBase repository and no copy/sync of Core between repositories.
 
 ```text
-        AppBase Core
-        /    |     \
-       ↓     ↓      ↓
-   FitTimer Lingua TaskApp
+Architecturally:            Physically (target layout):
+
+      AppBase Core          <repo>/
+      /    |     \            packages/core/     ← AppBase Core (client + server)
+     ↓     ↓      ↓           apps/fittimer/     ← FitTimer product + native shells
+ FitTimer  App2   App3        apps/<next-app>/   ← each further product
 ```
 
-This is an ownership model, not necessarily a specific packaging technology.
+Why a monorepo here: one owner, one ecosystem, frequent cross-cutting changes. A Core change and the migration of every product that uses it land in **one commit / one PR**, and CI checks all consumers at once — nothing can be "forgotten" in another repository, and one commit describes the whole platform state.
 
-### Bootstrap phase
+Rules that keep Core independent inside one repository:
+- Core never imports product code (`tests/dependency-boundaries-unit.js`, `npm run check:appbase`);
+- products depend on Core only through its public modules;
+- a Core change must keep every product green in the same PR;
+- Core has no product names, vocabulary or brand (guarded by tests);
+- product-specific behavior enters Core only through composition points (registries, hooks, capability config), never `if (app === ...)`.
 
-Initially FitTimer contains the proven production infrastructure, so extraction naturally starts there:
+How changes reach users: the web app redeploys from `main`; Android/iOS builds of each product receive a Core change only with that product's next release.
 
-```text
-FitTimer generic code → AppBase bootstrap
-```
-
-This is temporary. Do not build a permanent architecture where AppBase is continuously overwritten from FitTimer.
-
-### Mature phase
-
-After AppBase has:
-- stable Core boundaries;
-- its own build/tests;
-- proof-product validation;
-- a defined version/update mechanism;
-
-AppBase becomes canonical upstream.
-
-Then the normal flow is:
-
-```text
-AppBase Core change
-      ↓
-reviewable/versioned update
-      ↓
-FitTimer / Lingua / TaskApp
-```
-
-Product-domain changes remain local.
-
-If FitTimer or another product discovers a reusable Core bug, two flows are acceptable depending on urgency:
-
-```text
-preferred:
-AppBase fix → downstream update
-
-urgent production exception:
-Product hotfix → generalize/backport to AppBase → downstream reconciliation
-```
-
-The second route is an exception, not the default ownership model.
-
-### Delivery mechanism
-
-Do not lock the project prematurely to one transport. Re-evaluate when the Core boundary exists.
-
-Plausible options:
-- versioned Core package;
-- automated Core update PRs;
-- another explicit versioned dependency/copy mechanism.
-
-Current preference is reviewable automated PRs first because they preserve product autonomy and make diffs/tests visible without forcing all apps into lockstep. A package may become preferable later if Core APIs stabilize enough.
-
-Avoid permanent bidirectional automatic sync.
+Revisit a separate Core repository only if Core gets external consumers, a separate team or an independent release cycle.
 
 ## Coupling points already identified
 
@@ -598,7 +554,7 @@ FitTimer keeps every capability on, so its behavior is unchanged. `profiles` and
 
 ## Phase 16 — AppBase readiness audit
 
-Before fork/snapshot:
+Before building a second product on Core:
 - typecheck/contracts exist;
 - product identity is centralized enough to bootstrap a new app safely;
 - generic Storage API exists;
@@ -636,42 +592,22 @@ Checklist status:
 
 Known, accepted legacy names that stay for compatibility: `X-Fit-*` request headers, the APNs payload key `fit`, `window.FitNative`, the `fittimer/kv` local database and the `FitAudio`/`FitSystem`/`FitBiometric` native plugin names. Renaming them would break installed clients or native builds; an extracted product may choose its own names from day one.
 
-## Phase 17 — Core upstream transition
+## Phase 17 — Monorepo workspace
 
-After the AppBase extraction and proof-product checks, explicitly switch ownership:
-
-1. mark AppBase Core as canonical upstream;
-2. record the AppBase Core version/commit consumed by each product;
-3. create a repeatable downstream update path;
-4. start with reviewable automated PRs unless a different mechanism proves simpler;
-5. verify one generic Core change can update FitTimer and one non-fitness app;
-6. retire the temporary FitTimer → AppBase bootstrap sync path;
-7. document the hotfix/backport procedure for urgent product-first fixes.
-
-Do not call this phase complete merely because repositories share similar files; ownership and update direction must be explicit.
-
-### Upstream transition preparation status
-
-Everything that can be prepared inside FitTimer is in place; the remaining steps need a new repository and are owner decisions.
-
-Implemented:
+Core lives in this repository as an isolated layer. Implemented:
 - `config/appbase-manifest.json` — the single list of Core files (client + server). `tests/dependency-boundaries-unit.js` fails when a Core module is missing from it, when it lists a stale path, or when a listed file imports FitTimer composition modules.
-- `npm run appbase:extract` (`scripts/extract-appbase.mjs`) writes a clean snapshot (`dist-appbase/`, git-ignored): the Core files verbatim, neutral composition templates (`api/auth.js`, `api/sync.js`, `api/admin.js`, `api/health.js`, empty sync/AI/analytics registries, neutral `config/product.json`), `package.json`, `tsconfig.json`, README with the composition contract, a smoke test and `APPBASE_SOURCE.json` (source commit + per-file hashes).
-- `npm run check:appbase` (CI) builds the snapshot in a temp dir and verifies it: no product vocabulary or brand, every relative import resolves inside the snapshot, client Core typechecks alone, the neutral server composition loads and passes the smoke test.
-- `scripts/appbase-sync.mjs --from <appbase-checkout> [--dry-run]` is the downstream update path: it copies only manifest files into a product and records the consumed AppBase commit in `config/appbase-version.json`, producing a reviewable diff/PR.
-- Remaining product-specific server seams were closed for the snapshot: the catalog health probe moved to `api/health.js`, and a comment in `lib/util.js` no longer references the trainer endpoint.
+- `npm run check:appbase` (CI) proves Core stands alone: it assembles the manifest files with neutral composition templates in a temp dir and checks there is no product vocabulary or brand, every relative import resolves inside Core, client Core typechecks alone, and a neutral server composition loads and passes a smoke test. `npm run appbase:extract` writes the same assembly to `dist-appbase/` (git-ignored) for inspection or as a template for a new product's composition files.
+- Remaining product-specific server seams were closed: the catalog health probe moved to `api/health.js`, and `lib/util.js` no longer references the trainer endpoint.
 
-Owner steps (in order):
-1. Create the AppBase repository (name/visibility are owner decisions) and push the output of `npm run appbase:extract` as its first commit.
-2. Add AppBase's own CI (`npm run typecheck`, `npm test`).
-3. From then on make Core changes in AppBase first and bring them into FitTimer with `scripts/appbase-sync.mjs` in a PR; urgent FitTimer hotfixes to Core files must be ported back to AppBase in the same week.
-4. Optionally automate step 3 with a scheduled workflow that runs the sync and opens a PR (needs a token with read access to the AppBase repository).
+Layout migration (do it when the second product starts; not needed before):
+1. Move Core files from `config/appbase-manifest.json` into `packages/core/` (client `src/` + server `lib/`), keep the manifest pointing at the new paths, and make FitTimer import from there. Only internal paths change; no data/protocol changes.
+2. Move FitTimer into `apps/fittimer/` in a separate PR. This one needs owner actions outside the repo: Vercel project Root Directory, Android/iOS workflow paths, Capacitor paths. Do not combine it with any other change; signing material stays untouched.
+3. Add `apps/<next-app>/` with its own `config/product.json`, composition files (start from `npm run appbase:extract` output), Vercel project and native shells.
+4. CI: a change in `packages/core/**` runs Core + all apps; a change in `apps/<x>/**` runs that app (+ Core checks).
 
-## After the fork: AppBase extraction
+## Adding a product
 
-Delete fitness programs, exercises, workout engine, progression, warm-up, fitness progress, trainer/trainee, fitness catalog, fitness AI actions/prompts, fitness notifications and fitness deep links.
-
-The remaining base should still support Account/Auth, optional Profiles, generic Storage/Sync, AI runtime, entitlements, notifications, analytics/diagnostics, Core Admin and web/mobile shells.
+A new product does not fork FitTimer and does not delete fitness code. It is a new app folder on top of Core that provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions.
 
 ## Universality proof
 
@@ -702,7 +638,7 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 14. Retire remaining legacy global/concatenation compatibility.
 15. Dependency checks + stricter TS settings.
 16. Readiness audit.
-17. Extract AppBase and validate proof products.
-18. Switch Core ownership to AppBase and establish downstream update PRs.
+17. Monorepo workspace: Core manifest + standalone check; move Core to `packages/core/` when the second product starts.
+18. Add products as `apps/<name>/` on the same Core.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.
