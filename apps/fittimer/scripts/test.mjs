@@ -64,9 +64,11 @@ async function waitFor(url, ms = 15000){
   throw new Error(`не поднялся ${url}`);
 }
 const children = [];
+let serverStarted = false;
 process.on('exit', () => children.forEach(c => { try{ c.kill(); }catch(_){} }));
 async function startServers(withStatic){
-  const log = openSync(SERVER_LOG, 'a');
+  const log = openSync(SERVER_LOG, serverStarted ? 'a' : 'w');
+  serverStarted = true;
   const api = spawn(process.execPath, ['tests/dev-server.js', String(API_PORT)], {env: {...process.env, ...TEST_ENV}, stdio: ['ignore', log, log]});
   children.push(api);
   await waitFor(`http://127.0.0.1:${API_PORT}/index.html`);
@@ -138,7 +140,7 @@ if(want.browser || want.admin){
   }
 }
 
-if(failed && existsSync(SERVER_LOG)){
+if(failed && serverStarted && existsSync(SERVER_LOG)){
   const lines = readFileSync(SERVER_LOG, 'utf8').trimEnd().split('\n');
   console.log(`\nХвост лога тестового сервера (${SERVER_LOG}):\n` + lines.slice(-60).join('\n'));
 }

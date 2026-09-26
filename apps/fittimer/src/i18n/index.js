@@ -100,10 +100,20 @@ export function syncAccessibility(root){
   root.querySelectorAll('.switch').forEach(el => {
     el.setAttribute('role', 'switch');
     el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
-    if(!el.getAttribute('aria-label')){
+    // Имя берём из подписи строки: «Заголовок. Пояснение». Раньше склеивали
+    // textContent целиком — «Разминкаделается один раз…» без пробела — и не
+    // обновляли при смене языка. Своё aria-label (явное) не трогаем.
+    if(!el.getAttribute('aria-label') || el.dataset.autoAria === '1'){
       const row = el.closest('.pref-row');
       const label = row && row.querySelector(':scope > span');
-      if(label) el.setAttribute('aria-label', (label.textContent || '').trim());
+      if(label){
+        const title = [...label.childNodes]
+          .filter(n => !(n.nodeType === 1 && n.tagName === 'SMALL'))
+          .map(n => n.textContent).join('').trim();
+        const hint = label.querySelector('small');
+        el.setAttribute('aria-label', [title, hint && hint.textContent.trim()].filter(Boolean).join('. '));
+        el.dataset.autoAria = '1';
+      }
     }
   });
 }

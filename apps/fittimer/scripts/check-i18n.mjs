@@ -33,6 +33,47 @@ for(const file of htmlFiles){
   }
 }
 
+// Untranslated markup: Russian text or a Russian placeholder/aria-label/title in
+// src/html must carry a data-i18n* key, otherwise the English UI shows it in Russian.
+// Allowed: inside an element with data-i18n / data-i18n-html (the key replaces it),
+// <option> (a language's own name) and <script>/<style>.
+{
+  const CYR = /[А-Яа-яЁё]/;
+  const VOID = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  const ATTR_KEYS = {placeholder: 'data-i18n-placeholder', 'aria-label': 'data-i18n-aria', title: 'data-i18n-title'};
+  const attrOf = (attrs, name) => { const m = attrs.match(new RegExp('(?:^|\\s)' + name + '\\s*=\\s*("([^"]*)"|\'([^\']*)\')')); return m ? (m[2] ?? m[3]) : null; };
+  for(const file of htmlFiles){
+    const text = await readFile('src/html/' + file, 'utf8');
+    const stack = [];
+    const tokenRe = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>|([^<]+)/g;
+    let m;
+    while((m = tokenRe.exec(text))){
+      const line = text.slice(0, m.index).split('\n').length;
+      if(m[4] != null){
+        if(!CYR.test(m[4])) continue;
+        if(stack.some(e => /\sdata-i18n(-html)?=/.test(' ' + e.attrs) || ['option','script','style'].includes(e.tag))) continue;
+        console.error(`${file}:${line}: untranslated text "${m[4].trim().slice(0, 60)}" — add data-i18n`);
+        bad = true;
+      } else if(m[2]){
+        const tag = m[2].toLowerCase(), attrs = m[3] || '';
+        if(m[1]){
+          const i = stack.map(e => e.tag).lastIndexOf(tag);
+          if(i >= 0) stack.length = i;
+          continue;
+        }
+        for(const [name, key] of Object.entries(ATTR_KEYS)){
+          const value = attrOf(attrs, name);
+          if(value && CYR.test(value) && attrOf(attrs, key) == null){
+            console.error(`${file}:${line}: untranslated ${name}="${value.slice(0, 60)}" — add ${key}`);
+            bad = true;
+          }
+        }
+        if(!VOID.has(tag) && !/\/\s*$/.test(attrs)) stack.push({tag, attrs});
+      }
+    }
+  }
+}
+
 // Regression: declarative data-i18n is a default, not a permanent owner of runtime UI.
 // A background locale/profile refresh must translate untouched static labels while leaving
 // stateful text/markup alone until that screen's renderer updates it in the new language.
