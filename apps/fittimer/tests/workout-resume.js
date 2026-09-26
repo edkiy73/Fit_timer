@@ -53,6 +53,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     state.remaining = 42;
     prepSec = 0;
     state.workoutSessionId = 'test-session-inactivity';
+    state.stepOutcomes = {};
+    const firstDone = state.steps.findIndex(x => x.phase === 'work');
+    state.stepOutcomes[workoutStepKey(state.steps[firstDone], firstDone)] = 'done';
     await saveSession();
 
     const saved = await loadSession();
@@ -61,6 +64,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     }
     if(saved.sessionId !== 'test-session-inactivity'){
       throw new Error('workout session id was not saved for inactivity reminder');
+    }
+    if(!saved.outcomes || !Object.values(saved.outcomes).includes('done')){
+      throw new Error('per-step workout outcome was not saved');
     }
     // The saved resume point below is a reps step; keep that session realistic after
     // separately proving that timer recovery fields persist.
@@ -139,6 +145,33 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('в попапе нет подходов и кругов',
     choices.every(x => !/подход|круг|сторон/i.test(x.meta || '')),
     choices.map(x=>x.meta).join(' | '));
+
+  const isolation = await page.evaluate(async () => {
+    tearDownWorkout();
+    const a = customPrograms.find(x => x.id === 'resume-variant-test');
+    const b = {
+      id:'resume-other-test', name:'Другая тренировка', active:true, progression:0,
+      plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[{name:'Другое',type:'reps',value:'10',sets:1,rest:0,restAfter:0}]}]
+    };
+    customPrograms.push(b);
+    await savePrograms();
+
+    state.raw = b; state.planIdx = 0; state.current = customToProgram(b, 0);
+    state.steps = buildSteps(); state.stepIdx = 0; state.startLoad = workoutLoadSnapshot(b,0);
+    state.globalStart = Date.now() - 10000; state.pausedTotal = 0; state.paused = false;
+    state.workoutSessionId = 'session-b'; state.stepOutcomes = {};
+    await saveSession();
+
+    const aBefore = await sessionForProgram(a.id);
+    await clearSession('session-b', b.id);
+    const aAfter = await sessionForProgram(a.id);
+    const bAfter = await sessionForProgram(b.id);
+    return {aBefore:!!aBefore, aAfter:!!aAfter, bAfter:!!bAfter};
+  });
+  ok('сессия другой программы не затирает сохранённую тренировку',
+    isolation.aBefore && isolation.aAfter, JSON.stringify(isolation));
+  ok('удаление сессии ограничено выбранной тренировкой',
+    !isolation.bAfter && isolation.aAfter, JSON.stringify(isolation));
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();
