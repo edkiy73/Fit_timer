@@ -582,7 +582,7 @@ export function renderToday(){
       list.appendChild(todayRow({
         cls: neverTrained ? '' : 'rest',
         ico: neverTrained ? 'play' : 'moon',
-        title: neverTrained ? t('today.startToday') : t('today.rest'),   // заголовок строки не переносится: длиннее — обрежется
+        title: neverTrained ? t('today.startToday') : t('today.rest'),   // заголовок — не больше двух строк: длиннее — обрежется
         sub: neverTrained ? t('today.firstWorkout',{name:next.p.name}) : t('today.next',{when}),
         action: neverTrained ? t('today.start') : t('today.open'),
         onclick: () => openStart(next.p)

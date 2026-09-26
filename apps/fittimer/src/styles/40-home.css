@@ -143,9 +143,12 @@
   .today-row.done .tr-ico{background:var(--ok-soft);color:var(--ok)}
   .tr-ico svg{width:21px;height:21px}
   .today-row .ti{flex:1;min-width:0}
-  .today-row .ti b{display:block;font-size:var(--fs-md);font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  /* Заголовок — до двух строк: в одну на 360 точках рядом с кнопкой не влезало
+     даже «Сегодня отдых» («Сегодня о…»). Длинное название программы всё равно
+     обрезается, но после второй строки. */
+  .today-row .ti b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;font-size:var(--fs-md);font-weight:600;margin-bottom:3px;overflow:hidden;overflow-wrap:anywhere;color:var(--ink)}
   /* у служебных строк заголовок не имя программы, обрезать его нечестно */
-  .today-row.info .ti b{white-space:normal;overflow:visible}
+  .today-row.info .ti b{display:block;-webkit-line-clamp:none;line-clamp:none;white-space:normal;overflow:visible}
   .today-row .ti small{display:block;color:var(--muted);font-size:var(--fs-sm);line-height:1.35}
   .tr-go{
     flex:none;display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;
@@ -202,7 +205,11 @@
   .actions.act-row{display:flex;gap:10px;align-items:stretch}
   .actions.act-row .btn-share-res{flex:0 0 auto;width:auto;padding:0 16px;margin:0}
   .actions.act-row .btn-primary{flex:1;margin:0}
-  @media (max-width:359px){.actions.act-row .btn-share-res span{display:none}}
+  /* После слишком короткой тренировки #btnAgain становится вторичной кнопкой
+     «Засчитать» — без flex:1 она распирала ряд за край экрана. */
+  .actions.act-row #btnAgain{flex:1;min-width:0;margin:0}
+  /* 360 точек — самый частый Android: подпись «Поделиться» оставляем от 381. */
+  @media (max-width:380px){.actions.act-row .btn-share-res span{display:none}}
   .dlg-msg{font-size:15px;line-height:1.55;white-space:pre-line;margin:2px 0 22px;color:var(--ink)}
   #dlgCode{width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:monospace;font-size:12px;padding:10px;margin-bottom:12px;resize:vertical}
 

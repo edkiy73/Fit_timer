@@ -748,7 +748,8 @@
   #accProfiles .user-row{background:var(--bg-2);border:1px solid transparent;margin:0}
   #accProfiles .user-row.act{border-color:var(--accent-line);background:var(--accent-soft)}
   .u-now{
-    flex:none;font-family:var(--font-display);font-size:10px;font-weight:600;
+    display:inline-block;margin-right:8px;vertical-align:1px;
+    font-family:var(--font-display);font-size:10px;font-weight:600;
     letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);
     background:var(--card);border-radius:var(--r-pill);padding:4px 9px;line-height:1.2;
   }
@@ -790,5 +791,11 @@
     border-radius:var(--r-md);overflow:hidden;text-overflow:ellipsis;
   }
   .tabs.seg .tab.act{background:var(--grad-accent);color:var(--on-accent);font-weight:500}
+  /* Узкие телефоны (360 точек — половина Android): четыре равные пилюли не вмещают
+     «Профиль» и «Аккаунт», и активная вкладка резалась до «Профи…». Здесь ширина
+     идёт от подписи — короткому «Звуку» хватает меньше места, длинным достаётся больше. */
+  @media (max-width: 380px){
+    .tabs.seg .tab{flex:1 1 auto;min-width:0;padding:0 4px;font-size:13px}
+  }
 
   

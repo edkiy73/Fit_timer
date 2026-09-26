@@ -15,6 +15,7 @@ need(i18n.includes('function syncAccessibility(root)'), 'accessibility sync help
 need(i18n.includes("root.querySelectorAll('.back-chip')"), 'back buttons need accessible names');
 need(i18n.includes("el.setAttribute('role', 'switch')"), 'custom switches need switch semantics');
 need(i18n.includes("el.setAttribute('aria-checked'"), 'custom switches need checked state');
+need(i18n.includes("el.dataset.autoAria === '1'") && i18n.includes(".join('. ')"), 'switch names are title + hint and follow the app language');
 need(i18n.includes("button[title]"), 'icon buttons with title need accessible names');
 need(css.includes('min-width:44px;min-height:44px'), 'small icon controls need 44px touch targets');
 need(!css.includes('}\\n  *{box-sizing:border-box'), 'CSS reset must contain a real newline, not a literal \\n selector');

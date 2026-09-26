@@ -103,8 +103,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2165,
-      "chars": 102193,
+      "lines": 2167,
+      "chars": 102369,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -389,7 +389,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2973,
-      "chars": 139172,
+      "chars": 139173,
       "symbols": [
         "add",
         "ageError",
@@ -835,7 +835,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 796,
-      "chars": 34671,
+      "chars": 34599,
       "symbols": [
         "add",
         "advance",
@@ -1060,7 +1060,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 638,
-      "chars": 41911,
+      "chars": 42280,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1415,7 +1415,7 @@
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 417,
-      "chars": 26611,
+      "chars": 26607,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1561,7 +1561,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 610,
-      "chars": 39882,
+      "chars": 39965,
       "ids": [
         "addExModal",
         "aemAI",

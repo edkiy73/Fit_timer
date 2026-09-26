@@ -216,8 +216,10 @@ export function renderUsers(){
     const a = profileAge(u);
     if(a) bits.push(t('profile.ageYears',{count:a,years:appLocale === 'ru' ? plural(a,t('profile.yearOne'),t('profile.yearFew'),t('profile.yearMany')) : (a === 1 ? t('profile.yearOne') : t('profile.yearFew'))}));
     if(!act) bits.push(t('profile.switch'));
-    row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${bits.join(' · ')}</small></div>`
-      + (act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '')
+    // Метка «сейчас» — во второй строке, а не рядом с именем: справа она отнимала у
+    // имени место, и на узком телефоне «Мой профиль» превращался в «Мой п…».
+    const now = act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '';
+    row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${now}${bits.join(' · ')}</small></div>`
       + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
     row.querySelector('b').textContent = u.name || t('profile.noName');
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };

@@ -277,7 +277,7 @@ function handleNativeVoiceError(error){
   }else if(error === 'model_missing'){
     if(typeof refreshVoicePackUI === 'function') refreshVoicePackUI();
   }else if(error === 'model'){
-    appAlert('Не удалось запустить голосовое управление. Попробуй заново скачать голосовой пакет в настройках.');
+    appAlert(t('handsfree.modelFailed'));
   }
 }
 function handleNativeVoiceStatus(status){
