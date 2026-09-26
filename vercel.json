@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'This repository root is not a deployable app. Set the Vercel project Root Directory to apps/fittimer (Settings -> Build and Deployment).' && exit 1"
+}
