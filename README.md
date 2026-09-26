@@ -1,16 +1,24 @@
-# Fit Timer
+# AppBase monorepo
 
-Веб-приложение и нативные оболочки Android/iOS на Capacitor 8.
+One repository for the AppBase Core and every app built on it.
 
-- Мобильная архитектура и релиз: [`docs/mobile-release.md`](docs/mobile-release.md)
-- Настройка Vercel/backend: [`docs/setup-vercel.md`](docs/setup-vercel.md)
-- Контекст для ИИ: [`CLAUDE.md`](CLAUDE.md)
+```text
+packages/core/     AppBase Core — shared client (TypeScript) + server (Node) foundation
+apps/fittimer/     Fit Timer — web, API (Vercel), Android/iOS (Capacitor)
+docs/              repository-level plans
+```
 
-Исходники интерфейса разбиты на компактные части в `src/app`, `src/styles` и `src/html`. Корневые `app.js`, `style.css` и `index.html` генерируются для совместимости.
+- Architecture and roadmap: `docs/appbase-preparation-roadmap.md`
+- Agent instructions: `AGENTS.md`, `CLAUDE.md`
+- Fit Timer details: `apps/fittimer/README.md`
+
+## Common commands
 
 ```bash
-npm ci
-npm run build:sources
-npm run mobile:sync
-npm run check:mobile
+npm run setup          # install packages/core and apps/fittimer dependencies
+npm run core:check     # AppBase Core: typecheck, boundaries, runtime + smoke tests
+npm run fittimer:build # Fit Timer web + mobile bundle (apps/fittimer/dist)
+npm run check          # Core check + Fit Timer typecheck/boundaries/sources/build/mobile checks
 ```
+
+A change in `packages/core/` must keep every app green in the same pull request.

@@ -15,7 +15,7 @@ model: opus
 
 ## Что читать первым
 
-`CLAUDE.md` и `AGENTS.md` в корне — устройство приложения и ограничения. Затем `.ai/project-map.md` и только нужные canonical chunks в `src/html/`, `src/styles/`, `src/app/`. Generated root-файлы не читать целиком и не редактировать.
+`CLAUDE.md` и `AGENTS.md` в корне репозитория — устройство приложения и ограничения. Код FitTimer лежит в `apps/fittimer/`, все пути ниже — относительно этой папки. Затем `.ai/project-map.md` и только нужные canonical chunks в `src/html/`, `src/styles/`, `src/app/`. Generated root-файлы не читать целиком и не редактировать.
 
 ## Направление
 

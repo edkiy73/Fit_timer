@@ -2,14 +2,17 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'supabase/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig*.json', 'app.config.js', 'check.py', 'app.js', 'appbase-core.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/supabase/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/app.js', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'api/**', 'lib/**', 'config/**', 'tests/**', '.ai/**', 'scripts/**', 'tsconfig*.json', 'app.config.js', 'check.py', 'app.js', 'style.css', 'index.html', 'admin.html', 'admin.js', 'package.json', 'package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/app.js', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fittimer
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -17,6 +20,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: AppBase Core — typecheck, boundaries, runtime and smoke tests
+        working-directory: packages/core
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check
+
       - name: Установить зависимости для typecheck
         run: npm ci --ignore-scripts --no-audit --no-fund
 
@@ -25,7 +34,6 @@ jobs:
           npm run typecheck
           npm run build:esm
           node tests/appbase-foundation-unit.js
-          node tests/core-esm-runtime.mjs
           npm run test:boundaries
           npm run check:sources
           npm run check:ai-index
@@ -64,6 +72,7 @@ jobs:
           node tests/appbase-ui-brand-unit.js
           node tests/appbase-ui-states-unit.js
           node tests/appbase-core-bundle-unit.js
+          node tests/capabilities-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js

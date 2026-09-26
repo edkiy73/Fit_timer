@@ -6,23 +6,24 @@ name: Browser tests
 on:
   pull_request:
     paths: &browser_paths
-      - 'src/**'
-      - 'api/**'
-      - 'config/**'
-      - 'lib/**'
-      - 'tests/**'
-      - 'app.js'
-      - 'style.css'
-      - 'index.html'
-      - 'mobile.js'
-      - 'app.config.js'
-      - 'vercel.json'
-      - 'admin.html'
-      - 'admin.js'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.json'
-      - 'scripts/run-browser-tests.mjs'
+      - 'packages/core/**'
+      - 'apps/fittimer/src/**'
+      - 'apps/fittimer/api/**'
+      - 'apps/fittimer/config/**'
+      - 'apps/fittimer/lib/**'
+      - 'apps/fittimer/tests/**'
+      - 'apps/fittimer/app.js'
+      - 'apps/fittimer/style.css'
+      - 'apps/fittimer/index.html'
+      - 'apps/fittimer/mobile.js'
+      - 'apps/fittimer/app.config.js'
+      - 'apps/fittimer/vercel.json'
+      - 'apps/fittimer/admin.html'
+      - 'apps/fittimer/admin.js'
+      - 'apps/fittimer/package.json'
+      - 'apps/fittimer/package-lock.json'
+      - 'apps/fittimer/tsconfig.json'
+      - 'apps/fittimer/scripts/run-browser-tests.mjs'
       - '.github/workflows/browser-tests.yml'
   push:
     branches: [main]
@@ -35,6 +36,9 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fittimer
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7

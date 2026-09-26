@@ -5,17 +5,18 @@ on:
   push:
     branches: [main]
     paths: &mobile_paths
-      - 'ios/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'app.js'
-      - 'style.css'
-      - 'index.html'
-      - 'mobile.js'
-      - 'app.config.js'
-      - 'capacitor.config.json'
-      - 'package.json'
-      - 'package-lock.json'
+      - 'packages/core/**'
+      - 'apps/fittimer/ios/**'
+      - 'apps/fittimer/scripts/**'
+      - 'apps/fittimer/src/**'
+      - 'apps/fittimer/app.js'
+      - 'apps/fittimer/style.css'
+      - 'apps/fittimer/index.html'
+      - 'apps/fittimer/mobile.js'
+      - 'apps/fittimer/app.config.js'
+      - 'apps/fittimer/capacitor.config.json'
+      - 'apps/fittimer/package.json'
+      - 'apps/fittimer/package-lock.json'
       - '.github/workflows/ios.yml'
   pull_request:
     paths: *mobile_paths
@@ -24,6 +25,9 @@ on:
 jobs:
   simulator:
     runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/fittimer
     env:
       FIT_TIMER_API_URL: ${{ vars.FIT_TIMER_API_URL || 'https://fittimer99.vercel.app' }}
       FIT_TIMER_PUBLIC_URL: ${{ vars.FIT_TIMER_PUBLIC_URL || 'https://fittimer99.vercel.app' }}
@@ -35,6 +39,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: apps/fittimer/package-lock.json
 
       - name: Установить зависимости и синхронизировать Capacitor
         run: |

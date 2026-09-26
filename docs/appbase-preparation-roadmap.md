@@ -4,7 +4,7 @@ Baseline used when this document was introduced: `main` at `bfe07675d0061ef0a6ab
 
 ## Goal
 
-Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so a later snapshot/fork can delete the fitness domain and retain a strong reusable application base.
+Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so the reusable AppBase Core stays independent of the fitness domain and further products can be built on it in the same repository.
 
 Target dependency rule:
 
@@ -19,73 +19,29 @@ This roadmap is a working architecture proposal, not a claim that every step is 
 
 ## Long-term repository topology
 
-The target after the first stable AppBase extraction is:
+**Decision (2026-09-26): one repository (monorepo).** AppBase Core stays an independent layer architecturally, but all products live in this same Git repository. There is no separate AppBase repository and no copy/sync of Core between repositories.
 
 ```text
-        AppBase Core
-        /    |     \
-       ↓     ↓      ↓
-   FitTimer Lingua TaskApp
+Architecturally:            Physically (target layout):
+
+      AppBase Core          <repo>/
+      /    |     \            packages/core/     ← AppBase Core (client + server)
+     ↓     ↓      ↓           apps/fittimer/     ← FitTimer product + native shells
+ FitTimer  App2   App3        apps/<next-app>/   ← each further product
 ```
 
-This is an ownership model, not necessarily a specific packaging technology.
+Why a monorepo here: one owner, one ecosystem, frequent cross-cutting changes. A Core change and the migration of every product that uses it land in **one commit / one PR**, and CI checks all consumers at once — nothing can be "forgotten" in another repository, and one commit describes the whole platform state.
 
-### Bootstrap phase
+Rules that keep Core independent inside one repository:
+- Core never imports product code (`packages/core/tests/boundaries.js`, `apps/fittimer/tests/dependency-boundaries-unit.js`);
+- products depend on Core only through its public modules;
+- a Core change must keep every product green in the same PR;
+- Core has no product names, vocabulary or brand (guarded by tests);
+- product-specific behavior enters Core only through composition points (registries, hooks, capability config), never `if (app === ...)`.
 
-Initially FitTimer contains the proven production infrastructure, so extraction naturally starts there:
+How changes reach users: the web app redeploys from `main`; Android/iOS builds of each product receive a Core change only with that product's next release.
 
-```text
-FitTimer generic code → AppBase bootstrap
-```
-
-This is temporary. Do not build a permanent architecture where AppBase is continuously overwritten from FitTimer.
-
-### Mature phase
-
-After AppBase has:
-- stable Core boundaries;
-- its own build/tests;
-- proof-product validation;
-- a defined version/update mechanism;
-
-AppBase becomes canonical upstream.
-
-Then the normal flow is:
-
-```text
-AppBase Core change
-      ↓
-reviewable/versioned update
-      ↓
-FitTimer / Lingua / TaskApp
-```
-
-Product-domain changes remain local.
-
-If FitTimer or another product discovers a reusable Core bug, two flows are acceptable depending on urgency:
-
-```text
-preferred:
-AppBase fix → downstream update
-
-urgent production exception:
-Product hotfix → generalize/backport to AppBase → downstream reconciliation
-```
-
-The second route is an exception, not the default ownership model.
-
-### Delivery mechanism
-
-Do not lock the project prematurely to one transport. Re-evaluate when the Core boundary exists.
-
-Plausible options:
-- versioned Core package;
-- automated Core update PRs;
-- another explicit versioned dependency/copy mechanism.
-
-Current preference is reviewable automated PRs first because they preserve product autonomy and make diffs/tests visible without forcing all apps into lockstep. A package may become preferable later if Core APIs stabilize enough.
-
-Avoid permanent bidirectional automatic sync.
+Revisit a separate Core repository only if Core gets external consumers, a separate team or an independent release cycle.
 
 ## Coupling points already identified
 
@@ -399,6 +355,16 @@ FitTimer still owns:
 
 This keeps Core unaware of programs/workouts while preserving the existing `window.FitNative` compatibility surface for the current app.
 
+### Speech transport implementation status
+
+Native voice transport is now Core in `src/core/speech.ts`:
+- microphone permission, native TTS and voice listing;
+- speech recognition start/stop with listener lifecycle (result/error/status/heard handlers);
+- offline recognition-model status/download/delete;
+- default recognition language/TTS locale and the pre-download hook are injected by the product.
+
+`mobile.js` still owns FitTimer policy: the `ru`/`ru-RU` defaults, the `fitVoiceHeard` diagnostics event, requesting notification permission before a model download, and everything voice commands mean during a workout. The `window.FitNative` voice surface is unchanged.
+
 ## Phase 10 — Infrastructure adapters: Supabase + OpenRouter
 
 Owner: Architect + DevOps/Backend. Review: Security + QA.
@@ -535,14 +501,15 @@ Do not combine final legacy-build removal with unrelated data/protocol migration
 
 ### Legacy build migration status
 
-Phase 13 has started with the runtime boundary itself:
-- reusable browser Core runtimes are generated into `appbase-core.js`;
-- FitTimer `app.js` no longer owns/concatenates Storage, Identity, Sync, Observability, Notifications or UI Core runtimes;
-- the HTML bootstrap loads `appbase-core.js` before FitTimer product code;
-- the Capacitor web build copies and validates the same Core runtime bundle;
-- individual `src/core/*.runtime.js` files remain generated compatibility artifacts for now, so this is a transition away from the legacy global build rather than the final module-format cutover.
+The Core side of Phase 13 is done:
+- every `src/core/*.ts` module is a real ES module compiled by `tsconfig.esm.json` into `dist/esm/`; the generated `appbase-core.js` and `src/core/*.runtime.js` namespace bundles are gone;
+- `src/main.ts` is the production entry point: it composes Core with the typed product modules (`src/app/identity.ts`, `src/app/infrastructure.ts`, `src/app/sync-schema.ts`) and then loads the legacy product bundle;
+- `mobile.js` is an ES module that imports Core (`mobile`, `native-notifications`, `speech`) explicitly and no longer reads FitTimer product state;
+- the legacy product bundle receives its dependencies once through a transient `FitTimerModules` bridge (`src/app/00-dependencies.js`) that is deleted right after startup.
 
-Next: reduce remaining global compatibility surfaces in product code and remove concatenation only where the dependency graph is explicit enough to do so safely.
+Product-side conversion is in progress and continues chunk by chunk:
+- runtime compatibility (the only reader of `window.FitNative`/`window.Capacitor`/`window.storage`) is now the ESM module `src/app/runtime-compat.ts`;
+- the remaining `src/app/*.js` chunks are still concatenated into `app.js` with a shared global scope.
 
 ## Phase 14 — Dependency rules
 
@@ -553,6 +520,10 @@ src/core/** cannot import src/domain/**
 domain may import core
 app/bootstrap may compose both
 ```
+
+### Dependency rules implementation status
+
+Implemented by `tests/dependency-boundaries-unit.js` (`npm run test:boundaries`, CI): client `src/core/**` cannot import `src/app/**`, `types/fitness` or `fit*` modules, and generic server Core (`lib/*core*`, `lib/admin/core/**`) cannot import FitTimer server modules. `tests/appbase-foundation-unit.js` additionally guards that each Core module contains no fitness vocabulary.
 
 ## Phase 15 — Feature/capability config
 
@@ -569,9 +540,21 @@ sharing
 
 Do not create `if (app === 'fitness')` / `if (app === 'language')` branches inside Core.
 
+### Capability config implementation status
+
+`config/product.json → features` is now enforced instead of being documentation only:
+- `src/core/capabilities.ts` (client) and `lib/capabilities-core.js` (server) normalize the switches; missing, unknown or non-boolean values are **off**, so a product must opt in explicitly;
+- the known set is `profiles`, `premium`, `ai`, `notifications`, `biometrics`, `sharing`, `voice` (`voice` added together with the speech Core);
+- `mobile.js` wires native integrations only when enabled: `voice` → audio plugin, `biometrics` → biometric plugin, `notifications` → local + push plugins, `sharing` → Filesystem/Share;
+- the AI endpoint returns `404 capability_disabled` and public config reports AI as disabled when `ai` is off;
+- push-device registration requires `notifications` (unregistering stays allowed for cleanup);
+- `tests/capabilities-unit.js` covers normalization, the server gates and the mobile composition gates.
+
+FitTimer keeps every capability on, so its behavior is unchanged. `profiles` and `premium` are declared but still enforced only by product UI/billing code; a product without them simply does not render that UI. Core modules themselves stay unconditional — capabilities are applied at composition/endpoint boundaries.
+
 ## Phase 16 — AppBase readiness audit
 
-Before fork/snapshot:
+Before building a second product on Core:
 - typecheck/contracts exist;
 - product identity is centralized enough to bootstrap a new app safely;
 - generic Storage API exists;
@@ -585,25 +568,64 @@ Before fork/snapshot:
 - Core → Domain imports are prevented;
 - profile/auth/sync/backup regressions remain green.
 
-## Phase 17 — Core upstream transition
+### Readiness audit results
 
-After the AppBase extraction and proof-product checks, explicitly switch ownership:
+Audit performed against the checklist above; items found and fixed in this pass:
+- **Account extension split.** `api/auth.js` no longer reads trainer pages (`t:<handle>`), trainer keys or shared links (`p:<id>`). Those live in `lib/fit-account-extension.js` behind five hooks (`wipePublicIdentity`, `purgeAccountData`, `purgeOwnedContent`, `claimHandle`, `onVerify`). The wire protocol, deletion order and responses are unchanged; a product without such data plugs in no-op hooks.
+- **Product identity on the server.** `lib/product-core.js` exposes `config/product.json` identity; `lib/push.js` (APNs bundle id, default title), `lib/mail.js` (default sender) and the sign-in email no longer hard-code "Fit Timer". The generic push default category is `general`; all current callers pass explicit categories.
+- **AI runtime without fitness content.** `lib/ai-endpoint.js` exports `createAIHandler(registry)` and `api/admin.js` composes it with the FitTimer registry; product validation codes that mean "unusable AI result" are declared by the product registry (`malformedPattern`); AI_TEST_MODE fitness fixtures moved to `lib/fit-ai-test-fixtures.js` via `registerTestResponder`.
+- Guarded by `tests/appbase-foundation-unit.js` (generic server runtime brand/fitness-free, auth delegates to the extension) and `tests/capabilities-unit.js`.
 
-1. mark AppBase Core as canonical upstream;
-2. record the AppBase Core version/commit consumed by each product;
-3. create a repeatable downstream update path;
-4. start with reviewable automated PRs unless a different mechanism proves simpler;
-5. verify one generic Core change can update FitTimer and one non-fitness app;
-6. retire the temporary FitTimer → AppBase bootstrap sync path;
-7. document the hotfix/backport procedure for urgent product-first fixes.
+Checklist status:
+- typecheck/contracts — ✅ (`npm run typecheck`, `src/types/core.ts`);
+- centralized product identity — ✅ (`config/product.json` → client config, Capacitor check, server `product-core`); FitTimer package id/signing/App Links intentionally untouched;
+- generic Storage API — ✅ `src/core/storage.ts`;
+- Account/Profile separated — ✅ client (`src/core/identity.ts`) and server auth (extension hooks);
+- generic document sync — ✅ registries (`src/core/sync.ts`, `lib/sync-registry.js`);
+- generic Analytics/Diagnostics — ✅;
+- AI runtime without fitness prompts/schemas — ✅;
+- notification Core without workout semantics — ✅ (`notifications.ts`, `native-notifications.ts`);
+- mobile Core without program/workout links — ✅ (`mobile.ts`, `speech.ts`);
+- Core Admin separated — ✅ (`lib/admin/core` vs `lib/admin/fittimer`);
+- Core → Domain imports prevented — ✅ (`tests/dependency-boundaries-unit.js`);
+- profile/auth/sync/backup regressions — ✅ (server regression suite + 32 browser scenarios).
 
-Do not call this phase complete merely because repositories share similar files; ownership and update direction must be explicit.
+Known, accepted legacy names that stay for compatibility: `X-Fit-*` request headers, the APNs payload key `fit`, `window.FitNative`, the `fittimer/kv` local database and the `FitAudio`/`FitSystem`/`FitBiometric` native plugin names. Renaming them would break installed clients or native builds; an extracted product may choose its own names from day one.
 
-## After the fork: AppBase extraction
+## Phase 17 — Monorepo workspace
 
-Delete fitness programs, exercises, workout engine, progression, warm-up, fitness progress, trainer/trainee, fitness catalog, fitness AI actions/prompts, fitness notifications and fitness deep links.
+Implemented (2026-09-26): the repository now has the target layout.
 
-The remaining base should still support Account/Auth, optional Profiles, generic Storage/Sync, AI runtime, entitlements, notifications, analytics/diagnostics, Core Admin and web/mobile shells.
+```text
+packages/core/            AppBase Core package (@appbase/core)
+  src/core/*.ts           client Core (ES modules)
+  src/types/core.ts       shared contracts
+  server/*.js             server Core (auth, sync, AI runtime, analytics, push, mail, health, store, Supabase …)
+  server/admin/*.js       Core Admin
+  template/               neutral app composition (config, lib/product.js, empty registries, api/*) — smoke-tested, starting point for a new app
+  tests/                  boundaries (no product vocabulary/brand, imports stay inside Core), runtime, smoke
+apps/fittimer/            FitTimer: src/, api/, lib/ (fit-* modules, product.js), android/, ios/, tests/, docs/, .ai/
+```
+
+How the app consumes Core:
+- client: TypeScript `paths` aliases `@appbase/core/*` and `@appbase/types/*`; `scripts/build-esm.mjs` (esbuild) bundles `src/main.ts` and `mobile.js` together with Core into `dist/esm/` (mobile) or `esm/` (Vercel web);
+- server: `require('../../../packages/core/server/…')`; every `api/*` entry first requires `lib/product.js`, which registers `config/product.json` with Core (`configureProduct`) — Core never reads app files by path;
+- each package keeps its own `package.json`/lockfile; `apps/fittimer/node_modules` stays next to the native shells, so Capacitor's generated `../node_modules` paths are unchanged.
+
+CI: every workflow runs with `working-directory: apps/fittimer`; `source-consistency.yml` also runs `npm run check` in `packages/core`; path filters include `packages/core/**` so a Core change re-checks the app.
+
+Owner steps outside the repository (required once):
+1. ✅ 2026-09-26: Vercel project `fittimer99` → Settings → Build and Deployment → **Root Directory = `apps/fittimer`**; keep **"Include files outside the root directory in the Build Step"** enabled (server functions import `packages/core/server`).
+   The app's ignored-build step compares against the last *successful* deployment of the branch, so after such a settings change a redeploy of an unchanged commit is skipped; push a commit with `[deploy]` in its message to force the first build.
+2. Nothing changes for Android signing, package id, App Links or iOS; only CI paths moved.
+
+The previous Vercel build (`npm run build:sources`) never produced `esm/main.js`, which `index.html` has loaded since the ES-module startup; the app's `vercel.json` now builds with `npm run build:web`.
+
+Status sections of earlier phases keep the historical pre-monorepo paths (`src/core/…`, `lib/*-core.js`); today those files live in `packages/core/`.
+
+## Adding a product
+
+A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core (copy `packages/core/template/` as its server composition) that provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions.
 
 ## Universality proof
 
@@ -634,7 +656,7 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 14. Retire remaining legacy global/concatenation compatibility.
 15. Dependency checks + stricter TS settings.
 16. Readiness audit.
-17. Extract AppBase and validate proof products.
-18. Switch Core ownership to AppBase and establish downstream update PRs.
+17. Monorepo workspace: `packages/core` + `apps/fittimer` (done).
+18. Add products as `apps/<name>/` on the same Core.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.

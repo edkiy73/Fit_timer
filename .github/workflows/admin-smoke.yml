@@ -3,29 +3,34 @@ name: Admin — browser smoke
 on:
   pull_request:
     paths:
-      - 'admin.html'
-      - 'admin.js'
-      - 'api/admin.js'
-      - 'lib/ai.js'
-      - 'lib/ai-protocol.js'
-      - 'tests/admin-flow.js'
-      - 'tests/dev-server.js'
+      - 'packages/core/**'
+      - 'apps/fittimer/admin.html'
+      - 'apps/fittimer/admin.js'
+      - 'apps/fittimer/api/admin.js'
+      - 'apps/fittimer/lib/ai.js'
+      - 'apps/fittimer/lib/ai-protocol.js'
+      - 'apps/fittimer/tests/admin-flow.js'
+      - 'apps/fittimer/tests/dev-server.js'
       - '.github/workflows/admin-smoke.yml'
   push:
     branches: [main]
     paths:
-      - 'admin.html'
-      - 'admin.js'
-      - 'api/admin.js'
-      - 'lib/ai.js'
-      - 'lib/ai-protocol.js'
-      - 'tests/admin-flow.js'
-      - 'tests/dev-server.js'
+      - 'packages/core/**'
+      - 'apps/fittimer/admin.html'
+      - 'apps/fittimer/admin.js'
+      - 'apps/fittimer/api/admin.js'
+      - 'apps/fittimer/lib/ai.js'
+      - 'apps/fittimer/lib/ai-protocol.js'
+      - 'apps/fittimer/tests/admin-flow.js'
+      - 'apps/fittimer/tests/dev-server.js'
       - '.github/workflows/admin-smoke.yml'
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fittimer
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7

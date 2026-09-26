@@ -1,0 +1,139 @@
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const markup = await readFile('admin.html','utf8');
+const adminJs = await readFile('admin.js','utf8');
+// Проверки ниже ищут и разметку, и код — читаем их вместе.
+const html = markup + '\n' + adminJs;
+const api = [
+  await readFile('api/admin.js','utf8'),
+  await readFile('lib/admin/fittimer/catalog-ai.js','utf8'),
+  await readFile('lib/admin/fittimer/catalog-admin.js','utf8'),
+  await readFile('../../packages/core/server/admin/release.js','utf8'),
+  await readFile('../../packages/core/server/admin/campaigns.js','utf8'),
+  await readFile('../../packages/core/server/admin/ai-settings.js','utf8'),
+  await readFile('../../packages/core/server/admin/observability.js','utf8')
+].join('\n');
+const sourceWorkflow = await readFile('../../.github/workflows/source-consistency.yml','utf8');
+const smokeWorkflow = await readFile('../../.github/workflows/admin-smoke.yml','utf8');
+const healthApi = await readFile('api/health.js','utf8');
+const healthLib = await readFile('../../packages/core/server/health.js','utf8');
+const vercelConfig = await readFile('vercel.json','utf8');
+const vercelIgnore = await readFile('scripts/vercel-ignore.mjs','utf8');
+
+const need=(ok,msg)=>{if(!ok)throw new Error(msg);};
+
+// Встроенных скриптов нет: CSP script-src 'self' запрещает их, в том числе внедрённые.
+need(markup.includes('<script src="admin.js"></script>'),'admin.html must load admin.js');
+need(!/<script>[\s\S]*?<\/script>/.test(markup) && !/ on[a-z]+="/i.test(markup),'admin.html must not contain inline scripts or handlers');
+new vm.Script(adminJs,{filename:'admin.js'});
+need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
+
+need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
+need(api.includes('FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true})'),'AI-created program must be protocol-validated, including the weight ceiling');
+need(html.includes('id="fAiCreate"'),'admin AI-create button is missing');
+need(html.includes('id="aiCreateDays"'),'admin AI-create form is incomplete');
+need(html.includes("api('translate_catalog',{from:lang,to:other"),'AI-create must prepare the second catalog language');
+
+const editStart=html.indexOf('async function aiEditProgram()');
+const editEnd=html.indexOf('function renderExerciseCards',editStart);
+const editBlock=html.slice(editStart,editEnd);
+need(editStart>=0 && !editBlock.includes('prompt('),'AI editing must not use browser prompt()');
+need(html.includes('id="fAiEditBox"'),'inline AI edit box is missing');
+
+need(html.includes('let failedMediaJobs = []'),'failed media queue is missing');
+need(html.includes("generateMedia('retry')"),'failed media retry action is missing');
+need(html.includes('Уже готовые картинки сохранены'),'partial media generation must preserve successes');
+
+need(api.includes("'save_draft'"),'server draft save action is missing');
+need(api.includes("'publish_draft'"),'server draft publish action is missing');
+need(/readItems\('c:drafts',\s*'draft'\)/.test(api),'overview must return server drafts');
+need(html.includes('data-tab="dashboard"'),'admin dashboard tab is missing');
+need(html.includes('data-tab="drafts"'),'admin drafts tab is missing');
+need(html.includes('id="fPublish"'),'explicit publish action is missing from program editor');
+need(html.includes("api('save_draft'"),'program editor must save server drafts');
+need(html.includes("api('publish_draft'"),'program editor must publish drafts explicitly');
+need(html.includes("fetch('/api/health?format=json'"),'dashboard must consume structured health status');
+need(html.includes('function moderationState(item)'),'moderation readiness helper is missing');
+need(html.includes('class="moderation-actions"'),'pending submissions need direct moderation actions');
+need(html.includes('function paymentReadiness('),'payment readiness summary is missing');
+need(html.includes('id="editorReviewCard"'),'program editor moderation readiness card is missing');
+need(!html.slice(html.indexOf('function renderUsers(b){'),html.indexOf("let campaignLang='ru';")).includes("prompt("),'user Premium actions must not use browser prompt');
+need(html.includes('function grantUserPremium('),'user Premium inline action flow is missing');
+need(html.includes('function setActionFeedback('),'forms need action-local feedback helper');
+need(html.includes("let editorDirty = false"),'program editor must track unsaved changes');
+need(html.includes("Есть несохранённые изменения программы"),'leaving a dirty editor must ask for confirmation');
+need(html.includes("beforeunload"),'dirty editor must protect against browser/tab close');
+need(html.includes("window.scrollTo({top:0"),'section navigation must reset scroll position');
+need(!html.includes('Залить пять тестовых программ'),'production admin must not expose catalog seed action');
+need(html.includes('function dashboardBillingReady()'),'dashboard payment status must use full readiness');
+need(html.includes('function dashboardAIReady()'),'dashboard AI status must use full readiness');
+need(html.includes('details.row-menu{position:relative;display:inline-block;border:0;padding:0;margin:0}'),'row menu must neutralize generic details divider/margins');
+need(!html.includes('<summary>•••</summary>'),'kebab menus need an accessible action label');
+need(html.includes('id="editorToolsState"'),'translation tools need local feedback');
+need(html.includes('id="editorReviewFeedback"'),'moderation actions need local feedback');
+need(html.includes("setActionFeedback('editorToolsState'"),'translation/copy/paste results must stay by their buttons');
+need((html.match(/\$\('fErr'\)/g)||[]).length===1,'editor fErr should be reserved for final save errors, not sub-actions');
+need(!html.includes('alert('),'admin must not use blocking alert dialogs');
+need(!html.includes('prompt('),'admin must not use browser prompt dialogs');
+need(html.includes('class="action-feedback"'),'save/action bars need feedback next to the pressed action');
+need(html.includes("flashActionButton($('releaseSettingsSave'),'Проверь поля'"),'release validation must be shown at the save action');
+need(html.includes("flashActionButton($('priceSettingsSave'),'Проверь цены'"),'pricing validation must be shown at the save action');
+need(!html.slice(html.indexOf('async function saveReleaseSettings(){'),html.indexOf('let editing = null')).includes("alert("),'release form must not report validation through alert');
+need(api.includes("'android_release_latest'"),'admin API must expose latest Android release metadata');
+need(api.includes('FitTimer-release.json'),'admin API must read CI-published Android release metadata');
+need(html.includes("api('android_release_latest')"),'release screen must load the latest built APK automatically');
+need(html.includes('Опубликовать Direct APK'),'release screen needs a one-click direct publish action');
+need(html.includes('Опубликовать для магазина'),'release screen needs a separate store publish action');
+need(html.includes('Direct APK скачивается внутри Fit Timer'),'release screen must explain direct in-app downloading');
+need(html.includes('function writeReleaseChannel('),'release settings must preserve independent direct/store channels');
+need(html.includes('Каналы обновления'),'release screen must explain both live update channels');
+need(html.includes('<details class="release-advanced">'),'technical release fields must be collapsed under advanced settings');
+need(html.includes('id="relRequired"'),'mandatory update must be an explicit advanced toggle');
+need(html.includes('Пусто = стандартный текст приложения'),'custom release copy must be optional');
+need(!html.includes('<h3>Что показывать пользователям</h3>'),'release screen must not use the ambiguous old heading');
+const publishReleaseStart=html.indexOf('async function publishLatestAndroidBuild()');
+const publishReleaseEnd=html.indexOf('function renderLatestAndroidBuild',publishReleaseStart);
+const publishReleaseBlock=html.slice(publishReleaseStart,publishReleaseEnd);
+need(publishReleaseStart>=0,'latest Android publish helper is missing');
+need(publishReleaseBlock.includes("writeReleaseChannel(s,'direct',rec)"),'direct publishing must write only the direct channel');
+need(publishReleaseBlock.includes('minimumCode:Math.max(0,Math.round(+u.minimumCode||0))'),'normal publishing must preserve the direct mandatory-update threshold');
+need(!publishReleaseBlock.includes('minimumCode:r.versionCode'),'normal publishing must never make the latest build mandatory automatically');
+const releaseProblemsStart=html.indexOf('function releaseProblems(');
+const releaseProblemsEnd=html.indexOf('function releaseChannel',releaseProblemsStart);
+need(!html.slice(releaseProblemsStart,releaseProblemsEnd).includes('Заполни RU и EN'),'normal Android publishing must not require custom RU/EN copy');
+need(html.includes('let analyticsDays=30'),'analytics period selector is missing');
+need(html.includes('<option value="90">90 дней</option>'),'analytics must support 7/30/90 day periods');
+need(html.includes('data-user-panel'),'user account actions need inline feedback panel');
+need(html.includes('function previewCampaign()'),'campaign audience preview is missing');
+need(html.includes('campaignPreviewKey'),'campaign send must be invalidated when copy/channels change');
+need(/const preview\s*=\s*!!\(body\s*&&\s*body\.preview\)/.test(api),'campaign API dry-run is missing');
+need(html.includes('Тест текста без сохранения'),'AI settings must clearly test without saving');
+need(html.includes("api('test_ai',{type,settings})"),'AI test must send unsaved settings directly');
+need(/body\s*&&\s*body\.settings\s*\?\s*sanitizeSettings\(body\.settings\)/.test(api),'AI test API must use supplied unsaved settings');
+need(html.includes('function moderatePendingFromEditor('),'pending program must be publishable from editor after saving edits');
+need(html.includes("api('client_error_clear'"),'error screen must support resolving one error group');
+need(html.includes('Считать исправленной'),'error screen needs an explicit resolved action');
+need(api.includes("'client_error_clear'"),'admin API must clear resolved error groups');
+need(html.includes("problems.push('Google Play:"),'payment settings must validate impossible provider states');
+need(html.includes("el.className='admin-notice "),'admin actions need non-blocking feedback');
+need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');
+need(vercelConfig.includes('"ignoreCommand": "node scripts/vercel-ignore.mjs"'),'Vercel ignored build step is not configured');
+need(vercelIgnore.includes('[skip vercel]') && vercelIgnore.includes('[deploy]'),'Vercel deploy markers are missing');
+need(healthApi.includes("format === 'json'"),'health JSON mode is missing');
+need(healthLib.includes("store.selfTest()"),'health must actively exercise storage');
+need(healthApi.includes("store.list('c:approved')") && healthApi.includes('collectHealth({probes:FIT_HEALTH_PROBES})'),'health must probe catalog reads');
+need(healthLib.includes("store.list('a:all')"),'health must probe account index reads');
+
+need(sourceWorkflow.includes("'apps/fittimer/admin.html'"),'admin.html must trigger source consistency CI');
+need(smokeWorkflow.includes('node tests/admin-flow.js'),'real admin browser smoke must run in CI');
+need(smokeWorkflow.includes('AI_TEST_MODE'),'admin browser smoke must use deterministic AI test mode');
+
+console.log('Admin AI workflow and CI invariants are valid.');
+
+const storePublishStart=html.indexOf('async function publishLatestStoreBuild()');
+const storePublishEnd=html.indexOf('function renderLatestAndroidBuild',storePublishStart);
+const storePublishBlock=html.slice(storePublishStart,storePublishEnd);
+need(storePublishStart>=0,'store publish helper is missing');
+need(storePublishBlock.includes("writeReleaseChannel(s,'store',rec)"),'store publish must write only the store channel');
+need(storePublishBlock.includes('market') && storePublishBlock.includes('https'),'store channel must validate store links');

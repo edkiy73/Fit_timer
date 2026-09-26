@@ -1,45 +1,12 @@
 {
-  "name": "fit-timer",
-  "version": "1.0.0",
+  "name": "appbase-monorepo",
   "private": true,
-  "description": "Fit Timer web app and Capacitor mobile shells",
+  "description": "AppBase Core and the apps built on it. Each package keeps its own dependencies.",
   "scripts": {
-    "build": "npm run build:sources && node scripts/build-web.mjs && npm run build:esm",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "mobile:assets": "capacitor-assets generate --android --iconBackgroundColor '#0C0916' --iconBackgroundColorDark '#0C0916' --splashBackgroundColor '#0C0916' --splashBackgroundColorDark '#0C0916' && capacitor-assets generate --ios --iconBackgroundColor '#0C0916' --iconBackgroundColorDark '#0C0916' --splashBackgroundColor '#0C0916' --splashBackgroundColorDark '#0C0916'",
-    "mobile:sync": "npm run build && cap sync && npm run mobile:assets",
-    "mobile:android": "npm run mobile:sync && cap open android",
-    "mobile:ios": "npm run mobile:sync && cap open ios",
-    "check:mobile": "node scripts/check-mobile.mjs",
-    "build:sources": "npm run build:config && node scripts/build-sources.mjs",
-    "check:sources": "npm run check:config && node scripts/build-sources.mjs --check",
-    "ai:index": "node scripts/generate-ai-index.mjs",
-    "check:ai-index": "node scripts/generate-ai-index.mjs --check",
-    "i18n:check": "node scripts/check-i18n.mjs",
-    "ai:route": "node scripts/route-ai-task.mjs",
-    "ai:context": "node scripts/ai-context-pack.mjs",
-    "build:config": "node scripts/build-product-config.mjs",
-    "check:config": "node scripts/build-product-config.mjs --check",
-    "typecheck": "tsc -p tsconfig.json",
-    "test:foundation": "node tests/appbase-foundation-unit.js",
-    "test:boundaries": "node tests/dependency-boundaries-unit.js",
-    "test:core-esm": "npm run build:esm && node tests/core-esm-runtime.mjs"
-  },
-  "dependencies": {
-    "@capacitor/android": "8.5.2",
-    "@capacitor/app": "8.1.1",
-    "@capacitor/core": "8.5.2",
-    "@capacitor/filesystem": "^8.1.3",
-    "@capacitor/haptics": "8.0.2",
-    "@capacitor/ios": "8.5.2",
-    "@capacitor/local-notifications": "8.3.1",
-    "@capacitor/share": "^8.0.2",
-    "@capacitor/splash-screen": "8.0.2",
-    "@capacitor/push-notifications": "8.1.2"
-  },
-  "devDependencies": {
-    "@capacitor/assets": "3.0.5",
-    "@capacitor/cli": "8.5.2",
-    "typescript": "6.0.3"
+    "setup": "npm ci --prefix packages/core && npm ci --prefix apps/fittimer",
+    "core:check": "npm --prefix packages/core run check",
+    "fittimer:build": "npm --prefix apps/fittimer run build",
+    "fittimer:check": "npm --prefix apps/fittimer run typecheck && npm --prefix apps/fittimer run test:boundaries && npm --prefix apps/fittimer run test:foundation && npm --prefix apps/fittimer run check:sources && npm --prefix apps/fittimer run build && npm --prefix apps/fittimer run check:mobile",
+    "check": "npm run core:check && npm run fittimer:check"
   }
 }
