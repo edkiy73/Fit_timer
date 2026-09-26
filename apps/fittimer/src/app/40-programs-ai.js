@@ -1,3 +1,33 @@
+import { MUSCLES, M_LABEL, OPT_EQUIP, OPT_LEVEL } from './options.js';
+import { aiCanonicalEnglish, aiOutputLanguage, appLocale, canonicalLabel, t } from '../i18n/index.js';
+import FitAIProtocol from '../../lib/ai-protocol.js';
+import { appRuntimeCompat } from './00-dependencies.js';
+import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimatedWorkoutMinutes,
+  goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setShown, show, state
+} from './00-core.js';
+import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, customPrograms,
+  dayTitle, identity, kvDel, kvGet, kvSet, localISO, newId, normPlans, openSessions, pk, planDays,
+  profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, stats, streakWord,
+  trackProductEvent, users, wellAvg
+} from './10-data-sync.js';
+import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
+import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos, requireWho,
+  sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
+} from './30-progress-media.js';
+import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-trainer-catalog.js';
+import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_NOEX, MSG_AI_PARSE, advanceExerciseProgression,
+  aiCreateProgramGuard, aiExerciseBlocks, aiPrompt, carryExerciseProgress, copyPrompt, curPlan,
+  draft, ensurePs, exRestAfter, exSummary, fillBuilder, fmtKg, fullAIPrompt, getExProgValue,
+  getExWeight, hasWeight, importFromText, isDualProg, openBuilder, openExercise, parseProgramText,
+  progAxis, progressedRepsRange, qChips, renderExList, setDraftShared, setPlanIdxShared,
+  shrinkImage, valueText
+} from './60-builder.js';
+import { afterExChange, autoGrow, backToWorkout, esc, exFromWork } from './70-workout.js';
+import { addExManual, aiRunClose, aiRunCtl, aiRunNote, aiRunOpen, buildAiMenu, copyEditPrompt,
+  exaCopyPrompt, exeCopyPrompt, openPremium, openStats, syncSettingsSum, ytApplyResult,
+  ytCopyPrompt, ytGuard
+} from './90-events.js';
+
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
 // Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
 // шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
@@ -13,7 +43,7 @@
 // демотивирует, и травмоопасно.
 // applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
 // а только про одноразовую миграцию старых программ на эту модель.
-function applyProgressionAll(){
+export function applyProgressionAll(){
   let changed = false;
   customPrograms.forEach(p => {
     // у программ, живших на календарной прогрессии, уже накоплен progSteps — превращаем его
@@ -88,7 +118,7 @@ function makeChip({ico, val, label, cls, why}){
   return el;
 }
 
-function renderGreeting(){
+export function renderGreeting(){
   const u = curUser();
   const h = new Date().getHours();
   const hi = h < 5 ? t('home.goodNight') : h < 12 ? t('home.goodMorning') : h < 18 ? t('home.goodDay') : t('home.goodEvening');
@@ -216,7 +246,7 @@ function todayRow({cls, ico, title, sub, action, onclick}){
    друг про друга.
    Записи истории до появления pid (id программы) отнести к плану нельзя — они идут
    в «сверх плана», а не занижают выполнение. */
-function weekPlanInfo(date){
+export function weekPlanInfo(date){
   const now = date || new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -366,7 +396,7 @@ function renderWeekStrip(){
 
 // Программа из попапа дня: закрываем попап и открываем страницу программы на том
 // варианте, который стоит в этот день. Состав смотрят уже там, а не в попапе.
-function openDayProgram(pid, pi){
+export function openDayProgram(pid, pi){
   const p = customPrograms.find(x => x.id === pid);
   if(!p) return;
   $('sessModal').classList.remove('open');
@@ -428,7 +458,7 @@ function openWeekDay(d){
   }
 }
 
-function renderToday(){
+export function renderToday(){
   renderWeekStrip();
   const box = $('todayBox');
   const di = (new Date().getDay() + 6) % 7;
@@ -587,7 +617,7 @@ function renderToday(){
    Всё, что привязано к ПРОЙДЕННОМУ, копия не наследует: статистика, счётчик
    повышений, метка каталога, метка чужой ссылки. Копия — новая программа,
    а не продолжение старой. */
-async function duplicateProgram(p){
+export async function duplicateProgram(p){
   const copy = JSON.parse(JSON.stringify(p));
   copy.id = 'p' + Date.now();
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
@@ -633,7 +663,7 @@ const MEDIA_BUDGET = 700 * 1024;
 // Карта «название упражнения → фото». Отдельно от текста программы, потому что в
 // каталоге программа лежит ТЕКСТОМ, а текст картинку в себе не носит. Одна карта
 // работает и для ссылки подопечному, и для каталога.
-function programMedia(p){
+export function programMedia(p){
   const out = {};
   let left = MEDIA_BUDGET;
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
@@ -647,7 +677,7 @@ function programMedia(p){
   return out;
 }
 // Вернуть фото на места после разбора текста программы.
-function applyMedia(p, media){
+export function applyMedia(p, media){
   if(!media) return p;
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
     // cleanPic, а не «есть значит есть»: карта фото приходит с сервера обычным
@@ -710,7 +740,7 @@ function trainerProfile(){
 }
 
 /* Отправка профиля на сервер происходит только по явной кнопке «Сохранить». */
-async function pushProfile(){
+export async function pushProfile(){
   if(!trainerAccountReady()){
     trainer.pageErr = t('trainer.needAccountPage');
     return false;
@@ -736,7 +766,7 @@ async function pushProfile(){
 // Публичная страница — серверный источник данных тренера. Подтягиваем её при
 // входе в раздел и при запуске даже без Premium: аккаунт тренера бесплатный, а
 // его имя и описание не должны зависеть от синхронизации тренировок.
-async function refreshTrainerProfile(){
+export async function refreshTrainerProfile(){
   if(!trainerAccountReady() || !(trainer && trainer.handle)) return false;
   try{
     const remote = await apiFetch('/api/trainer/' + encodeURIComponent(normHandle(trainer.handle)));
@@ -773,7 +803,7 @@ const MAIL_ERRS = {
   code_expired:'mail.codeExpired', too_many_tries:'mail.tooManyTries',
   bad_code:'mail.badCode', handle_taken:'mail.handleTaken', offline:'mail.offline'
 };
-const mailErrText = e => (e && MAIL_ERRS[e.code] ? t(MAIL_ERRS[e.code]) : null)
+export const mailErrText = e => (e && MAIL_ERRS[e.code] ? t(MAIL_ERRS[e.code]) : null)
   || (e && e.code === 'mail_failed'
       ? t('mail.failed',{detail:(e.detail || '').slice(0,120) || t('mail.serviceRefused')})
       : t('mail.generic'));
@@ -786,7 +816,7 @@ const mailErrText = e => (e && MAIL_ERRS[e.code] ? t(MAIL_ERRS[e.code]) : null)
    сделанное. Полное удаление аккаунта уносит ещё и сам аккаунт со ссылками
    подопечным, но каталог не трогает и там: программа, которую взяли себе сотни
    людей, — это не сведения о человеке, а сделанная им вещь. */
-async function forgetMe(scope){
+export async function forgetMe(scope){
   const body = {scope, links: scope === 'all' ? coachLinkIds() : []};
   if(trainer && trainer.key && (trainer.handle || '').trim()){
     body.handle = normHandle(trainer.handle);
@@ -802,7 +832,7 @@ async function forgetMe(scope){
   return true;
 }
 
-async function wipeTrainerInfo(){
+export async function wipeTrainerInfo(){
   const ok = await appDialog(
     t('trainer.removeInfoQuestion'),
     {confirm:true,okText:t('clients.removeAction'),cancelText:t('common.cancel')}
@@ -819,7 +849,7 @@ async function wipeTrainerInfo(){
   appAlert(t('trainer.removeInfoDone'));
 }
 
-async function programLink(p, extra){
+export async function programLink(p, extra){
   const program = programPayload(p);
   const r = await apiPost('/api/share', Object.assign(
     {program, by: program.by || '', byLink: program.byLink || '',
@@ -837,7 +867,7 @@ async function programLink(p, extra){
    получателю, куда её вставлять, — тем более. Остался один запасной путь, который
    люди действительно понимают: файл. Он и так есть в меню, и он лучше — уходит
    целиком, вместе с картинками. */
-function linkFailNote(e){
+export function linkFailNote(e){
   if(e && e.code === 'no_store'){
     return t('share.noStore');
   }
@@ -846,9 +876,9 @@ function linkFailNote(e){
   }
   return t('share.offline');
 }
-const FILE_HINT = ()=> t('share.fileHint');
+export const FILE_HINT = ()=> t('share.fileHint');
 
-async function exportProgram(p){
+export async function exportProgram(p){
   let link;
   try{ link = await programLink(p); }
   catch(e){ appAlert(linkFailNote(e) + FILE_HINT()); return; }
@@ -867,7 +897,7 @@ async function exportProgram(p){
 }
 
 // Экспорт программы файлом — со всем содержимым: обложка и фото упражнений
-async function exportProgramFile(p){
+export async function exportProgramFile(p){
   const copy = JSON.parse(JSON.stringify(p));
   delete copy.stats;      // чужая статистика получателю не нужна
   delete copy.active;     // «отключена» — про мой список, а не про саму программу
@@ -902,7 +932,7 @@ async function exportProgramFile(p){
 }
 
 // Импорт программы из файла
-async function importProgramFile(file){
+export async function importProgramFile(file){
   try{
     const text = await file.text();
     const data = JSON.parse(text);
@@ -933,7 +963,7 @@ function userAge(u){
 // Возраст обязателен только там, где его спрашивают ради дела (попап «пара
 // уточнений»). В профиле пустое поле — законное состояние: на старте его больше не
 // спрашивают, и человек не должен упираться в ошибку, зайдя поменять имя.
-function ageError(v, required = false){
+export function ageError(v, required = false){
   if(v === '' || v == null) return required ? t('age.required') : '';
   const a = Number(v);
   if(!Number.isInteger(a)) return t('age.integer');
@@ -942,7 +972,7 @@ function ageError(v, required = false){
   return '';
 }
 // строка о человеке для запроса к ИИ
-function userForAI(locale){
+export function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
@@ -1036,7 +1066,7 @@ async function geminiTry(model, body, signal){
   return {ok: false, status: res.status, msg, model};
 }
 
-async function callGemini(prompt, signal){
+export async function callGemini(prompt, signal){
   const key = geminiKey();
   if(!key) throw new Error(t('ai.keyMissing'));
   // ответ бывает большим (программа целиком с описаниями),
@@ -1146,15 +1176,9 @@ async function callServerAI(prompt, signal, kind){
   return j;
 }
 
-// Более позднее присваивание заменяет прежний прямой вызов Gemini во всех
-// обработчиках, включая те, которые были объявлены выше по файлу.
-callGemini = async function(prompt, signal, kind){
-  return (await callServerAI(prompt, signal, kind || 'program.create')).text;
-};
-
 // Единая дверь ко всему платному. Отказов вида «недоступно» в приложении нет:
 // нажатие либо работает, либо показывает, что даёт подписка и сколько стоит.
-function premiumGate(){
+export function premiumGate(){
   if(isPremium()) return true;
   openPremium();
   return false;
@@ -1162,7 +1186,7 @@ function premiumGate(){
 
 // Кнопка «за меня» входит в подписку. Без подписки она не исчезает и ничего не
 // запрещает: на ней стоит метка «Премиум», а нажатие открывает витрину подписки.
-function syncGeminiBtns(){
+export function syncGeminiBtns(){
   const on = isPremium();
   document.querySelectorAll('.ai-self').forEach(b => {
     const txt = b.querySelector('.ha-txt');
@@ -1180,7 +1204,7 @@ function syncGeminiBtns(){
 
 // временная подпись на кнопке («Проверяю…», «Обработка…»): меняем только текст,
 // иконка и пояснение в строке остаются на месте
-function btnBusy(btn, text){
+export function btnBusy(btn, text){
   const el = btn.querySelector('b') || btn;
   const was = el.textContent;
   el.textContent = text;
@@ -1190,7 +1214,7 @@ function btnBusy(btn, text){
 
 // короткое «✓ Скопировано» на кнопке: подпись живёт в <b>, поэтому меняем именно её,
 // а не всю кнопку целиком — иначе из строки пропадали иконка и пояснение
-function flashDone(btn, text){
+export function flashDone(btn, text){
   if(!btn) return;
   const el = btn.querySelector('b') || btn;
   if(el.dataset.flash) return;
@@ -1198,7 +1222,6 @@ function flashDone(btn, text){
   el.textContent = text || t('common.copied');
   setTimeout(()=>{ el.textContent = el.dataset.flash; delete el.dataset.flash; }, 1600);
 }
-
 
 /* ================= ОДИН ЭКРАН ЗАПРОСА К ИИ =================
    Источников пять, а экран один. Всё, чем источники отличаются, собрано здесь в
@@ -1231,13 +1254,13 @@ const AI_UI_KEYS = {
   'Картинка упражнения останется на месте.':'ai.keepImageNote','Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.':'ai.answerApplyHint',
   'Применить изменения':'ai.applyChanges'
 };
-function aiUiText(value){
+export function aiUiText(value){
   const raw=String(value == null ? '' : value);
   const key=AI_UI_KEYS[raw];
   return key ? t(key) : raw;
 }
-let aiSrc = null;                 // ключ текущего источника
-const AI_SOURCES = {
+export let aiSrc = null;                 // ключ текущего источника
+export const AI_SOURCES = {
   text: {
     kind: 'program.create',
     title: 'Новая программа',
@@ -1371,7 +1394,7 @@ function aiEditRequestGuard(fieldId){
 }
 
 // собирает экран под источник и показывает его
-function openAI(key){
+export function openAI(key){
   const c = AI_SOURCES[key];
   if(!c) return;
   aiSrc = key;
@@ -1423,7 +1446,7 @@ function openAI(key){
 }
 
 // подсветка активной вкладки: «через ИИ» — это и text, и ai
-function markAITab(){
+export function markAITab(){
   const cur = (aiSrc === 'video') ? 'video' : (aiSrc === 'text' ? 'text' : 'ai');
   document.querySelectorAll('#aiTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === cur));
 }
@@ -1434,8 +1457,8 @@ function markAITab(){
    и читалось как обязательный третий шаг. Теперь ручной путь виден сразу, а поле для
    ответа появляется, только когда ему есть что принимать: после копирования задания —
    или сразу, если ответ в нём уже лежит. */
-const aiWaysReset = {};
-function setupAIAnswer(cfg){
+export const aiWaysReset = {};
+export function setupAIAnswer(cfg){
   const answer = cfg.answer ? $(cfg.answer) : null;
   const actions = cfg.actions ? $(cfg.actions) : null;
   if(!answer && !actions){ aiWaysReset[cfg.screen] = ()=>{}; return; }
@@ -1465,10 +1488,10 @@ function setupAIAnswer(cfg){
 // Пиктограмм больше нет: рисованные нейросетью человечки на 44 пикселях списка
 // не читались вовсе, а правила их рисования занимали пятую часть промта и столько же
 // вывода модели. Осталось одно фото на упражнение.
-function setExImg(ex, data){
+export function setExImg(ex, data){
   ex.media = data ? {kind: 'img', data} : null;
 }
-function dropExMedia(ex){
+export function dropExMedia(ex){
   ex.media = null;
 }
 
@@ -1516,10 +1539,6 @@ async function callGeminiImage(prompt, signal){
   }
   return `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
 }
-
-callGeminiImage = async function(prompt, signal, kind){
-  return (await callServerAI(prompt, signal, kind || 'image.exercise')).image;
-};
 
 // сжимает готовую картинку (data URL) так же, как сжимаются загруженные с телефона фото
 function shrinkDataUrl(dataUrl, maxSide, cb){
@@ -1585,7 +1604,6 @@ function imageCoverTone(context){
     return {tone:'berry magenta and deep violet', mood:'strong, sculpted, energetic'};
   return {tone:'Fit Timer violet and purple', mood:'balanced, premium, modern'};
 }
-
 
 function imageMuscleRegions(item){
   const exercise = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
@@ -1733,7 +1751,7 @@ function singleImagePrompt(kind, item){
 
 let imgGenCancelled = false;
 
-async function generateAllImagesViaAI(scope){
+export async function generateAllImagesViaAI(scope){
   if(!premiumGate()) return;
   if(!imageWorkspaceGuard()) return;
   scope = scope === 'missing' ? 'missing' : 'all';
@@ -1806,7 +1824,7 @@ async function generateAllImagesViaAI(scope){
 }
 
 // Что рисовать для упражнения: название, техника и мышцы.
-function exImageItem(ex){
+export function exImageItem(ex){
   return {
     name:(ex && ex.name || '').trim(),
     desc:(ex && ex.desc || '').trim(),
@@ -1817,7 +1835,7 @@ function exImageItem(ex){
 // Одна картинка через ИИ — общая для экрана картинок, редактора упражнения и
 // обложки в настройках программы: тот же прогресс, отмена и «Попробовать снова».
 // apply(data) получает уже ужатую картинку.
-async function generateOneImageViaAI(kind, item, title, apply){
+export async function generateOneImageViaAI(kind, item, title, apply){
   if(!premiumGate()) return false;
   if(!imageGenerationGuard(kind, item)) return false;
   imgGenCancelled = false;
@@ -1847,7 +1865,7 @@ async function generateOneImageViaAI(kind, item, title, apply){
   }
 }
 
-async function generateSlotImageViaAI(){
+export async function generateSlotImageViaAI(){
   const s = imageSlots()[slotTarget];
   if(!s) return;
   let kind = 'cover', item = null;
@@ -1904,7 +1922,7 @@ function uniqueProgramExercises(){
   return [...seen.values()];
 }
 
-function imagesPromptText(){
+export function imagesPromptText(){
   const u = curUser();
   const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
   const name = (draft.name || '').trim() || 'Workout program';
@@ -1925,11 +1943,11 @@ function imagesPromptText(){
 }
 
 /* ================= КАРТИНКИ ПРОГРАММЫ: МАССОВАЯ ЗАГРУЗКА ================= */
-let imgTray = [];        // загруженные, но ещё не разложенные картинки (data-url)
-let slotTarget = null;   // {kind:'cover'} | {kind:'ex', plan, idx}
+export let imgTray = [];        // загруженные, но ещё не разложенные картинки (data-url)
+export let slotTarget = null;   // {kind:'cover'} | {kind:'ex', plan, idx}
 
 // последовательно сжимаем выбранные файлы
-function shrinkAll(files, maxSide, done){
+export function shrinkAll(files, maxSide, done){
   const out = [];
   let i = 0;
   const next = ()=>{
@@ -1943,7 +1961,7 @@ function shrinkAll(files, maxSide, done){
 // программы) из её меню — поэтому «Готово» возвращает туда, откуда пришли, а не
 // всегда в конструктор.
 let imagesFrom = 'scrBuilder';
-function openImages(){
+export function openImages(){
   if(!imageWorkspaceGuard()) return false;
   imagesFrom = show._last || 'scrBuilder';
   // «Доступные» всегда начинается с картинок, которые уже используются в программе.
@@ -1959,7 +1977,7 @@ function openImages(){
   show('scrImages');
   window.scrollTo(0, 0);
 }
-function closeImages(){
+export function closeImages(){
   renderExList();
   syncSettingsSum();
   goBackTo(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
@@ -1971,12 +1989,12 @@ function closeImages(){
 // того же места съедала лоток по штуке за раз, а прежняя пропадала совсем; снятая
 // с упражнения картинка в лоток не возвращалась. Теперь назначение КОПИРУЕТ, а
 // лоток — просто то, что загружено.
-function trayUsed(){
+export function trayUsed(){
   const set = new Set();
   imageSlots().forEach(s0 => { const v = s0.get(); if(v) set.add(v); });
   return set;
 }
-function renderTray(){
+export function renderTray(){
   const box = $('tray');
   setShown('trayBox', imgTray.length);
   const used = trayUsed();
@@ -2000,7 +2018,7 @@ function renderTray(){
 }
 
 // все места, куда можно подставить картинку
-function imageSlots(){
+export function imageSlots(){
   const slots = [{kind:'cover',group:t('images.cover'),title:t('images.coverProgram'),get:()=>draft.cover,set:v=>draft.cover=v}];
   const plans = draft.plans || [];
   plans.forEach((pl, pi)=>{
@@ -2017,7 +2035,7 @@ function imageSlots(){
   return slots;
 }
 
-function renderSlots(){
+export function renderSlots(){
   const box = $('slotList'); box.innerHTML = '';
   const slots = imageSlots();
   let lastGroup = null;
@@ -2066,7 +2084,7 @@ function openSlotPicker(i){
 }
 
 // раскладывает лоток по местам без картинок, по порядку
-function trayAutoAssign(){
+export function trayAutoAssign(){
   if(!imgTray.length){ appAlert(t('images.pickFirst')); return; }
   const already = trayUsed();
   const free = imgTray.filter(d => !already.has(d));   // раскладываем ещё не пристроенные
@@ -2085,7 +2103,7 @@ function trayAutoAssign(){
 }
 
 /* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
-let exeIdx = -1; // индекс правимого упражнения
+export let exeIdx = -1; // индекс правимого упражнения
 
 // «ФОРМАТ: …» — четыре сочетания: повторения/время × без веса/с весом
 // («время и вес» — удержание или перенос с утяжелением: фермерская прогулка,
@@ -2149,7 +2167,7 @@ function exProgToLines(ex, opts){
 }
 
 // одно упражнение → текст в нашем формате
-function exerciseToText(ex){
+export function exerciseToText(ex){
   const L = ['УПРАЖНЕНИЕ: ' + (ex.name || '')];
   if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
   const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
@@ -2166,7 +2184,7 @@ function exerciseToText(ex){
   return L.join('\n');
 }
 
-function openExEdAI(i){
+export function openExEdAI(i){
   const ex = curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
@@ -2179,7 +2197,7 @@ function openExEdAI(i){
 
 // формат ответа для ОДНОГО упражнения — общий для правки через ИИ и для замены прямо
 // с тренировки, чтобы обе кнопки просили у нейросети ровно одно и то же
-function aiClientVerdict(kind, raw, opts){
+export function aiClientVerdict(kind, raw, opts){
   const verdict = FitAIProtocol.validateResponse(kind, raw);
   if(!verdict.ok){
     const miss = (verdict.missing || []).slice(0,6).join(', ');
@@ -2193,7 +2211,7 @@ function aiClientVerdict(kind, raw, opts){
   return verdict.text;
 }
 
-function exAnswerFormat(locale){
+export function exAnswerFormat(locale){
   const lang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   return [
     FitAIProtocol.machineLanguageRules(lang),
@@ -2202,7 +2220,7 @@ function exAnswerFormat(locale){
   ].join('\n\n');
 }
 
-function exePrompt(){
+export function exePrompt(){
   const ex=curPlan().exercises[exeIdx];
   const wish=clampText($('exeWish').value,LIM.wish);
   return [
@@ -2295,7 +2313,7 @@ function exaChips(){
   qChips('exaMuscles', MUSCLES.map(m => m[1]), true, ()=> exa.muscles, v => exa.muscles = v);
 }
 
-function openExAI(){
+export function openExAI(){
   exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
   $('exaContext').value = '';
@@ -2322,7 +2340,7 @@ function aiCreateExerciseGuard(){
   return false;
 }
 
-function exaPrompt(){
+export function exaPrompt(){
   const wish=clampText($('exaWish').value,LIM.wish);
   const given=[],free=[];
   const fmtMap={'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
@@ -2397,7 +2415,7 @@ function parseYouTubeUrl(raw){
   return {id: m[1], url: s.startsWith('http') ? s : ('https://' + s)};
 }
 
-function youtubePrompt(){
+export function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
@@ -2418,7 +2436,7 @@ function youtubePrompt(){
     (wish ? ('\nADDITIONAL USER REQUEST: ' + wish + '\n') : '');
 }
 
-function openYouTube(){
+export function openYouTube(){
   $('ytUrl').value = '';
   $('ytWish').value = '';
   autoGrow($('ytWish'));
@@ -2426,7 +2444,7 @@ function openYouTube(){
   requireWho('ai', ()=> goTab('scrPrograms'));
 }
 
-function ytCheckUrl(){
+export function ytCheckUrl(){
   const v = ($('ytUrl').value || '').trim();
   const ok = !v || !!parseYouTubeUrl(v);
   $('ytHint').style.color = ok ? '' : 'var(--danger)';
@@ -2435,7 +2453,7 @@ function ytCheckUrl(){
 }
 
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
-let editAIProg = null; // программа-исходник
+export let editAIProg = null; // программа-исходник
 
 // текущее (уже прогрессированное) значение упражнения — то, что человек реально
 // делает сейчас, а не база из редактора. Используется только для AI-правки всей
@@ -2458,7 +2476,7 @@ function exCurrentValueText(p, ex){
 // opts.forEdit: для AI-правки всей программы — добавляет техническую метку КОД:
 // у каждого упражнения (не видна пользователю) и отдаёт текущую прогрессированную
 // нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
-function programToText(p, opts){
+export function programToText(p, opts){
   const forEdit = !!(opts && opts.forEdit);
   const L = [];
   L.push('ПРОГРАММА: ' + (p.name || ''));
@@ -2501,7 +2519,7 @@ function programToText(p, opts){
   return L.join('\n');
 }
 
-function editAIPrompt(){
+export function editAIPrompt(){
   const wish=clampText($('eaWish').value,LIM.wish);
   return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
@@ -2519,7 +2537,7 @@ function editAIPrompt(){
     '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
 }
 
-function openEditAI(p){
+export function openEditAI(p){
   editAIProg = p;
   $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);
@@ -2531,7 +2549,7 @@ function openEditAI(p){
 }
 
 // подбирает свободное имя: «Ягодицы (обновлённая)», «Ягодицы (обновлённая 2)»…
-function versionedName(base){
+export function versionedName(base){
   const clean = String(base || t('program.fallback')).replace(/\s+\((?:обновлённая|updated)(?:\s+\d+)?\)$/i, '').trim();
   const taken = new Set(customPrograms.map(x => (x.name || '').trim().toLowerCase()));
   if(!taken.has(clean.toLowerCase())) return clean;
@@ -2664,7 +2682,7 @@ async function createEditedProgram(){
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в
    программе — по ней потом уедет отчёт, и по ней же подопечный понимает, что программа
    пришла от тренера, а не собрана им самим. */
-async function claimProgramLink(id){
+export async function claimProgramLink(id){
   if(!id || !account || !account.email || !account.syncToken) return false;
   let deviceId=await kvGet('deviceId');
   if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
@@ -2674,7 +2692,7 @@ async function claimProgramLink(id){
   }catch(_){return false;}
 }
 
-async function importProgramLink(id){
+export async function importProgramLink(id){
   let d;
   try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
   catch(e){
@@ -2720,7 +2738,7 @@ async function importProgramLink(id){
    • старая ссылка ?import=FIT1… — приложение таких больше не делает, но они лежат
      в чужих переписках, и ломать их задним числом незачем;
    • голый код FIT1… — то же самое, вставленное без адреса. */
-function importProgramCode(code){
+export function importProgramCode(code){
   code = (code || '').trim();
 
   const short = code.match(/[?&]p=([0-9a-z]{4,16})\b/i)
@@ -2765,10 +2783,10 @@ function importProgramCode(code){
    База по умолчанию — тот же адрес, откуда открыто приложение: функции лежат
    рядом со страницей (api/ в репозитории). */
 const RUNTIME_CONFIG = appRuntimeCompat.runtimeConfig();
-const API_BASE = RUNTIME_CONFIG.apiBase
+export const API_BASE = RUNTIME_CONFIG.apiBase
   ? String(RUNTIME_CONFIG.apiBase).replace(/\/$/, '')
   : (location.protocol.startsWith('http') ? '' : null);
-const PUBLIC_APP_URL = RUNTIME_CONFIG.publicAppUrl
+export const PUBLIC_APP_URL = RUNTIME_CONFIG.publicAppUrl
   ? String(RUNTIME_CONFIG.publicAppUrl).replace(/\/$/, '') + '/'
   : (location.origin + location.pathname.replace(/[^/]*$/, ''));   // /index.html → /
 const API_WAIT = 7000;
@@ -2778,7 +2796,7 @@ const API_WAIT = 7000;
    уходит не ссылкой, а кодом или файлом — см. exportProgram. */
 const URL_SAFE = 1800;
 
-async function apiFetch(path, opts){
+export async function apiFetch(path, opts){
   if(API_BASE === null) throw new Error('offline');
   const cfg = Object.assign({}, opts || {});
   const wait = Math.max(1000, Math.min(30000, +cfg.timeoutMs || API_WAIT));
@@ -2804,7 +2822,7 @@ async function apiFetch(path, opts){
    держать пустоту: человек видит содержимое сразу, а не «сломалось». Хранится в
    localStorage, потому что переживать перезапуск обязано, а ценности не имеет —
    пропало, значит просто подождём ответа, как раньше. */
-function lastSeen(key, value){
+export function lastSeen(key, value){
   try{
     if(value === undefined){
       const raw = localStorage.getItem('seen_' + key);
@@ -2815,7 +2833,7 @@ function lastSeen(key, value){
   return null;
 }
 
-const apiPost = (path, body) => apiFetch(path, {
+export const apiPost = (path, body) => apiFetch(path, {
   method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
 });
 
@@ -2828,18 +2846,18 @@ const apiPost = (path, body) => apiFetch(path, {
    Когда появится сервер, экраны останутся те же — поменяется только источник подопечных
    и способ доставки отчётов. Разбор — docs/trainer-ui.md. */
 
-let trainer = null;    // {on, handle, links}
+export let trainer = null;    // {on, handle, links}
 /* Подопечный: [{id, name, note, progs: [...]}]
    progs — программы, отправленные ЭТОМУ человеку, у каждой своя ссылка, свои
    отметки и свои занятия:
      {pid, name, sentAt, link:{id,key}, opens, firstOpen, reports:[], err, checkedAt}
    Раньше ссылка была одна на подопечного, и вторая отправка затирала первую вместе с
    её занятиями — тренер терял всё, что человек сделал по прошлому курсу. */
-let clients = [];
-let clientIdx = -1;    // какого подопечного открыли на scrClient
-let coachPhotoDraft = null;
+export let clients = [];
+export let clientIdx = -1;    // какого подопечного открыли на scrClient
+export let coachPhotoDraft = null;
 
-async function loadTrainer(){
+export async function loadTrainer(){
   let localTrainer = null, localClients = [];
   try{ localTrainer = JSON.parse(await kvGet(pk('trainer'))) || null; }catch(e){}
   try{ localClients = JSON.parse(await kvGet(pk('clients'))) || []; }catch(e){}
@@ -2881,7 +2899,7 @@ async function loadTrainer(){
   });
   if(moved) await saveClients();
 }
-async function saveTrainer(opts){
+export async function saveTrainer(opts){
   if(account && account.email){
     const rec = await readAccountBucket();
     rec.bucket.trainer = trainer;
@@ -2890,7 +2908,7 @@ async function saveTrainer(opts){
     if(!(opts && (opts.remote || opts.deferSync))) queueAccountSync();
   } else await kvSet(pk('trainer'), JSON.stringify(trainer));
 }
-async function saveClients(opts){
+export async function saveClients(opts){
   if(account && account.email){
     const rec = await readAccountBucket();
     rec.bucket.clients = clients;
@@ -2901,27 +2919,27 @@ async function saveClients(opts){
 }
 // Режим считается включённым только вместе с ником: без ника подопечный не поймёт, от кого
 // пришла программа, а «Отправить подопечному» в меню без адресата — пункт в никуда.
-const trainerAccountReady = () => !!(account && account.email && account.syncToken && account.handle);
-const trainerOn = () => !!(trainerAccountReady() && trainer && trainer.on && (trainer.handle || '').trim());
+export const trainerAccountReady = () => !!(account && account.email && account.syncToken && account.handle);
+export const trainerOn = () => !!(trainerAccountReady() && trainer && trainer.on && (trainer.handle || '').trim());
 // ник приводим к одному виду: человек напишет и «@lena», и «lena», и «t.me/lena»
-function normHandle(v){
+export function normHandle(v){
   let h = String(v || '').trim().replace(/^https?:\/\//, '').replace(/^(t\.me|instagram\.com)\//, '');
   h = h.replace(/^@+/, '').replace(/[^\wа-яё.\-]/gi, '');
   return h ? '@' + h : '';
 }
-function humanDay(iso){
+export function humanDay(iso){
   if(!iso) return '';
   try{ return new Date(iso + 'T12:00:00').toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'}); }
   catch(e){ return iso; }
 }
-function daysSince(iso){
+export function daysSince(iso){
   if(!iso) return null;
   try{ return Math.floor((Date.now() - new Date(iso + 'T12:00:00').getTime()) / 86400000); }catch(e){ return null; }
 }
-const lastReport = pr => (pr && pr.reports && pr.reports.length) ? pr.reports[pr.reports.length - 1] : null;
-const clProgs = c => (c && Array.isArray(c.progs)) ? c.progs : [];
+export const lastReport = pr => (pr && pr.reports && pr.reports.length) ? pr.reports[pr.reports.length - 1] : null;
+export const clProgs = c => (c && Array.isArray(c.progs)) ? c.progs : [];
 // Сводка по подопечному целиком: занятия по всем программам, самое свежее из них.
-function clientSum(c){
+export function clientSum(c){
   let n = 0, last = '', opens = 0, sent = 0;
   clProgs(c).forEach(pr => {
     const r = lastReport(pr);
@@ -2934,8 +2952,21 @@ function clientSum(c){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
-function setClientsShared(value){ clients = value; return clients; }
-function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
-function setImgTrayShared(value){ imgTray = value; return imgTray; }
-function setTrainerShared(value){ trainer = value; return trainer; }
+export function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
+export function setClientsShared(value){ clients = value; return clients; }
+export function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
+export function setImgTrayShared(value){ imgTray = value; return imgTray; }
+export function setTrainerShared(value){ trainer = value; return trainer; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initProgramsAi(){
+  // Более позднее присваивание заменяет прежний прямой вызов Gemini во всех
+  // обработчиках, включая те, которые были объявлены выше по файлу.
+  callGemini = async function(prompt, signal, kind){
+    return (await callServerAI(prompt, signal, kind || 'program.create')).text;
+  };
+  callGeminiImage = async function(prompt, signal, kind){
+    return (await callServerAI(prompt, signal, kind || 'image.exercise')).image;
+  };
+}

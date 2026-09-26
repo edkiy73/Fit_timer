@@ -1,5 +1,28 @@
+import { OPT_GOAL, OPT_LEVEL } from './options.js';
+import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
+import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
+  setShown, setStartFromShared, show, syncDockTabs
+} from './00-core.js';
+import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
+  localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared, stats,
+  toggleMenu, trackProductEvent, users
+} from './10-data-sync.js';
+import { account, isPremium, refreshServerSubscription } from './20-account.js';
+import { LIM, clampText } from './30-progress-media.js';
+import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
+  clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
+  lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
+  renderToday, saveClients, setClientIdxShared, setCoachPhotoDraftShared, trainer,
+  trainerAccountReady, trainerOn
+} from './40-programs-ai.js';
+import { enableDrag, exRestAfter, fmtKg, getExWeight, hasWeight, openBuilder, parseProgramText,
+  parseValue, progShort, progressedRepsRange, sortWarmFirst, valueText
+} from './60-builder.js';
+import { esc } from './70-workout.js';
+import { openPremium } from './90-events.js';
+
 /* ---- экран аккаунта: карточка «Тренер» ---- */
-function renderTrainerCard(){
+export function renderTrainerCard(){
   syncDockTabs();
   renderCatalogRow();
   if(!$('tglTrainer')) return;
@@ -35,7 +58,7 @@ function renderClientsSkeleton(){
     + '</div>'
   ).join('');
 }
-async function refreshClientsScreen(){
+export async function refreshClientsScreen(){
   const box = $('clsList');
   if(box && !box.children.length) renderClientsSkeleton();
   await loadTrainer();
@@ -57,7 +80,7 @@ async function pullAll(){
 function clientDayWord(n){
   return appLocale === 'ru' ? plural(n, 'день', 'дня', 'дней') : (n === 1 ? 'day' : 'days');
 }
-function renderClients(){
+export function renderClients(){
   const n = clients.length;
   const live = clients.filter(c => clientSum(c).n > 0).length;
   const total = clients.reduce((a, c) => a + clientSum(c).n, 0);
@@ -116,7 +139,7 @@ function renderClients(){
 }
 
 /* ---- карточка подопечного ---- */
-function openClient(i){
+export function openClient(i){
   setClientIdxShared(i);
   fillClient();                 // сначала показываем что есть — экран не ждёт сети
   show('scrClient');
@@ -125,7 +148,7 @@ function openClient(i){
     if(got && curClient() === c){ fillClient(); renderClients(); renderTrainerCard(); }
   });
 }
-const curClient = () => clients[clientIdx] || null;
+export const curClient = () => clients[clientIdx] || null;
 
 function fillClient(){
   const c = curClient();
@@ -350,7 +373,7 @@ function renderReport(box, pr){
    Программа уходит короткой ссылкой через сервер: по ней видно, открыл ли её
    подопечный, а его отчёты приезжают сами. Штамп by внутри программы говорит приложению
    подопечного, от кого она пришла. */
-async function sendProgramToClient(c, p){
+export async function sendProgramToClient(c, p){
   if(!p){ appAlert(t('clients.chooseProgram')); return; }
 
   // Уже отправляли эту же программу — обновляем ту запись, а не заводим вторую:
@@ -444,7 +467,7 @@ async function pullClient(c){
   return any;
 }
 
-async function addClient(){
+export async function addClient(){
   const c = {id: 'c' + Date.now(), name: t('clients.defaultName',{count:clients.length + 1}), note: '',
              programId: null, programName: '', sentAt: null, reports: []};
   clients.push(c);
@@ -453,7 +476,7 @@ async function addClient(){
 }
 
 // «Отправить подопечному» из меню программы: выбрать, кому, — и сразу отправить.
-function pickClientFor(p){
+export function pickClientFor(p){
   const box = $('pickClientList');
   box.innerHTML = '';
   $('pickClientModal').querySelector('.mini-label').textContent = t('clients.sendTo');
@@ -513,7 +536,7 @@ function pickClientFor(p){
 
 // Снимок присланного: с чем сравнивать правки подопечного. Снимается один раз, при
 // получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
-function snapshotEx(p){
+export function snapshotEx(p){
   const out = [];
   normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach(e => {
     out.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
@@ -613,7 +636,7 @@ function buildReport(p){
    Молчим и при успехе: человек закончил тренировку и смотрит на свой результат,
    а не на отчётность. О том, что тренер видит занятия, сказано один раз — когда
    программа принималась (см. importProgramLink). */
-function autoReport(p){
+export function autoReport(p){
   if(!p || !p.src) return;
   let rep;
   try{ rep = buildReport(p); }catch(e){ return; }
@@ -653,7 +676,7 @@ const STORE_LOOK = {
 const STORE_CATS = OPT_GOAL.map(name => Object.assign({name}, STORE_LOOK[name]));
 const STORE_LEVELS = OPT_LEVEL;
 const storeCat = id => STORE_CATS.find(c => c.id === id) || STORE_CATS[0];
-function storeCountText(n, type){
+export function storeCountText(n, type){
   const forms = {
     program:['store.programOne','store.programFew','store.programMany'],
     set:['store.setOne','store.setFew','store.setMany'],
@@ -723,7 +746,7 @@ async function ensureCatalogBody(it){
   }
 }
 
-async function loadStoreServer(){
+export async function loadStoreServer(){
   const locale = appLocale === 'ru' ? 'ru' : 'en';
   const cacheKey = 'catalog_' + locale;
   storeLoading = true;
@@ -738,7 +761,6 @@ async function loadStoreServer(){
     storeServer = storeServer.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it);
   } finally { storeLoading = false; }
 }
-
 
 // Обложка рисуется, а не хранится: градиент, два мягких блика и крупная
 // пиктограмма категории. Ни одного внешнего файла — офлайн витрина выглядит
@@ -810,7 +832,7 @@ function storeCoverData(it){
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
-let storeFilter = {q: '', cat: '', level: ''};
+export let storeFilter = {q: '', cat: '', level: ''};
 // уже добавлена: у программы из каталога остаётся метка storeId, поэтому
 // повторный заход предлагает открыть, а не положить второй экземпляр.
 // Имя поля storeId не трогаем — по нему узнаются библиотеки старых пользователей.
@@ -837,7 +859,7 @@ function openOptPicker(title, opts, cur, onPick){
   $('optModal').classList.add('open');
 }
 
-function renderStoreFilters(){
+export function renderStoreFilters(){
   const fill = (btnId, valId, chevId, ph, opts, cur, onPick) => {
     const cho = opts.find(([v]) => v === cur);
     $(valId).textContent = cho ? cho[1] : ph;
@@ -879,7 +901,7 @@ function storeLabels(it, own){
     `</div>`;
 }
 
-function renderStore(){
+export function renderStore(){
   const box = $('storeList');
   // Пока каталог едет и показывать нечего — заглушка строками той же формы.
   if(storeLoading && !storeServer.length){
@@ -924,7 +946,7 @@ function renderStore(){
 }
 
 /* ---- страница программы каталога ---- */
-let siItem = null;
+export let siItem = null;
 // объём упражнения для превью. НЕ exSummary: тот смотрит в draft и подставил бы
 // рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
 function siBits(ex){
@@ -936,7 +958,7 @@ function siBits(ex){
   if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
-async function openStoreItem(id){
+export async function openStoreItem(id){
   const it = storeAll().find(x => x.id === id);
   if(!it) return;
   if(it.pro && isPremium() && !it.text){
@@ -1082,10 +1104,6 @@ async function siPaintMedia(it){
     if(thumb) thumb.innerHTML = `<img src="${esc(pic)}" alt="">`;
   });
 }
-$('siLock').onclick = openPremium;
-$('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
-$('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
-$('siBackTop').onclick = ()=> goBackTo('scrStore');
 
 async function addStoreItem(id){
   const it = storeAll().find(x => x.id === id);
@@ -1153,14 +1171,14 @@ async function addStoreItem(id){
 
 // откуда пришли в каталог: с «Сегодня» или из «Тренировок». Кнопка «назад»
 // должна возвращать туда же, а не всегда на главную
-let storeFrom = 'scrMenu';
+export let storeFrom = 'scrMenu';
 // Карточка тренера. Ник может не найтись в справочнике — тогда показываем сам ник и
 // честную строку вместо выдуманного описания, а не пустой попап.
 /* Страница тренера. Всё знает сервер: и тех, чьи программы в каталоге, и тех, кто
    прислал программу ссылкой. Что знаем — показываем, чего не знаем — не выдумываем. */
-let tpFrom = 'scrMenu';
+export let tpFrom = 'scrMenu';
 
-function openTrainer(nick){
+export function openTrainer(nick){
   if(!nick) return;
   tpFrom = show._last;
   /* Сразу рисуем виденное в прошлый раз. Если человека видим впервые — заглушку:
@@ -1250,8 +1268,8 @@ function fillTrainerPage(nick, trainerData){
 
 /* ПРЕДЛОЖИТЬ В КАТАЛОГ */
 let pubProg = null;
-let pubFrom = 'scrPrograms';
-let pubDraft = {cat: '', level: '', gives: ''};
+export let pubFrom = 'scrPrograms';
+export let pubDraft = {cat: '', level: '', gives: ''};
 
 // Минуты для витрины. Точность здесь не нужна и невозможна — человек читает это
 // как «влезет ли в обед», а не как обещание. Считаем грубо и честно округляем.
@@ -1281,7 +1299,7 @@ function pubLabel(status){
 }
 const pubbed = () => customPrograms.filter(p => p.pub && p.pub.id);
 
-function openMyCatalog(){
+export function openMyCatalog(){
   renderMyCatalog();
   show('scrMyCatalog');
   refreshAllPubStatus();
@@ -1330,7 +1348,7 @@ async function refreshAllPubStatus(){
   }catch(e){}
 }
 
-function openPublish(p){
+export function openPublish(p){
   pubProg = p;
   // Возврат туда, откуда пришли: из списка, со страницы программы или из «В каталоге».
   pubFrom = ['scrMyCatalog', 'scrStart', 'scrPrograms'].includes(show._last) ? show._last : 'scrPrograms';
@@ -1419,7 +1437,7 @@ async function catalogCoverData(src){
   });
 }
 
-async function doPublish(){
+export async function doPublish(){
   const p = pubProg;
   if(!p) return;
   pubDraft.gives = clampText($('pubGives').value, LIM.gives);
@@ -1471,7 +1489,7 @@ async function doPublish(){
   }
 }
 
-function openStore(from){
+export function openStore(from){
   storeFrom = from || 'scrMenu';
   if(!storeServer.length) storeServer = lastSeen('catalog_' + (appLocale === 'ru' ? 'ru' : 'en')) || [];
   // Свежие позиции подтягиваем при входе и дорисовываем, когда придут: витрина
@@ -1521,7 +1539,7 @@ function compactProgramDays(days){
   return parts.join(' · ');
 }
 
-function renderMine(){
+export function renderMine(){
   renderCatalogRow();
   const box = $('mineList'); box.innerHTML='';
   const own = customPrograms.length;
@@ -1656,3 +1674,11 @@ function renderMine(){
   renderToday();
 }
 
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initTrainerCatalog(){
+  $('siLock').onclick = openPremium;
+  $('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
+  $('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
+  $('siBackTop').onclick = ()=> goBackTo('scrStore');
+}

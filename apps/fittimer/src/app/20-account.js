@@ -1,5 +1,24 @@
+import { appLocale, localeTag, normalizeLocale, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
+import { appIdentity, appRuntimeCompat } from './00-dependencies.js';
+import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceURI, setShown, show,
+  syncDockTabs, takeSnap
+} from './00-core.js';
+import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
+  kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, pushAccountDocs, recordConsent,
+  renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setUsersShared, showSyncState,
+  switchUser, syncState, users, validAge
+} from './10-data-sync.js';
+import { NAME_MAX, clampLine, nextProfileName } from './30-progress-media.js';
+import { API_BASE, ageError, apiPost, clients, forgetMe, loadTrainer, mailErrText, normHandle,
+  saveClients, saveTrainer, setTrainerShared, syncGeminiBtns, trainer
+} from './40-programs-ai.js';
+import { renderTrainerCard } from './50-trainer-catalog.js';
+import { esc } from './70-workout.js';
+import { applyThemeFor, themeOf } from './80-platform.js';
+import { applyAudioFromUser, readTimings, syncRemotePushRegistration, unregisterRemotePushServer } from './90-events.js';
+
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
-let uDraft = null;
+export let uDraft = null;
 // текущее состояние профиля для сравнения
 function userState(){
   if(!uDraft) return null;
@@ -8,9 +27,9 @@ function userState(){
   if($('ueAge')) u.age = validAge($('ueAge').value);
   return u;
 }
-function userDirty(){ return isChanged('user', userState()); }
+export function userDirty(){ return isChanged('user', userState()); }
 
-function openUserEdit(id = null){
+export function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
   const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
@@ -37,7 +56,7 @@ function openUserEdit(id = null){
   show('scrUserEdit');
   window.scrollTo(0, 0);
 }
-function syncUserForm(){
+export function syncUserForm(){
   // ни одна кнопка не подсвечена, пока пол не выбран: подставленный по умолчанию
   // «женский» уходил в запрос к ИИ как настоящий ответ
   $('ueGenderF').classList.toggle('act', uDraft.gender === 'f');
@@ -52,7 +71,7 @@ function syncUserForm(){
     ? `<img src="${esc(uDraft.photo)}" alt="">`
     : (nm ? `<span class="ava-let">${nm[0].toUpperCase()}</span>` : icon('camera'));
 }
-async function saveUser(){
+export async function saveUser(){
   // maxlength сторожит только набор с клавиатуры — вставка и перенос данных мимо него
   uDraft.name = clampLine($('ueName').value, NAME_MAX);
   uDraft.age = validAge($('ueAge').value);
@@ -96,7 +115,7 @@ async function saveUser(){
    Поэтому последний профиль удалить нельзя. Полный сброс никуда не делся — он живёт
    на экране аккаунта под своим именем «Удалить все данные», с подтверждением фразой,
    и человек понимает, на что идёт. */
-async function deleteUser(){
+export async function deleteUser(){
   if(!uDraft.id) return;
   if(users.length <= 1){
     await appAlert(t('profile.onlyOne'));
@@ -128,10 +147,10 @@ async function deleteUser(){
 // Ключи, которые заводит приложение. Перечислены поимённо и в одном месте: удаление,
 // которое забыло ключ, оставляет от «удалённого» аккаунта хвост — а это ровно то, за
 // что и придёт претензия (и из стора, и по 152-ФЗ).
-const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
+export const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
                       'workoutSession', 'identity', 'docMeta', 'outbox',
                       'trainer', 'clients'];
-const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
+export const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
                      'recognitionLang', 'recognitionLangManual', 'voiceLang', 'voiceLangManual',
                      'voiceHint', 'voiceURI', 'analyticsInstallSent',
@@ -140,7 +159,7 @@ const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'curren
 // Полное удаление аккаунта. Требование и сторов, и 152-ФЗ: человек должен уметь
 // отозвать согласие и стереть всё, не переустанавливая приложение. Стираем и очередь
 // на отправку — иначе после подключения сервера удалённое уехало бы туда из очереди.
-async function wipeAccount(){
+export async function wipeAccount(){
   const linked = !!(account && account.email);
   // Часть данных лежит НЕ на телефоне, и стереть её заодно нельзя — её надо стереть
   // отдельно и на сервере. Пока этого не было, «удалить всё» оставляло висеть имя и
@@ -182,7 +201,7 @@ async function wipeAccount(){
 // Аккаунт один на устройство, а профили лежат внутри него («второй — для мужа или
 // подруги»), поэтому почта, подписка и биометрия хранятся глобальным ключом, а не
 // рядом с профилем: подписка принадлежит тому, кто заплатил, а не имени в списке.
-let account = null;
+export let account = null;
 let bioOK = false;   // устройство умеет проверять отпечаток или лицо
 // Аккаунты, которые на этом устройстве уже открывали. Выход не должен означать потерю
 // подписки, а вход — превращаться в повторную покупку, поэтому почта, подписка и ключ
@@ -195,29 +214,29 @@ async function readAccountData(){
 function accountBucketKey(){
   return String((account && account.email) || '').trim().toLowerCase();
 }
-async function readAccountBucket(){
+export async function readAccountBucket(){
   const all = await readAccountData();
   const key = accountBucketKey();
   return {all, key, bucket:(key && all[key]) || {meta:{}}};
 }
-async function writeAccountBucket(rec){
+export async function writeAccountBucket(rec){
   if(!rec || !rec.key) return;
   rec.all[rec.key] = rec.bucket;
   await kvSet('accountData', JSON.stringify(rec.all));
 }
-function bumpAccountMeta(bucket, key){
+export function bumpAccountMeta(bucket, key){
   if(!bucket.meta) bucket.meta = {};
   const prev = bucket.meta[key] || {rev:0};
   bucket.meta[key] = {rev:(+prev.rev || 0) + 1, at:new Date().toISOString(), schema:SCHEMA_VERSION};
 }
-async function loadAccount(){
+export async function loadAccount(){
   try{ account = JSON.parse(await kvGet('account')) || null; }catch(e){ account = null; }
   if(!account) account = blankAccount();
   try{ knownAccounts = JSON.parse(await kvGet('knownAccounts')) || []; }catch(e){ knownAccounts = []; }
 }
-async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
-async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
-async function refreshServerSubscription(force){
+export async function saveAccount(){ await kvSet('account', JSON.stringify(account)); }
+export async function saveKnown(){ await kvSet('knownAccounts', JSON.stringify(knownAccounts)); }
+export async function refreshServerSubscription(force){
   if(!account || !account.email || !account.syncToken) return false;
   const now = Date.now();
   if(!force && refreshServerSubscription._at && now - refreshServerSubscription._at < 15000) return false;
@@ -239,7 +258,7 @@ async function refreshServerSubscription(force){
   }
 }
 
-async function syncAccountLocale(locale){
+export async function syncAccountLocale(locale){
   const next = normalizeLocale(locale);
   if(!account) return;
   account.locale = next;
@@ -252,14 +271,14 @@ async function syncAccountLocale(locale){
     try{ await apiPost('/api/auth', {action:'set_locale', email:account.email, deviceId, syncToken:account.syncToken, locale:next}); }catch(_){}
   }
 }
-function rememberAccount(){
+export function rememberAccount(){
   if(!account.email) return;
   const rec = {email: account.email, handle: account.handle || '', locale: account.locale || appLocale, sub: account.sub, biometry: account.biometry, syncToken: account.syncToken || null,
                deletedProfiles: account.deletedProfiles || [],
                createdAt: account.createdAt, linkedAt: account.linkedAt};
   knownAccounts = knownAccounts.filter(a => a.email !== rec.email).concat([rec]);
 }
-const isPremium = ()=> !!(account && account.sub && account.sub.until && new Date(account.sub.until) > new Date());
+export const isPremium = ()=> !!(account && account.sub && account.sub.until && new Date(account.sub.until) > new Date());
 
 // Цены — фиксированные точки в валюте покупателя, а не пересчёт по курсу: так делают
 // и сторы. «4,99 $» читается как цена, а «412,73 ₽» — как ошибка округления.
@@ -298,18 +317,18 @@ function userRegion(){
   }catch(e){}
   return 'US';
 }
-function userCurrency(){
+export function userCurrency(){
   const r = userRegion();
   return CUR_BY_REGION[r] || (EURO_REGIONS.includes(r) ? 'EUR' : 'USD');
 }
-function money(v, cur){
+export function money(v, cur){
   const frac = (Math.round(v * 100) % 100) ? 2 : 0;
   try{
     return new Intl.NumberFormat(localeTag(),
       {style: 'currency', currency: cur, minimumFractionDigits: frac, maximumFractionDigits: frac}).format(v);
   }catch(e){ return v + ' ' + cur; }
 }
-const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
+export const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REMOTE_PRICES || PRICES).USD;
 
 let APP_UPDATE = null;
 let APP_UPDATE_PREV = null;
@@ -422,8 +441,6 @@ async function resumePendingAndroidUpdate(){
   const result=await appRuntimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
   await finishDirectUpdateResult(result);
 }
-window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
-window.addEventListener('fitAppForeground',()=>setTimeout(()=>resumePendingAndroidUpdate(),180));
 
 async function applyAndroidUpdateConfig(raw){
   const banner=$('appUpdateBanner'),gate=$('appUpdateGate');
@@ -470,7 +487,7 @@ async function applyAndroidUpdateConfig(raw){
   }
   await restoreAndroidUpdateState();
 }
-async function loadPublicConfig(){
+export async function loadPublicConfig(){
   try{
     const res = await fetch(API_BASE + '/api/config', {cache:'no-store'});
     if(!res.ok) return;
@@ -486,7 +503,7 @@ function planUntil(plan, from){
   return d.toISOString();
 }
 // «10 сентября 2027 г.» в конце фразы даёт двойную точку и лишний хвост — убираем «г.»
-const humanDate = iso => new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'long', year:'numeric'}).format(new Date(iso));
+export const humanDate = iso => new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'long', year:'numeric'}).format(new Date(iso));
 // цена за месяц при годовой оплате: округляем до точности самой цены, иначе
 // в рублях получается «249,17 ₽», чего не бывает ни в одном ценнике
 function perMonth(pr, cur){
@@ -497,9 +514,9 @@ function perMonth(pr, cur){
 // по той цене, по которой оформлял
 const subPrice = ()=> (account.sub ? money(account.sub.price, account.sub.currency) : '');
 
-let pmPlan = 'year';   // годовой выбран заранее: он выгоднее и человеку, и продукту
+export let pmPlan = 'year';   // годовой выбран заранее: он выгоднее и человеку, и продукту
 
-function renderPremium(){
+export function renderPremium(){
   const cur = userCurrency(), pr = priceTable(), on = isPremium();
   setShown('pmState', on);
   setShown('pmPlans', !on);
@@ -539,13 +556,12 @@ function renderPremium(){
 /* Версия приложения: дата и короткое имя правки, чтобы по экрану сразу было видно,
    какая сборка сейчас у человека на телефоне. */
 const BUILD = '20.09 · v22';
-appRuntimeCompat.setBuild(BUILD);
 function renderBuild(){
   const el = $('buildLine');
   if(el) el.textContent = t('account.version') + ' ' + BUILD + ' · ' + t('account.buildNote');
 }
 
-function renderPlan(){
+export function renderPlan(){
   renderBuild();
   if(!account) return;   // экран может отрисоваться раньше, чем аккаунт прочитан с диска
   const on = isPremium(), pr = priceTable(), cur = userCurrency();
@@ -593,7 +609,7 @@ function renderPlan(){
    Поэтому оформление проходит тот же код на почту, что и обычный вход, — и
    отдельной «регистрации» тут по-прежнему нет: аккаунта с этой почтой не было —
    он заводится этим же кодом. */
-async function completePurchase(){
+export async function completePurchase(){
   const email = ($('payEmail').value || '').trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
     appAlert(t('login.emailTypo'));
@@ -656,7 +672,7 @@ let loginFixedEmail = '';
    почта, и обнуляется, чем бы дело ни кончилось. */
 let pendingSub = null;
 
-function openLogin(after, opts){
+export function openLogin(after, opts){
   opts = opts || {};
   loginDone = after || null;
   pendingSub = opts.sub || null;
@@ -681,7 +697,7 @@ function openLogin(after, opts){
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
 
-function loginUseExistingCode(){
+export function loginUseExistingCode(){
   const email = loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
   if(!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)){
@@ -763,7 +779,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
         : t('login.done')));
 }
 
-async function doLogin(){
+export async function doLogin(){
   const btn = $('loginGo');
   const email = loginPending ? loginPending.email : (loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase());
   $('loginErr').textContent = '';
@@ -855,7 +871,7 @@ async function doLogin(){
 
 // Выход отвязывает аккаунт от устройства, но не стирает тренировки: они лежат здесь же
 // и принадлежат человеку, а не подписке. Для «стереть всё» есть отдельная кнопка ниже.
-async function signOut(){
+export async function signOut(){
   if(!account.email) return;
   const ok = await appDialog(
     t('account.signOutQuestion',{email:account.email}),
@@ -895,7 +911,7 @@ function bioReason(reason){
   if(reason === 'unsupported') return t('bio.unsupported');
   return t('bio.refused');
 }
-async function bioSupported(){
+export async function bioSupported(){
   if(!nativeBiometryHost()){
     bioState = {available:false, reason:'unsupported'};
     return false;
@@ -921,7 +937,7 @@ async function requestNativeBiometry(){
     return {ok:false, error:'temporarily_unavailable'};
   }
 }
-async function bioEnable(){
+export async function bioEnable(){
   if(!account.email){ appAlert(t('bio.needAccount')); return false; }
   bioOK = await bioSupported();
   if(!bioOK){
@@ -942,7 +958,7 @@ async function bioEnable(){
   renderPlan();
   return true;
 }
-async function bioDisable(){
+export async function bioDisable(){
   if(!(await appConfirm(t('bio.disableQuestion')))) return;
   account.biometry = null;
   rememberAccount();
@@ -956,23 +972,23 @@ async function bioVerify(){
 }
 
 /* ---- мягкая блокировка приватности ---- */
-const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry
+export const lockNeeded = ()=> !!(nativeBiometryHost() && account && account.biometry
   && account.biometry.enabled && account.biometry.kind === 'native');
-function openLock(){
+export function openLock(){
   if(!lockNeeded()) return;
   bioRelockDeferred = false;
   $('lockMsg').textContent = t('lock.prompt');
   $('lockModal').classList.add('open');
   tryUnlock();   // системный prompt сразу, без лишнего тапа
 }
-async function tryUnlock(){
+export async function tryUnlock(){
   if(!lockNeeded()){ $('lockModal').classList.remove('open'); return; }
   if(await bioVerify()){ $('lockModal').classList.remove('open'); return; }
   $('lockMsg').textContent = bioLastResult && bioLastResult.error && bioLastResult.error !== 'cancelled'
     ? t('lock.failedReason',{reason:bioReason(bioLastResult.error)})
     : t('lock.failed');
 }
-function maybeBiometricRelock(awayMs){
+export function maybeBiometricRelock(awayMs){
   if(!lockNeeded() || !(awayMs >= BIO_RELOCK_MS) || $('lockModal').classList.contains('open')) return;
   if($('scrWork') && $('scrWork').classList.contains('on')){
     bioRelockDeferred = true;
@@ -980,7 +996,7 @@ function maybeBiometricRelock(awayMs){
   }
   openLock();
 }
-function maybeRunDeferredBiometricLock(){
+export function maybeRunDeferredBiometricLock(){
   if(!bioRelockDeferred || !lockNeeded()) return;
   if($('scrWork') && $('scrWork').classList.contains('on')) return;
   openLock();
@@ -988,8 +1004,16 @@ function maybeRunDeferredBiometricLock(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setBioOKShared(value){ bioOK = value; return bioOK; }
-function setLoginDoneShared(value){ loginDone = value; return loginDone; }
-function setLoginFixedEmailShared(value){ loginFixedEmail = value; return loginFixedEmail; }
-function setLoginPendingShared(value){ loginPending = value; return loginPending; }
-function setPendingSubShared(value){ pendingSub = value; return pendingSub; }
+export function setBioOKShared(value){ bioOK = value; return bioOK; }
+export function setLoginDoneShared(value){ loginDone = value; return loginDone; }
+export function setLoginFixedEmailShared(value){ loginFixedEmail = value; return loginFixedEmail; }
+export function setLoginPendingShared(value){ loginPending = value; return loginPending; }
+export function setPendingSubShared(value){ pendingSub = value; return pendingSub; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initAccount(){
+  window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
+  window.addEventListener('fitAppForeground',()=>setTimeout(()=>resumePendingAndroidUpdate(),180));
+  appRuntimeCompat.setBuild(BUILD);
+}

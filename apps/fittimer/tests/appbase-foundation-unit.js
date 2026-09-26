@@ -58,8 +58,8 @@ ok('runtime build metadata stays out of window globals',
   && /getRuntimeBuild\(\)/.test(runtimeCompatSource));
 const runtimeDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
 ok('runtime compatibility is imported by the product runtime prelude',
-  /import \* as fitRuntimeCompat from '\.\/src\/app\/runtime-compat\.js'/.test(runtimeDependencySource)
-  && /const appRuntimeCompat = fitRuntimeCompat\.appRuntimeCompat/.test(runtimeDependencySource)
+  /import \* as fitRuntimeCompat from '\.\/runtime-compat\.js'/.test(runtimeDependencySource)
+  && /export const appRuntimeCompat = fitRuntimeCompat\.appRuntimeCompat/.test(runtimeDependencySource)
   && !sourceBuild.includes("'src/app/05-runtime-compat.js'"));
 const genericNativeProductSources = [
   'src/app/00-core.js',
@@ -334,8 +334,8 @@ ok('product sync schema keeps FitTimer policy outside Core',
   /program:/.test(productSyncModuleSource)
   && /notificationPrefs/.test(productSyncModuleSource));
 ok('product runtime imports the product sync schema module',
-  /from ['"]\.\/src\/app\/sync-schema\.js['"]/.test(runtimeDependencySource)
-  && /const appSync = \{/.test(runtimeDependencySource));
+  /from ['"]\.\/sync-schema\.js['"]/.test(runtimeDependencySource)
+  && /export const appSync = \{/.test(runtimeDependencySource));
 
 const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
 ok('product infrastructure composes Core through explicit imports',
@@ -352,7 +352,7 @@ ok('legacy data-sync consumes captured product dependencies instead of globals',
   && /appSync\.registry/.test(dataSyncSource)
   && !/FitTimerModules|AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
 ok('product runtime imports product infrastructure explicitly',
-  /from ['"]\.\/src\/app\/infrastructure\.js['"]/.test(runtimeDependencySource)
+  /from ['"]\.\/infrastructure\.js['"]/.test(runtimeDependencySource)
   && /const appInfrastructure = /.test(runtimeDependencySource));
 
 const accountProductSource = fs.readFileSync('src/app/20-account.js','utf8');
@@ -372,7 +372,7 @@ ok('legacy account/profile flow consumes captured product identity',
   && /appIdentity\.createProfile/.test(accountProductSource)
   && !/FitTimerModules|AppBaseIdentity/.test(accountProductSource));
 ok('product runtime imports product identity explicitly',
-  /from ['"]\.\/src\/app\/identity\.js['"]/.test(runtimeDependencySource)
+  /from ['"]\.\/identity\.js['"]/.test(runtimeDependencySource)
   && /const appIdentity = /.test(runtimeDependencySource));
 
 

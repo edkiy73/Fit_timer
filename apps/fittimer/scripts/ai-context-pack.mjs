@@ -169,7 +169,7 @@ if(concrete.length){
 }
 
 out.push('## Agent instruction');
-out.push('Diagnose from this pack first. Open additional source only when a specific missing fact blocks the fix. Do not reread generated root app.js/style.css/index.html.');
+out.push('Diagnose from this pack first. Open additional source only when a specific missing fact blocks the fix. Do not reread generated root style.css/index.html.');
 
 const output = out.join('\n') + '\n';
 if(writeMode){

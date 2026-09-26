@@ -1,5 +1,30 @@
+import { M_LABEL } from './options.js';
+import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
+import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
+  appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
+  icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
+  setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
+} from './00-core.js';
+import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
+  customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
+  saveStats, stats, streakWord, toggleMenu, trackProductEvent, users
+} from './10-data-sync.js';
+import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
+import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
+  weekPlanInfo
+} from './40-programs-ai.js';
+import { autoReport, renderMine, storeCountText } from './50-trainer-catalog.js';
+import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, fmtKg,
+  liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
+  renderExList, setDraftShared, setExDraftShared, setExIdxShared, setExIsNewShared, setExOrigShared,
+  setPlanIdxShared, valueText
+} from './60-builder.js';
+import { hfMode, startHandsFree, stopHandsFree, syncNativeNotifications } from './80-platform.js';
+import { aiRunClose, aiRunCtl, aiRunOpen } from './90-events.js';
+
 /* ================= СБОРКА ШАГОВ ================= */
-function buildSteps(){
+export function buildSteps(){
   const cur = state.current;
   const cycle = cur.cycle;
   const warmup = cur.warmup || [];
@@ -34,7 +59,7 @@ function fmt(sec){
 // двигала строку целиком (см. комментарий у .tnum-d): двоеточие и прочее — как есть.
 // Внешний <span> — единственный флекс-элемент в .count/.reps: без него цифры сами
 // становятся элементами флекс-ряда, и column-gap рассаживает их с зазорами
-function tnum(str){
+export function tnum(str){
   return '<span>' + String(str).replace(/[0-9]/g, d => `<span class="tnum-d">${d}</span>`) + '</span>';
 }
 function globalElapsed(){
@@ -69,16 +94,7 @@ function stopGlobal(){
    Всё встаёт на паузу, открывается обычный редактор того же упражнения. «Назад»
    возвращает на тренировку нетронутой, «Готово» переносит правку в саму программу,
    пересобирает оставшиеся шаги и возвращает на тот же шаг — по-прежнему на паузе. */
-let exFromWork = false;
-$('workMore').innerHTML = icon('more');
-$('workMore').onclick = e => { e.stopPropagation(); toggleMenu($('workMenu')); };
-(function buildWorkMenu(){
-  const box = $('workMenu');
-  const b = document.createElement('button');
-  b.innerHTML = icon('pencil') + t('workout.editExercise');
-  b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); editExerciseFromWorkout(); };
-  box.appendChild(b);
-})();
+export let exFromWork = false;
 
 function editExerciseFromWorkout(){
   const step = state.steps[state.stepIdx];
@@ -98,7 +114,7 @@ function editExerciseFromWorkout(){
 }
 
 // вернуться на тренировку; rebuild — пересобрать шаги под изменённое упражнение
-function backToWorkout(rebuild){
+export function backToWorkout(rebuild){
   exFromWork = false;
   if(rebuild && state.raw){
     state.raw = customPrograms.find(p => p.id === state.raw.id) || state.raw;
@@ -123,7 +139,7 @@ function backToWorkout(rebuild){
 // Куда деваться после любой правки состава: на тренировку, если пришли оттуда
 // (тогда изменение сразу уезжает в саму программу и шаги пересобираются), иначе
 // обратно в конструктор.
-async function afterExChange(){
+export async function afterExChange(){
   renderExList();
   if(!exFromWork){ goBackTo('scrBuilder'); return; }
   const i = customPrograms.findIndex(x => x.id === draft.id);
@@ -133,7 +149,7 @@ async function afterExChange(){
   backToWorkout(true);
 }
 
-async function saveExToWorkout(){
+export async function saveExToWorkout(){
   const list = curPlan().exercises;
   if(list[exIdx]) list[exIdx] = commitExercise();
   const i = customPrograms.findIndex(x => x.id === draft.id);
@@ -145,7 +161,7 @@ async function saveExToWorkout(){
 }
 
 /* ================= ПАУЗА ================= */
-function setPause(p, silent){
+export function setPause(p, silent){
   if(p === state.paused) return;
   if(p){
     state.paused = true;
@@ -187,7 +203,7 @@ function paintPause(){
 /* ================= ДВИЖОК ШАГОВ ================= */
 // fromIdx — с какого шага начать (продолжение сессии или выбор упражнения)
 // elapsed — уже накопленное время тренировки в мс, чтобы счётчик не начинался с нуля
-function startWorkout(fromIdx, elapsed, options){
+export function startWorkout(fromIdx, elapsed, options){
   const opts = options || {};
   trackProductEvent('workout_started').catch(()=>{});
   initAudio(); keepAwake();
@@ -302,13 +318,6 @@ function autosaveNativeWorkoutSession(delay){
     if(state.live) saveSession().catch(()=>{});
   }, Math.max(0, Number(delay) || 0));
 }
-
-window.addEventListener('fitAppBackground', ()=>{
-  if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
-  clearTimeout(nativeSessionSaveT);
-  nativeSessionSaveT = 0;
-  saveSession().catch(()=>{});
-});
 
 function syncNativeWorkoutState(step, endsAt){
   if(!step || !appRuntimeCompat.hasNative('updateWorkoutState')) return;
@@ -499,7 +508,6 @@ function renderStep(){
   if(im) im.addEventListener('load', refreshDetailsFade, {once:true});
   requestAnimationFrame(refreshDetailsFade);
 
-
   if(step.kind === 'click'){
     setShown('stepReps', true);
     // рабочий вес — часть задания, поэтому цифра контрастнее подписи «повторений»
@@ -616,7 +624,7 @@ function fitStepTitle(){
 /* Край области с описанием подсказывает, что текст продолжается: сверху и снизу
    он растворяется ровно тогда, когда там правда есть непрочитанное, а внизу
    появляется стрелка. Обрыв текста посреди фразы больше не выглядит как ошибка. */
-function refreshDetailsFade(){
+export function refreshDetailsFade(){
   const d = $('stepDetails');
   if(!d) return;
   const below = d.scrollHeight - d.clientHeight - d.scrollTop;
@@ -628,7 +636,7 @@ function refreshDetailsFade(){
   setShown('scrollCue', below > 24);
 }
 
-function nextStep(){
+export function nextStep(){
   clearStepTimer();
   state.stepIdx++;
   if(state.stepIdx >= state.steps.length) finishWorkout();
@@ -639,7 +647,7 @@ function nextStep(){
    Упражнение доросло до потолка и расти дальше некуда, а более сложный вариант известен.
    Ничего не меняем автоматически: показываем название и технику, а замену человек делает
    сам через редактирование упражнения — на тренировке не место структурным правкам. */
-function openSwapHint(){
+export function openSwapHint(){
   const step = state.steps[state.stepIdx];
   if(!step || !step.swap) return;
   $('swapIntro').textContent = t('workout.swapIntro',{title:step.title});
@@ -653,7 +661,7 @@ function openSwapHint(){
   $('swapHint').textContent = t('workout.swapAIHint');
   appUi.openModal($('swapModal'));
 }
-function closeSwapHint(){ appUi.closeModal($('swapModal')); }
+export function closeSwapHint(){ appUi.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
 // находим упражнение-исходник в самой программе: шаг тренировки — это только копия
@@ -701,7 +709,7 @@ function refreshLiveSteps(oldName, ex){
   return touchedCurrent;
 }
 
-async function swapViaAI(){
+export async function swapViaAI(){
   if(!premiumGate()) return;
   const src = swapSourceExercise();
   if(!src || !src.step.swap){
@@ -750,7 +758,7 @@ async function swapViaAI(){
 }
 
 // шаг назад — если пропустил случайно или хочешь переделать подход
-function prevStep(){
+export function prevStep(){
   if(state.stepIdx <= 0) return;
   clearStepTimer();
   state.stepIdx--;
@@ -758,7 +766,7 @@ function prevStep(){
 }
 
 /* ================= ПРЕВЬЮ СЛЕДУЮЩЕГО УПРАЖНЕНИЯ ================= */
-function esc(s){
+export function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function renderNextUp(step){
@@ -801,7 +809,7 @@ function renderNextUp(step){
 function autoGrowMax(){
   return Math.max(180, Math.min(900, Math.round(window.innerHeight * 0.6)));
 }
-function autoGrow(el){
+export function autoGrow(el){
   if(!el) return;
   const max = autoGrowMax();
   el.style.overflowY = 'hidden';
@@ -810,16 +818,9 @@ function autoGrow(el){
   el.style.height = Math.min(need, max) + 'px';
   if(need > max) el.style.overflowY = 'auto';
 }
-document.addEventListener('input', e => {
-  if(e.target && e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
-});
-
-// карточка «дальше» больше не растягивается на всю высоту: описание в ней ограничено
-// четырьмя строками через CSS (line-clamp), подгонять высоту скриптом не нужно
-window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); } });
 
 /* ================= ФИНАЛ ================= */
-function stopSpeech(){
+export function stopSpeech(){
   appRuntimeCompat.stopSpeaking();
   try{ speechSynthesis.cancel(); }catch(e){}
 }
@@ -1032,13 +1033,13 @@ function renderProgCheck(){
     box.appendChild(b);
   });
 }
-function toggleProgCheckList(){
+export function toggleProgCheckList(){
   setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
 }
 // «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
 // отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
 // вернётся после следующей тренировки, где это упражнение снова встретится.
-async function applyProgCheck(){
+export async function applyProgCheck(){
   const chk = state.progCheck;
   if(!chk) return;
   // сразу снимаем проверку и прячем кнопку: второй быстрый тап не должен
@@ -1056,7 +1057,7 @@ async function applyProgCheck(){
 }
 
 // Решение по слишком короткой тренировке. keep — засчитать как обычно.
-function settleQuickFinish(keep){
+export function settleQuickFinish(keep){
   const pending = state.pendingFinish;
   if(!pending) return;
   state.pendingFinish = null;
@@ -1141,7 +1142,7 @@ function finishWorkout(){
 }
 
 /* ================= ШЕРИНГ-КАРТИНКА РЕЗУЛЬТАТА ================= */
-function roundRect(x, x0, y0, w, h, r){
+export function roundRect(x, x0, y0, w, h, r){
   x.beginPath();
   x.moveTo(x0 + r, y0);
   x.arcTo(x0 + w, y0, x0 + w, y0 + h, r);
@@ -1151,7 +1152,7 @@ function roundRect(x, x0, y0, w, h, r){
   x.closePath();
 }
 
-async function shareResult(){
+export async function shareResult(){
   const cs = getComputedStyle(document.body);
   const col = n => cs.getPropertyValue(n).trim();
   const W = 1080, H = 1350;
@@ -1303,7 +1304,7 @@ function setFinRing(p){
 
 // смена экрана гасит эффект: раньше конфетти с финала продолжало сыпаться поверх
 // статистики и календаря
-function stopFinishFx(){
+export function stopFinishFx(){
   if(finFxRaf) cancelAnimationFrame(finFxRaf);
   finFxRaf = 0;
   finFxTimers.forEach(clearTimeout);
@@ -1501,7 +1502,7 @@ function activeWeekStreak(history){
   return best;
 }
 
-const BADGES = [
+export const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
   // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
@@ -1567,18 +1568,18 @@ function pruneBadges(){
   return true;
 }
 // собранное копится и не отбирается обратно; возвращает список только что полученных
-function earnBadges(){
+export function earnBadges(){
   if(!Array.isArray(stats.badges)) stats.badges = [];
   pruneBadges();
   const fresh = BADGES.filter(b => !stats.badges.includes(b.id) && b.test()).map(b => b.id);
   if(fresh.length) stats.badges = stats.badges.concat(fresh);
   return fresh;
 }
-const hasBadge = id => Array.isArray(stats.badges) && stats.badges.includes(id);
+export const hasBadge = id => Array.isArray(stats.badges) && stats.badges.includes(id);
 // за что выдано. У большинства это постоянная строка, но «Личный рекорд» обязан
 // говорить нынешнее число: плашка одна, а рекорд с человеком растёт.
-const badgeName = b => t('badge.' + b.id + '.name');
-const badgeDesc = b => {
+export const badgeName = b => t('badge.' + b.id + '.name');
+export const badgeDesc = b => {
   if(b.id === 'record'){
     const n = stats.bestStreak || 0;
     if(n >= 3){
@@ -1615,7 +1616,7 @@ function renderBadges(){
 }
 
 // спрашиваем, сохранить ли место, и уходим согласно выбору
-function exitWorkout(){
+export function exitWorkout(){
   const steps = state.steps || [];
   const done = steps.slice(0, state.stepIdx).filter(s => s.phase === 'work').length;
   const all = steps.filter(s => s.phase === 'work').length;
@@ -1626,7 +1627,7 @@ function exitWorkout(){
 }
 
 // общая часть выхода: гасим всё, что работает во время тренировки
-function tearDownWorkout(){
+export function tearDownWorkout(){
   state.live = false;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
@@ -1645,4 +1646,30 @@ function tearDownWorkout(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setExFromWorkShared(value){ exFromWork = value; return exFromWork; }
+export function setExFromWorkShared(value){ exFromWork = value; return exFromWork; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initWorkout(){
+  $('workMore').innerHTML = icon('more');
+  $('workMore').onclick = e => { e.stopPropagation(); toggleMenu($('workMenu')); };
+  (function buildWorkMenu(){
+    const box = $('workMenu');
+    const b = document.createElement('button');
+    b.innerHTML = icon('pencil') + t('workout.editExercise');
+    b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); editExerciseFromWorkout(); };
+    box.appendChild(b);
+  })();
+  window.addEventListener('fitAppBackground', ()=>{
+    if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
+    clearTimeout(nativeSessionSaveT);
+    nativeSessionSaveT = 0;
+    saveSession().catch(()=>{});
+  });
+  document.addEventListener('input', e => {
+    if(e.target && e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
+  });
+  // карточка «дальше» больше не растягивается на всю высоту: описание в ней ограничено
+  // четырьмя строками через CSS (line-clamp), подгонять высоту скриптом не нужно
+  window.addEventListener('resize', ()=>{ if($('scrWork').classList.contains('on')){ fitStepTitle(); refreshDetailsFade(); } });
+}

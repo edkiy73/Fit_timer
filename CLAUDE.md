@@ -29,7 +29,7 @@ For every coding task:
 7. Search source text only if the context pack/router/index are insufficient.
 8. Read only the relevant source chunk and targeted docs.
 
-Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
+Do **not** read generated root `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
 Current engineering rationale and known bug traps live in:
 `apps/fittimer/docs/why.md`
@@ -44,7 +44,7 @@ Fit Timer is a Russian-first workout timer / training app.
 - App id: `ru.fittimer.app`
 - AppBase Core (shared with future apps): `packages/core/` — client `src/core/*.ts`, server `server/*.js`
 - Canonical frontend: `src/html/`, `src/styles/`, `src/app/`
-- Generated frontend outputs: root `index.html`, `style.css`, `app.js` — never edit directly (`app.js` is an ES module bundled by esbuild with Core; browser tests reach its internals only via the CI-only `__FIT_TEST_MODE__` bridge)
+- Generated frontend outputs: root `index.html`, `style.css` — never edit directly. The product runtime is ES modules in `src/app/` (entry `src/app/index.js`; each part's top level only declares, startup wiring lives in its `init*()`; guarded by `tests/app-module-graph-unit.js`), bundled by esbuild with Core; browser tests reach internals only via the CI-only `__FIT_TEST_MODE__` bridge (`scripts/test-bridge.mjs`)
 - Mobile runtime/bridge: `mobile.js`
 - Serverless backend: `api/`
 - Shared backend code: `lib/`
@@ -110,7 +110,7 @@ Use `.ai/project-map.md` for the full map. Common paths:
 - UI/layout/copy → targeted `src/html/` + `src/styles/`
 - App behavior/workouts/programs/progression → targeted `src/app/` chunk
 - Native share/haptics/notifications/mobile-only behavior → `mobile.js`, then native code only if required
-- Auth/account → `api/auth.js`, `lib/store.js`, relevant account code in `app.js`
+- Auth/account → `api/auth.js`, `lib/store.js`, relevant account code in `src/app/20-account.js`
 - Trainer → `api/trainer/[handle].js`, trainer-related frontend code, trainer tests
 - Catalog → `api/catalog.js`, `admin.html`, catalog frontend code
 - Sync → `api/sync.js`, sync frontend symbols, sync tests

@@ -2,10 +2,10 @@ name: Source parts — consistency
 
 on:
   pull_request:
-    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/supabase/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/app.js', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/supabase/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
   push:
     branches: [main]
-    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/app.js', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
+    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
 
 jobs:
   check:
@@ -72,7 +72,7 @@ jobs:
           node tests/appbase-ui-states-unit.js
           node tests/appbase-core-bundle-unit.js
           node tests/capabilities-unit.js
-          node tests/chunk-ownership-unit.js
+          node tests/app-module-graph-unit.js
           node tests/push-unit.js
           node tests/analytics-unit.js
           node tests/analytics-api.js

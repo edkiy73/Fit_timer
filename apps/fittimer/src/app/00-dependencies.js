@@ -1,39 +1,29 @@
-/* Product runtime dependencies. The concatenated product runtime (app.js) is an
-   ES module bundled by esbuild together with AppBase Core, so dependencies are
-   plain imports — no global bridge. Namespaces avoid clashes with legacy names
+/* Product-runtime adapters over AppBase Core and the typed product modules. Every
+   src/app module imports what it needs directly (i18n, options, other parts); only
+   these small adapter objects live here. Namespaces avoid clashes with legacy names
    such as the product's own setShown() helper. */
 import * as appbaseNotifications from '@appbase/core/notifications.js';
 import * as appbaseUi from '@appbase/core/ui.js';
-import * as fitSyncSchema from './src/app/sync-schema.js';
-import * as fitInfrastructure from './src/app/infrastructure.js';
-import * as fitIdentity from './src/app/identity.js';
-import * as fitRuntimeCompat from './src/app/runtime-compat.js';
-import FitAIProtocol from './lib/ai-protocol.js';
-import { I18N_RU } from './src/i18n/ru.js';
-import { I18N_EN } from './src/i18n/en.js';
-import {
-  I18N, LOCALE_META, SUPPORTED_LOCALES, appLocalePreference, appLocale, appLocaleStored,
-  normalizeLocale, systemLocale, normalizeLocalePreference, resolveLocalePreference, profileLocalePreference,
-  t, applyI18nValue, applyI18n, syncAccessibility, loadAppLocale, setAppLocale, localeTag,
-  aiOutputLanguage, aiCanonicalEnglish, aiCanonicalListEnglish,
-  CANONICAL_LABEL_KEYS, CANONICAL_DESC_KEYS, canonicalLabel, canonicalDescription
-} from './src/i18n/index.js';
+import * as fitSyncSchema from './sync-schema.js';
+import * as fitInfrastructure from './infrastructure.js';
+import * as fitIdentity from './identity.js';
+import * as fitRuntimeCompat from './runtime-compat.js';
 
-const appInfrastructure = {create: fitInfrastructure.createProductInfrastructure};
-const appIdentity = {
+export const appInfrastructure = {create: fitInfrastructure.createProductInfrastructure};
+export const appIdentity = {
   createAccount: fitIdentity.createFitTimerAccount,
   createProfile: fitIdentity.createFitTimerProfile
 };
-const appSync = {
+export const appSync = {
   profileKeys: fitSyncSchema.FIT_SYNC_PROFILE_DOC_KEYS,
   accountKeys: fitSyncSchema.FIT_SYNC_ACCOUNT_DOC_KEYS,
   registry: fitSyncSchema.FIT_SYNC_REGISTRY
 };
-const appNotifications = {
+export const appNotifications = {
   createPreferenceStore: appbaseNotifications.createPreferenceStore,
   limitCandidates: appbaseNotifications.limitCandidates
 };
-const appUi = {
+export const appUi = {
   setShown: appbaseUi.setShown,
   setText: appbaseUi.setText,
   applyCssVars: appbaseUi.applyCssVars,
@@ -43,4 +33,4 @@ const appUi = {
   setBusy: appbaseUi.setBusy,
   bindActions: appbaseUi.bindActions
 };
-const appRuntimeCompat = fitRuntimeCompat.appRuntimeCompat;
+export const appRuntimeCompat = fitRuntimeCompat.appRuntimeCompat;

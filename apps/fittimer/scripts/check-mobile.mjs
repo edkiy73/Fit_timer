@@ -29,7 +29,7 @@ if(config.appId !== 'ru.fittimer.app') throw new Error('Unexpected appId');
 if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 
 const html = await readFile('dist/index.html', 'utf8');
-// The product runtime (app.js) is bundled by esbuild into an ES-module chunk under dist/esm.
+// The product runtime (src/app ES modules) is bundled by esbuild into an ES-module chunk under dist/esm.
 const esmFiles = [];
 async function collectEsm(dir){
   for(const entry of await readdir(dir, {withFileTypes:true})){
