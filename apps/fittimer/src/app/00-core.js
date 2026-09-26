@@ -660,7 +660,7 @@ try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); exDraft = null; exIdx = -1; exOrig = ''; exFromWork = false; }} : null,
+  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExFromWorkShared(false); }} : null,
   scrUserEdit: ()=> userDirty() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
 };
@@ -890,7 +890,7 @@ function show(id, push = true){
   // Из-за этого ломалась правка упражнения прямо с тренировки: сходил на вкладку
   // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
   // бросив тренировку на середине.
-  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); exFromWork = false; }
+  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); setExFromWorkShared(false); }
   // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
   // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
   if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) settleQuickFinish(true);
@@ -1367,7 +1367,7 @@ function buildStartMenu(){
     mk(icon('download') + t('programs.saveFile'), ()=> exportProgramFile(p)),
     mk(icon('trash') + t('common.delete'), async ()=>{
       if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-      customPrograms = customPrograms.filter(x => x.id !== p.id);
+      setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
       await savePrograms();
       renderMine();
       goTab('scrPrograms');
@@ -1427,3 +1427,16 @@ function renderStartInfo(){
   renderStartOverview();
 }
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setFxVolShared(value){ fxVol = value; return fxVol; }
+function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
+function setMusicModeShared(value){ musicMode = value; return musicMode; }
+function setPrepSecShared(value){ prepSec = value; return prepSec; }
+function setReadySecShared(value){ readySec = value; return readySec; }
+function setSavedVoiceURIShared(value){ savedVoiceURI = value; return savedVoiceURI; }
+function setSideSecShared(value){ sideSec = value; return sideSec; }
+function setSoundOnShared(value){ soundOn = value; return soundOn; }
+function setStartFromShared(value){ startFrom = value; return startFrom; }
+function setVoiceLangShared(value){ voiceLang = value; return voiceLang; }
+function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }

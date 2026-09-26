@@ -10,7 +10,7 @@ function renderTrainerCard(){
   setShown('coachDeleteBlock', modeOn);
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
-  coachPhotoDraft = ph || '';
+  setCoachPhotoDraftShared(ph || '');
   $('coachPhotoPrev').innerHTML = ph ? `<img src="${esc(ph)}" alt="">` : icon('camera');
   if(document.activeElement !== $('coachLinks')){
     $('coachLinks').value = ((trainer && trainer.links) || '').replace(/^https?:\/\//i, '');
@@ -117,7 +117,7 @@ function renderClients(){
 
 /* ---- карточка подопечного ---- */
 function openClient(i){
-  clientIdx = i;
+  setClientIdxShared(i);
   fillClient();                 // сначала показываем что есть — экран не ждёт сети
   show('scrClient');
   const c = curClient();
@@ -1094,7 +1094,7 @@ async function addStoreItem(id){
   if(own){
     // уже добавлена — открываем экран старта. Каталог не корневой раздел, поэтому
     // «назад» с него сам не настроится: возвращаем туда, откуда пришли в каталог
-    startFrom = storeFrom;
+    setStartFromShared(storeFrom);
     openStart(own);
     return;
   }
@@ -1621,7 +1621,7 @@ function renderMine(){
     bDel.onclick = async ()=>{
       closeAllMenus();
       if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-      customPrograms = customPrograms.filter(x=>x.id!==p.id);
+      setCustomProgramsShared(customPrograms.filter(x=>x.id!==p.id));
       await savePrograms();
       renderMine();
     };

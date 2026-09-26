@@ -515,7 +515,8 @@ Product-side conversion continues chunk by chunk:
 - ✅ 2026-09-26: the product runtime reads `window.APP_CONFIG` only through `appRuntimeCompat.runtimeConfig()`; the legacy `FIT_TIMER_CONFIG` alias is no longer generated;
 - ✅ 2026-09-26: i18n is a real module (`src/i18n/ru.js`, `en.js` export dictionaries; `index.js` exports the i18n API and owns the active locale); `app.js` imports it instead of concatenating it;
 - dependency analysis of the remaining chunks (`src/app/00-core.js` … `90-events.js`): every chunk reads names from most others and several reassign each other's top-level state (e.g. `90-events.js` writes settings owned by `00-core.js`, `70-workout.js` writes builder draft state owned by `60-builder.js`). They cannot become separate modules until that shared mutable state is owned by one module and changed through functions;
-- next: give each piece of cross-chunk mutable state a single owner with setters (starting with builder draft state and audio/voice settings), then split chunks into modules one at a time, removing names from the test bridge as they get proper exports.
+- ✅ 2026-09-26: every top-level binding has a single owner chunk. The 38 bindings that other chunks used to reassign (builder draft, audio/voice settings, account login state, profiles, trainer/clients…) are now written only through the owner's `set<Name>Shared()` setter (104 call sites, rewritten with a scope-aware TypeScript codemod). `tests/chunk-ownership-unit.js` (CI) fails on any new cross-chunk reassignment;
+- next: split chunks into ES modules one at a time. Remaining blockers are circular imports between chunks and top-level code that runs at load time and touches other chunks' bindings; start with chunks whose top-level code only declares functions/state.
 
 ## Phase 14 — Dependency rules
 

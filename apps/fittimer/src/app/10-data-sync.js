@@ -1152,8 +1152,8 @@ async function applyRemoteAccountDocs(result){
     }
   }
   await writeAccountBucket(rec);
-  trainer = rec.bucket.trainer || trainer;
-  clients = Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients;
+  setTrainerShared(rec.bucket.trainer || trainer);
+  setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
   if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
 }
 
@@ -2133,3 +2133,11 @@ document.addEventListener('click', e => {
   closeAllMenus();
 }, true);
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setCalOffsetShared(value){ calOffset = value; return calOffset; }
+function setCurrentUserShared(value){ currentUser = value; return currentUser; }
+function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
+function setUsersShared(value){ users = value; return users; }
+function setWeightMetricShared(value){ weightMetric = value; return weightMetric; }
+function setWellMetricShared(value){ wellMetric = value; return wellMetric; }

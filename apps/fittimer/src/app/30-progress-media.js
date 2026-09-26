@@ -859,7 +859,7 @@ function startOnboarding(){
   // тёмном телефоне знакомство начиналось с белой вспышки во весь экран. Дальше
   // человек всё равно переключит её в настройках, а первое впечатление уже испорчено.
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  themeLight = !dark;
+  setThemeLightShared(!dark);
   applyTheme();
   show('scrOnboard', false);
 }
@@ -874,9 +874,9 @@ async function finishOnboardingCreate(){
     gender: '', age: null, photo: null,
     theme: 'system', locale: 'system'
   };
-  users = [u];
+  setUsersShared([u]);
   await saveUsers();
-  currentUser = u.id;
+  setCurrentUserShared(u.id);
   kvSet('currentUser', u.id);
   await loadIdentity();
   recordConsent('terms');

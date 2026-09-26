@@ -115,7 +115,7 @@ function applyVoiceCommand(input){
   else if(kind === lastCmdKind && now - lastCmdTime < 800) return true;
   lastCmdTime = now; lastCmdKind = kind;
   // свой же гонг и озвучка следующего шага не должны вернуться командой
-  lastAppSoundT = Math.max(lastAppSoundT, now + 700);
+  setLastAppSoundTShared(Math.max(lastAppSoundT, now + 700));
 
   if(kind === 'pause'){
     if(!state.paused){ setPause(true); beep(990, .1); }
@@ -771,3 +771,9 @@ document.addEventListener('click', e => {
   if(m.id !== 'dlg' && m.classList.contains('modal') && m.classList.contains('open')) dismissTopModal();
 });
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setHfModeShared(value){ hfMode = value; return hfMode; }
+function setRecognitionLangShared(value){ recognitionLang = value; return recognitionLang; }
+function setThemeLightShared(value){ themeLight = value; return themeLight; }
+function setVoiceWantedShared(value){ voiceWanted = value; return voiceWanted; }
