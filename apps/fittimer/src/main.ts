@@ -32,10 +32,30 @@ export async function loadProductRuntime(): Promise<void> {
   await import('./app/index.js');
 }
 
+/* Web only: esm/main.js has a fixed name, the chunks it imports are content-hashed.
+   A page (or a restored browser tab) that still holds main.js from a previous
+   deployment asks for chunk names that the new deployment no longer has, and the
+   runtime never starts: the person sees bare markup without the app. One reload
+   fetches the matching main.js; the marker prevents a reload loop when the failure
+   is real (offline, broken build), in which case the old fallback below applies. */
+const RELOAD_MARK = 'fitRuntimeReloadAt';
+function reloadOnceAfterFailedStart(): boolean {
+  if(!/^https?:$/.test(location.protocol)) return false;   // native shell: files are local
+  try{
+    const last = Number(sessionStorage.getItem(RELOAD_MARK) || 0);
+    if(Date.now() - last < 60000) return false;
+    sessionStorage.setItem(RELOAD_MARK, String(Date.now()));
+  }catch(_){
+    return false;
+  }
+  location.reload();
+  return true;
+}
+
 try{
   await loadMobileRuntime();
   await loadProductRuntime();
 }catch(error){
   console.error('Failed to start product runtime', error);
-  document.body.classList.remove('booting');
+  if(!reloadOnceAfterFailedStart()) document.body.classList.remove('booting');
 }
