@@ -59,8 +59,8 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
-  exFromWork, exitWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
-  setPause, settleQuickFinish, shareResult, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
+  completeStep, exFromWork, exitWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
+  setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
 } from './70-workout.js';
 import { SR, applyThemeFor, checkSchedules, hfMode, recognitionLang, setHfMode, setHfModeShared,
@@ -87,7 +87,7 @@ async function resumeWorkoutFromNativeNotification(){
   }
   const p = customPrograms.find(x => x && x.id === s.pid);
   if(!p){
-    await clearSession();
+    await clearSession(s.sessionId, s.pid);
     appRuntimeCompat.clearWorkoutState();
     return false;
   }
@@ -115,7 +115,7 @@ async function resumeWorkoutFromNativeNotification(){
     else if(savedDeadline > Date.now()) resumeDeadline = savedDeadline;
   }
 
-  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline, sessionId:s.sessionId});
+  startWorkout(stepIdx, s.elapsed, {skipPrep:true, resumeDeadline, sessionId:s.sessionId, outcomes:s.outcomes});
   return true;
 }
 
@@ -1094,7 +1094,7 @@ export function initEvents(){
     // Сначала восстанавливаем вариант, затем строим его шаги в startWorkout().
     state.planIdx = s.planIdx;
     state.current = customToProgram(state.raw, state.planIdx);
-    startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId});
+    startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId, outcomes:s.outcomes});
   };
   $('startFresh').onclick = async ()=>{
     $('startModal').classList.remove('open');
@@ -1123,8 +1123,8 @@ export function initEvents(){
   };
   $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
   $('startBackTop').onclick = ()=> goTab(startFrom);
-  $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); nextStep(); };
-  $('btnSkip').onclick  = nextStep;
+  $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); completeStep(); };
+  $('btnSkip').onclick  = skipStep;
   $('btnPrev').onclick  = prevStep;
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»

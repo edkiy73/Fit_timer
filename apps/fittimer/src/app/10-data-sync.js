@@ -1511,12 +1511,82 @@ function renderTotal(){
   $('totalCountWord').textContent = appLocale === 'ru' ? plural(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(n===1?'calendar.workoutOne':'calendar.workoutFew');
 }
 
-/* ================= НЕЗАВЕРШЁННАЯ СЕССИЯ ТРЕНИРОВКИ =================
-   Сохраняем место, на котором прервались, чтобы в следующий раз продолжить с него.
-   Храним не сами шаги (они пересобираются из программы), а координаты: какая программа,
-   какой вариант, нагрузка, номер шага и уже накопленное время. */
+/* ================= НЕЗАВЕРШЁННЫЕ СЕССИИ ТРЕНИРОВОК =================
+   Сессии храним отдельно друг от друга. Раньше был один workoutSession на профиль:
+   сохранённая тренировка A могла исчезнуть при старте/завершении тренировки B.
+   Теперь ключ содержит массив сессий, а удаление всегда ограничено текущей сессией
+   или текущей программой. Старую одиночную запись мигрируем при первом чтении. */
 
-function sessionKey(){ return pk('workoutSession'); }
+function sessionsKey(){ return pk('workoutSessionsV2'); }
+function legacySessionKey(){ return pk('workoutSession'); }
+
+function normalizeSessionOutcomeMap(value){
+  if(!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  Object.keys(value).forEach(k => {
+    const v = value[k];
+    if(v === 'done' || v === 'skipped') out[String(k)] = v;
+  });
+  return out;
+}
+
+function normalizeWorkoutSession(s){
+  if(!s || typeof s !== 'object' || !s.pid) return null;
+  return {
+    pid:String(s.pid),
+    sessionId:String(s.sessionId || ''),
+    planIdx:Math.max(0, parseInt(s.planIdx) || 0),
+    stepIdx:Math.max(0, parseInt(s.stepIdx) || 0),
+    total:Math.max(0, parseInt(s.total) || 0),
+    elapsed:Math.max(0, Number(s.elapsed) || 0),
+    load:Array.isArray(s.load) ? s.load : null,
+    stepDeadline:Math.max(0, Number(s.stepDeadline) || 0),
+    remaining:Math.max(0, Number(s.remaining) || 0),
+    paused:!!s.paused,
+    outcomes:normalizeSessionOutcomeMap(s.outcomes),
+    at:Math.max(0, Number(s.at) || Date.now())
+  };
+}
+
+async function readWorkoutSessions(){
+  let list = [];
+  try{
+    const raw = await kvGet(sessionsKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    list = (Array.isArray(parsed) ? parsed : []).map(normalizeWorkoutSession).filter(Boolean);
+  }catch(_){ list = []; }
+
+  // Одноразовая миграция старого формата. Не удаляем старую запись, пока новая
+  // коллекция не записалась успешно.
+  try{
+    const legacyRaw = await kvGet(legacySessionKey());
+    if(legacyRaw){
+      const legacy = normalizeWorkoutSession(JSON.parse(legacyRaw));
+      if(legacy){
+        if(!legacy.sessionId) legacy.sessionId = 'legacy_' + legacy.pid + '_' + legacy.at.toString(36);
+        if(!list.some(x => x.sessionId === legacy.sessionId)) list.push(legacy);
+        await kvSet(sessionsKey(), JSON.stringify(list));
+      }
+      await kvDel(legacySessionKey());
+    }
+  }catch(_){}
+
+  // Удалённая программа делает только свою сессию бессмысленной. Остальные
+  // незавершённые тренировки профиля должны остаться.
+  const valid = list.filter(x => customPrograms.some(p => String(p.id) === String(x.pid)));
+  if(valid.length !== list.length){
+    try{ await kvSet(sessionsKey(), JSON.stringify(valid)); }catch(_){}
+  }
+  return valid;
+}
+
+async function writeWorkoutSessions(list){
+  await kvSet(sessionsKey(), JSON.stringify(Array.isArray(list) ? list : []));
+}
+
+export async function loadSessions(){
+  return readWorkoutSessions();
+}
 
 export async function saveSession(){
   const raw = state.raw, cur = state.current;
@@ -1525,44 +1595,56 @@ export async function saveSession(){
   const elapsed = state.globalStart
     ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal - pausedNow)
     : 0;
-  const data = {
+  let sessionId = String(state.workoutSessionId || '');
+  if(!sessionId){
+    sessionId = 'ws_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+    state.workoutSessionId = sessionId;
+  }
+  const data = normalizeWorkoutSession({
     pid: raw.id,
-    sessionId: String(state.workoutSessionId || ''),
+    sessionId,
     planIdx: state.planIdx || 0,
     stepIdx: state.stepIdx || 0,
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
-    // Absolute deadline lets a cold notification launch distinguish three cases:
-    // timer still running, timer expired while WebView was dead, or non-timed step.
+    outcomes: state.stepOutcomes || {},
     stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
     remaining: Math.max(0, Number(state.remaining) || 0),
     paused: !!state.paused,
     at: Date.now()
-  };
-  await kvSet(sessionKey(), JSON.stringify(data));
+  });
+  const list = await readWorkoutSessions();
+  const next = list.filter(x => x.sessionId !== sessionId);
+  next.push(data);
+  await writeWorkoutSessions(next);
 }
 
 export async function loadSession(){
+  const list = await readWorkoutSessions();
+  if(!list.length) return null;
+  return list.slice().sort((a,b) => b.at - a.at)[0];
+}
+
+// Без аргументов удаляем только текущую сессию. Если живой sessionId отсутствует
+// (например, «начать заново» с экрана программы), удаляем сессии только этой программы.
+// Глобальной очистки всех незаконченных тренировок здесь больше нет.
+export async function clearSession(sessionId, pid){
   try{
-    const raw = await kvGet(sessionKey());
-    if(!raw) return null;
-    const s = JSON.parse(raw);
-    if(!s || !s.pid) return null;
-    // программу могли удалить — тогда сессия бессмысленна
-    if(!customPrograms.some(p => p.id === s.pid)){ await clearSession(); return null; }
-    return s;
-  }catch(e){ return null; }
+    const sid = String(sessionId || state.workoutSessionId || '');
+    const programId = String(pid || (state.raw && state.raw.id) || '');
+    if(!sid && !programId) return;
+    const list = await readWorkoutSessions();
+    const next = list.filter(x => sid ? x.sessionId !== sid : String(x.pid) !== programId);
+    if(next.length !== list.length) await writeWorkoutSessions(next);
+  }catch(_){}
 }
 
-export async function clearSession(){
-  try{ await kvDel(sessionKey()); }catch(e){}
-}
-
-// незавершённая сессия именно этой программы (для экрана перед стартом)
+// Последняя незавершённая сессия именно этой программы.
 export async function sessionForProgram(pid){
-  const s = await loadSession();
-  return (s && s.pid === pid) ? s : null;
+  const list = await readWorkoutSessions();
+  const matches = list.filter(x => String(x.pid) === String(pid));
+  return matches.sort((a,b) => b.at - a.at)[0] || null;
 }
 
 export function sessionAgeText(at){

@@ -219,14 +219,26 @@ export function startWorkout(fromIdx, elapsed, options){
   state.resumeElapsed = Math.max(0, parseInt(elapsed) || 0);
   state.resumeStepDeadline = Math.max(0, Number(opts.resumeDeadline) || 0);
   state.globalStart = 0;
-  // Упражнения, до которых тренировка реально дошла: только они считаются
-  // выполненными для прогрессии (commitFinish). Продолжение прерванной сессии
-  // (elapsed > 0) — всё до точки продолжения уже сделано; старт «с выбранного
-  // упражнения» — пропущенные до него не в счёт.
-  state.reachedEx = new Set();
-  if(state.resumeElapsed > 0){
-    state.steps.slice(0, state.stepIdx).forEach(s => { if(s.phase === 'work') state.reachedEx.add(s.exId || s.exName || s.title); });
+  // Результат каждого рабочего шага хранится отдельно: «готово» и «пропустить»
+  // больше не являются одним и тем же переходом вперёд.
+  state.stepOutcomes = (opts.outcomes && typeof opts.outcomes === 'object')
+    ? {...opts.outcomes}
+    : {};
+  // Совместимость со старыми сохранёнными сессиями: раньше результата по подходам
+  // не было, поэтому пройденные до точки продолжения шаги считаем выполненными.
+  if(state.resumeElapsed > 0 && !Object.keys(state.stepOutcomes).length){
+    state.steps.slice(0, state.stepIdx).forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
   }
+  // reachedEx пока оставляем как совместимый производный набор для старой логики
+  // прогрессии. В следующей пачке она будет считать только полностью выполненные
+  // упражнения по stepOutcomes.
+  state.reachedEx = new Set();
+  state.steps.forEach((step, i) => {
+    if(step.phase !== 'work' || state.stepOutcomes[workoutStepKey(step, i)] !== 'done') return;
+    state.reachedEx.add(step.exId || step.exName || step.title);
+  });
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -380,7 +392,6 @@ function renderStep(){
   const step = state.steps[state.stepIdx];
   const total = state.steps.length;
   if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
-  if(step && step.phase === 'work' && state.reachedEx) state.reachedEx.add(step.exId || step.exName || step.title);
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
   setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
@@ -577,8 +588,10 @@ function renderStep(){
         state.remaining = Math.max(0, Math.ceil((state.stepDeadline - Date.now()) / 1000));
         if(state.remaining <= 0){
           clearStepTimer();
-          if(step.phase === 'work') endSignal(); // после отдыха вместо сигнала прозвучит гонг нового упражнения
-          nextStep();
+          if(step.phase === 'work'){
+            endSignal(); // после отдыха вместо сигнала прозвучит гонг нового упражнения
+            completeStep();
+          } else nextStep();
           return;
         }
         cd.innerHTML = tnum(fmt(state.remaining));
@@ -636,11 +649,42 @@ export function refreshDetailsFade(){
   setShown('scrollCue', below > 24);
 }
 
+export function workoutStepKey(step, index){
+  if(!step || step.phase !== 'work') return '';
+  const ex = String(step.exId || step.exName || step.title || 'exercise');
+  const round = Number(step.round) || 0;
+  const setNo = Number(step.setNo) || 1;
+  const side = Number(step.side) || 0;
+  return [ex, round, setNo, side, Math.max(0, Number(index) || 0)].join('|');
+}
+
+function markCurrentStep(outcome){
+  const step = state.steps && state.steps[state.stepIdx];
+  if(!step || step.phase !== 'work') return;
+  state.stepOutcomes = state.stepOutcomes || {};
+  const key = workoutStepKey(step, state.stepIdx);
+  if(key) state.stepOutcomes[key] = outcome;
+  if(outcome === 'done' && state.reachedEx){
+    state.reachedEx.add(step.exId || step.exName || step.title);
+  }
+  saveSession().catch(()=>{});
+}
+
 export function nextStep(){
   clearStepTimer();
   state.stepIdx++;
   if(state.stepIdx >= state.steps.length) finishWorkout();
   else renderStep();
+}
+
+export function completeStep(){
+  markCurrentStep('done');
+  nextStep();
+}
+
+export function skipStep(){
+  markCurrentStep('skipped');
+  nextStep();
 }
 
 /* ---- подсказка «можно усложнить» ----
@@ -1067,6 +1111,8 @@ export function settleQuickFinish(keep){
 
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
+  const finishedSessionId = String(state.workoutSessionId || '');
+  const finishedProgramId = String((state.raw && state.raw.id) || '');
   state.live = false;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
@@ -1075,7 +1121,7 @@ function finishWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
-  clearSession(); // тренировка пройдена до конца — продолжать больше нечего
+  clearSession(finishedSessionId, finishedProgramId); // удаляем только эту тренировку
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;

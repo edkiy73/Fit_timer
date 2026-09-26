@@ -8,7 +8,7 @@ import { DAYS, curUser, customPrograms, kvSet, loadSession, localISO, normPlans,
   progActive, stats
 } from './10-data-sync.js';
 import { isPremium } from './20-account.js';
-import { nextStep, setPause, stopSpeech } from './70-workout.js';
+import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
 import { getNotificationPrefs, refreshVoicePackUI } from './90-events.js';
 
 /* ================= ТЕМА ================= */
@@ -102,12 +102,17 @@ function applyVoiceCommand(input){
   const pause = new Set(['пауза','на паузу','поставь на паузу','стоп','подожди','остановись','pause','stop','wait']);
   // те же фразы, что в словаре распознавателя Android (VoiceCommands.java)
   const resume = new Set(['продолжить','продолжай','продолжаем','продолжи','поехали','можно продолжать','дальше пошли','continue','resume','go on','keep going']);
-  const next = new Set(['дальше','готово','готов','готова','готовы','пропустить','пропусти','следующее','следующий','сделал','закончил','завершить','next','done','skip','finished']);
+  const skip = new Set(['пропустить','пропусти','skip']);
+  const done = new Set(['дальше','готово','готов','готова','готовы','следующее','следующий','сделал','закончил','завершить','next','done','finished']);
 
-  let kind = ['pause','resume','next'].includes(nativeKind) ? nativeKind : '';
+  // Старый нативный распознаватель присылает kind=next и для «готово», и для
+  // «пропустить». Текст команды у нас тоже есть, поэтому намерение восстанавливаем
+  // здесь без несовместимого изменения Android-моста.
+  let kind = skip.has(t) ? 'skip' : (done.has(t) ? 'done' : '');
+  if(!kind && ['pause','resume'].includes(nativeKind)) kind = nativeKind;
+  else if(!kind && nativeKind === 'next') kind = 'done';
   if(!kind && resume.has(t)) kind = 'resume';
   else if(!kind && pause.has(t)) kind = 'pause';
-  else if(!kind && next.has(t)) kind = 'next';
   if(!kind) return false;
 
   // Вторая линия защиты после дедупа по фразе (см. onresult): распознавание могло
@@ -118,7 +123,7 @@ function applyVoiceCommand(input){
   // именно она: для неё окно широкое и общее для всех команд. «Пауза» и
   // «продолжить» повтором ничего не ломают, им хватает узкой защиты от эха, иначе
   // сказанное сразу после «пауза» слово «продолжить» просто не сработает.
-  if(kind === 'next'){ if(now - lastCmdTime < 1500) return true; }
+  if(kind === 'done' || kind === 'skip'){ if(now - lastCmdTime < 1500) return true; }
   else if(kind === lastCmdKind && now - lastCmdTime < 800) return true;
   lastCmdTime = now; lastCmdKind = kind;
   // свой же гонг и озвучка следующего шага не должны вернуться командой
@@ -132,10 +137,11 @@ function applyVoiceCommand(input){
     if(state.paused){ setPause(false); beep(990, .1); }
     return true;
   }
-  // next
+  // завершить / пропустить текущий рабочий шаг
   if(state.paused) setPause(false);
-  if(step.kind === 'click'){ $('btnDone').click(); }
-  else { beep(990, .1); nextStep(); }
+  beep(990, .1);
+  if(kind === 'skip') skipStep();
+  else completeStep();
   return true;
 }
 
@@ -201,7 +207,7 @@ function startHeadset(){
       if(!step || !$('scrWork').classList.contains('on')) return;
       if(state.paused) setPause(false);
       if(step.kind === 'click') $('btnDone').click();
-      else { beep(990, .1); nextStep(); }
+      else { beep(990, .1); completeStep(); }
       try{ hsAudio.play().catch(()=>{}); }catch(e){}
     };
     navigator.mediaSession.setActionHandler('play', advance);
