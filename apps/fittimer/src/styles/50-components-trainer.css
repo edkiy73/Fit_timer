@@ -341,8 +341,10 @@
      input:focus рисует акцентную рамку и кольцо вокруг самого input — а он тут
      голый, без своей формы, и кольцо ложилось прямоугольником ровно по тексту
      посреди строки поиска. Гасим его на поле и переносим на контейнер. */
+  /* Поле растянуто на всю высоту строки: иначе нажатие выше или ниже текста
+     попадало в рамку, и клавиатура не открывалась. */
   .store-search input{
-    flex:1;min-width:0;border:none;background:none;
+    flex:1;min-width:0;align-self:stretch;border:none;background:none;
     font-family:var(--font-text);font-size:15px;color:var(--ink);
   }
   .store-search input:focus{outline:none;border:none;box-shadow:none}

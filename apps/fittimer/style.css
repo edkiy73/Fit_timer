@@ -1165,6 +1165,7 @@ body.booting .app{visibility:hidden}
   .load-chip{flex:1;padding:0 7px;min-height:33px;border-radius:11px;border:1px solid var(--line);background-color:var(--card);color:var(--muted);font-family:var(--font-text);font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
   .load-chip.act{background:var(--work);border-color:var(--accent-line);color:#fff}
   .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-top:1px solid var(--line);font-size:15px}
+  .pref-row:has(> .switch){cursor:pointer;-webkit-tap-highlight-color:transparent}
   .pref-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
   .prefs{margin-bottom:14px}
   .prefs .pref-row:first-child{border-top:none;padding-top:4px}
@@ -1657,6 +1658,9 @@ body.booting .app{visibility:hidden}
   /* поля внутри карточки — на фоне страницы, чтобы не сливаться */
   /* внутри карточки разделительные линии не нужны */
   .card-block .pref-row,.card-block .collapse-head{border-top:none;padding:0}
+  /* Без отступов заголовок раздела был целью в 18 точек по высоте. Отступ с
+     равным отрицательным полем расширяет зону нажатия, не сдвигая вёрстку. */
+  .card-block > .collapse-head{padding:13px 0;margin:-13px 0 !important}
   .card-block .field,.card-block .row2,.card-block .step-grid{margin:0}
   /* ============ РИТМ ВНУТРИ КАРТОЧКИ ============
      Отступы внутри карточки задаёт только gap, а gap работает между ПРЯМЫМИ
@@ -2406,8 +2410,10 @@ body.booting .app{visibility:hidden}
      input:focus рисует акцентную рамку и кольцо вокруг самого input — а он тут
      голый, без своей формы, и кольцо ложилось прямоугольником ровно по тексту
      посреди строки поиска. Гасим его на поле и переносим на контейнер. */
+  /* Поле растянуто на всю высоту строки: иначе нажатие выше или ниже текста
+     попадало в рамку, и клавиатура не открывалась. */
   .store-search input{
-    flex:1;min-width:0;border:none;background:none;
+    flex:1;min-width:0;align-self:stretch;border:none;background:none;
     font-family:var(--font-text);font-size:15px;color:var(--ink);
   }
   .store-search input:focus{outline:none;border:none;box-shadow:none}
