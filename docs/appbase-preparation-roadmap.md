@@ -614,8 +614,9 @@ How the app consumes Core:
 
 CI: every workflow runs with `working-directory: apps/fittimer`; `source-consistency.yml` also runs `npm run check` in `packages/core`; path filters include `packages/core/**` so a Core change re-checks the app.
 
-Owner steps outside the repository (required once, at merge time):
-1. Vercel project `fittimer99` → Settings → Build and Deployment → **Root Directory = `apps/fittimer`**, and keep **"Include files outside the root directory in the Build Step"** enabled (server functions import `packages/core/server`).
+Owner steps outside the repository (required once):
+1. ✅ 2026-09-26: Vercel project `fittimer99` → Settings → Build and Deployment → **Root Directory = `apps/fittimer`**; keep **"Include files outside the root directory in the Build Step"** enabled (server functions import `packages/core/server`).
+   The app's ignored-build step compares against the last *successful* deployment of the branch, so after such a settings change a redeploy of an unchanged commit is skipped; push a commit with `[deploy]` in its message to force the first build.
 2. Nothing changes for Android signing, package id, App Links or iOS; only CI paths moved.
 
 The previous Vercel build (`npm run build:sources`) never produced `esm/main.js`, which `index.html` has loaded since the ES-module startup; the app's `vercel.json` now builds with `npm run build:web`.
