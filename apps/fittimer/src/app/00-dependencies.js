@@ -9,6 +9,15 @@ import * as fitInfrastructure from './src/app/infrastructure.js';
 import * as fitIdentity from './src/app/identity.js';
 import * as fitRuntimeCompat from './src/app/runtime-compat.js';
 import FitAIProtocol from './lib/ai-protocol.js';
+import { I18N_RU } from './src/i18n/ru.js';
+import { I18N_EN } from './src/i18n/en.js';
+import {
+  I18N, LOCALE_META, SUPPORTED_LOCALES, appLocalePreference, appLocale, appLocaleStored,
+  normalizeLocale, systemLocale, normalizeLocalePreference, resolveLocalePreference, profileLocalePreference,
+  t, applyI18nValue, applyI18n, syncAccessibility, loadAppLocale, setAppLocale, localeTag,
+  aiOutputLanguage, aiCanonicalEnglish, aiCanonicalListEnglish,
+  CANONICAL_LABEL_KEYS, CANONICAL_DESC_KEYS, canonicalLabel, canonicalDescription
+} from './src/i18n/index.js';
 
 const appInfrastructure = {create: fitInfrastructure.createProductInfrastructure};
 const appIdentity = {

@@ -86,8 +86,8 @@
     },
     "src/app/00-dependencies.js": {
       "kind": "frontend-js",
-      "lines": 38,
-      "chars": 1610
+      "lines": 47,
+      "chars": 2173
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
@@ -363,7 +363,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 2935,
-      "chars": 135635,
+      "chars": 135644,
       "symbols": [
         "add",
         "ageError",
@@ -793,7 +793,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 774,
-      "chars": 33011,
+      "chars": 33026,
       "symbols": [
         "add",
         "advance",

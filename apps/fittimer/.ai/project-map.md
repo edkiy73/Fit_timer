@@ -9,7 +9,7 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 ```text
 Web
   src/html/* + src/styles/* + src/app/* (+ AppBase Core via @appbase/core)
-  -> generated index.html + style.css + app.js (ES module: src/app chunks + imports of Core/product modules);
+  -> generated index.html + style.css + app.js (ES module: src/app chunks + imports of Core, product modules and src/i18n);
      esbuild bundles src/main.ts → mobile.js → app.js (+ Core) into dist/esm/* (mobile) or esm/* (Vercel)
           |
           +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage

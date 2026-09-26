@@ -1,20 +1,25 @@
-/* ================= ЛОКАЛИЗАЦИЯ ================= */
-const I18N = {ru: I18N_RU, en: I18N_EN};
-const LOCALE_META = Object.freeze({
+/* ================= ЛОКАЛИЗАЦИЯ =================
+   ES module: dictionaries are imported, the i18n API is exported. The product runtime
+   (app.js) imports what it uses; the active locale lives here and changes only through
+   setAppLocale()/loadAppLocale(), so importers always read the live value. */
+import { I18N_RU } from './ru.js';
+import { I18N_EN } from './en.js';
+export const I18N = {ru: I18N_RU, en: I18N_EN};
+export const LOCALE_META = Object.freeze({
   ru: {tag:'ru-RU', ai:'Russian'},
   en: {tag:'en-US', ai:'English'}
 });
-const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
-let appLocalePreference = 'system'; // system | supported locale
-let appLocale = systemLocale();       // effective locale used by UI/TTS/API
-let appLocaleStored = false;
+export const SUPPORTED_LOCALES = Object.freeze(Object.keys(I18N));
+export let appLocalePreference = 'system'; // system | supported locale
+export let appLocale = systemLocale();       // effective locale used by UI/TTS/API
+export let appLocaleStored = false;
 
-function normalizeLocale(value){
+export function normalizeLocale(value){
   const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
   const base = raw.split('-')[0];
   return SUPPORTED_LOCALES.includes(base) ? base : 'en';
 }
-function systemLocale(){
+export function systemLocale(){
   try{
     const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
     for(const value of langs){
@@ -24,17 +29,17 @@ function systemLocale(){
   }catch(_){}
   return 'en';
 }
-function normalizeLocalePreference(value){
+export function normalizeLocalePreference(value){
   return String(value || '').toLowerCase() === 'system' ? 'system' : normalizeLocale(value);
 }
-function resolveLocalePreference(value){
+export function resolveLocalePreference(value){
   const pref = normalizeLocalePreference(value);
   return pref === 'system' ? systemLocale() : normalizeLocale(pref);
 }
-function profileLocalePreference(u){
+export function profileLocalePreference(u){
   return normalizeLocalePreference(u && u.locale ? u.locale : 'system');
 }
-function t(key, vars){
+export function t(key, vars){
   const dict = I18N[appLocale] || I18N.en;
   const fallback = I18N.en[key] != null ? I18N.en[key] : I18N.ru[key];
   let out = dict[key] != null ? dict[key] : (fallback != null ? fallback : key);
@@ -48,7 +53,7 @@ function t(key, vars){
 // Если код экрана позже изменил тот же текст/HTML/атрибут, считаем его владельцем до
 // следующего собственного render. Это не даёт фоновому sync/смене профиля на секунду
 // возвращать кнопки из «Переключиться / Остаться» в «Понятно / Отмена».
-function applyI18nValue(el, slot, next, attr){
+export function applyI18nValue(el, slot, next, attr){
   const mark = 'i18nApplied' + slot;
   const read = () => {
     if(attr){
@@ -71,7 +76,7 @@ function applyI18nValue(el, slot, next, attr){
   return true;
 }
 
-function applyI18n(root){
+export function applyI18n(root){
   root = root || document;
   document.documentElement.lang = appLocale;
   document.title = t('app.title');
@@ -83,7 +88,7 @@ function applyI18n(root){
   syncAccessibility(root);
 }
 
-function syncAccessibility(root){
+export function syncAccessibility(root){
   root = root || document;
   root.querySelectorAll('.back-chip').forEach(el => {
     el.setAttribute('aria-label', t('common.back'));
@@ -103,14 +108,14 @@ function syncAccessibility(root){
   });
 }
 
-async function loadAppLocale(){
+export async function loadAppLocale(){
   appLocaleStored = false;
   appLocalePreference = 'system';
   appLocale = systemLocale();
   applyI18n();
   return appLocale;
 }
-async function setAppLocale(value, opts){
+export async function setAppLocale(value, opts){
   const pref = normalizeLocalePreference(value);
   const next = resolveLocalePreference(pref);
   const changed = next !== appLocale;
@@ -127,16 +132,16 @@ try{
     if(appLocalePreference === 'system') setAppLocale('system', {persist:false});
   });
 }catch(_){}
-function localeTag(value){
+export function localeTag(value){
   const code = value == null ? appLocale : normalizeLocale(value);
   return (LOCALE_META[code] && LOCALE_META[code].tag) || code;
 }
-function aiOutputLanguage(){
+export function aiOutputLanguage(){
   const meta = LOCALE_META[appLocale] || LOCALE_META.en;
   return meta.ai || 'English';
 }
 
-function aiCanonicalEnglish(value){
+export function aiCanonicalEnglish(value){
   const map = {
     'Новичок':'beginner','Средний':'intermediate','Продвинутый':'advanced',
     'Похудеть':'lose weight','Подтянуть всё тело':'tone the whole body','Ягодицы и пресс':'glutes and core',
@@ -155,11 +160,11 @@ function aiCanonicalEnglish(value){
   };
   return map[String(value || '')] || String(value || '');
 }
-function aiCanonicalListEnglish(values){
+export function aiCanonicalListEnglish(values){
   return (values || []).map(aiCanonicalEnglish).join(', ');
 }
 
-const CANONICAL_LABEL_KEYS = {
+export const CANONICAL_LABEL_KEYS = {
   'Новичок':'option.level.beginner','Средний':'option.level.intermediate','Продвинутый':'option.level.advanced',
   'Похудеть':'option.goal.loseWeight','Подтянуть всё тело':'option.goal.tone','Ягодицы и пресс':'option.goal.glutesCore',
   'Плоский живот':'option.goal.flatStomach','Сила и выносливость':'option.goal.strength','Рельеф мышц':'option.goal.definition',
@@ -178,11 +183,11 @@ const CANONICAL_LABEL_KEYS = {
   'Пн':'day.mon','Вт':'day.tue','Ср':'day.wed','Чт':'day.thu','Пт':'day.fri','Сб':'day.sat','Вс':'day.sun',
   'Понедельник':'day.monFull','Вторник':'day.tueFull','Среда':'day.wedFull','Четверг':'day.thuFull','Пятница':'day.friFull','Суббота':'day.satFull','Воскресенье':'day.sunFull'
 };
-const CANONICAL_DESC_KEYS = {
+export const CANONICAL_DESC_KEYS = {
   'Круговая':'option.desc.circuit','Силовая':'option.desc.strength','Смешанная':'option.desc.mixed',
   'С разминкой':'option.desc.warm','Без разминки':'option.desc.noWarm'
 };
-function canonicalLabel(value){
+export function canonicalLabel(value){
   const raw=String(value == null ? '' : value);
   const key=CANONICAL_LABEL_KEYS[raw];
   if(key) return t(key);
@@ -190,7 +195,7 @@ function canonicalLabel(value){
   if(m) return appLocale === 'ru' ? raw : (m[1] + m[2] + ' min');
   return raw;
 }
-function canonicalDescription(value){
+export function canonicalDescription(value){
   const key=CANONICAL_DESC_KEYS[String(value || '')];
   return key ? t(key) : '';
 }

@@ -3,7 +3,8 @@ import { createContext, Script } from 'node:vm';
 
 async function loadDictionary(path, name){
   const src = await readFile(path, 'utf8');
-  return Function(src + '\nreturn ' + name + ';')();
+  // Dictionaries are ES modules (`export const I18N_RU = {...}`); evaluate the literal only.
+  return Function(src.replace(/^export\s+/m, '') + '\nreturn ' + name + ';')();
 }
 
 const ru = await loadDictionary('src/i18n/ru.js', 'I18N_RU');
@@ -92,8 +93,10 @@ for(const file of htmlFiles){
   const ruSrc = await readFile('src/i18n/ru.js', 'utf8');
   const enSrc = await readFile('src/i18n/en.js', 'utf8');
   const runtimeSrc = await readFile('src/i18n/index.js', 'utf8');
+  // The i18n files are ES modules; run them as one classic script for this DOM check.
+  const asScript = src => src.replace(/^import .*$/gm, '').replace(/^export\s+/gm, '');
   new Script(
-    ruSrc + '\n' + enSrc + '\n' + runtimeSrc +
+    asScript(ruSrc) + '\n' + asScript(enSrc) + '\n' + asScript(runtimeSrc) +
     '\n;globalThis.__i18nRuntimeTest={applyI18n,setAppLocale};'
   ).runInContext(context);
 

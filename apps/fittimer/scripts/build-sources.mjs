@@ -8,9 +8,6 @@ const targets = [
   {
     target: 'app.js',
     parts: [
-      'src/i18n/ru.js',
-      'src/i18n/en.js',
-      'src/i18n/index.js',
       'src/app/00-dependencies.js',
       'src/app/00-core.js',
       'src/app/10-data-sync.js',
@@ -54,7 +51,8 @@ const targets = [
    still inspect and stub product internals the way they did when app.js was a classic
    script. This generated bridge re-exposes every top-level binding on globalThis, but
    only when the test harness sets globalThis.__FIT_TEST_MODE__ (never in production).
-   Mutable bindings (let/var/function) get setters so test stubs keep replacing them. */
+   Mutable bindings (let/var/function) get setters so test stubs keep replacing them;
+   imported bindings (e.g. the i18n API) are exposed read-only. */
 function testBridge(source){
   const file = ts.createSourceFile('app.js', source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
   const names = new Map();
@@ -66,6 +64,12 @@ function testBridge(source){
   for(const stmt of file.statements){
     if(ts.isFunctionDeclaration(stmt) && stmt.name) add(stmt.name.text, true);
     else if(ts.isClassDeclaration(stmt) && stmt.name) add(stmt.name.text, false);
+    else if(ts.isImportDeclaration(stmt) && stmt.importClause){
+      const clause = stmt.importClause;
+      if(clause.name) add(clause.name.text, false);
+      const bindings = clause.namedBindings;
+      if(bindings && ts.isNamedImports(bindings)) for(const el of bindings.elements) add(el.name.text, false);
+    }
     else if(ts.isVariableStatement(stmt)){
       const mutable = !(stmt.declarationList.flags & ts.NodeFlags.Const);
       for(const decl of stmt.declarationList.declarations) for(const name of bindingNames(decl.name)) add(name, mutable);
