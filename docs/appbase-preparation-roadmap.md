@@ -507,9 +507,12 @@ The Core side of Phase 13 is done:
 - `mobile.js` is an ES module that imports Core (`mobile`, `native-notifications`, `speech`) explicitly and no longer reads FitTimer product state;
 - the legacy product bundle receives its dependencies once through a transient `FitTimerModules` bridge (`src/app/00-dependencies.js`) that is deleted right after startup.
 
-Product-side conversion is in progress and continues chunk by chunk:
-- runtime compatibility (the only reader of `window.FitNative`/`window.Capacitor`/`window.storage`) is now the ESM module `src/app/runtime-compat.ts`;
-- the remaining `src/app/*.js` chunks are still concatenated into `app.js` with a shared global scope.
+Product-side conversion continues chunk by chunk:
+- runtime compatibility (the only reader of `window.FitNative`/`window.Capacitor`/`window.storage`) is the ESM module `src/app/runtime-compat.ts`;
+- ✅ 2026-09-26: the product runtime is no longer a classic global script. The concatenated `app.js` is an ES module inside the esbuild graph: `src/app/00-dependencies.js` imports Core (`@appbase/core/*`), the typed product modules and the shared AI protocol directly; `main.ts` loads the native bridge (`esm/mobile.js`) and then `import('../app.js')` as a lazy chunk. The temporary `FitTimerModules` global bridge is gone, and top-level product names no longer leak onto `window`;
+- browser tests still inspect/stub product internals; `scripts/build-sources.mjs` appends a generated bridge that re-exposes every top-level binding on `globalThis` only when `window.__FIT_TEST_MODE__ === true` (set by the browser-tests workflow in `dist/app.config.js`, never in production). Shrink it as tests move to behavior-level assertions;
+- the build keeps UTF-8 and does not minify (`charset: 'utf8'`): `parseKeys()` reads the parser's own source to discover keys;
+- next: split the concatenated chunks into real modules with explicit imports/exports, starting with leaf chunks (i18n, platform) and removing names from the test bridge as they get proper exports.
 
 ## Phase 14 — Dependency rules
 

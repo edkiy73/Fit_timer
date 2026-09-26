@@ -3380,356 +3380,43 @@ try{
   });
   a11yObserver.observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:['class']});
 }catch(_){}
-/* Shared Fit Timer AI protocol contract.
-   Browser: globalThis.FitAIProtocol
-   Server:  require('../lib/ai-protocol')
-   Keep this file dependency-free so the same rules are used by the app and admin API. */
-(function(root){
-  const OPTIONAL_EXERCISE_LABELS = [
-    'ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ',
-    'ФОРМАТ','ЗНАЧЕНИЕ','ВЕС','ПОДХОДЫ',
-    'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА',
-    'ОТДЫХ','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
-    'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
-    'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
-    'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
-    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ',
-    'ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ','ЗАМЕНА ОПИСАНИЕ','ВИДЕО'
-  ];
+/* Product runtime dependencies. The concatenated product runtime (app.js) is an
+   ES module bundled by esbuild together with AppBase Core, so dependencies are
+   plain imports — no global bridge. Namespaces avoid clashes with legacy names
+   such as the product's own setShown() helper. */
+import * as appbaseNotifications from '@appbase/core/notifications.js';
+import * as appbaseUi from '@appbase/core/ui.js';
+import * as fitSyncSchema from './src/app/sync-schema.js';
+import * as fitInfrastructure from './src/app/infrastructure.js';
+import * as fitIdentity from './src/app/identity.js';
+import * as fitRuntimeCompat from './src/app/runtime-compat.js';
+import FitAIProtocol from './lib/ai-protocol.js';
 
-  const machineLanguageRules = outputLanguage => `IMPORTANT LANGUAGE RULE:
-- All instructions in this prompt are in English.
-- User-visible content values must be written in ${outputLanguage}.
-- Protocol field names, weekday tokens, muscle tokens, format tokens, and yes/no tokens below are machine-readable constants. Keep them EXACTLY unchanged even when user-visible content is English.
-- Never translate canonical muscle tokens or weekday tokens.`;
-
-  const progressionRules = () => `=== TRAINING AND PROGRESSION RULES ===
-Act like a deeply experienced strength-and-conditioning coach. Base decisions on established exercise science, biomechanics, load management, technique, recovery and progression principles. Treat all explicitly provided user data as authoritative constraints and build a program that genuinely matches the stated goal, level, equipment, schedule, duration and preferences. Do not make the whole program easier just because some unrelated details are unknown. Use extra caution only where uncertainty truly matters: absolute starting loads when strength is unknown, medical or pain-related risk, and unusually aggressive progression. Do not invent facts about the user or pretend certainty where context is missing.
-
-- ПРОГРЕССИЯ at PROGRAM level means: after N completions of a given exercise, the app checks with the user whether to raise its load — it does NOT raise the load automatically, and it is per exercise, not a single program-wide counter. It does NOT mean +N reps or +N kg. As a default, beginners often need roughly 3-6 completed workouts between checks and experienced users roughly 2-4, but adapt to the actual program and recovery.
-- Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
-- For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
-- For weighted reps, distinguish three cases:
-  1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
-  2) rep progression: positive ШАГ ПОВТОРОВ;
-  3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
-- Whenever ШАГ ВЕСА is positive (cases 1 and 3 above), always give ПОТОЛОК ВЕСА — weight that grows without any realistic cap is the actual injury/plateau risk, not a missing field. This applies even when the user hasn't picked a starting weight yet.
-- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
-- ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
-- СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
-- If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
-- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load without downgrading the overall program difficulty.
-- Respect the declared fitness level. Beginner, intermediate and advanced programs should differ meaningfully in exercise complexity, volume, density and progression where appropriate; do not silently turn an intermediate or advanced request into a beginner workout.
-- Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
-- Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
-- Keep an exercise unilateral or bilateral unless the request gives a reason to change it (e.g. equipment, a limitation, back support); do not switch it arbitrarily.
-- Never invent equipment the user does not have.
-- Do not diagnose or claim medical safety. Respect stated limitations and avoid exercises that clearly conflict with them.`;
-
-  const exerciseSchema = outputLanguage => `=== EXERCISE PROTOCOL ===
-УПРАЖНЕНИЕ: exercise name in ${outputLanguage}
-ОПИСАНИЕ: 3-4 practical sentences in ${outputLanguage} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
-МЫШЦЫ: comma-separated tokens STRICTLY from: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
-ОШИБКИ: 1-2 common mistakes in ${outputLanguage}, max 300 characters (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
-ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
-ВЕС: starting kilograms for weighted formats
-ПОДХОДЫ: consecutive sets before the next exercise, 1-10
-СТОРОНА: "да" if ЗНАЧЕНИЕ is performed separately for each side; omit otherwise
-РАЗМИНКА: "да" for warm-up exercises; omit otherwise
-ОТДЫХ: seconds between sets
-ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
-УСЛОЖНЯТЬ: "да" or "нет"
-ШАГ: progression increment for unweighted reps/time only
-ШАГ ПОВТОРОВ: reps increment for weighted reps, only when reps themselves should progress
-ШАГ ВРЕМЕНИ: seconds increment for weighted time, only when time itself should progress
-ШАГ ВЕСА: kg increment for weighted formats
-ПОТОЛОК: required ceiling for progressive unweighted formats
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
-ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
-ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
-ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
-ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
-ВИДЕО: real technique URL only if confident it exists; otherwise omit`;
-
-  const programSchema = outputLanguage => `=== PROGRAM PROTOCOL ===
-ПРОГРАММА: program name in ${outputLanguage}
-ОПИСАНИЕ ПРОГРАММЫ: up to 1000 characters on ONE line in ${outputLanguage}; explain purpose, frequency, expected result, what to watch, and when to reduce load
-ВРЕМЯ: HH:MM (optional)
-ПРОГРЕССИЯ: integer 1-15 or "нет"; number of completed executions of each progressive exercise between checks whether to raise its load
-ЧЕРЕДОВАНИЕ: "да" or "нет"; "да" means variants rotate A-B-A independently of weekdays
-ДНИ ТРЕНИРОВОК: comma-separated canonical tokens Пн, Вт, Ср, Чт, Пт, Сб, Вс; only for shared schedule when ЧЕРЕДОВАНИЕ: да
-
-Workout variants:
-- one repeating workout = one variant
-- different exercise sets = multiple variants, max 7
-- every variant starts with ДЕНЬ:
-ДЕНЬ: canonical weekday tokens for this variant; leave empty when ЧЕРЕДОВАНИЕ: да
-КРУГИ: 1-10; repetitions of the ENTIRE exercise list
-ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
-
-КРУГИ and ПОДХОДЫ are independent:
-- circuit: usually КРУГИ 2-5 and ПОДХОДЫ 1
-- strength: usually КРУГИ 1 and ПОДХОДЫ 3-4
-- mixed: both can be >1 when total volume remains sensible
-
-${exerciseSchema(outputLanguage)}`;
-
-  // Раньше здесь было два жёстко разных набора правил (свободная перестройка /
-  // запрет структуры), а клиент выбирал между ними regex-угадайкой по тексту
-  // запроса — и либо душил «добавь упражнение», либо разрешал больше, чем
-  // просили. Один набор правил учит модель судить о масштабе изменения сама,
-  // а итог всё равно проверяется после генерации (парсинг + семантический diff),
-  // а не запрещается заранее.
-  const editRules = () => `=== EDIT RULES ===
-- Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
-- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
-- Keep existing protocol lines that stay relevant after the change; never drop a line only because it looks unnecessary (a missing ШАГ / ШАГ ВЕСА silently turns progression off).
-- Remove an optional line when the requested change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
-- If the user asks to disable a numeric setting while keeping the exercise, set a neutral value such as 0.
-- You may add valid optional exercise fields when the requested change needs them.`;
-
-  const programPrompt = outputLanguage => [
-    'You are a fitness-program assistant for home workouts.',
-    'Return ONLY the plain-text protocol below: no Markdown and no commentary before or after it.',
-    machineLanguageRules(outputLanguage),
-    programSchema(outputLanguage),
-    progressionRules(),
-    'Quality checks before answering:',
-    '- Make exercise selection, volume, intensity, rest and progression coherent as one program.',
-    '- Do not target a fixed number of exercises. Choose the exercise count, sets and rounds from the training goal, structure and time budget; a longer workout may intentionally use only a few exercises with more sets/rounds.',
-    '- When a target workout duration is supplied, estimate the whole session, not just active work: timed work = stated seconds × sides; rep-based work ≈ reps × 3 seconds × sides; multiply by sets and rounds; then add between-set rest, rest after exercises, side-switch time and between-round rest. Warm-up exercises run once before the main rounds.',
-    '- For target durations from 5 to 20 minutes, aim to stay within about ±5 minutes. For targets of 30 minutes or more, aim to stay within about ±20%. Treat an open-ended target such as 45+ minutes as a lower-bound preference rather than an exact cap.',
-    '- Do not create conflicting progression fields.',
-    '- Return only the protocol.'
-  ].join('\n\n');
-
-  // Модели нередко оформляют протокол Markdown'ом: «**ПРОГРАММА:** …»,
-  // «### ДЕНЬ: Пн», «- ФОРМАТ: …», ограждение \`\`\`plaintext. Раньше такой ответ
-  // отклонялся целиком как «неполный», хотя все данные в нём есть. Снимаем
-  // оформление только у строк, которые начинаются с метки протокола, — текст
-  // описаний не трогаем.
-  function normalizeResponse(raw){
-    return String(raw == null ? '' : raw).replace(/\r\n?/g, '\n').split('\n')
-      .filter(line => !/^\s*\`\`\`/.test(line))
-      .map(line => line.replace(
-        /^\s*(?:#{1,6}\s*|[-*•]\s+|\d+[.)]\s+)?(?:\*\*|__)?([А-ЯЁ][А-ЯЁ ]{1,40}?)\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?[ \t]*/,
-        (m, label) => label + ': '))
-      .join('\n').trim();
-  }
-
-  // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
-  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Промт просит эту строку
-  // всегда, когда сам вес растёт (см. exerciseSchema/progressionRules), но
-  // промт — не гарантия; поэтому НОВЫЕ упражнения/программы (kind *.create)
-  // проверяются и после генерации. Правки (*.modify) — нет: старые упражнения
-  // сериализуются с «ШАГ ВЕСА: 2» и без потолка (так их создавали раньше), и
-  // узкая правка вроде «отдых 60 сек» законно возвращает их как есть —
-  // требовать потолок там значило бы отклонять обычные правки.
-  function exerciseBlockMissingWeightCeiling(block){
-    const stepM = block.match(/(?:^|\n)ШАГ ВЕСА:\s*([\d.,]+)/);
-    if(!stepM) return false;
-    const step = parseFloat(stepM[1].replace(',', '.'));
-    if(!(step > 0)) return false;
-    return !/(?:^|\n)ПОТОЛОК ВЕСА:\s*\S/.test(block);
-  }
-
-  function validateExerciseResponse(raw, opts){
-    const needCeiling = !!(opts && opts.requireWeightCeiling);
-    const text = normalizeResponse(raw);
-    const blocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).map(x=>x.trim()).filter(Boolean);
-    const required = ['УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ПОДХОДЫ','ОТДЫХ'];
-    const missing = [];
-    blocks.forEach((block, i) => {
-      required.forEach(label => {
-        if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
-      });
-      if(needCeiling && exerciseBlockMissingWeightCeiling(block)) missing.push((i+1)+':ПОТОЛОК ВЕСА');
-    });
-    const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
-    const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
-    const countOk = blocks.length >= min && blocks.length <= max;
-    return {ok: !!blocks.length && !missing.length && countOk, text, missing, count:blocks.length,
-      reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
-  }
-
-  // Вариант без единого упражнения — это лишняя строка «ДЕНЬ:», а не повод
-  // выбросить весь ответ: модели иногда оставляют пустой заголовок в конце или
-  // между вариантами. Убираем такие варианты; ответ отклоняется, только если
-  // упражнений не осталось вовсе.
-  function dropEmptyVariants(text){
-    const parts = text.split(/(?=^ДЕНЬ:)/m);
-    const kept = parts.filter((part, i) => !(/^ДЕНЬ:/.test(part) && !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(part)));
-    // все варианты пустые — оставляем как было, пусть сработает no_exercises
-    if(!kept.some(part => /^ДЕНЬ:/.test(part))) return text;
-    return kept.join('').replace(/\n{3,}/g, '\n\n').trim();
-  }
-
-  function validateProgramResponse(raw, opts){
-    const text = dropEmptyVariants(normalizeResponse(raw));
-    // ПОДХОДЫ не обязательны: без строки разбор ставит 1 подход, а программа
-    // «по кругам» (КРУГИ 2–5, по одному подходу) законно может её не содержать —
-    // раньше такой ответ целиком отклонялся как «неполный».
-    const required = ['ПРОГРАММА','ДЕНЬ','КРУГИ','УПРАЖНЕНИЕ','ФОРМАТ','ЗНАЧЕНИЕ','ОТДЫХ'];
-    const missing = required.filter(label => !new RegExp('(?:^|\\n)'+label+':(?:\\s*\\S)?','m').test(text));
-    const exercises = (text.match(/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/g) || []).length;
-    // каждый вариант начинается со своей строки ДЕНЬ: — делим по ней и отбрасываем
-    // преамбулу (ПРОГРАММА/ОПИСАНИЕ/ВРЕМЯ) до первого варианта
-    const variants = text.split(/(?:^|\n)ДЕНЬ:/).slice(1);
-    const days = variants.length;
-    const emptyVariant = variants.some(v => !/(?:^|\n)УПРАЖНЕНИЕ:\s*\S/.test(v));
-    const exBlocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm);
-    const weightCeilingMissing = !!(opts && opts.requireWeightCeiling) && exBlocks.some(exerciseBlockMissingWeightCeiling);
-    if(weightCeilingMissing) missing.push('ПОТОЛОК ВЕСА');
-    return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
-      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
-  }
-
-  function validateResponse(kind, raw){
-    if(String(kind || '').startsWith('image.')){
-      const image = String(raw == null ? '' : raw).trim();
-      return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
-        text:image, missing:[], reason:'bad_image'};
-    }
-    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true});
-    if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
-    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true});
-    if(/^(?:program\.modify|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
-    return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
-  }
-
-  // Одна строка протокола → {key, value}. Общая для клиента и сервера: обе стороны
-  // разбирали её независимо и чуть по-разному, хотя формат один и тот же.
-  function protocolLine(line){
-    const m = String(line || '').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
-    return m ? {key:m[1], value:m[2]} : null;
-  }
-
-  // Поля, которые нельзя терять молча при правке ОДНОГО упражнения. Раньше вся
-  // правка шла через позиционный merge каждого поля (что не даёт ИИ ни удалить,
-  // ни переставить строки) — теперь ответ ИИ принимается как есть, а сюда
-  // подставляются только описательные поля техники, если ответ их не вернул.
-  const DESCRIPTIVE_EXERCISE_LABELS = ['ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ','ВИДЕО'];
-  function carryExerciseFields(sourceText, candidateText){
-    const srcByKey = {};
-    String(sourceText || '').split(/\r?\n/).forEach(line => {
-      const p = protocolLine(line);
-      if(p && p.value.trim() && srcByKey[p.key] == null) srcByKey[p.key] = p.value.trim();
-    });
-    const candLines = String(candidateText || '').split(/\r?\n/);
-    const candHasValue = new Set();
-    candLines.forEach(line => {
-      const p = protocolLine(line);
-      if(p && p.value.trim()) candHasValue.add(p.key);
-    });
-    const extra = DESCRIPTIVE_EXERCISE_LABELS.filter(k => !candHasValue.has(k) && srcByKey[k] != null);
-    if(!extra.length) return candidateText;
-    return candLines.concat(extra.map(k => k + ': ' + srcByKey[k])).join('\n');
-  }
-
-  function normExName(s){
-    return String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-  }
-  // длина наидлиннейшей возрастающей подпоследовательности — сколько сопоставленных
-  // упражнений уже стоят в правильном относительном порядке без переноса
-  function longestIncreasingRun(seq){
-    const tails = [];
-    seq.forEach(x => {
-      let lo = 0, hi = tails.length;
-      while(lo < hi){ const mid = (lo + hi) >> 1; if(tails[mid] < x) lo = mid + 1; else hi = mid; }
-      tails[lo] = x;
-    });
-    return tails.length;
-  }
-
-  // Семантическое сравнение программ по упражнениям: что добавлено, что убрано,
-  // сколько переставлено — вместо принудительного «то же количество, тот же
-  // порядок» (aiMergeProgramEdit/sameProgramShape), которое молча душило любую
-  // структурную правку. Работает на {plans:[{exercises:[{id,name,...}]}]} —
-  // тот же вид, что у customProgram после normPlans()/parseProgramText().
-  // Сопоставление: сперва по стабильному id (если он совпал напрямую), затем по
-  // технической метке КОД в новом упражнении (её кладёт клиент в текст для
-  // AI-правки и не показывает пользователю), затем по точному имени — сначала в
-  // том же варианте, потом в любом. Совпадение не гарантирует, что это буквально
-  // то же движение — это лишь лучшая доступная оценка непрерывности.
-  function diffPrograms(oldP, newP){
-    const oldPlans = (oldP && Array.isArray(oldP.plans)) ? oldP.plans : [];
-    const newPlans = (newP && Array.isArray(newP.plans)) ? newP.plans : [];
-    const oldFlat = [], newFlat = [];
-    oldPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => oldFlat.push({ex, pi})));
-    newPlans.forEach((pl, pi) => (pl.exercises || []).forEach(ex => newFlat.push({ex, pi})));
-
-    const usedNew = new Array(newFlat.length).fill(false);
-    const matches = [];
-    const alreadyMatched = new Set();
-    const matchPass = test => {
-      oldFlat.forEach((o, oi) => {
-        if(alreadyMatched.has(oi)) return;
-        let ni = -1;
-        for(let j = 0; j < newFlat.length; j++){
-          if(usedNew[j]) continue;
-          if(newFlat[j].pi === o.pi && test(o.ex, newFlat[j].ex)){ ni = j; break; }
-        }
-        if(ni < 0) for(let j = 0; j < newFlat.length; j++){
-          if(usedNew[j]) continue;
-          if(test(o.ex, newFlat[j].ex)){ ni = j; break; }
-        }
-        if(ni >= 0){
-          usedNew[ni] = true; alreadyMatched.add(oi);
-          matches.push({oi, ni, oldEx:o.ex, newEx:newFlat[ni].ex});
-        }
-      });
-    };
-    matchPass((a, b) => a.id && b.id && a.id === b.id);
-    matchPass((a, b) => a.id && b._code && a.id === b._code);
-    matchPass((a, b) => normExName(a.name) && normExName(a.name) === normExName(b.name));
-
-    const matchedOld = new Set(matches.map(m => m.oi));
-    const removed = oldFlat.filter((_, oi) => !matchedOld.has(oi)).map(o => o.ex);
-    const added = newFlat.filter((_, ni) => !usedNew[ni]).map(n => n.ex);
-
-    const orderedNewIdx = matches.slice().sort((a, b) => a.oi - b.oi).map(m => m.ni);
-    const moved = matches.length ? matches.length - longestIncreasingRun(orderedNewIdx) : 0;
-
-    return {
-      matches: matches.map(m => ({oldEx:m.oldEx, newEx:m.newEx})),
-      added, removed, moved,
-      oldVariants: oldPlans.length, newVariants: newPlans.length
-    };
-  }
-
-  const api = {
-    OPTIONAL_EXERCISE_LABELS,
-    normalizeResponse,
-    validateExerciseResponse,
-    validateProgramResponse,
-    validateResponse,
-    machineLanguageRules,
-    progressionRules,
-    exerciseSchema,
-    programSchema,
-    editRules,
-    programPrompt,
-    protocolLine,
-    carryExerciseFields,
-    diffPrograms
-  };
-  root.FitAIProtocol = api;
-  if(typeof module !== 'undefined' && module.exports) module.exports = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this);
-/* Temporary dependency capture for the legacy concatenated product runtime.
-   main.ts exposes FitTimerModules only for startup; this file captures the modules
-   into bundle-local bindings so the global bridge can be deleted immediately after load. */
-const fitLegacyModules = globalThis.FitTimerModules;
-if(!fitLegacyModules) throw new Error('fit_product_modules_missing');
-
-const appInfrastructure = fitLegacyModules.infrastructure;
-const appIdentity = fitLegacyModules.identity;
-const appSync = fitLegacyModules.sync;
-const appNotifications = fitLegacyModules.notifications;
-const appUi = fitLegacyModules.ui;
-const appRuntimeCompat = fitLegacyModules.runtimeCompat;
+const appInfrastructure = {create: fitInfrastructure.createProductInfrastructure};
+const appIdentity = {
+  createAccount: fitIdentity.createFitTimerAccount,
+  createProfile: fitIdentity.createFitTimerProfile
+};
+const appSync = {
+  profileKeys: fitSyncSchema.FIT_SYNC_PROFILE_DOC_KEYS,
+  accountKeys: fitSyncSchema.FIT_SYNC_ACCOUNT_DOC_KEYS,
+  registry: fitSyncSchema.FIT_SYNC_REGISTRY
+};
+const appNotifications = {
+  createPreferenceStore: appbaseNotifications.createPreferenceStore,
+  limitCandidates: appbaseNotifications.limitCandidates
+};
+const appUi = {
+  setShown: appbaseUi.setShown,
+  setText: appbaseUi.setText,
+  applyCssVars: appbaseUi.applyCssVars,
+  openModal: appbaseUi.openModal,
+  closeModal: appbaseUi.closeModal,
+  closestModal: appbaseUi.closestModal,
+  setBusy: appbaseUi.setBusy,
+  bindActions: appbaseUi.bindActions
+};
+const appRuntimeCompat = fitRuntimeCompat.appRuntimeCompat;
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
@@ -15314,14 +15001,16 @@ const DAY_ALIASES = {
 
 /* Все ключи, которые понимает парсер. Берём их ИЗ САМОГО ПАРСЕРА, а не списком
    рядом: список пришлось бы помнить, а расходятся такие пары тихо — новый ключ
-   заработал бы в разборе и не заработал бы в починке ниже. Сборки в проекте нет,
-   имена в исходнике остаются как написаны, так что читать их оттуда безопасно. */
+   заработал бы в разборе и не заработал бы в починке ниже. Сборка (esbuild) не
+   минифицирует код и сохраняет UTF-8 (charset: 'utf8' в scripts/build-esm.mjs), так что
+   ключи в исходнике остаются как написаны и читать их оттуда безопасно. */
 let PARSE_KEYS = null;
 function parseKeys(){
   if(PARSE_KEYS) return PARSE_KEYS;
   const out = [];
   const src = String(parseProgramText);
-  const re = /case\s*'([А-ЯЁ][А-ЯЁ\s]*)'/g;
+  // Кавычки любые: сборщик может переписать 'КЛЮЧ' в "КЛЮЧ".
+  const re = /case\s*['"]([А-ЯЁ][А-ЯЁ\s]*)['"]/g;
   let m;
   while((m = re.exec(src))) out.push(m[1].trim());
   // Длинные вперёд: иначе «ОТДЫХ» срабатывает раньше «ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ»
@@ -20653,3 +20342,1050 @@ try{
   }
 })();
 
+
+/* Generated by scripts/build-sources.mjs — test-only binding bridge, inert in production. */
+if(globalThis.__FIT_TEST_MODE__ === true){
+  const __fitExpose = (name, get, set) => {
+    const current = Object.getOwnPropertyDescriptor(globalThis, name);
+    if(current && !current.configurable) return;
+    Object.defineProperty(globalThis, name, set ? {configurable:true, get, set} : {configurable:true, get});
+  };
+  __fitExpose("I18N_RU", () => I18N_RU);
+  __fitExpose("I18N_EN", () => I18N_EN);
+  __fitExpose("I18N", () => I18N);
+  __fitExpose("LOCALE_META", () => LOCALE_META);
+  __fitExpose("SUPPORTED_LOCALES", () => SUPPORTED_LOCALES);
+  __fitExpose("appLocalePreference", () => appLocalePreference, value => { appLocalePreference = value; });
+  __fitExpose("appLocale", () => appLocale, value => { appLocale = value; });
+  __fitExpose("appLocaleStored", () => appLocaleStored, value => { appLocaleStored = value; });
+  __fitExpose("normalizeLocale", () => normalizeLocale, value => { normalizeLocale = value; });
+  __fitExpose("systemLocale", () => systemLocale, value => { systemLocale = value; });
+  __fitExpose("normalizeLocalePreference", () => normalizeLocalePreference, value => { normalizeLocalePreference = value; });
+  __fitExpose("resolveLocalePreference", () => resolveLocalePreference, value => { resolveLocalePreference = value; });
+  __fitExpose("profileLocalePreference", () => profileLocalePreference, value => { profileLocalePreference = value; });
+  __fitExpose("t", () => t, value => { t = value; });
+  __fitExpose("applyI18nValue", () => applyI18nValue, value => { applyI18nValue = value; });
+  __fitExpose("applyI18n", () => applyI18n, value => { applyI18n = value; });
+  __fitExpose("syncAccessibility", () => syncAccessibility, value => { syncAccessibility = value; });
+  __fitExpose("loadAppLocale", () => loadAppLocale, value => { loadAppLocale = value; });
+  __fitExpose("setAppLocale", () => setAppLocale, value => { setAppLocale = value; });
+  __fitExpose("localeTag", () => localeTag, value => { localeTag = value; });
+  __fitExpose("aiOutputLanguage", () => aiOutputLanguage, value => { aiOutputLanguage = value; });
+  __fitExpose("aiCanonicalEnglish", () => aiCanonicalEnglish, value => { aiCanonicalEnglish = value; });
+  __fitExpose("aiCanonicalListEnglish", () => aiCanonicalListEnglish, value => { aiCanonicalListEnglish = value; });
+  __fitExpose("CANONICAL_LABEL_KEYS", () => CANONICAL_LABEL_KEYS);
+  __fitExpose("CANONICAL_DESC_KEYS", () => CANONICAL_DESC_KEYS);
+  __fitExpose("canonicalLabel", () => canonicalLabel, value => { canonicalLabel = value; });
+  __fitExpose("canonicalDescription", () => canonicalDescription, value => { canonicalDescription = value; });
+  __fitExpose("appInfrastructure", () => appInfrastructure);
+  __fitExpose("appIdentity", () => appIdentity);
+  __fitExpose("appSync", () => appSync);
+  __fitExpose("appNotifications", () => appNotifications);
+  __fitExpose("appUi", () => appUi);
+  __fitExpose("appRuntimeCompat", () => appRuntimeCompat);
+  __fitExpose("ILLO", () => ILLO);
+  __fitExpose("DUMBBELL_ICON", () => DUMBBELL_ICON);
+  __fitExpose("soundOn", () => soundOn, value => { soundOn = value; });
+  __fitExpose("lastAppSoundT", () => lastAppSoundT, value => { lastAppSoundT = value; });
+  __fitExpose("prepSec", () => prepSec, value => { prepSec = value; });
+  __fitExpose("readySec", () => readySec, value => { readySec = value; });
+  __fitExpose("sideSec", () => sideSec, value => { sideSec = value; });
+  __fitExpose("fxVol", () => fxVol, value => { fxVol = value; });
+  __fitExpose("voiceVol", () => voiceVol, value => { voiceVol = value; });
+  __fitExpose("audioCtx", () => audioCtx, value => { audioCtx = value; });
+  __fitExpose("masterGain", () => masterGain, value => { masterGain = value; });
+  __fitExpose("initAudio", () => initAudio, value => { initAudio = value; });
+  __fitExpose("fxDest", () => fxDest, value => { fxDest = value; });
+  __fitExpose("beep", () => beep, value => { beep = value; });
+  __fitExpose("tick", () => tick);
+  __fitExpose("endSignal", () => endSignal);
+  __fitExpose("gong", () => gong, value => { gong = value; });
+  __fitExpose("exerciseGong", () => exerciseGong, value => { exerciseGong = value; });
+  __fitExpose("fanfare", () => fanfare, value => { fanfare = value; });
+  __fitExpose("clicks", () => clicks, value => { clicks = value; });
+  __fitExpose("savedVoiceURI", () => savedVoiceURI, value => { savedVoiceURI = value; });
+  __fitExpose("voiceLang", () => voiceLang, value => { voiceLang = value; });
+  __fitExpose("voiceIsEnglish", () => voiceIsEnglish, value => { voiceIsEnglish = value; });
+  __fitExpose("voicePlural", () => voicePlural, value => { voicePlural = value; });
+  __fitExpose("voicesForLang", () => voicesForLang, value => { voicesForLang = value; });
+  __fitExpose("musicMode", () => musicMode, value => { musicMode = value; });
+  __fitExpose("speak", () => speak, value => { speak = value; });
+  __fitExpose("announceRemaining", () => announceRemaining, value => { announceRemaining = value; });
+  __fitExpose("roundDone", () => roundDone, value => { roundDone = value; });
+  __fitExpose("nextStepSpeech", () => nextStepSpeech, value => { nextStepSpeech = value; });
+  __fitExpose("announceRest", () => announceRest, value => { announceRest = value; });
+  __fitExpose("plural", () => plural, value => { plural = value; });
+  __fitExpose("announceExercise", () => announceExercise, value => { announceExercise = value; });
+  __fitExpose("RR_LEN", () => RR_LEN);
+  __fitExpose("runReadyBar", () => runReadyBar, value => { runReadyBar = value; });
+  __fitExpose("hideReadyBar", () => hideReadyBar, value => { hideReadyBar = value; });
+  __fitExpose("startSignal", () => startSignal, value => { startSignal = value; });
+  __fitExpose("wakeLock", () => wakeLock, value => { wakeLock = value; });
+  __fitExpose("keepAwake", () => keepAwake, value => { keepAwake = value; });
+  __fitExpose("releaseWake", () => releaseWake, value => { releaseWake = value; });
+  __fitExpose("state", () => state, value => { state = value; });
+  __fitExpose("$", () => $);
+  __fitExpose("haptic", () => haptic, value => { haptic = value; });
+  __fitExpose("ICONS", () => ICONS);
+  __fitExpose("icon", () => icon, value => { icon = value; });
+  __fitExpose("OPT_LEVEL", () => OPT_LEVEL);
+  __fitExpose("OPT_GOAL", () => OPT_GOAL);
+  __fitExpose("OPT_NONE", () => OPT_NONE);
+  __fitExpose("OPT_EQUIP", () => OPT_EQUIP);
+  __fitExpose("MUSCLES", () => MUSCLES);
+  __fitExpose("M_LABEL", () => M_LABEL);
+  __fitExpose("setShown", () => setShown, value => { setShown = value; });
+  __fitExpose("snap", () => snap);
+  __fitExpose("takeSnap", () => takeSnap, value => { takeSnap = value; });
+  __fitExpose("isChanged", () => isChanged, value => { isChanged = value; });
+  __fitExpose("clearSnap", () => clearSnap, value => { clearSnap = value; });
+  __fitExpose("leaveGuard", () => leaveGuard, value => { leaveGuard = value; });
+  __fitExpose("aiScreenDirty", () => aiScreenDirty, value => { aiScreenDirty = value; });
+  __fitExpose("NUM_RULES", () => NUM_RULES);
+  __fitExpose("markNum", () => markNum, value => { markNum = value; });
+  __fitExpose("guardNum", () => guardNum, value => { guardNum = value; });
+  __fitExpose("numFieldsOk", () => numFieldsOk, value => { numFieldsOk = value; });
+  __fitExpose("syncSoundCascade", () => syncSoundCascade, value => { syncSoundCascade = value; });
+  __fitExpose("modalHistoryWaiters", () => modalHistoryWaiters, value => { modalHistoryWaiters = value; });
+  __fitExpose("appDialog", () => appDialog, value => { appDialog = value; });
+  __fitExpose("appAlert", () => appAlert);
+  __fitExpose("appConfirm", () => appConfirm);
+  __fitExpose("screens", () => screens);
+  __fitExpose("ROOT_TABS", () => ROOT_TABS);
+  __fitExpose("navDepth", () => navDepth, value => { navDepth = value; });
+  __fitExpose("navStack", () => navStack, value => { navStack = value; });
+  __fitExpose("tabSwitch", () => tabSwitch, value => { tabSwitch = value; });
+  __fitExpose("pendingTabScreen", () => pendingTabScreen, value => { pendingTabScreen = value; });
+  __fitExpose("navBackWaiters", () => navBackWaiters, value => { navBackWaiters = value; });
+  __fitExpose("asTab", () => asTab, value => { asTab = value; });
+  __fitExpose("LEAVE_GUARDS", () => LEAVE_GUARDS);
+  __fitExpose("guardBypass", () => guardBypass, value => { guardBypass = value; });
+  __fitExpose("dismissTopModal", () => dismissTopModal, value => { dismissTopModal = value; });
+  __fitExpose("skipPop", () => skipPop, value => { skipPop = value; });
+  __fitExpose("modalsOpen", () => modalsOpen, value => { modalsOpen = value; });
+  __fitExpose("lockedY", () => lockedY, value => { lockedY = value; });
+  __fitExpose("freezeSticky", () => freezeSticky, value => { freezeSticky = value; });
+  __fitExpose("lockPage", () => lockPage, value => { lockPage = value; });
+  __fitExpose("resolveNavBack", () => resolveNavBack, value => { resolveNavBack = value; });
+  __fitExpose("goBackTo", () => goBackTo, value => { goBackTo = value; });
+  __fitExpose("show", () => show, value => { show = value; });
+  __fitExpose("prepTab", () => prepTab, value => { prepTab = value; });
+  __fitExpose("kbFocused", () => kbFocused, value => { kbFocused = value; });
+  __fitExpose("syncDockTabs", () => syncDockTabs, value => { syncDockTabs = value; });
+  __fitExpose("syncDock", () => syncDock, value => { syncDock = value; });
+  __fitExpose("goTab", () => goTab, value => { goTab = value; });
+  __fitExpose("startFrom", () => startFrom, value => { startFrom = value; });
+  __fitExpose("openStart", () => openStart, value => { openStart = value; });
+  __fitExpose("defaultPlanIdx", () => defaultPlanIdx, value => { defaultPlanIdx = value; });
+  __fitExpose("renderPlanRow", () => renderPlanRow, value => { renderPlanRow = value; });
+  __fitExpose("exerciseLoad", () => exerciseLoad, value => { exerciseLoad = value; });
+  __fitExpose("workoutLoadSnapshot", () => workoutLoadSnapshot, value => { workoutLoadSnapshot = value; });
+  __fitExpose("previousWorkoutLoad", () => previousWorkoutLoad, value => { previousWorkoutLoad = value; });
+  __fitExpose("loadTargetText", () => loadTargetText, value => { loadTargetText = value; });
+  __fitExpose("loadDelta", () => loadDelta, value => { loadDelta = value; });
+  __fitExpose("estimatedWorkoutMinutes", () => estimatedWorkoutMinutes, value => { estimatedWorkoutMinutes = value; });
+  __fitExpose("renderStartOverview", () => renderStartOverview, value => { renderStartOverview = value; });
+  __fitExpose("weightModalIdx", () => weightModalIdx, value => { weightModalIdx = value; });
+  __fitExpose("openWeightModal", () => openWeightModal, value => { openWeightModal = value; });
+  __fitExpose("commitWeightModal", () => commitWeightModal, value => { commitWeightModal = value; });
+  __fitExpose("buildStartMenu", () => buildStartMenu, value => { buildStartMenu = value; });
+  __fitExpose("renderStartInfo", () => renderStartInfo, value => { renderStartInfo = value; });
+  __fitExpose("users", () => users, value => { users = value; });
+  __fitExpose("currentUser", () => currentUser, value => { currentUser = value; });
+  __fitExpose("fitProductInfrastructure", () => fitProductInfrastructure);
+  __fitExpose("fitStorage", () => fitStorage);
+  __fitExpose("pk", () => pk);
+  __fitExpose("curUser", () => curUser);
+  __fitExpose("kvGet", () => kvGet, value => { kvGet = value; });
+  __fitExpose("kvSet", () => kvSet, value => { kvSet = value; });
+  __fitExpose("kvDel", () => kvDel, value => { kvDel = value; });
+  __fitExpose("kvClearAll", () => kvClearAll, value => { kvClearAll = value; });
+  __fitExpose("saveUsers", () => saveUsers, value => { saveUsers = value; });
+  __fitExpose("validAge", () => validAge, value => { validAge = value; });
+  __fitExpose("legacyAge", () => legacyAge, value => { legacyAge = value; });
+  __fitExpose("profileAge", () => profileAge, value => { profileAge = value; });
+  __fitExpose("migrateUserAge", () => migrateUserAge, value => { migrateUserAge = value; });
+  __fitExpose("localISO", () => localISO, value => { localISO = value; });
+  __fitExpose("customPrograms", () => customPrograms, value => { customPrograms = value; });
+  __fitExpose("stats", () => stats, value => { stats = value; });
+  __fitExpose("dataOwner", () => dataOwner, value => { dataOwner = value; });
+  __fitExpose("progWeights", () => progWeights, value => { progWeights = value; });
+  __fitExpose("appObservability", () => appObservability);
+  __fitExpose("trackProductEvent", () => trackProductEvent, value => { trackProductEvent = value; });
+  __fitExpose("trackInstallOnce", () => trackInstallOnce, value => { trackInstallOnce = value; });
+  __fitExpose("clientErrorPayload", () => clientErrorPayload, value => { clientErrorPayload = value; });
+  __fitExpose("reportClientError", () => reportClientError, value => { reportClientError = value; });
+  __fitExpose("loadData", () => loadData, value => { loadData = value; });
+  __fitExpose("discardLegacyWeightCorrections", () => discardLegacyWeightCorrections, value => { discardLegacyWeightCorrections = value; });
+  __fitExpose("profileSwitchQueue", () => profileSwitchQueue, value => { profileSwitchQueue = value; });
+  __fitExpose("queueProfileState", () => queueProfileState, value => { queueProfileState = value; });
+  __fitExpose("switchUser", () => switchUser, value => { switchUser = value; });
+  __fitExpose("switchUserNow", () => switchUserNow, value => { switchUserNow = value; });
+  __fitExpose("renderUsers", () => renderUsers, value => { renderUsers = value; });
+  __fitExpose("renderAccount", () => renderAccount, value => { renderAccount = value; });
+  __fitExpose("weightSeries", () => weightSeries, value => { weightSeries = value; });
+  __fitExpose("fmtMeasure", () => fmtMeasure, value => { fmtMeasure = value; });
+  __fitExpose("weightMetric", () => weightMetric, value => { weightMetric = value; });
+  __fitExpose("renderWeight", () => renderWeight, value => { renderWeight = value; });
+  __fitExpose("metricGraph", () => metricGraph, value => { metricGraph = value; });
+  __fitExpose("wellSeries", () => wellSeries, value => { wellSeries = value; });
+  __fitExpose("WELL_LIM", () => WELL_LIM);
+  __fitExpose("wellMetric", () => wellMetric, value => { wellMetric = value; });
+  __fitExpose("wellList", () => wellList);
+  __fitExpose("wellValue", () => wellValue, value => { wellValue = value; });
+  __fitExpose("wellAvg", () => wellAvg, value => { wellAvg = value; });
+  __fitExpose("renderWellness", () => renderWellness, value => { renderWellness = value; });
+  __fitExpose("openWellAdd", () => openWellAdd, value => { openWellAdd = value; });
+  __fitExpose("saveWell", () => saveWell, value => { saveWell = value; });
+  __fitExpose("openWellHist", () => openWellHist, value => { openWellHist = value; });
+  __fitExpose("saveWellHist", () => saveWellHist, value => { saveWellHist = value; });
+  __fitExpose("SCHEMA_VERSION", () => SCHEMA_VERSION);
+  __fitExpose("SYNC_KEYS", () => SYNC_KEYS);
+  __fitExpose("PROGRAM_DOC", () => PROGRAM_DOC);
+  __fitExpose("isSyncKey", () => isSyncKey);
+  __fitExpose("docHash", () => docHash, value => { docHash = value; });
+  __fitExpose("newId", () => newId);
+  __fitExpose("identity", () => identity, value => { identity = value; });
+  __fitExpose("docMeta", () => docMeta, value => { docMeta = value; });
+  __fitExpose("outbox", () => outbox, value => { outbox = value; });
+  __fitExpose("loadIdentity", () => loadIdentity, value => { loadIdentity = value; });
+  __fitExpose("saveIdentity", () => saveIdentity, value => { saveIdentity = value; });
+  __fitExpose("bumpDoc", () => bumpDoc, value => { bumpDoc = value; });
+  __fitExpose("flushMeta", () => flushMeta, value => { flushMeta = value; });
+  __fitExpose("saveDoc", () => saveDoc, value => { saveDoc = value; });
+  __fitExpose("docValue", () => docValue, value => { docValue = value; });
+  __fitExpose("markAllForSync", () => markAllForSync, value => { markAllForSync = value; });
+  __fitExpose("SYNC", () => SYNC);
+  __fitExpose("syncTimer", () => syncTimer, value => { syncTimer = value; });
+  __fitExpose("syncBusy", () => syncBusy, value => { syncBusy = value; });
+  __fitExpose("syncUploadBusy", () => syncUploadBusy, value => { syncUploadBusy = value; });
+  __fitExpose("syncUploadAgain", () => syncUploadAgain, value => { syncUploadAgain = value; });
+  __fitExpose("syncReplaceLocal", () => syncReplaceLocal, value => { syncReplaceLocal = value; });
+  __fitExpose("syncState", () => syncState, value => { syncState = value; });
+  __fitExpose("syncStep", () => syncStep, value => { syncStep = value; });
+  __fitExpose("syncTotal", () => syncTotal, value => { syncTotal = value; });
+  __fitExpose("syncDetail", () => syncDetail, value => { syncDetail = value; });
+  __fitExpose("showSyncState", () => showSyncState, value => { showSyncState = value; });
+  __fitExpose("syncApiPost", () => syncApiPost, value => { syncApiPost = value; });
+  __fitExpose("accountAuth", () => accountAuth);
+  __fitExpose("syncAuth", () => syncAuth);
+  __fitExpose("syncProfileInt", () => syncProfileInt);
+  __fitExpose("syncUser", () => syncUser);
+  __fitExpose("remoteWins", () => remoteWins);
+  __fitExpose("parsed", () => parsed);
+  __fitExpose("isPlaceholderProfile", () => isPlaceholderProfile);
+  __fitExpose("remoteProfileHasData", () => remoteProfileHasData, value => { remoteProfileHasData = value; });
+  __fitExpose("localProfileHasData", () => localProfileHasData, value => { localProfileHasData = value; });
+  __fitExpose("collapseEmptyLocalProfiles", () => collapseEmptyLocalProfiles, value => { collapseEmptyLocalProfiles = value; });
+  __fitExpose("mergeStatsDocs", () => mergeStatsDocs, value => { mergeStatsDocs = value; });
+  __fitExpose("applyRemoteSync", () => applyRemoteSync, value => { applyRemoteSync = value; });
+  __fitExpose("applyRemoteSyncNow", () => applyRemoteSyncNow, value => { applyRemoteSyncNow = value; });
+  __fitExpose("trainerSyncValue", () => trainerSyncValue, value => { trainerSyncValue = value; });
+  __fitExpose("mergeClientLists", () => mergeClientLists, value => { mergeClientLists = value; });
+  __fitExpose("applyRemoteAccountDocs", () => applyRemoteAccountDocs, value => { applyRemoteAccountDocs = value; });
+  __fitExpose("accountDocsSnapshot", () => accountDocsSnapshot, value => { accountDocsSnapshot = value; });
+  __fitExpose("syncNotificationPrefsServer", () => syncNotificationPrefsServer, value => { syncNotificationPrefsServer = value; });
+  __fitExpose("pushAccountDocs", () => pushAccountDocs, value => { pushAccountDocs = value; });
+  __fitExpose("pendingProfileSnapshot", () => pendingProfileSnapshot, value => { pendingProfileSnapshot = value; });
+  __fitExpose("accountSyncAdapter", () => accountSyncAdapter);
+  __fitExpose("pushPendingProfiles", () => pushPendingProfiles, value => { pushPendingProfiles = value; });
+  __fitExpose("pushDeletedProfiles", () => pushDeletedProfiles, value => { pushDeletedProfiles = value; });
+  __fitExpose("flushAccountSync", () => flushAccountSync, value => { flushAccountSync = value; });
+  __fitExpose("connectAccountSync", () => connectAccountSync, value => { connectAccountSync = value; });
+  __fitExpose("queueAccountSync", () => queueAccountSync, value => { queueAccountSync = value; });
+  __fitExpose("hasMeaningfulLocalData", () => hasMeaningfulLocalData, value => { hasMeaningfulLocalData = value; });
+  __fitExpose("CONSENT_VERSION", () => CONSENT_VERSION);
+  __fitExpose("pendingConsents", () => pendingConsents, value => { pendingConsents = value; });
+  __fitExpose("recordConsent", () => recordConsent, value => { recordConsent = value; });
+  __fitExpose("hasConsent", () => hasConsent);
+  __fitExpose("savePrograms", () => savePrograms, value => { savePrograms = value; });
+  __fitExpose("saveStats", () => saveStats, value => { saveStats = value; });
+  __fitExpose("saveProgWeights", () => saveProgWeights, value => { saveProgWeights = value; });
+  __fitExpose("loadProgWeights", () => loadProgWeights, value => { loadProgWeights = value; });
+  __fitExpose("fmtLong", () => fmtLong, value => { fmtLong = value; });
+  __fitExpose("renderTotal", () => renderTotal, value => { renderTotal = value; });
+  __fitExpose("sessionKey", () => sessionKey, value => { sessionKey = value; });
+  __fitExpose("saveSession", () => saveSession, value => { saveSession = value; });
+  __fitExpose("loadSession", () => loadSession, value => { loadSession = value; });
+  __fitExpose("clearSession", () => clearSession, value => { clearSession = value; });
+  __fitExpose("sessionForProgram", () => sessionForProgram, value => { sessionForProgram = value; });
+  __fitExpose("sessionAgeText", () => sessionAgeText, value => { sessionAgeText = value; });
+  __fitExpose("workStepChoices", () => workStepChoices, value => { workStepChoices = value; });
+  __fitExpose("calOffset", () => calOffset, value => { calOffset = value; });
+  __fitExpose("DAYS", () => DAYS);
+  __fitExpose("DAY_FULL", () => DAY_FULL);
+  __fitExpose("MONTH_NAMES", () => MONTH_NAMES);
+  __fitExpose("MONTH_IN", () => MONTH_IN);
+  __fitExpose("MONTH_OF", () => MONTH_OF);
+  __fitExpose("calcStreakInfo", () => calcStreakInfo, value => { calcStreakInfo = value; });
+  __fitExpose("calcStreak", () => calcStreak, value => { calcStreak = value; });
+  __fitExpose("streakWord", () => streakWord, value => { streakWord = value; });
+  __fitExpose("MON_SHORT_NAMES", () => MON_SHORT_NAMES);
+  __fitExpose("weekBarStarts", () => weekBarStarts, value => { weekBarStarts = value; });
+  __fitExpose("renderStatsBlock", () => renderStatsBlock, value => { renderStatsBlock = value; });
+  __fitExpose("renderStatBadges", () => renderStatBadges, value => { renderStatBadges = value; });
+  __fitExpose("renderCalendar", () => renderCalendar, value => { renderCalendar = value; });
+  __fitExpose("sessRow", () => sessRow, value => { sessRow = value; });
+  __fitExpose("openSessions", () => openSessions, value => { openSessions = value; });
+  __fitExpose("dayTitle", () => dayTitle);
+  __fitExpose("renderStats", () => renderStats, value => { renderStats = value; });
+  __fitExpose("planDayRank", () => planDayRank, value => { planDayRank = value; });
+  __fitExpose("sortPlans", () => sortPlans, value => { sortPlans = value; });
+  __fitExpose("normPlans", () => normPlans, value => { normPlans = value; });
+  __fitExpose("programDaysUnion", () => programDaysUnion, value => { programDaysUnion = value; });
+  __fitExpose("progActive", () => progActive);
+  __fitExpose("planDays", () => planDays);
+  __fitExpose("customToProgram", () => customToProgram, value => { customToProgram = value; });
+  __fitExpose("closeAllMenus", () => closeAllMenus, value => { closeAllMenus = value; });
+  __fitExpose("placeMenu", () => placeMenu, value => { placeMenu = value; });
+  __fitExpose("toggleMenu", () => toggleMenu, value => { toggleMenu = value; });
+  __fitExpose("uDraft", () => uDraft, value => { uDraft = value; });
+  __fitExpose("userState", () => userState, value => { userState = value; });
+  __fitExpose("userDirty", () => userDirty, value => { userDirty = value; });
+  __fitExpose("openUserEdit", () => openUserEdit, value => { openUserEdit = value; });
+  __fitExpose("syncUserForm", () => syncUserForm, value => { syncUserForm = value; });
+  __fitExpose("saveUser", () => saveUser, value => { saveUser = value; });
+  __fitExpose("deleteUser", () => deleteUser, value => { deleteUser = value; });
+  __fitExpose("PROFILE_KEYS", () => PROFILE_KEYS);
+  __fitExpose("GLOBAL_KEYS", () => GLOBAL_KEYS);
+  __fitExpose("wipeAccount", () => wipeAccount, value => { wipeAccount = value; });
+  __fitExpose("account", () => account, value => { account = value; });
+  __fitExpose("bioOK", () => bioOK, value => { bioOK = value; });
+  __fitExpose("knownAccounts", () => knownAccounts, value => { knownAccounts = value; });
+  __fitExpose("blankAccount", () => blankAccount);
+  __fitExpose("readAccountData", () => readAccountData, value => { readAccountData = value; });
+  __fitExpose("accountBucketKey", () => accountBucketKey, value => { accountBucketKey = value; });
+  __fitExpose("readAccountBucket", () => readAccountBucket, value => { readAccountBucket = value; });
+  __fitExpose("writeAccountBucket", () => writeAccountBucket, value => { writeAccountBucket = value; });
+  __fitExpose("bumpAccountMeta", () => bumpAccountMeta, value => { bumpAccountMeta = value; });
+  __fitExpose("loadAccount", () => loadAccount, value => { loadAccount = value; });
+  __fitExpose("saveAccount", () => saveAccount, value => { saveAccount = value; });
+  __fitExpose("saveKnown", () => saveKnown, value => { saveKnown = value; });
+  __fitExpose("refreshServerSubscription", () => refreshServerSubscription, value => { refreshServerSubscription = value; });
+  __fitExpose("syncAccountLocale", () => syncAccountLocale, value => { syncAccountLocale = value; });
+  __fitExpose("rememberAccount", () => rememberAccount, value => { rememberAccount = value; });
+  __fitExpose("isPremium", () => isPremium);
+  __fitExpose("PRICES", () => PRICES);
+  __fitExpose("REMOTE_PRICES", () => REMOTE_PRICES, value => { REMOTE_PRICES = value; });
+  __fitExpose("CUR_BY_REGION", () => CUR_BY_REGION);
+  __fitExpose("EURO_REGIONS", () => EURO_REGIONS);
+  __fitExpose("TZ_REGION", () => TZ_REGION);
+  __fitExpose("userRegion", () => userRegion, value => { userRegion = value; });
+  __fitExpose("userCurrency", () => userCurrency, value => { userCurrency = value; });
+  __fitExpose("money", () => money, value => { money = value; });
+  __fitExpose("priceTable", () => priceTable);
+  __fitExpose("APP_UPDATE", () => APP_UPDATE, value => { APP_UPDATE = value; });
+  __fitExpose("APP_UPDATE_PREV", () => APP_UPDATE_PREV, value => { APP_UPDATE_PREV = value; });
+  __fitExpose("androidUpdateAction", () => androidUpdateAction, value => { androidUpdateAction = value; });
+  __fitExpose("androidUpdateStatus", () => androidUpdateStatus, value => { androidUpdateStatus = value; });
+  __fitExpose("renderAndroidUpdate", () => renderAndroidUpdate, value => { renderAndroidUpdate = value; });
+  __fitExpose("renderAndroidUpdateProgress", () => renderAndroidUpdateProgress, value => { renderAndroidUpdateProgress = value; });
+  __fitExpose("finishDirectUpdateResult", () => finishDirectUpdateResult, value => { finishDirectUpdateResult = value; });
+  __fitExpose("openAndroidUpdate", () => openAndroidUpdate, value => { openAndroidUpdate = value; });
+  __fitExpose("restoreAndroidUpdateState", () => restoreAndroidUpdateState, value => { restoreAndroidUpdateState = value; });
+  __fitExpose("resumePendingAndroidUpdate", () => resumePendingAndroidUpdate, value => { resumePendingAndroidUpdate = value; });
+  __fitExpose("applyAndroidUpdateConfig", () => applyAndroidUpdateConfig, value => { applyAndroidUpdateConfig = value; });
+  __fitExpose("loadPublicConfig", () => loadPublicConfig, value => { loadPublicConfig = value; });
+  __fitExpose("planUntil", () => planUntil, value => { planUntil = value; });
+  __fitExpose("humanDate", () => humanDate);
+  __fitExpose("perMonth", () => perMonth, value => { perMonth = value; });
+  __fitExpose("subPrice", () => subPrice);
+  __fitExpose("pmPlan", () => pmPlan, value => { pmPlan = value; });
+  __fitExpose("renderPremium", () => renderPremium, value => { renderPremium = value; });
+  __fitExpose("BUILD", () => BUILD);
+  __fitExpose("renderBuild", () => renderBuild, value => { renderBuild = value; });
+  __fitExpose("renderPlan", () => renderPlan, value => { renderPlan = value; });
+  __fitExpose("completePurchase", () => completePurchase, value => { completePurchase = value; });
+  __fitExpose("grantSub", () => grantSub, value => { grantSub = value; });
+  __fitExpose("loginDone", () => loginDone, value => { loginDone = value; });
+  __fitExpose("loginStep", () => loginStep, value => { loginStep = value; });
+  __fitExpose("loginPending", () => loginPending, value => { loginPending = value; });
+  __fitExpose("loginFixedEmail", () => loginFixedEmail, value => { loginFixedEmail = value; });
+  __fitExpose("pendingSub", () => pendingSub, value => { pendingSub = value; });
+  __fitExpose("openLogin", () => openLogin, value => { openLogin = value; });
+  __fitExpose("loginUseExistingCode", () => loginUseExistingCode, value => { loginUseExistingCode = value; });
+  __fitExpose("finishVerifiedLogin", () => finishVerifiedLogin, value => { finishVerifiedLogin = value; });
+  __fitExpose("doLogin", () => doLogin, value => { doLogin = value; });
+  __fitExpose("signOut", () => signOut, value => { signOut = value; });
+  __fitExpose("bioState", () => bioState, value => { bioState = value; });
+  __fitExpose("bioLastResult", () => bioLastResult, value => { bioLastResult = value; });
+  __fitExpose("bioRelockDeferred", () => bioRelockDeferred, value => { bioRelockDeferred = value; });
+  __fitExpose("BIO_RELOCK_MS", () => BIO_RELOCK_MS);
+  __fitExpose("nativeBiometryHost", () => nativeBiometryHost, value => { nativeBiometryHost = value; });
+  __fitExpose("bioReason", () => bioReason, value => { bioReason = value; });
+  __fitExpose("bioSupported", () => bioSupported, value => { bioSupported = value; });
+  __fitExpose("requestNativeBiometry", () => requestNativeBiometry, value => { requestNativeBiometry = value; });
+  __fitExpose("bioEnable", () => bioEnable, value => { bioEnable = value; });
+  __fitExpose("bioDisable", () => bioDisable, value => { bioDisable = value; });
+  __fitExpose("bioVerify", () => bioVerify, value => { bioVerify = value; });
+  __fitExpose("lockNeeded", () => lockNeeded);
+  __fitExpose("openLock", () => openLock, value => { openLock = value; });
+  __fitExpose("tryUnlock", () => tryUnlock, value => { tryUnlock = value; });
+  __fitExpose("maybeBiometricRelock", () => maybeBiometricRelock, value => { maybeBiometricRelock = value; });
+  __fitExpose("maybeRunDeferredBiometricLock", () => maybeRunDeferredBiometricLock, value => { maybeRunDeferredBiometricLock = value; });
+  __fitExpose("WARMUP_SPEC", () => WARMUP_SPEC);
+  __fitExpose("warmupProgram", () => warmupProgram, value => { warmupProgram = value; });
+  __fitExpose("localizeBuiltinWarmup", () => localizeBuiltinWarmup, value => { localizeBuiltinWarmup = value; });
+  __fitExpose("ensureWarmup", () => ensureWarmup, value => { ensureWarmup = value; });
+  __fitExpose("photos", () => photos, value => { photos = value; });
+  __fitExpose("loadPhotos", () => loadPhotos, value => { loadPhotos = value; });
+  __fitExpose("savePhotos", () => savePhotos, value => { savePhotos = value; });
+  __fitExpose("fmtD", () => fmtD, value => { fmtD = value; });
+  __fitExpose("shortD", () => shortD, value => { shortD = value; });
+  __fitExpose("renderPhotos", () => renderPhotos, value => { renderPhotos = value; });
+  __fitExpose("deleteAllPhotos", () => deleteAllPhotos, value => { deleteAllPhotos = value; });
+  __fitExpose("addPhoto", () => addPhoto, value => { addPhoto = value; });
+  __fitExpose("fillCmpSel", () => fillCmpSel, value => { fillCmpSel = value; });
+  __fitExpose("renderCmp", () => renderCmp, value => { renderCmp = value; });
+  __fitExpose("openCompare", () => openCompare, value => { openCompare = value; });
+  __fitExpose("cmpStep", () => cmpStep, value => { cmpStep = value; });
+  __fitExpose("pfIdx", () => pfIdx, value => { pfIdx = value; });
+  __fitExpose("openPhotoFull", () => openPhotoFull, value => { openPhotoFull = value; });
+  __fitExpose("renderPhotoFull", () => renderPhotoFull, value => { renderPhotoFull = value; });
+  __fitExpose("pfStep", () => pfStep, value => { pfStep = value; });
+  __fitExpose("justSwiped", () => justSwiped);
+  __fitExpose("wireSwipe", () => wireSwipe, value => { wireSwipe = value; });
+  __fitExpose("delCmpPhoto", () => delCmpPhoto, value => { delCmpPhoto = value; });
+  __fitExpose("loadImg", () => loadImg, value => { loadImg = value; });
+  __fitExpose("drawCover", () => drawCover, value => { drawCover = value; });
+  __fitExpose("shareGeneratedFile", () => shareGeneratedFile, value => { shareGeneratedFile = value; });
+  __fitExpose("shareCompare", () => shareCompare, value => { shareCompare = value; });
+  __fitExpose("NO_BACKUP", () => NO_BACKUP);
+  __fitExpose("backupProfileKeys", () => backupProfileKeys);
+  __fitExpose("backupGlobalKeys", () => backupGlobalKeys);
+  __fitExpose("exportAllData", () => exportAllData, value => { exportAllData = value; });
+  __fitExpose("importAllData", () => importAllData, value => { importAllData = value; });
+  __fitExpose("sanitizeBackupValue", () => sanitizeBackupValue, value => { sanitizeBackupValue = value; });
+  __fitExpose("SHARE_W", () => SHARE_W);
+  __fitExpose("SHARE_TOP", () => SHARE_TOP);
+  __fitExpose("SHARE_BOT", () => SHARE_BOT);
+  __fitExpose("SHARE_GAP", () => SHARE_GAP);
+  __fitExpose("SHARE_LANE", () => SHARE_LANE);
+  __fitExpose("sharePng", () => sharePng, value => { sharePng = value; });
+  __fitExpose("shareBodyLanes", () => shareBodyLanes, value => { shareBodyLanes = value; });
+  __fitExpose("shareWellLanes", () => shareWellLanes, value => { shareWellLanes = value; });
+  __fitExpose("shareWeightChart", () => shareWeightChart, value => { shareWeightChart = value; });
+  __fitExpose("shareWellChart", () => shareWellChart, value => { shareWellChart = value; });
+  __fitExpose("openWeightHist", () => openWeightHist, value => { openWeightHist = value; });
+  __fitExpose("saveWeightHist", () => saveWeightHist, value => { saveWeightHist = value; });
+  __fitExpose("LIM", () => LIM);
+  __fitExpose("CTRL", () => CTRL);
+  __fitExpose("NL", () => NL);
+  __fitExpose("clampText", () => clampText, value => { clampText = value; });
+  __fitExpose("clampLine", () => clampLine, value => { clampLine = value; });
+  __fitExpose("clampNum", () => clampNum);
+  __fitExpose("PIC_RE", () => PIC_RE);
+  __fitExpose("cleanPic", () => cleanPic, value => { cleanPic = value; });
+  __fitExpose("HOST_RE", () => HOST_RE);
+  __fitExpose("cleanLink", () => cleanLink, value => { cleanLink = value; });
+  __fitExpose("sanitizeProgram", () => sanitizeProgram, value => { sanitizeProgram = value; });
+  __fitExpose("uniqueExerciseIds", () => uniqueExerciseIds, value => { uniqueExerciseIds = value; });
+  __fitExpose("sanitizeExercise", () => sanitizeExercise, value => { sanitizeExercise = value; });
+  __fitExpose("NAME_MAX", () => NAME_MAX);
+  __fitExpose("DEFAULT_PROFILE_NAMES", () => DEFAULT_PROFILE_NAMES);
+  __fitExpose("defaultProfileName", () => defaultProfileName);
+  __fitExpose("nextProfileName", () => nextProfileName, value => { nextProfileName = value; });
+  __fitExpose("startOnboarding", () => startOnboarding, value => { startOnboarding = value; });
+  __fitExpose("finishOnboardingCreate", () => finishOnboardingCreate, value => { finishOnboardingCreate = value; });
+  __fitExpose("WHO_MSG", () => WHO_MSG);
+  __fitExpose("whoDraft", () => whoDraft, value => { whoDraft = value; });
+  __fitExpose("whoDone", () => whoDone, value => { whoDone = value; });
+  __fitExpose("needWho", () => needWho);
+  __fitExpose("whoSyncForm", () => whoSyncForm, value => { whoSyncForm = value; });
+  __fitExpose("askWho", () => askWho, value => { askWho = value; });
+  __fitExpose("requireWho", () => requireWho, value => { requireWho = value; });
+  __fitExpose("whoFinish", () => whoFinish, value => { whoFinish = value; });
+  __fitExpose("applyProgressionAll", () => applyProgressionAll, value => { applyProgressionAll = value; });
+  __fitExpose("applyPerExerciseProgressionMigration", () => applyPerExerciseProgressionMigration, value => { applyPerExerciseProgressionMigration = value; });
+  __fitExpose("makeChip", () => makeChip, value => { makeChip = value; });
+  __fitExpose("renderGreeting", () => renderGreeting, value => { renderGreeting = value; });
+  __fitExpose("renderWellQuick", () => renderWellQuick, value => { renderWellQuick = value; });
+  __fitExpose("countTo", () => countTo, value => { countTo = value; });
+  __fitExpose("todayRow", () => todayRow, value => { todayRow = value; });
+  __fitExpose("weekPlanInfo", () => weekPlanInfo, value => { weekPlanInfo = value; });
+  __fitExpose("renderWeekStrip", () => renderWeekStrip, value => { renderWeekStrip = value; });
+  __fitExpose("openDayProgram", () => openDayProgram, value => { openDayProgram = value; });
+  __fitExpose("openWeekDay", () => openWeekDay, value => { openWeekDay = value; });
+  __fitExpose("renderToday", () => renderToday, value => { renderToday = value; });
+  __fitExpose("duplicateProgram", () => duplicateProgram, value => { duplicateProgram = value; });
+  __fitExpose("MEDIA_BUDGET", () => MEDIA_BUDGET);
+  __fitExpose("programMedia", () => programMedia, value => { programMedia = value; });
+  __fitExpose("applyMedia", () => applyMedia, value => { applyMedia = value; });
+  __fitExpose("programPayload", () => programPayload, value => { programPayload = value; });
+  __fitExpose("trainerProfile", () => trainerProfile, value => { trainerProfile = value; });
+  __fitExpose("pushProfile", () => pushProfile, value => { pushProfile = value; });
+  __fitExpose("refreshTrainerProfile", () => refreshTrainerProfile, value => { refreshTrainerProfile = value; });
+  __fitExpose("coachLinkIds", () => coachLinkIds, value => { coachLinkIds = value; });
+  __fitExpose("MAIL_ERRS", () => MAIL_ERRS);
+  __fitExpose("mailErrText", () => mailErrText);
+  __fitExpose("forgetMe", () => forgetMe, value => { forgetMe = value; });
+  __fitExpose("wipeTrainerInfo", () => wipeTrainerInfo, value => { wipeTrainerInfo = value; });
+  __fitExpose("programLink", () => programLink, value => { programLink = value; });
+  __fitExpose("linkFailNote", () => linkFailNote, value => { linkFailNote = value; });
+  __fitExpose("FILE_HINT", () => FILE_HINT);
+  __fitExpose("exportProgram", () => exportProgram, value => { exportProgram = value; });
+  __fitExpose("exportProgramFile", () => exportProgramFile, value => { exportProgramFile = value; });
+  __fitExpose("importProgramFile", () => importProgramFile, value => { importProgramFile = value; });
+  __fitExpose("userAge", () => userAge, value => { userAge = value; });
+  __fitExpose("ageError", () => ageError, value => { ageError = value; });
+  __fitExpose("userForAI", () => userForAI, value => { userForAI = value; });
+  __fitExpose("GEMINI_MODELS", () => GEMINI_MODELS);
+  __fitExpose("geminiKey", () => geminiKey, value => { geminiKey = value; });
+  __fitExpose("hasGemini", () => hasGemini, value => { hasGemini = value; });
+  __fitExpose("geminiModelOrder", () => geminiModelOrder, value => { geminiModelOrder = value; });
+  __fitExpose("isNetworkFail", () => isNetworkFail, value => { isNetworkFail = value; });
+  __fitExpose("networkFailMessage", () => networkFailMessage, value => { networkFailMessage = value; });
+  __fitExpose("geminiFetch", () => geminiFetch, value => { geminiFetch = value; });
+  __fitExpose("geminiTry", () => geminiTry, value => { geminiTry = value; });
+  __fitExpose("callGemini", () => callGemini, value => { callGemini = value; });
+  __fitExpose("aiAuth", () => aiAuth, value => { aiAuth = value; });
+  __fitExpose("callServerAI", () => callServerAI, value => { callServerAI = value; });
+  __fitExpose("premiumGate", () => premiumGate, value => { premiumGate = value; });
+  __fitExpose("syncGeminiBtns", () => syncGeminiBtns, value => { syncGeminiBtns = value; });
+  __fitExpose("btnBusy", () => btnBusy, value => { btnBusy = value; });
+  __fitExpose("flashDone", () => flashDone, value => { flashDone = value; });
+  __fitExpose("AI_UI_KEYS", () => AI_UI_KEYS);
+  __fitExpose("aiUiText", () => aiUiText, value => { aiUiText = value; });
+  __fitExpose("aiSrc", () => aiSrc, value => { aiSrc = value; });
+  __fitExpose("AI_SOURCES", () => AI_SOURCES);
+  __fitExpose("exitExAI", () => exitExAI, value => { exitExAI = value; });
+  __fitExpose("aiEditRequestGuard", () => aiEditRequestGuard, value => { aiEditRequestGuard = value; });
+  __fitExpose("openAI", () => openAI, value => { openAI = value; });
+  __fitExpose("markAITab", () => markAITab, value => { markAITab = value; });
+  __fitExpose("aiWaysReset", () => aiWaysReset);
+  __fitExpose("setupAIAnswer", () => setupAIAnswer, value => { setupAIAnswer = value; });
+  __fitExpose("setExImg", () => setExImg, value => { setExImg = value; });
+  __fitExpose("dropExMedia", () => dropExMedia, value => { dropExMedia = value; });
+  __fitExpose("GEMINI_IMAGE_MODEL", () => GEMINI_IMAGE_MODEL);
+  __fitExpose("callGeminiImage", () => callGeminiImage, value => { callGeminiImage = value; });
+  __fitExpose("shrinkDataUrl", () => shrinkDataUrl, value => { shrinkDataUrl = value; });
+  __fitExpose("imageEquipment", () => imageEquipment, value => { imageEquipment = value; });
+  __fitExpose("imageStaticExercise", () => imageStaticExercise, value => { imageStaticExercise = value; });
+  __fitExpose("imageProgramContext", () => imageProgramContext, value => { imageProgramContext = value; });
+  __fitExpose("imageCoverTone", () => imageCoverTone, value => { imageCoverTone = value; });
+  __fitExpose("imageMuscleRegions", () => imageMuscleRegions, value => { imageMuscleRegions = value; });
+  __fitExpose("imageCharacterStyle", () => imageCharacterStyle, value => { imageCharacterStyle = value; });
+  __fitExpose("exerciseImagePrompt", () => exerciseImagePrompt, value => { exerciseImagePrompt = value; });
+  __fitExpose("coverImagePrompt", () => coverImagePrompt, value => { coverImagePrompt = value; });
+  __fitExpose("imageProgramName", () => imageProgramName, value => { imageProgramName = value; });
+  __fitExpose("unnamedImageExerciseCount", () => unnamedImageExerciseCount, value => { unnamedImageExerciseCount = value; });
+  __fitExpose("imageGenerationGuard", () => imageGenerationGuard, value => { imageGenerationGuard = value; });
+  __fitExpose("imageWorkspaceGuard", () => imageWorkspaceGuard, value => { imageWorkspaceGuard = value; });
+  __fitExpose("singleImagePrompt", () => singleImagePrompt, value => { singleImagePrompt = value; });
+  __fitExpose("imgGenCancelled", () => imgGenCancelled, value => { imgGenCancelled = value; });
+  __fitExpose("generateAllImagesViaAI", () => generateAllImagesViaAI, value => { generateAllImagesViaAI = value; });
+  __fitExpose("exImageItem", () => exImageItem, value => { exImageItem = value; });
+  __fitExpose("generateOneImageViaAI", () => generateOneImageViaAI, value => { generateOneImageViaAI = value; });
+  __fitExpose("generateSlotImageViaAI", () => generateSlotImageViaAI, value => { generateSlotImageViaAI = value; });
+  __fitExpose("finishImgGen", () => finishImgGen, value => { finishImgGen = value; });
+  __fitExpose("uniqueProgramExercises", () => uniqueProgramExercises, value => { uniqueProgramExercises = value; });
+  __fitExpose("imagesPromptText", () => imagesPromptText, value => { imagesPromptText = value; });
+  __fitExpose("imgTray", () => imgTray, value => { imgTray = value; });
+  __fitExpose("slotTarget", () => slotTarget, value => { slotTarget = value; });
+  __fitExpose("shrinkAll", () => shrinkAll, value => { shrinkAll = value; });
+  __fitExpose("imagesFrom", () => imagesFrom, value => { imagesFrom = value; });
+  __fitExpose("openImages", () => openImages, value => { openImages = value; });
+  __fitExpose("closeImages", () => closeImages, value => { closeImages = value; });
+  __fitExpose("trayUsed", () => trayUsed, value => { trayUsed = value; });
+  __fitExpose("renderTray", () => renderTray, value => { renderTray = value; });
+  __fitExpose("imageSlots", () => imageSlots, value => { imageSlots = value; });
+  __fitExpose("renderSlots", () => renderSlots, value => { renderSlots = value; });
+  __fitExpose("openSlotPicker", () => openSlotPicker, value => { openSlotPicker = value; });
+  __fitExpose("trayAutoAssign", () => trayAutoAssign, value => { trayAutoAssign = value; });
+  __fitExpose("exeIdx", () => exeIdx, value => { exeIdx = value; });
+  __fitExpose("exFormatLine", () => exFormatLine, value => { exFormatLine = value; });
+  __fitExpose("exRestLines", () => exRestLines, value => { exRestLines = value; });
+  __fitExpose("exProgToLines", () => exProgToLines, value => { exProgToLines = value; });
+  __fitExpose("exerciseToText", () => exerciseToText, value => { exerciseToText = value; });
+  __fitExpose("openExEdAI", () => openExEdAI, value => { openExEdAI = value; });
+  __fitExpose("aiClientVerdict", () => aiClientVerdict, value => { aiClientVerdict = value; });
+  __fitExpose("exAnswerFormat", () => exAnswerFormat, value => { exAnswerFormat = value; });
+  __fitExpose("exePrompt", () => exePrompt, value => { exePrompt = value; });
+  __fitExpose("applyExEdit", () => applyExEdit, value => { applyExEdit = value; });
+  __fitExpose("EXA_OPTS", () => EXA_OPTS);
+  __fitExpose("exa", () => exa);
+  __fitExpose("exaSelfLabel", () => exaSelfLabel, value => { exaSelfLabel = value; });
+  __fitExpose("exaChips", () => exaChips, value => { exaChips = value; });
+  __fitExpose("openExAI", () => openExAI, value => { openExAI = value; });
+  __fitExpose("aiExerciseHasUserInput", () => aiExerciseHasUserInput, value => { aiExerciseHasUserInput = value; });
+  __fitExpose("aiCreateExerciseGuard", () => aiCreateExerciseGuard, value => { aiCreateExerciseGuard = value; });
+  __fitExpose("exaPrompt", () => exaPrompt, value => { exaPrompt = value; });
+  __fitExpose("exaAddExercise", () => exaAddExercise, value => { exaAddExercise = value; });
+  __fitExpose("parseYouTubeUrl", () => parseYouTubeUrl, value => { parseYouTubeUrl = value; });
+  __fitExpose("youtubePrompt", () => youtubePrompt, value => { youtubePrompt = value; });
+  __fitExpose("openYouTube", () => openYouTube, value => { openYouTube = value; });
+  __fitExpose("ytCheckUrl", () => ytCheckUrl, value => { ytCheckUrl = value; });
+  __fitExpose("editAIProg", () => editAIProg, value => { editAIProg = value; });
+  __fitExpose("exCurrentValueText", () => exCurrentValueText, value => { exCurrentValueText = value; });
+  __fitExpose("programToText", () => programToText, value => { programToText = value; });
+  __fitExpose("editAIPrompt", () => editAIPrompt, value => { editAIPrompt = value; });
+  __fitExpose("openEditAI", () => openEditAI, value => { openEditAI = value; });
+  __fitExpose("versionedName", () => versionedName, value => { versionedName = value; });
+  __fitExpose("carryMedia", () => carryMedia, value => { carryMedia = value; });
+  __fitExpose("carryProgressCounters", () => carryProgressCounters, value => { carryProgressCounters = value; });
+  __fitExpose("carryExerciseText", () => carryExerciseText, value => { carryExerciseText = value; });
+  __fitExpose("structuralMinutes", () => structuralMinutes, value => { structuralMinutes = value; });
+  __fitExpose("editSummaryText", () => editSummaryText, value => { editSummaryText = value; });
+  __fitExpose("createEditedProgram", () => createEditedProgram, value => { createEditedProgram = value; });
+  __fitExpose("claimProgramLink", () => claimProgramLink, value => { claimProgramLink = value; });
+  __fitExpose("importProgramLink", () => importProgramLink, value => { importProgramLink = value; });
+  __fitExpose("importProgramCode", () => importProgramCode, value => { importProgramCode = value; });
+  __fitExpose("RUNTIME_CONFIG", () => RUNTIME_CONFIG);
+  __fitExpose("API_BASE", () => API_BASE);
+  __fitExpose("PUBLIC_APP_URL", () => PUBLIC_APP_URL);
+  __fitExpose("API_WAIT", () => API_WAIT);
+  __fitExpose("URL_SAFE", () => URL_SAFE);
+  __fitExpose("apiFetch", () => apiFetch, value => { apiFetch = value; });
+  __fitExpose("lastSeen", () => lastSeen, value => { lastSeen = value; });
+  __fitExpose("apiPost", () => apiPost);
+  __fitExpose("trainer", () => trainer, value => { trainer = value; });
+  __fitExpose("clients", () => clients, value => { clients = value; });
+  __fitExpose("clientIdx", () => clientIdx, value => { clientIdx = value; });
+  __fitExpose("coachPhotoDraft", () => coachPhotoDraft, value => { coachPhotoDraft = value; });
+  __fitExpose("loadTrainer", () => loadTrainer, value => { loadTrainer = value; });
+  __fitExpose("saveTrainer", () => saveTrainer, value => { saveTrainer = value; });
+  __fitExpose("saveClients", () => saveClients, value => { saveClients = value; });
+  __fitExpose("trainerAccountReady", () => trainerAccountReady);
+  __fitExpose("trainerOn", () => trainerOn);
+  __fitExpose("normHandle", () => normHandle, value => { normHandle = value; });
+  __fitExpose("humanDay", () => humanDay, value => { humanDay = value; });
+  __fitExpose("daysSince", () => daysSince, value => { daysSince = value; });
+  __fitExpose("lastReport", () => lastReport);
+  __fitExpose("clProgs", () => clProgs);
+  __fitExpose("clientSum", () => clientSum, value => { clientSum = value; });
+  __fitExpose("renderTrainerCard", () => renderTrainerCard, value => { renderTrainerCard = value; });
+  __fitExpose("renderClientsSkeleton", () => renderClientsSkeleton, value => { renderClientsSkeleton = value; });
+  __fitExpose("refreshClientsScreen", () => refreshClientsScreen, value => { refreshClientsScreen = value; });
+  __fitExpose("openClients", () => openClients, value => { openClients = value; });
+  __fitExpose("pullAll", () => pullAll, value => { pullAll = value; });
+  __fitExpose("clientDayWord", () => clientDayWord, value => { clientDayWord = value; });
+  __fitExpose("renderClients", () => renderClients, value => { renderClients = value; });
+  __fitExpose("openClient", () => openClient, value => { openClient = value; });
+  __fitExpose("curClient", () => curClient);
+  __fitExpose("fillClient", () => fillClient, value => { fillClient = value; });
+  __fitExpose("progCard", () => progCard, value => { progCard = value; });
+  __fitExpose("renderReport", () => renderReport, value => { renderReport = value; });
+  __fitExpose("sendProgramToClient", () => sendProgramToClient, value => { sendProgramToClient = value; });
+  __fitExpose("resendProgram", () => resendProgram, value => { resendProgram = value; });
+  __fitExpose("shareLink", () => shareLink, value => { shareLink = value; });
+  __fitExpose("PULL_ERR", () => PULL_ERR);
+  __fitExpose("pullProgram", () => pullProgram, value => { pullProgram = value; });
+  __fitExpose("pullClient", () => pullClient, value => { pullClient = value; });
+  __fitExpose("addClient", () => addClient, value => { addClient = value; });
+  __fitExpose("pickClientFor", () => pickClientFor, value => { pickClientFor = value; });
+  __fitExpose("snapshotEx", () => snapshotEx, value => { snapshotEx = value; });
+  __fitExpose("exKey", () => exKey);
+  __fitExpose("exVal", () => exVal);
+  __fitExpose("buildReport", () => buildReport, value => { buildReport = value; });
+  __fitExpose("autoReport", () => autoReport, value => { autoReport = value; });
+  __fitExpose("STORE_LOOK", () => STORE_LOOK);
+  __fitExpose("STORE_CATS", () => STORE_CATS);
+  __fitExpose("STORE_LEVELS", () => STORE_LEVELS);
+  __fitExpose("storeCat", () => storeCat);
+  __fitExpose("storeCountText", () => storeCountText, value => { storeCountText = value; });
+  __fitExpose("storeVariant", () => storeVariant, value => { storeVariant = value; });
+  __fitExpose("storeServer", () => storeServer, value => { storeServer = value; });
+  __fitExpose("storeAll", () => storeAll);
+  __fitExpose("storeLoading", () => storeLoading, value => { storeLoading = value; });
+  __fitExpose("catalogItemFull", () => catalogItemFull, value => { catalogItemFull = value; });
+  __fitExpose("ensureCatalogBody", () => ensureCatalogBody, value => { ensureCatalogBody = value; });
+  __fitExpose("loadStoreServer", () => loadStoreServer, value => { loadStoreServer = value; });
+  __fitExpose("storeUid", () => storeUid, value => { storeUid = value; });
+  __fitExpose("storeCover", () => storeCover, value => { storeCover = value; });
+  __fitExpose("storeCoverData", () => storeCoverData, value => { storeCoverData = value; });
+  __fitExpose("storeFilter", () => storeFilter, value => { storeFilter = value; });
+  __fitExpose("storeOwned", () => storeOwned);
+  __fitExpose("openOptPicker", () => openOptPicker, value => { openOptPicker = value; });
+  __fitExpose("renderStoreFilters", () => renderStoreFilters, value => { renderStoreFilters = value; });
+  __fitExpose("storeMatches", () => storeMatches, value => { storeMatches = value; });
+  __fitExpose("storeLabels", () => storeLabels, value => { storeLabels = value; });
+  __fitExpose("renderStore", () => renderStore, value => { renderStore = value; });
+  __fitExpose("siItem", () => siItem, value => { siItem = value; });
+  __fitExpose("siBits", () => siBits, value => { siBits = value; });
+  __fitExpose("openStoreItem", () => openStoreItem, value => { openStoreItem = value; });
+  __fitExpose("siPaintMedia", () => siPaintMedia, value => { siPaintMedia = value; });
+  __fitExpose("addStoreItem", () => addStoreItem, value => { addStoreItem = value; });
+  __fitExpose("storeFrom", () => storeFrom, value => { storeFrom = value; });
+  __fitExpose("tpFrom", () => tpFrom, value => { tpFrom = value; });
+  __fitExpose("openTrainer", () => openTrainer, value => { openTrainer = value; });
+  __fitExpose("skeletonTrainer", () => skeletonTrainer, value => { skeletonTrainer = value; });
+  __fitExpose("fillTrainerPage", () => fillTrainerPage, value => { fillTrainerPage = value; });
+  __fitExpose("pubProg", () => pubProg, value => { pubProg = value; });
+  __fitExpose("pubFrom", () => pubFrom, value => { pubFrom = value; });
+  __fitExpose("pubDraft", () => pubDraft, value => { pubDraft = value; });
+  __fitExpose("estimateMinutes", () => estimateMinutes, value => { estimateMinutes = value; });
+  __fitExpose("pubLabel", () => pubLabel, value => { pubLabel = value; });
+  __fitExpose("pubbed", () => pubbed);
+  __fitExpose("openMyCatalog", () => openMyCatalog, value => { openMyCatalog = value; });
+  __fitExpose("renderMyCatalog", () => renderMyCatalog, value => { renderMyCatalog = value; });
+  __fitExpose("refreshAllPubStatus", () => refreshAllPubStatus, value => { refreshAllPubStatus = value; });
+  __fitExpose("openPublish", () => openPublish, value => { openPublish = value; });
+  __fitExpose("fillPublish", () => fillPublish, value => { fillPublish = value; });
+  __fitExpose("refreshPubStatus", () => refreshPubStatus, value => { refreshPubStatus = value; });
+  __fitExpose("catalogCoverData", () => catalogCoverData, value => { catalogCoverData = value; });
+  __fitExpose("doPublish", () => doPublish, value => { doPublish = value; });
+  __fitExpose("openStore", () => openStore, value => { openStore = value; });
+  __fitExpose("renderCatalogRow", () => renderCatalogRow, value => { renderCatalogRow = value; });
+  __fitExpose("compactProgramDays", () => compactProgramDays, value => { compactProgramDays = value; });
+  __fitExpose("renderMine", () => renderMine, value => { renderMine = value; });
+  __fitExpose("enableDrag", () => enableDrag, value => { enableDrag = value; });
+  __fitExpose("MAX_WARM", () => MAX_WARM);
+  __fitExpose("MAX_MAIN", () => MAX_MAIN);
+  __fitExpose("MAX_EX", () => MAX_EX);
+  __fitExpose("draft", () => draft, value => { draft = value; });
+  __fitExpose("newExId", () => newExId, value => { newExId = value; });
+  __fitExpose("blankExercise", () => blankExercise, value => { blankExercise = value; });
+  __fitExpose("normalizeExercise", () => normalizeExercise, value => { normalizeExercise = value; });
+  __fitExpose("liveExercise", () => liveExercise, value => { liveExercise = value; });
+  __fitExpose("PROG_AXES", () => PROG_AXES);
+  __fitExpose("progAxis", () => progAxis, value => { progAxis = value; });
+  __fitExpose("hasWeight", () => hasWeight, value => { hasWeight = value; });
+  __fitExpose("weightPending", () => weightPending, value => { weightPending = value; });
+  __fitExpose("exRestAfter", () => exRestAfter, value => { exRestAfter = value; });
+  __fitExpose("exFormatState", () => exFormatState, value => { exFormatState = value; });
+  __fitExpose("PROG_EVERY_MAX", () => PROG_EVERY_MAX);
+  __fitExpose("clampProgEvery", () => clampProgEvery, value => { clampProgEvery = value; });
+  __fitExpose("progPeriodLabel", () => progPeriodLabel, value => { progPeriodLabel = value; });
+  __fitExpose("fillProgEveryOptions", () => fillProgEveryOptions, value => { fillProgEveryOptions = value; });
+  __fitExpose("fmtKg", () => fmtKg, value => { fmtKg = value; });
+  __fitExpose("progBaseValue", () => progBaseValue, value => { progBaseValue = value; });
+  __fitExpose("progShort", () => progShort, value => { progShort = value; });
+  __fitExpose("progStepSize", () => progStepSize, value => { progStepSize = value; });
+  __fitExpose("progFloor", () => progFloor, value => { progFloor = value; });
+  __fitExpose("progRound", () => progRound, value => { progRound = value; });
+  __fitExpose("ensurePs", () => ensurePs, value => { ensurePs = value; });
+  __fitExpose("psReps", () => psReps, value => { psReps = value; });
+  __fitExpose("psSec", () => psSec, value => { psSec = value; });
+  __fitExpose("psKg", () => psKg, value => { psKg = value; });
+  __fitExpose("exWeightKey", () => exWeightKey, value => { exWeightKey = value; });
+  __fitExpose("progCeil", () => progCeil, value => { progCeil = value; });
+  __fitExpose("isDualProg", () => isDualProg, value => { isDualProg = value; });
+  __fitExpose("getExProgValue", () => getExProgValue, value => { getExProgValue = value; });
+  __fitExpose("progressedRepsRange", () => progressedRepsRange, value => { progressedRepsRange = value; });
+  __fitExpose("axisAtCeiling", () => axisAtCeiling, value => { axisAtCeiling = value; });
+  __fitExpose("progAtCeiling", () => progAtCeiling, value => { progAtCeiling = value; });
+  __fitExpose("advanceExerciseProgression", () => advanceExerciseProgression, value => { advanceExerciseProgression = value; });
+  __fitExpose("progBaseKey", () => progBaseKey, value => { progBaseKey = value; });
+  __fitExpose("carryExerciseProgress", () => carryExerciseProgress, value => { carryExerciseProgress = value; });
+  __fitExpose("cloneExerciseAsNew", () => cloneExerciseAsNew, value => { cloneExerciseAsNew = value; });
+  __fitExpose("getExWeight", () => getExWeight, value => { getExWeight = value; });
+  __fitExpose("setExWeight", () => setExWeight, value => { setExWeight = value; });
+  __fitExpose("parseValue", () => parseValue, value => { parseValue = value; });
+  __fitExpose("valueText", () => valueText, value => { valueText = value; });
+  __fitExpose("scaleValue", () => scaleValue, value => { scaleValue = value; });
+  __fitExpose("normValue", () => normValue, value => { normValue = value; });
+  __fitExpose("planIdx", () => planIdx, value => { planIdx = value; });
+  __fitExpose("blankPlan", () => blankPlan, value => { blankPlan = value; });
+  __fitExpose("openBuilder", () => openBuilder, value => { openBuilder = value; });
+  __fitExpose("curPlan", () => curPlan, value => { curPlan = value; });
+  __fitExpose("syncRotateUI", () => syncRotateUI, value => { syncRotateUI = value; });
+  __fitExpose("commitPlanFields", () => commitPlanFields, value => { commitPlanFields = value; });
+  __fitExpose("programState", () => programState, value => { programState = value; });
+  __fitExpose("programDirty", () => programDirty, value => { programDirty = value; });
+  __fitExpose("fillBuilder", () => fillBuilder, value => { fillBuilder = value; });
+  __fitExpose("renderPlanTabs", () => renderPlanTabs, value => { renderPlanTabs = value; });
+  __fitExpose("buildPlanTabs", () => buildPlanTabs, value => { buildPlanTabs = value; });
+  __fitExpose("fillPlanFields", () => fillPlanFields, value => { fillPlanFields = value; });
+  __fitExpose("syncCover", () => syncCover, value => { syncCover = value; });
+  __fitExpose("syncVolHint", () => syncVolHint, value => { syncVolHint = value; });
+  __fitExpose("renderDays", () => renderDays, value => { renderDays = value; });
+  __fitExpose("exIdx", () => exIdx, value => { exIdx = value; });
+  __fitExpose("exDraft", () => exDraft, value => { exDraft = value; });
+  __fitExpose("exIsNew", () => exIsNew, value => { exIsNew = value; });
+  __fitExpose("dropFreshEx", () => dropFreshEx, value => { dropFreshEx = value; });
+  __fitExpose("exOrig", () => exOrig, value => { exOrig = value; });
+  __fitExpose("openExercise", () => openExercise, value => { openExercise = value; });
+  __fitExpose("fillExercise", () => fillExercise, value => { fillExercise = value; });
+  __fitExpose("syncExType", () => syncExType, value => { syncExType = value; });
+  __fitExpose("syncExWarm", () => syncExWarm, value => { syncExWarm = value; });
+  __fitExpose("renderExMuscles", () => renderExMuscles, value => { renderExMuscles = value; });
+  __fitExpose("parseKg", () => parseKg, value => { parseKg = value; });
+  __fitExpose("renderProgControls", () => renderProgControls, value => { renderProgControls = value; });
+  __fitExpose("syncExNowHints", () => syncExNowHints, value => { syncExNowHints = value; });
+  __fitExpose("syncExProgSum", () => syncExProgSum, value => { syncExProgSum = value; });
+  __fitExpose("REST_CHIPS", () => REST_CHIPS);
+  __fitExpose("restCustom", () => restCustom);
+  __fitExpose("renderRestChipsInto", () => renderRestChipsInto, value => { renderRestChipsInto = value; });
+  __fitExpose("renderExRestChips", () => renderExRestChips, value => { renderExRestChips = value; });
+  __fitExpose("restModalKey", () => restModalKey, value => { restModalKey = value; });
+  __fitExpose("restModalBoxId", () => restModalBoxId, value => { restModalBoxId = value; });
+  __fitExpose("openRestModal", () => openRestModal, value => { openRestModal = value; });
+  __fitExpose("renderExMedia", () => renderExMedia, value => { renderExMedia = value; });
+  __fitExpose("syncExDetailsSum", () => syncExDetailsSum, value => { syncExDetailsSum = value; });
+  __fitExpose("applyFormTo", () => applyFormTo, value => { applyFormTo = value; });
+  __fitExpose("exDirty", () => exDirty, value => { exDirty = value; });
+  __fitExpose("commitExercise", () => commitExercise, value => { commitExercise = value; });
+  __fitExpose("sortWarmFirst", () => sortWarmFirst, value => { sortWarmFirst = value; });
+  __fitExpose("renderExList", () => renderExList, value => { renderExList = value; });
+  __fitExpose("exBits", () => exBits, value => { exBits = value; });
+  __fitExpose("exSummary", () => exSummary, value => { exSummary = value; });
+  __fitExpose("exThumb", () => exThumb, value => { exThumb = value; });
+  __fitExpose("dupExerciseAt", () => dupExerciseAt, value => { dupExerciseAt = value; });
+  __fitExpose("delExerciseAt", () => delExerciseAt, value => { delExerciseAt = value; });
+  __fitExpose("exRow", () => exRow, value => { exRow = value; });
+  __fitExpose("shrinkImage", () => shrinkImage, value => { shrinkImage = value; });
+  __fitExpose("aiPrompt", () => aiPrompt, value => { aiPrompt = value; });
+  __fitExpose("aiProtocolLine", () => aiProtocolLine, value => { aiProtocolLine = value; });
+  __fitExpose("aiExerciseBlocks", () => aiExerciseBlocks, value => { aiExerciseBlocks = value; });
+  __fitExpose("parseStepNum", () => parseStepNum, value => { parseStepNum = value; });
+  __fitExpose("DAY_ALIASES", () => DAY_ALIASES);
+  __fitExpose("PARSE_KEYS", () => PARSE_KEYS, value => { PARSE_KEYS = value; });
+  __fitExpose("parseKeys", () => parseKeys, value => { parseKeys = value; });
+  __fitExpose("repairLines", () => repairLines, value => { repairLines = value; });
+  __fitExpose("parseProgramText", () => parseProgramText, value => { parseProgramText = value; });
+  __fitExpose("pregnancyWarning", () => pregnancyWarning, value => { pregnancyWarning = value; });
+  __fitExpose("Q_OPTS", () => Q_OPTS);
+  __fitExpose("AI_DEFAULT_LEVEL", () => AI_DEFAULT_LEVEL);
+  __fitExpose("AI_DEFAULT_DURATION", () => AI_DEFAULT_DURATION);
+  __fitExpose("AI_DEFAULT_LIMITS", () => AI_DEFAULT_LIMITS);
+  __fitExpose("q", () => q);
+  __fitExpose("qChips", () => qChips, value => { qChips = value; });
+  __fitExpose("Q_DESC", () => Q_DESC);
+  __fitExpose("qCards", () => qCards, value => { qCards = value; });
+  __fitExpose("initAIForm", () => initAIForm, value => { initAIForm = value; });
+  __fitExpose("aiChoiceEnglish", () => aiChoiceEnglish, value => { aiChoiceEnglish = value; });
+  __fitExpose("aiListEnglish", () => aiListEnglish, value => { aiListEnglish = value; });
+  __fitExpose("aiProgramHasUserInput", () => aiProgramHasUserInput, value => { aiProgramHasUserInput = value; });
+  __fitExpose("aiCreateProgramGuard", () => aiCreateProgramGuard, value => { aiCreateProgramGuard = value; });
+  __fitExpose("aiDurationEnglish", () => aiDurationEnglish, value => { aiDurationEnglish = value; });
+  __fitExpose("composeRequest", () => composeRequest, value => { composeRequest = value; });
+  __fitExpose("fullAIPrompt", () => fullAIPrompt);
+  __fitExpose("copyPrompt", () => copyPrompt, value => { copyPrompt = value; });
+  __fitExpose("MSG_AI_EMPTY", () => MSG_AI_EMPTY);
+  __fitExpose("MSG_AI_PARSE", () => MSG_AI_PARSE);
+  __fitExpose("MSG_AI_NOEX", () => MSG_AI_NOEX);
+  __fitExpose("importFromText", () => importFromText, value => { importFromText = value; });
+  __fitExpose("saveProgram", () => saveProgram, value => { saveProgram = value; });
+  __fitExpose("buildSteps", () => buildSteps, value => { buildSteps = value; });
+  __fitExpose("fmt", () => fmt, value => { fmt = value; });
+  __fitExpose("tnum", () => tnum, value => { tnum = value; });
+  __fitExpose("globalElapsed", () => globalElapsed, value => { globalElapsed = value; });
+  __fitExpose("startGlobal", () => startGlobal, value => { startGlobal = value; });
+  __fitExpose("stopGlobal", () => stopGlobal, value => { stopGlobal = value; });
+  __fitExpose("exFromWork", () => exFromWork, value => { exFromWork = value; });
+  __fitExpose("editExerciseFromWorkout", () => editExerciseFromWorkout, value => { editExerciseFromWorkout = value; });
+  __fitExpose("backToWorkout", () => backToWorkout, value => { backToWorkout = value; });
+  __fitExpose("afterExChange", () => afterExChange, value => { afterExChange = value; });
+  __fitExpose("saveExToWorkout", () => saveExToWorkout, value => { saveExToWorkout = value; });
+  __fitExpose("setPause", () => setPause, value => { setPause = value; });
+  __fitExpose("paintPause", () => paintPause, value => { paintPause = value; });
+  __fitExpose("startWorkout", () => startWorkout, value => { startWorkout = value; });
+  __fitExpose("clearStepTimer", () => clearStepTimer, value => { clearStepTimer = value; });
+  __fitExpose("lastWorkStep", () => lastWorkStep, value => { lastWorkStep = value; });
+  __fitExpose("warmupPosition", () => warmupPosition, value => { warmupPosition = value; });
+  __fitExpose("nextNativeWorkStep", () => nextNativeWorkStep, value => { nextNativeWorkStep = value; });
+  __fitExpose("nativeSessionSaveT", () => nativeSessionSaveT, value => { nativeSessionSaveT = value; });
+  __fitExpose("autosaveNativeWorkoutSession", () => autosaveNativeWorkoutSession, value => { autosaveNativeWorkoutSession = value; });
+  __fitExpose("syncNativeWorkoutState", () => syncNativeWorkoutState, value => { syncNativeWorkoutState = value; });
+  __fitExpose("exerciseProgressLabel", () => exerciseProgressLabel, value => { exerciseProgressLabel = value; });
+  __fitExpose("renderStep", () => renderStep, value => { renderStep = value; });
+  __fitExpose("fitStepTitle", () => fitStepTitle, value => { fitStepTitle = value; });
+  __fitExpose("refreshDetailsFade", () => refreshDetailsFade, value => { refreshDetailsFade = value; });
+  __fitExpose("nextStep", () => nextStep, value => { nextStep = value; });
+  __fitExpose("openSwapHint", () => openSwapHint, value => { openSwapHint = value; });
+  __fitExpose("closeSwapHint", () => closeSwapHint, value => { closeSwapHint = value; });
+  __fitExpose("swapSourceExercise", () => swapSourceExercise, value => { swapSourceExercise = value; });
+  __fitExpose("swapAIPrompt", () => swapAIPrompt, value => { swapAIPrompt = value; });
+  __fitExpose("refreshLiveSteps", () => refreshLiveSteps, value => { refreshLiveSteps = value; });
+  __fitExpose("swapViaAI", () => swapViaAI, value => { swapViaAI = value; });
+  __fitExpose("prevStep", () => prevStep, value => { prevStep = value; });
+  __fitExpose("esc", () => esc, value => { esc = value; });
+  __fitExpose("renderNextUp", () => renderNextUp, value => { renderNextUp = value; });
+  __fitExpose("autoGrowMax", () => autoGrowMax, value => { autoGrowMax = value; });
+  __fitExpose("autoGrow", () => autoGrow, value => { autoGrow = value; });
+  __fitExpose("stopSpeech", () => stopSpeech, value => { stopSpeech = value; });
+  __fitExpose("estimateKcal", () => estimateKcal, value => { estimateKcal = value; });
+  __fitExpose("REVIEW_STATE_KEY", () => REVIEW_STATE_KEY);
+  __fitExpose("REVIEW_MILESTONES", () => REVIEW_MILESTONES);
+  __fitExpose("REVIEW_MIN_GAP_MS", () => REVIEW_MIN_GAP_MS);
+  __fitExpose("reviewPromptState", () => reviewPromptState, value => { reviewPromptState = value; });
+  __fitExpose("reviewMilestoneDue", () => reviewMilestoneDue, value => { reviewMilestoneDue = value; });
+  __fitExpose("maybeRequestAppReview", () => maybeRequestAppReview, value => { maybeRequestAppReview = value; });
+  __fitExpose("QUICK_FINISH_SEC", () => QUICK_FINISH_SEC);
+  __fitExpose("commitFinish", () => commitFinish, value => { commitFinish = value; });
+  __fitExpose("progCheckExercises", () => progCheckExercises, value => { progCheckExercises = value; });
+  __fitExpose("renderProgCheck", () => renderProgCheck, value => { renderProgCheck = value; });
+  __fitExpose("toggleProgCheckList", () => toggleProgCheckList, value => { toggleProgCheckList = value; });
+  __fitExpose("applyProgCheck", () => applyProgCheck, value => { applyProgCheck = value; });
+  __fitExpose("settleQuickFinish", () => settleQuickFinish, value => { settleQuickFinish = value; });
+  __fitExpose("finishWorkout", () => finishWorkout, value => { finishWorkout = value; });
+  __fitExpose("roundRect", () => roundRect, value => { roundRect = value; });
+  __fitExpose("shareResult", () => shareResult, value => { shareResult = value; });
+  __fitExpose("countUp", () => countUp, value => { countUp = value; });
+  __fitExpose("FIN_RING_C", () => FIN_RING_C);
+  __fitExpose("finFxRaf", () => finFxRaf, value => { finFxRaf = value; });
+  __fitExpose("finFxTimers", () => finFxTimers, value => { finFxTimers = value; });
+  __fitExpose("setFinRing", () => setFinRing, value => { setFinRing = value; });
+  __fitExpose("stopFinishFx", () => stopFinishFx, value => { stopFinishFx = value; });
+  __fitExpose("hexA", () => hexA, value => { hexA = value; });
+  __fitExpose("playFinishFx", () => playFinishFx, value => { playFinishFx = value; });
+  __fitExpose("activeWeekStreak", () => activeWeekStreak, value => { activeWeekStreak = value; });
+  __fitExpose("BADGES", () => BADGES);
+  __fitExpose("pruneBadges", () => pruneBadges, value => { pruneBadges = value; });
+  __fitExpose("earnBadges", () => earnBadges, value => { earnBadges = value; });
+  __fitExpose("hasBadge", () => hasBadge);
+  __fitExpose("badgeName", () => badgeName);
+  __fitExpose("badgeDesc", () => badgeDesc);
+  __fitExpose("renderBadges", () => renderBadges, value => { renderBadges = value; });
+  __fitExpose("exitWorkout", () => exitWorkout, value => { exitWorkout = value; });
+  __fitExpose("tearDownWorkout", () => tearDownWorkout, value => { tearDownWorkout = value; });
+  __fitExpose("sysDark", () => sysDark);
+  __fitExpose("themeLight", () => themeLight, value => { themeLight = value; });
+  __fitExpose("themeOf", () => themeOf);
+  __fitExpose("applyThemeFor", () => applyThemeFor, value => { applyThemeFor = value; });
+  __fitExpose("applyTheme", () => applyTheme, value => { applyTheme = value; });
+  __fitExpose("SR", () => SR);
+  __fitExpose("recog", () => recog, value => { recog = value; });
+  __fitExpose("voiceWanted", () => voiceWanted, value => { voiceWanted = value; });
+  __fitExpose("voiceActive", () => voiceActive, value => { voiceActive = value; });
+  __fitExpose("recognitionLang", () => recognitionLang, value => { recognitionLang = value; });
+  __fitExpose("syncPrefs", () => syncPrefs, value => { syncPrefs = value; });
+  __fitExpose("lastCmdTime", () => lastCmdTime, value => { lastCmdTime = value; });
+  __fitExpose("lastCmdKind", () => lastCmdKind, value => { lastCmdKind = value; });
+  __fitExpose("applyVoiceCommand", () => applyVoiceCommand, value => { applyVoiceCommand = value; });
+  __fitExpose("hfMode", () => hfMode, value => { hfMode = value; });
+  __fitExpose("hfHintText", () => hfHintText, value => { hfHintText = value; });
+  __fitExpose("syncHandsFreeUI", () => syncHandsFreeUI, value => { syncHandsFreeUI = value; });
+  __fitExpose("setHfMode", () => setHfMode, value => { setHfMode = value; });
+  __fitExpose("startHandsFree", () => startHandsFree, value => { startHandsFree = value; });
+  __fitExpose("stopHandsFree", () => stopHandsFree, value => { stopHandsFree = value; });
+  __fitExpose("hsAudio", () => hsAudio, value => { hsAudio = value; });
+  __fitExpose("startHeadset", () => startHeadset, value => { startHeadset = value; });
+  __fitExpose("stopHeadset", () => stopHeadset, value => { stopHeadset = value; });
+  __fitExpose("recogTimer", () => recogTimer, value => { recogTimer = value; });
+  __fitExpose("lastRecogStart", () => lastRecogStart, value => { lastRecogStart = value; });
+  __fitExpose("stopRequested", () => stopRequested, value => { stopRequested = value; });
+  __fitExpose("recogFails", () => recogFails, value => { recogFails = value; });
+  __fitExpose("recogSeq", () => recogSeq, value => { recogSeq = value; });
+  __fitExpose("firedSeq", () => firedSeq, value => { firedSeq = value; });
+  __fitExpose("firedIdx", () => firedIdx, value => { firedIdx = value; });
+  __fitExpose("buildRecog", () => buildRecog, value => { buildRecog = value; });
+  __fitExpose("resetVoiceDedup", () => resetVoiceDedup, value => { resetVoiceDedup = value; });
+  __fitExpose("handleNativeVoiceResult", () => handleNativeVoiceResult, value => { handleNativeVoiceResult = value; });
+  __fitExpose("handleNativeVoiceError", () => handleNativeVoiceError, value => { handleNativeVoiceError = value; });
+  __fitExpose("handleNativeVoiceStatus", () => handleNativeVoiceStatus, value => { handleNativeVoiceStatus = value; });
+  __fitExpose("startListening", () => startListening, value => { startListening = value; });
+  __fitExpose("stopListening", () => stopListening, value => { stopListening = value; });
+  __fitExpose("notifiedKeys", () => notifiedKeys);
+  __fitExpose("showNotification", () => showNotification, value => { showNotification = value; });
+  __fitExpose("checkSchedules", () => checkSchedules, value => { checkSchedules = value; });
+  __fitExpose("NOTIFY_HORIZON_DAYS", () => NOTIFY_HORIZON_DAYS);
+  __fitExpose("NOTIFY_NATIVE_LIMIT", () => NOTIFY_NATIVE_LIMIT);
+  __fitExpose("NOTIFY_PASSIVE_DAILY_LIMIT", () => NOTIFY_PASSIVE_DAILY_LIMIT);
+  __fitExpose("NOTIFY_DAY", () => NOTIFY_DAY);
+  __fitExpose("notifyDayKey", () => notifyDayKey, value => { notifyDayKey = value; });
+  __fitExpose("notifyAt", () => notifyAt, value => { notifyAt = value; });
+  __fitExpose("notifyTimeParts", () => notifyTimeParts, value => { notifyTimeParts = value; });
+  __fitExpose("notifyScheduledPlan", () => notifyScheduledPlan, value => { notifyScheduledPlan = value; });
+  __fitExpose("notifyPlanFor", () => notifyPlanFor, value => { notifyPlanFor = value; });
+  __fitExpose("notifyProgressionChanged", () => notifyProgressionChanged, value => { notifyProgressionChanged = value; });
+  __fitExpose("notifyWorkoutCount", () => notifyWorkoutCount, value => { notifyWorkoutCount = value; });
+  __fitExpose("notifyNames", () => notifyNames, value => { notifyNames = value; });
+  __fitExpose("notifyRowsExtra", () => notifyRowsExtra, value => { notifyRowsExtra = value; });
+  __fitExpose("notifyRowsByTime", () => notifyRowsByTime, value => { notifyRowsByTime = value; });
+  __fitExpose("notifyScheduleRowsForDay", () => notifyScheduleRowsForDay, value => { notifyScheduleRowsForDay = value; });
+  __fitExpose("notifyTimedGroupCopy", () => notifyTimedGroupCopy, value => { notifyTimedGroupCopy = value; });
+  __fitExpose("notifyMorningCopy", () => notifyMorningCopy, value => { notifyMorningCopy = value; });
+  __fitExpose("notifyEveningCopy", () => notifyEveningCopy, value => { notifyEveningCopy = value; });
+  __fitExpose("buildWorkoutNotificationCandidates", () => buildWorkoutNotificationCandidates, value => { buildWorkoutNotificationCandidates = value; });
+  __fitExpose("notifyThirdWorkoutDate", () => notifyThirdWorkoutDate, value => { notifyThirdWorkoutDate = value; });
+  __fitExpose("notifyHasWorkoutOn", () => notifyHasWorkoutOn, value => { notifyHasWorkoutOn = value; });
+  __fitExpose("notifyPremiumCandidate", () => notifyPremiumCandidate, value => { notifyPremiumCandidate = value; });
+  __fitExpose("limitNotificationCandidates", () => limitNotificationCandidates, value => { limitNotificationCandidates = value; });
+  __fitExpose("syncNativeNotifications", () => syncNativeNotifications, value => { syncNativeNotifications = value; });
+  __fitExpose("ACTIONS", () => ACTIONS);
+  __fitExpose("pendingStartSession", () => pendingStartSession, value => { pendingStartSession = value; });
+  __fitExpose("resumeWorkoutFromNativeNotification", () => resumeWorkoutFromNativeNotification, value => { resumeWorkoutFromNativeNotification = value; });
+  __fitExpose("NOTIFICATION_PREFS_KEY", () => NOTIFICATION_PREFS_KEY);
+  __fitExpose("NOTIFICATION_PREF_DEFAULTS", () => NOTIFICATION_PREF_DEFAULTS);
+  __fitExpose("notificationPreferenceStore", () => notificationPreferenceStore);
+  __fitExpose("getNotificationPrefs", () => getNotificationPrefs, value => { getNotificationPrefs = value; });
+  __fitExpose("syncNotificationSettings", () => syncNotificationSettings, value => { syncNotificationSettings = value; });
+  __fitExpose("persistNotificationPrefs", () => persistNotificationPrefs, value => { persistNotificationPrefs = value; });
+  __fitExpose("setNotificationPref", () => setNotificationPref, value => { setNotificationPref = value; });
+  __fitExpose("syncRemotePushRegistration", () => syncRemotePushRegistration, value => { syncRemotePushRegistration = value; });
+  __fitExpose("unregisterRemotePushServer", () => unregisterRemotePushServer, value => { unregisterRemotePushServer = value; });
+  __fitExpose("syncSettingsForm", () => syncSettingsForm, value => { syncSettingsForm = value; });
+  __fitExpose("settingsSaveT", () => settingsSaveT, value => { settingsSaveT = value; });
+  __fitExpose("saveSettingsSoon", () => saveSettingsSoon, value => { saveSettingsSoon = value; });
+  __fitExpose("readTimings", () => readTimings, value => { readTimings = value; });
+  __fitExpose("nativeVoiceReady", () => nativeVoiceReady, value => { nativeVoiceReady = value; });
+  __fitExpose("chooseHandsFree", () => chooseHandsFree, value => { chooseHandsFree = value; });
+  __fitExpose("clampVol", () => clampVol, value => { clampVol = value; });
+  __fitExpose("applyAudioFromUser", () => applyAudioFromUser, value => { applyAudioFromUser = value; });
+  __fitExpose("toggleSound", () => toggleSound, value => { toggleSound = value; });
+  __fitExpose("fxVolMemory", () => fxVolMemory, value => { fxVolMemory = value; });
+  __fitExpose("fillLiveSoundCascade", () => fillLiveSoundCascade, value => { fillLiveSoundCascade = value; });
+  __fitExpose("persistLiveSound", () => persistLiveSound, value => { persistLiveSound = value; });
+  __fitExpose("wireLiveSoundCascade", () => wireLiveSoundCascade, value => { wireLiveSoundCascade = value; });
+  __fitExpose("cloneSettingsBlock", () => cloneSettingsBlock, value => { cloneSettingsBlock = value; });
+  __fitExpose("mountWorkoutSettingsBlocks", () => mountWorkoutSettingsBlocks, value => { mountWorkoutSettingsBlocks = value; });
+  __fitExpose("availableTtsVoices", () => availableTtsVoices, value => { availableTtsVoices = value; });
+  __fitExpose("fillVoiceChoices", () => fillVoiceChoices, value => { fillVoiceChoices = value; });
+  __fitExpose("syncTtsLocaleToApp", () => syncTtsLocaleToApp, value => { syncTtsLocaleToApp = value; });
+  __fitExpose("voicePackPollTimer", () => voicePackPollTimer, value => { voicePackPollTimer = value; });
+  __fitExpose("refreshVoicePackUI", () => refreshVoicePackUI, value => { refreshVoicePackUI = value; });
+  __fitExpose("downloadSelectedVoicePack", () => downloadSelectedVoicePack, value => { downloadSelectedVoicePack = value; });
+  __fitExpose("openHfModal", () => openHfModal, value => { openHfModal = value; });
+  __fitExpose("previewSelectedVoice", () => previewSelectedVoice, value => { previewSelectedVoice = value; });
+  __fitExpose("openHfCommands", () => openHfCommands, value => { openHfCommands = value; });
+  __fitExpose("voiceTestOn", () => voiceTestOn, value => { voiceTestOn = value; });
+  __fitExpose("VT_KIND", () => VT_KIND);
+  __fitExpose("voiceTestRow", () => voiceTestRow, value => { voiceTestRow = value; });
+  __fitExpose("onVoiceTestHeard", () => onVoiceTestHeard, value => { onVoiceTestHeard = value; });
+  __fitExpose("openVoiceTest", () => openVoiceTest, value => { openVoiceTest = value; });
+  __fitExpose("stopVoiceTest", () => stopVoiceTest, value => { stopVoiceTest = value; });
+  __fitExpose("enableTrainerMode", () => enableTrainerMode, value => { enableTrainerMode = value; });
+  __fitExpose("pickProgramForClient", () => pickProgramForClient, value => { pickProgramForClient = value; });
+  __fitExpose("delCurrentPlan", () => delCurrentPlan, value => { delCurrentPlan = value; });
+  __fitExpose("legalBack", () => legalBack, value => { legalBack = value; });
+  __fitExpose("LEGAL_SECTIONS", () => LEGAL_SECTIONS);
+  __fitExpose("legalToggle", () => legalToggle, value => { legalToggle = value; });
+  __fitExpose("openLegal", () => openLegal, value => { openLegal = value; });
+  __fitExpose("openPremium", () => openPremium, value => { openPremium = value; });
+  __fitExpose("dropLogin", () => dropLogin);
+  __fitExpose("leaveOnboarding", () => leaveOnboarding, value => { leaveOnboarding = value; });
+  __fitExpose("openStats", () => openStats, value => { openStats = value; });
+  __fitExpose("switchStatsTab", () => switchStatsTab, value => { switchStatsTab = value; });
+  __fitExpose("moreTab", () => moreTab, value => { moreTab = value; });
+  __fitExpose("switchMoreTab", () => switchMoreTab, value => { switchMoreTab = value; });
+  __fitExpose("ytGuard", () => ytGuard, value => { ytGuard = value; });
+  __fitExpose("ytCopyPrompt", () => ytCopyPrompt, value => { ytCopyPrompt = value; });
+  __fitExpose("ytApplyResult", () => ytApplyResult, value => { ytApplyResult = value; });
+  __fitExpose("copyEditPrompt", () => copyEditPrompt, value => { copyEditPrompt = value; });
+  __fitExpose("aiRunCtl", () => aiRunCtl, value => { aiRunCtl = value; });
+  __fitExpose("aiRunT0", () => aiRunT0, value => { aiRunT0 = value; });
+  __fitExpose("aiRunTick", () => aiRunTick, value => { aiRunTick = value; });
+  __fitExpose("aiRunOnCancel", () => aiRunOnCancel, value => { aiRunOnCancel = value; });
+  __fitExpose("aiRunCancelled", () => aiRunCancelled, value => { aiRunCancelled = value; });
+  __fitExpose("aiRunOpen", () => aiRunOpen, value => { aiRunOpen = value; });
+  __fitExpose("aiRunNote", () => aiRunNote, value => { aiRunNote = value; });
+  __fitExpose("aiRunClose", () => aiRunClose, value => { aiRunClose = value; });
+  __fitExpose("aiRetryDialog", () => aiRetryDialog, value => { aiRetryDialog = value; });
+  __fitExpose("runSelfAI", () => runSelfAI, value => { runSelfAI = value; });
+  __fitExpose("buildAiMenu", () => buildAiMenu, value => { buildAiMenu = value; });
+  __fitExpose("buildExMenu", () => buildExMenu, value => { buildExMenu = value; });
+  __fitExpose("switchCreateMode", () => switchCreateMode, value => { switchCreateMode = value; });
+  __fitExpose("markBuilderTab", () => markBuilderTab, value => { markBuilderTab = value; });
+  __fitExpose("exeCopyPrompt", () => exeCopyPrompt, value => { exeCopyPrompt = value; });
+  __fitExpose("exaCopyPrompt", () => exaCopyPrompt, value => { exaCopyPrompt = value; });
+  __fitExpose("addExManual", () => addExManual, value => { addExManual = value; });
+  __fitExpose("exNameOk", () => exNameOk, value => { exNameOk = value; });
+  __fitExpose("dupExercise", () => dupExercise, value => { dupExercise = value; });
+  __fitExpose("delExercise", () => delExercise, value => { delExercise = value; });
+  __fitExpose("saveExAndBack", () => saveExAndBack, value => { saveExAndBack = value; });
+  __fitExpose("leaveExercise", () => leaveExercise, value => { leaveExercise = value; });
+  __fitExpose("closeProgSettings", () => closeProgSettings, value => { closeProgSettings = value; });
+  __fitExpose("syncImagesSum", () => syncImagesSum, value => { syncImagesSum = value; });
+  __fitExpose("syncSettingsSum", () => syncSettingsSum, value => { syncSettingsSum = value; });
+  __fitExpose("releaseResumeAt", () => releaseResumeAt, value => { releaseResumeAt = value; });
+  __fitExpose("refreshAfterForeground", () => refreshAfterForeground, value => { refreshAfterForeground = value; });
+  __fitExpose("renderIconLabels", () => renderIconLabels, value => { renderIconLabels = value; });
+  __fitExpose("pendingImport", () => pendingImport, value => { pendingImport = value; });
+  __fitExpose("pendingLink", () => pendingLink, value => { pendingLink = value; });
+  __fitExpose("pendingNativeLink", () => pendingNativeLink, value => { pendingNativeLink = value; });
+  __fitExpose("pendingNativeWorkoutResume", () => pendingNativeWorkoutResume, value => { pendingNativeWorkoutResume = value; });
+  __fitExpose("workoutResumeReady", () => workoutResumeReady, value => { workoutResumeReady = value; });
+  __fitExpose("programLinksReady", () => programLinksReady, value => { programLinksReady = value; });
+  __fitExpose("pendingAction", () => pendingAction, value => { pendingAction = value; });
+}

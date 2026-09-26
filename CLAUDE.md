@@ -44,7 +44,7 @@ Fit Timer is a Russian-first workout timer / training app.
 - App id: `ru.fittimer.app`
 - AppBase Core (shared with future apps): `packages/core/` — client `src/core/*.ts`, server `server/*.js`
 - Canonical frontend: `src/html/`, `src/styles/`, `src/app/`
-- Generated frontend outputs: root `index.html`, `style.css`, `app.js` — never edit directly
+- Generated frontend outputs: root `index.html`, `style.css`, `app.js` — never edit directly (`app.js` is an ES module bundled by esbuild with Core; browser tests reach its internals only via the CI-only `__FIT_TEST_MODE__` bridge)
 - Mobile runtime/bridge: `mobile.js`
 - Serverless backend: `api/`
 - Shared backend code: `lib/`

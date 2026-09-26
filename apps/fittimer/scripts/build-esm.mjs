@@ -19,6 +19,9 @@ await build({
   target: 'es2022',
   tsconfig: 'tsconfig.json',
   chunkNames: 'chunks/[name]-[hash]',
+  // Keep non-ASCII text as written: product code reads its own source at runtime
+  // (parseKeys() in src/app/60-builder.js) and must see Cyrillic keys, not \\u escapes.
+  charset: 'utf8',
   legalComments: 'none',
   logLevel: 'warning'
 });

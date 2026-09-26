@@ -86,8 +86,8 @@
     },
     "src/app/00-dependencies.js": {
       "kind": "frontend-js",
-      "lines": 13,
-      "chars": 672
+      "lines": 38,
+      "chars": 1610
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
@@ -587,8 +587,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2105,
-      "chars": 97286,
+      "lines": 2107,
+      "chars": 97434,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
