@@ -1111,6 +1111,8 @@ export function settleQuickFinish(keep){
 
 function finishWorkout(){
   trackProductEvent('workout_completed').catch(()=>{});
+  const finishedSessionId = String(state.workoutSessionId || '');
+  const finishedProgramId = String((state.raw && state.raw.id) || '');
   state.live = false;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
@@ -1119,7 +1121,7 @@ function finishWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
-  clearSession(); // тренировка пройдена до конца — продолжать больше нечего
+  clearSession(finishedSessionId, finishedProgramId); // удаляем только эту тренировку
   // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
   // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
   state.lastHist = null;
