@@ -2697,10 +2697,10 @@ async function importProgramLink(id){
   prog.origEx = snapshotEx(prog);
   if(d.by) prog.by = d.by;
   if(d.byLink) prog.byLink = d.byLink;
-  draft = prog;
+  setDraftShared(prog);
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
-  planIdx = 0;
+  setPlanIdxShared(0);
   fillBuilder(t('import.reviewSave'));
   // Говорим ОДИН РАЗ и ЗАРАНЕЕ: тренер будет видеть занятия по этой программе.
   // Отчёты уходят сами, и узнавать об этом постфактум человек не должен —
@@ -2749,10 +2749,10 @@ function importProgramCode(code){
   prog.stats = {completions: 0};
   prog.plans = normPlans(prog);
   sanitizeProgram(prog);        // код можно собрать руками, и собирают
-  draft = prog;
+  setDraftShared(prog);
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
-  planIdx = 0;
+  setPlanIdxShared(0);
   $('importModal').classList.remove('open');
   fillBuilder(t('import.reviewSave'));
 }
@@ -2932,3 +2932,10 @@ function clientSum(c){
   return {n, last, opens, sent, progs: clProgs(c).length};
 }
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
+function setClientsShared(value){ clients = value; return clients; }
+function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
+function setImgTrayShared(value){ imgTray = value; return imgTray; }
+function setTrainerShared(value){ trainer = value; return trainer; }

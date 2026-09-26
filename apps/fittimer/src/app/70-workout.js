@@ -89,10 +89,10 @@ function editExerciseFromWorkout(){
   }
   setPause(true);
   // редактор работает с draft: подставляем ту самую программу и тот самый вариант
-  draft = JSON.parse(JSON.stringify(src.p));
+  setDraftShared(JSON.parse(JSON.stringify(src.p)));
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days; delete draft.tod;
-  planIdx = (typeof state.planIdx === 'number') ? state.planIdx : 0;
+  setPlanIdxShared((typeof state.planIdx === 'number') ? state.planIdx : 0);
   exFromWork = true;
   openExercise(src.idx);
 }
@@ -140,7 +140,7 @@ async function saveExToWorkout(){
   if(i >= 0) customPrograms[i] = draft;
   await savePrograms();
   renderMine();
-  exDraft = null; exIdx = -1; exOrig = ''; exIsNew = false;
+  setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExIsNewShared(false);
   backToWorkout(true);
 }
 
@@ -1643,3 +1643,6 @@ function tearDownWorkout(){
   goTab('scrMenu');
 }
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setExFromWorkShared(value){ exFromWork = value; return exFromWork; }

@@ -113,10 +113,10 @@ async function deleteUser(){
     await saveAccount();
   }
   for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
-  users = users.filter(x => x.id !== id);
+  setUsersShared(users.filter(x => x.id !== id));
   await saveUsers();
   if(id === currentUser){
-    currentUser = '';
+    setCurrentUserShared('');
     await switchUser(users[0].id);
   } else {
     renderUsers();
@@ -717,7 +717,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(switchingAccount) await loadTrainer();
 
   if(r.handle){
-    if(!trainer) trainer = {on: false, handle: '', links: ''};
+    if(!trainer) setTrainerShared({on: false, handle: '', links: ''});
     trainer.handle = r.handle;
     if(r.trainerKey) trainer.key = r.trainerKey;
     const trainerRemote = r.trainer || {};
@@ -986,3 +986,10 @@ function maybeRunDeferredBiometricLock(){
   openLock();
 }
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setBioOKShared(value){ bioOK = value; return bioOK; }
+function setLoginDoneShared(value){ loginDone = value; return loginDone; }
+function setLoginFixedEmailShared(value){ loginFixedEmail = value; return loginFixedEmail; }
+function setLoginPendingShared(value){ loginPending = value; return loginPending; }
+function setPendingSubShared(value){ pendingSub = value; return pendingSub; }

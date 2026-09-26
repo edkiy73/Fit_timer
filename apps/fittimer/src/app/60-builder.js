@@ -2104,3 +2104,11 @@ async function saveProgram(){
   goTab('scrPrograms');
 }
 
+/* Setters for state owned by this chunk and changed from other chunks.
+   Other chunks read these bindings directly but write them only through the owner. */
+function setDraftShared(value){ draft = value; return draft; }
+function setExDraftShared(value){ exDraft = value; return exDraft; }
+function setExIdxShared(value){ exIdx = value; return exIdx; }
+function setExIsNewShared(value){ exIsNew = value; return exIsNew; }
+function setExOrigShared(value){ exOrig = value; return exOrig; }
+function setPlanIdxShared(value){ planIdx = value; return planIdx; }

@@ -331,7 +331,7 @@ document.querySelectorAll('#ueLocaleSeg button').forEach(b => {
     await setAppLocale(pref, {persist:false});
     await syncAccountLocale(appLocale);
     if((await kvGet('recognitionLangManual')) !== '1'){
-      recognitionLang = appLocale;
+      setRecognitionLangShared(appLocale);
       await kvSet('recognitionLang', recognitionLang);
       if(hfMode === 'voice') setHfMode('off');
       await refreshVoicePackUI();
@@ -365,18 +365,18 @@ $('weightModalDone').onclick = ()=> commitWeightModal();
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 function applyAudioFromUser(u){
   if(!u) return;
-  prepSec = (u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec));
-  readySec = (u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec));
-  sideSec = (u.sideSec == null) ? 10 : Math.max(3, Math.min(60, u.sideSec));
-  savedVoiceURI = u.voiceURI || '';
-  voiceVol = clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1);
-  fxVol = clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1);
+  setPrepSecShared((u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec)));
+  setReadySecShared((u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec)));
+  setSideSecShared((u.sideSec == null) ? 10 : Math.max(3, Math.min(60, u.sideSec)));
+  setSavedVoiceURIShared(u.voiceURI || '');
+  setVoiceVolShared(clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1));
+  setFxVolShared(clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1));
   if(masterGain) masterGain.gain.value = fxVol;
   kvSet('voiceURI', savedVoiceURI);
 }
 
 function toggleSound(){
-  soundOn = !soundOn;
+  setSoundOnShared(!soundOn);
   kvSet('soundOff', soundOn ? '0' : '1');
   if(!soundOn) stopSpeech();
   syncPrefs();
@@ -410,7 +410,7 @@ function persistLiveSound(){
 // вешает обработчики на каскад с префиксом p (вызывается один раз на префикс, при старте)
 function wireLiveSoundCascade(p){
   $(p + 'SoundOn').onclick = ()=>{
-    soundOn = !soundOn;
+    setSoundOnShared(!soundOn);
     kvSet('soundOff', soundOn ? '0' : '1');
     if(!soundOn) stopSpeech();
     $(p + 'SoundOn').classList.toggle('on', soundOn);
@@ -419,7 +419,7 @@ function wireLiveSoundCascade(p){
   };
   $(p + 'VoiceOn').onclick = ()=>{
     const on = !$(p + 'VoiceOn').classList.contains('on');
-    voiceVol = on ? 1 : 0;
+    setVoiceVolShared(on ? 1 : 0);
     $(p + 'VoiceOn').classList.toggle('on', on);
     syncSoundCascade(p);
     persistLiveSound();
@@ -427,8 +427,8 @@ function wireLiveSoundCascade(p){
   };
   $(p + 'FxOn').onclick = ()=>{
     const on = !$(p + 'FxOn').classList.contains('on');
-    if(on){ fxVol = clampVol(fxVolMemory / 100, 1); }
-    else { fxVolMemory = Math.round(fxVol * 100) || fxVolMemory; fxVol = 0; }
+    if(on){ setFxVolShared(clampVol(fxVolMemory / 100, 1)); }
+    else { fxVolMemory = Math.round(fxVol * 100) || fxVolMemory; setFxVolShared(0); }
     $(p + 'FxOn').classList.toggle('on', on);
     $(p + 'FxVol').value = Math.round(fxVol * 100);
     $(p + 'FxVolVal').textContent = Math.round(fxVol * 100) + '%';
@@ -438,14 +438,14 @@ function wireLiveSoundCascade(p){
   };
   $(p + 'FxVol').oninput = e => {
     const v = parseInt(e.target.value) || 0;
-    fxVol = clampVol(v / 100, 1);
+    setFxVolShared(clampVol(v / 100, 1));
     fxVolMemory = v || fxVolMemory;
     $(p + 'FxVolVal').textContent = v + '%';
     persistLiveSound();
     if(v > 0) tick();
   };
   $(p + 'Music').onclick = ()=>{
-    musicMode = !musicMode;
+    setMusicModeShared(!musicMode);
     kvSet('musicMode', musicMode ? '1' : '0');
     if(musicMode) stopSpeech();
     $(p + 'Music').classList.toggle('on', musicMode);
@@ -509,7 +509,7 @@ async function fillVoiceChoices(){
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
     sel.value=exists ? savedVoiceURI : list[0].id;
-    if(!exists){ savedVoiceURI=sel.value; await kvSet('voiceURI',savedVoiceURI); }
+    if(!exists){ setSavedVoiceURIShared(sel.value); await kvSet('voiceURI',savedVoiceURI); }
   }
   const u = curUser();
   if(u && u.voiceURI !== savedVoiceURI){
@@ -519,11 +519,11 @@ async function fillVoiceChoices(){
 }
 
 async function syncTtsLocaleToApp(resetVoice){
-  voiceLang = localeTag();
+  setVoiceLangShared(localeTag());
   await kvDel('voiceLangManual');
   await kvSet('voiceLang', voiceLang);
   if(resetVoice){
-    savedVoiceURI='';
+    setSavedVoiceURIShared('');
     await kvSet('voiceURI','');
   }
   await fillVoiceChoices();
@@ -616,7 +616,7 @@ async function previewSelectedVoice(){
     if(!resumeRecognition) return;
     setTimeout(()=>{
       if(hfMode === 'voice' && $('scrWork').classList.contains('on')){
-        voiceWanted = true;
+        setVoiceWantedShared(true);
         startListening();
       }
     }, 160);
@@ -624,7 +624,7 @@ async function previewSelectedVoice(){
 }
 for(const id of ['stVoiceChoice','sndVoiceChoice']){
   if($(id)) $(id).onchange = async e=>{
-    savedVoiceURI=e.target.value || '';
+    setSavedVoiceURIShared(e.target.value || '');
     persistLiveSound();
     for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
     await previewSelectedVoice();
@@ -632,7 +632,7 @@ for(const id of ['stVoiceChoice','sndVoiceChoice']){
 }
 for(const id of ['voiceRecLang','hfVoiceRecLang']){
   if($(id)) $(id).onchange = async e=>{
-    recognitionLang = e.target.value === 'en' ? 'en' : 'ru';
+    setRecognitionLangShared(e.target.value === 'en' ? 'en' : 'ru');
     kvSet('recognitionLang',recognitionLang);
     kvSet('recognitionLangManual','1');
     if(hfMode==='voice') setHfMode('off');
@@ -775,7 +775,7 @@ $('coachPhotoFile').onchange = e => {
   if(!file) return;
   shrinkImage(file, 240, async data => {
     if(!data){ appAlert(t('trainer.photoFailed')); return; }
-    coachPhotoDraft = data;
+    setCoachPhotoDraftShared(data);
     $('coachPhotoPrev').innerHTML = `<img src="${esc(data)}" alt="">`;
   });
 };
@@ -805,7 +805,7 @@ $('btnSaveCoach').onclick = async ()=>{
   const handle = account.handle;
   const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
   const years = parseInt(yearsRaw, 10);
-  trainer = Object.assign({}, trainer, {
+  setTrainerShared(Object.assign({}, trainer, {
     handle,
     name:clampLine($('coachName').value, LIM.coachName),
     photo:coachPhotoDraft || '',
@@ -813,7 +813,7 @@ $('btnSaveCoach').onclick = async ()=>{
     years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
     links:link || '',
     pageErr:null
-  });
+  }));
   btn.disabled = true;
   btn.textContent = t('common.saving');
   showSyncState('busy');
@@ -883,8 +883,8 @@ $('btnDelClient').onclick = async ()=>{
   const c = curClient(); if(!c) return;
   if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
        {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-  clients = clients.filter(x => x.id !== c.id);
-  clientIdx = -1;
+  setClientsShared(clients.filter(x => x.id !== c.id));
+  setClientIdxShared(-1);
   await saveClients();
   renderClients();
   renderTrainerCard();
@@ -927,7 +927,7 @@ async function delCurrentPlan(){
   if(!(await appDialog(t('builder.deleteVariant'),
     {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   draft.plans.splice(planIdx, 1);
-  planIdx = Math.max(0, planIdx - 1);
+  setPlanIdxShared(Math.max(0, planIdx - 1));
   if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
   fillPlanFields();
   syncRotateUI();
@@ -1066,11 +1066,11 @@ $('tglRenew').onclick = async ()=>{
 $('loginGo').onclick = doLogin;
 $('loginHaveCode').onclick = loginUseExistingCode;
 const dropLogin = ()=>{
-  loginDone = null;
-  loginPending = null;
-  loginFixedEmail = '';
+  setLoginDoneShared(null);
+  setLoginPendingShared(null);
+  setLoginFixedEmailShared('');
   $('loginEmail').readOnly = false;
-  pendingSub = null;   // ушёл с шага кода — подписки не случилось
+  setPendingSubShared(null);   // ушёл с шага кода — подписки не случилось
   $('loginModal').classList.remove('open');
 };
 $('loginCancel').onclick = dropLogin;
@@ -1129,14 +1129,14 @@ $('btnCompare').onclick = ()=> openCompare();
 $('weightSwitch').addEventListener('click', e => {
   const b = e.target.closest('.wm-chip');
   if(!b) return;
-  weightMetric = b.dataset.k;
+  setWeightMetricShared(b.dataset.k);
   renderWeight();
 });
 // самочувствие: тот же переключатель метрик, что и у веса
 $('wellSwitch').addEventListener('click', e => {
   const b = e.target.closest('.wm-chip');
   if(!b) return;
-  wellMetric = b.dataset.k;
+  setWellMetricShared(b.dataset.k);
   renderWellness();
 });
 $('btnAddWell').onclick = openWellAdd;
@@ -1154,8 +1154,8 @@ $('btnShareCmp').onclick = shareCompare;
 $('cmpModal').onclick = e => { if(e.target === $('cmpModal')) $('cmpModal').classList.remove('open'); };
 $('whSave').onclick = saveWeightHist;
 $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classList.remove('open'); };
-$('calPrev').onclick = ()=>{ calOffset--; renderCalendar(); };
-$('calNext').onclick = ()=>{ calOffset++; renderCalendar(); };
+$('calPrev').onclick = ()=>{ setCalOffsetShared(calOffset - 1); renderCalendar(); };
+$('calNext').onclick = ()=>{ setCalOffsetShared(calOffset + 1); renderCalendar(); };
 // онбординг
 // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
 // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
@@ -1551,7 +1551,7 @@ $('imgFiles').onchange = e => {
   if(!files.length) return;
   const btn = $('imgPick'), restore = btnBusy(btn, t('images.processing',{done:0,total:files.length}));
   shrinkAll(files, 640, list => {
-    imgTray = imgTray.concat(list);
+    setImgTrayShared(imgTray.concat(list));
     restore();
     renderTray();
     if(list.length) appAlert(t('images.uploaded',{count:list.length}));
@@ -1565,7 +1565,7 @@ $('trayClear').onclick = async ()=>{
   if(!removable.length) return;
   if(!(await appDialog(t('images.removeQuestion'),
     {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
-  imgTray = imgTray.filter(x => used.has(x));
+  setImgTrayShared(imgTray.filter(x => used.has(x)));
   renderTray();
 };
 $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
@@ -1606,16 +1606,16 @@ document.querySelectorAll('#exModeTabs .tab').forEach(b => {
     if(exIsNew){
       const wish = $('exName').value.trim();
       dropFreshEx();
-      exDraft = null; exIdx = -1; exOrig = '';
+      setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
       asTab(()=>{ openExAI(); if(wish){ $('exaWish').value = wish; autoGrow($('exaWish')); } });
       return;
     }
     if(!numFieldsOk('scrExercise') || !exNameOk()) return;
-    exIsNew = false;
+    setExIsNewShared(false);
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
     const keep = exIdx;
-    exDraft = null; exIdx = -1; exOrig = '';
+    setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
     renderExList();
     asTab(()=> openExEdAI(keep));
   };
@@ -1755,7 +1755,7 @@ $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise') && exNameOk()) save
 // дублируем то, что видно сейчас, вместе с несохранёнными правками формы
 function dupExercise(){
   if(!exDraft || exIdx < 0) return;
-  exIsNew = false;
+  setExIsNewShared(false);
   const list = curPlan().exercises;
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
@@ -1767,27 +1767,27 @@ function dupExercise(){
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
-  exDraft = null; exIdx = -1; exOrig = '';
+  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
   afterExChange();
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
   const nameTxt = (exDraft.name || '').trim() || t('exercise.this');
   if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-  exIsNew = false;
+  setExIsNewShared(false);
   curPlan().exercises.splice(exIdx, 1);
-  exDraft = null; exIdx = -1; exOrig = '';
+  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
   await afterExChange();
 }
 
 function saveExAndBack(){
   if(exFromWork){ saveExToWorkout(); return; }
-  exIsNew = false;
+  setExIsNewShared(false);
   if(exDraft && exIdx >= 0){
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
   }
-  exDraft = null; exIdx = -1; exOrig = '';
+  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
   renderExList();
   goBackTo('scrBuilder');
 }
@@ -1804,7 +1804,7 @@ async function leaveExercise(){
     if(!go) return;
   }
   dropFreshEx();
-  exDraft = null; exIdx = -1; exOrig = '';
+  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
   if(exFromWork){ backToWorkout(false); return; }
   renderExList();
   goBackTo('scrBuilder');
@@ -2177,10 +2177,10 @@ try{
   }
   loadPublicConfig();
   syncRemotePushRegistration(false).catch(()=>{});
-  bioOK = await bioSupported();
+  setBioOKShared(await bioSupported());
   if(lockNeeded()) openLock();
   // пользователи: миграция со старой схемы профилей f/m
-  try{ users = JSON.parse(await kvGet('users')) || []; }catch(e){ users = []; }
+  try{ setUsersShared(JSON.parse(await kvGet('users')) || []); }catch(e){ setUsersShared([]); }
   const hadLegacyBirth = users.some(u => u && Object.prototype.hasOwnProperty.call(u, 'birth'));
   let migratedProfilePrefs = false;
   users.forEach(u => {
@@ -2197,22 +2197,22 @@ try{
       || (await kvGet('customPrograms')) !== null
       || (await kvGet('migrated')) === '1';
     if(!hasLegacy){
-      voiceWanted = false; soundOn = true;
-      musicMode = false;
+      setVoiceWantedShared(false); setSoundOnShared(true);
+      setMusicModeShared(false);
       syncPrefs();
       applyThemeFor({theme:'system'});
       document.body.classList.remove('booting');
       startOnboarding();
       return;
     }
-    users = [{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system', locale:'system'}];
+    setUsersShared([{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system', locale:'system'}]);
     if((await kvGet('customPrograms_m')) !== null){
       users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
     }
     await saveUsers();
   }
-  currentUser = (await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id;
-  if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
+  setCurrentUserShared((await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id);
+  if(!users.some(u => u.id === currentUser)) setCurrentUserShared(users[0].id);
   // До первой динамической отрисовки включаем язык и тему активного профиля:
   // пользователь не должен видеть дефолтный экран, пока восстанавливается его состояние.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
@@ -2242,20 +2242,20 @@ try{
   if(hasScheduledWorkout && getNotificationPrefs().workouts !== false){
     appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
   } else syncNativeNotifications();
-  hfMode = (await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
+  setHfModeShared((await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off'));
   // Удалённый режим мог остаться в старой резервной копии или localStorage.
   if(!['off', 'voice', 'headset'].includes(hfMode)){
-    hfMode = 'off';
+    setHfModeShared('off');
     kvSet('hfMode', 'off');
   }
-  voiceWanted = hfMode === 'voice';
+  setVoiceWantedShared(hfMode === 'voice');
   syncHandsFreeUI();
-  soundOn = (await kvGet('soundOff')) !== '1';
-  voiceLang = localeTag();
-  savedVoiceURI = (await kvGet('voiceURI')) || '';
-  recognitionLang = (await kvGet('recognitionLang')) || appLocale;
-  if(!['ru','en'].includes(recognitionLang)) recognitionLang='ru';
-  musicMode = (await kvGet('musicMode')) === '1';
+  setSoundOnShared((await kvGet('soundOff')) !== '1');
+  setVoiceLangShared(localeTag());
+  setSavedVoiceURIShared((await kvGet('voiceURI')) || '');
+  setRecognitionLangShared((await kvGet('recognitionLang')) || appLocale);
+  if(!['ru','en'].includes(recognitionLang)) setRecognitionLangShared('ru');
+  setMusicModeShared((await kvGet('musicMode')) === '1');
   applyAudioFromUser(curUser());
   await syncTtsLocaleToApp(false);
   await refreshVoicePackUI();
