@@ -51,33 +51,11 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm install --no-save playwright@1.55.0
-          npm run build
-          # Browser CI runs the production-built frontend, but API calls must stay on the
-          # local test server instead of escaping to the real production origin.
-          cp app.config.js dist/app.config.js
-          # Test-only: re-expose product internals the browser tests inspect (see scripts/test-bridge.mjs).
-          printf '\nwindow.__FIT_TEST_MODE__ = true;\n' >> dist/app.config.js
           npx playwright install --with-deps chromium
           echo "FIT_CHROME=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
 
+      # Собирает dist, на время прогона включает тестовый мост (__FIT_TEST_MODE__,
+      # см. scripts/test-bridge.mjs), поднимает tests/dev-server.js и статику,
+      # гоняет scripts/run-browser-tests.mjs. Локально — то же самое: npm test -- --browser
       - name: Браузерные и сквозные тесты
-        env:
-          ADMIN_KEY: testadminkey123456
-          GEMINI_API_KEY: test
-          AI_TEST_MODE: '1'
-        run: |
-          node tests/dev-server.js 8124 > /tmp/fittimer-browser-server.log 2>&1 &
-          SERVER_PID=$!
-          # link-length проверяет поведение без сервера API — нужна голая статика
-          python3 -m http.server 8123 --bind 127.0.0.1 --directory dist > /tmp/fittimer-static.log 2>&1 &
-          STATIC_PID=$!
-          trap 'kill $SERVER_PID $STATIC_PID 2>/dev/null || true' EXIT
-          for i in {1..40}; do
-            if curl -fsS http://127.0.0.1:8124/index.html >/dev/null && curl -fsS http://127.0.0.1:8123/index.html >/dev/null; then break; fi
-            sleep 0.25
-          done
-          node scripts/run-browser-tests.mjs
-
-      - name: Лог тестового сервера
-        if: failure()
-        run: tail -n 200 /tmp/fittimer-browser-server.log || true
+        run: node scripts/test.mjs --browser

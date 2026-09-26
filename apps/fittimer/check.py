@@ -54,6 +54,9 @@ def load():
             if name.endswith('.js'):
                 with open(os.path.join(app_dir, name), encoding='utf-8') as f:
                     scripts.append(f.read())
+        # mobile.js тоже вешает классы (native-app на <html>)
+        with open(os.path.join(ROOT, 'mobile.js'), encoding='utf-8') as f:
+            scripts.append(f.read())
     if not styles:
         style_css = os.path.join(ROOT, 'style.css')
         if os.path.exists(style_css):
@@ -384,7 +387,8 @@ def main():
     check_tags(markup)
     check_js_syntax(js)
     check_ids(whole, js, css, markup)
-    check_icons(whole, js, markup)
+    # JS давно лежит отдельно от index.html: иконки ищем и в разметке, и в коде
+    check_icons(whole + '\n' + js, js, markup)
     check_storage(js)
     check_screens(js, markup)
     check_api()
