@@ -1328,6 +1328,15 @@ export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initCore(){
+  // Подпись строки с переключателем тоже переключает его — как у системных
+  // настроек. Раньше отзывался только сам тумблер 48×28, а в подпись попадали
+  // пальцем чаще. Кнопки, ссылки и поля внутри строки работают как прежде.
+  document.addEventListener('click', e => {
+    const row = e.target.closest('.pref-row');
+    if(!row || e.target.closest('button, a, input, select, textarea, label, [role="button"]')) return;
+    const switches = row.querySelectorAll('.switch');
+    if(switches.length === 1 && !switches[0].disabled) switches[0].click();
+  });
   document.addEventListener('pointerdown', e => {
     const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
     if(t && !t.disabled) haptic(8);
