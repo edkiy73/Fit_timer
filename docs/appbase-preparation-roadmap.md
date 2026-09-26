@@ -33,7 +33,7 @@ Architecturally:            Physically (target layout):
 Why a monorepo here: one owner, one ecosystem, frequent cross-cutting changes. A Core change and the migration of every product that uses it land in **one commit / one PR**, and CI checks all consumers at once — nothing can be "forgotten" in another repository, and one commit describes the whole platform state.
 
 Rules that keep Core independent inside one repository:
-- Core never imports product code (`tests/dependency-boundaries-unit.js`, `npm run check:appbase`);
+- Core never imports product code (`packages/core/tests/boundaries.js`, `apps/fittimer/tests/dependency-boundaries-unit.js`);
 - products depend on Core only through its public modules;
 - a Core change must keep every product green in the same PR;
 - Core has no product names, vocabulary or brand (guarded by tests);
@@ -594,20 +594,37 @@ Known, accepted legacy names that stay for compatibility: `X-Fit-*` request head
 
 ## Phase 17 — Monorepo workspace
 
-Core lives in this repository as an isolated layer. Implemented:
-- `config/appbase-manifest.json` — the single list of Core files (client + server). `tests/dependency-boundaries-unit.js` fails when a Core module is missing from it, when it lists a stale path, or when a listed file imports FitTimer composition modules.
-- `npm run check:appbase` (CI) proves Core stands alone: it assembles the manifest files with neutral composition templates in a temp dir and checks there is no product vocabulary or brand, every relative import resolves inside Core, client Core typechecks alone, and a neutral server composition loads and passes a smoke test. `npm run appbase:extract` writes the same assembly to `dist-appbase/` (git-ignored) for inspection or as a template for a new product's composition files.
-- Remaining product-specific server seams were closed: the catalog health probe moved to `api/health.js`, and `lib/util.js` no longer references the trainer endpoint.
+Implemented (2026-09-26): the repository now has the target layout.
 
-Layout migration (do it when the second product starts; not needed before):
-1. Move Core files from `config/appbase-manifest.json` into `packages/core/` (client `src/` + server `lib/`), keep the manifest pointing at the new paths, and make FitTimer import from there. Only internal paths change; no data/protocol changes.
-2. Move FitTimer into `apps/fittimer/` in a separate PR. This one needs owner actions outside the repo: Vercel project Root Directory, Android/iOS workflow paths, Capacitor paths. Do not combine it with any other change; signing material stays untouched.
-3. Add `apps/<next-app>/` with its own `config/product.json`, composition files (start from `npm run appbase:extract` output), Vercel project and native shells.
-4. CI: a change in `packages/core/**` runs Core + all apps; a change in `apps/<x>/**` runs that app (+ Core checks).
+```text
+packages/core/            AppBase Core package (@appbase/core)
+  src/core/*.ts           client Core (ES modules)
+  src/types/core.ts       shared contracts
+  server/*.js             server Core (auth, sync, AI runtime, analytics, push, mail, health, store, Supabase …)
+  server/admin/*.js       Core Admin
+  template/               neutral app composition (config, lib/product.js, empty registries, api/*) — smoke-tested, starting point for a new app
+  tests/                  boundaries (no product vocabulary/brand, imports stay inside Core), runtime, smoke
+apps/fittimer/            FitTimer: src/, api/, lib/ (fit-* modules, product.js), android/, ios/, tests/, docs/, .ai/
+```
+
+How the app consumes Core:
+- client: TypeScript `paths` aliases `@appbase/core/*` and `@appbase/types/*`; `scripts/build-esm.mjs` (esbuild) bundles `src/main.ts` and `mobile.js` together with Core into `dist/esm/` (mobile) or `esm/` (Vercel web);
+- server: `require('../../../packages/core/server/…')`; every `api/*` entry first requires `lib/product.js`, which registers `config/product.json` with Core (`configureProduct`) — Core never reads app files by path;
+- each package keeps its own `package.json`/lockfile; `apps/fittimer/node_modules` stays next to the native shells, so Capacitor's generated `../node_modules` paths are unchanged.
+
+CI: every workflow runs with `working-directory: apps/fittimer`; `source-consistency.yml` also runs `npm run check` in `packages/core`; path filters include `packages/core/**` so a Core change re-checks the app.
+
+Owner steps outside the repository (required once, at merge time):
+1. Vercel project `fittimer99` → Settings → Build and Deployment → **Root Directory = `apps/fittimer`**, and keep **"Include files outside the root directory in the Build Step"** enabled (server functions import `packages/core/server`).
+2. Nothing changes for Android signing, package id, App Links or iOS; only CI paths moved.
+
+The previous Vercel build (`npm run build:sources`) never produced `esm/main.js`, which `index.html` has loaded since the ES-module startup; the app's `vercel.json` now builds with `npm run build:web`.
+
+Status sections of earlier phases keep the historical pre-monorepo paths (`src/core/…`, `lib/*-core.js`); today those files live in `packages/core/`.
 
 ## Adding a product
 
-A new product does not fork FitTimer and does not delete fitness code. It is a new app folder on top of Core that provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions.
+A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core (copy `packages/core/template/` as its server composition) that provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions.
 
 ## Universality proof
 
@@ -638,7 +655,7 @@ If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or anothe
 14. Retire remaining legacy global/concatenation compatibility.
 15. Dependency checks + stricter TS settings.
 16. Readiness audit.
-17. Monorepo workspace: Core manifest + standalone check; move Core to `packages/core/` when the second product starts.
+17. Monorepo workspace: `packages/core` + `apps/fittimer` (done).
 18. Add products as `apps/<name>/` on the same Core.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.

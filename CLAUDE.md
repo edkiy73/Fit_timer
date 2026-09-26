@@ -3,6 +3,19 @@
 This file is intentionally compact because Claude Code loads it automatically.
 Do not expand it into a project encyclopedia again.
 
+## Repository layout (monorepo)
+
+```text
+packages/core/     AppBase Core — shared by every app (client src/, server server/, template/, tests/)
+apps/fittimer/     FitTimer — web, API (Vercel), Android/iOS shells, tests, docs, .ai index
+docs/              repository-level plans (AppBase roadmap)
+.github/workflows/ CI for all packages/apps
+```
+
+Unless a path starts with `packages/`, `apps/`, `.github/` or is the AppBase roadmap, **paths in this file are relative to `apps/fittimer/`**, and `npm run …` commands run there. AppBase Core is checked with `npm run check` in `packages/core/`.
+
+Core rules: Core never imports app code; app client code imports Core only via `@appbase/core/*` / `@appbase/types/*`; app server code requires `packages/core/server/*`; every app API entry first requires its `lib/product.js`. A Core change must keep every app green in the same PR.
+
 ## Start here
 
 For every coding task:
@@ -19,7 +32,7 @@ For every coding task:
 Do **not** read generated root `app.js`, `style.css`, `index.html`, or the archived context by default. Search `src/**` and open only the matching chunk.
 
 Current engineering rationale and known bug traps live in:
-`docs/why.md`
+`apps/fittimer/docs/why.md`
 
 ## Project snapshot
 
@@ -29,6 +42,7 @@ Fit Timer is a Russian-first workout timer / training app.
 - Production: `https://fittimer99.vercel.app`
 - Production branch: `main`
 - App id: `ru.fittimer.app`
+- AppBase Core (shared with future apps): `packages/core/` — client `src/core/*.ts`, server `server/*.js`
 - Canonical frontend: `src/html/`, `src/styles/`, `src/app/`
 - Generated frontend outputs: root `index.html`, `style.css`, `app.js` — never edit directly
 - Mobile runtime/bridge: `mobile.js`

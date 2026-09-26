@@ -4,19 +4,20 @@ on:
   push:
     branches: [main]
     paths: &mobile_paths
-      - 'android/**'
-      - 'scripts/build-web.mjs'
-      - 'scripts/check-mobile.mjs'
-      - 'src/**'
-      - 'app.js'
-      - 'style.css'
-      - 'index.html'
-      - 'mobile.js'
-      - 'app.config.js'
-      - 'assets/**'
-      - 'capacitor.config.json'
-      - 'package.json'
-      - 'package-lock.json'
+      - 'packages/core/**'
+      - 'apps/fittimer/android/**'
+      - 'apps/fittimer/scripts/build-web.mjs'
+      - 'apps/fittimer/scripts/check-mobile.mjs'
+      - 'apps/fittimer/src/**'
+      - 'apps/fittimer/app.js'
+      - 'apps/fittimer/style.css'
+      - 'apps/fittimer/index.html'
+      - 'apps/fittimer/mobile.js'
+      - 'apps/fittimer/app.config.js'
+      - 'apps/fittimer/assets/**'
+      - 'apps/fittimer/capacitor.config.json'
+      - 'apps/fittimer/package.json'
+      - 'apps/fittimer/package-lock.json'
       - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
@@ -41,6 +42,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fittimer
     env:
       FIT_TIMER_API_URL: ${{ vars.FIT_TIMER_API_URL || 'https://fittimer99.vercel.app' }}
       FIT_TIMER_PUBLIC_URL: ${{ vars.FIT_TIMER_PUBLIC_URL || 'https://fittimer99.vercel.app' }}
@@ -60,6 +64,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: apps/fittimer/package-lock.json
 
       - name: Java 21
         uses: actions/setup-java@v6
@@ -102,12 +107,12 @@ jobs:
 
       - name: Проверочная debug-сборка
         if: github.event_name == 'pull_request'
-        working-directory: android
+        working-directory: apps/fittimer/android
         run: ./gradlew assembleDirectDebug assemblePlayDebug testDirectDebugUnitTest --no-daemon
 
       - name: Release AAB и APK
         if: github.event_name != 'pull_request'
-        working-directory: android
+        working-directory: apps/fittimer/android
         env:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -128,8 +133,8 @@ jobs:
         with:
           name: fittimer-ci-check-not-for-update
           path: |
-            android/app/build/outputs/apk/direct/debug/*.apk
-            android/app/build/outputs/apk/play/debug/*.apk
+            apps/fittimer/android/app/build/outputs/apk/direct/debug/*.apk
+            apps/fittimer/android/app/build/outputs/apk/play/debug/*.apk
           if-no-files-found: error
 
       - name: Выложить файлы для Google Play
@@ -138,9 +143,9 @@ jobs:
         with:
           name: fittimer-android-${{ env.VERSION_NAME }}
           path: |
-            android/app/build/outputs/bundle/playRelease/*.aab
-            android/app/build/outputs/apk/play/release/*.apk
-            android/app/build/outputs/apk/direct/release/*.apk
+            apps/fittimer/android/app/build/outputs/bundle/playRelease/*.aab
+            apps/fittimer/android/app/build/outputs/apk/play/release/*.apk
+            apps/fittimer/android/app/build/outputs/apk/direct/release/*.apk
           if-no-files-found: error
 
       - name: Подготовить постоянный APK

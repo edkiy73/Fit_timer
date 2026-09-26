@@ -3,6 +3,19 @@
 This file is the default entry point for AI coding agents working in this repository.
 Goal: make the smallest correct change with the least repository reading and the least rework.
 
+## Repository layout (monorepo)
+
+```text
+packages/core/     AppBase Core — shared by every app (client src/, server server/, template/, tests/)
+apps/fittimer/     FitTimer — web, API (Vercel), Android/iOS shells, tests, docs, .ai index
+docs/              repository-level plans (AppBase roadmap)
+.github/workflows/ CI for all packages/apps
+```
+
+Unless a path starts with `packages/`, `apps/`, `.github/` or is the AppBase roadmap, **paths in this file are relative to `apps/fittimer/`**, and `npm run …` commands run there. AppBase Core is checked with `npm run check` in `packages/core/`.
+
+Core rules: Core never imports app code; app client code imports Core only via `@appbase/core/*` / `@appbase/types/*`; app server code requires `packages/core/server/*`; every app API entry first requires its `lib/product.js`. A Core change must keep every app green in the same PR.
+
 ## 1. Start here, not with a repo-wide scan
 
 Before editing:
@@ -25,29 +38,16 @@ The repository contains a dedicated, token-conscious agent team for the planned 
 
 - entry/orchestration: `.ai/appbase-agents/00_TEAM_ORCHESTRATION.md`;
 - roles: `.ai/appbase-agents/01_ARCHITECT.md` through `07_PRODUCT_INTEGRATION.md`;
-- current roadmap: `docs/appbase-preparation-roadmap.md`.
+- current roadmap: `docs/appbase-preparation-roadmap.md` (repository root).
 
 Default AppBase task flow is **Architect → Extraction Engineer → QA → Architect**. UX, Security, Release/DevOps and Product Integration are specialists activated only by the triggers in the orchestration file. Do not give every agent the full repository or full conversation history; pass the TASK CARD, targeted context/diff, required contracts and a short HANDOFF.
 
-### Target upstream model
+### Repository model
 
-The long-term ownership model is:
-
-```text
-        AppBase Core
-        /    |     \
-       ↓     ↓      ↓
-   FitTimer Lingua TaskApp
-```
-
-Interpretation:
-- AppBase becomes the upstream source of reusable Core/infrastructure after the first stable extraction.
-- Product repositories consume Core updates; product-specific domain code must not flow back into Core automatically.
-- Before AppBase is mature enough to be upstream, FitTimer may temporarily be the source of newly extracted generic Core changes. Treat this only as a transition phase.
-- Once AppBase is established, reusable fixes/features should normally be implemented in AppBase Core first, then propagated to products through reviewed update PRs.
-- Product-discovered Core bugs may be fixed in the product first only when urgency requires it; then backport the generic fix to AppBase promptly and re-sync downstream products.
-- Never maintain permanent bidirectional automatic file synchronization between AppBase and products. Prefer explicit versioned Core updates or reviewable sync PRs.
-- Automatic propagation may create PRs, but should not silently merge Core changes into products unless that policy is explicitly proven safe for the relevant repository.
+AppBase Core and all apps live in this one repository (decision 2026-09-26, see `docs/appbase-preparation-roadmap.md`):
+- Core changes and the migration of every app that uses them land in one PR; CI checks Core and all apps;
+- product-specific code never moves into `packages/core/`; products plug into Core through registries, hooks and `config/product.json` capabilities, never `if (app === …)`;
+- a new app is a new `apps/<name>/` folder; start its server composition from `packages/core/template/`.
 
 ### TypeScript migration policy
 

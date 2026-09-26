@@ -1,0 +1,15 @@
+{
+  "name": "@appbase/core",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AppBase Core: reusable client and server foundation shared by all apps in this repository.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json','{\\\"type\\\":\\\"module\\\"}\\\\n')\"",
+    "test": "npm run build && node tests/runtime.mjs && node tests/smoke.js",
+    "check": "npm run typecheck && node tests/boundaries.js && npm test"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

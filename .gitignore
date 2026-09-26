@@ -1,12 +1,3 @@
 node_modules/
 dist/
-dist-appbase/
-icons/
-*.keystore
-*.jks
-*.p12
-*.mobileprovision
-android/app/src/main/res/drawable*/splash.png
-android/app/src/main/res/mipmap-*/*.png
-ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png
-ios/App/App/Assets.xcassets/Splash.imageset/*.png
+esm/

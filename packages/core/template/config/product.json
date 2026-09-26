@@ -1,0 +1,24 @@
+{
+  "id": "com.example.appbase",
+  "name": "AppBase",
+  "slug": "appbase",
+  "defaultApiUrl": "https://example.com",
+  "defaultPublicUrl": "https://example.com",
+  "brand": {
+    "background": "#101114",
+    "notificationAccent": "#3B6EF5",
+    "ui": {
+      "dark": {"background": "#101114", "card": "#181A1F", "surface": "#20232A", "accent": "#4C7DFF", "accentInk": "#A9C0FF"},
+      "light": {"background": "#F5F6F8", "card": "#FFFFFF", "surface": "#EEF1F6", "accent": "#2F5FE0", "accentInk": "#244BB8"}
+    }
+  },
+  "features": {
+    "profiles": true,
+    "premium": true,
+    "ai": true,
+    "notifications": true,
+    "biometrics": true,
+    "sharing": true,
+    "voice": true
+  }
+}

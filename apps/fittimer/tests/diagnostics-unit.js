@@ -1,0 +1,25 @@
+process.env.ALLOW_MEMORY_STORE='1';
+const {recordClientError,clientErrorStats,clearClientError,redact,redactStack}=require('../../../packages/core/server/diagnostics');
+let bad=0;
+const ok=(n,c,e)=>{if(!c)bad++;console.log((c?'  ok  ':' ПЛОХО')+'  '+n+(e==null?'':' → '+e));};
+(async()=>{
+  await recordClientError({kind:'error',name:'TypeError',message:'Failed for "secret program" user@example.com https://example.com/x?a=1',stack:'TypeError: boom\n at https://example.com/assets/app.js:10:2?token=secret',build:'23.09 · analytics',platform:'android',locale:'ru'});
+  await recordClientError({kind:'error',name:'TypeError',message:'Failed for "secret program" user@example.com https://example.com/x?a=1',stack:'TypeError: boom\n at https://example.com/assets/app.js:10:2?token=secret',build:'23.09 · analytics',platform:'android',locale:'ru'});
+  const d=await clientErrorStats(), x=d.items[0]||{};
+  ok('одинаковая ошибка группируется',d.items.length===1&&x.count===2,JSON.stringify({items:d.items.length,count:x.count}));
+  ok('email удалён',!String(x.message).includes('user@example.com'),x.message);
+  ok('домен и query удалены',!String(x.message+x.stack).includes('example.com')&&!String(x.stack).includes('token=secret'),x.stack);
+  ok('source location остаётся полезной',String(x.stack).includes('app.js:10:2'),x.stack);
+  ok('версия сборки сохраняется',x.build==='23.09 · analytics',x.build);
+  ok('строка пользователя в кавычках удалена',!String(x.message).includes('secret program'),x.message);
+  ok('платформа остаётся только агрегатом',x.platform&&x.platform.android===2,JSON.stringify(x.platform));
+  ok('redact ограничивает длину',redact('x'.repeat(1000),80).length===80);
+  ok('redactStack сохраняет только безопасный хвост пути',redactStack('at https://host.test/a/b/app.js:42:7?q=x',200).includes('[app]/b/app.js:42:7'));
+  ok('исправленную группу можно убрать',await clearClientError(x.sig));
+  const cleared=await clientErrorStats();
+  ok('после очистки группа исчезает',cleared.items.length===0,cleared.items.length);
+  await recordClientError({kind:'error',name:'TypeError',message:'Failed for "secret program"',stack:'TypeError: boom\n at https://example.com/assets/app.js:10:2',build:'23.09 · analytics',platform:'android',locale:'ru'});
+  const returned=await clientErrorStats();
+  ok('при новом повторении исправленная ошибка появляется снова',returned.items.length===1&&returned.items[0].count===1,returned.items.length);
+  process.exit(bad?1:0);
+})().catch(e=>{console.error(e);process.exit(1);});
