@@ -18,8 +18,9 @@ ok('UI Core stays product-neutral',
   !/Fit ?Timer|workout|exercise|trainer|catalog|program/i.test(source));
 ok('UI Core has no app-specific selectors',
   !/#\w+|scrWork|btnDone|modal-card/.test(source));
-ok('legacy product captures UI once from the temporary startup bridge',
-  /const appUi = fitLegacyModules\.ui/.test(deps)
-  && /clearLegacyProductModules/.test(esmEntry));
+ok('product runtime composes UI Core from an explicit import',
+  /import \* as appbaseUi from '@appbase\/core\/ui\.js'/.test(deps)
+  && /const appUi = \{/.test(deps)
+  && !/FitTimerModules/.test(esmEntry));
 
 process.exit(bad?1:0);

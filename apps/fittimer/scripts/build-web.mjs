@@ -5,8 +5,7 @@ const root = process.cwd();
 const out = path.join(root, 'dist');
 const files = [
   'index.html',
-  'style.css',
-  'app.js'
+  'style.css'
 ];
 
 function cleanOrigin(value, fallback){

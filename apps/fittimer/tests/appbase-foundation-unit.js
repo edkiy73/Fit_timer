@@ -56,9 +56,9 @@ ok('runtime build metadata stays out of window globals',
   && /setRuntimeBuild\(value\)/.test(runtimeCompatSource)
   && /getRuntimeBuild\(\)/.test(runtimeCompatSource));
 const runtimeDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
-ok('runtime compatibility is supplied through the startup dependency capture',
-  /runtimeCompat:\s*appRuntimeCompat/.test(fs.readFileSync('src/main.ts','utf8'))
-  && /appRuntimeCompat\s*=\s*fitLegacyModules\.runtimeCompat/.test(runtimeDependencySource)
+ok('runtime compatibility is imported by the product runtime prelude',
+  /import \* as fitRuntimeCompat from '\.\/src\/app\/runtime-compat\.js'/.test(runtimeDependencySource)
+  && /const appRuntimeCompat = fitRuntimeCompat\.appRuntimeCompat/.test(runtimeDependencySource)
   && !sourceBuild.includes("'src/app/05-runtime-compat.js'"));
 const genericNativeProductSources = [
   'src/app/00-core.js',
@@ -220,10 +220,10 @@ ok('Notifications Core keeps preference and delivery-budget contracts intact',
   && /DeliveryBudgetOptions/.test(notificationsModuleSource)
   && /engagementWeeklyLimit/.test(notificationsModuleSource)
   && /passiveDailyLimit/.test(notificationsModuleSource));
-ok('ESM entry owns an explicit Notifications Core dependency',
-  /from ['"]@appbase\/core\/notifications\.js['"]/.test(esmEntrySource)
-  && /createPreferenceStore/.test(esmEntrySource)
-  && /limitCandidates/.test(esmEntrySource));
+ok('product runtime owns an explicit Notifications Core dependency',
+  /from ['"]@appbase\/core\/notifications\.js['"]/.test(runtimeDependencySource)
+  && /createPreferenceStore/.test(runtimeDependencySource)
+  && /limitCandidates/.test(runtimeDependencySource));
 
 const uiModuleSource = fs.readFileSync('../../packages/core/src/core/ui.ts', 'utf8');
 ok('UI Core uses ESM exports instead of a namespace global',
@@ -235,10 +235,10 @@ ok('UI Core keeps generic modal, busy-state and action contracts intact',
   && /export function closeModal/.test(uiModuleSource)
   && /export function setBusy/.test(uiModuleSource)
   && /data-act/.test(fs.readFileSync('src/app/80-platform.js','utf8')));
-ok('ESM entry owns an explicit UI Core dependency',
-  /from ['"]@appbase\/core\/ui\.js['"]/.test(esmEntrySource)
-  && /setShown/.test(esmEntrySource)
-  && /bindActions/.test(esmEntrySource));
+ok('product runtime owns an explicit UI Core dependency',
+  /from ['"]@appbase\/core\/ui\.js['"]/.test(runtimeDependencySource)
+  && /setShown/.test(runtimeDependencySource)
+  && /bindActions/.test(runtimeDependencySource));
 
 const coreSources = [
   fs.readFileSync('../../packages/core/src/types/core.ts', 'utf8'),
@@ -332,10 +332,9 @@ ok('product sync schema is a real ESM module',
 ok('product sync schema keeps FitTimer policy outside Core',
   /program:/.test(productSyncModuleSource)
   && /notificationPrefs/.test(productSyncModuleSource));
-ok('ESM entry composes product sync schema and startup bridge captures it once',
-  /from ['"]\.\/app\/sync-schema\.js['"]/.test(esmEntrySource)
-  && /productSyncSchema/.test(esmEntrySource)
-  && /const appSync = fitLegacyModules\.sync/.test(legacyDependencySource));
+ok('product runtime imports the product sync schema module',
+  /from ['"]\.\/src\/app\/sync-schema\.js['"]/.test(runtimeDependencySource)
+  && /const appSync = \{/.test(runtimeDependencySource));
 
 const productInfrastructureSource = fs.readFileSync('src/app/infrastructure.ts', 'utf8');
 ok('product infrastructure composes Core through explicit imports',
@@ -351,9 +350,9 @@ ok('legacy data-sync consumes captured product dependencies instead of globals',
   /appInfrastructure\.create/.test(dataSyncSource)
   && /appSync\.registry/.test(dataSyncSource)
   && !/FitTimerModules|AppBaseStorage|AppBaseObservability|FIT_SYNC_REGISTRY|FIT_SYNC_PROFILE_DOC_KEYS/.test(dataSyncSource));
-ok('ESM entry composes product infrastructure explicitly',
-  /from ['"]\.\/app\/infrastructure\.js['"]/.test(esmEntrySource)
-  && /productInfrastructure/.test(esmEntrySource));
+ok('product runtime imports product infrastructure explicitly',
+  /from ['"]\.\/src\/app\/infrastructure\.js['"]/.test(runtimeDependencySource)
+  && /const appInfrastructure = /.test(runtimeDependencySource));
 
 const accountProductSource = fs.readFileSync('src/app/20-account.js','utf8');
 const productIdentitySource = fs.readFileSync('src/app/identity.ts', 'utf8');
@@ -371,9 +370,9 @@ ok('legacy account/profile flow consumes captured product identity',
   /appIdentity\.createAccount/.test(accountProductSource)
   && /appIdentity\.createProfile/.test(accountProductSource)
   && !/FitTimerModules|AppBaseIdentity/.test(accountProductSource));
-ok('ESM entry composes product identity explicitly',
-  /from ['"]\.\/app\/identity\.js['"]/.test(esmEntrySource)
-  && /productIdentity/.test(esmEntrySource));
+ok('product runtime imports product identity explicitly',
+  /from ['"]\.\/src\/app\/identity\.js['"]/.test(runtimeDependencySource)
+  && /const appIdentity = /.test(runtimeDependencySource));
 
 
 // Phase 16 readiness: generic server runtime carries no FitTimer identity or fitness content.

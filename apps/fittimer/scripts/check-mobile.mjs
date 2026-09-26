@@ -1,9 +1,8 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 
 const required = [
   'dist/index.html',
   'dist/style.css',
-  'dist/app.js',
   'dist/app.config.js',
   'dist/esm/mobile.js',
   'dist/esm/main.js',
@@ -30,7 +29,17 @@ if(config.appId !== 'ru.fittimer.app') throw new Error('Unexpected appId');
 if(config.webDir !== 'dist') throw new Error('Capacitor webDir must be dist');
 
 const html = await readFile('dist/index.html', 'utf8');
-const app = await readFile('dist/app.js', 'utf8');
+// The product runtime (app.js) is bundled by esbuild into an ES-module chunk under dist/esm.
+const esmFiles = [];
+async function collectEsm(dir){
+  for(const entry of await readdir(dir, {withFileTypes:true})){
+    const full = `${dir}/${entry.name}`;
+    if(entry.isDirectory()) await collectEsm(full);
+    else if(entry.name.endsWith('.js')) esmFiles.push(full);
+  }
+}
+await collectEsm('dist/esm');
+const app = (await Promise.all(esmFiles.map(file => readFile(file, 'utf8')))).join('\n');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
 if(!html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="mobile.js"></script>') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
 if(!runtimeConfig.includes('window.APP_CONFIG') || !runtimeConfig.includes('window.FIT_TIMER_CONFIG = window.APP_CONFIG')) throw new Error('Generic runtime configuration / compatibility alias is missing');

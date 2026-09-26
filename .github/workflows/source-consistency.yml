@@ -39,7 +39,6 @@ jobs:
           npm run check:ai-index
           npm run i18n:check
           npm run build:sources
-          node --check app.js
           find api lib tests -name '*.js' -print0 | xargs -0 -n1 node --check
           find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
           python3 check.py

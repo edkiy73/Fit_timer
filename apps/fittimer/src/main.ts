@@ -1,84 +1,14 @@
-import { createPreferenceStore, limitCandidates } from '@appbase/core/notifications.js';
-import { setShown, setText, applyCssVars, openModal, closeModal, closestModal, setBusy, bindActions } from '@appbase/core/ui.js';
-import { FIT_SYNC_PROFILE_DOC_KEYS, FIT_SYNC_ACCOUNT_DOC_KEYS, FIT_SYNC_REGISTRY } from './app/sync-schema.js';
-import { createProductInfrastructure } from './app/infrastructure.js';
-import { createFitTimerAccount, createFitTimerProfile } from './app/identity.js';
-import { appRuntimeCompat } from './app/runtime-compat.js';
-
 /**
- * Production ESM composition entry point.
+ * Production ES-module entry point (bundled by scripts/build-esm.mjs).
  *
- * Core now loads through this module graph. The legacy product bundle still runs
- * temporarily, but only after the ESM Core exports are exposed through a narrow
- * compatibility surface.
+ * Start order matters: the native bridge (mobile.js → window.FitNative) must exist
+ * before the product runtime starts, so it is loaded first; the product runtime
+ * (generated app.js, which imports AppBase Core and the typed product modules
+ * itself) is then loaded as a lazily imported chunk of the same module graph.
  */
 export const APPBASE_ESM_FOUNDATION = true;
 
-export const notificationsCore = {
-  createPreferenceStore,
-  limitCandidates
-};
-
-export const uiCore = {
-  setShown,
-  setText,
-  applyCssVars,
-  openModal,
-  closeModal,
-  closestModal,
-  setBusy,
-  bindActions
-};
-
-export const productSyncSchema = {
-  profileKeys: FIT_SYNC_PROFILE_DOC_KEYS,
-  accountKeys: FIT_SYNC_ACCOUNT_DOC_KEYS,
-  registry: FIT_SYNC_REGISTRY
-};
-
-export const productInfrastructure = {
-  create: createProductInfrastructure
-};
-
-export const productIdentity = {
-  createAccount: createFitTimerAccount,
-  createProfile: createFitTimerProfile
-};
-
-
-type LegacyProductModules = {
-  infrastructure: typeof productInfrastructure;
-  identity: typeof productIdentity;
-  sync: typeof productSyncSchema;
-  notifications: typeof notificationsCore;
-  ui: typeof uiCore;
-  runtimeCompat: typeof appRuntimeCompat;
-};
-
-type LegacyProductGlobal = typeof globalThis & {FitTimerModules?: LegacyProductModules};
-
-function exposeLegacyProductModules(): void {
-  const legacy = globalThis as LegacyProductGlobal;
-  legacy.FitTimerModules = {
-    infrastructure: productInfrastructure,
-    identity: productIdentity,
-    sync: productSyncSchema,
-    notifications: notificationsCore,
-    ui: uiCore,
-    runtimeCompat: appRuntimeCompat
-  };
-}
-
-function clearLegacyProductModules(): void {
-  delete (globalThis as LegacyProductGlobal).FitTimerModules;
-}
-
-function loadLegacyScript(
-  src: string,
-  marker: string,
-  failureCode: string,
-  module = false
-): Promise<void> {
+function loadModuleScript(src: string, marker: string, failureCode: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if(document.querySelector(`script[${marker}]`)){
       resolve();
@@ -86,8 +16,7 @@ function loadLegacyScript(
     }
     const script = document.createElement('script');
     script.src = src;
-    script.async = false;
-    if(module) script.type = 'module';
+    script.type = 'module';
     script.setAttribute(marker, 'true');
     script.addEventListener('load', () => resolve(), {once:true});
     script.addEventListener('error', () => reject(new Error(failureCode)), {once:true});
@@ -95,24 +24,17 @@ function loadLegacyScript(
   });
 }
 
-export function loadLegacyMobileRuntime(): Promise<void> {
-  return loadLegacyScript(
-    'esm/mobile.js',
-    'data-legacy-mobile-runtime',
-    'legacy_mobile_runtime_failed',
-    true
-  );
+export function loadMobileRuntime(): Promise<void> {
+  return loadModuleScript('esm/mobile.js', 'data-mobile-runtime', 'mobile_runtime_failed');
 }
 
-export function loadLegacyProductRuntime(): Promise<void> {
-  return loadLegacyScript('app.js', 'data-legacy-product-runtime', 'legacy_product_runtime_failed');
+export async function loadProductRuntime(): Promise<void> {
+  await import('../app.js');
 }
 
-exposeLegacyProductModules();
 try{
-  await loadLegacyMobileRuntime();
-  await loadLegacyProductRuntime();
-  clearLegacyProductModules();
+  await loadMobileRuntime();
+  await loadProductRuntime();
 }catch(error){
   console.error('Failed to start product runtime', error);
   document.body.classList.remove('booting');

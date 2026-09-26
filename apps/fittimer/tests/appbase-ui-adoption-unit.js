@@ -10,10 +10,11 @@ const core=fs.readFileSync('src/app/00-core.js','utf8');
 const platform=fs.readFileSync('src/app/80-platform.js','utf8');
 const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
-ok('ESM entry imports UI Core',
-  /from ['"]@appbase\/core\/ui\.js['"]/.test(esmEntry));
-ok('ESM startup exposes product dependencies before loading legacy product runtime',
-  esmEntry.indexOf('exposeLegacyProductModules()') < esmEntry.indexOf('loadLegacyProductRuntime()'));
+const productDeps = require('fs').readFileSync('src/app/00-dependencies.js','utf8');
+ok('product runtime imports UI Core',
+  /from ['"]@appbase\/core\/ui\.js['"]/.test(productDeps));
+ok('ESM startup loads the native bridge before the product runtime',
+  esmEntry.indexOf('await loadMobileRuntime()') < esmEntry.indexOf('await loadProductRuntime()'));
 ok('FitTimer setShown delegates to appUi',
   core.includes('appUi.setShown(node, !!on)'));
 ok('named action delegation uses appUi',
