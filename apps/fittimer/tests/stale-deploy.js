@@ -26,7 +26,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 async function run(b, failAlways){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   let blocked = 0, loads = 0;
-  page.on('load', () => loads++);
+  // Считаем запросы самого документа: событие load первой загрузки может не
+  // наступить, если перезагрузка случилась раньше него.
+  page.on('request', req => { if(req.resourceType() === 'document') loads++; });
   await page.route('**/esm/chunks/app-*.js', route => {
     if(failAlways || blocked === 0){ blocked++; return route.fulfill({status: 404, body: 'gone'}); }
     return route.continue();
