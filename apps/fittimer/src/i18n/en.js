@@ -1,4 +1,4 @@
-const I18N_EN = {
+export const I18N_EN = {
   'app.title': 'Fit Timer — home workouts',
   'common.start': 'Start',
   'common.loginOrRegister': 'Sign in or register',

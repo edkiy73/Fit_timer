@@ -512,7 +512,10 @@ Product-side conversion continues chunk by chunk:
 - ✅ 2026-09-26: the product runtime is no longer a classic global script. The concatenated `app.js` is an ES module inside the esbuild graph: `src/app/00-dependencies.js` imports Core (`@appbase/core/*`), the typed product modules and the shared AI protocol directly; `main.ts` loads the native bridge (`esm/mobile.js`) and then `import('../app.js')` as a lazy chunk. The temporary `FitTimerModules` global bridge is gone, and top-level product names no longer leak onto `window`;
 - browser tests still inspect/stub product internals; `scripts/build-sources.mjs` appends a generated bridge that re-exposes every top-level binding on `globalThis` only when `window.__FIT_TEST_MODE__ === true` (set by the browser-tests workflow in `dist/app.config.js`, never in production). Shrink it as tests move to behavior-level assertions;
 - the build keeps UTF-8 and does not minify (`charset: 'utf8'`): `parseKeys()` reads the parser's own source to discover keys;
-- next: split the concatenated chunks into real modules with explicit imports/exports, starting with leaf chunks (i18n, platform) and removing names from the test bridge as they get proper exports.
+- ✅ 2026-09-26: the product runtime reads `window.APP_CONFIG` only through `appRuntimeCompat.runtimeConfig()`; the legacy `FIT_TIMER_CONFIG` alias is no longer generated;
+- ✅ 2026-09-26: i18n is a real module (`src/i18n/ru.js`, `en.js` export dictionaries; `index.js` exports the i18n API and owns the active locale); `app.js` imports it instead of concatenating it;
+- dependency analysis of the remaining chunks (`src/app/00-core.js` … `90-events.js`): every chunk reads names from most others and several reassign each other's top-level state (e.g. `90-events.js` writes settings owned by `00-core.js`, `70-workout.js` writes builder draft state owned by `60-builder.js`). They cannot become separate modules until that shared mutable state is owned by one module and changed through functions;
+- next: give each piece of cross-chunk mutable state a single owner with setters (starting with builder draft state and audio/voice settings), then split chunks into modules one at a time, removing names from the test bridge as they get proper exports.
 
 ## Phase 14 — Dependency rules
 

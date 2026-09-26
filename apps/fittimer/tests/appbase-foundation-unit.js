@@ -22,15 +22,16 @@ const context = {window:{}};
 vm.runInNewContext(fs.readFileSync('app.config.js', 'utf8'), context);
 const runtime = context.window.APP_CONFIG || {};
 ok('generic runtime config carries app id', runtime.appId === product.id, runtime.appId);
-ok('FitTimer runtime config alias points to generic config', context.window.FIT_TIMER_CONFIG === context.window.APP_CONFIG);
-const configConsumerSources = [
-  'src/app/40-programs-ai.js',
-  'src/app/80-platform.js',
-  'mobile.js'
-].map(path => fs.readFileSync(path, 'utf8')).join('\n');
-ok('runtime consumers use canonical APP_CONFIG',
-  configConsumerSources.includes('window.APP_CONFIG')
-  && !configConsumerSources.includes('window.FIT_TIMER_CONFIG'));
+ok('legacy FIT_TIMER_CONFIG alias is no longer generated', !('FIT_TIMER_CONFIG' in context.window));
+const productConfigSources = ['src/app/40-programs-ai.js', 'src/app/80-platform.js']
+  .map(path => fs.readFileSync(path, 'utf8')).join('\n');
+ok('product runtime reads config only through runtime compatibility',
+  /appRuntimeCompat\.runtimeConfig\(\)/.test(productConfigSources)
+  && !/window\.(?:APP_CONFIG|FIT_TIMER_CONFIG)/.test(productConfigSources)
+  && /runtimeConfig/.test(fs.readFileSync('src/app/runtime-compat.ts', 'utf8')));
+ok('mobile adapter reads canonical APP_CONFIG',
+  fs.readFileSync('mobile.js', 'utf8').includes('window.APP_CONFIG')
+  && !fs.readFileSync('mobile.js', 'utf8').includes('FIT_TIMER_CONFIG'));
 ok('runtime config carries feature flags',
   runtime.features && Object.keys(product.features).every(k => runtime.features[k] === product.features[k]));
 ok('root runtime keeps API relative for local/web fallback', runtime.apiBase === '' && runtime.publicAppUrl === '');

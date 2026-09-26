@@ -1,5 +1,6 @@
 import type { ExternalStorage } from '@appbase/core/storage.js';
 import type { Platform } from '@appbase/core/observability.js';
+import type { RuntimeAppConfig } from '@appbase/types/core.js';
 
 let runtimeBuild = '';
 
@@ -37,6 +38,16 @@ function getRuntimeBuild(): string {
   return runtimeBuild;
 }
 
+/* Public runtime config (app.config.js → window.APP_CONFIG). The product runtime reads
+   it only here, so a missing or partial config degrades to an empty object. */
+function runtimeConfig(): Partial<RuntimeAppConfig> {
+  try{
+    return (window as Window & {APP_CONFIG?: Readonly<RuntimeAppConfig>}).APP_CONFIG || {};
+  }catch(_){
+    return {};
+  }
+}
+
 type NativeBridge = Record<string, any> & { isNative?: boolean };
 
 function nativeBridge(): NativeBridge | null {
@@ -51,6 +62,7 @@ export const appRuntimeCompat = Object.freeze({
   externalStorage,
   nativeBridge,
   runtimePlatform,
+  runtimeConfig,
 
   setBuild(value: unknown){
     setRuntimeBuild(value);
