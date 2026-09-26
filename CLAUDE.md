@@ -187,6 +187,8 @@ Use the cheapest relevant verification first:
 6. `npm run check:mobile`
 7. Native Android/iOS build only when native code/config changed or a package build is explicitly required
 
+Before a PR: `npm test` (= CI static + unit/server), plus `npm test -- --browser` for UI/runtime changes. New tests go into `scripts/test-lists.mjs`.
+
 Do not repeatedly run expensive full builds while a cheaper failing check remains unresolved.
 
 ## Completion standard

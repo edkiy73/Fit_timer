@@ -1214,19 +1214,6 @@ body.booting .app{visibility:hidden}
   .w-add{display:none;gap:8px;margin-top:12px}
   .w-add.on{display:flex}
   .w-add input{flex:1;min-width:0}
-  /* Тихая кнопка второго плана: обычный текст на фоне карточки. Служебные действия
-     («Проверить», «Диагностика») кричали заливкой акцентом громче, чем всё остальное
-     на экране настроек, хотя нужны раз в жизни. */
-  /* «Добавить упражнение» и «Подобрать через ИИ» стоят рядом и обязаны быть одного
-     роста и с одним скруглением: разница в десять точек читается как небрежность. */
-  .btn-quiet{
-    flex:1;min-height:52px;padding:0 14px;border-radius:14px;cursor:pointer;
-    background:none;border:1px solid var(--line);color:var(--muted);
-    font-family:var(--font-text);font-size:14px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .btn-quiet:active{background:var(--line);color:var(--ink)}
-  .btn-quiet svg{width:17px;height:17px;margin-right:8px;flex:none}
   /* Звук — два разных разговора, а не пять строк подряд: что говорит голос и что
      звенит сигналами. Раньше «Громкость» стояла между «Звуками» и «Не прерывать
      музыку», и по строчке было не понять, к чему она относится. */
@@ -1240,7 +1227,6 @@ body.booting .app{visibility:hidden}
     letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
   }
   .snd-group .pref-row{padding:0;border:none;min-height:0}
-  .key-actions{display:flex;gap:8px}
 
   /* ---------- оценка нагрузки на финише ---------- */
 
@@ -1651,7 +1637,6 @@ body.booting .app{visibility:hidden}
   .start-ex-list{display:flex;flex-direction:column}
   .start-ex-list .ex-row{min-height:0;padding:12px 0;background:none;border:0;border-radius:0}
   .start-ex-list .ex-row + .ex-row{border-top:1px solid var(--line)}
-  .btn-quiet.danger{color:var(--danger);border-color:var(--danger-line)}
 
 
   /* ============ ЕДИНАЯ СИСТЕМА ОТСТУПОВ ============
@@ -1685,7 +1670,7 @@ body.booting .app{visibility:hidden}
 
      Теперь перечисляем наоборот — то, что обязано остаться строкой, сеткой или
      иметь свой ритм. Новая обёртка получает отступы сама, ничего не помня. */
-  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ava-row):not(.key-actions):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow):not(.cl-stats),
+  .card-block > div:not(.cb-head):not(.pref-row):not(.row2):not(.step-grid):not(.field):not(.days):not(.ex-meta):not(.load-row):not(.plan-tabs):not(.tabs):not(.seg):not(.media-row):not(.note):not(.nav-row):not(.tray):not(.ava-row):not(.or-line):not(.ways):not(.sched-mode):not(.list-rows):not(.si-hero):not(.tp-head):not(.tp-stats):not(.cl-weeks):not(.cl-grow):not(.cl-stats),
   .card-block .stack,
   .card-block .prefs,
   .card-block .hf-block,
@@ -1779,7 +1764,6 @@ body.booting .app{visibility:hidden}
     -webkit-appearance:none;appearance:none;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%23A99FC4' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat:no-repeat;background-position:right 10px center}
-  .app-locale-sel{display:block;width:100%;max-width:none;min-height:44px;margin-top:6px}
   /* достижения — нижняя секция карточки результата, а не отдельная плашка */
   .badge-row{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line)}
   .badge-row:empty{display:none}

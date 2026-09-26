@@ -4,10 +4,11 @@
    Раньше эти тесты в CI не запускались совсем и незаметно ломались месяцами:
    тестовый сервер не отдавал CSS, тренерские сценарии падали на no_trainer.
    Этот скрипт запускает их по одному, печатает итог и падает, если упал хоть один.
-   Заодно проверяет, что каждый tests/*.js где-то запускается — здесь или в workflow,
+   Заодно проверяет, что каждый tests/*.js где-то запускается — здесь или в scripts/test-lists.mjs,
    чтобы новый тест снова не оказался «забытым».
 
-   Нужны: node tests/dev-server.js 8124 (с ADMIN_KEY, GEMINI_API_KEY=test, AI_TEST_MODE=1),
+   Проще всего: npm test -- --browser (сам собирает dist и поднимает серверы).
+   Вручную нужны: node tests/dev-server.js 8124 (с ADMIN_KEY, GEMINI_API_KEY=test, AI_TEST_MODE=1),
           статика без API на 8123 (python3 -m http.server 8123) для link-length,
           playwright-core и FIT_CHROME — путь к Chromium.
 
@@ -17,6 +18,7 @@
 import { spawn } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { UNIT_TESTS, ADMIN_TESTS, STATIC_TESTS } from './test-lists.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
@@ -34,15 +36,9 @@ const PER_TEST_MS = 240000;
 
 async function coverageGaps(){
   const files = (await readdir(path.join(ROOT, 'tests'))).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3));
-  const wfDir = path.join(ROOT, '..', '..', '.github', 'workflows');
-  const workflows = (await Promise.all((await readdir(wfDir)).map(f => readFile(path.join(wfDir, f), 'utf8')))).join('\n');
   const pkg = await readFile(path.join(ROOT, 'package.json'), 'utf8');
-  return files.filter(n =>
-    !NOT_TESTS.has(n)
-    && !BROWSER_TESTS.includes(n)
-    && !workflows.includes(`tests/${n}.js`)
-    && !pkg.includes(`tests/${n}.js`)
-  );
+  const listed = new Set([...BROWSER_TESTS, ...UNIT_TESTS, ...ADMIN_TESTS, ...STATIC_TESTS]);
+  return files.filter(n => !NOT_TESTS.has(n) && !listed.has(n) && !pkg.includes(`tests/${n}.js`));
 }
 
 function run(name){
@@ -68,7 +64,7 @@ if(!only.length){
   const gaps = await coverageGaps();
   if(gaps.length){
     console.log('Тесты, которые нигде не запускаются: ' + gaps.join(', '));
-    console.log('Добавь их в BROWSER_TESTS (scripts/run-browser-tests.mjs) или в workflow.');
+    console.log('Добавь их в BROWSER_TESTS (scripts/run-browser-tests.mjs) или в scripts/test-lists.mjs.');
     failed++;
   }
 }
