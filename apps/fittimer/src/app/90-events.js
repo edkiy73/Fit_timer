@@ -87,7 +87,7 @@ async function resumeWorkoutFromNativeNotification(){
   }
   const p = customPrograms.find(x => x && x.id === s.pid);
   if(!p){
-    await clearSession();
+    await clearSession(s.sessionId, s.pid);
     appRuntimeCompat.clearWorkoutState();
     return false;
   }
