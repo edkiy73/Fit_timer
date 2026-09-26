@@ -1,3 +1,20 @@
+import { appLocale, localeTag, t } from '../i18n/index.js';
+import { I18N_RU } from '../i18n/ru.js';
+import { I18N_EN } from '../i18n/en.js';
+import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { $, appAlert, appConfirm, appDialog, icon, plural, setShown, show } from './00-core.js';
+import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
+  loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
+  renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
+  setCurrentUserShared, setUsersShared, stats, users, validAge, wellList
+} from './10-data-sync.js';
+import { GLOBAL_KEYS, PROFILE_KEYS } from './20-account.js';
+import { ageError, renderToday } from './40-programs-ai.js';
+import { renderMine } from './50-trainer-catalog.js';
+import { newExId, shrinkImage } from './60-builder.js';
+import { esc, roundRect } from './70-workout.js';
+import { applyTheme, setThemeLightShared } from './80-platform.js';
+
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
 const WARMUP_SPEC = [
   {k:1,m:['le','ca'],type:'time',value:60,rest:10},
@@ -38,7 +55,7 @@ function localizeBuiltinWarmup(p){
   });
   return changed;
 }
-async function ensureWarmup(){
+export async function ensureWarmup(){
   const existing = customPrograms.find(p => p.id === 'warmup');
   if(existing){
     if(localizeBuiltinWarmup(existing)) await savePrograms();
@@ -58,8 +75,8 @@ async function ensureWarmup(){
 }
 
 /* ================= ФОТО-ПРОГРЕСС ================= */
-let photos = []; // [{d:'ГГГГ-ММ-ДД', img:dataURL}] — отдельный ключ хранилища, фото тяжёлые
-async function loadPhotos(){
+export let photos = []; // [{d:'ГГГГ-ММ-ДД', img:dataURL}] — отдельный ключ хранилища, фото тяжёлые
+export async function loadPhotos(){
   try{ photos = JSON.parse(await kvGet(pk('photos'))) || []; }catch(e){ photos = []; }
 }
 async function savePhotos(){ await kvSet(pk('photos'), JSON.stringify(photos)); }
@@ -68,12 +85,12 @@ function fmtD(iso){
   const d = new Date(iso + 'T12:00:00');
   return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short', year:'2-digit'}).format(d);
 }
-function shortD(iso){
+export function shortD(iso){
   const d = new Date(iso + 'T12:00:00');
   return new Intl.DateTimeFormat(localeTag(), {day:'numeric', month:'short'}).format(d);
 }
 
-function renderPhotos(){
+export function renderPhotos(){
   const n = photos.length;
   $('photoCount').textContent = n ? t('progress.photoCount',{count:n}) : '';
   setShown('photoNowRow', !!n);
@@ -103,7 +120,7 @@ function renderPhotos(){
   setShown('btnDeleteAllPhotos', n > 0);
 }
 
-async function deleteAllPhotos(){
+export async function deleteAllPhotos(){
   if(!photos.length) return;
   const ok = await appDialog(
     t('progress.deleteAllPhotos',{count:photos.length}),
@@ -117,7 +134,7 @@ async function deleteAllPhotos(){
 
 // Один день — один снимок: второе фото за ту же дату заменяет первое. Раньше замена
 // происходила молча, и человек терял утренний кадр, сняв вечерний «на пробу».
-async function addPhoto(file){
+export async function addPhoto(file){
   const today = localISO(new Date());
   if(photos.some(p => p.d === today)){
     const ok = await appDialog(
@@ -145,7 +162,7 @@ function fillCmpSel(sel, idx){
     sel.appendChild(o);
   });
 }
-function renderCmp(){
+export function renderCmp(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
   $('cmpImgA').innerHTML = a ? `<img src="${esc(a.img)}" alt="">` : '';
   $('cmpImgB').innerHTML = b ? `<img src="${esc(b.img)}" alt="">` : '';
@@ -158,7 +175,7 @@ function renderCmp(){
 }
 // нажатие на снимок в сетке открывает сравнение сразу с ним справа,
 // нажатие на кнопку — крайние даты (было/стало)
-function openCompare(bIdx){
+export function openCompare(bIdx){
   if(photos.length < 2) return;
   const b = (typeof bIdx === 'number' && bIdx > 0) ? bIdx : photos.length - 1;
   fillCmpSel($('cmpA'), 0);
@@ -217,13 +234,7 @@ function wireSwipe(el, onLeft, onRight){
     if(dx < 0) onLeft(); else onRight();
   }, {passive: true});
 }
-wireSwipe($('cmpImgA'), ()=> cmpStep('A', 1), ()=> cmpStep('A', -1));
-wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
-wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
-$('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
-$('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-$('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) appUi.closeModal($('photoFullModal')); };
-async function delCmpPhoto(which){
+export async function delCmpPhoto(which){
   const idx = +$(which).value;
   const p = photos[idx];
   if(!p) return;
@@ -249,7 +260,7 @@ function drawCover(x, img, dx, dy, dw, dh, r){
   x.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, dx, dy, dw, dh);
   x.restore();
 }
-async function shareGeneratedFile(blob, fname, title, savedText){
+export async function shareGeneratedFile(blob, fname, title, savedText){
   if(appRuntimeCompat.isNative()){
     const ok = await appRuntimeCompat.shareFile(blob, fname, title || 'Fit Timer');
     if(!ok) appAlert(t('share.openFailed'));
@@ -268,7 +279,7 @@ async function shareGeneratedFile(blob, fname, title, savedText){
   appAlert(savedText || t('share.savedDownloads'));
   return true;
 }
-async function shareCompare(){
+export async function shareCompare(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
   if(!a || !b) return;
   const [ia, ib] = await Promise.all([loadImg(a.img), loadImg(b.img)]);
@@ -334,7 +345,7 @@ const NO_BACKUP = [
 const backupProfileKeys = () => PROFILE_KEYS.filter(k => !NO_BACKUP.includes(k));
 const backupGlobalKeys  = () => GLOBAL_KEYS.filter(k => !NO_BACKUP.includes(k));
 
-async function exportAllData(){
+export async function exportAllData(){
   const dump = {app: 'fittimer', version: 2, exportedAt: new Date().toISOString(),
                 users, currentUser, data: {}, settings: {}};
   for(const u of users){
@@ -360,7 +371,7 @@ async function exportAllData(){
   appAlert(t('backup.saved'));
 }
 
-async function importAllData(file){
+export async function importAllData(file){
   let dump;
   try{ dump = JSON.parse(await file.text()); }
   catch(e){ appAlert(t('backup.readFailed')); return; }
@@ -632,20 +643,20 @@ function shareWellLanes(){
   }).filter(L => L.have.length);
 }
 
-async function shareWeightChart(){
+export async function shareWeightChart(){
   const lanes = shareBodyLanes();
   if(!lanes.length){ appAlert(t('progress.addMetricFirst')); return; }
   await sharePng(t('progress.myChanges'), lanes, 'fittimer-progress.png');
 }
 
-async function shareWellChart(){
+export async function shareWellChart(){
   const lanes = shareWellLanes();
   if(!lanes.length){ appAlert(t('progress.addWellnessFirst')); return; }
   await sharePng(t('progress.myWellness'), lanes, 'fittimer-wellness.png');
 }
 
 /* ================= ИСТОРИЯ ВЕСА (правка задним числом) ================= */
-function openWeightHist(){
+export function openWeightHist(){
   const list = $('whList'); list.innerHTML = '';
   const entries = stats.weights.slice(-30).reverse();
   entries.forEach(en => {
@@ -666,7 +677,7 @@ function openWeightHist(){
   });
   $('whModal').classList.add('open');
 }
-async function saveWeightHist(){
+export async function saveWeightHist(){
   const rows = [...$('whList').querySelectorAll('.wh-row')];
   for(const row of rows){
     const wInp = row.querySelector('input[data-k=w]');
@@ -709,7 +720,7 @@ async function saveWeightHist(){
    Числа взяты не с потолка: столько помещается там, где поле показывают. Имя
    программы — в карточку, «о себе» — на страницу тренера, описание упражнения —
    в свёрнутый блок на экране упражнения. */
-const LIM = {
+export const LIM = {
   progName: 60, progDesc: 1000,
   exName: 60, exDesc: 600, exMistakes: 300, exSwapName: 60, exSwapDesc: 600,
   exValue: 16,               // «12-15», «01:30» — больше там быть нечему
@@ -731,16 +742,16 @@ const CTRL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\uFEFF]/
 const NL = /[\u2028\u2029\r]/g;
 
 // Многострочный текст: описания, заметки, «о себе».
-function clampText(v, max){
+export function clampText(v, max){
   return String(v == null ? '' : v).replace(NL, '\n').replace(CTRL, '').trim().slice(0, max);
 }
 // Однострочный: имена, названия. Перенос строки в названии программы — это
 // две строки в карточке там, где место под одну.
-function clampLine(v, max){
+export function clampLine(v, max){
   return String(v == null ? '' : v).replace(NL, '\n').replace(CTRL, '')
     .replace(/\s+/g, ' ').trim().slice(0, max);
 }
-const clampNum = (v, min, max, dflt) => {
+export const clampNum = (v, min, max, dflt) => {
   const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
   if(!isFinite(n)) return dflt;
   return Math.max(min, Math.min(max, n));
@@ -751,7 +762,7 @@ const clampNum = (v, min, max, dflt) => {
    и строка вида  x" onerror="…  превращается в чужой код на экране: браузер
    читает атрибут, а не наше намерение. Проверяем ФОРМУ, а не доверяем источнику. */
 const PIC_RE = /^data:image\/(png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/]+=*$/;
-function cleanPic(v){
+export function cleanPic(v){
   const s = String(v == null ? '' : v).trim();
   return (s.length <= LIM.pic && PIC_RE.test(s)) ? s : null;
 }
@@ -764,7 +775,7 @@ function cleanPic(v){
    Возвращает нормализованный адрес или null. Ругаться и объяснять — дело того,
    кто вызвал: в одном месте это надпись под полем, в другом молчаливый пропуск. */
 const HOST_RE = /^[a-zа-яё0-9]([a-zа-яё0-9-]*[a-zа-яё0-9])?(\.[a-zа-яё0-9-]+)+$/i;
-function cleanLink(v, max){
+export function cleanLink(v, max){
   let s = clampLine(v, max || LIM.link);
   if(!s) return '';
   s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//i, m => /^https?:\/\//i.test(m) ? m : '');
@@ -779,7 +790,7 @@ function cleanLink(v, max){
 /* Всё, что приехало снаружи, чистится ОДНОЙ функцией: программа по ссылке, из
    каталога, из файла, из кода FIT1 и из резервной копии проходят один и тот же
    путь. Разводить их по местам нельзя — каждый забытый путь и есть дыра. */
-function sanitizeProgram(p){
+export function sanitizeProgram(p){
   if(!p || typeof p !== 'object') return p;
   p.name = clampLine(p.name, LIM.progName) || t('program.default');
   if(p.desc != null) p.desc = clampText(p.desc, LIM.progDesc);
@@ -797,7 +808,7 @@ function sanitizeProgram(p){
 // id упражнения обязан быть уникальным в программе: по нему сопоставляются
 // AI-правки и проверка прогресса на финише. Раньше «дублировать упражнение»
 // копировало id вместе со всем остальным — такие копии получают свой.
-function uniqueExerciseIds(p){
+export function uniqueExerciseIds(p){
   let changed = false;
   const seen = new Set();
   (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
@@ -841,10 +852,10 @@ function sanitizeExercise(ex){
 // и надолго. Имя профиля, в отличие от аккаунта, ничего не адресует — уникальность
 // ему не нужна, поэтому первый профиль просто «Мой профиль», а следующие нумеруются,
 // чтобы их можно было различить в списке.
-const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
+export const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
 const DEFAULT_PROFILE_NAMES = ['Мой профиль','My profile'];
 const defaultProfileName = ()=> t('profile.defaultMine');
-function nextProfileName(){
+export function nextProfileName(){
   if(!users.some(u => DEFAULT_PROFILE_NAMES.includes((u.name || '').trim()))) return defaultProfileName();
   let n = 1;
   users.forEach(u => {
@@ -854,7 +865,7 @@ function nextProfileName(){
   return t('profile.defaultNumber',{count:n+1});
 }
 
-function startOnboarding(){
+export function startOnboarding(){
   // Тема первого запуска — системная. Раньше здесь жёстко включалась светлая, и на
   // тёмном телефоне знакомство начиналось с белой вспышки во весь экран. Дальше
   // человек всё равно переключит её в настройках, а первое впечатление уже испорчено.
@@ -866,7 +877,7 @@ function startOnboarding(){
 
 // Профиль заводится по нажатию любой кнопки знакомства — и там же фиксируется согласие
 // с правилами, о котором написано под кнопками.
-async function finishOnboardingCreate(){
+export async function finishOnboardingCreate(){
   if(users.length) return false;
   const u = {
     id: 'u' + Date.now(),
@@ -896,9 +907,9 @@ const WHO_MSG = {
   program:'who.programMsg',
   ai:'who.aiMsg'
 };
-let whoDraft = null, whoDone = null;
+export let whoDraft = null, whoDone = null;
 const needWho = u => !!u && (!profileAge(u) || !u.gender);
-function whoSyncForm(){
+export function whoSyncForm(){
   $('whoF').classList.toggle('act', whoDraft.gender === 'f');
   $('whoM').classList.toggle('act', whoDraft.gender === 'm');
   $('whoSave').disabled = !whoDraft.gender || !!ageError($('whoAge').value || '', true);
@@ -916,12 +927,12 @@ function askWho(reason){
 // Экран, которому эти данные нужны, уже открыт: попап видно поверх него. Если человек
 // отказался отвечать — уводим обратно, а не оставляем его на экране, который без
 // ответа всё равно не сработает.
-function requireWho(reason, onCancel){
+export function requireWho(reason, onCancel){
   const u = curUser();
   if(!u || !needWho(u)) return;
   askWho(reason).then(ok => { if(!ok && onCancel) onCancel(); });
 }
-async function whoFinish(save){
+export async function whoFinish(save){
   const u = curUser();
   if(!u){ $('whoModal').classList.remove('open'); return; }
   if(save){
@@ -938,9 +949,18 @@ async function whoFinish(save){
   if(whoDone){ whoDone(!!save); whoDone = null; }
 }
 
-
-window.addEventListener('appLocaleChanged', async ()=>{
-  const p = customPrograms.find(x=>x.id==='warmup');
-  if(p && localizeBuiltinWarmup(p)) await savePrograms();
-  try{ renderMine(); renderToday(); }catch(_){}
-});
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initProgressMedia(){
+  wireSwipe($('cmpImgA'), ()=> cmpStep('A', 1), ()=> cmpStep('A', -1));
+  wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
+  wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
+  $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
+  $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
+  $('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) appUi.closeModal($('photoFullModal')); };
+  window.addEventListener('appLocaleChanged', async ()=>{
+    const p = customPrograms.find(x=>x.id==='warmup');
+    if(p && localizeBuiltinWarmup(p)) await savePrograms();
+    try{ renderMine(); renderToday(); }catch(_){}
+  });
+}

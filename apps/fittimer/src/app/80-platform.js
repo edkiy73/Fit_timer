@@ -1,21 +1,28 @@
+import { appLocale, t } from '../i18n/index.js';
+import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
+import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, lastAppSoundT,
+  loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
+  state, syncSoundCascade, voiceVol, workoutLoadSnapshot
+} from './00-core.js';
+import { DAYS, curUser, customPrograms, kvSet, loadSession, localISO, normPlans, planDays,
+  progActive, stats
+} from './10-data-sync.js';
+import { isPremium } from './20-account.js';
+import { nextStep, setPause, stopSpeech } from './70-workout.js';
+import { getNotificationPrefs, refreshVoicePackUI } from './90-events.js';
+
 /* ================= ТЕМА ================= */
 // Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
 // разные, и спорить с системной настройкой без спроса приложению незачем.
 const sysDark = ()=> !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 let themeLight = !sysDark();
-const themeOf = u => (u && u.theme) || 'system';
-function applyThemeFor(u){
+export const themeOf = u => (u && u.theme) || 'system';
+export function applyThemeFor(u){
   const t = themeOf(u);
   themeLight = (t === 'system') ? !sysDark() : t !== 'dark';
   applyTheme();
 }
-try{
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
-    const u = curUser();
-    if(themeOf(u) === 'system') applyThemeFor(u);
-  });
-}catch(e){}
-function applyTheme(){
+export function applyTheme(){
   document.body.classList.toggle('light', themeLight);
   const productConfig = appRuntimeCompat.runtimeConfig();
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
@@ -50,11 +57,11 @@ function applyTheme(){
 }
 
 /* ================= ГОЛОСОВОЕ УПРАВЛЕНИЕ ================= */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+export const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
-let recognitionLang = 'ru'; // ru | en; в APK выбирает локальный пакет Vosk
+export let recognitionLang = 'ru'; // ru | en; в APK выбирает локальный пакет Vosk
 
 /* Карточки «Синхронизация» убраны с экрана.
 
@@ -67,7 +74,7 @@ let recognitionLang = 'ru'; // ru | en; в APK выбирает локальны
    сервер встанет. Убран только рассказ о ней человеку: о том, чего он не может ни
    включить, ни почувствовать, рассказывать незачем. */
 
-function syncPrefs(){
+export function syncPrefs(){
   const anyAudio = soundOn && (fxVol > 0 || voiceVol > 0);
   $('btnSoundW').innerHTML = icon(anyAudio ? 'vol' : 'volX');
   $('btnSoundW').classList.toggle('muted', !anyAudio);
@@ -133,9 +140,9 @@ function applyVoiceCommand(input){
 }
 
 /* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
-let hfMode = 'off'; // off | voice | headset
+export let hfMode = 'off'; // off | voice | headset
 
-function hfHintText(mode){
+export function hfHintText(mode){
   if(mode === 'voice'){
     return t(appRuntimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
   }
@@ -143,7 +150,7 @@ function hfHintText(mode){
   return t('handsfree.offHint');
 }
 
-function syncHandsFreeUI(){
+export function syncHandsFreeUI(){
   document.querySelectorAll('#hfSeg [data-hf], #hfModal [data-hf]').forEach(b =>
     b.classList.toggle('act', b.dataset.hf === hfMode));
   ['hfHint','hfModalHint'].forEach(id => {
@@ -151,7 +158,7 @@ function syncHandsFreeUI(){
     if(el) el.textContent = hfHintText(hfMode);
   });
 }
-function setHfMode(mode){
+export function setHfMode(mode){
   hfMode = mode;
   kvSet('hfMode', mode);
   voiceWanted = (mode === 'voice');
@@ -163,11 +170,11 @@ function setHfMode(mode){
     startHandsFree();
   }
 }
-function startHandsFree(){
+export function startHandsFree(){
   if(hfMode === 'voice') startListening();
   else if(hfMode === 'headset') startHeadset();
 }
-function stopHandsFree(){
+export function stopHandsFree(){
   stopListening(); stopHeadset();
 }
 
@@ -276,7 +283,7 @@ function handleNativeVoiceError(error){
 function handleNativeVoiceStatus(status){
   try{ window.dispatchEvent(new CustomEvent('fitVoiceModelStatus', {detail:status || {}})); }catch(_){}
 }
-function startListening(){
+export function startListening(){
   if(voiceActive) return;
   stopRequested = false;
   if(appRuntimeCompat.offlineVoice()){
@@ -349,7 +356,7 @@ function startListening(){
   }catch(e){ voiceActive = false; }
 }
 
-function stopListening(){
+export function stopListening(){
   stopRequested = true;
   clearTimeout(recogTimer);
   if(appRuntimeCompat.offlineVoice()){
@@ -362,36 +369,6 @@ function stopListening(){
   resetVoiceDedup();
 }
 
-// Вернулись в приложение — молча поднимаем распознавание обратно. Раньше сворачивание
-// гасило голосовое управление насовсем: браузер обрывал распознавание, приложение считало
-// это отказом в доступе и просило заново выбирать «Голос» в меню микрофона.
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    if(voiceActive) try{ if(recog){ recog.onend = null; recog.onresult = null; recog.stop(); } }catch(e){}
-    voiceActive = false;
-    resetVoiceDedup();
-    return;
-  }
-  if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
-    recogFails = 0;              // счётчик срывов относится к прошлой сессии микрофона
-    setTimeout(startListening, 300); // даём вкладке дорисоваться, иначе браузер снова оборвёт
-  }
-});
-
-window.addEventListener('fitAppBackground', ()=>{
-  stopListening();
-  stopHeadset();
-  stopSpeech();
-  releaseWake();
-  try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
-});
-window.addEventListener('fitAppForeground', ()=>{
-  if($('scrWork').classList.contains('on')){
-    keepAwake();
-    startHandsFree();
-  }
-});
-
 /* ================= УВЕДОМЛЕНИЯ ПО РАСПИСАНИЮ ================= */
 // В браузере оставляем только ближайшее напоминание для явно заданного времени.
 // В native всю очередь строит единый менеджер ниже; второй web Notification там был
@@ -400,7 +377,7 @@ const notifiedKeys = new Set();
 async function showNotification(title, body){
   try{ new Notification(title, {body, tag:'fittimer'}); }catch(e){}
 }
-function checkSchedules(){
+export function checkSchedules(){
   if(document.hidden) return;
   if(appRuntimeCompat.isNative()) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
@@ -422,7 +399,6 @@ function checkSchedules(){
     showNotification(copy.title, copy.body);
   });
 }
-setInterval(checkSchedules, 20000);
 
 /* ================= МЕНЕДЖЕР УВЕДОМЛЕНИЙ =================
    Уведомляем о плане человека, а не о каждой записи отдельно:
@@ -643,7 +619,7 @@ function limitNotificationCandidates(items){
 
 // Нативные уведомления переживают закрытие приложения. Пересобираем две недели
 // вперёд при старте, изменении расписания и завершении тренировки.
-async function syncNativeNotifications(){
+export async function syncNativeNotifications(){
   if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
   const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
     workouts:true, trainer:true, progress:true, offers:true
@@ -729,9 +705,6 @@ async function syncNativeNotifications(){
   const finalItems = limitNotificationCandidates(items);
   await appRuntimeCompat.syncWorkoutNotifications(finalItems);
 }
-window.addEventListener('fitAppForeground', ()=>{
-  syncNativeNotifications().catch(()=>{});
-});
 
 /* ================= ДЕЙСТВИЯ ПО ИМЕНИ =================
    Обычный способ привязать кнопку в этом файле — найти её по имени и повесить
@@ -762,18 +735,61 @@ const ACTIONS = {
     appUi.closeModal(m);
   }
 };
-appUi.bindActions(document, ACTIONS);
-// Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
-// с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
-// свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
-document.addEventListener('click', e => {
-  const m = e.target;
-  if(m.id !== 'dlg' && m.classList.contains('modal') && m.classList.contains('open')) dismissTopModal();
-});
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setHfModeShared(value){ hfMode = value; return hfMode; }
-function setRecognitionLangShared(value){ recognitionLang = value; return recognitionLang; }
-function setThemeLightShared(value){ themeLight = value; return themeLight; }
-function setVoiceWantedShared(value){ voiceWanted = value; return voiceWanted; }
+export function setHfModeShared(value){ hfMode = value; return hfMode; }
+export function setRecognitionLangShared(value){ recognitionLang = value; return recognitionLang; }
+export function setThemeLightShared(value){ themeLight = value; return themeLight; }
+export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWanted; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initPlatform(){
+  try{
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+      const u = curUser();
+      if(themeOf(u) === 'system') applyThemeFor(u);
+    });
+  }catch(e){}
+  // Вернулись в приложение — молча поднимаем распознавание обратно. Раньше сворачивание
+  // гасило голосовое управление насовсем: браузер обрывал распознавание, приложение считало
+  // это отказом в доступе и просило заново выбирать «Голос» в меню микрофона.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){
+      if(voiceActive) try{ if(recog){ recog.onend = null; recog.onresult = null; recog.stop(); } }catch(e){}
+      voiceActive = false;
+      resetVoiceDedup();
+      return;
+    }
+    if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
+      recogFails = 0;              // счётчик срывов относится к прошлой сессии микрофона
+      setTimeout(startListening, 300); // даём вкладке дорисоваться, иначе браузер снова оборвёт
+    }
+  });
+  window.addEventListener('fitAppBackground', ()=>{
+    stopListening();
+    stopHeadset();
+    stopSpeech();
+    releaseWake();
+    try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
+  });
+  window.addEventListener('fitAppForeground', ()=>{
+    if($('scrWork').classList.contains('on')){
+      keepAwake();
+      startHandsFree();
+    }
+  });
+  setInterval(checkSchedules, 20000);
+  window.addEventListener('fitAppForeground', ()=>{
+    syncNativeNotifications().catch(()=>{});
+  });
+  appUi.bindActions(document, ACTIONS);
+  // Клик мимо карточки — по затемнению, а не по самой карточке: e.target совпадает
+  // с попапом, только когда попали в подложку. #dlg решает это сам (appDialog ждёт
+  // свой промис), неотменяемые (data-locked="1") гасит dismissTopModal.
+  document.addEventListener('click', e => {
+    const m = e.target;
+    if(m.id !== 'dlg' && m.classList.contains('modal') && m.classList.contains('open')) dismissTopModal();
+  });
+}

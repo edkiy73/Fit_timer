@@ -9,7 +9,6 @@ on:
       - 'apps/fittimer/ios/**'
       - 'apps/fittimer/scripts/**'
       - 'apps/fittimer/src/**'
-      - 'apps/fittimer/app.js'
       - 'apps/fittimer/style.css'
       - 'apps/fittimer/index.html'
       - 'apps/fittimer/mobile.js'

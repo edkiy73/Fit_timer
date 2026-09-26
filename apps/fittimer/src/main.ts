@@ -3,8 +3,8 @@
  *
  * Start order matters: the native bridge (mobile.js → window.FitNative) must exist
  * before the product runtime starts, so it is loaded first; the product runtime
- * (generated app.js, which imports AppBase Core and the typed product modules
- * itself) is then loaded as a lazily imported chunk of the same module graph.
+ * (src/app/index.js and the product modules it imports, together with AppBase Core)
+ * is then loaded as a lazily imported chunk of the same module graph.
  */
 export const APPBASE_ESM_FOUNDATION = true;
 
@@ -29,7 +29,7 @@ export function loadMobileRuntime(): Promise<void> {
 }
 
 export async function loadProductRuntime(): Promise<void> {
-  await import('../app.js');
+  await import('./app/index.js');
 }
 
 try{

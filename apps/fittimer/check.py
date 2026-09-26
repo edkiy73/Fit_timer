@@ -45,13 +45,15 @@ def load():
     styles = re.findall(r'<style>(.*?)</style>', s, re.S)
 
     # Раньше production index.html содержал JS/CSS inline. После разбиения исходников
-    # сборка подключает app.js и style.css отдельными файлами; проверка не должна
+    # сборка подключает ES-модули и style.css отдельными файлами; проверка не должна
     # объявлять весь проект пустым только из-за смены способа подключения ресурсов.
     if not scripts:
-        app_js = os.path.join(ROOT, 'app.js')
-        if os.path.exists(app_js):
-            with open(app_js, encoding='utf-8') as f:
-                scripts = [f.read()]
+        # продуктовый runtime — ES-модули src/app/*.js (точка входа src/app/index.js)
+        app_dir = os.path.join(ROOT, 'src', 'app')
+        for name in sorted(os.listdir(app_dir)):
+            if name.endswith('.js'):
+                with open(os.path.join(app_dir, name), encoding='utf-8') as f:
+                    scripts.append(f.read())
     if not styles:
         style_css = os.path.join(ROOT, 'style.css')
         if os.path.exists(style_css):

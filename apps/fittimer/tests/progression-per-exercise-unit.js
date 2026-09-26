@@ -42,7 +42,10 @@ global.sanitizeExercise = ex => { if(!ex.id) ex.id = newExId(); };
 global.sanitizeProgram = p => { (p.plans||[]).forEach(pl => (pl.exercises||[]).forEach(sanitizeExercise)); return p; };
 global.savePrograms = async () => {};
 
-const builderSrc = fs.readFileSync(path.join(root, 'src/app/60-builder.js'), 'utf8');
+// 60-builder.js — ES-модуль: для eval убираем import-строки и слово export
+const builderSrc = fs.readFileSync(path.join(root, 'src/app/60-builder.js'), 'utf8')
+  .replace(/^import [\s\S]*?from '[^']+';\n/gm, '')
+  .replace(/^export /gm, '');
 eval(builderSrc.slice(0, builderSrc.indexOf('async function pregnancyWarning')));
 
 function mkEx(name, opts){

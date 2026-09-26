@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1443,
-      "chars": 69882,
+      "lines": 1445,
+      "chars": 70892,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -45,6 +45,7 @@
         "hideReadyBar",
         "icon",
         "initAudio",
+        "initCore",
         "isChanged",
         "kbFocused",
         "keepAwake",
@@ -97,13 +98,13 @@
     },
     "src/app/00-dependencies.js": {
       "kind": "frontend-js",
-      "lines": 47,
-      "chars": 2173
+      "lines": 37,
+      "chars": 1581
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2144,
-      "chars": 100038,
+      "lines": 2165,
+      "chars": 102193,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -134,6 +135,7 @@
         "fmtMeasure",
         "hasConsent",
         "hasMeaningfulLocalData",
+        "initDataSync",
         "inp",
         "isPlaceholderProfile",
         "isPlanned",
@@ -243,8 +245,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 996,
-      "chars": 44520,
+      "lines": 1020,
+      "chars": 46291,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -264,6 +266,7 @@
         "finishVerifiedLogin",
         "grantSub",
         "humanDate",
+        "initAccount",
         "isPremium",
         "loadAccount",
         "loadPublicConfig",
@@ -315,8 +318,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 947,
-      "chars": 42631,
+      "lines": 967,
+      "chars": 44130,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -341,6 +344,7 @@
         "finishOnboardingCreate",
         "fmtD",
         "importAllData",
+        "initProgressMedia",
         "justSwiped",
         "loadImg",
         "loadPhotos",
@@ -384,8 +388,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2942,
-      "chars": 136210,
+      "lines": 2973,
+      "chars": 139172,
       "symbols": [
         "add",
         "ageError",
@@ -466,6 +470,7 @@
         "importProgramCode",
         "importProgramFile",
         "importProgramLink",
+        "initProgramsAi",
         "isNetworkFail",
         "lastReport",
         "lastSeen",
@@ -537,8 +542,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1659,
-      "chars": 75492,
+      "lines": 1685,
+      "chars": 77303,
       "symbols": [
         "add",
         "addClient",
@@ -564,6 +569,7 @@
         "fillPublish",
         "fillTrainerPage",
         "has",
+        "initTrainerCatalog",
         "line",
         "loadStoreServer",
         "openClient",
@@ -614,8 +620,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2115,
-      "chars": 97992,
+      "lines": 2134,
+      "chars": 99864,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -667,6 +673,7 @@
         "hasWeight",
         "importFromText",
         "initAIForm",
+        "initBuilder",
         "isDualProg",
         "item",
         "liveExercise",
@@ -745,8 +752,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1649,
-      "chars": 76250,
+      "lines": 1676,
+      "chars": 78388,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -780,6 +787,7 @@
         "hand",
         "hasBadge",
         "hexA",
+        "initWorkout",
         "lastWorkStep",
         "launch",
         "maybeRequestAppReview",
@@ -826,8 +834,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 780,
-      "chars": 33511,
+      "lines": 796,
+      "chars": 34671,
       "symbols": [
         "add",
         "advance",
@@ -841,6 +849,7 @@
         "handleNativeVoiceResult",
         "handleNativeVoiceStatus",
         "hfHintText",
+        "initPlatform",
         "limitNotificationCandidates",
         "notifyAt",
         "notifyDayKey",
@@ -881,8 +890,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2312,
-      "chars": 97228,
+      "lines": 2364,
+      "chars": 105536,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -912,6 +921,7 @@
         "fillLiveSoundCascade",
         "fillVoiceChoices",
         "getNotificationPrefs",
+        "initEvents",
         "lastOf",
         "leaveExercise",
         "leaveOnboarding",
@@ -961,6 +971,16 @@
         "ytCopyPrompt",
         "ytGuard"
       ]
+    },
+    "src/app/index.js": {
+      "kind": "frontend-js",
+      "lines": 28,
+      "chars": 1148
+    },
+    "src/app/options.js": {
+      "kind": "frontend-js",
+      "lines": 22,
+      "chars": 1412
     },
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",

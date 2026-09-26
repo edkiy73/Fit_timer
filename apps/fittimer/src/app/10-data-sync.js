@@ -1,6 +1,26 @@
+import { appLocale, canonicalLabel, localeTag, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
+import { appInfrastructure, appRuntimeCompat, appSync, appUi } from './00-dependencies.js';
+import { $, appAlert, icon, plural, setShown, sideSec, state, syncDockTabs } from './00-core.js';
+import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
+  renderPlan, saveAccount, writeAccountBucket
+} from './20-account.js';
+import { ensureWarmup, loadPhotos, renderPhotos, shortD, uniqueExerciseIds } from './30-progress-media.js';
+import { apiFetch, applyProgressionAll, clients, loadTrainer, openDayProgram, renderGreeting,
+  setClientsShared, setTrainerShared, trainer, weekPlanInfo
+} from './40-programs-ai.js';
+import { renderMine } from './50-trainer-catalog.js';
+import { exRestAfter, getExProgValue, hasWeight, normValue, parseValue, progAtCeiling, progAxis,
+  progBaseValue, progStepSize, progressedRepsRange
+} from './60-builder.js';
+import { BADGES, badgeDesc, badgeName, earnBadges, esc, hasBadge } from './70-workout.js';
+import { applyThemeFor } from './80-platform.js';
+import { NOTIFICATION_PREFS_KEY, NOTIFICATION_PREF_DEFAULTS, applyAudioFromUser,
+  getNotificationPrefs, syncNotificationSettings, syncSettingsForm
+} from './90-events.js';
+
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
-let users = [];
-let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
+export let users = [];
+export let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
 const fitProductInfrastructure = appInfrastructure.create({
   externalStorage: appRuntimeCompat.externalStorage,
   onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
@@ -23,14 +43,14 @@ const fitProductInfrastructure = appInfrastructure.create({
   }
 });
 const fitStorage = fitProductInfrastructure.storage;
-const pk = key => fitStorage.namespacedKey(key, currentUser);
-const curUser = () => users.find(u => u.id === currentUser) || users[0];
-async function kvGet(key){ return fitStorage.get(key); }
-async function kvSet(key, val){ return fitStorage.set(key, val); }
-async function kvDel(key){ await fitStorage.delete(key); }
-async function kvClearAll(){ await fitStorage.clearAll(); }
-async function saveUsers(){ await kvSet('users', JSON.stringify(users)); }
-function validAge(v){
+export const pk = key => fitStorage.namespacedKey(key, currentUser);
+export const curUser = () => users.find(u => u.id === currentUser) || users[0];
+export async function kvGet(key){ return fitStorage.get(key); }
+export async function kvSet(key, val){ return fitStorage.set(key, val); }
+export async function kvDel(key){ await fitStorage.delete(key); }
+export async function kvClearAll(){ await fitStorage.clearAll(); }
+export async function saveUsers(){ await kvSet('users', JSON.stringify(users)); }
+export function validAge(v){
   if(v === '' || v == null) return null;
   const n = Number(v);
   return Number.isInteger(n) && n >= 5 && n <= 100 ? n : null;
@@ -45,21 +65,21 @@ function legacyAge(v){
   if(n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
   return validAge(a);
 }
-function profileAge(u){
+export function profileAge(u){
   return validAge(u && u.age) || legacyAge(u && u.birth);
 }
-function migrateUserAge(u){
+export function migrateUserAge(u){
   if(!u || typeof u !== 'object') return u;
   const a = profileAge(u);
   if(a) u.age = a; else delete u.age;
   delete u.birth;
   return u;
 }
-function localISO(d){
+export function localISO(d){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-let customPrograms = [];
-let stats = {totalSec: 0};
+export let customPrograms = [];
+export let stats = {totalSec: 0};
 // Чей профиль сейчас лежит в customPrograms/stats. currentUser меняется раньше, чем
 // приезжают данные нового профиля; сохранение в этом окне записало бы программы
 // прежнего профиля под ключ нового — так они «растекались» по всем профилям.
@@ -72,8 +92,8 @@ let progWeights = {};
 /* Storage + observability are composed by the ESM product infrastructure.
    Legacy data-sync only owns FitTimer data behavior and kv-compatible helpers. */
 const appObservability = fitProductInfrastructure.observability;
-async function trackProductEvent(event){ return appObservability.track(event); }
-async function trackInstallOnce(){
+export async function trackProductEvent(event){ return appObservability.track(event); }
+export async function trackInstallOnce(){
   if((await kvGet('analyticsInstallSent')) === '1') return;
   if(await trackProductEvent('install')) await kvSet('analyticsInstallSent','1');
 }
@@ -83,15 +103,8 @@ function clientErrorPayload(kind, error, fallbackMessage){
 async function reportClientError(kind, error, fallbackMessage){
   return appObservability.capture(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
-window.addEventListener('error',e=>{
-  reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
-});
-window.addEventListener('unhandledrejection',e=>{
-  const r=e&&e.reason;
-  reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
-});
 
-async function loadData(ownerId = currentUser){
+export async function loadData(ownerId = currentUser){
   // Все чтения привязываем к профилю, который начал загрузку. Раньше pk() вычислялся
   // заново после каждого await: если в этот момент фоновая синхронизация и ручное
   // переключение профиля пересекались, данные могли приехать уже от другого профиля.
@@ -160,7 +173,7 @@ function queueProfileState(task){
     .then(task);
   return profileSwitchQueue;
 }
-function switchUser(id){
+export function switchUser(id){
   return queueProfileState(()=> switchUserNow(id));
 }
 async function switchUserNow(id){
@@ -191,7 +204,7 @@ async function switchUserNow(id){
 // Все профили — одинаковыми строками, у каждой одна и та же кнопка-карандаш.
 // Активный отличается не формой, а меткой «сейчас» и рамкой: раньше он жил отдельной
 // карточкой сверху, и понять, какой из них выбран, было невозможно.
-function renderUsers(){
+export function renderUsers(){
   const box = $('usersList'); box.innerHTML = '';
   users.forEach(u => {
     const act = u.id === currentUser;
@@ -238,7 +251,7 @@ function fmtMeasure(v){
 }
 let weightMetric = 'w';
 
-function renderWeight(){
+export function renderWeight(){
   const ws = stats.weights;
   $('btnWeightHist').innerHTML = icon('pencil') + t('progress.history');
   $('btnShareWeight').innerHTML = icon('share') + t('progress.share');
@@ -402,7 +415,7 @@ function wellSeries(){
 const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16]};
 let wellMetric = 'sys';
 
-const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.wellness = []);
+export const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.wellness = []);
 // как метрика читается одной строкой: давление всегда парой, остальное — число с единицей
 function wellValue(en, s){
   if(en[s.k] == null) return '';
@@ -414,7 +427,7 @@ function wellValue(en, s){
 // последняя запись: одно измерение давления ничего не говорит, а месяц — уже картина.
 // Окно жёсткое: если за месяц не записано ничего, метрики на главной нет вовсе —
 // прошлогодний пульс под заголовком «Прогресс» был бы враньём.
-function wellAvg(){
+export function wellAvg(){
   const from = new Date();
   from.setDate(from.getDate() - 29);
   const lo = localISO(from);
@@ -426,7 +439,7 @@ function wellAvg(){
   return {sys: avg('sys'), dia: avg('dia'), pulse: avg('pulse'), sleep: avg('sleep')};
 }
 
-function renderWellness(){
+export function renderWellness(){
   const ws = wellList();
   $('btnWellHist').innerHTML = icon('pencil') + t('progress.history');
   $('btnShareWell').innerHTML = icon('share') + t('progress.share');
@@ -471,7 +484,7 @@ function renderWellness(){
 }
 
 // ---- запись самочувствия ----
-function openWellAdd(){
+export function openWellAdd(){
   const ws = wellList();
   const today = localISO(new Date());
   const en = ws.find(e => e.d === today) || {};
@@ -483,7 +496,7 @@ function openWellAdd(){
   $('sleepInput').value = en.sleep != null ? en.sleep : '';
   appUi.openModal($('wellModal'));
 }
-async function saveWell(){
+export async function saveWell(){
   const num = (id, k) => {
     const v = parseFloat(String($(id).value).replace(',', '.'));
     return (!isNaN(v) && v >= WELL_LIM[k][0] && v <= WELL_LIM[k][1]) ? Math.round(v * 10) / 10 : null;
@@ -508,7 +521,7 @@ async function saveWell(){
 }
 
 // ---- история самочувствия: та же правка задним числом, что и у веса ----
-function openWellHist(){
+export function openWellHist(){
   const list = $('wellHistList'); list.innerHTML = '';
   wellList().slice(-30).reverse().forEach(en => {
     const row = document.createElement('div');
@@ -531,7 +544,7 @@ function openWellHist(){
   });
   $('wellHistModal').classList.add('open');
 }
-async function saveWellHist(){
+export async function saveWellHist(){
   const ws = wellList();
   [...$('wellHistList').querySelectorAll('.wh-row')].forEach(row => {
     const d = row.querySelector('.wh-cells').dataset.d;
@@ -575,7 +588,7 @@ async function saveWellHist(){
 
    Фотографии в синхронизацию не входят намеренно: самые чувствительные данные,
    самый дорогой трафик и наименьшая польза от переноса между устройствами. */
-const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 1;
 /* Документы, которые поедут на сервер; всё остальное — настройки устройства.
 
    Единица синхронизации — ОДНА ПРОГРАММА, а не весь их список. Иначе два устройства,
@@ -585,7 +598,7 @@ const SCHEMA_VERSION = 1;
    только УЕЗЖАЮТ. Порядок и состав списка едут отдельным документом 'index': без него
    сервер не отличит «программу удалили» от «программа ещё не доехала». */
 const SYNC_KEYS = appSync.profileKeys;
-const PROGRAM_DOC = id => 'program:' + id;
+export const PROGRAM_DOC = id => 'program:' + id;
 const isSyncKey = key => appSync.registry.accepts('profile', key);
 // Короткий хеш строки. Нужен не для защиты, а чтобы понять «изменилось или нет» и не
 // гонять на сервер программы, которых человек не трогал.
@@ -595,10 +608,10 @@ function docHash(s){
   return h.toString(36);
 }
 
-const newId = () => (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+export const newId = () => (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
 
-let identity = null;   // {profileId, deviceId, createdAt, email, linkedAt}
-let docMeta  = {};     // ключ -> {rev, at, schema}
+export let identity = null;   // {profileId, deviceId, createdAt, email, linkedAt}
+export let docMeta  = {};     // ключ -> {rev, at, schema}
 let outbox   = [];     // [{key, rev, at}] — что ждёт отправки на сервер
 
 // deviceId общий для устройства, profileId — свой у каждого профиля.
@@ -608,7 +621,7 @@ let outbox   = [];     // [{key, rev, at}] — что ждёт отправки 
 // люди. Поле, названное accountId, увезло бы эту путаницу в схему базы, и жила бы она
 // там годами; переименовать до первого запроса — правка в десять строк, после — миграция
 // с данными у всех.
-async function loadIdentity(ownerId = currentUser){
+export async function loadIdentity(ownerId = currentUser){
   const ownerKey = key => key + '_' + ownerId;
   let dev = await kvGet('deviceId');
   if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
@@ -648,7 +661,7 @@ async function loadIdentity(ownerId = currentUser){
   outbox = nextOutbox;
   return true;
 }
-async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
+export async function saveIdentity(){ await kvSet(pk('identity'), JSON.stringify(identity)); }
 
 // Поднять редакцию документа и поставить его в очередь. Очередь схлопывается по ключу —
 // на сервер уедет последнее состояние, а не история правок.
@@ -723,7 +736,7 @@ async function markAllForSync(){
   await flushMeta();
 }
 
-const SYNC = {
+export const SYNC = {
   adapter: null,
   get connected(){ return !!SYNC.adapter; },
   // единственная точка входа для серверного адаптера
@@ -772,12 +785,12 @@ let syncBusy = null;
 let syncUploadBusy = null;
 let syncUploadAgain = false;
 let syncReplaceLocal = false;
-let syncState = 'idle';
+export let syncState = 'idle';
 let syncStep = 0;
 let syncTotal = 0;
 let syncDetail = '';
 
-function showSyncState(state, step, total, detailKey){
+export function showSyncState(state, step, total, detailKey){
   syncState = state;
   if(state === 'busy'){
     // Вызов только с state идёт из renderAccount(): он не должен стирать уже
@@ -826,7 +839,7 @@ async function syncApiPost(body){
   throw last || new Error('sync_failed');
 }
 
-const accountAuth = () => ({
+export const accountAuth = () => ({
   email: (account && account.email) || '',
   token: (account && account.syncToken) || '',
   deviceId: (identity && identity.deviceId) || ''
@@ -856,7 +869,7 @@ const remoteWins = (remote, local) => {
   // время телефона здесь намеренно не участвует.
   return String(remote.deviceId || '') !== String(local.deviceId || '');
 };
-const parsed = (raw, fallback) => { try{ return raw == null ? fallback : JSON.parse(raw); }catch(e){ return fallback; } };
+export const parsed = (raw, fallback) => { try{ return raw == null ? fallback : JSON.parse(raw); }catch(e){ return fallback; } };
 
 const isPlaceholderProfile = u => {
   const name = String((u && u.name) || '').trim().toLowerCase();
@@ -1185,7 +1198,7 @@ async function accountDocsSnapshot(){
   return docs;
 }
 
-async function syncNotificationPrefsServer(action){
+export async function syncNotificationPrefsServer(action){
   if(!account || !account.email || !account.syncToken) return false;
   let deviceId = await kvGet('deviceId');
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
@@ -1210,7 +1223,7 @@ async function syncNotificationPrefsServer(action){
   return true;
 }
 
-async function pushAccountDocs(){
+export async function pushAccountDocs(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   const docs = await accountDocsSnapshot();
   if(!docs.length) return;
@@ -1354,7 +1367,7 @@ async function flushAccountSync(){
   return syncUploadBusy;
 }
 
-async function connectAccountSync(opts){
+export async function connectAccountSync(opts){
   if(!account || !account.email || !account.syncToken || !identity){
     showSyncState('idle');
     return false;
@@ -1389,7 +1402,7 @@ async function connectAccountSync(opts){
   return syncBusy;
 }
 
-function queueAccountSync(){
+export function queueAccountSync(){
   if(!account || !account.email || !account.syncToken || !isPremium()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
@@ -1398,16 +1411,10 @@ function queueAccountSync(){
   }, 900);
 }
 
-window.addEventListener('online', ()=>{
-  if(account && account.email && account.syncToken && isPremium()){
-    connectAccountSync().catch(()=> showSyncState('error'));
-  }
-});
-
 // На новой установке загрузчик создаёт технический «Профиль 1», поэтому users.length
 // уже равен единице ещё до входа. Проверяем содержимое: только совершенно пустую
 // заглушку можно заменить серверными профилями. Реальные локальные данные объединяем.
-async function hasMeaningfulLocalData(){
+export async function hasMeaningfulLocalData(){
   if(users.length !== 1) return users.length > 0;
   const u = users[0] || {};
   if(!isPlaceholderProfile(u) || u.photo) return true;
@@ -1422,18 +1429,18 @@ const CONSENT_VERSION = 1;
 // личности, в этот момент ещё нет: он создаётся на последнем шаге. Молча терять такую
 // отметку нельзя, восстановить её потом неоткуда. Копим до появления личности.
 let pendingConsents = [];
-async function recordConsent(kind){
+export async function recordConsent(kind){
   const rec = {v: CONSENT_VERSION, at: new Date().toISOString()};
   if(!identity){ pendingConsents.push({kind, rec}); return; }
   identity.consents[kind] = rec;
   await saveIdentity();
 }
-const hasConsent = kind => !!(identity && identity.consents && identity.consents[kind]);
+export const hasConsent = kind => !!(identity && identity.consents && identity.consents[kind]);
 
 // Программы хранятся одним ключом, а в очередь встают поштучно: на сервер уйдут только
 // те, что человек действительно тронул. Хеш программы лежит рядом с её редакцией —
 // без него каждое сохранение любой программы гнало бы наверх весь список.
-async function savePrograms(){
+export async function savePrograms(){
   // customPrograms — глобальный массив активного профиля. Делаем независимый снимок
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
@@ -1482,7 +1489,7 @@ async function savePrograms(){
     queueAccountSync();
   }
 }
-async function saveStats(){ await saveDoc('stats', stats); }
+export async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
 async function loadProgWeights(ownerId = currentUser){
   await kvSet('progWeights_' + ownerId, '{}');
@@ -1502,7 +1509,6 @@ function renderTotal(){
   $('totalCountWord').textContent = appLocale === 'ru' ? plural(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(n===1?'calendar.workoutOne':'calendar.workoutFew');
 }
 
-
 /* ================= НЕЗАВЕРШЁННАЯ СЕССИЯ ТРЕНИРОВКИ =================
    Сохраняем место, на котором прервались, чтобы в следующий раз продолжить с него.
    Храним не сами шаги (они пересобираются из программы), а координаты: какая программа,
@@ -1510,7 +1516,7 @@ function renderTotal(){
 
 function sessionKey(){ return pk('workoutSession'); }
 
-async function saveSession(){
+export async function saveSession(){
   const raw = state.raw, cur = state.current;
   if(!raw || !cur || !state.steps.length) return;
   const pausedNow = state.paused && state.pausedAt ? Math.max(0, Date.now() - state.pausedAt) : 0;
@@ -1535,7 +1541,7 @@ async function saveSession(){
   await kvSet(sessionKey(), JSON.stringify(data));
 }
 
-async function loadSession(){
+export async function loadSession(){
   try{
     const raw = await kvGet(sessionKey());
     if(!raw) return null;
@@ -1547,17 +1553,17 @@ async function loadSession(){
   }catch(e){ return null; }
 }
 
-async function clearSession(){
+export async function clearSession(){
   try{ await kvDel(sessionKey()); }catch(e){}
 }
 
 // незавершённая сессия именно этой программы (для экрана перед стартом)
-async function sessionForProgram(pid){
+export async function sessionForProgram(pid){
   const s = await loadSession();
   return (s && s.pid === pid) ? s : null;
 }
 
-function sessionAgeText(at){
+export function sessionAgeText(at){
   const mins = Math.round((Date.now() - at) / 60000);
   if(mins < 1) return t('session.justNow');
   if(mins < 60){
@@ -1577,7 +1583,7 @@ function sessionAgeText(at){
 // список упражнений для выбора «с какого упражнения начать».
 // Выбирается именно упражнение, а не отдельный подход/сторона/круг:
 // всегда начинаем с его первого подхода, первой стороны и первого круга.
-function workStepChoices(){
+export function workStepChoices(){
   const out = [];
   (state.steps || []).forEach((s, i) => {
     if(s.phase !== 'work') return;
@@ -1589,16 +1595,16 @@ function workStepChoices(){
   return out;
 }
 /* ================= КАЛЕНДАРЬ И НЕДЕЛЯ ================= */
-let calOffset = 0;
-const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+export let calOffset = 0;
+export const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+export const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 // «чем в августе» — тот же список в предложном падеже: подставлять именительный
 // («чем в август») в живой текст нельзя, а склонять на лету незачем
 const MONTH_IN = ['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
 // и в родительном — «3 сентября», а не «3 сентябрь»: даты попадаются в попапе дня,
 // в истории веса и на картинке для шеринга
-const MONTH_OF = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+export const MONTH_OF = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 
 /* Серия считается ПО ПЛАНУ, а не по календарю.
    Раньше это были «дни подряд»: при расписании три раза в неделю между тренировками
@@ -1622,7 +1628,7 @@ const MONTH_OF = ['января','февраля','марта','апреля','�
       тренировками лежат дни отдыха, и заморозка простаивала.
    4. РЕКОРД — сгоревшая серия остаётся лучшей (stats.bestStreak). Собранное не
       отбираем — то же правило, что у достижений. */
-function calcStreakInfo(){
+export function calcStreakInfo(){
   const done = new Set(stats.history.map(h => h.d));
   const plan = new Set();
   customPrograms.forEach(p => planDays(p).forEach(d => plan.add(d)));
@@ -1676,11 +1682,11 @@ function calcStreakInfo(){
   }
   return {n, freezes, byPlan, risk: risk && n > 0, best: Math.max(stats.bestStreak || 0, n)};
 }
-function calcStreak(){ return calcStreakInfo().n; }
+export function calcStreak(){ return calcStreakInfo().n; }
 // подпись под число серии: по плану считаем тренировки, без плана — дни
 // «3 тренировки подряд» переносилось в две строки и распирало чип — на главной
 // хватает сокращения, полная форма осталась в подсказке
-function streakWord(n, byPlan){
+export function streakWord(n, byPlan){
   return byPlan
     ? t('streak.planShort')
     : (appLocale === 'ru' ? plural(n,t('streak.dayOne'),t('streak.dayFew'),t('streak.dayMany')) : t(n===1?'streak.dayOne':'streak.dayFew'));
@@ -1776,7 +1782,7 @@ function renderStatBadges(){
     : t('stats.allBadges');
 }
 
-function renderCalendar(){
+export function renderCalendar(){
   const base = new Date();
   base.setDate(1);
   base.setMonth(base.getMonth() + calOffset);
@@ -1853,7 +1859,7 @@ function sessRow(en, withDate, withStatus){
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }
-function openSessions(label, title, entries, emptyText, opts){
+export function openSessions(label, title, entries, emptyText, opts){
   $('sessLabel').textContent = label;
   $('sessTitle').textContent = title;
   const box = $('sessList');
@@ -1870,39 +1876,10 @@ function openSessions(label, title, entries, emptyText, opts){
   }
   $('sessModal').classList.add('open');
 }
-$('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
 
-const dayTitle = iso => new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
+export const dayTitle = iso => new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
 
-// неделя целиком: что было пройдено с понедельника по воскресенье того столбика
-$('weekBars').addEventListener('click', e => {
-  // колонку считаем по координате нажатия, а не по элементу: столбик бывает высотой
-  // в три пикселя, а поверх него ещё лежат число и подпись — попасть в сам прямоугольник
-  // пальцем нельзя. Кликабельна вся колонка целиком, вместе с цифрой и подписью.
-  const box = $('weekBars').getBoundingClientRect();
-  if(!box.width) return;
-  const i = Math.max(0, Math.min(7, Math.floor((e.clientX - box.left) / (box.width / 8))));
-  const startIso = weekBarStarts[i];
-  if(!startIso) return;
-  const start = new Date(startIso);
-  const days = [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
-  const entries = stats.history.filter(h => days.includes(h.d))
-    .sort((a, b) => a.d < b.d ? -1 : 1);
-  const end = new Date(start); end.setDate(start.getDate() + 6);
-  const title = new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(start) + ' — ' + new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(end);
-  openSessions(t('sessions.weekLabel'), title, entries, t('sessions.weekEmpty'));
-});
-
-$('calGrid').addEventListener('click', e => {
-  const cell = e.target.closest('.cal-cell.done');
-  if(!cell || !cell.dataset.iso) return;
-  const iso = cell.dataset.iso;
-  const entries = stats.history.filter(h => h.d === iso);
-  if(!entries.length) return;
-  openSessions(t('sessions.dayLabel'), dayTitle(iso), entries, '', {status:true});
-});
-
-function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
+export function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
 
 // планы программы: новые программы хранят plans[], старые — поля верхнего уровня
 // Варианты идут по дню недели, а не по времени добавления: заведя «Пн» после «Сб»,
@@ -1917,10 +1894,10 @@ function planDayRank(pl){
   ds.forEach(d => { const i = DAYS.indexOf(d); if(i >= 0 && i < min) min = i; });
   return min;
 }
-function sortPlans(plans){
+export function sortPlans(plans){
   return plans.sort((a, b) => planDayRank(a) - planDayRank(b));
 }
-function normPlans(p){
+export function normPlans(p){
   if(Array.isArray(p.plans) && p.plans.length){
     if(!p.rotate) sortPlans(p.plans);
     return p.plans;
@@ -1932,7 +1909,7 @@ function normPlans(p){
     exercises: p.exercises || []
   }];
 }
-function programDaysUnion(p){
+export function programDaysUnion(p){
   // при чередовании дни задаются один раз для всей программы:
   // они говорят КОГДА тренироваться, а какой вариант выпадет — решает очередь
   if(p && p.rotate && Array.isArray(p.days)) return DAYS.filter(d => p.days.includes(d));
@@ -1955,11 +1932,11 @@ function programDaysUnion(p){
    programDaysUnion остаётся ЧИСТЫМ ЧТЕНИЕМ настроек — им пользуются редактор и
    карточка в списке, где дни надо показывать и у выключенной программы. Планы,
    неделя, серия и уведомления спрашивают planDays(). */
-const progActive = p => !p || p.active !== false;
-const planDays = p => progActive(p) ? programDaysUnion(p) : [];
+export const progActive = p => !p || p.active !== false;
+export const planDays = p => progActive(p) ? programDaysUnion(p) : [];
 
 // превращает выбранный план программы в тренировочный цикл
-function customToProgram(p, planIdx = 0){
+export function customToProgram(p, planIdx = 0){
   const plans = normPlans(p);
   const plan = plans[planIdx] || plans[0];
 
@@ -2085,7 +2062,7 @@ function customToProgram(p, planIdx = 0){
   };
 }
 
-function closeAllMenus(){
+export function closeAllMenus(){
   document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open', 'up'));
 }
 // Меню открывается вниз от кнопки, и у нижних карточек списка оно уезжало под док
@@ -2117,27 +2094,71 @@ function placeMenu(m){
   window.scrollBy({top: down.bottom - (bottom - 8), behavior: 'smooth'});
 }
 // Открыть меню: закрыть остальные, показать это и развернуть вверх, если надо.
-function toggleMenu(m){
+export function toggleMenu(m){
   const was = m.classList.contains('open');
   closeAllMenus();
   if(was) return;
   m.classList.add('open');
   placeMenu(m);
 }
-// первый тап мимо открытого меню только закрывает его и НЕ нажимает то, что под ним
-document.addEventListener('click', e => {
-  if(!document.querySelector('.ctx-menu.open')) return;
-  if(e.target.closest('.ctx-menu') || e.target.closest('.more-btn')) return;
-  e.preventDefault();
-  e.stopPropagation();
-  closeAllMenus();
-}, true);
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setCalOffsetShared(value){ calOffset = value; return calOffset; }
-function setCurrentUserShared(value){ currentUser = value; return currentUser; }
-function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
-function setUsersShared(value){ users = value; return users; }
-function setWeightMetricShared(value){ weightMetric = value; return weightMetric; }
-function setWellMetricShared(value){ wellMetric = value; return wellMetric; }
+export function setCalOffsetShared(value){ calOffset = value; return calOffset; }
+export function setCurrentUserShared(value){ currentUser = value; return currentUser; }
+export function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
+export function setUsersShared(value){ users = value; return users; }
+export function setWeightMetricShared(value){ weightMetric = value; return weightMetric; }
+export function setWellMetricShared(value){ wellMetric = value; return wellMetric; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initDataSync(){
+  window.addEventListener('error',e=>{
+    reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
+  });
+  window.addEventListener('unhandledrejection',e=>{
+    const r=e&&e.reason;
+    reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
+  });
+  window.addEventListener('online', ()=>{
+    if(account && account.email && account.syncToken && isPremium()){
+      connectAccountSync().catch(()=> showSyncState('error'));
+    }
+  });
+  $('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
+  // неделя целиком: что было пройдено с понедельника по воскресенье того столбика
+  $('weekBars').addEventListener('click', e => {
+    // колонку считаем по координате нажатия, а не по элементу: столбик бывает высотой
+    // в три пикселя, а поверх него ещё лежат число и подпись — попасть в сам прямоугольник
+    // пальцем нельзя. Кликабельна вся колонка целиком, вместе с цифрой и подписью.
+    const box = $('weekBars').getBoundingClientRect();
+    if(!box.width) return;
+    const i = Math.max(0, Math.min(7, Math.floor((e.clientX - box.left) / (box.width / 8))));
+    const startIso = weekBarStarts[i];
+    if(!startIso) return;
+    const start = new Date(startIso);
+    const days = [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return localISO(d); });
+    const entries = stats.history.filter(h => days.includes(h.d))
+      .sort((a, b) => a.d < b.d ? -1 : 1);
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const title = new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(start) + ' — ' + new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(end);
+    openSessions(t('sessions.weekLabel'), title, entries, t('sessions.weekEmpty'));
+  });
+  $('calGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.cal-cell.done');
+    if(!cell || !cell.dataset.iso) return;
+    const iso = cell.dataset.iso;
+    const entries = stats.history.filter(h => h.d === iso);
+    if(!entries.length) return;
+    openSessions(t('sessions.dayLabel'), dayTitle(iso), entries, '', {status:true});
+  });
+  // первый тап мимо открытого меню только закрывает его и НЕ нажимает то, что под ним
+  document.addEventListener('click', e => {
+    if(!document.querySelector('.ctx-menu.open')) return;
+    if(e.target.closest('.ctx-menu') || e.target.closest('.more-btn')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeAllMenus();
+  }, true);
+}

@@ -6,7 +6,7 @@
 ## Canonical frontend и generated-файлы
 
 Интерфейс редактируется в `src/html/`, `src/styles/`, `src/app/`.
-Корневые `index.html`, `style.css`, `app.js` генерируются через `npm run build:sources`.
+Корневые `index.html`, `style.css` генерируются через `npm run build:sources`; логика — ES-модули `src/app` (точка входа `src/app/index.js`).
 
 Причина: раньше приложение жило одним огромным файлом, из-за чего агенты читали и переписывали
 слишком много кода за одну задачу. Split-source уменьшает область изменений и позволяет проверять

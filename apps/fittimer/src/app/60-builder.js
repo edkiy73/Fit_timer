@@ -1,5 +1,22 @@
+import { MUSCLES, OPT_EQUIP, OPT_GOAL, OPT_LEVEL, OPT_NONE } from './options.js';
+import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/index.js';
+import FitAIProtocol from '../../lib/ai-protocol.js';
+import { appRuntimeCompat } from './00-dependencies.js';
+import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setShown, show, state,
+  takeSnap
+} from './00-core.js';
+import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms, sortPlans,
+  toggleMenu, trackProductEvent
+} from './10-data-sync.js';
+import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram } from './30-progress-media.js';
+import { aiWaysReset, claimProgramLink, flashDone, userForAI } from './40-programs-ai.js';
+import { renderMine, storeCountText } from './50-trainer-catalog.js';
+import { autoGrow, esc } from './70-workout.js';
+import { syncNativeNotifications } from './80-platform.js';
+import { buildExMenu, delCurrentPlan, markBuilderTab, openLegal, syncImagesSum, syncSettingsSum } from './90-events.js';
+
 /* ================= ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (за ручку, с задержкой) ================= */
-function enableDrag(wrap, handle, selector, onDrop){
+export function enableDrag(wrap, handle, selector, onDrop){
   selector = selector || '.mine-card';
   handle.oncontextmenu = e => e.preventDefault();
   handle.addEventListener('pointerdown', e => {
@@ -71,10 +88,10 @@ function enableDrag(wrap, handle, selector, onDrop){
 }
 
 /* ================= КОНСТРУКТОР ================= */
-const MAX_WARM = 20;  // разминочных упражнений на вариант
-const MAX_MAIN = 20;  // основных упражнений на вариант
+export const MAX_WARM = 20;  // разминочных упражнений на вариант
+export const MAX_MAIN = 20;  // основных упражнений на вариант
 const MAX_EX = MAX_WARM + MAX_MAIN; // общий потолок списка
-let draft = null;
+export let draft = null;
 
 // Внутренний id упражнения — не показывается человеку и не входит в обычный
 // текстовый протокол (импорт/каталог/«скопировать программу» его не видят).
@@ -83,11 +100,11 @@ let draft = null;
 // и «Жим гантелей лёжа» → «Жим гантелей на полу» выглядело новым упражнением.
 // Уникальности достаточно внутри одной программы (десятки строк), поэтому без
 // проверки на коллизии: 36^6 комбинаций с большим запасом хватает.
-function newExId(){
+export function newExId(){
   return 'e' + Math.random().toString(36).slice(2, 8);
 }
 
-function blankExercise(){
+export function blankExercise(){
   return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
@@ -106,7 +123,7 @@ function blankExercise(){
 
 // приводит поля упражнения к валидным значениям: и после ручного ввода, и после ответа ИИ,
 // который может прислать что угодно. Меняет объект на месте и возвращает его же.
-function normalizeExercise(ex){
+export function normalizeExercise(ex){
   /* Пределы полей — здесь же. Эта функция и есть место, где «что угодно»
      становится упражнением: через неё проходит и набранное руками, и ответ
      нейросети, и чужая программа. Раньше длина названия и описаний тут не
@@ -166,10 +183,9 @@ function normalizeExercise(ex){
   return ex;
 }
 
-
 // упражнение-исходник в самой программе по названию из шага: шаг тренировки — только копия,
 // в нём нет ни потолка, ни двойной прогрессии, ни собственного старта отсчёта
-function liveExercise(name){
+export function liveExercise(name){
   const p = state.raw;
   if(!p || !p.id || !name) return null;
   const plan = normPlans(p)[(typeof state.planIdx === 'number') ? state.planIdx : 0];
@@ -178,7 +194,6 @@ function liveExercise(name){
   const idx = (plan.exercises || []).findIndex(e => (e.name || '').trim().toLowerCase() === key);
   return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx]} : null;
 }
-
 
 /* ---- прогрессия по упражнению ----
    Ось усложнения у разных упражнений разная: гантельные растут по весу (дискретно,
@@ -199,7 +214,7 @@ const PROG_AXES = [
 //   старые (созданы до этого обновления, у них нет ex.progOn вовсе): ось читается из
 //     явно сохранённого ex.prog, как раньше. Апгрейд происходит сам собой в момент,
 //     когда упражнение открывают в редакторе и сохраняют — тогда оно уже пишет новые поля.
-function progAxis(ex){
+export function progAxis(ex){
   if(!ex) return 'none';
   if(ex.warmup) return 'none';
   if(ex.progOn != null){
@@ -212,7 +227,7 @@ function progAxis(ex){
 }
 // «формат включает вес» — не зависит от того, усложняется ли упражнение сейчас:
 // вес может быть просто зафиксирован (тумблер выключен) и не расти, но оставаться видимым
-function hasWeight(ex){
+export function hasWeight(ex){
   if(!ex) return false;
   // trackWeight и есть «формат включает вес», и от тумблера прогрессии он не зависит.
   // Раньше ему верили только вместе с progOn — и программа, разобранная из текста без
@@ -224,14 +239,14 @@ function hasWeight(ex){
 }
 // формат включает вес, но снаряд ещё не выбран (0 — не «нулевой вес», а «неизвестный»,
 // см. getExProgValue): прогрессия по весу не копится, экран старта предлагает выбрать
-function weightPending(ex){
+export function weightPending(ex){
   return hasWeight(ex) && !(+ex.weight > 0);
 }
 // отдых после ВСЕГО упражнения (перед следующим), а не между его подходами.
 // У старых упражнений (и когда явно не задан) поле пустое — запасной вариант
 // тогда тот же, что и между подходами: разное число нужно не всем, и лучше
 // молча унаследовать разумное значение, чем ломать программу или писать 0.
-function exRestAfter(ex){
+export function exRestAfter(ex){
   if(!ex) return 0;
   return ex.restAfter != null ? +ex.restAfter : (+ex.rest || 0);
 }
@@ -267,7 +282,7 @@ function fillProgEveryOptions(){
   }
 }
 // 12 кг, 12,5 кг — без хвостов вроде 12.50
-function fmtKg(kg){
+export function fmtKg(kg){
   const n = Math.round((+kg || 0) * 2) / 2;
   return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
 }
@@ -290,7 +305,7 @@ function fmtKg(kg){
 // дважды с разным axis для одного и того же упражнения.
 
 // значение упражнения «с нуля», без какой-либо прогрессии
-function progBaseValue(ex, axis){
+export function progBaseValue(ex, axis){
   axis = axis || progAxis(ex);
   if(axis === 'weight') return +ex.weight || 0;
   return parseValue(ex.value).min; // повторы, время и «не усложнять» — читают минимум из value
@@ -304,7 +319,7 @@ function progBaseValue(ex, axis){
 // «+5 сек». Пусто — значит не растёт, и тогда НЕ ПОКАЗЫВАЕМ НИЧЕГО: отсутствие
 // роста — обычное дело, сообщать о нём незачем, а метка «не растёт» у каждого
 // второго упражнения только зашумляет список и экран тренировки.
-function progShort(ex){
+export function progShort(ex){
   if(!ex || ex.warmup || progAxis(ex) === 'none') return '';
   const bits = [];
   if(ex.type === 'time'){
@@ -323,7 +338,7 @@ function progShort(ex){
   return bits.length ? bits.join(appLocale === 'ru' ? ' и ' : ' & ') : t('builder.progressionAuto');
 }
 
-function progStepSize(ex, axis){
+export function progStepSize(ex, axis){
   axis = axis || progAxis(ex);
   if(axis === 'weight') return ex.wStep != null ? +ex.wStep : 2;
   if(axis === 'reps') return ex.repsStep != null ? +ex.repsStep : 1;
@@ -351,7 +366,7 @@ function progRound(axis, v){
    отдельного места хранения не нужно. advanceExerciseProgression() сдвигает
    cur на один шаг; вызывающий код (commitFinish в 70-workout.js) решает, когда
    это делать — см. также docs/ai-edit-progression-plan.md, пачка 4. */
-function ensurePs(ex){
+export function ensurePs(ex){
   if(!ex.ps || typeof ex.ps !== 'object') ex.ps = {n:0, cur:{}};
   else{
     ex.ps.n = Math.max(0, Math.round(+ex.ps.n || 0));
@@ -386,7 +401,7 @@ function progCeil(ex, axis){
 }
 // двойная прогрессия возможна, только когда есть и вес, и потолок повторов:
 // без потолка неизвестно, когда сбрасывать повторы и добавлять вес
-function isDualProg(ex){
+export function isDualProg(ex){
   return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
 }
 
@@ -395,7 +410,7 @@ function isDualProg(ex){
 // самого чтения (совместимость со старыми вызовами — аргументы просто игнорируются),
 // но getExWeight/exBits/exerciseLoad и т.п. по-прежнему передают их, поэтому сигнатура
 // сохранена, чтобы не переписывать десятки мест вызова.
-function getExProgValue(pid, ex, program, axis){
+export function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
   if(axis === 'weight'){
@@ -421,7 +436,7 @@ function getExProgValue(pid, ex, program, axis){
 }
 // диапазон повторов «8-12»: границы читаются из текущего состояния целиком (обе
 // сдвинуты вместе), потолок применяется к обеим
-function progressedRepsRange(pid, ex, program){
+export function progressedRepsRange(pid, ex, program){
   const r = psReps(ex);
   const ceil = progCeil(ex, 'reps');
   let min = r.min, max = r.max;
@@ -447,7 +462,7 @@ function axisAtCeiling(pid, ex, program, axis){
   }
   return getExProgValue(pid, ex, program, axis) >= ceil;
 }
-function progAtCeiling(pid, ex, program){
+export function progAtCeiling(pid, ex, program){
   const axis = progAxis(ex);
   if(axis === 'none') return false;
   // при двойной прогрессии повторы ходят по кругу, а копится вес — смотрим только на него
@@ -466,7 +481,7 @@ function progAtCeiling(pid, ex, program){
 // вызывающий код. Правила те же, что раньше вычислялись «на лету» из номера шага:
 // при двойной прогрессии повторы растут до потолка, затем сбрасываются к базе и
 // добавляется шаг веса; иначе каждая растущая ось просто сдвигается на свой шаг.
-function advanceExerciseProgression(ex){
+export function advanceExerciseProgression(ex){
   const axis = progAxis(ex);
   if(axis === 'none') return;
   ensurePs(ex);
@@ -529,7 +544,7 @@ function progBaseKey(ex){
   return [ex.type === 'time' ? 'time' : 'reps', hasWeight(ex) ? 1 : 0,
     normValue(ex.value, ex.type), +ex.weight || 0, ex.dualProg ? 1 : 0].join('|');
 }
-function carryExerciseProgress(oldEx, newEx){
+export function carryExerciseProgress(oldEx, newEx){
   if(!newEx) return newEx;
   if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
   if(progBaseKey(oldEx) === progBaseKey(newEx)) newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
@@ -538,7 +553,7 @@ function carryExerciseProgress(oldEx, newEx){
 }
 // копия упражнения — отдельное упражнение: свой id (по нему сопоставляются
 // правки ИИ и отметки «тяжело» на экране финала) и прогресс с нуля
-function cloneExerciseAsNew(ex){
+export function cloneExerciseAsNew(ex){
   const c = JSON.parse(JSON.stringify(ex));
   c.id = newExId();
   delete c.ps;
@@ -549,18 +564,18 @@ function cloneExerciseAsNew(ex){
 // Для формата «повторения и вес» вес растёт независимо от того, что там с повторами,
 // поэтому явно просим axis='weight', а не полагаемся на progAxis(ex) (которая для этого
 // формата тоже вернёт 'weight' — здесь совпадает, но так честнее читается)
-function getExWeight(pid, ex, program){
+export function getExWeight(pid, ex, program){
   return hasWeight(ex) ? getExProgValue(pid, ex, program, 'weight') : 0;
 }
 // прямая правка текущего веса (нажатие на строку экрана старта, см. 00-core.js) —
 // пишет в ex.ps.cur.kg напрямую, база (ex.weight) не трогается
-function setExWeight(ex, kg){
+export function setExWeight(ex, kg){
   ensurePs(ex).cur.kg = Math.max(0, progRound('weight', +kg || 0));
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
 // возвращает {min, max} — для одиночного значения min === max
-function parseValue(v){
+export function parseValue(v){
   const s = String(v == null ? '' : v).replace(',', '.').trim();
   const m = s.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
   if(m){
@@ -572,7 +587,7 @@ function parseValue(v){
   return {min: n, max: n};
 }
 // «12» или «12–15»
-function valueText(v){
+export function valueText(v){
   const r = parseValue(v);
   return r.min === r.max ? String(r.min) : (r.min + '–' + r.max);
 }
@@ -584,13 +599,13 @@ function scaleValue(v, k){
   return a === b ? String(a) : (a + '-' + b);
 }
 // нормализация значения для хранения
-function normValue(v, type){
+export function normValue(v, type){
   const r = parseValue(v);
   if(type === 'time') return String(r.min); // время — всегда одно число
   return r.min === r.max ? String(r.min) : (r.min + '-' + r.max);
 }
 
-let planIdx = 0;
+export let planIdx = 0;
 // Новый вариант начинается пустым: раньше в нём сразу лежало безымянное упражнение,
 // и человек видел строку, которой не заводил. Теперь виден пустой список с объяснением,
 // а первую строку создаёт «Добавить упражнение» — сразу с полем названия в фокусе.
@@ -598,7 +613,7 @@ function blankPlan(){
   return {days:[], rounds:3, roundRest:120, exercises:[]};
 }
 
-function openBuilder(id=null){
+export function openBuilder(id=null){
   if(id){
     const src = customPrograms.find(x=>x.id===id);
     draft = JSON.parse(JSON.stringify(src));
@@ -617,9 +632,9 @@ function openBuilder(id=null){
   requireWho('program', ()=> goTab('scrPrograms'));
 }
 
-function curPlan(){ return draft.plans[planIdx]; }
+export function curPlan(){ return draft.plans[planIdx]; }
 
-function syncRotateUI(){
+export function syncRotateUI(){
   const many = (draft.plans || []).length > 1;
   const rot = !!draft.rotate && many;
 
@@ -652,22 +667,9 @@ function syncRotateUI(){
   renderDays();
   renderPlanTabs();
 }
-document.querySelectorAll('#schedSeg button').forEach(b => {
-  b.onclick = ()=>{
-    draft.rotate = b.dataset.mode === 'rot';
-    if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
-    syncRotateUI();
-  };
-});
-$('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
-$('bProgOn').onclick = ()=>{
-  const on = !$('bProgOn').classList.contains('on');
-  $('bProgOn').classList.toggle('on', on);
-  setShown('bProgOpts', on);
-};
 
 // перед сменой вкладки/сохранением переносим значения полей в текущий план
-function commitPlanFields(){
+export function commitPlanFields(){
   const pl = curPlan();
   pl.rounds = +$('bRounds').value || 3;
   pl.roundRest = Math.max(0, Math.min(600, parseInt($('bRoundRest').value) || 0));
@@ -683,9 +685,9 @@ function programState(){
   try{ commitPlanFields(); }catch(e){}
   return {name: $('bName') ? $('bName').value.trim() : draft.name, d: draft};
 }
-function programDirty(){ return isChanged('program', programState()); }
+export function programDirty(){ return isChanged('program', programState()); }
 
-function fillBuilder(title){
+export function fillBuilder(title){
   $('builderTitle').textContent = title;
   setTimeout(()=> takeSnap('program', programState()), 0);
   setTimeout(markBuilderTab, 0);
@@ -777,7 +779,7 @@ function buildPlanTabs(boxId){
   }
 }
 
-function fillPlanFields(){
+export function fillPlanFields(){
   const pl = curPlan();
   $('bRoundRest').value = pl.roundRest;
   setTimeout(syncVolHint, 0);
@@ -792,7 +794,7 @@ function fillPlanFields(){
   renderExList();
 }
 
-function syncCover(){
+export function syncCover(){
   $('bCoverBtn').classList.toggle('act', !!draft.cover);
   $('bCoverNone').classList.toggle('act', !draft.cover);
   $('bCoverPrev').innerHTML = draft.cover ? `<img src="${esc(draft.cover)}" alt="">` : '';
@@ -859,12 +861,12 @@ function renderDays(){
 }
 
 /* ================= РЕДАКТОР ОДНОГО УПРАЖНЕНИЯ ================= */
-let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
-let exDraft = null;  // копия для правки
-let exIsNew = false; // упражнение только что заведено и в списке его держит сам редактор
+export let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
+export let exDraft = null;  // копия для правки
+export let exIsNew = false; // упражнение только что заведено и в списке его держит сам редактор
 
 // убрать пустышку, заведённую «Добавить упражнение», если её так и не сохранили
-function dropFreshEx(){
+export function dropFreshEx(){
   if(!exIsNew) return;
   exIsNew = false;
   try{
@@ -876,7 +878,7 @@ function dropFreshEx(){
 }
 
 let exOrig = '';  // снимок упражнения на момент открытия — для проверки изменений
-function openExercise(i, isNew){
+export function openExercise(i, isNew){
   const list = curPlan().exercises;
   exIdx = i;
   exIsNew = !!isNew;
@@ -945,7 +947,7 @@ function fillExercise(){
 // «Как считать» (повторения/время) и «Упражнение с доп. весом» — независимые переключатели:
 // вес сочетается с обоими, четыре формата вместо трёх («время и вес» — удержание
 // или перенос с грузом: планка с блином, фермерская прогулка).
-function syncExType(){
+export function syncExType(){
   const reps = exDraft.type !== 'time';
   const withWeight = hasWeight(exDraft);
   $('exTypeReps').classList.toggle('act', reps);
@@ -963,7 +965,7 @@ function syncExType(){
   setShown('exWeightRow', withWeight);
   renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
 }
-function syncExWarm(){
+export function syncExWarm(){
   setShown('exSetsField', true);
 }
 function renderExMuscles(){
@@ -983,7 +985,7 @@ function renderExMuscles(){
   });
 }
 // «12,5» и «12.5» — одинаково допустимый ввод веса
-function parseKg(v){
+export function parseKg(v){
   const n = parseFloat(String(v || '').replace(',', '.'));
   return isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
 }
@@ -993,7 +995,7 @@ function parseKg(v){
 // тумблер «усложнять со временем» + поля шага. Для «повторения и вес» полей ДВА сразу —
 // вес и повторы растут независимо друг от друга (0 в одном из них = эта ось не растёт,
 // решает либо сам человек, либо ИИ по промту). Для простых форматов — одно поле.
-function renderProgControls(){
+export function renderProgControls(){
   // разминка выполняется один раз и технически не может «усложняться со временем» —
   // тумблер здесь не имеет смысла, поэтому блокируем его явно, а не просто прячем шаг
   if(exDraft.warmup){
@@ -1067,7 +1069,7 @@ function renderProgControls(){
 // в списке 18 кг, в поле 12, и непонятно, какое из двух чисел ты меняешь.
 // Считаем по ФОРМЕ (applyFormTo), а не по черновику: вписанная только что прибавка
 // должна отражаться в подсказке сразу, а не после сохранения.
-function syncExNowHints(){
+export function syncExNowHints(){
   const el = $('exNowHint');
   const p = (typeof draft !== 'undefined' && draft && draft.id) ? draft : null;
   if(!exDraft || !p || exDraft.warmup){ setShown(el, false); return; }
@@ -1105,7 +1107,7 @@ function syncExNowHints(){
 // Сводка в заголовке свёрнутого блока: человек должен понимать, что внутри, не
 // открывая его. Читаем поля формы, а не exDraft: вписанное только что число ещё
 // не перенесено в черновик (перенос делает applyFormTo при сохранении).
-function syncExProgSum(){
+export function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
   const num = id => parseStepNum($(id).value);
@@ -1127,7 +1129,6 @@ function syncExProgSum(){
   const txt = bits.filter(Boolean).join(appLocale === 'ru' ? ' и ' : ' & ');
   $('exProgSum').textContent = txt || t('builder.emptyProgress');
 }
-
 
 // Одно значение — один видимый контрол. Раньше рядом с чипами стояло числовое
 // поле, нужное только тем, кому не подходит ни один чип, — и висело в разметке
@@ -1172,20 +1173,13 @@ function openRestModal(key, boxId){
   $('restModal').classList.add('open');
   $('restModalInput').focus();
 }
-$('restModalDone').onclick = ()=>{
-  if(!restModalKey) return;
-  exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
-  restCustom[restModalKey] = true;
-  $('restModal').classList.remove('open');
-  renderRestChipsInto(restModalBoxId, restModalKey);
-};
-function renderExMedia(){
+export function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
   if(m && m.kind === 'img') box.innerHTML = `<img src="${esc(m.data)}" alt="">`;
   else box.innerHTML = `<span class="mp-empty">${esc(t('builder.noImage'))}</span>`;
 }
-function syncExDetailsSum(){
+export function syncExDetailsSum(){
   const bits = [];
   if((exDraft.desc || '').trim()) bits.push(t('builder.detailDescription'));
   if((exDraft.mistakes || '').trim()) bits.push(t('builder.detailMistakes'));
@@ -1234,13 +1228,13 @@ function applyFormTo(target){
   return target;
 }
 // есть ли несохранённые правки
-function exDirty(){
+export function exDirty(){
   if(!exDraft || exIdx < 0) return false;
   const snapshot = applyFormTo(JSON.parse(JSON.stringify(exDraft)));
   return JSON.stringify(snapshot) !== exOrig;
 }
 
-function commitExercise(){
+export function commitExercise(){
   const old = (curPlan().exercises || [])[exIdx];
   const upd = applyFormTo(exDraft);
   return old ? carryExerciseProgress(old, upd) : upd;
@@ -1250,14 +1244,14 @@ function commitExercise(){
 // (см. buildSteps: warmEx идут первыми). Значит и список обязан показывать
 // порядок выполнения — иначе перетаскивание разминки вниз «получалось», но на
 // тренировке ничего не менялось, и номера строк врали.
-function sortWarmFirst(list){
+export function sortWarmFirst(list){
   const w = list.filter(e => e.warmup), m = list.filter(e => !e.warmup);
   if(!w.length || !m.length) return list;
   list.length = 0;
   list.push(...w, ...m);
   return list;
 }
-function renderExList(){
+export function renderExList(){
   const box = $('bExList'); box.innerHTML = '';
   const list = sortWarmFirst(curPlan().exercises);
   if(!list.length){
@@ -1323,7 +1317,7 @@ function exBits(ex){
   if(+ex.rest > 0) bits.push(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`);
   return bits;
 }
-function exSummary(ex){ return exBits(ex).join(' · '); }
+export function exSummary(ex){ return exBits(ex).join(' · '); }
 
 // Номер считаем только по основным упражнениям: разминка идёт один раз до кругов,
 // где бы она ни лежала в списке, и сквозная нумерация врала бы о порядке.
@@ -1336,7 +1330,7 @@ function exThumb(ex, i){
 
 // Дублирование и удаление ПРЯМО ИЗ СПИСКА: те же действия есть и в редакторе, но
 // ради них не должно быть нужно открывать упражнение.
-function dupExerciseAt(i){
+export function dupExerciseAt(i){
   const list = curPlan().exercises;
   const ex = list[i];
   if(!ex) return;
@@ -1350,7 +1344,7 @@ function dupExerciseAt(i){
   list.splice(i + 1, 0, cloneExerciseAsNew(ex));
   renderExList();
 }
-async function delExerciseAt(i){
+export async function delExerciseAt(i){
   const list = curPlan().exercises;
   const ex = list[i];
   if(!ex) return;
@@ -1430,7 +1424,7 @@ function exRow(ex, i){
 }
 
 // уменьшаем фото до 640px по большей стороне, чтобы программа занимала мало места
-function shrinkImage(file, maxSide, cb){
+export function shrinkImage(file, maxSide, cb){
   const img = new Image();
   img.onload = ()=>{
     const k = Math.min(1, maxSide / Math.max(img.width, img.height));
@@ -1446,7 +1440,7 @@ function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-function aiPrompt(locale){
+export function aiPrompt(locale){
   const outLocale=(locale==='ru'||locale==='en')?locale:appLocale;
   const lang=outLocale==='ru'?'Russian':'English';
   return FitAIProtocol.programPrompt(lang);
@@ -1456,7 +1450,7 @@ function aiProtocolLine(line){
   const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
   return m?{key:m[1],value:m[2]}:null;
 }
-function aiExerciseBlocks(text){
+export function aiExerciseBlocks(text){
   const lines=String(text||'').split(/\r?\n/),out=[];
   for(let i=0;i<lines.length;i++){
     if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
@@ -1538,7 +1532,7 @@ function repairLines(txt){
     .replace(/[ \t]*[•*\u2013-]+[ \t]*$/gm, '');
 }
 
-function parseProgramText(txt){
+export function parseProgramText(txt){
   const p = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, progression:0, plans:[]};
   let plan = null;
   let cur = null;
@@ -1797,7 +1791,7 @@ const AI_DEFAULT_LIMITS = ['Без ограничений'];
 const q = {goal: [], level: AI_DEFAULT_LEVEL, days: [], dur: AI_DEFAULT_DURATION, focus: [], equip: [], limit: AI_DEFAULT_LIMITS.slice(),
            note: '', split: false, style: '', warm: '', rotate: false};
 
-function qChips(boxId, opts, isMulti, get, set, requiredSingle = false){
+export function qChips(boxId, opts, isMulti, get, set, requiredSingle = false){
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
@@ -1845,7 +1839,7 @@ function qCards(boxId, opts, get, set){
   });
 }
 
-function initAIForm(){
+export function initAIForm(){
   requireWho('ai', ()=> goTab('scrPrograms'));   // данные уходят прямо в запрос (userForAI)
   qChips('qGoal', Q_OPTS.goal, true, ()=> q.goal, v => q.goal = v);
   qCards('qStyle', Q_OPTS.style, ()=> q.style, v => q.style = v);
@@ -1879,14 +1873,6 @@ function initAIForm(){
   autoGrow($('qContext'));
   if(aiWaysReset.scrAI) aiWaysReset.scrAI();
 }
-$('qNote').oninput = e => q.note = clampText(e.target.value, 300);
-$('qSplit').onclick = ()=>{
-  q.split = !q.split;
-  $('qSplit').classList.toggle('on', q.split);
-  setShown('qRotateRow', q.split);
-  if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
-};
-$('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
 
 function aiChoiceEnglish(v){
   const map = {
@@ -1921,7 +1907,7 @@ function aiProgramHasUserInput(){
   );
 }
 
-function aiCreateProgramGuard(){
+export function aiCreateProgramGuard(){
   if(aiProgramHasUserInput()) return true;
   appAlert(t('ai.needProgramInput'));
   return false;
@@ -1992,10 +1978,10 @@ function composeRequest(){
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
-const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
+export const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
-async function copyPrompt(){
+export async function copyPrompt(){
   const btn = $('aiCopy');
   try{
     await navigator.clipboard.writeText(fullAIPrompt());
@@ -2009,11 +1995,11 @@ async function copyPrompt(){
 // объясняется («чат с нейросетью — ChatGPT, Gemini и т.п.»), а формулировка
 // подсказывает и лёгкий путь («за меня»), и что именно делать («вставь ответ
 // целиком»).
-const MSG_AI_EMPTY = ()=> t('ai.emptyAnswer');
-const MSG_AI_PARSE = ()=> t('ai.parseProgramFailed');
-const MSG_AI_NOEX = ()=> t('ai.noExerciseResponse');
+export const MSG_AI_EMPTY = ()=> t('ai.emptyAnswer');
+export const MSG_AI_PARSE = ()=> t('ai.parseProgramFailed');
+export const MSG_AI_NOEX = ()=> t('ai.noExerciseResponse');
 
-function importFromText(){
+export function importFromText(){
   const txt = ($('aiResult').value || '').trim();
   if(!txt){ appAlert(t('ai.pasteProgram')); return; }
   const {program, errors} = parseProgramText(txt);
@@ -2028,7 +2014,7 @@ function importFromText(){
   fillBuilder(t('ai.reviewSave'));
 }
 
-async function saveProgram(){
+export async function saveProgram(){
   commitPlanFields();
   draft.name = clampLine($('bName').value, LIM.progName);
   draft.desc = clampText($('bDesc').value, LIM.progDesc);
@@ -2106,9 +2092,42 @@ async function saveProgram(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setDraftShared(value){ draft = value; return draft; }
-function setExDraftShared(value){ exDraft = value; return exDraft; }
-function setExIdxShared(value){ exIdx = value; return exIdx; }
-function setExIsNewShared(value){ exIsNew = value; return exIsNew; }
-function setExOrigShared(value){ exOrig = value; return exOrig; }
-function setPlanIdxShared(value){ planIdx = value; return planIdx; }
+export function setDraftShared(value){ draft = value; return draft; }
+export function setExDraftShared(value){ exDraft = value; return exDraft; }
+export function setExIdxShared(value){ exIdx = value; return exIdx; }
+export function setExIsNewShared(value){ exIsNew = value; return exIsNew; }
+export function setExOrigShared(value){ exOrig = value; return exOrig; }
+export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initBuilder(){
+  document.querySelectorAll('#schedSeg button').forEach(b => {
+    b.onclick = ()=>{
+      draft.rotate = b.dataset.mode === 'rot';
+      if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
+      syncRotateUI();
+    };
+  });
+  $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
+  $('bProgOn').onclick = ()=>{
+    const on = !$('bProgOn').classList.contains('on');
+    $('bProgOn').classList.toggle('on', on);
+    setShown('bProgOpts', on);
+  };
+  $('restModalDone').onclick = ()=>{
+    if(!restModalKey) return;
+    exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
+    restCustom[restModalKey] = true;
+    $('restModal').classList.remove('open');
+    renderRestChipsInto(restModalBoxId, restModalKey);
+  };
+  $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
+  $('qSplit').onclick = ()=>{
+    q.split = !q.split;
+    $('qSplit').classList.toggle('on', q.split);
+    setShown('qRotateRow', q.split);
+    if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
+  };
+  $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
+}

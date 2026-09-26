@@ -1,25 +1,44 @@
+import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
+import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
+  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
+} from './10-data-sync.js';
+import { maybeRunDeferredBiometricLock, userDirty } from './20-account.js';
+import { renderPhotos } from './30-progress-media.js';
+import { AI_SOURCES, aiSrc, applyProgressionAll, duplicateProgram, exportProgram, exportProgramFile,
+  renderGreeting, renderToday, trainerOn
+} from './40-programs-ai.js';
+import { openPublish, pickClientFor, refreshClientsScreen, renderMine, renderTrainerCard,
+  storeCountText
+} from './50-trainer-catalog.js';
+import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, hasWeight,
+  normValue, openBuilder, parseKg, parseValue, progAxis, progBaseValue, progStepSize, programDirty,
+  progressedRepsRange, setExDraftShared, setExIdxShared, setExOrigShared, setExWeight,
+  weightPending
+} from './60-builder.js';
+import { esc, exitWorkout, setExFromWorkShared, settleQuickFinish, stopFinishFx, tnum } from './70-workout.js';
+import { SR, hfHintText, hfMode, syncPrefs } from './80-platform.js';
+import { applyAudioFromUser, fillLiveSoundCascade, moreTab, switchMoreTab, syncSettingsForm } from './90-events.js';
+
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
-const ILLO = {
+export const ILLO = {
   water: `<svg viewBox="0 0 240 120"><path class="acc" d="M104 20 L136 20 L130 100 L110 100 Z"/><path class="prop" d="M108 56 C116 50, 124 62, 132 56"/></svg>`,
   rest: `<svg viewBox="0 0 240 120"><path class="acc" d="M96 36 a28 28 0 1 0 52 34 a34 34 0 1 1 -52 -34 Z"/></svg>`
 };
 
 // дефолтная обложка программы — гантель
-const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15" y="19" width="9" height="26" rx="3.5"/><rect x="40" y="19" width="9" height="26" rx="3.5"/><rect x="6" y="25" width="6" height="14" rx="3"/><rect x="52" y="25" width="6" height="14" rx="3"/><rect x="24" y="29" width="16" height="6" rx="3"/></svg>`;
-
-
-
+export const DUMBBELL_ICON = `<svg viewBox="0 0 64 64" fill="currentColor"><rect x="15" y="19" width="9" height="26" rx="3.5"/><rect x="40" y="19" width="9" height="26" rx="3.5"/><rect x="6" y="25" width="6" height="14" rx="3"/><rect x="52" y="25" width="6" height="14" rx="3"/><rect x="24" y="29" width="16" height="6" rx="3"/></svg>`;
 
 /* ================= ЗВУК ================= */
-let soundOn = true; // общий выключатель звука
-let lastAppSoundT = 0; // когда приложение само издавало звук — не принимаем его за голосовую команду
-let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
-let readySec = 5;  // подготовка перед упражнением на время
-let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
-let fxVol = 1;    // громкость звуковых эффектов 0..1
-let voiceVol = 1; // громкость голоса 0..1
-let audioCtx = null, masterGain = null;
-function initAudio(){
+export let soundOn = true; // общий выключатель звука
+export let lastAppSoundT = 0; // когда приложение само издавало звук — не принимаем его за голосовую команду
+export let prepSec = 5;   // отсчёт «Приготовься» перед стартом тренировки
+export let readySec = 5;  // подготовка перед упражнением на время
+export let sideSec = 10;  // пауза на смену стороны в упражнениях «на каждую сторону»
+export let fxVol = 1;    // громкость звуковых эффектов 0..1
+export let voiceVol = 1; // громкость голоса 0..1
+export let audioCtx = null, masterGain = null;
+export function initAudio(){
   try{
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if(!masterGain){ masterGain = audioCtx.createGain(); masterGain.gain.value = fxVol; masterGain.connect(audioCtx.destination); }
@@ -27,7 +46,7 @@ function initAudio(){
   }catch(e){}
 }
 function fxDest(){ return masterGain || audioCtx.destination; }
-function beep(freq=880, dur=0.15, when=0, vol=0.25){
+export function beep(freq=880, dur=0.15, when=0, vol=0.25){
   if(!audioCtx || !soundOn || fxVol<=0) return;
   lastAppSoundT = Date.now() + (when + dur) * 1000;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -37,11 +56,11 @@ function beep(freq=880, dur=0.15, when=0, vol=0.25){
   o.connect(g); g.connect(fxDest());
   o.start(audioCtx.currentTime + when); o.stop(audioCtx.currentTime + when + dur + 0.05);
 }
-const tick = () => beep(660, .09, 0, .18);
-const endSignal = () => { beep(880,.14,0); beep(880,.14,.2); beep(1320,.3,.4,.3); };
+export const tick = () => beep(660, .09, 0, .18);
+export const endSignal = () => { beep(880,.14,0); beep(880,.14,.2); beep(1320,.3,.4,.3); };
 
 // гонг — начало нового упражнения
-function gong(){
+export function gong(){
   if(!audioCtx || !soundOn || fxVol<=0) return;
   lastAppSoundT = Date.now() + 1500;
   const t = audioCtx.currentTime;
@@ -57,7 +76,7 @@ function gong(){
 
 // СТАРТ УПРАЖНЕНИЯ — самый заметный сигнал, ни на что не похожий:
 // низкий удар + восходящий колокольный аккорд со звоном
-function exerciseGong(){
+export function exerciseGong(){
   if(!audioCtx || !soundOn || fxVol<=0) return;
   lastAppSoundT = Date.now() + 2200;
   const t = audioCtx.currentTime;
@@ -94,7 +113,7 @@ function exerciseGong(){
 }
 
 // фанфары — тренировка завершена
-function fanfare(){
+export function fanfare(){
   if(!audioCtx || !soundOn || fxVol<=0) return;
   lastAppSoundT = Date.now() + 1500;
   const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -130,9 +149,9 @@ function clicks(n){
 
 // Язык озвучки всегда следует языку приложения. Отдельно выбирается только голос;
 // язык распознавания голосовых команд остаётся самостоятельной настройкой.
-let savedVoiceURI = '';
-let voiceLang = localeTag();
-function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
+export let savedVoiceURI = '';
+export let voiceLang = localeTag();
+export function voiceIsEnglish(){ return String(voiceLang || '').toLowerCase().startsWith('en'); }
 function voicePlural(n, ruOne, ruFew, ruMany, enOne, enMany){
   return voiceIsEnglish() ? (Math.abs(Number(n)) === 1 ? enOne : enMany) : plural(n, ruOne, ruFew, ruMany);
 }
@@ -143,8 +162,8 @@ function voicesForLang(lang){
 }
 
 // если голоса нет или ошибка — фолбэк-звук
-let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
-function speak(text, fallback, onDone){
+export let musicMode = false; // «не прерывать музыку»: голос заменяется сигналами
+export function speak(text, fallback, onDone){
   const done = ()=>{ if(onDone){ const f = onDone; onDone = null; f(); } };
   if(!soundOn){ done(); return; }
   if(voiceVol <= 0){ if(fallback) fallback(); done(); return; } // голос выключен — фолбэк-звук
@@ -188,12 +207,12 @@ function speak(text, fallback, onDone){
 }
 
 // «Осталось N секунд» на отметках 60/45/30/15
-function announceRemaining(sec){
+export function announceRemaining(sec){
   speak(voiceIsEnglish() ? `${sec} seconds remaining` : `Осталось ${sec} секунд`, ()=> clicks(sec/15));
 }
 
 // круг завершён — голосом с временем отдыха и следующим упражнением
-function roundDone(seconds, nxt){
+export function roundDone(seconds, nxt){
   let text;
   if(voiceIsEnglish()){
     text = seconds ? `Round complete. Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}` : 'Round complete';
@@ -218,7 +237,7 @@ function nextStepSpeech(nxt){
     : `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
   return out;
 }
-function announceRest(seconds, nxt){
+export function announceRest(seconds, nxt){
   let text = voiceIsEnglish()
     ? `Rest for ${seconds} ${voicePlural(seconds,'секунду','секунды','секунд','second','seconds')}`
     : `Отдохните ${seconds} ${plural(seconds, 'секунду', 'секунды', 'секунд')}`;
@@ -228,7 +247,7 @@ function announceRest(seconds, nxt){
 }
 
 // склонение: 1 повторение, 2 повторения, 5 повторений
-function plural(n, one, few, many){
+export function plural(n, one, few, many){
   n = Math.abs(n) % 100;
   if(n > 10 && n < 20) return many;
   const n1 = n % 10;
@@ -238,7 +257,7 @@ function plural(n, one, few, many){
 }
 
 // озвучка упражнения: «Приседания, 30 повторений» / «Планка, 120 секунд»
-function announceExercise(step, onDone){
+export function announceExercise(step, onDone){
   let text = step.title;
   if(step.setsTotal > 1) text += voiceIsEnglish()
     ? `, set ${step.setNo} of ${step.setsTotal}`
@@ -277,7 +296,7 @@ function announceExercise(step, onDone){
 // мини-таймер подготовки перед упражнением на время: полоса + отсчёт, в конце гонг.
 // считаем по кадрам, чтобы пауза реально останавливала подготовку
 const RR_LEN = 2 * Math.PI * 17; // длина окружности кольца подготовки (r=17 в svg 40×40)
-function runReadyBar(sec, done){
+export function runReadyBar(sec, done){
   const box = $('readyRing'), arc = $('readyArc'), num = $('readyNum');
   if(!box || sec <= 0){ done(); return; }
   const totalMs = sec * 1000;
@@ -306,7 +325,7 @@ function runReadyBar(sec, done){
     state.readyRAF = requestAnimationFrame(tick);
   });
 }
-function hideReadyBar(){
+export function hideReadyBar(){
   if(state.readyRAF){ cancelAnimationFrame(state.readyRAF); state.readyRAF = 0; }
   if(state.readyTimer){ clearInterval(state.readyTimer); state.readyTimer = null; }
   const box = $('readyRing');
@@ -322,13 +341,13 @@ function startSignal(){
 
 /* ================= WAKE LOCK ================= */
 let wakeLock = null;
-async function keepAwake(){
+export async function keepAwake(){
   try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
 }
-function releaseWake(){ try{ wakeLock && wakeLock.release(); wakeLock=null; }catch(e){} }
+export function releaseWake(){ try{ wakeLock && wakeLock.release(); wakeLock=null; }catch(e){} }
 
 /* ================= СОСТОЯНИЕ ================= */
-let state = {
+export let state = {
   current: null,   // выбранная программа (месяц или своя)
   steps: [],       // развёрнутый список шагов на все 4 круга
   startLoad: null, // нагрузка в момент старта — для точного сравнения в следующий раз
@@ -347,17 +366,13 @@ let state = {
   globalInterval: null
 };
 
-const $ = id => document.getElementById(id);
+export const $ = id => document.getElementById(id);
 
 // лёгкая тактильная отдача на нажатия (где поддерживается)
-function haptic(ms){
+export function haptic(ms){
   if(appRuntimeCompat.hapticHandled()) return;
   try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){}
 }
-document.addEventListener('pointerdown', e => {
-  const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
-  if(t && !t.disabled) haptic(8);
-}, {passive: true});
 
 /* ================= ИКОНКИ (единый стиль, stroke 2) ================= */
 /* ================= ИКОНКИ =================
@@ -378,7 +393,7 @@ document.addEventListener('pointerdown', e => {
 
    Единственное исключение — логотип YouTube в разметке: это чужой фирменный знак,
    у него своя форма и заливка, и «привести его к сетке» значит нарисовать не его. */
-const ICONS = {
+export const ICONS = {
   pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   grip: '<circle cx="9" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="19" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="19" r="1.3" fill="currentColor" stroke="none"/>',
   plus: '<path d="M5 12h14M12 5v14"/>',
@@ -442,36 +457,14 @@ const ICONS = {
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   dumbbell: '<path d="M4 9v6M7.5 6.5v11M16.5 6.5v11M20 9v6M7.5 12h9"/>'
 };
-function icon(name){
+export function icon(name){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
 }
-
-/* ================= МЫШЕЧНЫЕ ГРУППЫ ================= */
-// ОДИН набор на всё приложение. Списки чипов у программы и у упражнения разошлись:
-// инвентарь начинался то с «Нет», то с «Без инвентаря», «Резинки» против «Резинка»,
-// а «Утяжелители» и «Турник» были только у программы. Держим их здесь, до первого
-// использования, и подставляем в оба места.
-const OPT_LEVEL = ['Новичок', 'Средний', 'Продвинутый'];
-// Зачем человек тренируется. Один список и для вопроса при создании программы,
-// и для направлений каталога: «Похудение» в фильтре против «Похудеть» в чипах —
-// это два разных слова для одного и того же, и человек честно их не узнавал.
-const OPT_GOAL = ['Похудеть', 'Подтянуть всё тело', 'Ягодицы и пресс', 'Плоский живот',
-  'Сила и выносливость', 'Рельеф мышц', 'Растяжка и гибкость', 'Осанка и спина',
-  'Восстановиться после родов', 'Кардио и энергия'];
-// чипы-исключения: выбран такой — остальные снимаются, и наоборот
-const OPT_NONE = new Set(['Без инвентаря', 'Без ограничений']);
-const OPT_EQUIP = ['Без инвентаря', 'Коврик', 'Гантели', 'Резинки', 'Стул', 'Фитбол', 'Утяжелители', 'Турник'];
-
-const MUSCLES = [
-  ['ne','Шея'], ['sh','Плечи'], ['ch','Грудь'], ['ar','Руки'], ['co','Пресс'],
-  ['ba','Спина'], ['gl','Ягодицы'], ['le','Квадрицепс'], ['hm','Задняя бедра'], ['ca','Икры']
-];
-const M_LABEL = Object.fromEntries(MUSCLES);
 
 /* ================= ПОКАЗ И СКРЫТИЕ ================= */
 // единственный способ управлять видимостью: класс, а не инлайновый display.
 // инлайн ломал flex-раскладку и не мог побить .hidden{display:none!important}
-function setShown(el, on){
+export function setShown(el, on){
   const node = (typeof el === 'string') ? $(el) : el;
   appUi.setShown(node, !!on);
 }
@@ -479,15 +472,15 @@ function setShown(el, on){
 /* ================= ЗАЩИТА ОТ ПОТЕРИ ПРАВОК ================= */
 // снимки форм: сравниваем текущее состояние с тем, что было при открытии
 const snap = {};
-function takeSnap(key, val){ snap[key] = JSON.stringify(val ?? null); }
-function isChanged(key, val){ return snap[key] !== undefined && snap[key] !== JSON.stringify(val ?? null); }
-function clearSnap(key){ delete snap[key]; }
+export function takeSnap(key, val){ snap[key] = JSON.stringify(val ?? null); }
+export function isChanged(key, val){ return snap[key] !== undefined && snap[key] !== JSON.stringify(val ?? null); }
+export function clearSnap(key){ delete snap[key]; }
 
 // спрашивает подтверждение, если что-то менялось; иначе уходит молча
 // Формулировка одна на всё приложение: «ещё не сохранены» (а не «не сохранены» —
 // прошедшее время звучало как приговор), а кнопки всегда «Выйти без сохранения»
 // и «Остаться» — вместо пяти разных способов сказать «отменить».
-async function leaveGuard(changed, go, what){
+export async function leaveGuard(changed, go, what){
   if(changed){
     const ok = await appDialog(
       t('common.unsaved',{what:what || t('common.changes')}),
@@ -500,7 +493,7 @@ async function leaveGuard(changed, go, what){
 }
 
 // текст в полях ИИ-экрана считается несохранённой работой
-function aiScreenDirty(ids){
+export function aiScreenDirty(ids){
   return ids.some(id => { const el = $(id); return el && (el.value || '').trim(); });
 }
 
@@ -534,7 +527,7 @@ function markNum(el){
   } else if(hint) hint.remove();
   return !bad;
 }
-function guardNum(id, kind, required){
+export function guardNum(id, kind, required){
   const el = $(id);
   if(!el) return;
   el.dataset.numKind = kind;
@@ -544,7 +537,7 @@ function guardNum(id, kind, required){
   el.addEventListener('blur', check);
 }
 // проверяет все видимые числовые поля экрана; на первую ошибку — прокрутка и фокус
-function numFieldsOk(scopeId){
+export function numFieldsOk(scopeId){
   const scope = $(scopeId);
   if(!scope) return true;
   let first = null;
@@ -563,7 +556,7 @@ function numFieldsOk(scopeId){
 /* ================= КАСКАД НАСТРОЕК ЗВУКА (общий для трёх мест) ================= */
 // показывает/прячет вложенные блоки по состоянию тумблеров; сама раскладка одна и та же
 // в профиле, на экране старта и в попапе на тренировке — меняются только префикс id и что именно сохраняется
-function syncSoundCascade(p){
+export function syncSoundCascade(p){
   const on = $(p + 'SoundOn').classList.contains('on');
   setShown(p + 'SoundBox', on);
   if(!on) return;
@@ -575,7 +568,7 @@ function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
-function appDialog(msg, opts = {}){
+export function appDialog(msg, opts = {}){
   return new Promise(res => {
     // текст передают и готовой строкой, и функцией от t(): на экран не должен
     // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
@@ -621,18 +614,18 @@ function appDialog(msg, opts = {}){
     $('dlg').onclick = e => { if(e.target === $('dlg')) done(opts.confirm ? false : true); };
   });
 }
-const appAlert = (m, o) => appDialog(m, o);
+export const appAlert = (m, o) => appDialog(m, o);
 // Подтверждение действия. Кнопка по умолчанию — «Подтвердить», а не «Да»:
 // «Да» была безопасна только когда текст вопроса читается как «да/нет», а
 // у нас — «Удалить программу?».
-const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: t('common.confirm'), cancelText: t('common.cancel'), ...o});
+export const appConfirm = (m, o) => appDialog(m, {confirm: true, okText: t('common.confirm'), cancelText: t('common.cancel'), ...o});
 const screens = ['scrMenu','scrPrograms','scrStore','scrStoreItem','scrAccount','scrStart','scrWork','scrFinish','scrBuilder','scrProgSettings','scrExercise','scrImages','scrAI','scrLegal','scrStats','scrUserEdit','scrTrainer','scrClient','scrTrainerPage','scrPublish','scrMyCatalog','scrOnboard'];
 /* Корневые разделы: только у них внизу док и нет собственной панели действий.
 
    «Подопечные» — раздел, который есть не у всех: он появляется вместе с режимом
    тренера и исчезает вместе с ним. Держать его в списке всегда можно и нужно —
    иначе show() не узнает в нём корневой экран, — а прячет кнопку сам док. */
-const ROOT_TABS = ['scrMenu','scrPrograms','scrTrainer','scrStats','scrAccount'];
+export const ROOT_TABS = ['scrMenu','scrPrograms','scrTrainer','scrStats','scrAccount'];
 // Глубина истории относительно «Сегодня»: лежит прямо в состоянии записи, поэтому
 // переживает и системную кнопку «назад», и перезаход по истории.
 let navDepth = 0;
@@ -650,11 +643,10 @@ let navStack = ['scrMenu'];
 let tabSwitch = false;
 let pendingTabScreen = null; // вкладка, сменённая, пока снималась запись закрытого попапа
 let navBackWaiters = []; // программный возврат, которому нужно дождаться фактического popstate
-function asTab(fn){
+export function asTab(fn){
   tabSwitch = true;
   try{ fn(); } finally { tabSwitch = false; }
 }
-try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
 // Что считается несохранённой работой на каждом экране. Раньше эту проверку знали
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
 // напрямую — и набранная программа исчезала молча.
@@ -670,7 +662,7 @@ let guardBypass = false; // второй заход после подтверж�
 // попапов висит возврат состояния, и простое снятие класса его бы потеряло.
 // #dlg проверяем первым: он лежит выше остальных (z-index 90) и может быть открыт
 // поверх другого попапа.
-function dismissTopModal(){
+export function dismissTopModal(){
   const dlg = $('dlg');
   const m = dlg.classList.contains('open')
     ? dlg
@@ -735,113 +727,7 @@ function lockPage(on){
     freezeSticky(false);
   }
 }
-new MutationObserver(()=>{
-  const now = !!document.querySelector('.modal.open');
-  if(now === modalsOpen) return;
-  modalsOpen = now;
-  lockPage(now);
-  if(now){
-    try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(e){}
-    return;
-  }
-  // Попап закрыли кнопкой — лишнюю запись надо убрать. Но только если она всё ещё
-  // сверху: попап мог увести на другой экран (например, «Вручную» → конструктор),
-  // и тогда наш history.back() отменил бы этот переход.
-  if(history.state && history.state.m){
-    skipPop++;
-    try{ history.back(); }
-    catch(e){
-      skipPop = Math.max(0, skipPop - 1);
-      const waiters = modalHistoryWaiters.splice(0);
-      waiters.forEach(fn => fn());
-    }
-  } else if(modalHistoryWaiters.length){
-    const waiters = modalHistoryWaiters.splice(0);
-    waiters.forEach(fn => fn());
-  }
-}).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
 
-window.addEventListener('popstate', async e => {
-  // запись попапа снята (нами или жестом) — теперь можно переписать запись
-  // экрана под ней на вкладку, сменённую, пока попап был открыт
-  if(pendingTabScreen && !(history.state && history.state.m)){
-    try{ history.replaceState({scr: pendingTabScreen, d: navDepth}, ''); }catch(_){}
-    pendingTabScreen = null;
-  }
-  if(skipPop > 0){
-    skipPop--;
-    const waiters = modalHistoryWaiters.splice(0);
-    waiters.forEach(fn => fn());
-    return;
-  }   // это мы сами сняли запись закрытого попапа
-  // Открытый попап забирает системный Back себе. Сам Back уже снял его
-  // служебную history-запись и вернул нас на запись экрана под ним — повторно
-  // pushState делать нельзя: получалась вторая копия того же экрана, и следующий
-  // Back с вкладки визуально «ничего не делал». Если под верхним попапом остался
-  // ещё один, только тогда заводим новую служебную запись для следующего Back.
-  if(document.querySelector('.modal.open')){
-    dismissTopModal();
-    if(document.querySelector('.modal.open')){
-      try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(_){}
-    }
-    return;
-  }
-  if($('scrWork').classList.contains('on')){
-    // назад во время тренировки — спрашиваем, а не выбрасываем
-    try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
-    exitWorkout();
-    return;
-  }
-  let targetScreen = (e.state && e.state.scr) || 'scrMenu';
-  navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
-  {
-    const at = navStack.lastIndexOf(targetScreen);
-    if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
-  }
-  // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
-  // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
-  // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
-  // на «Сегодня», бросив занятие на середине.
-  if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
-
-  if(!guardBypass){
-    const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
-    let g = null;
-    try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
-    if(g){
-      // Возвращаем и browser history, и логический navStack на экран, с которого
-      // человек попытался уйти. Раньше history снова был Builder, а navStack уже
-      // успевал обрезаться до Programs — после «Остаться» два источника расходились.
-      navDepth++;
-      if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
-      try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
-      const ok = await appDialog(
-        t('common.unsaved',{what:g.what}),
-        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
-      );
-      if(!ok) return;
-      if(g.clean) g.clean();
-      guardBypass = true;
-      history.back();
-      return;
-    }
-  }
-  guardBypass = false;
-  show(targetScreen, false);
-  resolveNavBack(targetScreen);
-
-  // После явного выхода из глубокого сценария его текущая запись превращается
-  // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
-  // сюда с корневого таба, сразу перескакиваем через старый глубокий путь к
-  // исходной «Сегодня». Так Builder/AI/Store не воскресают следующим Back, но
-  // сам goTab остаётся синхронным и не ломает действия сразу после перехода.
-  const collapse = e.state && Number(e.state.collapse || 0);
-  if(targetScreen === 'scrMenu' && collapse > 0){
-    navDepth = 0;
-    navStack = ['scrMenu'];
-    try{ history.go(-collapse); }catch(_){}
-  }
-});
 // «Назад» и «Готово» на вложенном экране ВОЗВРАЩАЮТ, а не переходят: если нужный
 // экран лежит в пути прямо под текущим, снимаем запись истории вместо того, чтобы
 // класть новую. Иначе «конструктор → настройки → назад → упражнение → назад» копил
@@ -857,7 +743,7 @@ function resolveNavBack(target){
   });
   navBackWaiters = keep;
 }
-function goBackTo(id){
+export function goBackTo(id){
   // Если целевой экран уже есть в текущем пути, это настоящий возврат на него,
   // даже когда между ними больше одного вложенного экрана. Не создаём ещё одну
   // копию родителя поверх истории. Возвращаем Promise, чтобы сценарии вроде
@@ -882,7 +768,7 @@ function goBackTo(id){
   return Promise.resolve(true);
 }
 
-function show(id, push = true){
+export function show(id, push = true){
   // Ушли из редактора, не сохранив только что заведённое упражнение, — строку в
   // списке не оставляем. Ловим здесь, а не в кнопке «назад»: уйти можно ещё
   // жестом и системной кнопкой, и тогда в программе оставалось «Без названия».
@@ -942,7 +828,7 @@ function show(id, push = true){
 
 // содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
 // внутри приложения или системным «назад»
-function prepTab(id){
+export function prepTab(id){
   try{
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
     else if(id === 'scrPrograms'){ renderMine(); }
@@ -973,7 +859,7 @@ function kbFocused(){
 // Кнопка «Подопечные» живёт вместе с режимом тренера. Зовётся оттуда же, откуда
 // перерисовывается карточка тренера, — чтобы появляться в тот же миг, а не после
 // перезапуска.
-function syncDockTabs(){
+export function syncDockTabs(){
   const b = document.querySelector('.dock-btn[data-scr="scrTrainer"]');
   if(b) setShown(b, trainerOn());
 }
@@ -981,12 +867,10 @@ function syncDockTabs(){
 function syncDock(){
   setShown('dock', ROOT_TABS.includes(show._last) && !kbFocused());
 }
-document.addEventListener('focusin', ()=> syncDock());
-document.addEventListener('focusout', ()=> setTimeout(syncDock, 60));
 
 // Переход по доку. Вкладки не копят историю: поверх «Сегодня» живёт максимум одна
 // запись, а «назад» с любой вкладки возвращает на «Сегодня».
-function goTab(id){
+export function goTab(id){
   const cur = show._last;
   if(cur === id){
     try{ window.scrollTo({top: 0, behavior: 'smooth'}); }catch(e){ window.scrollTo(0, 0); }
@@ -1033,8 +917,8 @@ function goTab(id){
 /* ================= ЭКРАН 2: СТАРТ ================= */
 
 // с какой вкладки открыли программу — туда и вернёт «назад» с экрана старта
-let startFrom = 'scrMenu';
-function openStart(raw){
+export let startFrom = 'scrMenu';
+export function openStart(raw){
   if(ROOT_TABS.includes(show._last)) startFrom = show._last;
   applyProgressionAll();
   applyAudioFromUser(curUser());
@@ -1051,7 +935,7 @@ function openStart(raw){
 }
 
 // по умолчанию выбираем вариант, в чьи дни попадает сегодня
-function defaultPlanIdx(plans, prog){
+export function defaultPlanIdx(plans, prog){
   // режим ротации: варианты идут по очереди A-B-A-B независимо от календаря,
   // пропуск дня не сбивает очередь
   if(prog && prog.rotate && plans.length > 1){
@@ -1063,7 +947,7 @@ function defaultPlanIdx(plans, prog){
   return i >= 0 ? i : 0;
 }
 
-function renderPlanRow(){
+export function renderPlanRow(){
   const plans = normPlans(state.raw);
   const block = $('planBlock'), row = $('planRow');
   row.innerHTML = '';
@@ -1107,7 +991,7 @@ function exerciseLoad(p, ex){
 
 // Снимок нужен следующей тренировке для честного «было → сегодня». Старые записи
 // снимка не имеют; для них ниже есть совместимый расчёт по предыдущему шагу.
-function workoutLoadSnapshot(p, planIdx){
+export function workoutLoadSnapshot(p, planIdx){
   const pl = normPlans(p)[planIdx] || normPlans(p)[0];
   return ((pl && pl.exercises) || []).map((ex, i) => {
     const v = exerciseLoad(p, ex);
@@ -1115,7 +999,7 @@ function workoutLoadSnapshot(p, planIdx){
   });
 }
 
-function previousWorkoutLoad(p, planIdx){
+export function previousWorkoutLoad(p, planIdx){
   const hist = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx);
   const last = hist[hist.length - 1];
   if(last && Array.isArray(last.load)) return {first:false, exact:true, rows:last.load};
@@ -1135,7 +1019,7 @@ function loadTargetText(ex, v){
   return out;
 }
 
-function loadDelta(a, b){
+export function loadDelta(a, b){
   if(!a) return {text:'', dir:'same'};
   const bits = [];
   const moves = [];
@@ -1162,7 +1046,7 @@ function loadDelta(a, b){
   return {text:bits.join(' · '), dir};
 }
 
-function estimatedWorkoutMinutes(p, planIdx, rows){
+export function estimatedWorkoutMinutes(p, planIdx, rows){
   const own = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx
     && +h.sec > 59 && +h.sec < 6 * 3600).slice(-5);
   if(own.length){
@@ -1305,7 +1189,7 @@ function openWeightModal(i){
   $('weightModal').classList.add('open');
   $('weightModalInput').focus();
 }
-async function commitWeightModal(){
+export async function commitWeightModal(){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
@@ -1375,7 +1259,7 @@ function buildStartMenu(){
   );
 }
 
-function renderStartInfo(){
+export function renderStartInfo(){
   buildStartMenu();
   // описание программы: 4 строки с возможностью раскрыть
   const dBox = $('progDescBox'), dTxt = $('progDescText');
@@ -1429,14 +1313,132 @@ function renderStartInfo(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-function setFxVolShared(value){ fxVol = value; return fxVol; }
-function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
-function setMusicModeShared(value){ musicMode = value; return musicMode; }
-function setPrepSecShared(value){ prepSec = value; return prepSec; }
-function setReadySecShared(value){ readySec = value; return readySec; }
-function setSavedVoiceURIShared(value){ savedVoiceURI = value; return savedVoiceURI; }
-function setSideSecShared(value){ sideSec = value; return sideSec; }
-function setSoundOnShared(value){ soundOn = value; return soundOn; }
-function setStartFromShared(value){ startFrom = value; return startFrom; }
-function setVoiceLangShared(value){ voiceLang = value; return voiceLang; }
-function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
+export function setFxVolShared(value){ fxVol = value; return fxVol; }
+export function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
+export function setMusicModeShared(value){ musicMode = value; return musicMode; }
+export function setPrepSecShared(value){ prepSec = value; return prepSec; }
+export function setReadySecShared(value){ readySec = value; return readySec; }
+export function setSavedVoiceURIShared(value){ savedVoiceURI = value; return savedVoiceURI; }
+export function setSideSecShared(value){ sideSec = value; return sideSec; }
+export function setSoundOnShared(value){ soundOn = value; return soundOn; }
+export function setStartFromShared(value){ startFrom = value; return startFrom; }
+export function setVoiceLangShared(value){ voiceLang = value; return voiceLang; }
+export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
+
+/* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
+   after every product module is evaluated, in the original part order. */
+export function initCore(){
+  document.addEventListener('pointerdown', e => {
+    const t = e.target.closest('button, .day-chip, .load-chip, .plan-tab, .choice, .user-row, .mine-card .mc-cover, .cal-cell.done, a.btn-exit, .back-chip, .switch, .icon-btn');
+    if(t && !t.disabled) haptic(8);
+  }, {passive: true});
+  try{ history.replaceState({scr:'scrMenu', d:0}, ''); }catch(e){}
+  new MutationObserver(()=>{
+    const now = !!document.querySelector('.modal.open');
+    if(now === modalsOpen) return;
+    modalsOpen = now;
+    lockPage(now);
+    if(now){
+      try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(e){}
+      return;
+    }
+    // Попап закрыли кнопкой — лишнюю запись надо убрать. Но только если она всё ещё
+    // сверху: попап мог увести на другой экран (например, «Вручную» → конструктор),
+    // и тогда наш history.back() отменил бы этот переход.
+    if(history.state && history.state.m){
+      skipPop++;
+      try{ history.back(); }
+      catch(e){
+        skipPop = Math.max(0, skipPop - 1);
+        const waiters = modalHistoryWaiters.splice(0);
+        waiters.forEach(fn => fn());
+      }
+    } else if(modalHistoryWaiters.length){
+      const waiters = modalHistoryWaiters.splice(0);
+      waiters.forEach(fn => fn());
+    }
+  }).observe(document.documentElement, {subtree: true, attributes: true, attributeFilter: ['class']});
+  window.addEventListener('popstate', async e => {
+    // запись попапа снята (нами или жестом) — теперь можно переписать запись
+    // экрана под ней на вкладку, сменённую, пока попап был открыт
+    if(pendingTabScreen && !(history.state && history.state.m)){
+      try{ history.replaceState({scr: pendingTabScreen, d: navDepth}, ''); }catch(_){}
+      pendingTabScreen = null;
+    }
+    if(skipPop > 0){
+      skipPop--;
+      const waiters = modalHistoryWaiters.splice(0);
+      waiters.forEach(fn => fn());
+      return;
+    }   // это мы сами сняли запись закрытого попапа
+    // Открытый попап забирает системный Back себе. Сам Back уже снял его
+    // служебную history-запись и вернул нас на запись экрана под ним — повторно
+    // pushState делать нельзя: получалась вторая копия того же экрана, и следующий
+    // Back с вкладки визуально «ничего не делал». Если под верхним попапом остался
+    // ещё один, только тогда заводим новую служебную запись для следующего Back.
+    if(document.querySelector('.modal.open')){
+      dismissTopModal();
+      if(document.querySelector('.modal.open')){
+        try{ history.pushState({scr: show._last, d: navDepth, m: 1}, ''); }catch(_){}
+      }
+      return;
+    }
+    if($('scrWork').classList.contains('on')){
+      // назад во время тренировки — спрашиваем, а не выбрасываем
+      try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
+      exitWorkout();
+      return;
+    }
+    let targetScreen = (e.state && e.state.scr) || 'scrMenu';
+    navDepth = (e.state && typeof e.state.d === 'number') ? e.state.d : 0;
+    {
+      const at = navStack.lastIndexOf(targetScreen);
+      if(at >= 0) navStack.length = at + 1; else navStack = [targetScreen];
+    }
+    // На эти экраны нельзя вернуться «из истории» — там нет живого состояния.
+    // Исключение: тренировка, которая ИДЁТ ПРЯМО СЕЙЧАС. С неё можно уйти в
+    // редактор упражнения, и жест «назад» обязан вернуть на неё, а не выбросить
+    // на «Сегодня», бросив занятие на середине.
+    if((targetScreen === 'scrWork' && !state.live) || targetScreen === 'scrFinish' || targetScreen === 'scrOnboard') targetScreen = 'scrMenu';
+
+    if(!guardBypass){
+      const cur = screens.find(id => $(id) && $(id).classList.contains('on'));
+      let g = null;
+      try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
+      if(g){
+        // Возвращаем и browser history, и логический navStack на экран, с которого
+        // человек попытался уйти. Раньше history снова был Builder, а navStack уже
+        // успевал обрезаться до Programs — после «Остаться» два источника расходились.
+        navDepth++;
+        if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
+        try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
+        const ok = await appDialog(
+          t('common.unsaved',{what:g.what}),
+          {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
+        );
+        if(!ok) return;
+        if(g.clean) g.clean();
+        guardBypass = true;
+        history.back();
+        return;
+      }
+    }
+    guardBypass = false;
+    show(targetScreen, false);
+    resolveNavBack(targetScreen);
+
+    // После явного выхода из глубокого сценария его текущая запись превращается
+    // в служебную «Сегодня» с collapse=N. Когда пользователь потом возвращается
+    // сюда с корневого таба, сразу перескакиваем через старый глубокий путь к
+    // исходной «Сегодня». Так Builder/AI/Store не воскресают следующим Back, но
+    // сам goTab остаётся синхронным и не ломает действия сразу после перехода.
+    const collapse = e.state && Number(e.state.collapse || 0);
+    if(targetScreen === 'scrMenu' && collapse > 0){
+      navDepth = 0;
+      navStack = ['scrMenu'];
+      try{ history.go(-collapse); }catch(_){}
+    }
+  });
+  document.addEventListener('focusin', ()=> syncDock());
+  document.addEventListener('focusout', ()=> setTimeout(syncDock, 60));
+}

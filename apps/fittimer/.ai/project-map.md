@@ -9,8 +9,8 @@ Compact navigation map for agents. Use this instead of scanning the repository.
 ```text
 Web
   src/html/* + src/styles/* + src/app/* (+ AppBase Core via @appbase/core)
-  -> generated index.html + style.css + app.js (ES module: src/app chunks + imports of Core, product modules and src/i18n);
-     esbuild bundles src/main.ts → mobile.js → app.js (+ Core) into dist/esm/* (mobile) or esm/* (Vercel)
+  -> generated index.html + style.css; product runtime = ES modules src/app/NN-*.js (entry src/app/index.js runs each part's init*());
+     esbuild bundles src/main.ts → mobile.js → src/app/index.js (+ Core, src/i18n) into dist/esm/* (mobile) or esm/* (Vercel)
           |
           +--> local state: FitTimer kv* adapter -> AppBase Storage Core -> IndexedDB/localStorage
           |
@@ -65,9 +65,9 @@ Normal AppBase route: Architect → Engineer → QA → Architect. Specialists j
 |---|---|---|
 | `src/html/*.html` | canonical screen/modal markup chunks | adding/moving UI, finding element IDs |
 | `src/styles/*.css` | canonical style chunks | layout/spacing/visual bugs |
-| `src/app/*.js` | canonical behavior chunks | behavior changes; search part first |
+| `src/app/*.js` | product runtime ES modules (parts + `index.js` entry + `options.js` shared tables) | behavior changes; search part first |
 | `src/i18n/*.js` | RU/EN dictionaries + locale runtime | UI language, translation keys, locale persistence |
-| `index.html`, `style.css`, `app.js` | generated compatibility outputs | never edit directly; `npm run build:sources` |
+| `index.html`, `style.css` | generated compatibility outputs | never edit directly; `npm run build:sources` |
 | `mobile.js` | FitTimer mobile composition/adapters over ESM mobile/native Core | workout/voice/update/deep-link product behavior |
 | `app.config.js` | generated runtime public config bootstrap | API/public URL behavior |
 | `config/product.json` | canonical product identity, default URLs, capability flags and basic brand values | app identity/AppBase/bootstrap changes |
@@ -118,7 +118,7 @@ Canonical JS chunks:
 - `src/app/80-platform.js` — theme, voice/hands-free, notifications.
 - `src/app/90-events.js` — event/action wiring.
 
-Large-file rule: search `src/**` and open only the matching chunk. Root `app.js`, `style.css`, and `index.html` are generated outputs.
+Large-file rule: search `src/**` and open only the matching chunk. Root `style.css` and `index.html` are generated outputs.
 
 ## Backend
 
