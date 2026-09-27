@@ -1,24 +1,27 @@
 # AppBase monorepo
 
-One repository for the AppBase Core and every app built on it.
+One repository for AppBase Core and every app built on it.
 
 ```text
 packages/core/     AppBase Core — shared client (TypeScript) + server (Node) foundation
-apps/fittimer/     Fit Timer — web, API (Vercel), Android/iOS (Capacitor)
+apps/fittimer/     Fit Timer — production web/API/Android/iOS app
+apps/task-mini/    Minimal second consumer — universality/smoke proof for Core
 docs/              repository-level plans
 ```
 
 - Architecture and roadmap: `docs/appbase-preparation-roadmap.md`
 - Agent instructions: `AGENTS.md`, `CLAUDE.md`
 - Fit Timer details: `apps/fittimer/README.md`
+- Neutral starter guidance: `packages/core/template/README.md`
 
 ## Common commands
 
 ```bash
-npm run setup          # install packages/core and apps/fittimer dependencies
-npm run core:check     # AppBase Core: typecheck, boundaries, runtime + smoke tests
-npm run fittimer:build # Fit Timer web + mobile bundle (apps/fittimer/dist)
-npm run check          # Core check + Fit Timer typecheck/boundaries/sources/build/mobile checks
+npm run setup          # install Core + dependencies for every apps/* package
+npm run core:check     # AppBase Core checks
+npm run apps:check     # run scripts.check for every apps/* package
+npm run check          # Core + every app
+npm run apps:browser   # run test:browser in every app that defines it
 ```
 
-A change in `packages/core/` must keep every app green in the same pull request.
+A change in `packages/core/` must keep every app green in the same pull request. New apps must live under `apps/<name>/` and define `scripts.check`.
