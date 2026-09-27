@@ -264,14 +264,19 @@ export function weekPlanInfo(date){
   const ent = [];
   hist.forEach(h => {
     const i = isos.indexOf(h.d);
-    if(i >= 0) ent.push({idx: i, pid: h.pid || null, used: false});
+    if(i >= 0) ent.push({
+      idx:i,
+      pid:h.pid || null,
+      partial:h.status === 'partial',
+      used:false
+    });
   });
   ent.sort((a, b) => a.idx - b.idx);
 
   // 1) тренировка в свой день закрывает свой слот
   slots.forEach(s => {
     const e = ent.find(x => !x.used && x.pid === s.pid && x.idx === s.idx);
-    if(e){ e.used = true; s.from = s.idx; }
+    if(e){ e.used = true; s.from = s.idx; s.partial = !!e.partial; }
   });
   // 2) отработка: свободная тренировка той же программы закрывает прошедший пропуск.
   //    Берём ближайшую по времени, чтобы подпись «отработана в четверг» не врала.
@@ -282,26 +287,31 @@ export function weekPlanInfo(date){
       if(x.used || x.pid !== s.pid) return;
       if(!best || Math.abs(x.idx - s.idx) < Math.abs(best.idx - s.idx)) best = x;
     });
-    if(best){ best.used = true; s.from = best.idx; }
+    if(best){ best.used = true; s.from = best.idx; s.partial = !!best.partial; }
   });
 
   const days = DAYS.map((nm, i) => {
     const mine = slots.filter(s => s.idx === i);
     const shut = mine.filter(s => s.from !== null);
+    const fullShut = shut.filter(s => !s.partial);
+    const partialShut = shut.filter(s => s.partial);
     const iso = isos[i];
     const past = iso < todayIso;
     return {
       name: nm, iso, idx: i,
       planned: mine.length,
-      done: shut.length,
-      slots: mine.map(s => ({pid:s.pid, from:s.from})),
+      done: fullShut.length,
+      closed: shut.length,
+      partial: partialShut.length,
+      slots: mine.map(s => ({pid:s.pid, from:s.from, partial:!!s.partial})),
       moved: shut.filter(s => s.from !== i).length,
       movedFrom: [...new Set(shut.filter(s => s.from !== i).map(s => s.from))],
-      help: slots.filter(s => s.from === i && s.idx !== i).length, // закрыл чужой пропуск
+      help: slots.filter(s => s.from === i && s.idx !== i).length,
       extra: ent.filter(x => x.idx === i && !x.used).length,
       any: ent.some(x => x.idx === i),
-      full: mine.length > 0 && shut.length >= mine.length,
-      part: mine.length > 0 && shut.length > 0 && shut.length < mine.length,
+      full: mine.length > 0 && fullShut.length >= mine.length,
+      part: mine.length > 0 && shut.length > 0 && fullShut.length < mine.length,
+      // Частичная тренировка закрывает напоминание/долг, но не становится полной.
       debt: mine.length > 0 && shut.length < mine.length && past,
       past, today: iso === todayIso, future: iso > todayIso
     };
@@ -313,7 +323,9 @@ export function weekPlanInfo(date){
     plannedDays: days.filter(d => d.planned).length,
     fullDays: days.filter(d => d.full).length,
     plannedTotal: slots.length,
-    doneTotal: slots.filter(s => s.from !== null).length,
+    doneTotal: slots.filter(s => s.from !== null && !s.partial).length,
+    closedTotal: slots.filter(s => s.from !== null).length,
+    partialTotal: slots.filter(s => s.from !== null && s.partial).length,
     movedTotal: slots.filter(s => s.from !== null && s.from !== s.idx).length,
     debtTotal: debt.length,
     extraTotal: ent.filter(x => !x.used).length,
@@ -337,7 +349,7 @@ function renderWeekStrip(){
       + (i === di ? ' today' : '');
     let mark = '<i></i>';
     if(d.full) mark = `<span class="ws-ok">${icon('check')}</span>`;
-    else if(d.part) mark = `<span class="ws-part">${d.done}/${d.planned}</span>`;
+    else if(d.part) mark = `<span class="ws-part">${d.planned === 1 && d.partial ? '½' : (d.done + '/' + d.planned)}</span>`;
     else if(d.debt) mark = '<i class="ws-debt"></i>';
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
     cell.innerHTML = `<b>${canonicalLabel(d.name)}</b>` + mark;
@@ -490,7 +502,10 @@ export function renderToday(){
     return;
   }
 
-  const doneToday = new Set(stats.history.filter(h => h.d === localISO(new Date())).map(h => h.pid));
+  const todayEntries = stats.history.filter(h => h.d === localISO(new Date()));
+  const doneToday = new Set(todayEntries.filter(h => h.status !== 'partial').map(h => h.pid));
+  const partialToday = new Map();
+  todayEntries.filter(h => h.status === 'partial').forEach(h => partialToday.set(h.pid, h));
   const scheduled = [];
   customPrograms.forEach(p => {
     if(!progActive(p)) return;   // выключенная программа на сегодня не зовёт
@@ -498,12 +513,12 @@ export function renderToday(){
     if(p.rotate && plans.length > 1){
       // ротация: дни общие для программы, вариант берём очередной по очереди
       if((p.days || []).includes(today)){
-        scheduled.push({p, plan: plans[defaultPlanIdx(plans, p)], done: doneToday.has(p.id), rot: true});
+        scheduled.push({p, plan: plans[defaultPlanIdx(plans, p)], done: doneToday.has(p.id), partial:!doneToday.has(p.id) ? partialToday.get(p.id) : null, rot: true});
       }
       return;
     }
     const idx = plans.findIndex(pl => (pl.days || []).includes(today));
-    if(idx >= 0) scheduled.push({p, plan: plans[idx], done: doneToday.has(p.id)});
+    if(idx >= 0) scheduled.push({p, plan: plans[idx], done: doneToday.has(p.id), partial:!doneToday.has(p.id) ? partialToday.get(p.id) : null});
   });
 
   const list = $('todayList');
@@ -531,7 +546,7 @@ export function renderToday(){
   };
 
   if(scheduled.length){
-    scheduled.forEach(({p, plan, done, rot}) => {
+    scheduled.forEach(({p, plan, done, partial, rot}) => {
       const setsTotal = (plan.exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
       const bits = [];
       if(rot){
@@ -545,16 +560,20 @@ export function renderToday(){
       const planTime = plan.time || p.time;
       if(planTime) bits.push(planTime);
       list.appendChild(todayRow({
-        cls: done ? 'done' : '',
-        ico: done ? 'check' : 'play',
+        cls: done ? 'done' : (partial ? 'part' : ''),
+        ico: done ? 'check' : (partial ? 'clock' : 'play'),
         title: p.name,
-        sub: done ? t('today.done') : bits.join(' · '),
-        action: done ? t('today.again') : t('today.start'),
+        sub: done
+          ? t('today.done')
+          : (partial
+              ? t('today.partial',{done:Math.max(0,+partial.doneExercises||0),all:Math.max(0,+partial.plannedExercises||0)})
+              : bits.join(' · ')),
+        action: done ? t('today.again') : (partial ? t('today.again') : t('today.start')),
         onclick: () => openStart(p)
       }));
     });
     // сегодняшнее сделано — можно предложить закрыть долг недели
-    if(scheduled.every(s => s.done)){
+    if(scheduled.every(s => s.done || s.partial)){
       const mu = makeUpRow();
       if(mu) list.appendChild(mu);
     }
