@@ -9,6 +9,7 @@
     "apps:browser": "node scripts/apps.mjs run test:browser",
     "fittimer:build": "npm --prefix apps/fittimer run build",
     "fittimer:check": "npm --prefix apps/fittimer run check",
-    "check": "npm run core:check && npm run apps:check"
+    "check": "npm run core:check && npm run apps:check",
+    "check:affected": "node scripts/test-affected-apps.mjs && node scripts/apps.mjs affected"
   }
 }

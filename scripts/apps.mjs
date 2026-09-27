@@ -1,7 +1,8 @@
 import { readdir, readFile, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { affectedApps } from './affected-apps.mjs';
 
 const ROOT = process.cwd();
 const APPS_DIR = path.join(ROOT, 'apps');
@@ -55,6 +56,27 @@ if(mode === 'setup'){
     console.log('\n== check ' + app.name + ' ==');
     await run('npm', ['run', 'check'], app.dir);
   }
+}else if(mode === 'affected'){
+  // CI: проверить только то, что затронуто изменениями с <base> (sha или ref).
+  // Если diff посчитать нельзя (нет base, новая ветка, мелкий clone) — проверяем всё.
+  const base = scriptName;
+  const diff = base && !/^0+$/.test(base)
+    ? spawnSync('git', ['diff', '--name-only', base + '...HEAD'], {cwd:ROOT, encoding:'utf8'})
+    : null;
+  const names = all.map(a => a.name);
+  const target = diff && diff.status === 0
+    ? affectedApps(diff.stdout.split('\n').filter(Boolean), names)
+    : (console.log('Не удалось вычислить изменения относительно ' + (base || '(нет base)') + ' — проверяю всё'), {core:true, apps:names});
+  console.log('Core: ' + (target.core ? 'да' : 'нет') + '; приложения: ' + (target.apps.join(', ') || 'нет'));
+  if(target.core){
+    console.log('\n== check core ==');
+    await run('npm', ['run', 'check'], path.join(ROOT, 'packages', 'core'));
+  }
+  for(const app of all.filter(a => target.apps.includes(a.name))){
+    if(!app.pkg.scripts?.check) throw new Error(app.name + ' must define scripts.check');
+    console.log('\n== check ' + app.name + ' ==');
+    await run('npm', ['run', 'check'], app.dir);
+  }
 }else if(mode === 'run'){
   if(!scriptName) throw new Error('Usage: node scripts/apps.mjs run <script>');
   for(const app of all){
@@ -63,5 +85,5 @@ if(mode === 'setup'){
     await run('npm', ['run', scriptName], app.dir);
   }
 }else{
-  throw new Error('Usage: node scripts/apps.mjs <setup|check|run> [script]');
+  throw new Error('Usage: node scripts/apps.mjs <setup|check|affected|run> [script|base]');
 }

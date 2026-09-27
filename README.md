@@ -22,6 +22,7 @@ npm run core:check     # AppBase Core checks
 npm run apps:check     # run scripts.check for every apps/* package
 npm run check          # Core + every app
 npm run apps:browser   # run test:browser in every app that defines it
+npm run check:affected -- <base>  # CI: Core + only the apps changed since <base>
 ```
 
 A change in `packages/core/` must keep every app green in the same pull request. New apps must live under `apps/<name>/` and define `scripts.check`.

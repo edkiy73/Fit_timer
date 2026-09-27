@@ -4,8 +4,7 @@ Baseline used when this document was introduced: `main` at `bfe07675d0061ef0a6ab
 
 ## Goal
 
-> **2026-09-28 architecture review:** multi-app readiness changes the frontend decision context. The proposed common frontend/backend stack, FitTimer React migration options, and CI tiering plan are tracked separately in [appbase-stack-ci-strategy.md](./appbase-stack-ci-strategy.md). Phase 12's earlier "do not introduce a new frontend framework just for AppBase" rule remains historical guidance, not a final decision for App2.
-
+> **Stack and CI decisions (2026-09-28):** see the ADR [appbase-stack-ci-strategy.md](./appbase-stack-ci-strategy.md) — new apps use React + TypeScript + Vite, FitTimer stays on its ESM/DOM stack, Core stays framework-neutral, full regression runs on every PR.
 
 Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so the reusable AppBase Core stays independent of the fitness domain and further products can be built on it in the same repository.
 
@@ -469,7 +468,7 @@ The Phase 11 milestone is satisfied: Core Admin can conceptually be reused witho
 
 Owner: UX/UI. Implementation: Extraction Engineer.
 
-Extract only repeated primitives and tokens. Do not introduce a new frontend framework just for AppBase.
+Extract only repeated primitives and tokens. Core itself never depends on a UI framework; the frontend stack for new apps is fixed in the [stack ADR](./appbase-stack-ci-strategy.md).
 
 Candidate primitives: Button, Input, Select, Switch, Tabs, Card/ListRow, Modal/Sheet, Toast, Badge/Avatar, Loading/Empty/Error states.
 

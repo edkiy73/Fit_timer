@@ -10,6 +10,7 @@
 */
 
 const { becomeTrainer } = require('./helpers/trainer-account');
+const { settle } = require('./helpers/settle');
 
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
@@ -23,7 +24,8 @@ const ok = (name, cond, extra) => {
   if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : ''));
 };
-const nap = (page, ms=350) => page.waitForTimeout(ms);
+// Раньше здесь были фиксированные паузы (~90 с на прогон); теперь ждём, пока UI успокоится.
+const nap = async page => { const t=Date.now(); await settle(page); const d=Date.now()-t; if(d>300) console.log('   [settle '+d+'ms]'); };
 
 async function state(page){
   return page.evaluate(() => ({
@@ -60,7 +62,8 @@ async function newAppPage(ctx, opts={}){
   page.on('pageerror', e => opts.errs && opts.errs.push(String(e)));
   await page.goto('data:text/html,<title>nav-sentinel</title>');
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
-  await nap(page, 1000);
+  await page.waitForFunction(() => typeof goTab === 'function' && document.querySelector('.screen.on'));
+  await nap(page);
   if(!opts.keepOnboarding && await page.isVisible('#obStart')){
     await page.click('#obStart');
     await nap(page, 900);
@@ -95,11 +98,12 @@ async function homeThenExit(page, label){
   await page.close();
 }
 async function scenario(ctx, name, fn, errs){
-  const page = await newAppPage(ctx, {errs});
-  console.log('\n— ' + name);
+  const T=Date.now(); const page = await newAppPage(ctx, {errs});
+  console.log('\n— ' + name + ' [boot '+(Date.now()-T)+'ms]');
   try{ await fn(page); }
   catch(e){ bad++; console.log(' ПЛОХО  ' + name + ': исключение → ' + (e && e.stack || e)); }
   if(!page.isClosed()) await page.close();
+  console.log('   [total '+(Date.now()-T)+'ms]');
 }
 
 (async()=>{

@@ -1,5 +1,5 @@
 /* Списки тестов для scripts/test.mjs и scripts/run-browser-tests.mjs.
-   Новый tests/*.js добавляй сюда (или в BROWSER_TESTS) — иначе
+   Новый tests/*.js добавляй сюда — иначе
    run-browser-tests.mjs сообщит, что тест нигде не запускается. */
 
 // Unit- и серверные тесты. Все идут против одного tests/dev-server.js
@@ -25,4 +25,14 @@ export const UNIT_TESTS_WITH_TEST_ENV = ['admin-ai-api'];
 export const ADMIN_TESTS = ['admin-flow'];
 
 // Статические проверки, запускаемые как node-скрипты (не как npm-скрипты).
-export const STATIC_TESTS = ['appbase-foundation-unit'];
+export const STATIC_TESTS = ['appbase-foundation-unit', 'browser-shards-unit'];
+
+// Браузерные и сквозные тесты (scripts/run-browser-tests.mjs). Порядок — от быстрых к долгим.
+export const BROWSER_TESTS = [
+  'api-flow', 'ai-api', 'youtube-video',
+  'csp', 'parse-flat', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
+  'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow', 'nav-transitions',
+  'limits', 'link-length', 'tap-targets', 'stale-deploy', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
+  'report-auto', 'report-detail', 'prog-check-flow', 'ai-edit-carry', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
+];
+
