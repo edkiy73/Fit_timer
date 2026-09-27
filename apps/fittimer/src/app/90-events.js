@@ -1048,9 +1048,8 @@ export function initEvents(){
     $('progDescMore').textContent = open ? t('common.collapse') : t('builder.showFull');
   };
   $('btnStart').onclick = async ()=>{
-    // Отключённая программа не запрещена (её всё ещё можно запустить), но результат
-    // нигде не осядет (см. countsToStats в finishWorkout) — предупреждаем ДО модалки
-    // выбора способа, а не после сорока минут тренировки.
+    // Отключённую программу можно запустить вручную. Результат сохранится как
+    // активность, но не закроет план и не двинет прогрессию — предупреждаем до старта.
     if(!progActive(state.raw)){
       const go = await appConfirm(
         t('programs.disabledStart'),
