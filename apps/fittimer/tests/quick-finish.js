@@ -36,6 +36,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const run = async sec => {
     await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pq')));
     await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
     await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
     await page.evaluate(sec => {
       state.stepOutcomes = {};
