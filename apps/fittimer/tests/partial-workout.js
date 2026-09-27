@@ -88,6 +88,25 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     JSON.stringify(snap.exercises));
   ok('частичная не увеличивает полный счётчик и completions', snap.count === 0 && snap.completions === 0, JSON.stringify(snap));
   ok('один короткий выполненный подход не удерживает серию сам по себе', snap.meaningful === false, JSON.stringify(snap));
+
+  ok('полностью выполненное упражнение внутри частичной попало в проверку прогрессии',
+    await page.isVisible('#finProgCheck'));
+  await page.click('#finProgCheckToggle');
+  const progChips = await page.$eval('.fpc-chip', xs => xs.map(x => x.textContent.trim()));
+  ok('в проверке прогрессии только реально завершённое упражнение',
+    progChips.length === 1 && progChips[0] === 'Первое', progChips.join('|'));
+  await page.click('#finProgCheckYes');
+  await page.waitForTimeout(200);
+  const progValues = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'partial-test');
+    const ex = normPlans(p)[0].exercises;
+    return {
+      first:getExProgValue('partial-test', ex[0], p, 'reps'),
+      second:getExProgValue('partial-test', ex[1], p, 'reps')
+    };
+  });
+  ok('завершённое упражнение выросло, незавершённое — нет',
+    progValues.first === 11 && progValues.second === 10, JSON.stringify(progValues));
   ok('после «Закончить на сегодня» незавершённой сессии больше нет', !snap.session);
   ok('частичная закрывает долг недели, но остаётся частичной', !snap.debt && snap.partialTotal >= 1, JSON.stringify(snap));
   ok('на Сегодня видно «Частично», а не полную галочку', /Частично/.test(snap.today), snap.today);
