@@ -948,6 +948,7 @@ export function workoutOutcomeSummary(){
     plannedSteps, doneSteps, skippedSteps,
     plannedExercises:all.length,
     completedExercises:completed.length,
+    completedIds:completed.map(g => g.id).filter(Boolean),
     completedNames:completed.map(g => g.name).filter(Boolean),
     partialNames:partial.map(g => g.name).filter(Boolean),
     skippedNames:skipped.map(g => g.name).filter(Boolean),
@@ -1040,21 +1041,30 @@ function commitFinish(ctx){
     p.stats = p.stats || {completions: 0};
     state.progCheck = null;
 
-    if(!partial){
-      p.stats.completions++;
-      if(p.progression){
-        const every = Math.max(1, +p.progression || 1);
-        const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
-        const eligible = [];
-        ((pl && pl.exercises) || []).forEach(ex => {
-          if(ex.warmup || progAxis(ex) === 'none') return;
-          if(state.reachedEx && !state.reachedEx.has(ex.id) && !state.reachedEx.has(ex.name)) return;
-          const ps = ensurePs(ex);
-          ps.n++;
-          if(ps.n >= every) eligible.push(ex.id);
-        });
-        if(eligible.length) state.progCheck = {pid: p.id, plan: normPlans(p).indexOf(pl), ids: eligible, hard: new Set()};
-      }
+    if(!partial) p.stats.completions++;
+
+    // Прогрессия теперь считается по конкретному упражнению, а не по факту
+    // полного завершения всей тренировки. Если все подходы упражнения реально
+    // отмечены «Готово», оно получает свой шаг даже в частичной тренировке.
+    // Недоделанное и пропущенное упражнение не получает ничего.
+    if(p.progression){
+      const every = Math.max(1, +p.progression || 1);
+      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+      const completed = new Set([...(summary.completedIds || []), ...(summary.completedNames || [])].map(String));
+      const eligible = [];
+      ((pl && pl.exercises) || []).forEach(ex => {
+        if(ex.warmup || progAxis(ex) === 'none') return;
+        if(!completed.has(String(ex.id || '')) && !completed.has(String(ex.name || ''))) return;
+        const ps = ensurePs(ex);
+        ps.n++;
+        if(ps.n >= every) eligible.push(ex.id);
+      });
+      if(eligible.length) state.progCheck = {
+        pid:p.id,
+        plan:normPlans(p).indexOf(pl),
+        ids:eligible,
+        hard:new Set()
+      };
     }
 
     // «Закончить на сегодня» закрывает этот заход: при ротации следующий запуск
