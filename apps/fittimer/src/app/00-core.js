@@ -403,6 +403,7 @@ export const ICONS = {
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3"/>',
   pause: '<rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/>',
   play: '<path d="M7 4.5 20 12 7 19.5Z" fill="currentColor" stroke-linejoin="round"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   vol: '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.4 5.6a9 9 0 0 1 0 12.8"/>',
   volX: '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M22 9l-6 6M16 9l6 6"/>',
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.4l6.8 3.9M15.4 6.7 8.6 10.6"/>',
