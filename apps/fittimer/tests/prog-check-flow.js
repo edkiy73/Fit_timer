@@ -126,6 +126,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     openStart(p); state.planIdx = 0;
   });
   await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
   await page.evaluate(() => {
     state.stepOutcomes = {};
