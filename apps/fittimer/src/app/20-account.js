@@ -4,7 +4,7 @@ import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceU
   syncDockTabs, takeSnap
 } from './00-core.js';
 import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
-  kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, pushAccountDocs, recordConsent,
+  kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, profileDisplayName, pushAccountDocs, recordConsent,
   renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setUsersShared, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
