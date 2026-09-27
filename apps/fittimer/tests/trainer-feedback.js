@@ -123,7 +123,14 @@ async function boot(b, label, errs, url){
     const p = customPrograms.find(x => x.name === 'Сила дома');
     stats.history.push({d: localISO(new Date()), t: 9, pid: p.id, sec: 900, kcal: 90, plan: 0});
     stats.count = 1; await saveStats();
-    state.current = {sourceId: p.id}; state.raw = p; state.planIdx = 0;
+    state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
+    state.steps = buildSteps();
+    state.stepOutcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
+    state.globalStart = Date.now() - 60000;
+    state.pausedTotal = 0;
     await finishWorkout();
   });
   await cp.waitForTimeout(1800);
