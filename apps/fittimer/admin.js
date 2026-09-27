@@ -677,7 +677,7 @@ async function renderAnalytics(b,force){
   const a=analyticsCache||{},t=a.totals||{},cohort=a.cohort||{};
   const rows=[
     ['Первый запуск','install'],['Завершили onboarding','onboarding_complete'],['Создали аккаунт','account_created'],
-    ['Добавили программу','program_added'],['Начали тренировку','workout_started'],['Завершили тренировку','workout_completed'],
+    ['Добавили программу','program_added'],['Начали тренировку','workout_started'],['Завершили полностью','workout_completed'],['Завершили частично','workout_partial'],
     ['Дошли до 3 тренировок','workout_3'],['Дошли до 5 тренировок','workout_5'],['Дошли до 10 тренировок','workout_10'],
     ['Успешно использовали AI','ai_used'],['Открыли Premium','premium_opened'],['Начали покупку','purchase_started']
   ];
@@ -690,14 +690,14 @@ async function renderAnalytics(b,force){
   }).join('');
   const dayRows=(a.rows||[]).slice().reverse().map(r=>{
     const e=r.events||{},u=k=>((e[k]||{}).unique||0);
-    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td><td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td><td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td><td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
+    return '<tr><td>'+esc(r.day)+'</td><td>'+u('install')+'</td><td>'+u('onboarding_complete')+'</td><td>'+u('account_created')+'</td><td>'+u('program_added')+'</td><td>'+u('workout_completed')+'</td><td>'+u('workout_partial')+'</td><td>'+u('workout_3')+'</td><td>'+u('workout_10')+'</td><td>'+u('ai_used')+'</td><td>'+u('premium_opened')+'</td><td>'+u('purchase_started')+'</td></tr>';
   }).join('');
   const p=cohort.platform||{},l=cohort.locale||{};
   const controls='<div class="action-row"><select id="analyticsDays" style="width:auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button class="b" id="analyticsRefresh">Обновить</button><span class="action-feedback ok" id="analyticsState">✓ Обновлено</span></div>';
   b.innerHTML=pageHead('Аналитика','Период: последние '+analyticsDays+' дней. Exact unique = один анонимный device hash за период.',controls)
     +'<div class="status-row"><span class="status-chip">Cohort: '+(cohort.devices||0)+' устройств</span><span class="status-chip">Android '+(p.android||0)+'</span><span class="status-chip">iOS '+(p.ios||0)+'</span><span class="status-chip">Web '+(p.web||0)+'</span><span class="status-chip">RU '+(l.ru||0)+'</span><span class="status-chip">EN '+(l.en||0)+'</span></div>'
     +'<div class="entity-grid">'+cards+'</div>'
-    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Финиш</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
+    +'<div class="table-shell" style="overflow:auto;margin-top:18px"><table class="data-table"><thead><tr><th>День</th><th>Первый запуск</th><th>Onboarding</th><th>Аккаунт</th><th>Программа</th><th>Полный финиш</th><th>Частично</th><th>3 трен.</th><th>10 трен.</th><th>AI</th><th>Premium</th><th>Покупка</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>';
   $('analyticsDays').value=String(analyticsDays);
   $('analyticsDays').onchange=()=>{analyticsDays=+$('analyticsDays').value;analyticsCache=null;renderAnalytics(b,true);};
   $('analyticsRefresh').onclick=()=>{analyticsCache=null;renderAnalytics(b,true);};
