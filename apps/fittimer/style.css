@@ -157,9 +157,13 @@ body.booting .app{visibility:hidden}
   body.phase-rest .topbar .brand b{color:var(--rest-ink)}
   .global-clock{font-family:var(--font-display);font-size:15px;letter-spacing:.08em;color:var(--muted);font-variant-numeric:tabular-nums;display:none}
   .global-clock.on{display:block}
-  .btn-exit{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;height:34px;padding:0 12px;font-family:var(--font-text);font-size:13px;cursor:pointer;display:none;align-items:center}
-  .btn-exit.on{display:flex}
   .top-tools .icon-btn{width:34px;height:34px;border-radius:10px;padding:0;line-height:1;display:none;align-items:center;justify-content:center}
+  .work-top-menu-wrap{position:relative;display:flex}
+  .btn-work-more.on{display:flex}
+  .work-top-menu{right:0;top:42px;min-width:220px}
+  .work-top-menu .menu-sep{height:1px;background:var(--line);margin:2px 0}
+  .work-top-menu button + button{border-top:none}
+  .work-top-menu button svg{width:18px;height:18px;flex:none}
   .top-tools .icon-btn.on{display:flex}
   .top-tools .icon-btn svg{width:17px;height:17px}
   .top-tools{display:flex;align-items:center;gap:8px}
@@ -545,7 +549,7 @@ body.booting .app{visibility:hidden}
     width:100%;min-height:var(--ui-button-primary-min-h);border:none;cursor:pointer;border-radius:var(--ui-control-radius);
     background:var(--grad-accent);color:var(--on-accent);
     box-shadow:var(--sh-accent);
-    font-family:var(--font-display);font-weight:600;font-size:var(--fs-lg);letter-spacing:.09em;text-transform:uppercase;
+    font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.09em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;gap:8px;
     transition:transform .12s ease, opacity .15s ease, box-shadow .15s ease;
   }
@@ -748,16 +752,6 @@ body.booting .app{visibility:hidden}
     position:relative;width:100%;background:var(--card);border:1px solid var(--line);
     border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-1);
   }
-  .wk-edit{
-    position:absolute;left:10px;top:10px;z-index:4;
-    width:38px;height:38px;border-radius:11px;border:1px solid rgba(255,255,255,.16);
-    background:rgba(12,9,22,.72);color:#fff;backdrop-filter:blur(8px);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,.18);
-  }
-  .wk-edit svg{width:18px;height:18px}
-  .wk-edit:active{transform:scale(.96)}
-  body.phase-rest .wk-edit{display:none !important}
   .wk-body{display:flex;flex-direction:column;gap:10px;padding:var(--sp-3) var(--sp-4) var(--sp-4)}
   /* в теле карточки осталось одно предупреждение — верхнее поле превратилось бы
      в узкую белую полосу между обложкой и жёлтой плашкой */
@@ -903,12 +897,11 @@ body.booting .app{visibility:hidden}
   .btn-done{
     width:100%;min-height:58px;border:none;cursor:pointer;border-radius:var(--r-md);
     background:var(--grad-accent);color:var(--on-accent);box-shadow:var(--sh-accent);
-    font-family:var(--font-display);font-weight:600;font-size:19px;letter-spacing:.1em;text-transform:uppercase;
+    font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.09em;text-transform:uppercase;
     padding:0 18px;display:flex;align-items:center;justify-content:center;
     transition:transform .12s ease, box-shadow .15s ease;
   }
   .btn-done:active{transform:scale(.98);box-shadow:none}
-  .btn-done svg{width:20px;height:20px;margin-left:10px;flex:none;stroke-width:2.6}
   /* «Пропустить» окрашена по фазе: на упражнении со временем она была цвета отдыха,
      хотя всё вокруг — фиолетовое */
   .btn-skip{
@@ -1764,16 +1757,13 @@ body.booting .app{visibility:hidden}
   .btn-prev{flex:0 0 52px;min-height:58px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
   .btn-prev:disabled{opacity:.25}
-  .act-row .btn-done{flex:1.45 1 0;min-width:0;margin:0}
-  .act-row .btn-skip{flex:1 1 104px;width:auto;min-width:104px;margin:0;padding:0 12px;font-size:15px}
+  .act-row .btn-done,.act-row .btn-skip{flex:1 1 0;min-width:0;width:auto;margin:0;padding:0 12px}
   body.phase-rest .act-row .btn-skip{flex:1}
   @media (max-width:380px){
     .act-row{gap:7px}
     .btn-prev{flex-basis:48px}
-    .act-row .btn-skip{min-width:94px;padding:0 9px;font-size:14px}
-    .act-row .btn-done{font-size:18px;padding:0 12px}
+    .act-row .btn-done,.act-row .btn-skip{padding:0 8px;font-size:15px}
   }
-  .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
   .vol-label b{font-family:var(--font-display);color:var(--accent-ink);font-size:15px}
