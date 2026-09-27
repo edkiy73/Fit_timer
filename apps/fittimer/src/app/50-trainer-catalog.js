@@ -552,7 +552,9 @@ const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
 const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
 
 function buildReport(p){
-  const mine = stats.history.filter(h => h.pid === p.id);
+  // Пока частичный отчёт не имеет собственного формата, не выдаём его тренеру
+  // за полное прохождение. Отдельный честный формат добавим следующим этапом.
+  const mine = stats.history.filter(h => h.pid === p.id && h.status !== 'partial');
   const me = users.find(u => u.id === currentUser);
   const plans = normPlans(p);
 
