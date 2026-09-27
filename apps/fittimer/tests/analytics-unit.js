@@ -10,6 +10,7 @@ const ok=(name,cond,extra)=>{if(!cond)bad++;console.log((cond?'  ok  ':' ПЛО�
   await recordAnalytics({event:'install',deviceId:'dev-b',platform:'web',locale:'en'});
   await recordAnalytics({event:'account_created',deviceId:'dev-a',platform:'android',locale:'ru'});
   await recordAnalytics({event:'workout_completed',deviceId:'dev-a',platform:'android',locale:'ru'});
+  await recordAnalytics({event:'workout_partial',deviceId:'dev-a',platform:'android',locale:'ru'});
   await recordAnalytics({event:'workout_3',deviceId:'dev-a',platform:'android',locale:'ru'});
   await recordAnalytics({event:'ai_used',deviceId:'dev-a',platform:'android',locale:'ru'});
   await recordAnalytics({event:'premium_opened',deviceId:'dev-a',platform:'android',locale:'ru',premium:true});
@@ -17,8 +18,9 @@ const ok=(name,cond,extra)=>{if(!cond)bad++;console.log((cond?'  ok  ':' ПЛО�
   const today=s.rows[0];
   ok('события считаются',today.events.install.count===3,JSON.stringify(today.events.install));
   ok('unique не дублирует одно устройство',today.events.install.unique===2,JSON.stringify(today.events.install));
-  ok('другое событие считается отдельно',today.events.workout_completed.count===1);
-  ok('платформы агрегируются по событиям',today.platform.android===7&&today.platform.web===1,JSON.stringify(today.platform));
+  ok('полная тренировка считается отдельно',today.events.workout_completed.count===1);
+  ok('частичная тренировка считается отдельно',today.events.workout_partial.count===1);
+  ok('платформы агрегируются по событиям',today.platform.android===8&&today.platform.web===1,JSON.stringify(today.platform));
   ok('Premium-флаг хранится только агрегатом',today.premium===1,String(today.premium));
   ok('воронка считает устройство один раз за весь период',s.totals.install.unique===2&&s.totals.account_created.unique===1&&s.totals.ai_used.unique===1,JSON.stringify(s.totals));
   ok('cohort содержит только анонимные агрегаты',s.cohort.devices===2&&s.cohort.platform.android===1&&s.cohort.platform.web===1,JSON.stringify(s.cohort));

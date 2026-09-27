@@ -66,20 +66,28 @@ module.exports = async (req, res) => {
 
   await store.push(`p:${id}:reports`, JSON.stringify({
     at: new Date().toISOString(),
-    v: 2,
+    v: 3,
     _account: accountHash || undefined,
     who: str(r.who, 40),
     name: str(r.name, 80),
     n: num(r.n, 9999),
+    full: num(r.full, 9999),
+    partial: num(r.partial, 9999),
     sec: num(r.sec, 9999999),
     streak: num(r.streak, 999),
     first: str(r.first, 10),
     last: str(r.last, 10),
-    // журнал тренировок: дата, вариант, длительность
-    log: arr(r.log, 30).map(x => ({d: str(x.d, 10), p: num(x.p, 20), sec: num(x.sec, 99999)})),
-    // варианты программы и сколько раз каждый сделан
-    plans: arr(r.plans, 10).map(x => ({i: num(x.i, 20), days: str(x.days, 40),
-                                       n: num(x.n, 9999), sec: num(x.sec, 99999)})),
+    // журнал тренировок: дата, вариант, длительность и честный статус
+    log: arr(r.log, 30).map(x => ({
+      d: str(x.d, 10), p: num(x.p, 20), sec: num(x.sec, 99999),
+      partial: x.partial ? 1 : 0,
+      done: num(x.done, 99), all: num(x.all, 99)
+    })),
+    // варианты программы: полные и частичные отдельно
+    plans: arr(r.plans, 10).map(x => ({
+      i: num(x.i, 20), days: str(x.days, 40),
+      n: num(x.n, 9999), partial: num(x.partial, 9999), sec: num(x.sec, 99999)
+    })),
     // рост нагрузки по всем вариантам, разминка помечена
     ex: arr(r.ex, 40).map(e => ({
       p: num(e.p, 20), w: e.w ? 1 : 0,
