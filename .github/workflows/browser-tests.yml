@@ -35,7 +35,7 @@ jobs:
         run: |
           npm run setup
           npm --prefix apps/fittimer install --no-save playwright@1.55.0
-          npm --prefix apps/fittimer exec playwright install --with-deps chromium
+          cd apps/fittimer && npx playwright install --with-deps chromium && cd ../..
           echo "FIT_CHROME=$(cd apps/fittimer && node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
 
       # Собирает dist, на время прогона включает тестовый мост (__FIT_TEST_MODE__,
