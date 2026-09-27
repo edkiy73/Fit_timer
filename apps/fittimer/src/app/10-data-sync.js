@@ -1072,7 +1072,12 @@ async function applyRemoteSyncNow(result){
       // тренировки на двух телефонах должны дать два повышения, а не победителя LWW.
       const history = (stat && stat.history) || [];
       progs.forEach(p => {
-        const n = history.filter(h => String(h.pid || '') === String(p.id)).length;
+        // Старые записи без status — это обычные полные тренировки. Частичная
+        // история сохраняет активность, но не должна превращаться в full completion
+        // после синхронизации другого устройства.
+        const n = history.filter(h =>
+          String(h.pid || '') === String(p.id) && h.status !== 'partial'
+        ).length;
         if(n){ p.stats = p.stats || {}; p.stats.completions = Math.max(+p.stats.completions||0, n); }
       });
       await kvSet('customPrograms_' + localId, JSON.stringify(progs));
@@ -1924,7 +1929,16 @@ function sessRow(en, withDate, withStatus){
     else if(typeof en.plan === 'number') variant = t('sessions.variant',{count:en.plan+1});
   }
   const parts = [];
-  if(withStatus) parts.push(t('sessions.doneText'));
+  const isPartial = en.status === 'partial';
+  if(isPartial){
+    parts.push(t('sessions.partialText'));
+    if(Number(en.plannedExercises) > 0){
+      parts.push(t('sessions.partialProgress',{
+        done:Math.max(0, Number(en.doneExercises) || 0),
+        all:Math.max(0, Number(en.plannedExercises) || 0)
+      }));
+    }
+  } else if(withStatus) parts.push(t('sessions.doneText'));
   if(en.sec) parts.push(en.sec < 60 ? t('time.lessMinute') : t('time.minutes',{minutes:Math.round(en.sec/60)}));
   if(en.kcal) parts.push(`≈${en.kcal} ${t('workout.kcal')}`);
   if(variant) parts.push(variant);
