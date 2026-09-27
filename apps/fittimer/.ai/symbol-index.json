@@ -758,8 +758,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1773,
-      "chars": 79944,
+      "lines": 1769,
+      "chars": 79666,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -772,7 +772,6 @@
         "badgeDesc",
         "badgeName",
         "buildSteps",
-        "buildWorkMenu",
         "clearStepTimer",
         "closeSwapHint",
         "col",
@@ -1334,8 +1333,8 @@
     },
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
-      "lines": 151,
-      "chars": 9527,
+      "lines": 145,
+      "chars": 9226,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1400,9 +1399,7 @@
         "swapSlot",
         "videoCta",
         "videoLink",
-        "workMenu",
-        "workMenuWrap",
-        "workMore"
+        "workEdit"
       ]
     },
     "src/html/30-onboarding-account.html": {
