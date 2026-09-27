@@ -423,6 +423,8 @@ The provider-neutral document store and first shadow schema are now implemented:
 
 The next decision is operational rather than architectural: add Supabase server env to Vercel, enable shadow write first, observe parity, then enable compare. Do not switch authoritative reads yet.
 
+- 2026-09-27: decision changed to a **full store cutover** instead of a sync-only one: `store.js` gained engines (Upstash / Supabase `appbase_kv` + `kv_exec` / memory) and the `APPBASE_STORE` primary+mirror modes; Admin → «Хранилище» copies and verifies data. The database stays in Asia (FitT, Tokyo) until the main market is chosen; functions move to the same region at the cutover step. See `apps/fittimer/docs/infrastructure-adapters.md` (Phase S5).
+
 ## Phase 11 — Admin decomposition
 
 Owner: Architect + Extraction Engineer. Review: Security + QA.

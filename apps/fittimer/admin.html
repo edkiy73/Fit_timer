@@ -448,6 +448,10 @@
   .ai-route-state{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
   .ai-route-state>div{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--soft);font-size:11.5px}
   .ai-route-state b{display:block;margin-bottom:2px}.ai-route-state .bad{color:var(--danger)}
+  .campaign-preview b.bad{color:var(--danger)}
+  .storage-step{padding:9px 10px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
+  .storage-step.on{border-color:var(--ok);background:var(--soft)}
+  .storage-step code{font-size:11.5px;color:var(--muted)}
   .payment-summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
   .payment-card.problem{border-color:color-mix(in srgb,var(--danger) 35%,var(--line))}
   .payment-ready.warn{color:var(--danger)}
@@ -533,6 +537,7 @@
         <button class="nav-btn" data-tab="pricing"><span>Premium и цены</span></button>
         <button class="nav-btn" data-tab="payments"><span>Платежи</span></button>
         <button class="nav-btn" data-tab="release"><span>Релиз Android</span></button>
+        <button class="nav-btn" data-tab="storage"><span>Хранилище</span></button>
       </div>
     </aside>
     <div class="nav-shade" id="navShade"></div>

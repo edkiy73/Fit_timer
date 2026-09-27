@@ -270,7 +270,42 @@ Never put the secret key into `app.config.js`, browser code or the APK.
 
 After redeploy, `/api/health` shows Supabase connection status. This only checks connectivity; it does not switch storage and does not create tables.
 
-The current Supabase project `FitT` is intentionally left without application tables until the document schema/shadow-write migration is reviewed.
+Supabase project `FitT` (region `ap-northeast-1`, Tokyo) has two application tables:
+`appbase_documents` (legacy sync shadow, retired after the cutover) and `appbase_kv` —
+the full server store (migration `supabase/migrations/20260927140000_create_appbase_kv.sql`,
+function `kv_exec`, pg_cron job `appbase-kv-expire`).
+
+## Переезд хранилища Upstash → Supabase
+
+Весь сервер хранит данные через `packages/core/server/store.js`. Какая база главная,
+решает переменная `APPBASE_STORE` (Vercel → Settings → Environment Variables → Production,
+после изменения — Redeploy):
+
+| Значение | Читаем | Пишем | Когда |
+| --- | --- | --- | --- |
+| не задано / `redis` | Upstash | Upstash | до переезда |
+| `redis+supabase` | Upstash | Upstash + копия в Supabase | шаг 1: перенос и сверка |
+| `supabase+redis` | Supabase | Supabase + копия в Upstash | шаг 2: Supabase главный, откат мгновенный |
+| `supabase` | Supabase | Supabase | шаг 3: через 1–2 недели спокойной работы |
+
+Порядок:
+
+1. Задать `APPBASE_STORE=redis+supabase`, Redeploy. В админке → **Хранилище** нажать
+   «Перенести всё», затем «Сверить» (при расхождениях — «Сверить и починить») до нуля.
+2. Задать `APPBASE_STORE=supabase+redis` **вместе** с переносом функций Vercel в регион базы
+   (`vercel.json → regions: ["hnd1"]` для Tokyo), Redeploy. Снова «Сверить»: теперь сверка идёт
+   от Supabase к Upstash. Откат — вернуть `redis+supabase` (и регион `fra1`): Upstash всё это время
+   получал каждую запись.
+3. `APPBASE_STORE=supabase`, затем отключить интеграцию Upstash и удалить старую теневую синхронизацию
+   (`SUPABASE_SHADOW_*`, `sync-shadow.js`, таблицу `appbase_documents`).
+
+Короткоживущие ключи (`rl:*` — лимиты частоты, `lock:*`, `healthcheck:*`) не зеркалируются и не
+переносятся: они истекают за минуты. Сбой записи в зеркало не роняет запрос, а считается и виден в
+админке («сбоев зеркала»); сверка находит и чинит такие ключи.
+
+Функции и база должны стоять в одном регионе: каждое обращение к базе через полмира стоит 0,2–0,3 с.
+Если основной рынок изменится, новый проект Supabase в нужном регионе переносится тем же способом
+(парный режим → перенос → сверка).
 
 ## OpenRouter
 
@@ -279,7 +314,7 @@ To enable OpenRouter as an optional text AI provider:
 - add `OPENROUTER_API_KEY` in Vercel Production;
 - optionally add `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME`;
 - redeploy;
-- in Admin AI settings choose `openrouter` for a **text** primary/backup route and specify an OpenRouter model id.
+- in Admin → **ИИ** → карточка **OpenRouter**: указать модель (`компания/модель` со страницы openrouter.ai/models), «Проверить без сохранения», затем «Сделать основной/резервной для текста» и сохранить.
 
 Existing Gemini/OpenAI routes remain available and the default route does not change automatically.
 

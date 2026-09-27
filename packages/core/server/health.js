@@ -66,6 +66,8 @@ async function collectHealth({probes: productProbes = []} = {}){
   const criticalOk = probes.filter(x=>x.name!=='supabase').every(x=>x.ok);
   const optionalWarnings = [];
   if(info.memory) optionalWarnings.push('Хранилище работает только в памяти процесса.');
+  if(!info.modeValid) optionalWarnings.push('APPBASE_STORE содержит неизвестный режим: '+info.mode+'.');
+  if(info.mirrorMissing) optionalWarnings.push('Режим '+info.mode+' требует зеркало, но его ключи не заданы — записи не дублируются.');
   if(!mail.ready) optionalWarnings.push('Почта не настроена — вход по email-коду недоступен.');
   if(!ai.gemini && !ai.openai && !ai.openrouter) optionalWarnings.push('Нет настроенного AI-провайдера.');
   if(supabase.configured && supabaseProbe && !supabaseProbe.ok) optionalWarnings.push('Supabase настроен, но connection health не проходит.');
@@ -86,7 +88,8 @@ async function collectHealth({probes: productProbes = []} = {}){
     probes,
     storage:{
       status:storageProbe && storageProbe.ok ? 'ok' : 'error',
-      mode:info.connected ? 'redis' : (info.memory ? 'memory' : 'none'),
+      mode:info.connected ? info.primary + (info.mirror ? '+' + info.mirror : '') : (info.memory ? 'memory' : 'none'),
+      configuredMode:info.mode,
       connected:!!info.connected,
       latencyMs:storageProbe ? storageProbe.latencyMs : null,
       steps:storageSteps,
