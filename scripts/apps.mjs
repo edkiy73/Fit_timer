@@ -42,7 +42,7 @@ if(mode === 'setup'){
     const hasDeps = Object.keys(app.pkg.dependencies || {}).length || Object.keys(app.pkg.devDependencies || {}).length;
     if(await exists(lock)){
       console.log('\n== setup ' + app.name + ' ==');
-      await run('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], app.dir);
+      await run('npm', ['ci', '--no-audit', '--no-fund'], app.dir);
     }else if(hasDeps){
       throw new Error(app.name + ' has dependencies but no package-lock.json');
     }else{
