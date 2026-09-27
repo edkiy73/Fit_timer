@@ -157,9 +157,13 @@ body.booting .app{visibility:hidden}
   body.phase-rest .topbar .brand b{color:var(--rest-ink)}
   .global-clock{font-family:var(--font-display);font-size:15px;letter-spacing:.08em;color:var(--muted);font-variant-numeric:tabular-nums;display:none}
   .global-clock.on{display:block}
-  .btn-exit{background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;height:34px;padding:0 12px;font-family:var(--font-text);font-size:13px;cursor:pointer;display:none;align-items:center}
-  .btn-exit.on{display:flex}
   .top-tools .icon-btn{width:34px;height:34px;border-radius:10px;padding:0;line-height:1;display:none;align-items:center;justify-content:center}
+  .work-top-menu-wrap{position:relative;display:flex}
+  .btn-work-more.on{display:flex}
+  .work-top-menu{right:0;top:42px;min-width:220px}
+  .work-top-menu .menu-sep{height:1px;background:var(--line);margin:2px 0}
+  .work-top-menu button + button{border-top:none}
+  .work-top-menu button svg{width:18px;height:18px;flex:none}
   .top-tools .icon-btn.on{display:flex}
   .top-tools .icon-btn svg{width:17px;height:17px}
   .top-tools{display:flex;align-items:center;gap:8px}
