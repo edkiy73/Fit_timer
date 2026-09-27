@@ -1122,9 +1122,39 @@ export function initEvents(){
   };
   $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
   $('startBackTop').onclick = ()=> goTab(startFrom);
-  $('btnDone').onclick  = ()=>{ initAudio(); beep(990,.1); completeStep(); };
-  $('btnSkip').onclick  = skipStep;
-  $('btnPrev').onclick  = prevStep;
+  let skipConfirmIdx = -1;
+  let skipConfirmT = 0;
+  const resetSkipConfirm = ()=>{
+    clearTimeout(skipConfirmT);
+    skipConfirmT = 0;
+    skipConfirmIdx = -1;
+    const step = state.steps && state.steps[state.stepIdx];
+    $('btnSkip').textContent = t(step && step.phase === 'rest' ? 'workout.next' : 'workout.skip');
+    $('btnSkip').classList.remove('confirm');
+  };
+  $('btnDone').onclick = ()=>{
+    resetSkipConfirm();
+    initAudio(); beep(990,.1); completeStep();
+  };
+  $('btnSkip').onclick = ()=>{
+    const step = state.steps && state.steps[state.stepIdx];
+    if(step && step.phase === 'rest'){
+      resetSkipConfirm();
+      skipStep();
+      return;
+    }
+    if(skipConfirmIdx !== state.stepIdx){
+      clearTimeout(skipConfirmT);
+      skipConfirmIdx = state.stepIdx;
+      $('btnSkip').textContent = t('workout.areYouSure');
+      $('btnSkip').classList.add('confirm');
+      skipConfirmT = setTimeout(resetSkipConfirm, 3000);
+      return;
+    }
+    resetSkipConfirm();
+    skipStep();
+  };
+  $('btnPrev').onclick = ()=>{ resetSkipConfirm(); prevStep(); };
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
   $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
