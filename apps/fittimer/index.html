@@ -27,7 +27,10 @@
     <div class="top-tools">
       <button class="icon-btn btn-sound" id="btnSoundW" title="Звук" data-i18n-title="top.soundTitle" data-icon="vol"></button>
       <button class="icon-btn btn-mic" id="btnMicW" title="Голосовое управление" data-i18n-title="top.voiceTitle" data-icon="mic"></button>
-            <button class="btn-exit" id="btnExit" data-i18n="common.exit">Выйти</button>
+      <div class="work-top-menu-wrap" id="workTopMenuWrap">
+        <button class="icon-btn btn-work-more" id="workMore" title="Действия" data-i18n-title="common.actions"></button>
+        <div class="ctx-menu work-top-menu" id="workMenu"></div>
+      </div>
     </div>
   </div>
 
@@ -883,7 +886,6 @@
              не быть совсем (нет ни описания, ни мышц, ни ошибок) -->
         <div class="swap-slot hidden" id="swapSlot"></div>
         <div class="wk-card" id="exCard">
-          <button type="button" class="wk-edit hidden" id="workEdit" title="Изменить упражнение" data-i18n-title="workout.editExercise"><span data-icon="pencil"></span></button>
           <div class="illo-wrap" id="illoWrap">
             <button type="button" class="swap-badge hidden" id="swapBadge"><span id="swapBadgeIcon"></span><span data-i18n="workout.canProgress">Можно усложнить</span></button>
             <a class="yt-badge" id="videoLink" target="_blank" rel="noopener" title="Смотреть видео" data-i18n-title="workout.watchVideo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16 4 12 4 12 4s-4 0-6.8.3c-.4 0-1.2 0-2 .9-.6.6-.8 2-.8 2S2 8.8 2 10.5v1.9c0 1.7.2 3.3.2 3.3s.2 1.4.8 2c.8.8 1.8.8 2.3.9 1.6.2 6.7.3 6.7.3s4 0 6.8-.3c.4 0 1.2 0 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.9c0-1.7-.2-3.3-.2-3.3ZM10 14.6V8.9l4.7 2.9-4.7 2.8Z"/></svg></a>
@@ -905,8 +907,7 @@
     <div class="actions">
       <div class="act-row">
         <button class="btn-prev" id="btnPrev" title="Предыдущий этап" data-i18n-title="workout.previous"></button>
-        <button class="btn-prev" id="btnPause" title="Пауза" data-i18n-title="workout.pause"></button>
-        <button class="btn-done" id="btnDone"><span data-i18n="workout.done">Готово</span><span data-icon="check"></span></button>
+        <button class="btn-done" id="btnDone" data-i18n="workout.done">Готово</button>
         <button class="btn-skip" id="btnSkip" data-i18n="workout.skip">Пропустить</button>
       </div>
     </div>

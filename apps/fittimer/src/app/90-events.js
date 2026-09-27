@@ -59,7 +59,7 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
-  completeStep, exFromWork, exitWorkout, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
+  completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
 } from './70-workout.js';
@@ -1127,7 +1127,6 @@ export function initEvents(){
   $('btnPrev').onclick  = prevStep;
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
-  $('btnExit').onclick  = exitWorkout;
   $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
   $('exitSave').onclick = async ()=>{
     $('exitModal').classList.remove('open');
@@ -1145,7 +1144,6 @@ export function initEvents(){
     await clearSession();
     tearDownWorkout();
   };
-  $('btnPause').onclick = ()=> setPause(!state.paused);
   window.addEventListener('fitRemotePushToken',async e=>{
     const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
     let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
@@ -2108,7 +2106,6 @@ export function initEvents(){
     // при возврате первый тик сразу догонит прошедшее время.
   });
   // статичные иконки
-  $('btnPause').innerHTML = icon('pause');
   $('btnMicW').innerHTML = icon('mic');
   // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
   $('storeIcoMenu').innerHTML = $('storeIcoProg').innerHTML = icon('book');

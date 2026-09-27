@@ -1,24 +1,30 @@
 const fs = require('fs');
 
+const shell = fs.readFileSync('src/html/00-shell-home.html','utf8');
 const html = fs.readFileSync('src/html/20-workout-finish.html','utf8');
 const workout = fs.readFileSync('src/app/70-workout.js','utf8');
 const css = fs.readFileSync('src/styles/30-themes-settings.css','utf8');
+const actionCss = fs.readFileSync('src/styles/10-start-workout.css','utf8');
 
 const need = (ok, msg) => { if(!ok) throw new Error(msg); };
 
-need(html.includes('id="workEdit"'), 'exercise-card edit button is missing');
-need(!html.includes('id="workMore"') && !html.includes('id="workMenu"'), 'old workout overflow menu still exists');
-need(html.includes('id="btnDone"') && html.includes('id="btnSkip"'), 'done/skip controls are missing');
+need(shell.includes('id="workMore"') && shell.includes('id="workMenu"'),
+  'top workout menu is missing');
+need(!shell.includes('id="btnExit"'), 'old Exit button still exists in workout top bar');
+need(!html.includes('id="workEdit"'), 'card edit button must be moved to top menu');
+need(!html.includes('id="btnPause"'), 'pause must not occupy bottom action bar');
+need(html.includes('id="btnPrev"') && html.includes('id="btnDone"') && html.includes('id="btnSkip"'),
+  'bottom bar must contain only Back, Done and Skip');
+need(!html.includes('data-icon="check"'), 'Done button must not contain a check icon');
 
-need(workout.includes("setShown('workEdit', step.phase === 'work' && !!step.exName)"),
-  'edit control must be visible only on work steps');
-need(/setShown\('btnDone', true\);\s*setShown\('btnSkip', true\)/.test(workout),
-  'repetition steps must expose both Done and Skip');
-need(/setShown\('btnDone', step\.phase === 'work'\);\s*setShown\('btnSkip', true\)/.test(workout),
-  'timed work steps must expose both Done and Skip while rest keeps Skip');
-need(workout.includes("$('workEdit').onclick"), 'exercise-card edit button is not wired');
+need(workout.includes("edit.id = 'workEditItem'"), 'Edit exercise top-menu item is missing');
+need(workout.includes("pause.id = 'workPauseItem'"), 'Pause top-menu item is missing');
+need(workout.includes("stop.id = 'workExitItem'"), 'Stop workout top-menu item is missing');
+need(workout.includes("sep.className = 'menu-sep'"), 'menu separator is missing');
 
-need(css.includes('.act-row .btn-done{flex:1.45'), 'Done must remain the primary wide action');
-need(css.includes('.act-row .btn-skip{flex:1 1 104px'), 'Skip must have a compact permanent slot');
+need(actionCss.includes('font-size:16px;letter-spacing:.09em;text-transform:uppercase'),
+  'Done and Skip typography must use the same font size/weight treatment');
+need(css.includes('.act-row .btn-done,.act-row .btn-skip{flex:1 1 0'),
+  'Done and Skip must share the bottom row evenly');
 
 console.log('workout controls contract: ok');

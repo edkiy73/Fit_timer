@@ -510,6 +510,7 @@ export const I18N_EN = {
   'voicepack.retry': "Retry",
   'voicepack.startError': "Couldn’t start the download. Check your connection and try again.",
   'workout.editExercise': "Edit exercise",
+  'workout.stopWorkout': "Stop workout",
   'workout.editUnavailable': "This exercise is not from a saved program, so there’s nothing to edit.",
   'workout.rest': "Rest",
   'workout.exercise': "Exercise",

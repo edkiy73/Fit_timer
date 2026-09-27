@@ -510,6 +510,7 @@ export const I18N_RU = {
   'voicepack.retry': "Повторить",
   'voicepack.startError': "Не удалось запустить загрузку. Проверь интернет и попробуй ещё раз.",
   'workout.editExercise': "Изменить упражнение",
+  'workout.stopWorkout': "Прервать тренировку",
   'workout.editUnavailable': "Это упражнение не из сохранённой программы — менять нечего.",
   'workout.rest': "Отдых",
   'workout.exercise': "Упражнение",
