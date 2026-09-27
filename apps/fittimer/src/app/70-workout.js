@@ -8,7 +8,7 @@ import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRe
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
-  saveStats, stats, streakWord, trackProductEvent, users
+  saveStats, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
 import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
@@ -190,10 +190,11 @@ export function setPause(p, silent){
 function paintPause(){
   const p = !!state.paused;
   document.body.classList.toggle('paused', p);
-  const btn = $('btnPause');
-  btn.innerHTML = icon(p ? 'play' : 'pause');
-  btn.title = p ? t('workout.resume') : t('workout.pause');
-  btn.classList.toggle('paused', p);
+  const btn = $('workPauseItem');
+  if(btn){
+    btn.innerHTML = icon(p ? 'play' : 'pause') + '<span></span>';
+    btn.querySelector('span').textContent = p ? t('workout.resume') : t('workout.pause');
+  }
   const step = state.steps[state.stepIdx];
   if(step){
     $('phaseTag').textContent = p ? t('workout.pause') : (step.phase==='rest' ? t('workout.rest') : t('workout.exercise'));
@@ -386,7 +387,8 @@ function renderStep(){
   if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
-  setShown('workEdit', step.phase === 'work' && !!step.exName);
+  setShown('workEditItem', step.phase === 'work' && !!step.exName);
+  setShown('workMenuSep', step.phase === 'work' && !!step.exName);
   // на отдыхе подписи берём с последнего рабочего шага — у самого отдыха этих данных нет
   const labelStep = step.phase === 'rest' ? lastWorkStep() : step;
   // круг / разминка + подход
@@ -1749,10 +1751,52 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
-  $('workEdit').onclick = e => {
+  $('workMore').innerHTML = icon('more');
+  $('workMore').onclick = e => {
     e.stopPropagation();
-    editExerciseFromWorkout();
+    toggleMenu($('workMenu'));
   };
+  (function buildWorkoutTopMenu(){
+    const box = $('workMenu');
+    box.innerHTML = '';
+
+    const edit = document.createElement('button');
+    edit.id = 'workEditItem';
+    edit.innerHTML = icon('pencil') + '<span></span>';
+    edit.querySelector('span').textContent = t('workout.editExercise');
+    edit.onclick = e => {
+      e.stopPropagation();
+      closeAllMenus();
+      editExerciseFromWorkout();
+    };
+
+    const sep = document.createElement('div');
+    sep.id = 'workMenuSep';
+    sep.className = 'menu-sep';
+
+    const pause = document.createElement('button');
+    pause.id = 'workPauseItem';
+    pause.innerHTML = icon('pause') + '<span></span>';
+    pause.querySelector('span').textContent = t('workout.pause');
+    pause.onclick = e => {
+      e.stopPropagation();
+      closeAllMenus();
+      setPause(!state.paused);
+    };
+
+    const stop = document.createElement('button');
+    stop.id = 'workExitItem';
+    stop.className = 'danger';
+    stop.innerHTML = icon('stop') + '<span></span>';
+    stop.querySelector('span').textContent = t('workout.stopWorkout');
+    stop.onclick = e => {
+      e.stopPropagation();
+      closeAllMenus();
+      exitWorkout();
+    };
+
+    box.append(edit, sep, pause, stop);
+  })();
   window.addEventListener('fitAppBackground', ()=>{
     if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
     clearTimeout(nativeSessionSaveT);
