@@ -124,6 +124,36 @@ async function boot(b, label, errs, url){
   ok('отчёт доехал сам, без единого нажатия', card.n >= 1, card.txt.slice(0, 56) + '…');
   ok('видно, что клиент открыл ссылку', await tp.evaluate(() => clients[0].progs[0].opens > 0));
 
+  // ---- частичная тренировка тоже уходит автоматически и помечается честно ----
+  await cp.evaluate(async () => {
+    const p = customPrograms.find(x => x.name === 'Сила дома');
+    stats.history.push({
+      id:'partial-report-test', d:localISO(new Date()), t:10, pid:p.id, sec:420, plan:0,
+      status:'partial', meaningful:true, doneExercises:1, plannedExercises:2,
+      doneSteps:1, plannedSteps:2, exercises:['Приседания']
+    });
+    stats.totalSec += 420;
+    await saveStats();
+    autoReport(p);
+  });
+  await cp.waitForTimeout(1200);
+  await tp.evaluate(() => openClient(0));
+  await tp.waitForTimeout(1500);
+  const partialCard = await tp.evaluate(() => {
+    const pr=clients[0].progs[0];
+    const r=(pr.reports||[]).slice(-1)[0]||{};
+    return {
+      reports:(pr.reports||[]).length,
+      partial:r.partial,
+      log:(r.log||[]).slice(-1)[0]||{},
+      txt:document.getElementById('clProgs').textContent.replace(/\s+/g,' ').trim()
+    };
+  });
+  ok('частичный отчёт доехал тренеру',
+    partialCard.partial >= 1 && partialCard.log.partial === 1,
+    JSON.stringify(partialCard));
+  ok('в карточке тренера явно написано «частично»', /частично/i.test(partialCard.txt), partialCard.txt.slice(0,100));
+
   // сервер — источник правды: повторный заход не должен задваивать отчёты
   const was = await tp.evaluate(() => clients[0].progs[0].reports.length);
   await tp.evaluate(() => openClient(0));
