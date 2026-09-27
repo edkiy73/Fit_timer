@@ -231,14 +231,6 @@ export function startWorkout(fromIdx, elapsed, options){
       if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
     });
   }
-  // reachedEx пока оставляем как совместимый производный набор для старой логики
-  // прогрессии. В следующей пачке она будет считать только полностью выполненные
-  // упражнения по stepOutcomes.
-  state.reachedEx = new Set();
-  state.steps.forEach((step, i) => {
-    if(step.phase !== 'work' || state.stepOutcomes[workoutStepKey(step, i)] !== 'done') return;
-    state.reachedEx.add(step.exId || step.exName || step.title);
-  });
   show('scrWork');
   startHandsFree();
   // отсчёт 5..1 перед стартом
@@ -664,9 +656,6 @@ function markCurrentStep(outcome){
   state.stepOutcomes = state.stepOutcomes || {};
   const key = workoutStepKey(step, state.stepIdx);
   if(key) state.stepOutcomes[key] = outcome;
-  if(outcome === 'done' && state.reachedEx){
-    state.reachedEx.add(step.exId || step.exName || step.title);
-  }
   if(state.stepIdx < (state.steps || []).length - 1) saveSession().catch(()=>{});
 }
 
@@ -956,8 +945,9 @@ export function workoutOutcomeSummary(){
   };
 }
 
-// Запись результата. Полная и частичная тренировки обе сохраняют реальную работу,
-// но только полная увеличивает счётчик завершений программы и двигает прогрессию.
+// Запись результата. Полная и частичная тренировки обе сохраняют реальную работу.
+// Полная увеличивает счётчик завершений программы; прогрессия считается отдельно
+// по каждому полностью выполненному упражнению.
 function commitFinish(ctx){
   const totalSec = ctx.totalSec, srcProgram = ctx.srcProgram;
   const now = ctx.at || Date.now();
