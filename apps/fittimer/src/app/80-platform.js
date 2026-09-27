@@ -4,7 +4,7 @@ import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, l
   loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
   state, syncSoundCascade, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
-import { DAYS, curUser, customPrograms, kvSet, loadSession, localISO, normPlans, planDays,
+import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, stats
 } from './10-data-sync.js';
 import { isPremium } from './20-account.js';
@@ -639,37 +639,44 @@ export async function syncNativeNotifications(){
     items.push(item);
   };
 
-  let savedSession = null;
+  let savedSessions = [];
   try{
-    if(!(state && state.live) && typeof loadSession === 'function') savedSession = await loadSession();
-  }catch(_){}
+    if(!(state && state.live) && typeof loadSessions === 'function') savedSessions = await loadSessions();
+    else if(!(state && state.live) && typeof loadSession === 'function'){
+      const one = await loadSession();
+      if(one) savedSessions = [one];
+    }
+  }catch(_){ savedSessions = []; }
+
   const blockedKeys = new Set();
   if(state && state.live && state.raw && state.raw.id){
     blockedKeys.add(notifyDayKey(now) + '|' + state.raw.id);
   }
-  if(savedSession && savedSession.pid && savedSession.at){
+  savedSessions.forEach(savedSession => {
+    if(!savedSession || !savedSession.pid || !savedSession.at) return;
     const sessionDay = new Date(+savedSession.at);
     if(!isNaN(sessionDay)) blockedKeys.add(notifyDayKey(sessionDay) + '|' + savedSession.pid);
-  }
+  });
 
   if(prefs.workouts !== false){
     buildWorkoutNotificationCandidates(now, prefs, blockedKeys).forEach(add);
 
-    // Сохранённая незавершённая тренировка сильнее обычного расписания этой же
-    // программы: одно конкретное «продолжить с места», без второго общего reminder.
-    if(savedSession && savedSession.at){
+    // Каждая сохранённая незавершённая тренировка получает максимум одно конкретное
+    // напоминание. Все такие программы исключены из общих digest.
+    savedSessions.forEach(savedSession => {
+      if(!savedSession || !savedSession.at) return;
+      const started = new Date(+savedSession.at);
       const at = new Date(+savedSession.at + 2 * 3600000);
-      if(+at > +now && +at - +new Date(savedSession.at) < NOTIFY_DAY){
-        const p = customPrograms.find(x => x.id === savedSession.pid);
-        add({
-          at:at.toISOString(),
-          title:t('notify.unfinishedTitle'),
-          body:t('notify.unfinishedBody',{name:(p && p.name) || t('sessions.workoutFallback')}),
-          priority:85,
-          extra:{programId:savedSession.pid, stage:'unfinished', category:'workouts'}
-        });
-      }
-    }
+      if(+at <= +now || +at - +started >= NOTIFY_DAY) return;
+      const p = customPrograms.find(x => x.id === savedSession.pid);
+      add({
+        at:at.toISOString(),
+        title:t('notify.unfinishedTitle'),
+        body:t('notify.unfinishedBody',{name:(p && p.name) || t('sessions.workoutFallback')}),
+        priority:85,
+        extra:{programId:savedSession.pid, stage:'unfinished', category:'workouts'}
+      });
+    });
   }
 
   // Возврат после паузы: не ставим его вообще на день, где есть план тренировки.
