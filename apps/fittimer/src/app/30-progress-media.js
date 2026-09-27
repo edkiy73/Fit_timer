@@ -5,7 +5,7 @@ import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { $, appAlert, appConfirm, appDialog, icon, plural, setShown, show } from './00-core.js';
 import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
-  renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
+  isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
   setCurrentUserShared, setUsersShared, stats, users, validAge, wellList
 } from './10-data-sync.js';
 import { GLOBAL_KEYS, PROFILE_KEYS } from './20-account.js';
@@ -853,10 +853,9 @@ function sanitizeExercise(ex){
 // ему не нужна, поэтому первый профиль просто «Мой профиль», а следующие нумеруются,
 // чтобы их можно было различить в списке.
 export const NAME_MAX = 20;   // длиннее не помещается ни в приветствие, ни в строку профиля
-const DEFAULT_PROFILE_NAMES = ['Мой профиль','My profile'];
 const defaultProfileName = ()=> t('profile.defaultMine');
 export function nextProfileName(){
-  if(!users.some(u => DEFAULT_PROFILE_NAMES.includes((u.name || '').trim()))) return defaultProfileName();
+  if(!users.some(u => isDefaultProfileName(u && u.name))) return defaultProfileName();
   let n = 1;
   users.forEach(u => {
     const m = /^(?:Профиль|Profile)\s+(\d+)$/i.exec((u.name || '').trim());
