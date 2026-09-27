@@ -11,12 +11,16 @@ const storage = createStorage({
   storeName: 'kv'
 });
 
-const form = document.querySelector<HTMLFormElement>('#task-form');
-const input = document.querySelector<HTMLInputElement>('#task-input');
-const list = document.querySelector<HTMLUListElement>('#task-list');
-const empty = document.querySelector<HTMLElement>('#empty');
+function requiredElement<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if(!element) throw new Error('task_mini_dom_missing:' + selector);
+  return element;
+}
 
-if(!form || !input || !list || !empty) throw new Error('task_mini_dom_missing');
+const form = requiredElement<HTMLFormElement>('#task-form');
+const input = requiredElement<HTMLInputElement>('#task-input');
+const list = requiredElement<HTMLUListElement>('#task-list');
+const empty = requiredElement<HTMLElement>('#empty');
 
 let tasks: TaskItem[] = [];
 
