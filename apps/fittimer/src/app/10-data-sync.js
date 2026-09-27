@@ -1718,13 +1718,14 @@ export const MONTH_OF = ['января','февраля','марта','апре�
    4. РЕКОРД — сгоревшая серия остаётся лучшей (stats.bestStreak). Собранное не
       отбираем — то же правило, что у достижений. */
 export function calcStreakInfo(){
-  const done = new Set(stats.history.map(h => h.d));
+  const streakHistory = stats.history.filter(h => h.status !== 'partial' || h.meaningful !== false);
+  const done = new Set(streakHistory.map(h => h.d));
   const plan = new Set();
   customPrograms.forEach(p => planDays(p).forEach(d => plan.add(d)));
   const byPlan = plan.size > 0;
   const isPlanned = dt => plan.has(DAYS[(dt.getDay() + 6) % 7]);
   // дальше самой ранней тренировки уходить некуда — там просто нет истории
-  const earliest = stats.history.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
+  const earliest = streakHistory.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
   // отработка — механика недельная, поэтому неделю считаем один раз на неделю
   const weeks = {};
   const shut = dt => {
