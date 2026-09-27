@@ -1970,6 +1970,7 @@ body.booting .app{visibility:hidden}
   }
   .today-row.rest .tr-ico{background:var(--rest-soft);color:var(--rest-ink)}
   .today-row.done .tr-ico{background:var(--ok-soft);color:var(--ok)}
+  .today-row.part .tr-ico{background:var(--warn-soft);color:var(--warn)}
   .tr-ico svg{width:21px;height:21px}
   .today-row .ti{flex:1;min-width:0}
   /* Заголовок — до двух строк: в одну на 360 точках рядом с кнопкой не влезало
@@ -1984,7 +1985,7 @@ body.booting .app{visibility:hidden}
     border-radius:var(--r-sm);background:var(--accent);color:var(--on-accent);
     font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
   }
-  .today-row.rest .tr-go,.today-row.done .tr-go{background:var(--surface);color:var(--muted);border:1px solid var(--line)}
+  .today-row.rest .tr-go,.today-row.done .tr-go,.today-row.part .tr-go{background:var(--surface);color:var(--muted);border:1px solid var(--line)}
   .today-note{color:var(--muted);font-size:var(--fs-sm);line-height:1.5;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--line)}
     /* ===== нижняя панель кнопок =====
      Панель липкая, значит при прокрутке она проходит НАД содержимым. Чтобы до
