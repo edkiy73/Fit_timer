@@ -82,7 +82,7 @@
       ]
     },
     {
-      "source": "/(app.config.js|style.css)",
+      "source": "/(app.config.js|style.css|admin.js|admin.html)",
       "headers": [
         {
           "key": "Cache-Control",
