@@ -322,7 +322,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
   // Только реальные клики основных кнопок. Click не возникает после скролла.
   document.addEventListener('click', event=>{
     if(!native) return;
-    const target = event.target.closest('#startResume, #startFresh, .pick-item, #btnDone, #btnSkip, #btnPrev, #btnPause, #btnResume');
+    const target = event.target.closest('#startResume, #startFresh, .pick-item, #btnDone, #btnSkip, #btnPrev, #workPauseItem, #btnResume');
     if(target && !target.disabled) workoutHaptic();
   }, true);
 
