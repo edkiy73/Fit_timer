@@ -57,7 +57,7 @@ async function run(b, failAlways){
   const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
   const header = src => ((vercel.headers.find(h => h.source === src) || {}).headers || [])
     .find(x => x.key === 'Cache-Control');
-  ok('main.js и mobile.js всегда перепроверяются', /no-cache/.test((header('/esm/(main|mobile).js') || {}).value || ''));
+  ok('main.js и mobile.js никогда не берутся из старого кеша', /no-store/.test((header('/esm/(main|mobile).js') || {}).value || ''));
   ok('куски с хешем кешируются надолго', /immutable/.test((header('/esm/chunks/(.*)') || {}).value || ''));
 
   await b.close();

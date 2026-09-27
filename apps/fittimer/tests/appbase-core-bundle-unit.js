@@ -43,7 +43,7 @@ ok('test-only binding bridge is generated, gated and never enabled by production
   && /scripts\/test\.mjs --browser/.test(fs.readFileSync('../../.github/workflows/browser-tests.yml','utf8')));
 
 ok('HTML loads only the ESM startup entry for Core/product runtimes',
-  html.includes('<script type="module" src="esm/main.js"></script>')
+  /<script type="module" src="esm\/main\.js(?:\?[^"]+)?"><\/script>/.test(html)
   && !html.includes('<script src="appbase-core.js"></script>')
   && !html.includes('<script src="native-notifications.js"></script>')
   && !html.includes('<script src="mobile-core.js"></script>')
