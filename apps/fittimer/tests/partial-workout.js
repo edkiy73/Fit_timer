@@ -66,6 +66,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       title:$('finTitle').textContent,
       ex:$('finEx').textContent,
       status:h.status,
+      meaningful:h.meaningful,
       done:h.doneExercises,
       planned:h.plannedExercises,
       exercises:h.exercises,
@@ -86,9 +87,25 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     Array.isArray(snap.exercises) && snap.exercises.length === 1 && snap.exercises[0] === 'Первое',
     JSON.stringify(snap.exercises));
   ok('частичная не увеличивает полный счётчик и completions', snap.count === 0 && snap.completions === 0, JSON.stringify(snap));
+  ok('один короткий выполненный подход не удерживает серию сам по себе', snap.meaningful === false, JSON.stringify(snap));
   ok('после «Закончить на сегодня» незавершённой сессии больше нет', !snap.session);
   ok('частичная закрывает долг недели, но остаётся частичной', !snap.debt && snap.partialTotal >= 1, JSON.stringify(snap));
   ok('на Сегодня видно «Частично», а не полную галочку', /Частично/.test(snap.today), snap.today);
+
+  const override = await page.evaluate(() => {
+    const last = stats.history[stats.history.length - 1];
+    stats.history.push({
+      id:'partial-test-full-override', d:last.d, pid:'partial-test', status:'full',
+      sec:600, plan:0, exercises:['Первое','Второе']
+    });
+    const w = weekPlanInfo();
+    const day = w.days.find(x => x.iso === last.d);
+    return {full:day && day.full, part:day && day.part, done:w.doneTotal, partial:w.partialTotal};
+  });
+  ok('полный результат в тот же день сильнее частичного',
+    override.full && !override.part && override.done >= 1 && override.partial === 0,
+    JSON.stringify(override));
+
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 
   await b.close();
