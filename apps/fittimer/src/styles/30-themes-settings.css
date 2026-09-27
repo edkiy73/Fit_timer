@@ -648,16 +648,13 @@
   .btn-prev{flex:0 0 52px;min-height:58px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
   .btn-prev:disabled{opacity:.25}
-  .act-row .btn-done{flex:1.45 1 0;min-width:0;margin:0}
-  .act-row .btn-skip{flex:1 1 104px;width:auto;min-width:104px;margin:0;padding:0 12px;font-size:15px}
+  .act-row .btn-done,.act-row .btn-skip{flex:1 1 0;min-width:0;width:auto;margin:0;padding:0 12px}
   body.phase-rest .act-row .btn-skip{flex:1}
   @media (max-width:380px){
     .act-row{gap:7px}
     .btn-prev{flex-basis:48px}
-    .act-row .btn-skip{min-width:94px;padding:0 9px;font-size:14px}
-    .act-row .btn-done{font-size:18px;padding:0 12px}
+    .act-row .btn-done,.act-row .btn-skip{padding:0 8px;font-size:15px}
   }
-  .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
   .vol-label b{font-family:var(--font-display);color:var(--accent-ink);font-size:15px}
