@@ -24,7 +24,7 @@ for(const fn of ['openEditAI','openExAI','openExEdAI','openYouTube']){
   need(start >= 0, fn + ' is missing');
   const next = ai.indexOf('\nexport function ', start + 20);
   const block = ai.slice(start, next >= 0 ? next : start + 2500);
-  need(block.includes("requireWho('ai'"), fn + ' must require age/gender');
+  need(!block.includes('requireWho('), fn + ' must not require age/gender');
 }
 
 console.log('AI demographics gate contract: ok');
