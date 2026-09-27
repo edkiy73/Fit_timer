@@ -42,12 +42,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       openStart(customPrograms.find(x => x.id === 'pc'));
       $('btnStart').click();
       await new Promise(r => setTimeout(r, 500));
-      state.reachedEx = new Set();
       state.stepOutcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase !== 'work') return;
         state.stepOutcomes[workoutStepKey(step, i)] = reach ? 'done' : 'skipped';
-        if(reach) state.reachedEx.add(step.exId || step.exName || step.title);
       });
       state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
       finishWorkout();
@@ -127,7 +125,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     openStart(p); state.planIdx = 0;
     $('btnStart').click();
     await new Promise(r => setTimeout(r, 500));
-    state.reachedEx = new Set(normPlans(p)[0].exercises.map(e => e.id));
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
       if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
