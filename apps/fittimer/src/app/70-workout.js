@@ -1144,15 +1144,6 @@ export function settleQuickFinish(keep){
 
 function finishWorkout(options){
   const opts = options || {};
-  // Совместимость со старыми прямыми вызовами finishWorkout и сессиями времён,
-  // когда по подходам ещё не было outcome. В нормальном новом потоке хотя бы один
-  // done/skipped уже есть. Пустая карта при обычном финише означает старый формат.
-  if(opts.status !== 'partial' && !Object.keys(state.stepOutcomes || {}).length && (state.steps || []).length){
-    state.stepOutcomes = {};
-    (state.steps || []).forEach((step, index) => {
-      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, index)] = 'done';
-    });
-  }
   const summary = workoutOutcomeSummary();
   const allDone = summary.plannedSteps > 0 && summary.doneSteps === summary.plannedSteps;
   const status = opts.status === 'partial' || !allDone ? 'partial' : 'full';
