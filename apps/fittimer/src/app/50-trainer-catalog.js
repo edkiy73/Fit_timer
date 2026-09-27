@@ -561,9 +561,9 @@ const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
 const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
 
 function buildReport(p){
-  // Пока частичный отчёт не имеет собственного формата, не выдаём его тренеру
-  // за полное прохождение. Отдельный честный формат добавим следующим этапом.
-  const mine = stats.history.filter(h => h.pid === p.id && h.status !== 'partial');
+  const mine = stats.history.filter(h => h.pid === p.id);
+  const fullMine = mine.filter(h => h.status !== 'partial');
+  const partialMine = mine.filter(h => h.status === 'partial');
   const me = users.find(u => u.id === currentUser);
   const plans = normPlans(p);
 
@@ -586,7 +586,7 @@ function buildReport(p){
     // повод поговорить, но узнать об этом иначе неоткуда.
     // Шесть часов — заведомо не тренировка, а забытый на ночь таймер или сбой.
     // Одна такая запись сдвигает среднее так, что число перестаёт что-то значить.
-    const secs = own.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
+    const secs = ownFull.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
     return {
       i, days: (pl.days || []).join('·'), n: ownFull.length, partial: ownPartial.length,
       sec: secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
