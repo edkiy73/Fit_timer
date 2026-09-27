@@ -41,6 +41,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const run = async (reach = true) => {
     await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pc')));
     await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
     await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
     await page.evaluate((reach) => {
       state.stepOutcomes = {};
