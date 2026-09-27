@@ -106,6 +106,8 @@ export const I18N_EN = {
   'workout.previous': "Previous step",
   'workout.done': "Done",
   'workout.skip': "Skip",
+  'workout.next': "Next",
+  'workout.areYouSure': "Are you sure?",
   'workout.great': "Great work!",
   'workout.time': "workout time",
   'workout.kcal': "kcal",
