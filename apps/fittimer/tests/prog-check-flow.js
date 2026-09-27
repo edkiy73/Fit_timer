@@ -43,7 +43,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       $('btnStart').click();
       await new Promise(r => setTimeout(r, 500));
       state.reachedEx = new Set();
-      if(reach) normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises.forEach(ex => state.reachedEx.add(ex.name));
+      state.stepOutcomes = {};
+      state.steps.forEach((step, i) => {
+        if(step.phase !== 'work') return;
+        state.stepOutcomes[workoutStepKey(step, i)] = reach ? 'done' : 'skipped';
+        if(reach) state.reachedEx.add(step.exId || step.exName || step.title);
+      });
       state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
       finishWorkout();
       document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
@@ -123,6 +128,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     $('btnStart').click();
     await new Promise(r => setTimeout(r, 500));
     state.reachedEx = new Set(normPlans(p)[0].exercises.map(e => e.id));
+    state.stepOutcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
     // короче 30 секунд: финал сначала спрашивает, засчитывать ли
     state.globalStart = Date.now() - 10 * 1000; state.pausedTotal = 0;
     finishWorkout();

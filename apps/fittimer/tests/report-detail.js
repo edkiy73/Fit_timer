@@ -128,7 +128,14 @@ async function boot(b, label, errs, url){
     p.stats = {completions: 6};
     await savePrograms();
 
-    state.current = {sourceId: p.id}; state.raw = p; state.planIdx = 0;
+    state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
+    state.steps = buildSteps();
+    state.stepOutcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
+    state.globalStart = Date.now() - 60000;
+    state.pausedTotal = 0;
     await finishWorkout();
   });
   await cp.waitForTimeout(1800);

@@ -101,8 +101,15 @@ async function boot(b, label, errs, url){
     stats.count = 1; await saveStats();
     p.stats = {completions: 0};
     // финал — единственное место, откуда теперь уходит отчёт
-    state.current = {sourceId: p.id};
+    state.current = customToProgram(p, 0);
     state.raw = p; state.planIdx = 0;
+    state.steps = buildSteps();
+    state.stepOutcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
+    state.globalStart = Date.now() - 60000;
+    state.pausedTotal = 0;
     await finishWorkout();
   });
   await cp.waitForTimeout(1800);

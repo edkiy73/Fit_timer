@@ -667,7 +667,7 @@ function markCurrentStep(outcome){
   if(outcome === 'done' && state.reachedEx){
     state.reachedEx.add(step.exId || step.exName || step.title);
   }
-  saveSession().catch(()=>{});
+  if(state.stepIdx < (state.steps || []).length - 1) saveSession().catch(()=>{});
 }
 
 export function nextStep(){
@@ -920,107 +920,145 @@ async function maybeRequestAppReview(count){
 
 const QUICK_FINISH_SEC = 30;
 
-// Запись законченной тренировки: история, минуты, серия, достижения, счётчик
-// прохождений программы и отчёт тренеру. Для обычной тренировки вызывается сразу,
-// для слишком короткой — только когда человек нажал «Засчитать» (или ушёл с экрана).
+// Итог строим не по позиции в списке, а по сохранённым действиям человека.
+// Полностью выполненное упражнение = выполнены все его рабочие шаги/подходы.
+export function workoutOutcomeSummary(){
+  const groups = new Map();
+  let doneSteps = 0, skippedSteps = 0, plannedSteps = 0;
+  (state.steps || []).forEach((step, index) => {
+    if(!step || step.phase !== 'work') return;
+    plannedSteps++;
+    const id = String(step.exId || step.exName || step.title || 'exercise');
+    let g = groups.get(id);
+    if(!g){
+      g = {id, name:step.exName || step.title || '', total:0, done:0, skipped:0};
+      groups.set(id, g);
+    }
+    g.total++;
+    const outcome = (state.stepOutcomes || {})[workoutStepKey(step, index)] || '';
+    if(outcome === 'done'){ g.done++; doneSteps++; }
+    else if(outcome === 'skipped'){ g.skipped++; skippedSteps++; }
+  });
+  const all = [...groups.values()];
+  const completed = all.filter(g => g.total > 0 && g.done === g.total);
+  const partial = all.filter(g => g.done > 0 && g.done < g.total);
+  const skipped = all.filter(g => g.done === 0 && g.skipped > 0);
+  const performed = all.filter(g => g.done > 0);
+  return {
+    plannedSteps, doneSteps, skippedSteps,
+    plannedExercises:all.length,
+    completedExercises:completed.length,
+    completedNames:completed.map(g => g.name).filter(Boolean),
+    partialNames:partial.map(g => g.name).filter(Boolean),
+    skippedNames:skipped.map(g => g.name).filter(Boolean),
+    performedNames:performed.map(g => g.name).filter(Boolean)
+  };
+}
+
+// Запись результата. Полная и частичная тренировки обе сохраняют реальную работу,
+// но только полная увеличивает счётчик завершений программы и двигает прогрессию.
 function commitFinish(ctx){
   const totalSec = ctx.totalSec, srcProgram = ctx.srcProgram;
   const now = ctx.at || Date.now();
-  {
-    stats.totalSec += totalSec;
+  const status = ctx.status === 'partial' ? 'partial' : 'full';
+  const partial = status === 'partial';
+  const summary = ctx.summary || workoutOutcomeSummary();
+
+  stats.totalSec += totalSec;
+  if(!partial){
     stats.count = (stats.count || 0) + 1;
     if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
     else if(stats.count === 5) trackProductEvent('workout_5').catch(()=>{});
     else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
-    const histEntry = {
-      id: newId(),
-      d: localISO(new Date(now)),
-      // час НАЧАЛА тренировки: «занимаюсь до работы» — это про то, когда человек встал
-      // на коврик, а не когда выключил таймер. Поле новое, у прежних записей его нет.
-      t: new Date(now - totalSec * 1000).getHours(),
-      pid: (state.current && state.current.sourceId) || null,
-      note: clampText($('finNote').value || '', LIM.note), sec: totalSec, kcal: state.lastKcal || 0,
-      // Снимок названий нужен истории: программа потом может измениться, а попап дня
-      // должен показывать именно то, что человек реально делал тогда.
-      exercises: Array.from(new Set((state.steps || []).filter(s => s.phase === 'work')
-        .map(s => s.exName || s.title).filter(Boolean))),
-      plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-      // Следующий старт покажет точное «было → сегодня». Раньше история знала
-      // только минуты, поэтому после ручной поправки веса прошлую нагрузку уже
-      // нельзя было восстановить без догадок.
-      load: srcProgram
-        ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
-        : null,
-      planDays: (()=>{ // подпись варианта, чтобы потом не гадать
-        try{
-          const pl = normPlans(state.raw)[state.planIdx];
-          return (pl && pl.days && pl.days.length) ? pl.days.join('·') : '';
-        }catch(e){ return ''; }
-      })()
-    };
-    stats.history.push(histEntry);
-    if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
-    state.lastHist = histEntry;
-    // Рекорд серии считаем здесь, на единственной записи в историю: он остаётся с
-    // человеком навсегда, даже когда серия сгорит. Существующая серия попадёт в рекорд
-    // на первой же тренировке — ровно тогда, когда это нужно.
-    const stk = calcStreakInfo().n;
-    state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
-    if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
-    // Суммарный поднятый вес: вес снаряда × нижняя граница повторов у каждого силового
-    // подхода. Копим итогом, а не считаем по истории задним числом: в истории лежат
-    // минуты и калории, а какие веса стояли в тот день, программа уже не помнит —
-    // с тех пор она могла вырасти на пять шагов прогрессии.
-    let lifted = 0;
-    (state.steps || []).forEach(s => {
-      if(s.phase !== 'work' || !(s.weight > 0)) return;
-      const reps = parseInt(String(s.reps || '').split('-')[0], 10);
-      if(reps > 0) lifted += s.weight * reps;
-    });
-    if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
-    // тренировка без рук: голос или гарнитура — считаем сам факт, не режим
-    if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
   }
+
+  const histEntry = {
+    id: newId(),
+    d: localISO(new Date(now)),
+    t: new Date(now - totalSec * 1000).getHours(),
+    pid: (state.current && state.current.sourceId) || null,
+    note: clampText($('finNote').value || '', LIM.note),
+    sec: totalSec,
+    kcal: state.lastKcal || 0,
+    status,
+    // Один случайный тап не должен удерживать серию. Для частичной тренировки
+    // считаем активность значимой, если было хотя бы два выполненных рабочих шага
+    // или человек реально занимался не меньше пяти минут.
+    meaningful: !partial || summary.doneSteps >= 2 || totalSec >= 300,
+    doneExercises: summary.completedExercises,
+    plannedExercises: summary.plannedExercises,
+    partialExercises: summary.partialNames,
+    skippedExercises: summary.skippedNames,
+    doneSteps: summary.doneSteps,
+    plannedSteps: summary.plannedSteps,
+    // В истории перечисляем только упражнения, где был хотя бы один реально
+    // выполненный подход. Пропущенное не выдаём за сделанное.
+    exercises: summary.performedNames,
+    plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
+    load: srcProgram
+      ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
+      : null,
+    planDays: (()=> {
+      try{
+        const pl = normPlans(state.raw)[state.planIdx];
+        return (pl && pl.days && pl.days.length) ? pl.days.join('·') : '';
+      }catch(e){ return ''; }
+    })()
+  };
+  stats.history.push(histEntry);
+  if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
+  state.lastHist = histEntry;
+
+  const stk = calcStreakInfo().n;
+  state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
+  if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
+
+  // Поднятый вес считаем только по реально отмеченным «Готово» подходам.
+  let lifted = 0;
+  (state.steps || []).forEach((step, index) => {
+    if(step.phase !== 'work' || !(step.weight > 0)) return;
+    if((state.stepOutcomes || {})[workoutStepKey(step, index)] !== 'done') return;
+    const reps = parseInt(String(step.reps || '').split('-')[0], 10);
+    if(reps > 0) lifted += step.weight * reps;
+  });
+  if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
+  if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
+
+  trackProductEvent(partial ? 'workout_partial' : 'workout_completed').catch(()=>{});
   renderBadges();
   saveStats();
   syncNativeNotifications();
   renderStats();
-  {
+
+  if(!partial){
     const completedCount = stats.count || 0;
     setTimeout(()=>{ maybeRequestAppReview(completedCount).catch(()=>{}); }, 2500);
   }
+
   if(srcProgram){
     const p = srcProgram;
     p.stats = p.stats || {completions: 0};
-    p.stats.completions++;
-    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
-    // программы: иначе при чередовании A/Б упражнение варианта А получало бы
-    // +1 шаг за каждую тренировку программы, включая дни варианта Б, и росло
-    // бы вдвое быстрее задуманного. Считаем только упражнения СЕГОДНЯШНЕГО
-    // варианта — они и есть «реально выполненные».
-    // Раньше по достижении порога нагрузка росла сама, без участия человека:
-    // вес прибавлялся, даже если предыдущий подход дался тяжело. Теперь порог
-    // только открывает ПРОВЕРКУ — она показывается на экране финала
-    // (renderProgCheck) и требует явного «Да, повышаем»; отклонённое или
-    // непросмотренное упражнение спросит о том же на следующей тренировке.
     state.progCheck = null;
-    if(p.progression){
-      const every = Math.max(1, +p.progression || 1);
-      const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
-      const eligible = [];
-      ((pl && pl.exercises) || []).forEach(ex => {
-        if(ex.warmup || progAxis(ex) === 'none') return;
-        // упражнение, до которого тренировка не дошла (старт с середины), не в счёт
-        if(state.reachedEx && !state.reachedEx.has(ex.id) && !state.reachedEx.has(ex.name)) return;
-        const ps = ensurePs(ex);
-        ps.n++;
-        if(ps.n >= every) eligible.push(ex.id);
-      });
-      // храним id, а не сами объекты: пока открыт экран финала, синхронизация
-      // может заменить customPrograms новыми объектами (см. progCheckExercises)
-      if(eligible.length) state.progCheck = {pid: p.id, plan: normPlans(p).indexOf(pl), ids: eligible, hard: new Set()};
+
+    if(!partial){
+      p.stats.completions++;
+      if(p.progression){
+        const every = Math.max(1, +p.progression || 1);
+        const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
+        const eligible = [];
+        ((pl && pl.exercises) || []).forEach(ex => {
+          if(ex.warmup || progAxis(ex) === 'none') return;
+          if(state.reachedEx && !state.reachedEx.has(ex.id) && !state.reachedEx.has(ex.name)) return;
+          const ps = ensurePs(ex);
+          ps.n++;
+          if(ps.n >= every) eligible.push(ex.id);
+        });
+        if(eligible.length) state.progCheck = {pid: p.id, plan: normPlans(p).indexOf(pl), ids: eligible, hard: new Set()};
+      }
     }
-    // ротация вариантов: следующая тренировка — следующий вариант по очереди
+
+    // «Закончить на сегодня» закрывает этот заход: при ротации следующий запуск
+    // должен перейти к следующему варианту. «Продолжить позже» сюда не попадает.
     if(p.rotate){
       const plansN = normPlans(p).length;
       if(plansN > 1){
@@ -1029,10 +1067,9 @@ function commitFinish(ctx){
       }
     }
     savePrograms();
-    // Программа пришла от тренера — он увидит эту тренировку. Отправляем сами и
-    // молча: кнопка «отправить отчёт» лежала в меню программы, куда после финала
-    // никто не заходит, и поэтому не срабатывала никогда.
-    autoReport(p);
+    // До обновления формата отчёта частичный результат не отправляем тренеру как
+    // будто он полный. Полный сценарий остаётся без изменений.
+    if(!partial) autoReport(p);
   }
   renderMine();
   renderProgCheck();
@@ -1109,10 +1146,15 @@ export function settleQuickFinish(keep){
   if(keep) commitFinish(pending);
 }
 
-function finishWorkout(){
-  trackProductEvent('workout_completed').catch(()=>{});
+function finishWorkout(options){
+  const opts = options || {};
+  const summary = workoutOutcomeSummary();
+  const allDone = summary.plannedSteps > 0 && summary.doneSteps === summary.plannedSteps;
+  const status = opts.status === 'partial' || !allDone ? 'partial' : 'full';
+  const hasWork = summary.doneSteps > 0;
   const finishedSessionId = String(state.workoutSessionId || '');
   const finishedProgramId = String((state.raw && state.raw.id) || '');
+
   state.live = false;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
@@ -1121,44 +1163,34 @@ function finishWorkout(){
   setPause(false);
   stopHandsFree();
   stopSpeech();
-  clearSession(finishedSessionId, finishedProgramId); // удаляем только эту тренировку
-  // Заметка на экране результата пишется в state.lastHist. Пока эта тренировка не
-  // записана, там не должна висеть запись прошлой — иначе заметка уехала бы в неё.
+  clearSession(finishedSessionId, finishedProgramId);
+
   state.lastHist = null;
-  // то же для проверки прогресса: пока неясно, засчитается ли тренировка
-  // (см. quick ниже), блок с предыдущей проверки показывать не должен
   state.progCheck = null;
   renderProgCheck();
   const totalSec = stopGlobal();
-  // статистика: общее время + счётчик прохождений программы
   state.lastTotalSec = totalSec;
   state.lastKcal = estimateKcal(totalSec, 100);
   $('finKcal').textContent = '≈' + state.lastKcal;
-  // Отключённую программу (progActive(p) === false) запускать можно — предупредили
-  // об этом ДО старта (#btnStart) — но раз человек всё равно начал, держим слово:
-  // результат нигде не оседает, будто его не было. Финал при этом доигрывает как
-  // обычно — это про текущую сессию, а не про то, что сохранится.
+
   const srcProgram = (state.current && state.current.sourceId)
     ? customPrograms.find(x => x.id === state.current.sourceId) : null;
-  const countsToStats = !srcProgram || progActive(srcProgram);
-  // Меньше QUICK_FINISH_SEC — похоже на случайное завершение. Такую тренировку НЕ
-  // записываем сразу: человек решает на экране результата. Отменять задним числом
-  // нельзя — отчёт тренеру к тому моменту уже ушёл бы.
+  const countsToStats = hasWork && (!srcProgram || progActive(srcProgram));
   const quick = countsToStats && totalSec < QUICK_FINISH_SEC;
-  state.pendingFinish = quick ? {totalSec, srcProgram, at:Date.now()} : null;
-  // сколько разных упражнений пройдено — третья цифра карточки результата (текущая
-  // сессия, показываем всегда — это не то, что сохраняется)
-  const exNames = new Set();
-  (state.steps || []).forEach(s => { if(s.phase === 'work') exNames.add(s.exName || s.title); });
-  state.lastExCount = exNames.size;
-  $('finExLabel').textContent = storeCountText(exNames.size,'exercise').replace(/^\d+\s+/,'');
+  const finishCtx = {totalSec, srcProgram, at:Date.now(), status, summary};
+  state.pendingFinish = quick ? finishCtx : null;
+
+  state.lastExCount = summary.completedExercises;
+  state.lastExTotal = summary.plannedExercises;
+  $('finExLabel').textContent = storeCountText(summary.plannedExercises,'exercise').replace(/^\d+\s+/,'');
   $('finNote').value = '';
-  setShown('finNoteField', false);   // заметка снова свёрнута: это не главное на экране
-  setShown('finNoteToggle', countsToStats); // нечего комментировать у того, что не сохранится
-  if(countsToStats && !quick) commitFinish({totalSec, srcProgram, at:Date.now()});
+  setShown('finNoteField', false);
+  setShown('finNoteToggle', countsToStats);
+
+  if(countsToStats && !quick) commitFinish(finishCtx);
   else {
     if(quick){
-      $('badgeRow').innerHTML = '';    // достижений и рекорда ещё нет — ничего не записано
+      $('badgeRow').innerHTML = '';
       setShown('finStreakBox', false);
     } else renderBadges();
     saveStats();
@@ -1167,24 +1199,35 @@ function finishWorkout(){
     renderMine();
   }
   setShown('finQuick', quick);
-  // «Отличная работа!» над тремя секундами звучит издёвкой
-  $('finTitle').textContent = t(quick ? 'finish.quickHeading' : 'workout.great');
+
+  $('finTitle').textContent = t(quick
+    ? 'finish.quickHeading'
+    : (status === 'partial' && countsToStats ? 'finish.partialHeading' : 'workout.great'));
   $('btnAgain').className = quick ? 'btn-secondary' : 'btn-primary';
   $('btnAgain').textContent = t(quick ? 'finish.keep' : 'finish.done');
+
   releaseWake();
   document.body.classList.remove('phase-rest');
-  const m = Math.floor(totalSec/60), s = totalSec%60;
-  const timeText = `${m}:${String(s).padStart(2,'0')}`;
+  const m = Math.floor(totalSec/60), sec = totalSec%60;
+  const timeText = `${m}:${String(sec).padStart(2,'0')}`;
+  const exText = status === 'partial'
+    ? `${summary.completedExercises}/${summary.plannedExercises}`
+    : String(summary.completedExercises);
+
   show('scrFinish');
-  // Гонг звучит не здесь, а в момент, когда кольцо замкнулось: звук и вспышка
-  // обязаны совпасть. Цифры набегают тогда же, когда поднимается карточка, —
-  // результат «приходит», а не появляется готовым.
-  // При prefers-reduced-motion countUp сразу ставит конечное значение.
   playFinishFx(() => {
     countUp($('finalTime'), totalSec, v => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,'0')}`, timeText);
     countUp($('finKcal'), state.lastKcal || 0, v => '≈' + Math.round(v), '≈' + (state.lastKcal || 0));
-    countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
+    if(status === 'partial') $('finEx').textContent = exText;
+    else countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
   });
+}
+
+export function finishPartialWorkout(){
+  const summary = workoutOutcomeSummary();
+  if(!summary.doneSteps) return false;
+  finishWorkout({status:'partial'});
+  return true;
 }
 
 /* ================= ШЕРИНГ-КАРТИНКА РЕЗУЛЬТАТА ================= */
@@ -1663,12 +1706,11 @@ function renderBadges(){
 
 // спрашиваем, сохранить ли место, и уходим согласно выбору
 export function exitWorkout(){
-  const steps = state.steps || [];
-  const done = steps.slice(0, state.stepIdx).filter(s => s.phase === 'work').length;
-  const all = steps.filter(s => s.phase === 'work').length;
-  $('exitProgress').textContent = all
-    ? t('workout.exitProgress',{done,all})
+  const summary = workoutOutcomeSummary();
+  $('exitProgress').textContent = summary.plannedExercises
+    ? t('workout.exitProgress',{done:summary.completedExercises,all:summary.plannedExercises})
     : '';
+  setShown('exitFinishToday', summary.doneSteps > 0);
   $('exitModal').classList.add('open');
 }
 

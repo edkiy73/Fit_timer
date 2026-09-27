@@ -1137,6 +1137,10 @@ export function initEvents(){
     if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
     appAlert(t('workout.sessionSaved'));
   };
+  $('exitFinishToday').onclick = ()=>{
+    $('exitModal').classList.remove('open');
+    finishPartialWorkout();
+  };
   $('exitDrop').onclick = async ()=>{
     $('exitModal').classList.remove('open');
     await clearSession();
