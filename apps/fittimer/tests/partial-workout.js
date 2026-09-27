@@ -36,6 +36,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       ]}]
     });
     await savePrograms();
+    prepSec = 0;
     openStart(customPrograms.find(x => x.id === 'partial-test'));
     $('btnStart').click();
   });
