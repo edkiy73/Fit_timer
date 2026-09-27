@@ -246,9 +246,19 @@
      выравниванием. Теперь одна поверхность: обложка сверху, тело с единым полем,
      предупреждение — подвал той же карточки. */
   .wk-card{
-    width:100%;background:var(--card);border:1px solid var(--line);
+    position:relative;width:100%;background:var(--card);border:1px solid var(--line);
     border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-1);
   }
+  .wk-edit{
+    position:absolute;left:10px;top:10px;z-index:4;
+    width:38px;height:38px;border-radius:11px;border:1px solid rgba(255,255,255,.16);
+    background:rgba(12,9,22,.72);color:#fff;backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+  .wk-edit svg{width:18px;height:18px}
+  .wk-edit:active{transform:scale(.96)}
+  body.phase-rest .wk-edit{display:none !important}
   .wk-body{display:flex;flex-direction:column;gap:10px;padding:var(--sp-3) var(--sp-4) var(--sp-4)}
   /* в теле карточки осталось одно предупреждение — верхнее поле превратилось бы
      в узкую белую полосу между обложкой и жёлтой плашкой */
