@@ -552,7 +552,7 @@ function renderStep(){
     $('countRow').classList.toggle('with-kg', withKg);
     setShown('btnDone', step.phase === 'work');
     setShown('btnSkip', true);
-    $('btnSkip').textContent = t('workout.skip');
+    $('btnSkip').textContent = t(step.phase === 'rest' ? 'workout.next' : 'workout.skip');
     // подпись для упражнений «на каждую сторону» — как у повторений
     const sn = $('sideNote');
     if(step.phase === 'work' && step.perSide){
@@ -1762,7 +1762,7 @@ export function initWorkout(){
 
     const edit = document.createElement('button');
     edit.id = 'workEditItem';
-    edit.innerHTML = icon('pencil') + '<span></span>';
+    edit.innerHTML = icon('pencil') + '<span data-i18n="workout.editExercise"></span>';
     edit.querySelector('span').textContent = t('workout.editExercise');
     edit.onclick = e => {
       e.stopPropagation();
@@ -1787,7 +1787,7 @@ export function initWorkout(){
     const stop = document.createElement('button');
     stop.id = 'workExitItem';
     stop.className = 'danger';
-    stop.innerHTML = icon('stop') + '<span></span>';
+    stop.innerHTML = icon('stop') + '<span data-i18n="workout.stopWorkout"></span>';
     stop.querySelector('span').textContent = t('workout.stopWorkout');
     stop.onclick = e => {
       e.stopPropagation();

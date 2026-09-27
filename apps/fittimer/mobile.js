@@ -227,6 +227,13 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
     if(!nativeNotificationTransport || !nativeNotificationTransport.hasLocal()) return false;
     if(!(await nativeNotificationTransport.localPermission(false))) return false;
     const exact = await nativeNotificationTransport.exactAllowed();
+    const staleIds = Array.from({length:60}, (_, i) => PLAN_NOTIFICATION_MIN + i);
+    // Не полагаемся только на getPending(): на части Android старое локальное
+    // уведомление может не вернуться в pending, но всё ещё сработать позже.
+    // Сначала жёстко очищаем весь используемый FitTimer диапазон и доставленные
+    // уведомления, затем ставим только актуальный список.
+    await nativeNotificationTransport.cancel(staleIds);
+    await nativeNotificationTransport.removeDelivered(staleIds);
     const list = (Array.isArray(items) ? items : []).slice(0, 60).map((item, i) => ({
       id: PLAN_NOTIFICATION_MIN + i,
       title: String(item.title || 'Fit Timer'),
@@ -238,11 +245,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
       iconColor: '#7047EB',
       extra: Object.assign({kind:'fittimer-notification'}, item.extra || {})
     })).filter(n => !isNaN(n.schedule.at.getTime()) && n.schedule.at.getTime() > Date.now() + 10000);
-    return nativeNotificationTransport.replaceRange(
-      PLAN_NOTIFICATION_MIN,
-      PLAN_NOTIFICATION_MAX,
-      list
-    );
+    return nativeNotificationTransport.schedule(list);
   }
 
   async function updateWorkoutState(payload){
