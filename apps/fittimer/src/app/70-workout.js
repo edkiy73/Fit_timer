@@ -953,10 +953,11 @@ function commitFinish(ctx){
   const now = ctx.at || Date.now();
   const status = ctx.status === 'partial' ? 'partial' : 'full';
   const partial = status === 'partial';
+  const activityOnly = !!ctx.activityOnly;
   const summary = ctx.summary || workoutOutcomeSummary();
 
   stats.totalSec += totalSec;
-  if(!partial){
+  if(!partial && !activityOnly){
     stats.count = (stats.count || 0) + 1;
     if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
     else if(stats.count === 5) trackProductEvent('workout_5').catch(()=>{});
@@ -972,6 +973,7 @@ function commitFinish(ctx){
     sec: totalSec,
     kcal: state.lastKcal || 0,
     status,
+    activityOnly,
     // Один случайный тап не должен удерживать серию. Для частичной тренировки
     // считаем активность значимой, если было хотя бы два выполненных рабочих шага
     // или человек реально занимался не меньше пяти минут.
@@ -1021,7 +1023,7 @@ function commitFinish(ctx){
   syncNativeNotifications();
   renderStats();
 
-  if(!partial){
+  if(!partial && !activityOnly){
     const completedCount = stats.count || 0;
     setTimeout(()=>{ maybeRequestAppReview(completedCount).catch(()=>{}); }, 2500);
   }
@@ -1031,13 +1033,13 @@ function commitFinish(ctx){
     p.stats = p.stats || {completions: 0};
     state.progCheck = null;
 
-    if(!partial) p.stats.completions++;
+    if(!partial && !activityOnly) p.stats.completions++;
 
     // Прогрессия теперь считается по конкретному упражнению, а не по факту
     // полного завершения всей тренировки. Если все подходы упражнения реально
     // отмечены «Готово», оно получает свой шаг даже в частичной тренировке.
     // Недоделанное и пропущенное упражнение не получает ничего.
-    if(p.progression){
+    if(p.progression && !activityOnly){
       const every = Math.max(1, +p.progression || 1);
       const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
       const completed = new Set([...(summary.completedIds || []), ...(summary.completedNames || [])].map(String));
@@ -1175,9 +1177,10 @@ function finishWorkout(options){
 
   const srcProgram = (state.current && state.current.sourceId)
     ? customPrograms.find(x => x.id === state.current.sourceId) : null;
-  const countsToStats = hasWork && (!srcProgram || progActive(srcProgram));
+  const countsToStats = hasWork;
+  const activityOnly = !!(srcProgram && !progActive(srcProgram));
   const quick = countsToStats && totalSec < QUICK_FINISH_SEC;
-  const finishCtx = {totalSec, srcProgram, at:Date.now(), status, summary};
+  const finishCtx = {totalSec, srcProgram, at:Date.now(), status, summary, activityOnly};
   state.pendingFinish = quick ? finishCtx : null;
 
   state.lastExCount = summary.completedExercises;
@@ -1591,21 +1594,25 @@ function activeWeekStreak(history){
   return best;
 }
 
+export const badgeActivityHistory = () => (stats.history || []).filter(h =>
+  h.status !== 'partial' || h.meaningful !== false
+);
+
 export const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
   // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
   {id: 'body',  ico: 'chart',    name: 'Под наблюдением',     desc: '4 записи веса или замеров',          test: () => (stats.weights || []).length >= 4},
-  {id: 'notes', ico: 'book',     name: 'Дневник',             desc: 'Заметка после тренировки',           test: () => (stats.history || []).some(h => (h.note || '').trim())},
+  {id: 'notes', ico: 'book',     name: 'Дневник',             desc: 'Заметка после тренировки',           test: () => badgeActivityHistory().some(h => (h.note || '').trim())},
   {id: 't5',    ico: 'bolt',     name: 'Первые пять',         desc: '5 тренировок',                       test: () => (stats.count || 0) >= 5},
   {id: 't10',   ico: 'dumbbell', name: 'В ритме',             desc: '10 тренировок',                      test: () => (stats.count || 0) >= 10},
   {id: 'wk',    ico: 'calendar', name: 'Неделя по плану',     desc: 'Все тренировки недели закрыты',      test: () => { const w = weekPlanInfo(); return w.plannedTotal > 0 && w.doneTotal >= w.plannedTotal; }},
   {id: 'ph2',   ico: 'camera',   name: 'Было и стало',        desc: 'Два снимка прогресса',               test: () => (photos || []).length >= 2},
   // час НАЧАЛА тренировки пишется в историю с этого обновления: у старых записей
   // поля нет вовсе, и они просто не участвуют в проверке
-  {id: 'early', ico: 'sparkle',  name: 'Раннее утро',         desc: 'Тренировка начата до 7 утра',        test: () => (stats.history || []).some(h => h.t != null && h.t < 7)},
+  {id: 'early', ico: 'sparkle',  name: 'Раннее утро',         desc: 'Тренировка начата до 7 утра',        test: () => badgeActivityHistory().some(h => h.t != null && h.t < 7)},
   {id: 'hands', ico: 'mic',      name: 'Без рук',             desc: 'Тренировка с голосом или гарнитурой', test: () => (stats.hfDone || 0) >= 1},
-  {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => (stats.history || []).some(h => (h.sec || 0) >= 2700)},
+  {id: 'long',  ico: 'shield',   name: 'Долгая тренировка',   desc: 'Одна тренировка на 45 минут',        test: () => badgeActivityHistory().some(h => (h.sec || 0) >= 2700)},
   {id: 's7',    ico: 'flame',    name: 'Серия',               desc: '7 тренировок подряд по плану',       test: () => calcStreak() >= 7},
   // Рекорд не выдаётся один раз с застывшим числом: он живёт вместе с stats.bestStreak
   // и на следующем рекорде сам покажет новую цифру, не заводя второй плашки.
@@ -1617,16 +1624,16 @@ export const BADGES = [
                    : 'Серия из 3 тренировок подряд'; },
    test: () => (stats.bestStreak || 0) >= 3},
   {id: 'well',  ico: 'heart',    name: 'Слушаю себя',         desc: '7 записей самочувствия',             test: () => (stats.wellness || []).length >= 7},
-  {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set((stats.history || []).map(h => h.pid).filter(Boolean)).size >= 3},
+  {id: 'var3',  ico: 'grip',     name: 'Разные тренировки',   desc: 'Пройдены 3 разные программы',        test: () => new Set(badgeActivityHistory().map(h => h.pid).filter(Boolean)).size >= 3},
   {id: 'duo',   ico: 'user',     name: 'Не в одиночку',       desc: 'Второй профиль на устройстве',       test: () => (users || []).length >= 2},
   // не «сколько всего», а «как давно не бросил»: три разных месяца в истории
-  {id: 'month', ico: 'calendar', name: 'Четыре недели',       desc: 'Тренировки 4 недели подряд',         test: () => activeWeekStreak(stats.history) >= 4},
-  {id: 'season', ico: 'target',  name: 'Три месяца',          desc: 'Тренировки в трёх разных месяцах',   test: () => new Set((stats.history || []).map(h => (h.d || '').slice(0, 7)).filter(Boolean)).size >= 3},
+  {id: 'month', ico: 'calendar', name: 'Четыре недели',       desc: 'Тренировки 4 недели подряд',         test: () => activeWeekStreak(badgeActivityHistory()) >= 4},
+  {id: 'season', ico: 'target',  name: 'Три месяца',          desc: 'Тренировки в трёх разных месяцах',   test: () => new Set(badgeActivityHistory().map(h => (h.d || '').slice(0, 7)).filter(Boolean)).size >= 3},
   // Возвращение после перерыва — то, за что стоит хвалить сильнее всего: бросить
   // проще, чем начать заново. Считаем разрыв между соседними тренировками: если он
   // был две недели и после него есть ещё одна — человек вернулся.
   {id: 'back',  ico: 'rocket',   name: 'Возвращение',         desc: 'Снова в деле после перерыва в две недели', test: () => {
-    const ds = [...new Set((stats.history || []).map(h => h.d).filter(Boolean))].sort();
+    const ds = [...new Set(badgeActivityHistory().map(h => h.d).filter(Boolean))].sort();
     for(let i = 1; i < ds.length; i++){
       if((new Date(ds[i]) - new Date(ds[i - 1])) / 86400000 >= 14) return true;
     }
