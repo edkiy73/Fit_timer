@@ -808,7 +808,7 @@ export function show(id, push = true){
   screens.forEach(s => $(s).classList.toggle('on', s===id));
   // верхняя полоса нужна ровно одному экрану — тренировке
   setShown('topBar', id==='scrWork');
-  $('btnExit').classList.toggle('on', id==='scrWork');
+  $('workMore').classList.toggle('on', id==='scrWork');
   $('btnSoundW').classList.toggle('on', id==='scrWork');
   $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
   document.querySelectorAll('.dock-btn').forEach(b => {
