@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1454,
-      "chars": 71453,
+      "chars": 71479,
       "symbols": [
         "$",
         "aiScreenDirty",
