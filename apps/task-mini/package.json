@@ -1,0 +1,11 @@
+{
+  "name": "task-mini",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Minimal non-fitness AppBase consumer used as a universality proof.",
+  "scripts": {
+    "typecheck": "../../packages/core/node_modules/.bin/tsc -p tsconfig.json",
+    "test:smoke": "node tests/smoke.js",
+    "check": "npm run typecheck && npm run test:smoke"
+  }
+}
