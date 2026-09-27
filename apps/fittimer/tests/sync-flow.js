@@ -89,14 +89,25 @@ async function boot(browser, label, errors){
   ok('интерфейс прямо говорит о серверной копии', /сохранены на сервере/i.test(got.state), got.state);
 
   await two.evaluate(async()=>{
-    stats.history.push({id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0});
-    stats.count=2; stats.totalSec=1320;
+    stats.history.push({
+      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0,
+      status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
+      doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
+    });
+    // Частичная активность добавляет время/историю, но не полный счётчик.
+    stats.count=1; stats.totalSec=1320;
     await saveStats();
   });
   await two.waitForTimeout(1500);
   await one.evaluate(async()=>{ await accountSyncAdapter.pull(); });
-  const merged = await one.evaluate(()=>({n:stats.history.length,sec:stats.totalSec}));
-  ok('новая тренировка со второго устройства вернулась на первое', merged.n === 2 && merged.sec === 1320, JSON.stringify(merged));
+  const merged = await one.evaluate(()=>{
+    const h=stats.history.find(x=>x.id==='h-b')||{};
+    return {n:stats.history.length,sec:stats.totalSec,count:stats.count,status:h.status,done:h.doneExercises,all:h.plannedExercises};
+  });
+  ok('частичная тренировка со второго устройства вернулась на первое',
+    merged.n === 2 && merged.sec === 1320 && merged.count === 1
+    && merged.status === 'partial' && merged.done === 2 && merged.all === 4,
+    JSON.stringify(merged));
 
   const denied = await one.evaluate(async email => {
     try{ await apiPost('/api/sync',{action:'pull',email,deviceId:identity.deviceId,token:'wrong'}); return false; }
