@@ -34,10 +34,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // тренировка длиной sec секунд, доведённая до экрана результата
   const run = async sec => {
-    await page.evaluate(async sec => {
-      openStart(customPrograms.find(x => x.id === 'pq'));
-      $('btnStart').click();
-      await new Promise(r => setTimeout(r, 500));
+    await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pq')));
+    await page.click('#btnStart');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate(sec => {
       state.stepOutcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
