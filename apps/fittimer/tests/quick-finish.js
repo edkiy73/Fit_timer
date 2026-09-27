@@ -26,6 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
+    prepSec = 0;
     customPrograms.push({id: 'pq', name: 'Проба', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
       exercises: [{name: 'Планка', type: 'time', value: 30, rest: 10}]}]});
     await savePrograms();
