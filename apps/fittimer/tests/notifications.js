@@ -59,7 +59,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const fiveDifferent = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
     reset(Array.from({length:5},(_,i)=>p('p'+i,'Частично '+(i+1))));
-    stats.history = [{d:iso,pid:'p0'}];
+    stats.history = [{d:iso,pid:'p0',status:'partial',meaningful:true,doneExercises:2,plannedExercises:5}];
     const partial = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
     stats.history = [];
@@ -121,7 +121,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && !result.fiveDifferent.stages.includes('start'),
     JSON.stringify(result.fiveDifferent));
 
-  ok('выполненная программа исчезает из общих digest',
+  ok('осознанно завершённая частичная программа исчезает из общих digest',
     result.partial.ids.every(x=>x.length===4 && !x.includes('p0')),
     JSON.stringify(result.partial));
 
