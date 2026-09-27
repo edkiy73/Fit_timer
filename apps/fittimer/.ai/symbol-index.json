@@ -759,7 +759,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1813,
-      "chars": 81058,
+      "chars": 81164,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -903,8 +903,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2364,
-      "chars": 105549,
+      "lines": 2394,
+      "chars": 106478,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -961,6 +961,7 @@
         "refreshAfterForeground",
         "refreshVoicePackUI",
         "renderIconLabels",
+        "resetSkipConfirm",
         "resumeWorkoutFromNativeNotification",
         "runSelfAI",
         "saveExAndBack",
