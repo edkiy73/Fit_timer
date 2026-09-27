@@ -903,8 +903,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2365,
-      "chars": 105592,
+      "lines": 2364,
+      "chars": 105549,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
