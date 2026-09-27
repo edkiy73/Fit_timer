@@ -1218,11 +1218,13 @@ function finishWorkout(options){
     : String(summary.completedExercises);
 
   show('scrFinish');
+  // Для partial результат вида 1/2 должен быть виден сразу. Раньше он появлялся
+  // только после длинной finish-анимации, а до этого человек видел старое «—».
+  if(status === 'partial') $('finEx').textContent = exText;
   playFinishFx(() => {
     countUp($('finalTime'), totalSec, v => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,'0')}`, timeText);
     countUp($('finKcal'), state.lastKcal || 0, v => '≈' + Math.round(v), '≈' + (state.lastKcal || 0));
-    if(status === 'partial') $('finEx').textContent = exText;
-    else countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
+    if(status !== 'partial') countUp($('finEx'), state.lastExCount || 0, v => String(Math.round(v)), String(state.lastExCount || 0));
   });
 }
 
