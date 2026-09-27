@@ -14,7 +14,7 @@ export const UNIT_TESTS = [
   'appbase-ui-core-unit', 'appbase-ui-adoption-unit', 'appbase-ui-modals-unit', 'appbase-ui-brand-unit',
   'appbase-ui-states-unit', 'appbase-core-bundle-unit', 'capabilities-unit', 'app-module-graph-unit',
   'push-unit', 'analytics-unit', 'analytics-api', 'diagnostics-unit', 'health-unit', 'update-settings-unit',
-  'onboarding-funnel-unit', 'ai-recovery-unit', 'ai-generation-guards-unit', 'motivation-unit', 'partial-exit-unit', 'workout-controls-unit',
+  'onboarding-funnel-unit', 'ai-recovery-unit', 'ai-generation-guards-unit', 'motivation-unit', 'partial-exit-unit', 'workout-controls-unit', 'notification-reschedule-unit',
   'accessibility-unit', 'release-ux-unit', 'admin-ui-unit', 'vercel-ignore-unit', 'ai-protocol-edit-unit',
   'progression-per-exercise-unit', 'admin-ai-api'
 ];
