@@ -953,10 +953,11 @@ function commitFinish(ctx){
   const now = ctx.at || Date.now();
   const status = ctx.status === 'partial' ? 'partial' : 'full';
   const partial = status === 'partial';
+  const activityOnly = !!ctx.activityOnly;
   const summary = ctx.summary || workoutOutcomeSummary();
 
   stats.totalSec += totalSec;
-  if(!partial){
+  if(!partial && !activityOnly){
     stats.count = (stats.count || 0) + 1;
     if(stats.count === 3) trackProductEvent('workout_3').catch(()=>{});
     else if(stats.count === 5) trackProductEvent('workout_5').catch(()=>{});
@@ -1021,7 +1022,7 @@ function commitFinish(ctx){
   syncNativeNotifications();
   renderStats();
 
-  if(!partial){
+  if(!partial && !activityOnly){
     const completedCount = stats.count || 0;
     setTimeout(()=>{ maybeRequestAppReview(completedCount).catch(()=>{}); }, 2500);
   }
@@ -1031,13 +1032,13 @@ function commitFinish(ctx){
     p.stats = p.stats || {completions: 0};
     state.progCheck = null;
 
-    if(!partial) p.stats.completions++;
+    if(!partial && !activityOnly) p.stats.completions++;
 
     // Прогрессия теперь считается по конкретному упражнению, а не по факту
     // полного завершения всей тренировки. Если все подходы упражнения реально
     // отмечены «Готово», оно получает свой шаг даже в частичной тренировке.
     // Недоделанное и пропущенное упражнение не получает ничего.
-    if(p.progression){
+    if(p.progression && !activityOnly){
       const every = Math.max(1, +p.progression || 1);
       const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
       const completed = new Set([...(summary.completedIds || []), ...(summary.completedNames || [])].map(String));
@@ -1175,9 +1176,10 @@ function finishWorkout(options){
 
   const srcProgram = (state.current && state.current.sourceId)
     ? customPrograms.find(x => x.id === state.current.sourceId) : null;
-  const countsToStats = hasWork && (!srcProgram || progActive(srcProgram));
+  const countsToStats = hasWork;
+  const activityOnly = !!(srcProgram && !progActive(srcProgram));
   const quick = countsToStats && totalSec < QUICK_FINISH_SEC;
-  const finishCtx = {totalSec, srcProgram, at:Date.now(), status, summary};
+  const finishCtx = {totalSec, srcProgram, at:Date.now(), status, summary, activityOnly};
   state.pendingFinish = quick ? finishCtx : null;
 
   state.lastExCount = summary.completedExercises;
