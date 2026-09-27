@@ -11,7 +11,7 @@ import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, cust
   trackProductEvent, users, wellAvg
 } from './10-data-sync.js';
 import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
-import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos, requireWho,
+import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
   sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
 } from './30-progress-media.js';
 import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-trainer-catalog.js';
