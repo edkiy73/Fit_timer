@@ -1598,7 +1598,7 @@ export const badgeActivityHistory = () => (stats.history || []).filter(h =>
   h.status !== 'partial' || h.meaningful !== false
 );
 
-const BADGES = [
+export const BADGES = [
   {id: 'first', ico: 'sprout',   name: 'Первый шаг',          desc: 'Первая тренировка',                  test: () => (stats.count || 0) >= 1},
   {id: 'h1',    ico: 'clock',    name: 'Первый час',          desc: 'Час тренировок в сумме',             test: () => (stats.totalSec || 0) >= 3600},
   // ведение тела: цифры на весах — половина работы, и её тоже стоит замечать
