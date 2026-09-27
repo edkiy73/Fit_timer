@@ -103,8 +103,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2271,
-      "chars": 106592,
+      "lines": 2282,
+      "chars": 106993,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -137,6 +137,7 @@
         "hasMeaningfulLocalData",
         "initDataSync",
         "inp",
+        "isDefaultProfileName",
         "isPlaceholderProfile",
         "isPlanned",
         "isSyncKey",
@@ -177,6 +178,7 @@
         "planDayRank",
         "planDays",
         "profileAge",
+        "profileDisplayName",
         "progActive",
         "PROGRAM_DOC",
         "programDaysUnion",
@@ -252,7 +254,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 1020,
-      "chars": 46312,
+      "chars": 46341,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -324,8 +326,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 967,
-      "chars": 44130,
+      "lines": 966,
+      "chars": 44072,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -394,8 +396,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2999,
-      "chars": 140771,
+      "lines": 2995,
+      "chars": 140567,
       "symbols": [
         "add",
         "ageError",
@@ -904,7 +906,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2394,
-      "chars": 106478,
+      "chars": 106466,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

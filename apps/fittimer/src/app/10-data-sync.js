@@ -68,6 +68,16 @@ function legacyAge(v){
 export function profileAge(u){
   return validAge(u && u.age) || legacyAge(u && u.birth);
 }
+
+const DEFAULT_PROFILE_NAMES = new Set(['Мой профиль', 'My profile']);
+export function isDefaultProfileName(name){
+  return DEFAULT_PROFILE_NAMES.has(String(name || '').trim());
+}
+export function profileDisplayName(u){
+  const raw = String((u && u.name) || '').trim();
+  if(isDefaultProfileName(raw)) return t('profile.defaultMine');
+  return raw || t('profile.noName');
+}
 export function migrateUserAge(u){
   if(!u || typeof u !== 'object') return u;
   const a = profileAge(u);
@@ -210,7 +220,8 @@ export function renderUsers(){
     const act = u.id === currentUser;
     const row = document.createElement('div');
     row.className = 'user-row' + (act ? ' act' : '');
-    const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((u.name || '?')[0].toUpperCase());
+    const shownName = profileDisplayName(u);
+    const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((shownName || '?')[0].toUpperCase());
     const bits = [];
     if(u.gender) bits.push(t(u.gender === 'm' ? 'common.male' : 'common.female'));
     const a = profileAge(u);
@@ -221,7 +232,7 @@ export function renderUsers(){
     const now = act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '';
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${now}${bits.join(' · ')}</small></div>`
       + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
-    row.querySelector('b').textContent = u.name || t('profile.noName');
+    row.querySelector('b').textContent = shownName;
     row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
     // нажатие по строке активного профиля переключать некуда — открываем его правку
     row.onclick = ()=> act ? openUserEdit(u.id) : switchUser(u.id);

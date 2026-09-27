@@ -4,7 +4,7 @@ import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceU
   syncDockTabs, takeSnap
 } from './00-core.js';
 import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
-  kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, pushAccountDocs, recordConsent,
+  kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, profileDisplayName, pushAccountDocs, recordConsent,
   renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setUsersShared, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
@@ -34,7 +34,7 @@ export function openUserEdit(id = null){
   const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
-  $('ueName').value = uDraft.name || '';
+  $('ueName').value = profileDisplayName(uDraft);
   $('ueAge').value = profileAge(uDraft) || '';
   setTimeout(()=> takeSnap('user', userState()), 0);
   // отсчёты и ключ ИИ живут в «Настройках» и применяются сразу; здесь только

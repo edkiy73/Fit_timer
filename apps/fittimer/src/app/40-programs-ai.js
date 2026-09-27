@@ -11,7 +11,7 @@ import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, cust
   trackProductEvent, users, wellAvg
 } from './10-data-sync.js';
 import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
-import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos, requireWho,
+import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
   sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
 } from './30-progress-media.js';
 import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-trainer-catalog.js';
@@ -2208,7 +2208,6 @@ export function exerciseToText(ex){
 }
 
 export function openExEdAI(i){
-  requireWho('ai', ()=> goBackTo('scrBuilder'));
   const ex = curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
@@ -2338,7 +2337,6 @@ function exaChips(){
 }
 
 export function openExAI(){
-  requireWho('ai', ()=> goBackTo('scrBuilder'));
   exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
   $('exaContext').value = '';
@@ -2466,7 +2464,6 @@ export function openYouTube(){
   $('ytWish').value = '';
   autoGrow($('ytWish'));
   openAI('video');
-  requireWho('ai', ()=> goTab('scrPrograms'));
 }
 
 export function ytCheckUrl(){
@@ -2563,7 +2560,6 @@ export function editAIPrompt(){
 }
 
 export function openEditAI(p){
-  requireWho('ai', ()=> goTab('scrPrograms'));
   editAIProg = p;
   $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);

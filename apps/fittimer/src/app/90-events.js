@@ -2287,7 +2287,7 @@ export function initEvents(){
         startOnboarding();
         return;
       }
-      setUsersShared([{id:'f', name:t('profile.defaultNumber',{count:1}), gender:'f', age:null, photo:null, theme:'system', locale:'system'}]);
+      setUsersShared([{id:'f', name:t('profile.defaultMine'), gender:'f', age:null, photo:null, theme:'system', locale:'system'}]);
       if((await kvGet('customPrograms_m')) !== null){
         users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
       }
