@@ -1411,6 +1411,7 @@ export const I18N_EN = {
   'today.start': "Start",
   'today.variant': "Variant {current} of {total}",
   'today.done': "Already completed today",
+  'today.partial': "Partial · {done} of {all} exercises",
   'today.again': "Again",
   'today.tomorrow': "tomorrow",
   'today.onDay': "on {day}",
