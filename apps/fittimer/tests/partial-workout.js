@@ -38,9 +38,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await savePrograms();
     prepSec = 0;
     openStart(customPrograms.find(x => x.id === 'partial-test'));
-    $('btnStart').click();
   });
-  await page.waitForTimeout(700);
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
   await page.evaluate(() => {
     // Первый рабочий шаг выполнен честно через новый семантический переход.
