@@ -39,10 +39,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // reach=false — тренировку завершили, не дойдя до упражнения: оно не
   // считается выполненным и не участвует в проверке прогресса
   const run = async (reach = true) => {
-    await page.evaluate(async (reach) => {
-      openStart(customPrograms.find(x => x.id === 'pc'));
-      $('btnStart').click();
-      await new Promise(r => setTimeout(r, 500));
+    await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pc')));
+    await page.click('#btnStart');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate((reach) => {
       state.stepOutcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase !== 'work') return;
@@ -121,11 +121,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const ids = await page.evaluate(() => normPlans(customPrograms.find(x => x.id === 'pc2'))[0].exercises.map(e => e.id));
   ok('повторяющийся id получает свой при сохранении', new Set(ids).size === ids.length, ids.join(','));
 
-  await page.evaluate(async () => {
+  await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'pc2');
     openStart(p); state.planIdx = 0;
-    $('btnStart').click();
-    await new Promise(r => setTimeout(r, 500));
+  });
+  await page.click('#btnStart');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  await page.evaluate(() => {
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
       if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
