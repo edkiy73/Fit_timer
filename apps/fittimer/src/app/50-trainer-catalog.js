@@ -463,9 +463,11 @@ async function pullProgram(pr){
   pr.firstOpen = d.firstOpen || null;
   // Сервер — источник правды по отчётам: перезаписываем целиком, а не дополняем,
   // иначе после переустановки у тренера задвоится всё, что уже было.
-  pr.reports = (d.reports || []).map(r => ({at: (r.at || '').slice(0, 10), n: r.n, sec: r.sec,
-    streak: r.streak, first: r.first, last: r.last, ex: r.ex || [],
-    log: r.log || [], plans: r.plans || [], diff: r.diff || null}));
+  pr.reports = (d.reports || []).map(r => ({
+    at:(r.at || '').slice(0, 10), v:r.v || 2, n:r.n, full:r.full || 0, partial:r.partial || 0, sec:r.sec,
+    streak:r.streak, first:r.first, last:r.last, ex:r.ex || [],
+    log:r.log || [], plans:r.plans || [], diff:r.diff || null
+  }));
   return true;
 }
 // Обновить все программы подопечного разом.
