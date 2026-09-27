@@ -1076,7 +1076,9 @@ async function applyRemoteSyncNow(result){
         // история сохраняет активность, но не должна превращаться в full completion
         // после синхронизации другого устройства.
         const n = history.filter(h =>
-          String(h.pid || '') === String(p.id) && h.status !== 'partial'
+          String(h.pid || '') === String(p.id)
+          && h.status !== 'partial'
+          && h.activityOnly !== true
         ).length;
         if(n){ p.stats = p.stats || {}; p.stats.completions = Math.max(+p.stats.completions||0, n); }
       });
