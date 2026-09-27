@@ -453,6 +453,10 @@ async function scenario(ctx, name, fn, errs){
       openStart(p);
       state.current = customToProgram(p, 0);
       startWorkout();
+      state.stepOutcomes = {};
+      state.steps.forEach((step, i) => {
+        if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+      });
       state.globalStart = Date.now() - 40000;
       finishWorkout();
     });
