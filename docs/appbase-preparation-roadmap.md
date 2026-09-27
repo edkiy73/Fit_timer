@@ -4,6 +4,9 @@ Baseline used when this document was introduced: `main` at `bfe07675d0061ef0a6ab
 
 ## Goal
 
+> **2026-09-28 architecture review:** multi-app readiness changes the frontend decision context. The proposed common frontend/backend stack, FitTimer React migration options, and CI tiering plan are tracked separately in [appbase-stack-ci-strategy.md](./appbase-stack-ci-strategy.md). Phase 12's earlier "do not introduce a new frontend framework just for AppBase" rule remains historical guidance, not a final decision for App2.
+
+
 Do not turn FitTimer into a framework during active product work. Prepare hard boundaries so the reusable AppBase Core stays independent of the fitness domain and further products can be built on it in the same repository.
 
 Target dependency rule:
