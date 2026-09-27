@@ -8,7 +8,7 @@ import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRe
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
-  saveStats, stats, streakWord, toggleMenu, trackProductEvent, users
+  saveStats, stats, streakWord, trackProductEvent, users
 } from './10-data-sync.js';
 import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
 import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
@@ -386,7 +386,7 @@ function renderStep(){
   if(!(step && step.kind === 'timer' && step.seconds)) state.resumeStepDeadline = 0;
 
   document.body.classList.toggle('phase-rest', step.phase==='rest');
-  setShown('workMenuWrap', step.phase === 'work' && !!step.exName);
+  setShown('workEdit', step.phase === 'work' && !!step.exName);
   // на отдыхе подписи берём с последнего рабочего шага — у самого отдыха этих данных нет
   const labelStep = step.phase === 'rest' ? lastWorkStep() : step;
   // круг / разминка + подход
@@ -533,7 +533,8 @@ function renderStep(){
     else setShown(snR, false);
     setShown('countdown', false);
     setShown('btnDone', true);
-    setShown('btnSkip', false);
+    setShown('btnSkip', true);
+    $('btnSkip').textContent = t('workout.skip');
   } else {
     // «время и вес» (удержание или перенос с грузом) — вес виден и на самом
     // таймере, не только в озвучке в начале: не отдых, показывать нечего смысла нет.
@@ -547,7 +548,7 @@ function renderStep(){
     // класс нужен только вёрстке слота (.reps.kg-side чуть выше) — на позицию кольца
     // подготовки больше не влияет, оно на время отсчёта прячет вес сам (body.readying)
     $('countRow').classList.toggle('with-kg', withKg);
-    setShown('btnDone', false);
+    setShown('btnDone', step.phase === 'work');
     setShown('btnSkip', true);
     $('btnSkip').textContent = t('workout.skip');
     // подпись для упражнений «на каждую сторону» — как у повторений
@@ -1748,15 +1749,10 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
-  $('workMore').innerHTML = icon('more');
-  $('workMore').onclick = e => { e.stopPropagation(); toggleMenu($('workMenu')); };
-  (function buildWorkMenu(){
-    const box = $('workMenu');
-    const b = document.createElement('button');
-    b.innerHTML = icon('pencil') + t('workout.editExercise');
-    b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); editExerciseFromWorkout(); };
-    box.appendChild(b);
-  })();
+  $('workEdit').onclick = e => {
+    e.stopPropagation();
+    editExerciseFromWorkout();
+  };
   window.addEventListener('fitAppBackground', ()=>{
     if(!appRuntimeCompat.isNative() || !state.live || typeof saveSession !== 'function') return;
     clearTimeout(nativeSessionSaveT);
