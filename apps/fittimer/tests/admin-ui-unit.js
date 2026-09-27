@@ -125,7 +125,7 @@ need(healthLib.includes("store.selfTest()"),'health must actively exercise stora
 need(healthApi.includes("store.list('c:approved')") && healthApi.includes('collectHealth({probes:FIT_HEALTH_PROBES})'),'health must probe catalog reads');
 need(healthLib.includes("store.list('a:all')"),'health must probe account index reads');
 
-need(sourceWorkflow.includes("'apps/fittimer/admin.html'"),'admin.html must trigger source consistency CI');
+need(sourceWorkflow.includes("'apps/**'"),'all app files, including admin.html, must trigger source consistency CI');
 need(smokeWorkflow.includes('node tests/admin-flow.js'),'real admin browser smoke must run in CI');
 need(smokeWorkflow.includes('AI_TEST_MODE'),'admin browser smoke must use deterministic AI test mode');
 

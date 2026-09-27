@@ -1,36 +1,36 @@
-name: Source parts — consistency
+name: AppBase — all apps consistency
 
 on:
   pull_request:
-    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/supabase/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
+    paths:
+      - 'packages/core/**'
+      - 'apps/**'
+      - 'scripts/apps.mjs'
+      - 'package.json'
+      - '.github/workflows/source-consistency.yml'
   push:
     branches: [main]
-    paths: ['packages/core/**', 'apps/fittimer/src/**', 'apps/fittimer/api/**', 'apps/fittimer/lib/**', 'apps/fittimer/config/**', 'apps/fittimer/tests/**', 'apps/fittimer/.ai/**', 'apps/fittimer/scripts/**', 'apps/fittimer/tsconfig*.json', 'apps/fittimer/app.config.js', 'apps/fittimer/check.py', 'apps/fittimer/style.css', 'apps/fittimer/index.html', 'apps/fittimer/admin.html', 'apps/fittimer/admin.js', 'apps/fittimer/package.json', 'apps/fittimer/package-lock.json', '.github/workflows/source-consistency.yml']
+    paths:
+      - 'packages/core/**'
+      - 'apps/**'
+      - 'scripts/apps.mjs'
+      - 'package.json'
+      - '.github/workflows/source-consistency.yml'
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/fittimer
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+
       - name: Node.js 22
         uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: AppBase Core — typecheck, boundaries, runtime and smoke tests
-        working-directory: packages/core
-        run: |
-          npm ci --no-audit --no-fund
-          npm run check
 
-      - name: Установить зависимости для typecheck
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Core and every app
+        run: npm run setup
 
-      - name: Статические проверки (npm test -- --static)
-        run: node scripts/test.mjs --static
-
-      - name: Unit и серверные тесты (npm test -- --unit, списки в scripts/test-lists.mjs)
-        run: node scripts/test.mjs --unit
+      - name: Check Core and every app
+        run: npm run check

@@ -3,10 +3,12 @@
   "private": true,
   "description": "AppBase Core and the apps built on it. Each package keeps its own dependencies.",
   "scripts": {
-    "setup": "npm ci --prefix packages/core && npm ci --prefix apps/fittimer",
+    "setup": "npm ci --prefix packages/core && node scripts/apps.mjs setup",
     "core:check": "npm --prefix packages/core run check",
+    "apps:check": "node scripts/apps.mjs check",
+    "apps:browser": "node scripts/apps.mjs run test:browser",
     "fittimer:build": "npm --prefix apps/fittimer run build",
-    "fittimer:check": "npm --prefix apps/fittimer run typecheck && npm --prefix apps/fittimer run test:boundaries && npm --prefix apps/fittimer run test:foundation && npm --prefix apps/fittimer run check:sources && npm --prefix apps/fittimer run build && npm --prefix apps/fittimer run check:mobile",
-    "check": "npm run core:check && npm run fittimer:check"
+    "fittimer:check": "npm --prefix apps/fittimer run check",
+    "check": "npm run core:check && npm run apps:check"
   }
 }

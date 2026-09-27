@@ -40,7 +40,8 @@ ok('test-only binding bridge is generated, gated and never enabled by production
   && /testBridge\(/.test(esm) && !/__FIT_TEST_MODE__/.test(app)
   && !/__FIT_TEST_MODE__/.test(fs.readFileSync('app.config.js','utf8'))
   && /__FIT_TEST_MODE__ = true/.test(fs.readFileSync('scripts/test.mjs','utf8'))
-  && /scripts\/test\.mjs --browser/.test(fs.readFileSync('../../.github/workflows/browser-tests.yml','utf8')));
+  && /npm run apps:browser/.test(fs.readFileSync('../../.github/workflows/browser-tests.yml','utf8'))
+  && /scripts\/test\.mjs --browser/.test(fs.readFileSync('package.json','utf8')));
 
 ok('HTML loads only the ESM startup entry for Core/product runtimes',
   /<script type="module" src="esm\/main\.js(?:\?[^"]+)?"><\/script>/.test(html)
