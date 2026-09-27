@@ -271,7 +271,9 @@ export function weekPlanInfo(date){
       used:false
     });
   });
-  ent.sort((a, b) => a.idx - b.idx);
+  // Если в один день сначала закончили частично, а потом прошли полностью,
+  // полный результат должен закрыть слот первым.
+  ent.sort((a, b) => (a.idx - b.idx) || (Number(a.partial) - Number(b.partial)));
 
   // 1) тренировка в свой день закрывает свой слот
   slots.forEach(s => {
@@ -285,7 +287,9 @@ export function weekPlanInfo(date){
     let best = null;
     ent.forEach(x => {
       if(x.used || x.pid !== s.pid) return;
-      if(!best || Math.abs(x.idx - s.idx) < Math.abs(best.idx - s.idx)) best = x;
+      const dist = Math.abs(x.idx - s.idx);
+      const bestDist = best ? Math.abs(best.idx - s.idx) : Infinity;
+      if(!best || dist < bestDist || (dist === bestDist && best.partial && !x.partial)) best = x;
     });
     if(best){ best.used = true; s.from = best.idx; s.partial = !!best.partial; }
   });
