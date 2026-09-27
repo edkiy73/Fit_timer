@@ -981,6 +981,10 @@ function commitFinish(ctx){
     sec: totalSec,
     kcal: state.lastKcal || 0,
     status,
+    // Один случайный тап не должен удерживать серию. Для частичной тренировки
+    // считаем активность значимой, если было хотя бы два выполненных рабочих шага
+    // или человек реально занимался не меньше пяти минут.
+    meaningful: !partial || summary.doneSteps >= 2 || totalSec >= 300,
     doneExercises: summary.completedExercises,
     plannedExercises: summary.plannedExercises,
     partialExercises: summary.partialNames,
