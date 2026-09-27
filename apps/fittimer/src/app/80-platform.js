@@ -591,7 +591,8 @@ function buildWorkoutNotificationCandidates(now, prefs, blockedKeys){
   return out;
 }
 function notifyThirdWorkoutDate(){
-  const hs = (stats.history || []).filter(h => h && h.d).slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
+  const hs = (stats.history || []).filter(h => h && h.d && h.status !== 'partial' && h.activityOnly !== true)
+    .slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)));
   if(hs.length < 3) return null;
   const d = new Date(hs[2].d + 'T12:00:00');
   return isNaN(d) ? null : d;
@@ -680,8 +681,11 @@ export async function syncNativeNotifications(){
   }
 
   // Возврат после паузы: не ставим его вообще на день, где есть план тренировки.
-  if(prefs.workouts !== false && (stats.history || []).length){
-    const last = (stats.history || []).filter(h=>h && h.d).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
+  const meaningfulHistory = (stats.history || []).filter(h =>
+    h && h.d && (h.status !== 'partial' || h.meaningful !== false)
+  );
+  if(prefs.workouts !== false && meaningfulHistory.length){
+    const last = meaningfulHistory.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)))[0];
     if(last){
       const base = new Date(last.d + 'T12:00:00');
       [3,7,14].forEach(days => {
