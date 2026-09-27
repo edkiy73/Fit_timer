@@ -1411,6 +1411,7 @@ export const I18N_RU = {
   'today.start': "Начать",
   'today.variant': "Вариант {current} из {total}",
   'today.done': "Уже выполнено сегодня",
+  'today.partial': "Частично · {done} из {all} упражнений",
   'today.again': "Ещё раз",
   'today.tomorrow': "завтра",
   'today.onDay': "в {day}",
