@@ -394,8 +394,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2996,
-      "chars": 140626,
+      "lines": 2999,
+      "chars": 140771,
       "symbols": [
         "add",
         "ageError",
@@ -626,8 +626,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2134,
-      "chars": 99864,
+      "lines": 2131,
+      "chars": 99711,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
