@@ -745,9 +745,19 @@ body.booting .app{visibility:hidden}
      выравниванием. Теперь одна поверхность: обложка сверху, тело с единым полем,
      предупреждение — подвал той же карточки. */
   .wk-card{
-    width:100%;background:var(--card);border:1px solid var(--line);
+    position:relative;width:100%;background:var(--card);border:1px solid var(--line);
     border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-1);
   }
+  .wk-edit{
+    position:absolute;left:10px;top:10px;z-index:4;
+    width:38px;height:38px;border-radius:11px;border:1px solid rgba(255,255,255,.16);
+    background:rgba(12,9,22,.72);color:#fff;backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+  .wk-edit svg{width:18px;height:18px}
+  .wk-edit:active{transform:scale(.96)}
+  body.phase-rest .wk-edit{display:none !important}
   .wk-body{display:flex;flex-direction:column;gap:10px;padding:var(--sp-3) var(--sp-4) var(--sp-4)}
   /* в теле карточки осталось одно предупреждение — верхнее поле превратилось бы
      в узкую белую полосу между обложкой и жёлтой плашкой */
@@ -1751,12 +1761,18 @@ body.booting .app{visibility:hidden}
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:var(--font-text);font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:var(--on-accent);font-weight:500}
   .act-row{display:flex;gap:10px;align-items:stretch}
-  .work-menu-wrap{position:relative;flex:0 0 auto;display:flex}
-  .work-menu-wrap .ctx-menu{right:0;top:auto;bottom:calc(100% + 8px)}
   .btn-prev{flex:0 0 52px;min-height:58px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
   .btn-prev:disabled{opacity:.25}
-  .act-row .btn-done{flex:1;margin:0}
+  .act-row .btn-done{flex:1.45 1 0;min-width:0;margin:0}
+  .act-row .btn-skip{flex:1 1 104px;width:auto;min-width:104px;margin:0;padding:0 12px;font-size:15px}
+  body.phase-rest .act-row .btn-skip{flex:1}
+  @media (max-width:380px){
+    .act-row{gap:7px}
+    .btn-prev{flex-basis:48px}
+    .act-row .btn-skip{min-width:94px;padding:0 9px;font-size:14px}
+    .act-row .btn-done{font-size:18px;padding:0 12px}
+  }
   .act-row .btn-skip{flex:1;margin:0}
   .vol-field{margin:14px 0}
   .vol-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:14px;color:var(--ink)}
