@@ -37,6 +37,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       openStart(customPrograms.find(x => x.id === 'pq'));
       $('btnStart').click();
       await new Promise(r => setTimeout(r, 500));
+      state.stepOutcomes = {};
+      state.steps.forEach((step, i) => {
+        if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+      });
       state.globalStart = Date.now() - sec * 1000; state.pausedTotal = 0;
       finishWorkout();
       document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
