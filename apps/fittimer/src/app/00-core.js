@@ -1048,7 +1048,7 @@ export function loadDelta(a, b){
 
 export function estimatedWorkoutMinutes(p, planIdx, rows){
   const own = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx
-    && +h.sec > 59 && +h.sec < 6 * 3600).slice(-5);
+    && h.status !== 'partial' && +h.sec > 59 && +h.sec < 6 * 3600).slice(-5);
   if(own.length){
     const avg = own.reduce((n, h) => n + h.sec, 0) / own.length;
     return {n:Math.max(1, Math.round(avg / 60)), history:true, samples:own.length};
