@@ -314,7 +314,7 @@ function renderReport(box, pr){
   }
 
   /* ---- какие дни делает ---- */
-  const plans = (r.plans || []).filter(x => x.days || x.n);
+  const plans = (r.plans || []).filter(x => x.days || x.n || x.partial);
   if(plans.length > 1){
     add('cls-label', t('report.byDays'));
     plans.forEach(pl => {
