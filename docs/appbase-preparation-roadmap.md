@@ -635,18 +635,17 @@ Status sections of earlier phases keep the historical pre-monorepo paths (`src/c
 
 ## Adding a product
 
-A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core (copy `packages/core/template/` as its server composition) that provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions.
+A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core. Use `packages/core/template/` as the neutral composition reference and `apps/task-mini/` as the executable minimal example; do not blindly copy template-local relative paths. The product provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions. Every app must define `scripts.check` so the root runner and CI include it automatically.
 
 ## Universality proof
 
-Use at least:
+✅ First real proof added: `apps/task-mini/`.
 
-```text
-Mini Language App
-Mini Task Manager
-```
+It is a second, non-fitness Core consumer with its own `Task` model, sync document prefix, analytics taxonomy and capability set. Its client imports typed Core modules through the same aliases as a normal app; its server composes generic auth/sync/health directly from `packages/core/server`. Core did not need to learn `Task`, `Project` or any Task Mini business concept.
 
-If either requires Core to learn `Lesson`, `Course`, `Task`, `Project` or another product business entity, inspect whether that is a real reusable capability gap or a sign of premature abstraction.
+The root app runner discovers every `apps/*/package.json`, requires `scripts.check`, and CI runs Core + every app. This turns the previous architectural rule (“a Core change must keep every app green”) into an enforced repository rule.
+
+A future Mini Language App remains useful as a third-domain stress test, but it is no longer a blocker for adding the next real application.
 
 ## Suggested task sequence
 
