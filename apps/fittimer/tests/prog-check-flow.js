@@ -28,6 +28,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
+    prepSec = 0;
     customPrograms.push({id: 'pc', name: 'Проверка прогресса', progression: 1, stats: {completions: 0},
       plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [
         {name: 'Присед', type: 'reps', value: '10', sets: 1, rest: 5, progOn: true, trackWeight: false, repsStep: 1}
