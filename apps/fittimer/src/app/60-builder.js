@@ -627,9 +627,6 @@ export function openBuilder(id=null){
   }
   planIdx = 0;
   fillBuilder(id ? t('ai.editTitle') : t('programs.newProgram'));
-  // вот здесь пол и возраст впервые нужны по делу: от них зависят подбор упражнений
-  // и нагрузка
-  requireWho('program', ()=> goTab('scrPrograms'));
 }
 
 export function curPlan(){ return draft.plans[planIdx]; }
