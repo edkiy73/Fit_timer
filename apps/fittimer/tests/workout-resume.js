@@ -163,11 +163,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await saveSession();
 
     const aBefore = await sessionForProgram(a.id);
+    const bBefore = await sessionForProgram(b.id);
+    const both = await loadSessions();
     await clearSession('session-b', b.id);
     const aAfter = await sessionForProgram(a.id);
     const bAfter = await sessionForProgram(b.id);
-    return {aBefore:!!aBefore, aAfter:!!aAfter, bAfter:!!bAfter};
+    return {aBefore:!!aBefore, bBefore:!!bBefore, both:both.map(x=>x.sessionId), aAfter:!!aAfter, bAfter:!!bAfter};
   });
+  ok('две незавершённые тренировки реально хранятся одновременно',
+    isolation.aBefore && isolation.bBefore && isolation.both.includes('test-session-inactivity') && isolation.both.includes('session-b'),
+    JSON.stringify(isolation));
   ok('сессия другой программы не затирает сохранённую тренировку',
     isolation.aBefore && isolation.aAfter, JSON.stringify(isolation));
   ok('удаление сессии ограничено выбранной тренировкой',
