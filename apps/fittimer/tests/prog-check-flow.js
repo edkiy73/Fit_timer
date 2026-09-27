@@ -28,6 +28,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
+    prepSec = 0;
     customPrograms.push({id: 'pc', name: 'Проверка прогресса', progression: 1, stats: {completions: 0},
       plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [
         {name: 'Присед', type: 'reps', value: '10', sets: 1, rest: 5, progOn: true, trackWeight: false, repsStep: 1}
@@ -38,10 +39,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // reach=false — тренировку завершили, не дойдя до упражнения: оно не
   // считается выполненным и не участвует в проверке прогресса
   const run = async (reach = true) => {
-    await page.evaluate(async (reach) => {
-      openStart(customPrograms.find(x => x.id === 'pc'));
-      $('btnStart').click();
-      await new Promise(r => setTimeout(r, 500));
+    await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pc')));
+    await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate((reach) => {
       state.stepOutcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase !== 'work') return;
@@ -120,11 +123,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const ids = await page.evaluate(() => normPlans(customPrograms.find(x => x.id === 'pc2'))[0].exercises.map(e => e.id));
   ok('повторяющийся id получает свой при сохранении', new Set(ids).size === ids.length, ids.join(','));
 
-  await page.evaluate(async () => {
+  await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'pc2');
     openStart(p); state.planIdx = 0;
-    $('btnStart').click();
-    await new Promise(r => setTimeout(r, 500));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  await page.evaluate(() => {
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
       if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';

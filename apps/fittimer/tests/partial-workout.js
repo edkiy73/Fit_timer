@@ -36,10 +36,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       ]}]
     });
     await savePrograms();
+    prepSec = 0;
     openStart(customPrograms.find(x => x.id === 'partial-test'));
-    $('btnStart').click();
   });
-  await page.waitForTimeout(700);
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
   await page.evaluate(() => {
     // Первый рабочий шаг выполнен честно через новый семантический переход.
@@ -92,7 +95,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('полностью выполненное упражнение внутри частичной попало в проверку прогрессии',
     await page.isVisible('#finProgCheck'));
   await page.click('#finProgCheckToggle');
-  const progChips = await page.$eval('.fpc-chip', xs => xs.map(x => x.textContent.trim()));
+  const progChips = await page.evaluate(() => [...document.querySelectorAll('.fpc-chip')].map(x => x.textContent.trim()));
   ok('в проверке прогрессии только реально завершённое упражнение',
     progChips.length === 1 && progChips[0] === 'Первое', progChips.join('|'));
   await page.click('#finProgCheckYes');

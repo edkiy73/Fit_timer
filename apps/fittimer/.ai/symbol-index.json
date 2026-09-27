@@ -9,7 +9,7 @@
     "src/app/00-core.js": {
       "kind": "frontend-js",
       "lines": 1454,
-      "chars": 71453,
+      "chars": 71479,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -103,8 +103,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2167,
-      "chars": 102369,
+      "lines": 2271,
+      "chars": 106592,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -145,10 +145,12 @@
         "kvGet",
         "kvSet",
         "legacyAge",
+        "legacySessionKey",
         "loadData",
         "loadIdentity",
         "loadProgWeights",
         "loadSession",
+        "loadSessions",
         "localISO",
         "localProfileHasData",
         "markAllForSync",
@@ -160,6 +162,8 @@
         "mkSideSwitch",
         "mkWork",
         "newId",
+        "normalizeSessionOutcomeMap",
+        "normalizeWorkoutSession",
         "normPlans",
         "num",
         "openSessions",
@@ -182,6 +186,7 @@
         "put",
         "queueAccountSync",
         "queueProfileState",
+        "readWorkoutSessions",
         "recordConsent",
         "remoteProfileHasData",
         "remoteWins",
@@ -206,7 +211,7 @@
         "saveWellHist",
         "sessionAgeText",
         "sessionForProgram",
-        "sessionKey",
+        "sessionsKey",
         "sessRow",
         "setCalOffsetShared",
         "setCurrentUserShared",
@@ -239,6 +244,7 @@
         "wellSeries",
         "wellValue",
         "workStepChoices",
+        "writeWorkoutSessions",
         "xAt",
         "yAt"
       ]
@@ -246,7 +252,7 @@
     "src/app/20-account.js": {
       "kind": "frontend-js",
       "lines": 1020,
-      "chars": 46291,
+      "chars": 46312,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -388,8 +394,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2973,
-      "chars": 139173,
+      "lines": 2996,
+      "chars": 140626,
       "symbols": [
         "add",
         "ageError",
@@ -542,8 +548,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1685,
-      "chars": 77303,
+      "lines": 1707,
+      "chars": 78265,
       "symbols": [
         "add",
         "addClient",
@@ -752,8 +758,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1676,
-      "chars": 78388,
+      "lines": 1773,
+      "chars": 79944,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -762,6 +768,7 @@
         "autoGrowMax",
         "autosaveNativeWorkoutSession",
         "backToWorkout",
+        "badgeActivityHistory",
         "badgeDesc",
         "badgeName",
         "buildSteps",
@@ -770,6 +777,7 @@
         "closeSwapHint",
         "col",
         "commitFinish",
+        "completeStep",
         "countUp",
         "cvar",
         "earnBadges",
@@ -779,6 +787,7 @@
         "exerciseProgressLabel",
         "exitWorkout",
         "fade",
+        "finishPartialWorkout",
         "finishWorkout",
         "fitStepTitle",
         "fmt",
@@ -790,6 +799,7 @@
         "initWorkout",
         "lastWorkStep",
         "launch",
+        "markCurrentStep",
         "maybeRequestAppReview",
         "nextNativeWorkStep",
         "nextStep",
@@ -815,6 +825,7 @@
         "setPause",
         "settleQuickFinish",
         "shareResult",
+        "skipStep",
         "startGlobal",
         "startWorkout",
         "step",
@@ -829,13 +840,15 @@
         "textH",
         "tnum",
         "toggleProgCheckList",
-        "warmupPosition"
+        "warmupPosition",
+        "workoutOutcomeSummary",
+        "workoutStepKey"
       ]
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 796,
-      "chars": 34599,
+      "lines": 813,
+      "chars": 35456,
       "symbols": [
         "add",
         "advance",
@@ -890,8 +903,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2364,
-      "chars": 105536,
+      "lines": 2367,
+      "chars": 105700,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1059,8 +1072,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 638,
-      "chars": 42280,
+      "lines": 639,
+      "chars": 42468,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1161,6 +1174,7 @@
         "exDualRow",
         "exeWish",
         "exitDrop",
+        "exitFinishToday",
         "exitModal",
         "exitProgress",
         "exitSave",

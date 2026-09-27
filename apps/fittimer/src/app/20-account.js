@@ -148,7 +148,7 @@ export async function deleteUser(){
 // которое забыло ключ, оставляет от «удалённого» аккаунта хвост — а это ровно то, за
 // что и придёт претензия (и из стора, и по 152-ФЗ).
 export const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos', 'warmupAdded',
-                      'workoutSession', 'identity', 'docMeta', 'outbox',
+                      'workoutSession', 'workoutSessionsV2', 'identity', 'docMeta', 'outbox',
                       'trainer', 'clients'];
 export const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',

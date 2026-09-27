@@ -59,7 +59,7 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
-  completeStep, exFromWork, exitWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
+  completeStep, exFromWork, exitWorkout, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
 } from './70-workout.js';

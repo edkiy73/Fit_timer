@@ -941,7 +941,12 @@ function mergeStatsDocs(local, remote, preferRemote){
   out.wellness = unite(older.wellness, newerDoc.wellness, x => x && (x.d || JSON.stringify(x)));
   out.badges = [...new Set([].concat(b.badges || [], a.badges || []))];
   out.totalSec = out.history.length ? out.history.reduce((n,h)=>n+(+h.sec||0),0) : Math.max(+a.totalSec||0,+b.totalSec||0);
-  out.count = out.history.length || Math.max(+a.count||0,+b.count||0);
+  // count — только полноценные завершения. Частичные и activity-only живут в
+  // истории/времени, но после синхронизации не должны внезапно стать full.
+  const fullHistoryCount = out.history.filter(h =>
+    h && h.status !== 'partial' && h.activityOnly !== true
+  ).length;
+  out.count = out.history.length ? fullHistoryCount : Math.max(+a.count||0,+b.count||0);
   out.bestStreak = Math.max(+a.bestStreak||0,+b.bestStreak||0);
   out.totalKg = Math.max(+a.totalKg||0,+b.totalKg||0);
   out.hfDone = Math.max(+a.hfDone||0,+b.hfDone||0);

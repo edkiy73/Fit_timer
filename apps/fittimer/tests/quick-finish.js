@@ -26,6 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
+    prepSec = 0;
     customPrograms.push({id: 'pq', name: 'Проба', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
       exercises: [{name: 'Планка', type: 'time', value: 30, rest: 10}]}]});
     await savePrograms();
@@ -33,10 +34,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // тренировка длиной sec секунд, доведённая до экрана результата
   const run = async sec => {
-    await page.evaluate(async sec => {
-      openStart(customPrograms.find(x => x.id === 'pq'));
-      $('btnStart').click();
-      await new Promise(r => setTimeout(r, 500));
+    await page.evaluate(() => openStart(customPrograms.find(x => x.id === 'pq')));
+    await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate(sec => {
       state.stepOutcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
