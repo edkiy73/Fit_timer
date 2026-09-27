@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Task Mini</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="eyebrow">AppBase demo</div>
+      <h1>Task Mini</h1>
+      <p>Минимальное второе приложение на общем Core.</p>
+    </header>
+
+    <form id="task-form">
+      <input id="task-input" type="text" maxlength="120" autocomplete="off" placeholder="Новая задача" aria-label="Новая задача">
+      <button type="submit">Добавить</button>
+    </form>
+
+    <p id="empty" class="empty">Пока задач нет.</p>
+    <ul id="task-list" aria-live="polite"></ul>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
