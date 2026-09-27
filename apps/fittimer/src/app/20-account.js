@@ -34,7 +34,7 @@ export function openUserEdit(id = null){
   const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
-  $('ueName').value = uDraft.name || '';
+  $('ueName').value = profileDisplayName(uDraft);
   $('ueAge').value = profileAge(uDraft) || '';
   setTimeout(()=> takeSnap('user', userState()), 0);
   // отсчёты и ключ ИИ живут в «Настройках» и применяются сразу; здесь только
