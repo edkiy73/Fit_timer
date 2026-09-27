@@ -7,22 +7,9 @@ on:
   pull_request:
     paths: &browser_paths
       - 'packages/core/**'
-      - 'apps/fittimer/src/**'
-      - 'apps/fittimer/api/**'
-      - 'apps/fittimer/config/**'
-      - 'apps/fittimer/lib/**'
-      - 'apps/fittimer/tests/**'
-      - 'apps/fittimer/style.css'
-      - 'apps/fittimer/index.html'
-      - 'apps/fittimer/mobile.js'
-      - 'apps/fittimer/app.config.js'
-      - 'apps/fittimer/vercel.json'
-      - 'apps/fittimer/admin.html'
-      - 'apps/fittimer/admin.js'
-      - 'apps/fittimer/package.json'
-      - 'apps/fittimer/package-lock.json'
-      - 'apps/fittimer/tsconfig.json'
-      - 'apps/fittimer/scripts/run-browser-tests.mjs'
+      - 'apps/**'
+      - 'scripts/apps.mjs'
+      - 'package.json'
       - '.github/workflows/browser-tests.yml'
   push:
     branches: [main]
@@ -35,10 +22,7 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/fittimer
-    timeout-minutes: 30
+        timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -49,13 +33,13 @@ jobs:
 
       - name: Браузер для тестов
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
-          echo "FIT_CHROME=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+          npm run setup
+          npm --prefix apps/fittimer install --no-save playwright@1.55.0
+          npm --prefix apps/fittimer exec playwright install --with-deps chromium
+          echo "FIT_CHROME=$(cd apps/fittimer && node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
 
       # Собирает dist, на время прогона включает тестовый мост (__FIT_TEST_MODE__,
       # см. scripts/test-bridge.mjs), поднимает tests/dev-server.js и статику,
       # гоняет scripts/run-browser-tests.mjs. Локально — то же самое: npm test -- --browser
       - name: Браузерные и сквозные тесты
-        run: node scripts/test.mjs --browser
+        run: npm run apps:browser
