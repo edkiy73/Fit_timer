@@ -279,6 +279,7 @@ function renderReport(box, pr){
   const head = add('tr-sum cls-sum', '<b></b><small></small>');
   head.querySelector('b').textContent = r.n + ' ' + (appLocale === 'ru' ? plural(r.n,t('report.workoutOne'),t('report.workoutFew'),t('report.workoutMany')) : t(r.n === 1 ? 'report.workoutOne' : 'report.workoutFew'));
   const bits = [];
+  if(r.partial > 0) bits.push(t('report.partialCount',{count:r.partial}));
   if(r.last) bits.push(t('report.last',{date:humanDay(r.last)}));
   if(r.streak > 1) bits.push(t('report.streak',{count:r.streak}));
   head.querySelector('small').textContent = bits.join(' · ');
@@ -316,9 +317,14 @@ function renderReport(box, pr){
   const plans = (r.plans || []).filter(x => x.days || x.n);
   if(plans.length > 1){
     add('cls-label', t('report.byDays'));
-    plans.forEach(pl => line(pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : (t('builder.variant') + ' ' + (pl.i + 1)),
-      pl.n ? String(pl.n) : t('report.never'),
-      pl.n ? '' : 'muted'));
+    plans.forEach(pl => {
+      const value = [
+        pl.n ? String(pl.n) : '',
+        pl.partial ? t('report.partialShort',{count:pl.partial}) : ''
+      ].filter(Boolean).join(' · ') || t('report.never');
+      line(pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : (t('builder.variant') + ' ' + (pl.i + 1)),
+        value, (pl.n || pl.partial) ? '' : 'muted');
+    });
   }
 
   /* ---- каждая тренировка отдельно ----
@@ -339,7 +345,10 @@ function renderReport(box, pr){
       // сделал понедельничную тренировку в четверг, и это как раз стоит заметить.
       if(plans.length > 1 && pl && pl.days) when += ` (${pl.days})`;
       const mins = x.sec > 0 && x.sec < 6 * 3600 ? Math.round(x.sec / 60) + ' ' + t('store.minuteShort') : '';
-      line(when, mins || '—', mins ? '' : 'muted');
+      const value = x.partial
+        ? [t('report.partial'), (x.all > 0 ? (x.done + '/' + x.all) : ''), mins].filter(Boolean).join(' · ')
+        : (mins || '—');
+      line(when, value, mins ? '' : 'muted');
     });
     if(log.length > 8) add('field-hint', '').textContent = t('report.moreEarlier',{count:log.length - 8});
   }
@@ -560,11 +569,18 @@ function buildReport(p){
 
   // 1. Журнал: что и когда. Тридцати тренировок хватает на два месяца занятий —
   // дальше тренеру интересна не история, а то, что происходит сейчас.
-  const log = mine.slice(-30).map(h => ({d: h.d, p: +h.plan || 0, sec: h.sec || 0}));
+  const log = mine.slice(-30).map(h => ({
+    d:h.d, p:+h.plan || 0, sec:h.sec || 0,
+    partial:h.status === 'partial' ? 1 : 0,
+    done:Math.max(0, +h.doneExercises || 0),
+    all:Math.max(0, +h.plannedExercises || 0)
+  }));
 
   // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
   const planStats = plans.map((pl, i) => {
     const own = mine.filter(h => (+h.plan || 0) === i);
+    const ownFull = own.filter(h => h.status !== 'partial');
+    const ownPartial = own.filter(h => h.status === 'partial');
     // Сколько это занимает У ПОДОПЕЧНОГО. Тренер планировал одно, а человек делает
     // сорок минут вместо двадцати или пятнадцать вместо тридцати — и то и другое
     // повод поговорить, но узнать об этом иначе неоткуда.
@@ -572,7 +588,7 @@ function buildReport(p){
     // Одна такая запись сдвигает среднее так, что число перестаёт что-то значить.
     const secs = own.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
     return {
-      i, days: (pl.days || []).join('·'), n: own.length,
+      i, days: (pl.days || []).join('·'), n: ownFull.length, partial: ownPartial.length,
       sec: secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
     };
   });
@@ -617,8 +633,10 @@ function buildReport(p){
   }
 
   return {
-    v: 2, by: p.by || '', who: (me && me.name) || '', name: p.name,
+    v: 3, by: p.by || '', who: (me && me.name) || '', name: p.name,
     n: mine.length,
+    full: fullMine.length,
+    partial: partialMine.length,
     sec: mine.reduce((a, h) => a + (h.sec || 0), 0),
     first: mine.length ? mine[0].d : null,
     last: mine.length ? mine[mine.length - 1].d : null,
