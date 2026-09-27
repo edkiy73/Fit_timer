@@ -2106,7 +2106,6 @@ export function initEvents(){
     // при возврате первый тик сразу догонит прошедшее время.
   });
   // статичные иконки
-  $('btnPause').innerHTML = icon('pause');
   $('btnMicW').innerHTML = icon('mic');
   // каталог, а не магазин: сумка для покупок обещает кассу, которой здесь нет
   $('storeIcoMenu').innerHTML = $('storeIcoProg').innerHTML = icon('book');
