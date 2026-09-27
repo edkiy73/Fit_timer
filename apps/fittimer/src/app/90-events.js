@@ -1127,7 +1127,6 @@ export function initEvents(){
   $('btnPrev').onclick  = prevStep;
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
-  $('btnExit').onclick  = exitWorkout;
   $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
   $('exitSave').onclick = async ()=>{
     $('exitModal').classList.remove('open');
@@ -1145,7 +1144,6 @@ export function initEvents(){
     await clearSession();
     tearDownWorkout();
   };
-  $('btnPause').onclick = ()=> setPause(!state.paused);
   window.addEventListener('fitRemotePushToken',async e=>{
     const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
     let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
