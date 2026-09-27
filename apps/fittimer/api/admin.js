@@ -17,6 +17,7 @@ const { handleAdminAccounts } = require('../../../packages/core/server/admin/acc
 const { handleAdminCampaigns } = require('../../../packages/core/server/admin/campaigns');
 const { handleAdminAISettings } = require('../../../packages/core/server/admin/ai-settings');
 const { handleAdminRelease } = require('../../../packages/core/server/admin/release');
+const { handleAdminStorage } = require('../../../packages/core/server/admin/storage');
 
 const { handleCatalogTextAI } = require('../lib/admin/fittimer/catalog-ai');
 const { handleCatalogImageAI } = require('../lib/admin/fittimer/catalog-images');
@@ -70,6 +71,7 @@ module.exports = async (req, res) => {
   if(await handleAdminAccounts(action,body,res)) return;
   if(await handleAdminCampaigns(action,body,res)) return;
   if(await handleAdminAISettings(action,body,res)) return;
+  if(await handleAdminStorage(action,body,res)) return;
 
   if(await handleCatalogTextAI(action,body,res)) return;
   if(await handleCatalogImageAI(action,body,res)) return;

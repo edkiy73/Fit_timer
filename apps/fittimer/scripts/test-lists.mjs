@@ -7,7 +7,7 @@
 // Сами тесты запускаются без этих переменных (ai-runtime-unit проверяет
 // настоящие провайдеры через заглушки), кроме UNIT_TESTS_WITH_TEST_ENV.
 export const UNIT_TESTS = [
-  'sync-api', 'auth-abuse', 'ai-runtime-unit', 'infrastructure-adapters-unit', 'supabase-shadow-unit',
+  'sync-api', 'auth-abuse', 'ai-runtime-unit', 'infrastructure-adapters-unit', 'supabase-shadow-unit', 'store-backends-unit',
   'admin-core-observability-unit', 'admin-core-accounts-unit', 'admin-core-campaigns-unit',
   'admin-core-ai-settings-unit', 'admin-core-release-unit',
   'admin-fittimer-catalog-text-unit', 'admin-fittimer-catalog-images-unit', 'admin-fittimer-catalog-crud-unit',

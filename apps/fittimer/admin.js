@@ -66,11 +66,11 @@ let analyticsCache = null;
 let editorDirty = false;
 let allowEditorLeave = false;
 const savedTab = localStorage.getItem('adminTab');
-let tab = ['dashboard','pending','drafts','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release'].includes(savedTab) ? savedTab : 'dashboard';
+let tab = ['dashboard','pending','drafts','approved','add','trainers','users','analytics','errors','campaigns','ai','pricing','payments','release','storage'].includes(savedTab) ? savedTab : 'dashboard';
 
 const PAGE_TITLES = {
   dashboard:'Обзор', pending:'На проверке', drafts:'Черновики', approved:'Каталог', add:'Добавить программу', trainers:'Тренеры',
-  users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи', release:'Релиз Android'
+  users:'Пользователи', analytics:'Аналитика', errors:'Ошибки', campaigns:'Рассылки', ai:'ИИ', pricing:'Premium и цены', payments:'Платежи', release:'Релиз Android', storage:'Хранилище'
 };
 function closeNav(){
   document.body.classList.remove('nav-open');
@@ -267,6 +267,7 @@ function render(){
   if(tab === 'pricing') return renderPricing(b);
   if(tab === 'payments') return renderPayments(b);
   if(tab === 'release') return renderRelease(b);
+  if(tab === 'storage') return renderStorage(b);
   return renderCatalog(b);
 }
 
@@ -969,6 +970,7 @@ function renderAI(b){
     <div class="toolbar">${stat('Gemini',data.providers&&data.providers.gemini)}${stat('OpenAI',data.providers&&data.providers.openai)}${stat('OpenRouter',data.providers&&data.providers.openrouter)}
       <label class="inline-switch" style="margin-left:auto"><input id="aiEnabled" type="checkbox"${s.enabled!==false?' checked':''}><span>Генерация включена</span></label>
     </div>
+    ${openRouterCard(s)}
     <div class="form-card">
       <div class="form-card-head"><div><h3>Маршрутизация</h3><div class="cell-sub">«Тест» использует поля ниже, но ничего не сохраняет.</div></div></div>
       <div class="form-card-body">
@@ -1001,9 +1003,61 @@ function renderAI(b){
   $('aiSettingsSave').onclick=saveAISettings;
   $('testText').onclick=()=>testAIAdmin('text');
   $('testImage').onclick=()=>testAIAdmin('image');
+  $('orTest').onclick=testOpenRouter;
+  $('orPrimary').onclick=()=>useOpenRouter('primary');
+  $('orBackup').onclick=()=>useOpenRouter('backup');
   ['text_primary_provider','text_primary_model','text_backup_provider','text_backup_model','image_primary_provider','image_primary_model','image_backup_provider','image_backup_model','imageSize']
     .forEach(id=>$(id).addEventListener($(id).tagName==='SELECT'?'change':'input',updateAIRouteReadiness));
   updateAIRouteReadiness();
+}
+/* OpenRouter: один ключ — доступ к моделям разных компаний. Ключ живёт только
+   в переменных Vercel, в админку и приложение не попадает. */
+function openRouterCard(s){
+  const ready=aiProviderReady('openrouter');
+  const t=s.text||{};
+  const current=[t.primary,t.backup].find(x=>x&&x.provider==='openrouter');
+  const used=['primary','backup'].filter(w=>t[w]&&t[w].provider==='openrouter').map(w=>w==='primary'?'основной':'резерв');
+  return `<div class="form-card">
+      <div class="form-card-head"><div><h3>OpenRouter</h3><div class="cell-sub">Один ключ — модели Google, OpenAI, Anthropic и других. Только для текста: программы и упражнения. Картинки идут через Gemini/OpenAI.</div></div>
+        <span class="status-chip ${ready?'ok':''}">${ready?'ключ есть':'нет ключа'}${used.length?' · сейчас: '+used.join(' и '):''}</span></div>
+      <div class="form-card-body">
+        ${ready?'':`<div class="compact-note">Ключ добавляется не здесь: создай его на <b>openrouter.ai → Keys</b>, затем в Vercel → проект → Settings → Environment Variables добавь <code>OPENROUTER_API_KEY</code> (Production) и сделай Redeploy. После этого здесь появится «ключ есть».</div>`}
+        <div class="field-grid"><div class="wide"><label>Модель OpenRouter</label>
+          <input id="orModel" maxlength="100" value="${esc(current&&current.model||'')}" placeholder="например google/gemini-2.5-flash">
+          <div class="compact-note">Имя модели копируй со страницы модели на openrouter.ai/models — вида <code>компания/модель</code>.</div></div></div>
+        <div class="action-row">
+          <button class="b" id="orTest"${ready?'':' disabled'}>Проверить без сохранения</button>
+          <button class="b" id="orPrimary">Сделать основной для текста</button>
+          <button class="b" id="orBackup">Сделать резервной для текста</button>
+          <span class="action-feedback" id="orState"></span>
+        </div>
+      </div>
+    </div>`;
+}
+function openRouterModel(){
+  const model=$('orModel').value.trim();
+  if(!model){setActionFeedback('orState','Укажи модель, например google/gemini-2.5-flash.','err');return '';}
+  return model;
+}
+function useOpenRouter(which){
+  const model=openRouterModel();if(!model)return;
+  $('text_'+which+'_provider').value='openrouter';
+  $('text_'+which+'_model').value=model;
+  updateAIRouteReadiness();
+  setActionFeedback('orState','Подставлено в «'+(which==='primary'?'Основной':'Резервный')+'». Нажми «Сохранить production-настройки» внизу.','ok');
+}
+async function testOpenRouter(){
+  const model=openRouterModel();if(!model)return;
+  const btn=$('orTest'),settings=aiSettingsFromForm();
+  settings.text={primary:{provider:'openrouter',model},backup:{provider:'openrouter',model}};
+  actionButtonState(btn,true,'Проверяю…');
+  setActionFeedback('orState','Отправляю тестовый запрос…','busy');
+  try{
+    const r=await api('test_ai',{type:'text',settings});
+    setActionFeedback('orState','✓ Работает: '+r.model+' ответила «'+String(r.result||'').slice(0,40)+'» · ничего не сохранено','ok');
+  }catch(e){
+    setActionFeedback('orState','Ошибка: '+(e.detail||e.message),'err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 function aiSettingsFromForm(){
   const s=settingsClone();s.text=s.text||{};s.image=s.image||{};
@@ -1041,6 +1095,98 @@ async function testAIAdmin(type){
   }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 
+const STORAGE_LABEL={redis:'Upstash Redis',supabase:'Supabase',memory:'память процесса'};
+async function renderStorage(b){
+  b.innerHTML=pageHead('Хранилище','Где лежат данные сервера и перенос между базами.')+'<div class="empty">Загружаю…</div>';
+  let st;
+  try{st=(await api('storage_status')).status;}
+  catch(e){b.innerHTML=pageHead('Хранилище','')+'<div class="empty">Не удалось получить состояние: '+esc(e.message)+'</div>';return;}
+  if(tab!=='storage')return;
+  const chip=(ok,text)=>'<span class="status-chip '+(ok?'ok':'')+'">'+esc(text)+'</span>';
+  const name=x=>STORAGE_LABEL[x]||x||'—';
+  const failed=+st.mirrorFailed||0;
+  const steps=[
+    ['redis+supabase','Шаг 1 · двойная запись','Читаем Upstash, каждую запись повторяем в Supabase. Затем здесь: «Перенести всё» и «Сверить» до нуля расхождений.'],
+    ['supabase+redis','Шаг 2 · Supabase главный','Читаем Supabase, Upstash получает копию каждой записи — откат мгновенный и без потерь. Вместе с этим шагом функции Vercel переезжают в регион базы.'],
+    ['supabase','Шаг 3 · только Supabase','Через 1–2 недели спокойной работы: Upstash больше не нужен, интеграцию можно отключить.']
+  ];
+  const stepRows=steps.map(([mode,title,text])=>'<div class="storage-step'+(st.mode===mode?' on':'')+'"><b>'+esc(title)+'</b> <code>APPBASE_STORE='+esc(mode)+'</code><div class="cell-sub">'+esc(text)+'</div></div>').join('');
+  b.innerHTML=pageHead('Хранилище','Где лежат данные сервера и перенос между базами.')+`
+    <div class="toolbar">
+      ${chip(st.modeValid,'Режим · '+st.mode+(st.modeValid?'':' (неизвестный)'))}
+      ${chip(!!st.primary,'Главная · '+name(st.primary))}
+      ${st.mirror||st.mirrorMissing?chip(!!st.mirror,'Зеркало · '+(st.mirror?name(st.mirror):'не настроено')):''}
+      ${chip(st.redis,'Upstash · '+(st.redis?'подключён':'нет ключей'))}
+      ${chip(st.supabase,'Supabase · '+(st.supabase?'подключён':'нет ключей'))}
+    </div>
+    <div class="form-card"><div class="form-card-head"><div><h3>Данные</h3><div class="cell-sub">Счётчики включают короткоживущие служебные ключи, поэтому точное совпадение показывает только сверка.</div></div></div><div class="form-card-body">
+      <div class="campaign-preview">
+        <div><b>${esc(st.primaryKeys==null?'—':st.primaryKeys)}</b><span>ключей в главной</span></div>
+        <div><b>${esc(st.mirrorKeys==null?'—':st.mirrorKeys)}</b><span>ключей в зеркале</span></div>
+        <div><b class="${failed?'bad':''}">${esc(st.mirrorFailed==null?'—':failed)}</b><span>сбоев зеркала${failed?' · <button class="b quiet" id="storageResetFailures">сбросить</button>':''}</span></div>
+        <div><b>${esc(st.region||'—')}</b><span>регион функций</span></div>
+      </div>
+      ${st.paired?`<div class="action-row">
+          <button class="b ok" id="storageCopy">Перенести всё в ${esc(name(st.mirror))}</button>
+          <button class="b" id="storageVerify">Сверить</button>
+          <button class="b" id="storageRepair">Сверить и починить</button>
+          <span class="action-feedback" id="storageState"></span>
+        </div>
+        <div class="ai-route-state" id="storageReport"></div>`
+      :'<div class="compact-note">Перенос доступен в парном режиме (шаг 1 или 2 ниже): тогда главная база и зеркало работают одновременно.</div>'}
+    </div></div>
+    <div class="form-card"><div class="form-card-head"><div><h3>Переезд Upstash → Supabase</h3><div class="cell-sub">Каждый шаг — переменная APPBASE_STORE в Vercel (Settings → Environment Variables, Production) и повторный деплой. Любой шаг можно откатить на предыдущий.</div></div></div>
+      <div class="form-card-body">${stepRows}</div></div>`;
+  if($('storageResetFailures'))$('storageResetFailures').onclick=async()=>{await api('storage_reset_failures').catch(()=>{});renderStorage($('body'));};
+  if(!st.paired)return;
+  $('storageCopy').onclick=()=>storageLoop('copy');
+  $('storageVerify').onclick=()=>storageLoop('verify',false);
+  $('storageRepair').onclick=()=>storageLoop('verify',true);
+}
+async function storageLoop(kind,repair){
+  const buttons=['storageCopy','storageVerify','storageRepair'].map($).filter(Boolean);
+  buttons.forEach(x=>x.disabled=true);
+  const report=$('storageReport');
+  const total={scanned:0,copied:0,skipped:0,unsupported:0,checked:0,same:0,missing:0,different:0,ttlDifferent:0,extra:0,repaired:0};
+  const samples=[];
+  const show=(msg,tone)=>setActionFeedback('storageState',msg,tone);
+  try{
+    const passes=kind==='copy'?[false]:[false,true];
+    for(const reverse of passes){
+      let cursor='0',guard=0;
+      do{
+        const r=kind==='copy'
+          ? await api('storage_copy',{cursor,count:200})
+          : await api('storage_verify',{cursor,count:200,repair:!!repair,reverse});
+        const s=r.step||{};
+        Object.keys(total).forEach(k=>{if(typeof s[k]==='number')total[k]+=s[k];});
+        if(s.unsupportedCount)total.unsupported+=s.unsupportedCount;
+        (s.samples||[]).concat((s.unsupported||[]).map(x=>({key:x.key,problem:'тип '+x.kind}))).forEach(x=>{if(samples.length<20)samples.push(x);});
+        cursor=String(s.cursor||'0');
+        show(kind==='copy'
+          ? 'Переношу… скопировано '+total.copied
+          : (reverse?'Ищу лишнее в зеркале… ':'Сверяю… ')+'проверено '+total.checked,'busy');
+        if(++guard>20000)throw new Error('слишком много шагов');
+      }while(cursor!=='0');
+    }
+    const problems=total.missing+total.different+total.ttlDifferent+total.extra;
+    if(kind==='copy'){
+      show('✓ Перенесено '+total.copied+' ключей'+(total.unsupported?' · не перенесено (неизвестный тип): '+total.unsupported:''),total.unsupported?'err':'ok');
+    }else if(!problems){
+      show('✓ Совпадает: '+total.same+' ключей','ok');
+    }else{
+      show((repair?'Починено '+total.repaired+' · ':'')+'Расхождений: '+problems,repair?'ok':'err');
+    }
+    if(report)report.innerHTML=kind==='copy'
+      ? '<div>Просмотрено '+total.scanned+' · скопировано '+total.copied+' · пропущено служебных '+total.skipped+'</div>'
+      : '<div>Проверено '+total.checked+' · совпало '+total.same+' · нет в зеркале '+total.missing+' · отличается '+total.different+' · срок жизни '+total.ttlDifferent+' · лишних '+total.extra+'</div>';
+    if(report&&samples.length)report.innerHTML+='<div class="cell-sub">Примеры: '+samples.map(x=>esc(x.key)+' ('+esc(x.problem)+')').join(', ')+'</div>';
+  }catch(e){
+    show('Ошибка: '+(e.detail||e.message)+' · можно повторить — шаги безопасны','err');
+  }finally{
+    buttons.forEach(x=>x.disabled=false);
+  }
+}
 function renderPricing(b){
   const s=data.settings||{},prices=s.prices||{};
   const rows=Object.entries(prices).map(([cur,p])=>`<tr>

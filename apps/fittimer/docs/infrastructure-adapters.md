@@ -146,6 +146,27 @@ Do not dual-write indefinitely.
 
 Shadow activation is intentionally environment-gated. Deploying the code does not start dual-write automatically.
 
+### Phase S5 — full server store cutover (decision 2026-09-27)
+
+The document shadow (S2–S4) covered only sync documents. Accounts, sessions, catalog,
+trainer pages, share links, counters and analytics still lived only in Upstash, so a
+sync-only cutover would have split one logical store across two databases. Instead the
+whole server store moves at once, below the unchanged `store.js` API:
+
+- `public.appbase_kv` + `kv_exec(cmds jsonb)` implement exactly the Redis command subset
+  `store.js` uses (GET/MGET/SET EX NX/INCR/EXPIRE/RPUSH/LRANGE/LREM/DEL/SCAN/TTL/TYPE plus
+  UNLOCK and KVPUT); one PostgREST RPC per `store` call or pipeline, expiry by `expires_at`
+  + pg_cron purge; RLS on, execute granted to `service_role` only;
+- `APPBASE_STORE` selects `redis`, `redis+supabase`, `supabase+redis` or `supabase`
+  (primary+mirror). Mirror failures never fail a request and are counted;
+- Admin → «Хранилище» copies and verifies/repairs primary → mirror in resumable SCAN batches
+  (`store-migration.js`, `admin/storage.js`);
+- rollback during `supabase+redis` is lossless because Upstash receives every write;
+- functions must run in the database region (`vercel.json → regions`); FitT is Tokyo.
+
+Operator steps: `docs/setup-vercel.md` → «Переезд хранилища Upstash → Supabase».
+After step 3 the S2–S4 document shadow is removed.
+
 ### Supabase Auth
 
 Deferred by default.

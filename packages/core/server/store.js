@@ -5,11 +5,25 @@
    архитектуру, и его придётся принимать отдельно. Пока оно не принято, менять
    хостинг должно стоить одну правку здесь, а не переписывание эндпоинтов.
 
-   Сейчас поддержаны:
+   Внутри хранилище говорит небольшим фиксированным набором команд в стиле Redis
+   (GET/SET/INCR/RPUSH/LRANGE/…). Каждый «движок» исполняет этот набор:
    • Upstash Redis по REST — то, что подключает интеграция Vercel (переменные
      KV_REST_API_URL и KV_REST_API_TOKEN появляются сами);
+   • Supabase/Postgres — таблица appbase_kv и функция kv_exec() (миграция
+     create_appbase_kv), один HTTP-запрос на пачку команд;
    • память процесса — для локального запуска и тестов. На serverless она живёт
-     ровно до конца холодного старта, поэтому в бою это НЕ хранилище. */
+     ровно до конца холодного старта, поэтому в бою это НЕ хранилище.
+
+   Какой движок главный, решает APPBASE_STORE:
+     redis            — только Upstash (по умолчанию);
+     redis+supabase   — читаем Upstash, каждую запись повторяем в Supabase (переезд);
+     supabase+redis   — читаем Supabase, записи повторяем в Upstash (тёплый откат);
+     supabase         — только Supabase.
+   Первый в паре — главный: из него читаем, его ошибка — ошибка запроса. Второй —
+   зеркало: его сбой не роняет запрос, а считается и виден в админке («Хранилище»),
+   где сверка находит и чинит расхождения. */
+
+const Supabase = require('./supabase');
 
 /* Имена переменных зависят от того, ЧЕМ подключили базу, и это ровно та грабля, на
    которой всё встаёт молча: интеграция Upstash кладёт UPSTASH_REDIS_REST_*, прежнее
@@ -23,17 +37,35 @@ const PAIRS = [
 const found = PAIRS.find(([u, t]) => process.env[u] && process.env[t]) || [];
 const URL_ = found[0] ? process.env[found[0]] : '';
 const TOKEN = found[1] ? process.env[found[1]] : '';
-const mem = new Map();                 // локальный запуск: ключ -> {v, exp}
 const YEAR = 365 * 24 * 3600;
 
-const live = () => !!(URL_ && TOKEN);
+const MODES = {
+  'redis':          ['redis', null],
+  'redis+supabase': ['redis', 'supabase'],
+  'supabase+redis': ['supabase', 'redis'],
+  'supabase':       ['supabase', null]
+};
+const WRITE_OPS = new Set(['SET', 'INCR', 'EXPIRE', 'RPUSH', 'LREM', 'DEL', 'UNLOCK', 'KVPUT']);
+const MIRROR_FAIL_KEY = 'appbase:store:mirror-failed';
+// Короткоживущие ключи (окна rate-limit, проверки здоровья, locks) зеркалить и переносить
+// незачем: через минуты они истекут сами, а зеркало удвоило бы цену каждого запроса.
+const EPHEMERAL = /^(rl:|healthcheck:|lock:)/;
+
+const redisLive = () => !!(URL_ && TOKEN);
 // Память процесса на serverless живёт до конца холодного старта, то есть молча
 // теряет данные. Поэтому она включается только явным флагом — его ставит локальный
 // сервер и тесты. В бою без настроенной базы эндпоинт честно отвечает 503, а не
 // делает вид, что сохранил.
 const memOk = () => process.env.ALLOW_MEMORY_STORE === '1';
 
-async function post(path, body){
+function modeName(){
+  const raw = String(process.env.APPBASE_STORE || '').trim().toLowerCase();
+  return raw || 'redis';
+}
+
+/* ---------- Upstash Redis ---------- */
+
+async function redisPost(path, body){
   const res = await fetch(URL_ + path, {
     method: 'POST',
     headers: {Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json'},
@@ -42,74 +74,250 @@ async function post(path, body){
   if(!res.ok) throw new Error('store ' + res.status);
   return res.json();
 }
-async function call(cmd){
-  return (await post('', cmd)).result;
+
+const UNLOCK_LUA = "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
+
+// Команды, которых в Redis нет буквально, раскладываем на родные: [команды, как собрать ответ].
+function redisPlan(c){
+  const [op, key, ...rest] = c;
+  if(op === 'UNLOCK') return [[['EVAL', UNLOCK_LUA, '1', key, rest[0]]], r => r[0]];
+  if(op === 'KVPUT'){
+    const [kind, json, ttl] = rest;
+    const value = JSON.parse(json);
+    const cmds = [['DEL', key]];
+    if(kind === 'list'){ if(value.length) cmds.push(['RPUSH', key, ...value]); }
+    else cmds.push(['SET', key, value]);
+    if(+ttl > 0 && (kind !== 'list' || value.length)) cmds.push(['EXPIRE', key, String(ttl)]);
+    return [cmds, () => 'OK'];
+  }
+  return [[c], r => r[0]];
 }
+
+const redis = {
+  name: 'redis',
+  configured: redisLive,
+  async exec(cmds){
+    const plans = cmds.map(redisPlan);
+    const flat = plans.flatMap(([list]) => list);
+    const data = flat.length === 1
+      ? [await redisPost('', flat[0])]
+      : await redisPost('/pipeline', flat);
+    const results = (Array.isArray(data) ? data : []).map(x => x && x.result);
+    let at = 0;
+    return plans.map(([list, pick]) => {
+      const part = results.slice(at, at + list.length);
+      at += list.length;
+      return pick(part);
+    });
+  }
+};
+
+/* ---------- Supabase / Postgres ---------- */
+
+const supabase = {
+  name: 'supabase',
+  configured: () => Supabase.configured(),
+  async exec(cmds){
+    const body = JSON.stringify({cmds: cmds.map(c => c.map(x => x == null ? null : String(x)))});
+    const res = await Supabase.request('/rest/v1/rpc/kv_exec', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body,
+      timeoutMs: 10000
+    });
+    const out = await res.json();
+    if(!Array.isArray(out) || out.length !== cmds.length) throw new Error('store supabase_bad_response');
+    return out;
+  }
+};
+
+/* ---------- память процесса ---------- */
+
+function globRe(pattern){
+  const escaped = String(pattern || '*').replace(/[.+^$(){}|\\[\]]/g, '\\$&')
+    .replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp('^' + escaped + '$');
+}
+
+// Отдельная фабрика, чтобы тесты могли поднять два независимых «движка».
+function createMemoryBackend(name = 'memory'){
+  const mem = new Map();               // ключ -> {kind:'string'|'list', v, items, exp}
+  const memRec = key => {
+    const rec = mem.get(key);
+    if(!rec) return null;
+    if(rec.exp && rec.exp <= Date.now()){ mem.delete(key); return null; }
+    return rec;
+  };
+  // то же самое в памяти — чтобы локальный запуск вёл себя так же, а не «почти так же»
+  function memCmd(c){
+    const [op, key, ...rest] = c.map(x => x == null ? x : String(x));
+    const now = Date.now();
+    if(op === 'GET'){ const r = memRec(key); return r && r.kind === 'string' ? r.v : null; }
+    if(op === 'MGET') return [key].concat(rest).map(k => memCmd(['GET', k]));
+    if(op === 'SET'){
+      let ttl = null, nx = false;
+      for(let i = 1; i < rest.length; i++){
+        const o = rest[i].toUpperCase();
+        if(o === 'EX'){ ttl = +rest[i + 1]; i++; }
+        else if(o === 'NX') nx = true;
+      }
+      if(nx && memRec(key)) return null;            // уже было — не трогаем
+      mem.set(key, {kind: 'string', v: rest[0], exp: ttl ? now + ttl * 1000 : 0});
+      return 'OK';
+    }
+    if(op === 'INCR'){
+      const r = memRec(key);
+      const n = (r && r.kind === 'string' ? (+r.v || 0) : 0) + 1;
+      mem.set(key, {kind: 'string', v: String(n), exp: r && r.kind === 'string' ? r.exp : 0});
+      return n;
+    }
+    if(op === 'EXPIRE'){ const r = memRec(key); if(!r) return 0; r.exp = now + (+rest[0]) * 1000; return 1; }
+    if(op === 'RPUSH'){
+      let r = memRec(key);
+      if(!r || r.kind !== 'list'){ r = {kind: 'list', items: [], exp: 0}; mem.set(key, r); }
+      r.items.push(...rest);
+      return r.items.length;
+    }
+    if(op === 'LRANGE'){
+      const r = memRec(key);
+      if(!r || r.kind !== 'list') return [];
+      const len = r.items.length;
+      let s = +rest[0], e = +rest[1];
+      if(s < 0) s = Math.max(len + s, 0);
+      if(e < 0) e = len + e;
+      return r.items.slice(s, Math.min(e, len - 1) + 1);
+    }
+    if(op === 'LREM'){
+      const r = memRec(key);
+      if(!r || r.kind !== 'list') return 0;
+      const next = r.items.filter(x => x !== rest[1]);
+      const removed = r.items.length - next.length;
+      if(next.length) r.items = next; else mem.delete(key);
+      return removed;
+    }
+    if(op === 'DEL') return [key].concat(rest).reduce((n, k) => { const had = !!memRec(k); mem.delete(k); return n + (had ? 1 : 0); }, 0);
+    if(op === 'UNLOCK'){ const r = memRec(key); if(r && r.kind === 'string' && r.v === rest[0]){ mem.delete(key); return 1; } return 0; }
+    if(op === 'TTL'){ const r = memRec(key); if(!r) return -2; return r.exp ? Math.max(1, Math.ceil((r.exp - now) / 1000)) : -1; }
+    if(op === 'TYPE'){ const r = memRec(key); return r ? r.kind : 'none'; }
+    if(op === 'DBSIZE') return [...mem.keys()].filter(k => memRec(k)).length;
+    if(op === 'SCAN'){
+      let pattern = '*', count = 500;
+      for(let i = 0; i < rest.length; i += 2){
+        if(rest[i].toUpperCase() === 'MATCH') pattern = rest[i + 1];
+        if(rest[i].toUpperCase() === 'COUNT') count = Math.max(1, +rest[i + 1] || 500);
+      }
+      const re = globRe(pattern);
+      const from = key && key !== '0' ? key : '';
+      const keys = [...mem.keys()].filter(k => k > from && memRec(k) && re.test(k)).sort().slice(0, count);
+      return [keys.length < count ? '0' : keys[keys.length - 1], keys];
+    }
+    if(op === 'KVPUT'){
+      const [kind, json, ttl] = rest;
+      const value = JSON.parse(json);
+      const exp = +ttl > 0 ? now + (+ttl) * 1000 : 0;
+      if(kind === 'list') mem.set(key, {kind: 'list', items: value.map(String), exp});
+      else mem.set(key, {kind: 'string', v: String(value), exp});
+      return 'OK';
+    }
+    return null;
+  }
+  return {
+    name,
+    configured: memOk,
+    async exec(cmds){ return cmds.map(memCmd); }
+  };
+}
+
+const memory = createMemoryBackend();
+
+const BACKENDS = {redis, supabase, memory};
+
+/* ---------- выбор движков ---------- */
+
+function backends(){
+  const pair = MODES[modeName()];
+  // Опечатка в режиме не должна молча вернуть нас на старую базу.
+  if(!pair) return {primary: memory, mirror: null, implicitMemory: true, invalid: true};
+  const primary = BACKENDS[pair[0]];
+  const mirror = pair[1] ? BACKENDS[pair[1]] : null;
+  if(primary.configured()) return {primary, mirror: mirror && mirror.configured() ? mirror : null, mirrorMissing: !!mirror && !mirror.configured()};
+  // Главной базы нет. Как и раньше, команды исполняет память процесса, но
+  // configured() честно говорит «нет» — эндпоинты отвечают 503. Настоящим
+  // хранилищем память считается только с явным флагом (локальный сервер, тесты).
+  return {primary: memory, mirror: null, implicitMemory: !memOk()};
+}
+
+let mirrorFailures = 0;
+let mirrorLastError = null;
+
+async function run(cmds, opts = {}){
+  if(!cmds.length) return [];
+  const {primary, mirror} = backends();
+  const out = await primary.exec(cmds);
+  if(mirror && opts.mirror !== false){
+    const writes = cmds.filter(c => WRITE_OPS.has(String(c[0]).toUpperCase()) && !EPHEMERAL.test(String(c[1] || '')));
+    if(writes.length){
+      try{
+        await mirror.exec(writes);
+      }catch(e){
+        mirrorFailures++;
+        mirrorLastError = String((e && e.message) || e).slice(0, 200);
+        // Отметку кладём в главный движок: зеркало как раз и не отвечает.
+        await primary.exec([
+          ['INCR', MIRROR_FAIL_KEY],
+          ['EXPIRE', MIRROR_FAIL_KEY, String(30 * 24 * 3600)]
+        ]).catch(() => {});
+      }
+    }
+  }
+  return out;
+}
+async function call(cmd, opts){ return (await run([cmd], opts))[0]; }
+
 /* Несколько команд ОДНИМ запросом.
 
    Дело не в красоте: функция и база стоят в разных местах, и каждое обращение —
    это полный путь туда и обратно. Пять команд подряд превращались в пять таких
    путей, то есть в секунды ожидания на ровном месте. Здесь они едут вместе. */
 async function pipe(cmds){
-  if(!cmds.length) return [];
-  if(!live()){
-    const out = [];
-    for(const c of cmds) out.push(await memCmd(c));
-    return out;
-  }
-  const data = await post('/pipeline', cmds);
-  return (Array.isArray(data) ? data : []).map(x => x && x.result);
-}
-// то же самое в памяти — чтобы локальный запуск вёл себя так же, а не «почти так же»
-async function memCmd(c){
-  const [op, key, ...rest] = c;
-  if(op === 'GET') return memGet(key);
-  if(op === 'SET'){
-    if(rest.includes('NX') && memGet(key) != null) return null;   // уже было — не трогаем
-    mem.set(key, {v: rest[0], exp: Date.now() + (+rest[2] || YEAR) * 1000});
-    return 'OK';
-  }
-  if(op === 'INCR'){ const n = (+memGet(key) || 0) + 1; mem.set(key, {v: String(n), exp: Date.now() + YEAR * 1000}); return n; }
-  if(op === 'RPUSH'){ const a = JSON.parse(memGet(key) || '[]'); a.push(rest[0]); mem.set(key, {v: JSON.stringify(a), exp: Date.now() + YEAR * 1000}); return a.length; }
-  if(op === 'LRANGE') return JSON.parse(memGet(key) || '[]');
-  if(op === 'DEL'){ const had = mem.has(key); mem.delete(key); return had ? 1 : 0; }
-  if(op === 'EXPIRE') return 1;
-  if(op === 'MGET') return [key].concat(rest).map(k => memGet(k));
-  return null;
-}
-
-function memGet(key){
-  const rec = mem.get(key);
-  if(!rec) return null;
-  if(rec.exp && rec.exp < Date.now()){ mem.delete(key); return null; }
-  return rec.v;
+  return run(cmds);
 }
 
 const store = {
   // хранилище не настроено — это не ошибка запроса, а состояние «сервер без базы»
-  configured: () => live() || memOk(),
+  configured: () => { const b = backends(); return !!b.primary && !b.implicitMemory; },
 
   // Что видно снаружи: какими переменными подключено и подключено ли вообще.
   // Значения не отдаём НИКОГДА — только имена, иначе токен уедет в ответ.
   info(){
+    const b = backends();
     // Какие переменные про хранилище функция вообще видит. Это главное, что нужно
     // знать при разборе: «имена не те» и «переменных нет вовсе» — разные беды с
     // разным лечением, а без списка их не различить.
     const seen = Object.keys(process.env)
-      .filter(k => /^(KV_|REDIS_|UPSTASH_)/.test(k))
+      .filter(k => /^(KV_|REDIS_|UPSTASH_|APPBASE_STORE$)/.test(k))
       .sort();
     return {
-      connected: live(),
+      connected: b.primary !== memory,
+      mode: modeName(),
+      modeValid: !b.invalid,
+      primary: b.primary ? b.primary.name : null,
+      mirror: b.mirror ? b.mirror.name : null,
+      mirrorMissing: !!b.mirrorMissing,
+      mirrorFailures,
+      mirrorLastError,
+      redis: redisLive(),
+      supabase: Supabase.configured(),
       vars: found.length ? found : null,
       seen,
-      memory: !live() && memOk(),
+      memory: b.primary === memory && !b.implicitMemory,
       // Адрес для HTTP есть, а пара не сложилась — значит, не хватает токена
       // (частый случай: подставился только READ_ONLY, писать им нельзя).
       restUrl: PAIRS.some(([u]) => process.env[u]),
       // Совсем другой случай: базу подключили строкой для обычного клиента, а
       // функции ходят по HTTP и таким адресом пользоваться не могут. Проверять
       // его можно только ПОСЛЕ restUrl, иначе совет уводит не туда.
-      redisUrlOnly: !live() && !PAIRS.some(([u]) => process.env[u])
+      redisUrlOnly: !redisLive() && !PAIRS.some(([u]) => process.env[u])
         && !!(process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL),
       // Что именно сейчас запущено. Без этого нельзя отличить «не настроено» от
       // «настроено, но работает старая сборка, в которую переменные не попали», —
@@ -155,6 +363,7 @@ const store = {
         throw new Error('вернулось ' + JSON.stringify(arr));
       }
     });
+    await run([['DEL', k, k + ':n', k + ':l']]).catch(() => {});
 
     const bad = steps.find(x => !x.ok);
     if(bad) throw Object.assign(new Error(`${bad.name}: ${bad.err}`), {steps});
@@ -162,21 +371,20 @@ const store = {
   },
 
   async get(key){
-    if(!live()) return memGet(key);
     const raw = await call(['GET', key]);
     return raw == null ? null : raw;
   },
 
   async set(key, value, ttl = YEAR){
-    if(!live()){ mem.set(key, {v: value, exp: Date.now() + ttl * 1000}); return; }
     await call(['SET', key, value, 'EX', String(ttl)]);
   },
 
   /* Короткий распределённый lock для read-modify-write операций.
      Sync хранит компактный manifest одним JSON: без lock два serverless-инстанса
      могут прочитать одну версию и последний SET потеряет изменения первого.
-     Освобождение в Redis делаем compare-and-delete, чтобы истёкший владелец не
-     удалил lock, который уже успел получить другой запрос. */
+     Освобождение — compare-and-delete, чтобы истёкший владелец не удалил lock,
+     который уже успел получить другой запрос. Lock живёт только в главном движке:
+     зеркалу он не нужен. */
   async withLock(key, fn, opts = {}){
     const ttl = Math.max(2, Math.min(30, +opts.ttl || 8));
     const retries = Math.max(1, Math.min(100, +opts.retries || 60));
@@ -184,39 +392,20 @@ const store = {
     const token = require('crypto').randomBytes(18).toString('hex');
     let acquired = false;
     for(let i = 0; i < retries; i++){
-      if(!live()){
-        if(memGet(key) == null){
-          mem.set(key, {v:token, exp:Date.now() + ttl * 1000});
-          acquired = true;
-          break;
-        }
-      } else {
-        const ok = await call(['SET', key, token, 'NX', 'EX', String(ttl)]);
-        if(ok === 'OK'){ acquired = true; break; }
-      }
+      const ok = await call(['SET', key, token, 'NX', 'EX', String(ttl)], {mirror: false});
+      if(ok === 'OK'){ acquired = true; break; }
       await new Promise(r => setTimeout(r, delay));
     }
     if(!acquired) throw new Error('lock_timeout');
     try{
       return await fn();
     } finally {
-      if(!live()){
-        if(memGet(key) === token) mem.delete(key);
-      } else {
-        await call(['EVAL',
-          "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end",
-          '1', key, token]).catch(()=>{});
-      }
+      await call(['UNLOCK', key, token], {mirror: false}).catch(()=>{});
     }
   },
 
   // счётчик с временем жизни: на нём стоят и открытия ссылки, и ограничение частоты
   async incr(key, ttl = YEAR){
-    if(!live()){
-      const n = (+memGet(key) || 0) + 1;
-      mem.set(key, {v: String(n), exp: Date.now() + ttl * 1000});
-      return n;
-    }
     const n = await call(['INCR', key]);
     if(n === 1) await call(['EXPIRE', key, String(ttl)]);
     return n;
@@ -224,14 +413,7 @@ const store = {
 
   // список отчётов по ссылке: добавляем в конец, читаем целиком — их единицы
   async push(key, value, ttl = YEAR){
-    if(!live()){
-      const arr = JSON.parse(memGet(key) || '[]');
-      arr.push(value);
-      mem.set(key, {v: JSON.stringify(arr), exp: Date.now() + ttl * 1000});
-      return arr.length;
-    }
-    const n = await call(['RPUSH', key, value]);
-    await call(['EXPIRE', key, String(ttl)]);
+    const [n] = await run([['RPUSH', key, value], ['EXPIRE', key, String(ttl)]]);
     return n;
   },
 
@@ -239,25 +421,16 @@ const store = {
      «удалено» на записи с именем и фотографией — это не удаление, а обещание не
      показывать. 152-ФЗ требует первого, а не второго. */
   async del(key){
-    if(!live()){ const had = mem.has(key); mem.delete(key); return had ? 1 : 0; }
     return await call(['DEL', key]);
   },
 
   async list(key){
-    if(!live()) return JSON.parse(memGet(key) || '[]');
     return (await call(['LRANGE', key, '0', '-1'])) || [];
   },
 
-  // Удалить точное значение из Redis-list. Нужен для privacy cleanup индексов и
+  // Удалить точное значение из списка. Нужен для privacy cleanup индексов и
   // диагностических списков без перестройки всего списка на клиенте.
   async removeFromList(key, value){
-    if(!live()){
-      const arr = JSON.parse(memGet(key) || '[]');
-      const next = arr.filter(x => x !== value);
-      if(next.length) mem.set(key, {v:JSON.stringify(next), exp:Date.now() + YEAR * 1000});
-      else mem.delete(key);
-      return arr.length - next.length;
-    }
     return await call(['LREM', key, '0', value]);
   },
 
@@ -266,12 +439,6 @@ const store = {
   async scan(pattern, limit = 100000){
     pattern = String(pattern || '*');
     limit = Math.max(1, Math.min(100000, Math.round(+limit || 100000)));
-    if(!live()){
-      const escaped = pattern.replace(/[.+^$(){}|\\]/g, '\\$&')
-        .replace(/\*/g, '.*').replace(/\?/g, '.');
-      const re = new RegExp('^' + escaped + '$');
-      return [...mem.keys()].filter(k => memGet(k) != null && re.test(k)).slice(0, limit);
-    }
     let cursor = '0';
     const out = [];
     do{
@@ -290,9 +457,17 @@ const store = {
   // а не сто: обход в цикле и был причиной, по которой каталог открывался секундами.
   async many(keys){
     if(!keys.length) return [];
-    if(!live()) return keys.map(k => memGet(k));
     return (await call(['MGET'].concat(keys))) || [];
-  }
+  },
+
+  // Для переноса данных между движками (admin «Хранилище»): прямой доступ к паре
+  // главный/зеркало текущего режима. Эндпоинты этим не пользуются.
+  backends,
+  BACKENDS,
+  MODES: Object.keys(MODES),
+  MIRROR_FAIL_KEY,
+  EPHEMERAL,
+  createMemoryBackend
 };
 
 module.exports = { store };
