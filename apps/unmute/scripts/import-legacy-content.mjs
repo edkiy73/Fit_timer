@@ -2,8 +2,11 @@
 import fs from 'node:fs/promises';
 import { parseLegacySource,buildCourseSet,buildLexicon,validateImport } from '../lib/legacy-import.mjs';
 
+const LEGACY_SOURCE_SHA='011572be908d64a1e092e63a821e407d85753205';
+const LEGACY_SOURCE_URL='https://raw.githubusercontent.com/edkiy73/English/'+LEGACY_SOURCE_SHA+'/index.html';
+
 function parseArgs(argv){
-  const out={source:'https://raw.githubusercontent.com/edkiy73/English/main/index.html',api:'https://unmute99.vercel.app',publish:false,dryRun:false};
+  const out={source:LEGACY_SOURCE_URL,api:'https://unmute99.vercel.app',publish:false,dryRun:false};
   for(let i=0;i<argv.length;i++){
     const a=argv[i];
     if(a==='--source')out.source=argv[++i];
