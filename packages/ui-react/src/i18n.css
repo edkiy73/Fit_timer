@@ -1,0 +1,2 @@
+.ab-language{display:grid;gap:6px;font-size:13px;font-weight:650}
+.ab-language select{border:1px solid var(--line,#e4e6eb);border-radius:10px;padding:9px 12px;font:inherit;font-weight:500;color:inherit;background:var(--surface,transparent)}

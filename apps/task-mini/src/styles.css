@@ -61,3 +61,4 @@ header p{margin:0;color:var(--muted)}
 .account p{margin:0 0 10px}
 @media(max-width:480px){.account-row{display:block}.account-chip{max-width:none;justify-items:start;margin-top:10px}}
 .buy p{margin:0 0 6px}
+.language{margin-top:22px}

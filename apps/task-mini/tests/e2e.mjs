@@ -51,7 +51,7 @@ const ok = (name, cond) => { if(!cond) bad++; console.log((cond ? '  ok  ' : ' F
 const appears = (locator, timeout = 5000) => locator.waitFor({timeout}).then(() => true, () => false);
 
 async function openDevice(browser, errors){
-  const context = await browser.newContext({viewport: {width: 390, height: 800}});
+  const context = await browser.newContext({viewport: {width: 390, height: 800}, locale: 'ru-RU'});
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(URL_);
@@ -114,7 +114,7 @@ try{
   // Paid feature: locked, granted in the shared Admin UI, visible after the app refreshes rights.
   await phone.getByRole('link', {name: 'Аккаунт'}).click();
   ok('paid export is locked before purchase', await appears(phone.getByText(/Экспорт задач в файл — отдельная покупка/)));
-  const adminPage = await (await browser.newContext()).newPage();
+  const adminPage = await (await browser.newContext({locale: 'ru-RU'})).newPage();
   adminPage.on('pageerror', e => errors.push(String(e)));
   await adminPage.goto(URL_ + '#/admin');
   await adminPage.getByLabel('ADMIN_KEY').fill(process.env.ADMIN_KEY);
@@ -128,6 +128,12 @@ try{
   await phone.reload();
   ok('app refreshes rights on start and opens the paid feature',
     await appears(phone.getByRole('button', {name: /Скачать задачи/}), 8000));
+  // Language: the app follows the system language; a choice on the device switches everything.
+  await phone.getByRole('combobox', {name: 'Язык'}).selectOption('en');
+  ok('language switch changes the interface at once', await appears(phone.getByRole('heading', {name: 'Account'})));
+  await phone.reload();
+  ok('language choice survives a reload', await appears(phone.getByRole('link', {name: '← Back to tasks'})));
+  await phone.getByRole('combobox', {name: 'Language'}).selectOption('ru');
   await phone.getByRole('link', {name: /К задачам/}).click();
 
   // Purchase through the (memory-store only) test provider on the second device's account copy.

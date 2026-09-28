@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { routes } from './app';
+import { I18nProvider, LanguagePicker, missingKeys, offeredLocales, resolveLocale } from '@appbase/ui-react/i18n.js';
+import { dictionaries } from './i18n';
 import { loadTasks, saveTasks } from './tasks/repository';
 import {
   createTask, filterTasks, mergeTaskDocuments, parseTaskRecords, recordsFromTasks,
@@ -32,6 +34,7 @@ const signIn = (owned: string[] = []) =>
 
 beforeEach(async () => {
   localStorage.removeItem('task-mini.auth.session');
+  localStorage.setItem('task-mini.locale', 'ru');
   await saveTasks([]);
 });
 
@@ -85,6 +88,32 @@ describe('repository', () => {
     const valid = createTask('ok', '1');
     await saveTasks([valid, {id: 2, title: null} as never]);
     expect(await loadTasks()).toEqual([valid]);
+  });
+});
+
+describe('interface language', () => {
+  it('has the same keys in every dictionary', () => {
+    expect(missingKeys(dictionaries)).toEqual({});
+  });
+
+  it('switches the whole interface and remembers the choice on the device', async () => {
+    const user = userEvent.setup();
+    renderApp('/account');
+    await user.selectOptions(await screen.findByRole('combobox', {name: 'Язык'}), 'en');
+    expect(await screen.findByRole('heading', {name: 'Account'})).toBeTruthy();
+    expect(screen.getByRole('link', {name: '← Back to tasks'})).toBeTruthy();
+    expect(localStorage.getItem('task-mini.locale')).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('follows the system language by default and offers no switch with one locale', () => {
+    expect(resolveLocale('system', ['ru', 'en'], ['de-DE', 'en-GB'])).toBe('en');
+    expect(resolveLocale('system', ['ru', 'en'], ['de-DE'])).toBe('ru');
+    expect(offeredLocales(dictionaries, {locales: ['ru'], default: 'ru'})).toEqual(['ru']);
+    render(<I18nProvider dictionaries={dictionaries} config={{locales: ['ru']}} storageKey="one.locale">
+      <LanguagePicker label="Язык" systemLabel="Как в системе" />
+    </I18nProvider>);
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 });
 

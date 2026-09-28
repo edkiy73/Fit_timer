@@ -38,5 +38,12 @@
       "sku": "export",
       "title": "Экспорт задач"
     }
-  ]
+  ],
+  "i18n": {
+    "locales": [
+      "ru",
+      "en"
+    ],
+    "default": "ru"
+  }
 }
