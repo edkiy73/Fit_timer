@@ -27,7 +27,8 @@
 | Фаза 3.2a — общий словарь | ✅ в `main` (PR #200) | `docs/unmute-lexicon.md`, `apps/unmute/src/lexicon/*`, `lib/lexicon-store.js`, `api/lexicon.js` |
 | Фаза 3.3 — legacy importer | ✅ в `main` (PR #201) | `apps/unmute/lib/legacy-import.mjs`, `scripts/import-legacy-content.mjs` |
 | Фаза 3.3a — Admin Content + paired release | ✅ в `main` (PR #202) | `lib/content-admin.js`, `lib/content-release.js`, `src/admin-content.tsx` |
-| Фаза 3.3b — Lexicon editor | 🟡 PR в работе | draft CRUD, revision conflicts, `needs-review` workflow |
+| Фаза 3.3b — Lexicon editor | ✅ в `main` (PR #204) | draft CRUD, revision conflicts, `needs-review` workflow |
+| Фаза 3.3c — normalized draft workspaces | 🟡 PR в работе | entity-level draft storage; immutable published snapshots stay unchanged |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -330,6 +331,7 @@ DictEntry { word, ru }
 - 3.3 Одноразовый importer legacy `English/index.html`: применяет `EX/MORE_CARDS*/FIX/ALT`, собирает `general-foundation` и общий lexicon, проверяет контрольные объёмы, загружает draft в БД; `--publish` выпускает immutable revisions. Неоднозначные `;`-значения словаря маркируются `needs-review`, а старый динамический поиск примеров не переносится.
 - 3.3a Admin → «Контент»: детерминированный import legacy в draft, отчёт, очередь `needs-review`, отдельный Publish. Курс и lexicon публикуются только как единый paired release: сначала создаются обе immutable revisions, затем одним release pointer становятся видимы пользователям; одиночный publish через `/api/content`/`/api/lexicon` запрещён.
 - 3.3b Lexicon editor: Admin редактирует senses/переводы/части речи в draft, добавляет/удаляет значения, явно снимает `needs-review`; optimistic revision check защищает от потери изменений между вкладками. Повторный legacy-import не может молча затереть ручной draft — нужен явный overwrite.
+- 3.3c Draft storage для конструктора нормализован: activity/lexeme/node живут как отдельные immutable entity revisions, а draft pointer хранит только ссылки и порядок. Старые монолитные production drafts читаются и лениво мигрируют при первой правке. Publish по-прежнему собирает и валидирует цельный immutable snapshot.
 - 3.4 `src/engine/`: проверка ответа, повторения, лимиты, план, серия — чистый TS.
 - 3.5 **Эталонные тесты**: старые функции из `index.html` прогоняются в Node на наборе ответов (верные, сокращения, опечатки, «почти»), новый движок обязан совпасть на 100%.
 - 3.6 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.
