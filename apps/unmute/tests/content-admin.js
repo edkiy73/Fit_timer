@@ -26,7 +26,7 @@ const course={
   access:{mode:'entitlement',entitlement:'course.general-foundation',freePreview:{kind:'first-days',days:7,learnedContentStaysAvailable:true}},
   defaultRoadmapId:'main',
   roadmaps:[{id:'main',title:{ru:'Main'},nodes:[{id:'day-1',kind:'lesson',title:{ru:'Day 1'},dayIndex:1,order:0,prerequisites:[],activityIds:['a1'],optional:false}]}],
-  activities:[{id:'a1',revision:1,type:'theory',tags:[],revisionProgress:'preserve',body:{ru:'I work online.'},format:'text'}]
+  activities:[{id:'a1',revision:1,type:'theory',tags:[],revisionProgress:'preserve',body:{ru:'I work.'},format:'text'}]
 };
 const lexicon={
   schemaVersion:1,revision:1,entries:[
@@ -88,14 +88,14 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const openedActivity=await action(handler,'content_activity_get',{activityId:'a1'});
   assert.equal(openedActivity.status,200);
   const editedActivity=JSON.parse(JSON.stringify(openedActivity.body.activity));
-  editedActivity.body.ru='edited theory';
+  editedActivity.body.ru='I work online.';
   editedActivity.revisionProgress='reset';
   const savedActivity=await action(handler,'content_activity_save',{
     activityId:'a1',expectedRevision:1,activity:editedActivity
   });
   assert.equal(savedActivity.status,200);
   assert.equal(savedActivity.body.activity.revision,2);
-  assert.equal(savedActivity.body.activity.body.ru,'edited theory');
+  assert.equal(savedActivity.body.activity.body.ru,'I work online.');
   assert.equal(savedActivity.body.activity.revisionProgress,'reset');
 
   const staleActivity=await action(handler,'content_activity_save',{
