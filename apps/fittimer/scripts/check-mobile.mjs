@@ -42,6 +42,8 @@ await collectEsm('dist/esm');
 const app = (await Promise.all(esmFiles.map(file => readFile(file, 'utf8')))).join('\n');
 const runtimeConfig = await readFile('dist/app.config.js', 'utf8');
 if(!html.includes('type="module"') || !html.includes('esm/main.js') || html.includes('<script src="mobile.js"></script>') || html.includes('<script src="app.js"></script>') || !html.includes('style.css')) throw new Error('Application assets are not loaded');
+const assetVersions = [...html.matchAll(/(?:app\.config\.js|esm\/main\.js|style\.css)\?v=([a-zA-Z0-9._-]+)/g)].map(m => m[1]);
+if(assetVersions.length !== 3 || new Set(assetVersions).size !== 1) throw new Error('Application assets must share one build cache-bust id');
 if(!runtimeConfig.includes('window.APP_CONFIG') || runtimeConfig.includes('FIT_TIMER_CONFIG')) throw new Error('Generic runtime configuration is missing or still carries the legacy FIT_TIMER_CONFIG alias');
 if(!app.includes('applyAndroidUpdateConfig')) throw new Error('Android update policy is missing from client bundle');
 // AppBase Core is bundled into the ES-module entries (scripts/build-esm.mjs).
