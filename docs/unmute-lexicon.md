@@ -43,3 +43,14 @@ A different lexeme may legally share the same surface form. Lookup then returns 
 Sets may reference lexeme/sense IDs but do not own dictionary data. One lexeme can be used by any number of sets (A1→B1, B1→B2, Travel, Work, etc.).
 
 Legacy import will create lexemes/senses/forms/examples once, then course import will reference them.
+
+
+## Admin editing
+
+The Admin edits the lexicon draft only. Published users keep seeing the current paired release until an explicit Publish.
+
+- Each lexeme has its own revision.
+- Saving requires the revision the editor opened; a stale editor gets `lexeme_revision_conflict` instead of overwriting a newer edit.
+- `needs-review` is removed only by an explicit reviewed save.
+- A sense may be added or removed; validation prevents deleting a sense while examples still reference it.
+- Re-running the legacy import cannot silently replace a manually edited draft; overwrite must be explicit.
