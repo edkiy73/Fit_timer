@@ -238,10 +238,11 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     setBulkMessage('');
     try{
       const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply});
-      setIpaReport((result.report || null) as typeof ipaReport);
+      const report=(result.report || null) as typeof ipaReport;
+      setIpaReport(report);
       setBulkMessage(apply
-        ? 'IPA добавлен в draft: '+String(result.report?.updatedForms || 0)+' форм.'
-        : 'Можно добавить IPA для '+String(result.report?.updatedForms || 0)+' форм без перезаписи существующих данных.');
+        ? 'IPA добавлен в draft: '+String(report?.updatedForms || 0)+' форм.'
+        : 'Можно добавить IPA для '+String(report?.updatedForms || 0)+' форм без перезаписи существующих данных.');
       if(apply) await load();
     }catch(error){
       setBulkMessage('Ошибка IPA: '+String((error as {code?:string})?.code || 'request_failed'));
