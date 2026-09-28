@@ -119,6 +119,7 @@ function validateSet(input){
 const draftKey = id => `${PREFIX}:set:${id}:draft`;
 const pointerKey = id => `${PREFIX}:set:${id}:published`;
 const revisionKey = (id, revision) => `${PREFIX}:set:${id}:rev:${revision}`;
+const revisionCounterKey = id => `${PREFIX}:set:${id}:revision-counter`;
 
 async function persistentSet(key, value){
   await store.pipe([['SET', key, value]]);
@@ -157,40 +158,70 @@ async function getDraft(id){
   return parse(await store.get(draftKey(key)));
 }
 
-async function publish(id){
-  const key = cleanId(id);
+async function nextRevision(id){
+  const key=cleanId(id);
   if(!key) throw new Error('bad_set_id');
-  return store.withLock(`lock:content:${key}`, async () => {
-    const draft = await getDraft(key);
-    if(!draft) throw new Error('draft_not_found');
-    validateSet(draft);
+  const pointer=parse(await store.get(pointerKey(key)));
+  const current=Math.max(0,+(pointer&&pointer.revision)||0,+(await store.get(revisionCounterKey(key))||0));
+  const out=await store.pipe([
+    ['SET',revisionCounterKey(key),String(current)],
+    ['INCR',revisionCounterKey(key)]
+  ]);
+  return Math.max(1,+out[1]||current+1);
+}
 
-    const prevPointer = parse(await store.get(pointerKey(key)));
-    const revision = Math.max(0, +(prevPointer && prevPointer.revision) || 0) + 1;
-    const publishedAt = new Date().toISOString();
-    const snapshot = validateSet({...draft, revision, publishedAt});
-    delete snapshot.draftUpdatedAt;
+async function stageDraft(id){
+  const key=cleanId(id);
+  if(!key) throw new Error('bad_set_id');
+  const draft=await getDraft(key);
+  if(!draft) throw new Error('draft_not_found');
+  validateSet(draft);
+  const revision=await nextRevision(key);
+  const publishedAt=new Date().toISOString();
+  const snapshot=validateSet({...draft,revision,publishedAt});
+  delete snapshot.draftUpdatedAt;
+  const result=await store.pipe([['SET',revisionKey(key,revision),json(snapshot),'NX']]);
+  if(result[0] !== 'OK') throw new Error('revision_collision');
+  return snapshot;
+}
 
-    await persistentSet(revisionKey(key, revision), json(snapshot));
-    await persistentSet(pointerKey(key), json({revision, publishedAt}));
+async function getRevision(id,revision){
+  const key=cleanId(id);
+  const rev=Math.max(0,+revision||0);
+  if(!key||!rev) return null;
+  const snapshot=parse(await store.get(revisionKey(key,rev)));
+  return snapshot ? validateSet(snapshot) : null;
+}
 
-    const catalog = await getCatalog();
-    const next = catalog.sets.filter(item => item && item.id !== key);
-    next.push(catalogEntry(snapshot));
-    next.sort((a,b) => String(a.id).localeCompare(String(b.id)));
-    await persistentSet(CATALOG_KEY, json({schemaVersion:1, updatedAt:publishedAt, sets:next}));
+async function activateRevision(id,revision){
+  const key=cleanId(id);
+  const snapshot=await getRevision(key,revision);
+  if(!snapshot) throw new Error('revision_not_found');
+  await persistentSet(pointerKey(key),json({revision:snapshot.revision,publishedAt:snapshot.publishedAt}));
+  const catalog=await getCatalog();
+  const next=catalog.sets.filter(item=>item&&item.id!==key);
+  next.push(catalogEntry(snapshot));
+  next.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  await persistentSet(CATALOG_KEY,json({schemaVersion:1,updatedAt:snapshot.publishedAt,sets:next}));
+  return snapshot;
+}
+
+async function publish(id){
+  const key=cleanId(id);
+  if(!key) throw new Error('bad_set_id');
+  return store.withLock(`lock:content:${key}`,async()=>{
+    const snapshot=await stageDraft(key);
+    await activateRevision(key,snapshot.revision);
     return snapshot;
-  }, {ttl:10, retries:80, delay:50});
+  },{ttl:10,retries:80,delay:50});
 }
 
 async function getPublished(id){
-  const key = cleanId(id);
+  const key=cleanId(id);
   if(!key) return null;
-  const pointer = parse(await store.get(pointerKey(key)));
-  const revision = Math.max(0, +(pointer && pointer.revision) || 0);
-  if(!revision) return null;
-  const snapshot = parse(await store.get(revisionKey(key, revision)));
-  return snapshot ? validateSet(snapshot) : null;
+  const pointer=parse(await store.get(pointerKey(key)));
+  const revision=Math.max(0,+(pointer&&pointer.revision)||0);
+  return revision ? getRevision(key,revision) : null;
 }
 
 function previewSnapshot(set){
@@ -221,7 +252,10 @@ module.exports = {
   putDraft,
   getDraft,
   publish,
+  stageDraft,
+  activateRevision,
+  getRevision,
   getPublished,
   previewSnapshot,
-  keys:{CATALOG_KEY,draftKey,pointerKey,revisionKey}
+  keys:{CATALOG_KEY,draftKey,pointerKey,revisionKey,revisionCounterKey}
 };
