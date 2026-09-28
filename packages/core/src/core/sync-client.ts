@@ -8,6 +8,9 @@ export interface SyncDocumentInput {
   at?: string;
   schema?: number;
   deleted?: boolean;
+  /** Server revision the value was built on. With it the server writes only if its
+   *  revision still equals base, and otherwise reports the document as stale. */
+  base?: number;
 }
 
 export interface SyncProfileInput {
@@ -38,6 +41,11 @@ export interface SyncPullResult {
   accountDocs: SyncDocument[];
 }
 
+export interface SyncPushResult {
+  /** Documents pushed with `base` that the server rejected because it has a newer revision. */
+  stale: Array<{profileId: string; key: string}>;
+}
+
 export interface SyncClientOptions {
   auth: Pick<AuthClient, 'authFields'>;
   endpoint?: string;
@@ -46,7 +54,7 @@ export interface SyncClientOptions {
 
 export interface SyncClient {
   pull(): Promise<SyncPullResult>;
-  push(input: {profiles?: SyncProfileInput[]; docs?: SyncDocumentInput[]}): Promise<void>;
+  push(input: {profiles?: SyncProfileInput[]; docs?: SyncDocumentInput[]}): Promise<SyncPushResult>;
 }
 
 export interface SyncClientError extends Error {
@@ -99,11 +107,21 @@ export function createSyncClient(options: SyncClientOptions): SyncClient {
     },
 
     async push(input){
-      await post({
+      const result = await post({
         action:'push',
         profiles:Array.isArray(input.profiles) ? input.profiles : [],
         docs:Array.isArray(input.docs) ? input.docs : []
       });
+      const stale = Array.isArray(result.stale) ? result.stale : [];
+      return {
+        stale:stale
+          .filter(item => item && typeof item === 'object')
+          .map(item => ({
+            profileId:String((item as {profileId?: unknown}).profileId || ''),
+            key:String((item as {key?: unknown}).key || '')
+          }))
+          .filter(item => item.key)
+      };
     }
   };
 }

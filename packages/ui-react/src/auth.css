@@ -25,3 +25,4 @@
 .ab-auth-hint,.ab-auth-dev,.ab-auth-loading{margin:0 0 14px;color:var(--muted,#6b7280);font-size:13px}
 .ab-auth-dev{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 @media(max-width:480px){.ab-auth-shell{padding:14px}.ab-auth-card{padding:20px;border-radius:16px}}
+.ab-auth-card--inline{width:100%;box-shadow:none;border:0;padding:0;background:transparent}

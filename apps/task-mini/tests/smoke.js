@@ -26,20 +26,25 @@ function fakeRes(){
 
   ok('second app registers its own identity', productIdentity().name === 'Task Mini');
   ok('second app capability config is independent', capabilities().enabled('profiles') && !capabilities().enabled('ai'));
-  ok('second app owns task document semantics', registry.accepts('profile', 'task:1'));
+  ok('second app owns task document semantics', registry.accepts('account', 'tasks'));
+  ok('task sync is free: no subscription needed for personal data', registry.isFree('account', 'tasks'));
   const read = file => fs.readFileSync(require('path').join(__dirname, '..', file), 'utf8');
   const pkg = JSON.parse(read('package.json'));
   ok('UI is on the ADR default stack', ['react', 'react-router', '@tanstack/react-query', 'zod', 'react-aria-components']
     .every(name => pkg.dependencies && pkg.dependencies[name]) && !!pkg.devDependencies.vite);
   ok('UI persists through Core storage', read('src/tasks/repository.ts').includes("@appbase/core/storage.js"));
   ok('UI theme uses the shared Core token mapping', read('src/theme.ts').includes('themeCssVars'));
-  ok('UI uses shared React auth gate and Core auth client',
+  ok('UI uses shared React auth (optional sign-in) and Core auth client',
     read('src/app.tsx').includes('@appbase/ui-react/auth.js')
+    && read('src/app.tsx').includes('AuthProvider')
     && read('src/auth.ts').includes('@appbase/core/auth.js'));
+  ok('tasks sync through Core local-first document sync',
+    read('src/tasks/repository.ts').includes('@appbase/core/document-sync.js')
+    && read('src/tasks/sync.ts').includes('startAutoSync'));
   ok('UI uses shared React admin panel and Core admin client',
     read('src/app.tsx').includes('@appbase/ui-react/admin.js')
     && read('src/admin.ts').includes('@appbase/core/admin.js'));
-  ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1'));
+  ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1') && !registry.accepts('account', 'project'));
 
   const auth = require('../api/auth');
   const authRes = fakeRes();
