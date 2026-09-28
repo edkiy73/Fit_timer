@@ -70,6 +70,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [publishSetIds,setPublishSetIds]=useState<string[]>([]);
   const [bulkSetId,setBulkSetId]=useState('general-foundation');
   const [bulkLimit,setBulkLimit]=useState(50);
+  const [bulkMode,setBulkMode]=useState<'missing'|'enrich'>('missing');
   const [bulkPrompt,setBulkPrompt]=useState('');
   const [bulkText,setBulkText]=useState('');
   const [bulkCoverage,setBulkCoverage]=useState<CoverageSummary|null>(null);
@@ -238,11 +239,12 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     try{
       const result=await client.action(adminKey,'content_lexicon_ai_prompt',{
         setId:bulkSetId,
-        limit:bulkLimit
+        limit:bulkLimit,
+        mode:bulkMode
       });
       setBulkPrompt(String(result.prompt || ''));
       setBulkCoverage((result.coverage || null) as CoverageSummary|null);
-      setBulkMessage('Собрано '+String(result.targetCount || 0)+' недостающих форм. Скопируй prompt в ИИ и вставь JSON-ответ ниже.');
+      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+' Скопируй prompt в ИИ и вставь JSON-ответ ниже.');
     }catch(error){
       setBulkMessage('Не удалось собрать prompt: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
@@ -391,6 +393,17 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
             </select>
           </label>
           <label>
+            <span>Задача</span>
+            <select value={bulkMode} onChange={event=>{
+              setBulkMode(event.target.value==='enrich'?'enrich':'missing');
+              setBulkPrompt('');
+              setBulkPreview(null);
+            }}>
+              <option value="missing">Добавить отсутствующие формы</option>
+              <option value="enrich">Обогатить существующие</option>
+            </select>
+          </label>
+          <label>
             <span>Пачка</span>
             <select value={bulkLimit} onChange={event=>setBulkLimit(Number(event.target.value))}>
               <option value={25}>25</option>
@@ -398,7 +411,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
               <option value={100}>100</option>
             </select>
           </label>
-          <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>Собрать недостающие</button>
+          <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>
+            {bulkMode==='missing'?'Собрать недостающие':'Собрать на обогащение'}
+          </button>
         </div>
 
         {bulkCoverage && (
