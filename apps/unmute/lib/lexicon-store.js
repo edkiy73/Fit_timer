@@ -23,13 +23,22 @@ function validateEntry(entry){
     throw new Error(`invalid_lexeme:${id}`);
   }
 
-  const forms=new Set();
+  const surfaces=new Map();
+  const formIds=new Set();
   const formKinds=new Set(['lemma','inflection','contraction','variant','phrase']);
   for(const form of entry.forms){
     const key=normalizeSurface(form && form.text);
     if(!key) throw new Error(`bad_form:${id}`);
-    if(forms.has(key)) throw new Error(`duplicate_form:${id}:${key}`);
     if(!formKinds.has(String(form.kind||''))) throw new Error(`bad_form_kind:${id}:${key}`);
+    const formId=String(form&&form.id||'').trim();
+    if(formId){
+      if(!/^[a-z0-9][a-z0-9._-]*$/.test(formId)) throw new Error(`bad_form_id:${id}:${formId}`);
+      if(formIds.has(formId)) throw new Error(`duplicate_form_id:${id}:${formId}`);
+      formIds.add(formId);
+    }
+    const list=surfaces.get(key)||[];
+    list.push(form);
+    surfaces.set(key,list);
     if(form.pronunciation!==undefined){
       if(!form.pronunciation || typeof form.pronunciation!=='object' || Array.isArray(form.pronunciation)){
         throw new Error(`bad_form_pronunciation:${id}:${key}`);
@@ -38,9 +47,13 @@ function validateEntry(entry){
       const ru=String(form.pronunciation.ruReading||'').trim();
       if(!ipa && !ru && !String(form.pronunciation.audioKey||'').trim()) throw new Error(`empty_form_pronunciation:${id}:${key}`);
     }
-    forms.add(key);
   }
-  if(!forms.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${id}`);
+  for(const [surface,list] of surfaces){
+    if(list.length>1 && list.some(form=>!String(form&&form.id||'').trim())){
+      throw new Error(`duplicate_form_requires_id:${id}:${surface}`);
+    }
+  }
+  if(!surfaces.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${id}`);
 
   const senses=new Set();
   for(const sense of entry.senses){
@@ -180,7 +193,8 @@ function buildIndex(snapshot){
     if(entry.deprecated) continue;
     for(const form of entry.forms||[]){
       const key=normalizeSurface(form.text);
-      (out[key]||(out[key]=[])).push(entry.id);
+      const list=out[key]||(out[key]=[]);
+      if(!list.includes(entry.id)) list.push(entry.id);
     }
   }
   return out;
