@@ -23,7 +23,8 @@
 | 0.10 Стартер получает всё из этапа 0 | ✅ PR #195 | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
 | **Фаза 1 — `apps/unmute`** | ✅ инфраструктура готова; production + Redis + mail, регион `sin1` | `apps/unmute` (сгенерирован, `askHandle: false`, RU, флаги §3.1, временные бирюзовые токены), `.github/workflows/unmute.yml`; Vercel-проект `unmute` (`prj_qQFaxRe7iSRRv3XkthR089UAwraO`, Root Directory `apps/unmute`, файлы вне корня включены), домен `unmute99.vercel.app` (`unmute.vercel.app` занят другой командой) |
 | Фаза 3.1 — модель контента | ✅ в `main` (PR #198) | `docs/unmute-content-model.md`, `apps/unmute/src/content/*` |
-| Фаза 3.2 — DB content store | 🟡 PR в работе | `apps/unmute/lib/content-store.js`, `api/content.js`, `src/content/client.ts` |
+| Фаза 3.2 — DB content store | ✅ в `main` (PR #199) | `apps/unmute/lib/content-store.js`, `api/content.js`, `src/content/client.ts` |
+| Фаза 3.2a — общий словарь | 🟡 PR в работе | `docs/unmute-lexicon.md`, `apps/unmute/src/lexicon/*`, `lib/lexicon-store.js`, `api/lexicon.js` |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -322,7 +323,8 @@ DictEntry { word, ru }
 - ✅ 3.1 Модель контента зафиксирована в `docs/unmute-content-model.md`: независимые покупаемые Set, у каждого свой roadmap; несколько сетов можно проходить параллельно; глобального уровня пользователя нет.
 - ✅ 3.1 Каркас Zod: `Set → Roadmap → Node → Activity`, стабильные ID, revisions, prerequisites, независимые activity-типы; free preview первого сета = `dayIndex <= 7`, уже изученное остаётся доступно для повторений.
 - 3.2 Контент хранится в серверной БД, не внутри приложения: отдельный versioned content-store (`draft → validate → immutable publish revision`), публичный API отдаёт только published; клиент кэширует последнюю revision локально для офлайна. Legacy-importer пишет первый сет `general-foundation` сразу в БД.
-- 3.3 Одноразовый скрипт переноса legacy `English/index.html` в новый формат + публикация первого сета + content-integrity tests.
+- 3.2a Общий словарь приложения: `Lexeme → forms → senses → examples`, стабильные ID, без runtime-угадывания форм/значений; course activities могут явно фиксировать `lexemeId/senseId`. Словарь хранится и версионируется в БД отдельно от сетов.
+- 3.3 Одноразовый скрипт переноса legacy `English/index.html` в новый формат + публикация первого сета и общего словаря + content-integrity tests.
 - 3.4 `src/engine/`: проверка ответа, повторения, лимиты, план, серия — чистый TS.
 - 3.5 **Эталонные тесты**: старые функции из `index.html` прогоняются в Node на наборе ответов (верные, сокращения, опечатки, «почти»), новый движок обязан совпасть на 100%.
 - 3.6 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.

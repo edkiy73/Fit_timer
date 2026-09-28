@@ -5,6 +5,13 @@ const localizedTextSchema = z.record(z.string().min(2), z.string());
 
 export const cefrLevelSchema = z.enum(['pre-a1','a1','a2','b1','b2','c1','c2']);
 
+const lexiconRefSchema = z.object({
+  surface: z.string().min(1),
+  lexemeId: idSchema,
+  senseId: idSchema.optional(),
+  occurrence: z.number().int().positive().optional(),
+});
+
 const activityBaseSchema = z.object({
   id: idSchema,
   revision: z.number().int().positive().default(1),
@@ -13,6 +20,8 @@ const activityBaseSchema = z.object({
   /** preserve = wording/content edit keeps learner progress; reset = new revision starts fresh */
   revisionProgress: z.enum(['preserve','reset']).default('preserve'),
   estimatedMinutes: z.number().positive().optional(),
+  /** Explicit dictionary context. If omitted, UI may show all surface matches but must not guess a sense. */
+  lexiconRefs: z.array(lexiconRefSchema).default([]),
 });
 
 const answerCheckSchema = z.object({
