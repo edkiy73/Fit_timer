@@ -294,24 +294,66 @@ function previewPatch(snapshot,rawPatch){
   };
 }
 
-function buildAiPrompt(audit,limit=50){
-  const count=Math.max(1,Math.min(100,Math.round(Number(limit)||50)));
-  const targets=(audit&&audit.missing||[]).slice()
-    .sort((a,b)=>b.count-a.count||a.surface.localeCompare(b.surface))
-    .slice(0,count)
-    .map(item=>({surface:item.surface,count:item.count,contexts:(item.contexts||[]).slice(0,3)}));
+function pronunciationForSurface(entry,surface){
+  const form=(entry.forms||[]).find(item=>norm(item.text)===norm(surface));
+  return form&&form.pronunciation ? form.pronunciation : (entry.pronunciation||null);
+}
 
-  if(!targets.length) return {targets:[],prompt:''};
+function buildAiPrompt(audit,limit=50,options={}){
+  const count=Math.max(1,Math.min(100,Math.round(Number(limit)||50)));
+  const mode=options.mode==='enrich'?'enrich':'missing';
+  const lexicon=options.lexicon||{entries:[]};
+  const byId=new Map((lexicon.entries||[]).map(entry=>[entry.id,entry]));
+
+  let targets=[];
+  if(mode==='missing'){
+    targets=(audit&&audit.missing||[]).slice()
+      .sort((a,b)=>b.count-a.count||a.surface.localeCompare(b.surface))
+      .slice(0,count)
+      .map(item=>({surface:item.surface,count:item.count,contexts:(item.contexts||[]).slice(0,3)}));
+  }else{
+    targets=(audit&&audit.resolved||[]).map(item=>{
+      const id=(item.lexemeIds||[]).length===1?item.lexemeIds[0]:null;
+      const entry=id?byId.get(id):null;
+      if(!entry)return null;
+      const pronunciation=pronunciationForSurface(entry,item.surface)||{};
+      const missingFields=[];
+      if(!pronunciation.ipa)missingFields.push('ipa');
+      if(!pronunciation.ruReading)missingFields.push('ruReading');
+      if(!(entry.examples||[]).length)missingFields.push('examples');
+      if((entry.senses||[]).some(sense=>!sense.partOfSpeech))missingFields.push('partOfSpeech');
+      if(!missingFields.length)return null;
+      return {
+        surface:item.surface,
+        count:item.count,
+        contexts:(item.contexts||[]).slice(0,3),
+        lexemeId:entry.id,
+        lemma:entry.lemma,
+        missingFields,
+        existingSenses:(entry.senses||[]).map(sense=>({
+          id:sense.id,
+          partOfSpeech:sense.partOfSpeech||null,
+          translations:sense.translations&&sense.translations.ru||[]
+        }))
+      };
+    }).filter(Boolean)
+      .sort((a,b)=>b.count-a.count||a.surface.localeCompare(b.surface))
+      .slice(0,count);
+  }
+
+  if(!targets.length)return {targets:[],prompt:'',mode};
 
   const schema={
     format:FORMAT,
     entries:[{
+      lexemeId:mode==='enrich'?'lex.work':undefined,
       lemma:'work',
       forms:[
         {text:'work',kind:'lemma',ipa:'wɝːk',ruReading:'уёрк'},
         {text:'worked',kind:'inflection',ipa:'wɝːkt',ruReading:'уёркт'}
       ],
       senses:[{
+        id:mode==='enrich'?'verb':undefined,
         partOfSpeech:'verb',
         translations:['работать'],
         examples:[{en:'I work from home.',ru:'Я работаю из дома.'}]
@@ -319,20 +361,33 @@ function buildAiPrompt(audit,limit=50){
     }]
   };
 
+  const taskLines=mode==='missing'
+    ? [
+        '- Cover EVERY target surface below exactly once in the returned entries.forms.',
+        '- Group inflections/contractions/variants under the correct lemma when appropriate.',
+        '- It is OK to introduce the base lemma form even when it is not in the target list.',
+        '- Give the common Russian learner meanings needed for the supplied contexts.',
+        '- Split genuinely different parts of speech/meanings into separate senses.'
+      ]
+    : [
+        '- Enrich EVERY target below. Use its exact lexemeId in the returned entry.',
+        '- Preserve existing sense IDs when the sense already exists. Do NOT merge distinct existing senses.',
+        '- Fill the listed missingFields. You may include existing good data, but do not deliberately change it.',
+        '- Add a new sense only when the supplied contexts clearly require a meaning not represented by existingSenses.',
+        '- Contexts help choose useful examples, but examples must remain correct for the exact sense they are attached to.'
+      ];
+
   const prompt=[
     'You are preparing a production English-Russian learner lexicon for UnMute.',
     'Return ONLY valid JSON. No Markdown, no comments, no text before or after JSON.',
     '',
+    'MODE: '+mode,
     'TASK',
-    '- Cover EVERY target surface below exactly once in the returned entries.forms.',
-    '- Group inflections/contractions/variants under the correct lemma when appropriate.',
-    '- It is OK to introduce the base lemma form even when it is not in the target list.',
+    ...taskLines,
     '- Use General American English pronunciation.',
     '- IPA must describe the EXACT form next to it, not merely the lemma.',
     '- ruReading is a short Russian learner-friendly sound hint, not a spelling transliteration.',
-    '- Give the common Russian learner meanings needed for the supplied contexts.',
-    '- Split genuinely different parts of speech/meanings into separate senses.',
-    '- Give 1-2 short natural examples per sense with accurate Russian translations.',
+    '- Give 1-2 short natural examples per returned sense with accurate Russian translations.',
     '- Preserve apostrophes in contractions.',
     '- Do not invent obscure senses unrelated to these contexts.',
     '',
@@ -340,13 +395,13 @@ function buildAiPrompt(audit,limit=50){
     'PARTS OF SPEECH: noun | verb | adjective | adverb | pronoun | preposition | conjunction | determiner | modal | interjection | phrase | other',
     '',
     'OUTPUT SHAPE EXAMPLE (data is illustrative only):',
-    JSON.stringify(schema,null,2),
+    JSON.stringify(schema,(key,value)=>value===undefined?undefined:value,2),
     '',
     'TARGETS:',
     JSON.stringify(targets,null,2)
   ].join('\n');
 
-  return {targets,prompt};
+  return {targets,prompt,mode};
 }
 
 module.exports={FORMAT,parsePatch,previewPatch,buildAiPrompt,norm};
