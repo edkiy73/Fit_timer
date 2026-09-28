@@ -201,7 +201,12 @@ function previewSnapshot(set){
   }
   const allowedIds = new Set();
   const roadmaps = set.roadmaps.map(roadmap => {
-    const nodes = roadmap.nodes.filter(node => Number.isInteger(node.dayIndex) && node.dayIndex <= preview.days);
+    const visible = roadmap.nodes.filter(node => Number.isInteger(node.dayIndex) && node.dayIndex <= preview.days);
+    const visibleIds = new Set(visible.map(node => node.id));
+    const nodes = visible.map(node => ({
+      ...node,
+      prerequisites:(node.prerequisites || []).filter(id => visibleIds.has(id))
+    }));
     for(const node of nodes) for(const id of (node.activityIds || [])) allowedIds.add(id);
     return {...roadmap, nodes};
   });
