@@ -213,8 +213,12 @@ export function auditLexicalCoverage(course,lexicon){
       resolved.push({...item,lexemeIds:ids,pinned});
       resolvedOccurrences+=item.count;
     }
-    if(entries.some(entry=>entry.pronunciation?.ipa)) surfacesWithIpa++;
-    if(entries.some(entry=>entry.pronunciation?.ruReading)) surfacesWithRuReading++;
+    const pronunciations=entries.map(entry=>{
+      const form=(entry.forms||[]).find(candidate=>normalizeSurface(candidate.text)===item.surface);
+      return form&&form.pronunciation ? form.pronunciation : entry.pronunciation;
+    }).filter(Boolean);
+    if(pronunciations.some(pronunciation=>pronunciation.ipa)) surfacesWithIpa++;
+    if(pronunciations.some(pronunciation=>pronunciation.ruReading)) surfacesWithRuReading++;
     if(entries.some(entry=>(entry.examples || []).length)) surfacesWithExamples++;
   }
 
