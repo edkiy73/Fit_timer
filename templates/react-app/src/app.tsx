@@ -1,6 +1,8 @@
 import { Outlet, type RouteObject } from 'react-router';
 import { AuthGate, useAuth } from '@appbase/ui-react/auth.js';
+import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { authClient } from './auth';
+import { adminClient } from './admin';
 
 function Shell(){
   const auth = useAuth();
@@ -31,8 +33,14 @@ function AppGate(){
   return <AuthGate client={authClient} locale="__APP_LOCALE__" productName="__APP_NAME__"><Shell /></AuthGate>;
 }
 
-export const routes: RouteObject[] = [{
-  path:'/',
-  element:<AppGate />,
-  children:[{index:true, element:<Home />}]
-}];
+export const routes: RouteObject[] = [
+  {
+    path:'/',
+    element:<AppGate />,
+    children:[{index:true, element:<Home />}]
+  },
+  {
+    path:'/admin',
+    element:<AdminPanel client={adminClient} locale="__APP_LOCALE__" productName="__APP_NAME__" />
+  }
+];
