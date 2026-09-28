@@ -36,7 +36,8 @@
 | Фаза 3.3h — exact form identity | ✅ в `main` (#213) | stable `formId`, homographs like `read/read`, context can pin exact grammatical form |
 | Фаза 3.3i — legacy reference resources | ✅ в `main` (#212, #214) | `phrase-collection` + `verb-table`, both backed by global lexicon refs |
 | Фаза 3.4a — answer normalization | ✅ в `main` (#215) | legacy `norm/expand/canon` port + parity tests |
-| Фаза 3.4b — answer check | 🟡 PR в работе | optional words + movable time expressions + legacy `check()` parity |
+| Фаза 3.4b — answer check | ✅ в `main` (#216) | optional words + movable time expressions + legacy `check()` parity |
+| Фаза 3.4c — near miss | 🟡 PR в работе | legacy `lev/isFormPair/nearMiss`; new lexicon supplied through callback |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
