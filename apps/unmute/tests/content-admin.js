@@ -29,13 +29,20 @@ const course={
   activities:[{id:'a1',revision:1,type:'theory',tags:[],revisionProgress:'preserve',body:{ru:'I work online.'},format:'text'}]
 };
 const lexicon={
-  schemaVersion:1,revision:1,entries:[{
-    id:'work',revision:1,language:'en',lemma:'work',forms:[{text:'work',kind:'lemma'}],
-    senses:[
-      {id:'verb',translations:{ru:['работать']},tags:['needs-review']},
-      {id:'noun',translations:{ru:['работа']},tags:['needs-review']}
-    ],examples:[],deprecated:false
-  }]
+  schemaVersion:1,revision:1,entries:[
+    {
+      id:'work',revision:1,language:'en',lemma:'work',forms:[{text:'work',kind:'lemma'}],
+      senses:[
+        {id:'verb',translations:{ru:['работать']},tags:['needs-review']},
+        {id:'noun',translations:{ru:['работа']},tags:['needs-review']}
+      ],examples:[],deprecated:false
+    },
+    {
+      id:'pronoun-i',revision:1,language:'en',lemma:'I',forms:[{text:'I',kind:'lemma'}],
+      senses:[{id:'pronoun',partOfSpeech:'pronoun',translations:{ru:['я']},tags:[]}],
+      examples:[],deprecated:false
+    }
+  ]
 };
 const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
 
