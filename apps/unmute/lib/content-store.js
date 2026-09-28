@@ -151,11 +151,44 @@ function validateActivity(activity){
   return activity;
 }
 
+function validateResource(resource){
+  assertObject(resource,'resource');
+  const id=cleanId(resource.id);
+  if(!id) throw new Error('bad_resource_id');
+  if(resource.type!=='phrase-collection') throw new Error('unknown_resource_type:'+id);
+  if(!isTextMap(resource.title)) throw new Error('bad_resource_title:'+id);
+  if(!Array.isArray(resource.groups) || !resource.groups.length) throw new Error('bad_phrase_groups:'+id);
+  const groupIds=new Set();
+  for(const group of resource.groups){
+    assertObject(group,'phrase_group');
+    const groupId=cleanId(group.id);
+    if(!groupId || groupIds.has(groupId)) throw new Error('bad_phrase_group:'+id);
+    groupIds.add(groupId);
+    if(!isTextMap(group.title)) throw new Error('bad_phrase_group_title:'+id+':'+groupId);
+    if(!Array.isArray(group.items)) throw new Error('bad_phrase_group_items:'+id+':'+groupId);
+    for(const item of group.items){
+      assertObject(item,'phrase_item');
+      if(!cleanId(item.lexemeId)) throw new Error('bad_phrase_lexeme:'+id+':'+groupId);
+      if(item.senseId!==undefined && !cleanId(item.senseId)) throw new Error('bad_phrase_sense:'+id+':'+groupId);
+    }
+  }
+  return resource;
+}
+
 function validateSet(input){
   const set = assertObject(input, 'set');
   validateSetMeta(set);
   if(!Array.isArray(set.roadmaps) || !set.roadmaps.length) throw new Error('missing_roadmaps');
   if(!Array.isArray(set.activities)) throw new Error('missing_activities');
+  if(set.resources!==undefined && !Array.isArray(set.resources)) throw new Error('bad_resources');
+
+  const resourceIds=new Set();
+  for(const resource of (set.resources||[])){
+    const checked=validateResource(resource);
+    const id=cleanId(checked.id);
+    if(resourceIds.has(id)) throw new Error('duplicate_resource:'+id);
+    resourceIds.add(id);
+  }
 
   const activities = new Map();
   for(const activity of set.activities){
