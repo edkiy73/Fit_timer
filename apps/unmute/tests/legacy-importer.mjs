@@ -70,7 +70,7 @@ const model=parseLegacySource(fixture);
 assert.equal(model.lessons.length,2);
 assert.equal(model.lessons[0].cards.length,2);
 assert.equal(model.lessons[0].cards[0].ex,'fixed');
-assert.deepEqual(model.lessons[1].cards[0].a,['work','work please']);
+assert.equal(Array.from(model.lessons[1].cards[0].a).join('|'),'work|work please');
 assert.equal(Object.keys(model.dictionary).length,3);
 
 const course=buildCourseSet(model);
@@ -87,7 +87,7 @@ assert.ok(work.senses.every(s=>s.tags.includes('needs-review')));
 const howAreYou=lexicon.entries.find(e=>e.lemma==='how are you');
 assert.ok(howAreYou);
 assert.equal(howAreYou.senses.length,2);
-assert.deepEqual(howAreYou.senses.map(s=>s.translations.ru[0]).sort(),['Как дела?','как ты?'].sort());
+assert.equal(howAreYou.senses.map(s=>s.translations.ru[0]).sort().join('|'),['Как дела?','как ты?'].sort().join('|'));
 
 assert.throws(()=>validateImport(model,course,lexicon),/unexpected_lessons/);
 console.log('UnMute legacy importer unit tests passed');
