@@ -42,7 +42,9 @@ jobs:
           npx playwright-core install --with-deps chromium
 
       - name: Проверка реального legacy English
-        run: npm run import:legacy -- --dry-run
+        run: |
+          npm run import:legacy -- --dry-run
+          npm run test:legacy-parity
 
       - name: Сборка и e2e
         run: npm run test:browser
