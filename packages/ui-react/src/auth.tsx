@@ -2,20 +2,58 @@ import { createContext, useContext, useEffect, useMemo, useState, type FormEvent
 import type { AuthClient, AuthSession, AuthResponseError } from '@appbase/core/auth.js';
 import './auth.css';
 
-export interface AuthGateProps {
+/* Shared account UI for AppBase React apps.
+
+   Two ways to use it:
+   - AuthGate: the whole app requires an account (sign-in screen until a session exists);
+   - AuthProvider + useOptionalAuth + SignInForm: the app works without an account and
+     offers sign-in where the product wants it (local-first apps).
+   AuthGate is built on the same provider, so both modes share one session state. */
+
+type Locale = 'ru' | 'en';
+
+export interface AuthProviderProps {
   client: AuthClient;
-  locale?: 'ru' | 'en';
-  productName?: string;
   children: ReactNode;
+}
+
+export interface SignInFormProps {
+  locale?: Locale;
+  productName?: string;
+  /** Ask for a handle when the account has none yet. Default true; a product may turn it off
+   *  and let the person set a handle later through claimHandle(). */
+  askHandle?: boolean;
+  /** Visual variant: 'card' for a standalone screen, 'inline' inside a product screen. */
+  variant?: 'card' | 'inline';
+  onSignedIn?: (session: AuthSession) => void;
+}
+
+export interface AuthGateProps extends Omit<SignInFormProps, 'variant' | 'onSignedIn'> {
+  client: AuthClient;
+  children: ReactNode;
+}
+
+export interface OptionalAuthContextValue {
+  client: AuthClient;
+  /** null while signed out; the app keeps working locally. */
+  session: AuthSession | null;
+  loading: boolean;
+  logout(): Promise<void>;
+  deleteAccount(): Promise<void>;
+  /** Set or change the handle later (e.g. when the product skipped it at sign-in). */
+  claimHandle(handle: string): Promise<void>;
+  /** Used by SignInForm; products normally do not call it. */
+  acceptSession(session: AuthSession): void;
 }
 
 export interface AuthContextValue {
   session: AuthSession;
   logout(): Promise<void>;
   deleteAccount(): Promise<void>;
+  claimHandle(handle: string): Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const OptionalAuthContext = createContext<OptionalAuthContextValue | null>(null);
 
 const COPY = {
   ru: {
@@ -81,31 +119,20 @@ function errorText(error: unknown, locale: 'ru' | 'en'): string {
   return copy.generic;
 }
 
+const HANDLE = /^@[\wа-яё.\-]{2,29}$/i;
+
 function normalizeHandle(value: string): string {
   const body = value.trim().replace(/^@+/, '').replace(/[^\wа-яё.\-]/gi, '').slice(0, 29);
   return body ? '@' + body : '';
 }
 
-export function useAuth(): AuthContextValue {
-  const value = useContext(AuthContext);
-  if(!value) throw new Error('useAuth must be used inside AuthGate');
-  return value;
-}
-
-export function AuthGate({client, locale = 'ru', productName, children}: AuthGateProps){
-  const copy = COPY[locale];
+export function AuthProvider({client, children}: AuthProviderProps){
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'email' | 'code' | 'handle'>('email');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [handle, setHandle] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [devCode, setDevCode] = useState('');
 
   useEffect(() => {
     let live = true;
+    setLoading(true);
     client.restoreSession().then(value => {
       if(live) setSession(value);
     }).finally(() => {
@@ -114,25 +141,59 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
     return () => { live = false; };
   }, [client]);
 
-  const context = useMemo<AuthContextValue | null>(() => session ? {
+  const value = useMemo<OptionalAuthContextValue>(() => ({
+    client,
     session,
+    loading,
     logout: async () => {
       await client.logout();
       setSession(null);
-      setStep('email');
-      setCode('');
-      setHandle('');
-      setError('');
     },
     deleteAccount: async () => {
       await client.forget('all');
       setSession(null);
-      setStep('email');
-      setCode('');
-      setHandle('');
-      setError('');
-    }
-  } : null, [client, session]);
+    },
+    claimHandle: async (handle: string) => {
+      await client.claimHandle({handle: normalizeHandle(handle)});
+      setSession(await client.getSession());
+    },
+    acceptSession: next => setSession(next)
+  }), [client, session, loading]);
+
+  return <OptionalAuthContext.Provider value={value}>{children}</OptionalAuthContext.Provider>;
+}
+
+/** Session state that may be signed out. Use in local-first apps. */
+export function useOptionalAuth(): OptionalAuthContextValue {
+  const value = useContext(OptionalAuthContext);
+  if(!value) throw new Error('useOptionalAuth must be used inside AuthProvider or AuthGate');
+  return value;
+}
+
+/** Signed-in session. Use inside AuthGate, or inside AuthProvider where a session is guaranteed. */
+export function useAuth(): AuthContextValue {
+  const value = useContext(OptionalAuthContext);
+  if(!value || !value.session) throw new Error('useAuth must be used inside AuthGate');
+  const {session, logout, deleteAccount, claimHandle} = value;
+  return {session, logout, deleteAccount, claimHandle};
+}
+
+export function SignInForm({locale = 'ru', productName, askHandle = true, variant = 'card', onSignedIn}: SignInFormProps){
+  const auth = useOptionalAuth();
+  const client = auth.client;
+  const copy = COPY[locale];
+  const [step, setStep] = useState<'email' | 'code' | 'handle'>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [handle, setHandle] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [devCode, setDevCode] = useState('');
+
+  function finish(session: AuthSession){
+    auth.acceptSession(session);
+    onSignedIn?.(session);
+  }
 
   async function sendCode(event?: FormEvent){
     event?.preventDefault();
@@ -157,11 +218,11 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
     setBusy(true);
     try{
       const result = await client.verifyCode({email, code, locale});
-      if(result.needsHandle || !result.handle){
+      if(askHandle && (result.needsHandle || !result.handle)){
         setStep('handle');
         setHandle(result.handle || '@');
       }else{
-        setSession(result);
+        finish(result);
       }
     }catch(e){
       setError(errorText(e, locale));
@@ -174,7 +235,7 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
   async function saveHandle(event: FormEvent){
     event.preventDefault();
     const normalized = normalizeHandle(handle);
-    if(!/^@[\wа-яё.\-]{2,29}$/i.test(normalized)){
+    if(!HANDLE.test(normalized)){
       setError(copy.badHandle);
       return;
     }
@@ -183,7 +244,7 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
     try{
       await client.claimHandle({handle: normalized});
       const next = await client.getSession();
-      if(next) setSession(next);
+      if(next) finish(next);
     }catch(e){
       setError(errorText(e, locale));
     }finally{
@@ -191,81 +252,92 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
     }
   }
 
-  if(loading){
+  return (
+    <section className={'ab-auth-card' + (variant === 'inline' ? ' ab-auth-card--inline' : '')} aria-labelledby="ab-auth-title">
+      <div className="ab-auth-kicker">{productName || copy.account}</div>
+      <h1 id="ab-auth-title">{copy.account}</h1>
+
+      {step === 'email' && (
+        <form onSubmit={sendCode}>
+          <p className="ab-auth-lead">{copy.intro}</p>
+          <label className="ab-auth-field">
+            <span>{copy.email}</span>
+            <input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              autoFocus
+            />
+          </label>
+          {error && <p className="ab-auth-error" role="alert">{error}</p>}
+          <button className="ab-auth-primary" type="submit" disabled={busy}>{busy ? copy.sending : copy.send}</button>
+        </form>
+      )}
+
+      {step === 'code' && (
+        <form onSubmit={verify}>
+          <p className="ab-auth-lead">{copy.sent} <b>{email}</b>.</p>
+          <label className="ab-auth-field">
+            <span>{copy.code}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 12))}
+              autoFocus
+            />
+          </label>
+          {devCode && <p className="ab-auth-dev">DEV: {devCode}</p>}
+          {error && <p className="ab-auth-error" role="alert">{error}</p>}
+          <button className="ab-auth-primary" type="submit" disabled={busy || !code}>{busy ? copy.checking : copy.verify}</button>
+          <button className="ab-auth-secondary" type="button" disabled={busy} onClick={() => void sendCode()}>{copy.resend}</button>
+        </form>
+      )}
+
+      {step === 'handle' && (
+        <form onSubmit={saveHandle}>
+          <p className="ab-auth-lead">{copy.chooseHandle}</p>
+          <label className="ab-auth-field">
+            <span>{copy.handle}</span>
+            <input
+              type="text"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={handle}
+              onChange={e => setHandle(e.target.value)}
+              autoFocus
+            />
+          </label>
+          <p className="ab-auth-hint">{copy.handleHint}</p>
+          {error && <p className="ab-auth-error" role="alert">{error}</p>}
+          <button className="ab-auth-primary" type="submit" disabled={busy}>{busy ? copy.saving : copy.create}</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function Gate({locale = 'ru', productName, askHandle, children}: Omit<AuthGateProps, 'client'>){
+  const auth = useOptionalAuth();
+  const copy = COPY[locale];
+  if(auth.loading){
     return <div className="ab-auth-shell"><div className="ab-auth-card"><p className="ab-auth-loading">{copy.loading}</p></div></div>;
   }
+  if(auth.session) return <>{children}</>;
+  const formProps: SignInFormProps = {locale};
+  if(productName !== undefined) formProps.productName = productName;
+  if(askHandle !== undefined) formProps.askHandle = askHandle;
+  return <main className="ab-auth-shell"><SignInForm {...formProps} /></main>;
+}
 
-  if(context){
-    return <AuthContext.Provider value={context}>{children}</AuthContext.Provider>;
-  }
-
-  return (
-    <main className="ab-auth-shell">
-      <section className="ab-auth-card" aria-labelledby="ab-auth-title">
-        <div className="ab-auth-kicker">{productName || copy.account}</div>
-        <h1 id="ab-auth-title">{copy.account}</h1>
-
-        {step === 'email' && (
-          <form onSubmit={sendCode}>
-            <p className="ab-auth-lead">{copy.intro}</p>
-            <label className="ab-auth-field">
-              <span>{copy.email}</span>
-              <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoFocus
-              />
-            </label>
-            {error && <p className="ab-auth-error" role="alert">{error}</p>}
-            <button className="ab-auth-primary" type="submit" disabled={busy}>{busy ? copy.sending : copy.send}</button>
-          </form>
-        )}
-
-        {step === 'code' && (
-          <form onSubmit={verify}>
-            <p className="ab-auth-lead">{copy.sent} <b>{email}</b>.</p>
-            <label className="ab-auth-field">
-              <span>{copy.code}</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                autoFocus
-              />
-            </label>
-            {devCode && <p className="ab-auth-dev">DEV: {devCode}</p>}
-            {error && <p className="ab-auth-error" role="alert">{error}</p>}
-            <button className="ab-auth-primary" type="submit" disabled={busy || !code}>{busy ? copy.checking : copy.verify}</button>
-            <button className="ab-auth-secondary" type="button" disabled={busy} onClick={() => void sendCode()}>{copy.resend}</button>
-          </form>
-        )}
-
-        {step === 'handle' && (
-          <form onSubmit={saveHandle}>
-            <p className="ab-auth-lead">{copy.chooseHandle}</p>
-            <label className="ab-auth-field">
-              <span>{copy.handle}</span>
-              <input
-                type="text"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                value={handle}
-                onChange={e => setHandle(e.target.value)}
-                autoFocus
-              />
-            </label>
-            <p className="ab-auth-hint">{copy.handleHint}</p>
-            {error && <p className="ab-auth-error" role="alert">{error}</p>}
-            <button className="ab-auth-primary" type="submit" disabled={busy}>{busy ? copy.saving : copy.create}</button>
-          </form>
-        )}
-      </section>
-    </main>
-  );
+/** The whole subtree requires an account. Reuses an outer AuthProvider for the same client. */
+export function AuthGate({client, children, ...rest}: AuthGateProps){
+  const outer = useContext(OptionalAuthContext);
+  const gate = <Gate {...rest}>{children}</Gate>;
+  if(outer && outer.client === client) return gate;
+  return <AuthProvider client={client}>{gate}</AuthProvider>;
 }
