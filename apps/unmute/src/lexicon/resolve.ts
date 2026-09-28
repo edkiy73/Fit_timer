@@ -4,6 +4,7 @@ import { findLexiconForm, lookupLexemes, pronunciationForSurface } from './schem
 export interface LexiconContextRef {
   lexemeId?: string;
   senseId?: string;
+  formId?: string;
 }
 
 export interface ResolvedLexiconEntry {
@@ -26,8 +27,8 @@ export function resolveLexiconClick(snapshot:LexiconSnapshot,surface:string,cont
       if(sense){
         return {
           lexeme,
-          form:findLexiconForm(lexeme,surface),
-          pronunciation:pronunciationForSurface(lexeme,surface),
+          form:findLexiconForm(lexeme,surface,context.formId),
+          pronunciation:pronunciationForSurface(lexeme,surface,context.formId),
           senses:[sense],
           examples:lexeme.examples.filter(example=>example.senseId===sense.id),
           exactContext:true
@@ -37,11 +38,11 @@ export function resolveLexiconClick(snapshot:LexiconSnapshot,surface:string,cont
 
     return {
       lexeme,
-      form:findLexiconForm(lexeme,surface),
-      pronunciation:pronunciationForSurface(lexeme,surface),
+      form:findLexiconForm(lexeme,surface,context.formId),
+      pronunciation:pronunciationForSurface(lexeme,surface,context.formId),
       senses:lexeme.senses,
       examples:lexeme.examples,
-      exactContext:false
+      exactContext:Boolean(context.formId)
     };
   });
 }
