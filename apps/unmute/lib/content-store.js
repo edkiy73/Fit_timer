@@ -522,6 +522,22 @@ async function getPublished(id){
   return revision ? getRevision(key,revision) : null;
 }
 
+function roadmapOutline(set){
+  return (set.roadmaps||[]).map(roadmap=>({
+    id:roadmap.id,
+    title:roadmap.title,
+    nodes:(roadmap.nodes||[]).map(node=>({
+      id:node.id,
+      kind:node.kind,
+      title:node.title,
+      dayIndex:node.dayIndex,
+      order:node.order,
+      prerequisites:Array.isArray(node.prerequisites)?node.prerequisites:[],
+      optional:!!node.optional
+    }))
+  }));
+}
+
 function previewSnapshot(set){
   if(set.access.mode === 'free') return set;
   const preview = set.access.freePreview;
@@ -572,5 +588,6 @@ module.exports = {
   getRevision,
   getPublished,
   previewSnapshot,
+  roadmapOutline,
   keys:{CATALOG_KEY,draftKey,pointerKey,revisionKey,revisionCounterKey}
 };
