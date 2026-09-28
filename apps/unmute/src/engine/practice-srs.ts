@@ -1,8 +1,8 @@
-export type PracticeSrsKind='pattern'|'vocab'|'listening';
+export type PracticeSrsKind='drill'|'speaking'|'listening';
 
 export const PRACTICE_INTERVALS={
-  pattern:[0,2,6,16,35],
-  vocab:[0,3,9,24,45],
+  drill:[0,2,6,16,35],
+  speaking:[0,3,9,24,45],
   listening:[0,2,7,18,40],
 } as const;
 

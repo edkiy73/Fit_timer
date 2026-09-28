@@ -6,38 +6,38 @@ import {
   isPracticeDue
 } from './practice-srs';
 
-describe('legacy pattern/vocab/listening SRS parity',()=>{
+describe('legacy drill/speaking/listening SRS parity',()=>{
   it('keeps the exact legacy intervals',()=>{
-    expect(Array.from(PRACTICE_INTERVALS.pattern)).toEqual([0,2,6,16,35]);
-    expect(Array.from(PRACTICE_INTERVALS.vocab)).toEqual([0,3,9,24,45]);
+    expect(Array.from(PRACTICE_INTERVALS.drill)).toEqual([0,2,6,16,35]);
+    expect(Array.from(PRACTICE_INTERVALS.speaking)).toEqual([0,3,9,24,45]);
     expect(Array.from(PRACTICE_INTERVALS.listening)).toEqual([0,2,7,18,40]);
   });
 
   it('advances boxes independently per practice kind',()=>{
     const day=20000;
-    expect(gradePracticeSrs('pattern',undefined,true,day)).toEqual({box:1,due:day+2});
-    expect(gradePracticeSrs('vocab',undefined,true,day)).toEqual({box:1,due:day+3});
+    expect(gradePracticeSrs('drill',undefined,true,day)).toEqual({box:1,due:day+2});
+    expect(gradePracticeSrs('speaking',undefined,true,day)).toEqual({box:1,due:day+3});
     expect(gradePracticeSrs('listening',undefined,true,day)).toEqual({box:1,due:day+2});
   });
 
   it('uses later intervals exactly like legacy',()=>{
     const day=20000;
-    expect(gradePracticeSrs('pattern',{box:2,due:0},true,day)).toEqual({box:3,due:day+16});
-    expect(gradePracticeSrs('vocab',{box:2,due:0},true,day)).toEqual({box:3,due:day+24});
+    expect(gradePracticeSrs('drill',{box:2,due:0},true,day)).toEqual({box:3,due:day+16});
+    expect(gradePracticeSrs('speaking',{box:2,due:0},true,day)).toEqual({box:3,due:day+24});
     expect(gradePracticeSrs('listening',{box:2,due:0},true,day)).toEqual({box:3,due:day+18});
   });
 
   it('caps at box four',()=>{
     const day=20000;
-    expect(gradePracticeSrs('pattern',{box:4,due:0},true,day)).toEqual({box:4,due:day+35});
-    expect(gradePracticeSrs('vocab',{box:4,due:0},true,day)).toEqual({box:4,due:day+45});
+    expect(gradePracticeSrs('drill',{box:4,due:0},true,day)).toEqual({box:4,due:day+35});
+    expect(gradePracticeSrs('speaking',{box:4,due:0},true,day)).toEqual({box:4,due:day+45});
     expect(gradePracticeSrs('listening',{box:4,due:0},true,day)).toEqual({box:4,due:day+40});
   });
 
   it('resets wrong answers to box zero and due today',()=>{
     const day=20000;
-    expect(gradePracticeSrs('pattern',{box:3,due:99999},false,day)).toEqual({box:0,due:day});
-    expect(gradePracticeSrs('vocab',{box:3,due:99999},false,day)).toEqual({box:0,due:day});
+    expect(gradePracticeSrs('drill',{box:3,due:99999},false,day)).toEqual({box:0,due:day});
+    expect(gradePracticeSrs('speaking',{box:3,due:99999},false,day)).toEqual({box:0,due:day});
     expect(gradePracticeSrs('listening',{box:3,due:99999},false,day)).toEqual({box:0,due:day});
   });
 

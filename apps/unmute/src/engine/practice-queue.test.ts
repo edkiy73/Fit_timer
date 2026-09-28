@@ -9,11 +9,11 @@ const ids=['a','b','c','d','e','f'];
 
 describe('practice daily queue parity',()=>{
   it('keeps legacy daily caps',()=>{
-    expect(PRACTICE_DAILY_CAPS).toEqual({pattern:3,vocab:2,listening:2});
+    expect(PRACTICE_DAILY_CAPS).toEqual({drill:3,speaking:2,listening:2});
   });
 
   it('selects the oldest overdue items first and cuts to the daily cap',()=>{
-    const queue=selectPracticeQueue('pattern',ids,{
+    const queue=selectPracticeQueue('drill',ids,{
       a:{box:1,due:10},
       b:{box:1,due:8},
       c:{box:1,due:12},
@@ -28,7 +28,7 @@ describe('practice daily queue parity',()=>{
   });
 
   it('preserves source order when due dates are equal',()=>{
-    const queue=selectPracticeQueue('vocab',['c','a','b'],{
+    const queue=selectPracticeQueue('speaking',['c','a','b'],{
       a:{box:1,due:5},
       b:{box:1,due:5},
       c:{box:1,due:5},
@@ -52,7 +52,7 @@ describe('practice daily queue parity',()=>{
   });
 
   it('never returns the negative waiting count produced by legacy patWaiting',()=>{
-    const queue=selectPracticeQueue('pattern',ids,{
+    const queue=selectPracticeQueue('drill',ids,{
       a:{box:1,due:3},
     },3);
     expect(queue.waiting).toBe(0);
@@ -60,10 +60,10 @@ describe('practice daily queue parity',()=>{
 
   it('builds one deterministic review summary for all three practice modes',()=>{
     const queue=buildPracticeReviewQueue(ids,{
-      pattern:{
+      drill:{
         a:{box:1,due:1},b:{box:1,due:2},c:{box:1,due:3},d:{box:1,due:4},
       },
-      vocab:{
+      speaking:{
         a:{box:1,due:1},b:{box:1,due:2},c:{box:1,due:3},
       },
       listening:{
@@ -71,10 +71,10 @@ describe('practice daily queue parity',()=>{
       }
     },10);
 
-    expect(queue.pattern.due.map(item=>item.id)).toEqual(['a','b','c']);
-    expect(queue.pattern.waiting).toBe(1);
-    expect(queue.vocab.due.map(item=>item.id)).toEqual(['a','b']);
-    expect(queue.vocab.waiting).toBe(1);
+    expect(queue.drill.due.map(item=>item.id)).toEqual(['a','b','c']);
+    expect(queue.drill.waiting).toBe(1);
+    expect(queue.speaking.due.map(item=>item.id)).toEqual(['a','b']);
+    expect(queue.speaking.waiting).toBe(1);
     expect(queue.listening.due.map(item=>item.id)).toEqual(['d','e']);
     expect(queue.listening.waiting).toBe(0);
     expect(queue.dueCount).toBe(7);

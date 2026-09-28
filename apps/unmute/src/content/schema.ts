@@ -69,6 +69,7 @@ export const activitySchema = z.discriminatedUnion('type', [
   activityBaseSchema.extend({
     type: z.literal('pattern-drill'),
     pattern: localizedTextSchema,
+    modes: z.array(z.enum(['drill','listening','speaking'])).min(1).default(['drill']),
     items: z.array(z.object({
       id: idSchema,
       prompt: localizedTextSchema,
@@ -112,6 +113,26 @@ export const activitySchema = z.discriminatedUnion('type', [
 
 export type Activity = z.infer<typeof activitySchema>;
 
+export const nodeCompletionRequirementSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('activity-seen'),
+    activityIds: z.array(idSchema).min(1),
+  }),
+  z.object({
+    kind: z.literal('practice-started'),
+    activityId: idSchema,
+    modes: z.array(z.enum(['drill','listening','speaking'])).min(1),
+  }),
+  z.object({
+    kind: z.literal('manual'),
+  }),
+]);
+
+export const nodeCompletionSchema = z.object({
+  mode: z.literal('all'),
+  requirements: z.array(nodeCompletionRequirementSchema).min(1),
+});
+
 export const roadmapNodeSchema = z.object({
   id: idSchema,
   kind: z.enum(['lesson','practice','review','dialogue','checkpoint','bonus']),
@@ -121,6 +142,7 @@ export const roadmapNodeSchema = z.object({
   order: z.number().int().nonnegative(),
   prerequisites: z.array(idSchema).default([]),
   activityIds: z.array(idSchema).default([]),
+  completion: nodeCompletionSchema.optional(),
   optional: z.boolean().default(false),
 });
 
@@ -199,6 +221,8 @@ export const courseSetSchema = z.object({
 export type CourseSet = z.infer<typeof courseSetSchema>;
 export type Roadmap = z.infer<typeof roadmapSchema>;
 export type RoadmapNode = z.infer<typeof roadmapNodeSchema>;
+export type NodeCompletion = z.infer<typeof nodeCompletionSchema>;
+export type NodeCompletionRequirement = z.infer<typeof nodeCompletionRequirementSchema>;
 export type SetResource = z.infer<typeof setResourceSchema>;
 export type PhraseCollectionResource = z.infer<typeof phraseCollectionResourceSchema>;
 export type VerbTableResource = z.infer<typeof verbTableResourceSchema>;
@@ -228,6 +252,16 @@ export function validateCourseSet(input: unknown): CourseSet {
       }
       for (const activityId of node.activityIds) {
         if (!activityIds.has(activityId)) throw new Error(`Unknown activity ${activityId} in ${node.id}`);
+      }
+      for (const requirement of node.completion?.requirements ?? []) {
+        if (requirement.kind === 'activity-seen') {
+          for (const activityId of requirement.activityIds) {
+            if (!activityIds.has(activityId)) throw new Error(`Unknown completion activity ${activityId} in ${node.id}`);
+          }
+        }
+        if (requirement.kind === 'practice-started' && !activityIds.has(requirement.activityId)) {
+          throw new Error(`Unknown completion practice ${requirement.activityId} in ${node.id}`);
+        }
       }
     }
   }
