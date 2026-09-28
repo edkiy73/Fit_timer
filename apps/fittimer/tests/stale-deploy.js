@@ -54,6 +54,14 @@ async function run(b, failAlways){
   ok('если кусок недоступен и после перезагрузки — второй перезагрузки нет',
      always.loads === 2 && always.blocked === 2 && !always.booting, JSON.stringify(always));
 
+  const builtHtml = fs.readFileSync('dist/index.html', 'utf8');
+  const versions = [...builtHtml.matchAll(/(?:app\.config\.js|esm\/main\.js|style\.css)\?v=([a-zA-Z0-9._-]+)/g)].map(m => m[1]);
+  ok('config, main и CSS принадлежат одной сборке',
+     versions.length === 3 && new Set(versions).size === 1, JSON.stringify(versions));
+  const mainBundle = fs.readFileSync('dist/esm/main.js', 'utf8');
+  ok('main передаёт тот же build-id в URL mobile runtime',
+     /esm\/mobile\.js\?v=/.test(mainBundle) && /__FIT_BUILD_ID__/.test(fs.readFileSync('src/main.ts','utf8')));
+
   const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
   const header = src => ((vercel.headers.find(h => h.source === src) || {}).headers || [])
     .find(x => x.key === 'Cache-Control');
