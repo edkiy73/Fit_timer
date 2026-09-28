@@ -130,7 +130,7 @@ export function findLexiconForms(entry:Lexeme,surface:string){
 export function findLexiconForm(entry:Lexeme,surface:string,formId?:string){
   const matches=findLexiconForms(entry,surface);
   if(formId) return matches.find(form=>form.id===formId) || null;
-  return matches.length===1 ? matches[0] : null;
+  return matches.length===1 ? (matches[0] ?? null) : null;
 }
 
 export function pronunciationForSurface(entry:Lexeme,surface:string,formId?:string){
