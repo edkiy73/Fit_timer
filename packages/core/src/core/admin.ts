@@ -62,7 +62,7 @@ export function createAdminClient(options: AdminClientOptions = {}): AdminClient
       throw new Error('health_request_failed');
     },
 
-    async action(adminKey, action, body = {}) {
+    async action<T extends Record<string, unknown> = Record<string, unknown>>(adminKey: string, action: string, body: Record<string, unknown> = {}) {
       if(typeof fetchImpl !== 'function') throw new Error('fetch_unavailable');
       const key = String(adminKey || '').trim();
       if(!key) throw new Error('admin_key_required');
