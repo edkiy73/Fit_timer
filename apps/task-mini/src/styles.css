@@ -1,0 +1,52 @@
+/* Colors come from config/product.json via Core themeCssVars (--bg, --card, --surface,
+   --accent, --accent-ink); neutral text/line colors follow the system light/dark setting,
+   like the product tokens (src/theme.ts). */
+:root{
+  color-scheme:light dark;
+  --ink:#17181b;
+  --muted:#6b7280;
+  --line:#e4e6eb;
+  --danger:#c2410c;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  background:var(--bg,#f5f6f8);
+}
+@media(prefers-color-scheme:dark){
+  :root{--ink:#eceef2;--muted:#9aa1ad;--line:#2b2f38;--danger:#fb923c}
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:start center;padding:48px 16px}
+.app{width:min(100%,560px);background:var(--card,#fff);border:1px solid var(--line);border-radius:20px;padding:24px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:6px 0 4px;font-size:32px}
+header p{margin:0;color:var(--muted)}
+
+.add-form{display:flex;gap:10px;margin:24px 0 14px}
+.add-form .react-aria-TextField{flex:1;min-width:0;display:flex}
+.add-form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;color:inherit;background:var(--surface,transparent);outline:none}
+.add-form input[data-focused]{border-color:var(--accent)}
+.react-aria-Button{border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:650;cursor:pointer;background:var(--accent,#2f5fe0);color:#fff}
+.react-aria-Button[data-disabled]{opacity:.45;cursor:default}
+.react-aria-Button[data-focus-visible],.filters a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.filters{display:flex;gap:6px;margin:0 0 14px}
+.filters a{padding:7px 12px;border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px;font-weight:600}
+.filters a.active{background:var(--surface);color:var(--accent-ink,var(--ink))}
+.count{font-weight:500;opacity:.7}
+
+.tasks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.task{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px}
+.task-check{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
+.task-check .box{flex:none;width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:grid;place-items:center}
+.task-check[data-selected] .box{background:var(--accent);border-color:var(--accent)}
+.task-check[data-selected] .box::after{content:"";width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.task-check[data-focus-visible] .box{outline:2px solid var(--accent);outline-offset:2px}
+.title{overflow-wrap:anywhere}
+.task[data-done] .title{text-decoration:line-through;color:var(--muted)}
+.task .remove{border:0;border-radius:8px;background:transparent;color:var(--muted);padding:7px 8px;font:inherit;font-size:13px;cursor:pointer}
+.task .remove[data-hovered]{color:var(--danger)}
+.task .remove[data-focus-visible]{outline:2px solid var(--accent);outline-offset:2px}
+
+.empty{margin:28px 0 8px;text-align:center;color:var(--muted)}
+.error{margin:0 0 12px;color:var(--danger)}
+@media(max-width:480px){body{padding:18px 12px}.app{padding:18px;border-radius:16px}.add-form{flex-direction:column}}

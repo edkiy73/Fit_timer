@@ -7,8 +7,8 @@ const all = {core: true, apps: APPS};
 const cases = [
   [['packages/core/src/core/ui.ts'], all],
   [['packages/core/README.md'], {core: false, apps: []}],
-  [['apps/task-mini/src/ui.ts'], {core: false, apps: ['task-mini']}],
-  [['apps/fittimer/src/app/70-workout.js', 'apps/task-mini/src/ui.ts'], {core: false, apps: APPS}],
+  [['apps/task-mini/src/app.tsx'], {core: false, apps: ['task-mini']}],
+  [['apps/fittimer/src/app/70-workout.js', 'apps/task-mini/src/app.tsx'], {core: false, apps: APPS}],
   [['apps/fittimer/docs/why.md', 'apps/fittimer/docs/img.png', 'docs/roadmap.md'], {core: false, apps: []}],
   [['package.json'], all],
   [['scripts/apps.mjs'], all],

@@ -641,7 +641,7 @@ A new product does not fork FitTimer and does not delete fitness code. It is a n
 
 ## Universality proof
 
-✅ First real proof added: `apps/task-mini/`.
+✅ First real proof added: `apps/task-mini/`. Since 2026-09-28 it is also the reference implementation of the standard app stack (React + TypeScript + Vite, see the [stack ADR](./appbase-stack-ci-strategy.md)).
 
 It is a second, non-fitness Core consumer with its own `Task` model, sync document prefix, analytics taxonomy and capability set. Its client imports typed Core modules through the same aliases as a normal app; its server composes generic auth/sync/health directly from `packages/core/server`. Core did not need to learn `Task`, `Project` or any Task Mini business concept.
 

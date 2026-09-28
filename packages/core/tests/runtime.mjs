@@ -11,6 +11,7 @@ const {createClient} = await import('../dist/core/observability.js');
 const {createPreferenceStore, limitCandidates} = await import('../dist/core/notifications.js');
 const {createSpeech} = await import('../dist/core/speech.js');
 const {createCapabilities, CAPABILITY_NAMES} = await import('../dist/core/capabilities.js');
+const {themeCssVars} = await import('../dist/core/ui.js');
 
 const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
 const profileDraft = createProfileDraft('Demo');
@@ -127,6 +128,10 @@ ok('ESM capabilities default missing/non-boolean switches to off',
   caps.enabled('voice') && !caps.enabled('sharing') && !caps.enabled('ai')
   && caps.when('voice', 'x') === 'x' && caps.when('ai', 'x') === null
   && CAPABILITY_NAMES.length === Object.keys(caps.flags()).length);
+
+const themeVars = themeCssVars({background:'#000001', card:'#000002', surface:'#000003', accent:'#000004', accentInk:'#000005'});
+ok('ESM UI maps product theme tokens to the shared CSS variable names',
+  JSON.stringify(themeVars) === JSON.stringify({bg:'#000001', card:'#000002', surface:'#000003', accent:'#000004', 'accent-ink':'#000005'}));
 
 console.log(bad ? `\nESM Core failures: ${bad}` : '\nESM Core behavior is clean');
 process.exit(bad ? 1 : 0);

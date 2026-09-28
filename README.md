@@ -5,7 +5,7 @@ One repository for AppBase Core and every app built on it.
 ```text
 packages/core/     AppBase Core — shared client (TypeScript) + server (Node) foundation
 apps/fittimer/     Fit Timer — production web/API/Android/iOS app
-apps/task-mini/    Minimal second consumer — universality/smoke proof for Core
+apps/task-mini/    Reference app on the standard stack (React + TS + Vite) — start new apps from it
 docs/              repository-level plans
 ```
 

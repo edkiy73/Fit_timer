@@ -1,3 +1,5 @@
+import type { AppThemeTokens } from '../types/core.js';
+
 export type ActionHandler = (element: HTMLElement, event: Event) => void;
 
 export interface BusyOptions {
@@ -24,6 +26,18 @@ export function applyCssVars(element: HTMLElement | null, vars: Record<string, s
     if(value == null || value === '') element.style.removeProperty(key);
     else element.style.setProperty(key, String(value));
   });
+}
+
+/** The one mapping from product theme tokens (`config/product.json → brand.ui.<mode>`)
+ *  to CSS custom properties. Every app styles against these names, whatever its UI stack. */
+export function themeCssVars(theme: AppThemeTokens): Record<string, string> {
+  return {
+    bg: theme.background,
+    card: theme.card,
+    surface: theme.surface,
+    accent: theme.accent,
+    'accent-ink': theme.accentInk
+  };
 }
 
 export function openModal(modal: HTMLElement | null, openClass = 'open'): boolean {

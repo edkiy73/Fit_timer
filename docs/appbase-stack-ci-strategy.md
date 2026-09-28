@@ -28,7 +28,24 @@ Core owns sync, storage, auth transport, server store, AI runtime, notification 
 
 Why these: mainstream, well-typed, no forced visual identity, good touch handling inside a Capacitor WebView. Versions are pinned in the app's `package.json` when the app is created, not here.
 
-Next step before App2: rebuild the UI of `apps/task-mini` (~150 lines) on this stack so it becomes the executable reference — it proves Vite + Core aliases + a Capacitor-free web build before App2 starts.
+**Reference implementation: `apps/task-mini`.** Start App2 by copying its shape, not FitTimer's:
+
+| Piece | Where in `apps/task-mini` |
+|---|---|
+| Vite config: Core aliases `@appbase/core/*`, `@appbase/types/*`, relative `base` | `vite.config.mts`, `tsconfig.json` |
+| Domain model + Zod schema, Core sync registry | `src/domain.ts` |
+| Persistence through Core storage, validated on read | `src/tasks/repository.ts` |
+| Async data + optimistic mutations (TanStack Query) | `src/tasks/queries.ts` |
+| Routes (hash router: works on any static host and in a WebView) | `src/app.tsx`, `src/main.tsx` |
+| Accessible controls (React Aria Components) | `src/components/*` |
+| Product theme tokens via Core (D4) | `src/theme.ts`, `src/styles.css` |
+| Component tests (Vitest + Testing Library + fake IndexedDB) | `src/app.test.tsx` |
+| E2E against the production build (Playwright) | `tests/e2e.mjs` |
+| Server composition from Core (auth, sync, health) | `api/`, `lib/` |
+
+The whole stack costs ~150 KB gzip of JavaScript for Task Mini; watch this budget as apps grow.
+
+Each app deploys as its own Vercel project with Root Directory `apps/<name>` and "Include files outside the root directory" enabled (server functions import `packages/core/server`). Apps never build each other.
 
 Revisit only if: the stack blocks a concrete product requirement that another option solves materially better.
 
@@ -49,7 +66,7 @@ Revisit only if:
 
 ## D4. Shared design = framework-neutral tokens
 
-Semantic tokens are CSS custom properties. Products declare them in `config/product.json → ui`, and Core `applyCssVars` (`packages/core/src/core/ui.ts`) applies them. Both the FitTimer DOM UI and React apps consume the same variables; no token package is tied to React.
+Semantic tokens are CSS custom properties. Products declare them in `config/product.json → brand.ui.{dark,light}`; Core `themeCssVars` maps them to the shared variable names (`--bg`, `--card`, `--surface`, `--accent`, `--accent-ink`) and `applyCssVars` applies them (`packages/core/src/core/ui.ts`). FitTimer (DOM) and Task Mini (React) use the same functions; no token package is tied to React.
 
 `packages/ui-react` is created only when a primitive is needed by **two React apps**. Until then components live inside the app.
 
@@ -74,6 +91,7 @@ Rules:
    - `packages/core/**`, root `package.json`, `scripts/apps.mjs` → every app;
    - `apps/<name>/**` → that app only;
    - Markdown and `apps/*/docs/**` never trigger builds or tests.
+   Every app with a browser suite has its own workflow filtered to its paths + `packages/core/**` (FitTimer: `browser-tests.yml`, Task Mini: `task-mini.yml`).
 4. **Android/iOS builds** keep their own path filters (FitTimer client/native/build paths + `packages/core/**`) and run in parallel with the rest; they are not on the critical path.
 5. **Releases** (manual Android dispatch, `main` push builds) keep the full signed native pipeline.
 
