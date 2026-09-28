@@ -5,6 +5,7 @@ const { send, fail } = require('../../../packages/core/server/util');
 const Content = require('./content-store');
 const Lexicon = require('./lexicon-store');
 const Release = require('./content-release');
+const BulkLexicon = require('./lexicon-bulk');
 
 const LEGACY_SHA = '011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_URL = 'https://raw.githubusercontent.com/edkiy73/English/' + LEGACY_SHA + '/index.html';
@@ -17,6 +18,10 @@ async function defaultLoadLegacySource(){
 
 async function defaultImporter(){
   return import('./legacy-import.mjs');
+}
+
+async function loadCoverage(){
+  return import('./lexicon-coverage.mjs');
 }
 
 const ACTIVITY_TYPES=new Set([
@@ -446,6 +451,89 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!roadmapId || !nodeId || !ids.length || ids.some(id=>!id)){ fail(res,400,'bad_activity_order'); return true; }
         const result=await Content.reorderDraftActivities(setId,roadmapId,nodeId,ids);
         send(res,200,{ok:true,node:result.node,draftRevision:result.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_lexicon_ai_prompt'){
+        const setId=requestedSetId(body);
+        const limit=Math.max(1,Math.min(100,Math.round(Number(body.limit)||50)));
+        const [course,lexicon,Coverage]=await Promise.all([
+          Content.getDraft(setId),
+          Lexicon.getDraft(),
+          loadCoverage()
+        ]);
+        if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const audit=Coverage.auditLexicalCoverage(course,lexicon);
+        const generated=BulkLexicon.buildAiPrompt(audit,limit);
+        send(res,200,{ok:true,setId,limit,
+          coverage:Coverage.compactCoverageReport(audit),
+          targetCount:generated.targets.length,
+          targets:generated.targets,
+          prompt:generated.prompt,
+          format:BulkLexicon.FORMAT
+        });
+        return true;
+      }
+
+      if(action === 'content_lexicon_patch_preview'){
+        const setId=requestedSetId(body);
+        const [course,lexicon,Coverage]=await Promise.all([
+          Content.getDraft(setId),
+          Lexicon.getDraft(),
+          loadCoverage()
+        ]);
+        if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const preview=BulkLexicon.previewPatch(lexicon,body.patch ?? body.text);
+        const before=Coverage.auditLexicalCoverage(course,lexicon);
+        send(res,200,{ok:true,setId,format:BulkLexicon.FORMAT,
+          summary:preview.summary,
+          conflicts:preview.conflicts,
+          warnings:preview.warnings,
+          changes:preview.changes.map(change=>({
+            id:change.id,
+            kind:change.kind,
+            expectedRevision:change.expectedRevision,
+            lemma:change.entry.lemma,
+            forms:(change.entry.forms||[]).map(form=>form.text),
+            senses:(change.entry.senses||[]).map(sense=>({
+              id:sense.id,
+              partOfSpeech:sense.partOfSpeech||null,
+              translations:sense.translations&&sense.translations.ru||[]
+            })),
+            examples:(change.entry.examples||[]).length
+          })),
+          coverage:Coverage.compactCoverageReport(before)
+        });
+        return true;
+      }
+
+      if(action === 'content_lexicon_patch_apply'){
+        const setId=requestedSetId(body);
+        const [course,lexicon,Coverage]=await Promise.all([
+          Content.getDraft(setId),
+          Lexicon.getDraft(),
+          loadCoverage()
+        ]);
+        if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const preview=BulkLexicon.previewPatch(lexicon,body.patch ?? body.text);
+        if(preview.conflicts.length){
+          send(res,409,{ok:false,error:'lexicon_patch_conflicts',
+            summary:preview.summary,conflicts:preview.conflicts,warnings:preview.warnings});
+          return true;
+        }
+        if(!preview.changes.length){ fail(res,400,'lexicon_patch_no_changes'); return true; }
+
+        const applied=await Lexicon.upsertDraftLexemes(preview.changes.map(change=>({
+          id:change.id,
+          expectedRevision:change.expectedRevision,
+          entry:change.entry
+        })));
+        const nextLexicon=await Lexicon.getDraft();
+        const audit=Coverage.auditLexicalCoverage(course,nextLexicon);
+        send(res,200,{ok:true,setId,applied:applied.entries.length,draftRevision:applied.draftRevision,
+          summary:preview.summary,warnings:preview.warnings,
+          coverage:Coverage.compactCoverageReport(audit)
+        });
         return true;
       }
 
