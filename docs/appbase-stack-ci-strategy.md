@@ -68,7 +68,7 @@ Revisit only if:
 
 Semantic tokens are CSS custom properties. Products declare them in `config/product.json → brand.ui.{dark,light}`; Core `themeCssVars` maps them to the shared variable names (`--bg`, `--card`, `--surface`, `--accent`, `--accent-ink`) and `applyCssVars` applies them (`packages/core/src/core/ui.ts`). FitTimer (DOM) and Task Mini (React) use the same functions; no token package is tied to React.
 
-`packages/ui-react` contains only UI that is platform-level infrastructure rather than product UI. The first such slice is the shared auth flow (`AuthGate`/`useAuth`), consumed by Task Mini and the generated React app starter. Product-specific components stay inside each app; new shared primitives move here only after reuse is concrete.
+`packages/ui-react` contains only UI that is platform-level infrastructure rather than product UI: the auth flow (`AuthProvider`/`useOptionalAuth`/`SignInForm`/`AuthGate`), the shared Admin, the fatal error boundary and the interface-language layer (`I18nProvider`/`useI18n`/`LanguagePicker`; dictionaries stay in each app). They are consumed by Task Mini and the generated React app starter. Product-specific components stay inside each app; new shared primitives move here only after reuse is concrete.
 
 ## D5. Backend unchanged
 

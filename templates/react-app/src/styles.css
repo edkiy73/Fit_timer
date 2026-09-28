@@ -21,4 +21,8 @@ h2{margin:0 0 8px}
 .card p{margin:0;color:var(--muted);line-height:1.5}
 .link-button{border:0;background:transparent;color:var(--accent-ink,var(--accent));font-weight:700;cursor:pointer;padding:6px}
 .link-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card p + p,.card h2 + p{margin-top:10px}
+.muted{color:var(--muted)}
+.link-button{text-decoration:none}
+.language{margin-top:18px}
 @media(max-width:480px){.app{margin:12px auto;padding:18px;border-radius:16px}}

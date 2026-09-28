@@ -6,19 +6,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const TEMPLATE = path.join(REPO, 'templates', 'react-app');
 
-const TEXT = {
-  ru: {
-    logout:'Выйти',
-    readyTitle:'Основа готова',
-    readyText:'Авторизация, роутинг, тема, Core, Vercel и тестовый каркас уже подключены.'
-  },
-  en: {
-    logout:'Sign out',
-    readyTitle:'Foundation ready',
-    readyText:'Auth, routing, theme, Core, Vercel and the test scaffold are already wired.'
-  }
-};
-
 async function exists(target){
   try{ await access(target); return true; }catch{ return false; }
 }
@@ -47,15 +34,13 @@ export async function createApp({slug, name, appId, locale='ru', destination}){
   const target = destination ? path.resolve(destination) : path.join(REPO, 'apps', slug);
   if(await exists(target)) throw new Error('destination already exists: ' + target);
 
-  const copy = TEXT[locale];
+  // Product copy lives in src/i18n (ru + en dictionaries); the chosen locale becomes the only
+  // offered one in config/product.json → i18n. Add the other locale there to enable switching.
   await copyTree(TEMPLATE, target, {
     '__APP_SLUG__': slug,
     '__APP_NAME__': String(name).trim(),
     '__APP_ID__': appId,
-    '__APP_LOCALE__': locale,
-    '__LOGOUT_TEXT__': copy.logout,
-    '__READY_TITLE__': copy.readyTitle,
-    '__READY_TEXT__': copy.readyText
+    '__APP_LOCALE__': locale
   });
   return target;
 }

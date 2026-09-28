@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useOutletContext, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
+import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import { hasEntitlement } from '@appbase/core/auth.js';
 import { filterTasks, type TaskFilter } from './domain';
 import { AddTaskForm } from './components/AddTaskForm';
@@ -14,16 +15,18 @@ import { taskDocs } from './tasks/repository';
 import { taskAuth } from './auth';
 import { taskAdmin } from './admin';
 import { taskBilling } from './billing';
+import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 
 const EMPTY: Record<TaskFilter, string> = {
-  all: 'Пока задач нет.',
-  active: 'Все задачи выполнены.',
-  done: 'Пока ничего не выполнено.'
+  all: 'tasks.emptyAll',
+  active: 'tasks.emptyActive',
+  done: 'tasks.emptyDone'
 };
 
 // Tasks work without an account (local-first); the account only adds sync between devices.
 function AccountChip(){
   const auth = useOptionalAuth();
+  const {t} = useI18n();
   const email = auth.session?.email;
   // Sign-in on this device (or restored session): merge local tasks with the account now.
   useEffect(() => { if(email) syncTasksNow(); }, [email]);
@@ -31,20 +34,21 @@ function AccountChip(){
   return (
     <div className="account-chip">
       {auth.session
-        ? <><span>{auth.session.email}</span><Link to="/account">Аккаунт</Link></>
-        : <Link to="/account">Войти</Link>}
+        ? <><span>{auth.session.email}</span><Link to="/account">{t('nav.account')}</Link></>
+        : <Link to="/account">{t('nav.signIn')}</Link>}
     </div>
   );
 }
 
 function Header(){
+  const {t} = useI18n();
   return (
     <header>
       <div className="account-row">
         <div>
-          <div className="eyebrow">AppBase demo</div>
+          <div className="eyebrow">{t('app.eyebrow')}</div>
           <h1>Task Mini</h1>
-          <p>Эталонное приложение на общем Core.</p>
+          <p>{t('app.lead')}</p>
         </div>
         <AccountChip />
       </div>
@@ -55,11 +59,12 @@ function Header(){
 function TaskLayout(){
   const {data: tasks = []} = useTasks();
   const actions = useTaskActions();
+  const {t} = useI18n();
   return (
     <main className="app">
       <Header />
       <AddTaskForm onAdd={actions.add} />
-      {actions.saveFailed && <p className="error" role="alert">Не удалось сохранить изменения.</p>}
+      {actions.saveFailed && <p className="error" role="alert">{t('tasks.saveFailed')}</p>}
       <FilterNav tasks={tasks} />
       <Outlet context={actions} />
     </main>
@@ -71,6 +76,7 @@ export const EXPORT_SKU = 'export';
 
 function ExportTasks(){
   const auth = useOptionalAuth();
+  const {t} = useI18n();
   const {data: tasks = []} = useTasks();
   if(!hasEntitlement(auth.session, EXPORT_SKU)) return <BuyExport />;
   const download = () => {
@@ -82,13 +88,14 @@ function ExportTasks(){
     link.click();
     URL.revokeObjectURL(url);
   };
-  return <button type="button" className="text-button" onClick={download}>Скачать задачи ({tasks.length})</button>;
+  return <button type="button" className="text-button" onClick={download}>{t('export.download', {count: tasks.length})}</button>;
 }
 
 // Offered only when the server has a payment provider for this build (the test provider
 // exists only on the memory store, so production shows the note instead of a button).
 function BuyExport(){
   const auth = useOptionalAuth();
+  const {t} = useI18n();
   const {data: providers = []} = useQuery({queryKey: ['billing-providers'], queryFn: () => taskBilling.providers(), retry: false});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -102,15 +109,15 @@ function BuyExport(){
       if(result.url){ window.location.assign(result.url); return; }
       await auth.refresh();
     }catch{
-      setError('Не удалось оформить покупку. Попробуй ещё раз.');
+      setError(t('export.buyFailed'));
     }finally{
       setBusy(false);
     }
   };
   return (
     <div className="buy">
-      <p className="muted">Экспорт задач в файл — отдельная покупка{provider ? '.' : '. Пока её выдают в админке.'}</p>
-      {provider && <button type="button" className="text-button" disabled={busy} onClick={() => void buy()}>Купить экспорт</button>}
+      <p className="muted">{t(provider ? 'export.locked' : 'export.lockedAdmin')}</p>
+      {provider && <button type="button" className="text-button" disabled={busy} onClick={() => void buy()}>{t('export.buy')}</button>}
       {error && <p className="error" role="alert">{error}</p>}
     </div>
   );
@@ -118,6 +125,7 @@ function BuyExport(){
 
 function AccountPage(){
   const auth = useOptionalAuth();
+  const {t, locale} = useI18n();
   const navigate = useNavigate();
   // Tasks stay on the device; the next sign-in merges them into that account.
   const signOut = async () => {
@@ -128,21 +136,22 @@ function AccountPage(){
   if(auth.loading) return null;
   return (
     <main className="app">
-      <p className="back"><Link to="/">← К задачам</Link></p>
+      <p className="back"><Link to="/">{t('nav.back')}</Link></p>
       {auth.session ? (
         <section className="account">
-          <h1>Аккаунт</h1>
+          <h1>{t('account.title')}</h1>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
-          <p className="muted">Задачи синхронизируются между устройствами, где выполнен вход.</p>
+          <p className="muted">{t('account.synced')}</p>
           <ExportTasks />
-          <button type="button" className="text-button" onClick={() => void signOut()}>Выйти</button>
+          <button type="button" className="text-button" onClick={() => void signOut()}>{t('account.signOut')}</button>
         </section>
       ) : (
         <>
-          <p className="muted">Задачи уже сохраняются на этом устройстве. Войди, чтобы видеть их и на других.</p>
-          <SignInForm locale="ru" productName="Task Mini" variant="inline" onSignedIn={() => navigate('/')} />
+          <p className="muted">{t('account.localHint')}</p>
+          <SignInForm locale={sharedUiLocale(locale)} productName="Task Mini" variant="inline" onSignedIn={() => navigate('/')} />
         </>
       )}
+      <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
     </main>
   );
 }
@@ -151,13 +160,23 @@ function Root(){
   return <AuthProvider client={taskAuth}><Outlet /></AuthProvider>;
 }
 
+function Localized({children}: {children: ReactNode}){
+  return <I18nProvider dictionaries={dictionaries} config={i18nConfig} storageKey={LOCALE_KEY}>{children}</I18nProvider>;
+}
+
+function Admin(){
+  const {locale} = useI18n();
+  return <AdminPanel client={taskAdmin} locale={sharedUiLocale(locale)} productName="Task Mini" />;
+}
+
 function TaskList({filter}: {filter: TaskFilter}){
   const {data, isPending, isError} = useTasks();
   const actions = useOutletContext<TaskActions>();
-  if(isPending) return <p className="empty">Загружаю…</p>;
-  if(isError) return <p className="error" role="alert">Не удалось прочитать задачи.</p>;
+  const {t} = useI18n();
+  if(isPending) return <p className="empty">{t('tasks.loading')}</p>;
+  if(isError) return <p className="error" role="alert">{t('tasks.readFailed')}</p>;
   const visible = filterTasks(data, filter);
-  if(!visible.length) return <p className="empty">{EMPTY[filter]}</p>;
+  if(!visible.length) return <p className="empty">{t(EMPTY[filter])}</p>;
   return (
     <ul className="tasks" aria-live="polite">
       {visible.map(task => <TaskItem key={task.id} task={task} onToggle={actions.toggle} onRemove={actions.remove} />)}
@@ -168,7 +187,7 @@ function TaskList({filter}: {filter: TaskFilter}){
 export const routes: RouteObject[] = [
   {
     path: '/',
-    element: <Root />,
+    element: <Localized><Root /></Localized>,
     children: [
       {
         element: <TaskLayout />,
@@ -183,6 +202,6 @@ export const routes: RouteObject[] = [
   },
   {
     path:'/admin',
-    element:<AdminPanel client={taskAdmin} locale="ru" productName="Task Mini" />
+    element:<Localized><Admin /></Localized>
   }
 ];
