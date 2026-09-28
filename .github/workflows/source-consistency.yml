@@ -6,6 +6,7 @@ on:
   pull_request:
     paths: &consistency_paths
       - 'packages/core/**'
+      - 'packages/ui-react/**'
       - 'apps/**'
       - 'scripts/**'
       - 'templates/**'
