@@ -11,6 +11,8 @@ export interface AdminSectionContext {
 export interface AdminSection {
   id: string;
   label: string;
+  /** Sidebar group. Product modules can share one group or create their own. */
+  group?: string;
   render(context: AdminSectionContext): ReactNode;
 }
 
@@ -35,7 +37,8 @@ const COPY = {
     owned:'Покупки', access:'Доступ', sku:'Покупка (SKU)', grant:'Выдать', revoke:'Забрать',
     premiumDays:'Premium, дней', grantPremium:'Выдать Premium', revokePremium:'Забрать Premium',
     accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок.',
-    payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт'
+    payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
+    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -50,7 +53,8 @@ const COPY = {
     owned:'Purchases', access:'Access', sku:'Purchase (SKU)', grant:'Grant', revoke:'Revoke',
     premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
     accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period.',
-    payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account'
+    payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
+    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu'
   }
 } as const;
 
@@ -137,12 +141,34 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [navOpen, setNavOpen] = useState(false);
 
   const tabs = useMemo(() => [
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
     ['errors', copy.errors], ['storage', copy.storage],
     ...extraSections.map(section => [section.id, section.label] as const)
   ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
+
+  const navGroups = useMemo(() => {
+    const core = [
+      {label:copy.mainGroup, ids:['health','overview']},
+      {label:copy.accountsGroup, ids:['users','payments','errors']},
+      {label:copy.systemGroup, ids:['storage']}
+    ];
+    const extras = new Map<string,string[]>();
+    for(const section of extraSections){
+      const group = section.group || copy.productGroup;
+      const list = extras.get(group) || [];
+      list.push(section.id);
+      extras.set(group,list);
+    }
+    return [
+      ...core,
+      ...Array.from(extras, ([label,ids]) => ({label,ids}))
+    ];
+  }, [copy, extraSections]);
+
+  const currentLabel = tabs.find(([id]) => id === tab)?.[1] || copy.title;
 
   const loadHealth = useCallback(async () => {
     try{
@@ -205,7 +231,14 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     setKey('');
     setDraftKey('');
     setData(null);
+    setNavOpen(false);
     try{ sessionStorage.removeItem('appbase.admin.key'); }catch(_){}
+  }
+
+  function selectTab(next: Tab){
+    setTab(next);
+    setNavOpen(false);
+    window.scrollTo({top:0,left:0,behavior:'auto'});
   }
 
   async function clearError(sig: string){
@@ -225,37 +258,70 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     ? data.stats as Record<string, unknown> : null;
   const errors = errorStats && Array.isArray(errorStats.items) ? errorStats.items as Array<Record<string, unknown>> : [];
 
-  return (
-    <main className="ab-admin">
-      <header className="ab-admin-header">
-        <div>
+  if(!key){
+    return (
+      <main className="ab-admin-gate">
+        <section className="ab-admin-gate-card">
           <div className="ab-admin-kicker">{productName}</div>
           <h1>{copy.title}</h1>
-        </div>
-        <div className="ab-admin-auth">
-          {!key ? (
-            <>
-              <input
-                aria-label={copy.key}
-                type="password"
-                value={draftKey}
-                onChange={e => setDraftKey(e.target.value)}
-                onKeyDown={e => { if(e.key === 'Enter') connect(); }}
-                placeholder={copy.key}
-              />
-              <button type="button" onClick={connect}>{copy.connect}</button>
-            </>
-          ) : (
-            <button type="button" onClick={disconnect}>{copy.disconnect}</button>
-          )}
-        </div>
-      </header>
+          <p>{copy.noKey}</p>
+          <div className="ab-admin-auth">
+            <input
+              aria-label={copy.key}
+              type="password"
+              value={draftKey}
+              onChange={e => setDraftKey(e.target.value)}
+              onKeyDown={e => { if(e.key === 'Enter') connect(); }}
+              placeholder={copy.key}
+              autoComplete="off"
+            />
+            <button type="button" onClick={connect}>{copy.connect}</button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
-      <nav className="ab-admin-tabs" aria-label={copy.title}>
-        {tabs.map(([id,label]) => (
-          <button key={id} type="button" data-active={tab === id || undefined} onClick={() => setTab(id)}>{label}</button>
-        ))}
-      </nav>
+  return (
+    <div className="ab-admin-shell" data-nav-open={navOpen || undefined}>
+      <aside className="ab-admin-side" aria-label={copy.title}>
+        <div className="ab-admin-brand">
+          <div>
+            <strong>{productName}</strong>
+            <small>{copy.title}</small>
+          </div>
+          <button type="button" className="ab-admin-signout" onClick={disconnect}>{copy.disconnect}</button>
+        </div>
+        <nav className="ab-admin-nav">
+          {navGroups.map(group => (
+            <div className="ab-admin-nav-group" key={group.label}>
+              <div className="ab-admin-nav-label">{group.label}</div>
+              {group.ids.map(id => {
+                const item = tabs.find(([tabId]) => tabId === id);
+                if(!item) return null;
+                return (
+                  <button key={id} type="button" data-active={tab === id || undefined} onClick={() => selectTab(id)}>
+                    <span>{item[1]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </aside>
+      <button className="ab-admin-shade" aria-label={copy.menu} type="button" onClick={() => setNavOpen(false)} />
+
+      <div className="ab-admin-main">
+        <header className="ab-admin-topbar">
+          <div className="ab-admin-topbar-inner">
+            <button className="ab-admin-menu" aria-label={copy.menu} type="button" onClick={() => setNavOpen(true)}>☰</button>
+            <div>
+              <h1>{currentLabel}</h1>
+              <small>{productName} · {copy.title}</small>
+            </div>
+          </div>
+        </header>
+        <main className="ab-admin">
 
       {tab === 'health' && (
         <section className="ab-admin-stack">
@@ -269,7 +335,6 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
         </section>
       )}
 
-      {tab !== 'health' && !key && <p className="ab-admin-empty">{copy.noKey}</p>}
       {error && <p className="ab-admin-error" role="alert">{error}</p>}
       {busy && <p className="ab-admin-empty">…</p>}
 
@@ -335,6 +400,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
           {section.render({client, adminKey:key, locale})}
         </section>
       ) : null)}
-    </main>
+        </main>
+      </div>
+    </div>
   );
 }
