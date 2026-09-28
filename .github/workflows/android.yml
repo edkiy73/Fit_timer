@@ -18,6 +18,7 @@ on:
       - 'apps/fittimer/package.json'
       - 'apps/fittimer/package-lock.json'
       - '.github/workflows/android.yml'
+      - '!**/*.md'
   workflow_dispatch:
     inputs:
       version_code:

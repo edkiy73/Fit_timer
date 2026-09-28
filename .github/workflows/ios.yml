@@ -17,6 +17,7 @@ on:
       - 'apps/fittimer/package.json'
       - 'apps/fittimer/package-lock.json'
       - '.github/workflows/ios.yml'
+      - '!**/*.md'
   pull_request:
     paths: *mobile_paths
 

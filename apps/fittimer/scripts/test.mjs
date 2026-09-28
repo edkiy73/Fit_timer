@@ -5,6 +5,7 @@
    npm test -- --static      только статические проверки
    npm test -- --unit        только unit/серверные тесты (сервер поднимается сам)
    npm test -- --browser     только сборка dist и браузерные сценарии (нужен Chromium)
+   npm test -- --browser --shard=1/4   одна из параллельных частей браузерных сценариев (как в CI)
    npm test -- --admin       только браузерный smoke админки
    npm test -- --all         всё вместе — перед мержем крупных изменений
    Флаги можно сочетать: npm test -- --unit --browser
@@ -130,7 +131,8 @@ if(want.browser || want.admin){
       try{
         await startServers(true);
         const env = {...TEST_ENV, FIT_CHROME: chrome};
-        if(want.browser) step('scripts/run-browser-tests.mjs', process.execPath, ['scripts/run-browser-tests.mjs'], {env});
+        const shard = [...args].filter(a => a.startsWith('--shard='));
+        if(want.browser) step('scripts/run-browser-tests.mjs', process.execPath, ['scripts/run-browser-tests.mjs', ...shard], {env});
         if(want.admin) for(const name of ADMIN_TESTS) node(`tests/${name}.js`, env);
       } finally {
         stopServers();

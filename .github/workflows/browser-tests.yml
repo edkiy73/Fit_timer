@@ -1,16 +1,18 @@
 name: Browser tests
 
-# Сквозные и браузерные тесты приложения. Раньше их в CI не было, и они незаметно
-# ломались. Список тестов и проверка «каждый тест где-то запускается» —
-# в scripts/run-browser-tests.mjs.
+# Сквозные и браузерные тесты FitTimer. Полный набор идёт на каждом PR (main сразу
+# уходит в продакшн), но разбит на параллельные части, у каждой свой сервер.
+# Раскладка — scripts/browser-shards.mjs по tests/browser-timings.json.
 on:
   pull_request:
     paths: &browser_paths
       - 'packages/core/**'
-      - 'apps/**'
-      - 'scripts/apps.mjs'
+      - 'apps/fittimer/**'
       - 'package.json'
+      - 'scripts/apps.mjs'
       - '.github/workflows/browser-tests.yml'
+      - '!**/*.md'
+      - '!apps/*/docs/**'
   push:
     branches: [main]
     paths: *browser_paths
@@ -20,9 +22,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  browser:
+  shard:
+    name: shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
 
@@ -40,6 +47,18 @@ jobs:
 
       # Собирает dist, на время прогона включает тестовый мост (__FIT_TEST_MODE__,
       # см. scripts/test-bridge.mjs), поднимает tests/dev-server.js и статику,
-      # гоняет scripts/run-browser-tests.mjs. Локально — то же самое: npm test -- --browser
+      # гоняет свою часть scripts/run-browser-tests.mjs. Локально — то же самое:
+      # npm test -- --browser (всё) или npm test -- --browser --shard=2/4
       - name: Браузерные и сквозные тесты
-        run: npm run apps:browser
+        working-directory: apps/fittimer
+        run: node scripts/test.mjs --browser --shard=${{ matrix.shard }}/4
+
+  # Одна итоговая проверка с прежним именем: обязательные проверки в настройках
+  # репозитория не нужно менять при изменении числа частей.
+  browser:
+    if: always()
+    needs: shard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Все части прошли
+        run: test "${{ needs.shard.result }}" = success

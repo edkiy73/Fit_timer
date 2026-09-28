@@ -13,26 +13,23 @@
           playwright-core и FIT_CHROME — путь к Chromium.
 
    Запуск:  node scripts/run-browser-tests.mjs            — все
-            node scripts/run-browser-tests.mjs sync-flow  — выбранные */
+            node scripts/run-browser-tests.mjs sync-flow  — выбранные
+            node scripts/run-browser-tests.mjs --shard=2/4 — вторая из четырёх частей (CI гоняет части
+                     параллельно, у каждой свой сервер). Части балансируются по tests/browser-timings.json.
+            node scripts/run-browser-tests.mjs --write-timings — полный прогон и обновление этого файла */
 
 import { spawn } from 'node:child_process';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { UNIT_TESTS, ADMIN_TESTS, STATIC_TESTS } from './test-lists.mjs';
+import { BROWSER_TESTS, UNIT_TESTS, ADMIN_TESTS, STATIC_TESTS } from './test-lists.mjs';
+import { shardTests } from './browser-shards.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
-// Тесты, которые идут здесь. Порядок — от быстрых к долгим.
-export const BROWSER_TESTS = [
-  'api-flow', 'ai-api', 'youtube-video',
-  'csp', 'parse-flat', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
-  'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow', 'nav-transitions',
-  'limits', 'link-length', 'tap-targets', 'stale-deploy', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
-  'report-auto', 'report-detail', 'prog-check-flow', 'ai-edit-carry', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
-];
 // Не тесты: сервер и общий хелпер.
 const NOT_TESTS = new Set(['dev-server']);
 const PER_TEST_MS = 240000;
+const TIMINGS = path.join(ROOT, 'tests', 'browser-timings.json');
 
 async function coverageGaps(){
   const files = (await readdir(path.join(ROOT, 'tests'))).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3));
@@ -56,26 +53,48 @@ function run(name){
   });
 }
 
-const only = process.argv.slice(2);
-const list = only.length ? only : BROWSER_TESTS;
+const argv = process.argv.slice(2);
+const shardArg = argv.find(a => a.startsWith('--shard='));
+const writeTimings = argv.includes('--write-timings');
+const only = argv.filter(a => !a.startsWith('--'));
+let list = only.length ? only : BROWSER_TESTS;
+let shardIndex = 1;
+if(shardArg){
+  const m = /^--shard=(\d+)\/(\d+)$/.exec(shardArg);
+  if(!m || +m[1] < 1 || +m[1] > +m[2]) throw new Error('Ожидается --shard=<номер>/<всего>, например --shard=1/4');
+  shardIndex = +m[1];
+  const timings = JSON.parse(await readFile(TIMINGS, 'utf8'));
+  list = shardTests(list, timings, shardIndex, +m[2]);
+  console.log(`Часть ${m[1]}/${m[2]}: ${list.join(', ')}`);
+}
 let failed = 0;
+const done = [];
 
-if(!only.length){
+// Проверку «тест нигде не запускается» делает только первая часть, чтобы не дублировать.
+if(!only.length && shardIndex === 1){
   const gaps = await coverageGaps();
   if(gaps.length){
     console.log('Тесты, которые нигде не запускаются: ' + gaps.join(', '));
-    console.log('Добавь их в BROWSER_TESTS (scripts/run-browser-tests.mjs) или в scripts/test-lists.mjs.');
+    console.log('Добавь их в scripts/test-lists.mjs.');
     failed++;
   }
 }
 
 for(const name of list){
   const r = await run(name);
+  done.push(r);
   console.log(`${r.ok ? 'ok  ' : 'FAIL'}  ${name}  (${r.sec} с)`);
   if(!r.ok){
     failed++;
     console.log(r.out.split('\n').map(l => '      ' + l).join('\n'));
   }
+}
+const slowest = [...done].sort((a, b) => b.sec - a.sec).slice(0, 5);
+console.log(`\nСамые долгие: ${slowest.map(r => `${r.name} ${r.sec} с`).join(', ')}; всего ${done.reduce((s, r) => s + r.sec, 0)} с`);
+if(writeTimings && !failed){
+  const timings = Object.fromEntries(done.map(r => [r.name, r.sec]).sort((a, b) => a[0].localeCompare(b[0])));
+  await writeFile(TIMINGS, JSON.stringify(timings, null, 2) + '\n');
+  console.log('Обновлён ' + path.relative(ROOT, TIMINGS));
 }
 console.log(failed ? `\nПровалено: ${failed}` : `\nВсе ${list.length} прошли`);
 process.exit(failed ? 1 : 0);

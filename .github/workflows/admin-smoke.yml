@@ -12,6 +12,7 @@ on:
       - 'apps/fittimer/tests/admin-flow.js'
       - 'apps/fittimer/tests/dev-server.js'
       - '.github/workflows/admin-smoke.yml'
+      - '!**/*.md'
   push:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - 'apps/fittimer/tests/admin-flow.js'
       - 'apps/fittimer/tests/dev-server.js'
       - '.github/workflows/admin-smoke.yml'
+      - '!**/*.md'
 
 jobs:
   smoke:

@@ -1,21 +1,20 @@
 name: AppBase — all apps consistency
 
+# Проверяет Core и только затронутые приложения (scripts/affected-apps.mjs):
+# изменение packages/core или корня — всё; apps/<name> — это приложение; Markdown — ничего.
 on:
   pull_request:
-    paths:
+    paths: &consistency_paths
       - 'packages/core/**'
       - 'apps/**'
-      - 'scripts/apps.mjs'
+      - 'scripts/**'
       - 'package.json'
       - '.github/workflows/source-consistency.yml'
+      - '!**/*.md'
+      - '!apps/*/docs/**'
   push:
     branches: [main]
-    paths:
-      - 'packages/core/**'
-      - 'apps/**'
-      - 'scripts/apps.mjs'
-      - 'package.json'
-      - '.github/workflows/source-consistency.yml'
+    paths: *consistency_paths
 
 jobs:
   check:
@@ -23,6 +22,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Node.js 22
         uses: actions/setup-node@v7
@@ -32,5 +33,7 @@ jobs:
       - name: Install Core and every app
         run: npm run setup
 
-      - name: Check Core and every app
-        run: npm run check
+      - name: Check Core and affected apps
+        run: npm run check:affected -- "$BASE"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
