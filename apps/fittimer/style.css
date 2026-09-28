@@ -2825,6 +2825,7 @@ body.booting .app{visibility:hidden}
      иначе список читается как два разных типа записей */
   #accProfiles .user-row{background:var(--bg-2);border:1px solid transparent;margin:0}
   #accProfiles .user-row.act{border-color:var(--accent-line);background:var(--accent-soft)}
+  #accProfiles .user-row.act .ub small{display:block;margin-top:4px}
   .u-now{
     display:inline-block;margin-right:8px;vertical-align:1px;
     font-family:var(--font-display);font-size:10px;font-weight:600;
