@@ -64,3 +64,14 @@ h2{margin:0 0 8px}
   .ab-admin-bulk-controls label:nth-child(2){grid-column:1/-1}
   .ab-admin-bulk-controls>button{grid-column:1/-1;width:100%}
 }
+
+.ab-admin-ipa-box{
+  display:grid;
+  gap:8px;
+  margin:8px 0 12px;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+}
+.ab-admin-ipa-box .ab-admin-action-row{margin-top:0}
