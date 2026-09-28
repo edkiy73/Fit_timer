@@ -24,6 +24,41 @@ function assertObject(value, name){
   return value;
 }
 
+function validateSetMeta(meta){
+  assertObject(meta,'set_meta');
+  if(meta.schemaVersion!==1) throw new Error('unsupported_schema');
+  if(!cleanId(meta.id)) throw new Error('bad_set_id');
+  if(!cleanId(meta.slug)) throw new Error('bad_set_slug');
+  if(!isTextMap(meta.title)) throw new Error('missing_set_title');
+  if(!cleanId(meta.defaultRoadmapId)) throw new Error('bad_default_roadmap');
+  const access=assertObject(meta.access,'access');
+  if(access.mode==='entitlement'){
+    if(!SKU.test(String(access.entitlement||'').trim().toLowerCase())) throw new Error('bad_entitlement');
+    if(access.freePreview){
+      if(access.freePreview.kind!=='first-days') throw new Error('bad_free_preview_kind');
+      if(!Number.isInteger(access.freePreview.days)||access.freePreview.days<0) throw new Error('bad_free_preview_days');
+      if(access.freePreview.learnedContentStaysAvailable!==true) throw new Error('free_review_must_stay_available');
+    }
+  }else if(access.mode!=='free'){
+    throw new Error('bad_access_mode');
+  }
+  return meta;
+}
+
+function validateNode(node){
+  assertObject(node,'node');
+  const id=cleanId(node.id);
+  if(!id) throw new Error('bad_node_id');
+  if(!['lesson','practice','review','dialogue','checkpoint','bonus'].includes(node.kind)) throw new Error(`bad_node_kind:${id}`);
+  if(!isTextMap(node.title)) throw new Error(`bad_node_title:${id}`);
+  if(node.dayIndex!==undefined && (!Number.isInteger(node.dayIndex)||node.dayIndex<1)) throw new Error(`bad_day_index:${id}`);
+  if(!Number.isInteger(node.order)||node.order<0) throw new Error(`bad_node_order:${id}`);
+  if(!Array.isArray(node.prerequisites)||node.prerequisites.some(dep=>!cleanId(dep))) throw new Error(`bad_node_prerequisites:${id}`);
+  if(!Array.isArray(node.activityIds)||node.activityIds.some(ref=>!cleanId(ref))) throw new Error(`bad_node_activities:${id}`);
+  if(typeof node.optional!=='boolean') throw new Error(`bad_node_optional:${id}`);
+  return node;
+}
+
 function isTextMap(value){
   return !!value && typeof value==='object' && !Array.isArray(value)
     && Object.values(value).some(item=>typeof item==='string' && item.trim());
@@ -112,13 +147,9 @@ function validateActivity(activity){
 
 function validateSet(input){
   const set = assertObject(input, 'set');
-  if(set.schemaVersion !== 1) throw new Error('unsupported_schema');
-  if(!cleanId(set.id)) throw new Error('bad_set_id');
-  if(!cleanId(set.slug)) throw new Error('bad_set_slug');
-  if(!set.title || typeof set.title !== 'object') throw new Error('missing_set_title');
+  validateSetMeta(set);
   if(!Array.isArray(set.roadmaps) || !set.roadmaps.length) throw new Error('missing_roadmaps');
   if(!Array.isArray(set.activities)) throw new Error('missing_activities');
-  if(!cleanId(set.defaultRoadmapId)) throw new Error('bad_default_roadmap');
 
   const activities = new Map();
   for(const activity of set.activities){
@@ -139,14 +170,10 @@ function validateSet(input){
 
     const nodes = new Map();
     for(const node of roadmap.nodes){
-      assertObject(node, 'node');
-      const nodeId = cleanId(node.id);
-      if(!nodeId) throw new Error(`bad_node_id:${roadmapId}`);
+      const checked=validateNode(node);
+      const nodeId=cleanId(checked.id);
       if(nodes.has(nodeId)) throw new Error(`duplicate_node:${nodeId}`);
-      if(node.dayIndex !== undefined && (!Number.isInteger(node.dayIndex) || node.dayIndex < 1)){
-        throw new Error(`bad_day_index:${nodeId}`);
-      }
-      nodes.set(nodeId, node);
+      nodes.set(nodeId,checked);
     }
 
     for(const [nodeId, node] of nodes){
@@ -177,18 +204,6 @@ function validateSet(input){
   }
 
   if(!roadmapIds.has(cleanId(set.defaultRoadmapId))) throw new Error('unknown_default_roadmap');
-
-  const access = assertObject(set.access, 'access');
-  if(access.mode === 'entitlement'){
-    if(!SKU.test(String(access.entitlement || '').trim().toLowerCase())) throw new Error('bad_entitlement');
-    if(access.freePreview){
-      if(access.freePreview.kind !== 'first-days') throw new Error('bad_free_preview_kind');
-      if(!Number.isInteger(access.freePreview.days) || access.freePreview.days < 0) throw new Error('bad_free_preview_days');
-      if(access.freePreview.learnedContentStaysAvailable !== true) throw new Error('free_review_must_stay_available');
-    }
-  }else if(access.mode !== 'free'){
-    throw new Error('bad_access_mode');
-  }
 
   return set;
 }
@@ -254,6 +269,26 @@ async function ensureDraftWorkspace(id){
   return Draft.ensure(key,fallback);
 }
 
+async function listDraftSetIds(){
+  const ids=new Set(await Draft.listSetIds());
+  const legacyKeys=await store.scan(`${PREFIX}:set:*:draft`,1000);
+  for(const key of legacyKeys){
+    const prefix=`${PREFIX}:set:`, suffix=':draft';
+    if(key.startsWith(prefix)&&key.endsWith(suffix)) ids.add(key.slice(prefix.length,-suffix.length));
+  }
+  return [...ids].filter(cleanId).sort();
+}
+
+async function updateDraftSetMeta(id,expectedDraftRevision,updater){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.updateMeta(key,expectedDraftRevision,current=>{
+    const next=updater(current);
+    validateSetMeta(next);
+    return next;
+  });
+}
+
 async function getDraftStructure(id){
   const key=cleanId(id);
   await ensureDraftWorkspace(key);
@@ -267,6 +302,30 @@ async function getDraftNode(id,roadmapId,nodeId){
   if(!nodeResult) return null;
   const activities=await Draft.getActivities(key,nodeResult.node.activityIds || []);
   return {...nodeResult,activities};
+}
+
+async function createDraftNode(id,roadmapId,node){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.createNode(key,cleanId(roadmapId),node,validateNode);
+}
+
+async function updateDraftNode(id,roadmapId,nodeId,expectedVersion,updater){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.updateNode(key,cleanId(roadmapId),cleanId(nodeId),expectedVersion,updater,validateNode);
+}
+
+async function deleteDraftNode(id,roadmapId,nodeId){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.deleteNode(key,cleanId(roadmapId),cleanId(nodeId));
+}
+
+async function reorderDraftNodes(id,roadmapId,nodeIds){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.reorderNodes(key,cleanId(roadmapId),nodeIds.map(cleanId),validateNode);
 }
 
 async function getDraftActivity(id,activityId){
@@ -388,6 +447,8 @@ function previewSnapshot(set){
 }
 
 module.exports = {
+  validateSetMeta,
+  validateNode,
   validateSet,
   validateActivity,
   cleanId,
@@ -395,8 +456,14 @@ module.exports = {
   putDraft,
   getDraft,
   ensureDraftWorkspace,
+  listDraftSetIds,
+  updateDraftSetMeta,
   getDraftStructure,
   getDraftNode,
+  createDraftNode,
+  updateDraftNode,
+  deleteDraftNode,
+  reorderDraftNodes,
   getDraftActivity,
   updateDraftActivity,
   createDraftActivity,
