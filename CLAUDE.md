@@ -193,6 +193,11 @@ Before a PR: `npm test` (= CI static + unit/server), plus `npm test -- --browser
 
 Do not repeatedly run expensive full builds while a cheaper failing check remains unresolved.
 
+
+## Autonomy (owner's standing instruction)
+
+Do yourself everything the available tools allow; do not hand the owner steps you can perform: checks, builds, commits, PRs, CI fixes, merging your own PR once every check is green with no conflicts or open review threads, GitHub/Vercel configuration. Ask the owner only for product decisions, access you lack (say exactly what to grant), and irreversible actions on production data, signing keys or billing.
+
 ## Completion standard
 
 A task is complete only when:
