@@ -3,9 +3,17 @@ import { z } from 'zod';
 const idSchema=z.string().min(1).regex(/^[a-z0-9][a-z0-9._-]*$/);
 const textMap=z.record(z.string().min(2),z.string());
 
+const pronunciationSchema=z.object({
+  ipa:z.string().optional(),
+  ruReading:z.string().optional(),
+  audioKey:z.string().optional(),
+});
+
 export const lexiconFormSchema=z.object({
   text:z.string().min(1),
   kind:z.enum(['lemma','inflection','contraction','variant','phrase']),
+  /** Surface pronunciation wins over lemma pronunciation for clicks on inflected/contraction forms. */
+  pronunciation:pronunciationSchema.optional(),
 });
 
 export const lexiconSenseSchema=z.object({
@@ -34,11 +42,7 @@ export const lexemeSchema=z.object({
   language:z.literal('en'),
   lemma:z.string().min(1),
   forms:z.array(lexiconFormSchema).min(1),
-  pronunciation:z.object({
-    ipa:z.string().optional(),
-    ruReading:z.string().optional(),
-    audioKey:z.string().optional(),
-  }).optional(),
+  pronunciation:pronunciationSchema.optional(),
   senses:z.array(lexiconSenseSchema).min(1),
   examples:z.array(lexiconExampleSchema).default([]),
   deprecated:z.boolean().default(false),
@@ -104,4 +108,14 @@ export function lookupLexemes(snapshot:LexiconSnapshot,surface:string):Lexeme[]{
   const ids=buildLexiconIndex(snapshot).get(normalizeSurface(surface)) || [];
   const byId=new Map(snapshot.entries.map(entry=>[entry.id,entry]));
   return ids.map(id=>byId.get(id)).filter((entry):entry is Lexeme=>Boolean(entry));
+}
+
+
+export function findLexiconForm(entry:Lexeme,surface:string){
+  const key=normalizeSurface(surface);
+  return entry.forms.find(form=>normalizeSurface(form.text)===key) || null;
+}
+
+export function pronunciationForSurface(entry:Lexeme,surface:string){
+  return findLexiconForm(entry,surface)?.pronunciation || entry.pronunciation || null;
 }
