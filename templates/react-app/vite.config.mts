@@ -4,8 +4,11 @@ import { defineConfig } from 'vitest/config';
 
 const root = (path: string) => fileURLToPath(new URL('../../' + path, import.meta.url));
 
+const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'dev').slice(0, 12);
+
 export default defineConfig({
   plugins: [react()],
+  define: {'__APP_BUILD_ID__': JSON.stringify(buildId)},
   base: './',
   resolve: {
     alias: {
