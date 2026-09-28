@@ -1,0 +1,47 @@
+{
+  "id": "app.unmute.english",
+  "name": "UnMute: English for Expats",
+  "slug": "unmute",
+  "defaultApiUrl": "https://unmute99.vercel.app",
+  "defaultPublicUrl": "https://unmute99.vercel.app",
+  "brand": {
+    "background": "#0F1115",
+    "notificationAccent": "#14B8A6",
+    "ui": {
+      "dark": {
+        "background": "#0F1115",
+        "card": "#171A21",
+        "surface": "#1F2430",
+        "accent": "#2DD4BF",
+        "accentInk": "#99F6E4"
+      },
+      "light": {
+        "background": "#F4F7F7",
+        "card": "#FFFFFF",
+        "surface": "#E9F1F0",
+        "accent": "#0F9E8E",
+        "accentInk": "#0B766A"
+      }
+    }
+  },
+  "i18n": {
+    "locales": [
+      "ru"
+    ],
+    "default": "ru"
+  },
+  "auth": {
+    "askHandle": false
+  },
+  "products": [],
+  "features": {
+    "profiles": false,
+    "premium": true,
+    "ai": true,
+    "notifications": true,
+    "biometrics": false,
+    "sharing": false,
+    "voice": true
+  },
+  "shortName": "UnMute"
+}

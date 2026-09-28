@@ -1,22 +1,22 @@
-name: Task Mini — e2e
+name: UnMute — e2e
 
-# Сквозной тест настоящей production-сборки Task Mini (Vite) в Chromium.
+# Сквозной тест настоящей production-сборки UnMute (Vite) в Chromium.
 # Typecheck, unit-тесты и сборку делает AppBase consistency (npm run check приложения).
 on:
   pull_request:
-    paths: &task_mini_paths
+    paths: &unmute_paths
       - 'packages/core/**'
       - 'packages/ui-react/**'
-      - 'apps/task-mini/**'
-      - '.github/workflows/task-mini.yml'
+      - 'apps/unmute/**'
+      - '.github/workflows/unmute.yml'
       - '!**/*.md'
       - '!apps/*/docs/**'
   push:
     branches: [main]
-    paths: *task_mini_paths
+    paths: *unmute_paths
 
 concurrency:
-  group: task-mini-${{ github.ref }}
+  group: unmute-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: apps/task-mini
+        working-directory: apps/unmute
     steps:
       - uses: actions/checkout@v7
 
@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: apps/task-mini/package-lock.json
+          cache-dependency-path: apps/unmute/package-lock.json
 
       - name: Зависимости и браузер
         run: |

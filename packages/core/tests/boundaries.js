@@ -14,8 +14,8 @@ const ok = (name, cond, extra='') => {
 
 // Legacy wire names that must stay for installed clients are documented in
 // docs/appbase-preparation-roadmap.md ("Known, accepted legacy names").
-const DOMAIN_WORDS = /\b(?:workouts?|exercises?|trainers?|trainees?|programs?|fitness|fittimer|progWeights|warm-?up)\b/i;
-const BRAND = /Fit Timer|ru\.fittimer|fittimer99/;
+const DOMAIN_WORDS = /\b(?:workouts?|exercises?|trainers?|trainees?|programs?|fitness|fittimer|progWeights|warm-?up|lessons?|flashcards?|unmute)\b/i;
+const BRAND = /Fit Timer|ru\.fittimer|fittimer99|UnMute|app\.unmute/;
 
 function walk(dir){
   return fs.readdirSync(dir, {withFileTypes:true}).flatMap(entry => {
