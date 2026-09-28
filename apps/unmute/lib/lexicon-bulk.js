@@ -47,7 +47,7 @@ function normalizeForm(raw,lemma){
   const value=text(raw.text);
   if(!value) throw new Error('bad_patch_form');
   const kind=FORM_KINDS.has(raw.kind)?raw.kind:(norm(value)===norm(lemma)?(value.includes(' ')?'phrase':'lemma'):(value.includes(' ')?'phrase':'variant'));
-  const pronunciation=normalizePronunciation(raw);
+  const pronunciation=normalizePronunciation(raw.pronunciation || raw);
   return {text:value,kind,...(pronunciation?{pronunciation}:{})};
 }
 
@@ -183,7 +183,7 @@ function makeNewSense(entry,patchSense,index){
 }
 
 function previewPatch(snapshot,rawPatch){
-  const patch=rawPatch&&rawPatch.format===FORMAT&&Array.isArray(rawPatch.entries)?rawPatch:parsePatch(rawPatch);
+  const patch=parsePatch(rawPatch);
   const entries=asArray(snapshot&&snapshot.entries);
   const byId=new Map(entries.map(entry=>[entry.id,entry]));
   const byLemma=new Map();
