@@ -680,7 +680,7 @@ export const I18N_EN = {
   'progress.chestLabel': "Chest",
   'progress.shareSaved': "Image saved to Downloads.",
   'profile.switch': "switch",
-  'profile.now': "current",
+  'profile.now': "selected",
   'profile.edit': "Edit",
   'profile.noName': "Unnamed",
   'profile.multiHint': "Each profile has its own programs, statistics, weight, and photos.",
