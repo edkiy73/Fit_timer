@@ -28,7 +28,13 @@ export function applyTheme(){
   const productUi = productConfig && productConfig.brand && productConfig.brand.ui;
   const productTheme = productUi && productUi[themeLight ? 'light' : 'dark'];
   if(productTheme){
-    appUi.applyCssVars(document.body, appUi.themeCssVars(productTheme));
+    appUi.applyCssVars(document.body, {
+      bg: productTheme.background,
+      card: productTheme.card,
+      surface: productTheme.surface,
+      accent: productTheme.accent,
+      'accent-ink': productTheme.accentInk
+    });
   }
   // color-scheme говорит браузеру, в каком свете рисовать СВОИ элементы: полосу
   // прокрутки, календарь в поле даты, список в select. Без него они остаются
