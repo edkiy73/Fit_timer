@@ -6,9 +6,9 @@ import { createApp } from './create-app.mjs';
 
 const required = [
   'package.json','package-lock.json','tsconfig.json','vite.config.mts','vercel.json','index.html',
-  'config/product.json','api/auth.js','api/sync.js','api/health.js',
+  'config/product.json','api/auth.js','api/sync.js','api/health.js','api/admin.js',
   'lib/product.js','lib/app-analytics.js','lib/app-sync-schema.js',
-  'src/main.tsx','src/app.tsx','src/auth.ts','src/theme.ts','src/styles.css','src/app.test.tsx','src/test-setup.ts',
+  'src/main.tsx','src/app.tsx','src/auth.ts','src/admin.ts','src/theme.ts','src/styles.css','src/app.test.tsx','src/test-setup.ts',
   'tests/smoke.js','tests/e2e.mjs'
 ];
 
@@ -40,6 +40,8 @@ try{
 
   const app = await readFile(path.join(target,'src/app.tsx'),'utf8');
   assert.match(app, /AuthGate/);
+  assert.match(app, /AdminPanel/);
+  assert.match(app, /path:'\/admin'/);
   assert.match(app, /locale="en"/);
   assert.doesNotMatch(app, /__APP_|__READY_|__LOGOUT_/);
 
