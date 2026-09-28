@@ -62,11 +62,46 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.ok(await Content.getDraft('general-foundation'));
   assert.ok(await Lexicon.getDraft());
 
+  const blockedImport=await action(handler,'content_legacy_import');
+  assert.equal(blockedImport.status,409);
+  assert.equal(blockedImport.body.error,'draft_exists_use_overwrite');
+  const overwritten=await action(handler,'content_legacy_import',{overwrite:true});
+  assert.equal(overwritten.status,200);
+
   const queue=await action(handler,'content_review_queue');
   assert.equal(queue.status,200);
   assert.equal(queue.body.count,1);
   assert.equal(queue.body.items[0].lemma,'work');
+  assert.equal(queue.body.items[0].revision,1);
   assert.equal(reviewItems(await Lexicon.getDraft()).length,1);
+
+  const opened=await action(handler,'content_lexeme_get',{lexemeId:'work'});
+  assert.equal(opened.status,200);
+  assert.equal(opened.body.lexeme.senses.length,2);
+
+  const saved=await action(handler,'content_lexeme_save',{
+    lexemeId:'work',
+    expectedRevision:1,
+    reviewed:true,
+    changes:{senses:[
+      {id:'verb',partOfSpeech:'verb',translations:{ru:['работать']},tags:['needs-review']},
+      {id:'noun',partOfSpeech:'noun',translations:{ru:['работа','труд']},tags:['needs-review']}
+    ]}
+  });
+  assert.equal(saved.status,200);
+  assert.equal(saved.body.lexeme.revision,2);
+  assert.equal(saved.body.lexeme.senses[0].partOfSpeech,'verb');
+  assert.equal(saved.body.lexeme.senses[1].translations.ru[1],'труд');
+  assert.equal(saved.body.remainingReview,0);
+  assert.ok(saved.body.lexeme.senses.every(sense=>!sense.tags.includes('needs-review')));
+
+  const stale=await action(handler,'content_lexeme_save',{
+    lexemeId:'work',
+    expectedRevision:1,
+    changes:{senses:saved.body.lexeme.senses}
+  });
+  assert.equal(stale.status,400);
+  assert.equal(stale.body.error,'lexeme_revision_conflict');
 
   const before=await action(handler,'content_status');
   assert.equal(before.status,200);
