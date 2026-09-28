@@ -17,7 +17,12 @@ function fakeRes(){
   ok('UnMute capabilities: premium, AI, notifications, voice; no profiles',
     product.features.premium && product.features.ai && product.features.notifications && product.features.voice && !product.features.profiles);
   ok('product identity is registered', productIdentity().name === 'UnMute: English for Expats');
-  ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1'));
+  ok('UnMute owns settings and learner progress sync docs',
+    registry.accepts('account','settings')
+    && registry.accepts('account','progress:course:general-foundation')
+    && registry.accepts('account','progress:stats:general-foundation')
+    && registry.accepts('account','progress:words')
+    && !registry.accepts('profile','task:1'));
 
   const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');
   ok('shared auth UI is wired (optional sign-in)', app.includes('@appbase/ui-react/auth.js') && app.includes('AuthProvider'));
@@ -38,7 +43,11 @@ function fakeRes(){
   await billing({method:'POST',headers:{},body:{action:'providers'}},billingRes);
   ok('billing endpoint is mounted (test provider only on the memory store)',
     JSON.parse(billingRes.body || '{}').providers.join() === 'test');
-  ok('synced settings are a free account document', registry.isFree('account','settings'));
+  ok('settings and learner progress sync without Premium',
+    registry.isFree('account','settings')
+    && registry.isFree('account','progress:course:general-foundation')
+    && registry.isFree('account','progress:stats:general-foundation')
+    && registry.isFree('account','progress:words'));
 
   const health = require('../api/health');
   const healthRes = fakeRes();
