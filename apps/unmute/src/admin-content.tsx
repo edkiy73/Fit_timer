@@ -38,6 +38,24 @@ type LexemeEditor = {
   examples?:Array<{id:string;senseId:string;text:string;translations:Record<string,string>}>;
 };
 
+type CoverageSummary = {
+  uniqueSurfaces?:number;
+  resolvedSurfaces?:number;
+  missingSurfaces?:number;
+  coveragePct?:number;
+  ipaCoveragePct?:number;
+  ruReadingCoveragePct?:number;
+  exampleCoveragePct?:number;
+};
+
+type BulkPreview = {
+  summary?:{requested?:number;creates?:number;updates?:number;conflicts?:number;warnings?:number};
+  conflicts?:Array<{lemma?:string;surface?:string;code?:string;detail?:string}>;
+  warnings?:string[];
+  changes?:Array<{id?:string;kind?:string;lemma?:string;forms?:string[];examples?:number}>;
+  coverage?:CoverageSummary;
+};
+
 function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [status,setStatus]=useState<Status|null>(null);
   const [review,setReview]=useState<ReviewItem[]>([]);
@@ -50,6 +68,15 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [editorBusy,setEditorBusy]=useState(false);
   const [sets,setSets]=useState<ReleaseSet[]>([]);
   const [publishSetIds,setPublishSetIds]=useState<string[]>([]);
+  const [bulkSetId,setBulkSetId]=useState('general-foundation');
+  const [bulkLimit,setBulkLimit]=useState(50);
+  const [bulkMode,setBulkMode]=useState<'missing'|'enrich'>('missing');
+  const [bulkPrompt,setBulkPrompt]=useState('');
+  const [bulkText,setBulkText]=useState('');
+  const [bulkCoverage,setBulkCoverage]=useState<CoverageSummary|null>(null);
+  const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
+  const [bulkMessage,setBulkMessage]=useState('');
+  const [bulkBusy,setBulkBusy]=useState(false);
 
   const load=useCallback(async()=>{
     setBusy(true);
@@ -64,6 +91,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setReview(Array.isArray(q.items) ? q.items as ReviewItem[] : []);
       const nextSets=Array.isArray(setResult.sets) ? setResult.sets as ReleaseSet[] : [];
       setSets(nextSets);
+      setBulkSetId(current=>nextSets.some(item=>item.id===current)
+        ? current
+        : (nextSets.find(item=>item.id==='general-foundation')?.id || nextSets[0]?.id || 'general-foundation'));
       setPublishSetIds(current=>{
         const valid=current.filter(id=>nextSets.some(item=>item.id===id&&item.draftRevision));
         if(valid.length)return valid;
@@ -202,6 +232,85 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  async function buildBulkPrompt(){
+    setBulkBusy(true);
+    setBulkMessage('');
+    setBulkPreview(null);
+    try{
+      const result=await client.action(adminKey,'content_lexicon_ai_prompt',{
+        setId:bulkSetId,
+        limit:bulkLimit,
+        mode:bulkMode
+      });
+      setBulkPrompt(String(result.prompt || ''));
+      setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+' Скопируй prompt в ИИ и вставь JSON-ответ ниже.');
+    }catch(error){
+      setBulkMessage('Не удалось собрать prompt: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBulkBusy(false);
+    }
+  }
+
+  async function copyBulkPrompt(){
+    if(!bulkPrompt)return;
+    try{
+      await navigator.clipboard.writeText(bulkPrompt);
+      setBulkMessage('Prompt скопирован.');
+    }catch(_){
+      setBulkMessage('Не удалось скопировать автоматически — выдели текст вручную.');
+    }
+  }
+
+  async function previewBulkPatch(){
+    if(!bulkText.trim()){setBulkMessage('Вставь JSON-ответ ИИ.');return;}
+    setBulkBusy(true);
+    setBulkMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_patch_preview',{
+        setId:bulkSetId,
+        text:bulkText
+      });
+      setBulkPreview(result as BulkPreview);
+      setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      const summary=(result.summary || {}) as Record<string,unknown>;
+      setBulkMessage('Проверено: '+String(summary.creates||0)+' новых, '+String(summary.updates||0)+' обновлений, '+String(summary.conflicts||0)+' конфликтов.');
+    }catch(error){
+      setBulkPreview(null);
+      setBulkMessage('Ошибка проверки: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBulkBusy(false);
+    }
+  }
+
+  async function applyBulkPatch(){
+    if(!bulkText.trim() || !bulkPreview)return;
+    if((bulkPreview.summary?.conflicts || 0)>0){
+      setBulkMessage('Сначала исправь конфликты — пачка не будет применена частично.');
+      return;
+    }
+    const ok=window.confirm('Применить эту пачку к draft словаря? Live release не изменится.');
+    if(!ok)return;
+    setBulkBusy(true);
+    setBulkMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_patch_apply',{
+        setId:bulkSetId,
+        text:bulkText
+      });
+      setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      setBulkPreview(null);
+      setBulkText('');
+      setBulkPrompt('');
+      setBulkMessage('Применено '+String(result.applied || 0)+' записей в draft. Live release не затронут.');
+      await load();
+    }catch(error){
+      setBulkMessage('Ошибка применения: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBulkBusy(false);
+    }
+  }
+
   const filteredReview=review.filter(item=>{
     const q=query.trim().toLowerCase();
     if(!q)return true;
@@ -259,6 +368,137 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
             <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
           </details>
         )}
+      </article>
+
+      <article className="ab-admin-panel ab-admin-bulk">
+        <div className="ab-admin-section-head">
+          <div>
+            <h2>Массовое заполнение словаря через ИИ</h2>
+            <p className="ab-admin-note">Без API: собираем реальные дырки курса → копируем prompt → вставляем JSON → проверяем → применяем только в draft.</p>
+          </div>
+        </div>
+
+        <div className="ab-admin-bulk-controls">
+          <label>
+            <span>Set</span>
+            <select value={bulkSetId} onChange={event=>{
+              setBulkSetId(event.target.value);
+              setBulkPrompt('');
+              setBulkPreview(null);
+              setBulkCoverage(null);
+            }}>
+              {sets.filter(item=>item.draftRevision).map(item=>(
+                <option value={item.id} key={item.id}>{item.title.ru || item.id}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Задача</span>
+            <select value={bulkMode} onChange={event=>{
+              setBulkMode(event.target.value==='enrich'?'enrich':'missing');
+              setBulkPrompt('');
+              setBulkPreview(null);
+            }}>
+              <option value="missing">Добавить отсутствующие формы</option>
+              <option value="enrich">Обогатить существующие</option>
+            </select>
+          </label>
+          <label>
+            <span>Пачка</span>
+            <select value={bulkLimit} onChange={event=>setBulkLimit(Number(event.target.value))}>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+          <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>
+            {bulkMode==='missing'?'Собрать недостающие':'Собрать на обогащение'}
+          </button>
+        </div>
+
+        {bulkCoverage && (
+          <div className="ab-admin-status-line">
+            <span><b>Покрытие</b> {String(bulkCoverage.resolvedSurfaces ?? 0)}/{String(bulkCoverage.uniqueSurfaces ?? 0)} · {String(bulkCoverage.coveragePct ?? 0)}%</span>
+            <span><b>Нет в словаре</b> {String(bulkCoverage.missingSurfaces ?? 0)}</span>
+            <span><b>IPA</b> {String(bulkCoverage.ipaCoveragePct ?? 0)}%</span>
+            <span><b>RU произношение</b> {String(bulkCoverage.ruReadingCoveragePct ?? 0)}%</span>
+            <span><b>Примеры</b> {String(bulkCoverage.exampleCoveragePct ?? 0)}%</span>
+          </div>
+        )}
+
+        {bulkPrompt && (
+          <div className="ab-admin-bulk-step">
+            <div className="ab-admin-section-head">
+              <div><strong>1. Prompt для ИИ</strong><p className="ab-admin-note">Можно вставить в ChatGPT или другой ИИ целиком.</p></div>
+              <button type="button" className="ab-admin-secondary" onClick={()=>void copyBulkPrompt()}>Копировать</button>
+            </div>
+            <textarea readOnly rows={12} value={bulkPrompt} aria-label="Prompt для массового словаря" />
+          </div>
+        )}
+
+        <div className="ab-admin-bulk-step">
+          <strong>2. Ответ ИИ</strong>
+          <p className="ab-admin-note">Вставь JSON формата <code>unmute.lexicon.patch.v1</code>. Markdown-код-блок тоже принимается.</p>
+          <textarea
+            rows={12}
+            value={bulkText}
+            onChange={event=>{setBulkText(event.target.value);setBulkPreview(null);}}
+            placeholder={'{"format":"unmute.lexicon.patch.v1","entries":[...]}'}
+            aria-label="JSON ответ ИИ"
+          />
+          <div className="ab-admin-action-row">
+            <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !bulkText.trim()} onClick={()=>void previewBulkPatch()}>Проверить без изменений</button>
+            <button
+              type="button"
+              disabled={bulkBusy || !bulkPreview || (bulkPreview.summary?.conflicts || 0)>0}
+              onClick={()=>void applyBulkPatch()}
+            >Применить в draft</button>
+          </div>
+        </div>
+
+        {bulkPreview && (
+          <div className="ab-admin-bulk-preview">
+            <div className="ab-admin-status-line">
+              <span><b>Новых</b> {String(bulkPreview.summary?.creates ?? 0)}</span>
+              <span><b>Обновлений</b> {String(bulkPreview.summary?.updates ?? 0)}</span>
+              <span><b>Конфликтов</b> {String(bulkPreview.summary?.conflicts ?? 0)}</span>
+              <span><b>Предупреждений</b> {String(bulkPreview.summary?.warnings ?? 0)}</span>
+            </div>
+            {!!bulkPreview.conflicts?.length && (
+              <div className="ab-admin-error">
+                {bulkPreview.conflicts.map((item,index)=>(
+                  <div key={index}><b>{item.lemma || item.surface || 'entry'}</b>: {item.code}{item.detail ? ' · '+item.detail : ''}</div>
+                ))}
+              </div>
+            )}
+            {!!bulkPreview.warnings?.length && (
+              <details className="ab-admin-details">
+                <summary>Предупреждения ({bulkPreview.warnings.length})</summary>
+                <ul>{bulkPreview.warnings.map((item,index)=><li key={index}>{item}</li>)}</ul>
+              </details>
+            )}
+            {!!bulkPreview.changes?.length && (
+              <details className="ab-admin-details">
+                <summary>Что изменится ({bulkPreview.changes.length})</summary>
+                <div className="ab-admin-table-wrap">
+                  <table>
+                    <thead><tr><th>Лемма</th><th>Действие</th><th>Формы</th><th>Примеры</th></tr></thead>
+                    <tbody>{bulkPreview.changes.slice(0,100).map(item=>(
+                      <tr key={item.id}>
+                        <td data-label="Лемма"><strong>{item.lemma}</strong></td>
+                        <td data-label="Действие">{item.kind}</td>
+                        <td data-label="Формы">{item.forms?.join(', ')}</td>
+                        <td data-label="Примеры">{String(item.examples ?? 0)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
+        {bulkMessage && <p className="ab-admin-feedback" role="status">{bulkMessage}</p>}
       </article>
 
       <article className="ab-admin-panel">

@@ -26,3 +26,41 @@ h2{margin:0 0 8px}
 .link-button{text-decoration:none}
 .language{margin-top:18px}
 @media(max-width:480px){.app{margin:12px auto;padding:18px;border-radius:16px}}
+
+.ab-admin-bulk-controls{
+  display:grid;
+  grid-template-columns:minmax(150px,1fr) minmax(210px,1.2fr) 100px auto;
+  gap:8px;
+  align-items:end;
+  margin:8px 0 10px;
+}
+.ab-admin-bulk-controls label{
+  display:grid;
+  gap:4px;
+}
+.ab-admin-bulk-controls label>span{
+  color:var(--muted);
+  font-size:11px;
+}
+.ab-admin-bulk-step{
+  display:grid;
+  gap:7px;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+.ab-admin-bulk textarea{
+  width:100%;
+  min-height:160px;
+  resize:vertical;
+  box-sizing:border-box;
+  font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.ab-admin-bulk-preview{margin-top:10px}
+.ab-admin-bulk-preview ul{margin:6px 0 0;padding-left:18px}
+@media(max-width:760px){
+  .ab-admin-bulk-controls{grid-template-columns:1fr 100px}
+  .ab-admin-bulk-controls label:first-child,
+  .ab-admin-bulk-controls label:nth-child(2){grid-column:1/-1}
+  .ab-admin-bulk-controls>button{grid-column:1/-1;width:100%}
+}

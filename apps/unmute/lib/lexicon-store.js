@@ -24,10 +24,20 @@ function validateEntry(entry){
   }
 
   const forms=new Set();
+  const formKinds=new Set(['lemma','inflection','contraction','variant','phrase']);
   for(const form of entry.forms){
     const key=normalizeSurface(form && form.text);
     if(!key) throw new Error(`bad_form:${id}`);
     if(forms.has(key)) throw new Error(`duplicate_form:${id}:${key}`);
+    if(!formKinds.has(String(form.kind||''))) throw new Error(`bad_form_kind:${id}:${key}`);
+    if(form.pronunciation!==undefined){
+      if(!form.pronunciation || typeof form.pronunciation!=='object' || Array.isArray(form.pronunciation)){
+        throw new Error(`bad_form_pronunciation:${id}:${key}`);
+      }
+      const ipa=String(form.pronunciation.ipa||'').trim();
+      const ru=String(form.pronunciation.ruReading||'').trim();
+      if(!ipa && !ru && !String(form.pronunciation.audioKey||'').trim()) throw new Error(`empty_form_pronunciation:${id}:${key}`);
+    }
     forms.add(key);
   }
   if(!forms.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${id}`);
@@ -106,6 +116,11 @@ async function updateDraftLexeme(id, updater, expectedRevision){
   return result.entry;
 }
 
+async function upsertDraftLexemes(entries){
+  await ensureDraftWorkspace();
+  return Draft.upsertEntries(entries,validateEntry);
+}
+
 async function nextRevision(){
   const pointer=parse(await store.get(POINTER));
   const current=Math.max(0,+(pointer&&pointer.revision)||0,+(await store.get(REVISION_COUNTER)||0));
@@ -178,4 +193,4 @@ function lookup(snapshot,surface){
   return ids.map(id=>byId.get(id)).filter(Boolean);
 }
 
-module.exports={validateEntry,validateLexicon,putDraft,getDraft,ensureDraftWorkspace,getDraftLexeme,updateDraftLexeme,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
+module.exports={validateEntry,validateLexicon,putDraft,getDraft,ensureDraftWorkspace,getDraftLexeme,updateDraftLexeme,upsertDraftLexemes,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};

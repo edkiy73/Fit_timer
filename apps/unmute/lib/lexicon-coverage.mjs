@@ -107,7 +107,15 @@ export function buildCourseCorpus(course){
   const activityTexts=new Map();
   let occurrences=0;
 
+  const referencedIds=new Set();
+  for(const roadmap of course?.roadmaps || []){
+    for(const node of roadmap?.nodes || []){
+      for(const activityId of node?.activityIds || []) referencedIds.add(activityId);
+    }
+  }
+
   for(const activity of course?.activities || []){
+    if(!referencedIds.has(activity.id)) continue;
     const strings=activityVisibleStrings(activity);
     activityTexts.set(activity.id,strings);
     for(const value of strings){
@@ -213,8 +221,12 @@ export function auditLexicalCoverage(course,lexicon){
       resolved.push({...item,lexemeIds:ids,pinned});
       resolvedOccurrences+=item.count;
     }
-    if(entries.some(entry=>entry.pronunciation?.ipa)) surfacesWithIpa++;
-    if(entries.some(entry=>entry.pronunciation?.ruReading)) surfacesWithRuReading++;
+    const pronunciations=entries.map(entry=>{
+      const form=(entry.forms||[]).find(candidate=>normalizeSurface(candidate.text)===item.surface);
+      return form&&form.pronunciation ? form.pronunciation : entry.pronunciation;
+    }).filter(Boolean);
+    if(pronunciations.some(pronunciation=>pronunciation.ipa)) surfacesWithIpa++;
+    if(pronunciations.some(pronunciation=>pronunciation.ruReading)) surfacesWithRuReading++;
     if(entries.some(entry=>(entry.examples || []).length)) surfacesWithExamples++;
   }
 

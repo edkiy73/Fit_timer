@@ -26,16 +26,23 @@ const course={
   access:{mode:'entitlement',entitlement:'course.general-foundation',freePreview:{kind:'first-days',days:7,learnedContentStaysAvailable:true}},
   defaultRoadmapId:'main',
   roadmaps:[{id:'main',title:{ru:'Main'},nodes:[{id:'day-1',kind:'lesson',title:{ru:'Day 1'},dayIndex:1,order:0,prerequisites:[],activityIds:['a1'],optional:false}]}],
-  activities:[{id:'a1',revision:1,type:'theory',tags:[],revisionProgress:'preserve',body:{ru:'x'},format:'text'}]
+  activities:[{id:'a1',revision:1,type:'theory',tags:[],revisionProgress:'preserve',body:{ru:'I work.'},format:'text'}]
 };
 const lexicon={
-  schemaVersion:1,revision:1,entries:[{
-    id:'work',revision:1,language:'en',lemma:'work',forms:[{text:'work',kind:'lemma'}],
-    senses:[
-      {id:'verb',translations:{ru:['работать']},tags:['needs-review']},
-      {id:'noun',translations:{ru:['работа']},tags:['needs-review']}
-    ],examples:[],deprecated:false
-  }]
+  schemaVersion:1,revision:1,entries:[
+    {
+      id:'work',revision:1,language:'en',lemma:'work',forms:[{text:'work',kind:'lemma'}],
+      senses:[
+        {id:'verb',translations:{ru:['работать']},tags:['needs-review']},
+        {id:'noun',translations:{ru:['работа']},tags:['needs-review']}
+      ],examples:[],deprecated:false
+    },
+    {
+      id:'pronoun-i',revision:1,language:'en',lemma:'I',forms:[{text:'I',kind:'lemma'}],
+      senses:[{id:'pronoun',partOfSpeech:'pronoun',translations:{ru:['я']},tags:[]}],
+      examples:[],deprecated:false
+    }
+  ]
 };
 const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
 
@@ -81,14 +88,14 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const openedActivity=await action(handler,'content_activity_get',{activityId:'a1'});
   assert.equal(openedActivity.status,200);
   const editedActivity=JSON.parse(JSON.stringify(openedActivity.body.activity));
-  editedActivity.body.ru='edited theory';
+  editedActivity.body.ru='I work online.';
   editedActivity.revisionProgress='reset';
   const savedActivity=await action(handler,'content_activity_save',{
     activityId:'a1',expectedRevision:1,activity:editedActivity
   });
   assert.equal(savedActivity.status,200);
   assert.equal(savedActivity.body.activity.revision,2);
-  assert.equal(savedActivity.body.activity.body.ru,'edited theory');
+  assert.equal(savedActivity.body.activity.body.ru,'I work online.');
   assert.equal(savedActivity.body.activity.revisionProgress,'reset');
 
   const staleActivity=await action(handler,'content_activity_save',{
@@ -190,6 +197,46 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   });
   assert.equal(blockedDelete.status,400);
   assert.equal(blockedDelete.body.error,'node_has_dependents');
+
+  const aiPrompt=await action(handler,'content_lexicon_ai_prompt',{setId:'general-foundation',limit:20});
+  assert.equal(aiPrompt.status,200);
+  assert.equal(aiPrompt.body.format,'unmute.lexicon.patch.v1');
+  assert.ok(aiPrompt.body.targetCount>=1);
+  assert.ok(aiPrompt.body.prompt.includes('unmute.lexicon.patch.v1'));
+  assert.ok(aiPrompt.body.coverage.missingSurfaces>=1);
+
+  const blockedIncomplete=await action(handler,'content_publish',{setIds:['general-foundation']});
+  assert.equal(blockedIncomplete.status,409);
+  assert.equal(blockedIncomplete.body.error,'lexical_coverage_incomplete');
+  assert.ok(blockedIncomplete.body.sets['general-foundation'].missingSurfaces>=1);
+
+  const patchText=JSON.stringify({
+    format:'unmute.lexicon.patch.v1',
+    entries:[{
+      lemma:'online',
+      forms:[{text:'online',kind:'lemma',ipa:'ˌɑːnˈlaɪn',ruReading:'онлайн'}],
+      senses:[{
+        partOfSpeech:'adverb',
+        translations:['онлайн','в интернете'],
+        examples:[{en:'I work online.',ru:'Я работаю онлайн.'}]
+      }]
+    }]
+  });
+  const patchPreview=await action(handler,'content_lexicon_patch_preview',{
+    setId:'general-foundation',text:patchText
+  });
+  assert.equal(patchPreview.status,200);
+  assert.equal(patchPreview.body.summary.creates,1);
+  assert.equal(patchPreview.body.summary.conflicts,0);
+  assert.equal(patchPreview.body.changes[0].lemma,'online');
+
+  const patchApplied=await action(handler,'content_lexicon_patch_apply',{
+    setId:'general-foundation',text:patchText
+  });
+  assert.equal(patchApplied.status,200);
+  assert.equal(patchApplied.body.applied,1);
+  assert.ok(patchApplied.body.coverage.resolvedSurfaces>=2);
+  assert.ok((await Lexicon.getDraft()).entries.some(entry=>entry.lemma==='online'));
 
   const queue=await action(handler,'content_review_queue');
   assert.equal(queue.status,200);

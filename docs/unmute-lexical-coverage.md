@@ -145,9 +145,12 @@ Human/AI-facing input is intentionally simpler than the internal DB schema:
     {
       "lexemeId": "lex.work",
       "lemma": "work",
-      "forms": ["work", "works", "worked", "working"],
-      "ipa": "wɝːk",
-      "ruReading": "уёрк",
+      "forms": [
+        {"text": "work", "kind": "lemma", "ipa": "wɝːk", "ruReading": "уёрк"},
+        {"text": "works", "kind": "inflection", "ipa": "wɝːks", "ruReading": "уёркс"},
+        {"text": "worked", "kind": "inflection", "ipa": "wɝːkt", "ruReading": "уёркт"},
+        {"text": "working", "kind": "inflection", "ipa": "ˈwɝːkɪŋ", "ruReading": "уёркинг"}
+      ],
       "senses": [
         {
           "id": "verb",
@@ -163,7 +166,11 @@ Human/AI-facing input is intentionally simpler than the internal DB schema:
 }
 ```
 
-The server converts this into the strict internal schema and preserves stable IDs/revisions. AI is never allowed to overwrite a published release directly.
+Pronunciation belongs to the exact surface form when forms differ: the IPA for `worked` must describe `worked`, not `work`. A lexeme-level pronunciation remains only as a fallback/default.
+
+The server converts this into the strict internal schema and preserves stable IDs/revisions. Existing curated pronunciation is never silently replaced by an AI patch. Polysemous existing entries are not auto-merged into a guessed sense. AI is never allowed to overwrite a published release directly.
+
+The Admin workflow is deliberately API-free: generate a prompt for 25/50/100 missing surfaces, copy it to a model, paste the JSON answer, Preview, then Apply to draft. A batch is atomic at the lexicon-workspace pointer: conflicts block the apply rather than partially changing the draft.
 
 ## Pronunciation bootstrap
 

@@ -80,6 +80,55 @@ async function getEntry(id){
   return entry ? {entry,draftRevision:pointer.draftRevision} : null;
 }
 
+async function upsertEntries(entries,validateEntry){
+  if(!Array.isArray(entries) || !entries.length) return {entries:[],draftRevision:null};
+  return store.withLock('lock:lexicon-workspace',async()=>{
+    const pointer=await readPointer();
+    if(!pointer) throw new Error('draft_not_found');
+
+    const refs={...(pointer.refs||{})};
+    const order=[...(pointer.order||[])];
+    const commands=[];
+    const written=[];
+
+    for(const raw of entries){
+      if(!raw || typeof raw!=='object' || Array.isArray(raw)) throw new Error('bad_lexeme_batch');
+      const id=String(raw.id||'').trim();
+      if(!id) throw new Error('bad_lexeme_id');
+      const currentRevision=Math.max(0,+refs[id]||0);
+      const expected=raw.expectedRevision;
+      if(expected!==undefined && Number(expected)!==currentRevision){
+        throw new Error('lexeme_revision_conflict:'+id);
+      }
+
+      const next=clone(raw.entry);
+      if(!next || typeof next!=='object' || Array.isArray(next)) throw new Error('bad_lexeme_update');
+      if(next.id!==id) throw new Error('lexeme_id_immutable');
+
+      let revision=currentRevision ? currentRevision+1 : Math.max(1,+next.revision||1);
+      while(await store.get(entryKey(pointer.generation,id,revision))) revision++;
+      next.revision=revision;
+      if(validateEntry) validateEntry(next);
+
+      commands.push(['SET',entryKey(pointer.generation,id,revision),JSON.stringify(next),'NX']);
+      refs[id]=revision;
+      if(!currentRevision && !order.includes(id)) order.push(id);
+      written.push(next);
+    }
+
+    await writeCommands(commands);
+    const updatedPointer={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      refs,
+      order
+    };
+    await store.pipe([['SET',POINTER,JSON.stringify(updatedPointer)]]);
+    return {entries:written,draftRevision:updatedPointer.draftRevision};
+  },{ttl:20,retries:100,delay:50});
+}
+
 async function updateEntry(id,expectedRevision,updater,validateEntry){
   return store.withLock('lock:lexicon-workspace',async()=>{
     const pointer=await readPointer();
@@ -114,4 +163,4 @@ async function updateEntry(id,expectedRevision,updater,validateEntry){
   },{ttl:10,retries:80,delay:50});
 }
 
-module.exports={replace,get,ensure,readPointer,getEntry,updateEntry,keys:{POINTER,GENERATION_COUNTER,entryKey}};
+module.exports={replace,get,ensure,readPointer,getEntry,updateEntry,upsertEntries,keys:{POINTER,GENERATION_COUNTER,entryKey}};
