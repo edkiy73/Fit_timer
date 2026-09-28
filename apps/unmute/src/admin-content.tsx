@@ -56,6 +56,20 @@ type BulkPreview = {
   coverage?:CoverageSummary;
 };
 
+type IpaPreview = {
+  summary?:{
+    resolvedSurfaces?:number;
+    sourceMatches?:number;
+    alreadyHaveIpa?:number;
+    noSourcePronunciation?:number;
+    lexemesChanged?:number;
+    formsChanged?:number;
+    sourceCommit?:string;
+    sourceLicense?:string;
+  };
+  coverage?:CoverageSummary;
+};
+
 function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [status,setStatus]=useState<Status|null>(null);
   const [review,setReview]=useState<ReviewItem[]>([]);
@@ -77,6 +91,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [ipaPreview,setIpaPreview]=useState<IpaPreview|null>(null);
+  const [ipaMessage,setIpaMessage]=useState('');
+  const [ipaBusy,setIpaBusy]=useState(false);
 
   const load=useCallback(async()=>{
     setBusy(true);
@@ -232,6 +249,44 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  async function previewIpa(){
+    setIpaBusy(true);
+    setIpaMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_ipa_preview',{setId:bulkSetId});
+      setIpaPreview(result as IpaPreview);
+      setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      const summary=(result.summary || {}) as Record<string,unknown>;
+      setIpaMessage('Можно добавить IPA для '+String(summary.formsChanged||0)+' форм; уже есть у '+String(summary.alreadyHaveIpa||0)+'.');
+    }catch(error){
+      setIpaPreview(null);
+      setIpaMessage('Не удалось проверить IPA: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setIpaBusy(false);
+    }
+  }
+
+  async function applyIpa(){
+    if(!ipaPreview || !(ipaPreview.summary?.formsChanged || 0))return;
+    const ok=window.confirm('Подтянуть найденный US IPA в draft словаря? Существующий IPA не будет заменён.');
+    if(!ok)return;
+    setIpaBusy(true);
+    setIpaMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_ipa_apply',{setId:bulkSetId});
+      setIpaPreview(result as IpaPreview);
+      setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      setIpaMessage('IPA добавлен в draft. Live release не изменён.');
+      setBulkPreview(null);
+      setBulkPrompt('');
+      await load();
+    }catch(error){
+      setIpaMessage('Ошибка IPA import: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setIpaBusy(false);
+    }
+  }
+
   async function buildBulkPrompt(){
     setBulkBusy(true);
     setBulkMessage('');
@@ -378,6 +433,26 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
           </div>
         </div>
 
+        <div className="ab-admin-ipa-box">
+          <div>
+            <strong>US IPA из открытой базы</strong>
+            <p className="ab-admin-note">Pinned <code>open-dict-data/ipa-dict</code>. Только exact forms без IPA; переводы и смыслы не меняются.</p>
+          </div>
+          <div className="ab-admin-action-row">
+            <button type="button" className="ab-admin-secondary" disabled={ipaBusy || !bulkSetId} onClick={()=>void previewIpa()}>Проверить US IPA</button>
+            <button type="button" disabled={ipaBusy || !ipaPreview || !(ipaPreview.summary?.formsChanged || 0)} onClick={()=>void applyIpa()}>Подтянуть в draft</button>
+          </div>
+          {ipaPreview && (
+            <div className="ab-admin-status-line">
+              <span><b>Добавится</b> {String(ipaPreview.summary?.formsChanged ?? 0)} форм</span>
+              <span><b>Уже есть</b> {String(ipaPreview.summary?.alreadyHaveIpa ?? 0)}</span>
+              <span><b>Нет в source</b> {String(ipaPreview.summary?.noSourcePronunciation ?? 0)}</span>
+              <span><b>Лицензия</b> {String(ipaPreview.summary?.sourceLicense || '—')}</span>
+            </div>
+          )}
+          {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
+        </div>
+
         <div className="ab-admin-bulk-controls">
           <label>
             <span>Set</span>
@@ -386,6 +461,8 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
               setBulkPrompt('');
               setBulkPreview(null);
               setBulkCoverage(null);
+              setIpaPreview(null);
+              setIpaMessage('');
             }}>
               {sets.filter(item=>item.draftRevision).map(item=>(
                 <option value={item.id} key={item.id}>{item.title.ru || item.id}</option>
