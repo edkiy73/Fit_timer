@@ -78,10 +78,9 @@ export async function saveUser(){
   uDraft.syncAt = new Date().toISOString();
   readTimings();
   if(!uDraft.name){ appAlert(t('profile.nameRequired')); return; }
-  // пол и возраст — не украшение анкеты: они уходят в запрос к ИИ и определяют
-  // подбор упражнений, нагрузку и восстановление. Пустыми их оставлять нельзя
-  if(!uDraft.gender){ appAlert(t('profile.genderRequired')); return; }
-  const aErr = ageError($('ueAge').value, true);
+  // Пол и возраст в самом профиле необязательны. Они становятся обязательными
+  // только перед AI-генерацией, где askWho() отдельно запрашивает недостающие данные.
+  const aErr = ageError($('ueAge').value);
   if(aErr){
     appAlert(aErr);
     $('ueAge').focus();
