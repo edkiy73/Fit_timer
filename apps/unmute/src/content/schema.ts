@@ -160,8 +160,21 @@ export const phraseCollectionResourceSchema = z.object({
   })).min(1),
 });
 
+export const verbTableResourceSchema = z.object({
+  id: idSchema,
+  type: z.literal('verb-table'),
+  title: localizedTextSchema,
+  items: z.array(z.object({
+    lexemeId: idSchema,
+    baseFormId: idSchema,
+    pastFormIds: z.array(idSchema).min(1),
+    participleFormIds: z.array(idSchema).min(1),
+  })).min(1),
+});
+
 export const setResourceSchema = z.discriminatedUnion('type', [
   phraseCollectionResourceSchema,
+  verbTableResourceSchema,
 ]);
 
 export const courseSetSchema = z.object({
@@ -188,6 +201,7 @@ export type Roadmap = z.infer<typeof roadmapSchema>;
 export type RoadmapNode = z.infer<typeof roadmapNodeSchema>;
 export type SetResource = z.infer<typeof setResourceSchema>;
 export type PhraseCollectionResource = z.infer<typeof phraseCollectionResourceSchema>;
+export type VerbTableResource = z.infer<typeof verbTableResourceSchema>;
 
 export function validateCourseSet(input: unknown): CourseSet {
   const parsed = courseSetSchema.parse(input);

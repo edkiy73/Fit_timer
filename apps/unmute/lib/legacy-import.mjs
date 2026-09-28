@@ -249,6 +249,77 @@ export function buildPhraseBankResource(model,lexicon){
   };
 }
 
+function splitVerbForms(value){
+  return text(value).split(/\s*\/\s*/).map(item=>item.trim()).filter(Boolean);
+}
+
+function ensureVerbForm(entry,id,surface,kind){
+  const normalized=normalizePhrase(surface);
+  const byId=(entry.forms||[]).find(form=>form.id===id);
+  if(byId){
+    if(normalizePhrase(byId.text)!==normalized) throw new Error('verb_form_id_collision:'+entry.lemma+':'+id);
+    return byId;
+  }
+  const existing=(entry.forms||[]).find(form=>normalizePhrase(form.text)===normalized && !form.id);
+  const lemmaSurface=normalizePhrase(entry.lemma);
+  if(existing && (id==='base' || normalized!==lemmaSurface)){
+    existing.id=id;
+    existing.kind=kind;
+    return existing;
+  }
+  const form={id,text:surface,kind};
+  entry.forms.push(form);
+  return form;
+}
+
+function enrichIrregularVerbForms(model,lexicon){
+  const byLemma=new Map();
+  for(const entry of lexicon.entries||[]){
+    const key=normalizePhrase(entry.lemma);
+    if(!byLemma.has(key))byLemma.set(key,[]);
+    byLemma.get(key).push(entry);
+  }
+
+  for(const row of model.verbs||[]){
+    const base=text(row&&row[0]).trim();
+    const past=splitVerbForms(row&&row[1]);
+    const participle=splitVerbForms(row&&row[2]);
+    const candidates=byLemma.get(normalizePhrase(base))||[];
+    if(candidates.length!==1)throw new Error('verb_resource_lexeme_resolution:'+base+':'+candidates.length);
+    const entry=candidates[0];
+    ensureVerbForm(entry,'base',base,'lemma');
+    past.forEach((surface,index)=>ensureVerbForm(entry,past.length===1?'past':'past-'+(index+1),surface,'inflection'));
+    participle.forEach((surface,index)=>ensureVerbForm(entry,participle.length===1?'participle':'participle-'+(index+1),surface,'inflection'));
+  }
+  return lexicon;
+}
+
+export function buildVerbTableResource(model,lexicon){
+  const byLemma=new Map((lexicon.entries||[]).map(entry=>[normalizePhrase(entry.lemma),entry]));
+  const items=[];
+  for(const row of model.verbs||[]){
+    const base=text(row&&row[0]).trim();
+    const past=splitVerbForms(row&&row[1]);
+    const participle=splitVerbForms(row&&row[2]);
+    const entry=byLemma.get(normalizePhrase(base));
+    if(!entry)throw new Error('verb_resource_lexeme_missing:'+base);
+    const required=[
+      'base',
+      ...past.map((_,index)=>past.length===1?'past':'past-'+(index+1)),
+      ...participle.map((_,index)=>participle.length===1?'participle':'participle-'+(index+1))
+    ];
+    const formIds=new Set((entry.forms||[]).map(form=>form.id).filter(Boolean));
+    for(const id of required)if(!formIds.has(id))throw new Error('verb_resource_form_missing:'+base+':'+id);
+    items.push({
+      lexemeId:entry.id,
+      baseFormId:'base',
+      pastFormIds:past.map((_,index)=>past.length===1?'past':'past-'+(index+1)),
+      participleFormIds:participle.map((_,index)=>participle.length===1?'participle':'participle-'+(index+1))
+    });
+  }
+  return {id:'irregular-verbs',type:'verb-table',title:{ru:'Неправильные глаголы'},items};
+}
+
 export function buildCourseSet(model,lexicon=null){
   const built=buildActivities(model),activities=built.activities,nodes=[];
   let previous=null;
@@ -281,9 +352,10 @@ export function buildCourseSet(model,lexicon=null){
     defaultRoadmapId:'main',
     roadmaps:[{id:'main',title:{ru:'Основной путь'},nodes}],
     activities,
-    resources:lexicon&&Array.isArray(model.phrases)&&model.phrases.length
-      ? [buildPhraseBankResource(model,lexicon)]
-      : []
+    resources:lexicon ? [
+      ...(Array.isArray(model.phrases)&&model.phrases.length ? [buildPhraseBankResource(model,lexicon)] : []),
+      ...(Array.isArray(model.verbs)&&model.verbs.length ? [buildVerbTableResource(model,lexicon)] : [])
+    ] : []
   };
 }
 
@@ -320,12 +392,46 @@ function addPhraseLexeme(entries,used,en,ru){
     senses:[{id:'sense-1',partOfSpeech:'phrase',translations:{ru:[translation]},tags:[]}],examples:[],deprecated:false});
 }
 
+const LEGACY_VERB_FALLBACK_RU={
+  become:['становиться'],
+  feel:['чувствовать'],
+  win:['выигрывать','побеждать']
+};
+
+function addMissingIrregularVerbLexemes(model,entries,used){
+  const byLemma=new Set(entries.map(entry=>normalizePhrase(entry.lemma)));
+  for(const row of model.verbs||[]){
+    const base=text(row&&row[0]).trim();
+    const key=normalizePhrase(base);
+    if(!base || byLemma.has(key))continue;
+    const translations=LEGACY_VERB_FALLBACK_RU[key];
+    if(!translations)throw new Error('missing_verb_translation:'+base);
+    entries.push({
+      id:uniqId('lex.'+slug(base),used),
+      revision:1,
+      language:'en',
+      lemma:base,
+      forms:[{text:base,kind:'lemma'}],
+      senses:[{
+        id:'verb',
+        partOfSpeech:'verb',
+        translations:{ru:translations},
+        tags:['needs-review']
+      }],
+      examples:[],
+      deprecated:false
+    });
+    byLemma.add(key);
+  }
+}
+
 export function buildLexicon(model){
   const used=new Set(),entries=[];
   for(const [word,value] of Object.entries(model.dictionary||{}))entries.push(lexemeFromDict(word,value,used));
   for(const group of model.phrases||[])for(const pair of group.items||[])addPhraseLexeme(entries,used,pair[0],pair[1]);
   for(const [en,ru] of Object.entries(model.phraseTranslations||{}))addPhraseLexeme(entries,used,en,ru);
-  return {schemaVersion:1,revision:1,entries};
+  addMissingIrregularVerbLexemes(model,entries,used);
+  return enrichIrregularVerbForms(model,{schemaVersion:1,revision:1,entries});
 }
 
 export function buildImportReport(model,course,lexicon){
@@ -341,6 +447,8 @@ export function buildImportReport(model,course,lexicon){
     phraseBankResourceItems:(course.resources||[]).filter(resource=>resource.type==='phrase-collection')
       .reduce((sum,resource)=>sum+(resource.groups||[]).reduce((groupSum,group)=>groupSum+(group.items||[]).length,0),0),
     irregularVerbs:(model.verbs||[]).length,
+    irregularVerbResourceItems:(course.resources||[]).filter(resource=>resource.type==='verb-table')
+      .reduce((sum,resource)=>sum+(resource.items||[]).length,0),
     lexicalCoverage:coverage,
     unplannedLessons:model.lessons.map(x=>x.id).filter(id=>!planned.has(id))};
 }
@@ -352,6 +460,7 @@ export function validateImport(model,course,lexicon){
   if(report.cards<400)throw new Error('unexpected_cards:'+report.cards);
   if(report.dictionaryEntries<500)throw new Error('unexpected_dictionary:'+report.dictionaryEntries);
   if(report.phraseBankResourceItems!==report.phraseBankItems)throw new Error('phrase_bank_resource_mismatch:'+report.phraseBankResourceItems+':'+report.phraseBankItems);
+  if(report.irregularVerbResourceItems!==report.irregularVerbs)throw new Error('verb_resource_mismatch:'+report.irregularVerbResourceItems+':'+report.irregularVerbs);
   if(!course.roadmaps[0]||course.roadmaps[0].nodes.length!==40)throw new Error('bad_roadmap_days');
   const ids=new Set(course.activities.map(x=>x.id));
   if(ids.size!==course.activities.length)throw new Error('duplicate_course_activity');

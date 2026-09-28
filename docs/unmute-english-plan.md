@@ -33,7 +33,8 @@
 | Фаза 3.3e — Sets + roadmap constructor | ✅ в `main` | multi-set CRUD, set metadata, node CRUD/reorder, selective paired releases |
 | Фаза 3.3f — Whole-course lexical coverage | ✅ в `main` (PR #208) | 993 visible forms audited; exact forms/phrases/pronunciation/example metrics |
 | Фаза 3.3g — Bulk AI lexicon | ✅ в `main` (#209) | copy/paste prompt → validate → preview → atomic draft apply; no model API |
-| Фаза 3.3h — exact form identity | 🟡 PR в работе | stable `formId`, homographs like `read/read`, context can pin exact grammatical form |
+| Фаза 3.3h — exact form identity | ✅ в `main` (#213) | stable `formId`, homographs like `read/read`, context can pin exact grammatical form |
+| Фаза 3.3i — legacy reference resources | 🟡 irregular verbs PR; Phrase Bank ✅ #212 | `phrase-collection` + `verb-table`, both backed by global lexicon refs |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
