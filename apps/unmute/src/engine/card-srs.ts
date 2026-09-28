@@ -18,7 +18,7 @@ export function gradeCardSrs(
   const box=correct ? Math.min(5,state.box+1) : 0;
   return {
     box,
-    due:todayDay + CARD_INTERVALS[box],
+    due:todayDay + (CARD_INTERVALS[box] ?? 0),
   };
 }
 
