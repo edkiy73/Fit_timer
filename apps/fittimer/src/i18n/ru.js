@@ -680,7 +680,7 @@ export const I18N_RU = {
   'progress.chestLabel': "Грудь",
   'progress.shareSaved': "Картинка сохранена в загрузки.",
   'profile.switch': "переключиться",
-  'profile.now': "сейчас",
+  'profile.now': "выбран",
   'profile.edit': "Изменить",
   'profile.noName': "Без имени",
   'profile.multiHint': "У каждого профиля свои программы, статистика, вес и фото.",
