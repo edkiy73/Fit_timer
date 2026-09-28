@@ -33,7 +33,12 @@
   "auth": {
     "askHandle": false
   },
-  "products": [],
+  "products": [
+    {
+      "sku": "course.general-foundation",
+      "title": "General Foundation"
+    }
+  ],
   "features": {
     "profiles": false,
     "premium": true,
