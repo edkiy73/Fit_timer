@@ -108,7 +108,7 @@ function planIpaEnrichment(lexicon,audit,sourceText){
   return {
     changes,
     summary:{
-      source:S​​OURCE.id,
+      source:SOURCE.id,
       sourceCommit:SOURCE.commit,
       sourceLicense:SOURCE.license,
       resolvedSurfaces:candidates.length,
