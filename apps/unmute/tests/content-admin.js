@@ -205,6 +205,11 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.ok(aiPrompt.body.prompt.includes('unmute.lexicon.patch.v1'));
   assert.ok(aiPrompt.body.coverage.missingSurfaces>=1);
 
+  const blockedIncomplete=await action(handler,'content_publish',{setIds:['general-foundation']});
+  assert.equal(blockedIncomplete.status,409);
+  assert.equal(blockedIncomplete.body.error,'lexical_coverage_incomplete');
+  assert.ok(blockedIncomplete.body.sets['general-foundation'].missingSurfaces>=1);
+
   const patchText=JSON.stringify({
     format:'unmute.lexicon.patch.v1',
     entries:[{
