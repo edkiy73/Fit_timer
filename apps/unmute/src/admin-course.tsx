@@ -57,6 +57,7 @@ type ActivitySummary = {
 
 type OpenNode = {
   roadmapId:string;
+  version:number;
   node:CourseNode & {activityIds:string[]};
   activities:ActivitySummary[];
 };
@@ -304,7 +305,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     setBusy(true);setMessage('');setEditor(null);
     try{
       const result=await client.action(adminKey,'content_course_node',{setId,roadmapId,nodeId});
-      setOpenNode({roadmapId,node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
+      setOpenNode({roadmapId,version:Number(result.version||1),node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
     }catch(error){
       setMessage('Не удалось открыть день: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
@@ -361,6 +362,128 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       await reloadOpenNode();
     }catch(error){
       setMessage('Не удалось изменить порядок: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function createSet(){
+    const id=createId.trim().toLowerCase();
+    const title=createTitle.trim();
+    if(!id || !title){setMessage('Укажи ID и название нового сета.');return;}
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_set_create',{
+        id,title,accessMode:'entitlement',freeDays:0
+      });
+      await loadSets();
+      setSetId(id);
+      setCreateId('');setCreateTitle('');setCreateOpen(false);
+      setMessage('Новый set создан в draft.');
+    }catch(error){
+      setMessage('Не удалось создать set: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function saveSetMeta(){
+    if(!structure)return;
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_set_save',{
+        setId,
+        expectedDraftRevision:structure.draftRevision,
+        changes:{
+          title:metaTitle,
+          description:metaDescription,
+          levelFrom:metaFrom,
+          levelTo:metaTo,
+          accessMode:metaAccess,
+          freeDays:Number(metaFreeDays)||0
+        }
+      });
+      await Promise.all([loadStructure(),loadSets()]);
+      setMessage('Настройки set сохранены в draft.');
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='set_revision_conflict'
+        ? 'Set уже изменён в другой вкладке. Обнови страницу и повтори.'
+        : 'Не удалось сохранить set: '+code);
+    }finally{setBusy(false);}
+  }
+
+  async function createNode(){
+    const roadmap=structure?.roadmaps[0];
+    if(!roadmap)return;
+    setBusy(true);setMessage('');
+    try{
+      const result=await client.action(adminKey,'content_node_create',{setId,roadmapId:roadmap.id});
+      await Promise.all([loadStructure(),loadSets()]);
+      await open(roadmap.id,String((result.node as {id?:unknown})?.id||''));
+      setMessage('Новый день/узел создан.');
+    }catch(error){
+      setMessage('Не удалось создать узел: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function saveNodeMeta(){
+    if(!openNode)return;
+    setBusy(true);setMessage('');
+    try{
+      const result=await client.action(adminKey,'content_node_save',{
+        setId,
+        roadmapId:openNode.roadmapId,
+        nodeId:openNode.node.id,
+        expectedVersion:openNode.version,
+        changes:{
+          title:textValue(openNode.node.title),
+          kind:openNode.node.kind,
+          dayIndex:openNode.node.dayIndex ?? null,
+          optional:openNode.node.optional,
+          prerequisites:openNode.node.prerequisites
+        }
+      });
+      const node=result.node as OpenNode['node'];
+      setOpenNode(current=>current?{...current,node,version:Number(result.version||current.version)}:current);
+      await loadStructure();
+      setMessage('Узел сохранён.');
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='node_revision_conflict'
+        ? 'Этот узел уже изменили в другой вкладке. Открой его заново.'
+        : 'Не удалось сохранить узел: '+code);
+    }finally{setBusy(false);}
+  }
+
+  function patchOpenNode(patch:Partial<OpenNode['node']>){
+    setOpenNode(current=>current?{...current,node:{...current.node,...patch}}:current);
+  }
+
+  async function moveNode(index:number,delta:number){
+    const roadmap=structure?.roadmaps[0];
+    if(!roadmap)return;
+    const ids=roadmap.nodes.slice().sort((a,b)=>a.order-b.order).map(node=>node.id);
+    const target=index+delta;
+    if(target<0||target>=ids.length)return;
+    [ids[index],ids[target]]=[ids[target]!,ids[index]!];
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_node_reorder',{setId,roadmapId:roadmap.id,nodeIds:ids});
+      await loadStructure();
+    }catch(error){
+      setMessage('Не удалось изменить порядок узлов: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function deleteNode(roadmapId:string,nodeId:string){
+    if(!window.confirm('Удалить этот узел из roadmap? Activities останутся в библиотеке draft.'))return;
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_node_delete',{setId,roadmapId,nodeId});
+      if(openNode?.node.id===nodeId){setOpenNode(null);setEditor(null);}
+      await Promise.all([loadStructure(),loadSets()]);
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='node_has_dependents'
+        ? 'Сначала измени prerequisites у следующих узлов: этот узел используется как зависимость.'
+        : 'Не удалось удалить узел: '+code);
     }finally{setBusy(false);}
   }
 
@@ -421,7 +544,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       </div>
     </article>}
 
-    {editor && <ActivityEditor client={client} adminKey={adminKey} activity={editor}
+    {editor && <ActivityEditor client={client} adminKey={adminKey} setId={setId} activity={editor}
       onClose={()=>setEditor(null)}
       onSaved={next=>{setEditor(next);void reloadOpenNode();}} />}
   </div>;
