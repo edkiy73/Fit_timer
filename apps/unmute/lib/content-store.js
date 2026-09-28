@@ -1,6 +1,7 @@
 'use strict';
 
 const { store } = require('../../../packages/core/server/store');
+const Draft = require('./content-draft-workspace');
 
 const PREFIX = 'unmute:content:v1';
 const CATALOG_KEY = `${PREFIX}:catalog`;
@@ -23,6 +24,22 @@ function assertObject(value, name){
   return value;
 }
 
+function validateActivity(activity){
+  assertObject(activity,'activity');
+  const id=cleanId(activity.id);
+  if(!id) throw new Error('bad_activity_id');
+  if(typeof activity.type!=='string' || !activity.type) throw new Error(`missing_activity_type:${id}`);
+  if(!Number.isInteger(activity.revision) || activity.revision<1) throw new Error(`bad_activity_revision:${id}`);
+  if(!['preserve','reset'].includes(activity.revisionProgress)) throw new Error(`bad_revision_progress:${id}`);
+  if(activity.type==='choice'){
+    if(!Array.isArray(activity.options) || activity.options.length<2) throw new Error(`bad_choice_options:${id}`);
+    if(!Number.isInteger(activity.correctIndex) || activity.correctIndex<0 || activity.correctIndex>=activity.options.length){
+      throw new Error(`bad_choice_answer:${id}`);
+    }
+  }
+  return activity;
+}
+
 function validateSet(input){
   const set = assertObject(input, 'set');
   if(set.schemaVersion !== 1) throw new Error('unsupported_schema');
@@ -35,20 +52,10 @@ function validateSet(input){
 
   const activities = new Map();
   for(const activity of set.activities){
-    assertObject(activity, 'activity');
-    const id = cleanId(activity.id);
-    if(!id) throw new Error('bad_activity_id');
+    const checked=validateActivity(activity);
+    const id=cleanId(checked.id);
     if(activities.has(id)) throw new Error(`duplicate_activity:${id}`);
-    if(typeof activity.type !== 'string' || !activity.type) throw new Error(`missing_activity_type:${id}`);
-    if(!Number.isInteger(activity.revision) || activity.revision < 1) throw new Error(`bad_activity_revision:${id}`);
-    if(!['preserve','reset'].includes(activity.revisionProgress)) throw new Error(`bad_revision_progress:${id}`);
-    if(activity.type === 'choice'){
-      if(!Array.isArray(activity.options) || activity.options.length < 2) throw new Error(`bad_choice_options:${id}`);
-      if(!Number.isInteger(activity.correctIndex) || activity.correctIndex < 0 || activity.correctIndex >= activity.options.length){
-        throw new Error(`bad_choice_answer:${id}`);
-      }
-    }
-    activities.set(id, activity);
+    activities.set(id, checked);
   }
 
   const roadmapIds = new Set();
@@ -145,17 +152,60 @@ function catalogEntry(set){
 }
 
 async function putDraft(input){
-  const set = validateSet(input);
-  const id = cleanId(set.id);
-  const draft = {...set, id, slug:cleanId(set.slug), draftUpdatedAt:new Date().toISOString()};
-  await persistentSet(draftKey(id), json(draft));
-  return draft;
+  const set=validateSet(input);
+  const id=cleanId(set.id);
+  const draft={...set,id,slug:cleanId(set.slug)};
+  await Draft.replace(draft);
+  return Draft.get(id);
+}
+
+async function legacyDraft(id){
+  const key=cleanId(id);
+  if(!key) return null;
+  return parse(await store.get(draftKey(key)));
 }
 
 async function getDraft(id){
-  const key = cleanId(id);
+  const key=cleanId(id);
   if(!key) return null;
-  return parse(await store.get(draftKey(key)));
+  const normalized=await Draft.get(key);
+  if(normalized) return normalized;
+  return legacyDraft(key);
+}
+
+async function ensureDraftWorkspace(id){
+  const key=cleanId(id);
+  if(!key) throw new Error('bad_set_id');
+  let pointer=await Draft.readPointer(key);
+  if(pointer) return pointer;
+  const fallback=await legacyDraft(key);
+  if(!fallback) throw new Error('draft_not_found');
+  validateSet(fallback);
+  return Draft.ensure(key,fallback);
+}
+
+async function getDraftActivity(id,activityId){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.getActivity(key,cleanId(activityId));
+}
+
+async function updateDraftActivity(id,activityId,expectedRevision,updater){
+  const key=cleanId(id), aid=cleanId(activityId);
+  await ensureDraftWorkspace(key);
+  return Draft.updateActivity(key,aid,expectedRevision,updater,validateActivity);
+}
+
+async function createDraftActivity(id,roadmapId,nodeId,activity){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.createActivity(key,cleanId(roadmapId),cleanId(nodeId),activity,validateActivity);
+}
+
+async function reorderDraftActivities(id,roadmapId,nodeId,activityIds){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.reorderActivities(key,cleanId(roadmapId),cleanId(nodeId),activityIds.map(cleanId));
 }
 
 async function nextRevision(id){
@@ -180,6 +230,7 @@ async function stageDraft(id){
   const publishedAt=new Date().toISOString();
   const snapshot=validateSet({...draft,revision,publishedAt});
   delete snapshot.draftUpdatedAt;
+  delete snapshot.draftRevision;
   const result=await store.pipe([['SET',revisionKey(key,revision),json(snapshot),'NX']]);
   if(result[0] !== 'OK') throw new Error('revision_collision');
   return snapshot;
@@ -247,10 +298,16 @@ function previewSnapshot(set){
 
 module.exports = {
   validateSet,
+  validateActivity,
   cleanId,
   getCatalog,
   putDraft,
   getDraft,
+  ensureDraftWorkspace,
+  getDraftActivity,
+  updateDraftActivity,
+  createDraftActivity,
+  reorderDraftActivities,
   publish,
   stageDraft,
   activateRevision,

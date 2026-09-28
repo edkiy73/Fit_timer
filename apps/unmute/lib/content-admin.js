@@ -124,11 +124,9 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       if(action === 'content_lexeme_get'){
         const id=String(body.lexemeId || '').trim();
         if(!id){ fail(res,400,'bad_lexeme_id'); return true; }
-        const lexicon=await Lexicon.getDraft();
-        if(!lexicon){ fail(res,404,'draft_not_found'); return true; }
-        const lexeme=(lexicon.entries || []).find(entry=>entry && entry.id===id);
-        if(!lexeme){ fail(res,404,'lexeme_not_found'); return true; }
-        send(res,200,{ok:true,lexeme});
+        const result=await Lexicon.getDraftLexeme(id);
+        if(!result || !result.entry){ fail(res,404,'lexeme_not_found'); return true; }
+        send(res,200,{ok:true,lexeme:result.entry,draftRevision:result.draftRevision});
         return true;
       }
 
