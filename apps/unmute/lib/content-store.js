@@ -61,6 +61,27 @@ function validateNode(node){
   if(!Number.isInteger(node.order)||node.order<0) throw new Error(`bad_node_order:${id}`);
   if(!Array.isArray(node.prerequisites)||node.prerequisites.some(dep=>!cleanId(dep))) throw new Error(`bad_node_prerequisites:${id}`);
   if(!Array.isArray(node.activityIds)||node.activityIds.some(ref=>!cleanId(ref))) throw new Error(`bad_node_activities:${id}`);
+  if(node.completion!==undefined){
+    assertObject(node.completion,'node_completion');
+    if(node.completion.mode!=='all'||!Array.isArray(node.completion.requirements)||!node.completion.requirements.length){
+      throw new Error(`bad_node_completion:${id}`);
+    }
+    for(const requirement of node.completion.requirements){
+      assertObject(requirement,'completion_requirement');
+      if(requirement.kind==='activity-seen'){
+        if(!Array.isArray(requirement.activityIds)||!requirement.activityIds.length||requirement.activityIds.some(ref=>!cleanId(ref))){
+          throw new Error(`bad_seen_requirement:${id}`);
+        }
+      }else if(requirement.kind==='practice-started'){
+        if(!cleanId(requirement.activityId)||!Array.isArray(requirement.modes)||!requirement.modes.length
+          || requirement.modes.some(mode=>!['drill','listening','speaking'].includes(mode))){
+          throw new Error(`bad_practice_requirement:${id}`);
+        }
+      }else if(requirement.kind!=='manual'){
+        throw new Error(`bad_completion_requirement:${id}`);
+      }
+    }
+  }
   if(typeof node.optional!=='boolean') throw new Error(`bad_node_optional:${id}`);
   return node;
 }
@@ -116,6 +137,9 @@ function validateActivity(activity){
       break;
     case 'pattern-drill':
       if(!isTextMap(activity.pattern)) throw new Error(`bad_pattern:${id}`);
+      if(!Array.isArray(activity.modes) || !activity.modes.length || activity.modes.some(mode=>!['drill','listening','speaking'].includes(mode))){
+        throw new Error(`bad_pattern_modes:${id}`);
+      }
       if(!Array.isArray(activity.items) || !activity.items.length) throw new Error(`bad_pattern_items:${id}`);
       for(const item of activity.items){
         if(!item || !cleanId(item.id) || !isTextMap(item.prompt)) throw new Error(`bad_pattern_item:${id}`);
@@ -242,6 +266,23 @@ function validateSet(input){
       for(const activityRaw of refs){
         const activityId = cleanId(activityRaw);
         if(!activities.has(activityId)) throw new Error(`unknown_activity:${nodeId}:${activityRaw}`);
+      }
+      for(const requirement of (node.completion&&node.completion.requirements)||[]){
+        if(requirement.kind==='activity-seen'){
+          for(const activityRaw of requirement.activityIds){
+            const activityId=cleanId(activityRaw);
+            if(!activities.has(activityId)) throw new Error(`unknown_completion_activity:${nodeId}:${activityRaw}`);
+          }
+        }
+        if(requirement.kind==='practice-started'){
+          const activityId=cleanId(requirement.activityId);
+          const activity=activities.get(activityId);
+          if(!activity) throw new Error(`unknown_completion_practice:${nodeId}:${requirement.activityId}`);
+          if(activity.type!=='pattern-drill') throw new Error(`completion_practice_not_pattern:${nodeId}:${activityId}`);
+          for(const mode of requirement.modes){
+            if(!activity.modes.includes(mode)) throw new Error(`completion_practice_mode_missing:${nodeId}:${activityId}:${mode}`);
+          }
+        }
       }
     }
 
