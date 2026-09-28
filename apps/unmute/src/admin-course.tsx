@@ -17,7 +17,7 @@ type CourseNode = {
   id:string;
   kind:string;
   title:TextMap;
-  dayIndex?:number;
+  dayIndex?:number|undefined;
   order:number;
   optional:boolean;
   prerequisites:string[];
