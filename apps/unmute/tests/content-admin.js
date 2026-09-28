@@ -238,6 +238,15 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(published.body.release.sets['general-foundation'],1);
   assert.equal(published.body.release.lexiconRevision,1);
 
+  const publishedB=await action(handler,'content_publish',{setIds:['b1-b2']});
+  assert.equal(publishedB.status,200);
+  assert.equal(publishedB.body.release.revision,2);
+  assert.equal(publishedB.body.release.sets['general-foundation'],1);
+  assert.equal(publishedB.body.release.sets['b1-b2'],1);
+  assert.equal(publishedB.body.courses['b1-b2'].revision,1);
+  assert.equal((await Release.getReleasedSet('general-foundation')).revision,1);
+  assert.equal((await Release.getReleasedSet('b1-b2')).revision,1);
+
   // A newly staged course snapshot is invisible until a new paired release pointer is committed.
   const nextDraft=await Content.getDraft('general-foundation');
   nextDraft.title.ru='Staged but not released';
@@ -250,7 +259,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
 
   const after=await action(handler,'content_status');
   assert.equal(after.body.course.published.revision,1);
-  assert.equal(after.body.lexicon.published.revision,1);
+  assert.equal(after.body.lexicon.published.revision,2);
 
   console.log('UnMute content Admin tests passed');
 })().catch(error=>{console.error(error);process.exit(1);});
