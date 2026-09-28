@@ -17,7 +17,8 @@ const API = {
   auth: require(join(APP, 'api/auth.js')),
   sync: require(join(APP, 'api/sync.js')),
   health: require(join(APP, 'api/health.js')),
-  admin: require(join(APP, 'api/admin.js'))
+  admin: require(join(APP, 'api/admin.js')),
+  billing: require(join(APP, 'api/billing.js'))
 };
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
@@ -128,6 +129,20 @@ try{
   ok('app refreshes rights on start and opens the paid feature',
     await appears(phone.getByRole('button', {name: /Скачать задачи/}), 8000));
   await phone.getByRole('link', {name: /К задачам/}).click();
+
+  // Purchase through the (memory-store only) test provider on the second device's account copy.
+  await adminPage.getByRole('textbox', {name: 'Email'}).fill('person@example.com');
+  await adminPage.getByRole('button', {name: 'Забрать', exact: true}).click();
+  await adminPage.getByText('Готово.').waitFor();
+  await laptop.goto(URL_ + '#/account');
+  await laptop.reload();
+  ok('revoked purchase is locked again and can be bought',
+    await appears(laptop.getByRole('button', {name: 'Купить экспорт'}), 8000));
+  await laptop.getByRole('button', {name: 'Купить экспорт'}).click();
+  ok('purchase through the payment provider opens the feature at once',
+    await appears(laptop.getByRole('button', {name: /Скачать задачи/}), 8000));
+  await adminPage.getByRole('button', {name: 'Платежи'}).click();
+  ok('payment appears in the Admin journal', await appears(adminPage.getByRole('cell', {name: 'paid'})));
 
   await phone.getByRole('link', {name: /Готовые/}).click();
   await phone.waitForURL(/#\/done$/);
