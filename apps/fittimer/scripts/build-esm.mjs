@@ -56,17 +56,15 @@ await build({
 
 if(stampIndex){
   let html = await readFile(stampIndex, 'utf8');
-  const stamp = asset => {
-    const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\  const stamp = asset => {
-    const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    html = html.replace(new RegExp(escaped + '(?:\\?v=[^"\\s]+)?', 'g'), asset + '?v=' + BUILD_ID);
-  };');
-    const ref = new RegExp('((?:src|href)=["\\\'])' + escaped + '(?:\\\\?v=[^"\\\']+)?(["\\\'])', 'g');
-    html = html.replace(ref, '$1' + asset + '?v=' + BUILD_ID + '$2');
-  };
-  stamp('app.config.js');
-  stamp('esm/main.js');
-  stamp('style.css');
+  const refs = [
+    ['src="app.config.js"', `src="app.config.js?v=${BUILD_ID}"`],
+    ['src="esm/main.js"', `src="esm/main.js?v=${BUILD_ID}"`],
+    ['href="style.css"', `href="style.css?v=${BUILD_ID}"`]
+  ];
+  for(const [from, to] of refs){
+    if(!html.includes(from)) throw new Error(`Cannot stamp missing asset reference: ${from}`);
+    html = html.replace(from, to);
+  }
   await writeFile(stampIndex, html, 'utf8');
   console.log(`Stamped ${stampIndex} with build ${BUILD_ID}`);
 }
