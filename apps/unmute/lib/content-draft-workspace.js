@@ -116,6 +116,61 @@ async function ensure(setId,fallbackSet){
   return readPointer(setId);
 }
 
+async function getStructure(setId){
+  const pointer=await readPointer(setId);
+  if(!pointer) return null;
+  const roadmaps=[];
+  for(const roadmapMeta of pointer.roadmaps || []){
+    const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapMeta.id])||{};
+    const keys=(roadmapMeta.nodeIds||[]).map(id=>nodeKey(setId,pointer.generation,roadmapMeta.id,id,versions[id]||1));
+    const nodes=(await manyJson(keys)).filter(Boolean);
+    if(nodes.length!==keys.length) throw new Error('draft_node_missing');
+    roadmaps.push({
+      id:roadmapMeta.id,
+      title:clone(roadmapMeta.title),
+      nodes
+    });
+  }
+  return {
+    meta:clone(pointer.meta),
+    roadmaps,
+    draftRevision:pointer.draftRevision,
+    draftUpdatedAt:pointer.updatedAt
+  };
+}
+
+async function getNode(setId,roadmapId,nodeId){
+  const pointer=await readPointer(setId);
+  if(!pointer) return null;
+  const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
+  const version=Math.max(0,+versions[nodeId]||0);
+  if(!version) return null;
+  const node=parseJson(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,version)));
+  return node ? {node,version,draftRevision:pointer.draftRevision} : null;
+}
+
+async function getActivities(setId,ids){
+  const pointer=await readPointer(setId);
+  if(!pointer) return [];
+  const requested=[...new Set((ids||[]).map(String).filter(Boolean))];
+  const keys=requested.map(id=>{
+    const revision=Math.max(0,+((pointer.activityRefs||{})[id])||0);
+    return revision ? activityKey(setId,pointer.generation,id,revision) : null;
+  });
+  const validKeys=keys.filter(Boolean);
+  const values=await manyJson(validKeys);
+  const byKey=new Map();
+  let at=0;
+  for(const key of keys){
+    if(!key) continue;
+    byKey.set(key,values[at++]);
+  }
+  return requested.map((id,index)=>{
+    const key=keys[index];
+    return key ? byKey.get(key) : null;
+  }).filter(Boolean);
+}
+
 async function getActivity(setId,id){
   const pointer=await readPointer(setId);
   if(!pointer) return null;
@@ -198,6 +253,35 @@ async function createActivity(setId,roadmapId,nodeId,activity,validateActivity){
   },{ttl:10,retries:80,delay:50});
 }
 
+async function detachActivity(setId,roadmapId,nodeId,activityId){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
+    const currentVersion=Math.max(0,+versions[nodeId]||0);
+    if(!currentVersion) throw new Error('node_not_found');
+    const current=parseJson(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,currentVersion)));
+    if(!current) throw new Error('node_not_found');
+    const currentIds=current.activityIds||[];
+    if(!currentIds.includes(activityId)) throw new Error('activity_not_attached');
+
+    let nextVersion=currentVersion+1;
+    while(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,nextVersion))) nextVersion++;
+    const next={...current,activityIds:currentIds.filter(id=>id!==activityId)};
+    const updatedPointer={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      nodeRefs:{...(pointer.nodeRefs||{}),[roadmapId]:{...versions,[nodeId]:nextVersion}}
+    };
+    await store.pipe([
+      ['SET',nodeKey(setId,pointer.generation,roadmapId,nodeId,nextVersion),JSON.stringify(next),'NX'],
+      ['SET',pointerKey(setId),JSON.stringify(updatedPointer)]
+    ]);
+    return {node:next,draftRevision:updatedPointer.draftRevision};
+  },{ttl:10,retries:80,delay:50});
+}
+
 async function reorderActivities(setId,roadmapId,nodeId,activityIds){
   return store.withLock('lock:content-workspace:'+setId,async()=>{
     const pointer=await readPointer(setId);
@@ -231,6 +315,6 @@ async function reorderActivities(setId,roadmapId,nodeId,activityIds){
 }
 
 module.exports={
-  replace,get,ensure,readPointer,getActivity,updateActivity,createActivity,reorderActivities,
+  replace,get,ensure,readPointer,getStructure,getNode,getActivities,getActivity,updateActivity,createActivity,detachActivity,reorderActivities,
   keys:{pointerKey,generationCounterKey,activityKey,nodeKey}
 };

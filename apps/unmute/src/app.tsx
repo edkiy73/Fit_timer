@@ -7,6 +7,7 @@ import product from '../config/product.json';
 import { authClient } from './auth';
 import { adminClient } from './admin';
 import { contentAdminSection } from './admin-content';
+import { courseAdminSection } from './admin-course';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 
@@ -128,7 +129,7 @@ function Account(){
 
 function Admin(){
   const {locale} = useI18n();
-  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={[contentAdminSection]} />;
+  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={[courseAdminSection,contentAdminSection]} />;
 }
 
 export const routes: RouteObject[] = [

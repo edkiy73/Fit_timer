@@ -68,6 +68,61 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const overwritten=await action(handler,'content_legacy_import',{overwrite:true});
   assert.equal(overwritten.status,200);
 
+  const structure=await action(handler,'content_course_structure');
+  assert.equal(structure.status,200);
+  assert.equal(structure.body.roadmaps[0].nodes[0].id,'day-1');
+  assert.equal(structure.body.roadmaps[0].nodes[0].activityCount,1);
+
+  const nodeBefore=await action(handler,'content_course_node',{roadmapId:'main',nodeId:'day-1'});
+  assert.equal(nodeBefore.status,200);
+  assert.equal(nodeBefore.body.activities.length,1);
+  assert.equal(nodeBefore.body.activities[0].id,'a1');
+
+  const openedActivity=await action(handler,'content_activity_get',{activityId:'a1'});
+  assert.equal(openedActivity.status,200);
+  const editedActivity=JSON.parse(JSON.stringify(openedActivity.body.activity));
+  editedActivity.body.ru='edited theory';
+  editedActivity.revisionProgress='reset';
+  const savedActivity=await action(handler,'content_activity_save',{
+    activityId:'a1',expectedRevision:1,activity:editedActivity
+  });
+  assert.equal(savedActivity.status,200);
+  assert.equal(savedActivity.body.activity.revision,2);
+  assert.equal(savedActivity.body.activity.body.ru,'edited theory');
+  assert.equal(savedActivity.body.activity.revisionProgress,'reset');
+
+  const staleActivity=await action(handler,'content_activity_save',{
+    activityId:'a1',expectedRevision:1,activity:editedActivity
+  });
+  assert.equal(staleActivity.status,400);
+  assert.equal(staleActivity.body.error,'activity_revision_conflict');
+
+  const createdActivity=await action(handler,'content_activity_create',{
+    roadmapId:'main',nodeId:'day-1',type:'text-input'
+  });
+  assert.equal(createdActivity.status,200);
+  const createdId=createdActivity.body.activity.id;
+  assert.ok(/^activity\.text-input\./.test(createdId));
+
+  const nodeWithNew=await action(handler,'content_course_node',{roadmapId:'main',nodeId:'day-1'});
+  assert.deepEqual(nodeWithNew.body.node.activityIds,['a1',createdId]);
+
+  const reordered=await action(handler,'content_activity_reorder',{
+    roadmapId:'main',nodeId:'day-1',activityIds:[createdId,'a1']
+  });
+  assert.equal(reordered.status,200);
+  assert.deepEqual(reordered.body.node.activityIds,[createdId,'a1']);
+
+  const detached=await action(handler,'content_activity_detach',{
+    roadmapId:'main',nodeId:'day-1',activityId:createdId
+  });
+  assert.equal(detached.status,200);
+  assert.deepEqual(detached.body.node.activityIds,['a1']);
+
+  const detachedEntity=await action(handler,'content_activity_get',{activityId:createdId});
+  assert.equal(detachedEntity.status,200);
+  assert.equal(detachedEntity.body.activity.id,createdId);
+
   const queue=await action(handler,'content_review_queue');
   assert.equal(queue.status,200);
   assert.equal(queue.body.count,1);

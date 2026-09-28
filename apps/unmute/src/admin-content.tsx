@@ -329,7 +329,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
 export const contentAdminSection: AdminSection = {
   id:'content',
-  label:'Курс и словарь',
+  label:'Релизы и словарь',
   group:'Контент',
   render(context){ return <ContentAdmin {...context} />; }
 };
