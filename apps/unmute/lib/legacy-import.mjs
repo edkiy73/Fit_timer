@@ -249,10 +249,23 @@ function lexemeFromDict(word,value,used){
 function addPhraseLexeme(entries,used,en,ru){
   const surface=text(en).trim();if(!surface)return;
   const normalized=surface.toLowerCase().replace(/[.!?]+$/,'').trim();
-  if(entries.some(entry=>entry.lemma.toLowerCase()===normalized))return;
+  const translation=text(ru).trim();
+  const existing=entries.find(entry=>entry.lemma.toLowerCase()===normalized);
+  if(existing){
+    const known=existing.senses.some(sense=>Array.isArray(sense.translations&&sense.translations.ru)
+      && sense.translations.ru.includes(translation));
+    if(!known&&translation){
+      existing.senses.push({id:'sense-'+(existing.senses.length+1),partOfSpeech:'phrase',
+        translations:{ru:[translation]},tags:['needs-review']});
+    }
+    if(!existing.forms.some(form=>form.text.toLowerCase()===normalized)){
+      existing.forms.push({text:normalized,kind:'phrase'});
+    }
+    return;
+  }
   const id=uniqId('phrase.'+slug(normalized),used);
   entries.push({id,revision:1,language:'en',lemma:normalized,forms:[{text:normalized,kind:'phrase'}],
-    senses:[{id:'sense-1',partOfSpeech:'phrase',translations:{ru:[text(ru)]},tags:[]}],examples:[],deprecated:false});
+    senses:[{id:'sense-1',partOfSpeech:'phrase',translations:{ru:[translation]},tags:[]}],examples:[],deprecated:false});
 }
 
 export function buildLexicon(model){
