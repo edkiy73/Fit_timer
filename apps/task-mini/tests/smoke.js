@@ -28,6 +28,8 @@ function fakeRes(){
   ok('second app capability config is independent', capabilities().enabled('profiles') && !capabilities().enabled('ai'));
   ok('second app owns task document semantics', registry.accepts('account', 'tasks'));
   ok('task sync is free: no subscription needed for personal data', registry.isFree('account', 'tasks'));
+  const { productCatalog } = require('../../../packages/core/server/entitlements');
+  ok('paid features are declared as product SKUs', productCatalog().some(item => item.sku === 'export'));
   const read = file => fs.readFileSync(require('path').join(__dirname, '..', file), 'utf8');
   const pkg = JSON.parse(read('package.json'));
   ok('UI is on the ADR default stack', ['react', 'react-router', '@tanstack/react-query', 'zod', 'react-aria-components']

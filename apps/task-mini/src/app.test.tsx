@@ -17,8 +17,9 @@ function renderApp(path = '/'){
   return router;
 }
 
-const signIn = () =>
+const signIn = (owned: string[] = []) =>
   localStorage.setItem('task-mini.auth.session', JSON.stringify({
+    owned,
     email:'demo@example.com',
     deviceId:'device-test',
     syncToken:'token-test',
@@ -88,6 +89,21 @@ describe('repository', () => {
 });
 
 describe('Task Mini UI', () => {
+  it('keeps the paid export locked until the account owns it', async () => {
+    signIn();
+    await saveTasks([createTask('Первая', '1')]);
+    renderApp('/account');
+    expect(await screen.findByText(/Экспорт задач в файл — отдельная покупка/)).toBeTruthy();
+    expect(screen.queryByRole('button', {name: /Скачать задачи/})).toBeNull();
+  });
+
+  it('opens the paid export for an account that owns the SKU', async () => {
+    signIn(['export']);
+    await saveTasks([createTask('Первая', '1'), createTask('Вторая', '2')]);
+    renderApp('/account');
+    expect(await screen.findByRole('button', {name: 'Скачать задачи (2)'})).toBeTruthy();
+  });
+
   it('works without an account and offers sign-in', async () => {
     const user = userEvent.setup();
     const router = renderApp();

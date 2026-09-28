@@ -27,6 +27,7 @@ const { recordClientError } = require('./diagnostics');
 const SyncShadow = require('./sync-shadow');
 const { capabilities } = require('./capabilities-core');
 const { productIdentity } = require('./product-core');
+const { entitlementsOf } = require('./entitlements');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -228,11 +229,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
       const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
       if(!device || !sameSecret(sha(token), device.h || '')) return fail(res,403,'bad_sync_token');
-      return send(res,200,{
-        ok:true,
-        sub:acc.sub || null,
-        premium:!!(acc.sub && (Date.parse(acc.sub.until)||0) > Date.now())
-      });
+      return send(res,200,{ok:true, ...entitlementsOf(acc)});
     }
 
     if(act === 'set_locale'){
@@ -418,7 +415,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
 
       return send(res, 200, {
         ok: true, email, fresh,
-        sub: acc.sub || null,
+        ...entitlementsOf(acc),
         handle: acc.handle || '',
         needsHandle: !acc.handle,
         ...extension.fields,

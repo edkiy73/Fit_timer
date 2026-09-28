@@ -4,9 +4,10 @@ const crypto = require('crypto');
 const { store } = require('../store');
 const { send, fail } = require('../util');
 const { getSettings } = require('../ai');
+const { entitlementsOf, productCatalog, checkSku, grantOwned, revokeOwned } = require('../entitlements');
 
 const ACCOUNT_EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
-const ACTIONS = new Set(['users_list','user_ai_reset','user_create','user_premium','user_test_code']);
+const ACTIONS = new Set(['users_list','user_ai_reset','user_create','user_premium','user_owned','products_list','user_test_code']);
 
 const accountMail = v => String(v || '').trim().toLowerCase().slice(0,120);
 const accountHash = email => crypto.createHash('sha256').update(String(email)).digest('hex').slice(0,32);
@@ -74,6 +75,7 @@ async function adminUsers(){
           plan:String(sub.plan||''), until:sub.until||null, since:sub.since||null,
           provider:String(sub.provider||sub.source||''), autoRenew:!!sub.autoRenew
         }:null,
+        owned:entitlementsOf(a).owned,
         devices:Object.keys(a.syncDevices||{}).length,
         pushDevices:Object.keys(a.pushDevices||{}).length,
         aiUsage:{
@@ -98,6 +100,11 @@ async function handleAdminAccounts(action, body, res){
 
   if(action === 'users_list'){
     send(res,200,{ok:true,users:await adminUsers()});
+    return true;
+  }
+
+  if(action === 'products_list'){
+    send(res,200,{ok:true,products:productCatalog()});
     return true;
   }
 
@@ -161,6 +168,22 @@ async function handleAdminAccounts(action, body, res){
     await store.set(`a:${mh}`,JSON.stringify(acc));
     await indexAccount(mh);
     send(res,200,{ok:true,email,sub:acc.sub||null});
+    return true;
+  }
+
+  // Покупка навсегда: выдать вручную (семья, промо, возврат) или забрать.
+  if(action === 'user_owned'){
+    const skuError=checkSku(body&&body.sku);
+    if(skuError && !(body&&body.revoke)){
+      fail(res,400,skuError);
+      return true;
+    }
+    if(body&&body.revoke) revokeOwned(acc,body.sku);
+    else grantOwned(acc,body.sku,{provider:'admin'});
+    acc.seen=acc.seen||new Date().toISOString();
+    await store.set(`a:${mh}`,JSON.stringify(acc));
+    await indexAccount(mh);
+    send(res,200,{ok:true,email,owned:entitlementsOf(acc).owned});
     return true;
   }
 
