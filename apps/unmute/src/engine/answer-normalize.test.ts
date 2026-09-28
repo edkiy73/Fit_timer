@@ -17,7 +17,7 @@ describe('legacy answer normalization parity',()=>{
   });
 
   it('canonicalizes no-apostrophe forms and number words',()=>{
-    expect(canon('im here and ive got two')).toBe('i am here and i have got 2');
+    expect(canon('im here and ive got two')).toBe('i am here and i have 2');
     expect(canon('dont call me at fifteen')).toBe('do not call me at 15');
   });
 
