@@ -39,7 +39,8 @@
 | Фаза 3.4b — answer check | ✅ в `main` (#216) | optional words + movable time expressions + legacy `check()` parity |
 | Фаза 3.4c — near miss | ✅ в `main` (#217) | legacy `lev/isFormPair/nearMiss`; new lexicon supplied through callback |
 | Фаза 3.4d — card SRS | ✅ в `main` (#218) | `[0,1,3,7,16,35]`, box/due, learned threshold parity |
-| Фаза 3.4e-1 — practice SRS | 🟡 PR в работе | pattern/vocab/listening intervals + box/due parity; caps отдельно |
+| Фаза 3.4e-1 — practice SRS | ✅ в `main` (#219) | pattern/vocab/listening intervals + box/due parity |
+| Фаза 3.4e-2 — practice review queue | 🟡 PR в работе | caps 3/2/2, oldest-due-first, deterministic waiting summary |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
