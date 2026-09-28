@@ -23,12 +23,17 @@ export function levenshtein(a:string,b:string):number{
   if(a.length===b.length){
     const diff:number[]=[];
     for(let i=0;i<a.length;i++) if(a.charAt(i)!==b.charAt(i)) diff.push(i);
-    if(
-      diff.length===2 &&
-      diff[1]===diff[0]+1 &&
-      a.charAt(diff[0])===b.charAt(diff[1]) &&
-      a.charAt(diff[1])===b.charAt(diff[0])
-    ) return 1;
+    if(diff.length===2){
+      const first=diff[0];
+      const second=diff[1];
+      if(
+        first!==undefined &&
+        second!==undefined &&
+        second===first+1 &&
+        a.charAt(first)===b.charAt(second) &&
+        a.charAt(second)===b.charAt(first)
+      ) return 1;
+    }
   }
 
   const m=a.length,n=b.length;
