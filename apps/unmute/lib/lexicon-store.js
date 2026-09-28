@@ -73,6 +73,35 @@ async function putDraft(input){
 
 async function getDraft(){return parse(await store.get(DRAFT));}
 
+async function updateDraftLexeme(id, updater, expectedRevision){
+  const key=String(id||'').trim();
+  if(!key) throw new Error('bad_lexeme_id');
+  return store.withLock('lock:lexicon-draft',async()=>{
+    const draft=await getDraft();
+    if(!draft) throw new Error('draft_not_found');
+    const index=(draft.entries||[]).findIndex(entry=>entry&&entry.id===key);
+    if(index<0) throw new Error('lexeme_not_found');
+
+    const current=draft.entries[index];
+    const currentRevision=Math.max(1,+current.revision||1);
+    if(expectedRevision!==undefined && Number(expectedRevision)!==currentRevision){
+      throw new Error('lexeme_revision_conflict');
+    }
+
+    const next=updater(JSON.parse(JSON.stringify(current)));
+    if(!next || typeof next!=='object' || Array.isArray(next)) throw new Error('bad_lexeme_update');
+    if(next.id!==current.id) throw new Error('lexeme_id_immutable');
+    next.revision=currentRevision+1;
+
+    const entries=draft.entries.slice();
+    entries[index]=next;
+    const updated={...draft,entries,draftUpdatedAt:new Date().toISOString()};
+    validateLexicon(updated);
+    await persistentSet(DRAFT,updated);
+    return next;
+  },{ttl:10,retries:80,delay:50});
+}
+
 async function nextRevision(){
   const pointer=parse(await store.get(POINTER));
   const current=Math.max(0,+(pointer&&pointer.revision)||0,+(await store.get(REVISION_COUNTER)||0));
@@ -144,4 +173,4 @@ function lookup(snapshot,surface){
   return ids.map(id=>byId.get(id)).filter(Boolean);
 }
 
-module.exports={validateLexicon,putDraft,getDraft,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
+module.exports={validateLexicon,putDraft,getDraft,updateDraftLexeme,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
