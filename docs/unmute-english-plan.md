@@ -1,6 +1,6 @@
 # UnMute: English for Expats — план слияния с AppBase Core
 
-Статус: **согласован по пп. 1–4 §2** (2026-09-28). **Этап 0 завершён** (0.1–0.5 PR #192, 0.7 PR #193, 0.8 PR #194, 0.9–0.10 PR после #194); следующий шаг — **фаза 1: создать `apps/unmute`**. Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
+Статус: **согласован по пп. 1–4 §2** (2026-09-28). **Этап 0 завершён** (PR #192–#195). **Фаза 1:** `apps/unmute` создан, Vercel-проект `unmute` → https://unmute99.vercel.app; ждёт базы Upstash и секретов от владельца (§0.4). Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
 
 Продукт — первое настоящее «App2» из [ADR по стеку](./appbase-stack-ci-strategy.md). Источник логики — репозиторий `edkiy73/English` (семейное приложение «English Trainer», один `index.html` ~4,6 тыс. строк, сборка `2026-09-04.17`; с тех пор не менялся). Интерфейс оттуда **не переносится**: берём контент и алгоритмы, интерфейс делаем с нуля.
 
@@ -19,9 +19,9 @@
 | 0.6 Префикс ключей | ❌ отменён: своя база и домен у каждого приложения | — |
 | 0.7 Покупки навсегда + выдача в админке | ✅ PR #193 | `packages/core/server/entitlements.js`, `packages/core/server/admin/accounts.js` (`user_owned`, `products_list`), `packages/core/src/core/auth.ts` (`owned`, `hasEntitlement`), `packages/ui-react/src/admin.tsx` (форма доступа), `apps/task-mini` (SKU `export`) |
 | 0.8 Каркас оплаты | ✅ PR #194 | `packages/core/server/billing.js` (`applyBillingEvent`, `createBillingHandler`, `createTestBillingAdapter`, `billing_log`), `packages/core/src/core/billing.ts` (`createBillingClient`), `packages/ui-react/src/admin.tsx` (вкладка «Платежи»), `apps/task-mini/api/billing.js`, кнопка «Купить экспорт» |
-| 0.9 Язык интерфейса (переключение — по желанию приложения) | ✅ | `packages/ui-react/src/i18n.tsx` (`I18nProvider`, `useI18n`, `LanguagePicker`, `missingKeys`); языки — `config/product.json → i18n`; Task Mini RU/EN |
-| 0.10 Стартер получает всё из этапа 0 | ✅ | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
-| **Фаза 1 — `apps/unmute`** | ⏭ **следующий** | см. §0.4 |
+| 0.9 Язык интерфейса (переключение — по желанию приложения) | ✅ PR #195 | `packages/ui-react/src/i18n.tsx` (`I18nProvider`, `useI18n`, `LanguagePicker`, `missingKeys`); языки — `config/product.json → i18n`; Task Mini RU/EN |
+| 0.10 Стартер получает всё из этапа 0 | ✅ PR #195 | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
+| **Фаза 1 — `apps/unmute`** | ⏳ код готов; ждёт базы и секретов | `apps/unmute` (сгенерирован, `askHandle: false`, RU, флаги §3.1, временные бирюзовые токены), `.github/workflows/unmute.yml`; Vercel-проект `unmute` (`prj_qQFaxRe7iSRRv3XkthR089UAwraO`, Root Directory `apps/unmute`, файлы вне корня включены), домен `unmute99.vercel.app` (`unmute.vercel.app` занят другой командой) |
 | Фазы 2–10 UnMute | ждут | §5 |
 
 `apps/unmute` ещё **не создан**. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -52,24 +52,18 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 
 Тестовые серверы работают на памяти (`ALLOW_MEMORY_STORE=1`): `/api/auth` отдаёт `devCode`, поэтому вход по почте проверяется без почты. Пример — `apps/task-mini/tests/e2e.mjs` (сборка + `api/*` + два браузерных контекста + админка).
 
-### 0.4. Следующий шаг: фаза 1 — создать `apps/unmute`
+### 0.4. Следующий шаг: завершить фазу 1 (сделать может только владелец)
 
-Всё общее уже в шаблоне, поэтому фаза 1 — генерация и настройка, без новых механизмов.
+Сделано: `apps/unmute` сгенерирован и настроен, CI (`unmute.yml`), Vercel-проект `unmute` с доменом `unmute99.vercel.app`, слова и бренд UnMute запрещены в Core (`packages/core/tests/boundaries.js`).
 
-1. `npm run app:create -- unmute "UnMute: English for Expats" app.unmute.english ru`.
-2. `apps/unmute/config/product.json`:
-   - короткое имя «UnMute» (поле для сторов добавить, когда появятся оболочки — фаза 9);
-   - `auth.askHandle: false` (решение владельца: ник не спрашивать только в UnMute);
-   - `i18n: {locales: ["ru"], default: "ru"}` — второй язык интерфейса позже одной строкой;
-   - `features`: `premium: true, ai: true, notifications: true, voice: true`, остальное `false` (§3.1);
-   - `products`: пока `[]`; SKU пакетов и Plus добавляются в фазе 5 (§4.2).
-3. Бренд: временные токены светлой/тёмной темы в `brand.ui` (дизайн — фаза 4).
-4. CI: `.github/workflows/unmute.yml` по образцу `task-mini.yml` (пути `apps/unmute/**`, `packages/core/**`, `packages/ui-react/**`; шаги `npm ci`, `npm run check`, `npm run test:browser`). Корневой раннер подхватит `scripts.check` сам.
-5. Проверки §0.3 + `npm --prefix apps/unmute run check` и `node apps/unmute/tests/e2e.mjs` после сборки.
-6. **Нужно от владельца** (агент сам сделать не может, если нет доступа к Vercel/Upstash): Vercel-проект `unmute` (Root Directory `apps/unmute`, «Include files outside the root directory» включено), своя база Upstash (и при желании Supabase, `APPBASE_STORE`), домен, переменные почты и `ADMIN_KEY` — по `apps/fittimer/docs/setup-vercel.md`. Если у агента есть Vercel-коннектор, проект можно создать им и попросить владельца только о секретах.
-7. Готово, когда: превью на Vercel открывается без аккаунта, вход по почте работает, `#/admin` защищена, CI зелёный.
+Осталось в панели Vercel (у агента нет прав создавать базы Marketplace):
+1. **База:** Vercel → Storage → Create → Upstash for Redis → имя `unmute` → Connect Project → `unmute` (все окружения). Интеграция сама добавит `KV_REST_API_URL`, `KV_REST_API_TOKEN` и др. Supabase пока не создаём (решение владельца).
+2. **Секреты** в Vercel → Project `unmute` → Settings → Environment Variables (Production): `ADMIN_KEY` (новый, не как у FitTimer), `RESEND_API_KEY` (можно тот же, что у FitTimer; отправитель — `apps/fittimer/docs/setup-vercel.md`).
+3. Redeploy production.
 
-Дальше — фаза 3 (перенос контента и движка, §5), её можно начинать параллельно с настройкой Vercel.
+Проверка после этого: https://unmute99.vercel.app открывается без аккаунта, вход по почте приходит письмом, `https://unmute99.vercel.app/api/health` показывает хранилище `redis`, `#/admin` пускает по `ADMIN_KEY`.
+
+Дальше — **фаза 3** (перенос контента и движка из `edkiy73/English`, §5); её можно делать параллельно, база для неё не нужна.
 
 ### 0.4a. Как устроена оплата (сделано в 0.8, нужно для фазы 6)
 
