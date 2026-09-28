@@ -1,6 +1,6 @@
 # UnMute: English for Expats — план слияния с AppBase Core
 
-Статус: **согласован по пп. 1–4 §2** (2026-09-28). **Этап 0 завершён** (PR #192–#195). **Фаза 1:** `apps/unmute` создан, Vercel-проект `unmute` → https://unmute99.vercel.app; ждёт базы Upstash и секретов от владельца (§0.4). Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
+Статус: **согласован по пп. 1–4 §2** (2026-09-28). **Этап 0 завершён** (PR #192–#195). **Фаза 1:** `apps/unmute` создан и задеплоен в Vercel → https://unmute99.vercel.app; Upstash Redis и почта подключены, Functions переводятся в Singapore (`sin1`). Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
 
 Продукт — первое настоящее «App2» из [ADR по стеку](./appbase-stack-ci-strategy.md). Источник логики — репозиторий `edkiy73/English` (семейное приложение «English Trainer», один `index.html` ~4,6 тыс. строк, сборка `2026-09-04.17`; с тех пор не менялся). Интерфейс оттуда **не переносится**: берём контент и алгоритмы, интерфейс делаем с нуля.
 
@@ -21,10 +21,10 @@
 | 0.8 Каркас оплаты | ✅ PR #194 | `packages/core/server/billing.js` (`applyBillingEvent`, `createBillingHandler`, `createTestBillingAdapter`, `billing_log`), `packages/core/src/core/billing.ts` (`createBillingClient`), `packages/ui-react/src/admin.tsx` (вкладка «Платежи»), `apps/task-mini/api/billing.js`, кнопка «Купить экспорт» |
 | 0.9 Язык интерфейса (переключение — по желанию приложения) | ✅ PR #195 | `packages/ui-react/src/i18n.tsx` (`I18nProvider`, `useI18n`, `LanguagePicker`, `missingKeys`); языки — `config/product.json → i18n`; Task Mini RU/EN |
 | 0.10 Стартер получает всё из этапа 0 | ✅ PR #195 | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
-| **Фаза 1 — `apps/unmute`** | ⏳ код готов; ждёт базы и секретов | `apps/unmute` (сгенерирован, `askHandle: false`, RU, флаги §3.1, временные бирюзовые токены), `.github/workflows/unmute.yml`; Vercel-проект `unmute` (`prj_qQFaxRe7iSRRv3XkthR089UAwraO`, Root Directory `apps/unmute`, файлы вне корня включены), домен `unmute99.vercel.app` (`unmute.vercel.app` занят другой командой) |
+| **Фаза 1 — `apps/unmute`** | ✅ инфраструктура готова; production + Redis + mail, регион `sin1` | `apps/unmute` (сгенерирован, `askHandle: false`, RU, флаги §3.1, временные бирюзовые токены), `.github/workflows/unmute.yml`; Vercel-проект `unmute` (`prj_qQFaxRe7iSRRv3XkthR089UAwraO`, Root Directory `apps/unmute`, файлы вне корня включены), домен `unmute99.vercel.app` (`unmute.vercel.app` занят другой командой) |
 | Фазы 2–10 UnMute | ждут | §5 |
 
-`apps/unmute` ещё **не создан**. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
+`apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
 
 ### 0.2. Правила работы
 
