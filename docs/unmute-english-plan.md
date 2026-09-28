@@ -37,7 +37,8 @@
 | Фаза 3.3i — legacy reference resources | ✅ в `main` (#212, #214) | `phrase-collection` + `verb-table`, both backed by global lexicon refs |
 | Фаза 3.4a — answer normalization | ✅ в `main` (#215) | legacy `norm/expand/canon` port + parity tests |
 | Фаза 3.4b — answer check | ✅ в `main` (#216) | optional words + movable time expressions + legacy `check()` parity |
-| Фаза 3.4c — near miss | 🟡 PR в работе | legacy `lev/isFormPair/nearMiss`; new lexicon supplied through callback |
+| Фаза 3.4c — near miss | ✅ в `main` (#217) | legacy `lev/isFormPair/nearMiss`; new lexicon supplied through callback |
+| Фаза 3.4d — card SRS | 🟡 PR в работе | `[0,1,3,7,16,35]`, box/due, learned threshold parity |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
