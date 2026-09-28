@@ -6,6 +6,7 @@ const Content = require('./content-store');
 const Lexicon = require('./lexicon-store');
 const Release = require('./content-release');
 const BulkLexicon = require('./lexicon-bulk');
+const IpaBootstrap = require('./ipa-bootstrap');
 
 const LEGACY_SHA = '011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_URL = 'https://raw.githubusercontent.com/edkiy73/English/' + LEGACY_SHA + '/index.html';
@@ -166,7 +167,7 @@ function lexiconStats(lexicon){
   };
 }
 
-function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, loadImporter=defaultImporter} = {}){
+function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, loadImporter=defaultImporter, loadIpaSource=IpaBootstrap.defaultLoadIpaSource} = {}){
   return async function handleContentAdmin(action, body, res){
     if(!String(action || '').startsWith('content_')) return false;
 
@@ -451,6 +452,21 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!roadmapId || !nodeId || !ids.length || ids.some(id=>!id)){ fail(res,400,'bad_activity_order'); return true; }
         const result=await Content.reorderDraftActivities(setId,roadmapId,nodeId,ids);
         send(res,200,{ok:true,node:result.node,draftRevision:result.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_lexicon_ipa_bootstrap'){
+        const lexicon=await Lexicon.getDraft();
+        if(!lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const source=await loadIpaSource();
+        const planned=IpaBootstrap.planIpaBootstrap(lexicon,source);
+        if(body.apply===true && planned.changes.length){
+          const applied=await Lexicon.upsertDraftLexemes(planned.changes);
+          send(res,200,{ok:true,applied:true,draftRevision:applied.draftRevision,
+            source:planned.source,report:planned.report});
+          return true;
+        }
+        send(res,200,{ok:true,applied:false,source:planned.source,report:planned.report});
         return true;
       }
 
