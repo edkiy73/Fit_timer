@@ -1,0 +1,6 @@
+{
+  "name": "@appbase/ui-react",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shared React UI primitives for AppBase apps. Consumed from source inside the monorepo."
+}

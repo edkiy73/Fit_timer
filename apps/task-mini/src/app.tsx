@@ -1,9 +1,11 @@
 import { Outlet, useOutletContext, type RouteObject } from 'react-router';
+import { AuthGate, useAuth } from '@appbase/ui-react/auth.js';
 import { filterTasks, type TaskFilter } from './domain';
 import { AddTaskForm } from './components/AddTaskForm';
 import { FilterNav } from './components/FilterNav';
 import { TaskItem } from './components/TaskItem';
 import { useTaskActions, useTasks, type TaskActions } from './tasks/queries';
+import { taskAuth } from './auth';
 
 const EMPTY: Record<TaskFilter, string> = {
   all: 'Пока задач нет.',
@@ -11,15 +13,24 @@ const EMPTY: Record<TaskFilter, string> = {
   done: 'Пока ничего не выполнено.'
 };
 
-function Layout(){
+function TaskLayout(){
   const {data: tasks = []} = useTasks();
   const actions = useTaskActions();
+  const auth = useAuth();
   return (
     <main className="app">
       <header>
-        <div className="eyebrow">AppBase demo</div>
-        <h1>Task Mini</h1>
-        <p>Эталонное приложение на общем Core.</p>
+        <div className="account-row">
+          <div>
+            <div className="eyebrow">AppBase demo</div>
+            <h1>Task Mini</h1>
+            <p>Эталонное приложение на общем Core.</p>
+          </div>
+          <div className="account-chip">
+            <span>{auth.session.email}</span>
+            <button type="button" onClick={() => void auth.logout()}>Выйти</button>
+          </div>
+        </div>
       </header>
       <AddTaskForm onAdd={actions.add} />
       {actions.saveFailed && <p className="error" role="alert">Не удалось сохранить изменения.</p>}
@@ -27,6 +38,10 @@ function Layout(){
       <Outlet context={actions} />
     </main>
   );
+}
+
+function Layout(){
+  return <AuthGate client={taskAuth} locale="ru" productName="Task Mini"><TaskLayout /></AuthGate>;
 }
 
 function TaskList({filter}: {filter: TaskFilter}){

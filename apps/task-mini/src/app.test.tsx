@@ -14,7 +14,19 @@ function renderApp(path = '/'){
   return router;
 }
 
-beforeEach(async () => { await saveTasks([]); });
+beforeEach(async () => {
+  localStorage.setItem('task-mini.auth.session', JSON.stringify({
+    email:'demo@example.com',
+    deviceId:'device-test',
+    syncToken:'token-test',
+    handle:'@demo',
+    locale:'ru',
+    sub:null,
+    premium:false,
+    fresh:false
+  }));
+  await saveTasks([]);
+});
 
 describe('domain', () => {
   it('validates tasks at the boundary', () => {

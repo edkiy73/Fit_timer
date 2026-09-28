@@ -23,6 +23,18 @@ try{
   const errors = [];
   const page = await browser.newPage({viewport: {width: 390, height: 800}});
   page.on('pageerror', e => errors.push(String(e)));
+  await page.addInitScript(() => {
+    localStorage.setItem('task-mini.auth.session', JSON.stringify({
+      email:'demo@example.com',
+      deviceId:'device-e2e',
+      syncToken:'token-e2e',
+      handle:'@demo',
+      locale:'ru',
+      sub:null,
+      premium:false,
+      fresh:false
+    }));
+  });
   await page.goto(URL);
   await page.getByText('Пока задач нет.').waitFor();
   ok('app boots on the production build', true);

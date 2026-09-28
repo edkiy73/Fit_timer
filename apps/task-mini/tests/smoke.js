@@ -32,6 +32,9 @@ function fakeRes(){
     .every(name => pkg.dependencies && pkg.dependencies[name]) && !!pkg.devDependencies.vite);
   ok('UI persists through Core storage', read('src/tasks/repository.ts').includes("@appbase/core/storage.js"));
   ok('UI theme uses the shared Core token mapping', read('src/theme.ts').includes('themeCssVars'));
+  ok('UI uses shared React auth gate and Core auth client',
+    read('src/app.tsx').includes('@appbase/ui-react/auth.js')
+    && read('src/auth.ts').includes('@appbase/core/auth.js'));
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1'));
 
   const auth = require('../api/auth');
