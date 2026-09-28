@@ -165,21 +165,27 @@ function activityFromCard(lesson,card,index,used){
 }
 
 function buildActivities(model){
-  const used=new Set(),activities=[],lessonActivities=new Map(),byDay=new Map();
+  const used=new Set(),activities=[],lessonActivities=new Map(),lessonCompletion=new Map(),byDay=new Map();
   for(const lesson of model.lessons){
-    const ids=[],theoryId=uniqId('theory.'+lesson.id,used);
+    const ids=[],cardIds=[],theoryId=uniqId('theory.'+lesson.id,used);
     activities.push({id:theoryId,revision:1,type:'theory',tags:[lesson.id],revisionProgress:'preserve',lexiconRefs:[],
       body:{ru:text(lesson.theory||'')},format:'html',title:{ru:text(lesson.t||lesson.id)}});
     ids.push(theoryId);
-    for(let i=0;i<(lesson.cards||[]).length;i++){const a=activityFromCard(lesson,lesson.cards[i],i,used);activities.push(a);ids.push(a.id);}
+    for(let i=0;i<(lesson.cards||[]).length;i++){
+      const a=activityFromCard(lesson,lesson.cards[i],i,used);
+      activities.push(a);ids.push(a.id);cardIds.push(a.id);
+    }
     const pattern=model.patterns&&model.patterns[lesson.id];
     if(pattern&&Array.isArray(pattern.items)&&pattern.items.length){
       const pid=uniqId('pattern.'+lesson.id,used);
       activities.push({id:pid,revision:1,type:'pattern-drill',tags:[lesson.id],revisionProgress:'preserve',lexiconRefs:[],
-        pattern:{ru:text(pattern.p||lesson.t||lesson.id)},items:pattern.items.map((pair,i)=>({
+        pattern:{ru:text(pattern.p||lesson.t||lesson.id)},modes:['drill','listening','speaking'],items:pattern.items.map((pair,i)=>({
           id:pid+'.item-'+(i+1),prompt:{ru:text(pair[0])},answer:answerSpec(pair[1])
         }))});
       ids.push(pid);
+      lessonCompletion.set(lesson.id,{cardIds,patternId:pid});
+    }else{
+      lessonCompletion.set(lesson.id,{cardIds,patternId:null});
     }
     lessonActivities.set(lesson.id,ids);
   }
@@ -200,7 +206,7 @@ function buildActivities(model){
       topic:{ru:text(talk.title||talk.topic||talk.id)},promptTemplate:text(talk.topic||''),focus:(talk.focus||[]).map(text)});
     if(Number.isInteger(talk.day)){if(!byDay.has(talk.day))byDay.set(talk.day,[]);byDay.get(talk.day).push(id);}
   }
-  return {activities,lessonActivities,byDay};
+  return {activities,lessonActivities,lessonCompletion,byDay};
 }
 
 function normalizePhrase(value){
@@ -330,17 +336,34 @@ export function buildCourseSet(model,lexicon=null){
     activities.push({id:planId,revision:1,type:'theory',tags:['plan'],revisionProgress:'preserve',lexiconRefs:[],
       title:{ru:'День '+day},body:{ru:text(plan.g||'')+examples},format:'text'});
     activityIds.push(planId);
-    for(const lessonId of plan.ids||[])activityIds.push(...(built.lessonActivities.get(lessonId)||[]));
+    const completionRequirements=[];
+    for(const lessonId of plan.ids||[]){
+      activityIds.push(...(built.lessonActivities.get(lessonId)||[]));
+      const completion=built.lessonCompletion.get(lessonId);
+      if(completion&&completion.cardIds.length){
+        completionRequirements.push({kind:'activity-seen',activityIds:completion.cardIds});
+      }
+      if(completion&&completion.patternId){
+        completionRequirements.push({
+          kind:'practice-started',
+          activityId:completion.patternId,
+          modes:['drill','listening','speaking']
+        });
+      }
+    }
     activityIds.push(...(built.byDay.get(day)||[]));
     if(!(plan.ids||[]).length){
       const rid='review.day-'+day;
       activities.push({id:rid,revision:1,type:'review',tags:['review'],revisionProgress:'preserve',lexiconRefs:[],
         source:{activityIds:[],tags:[],dueOnly:true}});
       activityIds.push(rid);
+      completionRequirements.push({kind:'manual'});
     }
     const id='day-'+day;
     nodes.push({id,kind:(plan.ids||[]).length?'lesson':'review',title:{ru:'День '+day},dayIndex:day,order:i,
-      prerequisites:previous?[previous]:[],activityIds,optional:false});
+      prerequisites:previous?[previous]:[],activityIds,
+      completion:{mode:'all',requirements:completionRequirements},
+      optional:false});
     previous=id;
   }
   return {
