@@ -6,6 +6,7 @@ const Content = require('./content-store');
 const Lexicon = require('./lexicon-store');
 const Release = require('./content-release');
 const BulkLexicon = require('./lexicon-bulk');
+const IpaLexicon = require('./lexicon-ipa');
 
 const LEGACY_SHA = '011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_URL = 'https://raw.githubusercontent.com/edkiy73/English/' + LEGACY_SHA + '/index.html';
@@ -166,7 +167,7 @@ function lexiconStats(lexicon){
   };
 }
 
-function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, loadImporter=defaultImporter} = {}){
+function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, loadImporter=defaultImporter, loadIpaSource=IpaLexicon.loadPinnedSource} = {}){
   return async function handleContentAdmin(action, body, res){
     if(!String(action || '').startsWith('content_')) return false;
 
@@ -451,6 +452,51 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!roadmapId || !nodeId || !ids.length || ids.some(id=>!id)){ fail(res,400,'bad_activity_order'); return true; }
         const result=await Content.reorderDraftActivities(setId,roadmapId,nodeId,ids);
         send(res,200,{ok:true,node:result.node,draftRevision:result.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_lexicon_ipa_preview'){
+        const setId=requestedSetId(body);
+        const [course,lexicon,Coverage]=await Promise.all([
+          Content.getDraft(setId),
+          Lexicon.getDraft(),
+          loadCoverage()
+        ]);
+        if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const audit=Coverage.auditLexicalCoverage(course,lexicon);
+        const source=await loadIpaSource();
+        const plan=IpaLexicon.planIpaEnrichment(lexicon,audit,source);
+        send(res,200,{ok:true,setId,source:IpaLexicon.SOURCE,summary:plan.summary,
+          coverage:Coverage.compactCoverageReport(audit),
+          changes:plan.changes.slice(0,100).map(change=>({
+            id:change.id,
+            lemma:change.entry.lemma,
+            expectedRevision:change.expectedRevision
+          }))
+        });
+        return true;
+      }
+
+      if(action === 'content_lexicon_ipa_apply'){
+        const setId=requestedSetId(body);
+        const [course,lexicon,Coverage]=await Promise.all([
+          Content.getDraft(setId),
+          Lexicon.getDraft(),
+          loadCoverage()
+        ]);
+        if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const audit=Coverage.auditLexicalCoverage(course,lexicon);
+        const source=await loadIpaSource();
+        const plan=IpaLexicon.planIpaEnrichment(lexicon,audit,source);
+        if(plan.changes.length){
+          await Lexicon.upsertDraftLexemes(plan.changes);
+        }
+        const nextLexicon=await Lexicon.getDraft();
+        const nextAudit=Coverage.auditLexicalCoverage(course,nextLexicon);
+        send(res,200,{ok:true,setId,source:IpaLexicon.SOURCE,applied:plan.changes.length,
+          summary:plan.summary,
+          coverage:Coverage.compactCoverageReport(nextAudit)
+        });
         return true;
       }
 
