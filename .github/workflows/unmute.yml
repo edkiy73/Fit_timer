@@ -41,5 +41,8 @@ jobs:
           npm ci --no-audit --no-fund
           npx playwright-core install --with-deps chromium
 
+      - name: Проверка реального legacy English
+        run: npm run import:legacy -- --dry-run
+
       - name: Сборка и e2e
         run: npm run test:browser
