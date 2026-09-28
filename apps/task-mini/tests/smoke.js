@@ -1,4 +1,5 @@
 process.env.ALLOW_MEMORY_STORE = '1';
+process.env.ADMIN_KEY = 'task-mini-admin';
 const fs = require('fs');
 
 let bad = 0;
@@ -41,6 +42,11 @@ function fakeRes(){
   const authRes = fakeRes();
   await auth({method:'POST', headers:{}, body:{action:'unknown'}}, authRes);
   ok('generic auth handler runs for second app', authRes.statusCode >= 400);
+
+  const admin = require('../api/admin');
+  const adminRes = fakeRes();
+  await admin({method:'POST', headers:{'x-admin-key':'wrong'}, body:{action:'users_list'}}, adminRes);
+  ok('shared admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
   const health = require('../api/health');
   const healthRes = fakeRes();
