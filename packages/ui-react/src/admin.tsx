@@ -232,11 +232,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
         <section className="ab-admin-panel"><h2>{copy.migration}</h2><JsonCard value={data.status || data} /></section>
       )}
 
-      {extraSections.map(section => tab === section.id ? (
+      {extraSections.map(section => tab === section.id && key ? (
         <section key={section.id} className="ab-admin-stack">
-          {!key
-            ? <p className="ab-admin-empty">{copy.noKey}</p>
-            : section.render({client, adminKey:key, locale})}
+          {section.render({client, adminKey:key, locale})}
         </section>
       ) : null)}
     </main>
