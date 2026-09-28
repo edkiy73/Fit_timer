@@ -392,11 +392,45 @@ function addPhraseLexeme(entries,used,en,ru){
     senses:[{id:'sense-1',partOfSpeech:'phrase',translations:{ru:[translation]},tags:[]}],examples:[],deprecated:false});
 }
 
+const LEGACY_VERB_FALLBACK_RU={
+  become:['становиться'],
+  feel:['чувствовать'],
+  win:['выигрывать','побеждать']
+};
+
+function addMissingIrregularVerbLexemes(model,entries,used){
+  const byLemma=new Set(entries.map(entry=>normalizePhrase(entry.lemma)));
+  for(const row of model.verbs||[]){
+    const base=text(row&&row[0]).trim();
+    const key=normalizePhrase(base);
+    if(!base || byLemma.has(key))continue;
+    const translations=LEGACY_VERB_FALLBACK_RU[key];
+    if(!translations)throw new Error('missing_verb_translation:'+base);
+    entries.push({
+      id:uniqId('lex.'+slug(base),used),
+      revision:1,
+      language:'en',
+      lemma:base,
+      forms:[{text:base,kind:'lemma'}],
+      senses:[{
+        id:'verb',
+        partOfSpeech:'verb',
+        translations:{ru:translations},
+        tags:['needs-review']
+      }],
+      examples:[],
+      deprecated:false
+    });
+    byLemma.add(key);
+  }
+}
+
 export function buildLexicon(model){
   const used=new Set(),entries=[];
   for(const [word,value] of Object.entries(model.dictionary||{}))entries.push(lexemeFromDict(word,value,used));
   for(const group of model.phrases||[])for(const pair of group.items||[])addPhraseLexeme(entries,used,pair[0],pair[1]);
   for(const [en,ru] of Object.entries(model.phraseTranslations||{}))addPhraseLexeme(entries,used,en,ru);
+  addMissingIrregularVerbLexemes(model,entries,used);
   return enrichIrregularVerbForms(model,{schemaVersion:1,revision:1,entries});
 }
 
