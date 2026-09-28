@@ -286,7 +286,18 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
                 </div>
                 <label>
                   <span>Часть речи</span>
-                  <select value={sense.partOfSpeech || ''} onChange={event=>updateSense(index,{partOfSpeech:event.target.value || undefined})}>
+                  <select value={sense.partOfSpeech || ''} onChange={event=>{
+                    const value=event.target.value;
+                    if(value) updateSense(index,{partOfSpeech:value});
+                    else setEditor(current=>{
+                      if(!current)return current;
+                      const senses=current.senses.slice();
+                      const next={...senses[index]!};
+                      delete next.partOfSpeech;
+                      senses[index]=next;
+                      return {...current,senses};
+                    });
+                  }}>
                     <option value="">Не указана</option>
                     <option value="noun">noun</option>
                     <option value="verb">verb</option>
