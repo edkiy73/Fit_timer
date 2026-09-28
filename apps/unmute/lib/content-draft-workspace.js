@@ -13,6 +13,7 @@ function splitSet(set){
   delete meta.activities;
   delete meta.roadmaps;
   delete meta.draftUpdatedAt;
+  delete meta.draftRevision;
   delete meta.publishedAt;
 
   const activityRefs={};
