@@ -42,7 +42,7 @@
 | Фаза 3.4e-1 — practice SRS | ✅ в `main` (#219) | drill/speaking/listening intervals + box/due parity |
 | Фаза 3.4e-2 — practice review queue | ✅ в `main` (#220) | caps 3/2/2, oldest-due-first, deterministic waiting summary |
 | Фаза 3.4f — course progress | ✅ в `main` (#221) | explicit practice modes + node completion policy + streak/current roadmap day |
-| Фаза 3.4g — learner progress + sync | 🟡 PR в работе | per-set course/stats docs + global personal lexicon + conflict-safe merge + review summary |
+| Фаза 3.4g — learner progress + sync | 🟡 PR в работе | per-set course/stats docs + global personal lexicon + conflict-safe merge + review summary + synced progress actions |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
