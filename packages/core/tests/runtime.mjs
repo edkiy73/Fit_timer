@@ -12,6 +12,7 @@ const {createPreferenceStore, limitCandidates} = await import('../dist/core/noti
 const {createSpeech} = await import('../dist/core/speech.js');
 const {createCapabilities, CAPABILITY_NAMES} = await import('../dist/core/capabilities.js');
 const {themeCssVars} = await import('../dist/core/ui.js');
+const {createAuthClient, normalizeEmail, validEmail} = await import('../dist/core/auth.js');
 
 const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
 const profileDraft = createProfileDraft('Demo');
@@ -132,6 +133,77 @@ ok('ESM capabilities default missing/non-boolean switches to off',
 const themeVars = themeCssVars({background:'#000001', card:'#000002', surface:'#000003', accent:'#000004', accentInk:'#000005'});
 ok('ESM UI maps product theme tokens to the shared CSS variable names',
   JSON.stringify(themeVars) === JSON.stringify({bg:'#000001', card:'#000002', surface:'#000003', accent:'#000004', 'accent-ink':'#000005'}));
+
+
+const authMemory = new Map();
+const authStorage = {
+  getItem: async key => authMemory.has(key) ? authMemory.get(key) : null,
+  setItem: async (key, value) => { authMemory.set(key, value); },
+  removeItem: async key => { authMemory.delete(key); }
+};
+const authCalls = [];
+const authFetch = async (_url, init) => {
+  const body = JSON.parse(init.body);
+  authCalls.push(body);
+  if(body.action === 'send') return {ok:true,status:200,json:async()=>({ok:true,sent:true})};
+  if(body.action === 'verify') return {ok:true,status:200,json:async()=>({
+    ok:true,email:body.email,syncToken:'sync-demo',handle:'@demo',locale:'en',
+    fresh:true,sub:{until:'2099-01-01T00:00:00.000Z'}
+  })};
+  if(body.action === 'status') return {ok:true,status:200,json:async()=>({
+    ok:true,premium:true,sub:{until:'2099-01-01T00:00:00.000Z'}
+  })};
+  if(body.action === 'set_locale') return {ok:true,status:200,json:async()=>({ok:true,locale:body.locale})};
+  if(body.action === 'set_handle') return {ok:true,status:200,json:async()=>({ok:true,handle:body.handle})};
+  if(body.action === 'forget') return {ok:true,status:200,json:async()=>({ok:true,account:true})};
+  return {ok:false,status:400,json:async()=>({error:'unknown_action'})};
+};
+const auth = createAuthClient({
+  endpoint:'/api/auth',
+  storage:authStorage,
+  fetch:authFetch,
+  createDeviceId:()=>'device-demo'
+});
+ok('ESM auth normalizes and validates email without product assumptions',
+  normalizeEmail('  Demo@Example.COM ') === 'demo@example.com'
+  && validEmail('demo@example.com') && !validEmail('broken@'));
+await auth.sendCode(' Demo@Example.COM ', 'en');
+ok('ESM auth sendCode uses normalized address and locale',
+  authCalls[0].action === 'send' && authCalls[0].email === 'demo@example.com' && authCalls[0].locale === 'en');
+const verified = await auth.verifyCode({
+  email:'Demo@Example.COM',
+  code:'12 34 56',
+  locale:'en',
+  platform:'web',
+  extra:{campaign:'demo'}
+});
+ok('ESM auth verify creates device once and persists generic session',
+  verified.email === 'demo@example.com' && verified.deviceId === 'device-demo'
+  && verified.syncToken === 'sync-demo' && verified.handle === '@demo' && verified.premium === true
+  && authCalls[1].code === '123456' && authCalls[1].campaign === 'demo');
+const restored = await auth.restoreSession();
+ok('ESM auth restores persisted session',
+  restored && restored.email === 'demo@example.com' && restored.deviceId === 'device-demo');
+const detachedRestore = auth.restoreSession;
+const validated = await detachedRestore(true);
+ok('ESM auth validates restored session without method binding',
+  validated && validated.premium === true && authCalls.some(call => call.action === 'status'));
+await auth.setLocale('ru');
+await auth.claimHandle({handle:'@next', extra:{source:'demo'}});
+const changed = await auth.getSession();
+ok('ESM auth updates locale and handle in persisted session',
+  changed && changed.locale === 'ru' && changed.handle === '@next'
+  && authCalls.some(call => call.action === 'set_handle' && call.source === 'demo'));
+const fields = await auth.authFields();
+ok('ESM auth exposes sync credentials without product fields',
+  fields && fields.email === 'demo@example.com' && fields.deviceId === 'device-demo' && fields.syncToken === 'sync-demo');
+await auth.logout();
+ok('ESM auth logout clears session but preserves stable device identity',
+  (await auth.getSession()) === null && (await auth.getOrCreateDeviceId()) === 'device-demo');
+await auth.verifyCode({email:'demo@example.com', code:'123456'});
+await auth.forget('all');
+ok('ESM auth full forget removes local session after server success',
+  (await auth.getSession()) === null && authCalls.some(call => call.action === 'forget' && call.scope === 'all'));
 
 console.log(bad ? `\nESM Core failures: ${bad}` : '\nESM Core behavior is clean');
 process.exit(bad ? 1 : 0);
