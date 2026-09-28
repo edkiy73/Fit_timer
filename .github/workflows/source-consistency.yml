@@ -8,6 +8,7 @@ on:
       - 'packages/core/**'
       - 'apps/**'
       - 'scripts/**'
+      - 'templates/**'
       - 'package.json'
       - '.github/workflows/source-consistency.yml'
       - '!**/*.md'
