@@ -167,7 +167,7 @@ async function createActivity(setId,roadmapId,nodeId,activity,validateActivity){
     const roadmap=(pointer.roadmaps||[]).find(item=>item.id===roadmapId);
     if(!roadmap) throw new Error('roadmap_not_found');
     const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
-    const nodeVersion=Math.max(1,+versions[nodeId]||0);
+    const nodeVersion=Math.max(0,+versions[nodeId]||0);
     if(!nodeVersion) throw new Error('node_not_found');
     const currentNode=parseJson(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,nodeVersion)));
     if(!currentNode) throw new Error('node_not_found');
