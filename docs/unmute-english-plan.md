@@ -43,7 +43,8 @@
 | Фаза 3.4e-2 — practice review queue | ✅ в `main` (#220) | caps 3/2/2, oldest-due-first, deterministic waiting summary |
 | Фаза 3.4f — course progress | ✅ в `main` (#221) | explicit practice modes + node completion policy + streak/current roadmap day |
 | Фаза 3.4g — learner progress + sync | ✅ в `main` (#222) | per-set course/stats docs + global personal lexicon + conflict-safe merge + review summary + synced progress actions |
-| Фаза 3.4h — legacy progress migration | 🟡 PR в работе | `eng-trainer-v2` → stable activities/practice/stats/words/manual days; ambiguity report; timezone due correction |
+| Фаза 3.4h — legacy progress migration | ✅ в `main` (#223) | `eng-trainer-v2` → stable activities/practice/stats/words/manual days; ambiguity report; timezone due correction |
+| Фаза 3.5 — frozen legacy parity | 🟡 PR в работе | pinned English snapshot; real legacy functions vs new answer/SRS/queue engine in CI |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -229,28 +230,25 @@ PlanDay { day, lessonIds[], goal, examples[] }
 DictEntry { word, ru }
 ```
 
-- Id уроков и индексы карточек сохраняются — от них зависит импорт старого прогресса (`srs["pres-simple#3"]`).
+- Legacy `lessonId#index` используется только как входной ключ миграции. Runtime-прогресс хранится по новым стабильным activity IDs; старый индекс после импорта не является identity.
 - Теория рендерится через санитайзер с белым списком тегов.
 - Контентные тесты фиксируют объём (32 / 452 / 30 / 4 / 5 / 40 / 577) и целостность ссылок.
 - Доступ задаётся полем `Unit.access`, а не в коде экранов.
 
 ### 3.4. Прогресс и синхронизация
 
-Документы scope `account`, `free:true` (G4):
+Документы scope `account`, `free:true` (G4), подробно — `docs/unmute-progress-model.md`:
 
 | Документ | Содержимое | Слияние |
 |---|---|---|
-| `progress:cards` | повторения карточек (`srs`) | по элементу, побеждает более поздний `at` |
-| `progress:drills` | паттерны, аудирование, лексика, скорость | по элементу |
-| `progress:words` | личный словарь | по элементу |
-| `progress:journal` | день, серия, пауза, счётчики, ошибки, диалоги, ИИ-темы | серия и счётчики — максимум, остальное по `at` |
-| `settings` | тема, перевод, голос, напоминания | по полю |
+| `progress:course:<setId>` | seen activities, card SRS, drill/listening/speaking SRS, manual roadmap days, learning days, metrics | по стабильной сущности, newer `at`; tombstones |
+| `progress:stats:<setId>` | per-device + activity answer buckets | по bucket; агрегирование без потери офлайн-ответов другого устройства |
+| `progress:words` | общий личный словарь по `lexemeId+senseId` | по lexeme+sense; tombstones |
+| `settings` | тема, язык и будущие настройки | документ настроек |
 
-Свой слой над `sync-client.ts`: локальная копия с ревизией, отметка «изменено», отправка при появлении сети, при конфликте — pull, слияние по элементам, повторная отправка. Размеры — десятки КБ при лимите 3 МБ на документ.
+Локальная копия и конфликтный pull → merge → push уже работают через Core `document-sync.ts`. Без аккаунта состояние остаётся на устройстве; при первом входе локальные документы сливаются с серверными.
 
-Без аккаунта прогресс живёт только на устройстве. При первом входе локальный прогресс сливается с серверным, а не затирается.
-
-Импорт старого прогресса: экран «Перенести из English Trainer» принимает файл экспорта `eng-trainer-v2`, валидирует Zod и раскладывает по документам.
+Импорт `eng-trainer-v2` уже переносит legacy IDs в стабильные activity/lexicon refs, исправляет старый timezone shift due-дней и отдельно сообщает неоднозначные слова/ссылки вместо угадывания.
 
 ---
 
