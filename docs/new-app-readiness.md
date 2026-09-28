@@ -10,8 +10,10 @@ The clean React starter is the default starting point for every new app:
 - current monorepo Core aliases (no per-app Core versions);
 - React + TypeScript + Vite + React Router + TanStack Query + Zod + React Aria;
 - product config and shared theme tokens;
-- email OTP auth, persisted session, logout and account-deletion action;
-- generic document-sync endpoint **and client transport**;
+- email OTP auth, persisted session, logout and account-deletion action; the app works **without an account** (`AuthProvider` + `SignInForm` on `#/account`), handle step per product (`config/product.json → auth.askHandle`);
+- local-first document sync (`createDocumentSync` + `startAutoSync`): data is written on the device, synced after sign-in, merged on first sign-in; the starter syncs a free account document `settings` (the language choice);
+- purchases: account rights (`hasEntitlement`), product SKU catalog (`config/product.json → products`), `api/billing.js` with the memory-store-only test provider; Admin grants/revokes purchases and Premium and shows payments;
+- interface language: all copy through `t()` with RU/EN dictionaries in `src/i18n`; languages offered are `config/product.json → i18n.locales` (one locale = no switch, add a second to turn the switch on);
 - Health endpoint;
 - protected shared Admin at `#/admin`;
 - Admin Health, analytics overview, accounts, client errors and storage status;
@@ -30,15 +32,17 @@ These are not starter blockers and should be added only when the product enables
 - domain models, repositories, sync registry entries and merge policy;
 - product analytics event taxonomy beyond `install`;
 - AI actions/prompts/schemas and AI Admin pages;
-- Premium/billing/store products;
+- real payment providers (adapters in `api/billing.js`) and the product's SKUs;
 - push notification categories and scheduling policy;
 - Capacitor Android/iOS shells and native capabilities;
 - product-specific Admin sections;
 - privacy policy, terms, store metadata and deep/app links.
 
-## One decision to make when App2 is created
+## Decisions per app
 
-The starter is generated with one UI locale (`ru` or `en`). If App2 must support live RU/EN switching from day one, add the app-level i18n layer before building many screens. Auth already supports RU/EN, but product copy is intentionally not forced into a generic Core translation system.
+- Languages: the generator's locale is the only one offered; add the other to `i18n.locales` to enable switching.
+- Handle at sign-in: `auth.askHandle` (default `true`).
+- What syncs and whether it is free: `lib/app-sync-schema.js` (free data = account documents with `free:true`).
 
 ## Definition of ready to start App2
 

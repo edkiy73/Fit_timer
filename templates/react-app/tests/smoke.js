@@ -16,7 +16,8 @@ function fakeRes(){
   ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1'));
 
   const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');
-  ok('shared auth UI is wired', app.includes('@appbase/ui-react/auth.js'));
+  ok('shared auth UI is wired (optional sign-in)', app.includes('@appbase/ui-react/auth.js') && app.includes('AuthProvider'));
+  ok('interface language is wired', app.includes('@appbase/ui-react/i18n.js'));
 
   const auth = require('../api/auth');
   const res = fakeRes();
@@ -27,6 +28,13 @@ function fakeRes(){
   const adminRes = fakeRes();
   await admin({method:'POST',headers:{'x-admin-key':'wrong'},body:{action:'users_list'}},adminRes);
   ok('generic admin endpoint is mounted and protected', adminRes.statusCode === 403);
+
+  const billing = require('../api/billing');
+  const billingRes = fakeRes();
+  await billing({method:'POST',headers:{},body:{action:'providers'}},billingRes);
+  ok('billing endpoint is mounted (test provider only on the memory store)',
+    JSON.parse(billingRes.body || '{}').providers.join() === 'test');
+  ok('synced settings are a free account document', registry.isFree('account','settings'));
 
   const health = require('../api/health');
   const healthRes = fakeRes();

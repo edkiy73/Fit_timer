@@ -1,6 +1,6 @@
 # UnMute: English for Expats — план слияния с AppBase Core
 
-Статус: **согласован по пп. 1–4 §2** (2026-09-28). Этап 0: сделаны 0.1–0.5 (PR #192), 0.7 (PR #193) и 0.8 (каркас оплаты); следующий шаг — **0.9**. Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
+Статус: **согласован по пп. 1–4 §2** (2026-09-28). **Этап 0 завершён** (0.1–0.5 PR #192, 0.7 PR #193, 0.8 PR #194, 0.9–0.10 PR после #194); следующий шаг — **фаза 1: создать `apps/unmute`**. Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
 
 Продукт — первое настоящее «App2» из [ADR по стеку](./appbase-stack-ci-strategy.md). Источник логики — репозиторий `edkiy73/English` (семейное приложение «English Trainer», один `index.html` ~4,6 тыс. строк, сборка `2026-09-04.17`; с тех пор не менялся). Интерфейс оттуда **не переносится**: берём контент и алгоритмы, интерфейс делаем с нуля.
 
@@ -18,10 +18,11 @@
 | 0.3–0.5 Локальная синхронизация, слияние, бесплатные документы | ✅ в `main` (PR #192) | `packages/core/src/core/document-sync.ts`, `packages/core/server/sync-core.js` (поле `base`), `apps/task-mini/src/tasks/*`, `apps/task-mini/lib/app-sync-schema.js` |
 | 0.6 Префикс ключей | ❌ отменён: своя база и домен у каждого приложения | — |
 | 0.7 Покупки навсегда + выдача в админке | ✅ PR #193 | `packages/core/server/entitlements.js`, `packages/core/server/admin/accounts.js` (`user_owned`, `products_list`), `packages/core/src/core/auth.ts` (`owned`, `hasEntitlement`), `packages/ui-react/src/admin.tsx` (форма доступа), `apps/task-mini` (SKU `export`) |
-| 0.8 Каркас оплаты | ✅ PR после #193 | `packages/core/server/billing.js` (`applyBillingEvent`, `createBillingHandler`, `createTestBillingAdapter`, `billing_log`), `packages/core/src/core/billing.ts` (`createBillingClient`), `packages/ui-react/src/admin.tsx` (вкладка «Платежи»), `apps/task-mini/api/billing.js`, кнопка «Купить экспорт» |
-| **0.9 i18n в стартере и Task Mini** | ⏭ **следующий** | см. §0.4 |
-| 0.10 Стартер получает всё из этапа 0 | ждёт | `templates/react-app`, `scripts/create-app.mjs` |
-| Фазы 1–10 UnMute | ждут этапа 0 | §5 |
+| 0.8 Каркас оплаты | ✅ PR #194 | `packages/core/server/billing.js` (`applyBillingEvent`, `createBillingHandler`, `createTestBillingAdapter`, `billing_log`), `packages/core/src/core/billing.ts` (`createBillingClient`), `packages/ui-react/src/admin.tsx` (вкладка «Платежи»), `apps/task-mini/api/billing.js`, кнопка «Купить экспорт» |
+| 0.9 Язык интерфейса (переключение — по желанию приложения) | ✅ | `packages/ui-react/src/i18n.tsx` (`I18nProvider`, `useI18n`, `LanguagePicker`, `missingKeys`); языки — `config/product.json → i18n`; Task Mini RU/EN |
+| 0.10 Стартер получает всё из этапа 0 | ✅ | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
+| **Фаза 1 — `apps/unmute`** | ⏭ **следующий** | см. §0.4 |
+| Фазы 2–10 UnMute | ждут | §5 |
 
 `apps/unmute` ещё **не создан**. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
 
@@ -51,16 +52,24 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 
 Тестовые серверы работают на памяти (`ALLOW_MEMORY_STORE=1`): `/api/auth` отдаёт `devCode`, поэтому вход по почте проверяется без почты. Пример — `apps/task-mini/tests/e2e.mjs` (сборка + `api/*` + два браузерных контекста + админка).
 
-### 0.4. Следующий шаг: 0.9 — язык интерфейса приложения (RU/EN)
+### 0.4. Следующий шаг: фаза 1 — создать `apps/unmute`
 
-Цель: каждое новое приложение с первого экрана пишет копию через `t(key)` и умеет переключать язык, чтобы UnMute потом добавил EN/UA без переделки (G9). FitTimer не трогаем — у него своя i18n.
+Всё общее уже в шаблоне, поэтому фаза 1 — генерация и настройка, без новых механизмов.
 
-- Где: механизм — в `packages/ui-react` (React-контекст) или в самом приложении; **в Core не класть** словари и тексты продуктов. Предложение: `packages/ui-react/src/i18n.tsx` — `I18nProvider({dictionaries, locale})`, `useT()`, `t(key, vars)`; словари лежат в приложении (`src/i18n/ru.ts`, `en.ts`), отсутствующий ключ в тестах — ошибка.
-- Язык: `system | ru | en`, по умолчанию `system` (язык браузера → ru/en); выбор сохраняется на устройстве и отправляется в аккаунт через существующий `auth.setLocale()`; `SignInForm`/`AdminPanel` получают тот же `locale`.
-- Task Mini: все строки через `t()`, переключатель RU/EN на `#/account`; unit-тест «словари совпадают по ключам»; e2e переключает язык и проверяет пару строк.
-- Проверки: как в §0.3.
+1. `npm run app:create -- unmute "UnMute: English for Expats" app.unmute.english ru`.
+2. `apps/unmute/config/product.json`:
+   - короткое имя «UnMute» (поле для сторов добавить, когда появятся оболочки — фаза 9);
+   - `auth.askHandle: false` (решение владельца: ник не спрашивать только в UnMute);
+   - `i18n: {locales: ["ru"], default: "ru"}` — второй язык интерфейса позже одной строкой;
+   - `features`: `premium: true, ai: true, notifications: true, voice: true`, остальное `false` (§3.1);
+   - `products`: пока `[]`; SKU пакетов и Plus добавляются в фазе 5 (§4.2).
+3. Бренд: временные токены светлой/тёмной темы в `brand.ui` (дизайн — фаза 4).
+4. CI: `.github/workflows/unmute.yml` по образцу `task-mini.yml` (пути `apps/unmute/**`, `packages/core/**`, `packages/ui-react/**`; шаги `npm ci`, `npm run check`, `npm run test:browser`). Корневой раннер подхватит `scripts.check` сам.
+5. Проверки §0.3 + `npm --prefix apps/unmute run check` и `node apps/unmute/tests/e2e.mjs` после сборки.
+6. **Нужно от владельца** (агент сам сделать не может, если нет доступа к Vercel/Upstash): Vercel-проект `unmute` (Root Directory `apps/unmute`, «Include files outside the root directory» включено), своя база Upstash (и при желании Supabase, `APPBASE_STORE`), домен, переменные почты и `ADMIN_KEY` — по `apps/fittimer/docs/setup-vercel.md`. Если у агента есть Vercel-коннектор, проект можно создать им и попросить владельца только о секретах.
+7. Готово, когда: превью на Vercel открывается без аккаунта, вход по почте работает, `#/admin` защищена, CI зелёный.
 
-После 0.9 — **0.10**: перенести в `templates/react-app` всё из этапа 0 (необязательный вход, `document-sync` с бесплатным документом аккаунта, права и `billing` с тестовым провайдером, i18n) и дополнить `scripts/test-react-app-template.mjs` проверками этих частей. Затем фаза 1 (генерация `apps/unmute`).
+Дальше — фаза 3 (перенос контента и движка, §5), её можно начинать параллельно с настройкой Vercel.
 
 ### 0.4a. Как устроена оплата (сделано в 0.8, нужно для фазы 6)
 
@@ -296,12 +305,12 @@ DictEntry { word, ru }
 | 0.6 | ~~Префикс ключей хранилища~~ — **отменено**: у каждого приложения своя база и свой домен (решение владельца, см. G7) | — | — | G7 |
 | 0.7 | ✅ Права аккаунта: `acc.owned` (покупки навсегда) рядом с `acc.sub` (Premium); Core `server/entitlements.js` (`hasPremium`, `hasOwned`, `grantOwned`, `revokeOwned`); `verify`/`status` отдают `owned`; клиент `session.owned` + `hasEntitlement(session, sku)`; `AuthProvider` обновляет права при запуске, `refresh()`; каталог SKU продукта — `config/product.json → products`; админка: действия `user_owned`, `products_list`, на вкладке «Пользователи» — выдача/отзыв покупки и Premium, колонка «Покупки» | Core server + `auth.ts` + ui-react | «Экспорт задач» (SKU `export`) открывается правом, выданным в общей админке; e2e проходит это в браузере | G5 |
 | 0.8 | ✅ Каркас оплаты: адаптер провайдера, вебхук с подписью, идемпотентность, журнал; тестовый провайдер только на памяти (§0.4a) | Core `billing.js`/`billing.ts`, ui-react «Платежи» | «Купить экспорт» → право сразу; повтор вебхука ничего не меняет; возврат забирает; e2e в браузере | G6 (каркас) |
-| 0.9 | Слой i18n приложения `t(key)` + переключение RU/EN в стартере | стартер, Task Mini | Task Mini на двух языках | G9 |
-| 0.10 | Обновить стартер и генератор, чтобы всё выше приходило в новое приложение; CI уже собирает свежий стартер | `templates/react-app`, `scripts/create-app.mjs` | — | — |
+| 0.9 | ✅ Язык интерфейса: `I18nProvider` + `t()` + `LanguagePicker` в ui-react, словари в приложении; языки — `config/product.json → i18n.locales`; один язык = переключателя нет (решение владельца: переключение по желанию каждого приложения); выбор хранится на устройстве, по умолчанию — язык системы | ui-react, Task Mini | Task Mini на RU/EN, e2e переключает язык | G9 |
+| 0.10 | ✅ Шаблон нового приложения получает всё из этапа 0: необязательный вход, `auth.askHandle`, `document-sync` (язык хранится в бесплатном документе `settings`), права и `api/billing.js`, i18n; e2e шаблона на настоящих `api/*` | `templates/react-app`, `scripts/create-app.mjs` | CI генерирует свежее приложение и прогоняет его проверки | — |
 
 Не входит в этап 0 (делается вместе с UnMute, чтобы не строить механизм без реального потребителя): реальные провайдеры оплаты, ИИ-действия, уведомления, вынос нативного аудио-плагина (G8).
 
-Сделано: 0.1–0.5 (PR #192), 0.7 (PR #193), 0.8. Дальше: 0.9 → 0.10. Шаблон `templates/react-app` пока на `AuthGate` (работает без изменений); перевод шаблона на необязательный вход и `document-sync` — в 0.10. FitTimer в этапе 0 не переводится на новые модули (ADR D3) — только остаётся зелёным.
+Этап 0 завершён: 0.1–0.5 (PR #192), 0.7 (PR #193), 0.8 (PR #194), 0.9–0.10. Шаблон `templates/react-app` отдаёт новому приложению всё из этапа 0. FitTimer в этапе 0 не переводится на новые модули (ADR D3) — только остаётся зелёным.
 
 ### Фаза 1 — Генерация приложения и деплой (после этапа 0)
 - `npm run app:create -- unmute "UnMute: English for Expats" app.unmute.english ru`.
@@ -311,7 +320,7 @@ DictEntry { word, ru }
 - Готово: превью открывается, вход по почте работает, `#/admin` защищена, `npm run check` зелёный.
 
 ### Фаза 2 — Вход в UnMute
-- Необязательный вход и отключённый шаг «ник» приходят из этапа 0 (0.1, 0.2); в UnMute — только настройка и место входа (экран «Аккаунт», предложение сохранить прогресс).
+- Необязательный вход и экран `#/account` приходят из шаблона; в UnMute — `auth.askHandle: false` и место предложения войти (сохранить прогресс).
 
 ### Фаза 3 — Контент и движок
 - Скрипт переноса, Zod-схемы, JSON, контентные тесты (§3.3), разметка `Unit.access`.
