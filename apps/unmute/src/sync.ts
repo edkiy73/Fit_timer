@@ -2,6 +2,18 @@ import { createSyncClient } from '@appbase/core/sync-client.js';
 import { createDocumentSync, startAutoSync, type AutoSync, type DocumentSync } from '@appbase/core/document-sync.js';
 import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from './auth';
+import {
+  courseProgressDoc,
+  mergeUnMuteDocument,
+  parseCourseProgress,
+  parseStatsProgress,
+  parseWordsProgress,
+  statsProgressDoc,
+  WORD_PROGRESS_DOC,
+  type CourseProgressDocument,
+  type StatsProgressDocument,
+  type WordsProgressDocument
+} from './progress';
 
 /* Local-first data: documents are written on the device first and sync to the account
    after sign-in. Every synced key must be registered in lib/app-sync-schema.js; data that
@@ -16,8 +28,7 @@ export const appDocs: DocumentSync = createDocumentSync({
   owner: async () => (await authClient.getSession())?.email || null,
   storage: createStorage({dbName:'unmute/kv', storeName:'kv'}),
   storageKey: 'sync.mirror',
-  // Settings are small: the newer whole document wins. Collections use mergeRecordMaps().
-  merge: ({local}) => local
+  merge: ({key,local,remote}) => mergeUnMuteDocument(key,local,remote)
 });
 
 let auto: AutoSync | null = null;
@@ -32,4 +43,29 @@ export function startAppSync(): void {
 /** After sign-in: merge local data into the account right away. */
 export function syncNow(): void {
   void auto?.now();
+}
+
+
+export async function readCourseProgress(setId:string):Promise<CourseProgressDocument>{
+  return parseCourseProgress(await appDocs.read(courseProgressDoc(setId)));
+}
+
+export async function writeCourseProgress(setId:string,doc:CourseProgressDocument):Promise<void>{
+  await appDocs.write(courseProgressDoc(setId),JSON.stringify(doc));
+}
+
+export async function readStatsProgress(setId:string):Promise<StatsProgressDocument>{
+  return parseStatsProgress(await appDocs.read(statsProgressDoc(setId)));
+}
+
+export async function writeStatsProgress(setId:string,doc:StatsProgressDocument):Promise<void>{
+  await appDocs.write(statsProgressDoc(setId),JSON.stringify(doc));
+}
+
+export async function readWordsProgress():Promise<WordsProgressDocument>{
+  return parseWordsProgress(await appDocs.read(WORD_PROGRESS_DOC));
+}
+
+export async function writeWordsProgress(doc:WordsProgressDocument):Promise<void>{
+  await appDocs.write(WORD_PROGRESS_DOC,JSON.stringify(doc));
 }
