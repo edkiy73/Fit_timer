@@ -22,7 +22,8 @@
 | 0.9 Язык интерфейса (переключение — по желанию приложения) | ✅ PR #195 | `packages/ui-react/src/i18n.tsx` (`I18nProvider`, `useI18n`, `LanguagePicker`, `missingKeys`); языки — `config/product.json → i18n`; Task Mini RU/EN |
 | 0.10 Стартер получает всё из этапа 0 | ✅ PR #195 | `templates/react-app` (необязательный вход, `auth.askHandle`, `document-sync` с документом `settings`, `api/billing.js`, `products`, i18n), `scripts/create-app.mjs`, `scripts/test-react-app-template.mjs`, `docs/new-app-readiness.md` |
 | **Фаза 1 — `apps/unmute`** | ✅ инфраструктура готова; production + Redis + mail, регион `sin1` | `apps/unmute` (сгенерирован, `askHandle: false`, RU, флаги §3.1, временные бирюзовые токены), `.github/workflows/unmute.yml`; Vercel-проект `unmute` (`prj_qQFaxRe7iSRRv3XkthR089UAwraO`, Root Directory `apps/unmute`, файлы вне корня включены), домен `unmute99.vercel.app` (`unmute.vercel.app` занят другой командой) |
-| Фаза 3.1 — модель контента | 🟡 PR в работе | `docs/unmute-content-model.md`, `apps/unmute/src/content/*` |
+| Фаза 3.1 — модель контента | ✅ в `main` (PR #198) | `docs/unmute-content-model.md`, `apps/unmute/src/content/*` |
+| Фаза 3.2 — DB content store | 🟡 PR в работе | `apps/unmute/lib/content-store.js`, `api/content.js`, `src/content/client.ts` |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -320,10 +321,11 @@ DictEntry { word, ru }
 ### Фаза 3 — Контент и движок
 - ✅ 3.1 Модель контента зафиксирована в `docs/unmute-content-model.md`: независимые покупаемые Set, у каждого свой roadmap; несколько сетов можно проходить параллельно; глобального уровня пользователя нет.
 - ✅ 3.1 Каркас Zod: `Set → Roadmap → Node → Activity`, стабильные ID, revisions, prerequisites, независимые activity-типы; free preview первого сета = `dayIndex <= 7`, уже изученное остаётся доступно для повторений.
-- 3.2 Одноразовый скрипт переноса legacy `English/index.html` в новый формат + JSON первого сета + content-integrity tests.
-- 3.3 `src/engine/`: проверка ответа, повторения, лимиты, план, серия — чистый TS.
-- 3.4 **Эталонные тесты**: старые функции из `index.html` прогоняются в Node на наборе ответов (верные, сокращения, опечатки, «почти»), новый движок обязан совпасть на 100%.
-- 3.5 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.
+- 3.2 Контент хранится в серверной БД, не внутри приложения: отдельный versioned content-store (`draft → validate → immutable publish revision`), публичный API отдаёт только published; клиент кэширует последнюю revision локально для офлайна. Legacy-importer пишет первый сет `general-foundation` сразу в БД.
+- 3.3 Одноразовый скрипт переноса legacy `English/index.html` в новый формат + публикация первого сета + content-integrity tests.
+- 3.4 `src/engine/`: проверка ответа, повторения, лимиты, план, серия — чистый TS.
+- 3.5 **Эталонные тесты**: старые функции из `index.html` прогоняются в Node на наборе ответов (верные, сокращения, опечатки, «почти»), новый движок обязан совпасть на 100%.
+- 3.6 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.
 
 ### Фаза 4 — Новый интерфейс
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
