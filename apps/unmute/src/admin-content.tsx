@@ -82,22 +82,34 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   return (
     <>
       <article className="ab-admin-panel">
-        <h2>Контент курса</h2>
-        <p className="ab-admin-empty">Источник legacy зафиксирован на commit <code>{status?.source?.sha?.slice(0,12) || '…'}</code>. Импорт всегда идёт сначала в draft.</p>
-        <div className="ab-admin-grid">
-          <div className="ab-admin-card"><span>Release</span><strong>{status?.release ? 'r'+String(status.release.revision ?? 0) : 'не опубликован'}</strong></div>
-          <div className="ab-admin-card"><span>Course draft</span><strong>{cd ? 'r'+String(cd.revision ?? 0)+' · '+String(cd.activities ?? 0)+' activities' : 'нет'}</strong></div>
-          <div className="ab-admin-card"><span>Course published</span><strong>{cp ? 'r'+String(cp.revision ?? 0) : 'нет'}</strong></div>
-          <div className="ab-admin-card"><span>Lexicon draft</span><strong>{ld ? String(ld.entries ?? 0)+' entries' : 'нет'}</strong></div>
-          <div className="ab-admin-card"><span>Lexicon published</span><strong>{lp ? 'r'+String(lp.revision ?? 0) : 'нет'}</strong></div>
-        </div>
-        <div className="ab-admin-row">
-          <button type="button" disabled={busy} onClick={()=>void importLegacy()}>Импортировать legacy в draft</button>
-          <button type="button" className="ab-admin-secondary" disabled={busy || !cd || !ld} onClick={()=>void publish()}>Опубликовать draft</button>
+        <div className="ab-admin-section-head">
+          <div>
+            <h2>Контент курса</h2>
+            <p className="ab-admin-note">Legacy source: <code>{status?.source?.sha?.slice(0,12) || '…'}</code>. Импорт всегда создаёт draft.</p>
+          </div>
           <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void load()}>Обновить</button>
         </div>
-        {message && <p role="status" className="ab-admin-empty">{message}</p>}
-        {report && <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>}
+
+        <div className="ab-admin-status-line">
+          <span><b>Release</b> {status?.release ? 'r'+String(status.release.revision ?? 0) : 'нет'}</span>
+          <span><b>Курс draft</b> {cd ? 'r'+String(cd.revision ?? 0)+' · '+String(cd.activities ?? 0) : 'нет'}</span>
+          <span><b>Курс live</b> {cp ? 'r'+String(cp.revision ?? 0) : 'нет'}</span>
+          <span><b>Словарь draft</b> {ld ? String(ld.entries ?? 0) : 'нет'}</span>
+          <span><b>Словарь live</b> {lp ? 'r'+String(lp.revision ?? 0) : 'нет'}</span>
+        </div>
+
+        <div className="ab-admin-action-row">
+          <button type="button" disabled={busy} onClick={()=>void importLegacy()}>Импортировать legacy</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy || !cd || !ld} onClick={()=>void publish()}>Опубликовать release</button>
+        </div>
+
+        {message && <p role="status" className="ab-admin-feedback">{message}</p>}
+        {report && (
+          <details className="ab-admin-details">
+            <summary>Отчёт последнего импорта</summary>
+            <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
+          </details>
+        )}
       </article>
 
       <article className="ab-admin-panel">
@@ -109,9 +121,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
               <thead><tr><th>Слово</th><th>Значения</th><th>ID</th></tr></thead>
               <tbody>{review.map(item=>(
                 <tr key={item.lexemeId}>
-                  <td><strong>{item.lemma}</strong></td>
-                  <td>{item.senses.map(s=>s.translations.ru?.join(', ') || '—').join(' · ')}</td>
-                  <td><code>{item.lexemeId}</code></td>
+                  <td data-label="Слово"><strong>{item.lemma}</strong></td>
+                  <td data-label="Значения">{item.senses.map(s=>s.translations.ru?.join(', ') || '—').join(' · ')}</td>
+                  <td data-label="ID"><code>{item.lexemeId}</code></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -124,6 +136,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
 export const contentAdminSection: AdminSection = {
   id:'content',
-  label:'Контент',
+  label:'Курс и словарь',
+  group:'Контент',
   render(context){ return <ContentAdmin {...context} />; }
 };

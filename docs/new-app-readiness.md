@@ -16,8 +16,9 @@ The clean React starter is the default starting point for every new app:
 - interface language: all copy through `t()` with RU/EN dictionaries in `src/i18n`; languages offered are `config/product.json → i18n.locales` (one locale = no switch, add a second to turn the switch on);
 - Health endpoint;
 - protected shared Admin at `#/admin`;
+- shared Admin shell follows the mature FitTimer workbench pattern: desktop sidebar with grouped navigation, mobile drawer, sticky page header, compact cards/tables/forms;
 - Admin Health, analytics overview, accounts, client errors and storage status;
-- product-specific Admin extension slots;
+- product-specific Admin extension slots can choose their sidebar group;
 - install analytics and global client-error reporting;
 - fatal React error boundary with a usable reload screen;
 - Vercel config;
