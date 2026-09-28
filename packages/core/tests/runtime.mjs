@@ -13,6 +13,7 @@ const {createSpeech} = await import('../dist/core/speech.js');
 const {createCapabilities, CAPABILITY_NAMES} = await import('../dist/core/capabilities.js');
 const {themeCssVars} = await import('../dist/core/ui.js');
 const {createAuthClient, normalizeEmail, validEmail} = await import('../dist/core/auth.js');
+const {createAdminClient} = await import('../dist/core/admin.js');
 
 const accountDraft = createAccount(new Date('2026-01-02T03:04:05.000Z'));
 const profileDraft = createProfileDraft('Demo');
@@ -204,6 +205,28 @@ await auth.verifyCode({email:'demo@example.com', code:'123456'});
 await auth.forget('all');
 ok('ESM auth full forget removes local session after server success',
   (await auth.getSession()) === null && authCalls.some(call => call.action === 'forget' && call.scope === 'all'));
+
+
+const adminCalls = [];
+const admin = createAdminClient({
+  endpoint:'/api/admin',
+  healthEndpoint:'/api/health',
+  fetch:async (url, init={}) => {
+    adminCalls.push({url, init});
+    if(url === '/api/health'){
+      return {ok:false,status:503,json:async()=>({ok:false,status:'error',warnings:['storage']})};
+    }
+    return {ok:true,status:200,json:async()=>({ok:true,users:[]})};
+  }
+});
+const degradedHealth = await admin.health();
+ok('ESM admin client preserves degraded Health payloads returned with 503',
+  degradedHealth.status === 'error' && degradedHealth.warnings[0] === 'storage');
+const adminUsers = await admin.action('a key/with spaces', 'users_list');
+ok('ESM admin client sends protected actions with encoded key',
+  Array.isArray(adminUsers.users)
+  && adminCalls[1].init.headers['X-Admin-Key'] === encodeURIComponent('a key/with spaces')
+  && JSON.parse(adminCalls[1].init.body).action === 'users_list');
 
 console.log(bad ? `\nESM Core failures: ${bad}` : '\nESM Core behavior is clean');
 process.exit(bad ? 1 : 0);
