@@ -36,6 +36,9 @@ function fakeRes(){
   ok('UI uses shared React auth gate and Core auth client',
     read('src/app.tsx').includes('@appbase/ui-react/auth.js')
     && read('src/auth.ts').includes('@appbase/core/auth.js'));
+  ok('UI uses shared React admin panel and Core admin client',
+    read('src/app.tsx').includes('@appbase/ui-react/admin.js')
+    && read('src/admin.ts').includes('@appbase/core/admin.js'));
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1'));
 
   const auth = require('../api/auth');
