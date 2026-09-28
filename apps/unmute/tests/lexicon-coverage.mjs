@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { auditLexicalCoverage, buildCourseCorpus } from '../lib/lexicon-coverage.mjs';
 
 const course={
+  roadmaps:[{id:'main',nodes:[{id:'day-1',activityIds:['a1','a2']}]}],
   activities:[
     {
       id:'a1',type:'theory',body:{ru:'<p>I worked from home. I work online.</p>'},
@@ -10,6 +11,9 @@ const course={
     {
       id:'a2',type:'dialogue',scene:{ru:'Разговор'},lexiconRefs:[],
       lines:[{id:'l1',partner:{ru:'How are you?'},task:{ru:'Ответь'},answer:{accepted:['I am good.']},displayAnswer:'I am good.'}]
+    },
+    {
+      id:'orphan',type:'theory',body:{ru:'Unreachable phantom vocabulary.'},lexiconRefs:[]
     }
   ]
 };
@@ -42,6 +46,7 @@ const corpus=buildCourseCorpus(course);
 assert.ok(corpus.uniqueSurfaces>=8);
 assert.ok(corpus.surfaces.some(item=>item.surface==='worked'));
 assert.ok(corpus.surfaces.some(item=>item.surface==='online'));
+assert.ok(!corpus.surfaces.some(item=>item.surface==='phantom'));
 
 const audit=auditLexicalCoverage(course,lexicon);
 assert.ok(audit.resolvedSurfaces>=3);
