@@ -1,4 +1,5 @@
 process.env.ALLOW_MEMORY_STORE = '1';
+process.env.ADMIN_KEY = 'starter-admin-key';
 const fs = require('fs');
 let bad = 0;
 const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : ' FAIL ') + name); };
@@ -21,6 +22,11 @@ function fakeRes(){
   const res = fakeRes();
   await auth({method:'POST',headers:{},body:{action:'unknown'}},res);
   ok('generic auth endpoint is mounted', res.statusCode >= 400);
+
+  const admin = require('../api/admin');
+  const adminRes = fakeRes();
+  await admin({method:'POST',headers:{'x-admin-key':'wrong'},body:{action:'users_list'}},adminRes);
+  ok('generic admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
   const health = require('../api/health');
   const healthRes = fakeRes();
