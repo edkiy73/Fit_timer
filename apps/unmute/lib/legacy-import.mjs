@@ -1,4 +1,5 @@
 import vm from 'node:vm';
+import { auditLexicalCoverage, compactCoverageReport } from './lexicon-coverage.mjs';
 
 function skipSpace(source,i){
   while(i<source.length){
@@ -279,10 +280,15 @@ export function buildLexicon(model){
 export function buildImportReport(model,course,lexicon){
   const ambiguous=lexicon.entries.filter(entry=>entry.senses.some(s=>s.tags&&s.tags.includes('needs-review')));
   const planned=new Set(model.plan.flatMap(day=>day.ids||[]));
+  const coverage=compactCoverageReport(auditLexicalCoverage(course,lexicon));
   return {lessons:model.lessons.length,cards:model.lessons.reduce((n,l)=>n+(l.cards||[]).length,0),
     planDays:model.plan.length,patterns:Object.keys(model.patterns||{}).length,dialogs:(model.dialogs||[]).length,
     aiTalks:(model.aiTalks||[]).length,dictionaryEntries:Object.keys(model.dictionary||{}).length,
     courseActivities:course.activities.length,lexiconEntries:lexicon.entries.length,lexiconNeedsReview:ambiguous.length,
+    phraseBankGroups:(model.phrases||[]).length,
+    phraseBankItems:(model.phrases||[]).reduce((sum,group)=>sum+(group.items||[]).length,0),
+    irregularVerbs:(model.verbs||[]).length,
+    lexicalCoverage:coverage,
     unplannedLessons:model.lessons.map(x=>x.id).filter(id=>!planned.has(id))};
 }
 
