@@ -578,12 +578,23 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         const setIds=[...new Set(requested)];
         const lexiconDraft=await Lexicon.getDraft();
         if(!setIds.length || !lexiconDraft){ fail(res,409,'drafts_required'); return true; }
+        const Coverage=await loadCoverage();
+        const lexicalReadiness={};
         for(const setId of setIds){
           const draft=await Content.getDraft(setId);
           if(!draft){ fail(res,409,'course_draft_not_found:'+setId); return true; }
           Content.validateSet(draft);
+          const audit=Coverage.auditLexicalCoverage(draft,lexiconDraft);
+          lexicalReadiness[setId]=Coverage.compactCoverageReport(audit);
         }
         Lexicon.validateLexicon(lexiconDraft);
+
+        const blocked=Object.entries(lexicalReadiness).filter(([,coverage])=>
+          Number(coverage.missingSurfaces||0)>0 || Number(coverage.ambiguousSurfaces||0)>0);
+        if(blocked.length){
+          send(res,409,{ok:false,error:'lexical_coverage_incomplete',sets:Object.fromEntries(blocked)});
+          return true;
+        }
 
         const published=await Release.publishDraftRelease(setIds);
         const lexicon=await Release.getReleasedLexicon();
