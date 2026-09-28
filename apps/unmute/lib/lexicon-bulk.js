@@ -31,7 +31,13 @@ function parseJsonText(raw){
 function normalizePronunciation(source){
   if(!source || typeof source!=='object' || Array.isArray(source)) return null;
   const ipa=text(source.ipa),ruReading=text(source.ruReading);
-  return (ipa||ruReading)?{...(ipa?{ipa}:{}),...(ruReading?{ruReading}:{})}:null;
+  const ipaVariants=unique(asArray(source.ipaVariants).map(text));
+  const pronunciation={
+    ...(ipa?{ipa}:{}),
+    ...(ipaVariants.length?{ipaVariants}:{}),
+    ...(ruReading?{ruReading}:{})
+  };
+  return Object.keys(pronunciation).length?pronunciation:null;
 }
 
 function normalizeForm(raw,lemma){
@@ -296,7 +302,8 @@ function previewPatch(snapshot,rawPatch){
 
 function pronunciationForSurface(entry,surface){
   const form=(entry.forms||[]).find(item=>norm(item.text)===norm(surface));
-  return form&&form.pronunciation ? form.pronunciation : (entry.pronunciation||null);
+  if(form&&form.pronunciation) return form.pronunciation;
+  return norm(entry.lemma)===norm(surface) ? (entry.pronunciation||null) : null;
 }
 
 function buildAiPrompt(audit,limit=50,options={}){
