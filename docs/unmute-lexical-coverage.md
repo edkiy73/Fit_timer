@@ -179,9 +179,11 @@ Use a pinned snapshot of `open-dict-data/ipa-dict` US English as a pronunciation
 Pinned source commit:
 `43c3570eb3553bdd19fccd2bd0091534889af023`
 
-Only the fields needed by the current UnMute lexicon are imported into the DB; the full external dictionary is not shipped inside the app bundle.
+Only the exact forms already resolved by the current set are considered. The Admin previews the change count first and then applies only missing IPA to the lexicon draft. Existing IPA is never overwritten, translations/senses are never touched, and the full external dictionary is never shipped inside the app bundle.
 
-Russian learner readings remain optional and can be bulk-generated/reviewed through the AI paste workflow.
+Pronunciation is form-specific. A lemma-level pronunciation is valid only when the clicked surface is the lemma itself; it is never used as a fake fallback for an inflection such as `worked`. Multiple source pronunciations are retained as `ipaVariants`, with the first variant as the primary display value. Provenance (`source id + pinned commit + license`) is stored with imported pronunciation.
+
+Russian learner readings remain separate from IPA and can be bulk-generated/reviewed through the AI paste workflow.
 
 ## Examples
 
