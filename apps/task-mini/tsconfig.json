@@ -27,6 +27,12 @@
       ],
       "@appbase/ui-react/*": [
         "../../packages/ui-react/src/*"
+      ],
+      "react": [
+        "./node_modules/@types/react/index.d.ts"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime.d.ts"
       ]
     }
   },
