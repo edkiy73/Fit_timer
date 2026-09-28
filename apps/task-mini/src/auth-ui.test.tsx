@@ -46,7 +46,7 @@ describe('shared React auth UI', () => {
     await user.type(screen.getByRole('textbox', {name:'Email'}), 'Demo@Example.com');
     await user.click(screen.getByRole('button', {name:'Прислать код'}));
 
-    expect(await screen.findByText(/Код отправлен на demo@example.com/)).toBeTruthy();
+    expect(await screen.findByText((_, el) => el?.textContent === 'Код отправлен на demo@example.com.')).toBeTruthy();
     expect((screen.getByRole('textbox', {name:'Код из письма'}) as HTMLInputElement).value).toBe('123456');
     await user.click(screen.getByRole('button', {name:'Войти'}));
 
