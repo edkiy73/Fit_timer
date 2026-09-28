@@ -21,6 +21,12 @@ export interface TimedPracticeState extends PracticeSrsState, RecordMeta {
   deleted?:boolean;
 }
 
+export interface TimedMetric extends RecordMeta {
+  at:string;
+  deleted?:boolean;
+  value:number;
+}
+
 export interface CourseProgressDocument {
   schemaVersion:1;
   seen:RecordMap<TimedFlag>;
@@ -32,6 +38,7 @@ export interface CourseProgressDocument {
   };
   manualNodes:RecordMap<TimedFlag>;
   learningDays:RecordMap<TimedFlag>;
+  metrics:RecordMap<TimedMetric>;
 }
 
 export interface StatsBucket extends RecordMeta {
@@ -77,6 +84,7 @@ export function emptyCourseProgress():CourseProgressDocument{
     practice:{drill:{},listening:{},speaking:{}},
     manualNodes:{},
     learningDays:{},
+    metrics:{},
   };
 }
 
@@ -105,6 +113,7 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
       },
       manualNodes:asMap<TimedFlag>(parsed.manualNodes),
       learningDays:asMap<TimedFlag>(parsed.learningDays),
+      metrics:asMap<TimedMetric>(parsed.metrics),
     };
   }catch{
     return emptyCourseProgress();
@@ -148,6 +157,7 @@ export function mergeCourseProgress(
     },
     manualNodes:mergeRecordMaps(local.manualNodes,remote.manualNodes),
     learningDays:mergeRecordMaps(local.learningDays,remote.learningDays),
+    metrics:mergeRecordMaps(local.metrics,remote.metrics),
   };
 }
 
