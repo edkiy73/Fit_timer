@@ -914,6 +914,131 @@ async function localProfileHasData(uid){
     || (Array.isArray(photos) && photos.length > 0);
 }
 
+
+function remoteProgramRepairPlan(active){
+  const profiles = [];
+  for(const r of Array.isArray(active) ? active : []){
+    const pid = String(r && r.user && r.user.id || '');
+    if(!pid) continue;
+    const docs = Array.isArray(r.docs) ? r.docs : [];
+    const indexDoc = docs.find(d => d && d.key === 'index' && !d.deleted);
+    const order = new Set((parsed(indexDoc && indexDoc.value, {}).order || []).map(String));
+    const statsDoc = docs.find(d => d && d.key === 'stats' && !d.deleted);
+    const history = parsed(statsDoc && statsDoc.value, {}).history || [];
+    const used = new Set((Array.isArray(history) ? history : [])
+      .map(h => String(h && h.pid || '')).filter(Boolean));
+    const programs = new Map();
+    docs.forEach(d => {
+      if(!d || d.deleted || !String(d.key || '').startsWith('program:')) return;
+      const id = String(d.key).slice(8);
+      // warmup is intentionally profile-local but has the same canonical id everywhere.
+      if(!id || id === 'warmup' || !order.has(id)) return;
+      programs.set(id, d);
+    });
+    profiles.push({pid, programs, used});
+  }
+
+  const byId = new Map();
+  profiles.forEach(p => p.programs.forEach((d, id) => {
+    if(!byId.has(id)) byId.set(id, []);
+    byId.get(id).push({profile:p, doc:d});
+  }));
+
+  // Historical profile-leak corruption usually copied several program ids from one
+  // profile to another. For duplicates without workout-history evidence, repair only
+  // when the SAME profile pair shares 2+ ids and all comparable server timestamps
+  // point to one consistently earlier owner. A lone ambiguous duplicate is preserved.
+  const pairInfo = new Map();
+  byId.forEach(entries => {
+    if(entries.length !== 2) return;
+    const a = entries[0], b = entries[1];
+    const ids = [a.profile.pid, b.profile.pid].sort();
+    const key = ids.join('\n');
+    const info = pairInfo.get(key) || {count:0, comparable:0, earlier:new Map()};
+    info.count++;
+    const ta = Date.parse(a.doc.at || '') || 0, tb = Date.parse(b.doc.at || '') || 0;
+    if(ta && tb && ta !== tb){
+      info.comparable++;
+      const earlier = ta < tb ? a.profile.pid : b.profile.pid;
+      info.earlier.set(earlier, (info.earlier.get(earlier) || 0) + 1);
+    }
+    pairInfo.set(key, info);
+  });
+
+  const repairs = new Map();
+  const addRepair = (pid, id) => {
+    if(!repairs.has(pid)) repairs.set(pid, new Set());
+    repairs.get(pid).add(id);
+  };
+
+  byId.forEach((entries, id) => {
+    if(entries.length < 2) return;
+    const withHistory = entries.filter(e => e.profile.used.has(id));
+    let winner = null;
+    if(withHistory.length === 1){
+      winner = withHistory[0].profile.pid;
+    } else if(withHistory.length > 1 || entries.length !== 2){
+      return;
+    } else {
+      const pairKey = [entries[0].profile.pid, entries[1].profile.pid].sort().join('\n');
+      const info = pairInfo.get(pairKey);
+      if(!info || info.count < 2 || info.comparable < 2 || info.earlier.size !== 1) return;
+      const only = [...info.earlier.entries()][0];
+      if(only[1] !== info.comparable) return;
+      winner = only[0];
+    }
+    entries.forEach(e => { if(e.profile.pid !== winner) addRepair(e.profile.pid, id); });
+  });
+  return repairs;
+}
+
+async function repairRemoteDuplicatePrograms(active){
+  const repairs = remoteProgramRepairPlan(active);
+  if(!repairs.size) return 0;
+  let repaired = 0;
+  for(const [serverId, ids] of repairs){
+    const u = users.find(x => String(x.profileId || x.id) === String(serverId));
+    if(!u) continue;
+    const localId = u.id;
+    let programs = parsed(await kvGet('customPrograms_' + localId), []);
+    programs = Array.isArray(programs) ? programs : [];
+    const before = programs.length;
+    programs = programs.filter(p => !p || !ids.has(String(p.id)));
+    if(programs.length === before) continue;
+
+    let meta = parsed(await kvGet('docMeta_' + localId), {});
+    let queue = parsed(await kvGet('outbox_' + localId), []);
+    queue = Array.isArray(queue) ? queue : [];
+    const now = new Date().toISOString();
+    for(const id of ids){
+      const key = PROGRAM_DOC(id);
+      const prev = meta[key] || {};
+      const rev = Math.max(0, +prev.rev || 0) + 1;
+      meta[key] = Object.assign({}, prev, {
+        rev, at:now, schema:SCHEMA_VERSION, gone:true, h:''
+      });
+      queue = queue.filter(o => o.key !== key);
+      queue.push({key, rev, at:now});
+      repaired++;
+    }
+    const orderValue = programs.map(p => p && p.id).filter(Boolean).join(',');
+    const prevIndex = meta.index || {};
+    const indexRev = Math.max(0, +prevIndex.rev || 0) + 1;
+    meta.index = Object.assign({}, prevIndex, {
+      rev:indexRev, at:now, schema:SCHEMA_VERSION, gone:false, h:docHash(orderValue)
+    });
+    queue = queue.filter(o => o.key !== 'index');
+    queue.push({key:'index', rev:indexRev, at:now});
+
+    await kvSet('customPrograms_' + localId, JSON.stringify(programs));
+    await kvSet('docMeta_' + localId, JSON.stringify(meta));
+    await kvSet('outbox_' + localId, JSON.stringify(queue));
+    if(localId === currentUser){ docMeta = meta; outbox = queue; }
+  }
+  if(repaired) queueAccountSync();
+  return repaired;
+}
+
 async function collapseEmptyLocalProfiles(active){
   const blanks = [];
   for(const u of users){
@@ -1108,6 +1233,12 @@ async function applyRemoteSyncNow(result){
     await kvSet('docMeta_' + localId, JSON.stringify(meta));
     await kvSet('outbox_' + localId, JSON.stringify(queue));
   }
+
+  // Old builds could copy one profile's program list into another profile. A clean
+  // install faithfully restores that old server corruption unless we reconcile it.
+  // Run only after every remote profile has been materialized locally, so removals
+  // become ordinary higher-revision tombstones and are pushed through the normal path.
+  await repairRemoteDuplicatePrograms(active);
 
   if(!users.some(u => u.id === currentUser)) currentUser = users[0].id;
   await kvSet('currentUser', currentUser);

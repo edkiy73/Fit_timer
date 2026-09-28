@@ -44,6 +44,11 @@ async function boot(browser, label, errors){
       stats:{completions:1}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
         {name:'Приседания',type:'reps',value:'12',sets:2,rest:30,restAfter:45,weight:0}
       ]}]
+    },{
+      id:'sync-program-2', name:'Синхронная мобильность', time:'', progression:3,
+      stats:{completions:0}, plans:[{days:['Ср'],rounds:1,roundRest:0,exercises:[
+        {name:'Наклоны',type:'reps',value:'10',sets:1,rest:20}
+      ]}]
     }];
     stats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
              weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
@@ -87,6 +92,80 @@ async function boot(browser, label, errors){
   ok('скрытая ручная поправка веса не вернулась', got.prog == null, got.prog);
   ok('фото-прогресс не ушёл на сервер', got.photos === 0, got.photos);
   ok('интерфейс прямо говорит о серверной копии', /сохранены на сервере/i.test(got.state), got.state);
+
+  // Исторический profile-leak: старый клиент мог сохранить те же program ids уже
+  // под другим profileId. На чистой установке это не должно воскресать как две
+  // независимые копии программ. Уникальная программа второго профиля сохраняется.
+  const DUP_PROFILE = 'sync-duplicate-profile';
+  await two.evaluate(async dupId => {
+    const originals = customPrograms.filter(p => p.id === 'sync-program' || p.id === 'sync-program-2');
+    const unique = {
+      id:'sync-unique', name:'Только второй профиль', plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
+        {name:'Планка',type:'time',value:30,sets:1,rest:20}
+      ]}]
+    };
+    const later = new Date(Date.now() + 5000).toISOString();
+    const docs = originals.map(p => ({
+      key:'program:' + p.id, profileId:dupId, rev:1, at:later, schema:1,
+      value:JSON.stringify(p)
+    }));
+    docs.push({key:'program:' + unique.id, profileId:dupId, rev:1, at:later, schema:1,
+      value:JSON.stringify(unique)});
+    docs.push({key:'index', profileId:dupId, rev:1, at:later, schema:1,
+      value:JSON.stringify({order:['sync-program','sync-program-2','sync-unique']})});
+    await apiPost('/api/sync',{
+      action:'push', email:account.email, deviceId:identity.deviceId, token:account.syncToken,
+      profiles:[{user:{id:dupId,name:'Лена 2',gender:'f',age:34,theme:'system',locale:'ru'},at:later}],
+      docs
+    });
+  }, DUP_PROFILE);
+
+  const three = await boot(browser, 'C', errors);
+  await three.click('#obLogin');
+  await three.fill('#loginEmail', MAIL);
+  await three.click('#loginGo');
+  await three.waitForTimeout(150);
+  await three.click('#loginGo');
+  await three.waitForTimeout(2200);
+
+  const repairedLocal = await three.evaluate(async dupId => {
+    const u = users.find(x => (x.profileId || x.id) === dupId);
+    if(!u) return {found:false};
+    const list = JSON.parse(await kvGet('customPrograms_' + u.id) || '[]');
+    return {found:true, ids:list.map(p=>p.id), pending:JSON.parse(await kvGet('outbox_' + u.id) || '[]').map(x=>x.key)};
+  }, DUP_PROFILE);
+  ok('дубли старого profile-leak удалены из второго профиля локально',
+    repairedLocal.found
+      && !repairedLocal.ids.includes('sync-program')
+      && !repairedLocal.ids.includes('sync-program-2'),
+    JSON.stringify(repairedLocal));
+  ok('уникальная программа второго профиля сохранена',
+    repairedLocal.ids.includes('sync-unique'), repairedLocal.ids.join(','));
+
+  await three.waitForTimeout(1800);
+  const repairedRemote = await three.evaluate(async dupId => {
+    const r = await apiPost('/api/sync',{
+      action:'pull', email:account.email, deviceId:identity.deviceId, token:account.syncToken
+    });
+    const p = (r.profiles || []).find(x => x.user && x.user.id === dupId);
+    const docs = (p && p.docs) || [];
+    return {
+      duplicate1:docs.find(d=>d.key==='program:sync-program'),
+      duplicate2:docs.find(d=>d.key==='program:sync-program-2'),
+      unique:docs.find(d=>d.key==='program:sync-unique'),
+      order:JSON.parse((docs.find(d=>d.key==='index')||{}).value || '{"order":[]}')
+    };
+  }, DUP_PROFILE);
+  ok('repair доехал на сервер tombstone-ами',
+    repairedRemote.duplicate1 && repairedRemote.duplicate1.deleted
+      && repairedRemote.duplicate2 && repairedRemote.duplicate2.deleted,
+    JSON.stringify(repairedRemote));
+  ok('серверный index после repair содержит только уникальную программу',
+    repairedRemote.unique && !repairedRemote.unique.deleted
+      && repairedRemote.order.order.includes('sync-unique')
+      && !repairedRemote.order.order.includes('sync-program')
+      && !repairedRemote.order.order.includes('sync-program-2'),
+    JSON.stringify(repairedRemote));
 
   await two.evaluate(async()=>{
     stats.history.push({
