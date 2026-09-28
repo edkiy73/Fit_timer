@@ -122,7 +122,11 @@ function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
-export function AdminPanel({client, productName, locale='ru', extraSections=[]}: AdminPanelProps){
+// One shared empty list: a fresh [] default on every render would re-create the loaders
+// and refetch protected data in a loop (hundreds of requests, then the admin rate limit).
+const NO_SECTIONS: readonly AdminSection[] = [];
+
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }

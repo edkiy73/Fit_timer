@@ -26,6 +26,9 @@ const PORT = 4174;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
+// Admin requests are rate-limited (30/hour): a refetch loop in the Admin UI would lock it.
+let adminCalls = 0;
+
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url || '/', URL_).pathname);
   const api = /^\/api\/([a-z]+)$/.exec(path);
@@ -35,6 +38,7 @@ const server = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     req.body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
+    if(api[1] === 'admin') adminCalls++;
     await handler(req, res);
     return;
   }
@@ -157,6 +161,7 @@ try{
   ok('route and task survive a reload (Core storage + hash router)',
     await appears(phone.getByRole('checkbox', {name: 'С телефона', checked: true})) && phone.url().endsWith('#/done'));
 
+  ok('shared Admin loads data once per action, not in a loop', adminCalls > 0 && adminCalls < 30);
   ok('no runtime errors', errors.length === 0);
   if(errors.length) console.log(errors.join('\n'));
 }catch(error){
