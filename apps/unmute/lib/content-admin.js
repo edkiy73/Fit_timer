@@ -43,6 +43,61 @@ function newActivity(type){
   }
 }
 
+function requestedSetId(body, fallback=true){
+  const id=Content.cleanId(body && body.setId);
+  if(id) return id;
+  return fallback ? 'general-foundation' : '';
+}
+
+function newSetFromBody(body){
+  const id=Content.cleanId(body && body.id);
+  const title=String(body && body.title || '').trim();
+  if(!id || title.length<2) throw new Error('bad_set_create');
+  const accessMode=body.accessMode==='free' ? 'free' : 'entitlement';
+  const freeDays=Math.max(0,Math.min(365,Math.round(Number(body.freeDays)||0)));
+  const access=accessMode==='free'
+    ? {mode:'free'}
+    : {
+        mode:'entitlement',
+        entitlement:'course.'+id,
+        ...(freeDays>0 ? {freePreview:{kind:'first-days',days:freeDays,learnedContentStaysAvailable:true}} : {})
+      };
+  const level={
+    ...(body.levelFrom ? {from:String(body.levelFrom)} : {}),
+    ...(body.levelTo ? {to:String(body.levelTo)} : {}),
+    labels:[]
+  };
+  return {
+    schemaVersion:1,id,revision:1,slug:id,
+    title:{ru:title},
+    description:{ru:String(body.description||'')},
+    level,
+    access,
+    defaultRoadmapId:'main',
+    roadmaps:[{
+      id:'main',title:{ru:'Основной путь'},nodes:[{
+        id:'day-1',kind:'lesson',title:{ru:'День 1'},dayIndex:1,order:0,
+        prerequisites:[],activityIds:[],optional:false
+      }]
+    }],
+    activities:[]
+  };
+}
+
+function newNode({title,dayIndex,kind='lesson',previousId=null}){
+  const id='node.'+crypto.randomUUID().replace(/-/g,'').slice(0,12);
+  return {
+    id,
+    kind:['lesson','practice','review','dialogue','checkpoint','bonus'].includes(kind)?kind:'lesson',
+    title:{ru:String(title||('День '+dayIndex))},
+    dayIndex:Number.isInteger(dayIndex)&&dayIndex>0?dayIndex:undefined,
+    order:0,
+    prerequisites:previousId?[previousId]:[],
+    activityIds:[],
+    optional:false
+  };
+}
+
 function activitySummary(activity){
   if(!activity) return null;
   const firstText=value=>{
@@ -160,8 +215,143 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         return true;
       }
 
+      if(action === 'content_sets_list'){
+        const draftIds=await Content.listDraftSetIds();
+        const release=await Release.getRelease();
+        const releasedIds=release&&release.sets ? Object.keys(release.sets) : [];
+        const ids=[...new Set([...draftIds,...releasedIds])].sort();
+        const sets=[];
+        for(const id of ids){
+          const structure=await Content.getDraftStructure(id).catch(()=>null);
+          const released=await Release.getReleasedSet(id).catch(()=>null);
+          const meta=structure&&structure.meta || released || null;
+          if(!meta) continue;
+          sets.push({
+            id,
+            title:meta.title || {ru:id},
+            level:meta.level || {},
+            access:meta.access || null,
+            draftRevision:structure&&structure.draftRevision || null,
+            publishedRevision:released&&released.revision || null,
+            nodeCount:structure ? (structure.roadmaps||[]).reduce((sum,roadmap)=>sum+(roadmap.nodes||[]).length,0) : null
+          });
+        }
+        send(res,200,{ok:true,sets});
+        return true;
+      }
+
+      if(action === 'content_set_create'){
+        const set=newSetFromBody(body);
+        const [draft,released]=await Promise.all([
+          Content.getDraft(set.id),
+          Release.getReleasedSet(set.id)
+        ]);
+        if(draft || released){ fail(res,409,'set_exists'); return true; }
+        Content.validateSet(set);
+        const created=await Content.putDraft(set);
+        send(res,200,{ok:true,set:{id:created.id,title:created.title,draftRevision:created.draftRevision}});
+        return true;
+      }
+
+      if(action === 'content_set_save'){
+        const setId=requestedSetId(body,false);
+        const expectedDraftRevision=Number(body.expectedDraftRevision);
+        if(!setId || !Number.isInteger(expectedDraftRevision) || expectedDraftRevision<1){
+          fail(res,400,'bad_set_revision');
+          return true;
+        }
+        const changes=body.changes&&typeof body.changes==='object'&&!Array.isArray(body.changes)?body.changes:{};
+        const updated=await Content.updateDraftSetMeta(setId,expectedDraftRevision,current=>{
+          const next={...current};
+          if(typeof changes.title==='string' && changes.title.trim()) next.title={...(next.title||{}),ru:changes.title.trim()};
+          if(typeof changes.description==='string') next.description={...(next.description||{}),ru:changes.description};
+          const level={...(next.level||{})};
+          if(Object.prototype.hasOwnProperty.call(changes,'levelFrom')){
+            if(changes.levelFrom) level.from=String(changes.levelFrom); else delete level.from;
+          }
+          if(Object.prototype.hasOwnProperty.call(changes,'levelTo')){
+            if(changes.levelTo) level.to=String(changes.levelTo); else delete level.to;
+          }
+          next.level=level;
+
+          if(changes.accessMode==='free') next.access={mode:'free'};
+          if(changes.accessMode==='entitlement'){
+            const days=Math.max(0,Math.min(365,Math.round(Number(changes.freeDays)||0)));
+            next.access={
+              mode:'entitlement',
+              entitlement:String(changes.entitlement || (next.access&&next.access.entitlement) || ('course.'+setId)),
+              ...(days>0?{freePreview:{kind:'first-days',days,learnedContentStaysAvailable:true}}:{})
+            };
+          }
+          return next;
+        });
+        send(res,200,{ok:true,set:updated.meta,draftRevision:updated.draftRevision,draftUpdatedAt:updated.updatedAt});
+        return true;
+      }
+
+      if(action === 'content_node_create'){
+        const setId=requestedSetId(body);
+        const roadmapId=Content.cleanId(body.roadmapId)||'main';
+        const structure=await Content.getDraftStructure(setId);
+        if(!structure){ fail(res,404,'draft_not_found'); return true; }
+        const roadmap=(structure.roadmaps||[]).find(item=>item.id===roadmapId);
+        if(!roadmap){ fail(res,404,'roadmap_not_found'); return true; }
+        const ordered=[...(roadmap.nodes||[])].sort((a,b)=>(a.order||0)-(b.order||0));
+        const previous=ordered[ordered.length-1]||null;
+        const maxDay=ordered.reduce((max,node)=>Number.isInteger(node.dayIndex)?Math.max(max,node.dayIndex):max,0);
+        const dayIndex=Number.isInteger(body.dayIndex)&&body.dayIndex>0?body.dayIndex:maxDay+1;
+        const node=newNode({title:body.title,dayIndex,kind:String(body.kind||'lesson'),previousId:previous&&previous.id});
+        const created=await Content.createDraftNode(setId,roadmapId,node);
+        send(res,200,{ok:true,node:created.node,version:created.version,draftRevision:created.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_node_save'){
+        const setId=requestedSetId(body);
+        const roadmapId=Content.cleanId(body.roadmapId);
+        const nodeId=Content.cleanId(body.nodeId);
+        const expectedVersion=Number(body.expectedVersion);
+        const changes=body.changes&&typeof body.changes==='object'&&!Array.isArray(body.changes)?body.changes:{};
+        if(!roadmapId||!nodeId||!Number.isInteger(expectedVersion)||expectedVersion<1){ fail(res,400,'bad_node_update'); return true; }
+        const result=await Content.updateDraftNode(setId,roadmapId,nodeId,expectedVersion,current=>{
+          const next={...current};
+          if(typeof changes.title==='string'&&changes.title.trim()) next.title={...(next.title||{}),ru:changes.title.trim()};
+          if(typeof changes.kind==='string') next.kind=changes.kind;
+          if(Object.prototype.hasOwnProperty.call(changes,'dayIndex')){
+            if(changes.dayIndex===null||changes.dayIndex==='') delete next.dayIndex;
+            else next.dayIndex=Number(changes.dayIndex);
+          }
+          if(typeof changes.optional==='boolean') next.optional=changes.optional;
+          if(Array.isArray(changes.prerequisites)) next.prerequisites=changes.prerequisites.map(Content.cleanId).filter(Boolean);
+          return next;
+        });
+        send(res,200,{ok:true,node:result.node,version:result.version,draftRevision:result.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_node_delete'){
+        const setId=requestedSetId(body);
+        const roadmapId=Content.cleanId(body.roadmapId);
+        const nodeId=Content.cleanId(body.nodeId);
+        if(!roadmapId||!nodeId){ fail(res,400,'bad_node_id'); return true; }
+        const result=await Content.deleteDraftNode(setId,roadmapId,nodeId);
+        send(res,200,{ok:true,draftRevision:result.draftRevision});
+        return true;
+      }
+
+      if(action === 'content_node_reorder'){
+        const setId=requestedSetId(body);
+        const roadmapId=Content.cleanId(body.roadmapId);
+        const ids=Array.isArray(body.nodeIds)?body.nodeIds.map(Content.cleanId):[];
+        if(!roadmapId||!ids.length||ids.some(id=>!id)){ fail(res,400,'bad_node_order'); return true; }
+        const result=await Content.reorderDraftNodes(setId,roadmapId,ids);
+        send(res,200,{ok:true,draftRevision:result.draftRevision});
+        return true;
+      }
+
       if(action === 'content_course_structure'){
-        const structure=await Content.getDraftStructure('general-foundation');
+        const setId=requestedSetId(body);
+        const structure=await Content.getDraftStructure(setId);
         if(!structure){ fail(res,404,'draft_not_found'); return true; }
         send(res,200,{ok:true,
           draftRevision:structure.draftRevision,
@@ -180,10 +370,11 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       }
 
       if(action === 'content_course_node'){
+        const setId=requestedSetId(body);
         const roadmapId=Content.cleanId(body.roadmapId);
         const nodeId=Content.cleanId(body.nodeId);
         if(!roadmapId || !nodeId){ fail(res,400,'bad_node_id'); return true; }
-        const result=await Content.getDraftNode('general-foundation',roadmapId,nodeId);
+        const result=await Content.getDraftNode(setId,roadmapId,nodeId);
         if(!result){ fail(res,404,'node_not_found'); return true; }
         const byId=new Map((result.activities||[]).map(activity=>[activity.id,activity]));
         send(res,200,{ok:true,node:result.node,version:result.version,draftRevision:result.draftRevision,
@@ -193,26 +384,29 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       }
 
       if(action === 'content_activity_get'){
+        const setId=requestedSetId(body);
         const activityId=Content.cleanId(body.activityId);
         if(!activityId){ fail(res,400,'bad_activity_id'); return true; }
-        const result=await Content.getDraftActivity('general-foundation',activityId);
+        const result=await Content.getDraftActivity(setId,activityId);
         if(!result){ fail(res,404,'activity_not_found'); return true; }
         send(res,200,{ok:true,activity:result.activity,draftRevision:result.draftRevision});
         return true;
       }
 
       if(action === 'content_activity_create'){
+        const setId=requestedSetId(body);
         const roadmapId=Content.cleanId(body.roadmapId);
         const nodeId=Content.cleanId(body.nodeId);
         const type=String(body.type||'').trim();
         if(!roadmapId || !nodeId){ fail(res,400,'bad_node_id'); return true; }
         const activity=newActivity(type);
-        const result=await Content.createDraftActivity('general-foundation',roadmapId,nodeId,activity);
+        const result=await Content.createDraftActivity(setId,roadmapId,nodeId,activity);
         send(res,200,{ok:true,activity:result.activity,node:result.node,draftRevision:result.draftRevision});
         return true;
       }
 
       if(action === 'content_activity_save'){
+        const setId=requestedSetId(body);
         const activityId=Content.cleanId(body.activityId);
         const expectedRevision=Number(body.expectedRevision);
         const incoming=body.activity;
@@ -220,7 +414,7 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
           fail(res,400,'bad_activity_update');
           return true;
         }
-        const result=await Content.updateDraftActivity('general-foundation',activityId,expectedRevision,current=>{
+        const result=await Content.updateDraftActivity(setId,activityId,expectedRevision,current=>{
           if(String(incoming.id||'')!==current.id) throw new Error('activity_id_immutable');
           if(String(incoming.type||'')!==current.type) throw new Error('activity_type_immutable');
           const next=JSON.parse(JSON.stringify(incoming));
@@ -234,21 +428,23 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       }
 
       if(action === 'content_activity_detach'){
+        const setId=requestedSetId(body);
         const roadmapId=Content.cleanId(body.roadmapId);
         const nodeId=Content.cleanId(body.nodeId);
         const activityId=Content.cleanId(body.activityId);
         if(!roadmapId || !nodeId || !activityId){ fail(res,400,'bad_activity_detach'); return true; }
-        const result=await Content.detachDraftActivity('general-foundation',roadmapId,nodeId,activityId);
+        const result=await Content.detachDraftActivity(setId,roadmapId,nodeId,activityId);
         send(res,200,{ok:true,node:result.node,draftRevision:result.draftRevision});
         return true;
       }
 
       if(action === 'content_activity_reorder'){
+        const setId=requestedSetId(body);
         const roadmapId=Content.cleanId(body.roadmapId);
         const nodeId=Content.cleanId(body.nodeId);
         const ids=Array.isArray(body.activityIds) ? body.activityIds.map(Content.cleanId) : [];
         if(!roadmapId || !nodeId || !ids.length || ids.some(id=>!id)){ fail(res,400,'bad_activity_order'); return true; }
-        const result=await Content.reorderDraftActivities('general-foundation',roadmapId,nodeId,ids);
+        const result=await Content.reorderDraftActivities(setId,roadmapId,nodeId,ids);
         send(res,200,{ok:true,node:result.node,draftRevision:result.draftRevision});
         return true;
       }
@@ -289,19 +485,27 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       }
 
       if(action === 'content_publish'){
-        const courseDraft = await Content.getDraft('general-foundation');
-        const lexiconDraft = await Lexicon.getDraft();
-        if(!courseDraft || !lexiconDraft){ fail(res,409,'drafts_required'); return true; }
-
-        Content.validateSet(courseDraft);
+        const requested=Array.isArray(body.setIds) ? body.setIds.map(Content.cleanId).filter(Boolean) : ['general-foundation'];
+        const setIds=[...new Set(requested)];
+        const lexiconDraft=await Lexicon.getDraft();
+        if(!setIds.length || !lexiconDraft){ fail(res,409,'drafts_required'); return true; }
+        for(const setId of setIds){
+          const draft=await Content.getDraft(setId);
+          if(!draft){ fail(res,409,'course_draft_not_found:'+setId); return true; }
+          Content.validateSet(draft);
+        }
         Lexicon.validateLexicon(lexiconDraft);
 
-        const published = await Release.publishDraftRelease(['general-foundation']);
-        const course = await Release.getReleasedSet('general-foundation');
-        const lexicon = await Release.getReleasedLexicon();
-        send(res,200,{ok:true,release:published.release,
-          course:{revision:course && course.revision,publishedAt:course && course.publishedAt},
-          lexicon:{revision:lexicon && lexicon.revision,publishedAt:lexicon && lexicon.publishedAt},
+        const published=await Release.publishDraftRelease(setIds);
+        const lexicon=await Release.getReleasedLexicon();
+        const courses={};
+        for(const setId of setIds){
+          const course=await Release.getReleasedSet(setId);
+          courses[setId]={revision:course&&course.revision,publishedAt:course&&course.publishedAt};
+        }
+        const first=courses[setIds[0]];
+        send(res,200,{ok:true,release:published.release,courses,course:first,
+          lexicon:{revision:lexicon&&lexicon.revision,publishedAt:lexicon&&lexicon.publishedAt},
           needsReview:reviewItems(lexicon).length
         });
         return true;
