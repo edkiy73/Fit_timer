@@ -1,0 +1,6 @@
+.ab-fatal{min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--bg,#f5f6f8);color:var(--ink,#17181b)}
+.ab-fatal-card{width:min(100%,440px);background:var(--card,#fff);border:1px solid var(--line,#e4e6eb);border-radius:18px;padding:22px}
+.ab-fatal-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#6b7280)}
+.ab-fatal h1{margin:7px 0 8px;font-size:28px}
+.ab-fatal p{margin:0 0 18px;color:var(--muted,#6b7280);line-height:1.5}
+.ab-fatal button{border:0;border-radius:11px;padding:11px 15px;background:var(--accent,#2f5fe0);color:#fff;font:inherit;font-weight:700;cursor:pointer}
