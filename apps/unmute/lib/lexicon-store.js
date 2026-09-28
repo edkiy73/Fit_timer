@@ -106,6 +106,11 @@ async function updateDraftLexeme(id, updater, expectedRevision){
   return result.entry;
 }
 
+async function upsertDraftLexemes(entries){
+  await ensureDraftWorkspace();
+  return Draft.upsertEntries(entries,validateEntry);
+}
+
 async function nextRevision(){
   const pointer=parse(await store.get(POINTER));
   const current=Math.max(0,+(pointer&&pointer.revision)||0,+(await store.get(REVISION_COUNTER)||0));
@@ -178,4 +183,4 @@ function lookup(snapshot,surface){
   return ids.map(id=>byId.get(id)).filter(Boolean);
 }
 
-module.exports={validateEntry,validateLexicon,putDraft,getDraft,ensureDraftWorkspace,getDraftLexeme,updateDraftLexeme,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
+module.exports={validateEntry,validateLexicon,putDraft,getDraft,ensureDraftWorkspace,getDraftLexeme,updateDraftLexeme,upsertDraftLexemes,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
