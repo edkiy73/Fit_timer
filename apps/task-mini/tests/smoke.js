@@ -1,4 +1,5 @@
 process.env.ALLOW_MEMORY_STORE = '1';
+process.env.ADMIN_KEY = 'task-mini-admin';
 const fs = require('fs');
 
 let bad = 0;
@@ -35,12 +36,20 @@ function fakeRes(){
   ok('UI uses shared React auth gate and Core auth client',
     read('src/app.tsx').includes('@appbase/ui-react/auth.js')
     && read('src/auth.ts').includes('@appbase/core/auth.js'));
+  ok('UI uses shared React admin panel and Core admin client',
+    read('src/app.tsx').includes('@appbase/ui-react/admin.js')
+    && read('src/admin.ts').includes('@appbase/core/admin.js'));
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1'));
 
   const auth = require('../api/auth');
   const authRes = fakeRes();
   await auth({method:'POST', headers:{}, body:{action:'unknown'}}, authRes);
   ok('generic auth handler runs for second app', authRes.statusCode >= 400);
+
+  const admin = require('../api/admin');
+  const adminRes = fakeRes();
+  await admin({method:'POST', headers:{'x-admin-key':'wrong'}, body:{action:'users_list'}}, adminRes);
+  ok('shared admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
   const health = require('../api/health');
   const healthRes = fakeRes();

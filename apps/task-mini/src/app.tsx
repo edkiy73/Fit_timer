@@ -1,11 +1,13 @@
 import { Outlet, useOutletContext, type RouteObject } from 'react-router';
 import { AuthGate, useAuth } from '@appbase/ui-react/auth.js';
+import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { filterTasks, type TaskFilter } from './domain';
 import { AddTaskForm } from './components/AddTaskForm';
 import { FilterNav } from './components/FilterNav';
 import { TaskItem } from './components/TaskItem';
 import { useTaskActions, useTasks, type TaskActions } from './tasks/queries';
 import { taskAuth } from './auth';
+import { taskAdmin } from './admin';
 
 const EMPTY: Record<TaskFilter, string> = {
   all: 'Пока задач нет.',
@@ -58,12 +60,18 @@ function TaskList({filter}: {filter: TaskFilter}){
   );
 }
 
-export const routes: RouteObject[] = [{
-  path: '/',
-  element: <Layout />,
-  children: [
-    {index: true, element: <TaskList filter="all" />},
-    {path: 'active', element: <TaskList filter="active" />},
-    {path: 'done', element: <TaskList filter="done" />}
-  ]
-}];
+export const routes: RouteObject[] = [
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      {index: true, element: <TaskList filter="all" />},
+      {path: 'active', element: <TaskList filter="active" />},
+      {path: 'done', element: <TaskList filter="done" />}
+    ]
+  },
+  {
+    path:'/admin',
+    element:<AdminPanel client={taskAdmin} locale="ru" productName="Task Mini" />
+  }
+];
