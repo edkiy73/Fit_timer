@@ -66,7 +66,7 @@ module.exports = async function contentHandler(req,res){
         const acc = await accountFromHeaders(req);
         full = !!acc && hasOwned(acc,set.access.entitlement);
       }
-      return send(res,200,{ok:true, access:full?'full':'preview', set:full?set:Content.previewSnapshot(set)});
+      return send(res,200,{ok:true, access:full?'full':'preview', set:full?set:Content.previewSnapshot(set), outline:Content.roadmapOutline(set)});
     }
 
     return fail(res,400,'unknown_action');
