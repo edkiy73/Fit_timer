@@ -17,7 +17,7 @@ type ReviewItem = {
 
 type LexemeSense = {
   id:string;
-  partOfSpeech?:string;
+  partOfSpeech?:string|undefined;
   translations:Record<string,string[]>;
   note?:Record<string,string>;
   tags?:string[];
