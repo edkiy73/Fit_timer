@@ -119,9 +119,9 @@ export function parseLegacySource(source){
   for(const block of extractAssignObjects(source,'EX'))Object.assign(explanations,block);
 
   appendCards(lessons,[extractConst(source,'MORE_CARDS'),extractConst(source,'MORE_CARDS2'),extractConst(source,'MORE_CARDS3')]);
+  applyCardPatches(lessons,Object.fromEntries(Object.entries(explanations).map(([k,ex])=>[k,{ex}])));
   applyCardPatches(lessons,extractConst(source,'FIX'));
   applyAlternates(lessons,extractConst(source,'ALT'));
-  applyCardPatches(lessons,Object.fromEntries(Object.entries(explanations).map(([k,ex])=>[k,{ex}])));
 
   const dictionary=Object.assign({},extractConst(source,'DICT'));
   for(const block of extractAssignObjects(source,'DICT'))Object.assign(dictionary,block);
@@ -207,6 +207,11 @@ export function buildCourseSet(model){
   let previous=null;
   for(let i=0;i<model.plan.length;i++){
     const day=i+1,plan=model.plan[i]||{},activityIds=[];
+    const planId='plan.day-'+day;
+    const examples=Array.isArray(plan.ex)&&plan.ex.length?'\n\n'+plan.ex.map(x=>'• '+text(x)).join('\n'):'';
+    activities.push({id:planId,revision:1,type:'theory',tags:['plan'],revisionProgress:'preserve',lexiconRefs:[],
+      title:{ru:'День '+day},body:{ru:text(plan.g||'')+examples},format:'text'});
+    activityIds.push(planId);
     for(const lessonId of plan.ids||[])activityIds.push(...(built.lessonActivities.get(lessonId)||[]));
     activityIds.push(...(built.byDay.get(day)||[]));
     if(!activityIds.length){
