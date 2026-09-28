@@ -6,6 +6,7 @@ const { store } = require('../../../packages/core/server/store');
 const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
 const { hasOwned } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
+const Release = require('../lib/content-release');
 
 const MAX_BODY = 6 * 1024 * 1024;
 const sha = value => crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -51,13 +52,13 @@ module.exports = async function contentHandler(req,res){
     const action = String((req.query && req.query.action) || 'catalog');
 
     if(action === 'catalog'){
-      return send(res,200,{ok:true, catalog:await Content.getCatalog()});
+      return send(res,200,{ok:true, catalog:await Release.getReleasedCatalog()});
     }
 
     if(action === 'set'){
       const id = Content.cleanId(req.query && req.query.id);
       if(!id) return fail(res,400,'bad_set_id');
-      const set = await Content.getPublished(id);
+      const set = await Release.getReleasedSet(id);
       if(!set) return fail(res,404,'set_not_found');
 
       let full = set.access.mode === 'free';
@@ -91,14 +92,12 @@ module.exports = async function contentHandler(req,res){
         if(!draft) return fail(res,404,'draft_not_found');
         return send(res,200,{ok:true,draft});
       }
-      case 'publish': {
-        const set=await Content.publish(body.id);
-        return send(res,200,{ok:true,id:set.id,revision:set.revision,publishedAt:set.publishedAt});
-      }
+      case 'publish':
+        return fail(res,409,'publish_via_content_admin');
       case 'status': {
         const id=Content.cleanId(body.id);
         if(!id) return fail(res,400,'bad_set_id');
-        const [draft,published]=await Promise.all([Content.getDraft(id),Content.getPublished(id)]);
+        const [draft,published]=await Promise.all([Content.getDraft(id),Release.getReleasedSet(id)]);
         return send(res,200,{ok:true,id,draft:!!draft,draftUpdatedAt:draft&&draft.draftUpdatedAt||null,
           publishedRevision:published&&published.revision||0,publishedAt:published&&published.publishedAt||null});
       }
