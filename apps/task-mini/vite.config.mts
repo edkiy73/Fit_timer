@@ -12,7 +12,9 @@ export default defineConfig({
     alias: {
       '@appbase/core': core('core'),
       '@appbase/types': core('types'),
-      '@appbase/ui-react': fileURLToPath(new URL('../../packages/ui-react/src', import.meta.url))
+      '@appbase/ui-react': fileURLToPath(new URL('../../packages/ui-react/src', import.meta.url)),
+      'react': fileURLToPath(new URL('./node_modules/react', import.meta.url)),
+      'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url))
     }
   },
   server: {
