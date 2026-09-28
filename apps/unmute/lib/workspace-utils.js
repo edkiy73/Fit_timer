@@ -25,8 +25,8 @@ async function manyJson(keys,batchSize=160){
 }
 
 async function nextCounter(key){
-  const value=await store.incr(key);
-  return Math.max(1,+value||1);
+  const out=await store.pipe([['INCR',key]]);
+  return Math.max(1,+out[0]||1);
 }
 
 function clone(value){
