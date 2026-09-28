@@ -43,8 +43,8 @@ if(args.help){
 
 const source=await readSource(args.source);
 const model=parseLegacySource(source);
-const course=buildCourseSet(model);
 const lexicon=buildLexicon(model);
+const course=buildCourseSet(model,lexicon);
 const report=validateImport(model,course,lexicon);
 console.log(JSON.stringify(report,null,2));
 

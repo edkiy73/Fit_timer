@@ -200,8 +200,8 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         const source = await loadLegacySource();
         const importer = await loadImporter();
         const model = importer.parseLegacySource(source);
-        const course = importer.buildCourseSet(model);
         const lexicon = importer.buildLexicon(model);
+        const course = importer.buildCourseSet(model,lexicon);
         const report = importer.validateImport(model,course,lexicon);
 
         await Content.putDraft(course);

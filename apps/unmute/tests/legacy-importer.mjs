@@ -73,14 +73,20 @@ assert.equal(model.lessons[0].cards[0].ex,'fixed');
 assert.equal(Array.from(model.lessons[1].cards[0].a).join('|'),'work|work please');
 assert.equal(Object.keys(model.dictionary).length,3);
 
-const course=buildCourseSet(model);
+const lexicon=buildLexicon(model);
+const course=buildCourseSet(model,lexicon);
 assert.equal(course.id,'general-foundation');
 assert.equal(course.roadmaps[0].nodes.length,40);
 assert.ok(course.roadmaps[0].nodes[0].activityIds[0]==='plan.day-1');
 assert.ok(course.activities.some(a=>a.id==='dialogue.d1'));
 assert.ok(course.activities.some(a=>a.id==='ai.ai1'));
+assert.equal(course.resources.length,1);
+assert.equal(course.resources[0].id,'phrase-bank');
+assert.equal(course.resources[0].type,'phrase-collection');
+assert.equal(course.resources[0].groups.length,1);
+assert.equal(course.resources[0].groups[0].items.length,1);
 
-const lexicon=buildLexicon(model);
+
 const work=lexicon.entries.find(e=>e.lemma==='work');
 assert.equal(work.senses.length,2);
 assert.ok(work.senses.every(s=>s.tags.includes('needs-review')));
@@ -88,6 +94,9 @@ const howAreYou=lexicon.entries.find(e=>e.lemma==='how are you');
 assert.ok(howAreYou);
 assert.equal(howAreYou.senses.length,2);
 assert.equal(howAreYou.senses.map(s=>s.translations.ru[0]).sort().join('|'),['Как дела?','как ты?'].sort().join('|'));
+const phraseRef=course.resources[0].groups[0].items[0];
+assert.equal(phraseRef.lexemeId,howAreYou.id);
+assert.equal(phraseRef.senseId,howAreYou.senses.find(s=>s.translations.ru.includes('Как дела?')).id);
 
 assert.throws(()=>validateImport(model,course,lexicon),/unexpected_lessons/);
 console.log('UnMute legacy importer unit tests passed');
