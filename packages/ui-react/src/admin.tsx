@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
+import './admin.css';
 
 export interface AdminPanelProps {
   client: AdminClient;
