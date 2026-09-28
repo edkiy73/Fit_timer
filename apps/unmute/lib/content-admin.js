@@ -3,6 +3,7 @@
 const { send, fail } = require('../../../packages/core/server/util');
 const Content = require('./content-store');
 const Lexicon = require('./lexicon-store');
+const Release = require('./content-release');
 
 const LEGACY_SHA = '011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_URL = 'https://raw.githubusercontent.com/edkiy73/English/' + LEGACY_SHA + '/index.html';
@@ -70,13 +71,14 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
 
     try{
       if(action === 'content_status'){
-        const [courseDraft,coursePublished,lexiconDraft,lexiconPublished] = await Promise.all([
+        const [courseDraft,coursePublished,lexiconDraft,lexiconPublished,release] = await Promise.all([
           Content.getDraft('general-foundation'),
-          Content.getPublished('general-foundation'),
+          Release.getReleasedSet('general-foundation'),
           Lexicon.getDraft(),
-          Lexicon.getPublished()
+          Release.getReleasedLexicon(),
+          Release.getRelease()
         ]);
-        send(res,200,{ok:true, source:{sha:LEGACY_SHA,url:LEGACY_URL},
+        send(res,200,{ok:true, source:{sha:LEGACY_SHA,url:LEGACY_URL}, release,
           course:{draft:courseStats(courseDraft),published:courseStats(coursePublished)},
           lexicon:{draft:lexiconStats(lexiconDraft),published:lexiconStats(lexiconPublished)}
         });
@@ -116,11 +118,12 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         Content.validateSet(courseDraft);
         Lexicon.validateLexicon(lexiconDraft);
 
-        const course = await Content.publish('general-foundation');
-        const lexicon = await Lexicon.publish();
-        send(res,200,{ok:true,
-          course:{revision:course.revision,publishedAt:course.publishedAt},
-          lexicon:{revision:lexicon.revision,publishedAt:lexicon.publishedAt},
+        const published = await Release.publishDraftRelease(['general-foundation']);
+        const course = await Release.getReleasedSet('general-foundation');
+        const lexicon = await Release.getReleasedLexicon();
+        send(res,200,{ok:true,release:published.release,
+          course:{revision:course && course.revision,publishedAt:course && course.publishedAt},
+          lexicon:{revision:lexicon && lexicon.revision,publishedAt:lexicon && lexicon.publishedAt},
           needsReview:reviewItems(lexicon).length
         });
         return true;
