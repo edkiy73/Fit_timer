@@ -89,4 +89,27 @@ async function getReleasedLexicon(){
   return Lexicon.getPublished();
 }
 
-module.exports={getRelease,publishDraftRelease,getReleasedSet,getReleasedLexicon,keys:{RELEASE_KEY,RELEASE_COUNTER}};
+async function getReleasedCatalog(){
+  const release=await getRelease();
+  if(!release || !release.sets) return Content.getCatalog();
+  const sets=[];
+  for(const [id,revision] of Object.entries(release.sets)){
+    const set=await Content.getRevision(id,revision);
+    if(!set) continue;
+    sets.push({
+      id:set.id,
+      slug:set.slug,
+      revision:set.revision,
+      title:set.title,
+      description:set.description || null,
+      level:set.level || {},
+      access:set.access,
+      defaultRoadmapId:set.defaultRoadmapId,
+      publishedAt:set.publishedAt
+    });
+  }
+  sets.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  return {schemaVersion:1,revision:release.revision,updatedAt:release.publishedAt,sets};
+}
+
+module.exports={getRelease,publishDraftRelease,getReleasedSet,getReleasedLexicon,getReleasedCatalog,keys:{RELEASE_KEY,RELEASE_COUNTER}};
