@@ -24,18 +24,88 @@ function assertObject(value, name){
   return value;
 }
 
+function isTextMap(value){
+  return !!value && typeof value==='object' && !Array.isArray(value)
+    && Object.values(value).some(item=>typeof item==='string' && item.trim());
+}
+
+function validateAnswer(answer,id){
+  assertObject(answer,'answer');
+  if(!Array.isArray(answer.accepted) || !answer.accepted.length || answer.accepted.some(value=>typeof value!=='string' || !value.trim())){
+    throw new Error(`bad_answers:${id}`);
+  }
+  return answer;
+}
+
 function validateActivity(activity){
   assertObject(activity,'activity');
   const id=cleanId(activity.id);
   if(!id) throw new Error('bad_activity_id');
-  if(typeof activity.type!=='string' || !activity.type) throw new Error(`missing_activity_type:${id}`);
   if(!Number.isInteger(activity.revision) || activity.revision<1) throw new Error(`bad_activity_revision:${id}`);
   if(!['preserve','reset'].includes(activity.revisionProgress)) throw new Error(`bad_revision_progress:${id}`);
-  if(activity.type==='choice'){
-    if(!Array.isArray(activity.options) || activity.options.length<2) throw new Error(`bad_choice_options:${id}`);
-    if(!Number.isInteger(activity.correctIndex) || activity.correctIndex<0 || activity.correctIndex>=activity.options.length){
-      throw new Error(`bad_choice_answer:${id}`);
-    }
+  if(!Array.isArray(activity.tags)) throw new Error(`bad_activity_tags:${id}`);
+  if(activity.lexiconRefs!==undefined && !Array.isArray(activity.lexiconRefs)) throw new Error(`bad_lexicon_refs:${id}`);
+
+  switch(activity.type){
+    case 'theory':
+      if(!isTextMap(activity.body)) throw new Error(`bad_theory_body:${id}`);
+      if(!['text','html','markdown'].includes(activity.format)) throw new Error(`bad_theory_format:${id}`);
+      break;
+    case 'choice':
+      if(!isTextMap(activity.prompt)) throw new Error(`bad_choice_prompt:${id}`);
+      if(!Array.isArray(activity.options) || activity.options.length<2 || activity.options.some(option=>!isTextMap(option))){
+        throw new Error(`bad_choice_options:${id}`);
+      }
+      if(!Number.isInteger(activity.correctIndex) || activity.correctIndex<0 || activity.correctIndex>=activity.options.length){
+        throw new Error(`bad_choice_answer:${id}`);
+      }
+      break;
+    case 'text-input':
+      if(!isTextMap(activity.prompt)) throw new Error(`bad_text_input_prompt:${id}`);
+      validateAnswer(activity.answer,id);
+      break;
+    case 'translation':
+      if(!['to-target','from-target'].includes(activity.direction)) throw new Error(`bad_translation_direction:${id}`);
+      if(!isTextMap(activity.prompt)) throw new Error(`bad_translation_prompt:${id}`);
+      validateAnswer(activity.answer,id);
+      break;
+    case 'speaking':
+      if(!isTextMap(activity.prompt)) throw new Error(`bad_speaking_prompt:${id}`);
+      if(activity.answer!==undefined) validateAnswer(activity.answer,id);
+      break;
+    case 'pattern-drill':
+      if(!isTextMap(activity.pattern)) throw new Error(`bad_pattern:${id}`);
+      if(!Array.isArray(activity.items) || !activity.items.length) throw new Error(`bad_pattern_items:${id}`);
+      for(const item of activity.items){
+        if(!item || !cleanId(item.id) || !isTextMap(item.prompt)) throw new Error(`bad_pattern_item:${id}`);
+        validateAnswer(item.answer,id);
+      }
+      break;
+    case 'dialogue':
+      if(!isTextMap(activity.scene)) throw new Error(`bad_dialogue_scene:${id}`);
+      if(!Array.isArray(activity.lines) || !activity.lines.length) throw new Error(`bad_dialogue_lines:${id}`);
+      for(const line of activity.lines){
+        if(!line || !cleanId(line.id) || !isTextMap(line.partner)) throw new Error(`bad_dialogue_line:${id}`);
+        validateAnswer(line.answer,id);
+      }
+      break;
+    case 'listening':
+      if(typeof activity.text!=='string' || !activity.text.trim()) throw new Error(`bad_listening_text:${id}`);
+      if(activity.answer!==undefined) validateAnswer(activity.answer,id);
+      break;
+    case 'review':
+      assertObject(activity.source,'review_source');
+      if(!Array.isArray(activity.source.activityIds) || !Array.isArray(activity.source.tags) || typeof activity.source.dueOnly!=='boolean'){
+        throw new Error(`bad_review_source:${id}`);
+      }
+      break;
+    case 'ai-conversation':
+      if(!isTextMap(activity.topic)) throw new Error(`bad_ai_topic:${id}`);
+      if(typeof activity.promptTemplate!=='string' || !activity.promptTemplate.trim()) throw new Error(`bad_ai_prompt:${id}`);
+      if(!Array.isArray(activity.focus)) throw new Error(`bad_ai_focus:${id}`);
+      break;
+    default:
+      throw new Error(`unknown_activity_type:${id}`);
   }
   return activity;
 }
@@ -184,6 +254,21 @@ async function ensureDraftWorkspace(id){
   return Draft.ensure(key,fallback);
 }
 
+async function getDraftStructure(id){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.getStructure(key);
+}
+
+async function getDraftNode(id,roadmapId,nodeId){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  const nodeResult=await Draft.getNode(key,cleanId(roadmapId),cleanId(nodeId));
+  if(!nodeResult) return null;
+  const activities=await Draft.getActivities(key,nodeResult.node.activityIds || []);
+  return {...nodeResult,activities};
+}
+
 async function getDraftActivity(id,activityId){
   const key=cleanId(id);
   await ensureDraftWorkspace(key);
@@ -200,6 +285,12 @@ async function createDraftActivity(id,roadmapId,nodeId,activity){
   const key=cleanId(id);
   await ensureDraftWorkspace(key);
   return Draft.createActivity(key,cleanId(roadmapId),cleanId(nodeId),activity,validateActivity);
+}
+
+async function detachDraftActivity(id,roadmapId,nodeId,activityId){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.detachActivity(key,cleanId(roadmapId),cleanId(nodeId),cleanId(activityId));
 }
 
 async function reorderDraftActivities(id,roadmapId,nodeId,activityIds){
@@ -304,9 +395,12 @@ module.exports = {
   putDraft,
   getDraft,
   ensureDraftWorkspace,
+  getDraftStructure,
+  getDraftNode,
   getDraftActivity,
   updateDraftActivity,
   createDraftActivity,
+  detachDraftActivity,
   reorderDraftActivities,
   publish,
   stageDraft,
