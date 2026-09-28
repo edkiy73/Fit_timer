@@ -203,7 +203,53 @@ function buildActivities(model){
   return {activities,lessonActivities,byDay};
 }
 
-export function buildCourseSet(model){
+function normalizePhrase(value){
+  return text(value).toLowerCase().replace(/[.!?]+$/,'').replace(/\s+/g,' ').trim();
+}
+
+export function buildPhraseBankResource(model,lexicon){
+  const byLemma=new Map();
+  for(const entry of lexicon&&lexicon.entries||[]){
+    const key=normalizePhrase(entry.lemma);
+    if(!byLemma.has(key))byLemma.set(key,[]);
+    byLemma.get(key).push(entry);
+  }
+
+  const groups=[];
+  for(let groupIndex=0;groupIndex<(model.phrases||[]).length;groupIndex++){
+    const group=model.phrases[groupIndex]||{};
+    const items=[];
+    for(const pair of group.items||[]){
+      const en=text(pair&&pair[0]).trim();
+      const ru=text(pair&&pair[1]).trim();
+      if(!en)continue;
+      const candidates=byLemma.get(normalizePhrase(en))||[];
+      if(candidates.length!==1)throw new Error('phrase_resource_lexeme_resolution:'+en+':'+candidates.length);
+      const entry=candidates[0];
+      const senses=(entry.senses||[]).filter(sense=>
+        !ru || (sense.translations&&Array.isArray(sense.translations.ru)&&sense.translations.ru.includes(ru)));
+      if(senses.length>1)throw new Error('phrase_resource_sense_resolution:'+en+':'+senses.length);
+      items.push({
+        lexemeId:entry.id,
+        ...(senses.length===1?{senseId:senses[0].id}:{})
+      });
+    }
+    groups.push({
+      id:'phrase-group-'+String(groupIndex+1).padStart(2,'0'),
+      title:{ru:text(group.g||('Группа '+(groupIndex+1)))},
+      items
+    });
+  }
+
+  return {
+    id:'phrase-bank',
+    type:'phrase-collection',
+    title:{ru:'Банк фраз'},
+    groups
+  };
+}
+
+export function buildCourseSet(model,lexicon=null){
   const built=buildActivities(model),activities=built.activities,nodes=[];
   let previous=null;
   for(let i=0;i<model.plan.length;i++){
@@ -232,7 +278,12 @@ export function buildCourseSet(model){
     level:{from:'a1',to:'b2',labels:['A1–B1/B2']},
     access:{mode:'entitlement',entitlement:'course.general-foundation',
       freePreview:{kind:'first-days',days:7,learnedContentStaysAvailable:true}},
-    defaultRoadmapId:'main',roadmaps:[{id:'main',title:{ru:'Основной путь'},nodes}],activities
+    defaultRoadmapId:'main',
+    roadmaps:[{id:'main',title:{ru:'Основной путь'},nodes}],
+    activities,
+    resources:lexicon&&Array.isArray(model.phrases)&&model.phrases.length
+      ? [buildPhraseBankResource(model,lexicon)]
+      : []
   };
 }
 
