@@ -75,7 +75,7 @@ export function gradeCoursePractice(
   at:string
 ):CourseProgressDocument{
   const previous=doc.practice[mode][activityId];
-  const graded=gradePracticeSrs(previous&& !previous.deleted ? previous : undefined,correct,todayDay);
+  const graded=gradePracticeSrs(mode,previous&& !previous.deleted ? previous : undefined,correct,todayDay);
   return withLearningDay({
     ...doc,
     practice:{
