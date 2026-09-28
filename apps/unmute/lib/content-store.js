@@ -155,24 +155,40 @@ function validateResource(resource){
   assertObject(resource,'resource');
   const id=cleanId(resource.id);
   if(!id) throw new Error('bad_resource_id');
-  if(resource.type!=='phrase-collection') throw new Error('unknown_resource_type:'+id);
   if(!isTextMap(resource.title)) throw new Error('bad_resource_title:'+id);
-  if(!Array.isArray(resource.groups) || !resource.groups.length) throw new Error('bad_phrase_groups:'+id);
-  const groupIds=new Set();
-  for(const group of resource.groups){
-    assertObject(group,'phrase_group');
-    const groupId=cleanId(group.id);
-    if(!groupId || groupIds.has(groupId)) throw new Error('bad_phrase_group:'+id);
-    groupIds.add(groupId);
-    if(!isTextMap(group.title)) throw new Error('bad_phrase_group_title:'+id+':'+groupId);
-    if(!Array.isArray(group.items)) throw new Error('bad_phrase_group_items:'+id+':'+groupId);
-    for(const item of group.items){
-      assertObject(item,'phrase_item');
-      if(!cleanId(item.lexemeId)) throw new Error('bad_phrase_lexeme:'+id+':'+groupId);
-      if(item.senseId!==undefined && !cleanId(item.senseId)) throw new Error('bad_phrase_sense:'+id+':'+groupId);
+  if(resource.type==='phrase-collection'){
+    if(!Array.isArray(resource.groups) || !resource.groups.length) throw new Error('bad_phrase_groups:'+id);
+    const groupIds=new Set();
+    for(const group of resource.groups){
+      assertObject(group,'phrase_group');
+      const groupId=cleanId(group.id);
+      if(!groupId || groupIds.has(groupId)) throw new Error('bad_phrase_group:'+id);
+      groupIds.add(groupId);
+      if(!isTextMap(group.title)) throw new Error('bad_phrase_group_title:'+id+':'+groupId);
+      if(!Array.isArray(group.items)) throw new Error('bad_phrase_group_items:'+id+':'+groupId);
+      for(const item of group.items){
+        assertObject(item,'phrase_item');
+        if(!cleanId(item.lexemeId)) throw new Error('bad_phrase_lexeme:'+id+':'+groupId);
+        if(item.senseId!==undefined && !cleanId(item.senseId)) throw new Error('bad_phrase_sense:'+id+':'+groupId);
+      }
     }
+    return resource;
   }
-  return resource;
+  if(resource.type==='verb-table'){
+    if(!Array.isArray(resource.items) || !resource.items.length) throw new Error('bad_verb_items:'+id);
+    for(const item of resource.items){
+      assertObject(item,'verb_item');
+      if(!cleanId(item.lexemeId)||!cleanId(item.baseFormId)) throw new Error('bad_verb_ref:'+id);
+      if(!Array.isArray(item.pastFormIds)||!item.pastFormIds.length||item.pastFormIds.some(value=>!cleanId(value))){
+        throw new Error('bad_verb_past:'+id);
+      }
+      if(!Array.isArray(item.participleFormIds)||!item.participleFormIds.length||item.participleFormIds.some(value=>!cleanId(value))){
+        throw new Error('bad_verb_participle:'+id);
+      }
+    }
+    return resource;
+  }
+  throw new Error('unknown_resource_type:'+id);
 }
 
 function validateSet(input){
