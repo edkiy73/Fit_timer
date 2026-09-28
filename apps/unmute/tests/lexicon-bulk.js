@@ -111,4 +111,17 @@ assert.ok(prompt.prompt.includes("It's cold."));
 assert.ok(prompt.prompt.includes('worked'));
 assert.ok(prompt.prompt.includes('IPA must describe the EXACT form'));
 
+const enrich=Bulk.buildAiPrompt({
+  resolved:[
+    {surface:'work',count:20,contexts:['I work from home.'],lexemeIds:['lex.work']},
+    {surface:'sound',count:10,contexts:['It sounds good.'],lexemeIds:['lex.sound']}
+  ]
+},10,{mode:'enrich',lexicon:snapshot});
+assert.equal(enrich.mode,'enrich');
+assert.equal(enrich.targets.length,2);
+assert.equal(enrich.targets[0].lexemeId,'lex.work');
+assert.ok(enrich.targets[0].missingFields.includes('examples'));
+assert.ok(enrich.prompt.includes('Preserve existing sense IDs'));
+assert.ok(enrich.prompt.includes('"lexemeId": "lex.work"'));
+
 console.log('UnMute bulk lexicon tests passed');
