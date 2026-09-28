@@ -495,21 +495,76 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     <article className="ab-admin-panel">
       <div className="ab-admin-section-head">
         <div>
-          <h2>{structure ? textValue(structure.set.title) : 'Курс'}</h2>
+          <h2>Сеты</h2>
+          <p className="ab-admin-note">Каждый set — независимый покупаемый курс со своим roadmap и прогрессом.</p>
+        </div>
+        <button type="button" onClick={()=>setCreateOpen(value=>!value)}>+ Set</button>
+      </div>
+
+      <div className="ab-course-set-picker">
+        <select value={setId} onChange={e=>setSetId(e.target.value)}>
+          {sets.map(item=><option key={item.id} value={item.id}>{textValue(item.title)||item.id}</option>)}
+        </select>
+        <span>{sets.find(item=>item.id===setId)?.publishedRevision ? 'live r'+sets.find(item=>item.id===setId)?.publishedRevision : 'не опубликован'}</span>
+      </div>
+
+      {createOpen && <div className="ab-course-create-set">
+        <label><span>Стабильный ID</span><input value={createId} onChange={e=>setCreateId(e.target.value)} placeholder="b1-b2" /></label>
+        <label><span>Название</span><input value={createTitle} onChange={e=>setCreateTitle(e.target.value)} placeholder="B1 → B2" /></label>
+        <button type="button" disabled={busy} onClick={()=>void createSet()}>Создать draft</button>
+      </div>}
+
+      {structure && <details className="ab-admin-details">
+        <summary>Настройки выбранного set</summary>
+        <div className="ab-course-meta-grid">
+          <label><span>Название</span><input value={metaTitle} onChange={e=>setMetaTitle(e.target.value)} /></label>
+          <label><span>Описание</span><input value={metaDescription} onChange={e=>setMetaDescription(e.target.value)} /></label>
+          <label><span>Уровень от</span><select value={metaFrom} onChange={e=>setMetaFrom(e.target.value)}>
+            <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
+          </select></label>
+          <label><span>Уровень до</span><select value={metaTo} onChange={e=>setMetaTo(e.target.value)}>
+            <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
+          </select></label>
+          <label><span>Доступ</span><select value={metaAccess} onChange={e=>setMetaAccess(e.target.value as 'free'|'entitlement')}>
+            <option value="entitlement">Покупка / entitlement</option><option value="free">Полностью бесплатно</option>
+          </select></label>
+          {metaAccess==='entitlement' && <label><span>Бесплатных учебных дней</span><input type="number" min={0} max={365} value={metaFreeDays} onChange={e=>setMetaFreeDays(e.target.value)} /></label>}
+        </div>
+        <div className="ab-admin-action-row">
+          <button type="button" disabled={busy} onClick={()=>void saveSetMeta()}>Сохранить настройки</button>
+        </div>
+      </details>}
+
+      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
+    </article>
+
+    <article className="ab-admin-panel">
+      <div className="ab-admin-section-head">
+        <div>
+          <h2>{structure ? textValue(structure.set.title) : 'Roadmap'}</h2>
           <p className="ab-admin-note">{structure ? 'Draft r'+structure.draftRevision+' · '+nodes.length+' узлов roadmap' : 'Загрузка…'}</p>
         </div>
-        <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void loadStructure()}>Обновить</button>
+        <div className="ab-course-head-actions">
+          <button type="button" disabled={busy||!structure} onClick={()=>void createNode()}>+ День / узел</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void loadStructure()}>Обновить</button>
+        </div>
       </div>
-      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
       <div className="ab-admin-table-wrap">
         <table>
           <thead><tr><th>День</th><th>Узел</th><th>Тип</th><th>Activities</th><th></th></tr></thead>
-          <tbody>{nodes.map(node=><tr key={node.roadmapId+':'+node.id}>
+          <tbody>{nodes.map((node,index)=><tr key={node.roadmapId+':'+node.id}>
             <td data-label="День">{node.dayIndex ?? '—'}</td>
             <td data-label="Узел"><strong>{textValue(node.title)||node.id}</strong><div className="ab-admin-cell-sub">{node.id}</div></td>
             <td data-label="Тип">{node.kind}</td>
             <td data-label="Activities">{node.activityCount}</td>
-            <td className="ab-admin-cell-action"><button type="button" className="ab-admin-secondary" onClick={()=>void open(node.roadmapId,node.id)}>Открыть</button></td>
+            <td className="ab-admin-cell-action">
+              <div className="ab-course-node-actions">
+                <button type="button" className="ab-admin-secondary" disabled={index===0||busy} onClick={()=>void moveNode(index,-1)}>↑</button>
+                <button type="button" className="ab-admin-secondary" disabled={index===nodes.length-1||busy} onClick={()=>void moveNode(index,1)}>↓</button>
+                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void open(node.roadmapId,node.id)}>Открыть</button>
+                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void deleteNode(node.roadmapId,node.id)}>Удалить</button>
+              </div>
+            </td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -520,6 +575,20 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
         <div><h2>{textValue(openNode.node.title)||openNode.node.id}</h2><p className="ab-admin-note">Day {openNode.node.dayIndex ?? '—'} · {openNode.activities.length} activities</p></div>
         <button type="button" className="ab-admin-secondary" onClick={()=>{setOpenNode(null);setEditor(null);}}>Закрыть</button>
       </div>
+
+      <details className="ab-admin-details">
+        <summary>Настройки узла</summary>
+        <div className="ab-course-meta-grid">
+          <label><span>Название</span><input value={textValue(openNode.node.title)} onChange={e=>patchOpenNode({title:{...openNode.node.title,ru:e.target.value}})} /></label>
+          <label><span>Тип</span><select value={openNode.node.kind} onChange={e=>patchOpenNode({kind:e.target.value})}>
+            <option value="lesson">lesson</option><option value="practice">practice</option><option value="review">review</option><option value="dialogue">dialogue</option><option value="checkpoint">checkpoint</option><option value="bonus">bonus</option>
+          </select></label>
+          <label><span>Учебный день</span><input type="number" min={1} value={openNode.node.dayIndex ?? ''} onChange={e=>patchOpenNode({dayIndex:e.target.value?Number(e.target.value):undefined})} /></label>
+          <label><span>Prerequisites — ID через запятую</span><input value={openNode.node.prerequisites.join(', ')} onChange={e=>patchOpenNode({prerequisites:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)})} /></label>
+          <label className="ab-course-check"><input type="checkbox" checked={openNode.node.optional} onChange={e=>patchOpenNode({optional:e.target.checked})} /><span>Необязательный узел</span></label>
+        </div>
+        <div className="ab-admin-action-row"><button type="button" disabled={busy} onClick={()=>void saveNodeMeta()}>Сохранить узел</button></div>
+      </details>
 
       <div className="ab-course-add">
         <select value={newType} onChange={e=>setNewType(e.target.value)}>
