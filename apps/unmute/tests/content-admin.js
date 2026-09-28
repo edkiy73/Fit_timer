@@ -7,6 +7,7 @@ const assert=require('assert');
 const { createContentAdminHandler, reviewItems, LEGACY_SHA }=require('../lib/content-admin');
 const Content=require('../lib/content-store');
 const Lexicon=require('../lib/lexicon-store');
+const Release=require('../lib/content-release');
 
 function res(){
   return {statusCode:0,headers:{},body:'',setHeader(k,v){this.headers[k]=v;},end(v){this.body=v||'';}};
@@ -75,6 +76,19 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(published.status,200);
   assert.equal(published.body.course.revision,1);
   assert.equal(published.body.lexicon.revision,1);
+  assert.equal(published.body.release.revision,1);
+  assert.equal(published.body.release.sets['general-foundation'],1);
+  assert.equal(published.body.release.lexiconRevision,1);
+
+  // A newly staged course snapshot is invisible until a new paired release pointer is committed.
+  const nextDraft=await Content.getDraft('general-foundation');
+  nextDraft.title.ru='Staged but not released';
+  await Content.putDraft(nextDraft);
+  const staged=await Content.stageDraft('general-foundation');
+  assert.equal(staged.revision,2);
+  const stillReleased=await Release.getReleasedSet('general-foundation');
+  assert.equal(stillReleased.revision,1);
+  assert.equal(stillReleased.title.ru,'Test');
 
   const after=await action(handler,'content_status');
   assert.equal(after.body.course.published.revision,1);
