@@ -43,6 +43,28 @@ function adminOk(req){
   return sameSecret(given, expected);
 }
 
+function roadmapOutline(set,full){
+  const preview=set.access&&set.access.mode==='entitlement'&&set.access.freePreview;
+  return (set.roadmaps||[]).map(roadmap=>({
+    id:roadmap.id,
+    title:roadmap.title,
+    nodes:(roadmap.nodes||[]).map(node=>{
+      const free=full
+        || set.access.mode==='free'
+        || (preview&&preview.kind==='first-days'&&Number.isInteger(node.dayIndex)&&node.dayIndex<=preview.days);
+      return {
+        id:node.id,
+        kind:node.kind,
+        title:node.title,
+        dayIndex:node.dayIndex||null,
+        order:node.order,
+        optional:!!node.optional,
+        locked:!free
+      };
+    })
+  }));
+}
+
 module.exports = async function contentHandler(req,res){
   if(cors(req,res)) return;
   if(!store.configured()) return fail(res,503,'no_store');
@@ -66,7 +88,12 @@ module.exports = async function contentHandler(req,res){
         const acc = await accountFromHeaders(req);
         full = !!acc && hasOwned(acc,set.access.entitlement);
       }
-      return send(res,200,{ok:true, access:full?'full':'preview', set:full?set:Content.previewSnapshot(set)});
+      return send(res,200,{
+        ok:true,
+        access:full?'full':'preview',
+        outline:roadmapOutline(set,full),
+        set:full?set:Content.previewSnapshot(set)
+      });
     }
 
     return fail(res,400,'unknown_action');
