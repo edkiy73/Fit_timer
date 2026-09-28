@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
-import './admin.css';
 
 export interface AdminSectionContext {
   client: AdminClient;
@@ -32,7 +31,10 @@ const COPY = {
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок клиента',
     noErrors:'Ошибок клиента нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
     premium:'Premium', seen:'Последняя активность', count:'Количество',
-    clear:'Очистить', migration:'Миграция хранилища'
+    clear:'Очистить', migration:'Миграция хранилища',
+    owned:'Покупки', access:'Доступ', sku:'Покупка (SKU)', grant:'Выдать', revoke:'Забрать',
+    premiumDays:'Premium, дней', grantPremium:'Выдать Premium', revokePremium:'Забрать Premium',
+    accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок.'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -43,12 +45,76 @@ const COPY = {
     analytics:'Analytics', accounts:'Accounts', totalErrors:'Client errors',
     noErrors:'No client errors.', noUsers:'No accounts yet.', email:'Email',
     premium:'Premium', seen:'Last active', count:'Count',
-    clear:'Clear', migration:'Storage migration'
+    clear:'Clear', migration:'Storage migration',
+    owned:'Purchases', access:'Access', sku:'Purchase (SKU)', grant:'Grant', revoke:'Revoke',
+    premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
+    accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period.'
   }
 } as const;
 
 type CoreTab = 'health' | 'overview' | 'users' | 'errors' | 'storage';
 type Tab = CoreTab | string;
+
+type Copy = (typeof COPY)[keyof typeof COPY];
+
+/* Manual access for one account: a purchase for good (SKU from the product catalog)
+   or Premium for a number of days. */
+function AccessForm({client, adminKey, copy, onChanged}: {client: AdminClient; adminKey: string; copy: Copy; onChanged(): void}){
+  const [email, setEmail] = useState('');
+  const [sku, setSku] = useState('');
+  const [days, setDays] = useState('30');
+  const [products, setProducts] = useState<Array<{sku: string; title: string}>>([]);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    client.action(adminKey, 'products_list').then(result => {
+      const list = Array.isArray(result.products) ? result.products as Array<{sku: string; title: string}> : [];
+      if(!live) return;
+      setProducts(list);
+      if(list[0]) setSku(current => current || list[0]!.sku);
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [client, adminKey]);
+
+  async function run(action: string, body: Record<string, unknown>){
+    setBusy(true);
+    setMessage('');
+    try{
+      await client.action(adminKey, action, {email, ...body});
+      setMessage(copy.accessDone);
+      onChanged();
+    }catch(e){
+      setMessage(String((e as {code?: string})?.code || copy.requestFailed));
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="ab-admin-panel ab-admin-access">
+      <h2>{copy.access}</h2>
+      <p className="ab-admin-empty">{copy.accessHint}</p>
+      <label><span>{copy.email}</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+      <div className="ab-admin-row">
+        <label><span>{copy.sku}</span>
+          {products.length
+            ? <select value={sku} onChange={e => setSku(e.target.value)}>{products.map(p => <option key={p.sku} value={p.sku}>{p.title} ({p.sku})</option>)}</select>
+            : <input value={sku} onChange={e => setSku(e.target.value)} />}
+        </label>
+        <button type="button" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku})}>{copy.grant}</button>
+        <button type="button" className="ab-admin-secondary" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku, revoke:true})}>{copy.revoke}</button>
+      </div>
+      <div className="ab-admin-row">
+        <label><span>{copy.premiumDays}</span><input type="number" min={1} max={3650} value={days} onChange={e => setDays(e.target.value)} /></label>
+        <button type="button" disabled={busy || !email} onClick={() => void run('user_premium', {days:Number(days) || 30})}>{copy.grantPremium}</button>
+        <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void run('user_premium', {revoke:true})}>{copy.revokePremium}</button>
+      </div>
+      {message && <p className="ab-admin-empty" role="status">{message}</p>}
+    </article>
+  );
+}
 
 function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
@@ -208,12 +274,20 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
         </section>
       )}
 
-      {tab === 'users' && key && data && (
-        <section className="ab-admin-panel">
-          {users.length ? (
-            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.seen}</th></tr></thead>
-            <tbody>{users.map(user => <tr key={String(user.id || user.email)}><td>{String(user.email || '—')}</td><td>{user.premium ? '✓' : '—'}</td><td>{String(user.seen || user.since || '—')}</td></tr>)}</tbody></table></div>
-          ) : <p className="ab-admin-empty">{copy.noUsers}</p>}
+      {tab === 'users' && key && (
+        <section className="ab-admin-stack">
+          <AccessForm client={client} adminKey={key} copy={copy} onChanged={() => void loadProtected('users', key)} />
+          {data && <article className="ab-admin-panel">
+            {users.length ? (
+              <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
+              <tbody>{users.map(user => <tr key={String(user.id || user.email)}>
+                <td>{String(user.email || '—')}</td>
+                <td>{user.premium ? String((user.sub as {until?: string} | null)?.until || '✓') : '—'}</td>
+                <td>{Array.isArray(user.owned) && user.owned.length ? user.owned.join(', ') : '—'}</td>
+                <td>{String(user.seen || user.since || '—')}</td>
+              </tr>)}</tbody></table></div>
+            ) : <p className="ab-admin-empty">{copy.noUsers}</p>}
+          </article>}
         </section>
       )}
 

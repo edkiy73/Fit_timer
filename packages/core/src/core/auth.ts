@@ -8,6 +8,8 @@ export interface AuthSession {
   locale: AuthLocale;
   sub: unknown | null;
   premium: boolean;
+  /** SKUs bought for good (course packs, one-time features). What a SKU unlocks is product logic. */
+  owned: string[];
   fresh: boolean;
 }
 
@@ -102,6 +104,16 @@ function premiumFrom(sub: unknown): boolean {
   return typeof until === 'string' && (Date.parse(until) || 0) > Date.now();
 }
 
+function ownedFrom(value: unknown): string[] {
+  if(!Array.isArray(value)) return [];
+  return [...new Set(value.map(item => String(item || '').trim().toLowerCase()).filter(Boolean))].slice(0, 200);
+}
+
+/** True when the account owns the SKU for good. Subscriptions are checked with session.premium. */
+export function hasEntitlement(session: Pick<AuthSession, 'owned'> | null | undefined, sku: string): boolean {
+  return !!session && Array.isArray(session.owned) && session.owned.includes(String(sku || '').trim().toLowerCase());
+}
+
 function toSession(raw: unknown): AuthSession | null {
   if(!raw || typeof raw !== 'object') return null;
   const v = raw as Partial<AuthSession>;
@@ -117,6 +129,7 @@ function toSession(raw: unknown): AuthSession | null {
     locale: localeOf(v.locale),
     sub: v.sub ?? null,
     premium: typeof v.premium === 'boolean' ? v.premium : premiumFrom(v.sub),
+    owned: ownedFrom(v.owned),
     fresh: !!v.fresh
   };
 }
@@ -203,6 +216,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     });
     if('sub' in result) session.sub = result.sub ?? null;
     session.premium = typeof result.premium === 'boolean' ? result.premium : premiumFrom(session.sub);
+    if('owned' in result) session.owned = ownedFrom(result.owned);
     await saveSession(session);
     return result;
   }
@@ -240,6 +254,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
         locale:localeOf(result.locale ?? input.locale),
         sub:result.sub ?? null,
         premium:typeof result.premium === 'boolean' ? result.premium : premiumFrom(result.sub),
+        owned:ownedFrom(result.owned),
         fresh:!!result.fresh
       };
       await saveSession(session);

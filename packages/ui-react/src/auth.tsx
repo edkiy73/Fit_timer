@@ -42,6 +42,8 @@ export interface OptionalAuthContextValue {
   deleteAccount(): Promise<void>;
   /** Set or change the handle later (e.g. when the product skipped it at sign-in). */
   claimHandle(handle: string): Promise<void>;
+  /** Re-read Premium and owned SKUs from the server (after a purchase, on app start). */
+  refresh(): Promise<void>;
   /** Used by SignInForm; products normally do not call it. */
   acceptSession(session: AuthSession): void;
 }
@@ -51,6 +53,7 @@ export interface AuthContextValue {
   logout(): Promise<void>;
   deleteAccount(): Promise<void>;
   claimHandle(handle: string): Promise<void>;
+  refresh(): Promise<void>;
 }
 
 const OptionalAuthContext = createContext<OptionalAuthContextValue | null>(null);
@@ -134,7 +137,13 @@ export function AuthProvider({client, children}: AuthProviderProps){
     let live = true;
     setLoading(true);
     client.restoreSession().then(value => {
-      if(live) setSession(value);
+      if(!live) return;
+      setSession(value);
+      // Rights may have changed on another device or in Admin: refresh in the background.
+      // Offline or a failed request keeps the stored session.
+      if(value) client.status().then(() => client.getSession()).then(next => {
+        if(live && next) setSession(next);
+      }).catch(() => undefined);
     }).finally(() => {
       if(live) setLoading(false);
     });
@@ -157,6 +166,10 @@ export function AuthProvider({client, children}: AuthProviderProps){
       await client.claimHandle({handle: normalizeHandle(handle)});
       setSession(await client.getSession());
     },
+    refresh: async () => {
+      await client.status();
+      setSession(await client.getSession());
+    },
     acceptSession: next => setSession(next)
   }), [client, session, loading]);
 
@@ -174,8 +187,8 @@ export function useOptionalAuth(): OptionalAuthContextValue {
 export function useAuth(): AuthContextValue {
   const value = useContext(OptionalAuthContext);
   if(!value || !value.session) throw new Error('useAuth must be used inside AuthGate');
-  const {session, logout, deleteAccount, claimHandle} = value;
-  return {session, logout, deleteAccount, claimHandle};
+  const {session, logout, deleteAccount, claimHandle, refresh} = value;
+  return {session, logout, deleteAccount, claimHandle, refresh};
 }
 
 export function SignInForm({locale = 'ru', productName, askHandle = true, variant = 'card', onSignedIn}: SignInFormProps){

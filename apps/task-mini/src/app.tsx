@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, Outlet, useNavigate, useOutletContext, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
+import { hasEntitlement } from '@appbase/core/auth.js';
 import { filterTasks, type TaskFilter } from './domain';
 import { AddTaskForm } from './components/AddTaskForm';
 import { FilterNav } from './components/FilterNav';
@@ -63,6 +64,27 @@ function TaskLayout(){
   );
 }
 
+// Paid feature of the reference app: bought once (SKU "export", config/product.json → products).
+export const EXPORT_SKU = 'export';
+
+function ExportTasks(){
+  const auth = useOptionalAuth();
+  const {data: tasks = []} = useTasks();
+  if(!hasEntitlement(auth.session, EXPORT_SKU)){
+    return <p className="muted">Экспорт задач в файл — отдельная покупка. Пока её выдают в админке.</p>;
+  }
+  const download = () => {
+    const blob = new Blob([JSON.stringify(tasks, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'tasks.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  return <button type="button" className="text-button" onClick={download}>Скачать задачи ({tasks.length})</button>;
+}
+
 function AccountPage(){
   const auth = useOptionalAuth();
   const navigate = useNavigate();
@@ -81,6 +103,7 @@ function AccountPage(){
           <h1>Аккаунт</h1>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">Задачи синхронизируются между устройствами, где выполнен вход.</p>
+          <ExportTasks />
           <button type="button" className="text-button" onClick={() => void signOut()}>Выйти</button>
         </section>
       ) : (

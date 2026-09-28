@@ -16,7 +16,8 @@ const DIST = join(APP, 'dist');
 const API = {
   auth: require(join(APP, 'api/auth.js')),
   sync: require(join(APP, 'api/sync.js')),
-  health: require(join(APP, 'api/health.js'))
+  health: require(join(APP, 'api/health.js')),
+  admin: require(join(APP, 'api/admin.js'))
 };
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
@@ -108,6 +109,25 @@ try{
   ok('first device receives both the laptop task and its change',
     await appears(phone.getByRole('checkbox', {name: 'С ноутбука'}), 8000)
     && await appears(phone.getByRole('checkbox', {name: 'С телефона', checked: true}), 8000));
+
+  // Paid feature: locked, granted in the shared Admin UI, visible after the app refreshes rights.
+  await phone.getByRole('link', {name: 'Аккаунт'}).click();
+  ok('paid export is locked before purchase', await appears(phone.getByText(/Экспорт задач в файл — отдельная покупка/)));
+  const adminPage = await (await browser.newContext()).newPage();
+  adminPage.on('pageerror', e => errors.push(String(e)));
+  await adminPage.goto(URL_ + '#/admin');
+  await adminPage.getByLabel('ADMIN_KEY').fill(process.env.ADMIN_KEY);
+  await adminPage.getByRole('button', {name: 'Подключиться'}).click();
+  await adminPage.getByRole('button', {name: 'Пользователи'}).click();
+  await adminPage.getByRole('textbox', {name: 'Email'}).fill('person@example.com');
+  await adminPage.getByLabel('Покупка (SKU)').selectOption('export');
+  await adminPage.getByRole('button', {name: 'Выдать', exact: true}).click();
+  ok('admin grants the purchase from the shared Admin UI',
+    await appears(adminPage.getByRole('cell', {name: 'export', exact: true})));
+  await phone.reload();
+  ok('app refreshes rights on start and opens the paid feature',
+    await appears(phone.getByRole('button', {name: /Скачать задачи/}), 8000));
+  await phone.getByRole('link', {name: /К задачам/}).click();
 
   await phone.getByRole('link', {name: /Готовые/}).click();
   await phone.waitForURL(/#\/done$/);

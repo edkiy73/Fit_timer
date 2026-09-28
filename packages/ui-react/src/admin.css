@@ -27,4 +27,9 @@
 .ab-admin table{width:100%;border-collapse:collapse;font-size:14px}
 .ab-admin th,.ab-admin td{text-align:left;padding:10px;border-bottom:1px solid var(--line,#e4e6eb);vertical-align:top}
 .ab-admin th{font-size:12px;color:var(--muted,#6b7280)}
+.ab-admin-access label{display:grid;gap:6px;margin-bottom:12px;flex:1}
+.ab-admin-access input,.ab-admin-access select{border:1px solid var(--line,#e4e6eb);border-radius:10px;padding:10px 12px;background:var(--surface,transparent);color:inherit;font:inherit}
+.ab-admin-access .ab-admin-row{align-items:flex-end}
+.ab-admin-access .ab-admin-row button{margin-bottom:12px!important;margin-top:0!important}
+.ab-admin-access .ab-admin-empty{padding:0 0 12px;text-align:left}
 @media(max-width:640px){.ab-admin-header{display:grid}.ab-admin-auth{width:100%}.ab-admin-auth input{min-width:0;flex:1}.ab-admin-grid{grid-template-columns:1fr}.ab-admin-row{display:grid}}
