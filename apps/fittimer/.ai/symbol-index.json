@@ -98,8 +98,8 @@
     },
     "src/app/00-dependencies.js": {
       "kind": "frontend-js",
-      "lines": 38,
-      "chars": 1621
+      "lines": 37,
+      "chars": 1581
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
@@ -849,8 +849,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 807,
-      "chars": 35300,
+      "lines": 813,
+      "chars": 35456,
       "symbols": [
         "add",
         "advance",
