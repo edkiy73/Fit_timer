@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { parseLegacySource,buildCourseSet,buildLexicon,validateImport } from '../lib/legacy-import.mjs';
 
-const fixture=String.raw\`
+const fixture=String.raw`
 const LESSONS=[
 {id:"abc",t:"ABC",s:"",theory:"<p>x</p>",cards:[{t:"mc",q:"Q?",ru:"В?",o:["a","b"],a:0}]}
 ];
@@ -64,7 +64,7 @@ const PHRASES=[{g:"x",items:[["How are you?","Как дела?"]]}];
 const VERBS=[["work","worked","worked"]];
 const TAGS={abc:["основы"]};
 const PHRASE_RU={"good morning":"доброе утро","how are you":"как ты?"};
-\`;
+`;
 
 const model=parseLegacySource(fixture);
 assert.equal(model.lessons.length,2);
