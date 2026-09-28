@@ -2,7 +2,9 @@
    (packages/core, resolved through the tsconfig "paths" aliases @appbase/core and
    @appbase/types). Shared Core modules go to a common chunk, so each Core module runs once.
 
-   node scripts/build-esm.mjs [--outdir <dir>]   default: dist/esm (mobile bundle) */
+   node scripts/build-esm.mjs [--outdir <dir>] [--stamp-index <html>]
+   default outdir: dist/esm. Production builds stamp fixed asset URLs with one
+   build id so WebView/browser caches can never mix files from different commits. */
 import { build } from 'esbuild';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -54,9 +56,8 @@ await build({
 
 if(stampIndex){
   let html = await readFile(stampIndex, 'utf8');
-  const stamp = (asset) => {
-    const escaped = asset.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\console.log(`Built ES modules in ${path.relative(process.cwd(), path.resolve(outdir)) || outdir}`);
-');
+  const stamp = asset => {
+    const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     html = html.replace(new RegExp(escaped + '(?:\\?v=[^"\\s]+)?', 'g'), asset + '?v=' + BUILD_ID);
   };
   stamp('app.config.js');
