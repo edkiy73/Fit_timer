@@ -55,7 +55,11 @@ export function createAdminClient(options: AdminClientOptions = {}): AdminClient
     async health() {
       if(typeof fetchImpl !== 'function') throw new Error('fetch_unavailable');
       const response = await fetchImpl(healthEndpoint, {headers:{Accept:'application/json'}});
-      return await json(response) as unknown as AdminHealth;
+      try {
+        const payload = await response.json();
+        if(payload && typeof payload === 'object') return payload as AdminHealth;
+      } catch (_) {}
+      throw new Error('health_request_failed');
     },
 
     async action(adminKey, action, body = {}) {
