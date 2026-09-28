@@ -137,6 +137,7 @@ function validateActivity(activity){
       break;
     case 'pattern-drill':
       if(!isTextMap(activity.pattern)) throw new Error(`bad_pattern:${id}`);
+      if(activity.modes===undefined) activity.modes=['drill'];
       if(!Array.isArray(activity.modes) || !activity.modes.length || activity.modes.some(mode=>!['drill','listening','speaking'].includes(mode))){
         throw new Error(`bad_pattern_modes:${id}`);
       }
