@@ -55,7 +55,12 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   };
   const handler=createContentAdminHandler({
     loadLegacySource:async()=> 'fixture-source',
-    loadImporter:async()=> importer
+    loadImporter:async()=> importer,
+    loadIpaSource:async()=> [
+      'i\t/ˈaɪ/',
+      'work\t/ˈwɝk/',
+      'online\t/ˌɑnˈlaɪn/'
+    ].join('\n')
   });
 
   const ignored=await action(handler,'users_list');
@@ -272,6 +277,18 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   });
   assert.equal(stale.status,400);
   assert.equal(stale.body.error,'lexeme_revision_conflict');
+
+  const ipaPreview=await action(handler,'content_lexicon_ipa_preview',{setId:'general-foundation'});
+  assert.equal(ipaPreview.status,200);
+  assert.equal(ipaPreview.body.summary.formsChanged,2);
+  assert.equal(ipaPreview.body.summary.sourceLicense,'MIT');
+
+  const ipaApplied=await action(handler,'content_lexicon_ipa_apply',{setId:'general-foundation'});
+  assert.equal(ipaApplied.status,200);
+  assert.equal(ipaApplied.body.summary.formsChanged,2);
+  assert.equal(ipaApplied.body.coverage.ipaCoveragePct,100);
+  const afterIpa=await Lexicon.getDraft();
+  assert.equal(afterIpa.entries.find(entry=>entry.id==='work').forms[0].pronunciation.source.license,'MIT');
 
   const before=await action(handler,'content_status');
   assert.equal(before.status,200);
