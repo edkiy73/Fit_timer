@@ -29,6 +29,7 @@ async function replace(snapshot){
   const meta=clone(snapshot);
   delete meta.entries;
   delete meta.draftUpdatedAt;
+  delete meta.draftRevision;
   delete meta.publishedAt;
 
   const pointer={
