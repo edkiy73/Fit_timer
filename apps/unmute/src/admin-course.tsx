@@ -184,15 +184,6 @@ function ActivityEditor({client,adminKey,setId,activity,onSaved,onClose}:{client
   const [raw,setRaw]=useState(()=>JSON.stringify(activity,null,2));
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
-  const [createOpen,setCreateOpen]=useState(false);
-  const [createId,setCreateId]=useState('');
-  const [createTitle,setCreateTitle]=useState('');
-  const [metaTitle,setMetaTitle]=useState('');
-  const [metaDescription,setMetaDescription]=useState('');
-  const [metaFrom,setMetaFrom]=useState('');
-  const [metaTo,setMetaTo]=useState('');
-  const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
-  const [metaFreeDays,setMetaFreeDays]=useState('0');
 
   useEffect(()=>{setValue(activity);setRaw(JSON.stringify(activity,null,2));setMessage('');},[activity]);
 
@@ -269,6 +260,15 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [newType,setNewType]=useState('text-input');
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
+  const [createOpen,setCreateOpen]=useState(false);
+  const [createId,setCreateId]=useState('');
+  const [createTitle,setCreateTitle]=useState('');
+  const [metaTitle,setMetaTitle]=useState('');
+  const [metaDescription,setMetaDescription]=useState('');
+  const [metaFrom,setMetaFrom]=useState('');
+  const [metaTo,setMetaTo]=useState('');
+  const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
+  const [metaFreeDays,setMetaFreeDays]=useState('0');
 
   const loadSets=useCallback(async()=>{
     const result=await client.action(adminKey,'content_sets_list');
