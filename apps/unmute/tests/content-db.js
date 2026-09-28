@@ -59,6 +59,10 @@ const sample={
   assert.equal(preview.body.access,'preview');
   assert.deepEqual(preview.body.set.activities.map(x=>x.id),['a1','a7']);
   assert.deepEqual(preview.body.set.roadmaps[0].nodes.map(x=>x.id),['d1','d7']);
+  assert.deepEqual(preview.body.outline[0].nodes.map(x=>x.id),['d1','d7','d8']);
+  assert.equal(preview.body.outline[0].nodes[2].dayIndex,8);
+  assert.equal(preview.body.outline[0].nodes[2].activityIds,undefined);
+  assert.equal(preview.body.outline[0].nodes[2].completion,undefined);
 
   // Add a real account record owning the course, using the same auth shape as Core.
   const email='owner@example.com', deviceId='device-1', token='secret-token';
