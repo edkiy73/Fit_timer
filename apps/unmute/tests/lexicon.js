@@ -34,6 +34,16 @@ const sample={
       deprecated:false
     },
     {
+      id:'read',revision:1,language:'en',lemma:'read',
+      forms:[
+        {id:'base',text:'read',kind:'lemma',pronunciation:{ipa:'/riːd/'}},
+        {id:'past',text:'read',kind:'inflection',pronunciation:{ipa:'/rɛd/'}},
+        {id:'participle',text:'read',kind:'inflection',pronunciation:{ipa:'/rɛd/'}}
+      ],
+      senses:[{id:'verb',partOfSpeech:'verb',translations:{ru:['читать']},tags:[]}],
+      examples:[],deprecated:false
+    },
+    {
       id:'working-adjective',revision:1,language:'en',lemma:'working',
       forms:[{text:'working',kind:'lemma'}],
       senses:[{id:'adjective',partOfSpeech:'adjective',translations:{ru:['работающий','рабочий']},tags:[]}],
@@ -62,6 +72,15 @@ const sample={
   assert.equal(work[0].senses.length,2);
   assert.equal(work[0].examples.find(x=>x.senseId==='verb').translations.ru,'Я работаю из дома.');
   assert.equal(work[0].examples.find(x=>x.senseId==='noun').translations.ru,'У меня много работы.');
+
+  const read=Lexicon.lookup(published,'read');
+  assert.equal(read.length,1);
+  assert.equal(read[0].id,'read');
+  assert.equal(read[0].forms.filter(form=>form.text==='read').length,3);
+
+  const badDuplicate=JSON.parse(JSON.stringify(sample));
+  badDuplicate.entries[1].forms[1].id=undefined;
+  assert.throws(()=>Lexicon.validateLexicon(badDuplicate),/duplicate_form_requires_id/);
 
   const lookup=await call({method:'GET',query:{action:'lookup',q:'working'}});
   assert.equal(lookup.status,200);

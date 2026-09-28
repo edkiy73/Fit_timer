@@ -9,6 +9,7 @@ const lexiconRefSchema = z.object({
   surface: z.string().min(1),
   lexemeId: idSchema,
   senseId: idSchema.optional(),
+  formId: idSchema.optional(),
   occurrence: z.number().int().positive().optional(),
 });
 

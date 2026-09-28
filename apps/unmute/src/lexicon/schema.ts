@@ -10,6 +10,7 @@ const pronunciationSchema=z.object({
 });
 
 export const lexiconFormSchema=z.object({
+  id:idSchema.optional(),
   text:z.string().min(1),
   kind:z.enum(['lemma','inflection','contraction','variant','phrase']),
   /** Surface pronunciation wins over lemma pronunciation for clicks on inflected/contraction forms. */
@@ -79,13 +80,23 @@ export function validateLexicon(input:unknown):LexiconSnapshot{
       if(!senseIds.has(example.senseId)) throw new Error(`unknown_example_sense:${entry.id}:${example.senseId}`);
     }
 
-    const forms=new Set<string>();
+    const formIds=new Set<string>();
+    const surfaces=new Map<string,number>();
     for(const form of entry.forms){
       const normalized=normalizeSurface(form.text);
-      if(forms.has(normalized)) throw new Error(`duplicate_form:${entry.id}:${normalized}`);
-      forms.add(normalized);
+      surfaces.set(normalized,(surfaces.get(normalized)||0)+1);
+      if(form.id){
+        if(formIds.has(form.id)) throw new Error(`duplicate_form_id:${entry.id}:${form.id}`);
+        formIds.add(form.id);
+      }
     }
-    if(!forms.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${entry.id}`);
+    for(const [surface,count] of surfaces){
+      if(count>1){
+        const duplicates=entry.forms.filter(form=>normalizeSurface(form.text)===surface);
+        if(duplicates.some(form=>!form.id)) throw new Error(`duplicate_form_requires_id:${entry.id}:${surface}`);
+      }
+    }
+    if(!surfaces.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${entry.id}`);
   }
   return parsed;
 }
@@ -111,11 +122,23 @@ export function lookupLexemes(snapshot:LexiconSnapshot,surface:string):Lexeme[]{
 }
 
 
-export function findLexiconForm(entry:Lexeme,surface:string){
+export function findLexiconForms(entry:Lexeme,surface:string){
   const key=normalizeSurface(surface);
-  return entry.forms.find(form=>normalizeSurface(form.text)===key) || null;
+  return entry.forms.filter(form=>normalizeSurface(form.text)===key);
 }
 
-export function pronunciationForSurface(entry:Lexeme,surface:string){
-  return findLexiconForm(entry,surface)?.pronunciation || entry.pronunciation || null;
+export function findLexiconForm(entry:Lexeme,surface:string,formId?:string){
+  const matches=findLexiconForms(entry,surface);
+  if(formId) return matches.find(form=>form.id===formId) || null;
+  return matches.length===1 ? (matches[0] ?? null) : null;
+}
+
+export function pronunciationForSurface(entry:Lexeme,surface:string,formId?:string){
+  const matches=findLexiconForms(entry,surface);
+  if(formId){
+    const form=matches.find(item=>item.id===formId);
+    return form?.pronunciation || null;
+  }
+  if(matches.length!==1) return null;
+  return matches[0]?.pronunciation || entry.pronunciation || null;
 }
