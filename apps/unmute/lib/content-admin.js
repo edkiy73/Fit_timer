@@ -27,10 +27,12 @@ function reviewItems(lexicon){
     if(!flagged.length) continue;
     out.push({
       lexemeId:String(entry.id || ''),
+      revision:Number(entry.revision) || 1,
       lemma:String(entry.lemma || ''),
       pronunciation:entry.pronunciation || null,
       senses:flagged.map(sense => ({
         senseId:String(sense.id || ''),
+        partOfSpeech:sense.partOfSpeech || null,
         translations:sense.translations || {}
       }))
     });
@@ -86,6 +88,15 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
       }
 
       if(action === 'content_legacy_import'){
+        const [existingCourse,existingLexicon] = await Promise.all([
+          Content.getDraft('general-foundation'),
+          Lexicon.getDraft()
+        ]);
+        if((existingCourse || existingLexicon) && body.overwrite !== true){
+          fail(res,409,'draft_exists_use_overwrite');
+          return true;
+        }
+
         const source = await loadLegacySource();
         const importer = await loadImporter();
         const model = importer.parseLegacySource(source);
@@ -107,6 +118,43 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!lexicon){ fail(res,404,'lexicon_not_found'); return true; }
         const items = reviewItems(lexicon);
         send(res,200,{ok:true,count:items.length,items});
+        return true;
+      }
+
+      if(action === 'content_lexeme_get'){
+        const id=String(body.lexemeId || '').trim();
+        if(!id){ fail(res,400,'bad_lexeme_id'); return true; }
+        const lexicon=await Lexicon.getDraft();
+        if(!lexicon){ fail(res,404,'draft_not_found'); return true; }
+        const lexeme=(lexicon.entries || []).find(entry=>entry && entry.id===id);
+        if(!lexeme){ fail(res,404,'lexeme_not_found'); return true; }
+        send(res,200,{ok:true,lexeme});
+        return true;
+      }
+
+      if(action === 'content_lexeme_save'){
+        const id=String(body.lexemeId || '').trim();
+        const expectedRevision=Number(body.expectedRevision);
+        if(!id || !Number.isInteger(expectedRevision) || expectedRevision < 1){
+          fail(res,400,'bad_lexeme_revision');
+          return true;
+        }
+        const allowed=['lemma','forms','pronunciation','senses','examples','deprecated'];
+        const changes=body.changes && typeof body.changes==='object' && !Array.isArray(body.changes) ? body.changes : {};
+        const reviewed=body.reviewed===true;
+        const updated=await Lexicon.updateDraftLexeme(id,current=>{
+          for(const key of allowed){
+            if(Object.prototype.hasOwnProperty.call(changes,key)) current[key]=changes[key];
+          }
+          if(reviewed){
+            current.senses=(current.senses || []).map(sense=>({
+              ...sense,
+              tags:(sense.tags || []).filter(tag=>tag!=='needs-review')
+            }));
+          }
+          return current;
+        },expectedRevision);
+        send(res,200,{ok:true,lexeme:updated,reviewed,remainingReview:reviewItems(await Lexicon.getDraft()).length});
         return true;
       }
 
