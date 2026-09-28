@@ -1,8 +1,8 @@
 import type { PracticeSrsKind, PracticeSrsState } from './practice-srs';
 
 export const PRACTICE_DAILY_CAPS:Record<PracticeSrsKind,number>={
-  pattern:3,
-  vocab:2,
+  drill:3,
+  speaking:2,
   listening:2,
 };
 
@@ -20,8 +20,8 @@ export interface PracticeQueueSlice{
 }
 
 export interface PracticeReviewQueue{
-  pattern:PracticeQueueSlice;
-  vocab:PracticeQueueSlice;
+  drill:PracticeQueueSlice;
+  speaking:PracticeQueueSlice;
   listening:PracticeQueueSlice;
   dueCount:number;
   waitingCount:number;
@@ -63,14 +63,14 @@ export function selectPracticeQueue(
 export function buildPracticeReviewQueue(
   candidateIds:string[],
   progress:{
-    pattern:Record<string,PracticeSrsState|undefined>;
-    vocab:Record<string,PracticeSrsState|undefined>;
+    drill:Record<string,PracticeSrsState|undefined>;
+    speaking:Record<string,PracticeSrsState|undefined>;
     listening:Record<string,PracticeSrsState|undefined>;
   },
   todayDay:number
 ):PracticeReviewQueue{
-  const pattern=selectPracticeQueue('pattern',candidateIds,progress.pattern,todayDay);
-  const vocab=selectPracticeQueue('vocab',candidateIds,progress.vocab,todayDay);
+  const pattern=selectPracticeQueue('drill',candidateIds,progress.drill,todayDay);
+  const vocab=selectPracticeQueue('speaking',candidateIds,progress.speaking,todayDay);
   const listening=selectPracticeQueue('listening',candidateIds,progress.listening,todayDay);
 
   return {
