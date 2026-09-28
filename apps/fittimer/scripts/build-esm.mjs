@@ -57,8 +57,12 @@ await build({
 if(stampIndex){
   let html = await readFile(stampIndex, 'utf8');
   const stamp = asset => {
+    const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\  const stamp = asset => {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     html = html.replace(new RegExp(escaped + '(?:\\?v=[^"\\s]+)?', 'g'), asset + '?v=' + BUILD_ID);
+  };');
+    const ref = new RegExp('((?:src|href)=["\\\'])' + escaped + '(?:\\\\?v=[^"\\\']+)?(["\\\'])', 'g');
+    html = html.replace(ref, '$1' + asset + '?v=' + BUILD_ID + '$2');
   };
   stamp('app.config.js');
   stamp('esm/main.js');
