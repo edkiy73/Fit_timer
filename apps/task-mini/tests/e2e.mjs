@@ -10,6 +10,8 @@ const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium'
 
 let bad = 0;
 const ok = (name, cond) => { if(!cond) bad++; console.log((cond ? '  ok  ' : ' FAIL ') + ' ' + name); };
+// Wait for a state instead of reading it right after an action: React applies updates asynchronously.
+const appears = locator => locator.waitFor({timeout: 5000}).then(() => true, () => false);
 
 const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {stdio: 'ignore'});
 const browser = await chromium.launch(CHROME ? {executablePath: CHROME} : {});
@@ -28,16 +30,17 @@ try{
 
   await page.getByRole('textbox', {name: 'Новая задача'}).fill('Купить хлеб');
   await page.getByRole('button', {name: 'Добавить'}).click();
+  ok('task is added', await appears(page.getByRole('checkbox', {name: 'Купить хлеб', checked: false})));
   await page.getByText('Купить хлеб').click();
-  ok('task is added and completed', await page.getByRole('checkbox', {name: 'Купить хлеб'}).isChecked());
+  ok('task is completed', await appears(page.getByRole('checkbox', {name: 'Купить хлеб', checked: true})));
 
   await page.getByRole('link', {name: /Готовые/}).click();
+  await page.waitForURL(/#\/done$/);
   ok('hash route changes with the filter', page.url().endsWith('#/done'));
 
   await page.reload();
-  await page.getByText('Купить хлеб').waitFor();
   ok('route and task survive a reload (Core storage + hash router)',
-    page.url().endsWith('#/done') && await page.getByRole('checkbox', {name: 'Купить хлеб'}).isChecked());
+    await appears(page.getByRole('checkbox', {name: 'Купить хлеб', checked: true})) && page.url().endsWith('#/done'));
   ok('no runtime errors', errors.length === 0);
   if(errors.length) console.log(errors.join('\n'));
 }catch(error){
