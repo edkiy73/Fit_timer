@@ -8,6 +8,11 @@
  */
 export const APPBASE_ESM_FOUNDATION = true;
 
+declare const __FIT_BUILD_ID__: string;
+export const APP_BUILD_ID = __FIT_BUILD_ID__;
+(window as Window & {__FIT_BUILD_ID__?: string}).__FIT_BUILD_ID__ = APP_BUILD_ID;
+document.documentElement.dataset.buildId = APP_BUILD_ID;
+
 function loadModuleScript(src: string, marker: string, failureCode: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if(document.querySelector(`script[${marker}]`)){
@@ -25,7 +30,7 @@ function loadModuleScript(src: string, marker: string, failureCode: string): Pro
 }
 
 export function loadMobileRuntime(): Promise<void> {
-  return loadModuleScript('esm/mobile.js', 'data-mobile-runtime', 'mobile_runtime_failed');
+  return loadModuleScript(`esm/mobile.js?v=${encodeURIComponent(APP_BUILD_ID)}`, 'data-mobile-runtime', 'mobile_runtime_failed');
 }
 
 export async function loadProductRuntime(): Promise<void> {
@@ -56,6 +61,6 @@ try{
   await loadMobileRuntime();
   await loadProductRuntime();
 }catch(error){
-  console.error('Failed to start product runtime', error);
+  console.error('Failed to start product runtime', {buildId: APP_BUILD_ID, error});
   if(!reloadOnceAfterFailedStart()) document.body.classList.remove('booting');
 }
