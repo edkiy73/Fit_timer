@@ -123,6 +123,74 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(detachedEntity.status,200);
   assert.equal(detachedEntity.body.activity.id,createdId);
 
+  const createdSet=await action(handler,'content_set_create',{
+    id:'b1-b2',title:'B1–B2',levelFrom:'b1',levelTo:'b2',accessMode:'entitlement',freeDays:3
+  });
+  assert.equal(createdSet.status,200);
+  assert.equal(createdSet.body.set.id,'b1-b2');
+
+  const sets=await action(handler,'content_sets_list');
+  assert.equal(sets.status,200);
+  assert.ok(sets.body.sets.some(set=>set.id==='general-foundation'));
+  assert.ok(sets.body.sets.some(set=>set.id==='b1-b2'));
+
+  const bStructure=await action(handler,'content_course_structure',{setId:'b1-b2'});
+  assert.equal(bStructure.status,200);
+  assert.equal(bStructure.body.set.id,'b1-b2');
+  assert.equal(bStructure.body.roadmaps[0].nodes.length,1);
+
+  const bSaved=await action(handler,'content_set_save',{
+    setId:'b1-b2',
+    expectedDraftRevision:bStructure.body.draftRevision,
+    changes:{title:'B1 to B2',description:'Second set',levelFrom:'b1',levelTo:'b2',accessMode:'entitlement',freeDays:5}
+  });
+  assert.equal(bSaved.status,200);
+  assert.equal(bSaved.body.set.title.ru,'B1 to B2');
+  assert.equal(bSaved.body.set.access.freePreview.days,5);
+
+  const staleSet=await action(handler,'content_set_save',{
+    setId:'b1-b2',
+    expectedDraftRevision:bStructure.body.draftRevision,
+    changes:{title:'stale'}
+  });
+  assert.equal(staleSet.status,400);
+  assert.equal(staleSet.body.error,'set_revision_conflict');
+
+  const bNode=await action(handler,'content_node_create',{setId:'b1-b2',roadmapId:'main',title:'День 2'});
+  assert.equal(bNode.status,200);
+  assert.equal(bNode.body.node.dayIndex,2);
+  assert.deepEqual(bNode.body.node.prerequisites,['day-1']);
+
+  const bNodeSaved=await action(handler,'content_node_save',{
+    setId:'b1-b2',roadmapId:'main',nodeId:bNode.body.node.id,expectedVersion:bNode.body.version,
+    changes:{title:'Разговорный день',kind:'practice',optional:true}
+  });
+  assert.equal(bNodeSaved.status,200);
+  assert.equal(bNodeSaved.body.node.kind,'practice');
+  assert.equal(bNodeSaved.body.node.optional,true);
+
+  const bActivity=await action(handler,'content_activity_create',{
+    setId:'b1-b2',roadmapId:'main',nodeId:'day-1',type:'theory'
+  });
+  assert.equal(bActivity.status,200);
+
+  const crossSet=await action(handler,'content_activity_get',{setId:'b1-b2',activityId:'a1'});
+  assert.equal(crossSet.status,404);
+  assert.equal(crossSet.body.error,'activity_not_found');
+
+  const bNodeList=await action(handler,'content_course_structure',{setId:'b1-b2'});
+  const bNodes=bNodeList.body.roadmaps[0].nodes;
+  const reorderedNodes=await action(handler,'content_node_reorder',{
+    setId:'b1-b2',roadmapId:'main',nodeIds:[bNodes[1].id,bNodes[0].id]
+  });
+  assert.equal(reorderedNodes.status,200);
+
+  const blockedDelete=await action(handler,'content_node_delete',{
+    setId:'b1-b2',roadmapId:'main',nodeId:'day-1'
+  });
+  assert.equal(blockedDelete.status,400);
+  assert.equal(blockedDelete.body.error,'node_has_dependents');
+
   const queue=await action(handler,'content_review_queue');
   assert.equal(queue.status,200);
   assert.equal(queue.body.count,1);
@@ -170,6 +238,15 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(published.body.release.sets['general-foundation'],1);
   assert.equal(published.body.release.lexiconRevision,1);
 
+  const publishedB=await action(handler,'content_publish',{setIds:['b1-b2']});
+  assert.equal(publishedB.status,200);
+  assert.equal(publishedB.body.release.revision,2);
+  assert.equal(publishedB.body.release.sets['general-foundation'],1);
+  assert.equal(publishedB.body.release.sets['b1-b2'],1);
+  assert.equal(publishedB.body.courses['b1-b2'].revision,1);
+  assert.equal((await Release.getReleasedSet('general-foundation')).revision,1);
+  assert.equal((await Release.getReleasedSet('b1-b2')).revision,1);
+
   // A newly staged course snapshot is invisible until a new paired release pointer is committed.
   const nextDraft=await Content.getDraft('general-foundation');
   nextDraft.title.ru='Staged but not released';
@@ -182,7 +259,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
 
   const after=await action(handler,'content_status');
   assert.equal(after.body.course.published.revision,1);
-  assert.equal(after.body.lexicon.published.revision,1);
+  assert.equal(after.body.lexicon.published.revision,2);
 
   console.log('UnMute content Admin tests passed');
 })().catch(error=>{console.error(error);process.exit(1);});

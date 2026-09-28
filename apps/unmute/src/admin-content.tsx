@@ -8,6 +8,13 @@ type Status = {
   lexicon?: {draft?: Record<string,unknown>|null;published?: Record<string,unknown>|null};
 };
 
+type ReleaseSet = {
+  id:string;
+  title:Record<string,string>;
+  draftRevision:number|null;
+  publishedRevision:number|null;
+};
+
 type ReviewItem = {
   lexemeId:string;
   revision:number;
@@ -41,17 +48,28 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [editor,setEditor]=useState<LexemeEditor|null>(null);
   const [editorMessage,setEditorMessage]=useState('');
   const [editorBusy,setEditorBusy]=useState(false);
+  const [sets,setSets]=useState<ReleaseSet[]>([]);
+  const [publishSetIds,setPublishSetIds]=useState<string[]>([]);
 
   const load=useCallback(async()=>{
     setBusy(true);
     setMessage('');
     try{
-      const [s,q]=await Promise.all([
+      const [s,q,setResult]=await Promise.all([
         client.action(adminKey,'content_status'),
-        client.action(adminKey,'content_review_queue').catch(()=>({items:[]}))
+        client.action(adminKey,'content_review_queue').catch(()=>({items:[]})),
+        client.action(adminKey,'content_sets_list').catch(()=>({sets:[]}))
       ]);
       setStatus(s as Status);
       setReview(Array.isArray(q.items) ? q.items as ReviewItem[] : []);
+      const nextSets=Array.isArray(setResult.sets) ? setResult.sets as ReleaseSet[] : [];
+      setSets(nextSets);
+      setPublishSetIds(current=>{
+        const valid=current.filter(id=>nextSets.some(item=>item.id===id&&item.draftRevision));
+        if(valid.length)return valid;
+        const general=nextSets.find(item=>item.id==='general-foundation'&&item.draftRevision);
+        return general ? [general.id] : nextSets.filter(item=>item.draftRevision).slice(0,1).map(item=>item.id);
+      });
     }catch(error){
       setMessage(String((error as {code?:string})?.code || 'Не удалось загрузить статус контента.'));
     }finally{
@@ -85,15 +103,17 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   }
 
   async function publish(){
-    const ok=window.confirm('Опубликовать текущие draft курса и словаря? Это создаст новые immutable revisions для пользователей.');
+    if(!publishSetIds.length){setMessage('Выбери хотя бы один set для публикации.');return;}
+    const names=sets.filter(item=>publishSetIds.includes(item.id)).map(item=>item.title.ru||item.id).join(', ');
+    const ok=window.confirm('Опубликовать выбранные set ('+names+') и текущий draft словаря одним release?');
     if(!ok)return;
     setBusy(true);
     setMessage('');
     try{
-      const result=await client.action(adminKey,'content_publish');
-      const course=(result.course || {}) as {revision?:unknown};
+      const result=await client.action(adminKey,'content_publish',{setIds:publishSetIds});
       const lexicon=(result.lexicon || {}) as {revision?:unknown};
-      setMessage('Опубликовано: курс r'+String(course.revision||'?')+', словарь r'+String(lexicon.revision||'?')+'.');
+      const release=(result.release || {}) as {revision?:unknown};
+      setMessage('Опубликован release r'+String(release.revision||'?')+': '+publishSetIds.length+' set, словарь r'+String(lexicon.revision||'?')+'.');
       await load();
     }catch(error){
       setMessage('Ошибка публикации: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -213,9 +233,23 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
           <span><b>Словарь live</b> {lp ? 'r'+String(lp.revision ?? 0) : 'нет'}</span>
         </div>
 
+        <div className="ab-release-set-list">
+          {sets.map(item=><label key={item.id}>
+            <input
+              type="checkbox"
+              checked={publishSetIds.includes(item.id)}
+              disabled={!item.draftRevision}
+              onChange={event=>setPublishSetIds(current=>event.target.checked
+                ? [...new Set([...current,item.id])]
+                : current.filter(id=>id!==item.id))}
+            />
+            <span><b>{item.title.ru || item.id}</b><small>{item.draftRevision ? 'draft r'+item.draftRevision : 'нет draft'} · {item.publishedRevision ? 'live r'+item.publishedRevision : 'не опубликован'}</small></span>
+          </label>)}
+        </div>
+
         <div className="ab-admin-action-row">
           <button type="button" disabled={busy} onClick={()=>void importLegacy(false)}>Импортировать legacy</button>
-          <button type="button" className="ab-admin-secondary" disabled={busy || !cd || !ld} onClick={()=>void publish()}>Опубликовать release</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>Опубликовать release</button>
         </div>
 
         {message && <p role="status" className="ab-admin-feedback">{message}</p>}

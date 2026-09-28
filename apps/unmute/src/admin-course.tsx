@@ -17,17 +17,33 @@ type CourseNode = {
   id:string;
   kind:string;
   title:TextMap;
-  dayIndex?:number;
+  dayIndex?:number|undefined;
   order:number;
   optional:boolean;
   prerequisites:string[];
   activityCount:number;
 };
 
+type CourseSetSummary = {
+  id:string;
+  title:TextMap;
+  level:Record<string,unknown>;
+  access:Record<string,unknown>|null;
+  draftRevision:number|null;
+  publishedRevision:number|null;
+  nodeCount:number|null;
+};
+
 type CourseStructure = {
   draftRevision:number;
   draftUpdatedAt?:string;
-  set:{id:string;title:TextMap;level?:Record<string,unknown>};
+  set:{
+    id:string;
+    title:TextMap;
+    description?:TextMap;
+    level?:Record<string,unknown>;
+    access?:Record<string,unknown>;
+  };
   roadmaps:Array<{id:string;title:TextMap;nodes:CourseNode[]}>;
 };
 
@@ -41,6 +57,7 @@ type ActivitySummary = {
 
 type OpenNode = {
   roadmapId:string;
+  version:number;
   node:CourseNode & {activityIds:string[]};
   activities:ActivitySummary[];
 };
@@ -162,7 +179,7 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
   return <p className="ab-admin-note">Для {activity.type} пока используй расширенный JSON ниже. Тип полностью поддерживается движком и валидацией.</p>;
 }
 
-function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:AdminSectionContext['client'];adminKey:string;activity:EditableActivity;onSaved(next:EditableActivity):void;onClose():void}){
+function ActivityEditor({client,adminKey,setId,activity,onSaved,onClose}:{client:AdminSectionContext['client'];adminKey:string;setId:string;activity:EditableActivity;onSaved(next:EditableActivity):void;onClose():void}){
   const [value,setValue]=useState(activity);
   const [raw,setRaw]=useState(()=>JSON.stringify(activity,null,2));
   const [message,setMessage]=useState('');
@@ -194,7 +211,7 @@ function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:Admin
     setBusy(true);setMessage('');
     try{
       const result=await client.action(adminKey,'content_activity_save',{
-        activityId:value.id,expectedRevision:value.revision,activity:value
+        setId,activityId:value.id,expectedRevision:value.revision,activity:value
       });
       const next=result.activity as EditableActivity;
       setValue(next);setRaw(JSON.stringify(next,null,2));
@@ -235,30 +252,60 @@ function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:Admin
 }
 
 function CourseAdmin({client,adminKey}:AdminSectionContext){
+  const [sets,setSets]=useState<CourseSetSummary[]>([]);
+  const [setId,setSetId]=useState('general-foundation');
   const [structure,setStructure]=useState<CourseStructure|null>(null);
   const [openNode,setOpenNode]=useState<OpenNode|null>(null);
   const [editor,setEditor]=useState<EditableActivity|null>(null);
   const [newType,setNewType]=useState('text-input');
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
+  const [createOpen,setCreateOpen]=useState(false);
+  const [createId,setCreateId]=useState('');
+  const [createTitle,setCreateTitle]=useState('');
+  const [metaTitle,setMetaTitle]=useState('');
+  const [metaDescription,setMetaDescription]=useState('');
+  const [metaFrom,setMetaFrom]=useState('');
+  const [metaTo,setMetaTo]=useState('');
+  const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
+  const [metaFreeDays,setMetaFreeDays]=useState('0');
+
+  const loadSets=useCallback(async()=>{
+    const result=await client.action(adminKey,'content_sets_list');
+    const list=Array.isArray(result.sets) ? result.sets as CourseSetSummary[] : [];
+    setSets(list);
+    if(list.length && !list.some(item=>item.id===setId)) setSetId(list[0]!.id);
+    return list;
+  },[client,adminKey,setId]);
 
   const loadStructure=useCallback(async()=>{
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_course_structure');
-      setStructure(result as unknown as CourseStructure);
+      const result=await client.action(adminKey,'content_course_structure',{setId});
+      const next=result as unknown as CourseStructure;
+      setStructure(next);
+      setMetaTitle(textValue(next.set.title));
+      setMetaDescription(textValue(next.set.description));
+      setMetaFrom(String(next.set.level?.from || ''));
+      setMetaTo(String(next.set.level?.to || ''));
+      const access=next.set.access || {};
+      setMetaAccess(access.mode==='free'?'free':'entitlement');
+      const preview=access.freePreview && typeof access.freePreview==='object' ? access.freePreview as Record<string,unknown> : {};
+      setMetaFreeDays(String(preview.days ?? 0));
     }catch(error){
+      setStructure(null);
       setMessage('Не удалось загрузить курс: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
-  },[client,adminKey]);
+  },[client,adminKey,setId]);
 
-  useEffect(()=>{void loadStructure();},[loadStructure]);
+  useEffect(()=>{void loadSets();},[loadSets]);
+  useEffect(()=>{void loadStructure();setOpenNode(null);setEditor(null);},[loadStructure]);
 
   async function open(roadmapId:string,nodeId:string){
     setBusy(true);setMessage('');setEditor(null);
     try{
-      const result=await client.action(adminKey,'content_course_node',{roadmapId,nodeId});
-      setOpenNode({roadmapId,node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
+      const result=await client.action(adminKey,'content_course_node',{setId,roadmapId,nodeId});
+      setOpenNode({roadmapId,version:Number(result.version||1),node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
     }catch(error){
       setMessage('Не удалось открыть день: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
@@ -267,7 +314,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   async function openActivity(id:string){
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_activity_get',{activityId:id});
+      const result=await client.action(adminKey,'content_activity_get',{setId,activityId:id});
       setEditor(result.activity as EditableActivity);
     }catch(error){
       setMessage('Не удалось открыть activity: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -282,7 +329,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     if(!openNode)return;
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_activity_create',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
+      const result=await client.action(adminKey,'content_activity_create',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
       await Promise.all([reloadOpenNode(),loadStructure()]);
       setEditor(result.activity as EditableActivity);
     }catch(error){
@@ -295,7 +342,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     if(!window.confirm('Убрать эту activity из текущего дня? Сама activity останется в draft-библиотеке и не потеряется.'))return;
     setBusy(true);setMessage('');
     try{
-      await client.action(adminKey,'content_activity_detach',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
+      await client.action(adminKey,'content_activity_detach',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
       if(editor?.id===id)setEditor(null);
       await Promise.all([reloadOpenNode(),loadStructure()]);
     }catch(error){
@@ -311,10 +358,132 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     [next[index],next[target]]=[next[target]!,next[index]!];
     setBusy(true);setMessage('');
     try{
-      await client.action(adminKey,'content_activity_reorder',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityIds:next});
+      await client.action(adminKey,'content_activity_reorder',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityIds:next});
       await reloadOpenNode();
     }catch(error){
       setMessage('Не удалось изменить порядок: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function createSet(){
+    const id=createId.trim().toLowerCase();
+    const title=createTitle.trim();
+    if(!id || !title){setMessage('Укажи ID и название нового сета.');return;}
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_set_create',{
+        id,title,accessMode:'entitlement',freeDays:0
+      });
+      await loadSets();
+      setSetId(id);
+      setCreateId('');setCreateTitle('');setCreateOpen(false);
+      setMessage('Новый set создан в draft.');
+    }catch(error){
+      setMessage('Не удалось создать set: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function saveSetMeta(){
+    if(!structure)return;
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_set_save',{
+        setId,
+        expectedDraftRevision:structure.draftRevision,
+        changes:{
+          title:metaTitle,
+          description:metaDescription,
+          levelFrom:metaFrom,
+          levelTo:metaTo,
+          accessMode:metaAccess,
+          freeDays:Number(metaFreeDays)||0
+        }
+      });
+      await Promise.all([loadStructure(),loadSets()]);
+      setMessage('Настройки set сохранены в draft.');
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='set_revision_conflict'
+        ? 'Set уже изменён в другой вкладке. Обнови страницу и повтори.'
+        : 'Не удалось сохранить set: '+code);
+    }finally{setBusy(false);}
+  }
+
+  async function createNode(){
+    const roadmap=structure?.roadmaps[0];
+    if(!roadmap)return;
+    setBusy(true);setMessage('');
+    try{
+      const result=await client.action(adminKey,'content_node_create',{setId,roadmapId:roadmap.id});
+      await Promise.all([loadStructure(),loadSets()]);
+      await open(roadmap.id,String((result.node as {id?:unknown})?.id||''));
+      setMessage('Новый день/узел создан.');
+    }catch(error){
+      setMessage('Не удалось создать узел: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function saveNodeMeta(){
+    if(!openNode)return;
+    setBusy(true);setMessage('');
+    try{
+      const result=await client.action(adminKey,'content_node_save',{
+        setId,
+        roadmapId:openNode.roadmapId,
+        nodeId:openNode.node.id,
+        expectedVersion:openNode.version,
+        changes:{
+          title:textValue(openNode.node.title),
+          kind:openNode.node.kind,
+          dayIndex:openNode.node.dayIndex ?? null,
+          optional:openNode.node.optional,
+          prerequisites:openNode.node.prerequisites
+        }
+      });
+      const node=result.node as OpenNode['node'];
+      setOpenNode(current=>current?{...current,node,version:Number(result.version||current.version)}:current);
+      await loadStructure();
+      setMessage('Узел сохранён.');
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='node_revision_conflict'
+        ? 'Этот узел уже изменили в другой вкладке. Открой его заново.'
+        : 'Не удалось сохранить узел: '+code);
+    }finally{setBusy(false);}
+  }
+
+  function patchOpenNode(patch:Partial<OpenNode['node']>){
+    setOpenNode(current=>current?{...current,node:{...current.node,...patch}}:current);
+  }
+
+  async function moveNode(index:number,delta:number){
+    const roadmap=structure?.roadmaps[0];
+    if(!roadmap)return;
+    const ids=roadmap.nodes.slice().sort((a,b)=>a.order-b.order).map(node=>node.id);
+    const target=index+delta;
+    if(target<0||target>=ids.length)return;
+    [ids[index],ids[target]]=[ids[target]!,ids[index]!];
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_node_reorder',{setId,roadmapId:roadmap.id,nodeIds:ids});
+      await loadStructure();
+    }catch(error){
+      setMessage('Не удалось изменить порядок узлов: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{setBusy(false);}
+  }
+
+  async function deleteNode(roadmapId:string,nodeId:string){
+    if(!window.confirm('Удалить этот узел из roadmap? Activities останутся в библиотеке draft.'))return;
+    setBusy(true);setMessage('');
+    try{
+      await client.action(adminKey,'content_node_delete',{setId,roadmapId,nodeId});
+      if(openNode?.node.id===nodeId){setOpenNode(null);setEditor(null);}
+      await Promise.all([loadStructure(),loadSets()]);
+    }catch(error){
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='node_has_dependents'
+        ? 'Сначала измени prerequisites у следующих узлов: этот узел используется как зависимость.'
+        : 'Не удалось удалить узел: '+code);
     }finally{setBusy(false);}
   }
 
@@ -326,21 +495,76 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     <article className="ab-admin-panel">
       <div className="ab-admin-section-head">
         <div>
-          <h2>{structure ? textValue(structure.set.title) : 'Курс'}</h2>
+          <h2>Сеты</h2>
+          <p className="ab-admin-note">Каждый set — независимый покупаемый курс со своим roadmap и прогрессом.</p>
+        </div>
+        <button type="button" onClick={()=>setCreateOpen(value=>!value)}>+ Set</button>
+      </div>
+
+      <div className="ab-course-set-picker">
+        <select value={setId} onChange={e=>setSetId(e.target.value)}>
+          {sets.map(item=><option key={item.id} value={item.id}>{textValue(item.title)||item.id}</option>)}
+        </select>
+        <span>{sets.find(item=>item.id===setId)?.publishedRevision ? 'live r'+sets.find(item=>item.id===setId)?.publishedRevision : 'не опубликован'}</span>
+      </div>
+
+      {createOpen && <div className="ab-course-create-set">
+        <label><span>Стабильный ID</span><input value={createId} onChange={e=>setCreateId(e.target.value)} placeholder="b1-b2" /></label>
+        <label><span>Название</span><input value={createTitle} onChange={e=>setCreateTitle(e.target.value)} placeholder="B1 → B2" /></label>
+        <button type="button" disabled={busy} onClick={()=>void createSet()}>Создать draft</button>
+      </div>}
+
+      {structure && <details className="ab-admin-details">
+        <summary>Настройки выбранного set</summary>
+        <div className="ab-course-meta-grid">
+          <label><span>Название</span><input value={metaTitle} onChange={e=>setMetaTitle(e.target.value)} /></label>
+          <label><span>Описание</span><input value={metaDescription} onChange={e=>setMetaDescription(e.target.value)} /></label>
+          <label><span>Уровень от</span><select value={metaFrom} onChange={e=>setMetaFrom(e.target.value)}>
+            <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
+          </select></label>
+          <label><span>Уровень до</span><select value={metaTo} onChange={e=>setMetaTo(e.target.value)}>
+            <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
+          </select></label>
+          <label><span>Доступ</span><select value={metaAccess} onChange={e=>setMetaAccess(e.target.value as 'free'|'entitlement')}>
+            <option value="entitlement">Покупка / entitlement</option><option value="free">Полностью бесплатно</option>
+          </select></label>
+          {metaAccess==='entitlement' && <label><span>Бесплатных учебных дней</span><input type="number" min={0} max={365} value={metaFreeDays} onChange={e=>setMetaFreeDays(e.target.value)} /></label>}
+        </div>
+        <div className="ab-admin-action-row">
+          <button type="button" disabled={busy} onClick={()=>void saveSetMeta()}>Сохранить настройки</button>
+        </div>
+      </details>}
+
+      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
+    </article>
+
+    <article className="ab-admin-panel">
+      <div className="ab-admin-section-head">
+        <div>
+          <h2>{structure ? textValue(structure.set.title) : 'Roadmap'}</h2>
           <p className="ab-admin-note">{structure ? 'Draft r'+structure.draftRevision+' · '+nodes.length+' узлов roadmap' : 'Загрузка…'}</p>
         </div>
-        <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void loadStructure()}>Обновить</button>
+        <div className="ab-course-head-actions">
+          <button type="button" disabled={busy||!structure} onClick={()=>void createNode()}>+ День / узел</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void loadStructure()}>Обновить</button>
+        </div>
       </div>
-      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
       <div className="ab-admin-table-wrap">
         <table>
           <thead><tr><th>День</th><th>Узел</th><th>Тип</th><th>Activities</th><th></th></tr></thead>
-          <tbody>{nodes.map(node=><tr key={node.roadmapId+':'+node.id}>
+          <tbody>{nodes.map((node,index)=><tr key={node.roadmapId+':'+node.id}>
             <td data-label="День">{node.dayIndex ?? '—'}</td>
             <td data-label="Узел"><strong>{textValue(node.title)||node.id}</strong><div className="ab-admin-cell-sub">{node.id}</div></td>
             <td data-label="Тип">{node.kind}</td>
             <td data-label="Activities">{node.activityCount}</td>
-            <td className="ab-admin-cell-action"><button type="button" className="ab-admin-secondary" onClick={()=>void open(node.roadmapId,node.id)}>Открыть</button></td>
+            <td className="ab-admin-cell-action">
+              <div className="ab-course-node-actions">
+                <button type="button" className="ab-admin-secondary" disabled={index===0||busy} onClick={()=>void moveNode(index,-1)}>↑</button>
+                <button type="button" className="ab-admin-secondary" disabled={index===nodes.length-1||busy} onClick={()=>void moveNode(index,1)}>↓</button>
+                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void open(node.roadmapId,node.id)}>Открыть</button>
+                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void deleteNode(node.roadmapId,node.id)}>Удалить</button>
+              </div>
+            </td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -351,6 +575,20 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
         <div><h2>{textValue(openNode.node.title)||openNode.node.id}</h2><p className="ab-admin-note">Day {openNode.node.dayIndex ?? '—'} · {openNode.activities.length} activities</p></div>
         <button type="button" className="ab-admin-secondary" onClick={()=>{setOpenNode(null);setEditor(null);}}>Закрыть</button>
       </div>
+
+      <details className="ab-admin-details">
+        <summary>Настройки узла</summary>
+        <div className="ab-course-meta-grid">
+          <label><span>Название</span><input value={textValue(openNode.node.title)} onChange={e=>patchOpenNode({title:{...openNode.node.title,ru:e.target.value}})} /></label>
+          <label><span>Тип</span><select value={openNode.node.kind} onChange={e=>patchOpenNode({kind:e.target.value})}>
+            <option value="lesson">lesson</option><option value="practice">practice</option><option value="review">review</option><option value="dialogue">dialogue</option><option value="checkpoint">checkpoint</option><option value="bonus">bonus</option>
+          </select></label>
+          <label><span>Учебный день</span><input type="number" min={1} value={openNode.node.dayIndex ?? ''} onChange={e=>patchOpenNode({dayIndex:e.target.value?Number(e.target.value):undefined})} /></label>
+          <label><span>Prerequisites — ID через запятую</span><input value={openNode.node.prerequisites.join(', ')} onChange={e=>patchOpenNode({prerequisites:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)})} /></label>
+          <label className="ab-course-check"><input type="checkbox" checked={openNode.node.optional} onChange={e=>patchOpenNode({optional:e.target.checked})} /><span>Необязательный узел</span></label>
+        </div>
+        <div className="ab-admin-action-row"><button type="button" disabled={busy} onClick={()=>void saveNodeMeta()}>Сохранить узел</button></div>
+      </details>
 
       <div className="ab-course-add">
         <select value={newType} onChange={e=>setNewType(e.target.value)}>
@@ -375,7 +613,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       </div>
     </article>}
 
-    {editor && <ActivityEditor client={client} adminKey={adminKey} activity={editor}
+    {editor && <ActivityEditor client={client} adminKey={adminKey} setId={setId} activity={editor}
       onClose={()=>setEditor(null)}
       onSaved={next=>{setEditor(next);void reloadOpenNode();}} />}
   </div>;
