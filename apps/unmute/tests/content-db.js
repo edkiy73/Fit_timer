@@ -44,9 +44,11 @@ const sample={
   const put=await call({method:'POST',headers:{'x-admin-key':encodeURIComponent(process.env.ADMIN_KEY)},body:{action:'draft_put',set:sample}});
   assert.equal(put.status,200);
 
-  const pub=await call({method:'POST',headers:{'x-admin-key':encodeURIComponent(process.env.ADMIN_KEY)},body:{action:'publish',id:'general-foundation'}});
-  assert.equal(pub.status,200);
-  assert.equal(pub.body.revision,1);
+  const blocked=await call({method:'POST',headers:{'x-admin-key':encodeURIComponent(process.env.ADMIN_KEY)},body:{action:'publish',id:'general-foundation'}});
+  assert.equal(blocked.status,409);
+  assert.equal(blocked.body.error,'publish_via_content_admin');
+  const pub=await Content.publish('general-foundation');
+  assert.equal(pub.revision,1);
 
   const catalog=await call({method:'GET',query:{action:'catalog'}});
   assert.equal(catalog.status,200);

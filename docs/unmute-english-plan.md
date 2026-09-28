@@ -25,7 +25,8 @@
 | Фаза 3.1 — модель контента | ✅ в `main` (PR #198) | `docs/unmute-content-model.md`, `apps/unmute/src/content/*` |
 | Фаза 3.2 — DB content store | ✅ в `main` (PR #199) | `apps/unmute/lib/content-store.js`, `api/content.js`, `src/content/client.ts` |
 | Фаза 3.2a — общий словарь | ✅ в `main` (PR #200) | `docs/unmute-lexicon.md`, `apps/unmute/src/lexicon/*`, `lib/lexicon-store.js`, `api/lexicon.js` |
-| Фаза 3.3 — legacy importer | 🟡 PR в работе | `apps/unmute/lib/legacy-import.mjs`, `scripts/import-legacy-content.mjs` |
+| Фаза 3.3 — legacy importer | ✅ в `main` (PR #201) | `apps/unmute/lib/legacy-import.mjs`, `scripts/import-legacy-content.mjs` |
+| Фаза 3.3a — Admin Content + paired release | 🟡 PR в работе | `lib/content-admin.js`, `lib/content-release.js`, `src/admin-content.tsx` |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -326,6 +327,7 @@ DictEntry { word, ru }
 - 3.2 Контент хранится в серверной БД, не внутри приложения: отдельный versioned content-store (`draft → validate → immutable publish revision`), публичный API отдаёт только published; клиент кэширует последнюю revision локально для офлайна. Legacy-importer пишет первый сет `general-foundation` сразу в БД.
 - 3.2a Общий словарь приложения: `Lexeme → forms → senses → examples`, стабильные ID, без runtime-угадывания форм/значений; course activities могут явно фиксировать `lexemeId/senseId`. Словарь хранится и версионируется в БД отдельно от сетов.
 - 3.3 Одноразовый importer legacy `English/index.html`: применяет `EX/MORE_CARDS*/FIX/ALT`, собирает `general-foundation` и общий lexicon, проверяет контрольные объёмы, загружает draft в БД; `--publish` выпускает immutable revisions. Неоднозначные `;`-значения словаря маркируются `needs-review`, а старый динамический поиск примеров не переносится.
+- 3.3a Admin → «Контент»: детерминированный import legacy в draft, отчёт, очередь `needs-review`, отдельный Publish. Курс и lexicon публикуются только как единый paired release: сначала создаются обе immutable revisions, затем одним release pointer становятся видимы пользователям; одиночный publish через `/api/content`/`/api/lexicon` запрещён.
 - 3.4 `src/engine/`: проверка ответа, повторения, лимиты, план, серия — чистый TS.
 - 3.5 **Эталонные тесты**: старые функции из `index.html` прогоняются в Node на наборе ответов (верные, сокращения, опечатки, «почти»), новый движок обязан совпасть на 100%.
 - 3.6 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.

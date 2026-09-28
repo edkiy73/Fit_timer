@@ -4,6 +4,7 @@ require('../lib/product');
 const { store }=require('../../../packages/core/server/store');
 const { send,fail,rateOk,rateOkScoped,sameSecret,cors }=require('../../../packages/core/server/util');
 const Lexicon=require('../lib/lexicon-store');
+const Release=require('../lib/content-release');
 
 const MAX_BODY=8*1024*1024;
 async function bodyOf(req){
@@ -31,7 +32,7 @@ module.exports=async function lexiconHandler(req,res){
   if(req.method==='GET'){
     if(!(await rateOk(req,'lexicon-read',900))) return fail(res,429,'rate_limited');
     const action=String((req.query&&req.query.action)||'snapshot');
-    const snapshot=await Lexicon.getPublished();
+    const snapshot=await Release.getReleasedLexicon();
     if(!snapshot) return fail(res,404,'lexicon_not_published');
 
     if(action==='snapshot') return send(res,200,{ok:true,revision:snapshot.revision,publishedAt:snapshot.publishedAt,lexicon:snapshot});
@@ -63,12 +64,9 @@ module.exports=async function lexiconHandler(req,res){
       if(!draft) return fail(res,404,'draft_not_found');
       return send(res,200,{ok:true,draft});
     }
-    if(body.action==='publish'){
-      const snapshot=await Lexicon.publish();
-      return send(res,200,{ok:true,revision:snapshot.revision,publishedAt:snapshot.publishedAt,count:snapshot.entries.length});
-    }
+    if(body.action==='publish') return fail(res,409,'publish_via_content_admin');
     if(body.action==='status'){
-      const [draft,published]=await Promise.all([Lexicon.getDraft(),Lexicon.getPublished()]);
+      const [draft,published]=await Promise.all([Lexicon.getDraft(),Release.getReleasedLexicon()]);
       return send(res,200,{ok:true,draft:!!draft,draftUpdatedAt:draft&&draft.draftUpdatedAt||null,
         publishedRevision:published&&published.revision||0,publishedAt:published&&published.publishedAt||null,
         count:published&&published.entries.length||0});

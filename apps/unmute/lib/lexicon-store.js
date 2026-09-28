@@ -6,6 +6,7 @@ const PREFIX='unmute:lexicon:v1';
 const DRAFT=`${PREFIX}:draft`;
 const POINTER=`${PREFIX}:published`;
 const revisionKey=revision=>`${PREFIX}:rev:${revision}`;
+const REVISION_COUNTER=`${PREFIX}:revision-counter`;
 
 const parse=raw=>{try{return raw?JSON.parse(raw):null;}catch(_){return null;}};
 
@@ -72,19 +73,48 @@ async function putDraft(input){
 
 async function getDraft(){return parse(await store.get(DRAFT));}
 
+async function nextRevision(){
+  const pointer=parse(await store.get(POINTER));
+  const current=Math.max(0,+(pointer&&pointer.revision)||0,+(await store.get(REVISION_COUNTER)||0));
+  const out=await store.pipe([
+    ['SET',REVISION_COUNTER,String(current)],
+    ['INCR',REVISION_COUNTER]
+  ]);
+  return Math.max(1,+out[1]||current+1);
+}
+
+async function stageDraft(){
+  const draft=await getDraft();
+  if(!draft) throw new Error('draft_not_found');
+  validateLexicon(draft);
+  const revision=await nextRevision();
+  const publishedAt=new Date().toISOString();
+  const snapshot={...draft,revision,publishedAt};
+  delete snapshot.draftUpdatedAt;
+  validateLexicon(snapshot);
+  const result=await store.pipe([['SET',revisionKey(revision),JSON.stringify(snapshot),'NX']]);
+  if(result[0] !== 'OK') throw new Error('revision_collision');
+  return snapshot;
+}
+
+async function getRevision(revision){
+  const rev=Math.max(0,+revision||0);
+  if(!rev) return null;
+  const snapshot=parse(await store.get(revisionKey(rev)));
+  return snapshot?validateLexicon(snapshot):null;
+}
+
+async function activateRevision(revision){
+  const snapshot=await getRevision(revision);
+  if(!snapshot) throw new Error('revision_not_found');
+  await persistentSet(POINTER,{revision:snapshot.revision,publishedAt:snapshot.publishedAt});
+  return snapshot;
+}
+
 async function publish(){
   return store.withLock('lock:lexicon',async()=>{
-    const draft=await getDraft();
-    if(!draft) throw new Error('draft_not_found');
-    validateLexicon(draft);
-    const pointer=parse(await store.get(POINTER));
-    const revision=Math.max(0,+(pointer&&pointer.revision)||0)+1;
-    const publishedAt=new Date().toISOString();
-    const snapshot={...draft,revision,publishedAt};
-    delete snapshot.draftUpdatedAt;
-    validateLexicon(snapshot);
-    await persistentSet(revisionKey(revision),snapshot);
-    await persistentSet(POINTER,{revision,publishedAt});
+    const snapshot=await stageDraft();
+    await activateRevision(snapshot.revision);
     return snapshot;
   },{ttl:10,retries:80,delay:50});
 }
@@ -92,9 +122,7 @@ async function publish(){
 async function getPublished(){
   const pointer=parse(await store.get(POINTER));
   const revision=Math.max(0,+(pointer&&pointer.revision)||0);
-  if(!revision) return null;
-  const snapshot=parse(await store.get(revisionKey(revision)));
-  return snapshot?validateLexicon(snapshot):null;
+  return revision?getRevision(revision):null;
 }
 
 function buildIndex(snapshot){
@@ -116,4 +144,4 @@ function lookup(snapshot,surface){
   return ids.map(id=>byId.get(id)).filter(Boolean);
 }
 
-module.exports={validateLexicon,putDraft,getDraft,publish,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,revisionKey}};
+module.exports={validateLexicon,putDraft,getDraft,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
