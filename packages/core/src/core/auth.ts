@@ -192,6 +192,21 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     return {email:session.email, deviceId:session.deviceId, syncToken:session.syncToken};
   }
 
+  async function readStatus(): Promise<Record<string, unknown>> {
+    const session = await getSession();
+    if(!session) throw new Error('not_authenticated');
+    const result = await post({
+      action:'status',
+      email:session.email,
+      deviceId:session.deviceId,
+      syncToken:session.syncToken
+    });
+    if('sub' in result) session.sub = result.sub ?? null;
+    session.premium = typeof result.premium === 'boolean' ? result.premium : premiumFrom(session.sub);
+    await saveSession(session);
+    return result;
+  }
+
   return {
     async sendCode(email, locale = 'ru') {
       const normalized = normalizeEmail(email);
@@ -253,7 +268,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
       const session = await getSession();
       if(!session || !validate) return session;
       try {
-        await this.status();
+        await readStatus();
         return await getSession();
       } catch (_) {
         return null;
@@ -262,20 +277,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
 
     getOrCreateDeviceId,
 
-    async status() {
-      const session = await getSession();
-      if(!session) throw new Error('not_authenticated');
-      const result = await post({
-        action:'status',
-        email:session.email,
-        deviceId:session.deviceId,
-        syncToken:session.syncToken
-      });
-      if('sub' in result) session.sub = result.sub ?? null;
-      session.premium = typeof result.premium === 'boolean' ? result.premium : premiumFrom(session.sub);
-      await saveSession(session);
-      return result;
-    },
+    status: readStatus,
 
     async setLocale(locale) {
       const session = await getSession();
