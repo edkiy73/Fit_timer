@@ -69,15 +69,15 @@ export function buildPracticeReviewQueue(
   },
   todayDay:number
 ):PracticeReviewQueue{
-  const pattern=selectPracticeQueue('drill',candidateIds,progress.drill,todayDay);
-  const vocab=selectPracticeQueue('speaking',candidateIds,progress.speaking,todayDay);
+  const drill=selectPracticeQueue('drill',candidateIds,progress.drill,todayDay);
+  const speaking=selectPracticeQueue('speaking',candidateIds,progress.speaking,todayDay);
   const listening=selectPracticeQueue('listening',candidateIds,progress.listening,todayDay);
 
   return {
-    pattern,
-    vocab,
+    drill,
+    speaking,
     listening,
-    dueCount:pattern.due.length+vocab.due.length+listening.due.length,
-    waitingCount:pattern.waiting+vocab.waiting+listening.waiting,
+    dueCount:drill.due.length+speaking.due.length+listening.due.length,
+    waitingCount:drill.waiting+speaking.waiting+listening.waiting,
   };
 }
