@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';
+// @ts-expect-error jsdom runtime is a dev dependency; this parity-only test does not ship to the app.
 import { JSDOM } from 'jsdom';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { norm, expand, canon } from './answer-normalize';
@@ -58,13 +58,9 @@ type LegacyParity={
 };
 
 async function readLegacySource():Promise<string>{
-  const source=process.env.UNMUTE_LEGACY_SOURCE||LEGACY_URL;
-  if(/^https?:\/\//i.test(source)){
-    const response=await fetch(source);
-    if(!response.ok)throw new Error('legacy_source_http_'+response.status);
-    return response.text();
-  }
-  return fs.readFile(source,'utf8');
+  const response=await fetch(LEGACY_URL);
+  if(!response.ok)throw new Error('legacy_source_http_'+response.status);
+  return response.text();
 }
 
 function emptyLegacyState():LegacyState{
