@@ -16,6 +16,8 @@ Unless a path starts with `packages/`, `apps/`, `.github/` or is the AppBase roa
 
 Core rules: Core never imports app code; app client code imports Core only via `@appbase/core/*` / `@appbase/types/*`; app server code requires `packages/core/server/*`; every app API entry first requires its `lib/product.js`. A Core change must keep every app green in the same PR.
 
+Next product work (UnMute: English for Expats, AppBase stage 0 in Task Mini): start from `docs/unmute-english-plan.md` §0 — current status, checks, next step.
+
 Stack and CI decisions are fixed in `docs/appbase-stack-ci-strategy.md` (ADR): new apps use React + TypeScript + Vite; FitTimer stays on its ESM/DOM stack; Core stays framework-neutral; full browser regression runs on every PR, sharded. Change them only via that ADR.
 
 ## Start here
