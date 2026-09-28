@@ -109,6 +109,7 @@
         "accountAuth",
         "accountDocsSnapshot",
         "add",
+        "addRepair",
         "applyRemoteAccountDocs",
         "applyRemoteSync",
         "applyRemoteSyncNow",
