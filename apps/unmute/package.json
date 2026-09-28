@@ -12,7 +12,8 @@
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run build",
-    "import:legacy": "node scripts/import-legacy-content.mjs"
+    "import:legacy": "node scripts/import-legacy-content.mjs",
+    "test:legacy-parity": "vitest run src/engine/legacy-parity.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.0",
