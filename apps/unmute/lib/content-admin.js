@@ -356,7 +356,7 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         send(res,200,{ok:true,
           draftRevision:structure.draftRevision,
           draftUpdatedAt:structure.draftUpdatedAt,
-          set:{id:structure.meta.id,title:structure.meta.title,level:structure.meta.level,access:structure.meta.access},
+          set:{id:structure.meta.id,title:structure.meta.title,description:structure.meta.description,level:structure.meta.level,access:structure.meta.access},
           roadmaps:(structure.roadmaps||[]).map(roadmap=>({
             id:roadmap.id,
             title:roadmap.title,
