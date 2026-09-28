@@ -79,7 +79,7 @@ const sample={
   assert.equal(read[0].forms.filter(form=>form.text==='read').length,3);
 
   const badDuplicate=JSON.parse(JSON.stringify(sample));
-  badDuplicate.entries[2].forms[1].id=undefined;
+  badDuplicate.entries[1].forms[1].id=undefined;
   assert.throws(()=>Lexicon.validateLexicon(badDuplicate),/duplicate_form_requires_id/);
 
   const lookup=await call({method:'GET',query:{action:'lookup',q:'working'}});
