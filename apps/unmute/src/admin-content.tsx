@@ -3,6 +3,7 @@ import type { AdminSection, AdminSectionContext } from '@appbase/ui-react/admin.
 
 type Status = {
   source?: {sha?:string;url?:string};
+  release?: {revision?:number;publishedAt?:string;sets?:Record<string,number>;lexiconRevision?:number}|null;
   course?: {draft?: Record<string,unknown>|null;published?: Record<string,unknown>|null};
   lexicon?: {draft?: Record<string,unknown>|null;published?: Record<string,unknown>|null};
 };
@@ -84,6 +85,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <h2>Контент курса</h2>
         <p className="ab-admin-empty">Источник legacy зафиксирован на commit <code>{status?.source?.sha?.slice(0,12) || '…'}</code>. Импорт всегда идёт сначала в draft.</p>
         <div className="ab-admin-grid">
+          <div className="ab-admin-card"><span>Release</span><strong>{status?.release ? 'r'+String(status.release.revision ?? 0) : 'не опубликован'}</strong></div>
           <div className="ab-admin-card"><span>Course draft</span><strong>{cd ? 'r'+String(cd.revision ?? 0)+' · '+String(cd.activities ?? 0)+' activities' : 'нет'}</strong></div>
           <div className="ab-admin-card"><span>Course published</span><strong>{cp ? 'r'+String(cp.revision ?? 0) : 'нет'}</strong></div>
           <div className="ab-admin-card"><span>Lexicon draft</span><strong>{ld ? String(ld.entries ?? 0)+' entries' : 'нет'}</strong></div>
