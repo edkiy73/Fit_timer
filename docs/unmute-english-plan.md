@@ -1,6 +1,6 @@
 # UnMute: English for Expats — план слияния с AppBase Core
 
-Статус: **согласован по пп. 1–4 §2** (2026-09-28). Этап 0: сделаны 0.1–0.5 (PR #192) и 0.7 (PR «entitlements»); следующий шаг — **0.8**. Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
+Статус: **согласован по пп. 1–4 §2** (2026-09-28). Этап 0: сделаны 0.1–0.5 (PR #192), 0.7 (PR #193) и 0.8 (каркас оплаты); следующий шаг — **0.9**. Раздел §0 — точка входа для любого исполнителя (человека или ИИ-агента), который продолжает работу.
 
 Продукт — первое настоящее «App2» из [ADR по стеку](./appbase-stack-ci-strategy.md). Источник логики — репозиторий `edkiy73/English` (семейное приложение «English Trainer», один `index.html` ~4,6 тыс. строк, сборка `2026-09-04.17`; с тех пор не менялся). Интерфейс оттуда **не переносится**: берём контент и алгоритмы, интерфейс делаем с нуля.
 
@@ -17,9 +17,9 @@
 | 0.1–0.2 Необязательный вход, `askHandle` | ✅ в `main` (PR #192) | `packages/ui-react/src/auth.tsx` |
 | 0.3–0.5 Локальная синхронизация, слияние, бесплатные документы | ✅ в `main` (PR #192) | `packages/core/src/core/document-sync.ts`, `packages/core/server/sync-core.js` (поле `base`), `apps/task-mini/src/tasks/*`, `apps/task-mini/lib/app-sync-schema.js` |
 | 0.6 Префикс ключей | ❌ отменён: своя база и домен у каждого приложения | — |
-| 0.7 Покупки навсегда + выдача в админке | ✅ PR «entitlements» (после #192) | `packages/core/server/entitlements.js`, `packages/core/server/admin/accounts.js` (`user_owned`, `products_list`), `packages/core/src/core/auth.ts` (`owned`, `hasEntitlement`), `packages/ui-react/src/admin.tsx` (форма доступа), `apps/task-mini` (SKU `export`) |
-| **0.8 Каркас оплаты** | ⏭ **следующий** | см. §0.4 |
-| 0.9 i18n в стартере и Task Mini | ждёт | — |
+| 0.7 Покупки навсегда + выдача в админке | ✅ PR #193 | `packages/core/server/entitlements.js`, `packages/core/server/admin/accounts.js` (`user_owned`, `products_list`), `packages/core/src/core/auth.ts` (`owned`, `hasEntitlement`), `packages/ui-react/src/admin.tsx` (форма доступа), `apps/task-mini` (SKU `export`) |
+| 0.8 Каркас оплаты | ✅ PR после #193 | `packages/core/server/billing.js` (`applyBillingEvent`, `createBillingHandler`, `createTestBillingAdapter`, `billing_log`), `packages/core/src/core/billing.ts` (`createBillingClient`), `packages/ui-react/src/admin.tsx` (вкладка «Платежи»), `apps/task-mini/api/billing.js`, кнопка «Купить экспорт» |
+| **0.9 i18n в стартере и Task Mini** | ⏭ **следующий** | см. §0.4 |
 | 0.10 Стартер получает всё из этапа 0 | ждёт | `templates/react-app`, `scripts/create-app.mjs` |
 | Фазы 1–10 UnMute | ждут этапа 0 | §5 |
 
@@ -36,7 +36,7 @@
 ### 0.3. Как проверять (локально, до пуша)
 
 ```bash
-# Core: typecheck, границы, runtime, document-sync, entitlements, smoke
+# Core: typecheck, границы, runtime, document-sync, entitlements, billing, smoke
 cd packages/core && npm ci && npm run check
 # Task Mini: typecheck, smoke, unit; затем e2e на production-сборке с настоящим api/* в памяти
 cd apps/task-mini && npm ci && npm run check && node tests/e2e.mjs
@@ -51,19 +51,24 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 
 Тестовые серверы работают на памяти (`ALLOW_MEMORY_STORE=1`): `/api/auth` отдаёт `devCode`, поэтому вход по почте проверяется без почты. Пример — `apps/task-mini/tests/e2e.mjs` (сборка + `api/*` + два браузерных контекста + админка).
 
-### 0.4. Следующий шаг: 0.8 — каркас оплаты (без реального провайдера)
+### 0.4. Следующий шаг: 0.9 — язык интерфейса приложения (RU/EN)
 
-Цель: одна общая дорога «платёж подтверждён → право выдано», в которую потом подключаются Google Play, App Store, ЮKassa, Paddle/Lemon Squeezy (фаза 6) без переделки.
+Цель: каждое новое приложение с первого экрана пишет копию через `t(key)` и умеет переключать язык, чтобы UnMute потом добавил EN/UA без переделки (G9). FitTimer не трогаем — у него своя i18n.
 
-- `packages/core/server/billing.js`:
-  - контракт адаптера провайдера: `{id, verifyWebhook(req, body) → {ok, events[]}, verifyReceipt?(input) → {ok, events[]}}`; событие — `{orderId, email|accountHash, sku, kind: 'owned'|'subscription', until?, status: 'paid'|'refunded'|'canceled'}`;
-  - `applyBillingEvent(event)`: идемпотентно по `provider + orderId` (ключ `bill:<provider>:<orderId>`), `paid` → `grantOwned` / `acc.sub`, `refunded` → `revokeOwned` / снять подписку; журнал `bill:log` (последние N событий без платёжных данных);
-  - SKU только из каталога продукта (`checkSku`), подписка — `products[].kind: 'subscription'` с периодом.
-- `createBillingHandler({adapters})` для `api/billing.js` продукта: `POST /api/billing?provider=<id>` (вебхук), ключи провайдеров только из env; неизвестный провайдер — 404; неподтверждённая подпись — 401.
-- Тестовый адаптер `test` (подпись по `BILLING_TEST_SECRET`) — **включается только при `ALLOW_MEMORY_STORE=1`**, в проде недоступен.
-- Админка: журнал платежей (вкладка «Платежи» или блок в «Пользователях»).
-- Task Mini: `api/billing.js`, кнопка «Купить экспорт» → тестовый провайдер (только dev) → вебхук → право; e2e «купил тестовым провайдером → экспорт открылся», повтор вебхука не дублирует, `refunded` забирает.
-- Проверить: Vercel считает функции — `api/billing.js` добавляет функцию (у FitTimer лимит сторожит `apps/fittimer/check.py`; у Task Mini/UnMute лимита пока нет, но не плодить).
+- Где: механизм — в `packages/ui-react` (React-контекст) или в самом приложении; **в Core не класть** словари и тексты продуктов. Предложение: `packages/ui-react/src/i18n.tsx` — `I18nProvider({dictionaries, locale})`, `useT()`, `t(key, vars)`; словари лежат в приложении (`src/i18n/ru.ts`, `en.ts`), отсутствующий ключ в тестах — ошибка.
+- Язык: `system | ru | en`, по умолчанию `system` (язык браузера → ru/en); выбор сохраняется на устройстве и отправляется в аккаунт через существующий `auth.setLocale()`; `SignInForm`/`AdminPanel` получают тот же `locale`.
+- Task Mini: все строки через `t()`, переключатель RU/EN на `#/account`; unit-тест «словари совпадают по ключам»; e2e переключает язык и проверяет пару строк.
+- Проверки: как в §0.3.
+
+После 0.9 — **0.10**: перенести в `templates/react-app` всё из этапа 0 (необязательный вход, `document-sync` с бесплатным документом аккаунта, права и `billing` с тестовым провайдером, i18n) и дополнить `scripts/test-react-app-template.mjs` проверками этих частей. Затем фаза 1 (генерация `apps/unmute`).
+
+### 0.4a. Как устроена оплата (сделано в 0.8, нужно для фазы 6)
+
+- Провайдер подключается адаптером `{id, testOnly?, checkout?({email, sku, product}) → {url}|{events}, verifyWebhook({headers, body, query}) → {ok, events}}`; адаптеры передаются в `createBillingHandler({adapters})` в `api/billing.js` продукта.
+- Событие `{orderId, email, sku, status: paid|refunded|canceled, until?, autoRenew?}` применяет `applyBillingEvent`: идемпотентно по провайдеру+заказу+статусу, SKU только из каталога (`config/product.json → products`; подписка — `kind: "subscription", days`). `paid` → покупка навсегда (`acc.owned`) или Premium (`acc.sub` с `orderId`); `refunded` → забрать; `canceled` у подписки → выключить продление, оплаченный срок остаётся. Покупка до первого входа создаёт аккаунт.
+- Журнал — `bill:log:YYYY-MM` (400 дней), без почты и номеров заказов; в админке вкладка «Платежи».
+- Тестовый провайдер `test` работает только при `ALLOW_MEMORY_STORE=1` (в проде его нет — это проверено тестом).
+- Открыто для фазы 6: провайдерам с подписью по «сырому» телу запроса (Stripe/Paddle) понадобится доступ к исходным байтам — проверить, как Vercel отдаёт тело в `api/*`, до подключения первого такого провайдера.
 
 ### 0.5. Подводные камни, уже найденные
 
@@ -290,13 +295,13 @@ DictEntry { word, ru }
 | 0.5 | ✅ Бесплатная синхронизация: данные продукта — документ аккаунта с `free:true` | `lib/app-sync-schema.js` Task Mini | без Premium задачи синхронизируются | G4 |
 | 0.6 | ~~Префикс ключей хранилища~~ — **отменено**: у каждого приложения своя база и свой домен (решение владельца, см. G7) | — | — | G7 |
 | 0.7 | ✅ Права аккаунта: `acc.owned` (покупки навсегда) рядом с `acc.sub` (Premium); Core `server/entitlements.js` (`hasPremium`, `hasOwned`, `grantOwned`, `revokeOwned`); `verify`/`status` отдают `owned`; клиент `session.owned` + `hasEntitlement(session, sku)`; `AuthProvider` обновляет права при запуске, `refresh()`; каталог SKU продукта — `config/product.json → products`; админка: действия `user_owned`, `products_list`, на вкладке «Пользователи» — выдача/отзыв покупки и Premium, колонка «Покупки» | Core server + `auth.ts` + ui-react | «Экспорт задач» (SKU `export`) открывается правом, выданным в общей админке; e2e проходит это в браузере | G5 |
-| 0.8 | Контракт оплаты без реального провайдера: адаптер, вебхук, идемпотентность, журнал; тестовый провайдер только в тестах | Core `billing` | e2e «купил тестовым провайдером → право появилось» | G6 (каркас) |
+| 0.8 | ✅ Каркас оплаты: адаптер провайдера, вебхук с подписью, идемпотентность, журнал; тестовый провайдер только на памяти (§0.4a) | Core `billing.js`/`billing.ts`, ui-react «Платежи» | «Купить экспорт» → право сразу; повтор вебхука ничего не меняет; возврат забирает; e2e в браузере | G6 (каркас) |
 | 0.9 | Слой i18n приложения `t(key)` + переключение RU/EN в стартере | стартер, Task Mini | Task Mini на двух языках | G9 |
 | 0.10 | Обновить стартер и генератор, чтобы всё выше приходило в новое приложение; CI уже собирает свежий стартер | `templates/react-app`, `scripts/create-app.mjs` | — | — |
 
 Не входит в этап 0 (делается вместе с UnMute, чтобы не строить механизм без реального потребителя): реальные провайдеры оплаты, ИИ-действия, уведомления, вынос нативного аудио-плагина (G8).
 
-Сделано: 0.1–0.5 (PR #192), 0.7. Дальше: 0.8 → 0.9 → 0.10. Шаблон `templates/react-app` пока на `AuthGate` (работает без изменений); перевод шаблона на необязательный вход и `document-sync` — в 0.10. FitTimer в этапе 0 не переводится на новые модули (ADR D3) — только остаётся зелёным.
+Сделано: 0.1–0.5 (PR #192), 0.7 (PR #193), 0.8. Дальше: 0.9 → 0.10. Шаблон `templates/react-app` пока на `AuthGate` (работает без изменений); перевод шаблона на необязательный вход и `document-sync` — в 0.10. FitTimer в этапе 0 не переводится на новые модули (ADR D3) — только остаётся зелёным.
 
 ### Фаза 1 — Генерация приложения и деплой (после этапа 0)
 - `npm run app:create -- unmute "UnMute: English for Expats" app.unmute.english ru`.
@@ -330,7 +335,7 @@ DictEntry { word, ru }
 **Здесь готов запуск для семьи (MVP).**
 
 ### Фаза 6 — Оплата (G6)
-- Контракт `billing` — из этапа 0.8; здесь — реальный адаптер первого канала (решение 8), включение провайдеров в админке; оферта, политика конфиденциальности, возвраты — до включения в проде.
+- Контракт `billing` — из этапа 0.8 (§0.4a); здесь — реальный адаптер первого канала (решение 8), включение провайдеров в админке; оферта, политика конфиденциальности, возвраты — до включения в проде.
 
 ### Фаза 7 — ИИ-собеседник (Plus)
 - `lib/unmute-ai-actions.js`: `talk.reply`, `talk.review`, `answer.explain`; лимиты и журнал — Core `ai-endpoint`; доступ по `acc.sub`, одна пробная беседа.

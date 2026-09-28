@@ -34,7 +34,8 @@ const COPY = {
     clear:'Очистить', migration:'Миграция хранилища',
     owned:'Покупки', access:'Доступ', sku:'Покупка (SKU)', grant:'Выдать', revoke:'Забрать',
     premiumDays:'Premium, дней', grantPremium:'Выдать Premium', revokePremium:'Забрать Premium',
-    accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок.'
+    accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок.',
+    payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -48,11 +49,12 @@ const COPY = {
     clear:'Clear', migration:'Storage migration',
     owned:'Purchases', access:'Access', sku:'Purchase (SKU)', grant:'Grant', revoke:'Revoke',
     premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
-    accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period.'
+    accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period.',
+    payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account'
   }
 } as const;
 
-type CoreTab = 'health' | 'overview' | 'users' | 'errors' | 'storage';
+type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage';
 type Tab = CoreTab | string;
 
 type Copy = (typeof COPY)[keyof typeof COPY];
@@ -133,7 +135,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
   const [error, setError] = useState('');
 
   const tabs = useMemo(() => [
-    ['health', copy.health], ['overview', copy.overview], ['users', copy.users],
+    ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
     ['errors', copy.errors], ['storage', copy.storage],
     ...extraSections.map(section => [section.id, section.label] as const)
   ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
@@ -167,6 +169,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
         });
       }else if(target === 'users'){
         setData(await client.action(adminKey, 'users_list'));
+      }else if(target === 'payments'){
+        setData(await client.action(adminKey, 'billing_log'));
       }else if(target === 'errors'){
         setData(await client.action(adminKey, 'client_errors'));
       }else{
@@ -212,6 +216,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
   }
 
   const users = tab === 'users' && data && Array.isArray(data.users) ? data.users as Array<Record<string, unknown>> : [];
+  const payments = tab === 'payments' && data && Array.isArray(data.events) ? data.events as Array<Record<string, unknown>> : [];
   const errorStats = tab === 'errors' && data && data.stats && typeof data.stats === 'object'
     ? data.stats as Record<string, unknown> : null;
   const errors = errorStats && Array.isArray(errorStats.items) ? errorStats.items as Array<Record<string, unknown>> : [];
@@ -288,6 +293,21 @@ export function AdminPanel({client, productName, locale='ru', extraSections=[]}:
               </tr>)}</tbody></table></div>
             ) : <p className="ab-admin-empty">{copy.noUsers}</p>}
           </article>}
+        </section>
+      )}
+
+      {tab === 'payments' && key && data && (
+        <section className="ab-admin-panel">
+          {payments.length ? (
+            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.when}</th><th>{copy.provider}</th><th>{copy.event}</th><th>SKU</th><th>{copy.account}</th></tr></thead>
+            <tbody>{payments.map((row, i) => <tr key={i}>
+              <td>{String(row.at || '').replace('T', ' ').slice(0, 19)}</td>
+              <td>{String(row.provider || '')}</td>
+              <td>{String(row.status || '')}</td>
+              <td>{String(row.sku || '')}</td>
+              <td>{String(row.account || '')}</td>
+            </tr>)}</tbody></table></div>
+          ) : <p className="ab-admin-empty">{copy.noPayments}</p>}
         </section>
       )}
 

@@ -7,6 +7,7 @@ const { handleAdminAccounts } = require('./admin/accounts');
 const { handleAdminCampaigns } = require('./admin/campaigns');
 const { handleAdminAISettings } = require('./admin/ai-settings');
 const { handleAdminStorage } = require('./admin/storage');
+const { handleAdminBilling } = require('./billing');
 
 function createAdminHandler({analyticsStats, handlers = []} = {}){
   const handleObservability = createAdminObservability({analyticsStats});
@@ -40,6 +41,7 @@ function createAdminHandler({analyticsStats, handlers = []} = {}){
     if(await handleAdminCampaigns(action, body, res)) return;
     if(await handleAdminAISettings(action, body, res)) return;
     if(await handleAdminStorage(action, body, res)) return;
+    if(await handleAdminBilling(action, body, res)) return;
 
     for(const handler of productHandlers){
       if(await handler(action, body, res)) return;

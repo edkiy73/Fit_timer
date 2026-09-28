@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useOutletContext, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
@@ -12,6 +13,7 @@ import { syncTasksNow } from './tasks/sync';
 import { taskDocs } from './tasks/repository';
 import { taskAuth } from './auth';
 import { taskAdmin } from './admin';
+import { taskBilling } from './billing';
 
 const EMPTY: Record<TaskFilter, string> = {
   all: 'Пока задач нет.',
@@ -70,9 +72,7 @@ export const EXPORT_SKU = 'export';
 function ExportTasks(){
   const auth = useOptionalAuth();
   const {data: tasks = []} = useTasks();
-  if(!hasEntitlement(auth.session, EXPORT_SKU)){
-    return <p className="muted">Экспорт задач в файл — отдельная покупка. Пока её выдают в админке.</p>;
-  }
+  if(!hasEntitlement(auth.session, EXPORT_SKU)) return <BuyExport />;
   const download = () => {
     const blob = new Blob([JSON.stringify(tasks, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -83,6 +83,37 @@ function ExportTasks(){
     URL.revokeObjectURL(url);
   };
   return <button type="button" className="text-button" onClick={download}>Скачать задачи ({tasks.length})</button>;
+}
+
+// Offered only when the server has a payment provider for this build (the test provider
+// exists only on the memory store, so production shows the note instead of a button).
+function BuyExport(){
+  const auth = useOptionalAuth();
+  const {data: providers = []} = useQuery({queryKey: ['billing-providers'], queryFn: () => taskBilling.providers(), retry: false});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const provider = providers[0];
+  const buy = async () => {
+    if(!provider) return;
+    setBusy(true);
+    setError('');
+    try{
+      const result = await taskBilling.checkout(provider, EXPORT_SKU);
+      if(result.url){ window.location.assign(result.url); return; }
+      await auth.refresh();
+    }catch{
+      setError('Не удалось оформить покупку. Попробуй ещё раз.');
+    }finally{
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="buy">
+      <p className="muted">Экспорт задач в файл — отдельная покупка{provider ? '.' : '. Пока её выдают в админке.'}</p>
+      {provider && <button type="button" className="text-button" disabled={busy} onClick={() => void buy()}>Купить экспорт</button>}
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
+  );
 }
 
 function AccountPage(){

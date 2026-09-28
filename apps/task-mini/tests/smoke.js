@@ -58,6 +58,12 @@ function fakeRes(){
   await admin({method:'POST', headers:{'x-admin-key':'wrong'}, body:{action:'users_list'}}, adminRes);
   ok('shared admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
+  const billing = require('../api/billing');
+  const billingRes = fakeRes();
+  await billing({method:'POST', headers:{}, body:{action:'providers'}}, billingRes);
+  ok('billing endpoint offers only the test provider on the memory store',
+    JSON.parse(billingRes.body || '{}').providers.join() === 'test');
+
   const health = require('../api/health');
   const healthRes = fakeRes();
   await health({method:'GET', headers:{}, query:{}}, healthRes);
