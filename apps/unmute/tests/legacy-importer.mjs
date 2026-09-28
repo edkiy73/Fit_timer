@@ -61,7 +61,7 @@ const PLAN=[
 const DICT={"work":["работать; работа","w","у"],"home":["дом","h","х"]};
 Object.assign(DICT,{"hello":["привет","h","х"]});
 const PHRASES=[{g:"x",items:[["How are you?","Как дела?"]]}];
-const VERBS=[["work","worked","worked"]];
+const VERBS=[["work","worked","worked"],["become","became","become"]];
 const TAGS={abc:["основы"]};
 const PHRASE_RU={"good morning":"доброе утро","how are you":"как ты?"};
 `;
@@ -89,7 +89,7 @@ assert.equal(phraseBank.id,'phrase-bank');
 assert.equal(phraseBank.groups.length,1);
 assert.equal(phraseBank.groups[0].items.length,1);
 assert.equal(verbTable.id,'irregular-verbs');
-assert.equal(verbTable.items.length,1);
+assert.equal(verbTable.items.length,2);
 
 
 const work=lexicon.entries.find(e=>e.lemma==='work');
@@ -102,6 +102,13 @@ assert.equal(verbTable.items[0].lexemeId,work.id);
 assert.equal(verbTable.items[0].baseFormId,'base');
 assert.deepEqual(Array.from(verbTable.items[0].pastFormIds),['past']);
 assert.deepEqual(Array.from(verbTable.items[0].participleFormIds),['participle']);
+const become=lexicon.entries.find(e=>e.lemma==='become');
+assert.ok(become);
+assert.deepEqual(Array.from(become.senses[0].translations.ru),['становиться']);
+assert.ok(become.senses[0].tags.includes('needs-review'));
+assert.equal(become.forms.find(form=>form.id==='base').text,'become');
+assert.equal(become.forms.find(form=>form.id==='past').text,'became');
+assert.equal(become.forms.find(form=>form.id==='participle').text,'become');
 assert.ok(work.senses.every(s=>s.tags.includes('needs-review')));
 const howAreYou=lexicon.entries.find(e=>e.lemma==='how are you');
 assert.ok(howAreYou);
