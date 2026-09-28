@@ -1,12 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
 import './admin.css';
+
+export interface AdminSectionContext {
+  client: AdminClient;
+  adminKey: string;
+  locale: 'ru' | 'en';
+}
+
+export interface AdminSection {
+  id: string;
+  label: string;
+  render(context: AdminSectionContext): ReactNode;
+}
 
 export interface AdminPanelProps {
   client: AdminClient;
   productName: string;
   locale?: 'ru' | 'en';
+  extraSections?: readonly AdminSection[];
 }
 
 const COPY = {
@@ -34,13 +47,14 @@ const COPY = {
   }
 } as const;
 
-type Tab = 'health' | 'overview' | 'users' | 'errors' | 'storage';
+type CoreTab = 'health' | 'overview' | 'users' | 'errors' | 'storage';
+type Tab = CoreTab | string;
 
 function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
-export function AdminPanel({client, productName, locale='ru'}: AdminPanelProps){
+export function AdminPanel({client, productName, locale='ru', extraSections=[]}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
@@ -52,10 +66,11 @@ export function AdminPanel({client, productName, locale='ru'}: AdminPanelProps){
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const tabs = useMemo(() => ([
+  const tabs = useMemo(() => [
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users],
-    ['errors', copy.errors], ['storage', copy.storage]
-  ] as const), [copy]);
+    ['errors', copy.errors], ['storage', copy.storage],
+    ...extraSections.map(section => [section.id, section.label] as const)
+  ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
 
   const loadHealth = useCallback(async () => {
     try{
@@ -66,7 +81,7 @@ export function AdminPanel({client, productName, locale='ru'}: AdminPanelProps){
   }, [client, copy.requestFailed]);
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
-    if(target === 'health') return;
+    if(target === 'health' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);
     setError('');
@@ -98,7 +113,7 @@ export function AdminPanel({client, productName, locale='ru'}: AdminPanelProps){
     }finally{
       setBusy(false);
     }
-  }, [client, copy.badKey, copy.requestFailed, key]);
+  }, [client, copy.badKey, copy.requestFailed, extraSections, key]);
 
   useEffect(() => { void loadHealth(); }, [loadHealth]);
   useEffect(() => { void loadProtected(tab); }, [tab, key, loadProtected]);
@@ -216,6 +231,14 @@ export function AdminPanel({client, productName, locale='ru'}: AdminPanelProps){
       {tab === 'storage' && key && data && (
         <section className="ab-admin-panel"><h2>{copy.migration}</h2><JsonCard value={data.status || data} /></section>
       )}
+
+      {extraSections.map(section => tab === section.id ? (
+        <section key={section.id} className="ab-admin-stack">
+          {!key
+            ? <p className="ab-admin-empty">{copy.noKey}</p>
+            : section.render({client, adminKey:key, locale})}
+        </section>
+      ) : null)}
     </main>
   );
 }
