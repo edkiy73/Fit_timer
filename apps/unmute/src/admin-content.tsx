@@ -77,6 +77,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [ipaReport,setIpaReport]=useState<{forms:number;alreadyHaveIpa:number;sourceMatches:number;updatedForms:number;unmatched:number;updatedLexemes:number}|null>(null);
 
   const load=useCallback(async()=>{
     setBusy(true);
@@ -232,6 +233,23 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  async function runIpaBootstrap(apply:boolean){
+    setBulkBusy(true);
+    setBulkMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply});
+      setIpaReport((result.report || null) as typeof ipaReport);
+      setBulkMessage(apply
+        ? 'IPA добавлен в draft: '+String(result.report?.updatedForms || 0)+' форм.'
+        : 'Можно добавить IPA для '+String(result.report?.updatedForms || 0)+' форм без перезаписи существующих данных.');
+      if(apply) await load();
+    }catch(error){
+      setBulkMessage('Ошибка IPA: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBulkBusy(false);
+    }
+  }
+
   async function buildBulkPrompt(){
     setBulkBusy(true);
     setBulkMessage('');
@@ -368,6 +386,28 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
             <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
           </details>
         )}
+      </article>
+
+      <article className="ab-admin-panel ab-admin-bulk">
+        <div className="ab-admin-section-head">
+          <div>
+            <h2>Автоматический IPA</h2>
+            <p className="ab-admin-note">Pinned US pronunciation dictionary. Заполняет только отсутствующий IPA у exact forms и никогда не перезаписывает существующий.</p>
+          </div>
+        </div>
+        <div className="ab-admin-action-row">
+          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить IPA</button>
+          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Добавить IPA в draft</button>
+        </div>
+        {ipaReport && (
+          <div className="ab-admin-status-line">
+            <span><b>Форм</b> {ipaReport.forms}</span>
+            <span><b>Уже есть IPA</b> {ipaReport.alreadyHaveIpa}</span>
+            <span><b>Можно добавить</b> {ipaReport.updatedForms}</span>
+            <span><b>Нет в базе</b> {ipaReport.unmatched}</span>
+          </div>
+        )}
+        {bulkMessage && <p className="ab-admin-feedback" role="status">{bulkMessage}</p>}
       </article>
 
       <article className="ab-admin-panel ab-admin-bulk">
