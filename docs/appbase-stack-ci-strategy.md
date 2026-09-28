@@ -28,7 +28,7 @@ Core owns sync, storage, auth transport, server store, AI runtime, notification 
 
 Why these: mainstream, well-typed, no forced visual identity, good touch handling inside a Capacitor WebView. Versions are pinned in the app's `package.json` when the app is created, not here.
 
-**Reference implementation: `apps/task-mini`.** Start App2 by copying its shape, not FitTimer's:
+**Reference implementation: `apps/task-mini`.** For a real new product, generate the clean starter with `npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]`; use Task Mini to inspect a working domain example. Do not copy FitTimer.
 
 | Piece | Where in `apps/task-mini` |
 |---|---|
@@ -68,7 +68,7 @@ Revisit only if:
 
 Semantic tokens are CSS custom properties. Products declare them in `config/product.json → brand.ui.{dark,light}`; Core `themeCssVars` maps them to the shared variable names (`--bg`, `--card`, `--surface`, `--accent`, `--accent-ink`) and `applyCssVars` applies them (`packages/core/src/core/ui.ts`). FitTimer (DOM) and Task Mini (React) use the same functions; no token package is tied to React.
 
-`packages/ui-react` is created only when a primitive is needed by **two React apps**. Until then components live inside the app.
+`packages/ui-react` contains only UI that is platform-level infrastructure rather than product UI. The first such slice is the shared auth flow (`AuthGate`/`useAuth`), consumed by Task Mini and the generated React app starter. Product-specific components stay inside each app; new shared primitives move here only after reuse is concrete.
 
 ## D5. Backend unchanged
 

@@ -12,6 +12,7 @@ const cases = [
   [['apps/fittimer/docs/why.md', 'apps/fittimer/docs/img.png', 'docs/roadmap.md'], {core: false, apps: []}],
   [['package.json'], all],
   [['scripts/apps.mjs'], all],
+  [['templates/react-app/src/app.tsx'], all],
   [['.github/workflows/source-consistency.yml'], all],
   [['apps/unknown-app/x.js'], all],
   [['some/new/place.js'], all],

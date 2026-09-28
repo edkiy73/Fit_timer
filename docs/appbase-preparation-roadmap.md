@@ -637,7 +637,7 @@ Status sections of earlier phases keep the historical pre-monorepo paths (`src/c
 
 ## Adding a product
 
-A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core. Use `packages/core/template/` as the neutral composition reference and `apps/task-mini/` as the executable minimal example; do not blindly copy template-local relative paths. The product provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions. Every app must define `scripts.check` so the root runner and CI include it automatically.
+A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core. Use `packages/core/template/` as the neutral server composition reference and `apps/task-mini/` as the executable domain example. For a real React product, create it from `templates/react-app/` with `npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]`; the generator writes the app directly under `apps/<slug>/` with Core/Auth/theme/routing/Vercel/tests already wired. The product provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions. Every app must define `scripts.check` so the root runner and CI include it automatically.
 
 ## Universality proof
 

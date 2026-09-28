@@ -8,6 +8,7 @@ on:
       - 'packages/core/**'
       - 'apps/**'
       - 'scripts/**'
+      - 'templates/**'
       - 'package.json'
       - '.github/workflows/source-consistency.yml'
       - '!**/*.md'
@@ -37,3 +38,9 @@ jobs:
         run: npm run check:affected -- "$BASE"
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+
+      - name: Generate and compile clean React starter
+        run: |
+          npm run app:create -- starter-check "Starter Check" com.example.startercheck en
+          npm ci --prefix apps/starter-check --no-audit --no-fund
+          npm --prefix apps/starter-check run check

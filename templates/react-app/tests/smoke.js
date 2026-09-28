@@ -1,0 +1,33 @@
+process.env.ALLOW_MEMORY_STORE = '1';
+const fs = require('fs');
+let bad = 0;
+const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : ' FAIL ') + name); };
+
+function fakeRes(){
+  return {statusCode:0,headers:{},body:'',setHeader(k,v){this.headers[k]=v;},end(v){this.body=v||'';}};
+}
+
+(async () => {
+  require('../lib/product');
+  const { productIdentity } = require('../../../packages/core/server/product-core');
+  const { registry } = require('../lib/app-sync-schema');
+  ok('product identity is registered', productIdentity().name === '__APP_NAME__');
+  ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1'));
+
+  const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');
+  ok('shared auth UI is wired', app.includes('@appbase/ui-react/auth.js'));
+
+  const auth = require('../api/auth');
+  const res = fakeRes();
+  await auth({method:'POST',headers:{},body:{action:'unknown'}},res);
+  ok('generic auth endpoint is mounted', res.statusCode >= 400);
+
+  const health = require('../api/health');
+  const healthRes = fakeRes();
+  await health({method:'GET',headers:{},query:{}},healthRes);
+  const report = JSON.parse(healthRes.body || '{}');
+  ok('generic health endpoint is mounted', Array.isArray(report.probes));
+
+  console.log(bad ? '\nStarter smoke failures: ' + bad : '\nStarter smoke passed');
+  process.exit(bad ? 1 : 0);
+})().catch(error => { console.error(error); process.exit(1); });
