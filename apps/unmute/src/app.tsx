@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Link, Outlet, useNavigate, type RouteObject } from 'react-router';
+import { Link, NavLink, Outlet, useNavigate, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -10,8 +10,10 @@ import { contentAdminSection } from './admin-content';
 import { courseAdminSection } from './admin-course';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
+import { CourseDay, CourseMap, Today } from './course';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
+const PRODUCT_SHORT_NAME = product.shortName || 'UnMute';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
 
@@ -74,24 +76,18 @@ function Shell(){
   return (
     <main className="app">
       <header className="app-header">
-        <div>
+        <Link className="brand-link" to="/">
           <div className="eyebrow">{t('app.eyebrow')}</div>
-          <h1>{PRODUCT_NAME}</h1>
-        </div>
-        {!auth.loading && <Link className="link-button" to="/account">{auth.session ? t('nav.account') : t('nav.signIn')}</Link>}
+          <h1>{PRODUCT_SHORT_NAME}</h1>
+        </Link>
+        {!auth.loading && <Link className="link-button account-link" to="/account">{auth.session ? t('nav.account') : t('nav.signIn')}</Link>}
       </header>
+      <nav className="course-nav" aria-label={t('nav.course')}>
+        <NavLink end to="/">{t('nav.today')}</NavLink>
+        <NavLink to="/map">{t('nav.map')}</NavLink>
+      </nav>
       <Outlet />
     </main>
-  );
-}
-
-function Home(){
-  const {t} = useI18n();
-  return (
-    <section className="card">
-      <h2>{t('app.readyTitle')}</h2>
-      <p>{t('app.readyText')}</p>
-    </section>
   );
 }
 
@@ -139,7 +135,9 @@ export const routes: RouteObject[] = [
     children:[{
       element:<Shell />,
       children:[
-        {index:true, element:<Home />},
+        {index:true, element:<Today />},
+        {path:'map', element:<CourseMap />},
+        {path:'day/:nodeId', element:<CourseDay />},
         {path:'account', element:<Account />}
       ]
     }]
