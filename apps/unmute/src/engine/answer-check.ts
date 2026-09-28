@@ -65,7 +65,7 @@ export function splitCore(value:string):{c:string;t:string}{
 
   const moved:string[]=[];
   for(const word of Object.keys(count)){
-    for(let i=0;i<count[word];i++) moved.push(word);
+    for(let i=0;i<(count[word]||0);i++) moved.push(word);
   }
   return {c:core.join(' '),t:moved.sort().join(' ')};
 }
