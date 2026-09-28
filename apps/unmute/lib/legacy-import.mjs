@@ -214,7 +214,7 @@ export function buildCourseSet(model){
     activityIds.push(planId);
     for(const lessonId of plan.ids||[])activityIds.push(...(built.lessonActivities.get(lessonId)||[]));
     activityIds.push(...(built.byDay.get(day)||[]));
-    if(!activityIds.length){
+    if(!(plan.ids||[]).length){
       const rid='review.day-'+day;
       activities.push({id:rid,revision:1,type:'review',tags:['review'],revisionProgress:'preserve',lexiconRefs:[],
         source:{activityIds:[],tags:[],dueOnly:true}});
