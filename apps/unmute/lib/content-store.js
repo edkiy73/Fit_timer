@@ -24,6 +24,8 @@ function assertObject(value, name){
   return value;
 }
 
+const CEFR=new Set(['pre-a1','a1','a2','b1','b2','c1','c2']);
+
 function validateSetMeta(meta){
   assertObject(meta,'set_meta');
   if(meta.schemaVersion!==1) throw new Error('unsupported_schema');
@@ -31,6 +33,10 @@ function validateSetMeta(meta){
   if(!cleanId(meta.slug)) throw new Error('bad_set_slug');
   if(!isTextMap(meta.title)) throw new Error('missing_set_title');
   if(!cleanId(meta.defaultRoadmapId)) throw new Error('bad_default_roadmap');
+  const level=meta.level&&typeof meta.level==='object'&&!Array.isArray(meta.level)?meta.level:{};
+  if(level.from!==undefined && !CEFR.has(String(level.from))) throw new Error('bad_level_from');
+  if(level.to!==undefined && !CEFR.has(String(level.to))) throw new Error('bad_level_to');
+  if(!Array.isArray(level.labels)) throw new Error('bad_level_labels');
   const access=assertObject(meta.access,'access');
   if(access.mode==='entitlement'){
     if(!SKU.test(String(access.entitlement||'').trim().toLowerCase())) throw new Error('bad_entitlement');
