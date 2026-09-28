@@ -24,10 +24,26 @@ type CourseNode = {
   activityCount:number;
 };
 
+type CourseSetSummary = {
+  id:string;
+  title:TextMap;
+  level:Record<string,unknown>;
+  access:Record<string,unknown>|null;
+  draftRevision:number|null;
+  publishedRevision:number|null;
+  nodeCount:number|null;
+};
+
 type CourseStructure = {
   draftRevision:number;
   draftUpdatedAt?:string;
-  set:{id:string;title:TextMap;level?:Record<string,unknown>};
+  set:{
+    id:string;
+    title:TextMap;
+    description?:TextMap;
+    level?:Record<string,unknown>;
+    access?:Record<string,unknown>;
+  };
   roadmaps:Array<{id:string;title:TextMap;nodes:CourseNode[]}>;
 };
 
@@ -162,11 +178,20 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
   return <p className="ab-admin-note">Для {activity.type} пока используй расширенный JSON ниже. Тип полностью поддерживается движком и валидацией.</p>;
 }
 
-function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:AdminSectionContext['client'];adminKey:string;activity:EditableActivity;onSaved(next:EditableActivity):void;onClose():void}){
+function ActivityEditor({client,adminKey,setId,activity,onSaved,onClose}:{client:AdminSectionContext['client'];adminKey:string;setId:string;activity:EditableActivity;onSaved(next:EditableActivity):void;onClose():void}){
   const [value,setValue]=useState(activity);
   const [raw,setRaw]=useState(()=>JSON.stringify(activity,null,2));
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
+  const [createOpen,setCreateOpen]=useState(false);
+  const [createId,setCreateId]=useState('');
+  const [createTitle,setCreateTitle]=useState('');
+  const [metaTitle,setMetaTitle]=useState('');
+  const [metaDescription,setMetaDescription]=useState('');
+  const [metaFrom,setMetaFrom]=useState('');
+  const [metaTo,setMetaTo]=useState('');
+  const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
+  const [metaFreeDays,setMetaFreeDays]=useState('0');
 
   useEffect(()=>{setValue(activity);setRaw(JSON.stringify(activity,null,2));setMessage('');},[activity]);
 
@@ -194,7 +219,7 @@ function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:Admin
     setBusy(true);setMessage('');
     try{
       const result=await client.action(adminKey,'content_activity_save',{
-        activityId:value.id,expectedRevision:value.revision,activity:value
+        setId,activityId:value.id,expectedRevision:value.revision,activity:value
       });
       const next=result.activity as EditableActivity;
       setValue(next);setRaw(JSON.stringify(next,null,2));
@@ -235,6 +260,8 @@ function ActivityEditor({client,adminKey,activity,onSaved,onClose}:{client:Admin
 }
 
 function CourseAdmin({client,adminKey}:AdminSectionContext){
+  const [sets,setSets]=useState<CourseSetSummary[]>([]);
+  const [setId,setSetId]=useState('general-foundation');
   const [structure,setStructure]=useState<CourseStructure|null>(null);
   const [openNode,setOpenNode]=useState<OpenNode|null>(null);
   const [editor,setEditor]=useState<EditableActivity|null>(null);
@@ -242,22 +269,41 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
 
+  const loadSets=useCallback(async()=>{
+    const result=await client.action(adminKey,'content_sets_list');
+    const list=Array.isArray(result.sets) ? result.sets as CourseSetSummary[] : [];
+    setSets(list);
+    if(list.length && !list.some(item=>item.id===setId)) setSetId(list[0]!.id);
+    return list;
+  },[client,adminKey,setId]);
+
   const loadStructure=useCallback(async()=>{
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_course_structure');
-      setStructure(result as unknown as CourseStructure);
+      const result=await client.action(adminKey,'content_course_structure',{setId});
+      const next=result as unknown as CourseStructure;
+      setStructure(next);
+      setMetaTitle(textValue(next.set.title));
+      setMetaDescription(textValue(next.set.description));
+      setMetaFrom(String(next.set.level?.from || ''));
+      setMetaTo(String(next.set.level?.to || ''));
+      const access=next.set.access || {};
+      setMetaAccess(access.mode==='free'?'free':'entitlement');
+      const preview=access.freePreview && typeof access.freePreview==='object' ? access.freePreview as Record<string,unknown> : {};
+      setMetaFreeDays(String(preview.days ?? 0));
     }catch(error){
+      setStructure(null);
       setMessage('Не удалось загрузить курс: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
-  },[client,adminKey]);
+  },[client,adminKey,setId]);
 
-  useEffect(()=>{void loadStructure();},[loadStructure]);
+  useEffect(()=>{void loadSets();},[loadSets]);
+  useEffect(()=>{void loadStructure();setOpenNode(null);setEditor(null);},[loadStructure]);
 
   async function open(roadmapId:string,nodeId:string){
     setBusy(true);setMessage('');setEditor(null);
     try{
-      const result=await client.action(adminKey,'content_course_node',{roadmapId,nodeId});
+      const result=await client.action(adminKey,'content_course_node',{setId,roadmapId,nodeId});
       setOpenNode({roadmapId,node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
     }catch(error){
       setMessage('Не удалось открыть день: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -267,7 +313,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   async function openActivity(id:string){
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_activity_get',{activityId:id});
+      const result=await client.action(adminKey,'content_activity_get',{setId,activityId:id});
       setEditor(result.activity as EditableActivity);
     }catch(error){
       setMessage('Не удалось открыть activity: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -282,7 +328,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     if(!openNode)return;
     setBusy(true);setMessage('');
     try{
-      const result=await client.action(adminKey,'content_activity_create',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
+      const result=await client.action(adminKey,'content_activity_create',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
       await Promise.all([reloadOpenNode(),loadStructure()]);
       setEditor(result.activity as EditableActivity);
     }catch(error){
@@ -295,7 +341,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     if(!window.confirm('Убрать эту activity из текущего дня? Сама activity останется в draft-библиотеке и не потеряется.'))return;
     setBusy(true);setMessage('');
     try{
-      await client.action(adminKey,'content_activity_detach',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
+      await client.action(adminKey,'content_activity_detach',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
       if(editor?.id===id)setEditor(null);
       await Promise.all([reloadOpenNode(),loadStructure()]);
     }catch(error){
@@ -311,7 +357,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     [next[index],next[target]]=[next[target]!,next[index]!];
     setBusy(true);setMessage('');
     try{
-      await client.action(adminKey,'content_activity_reorder',{roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityIds:next});
+      await client.action(adminKey,'content_activity_reorder',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityIds:next});
       await reloadOpenNode();
     }catch(error){
       setMessage('Не удалось изменить порядок: '+String((error as {code?:string})?.code || 'request_failed'));
