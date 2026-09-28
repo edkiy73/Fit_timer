@@ -1,6 +1,7 @@
 'use strict';
 
 const { store }=require('../../../packages/core/server/store');
+const Draft=require('./lexicon-draft-workspace');
 
 const PREFIX='unmute:lexicon:v1';
 const DRAFT=`${PREFIX}:draft`;
@@ -14,6 +15,43 @@ function normalizeSurface(value){
   return String(value||'').toLowerCase().replace(/[\u2019\u02bc]/g,"'").replace(/\s+/g,' ').trim();
 }
 
+function validateEntry(entry){
+  if(!entry || typeof entry!=='object' || Array.isArray(entry)) throw new Error('invalid_lexeme');
+  const id=String(entry.id||'');
+  if(!/^[a-z0-9][a-z0-9._-]*$/.test(id)) throw new Error('bad_lexeme_id');
+  if(!entry.lemma || !Array.isArray(entry.forms) || !entry.forms.length || !Array.isArray(entry.senses) || !entry.senses.length){
+    throw new Error(`invalid_lexeme:${id}`);
+  }
+
+  const forms=new Set();
+  for(const form of entry.forms){
+    const key=normalizeSurface(form && form.text);
+    if(!key) throw new Error(`bad_form:${id}`);
+    if(forms.has(key)) throw new Error(`duplicate_form:${id}:${key}`);
+    forms.add(key);
+  }
+  if(!forms.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${id}`);
+
+  const senses=new Set();
+  for(const sense of entry.senses){
+    const sid=String(sense && sense.id || '');
+    if(!/^[a-z0-9][a-z0-9._-]*$/.test(sid)) throw new Error(`bad_sense_id:${id}`);
+    if(senses.has(sid)) throw new Error(`duplicate_sense:${id}:${sid}`);
+    senses.add(sid);
+    if(!sense.translations || typeof sense.translations!=='object') throw new Error(`missing_translations:${id}:${sid}`);
+  }
+
+  const examples=new Set();
+  for(const example of (entry.examples||[])){
+    const eid=String(example && example.id || '');
+    if(!/^[a-z0-9][a-z0-9._-]*$/.test(eid)) throw new Error(`bad_example_id:${id}`);
+    if(examples.has(eid)) throw new Error(`duplicate_example:${id}:${eid}`);
+    examples.add(eid);
+    if(!senses.has(String(example.senseId||''))) throw new Error(`unknown_example_sense:${id}:${example.senseId}`);
+  }
+  return entry;
+}
+
 function validateLexicon(input){
   if(!input || typeof input!=='object' || Array.isArray(input)) throw new Error('invalid_lexicon');
   if(input.schemaVersion!==1) throw new Error('unsupported_schema');
@@ -21,41 +59,9 @@ function validateLexicon(input){
 
   const ids=new Set();
   for(const entry of input.entries){
-    if(!entry || typeof entry!=='object') throw new Error('invalid_lexeme');
-    const id=String(entry.id||'');
-    if(!/^[a-z0-9][a-z0-9._-]*$/.test(id)) throw new Error('bad_lexeme_id');
-    if(ids.has(id)) throw new Error(`duplicate_lexeme:${id}`);
-    ids.add(id);
-    if(!entry.lemma || !Array.isArray(entry.forms) || !entry.forms.length || !Array.isArray(entry.senses) || !entry.senses.length){
-      throw new Error(`invalid_lexeme:${id}`);
-    }
-
-    const forms=new Set();
-    for(const form of entry.forms){
-      const key=normalizeSurface(form && form.text);
-      if(!key) throw new Error(`bad_form:${id}`);
-      if(forms.has(key)) throw new Error(`duplicate_form:${id}:${key}`);
-      forms.add(key);
-    }
-    if(!forms.has(normalizeSurface(entry.lemma))) throw new Error(`lemma_form_missing:${id}`);
-
-    const senses=new Set();
-    for(const sense of entry.senses){
-      const sid=String(sense && sense.id || '');
-      if(!/^[a-z0-9][a-z0-9._-]*$/.test(sid)) throw new Error(`bad_sense_id:${id}`);
-      if(senses.has(sid)) throw new Error(`duplicate_sense:${id}:${sid}`);
-      senses.add(sid);
-      if(!sense.translations || typeof sense.translations!=='object') throw new Error(`missing_translations:${id}:${sid}`);
-    }
-
-    const examples=new Set();
-    for(const example of (entry.examples||[])){
-      const eid=String(example && example.id || '');
-      if(!/^[a-z0-9][a-z0-9._-]*$/.test(eid)) throw new Error(`bad_example_id:${id}`);
-      if(examples.has(eid)) throw new Error(`duplicate_example:${id}:${eid}`);
-      examples.add(eid);
-      if(!senses.has(String(example.senseId||''))) throw new Error(`unknown_example_sense:${id}:${example.senseId}`);
-    }
+    const checked=validateEntry(entry);
+    if(ids.has(checked.id)) throw new Error(`duplicate_lexeme:${checked.id}`);
+    ids.add(checked.id);
   }
   return input;
 }
@@ -66,40 +72,38 @@ async function persistentSet(key,value){
 
 async function putDraft(input){
   const validated=validateLexicon(input);
-  const draft={...validated,draftUpdatedAt:new Date().toISOString()};
-  await persistentSet(DRAFT,draft);
-  return draft;
+  await Draft.replace(validated);
+  return Draft.get();
 }
 
-async function getDraft(){return parse(await store.get(DRAFT));}
+async function legacyDraft(){return parse(await store.get(DRAFT));}
+
+async function getDraft(){
+  const normalized=await Draft.get();
+  if(normalized) return normalized;
+  return legacyDraft();
+}
+
+async function ensureDraftWorkspace(){
+  let pointer=await Draft.readPointer();
+  if(pointer) return pointer;
+  const fallback=await legacyDraft();
+  if(!fallback) throw new Error('draft_not_found');
+  validateLexicon(fallback);
+  return Draft.ensure(fallback);
+}
+
+async function getDraftLexeme(id){
+  await ensureDraftWorkspace();
+  return Draft.getEntry(String(id||'').trim());
+}
 
 async function updateDraftLexeme(id, updater, expectedRevision){
   const key=String(id||'').trim();
   if(!key) throw new Error('bad_lexeme_id');
-  return store.withLock('lock:lexicon-draft',async()=>{
-    const draft=await getDraft();
-    if(!draft) throw new Error('draft_not_found');
-    const index=(draft.entries||[]).findIndex(entry=>entry&&entry.id===key);
-    if(index<0) throw new Error('lexeme_not_found');
-
-    const current=draft.entries[index];
-    const currentRevision=Math.max(1,+current.revision||1);
-    if(expectedRevision!==undefined && Number(expectedRevision)!==currentRevision){
-      throw new Error('lexeme_revision_conflict');
-    }
-
-    const next=updater(JSON.parse(JSON.stringify(current)));
-    if(!next || typeof next!=='object' || Array.isArray(next)) throw new Error('bad_lexeme_update');
-    if(next.id!==current.id) throw new Error('lexeme_id_immutable');
-    next.revision=currentRevision+1;
-
-    const entries=draft.entries.slice();
-    entries[index]=next;
-    const updated={...draft,entries,draftUpdatedAt:new Date().toISOString()};
-    validateLexicon(updated);
-    await persistentSet(DRAFT,updated);
-    return next;
-  },{ttl:10,retries:80,delay:50});
+  await ensureDraftWorkspace();
+  const result=await Draft.updateEntry(key,expectedRevision,updater,validateEntry);
+  return result.entry;
 }
 
 async function nextRevision(){
@@ -120,6 +124,7 @@ async function stageDraft(){
   const publishedAt=new Date().toISOString();
   const snapshot={...draft,revision,publishedAt};
   delete snapshot.draftUpdatedAt;
+  delete snapshot.draftRevision;
   validateLexicon(snapshot);
   const result=await store.pipe([['SET',revisionKey(revision),JSON.stringify(snapshot),'NX']]);
   if(result[0] !== 'OK') throw new Error('revision_collision');
@@ -173,4 +178,4 @@ function lookup(snapshot,surface){
   return ids.map(id=>byId.get(id)).filter(Boolean);
 }
 
-module.exports={validateLexicon,putDraft,getDraft,updateDraftLexeme,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
+module.exports={validateEntry,validateLexicon,putDraft,getDraft,ensureDraftWorkspace,getDraftLexeme,updateDraftLexeme,publish,stageDraft,activateRevision,getRevision,getPublished,lookup,buildIndex,normalizeSurface,keys:{DRAFT,POINTER,REVISION_COUNTER,revisionKey}};
