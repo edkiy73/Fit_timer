@@ -40,6 +40,36 @@ async function readPointer(setId){
   return parseJson(await store.get(pointerKey(setId)));
 }
 
+async function listSetIds(){
+  const keys=await store.scan(`${PREFIX}:set:*:pointer`,1000);
+  const prefix=`${PREFIX}:set:`, suffix=':pointer';
+  return keys.map(key=>{
+    if(!key.startsWith(prefix) || !key.endsWith(suffix)) return '';
+    return key.slice(prefix.length,-suffix.length);
+  }).filter(Boolean).sort();
+}
+
+async function updateMeta(setId,expectedDraftRevision,updater){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const currentRevision=Math.max(1,+pointer.draftRevision||1);
+    if(Number(expectedDraftRevision)!==currentRevision) throw new Error('set_revision_conflict');
+    const nextMeta=updater(clone(pointer.meta));
+    if(!nextMeta || typeof nextMeta!=='object' || Array.isArray(nextMeta)) throw new Error('bad_set_update');
+    if(nextMeta.id!==pointer.meta.id) throw new Error('set_id_immutable');
+    if(nextMeta.slug!==pointer.meta.slug) throw new Error('set_slug_immutable');
+    const updated={
+      ...pointer,
+      draftRevision:currentRevision+1,
+      updatedAt:new Date().toISOString(),
+      meta:nextMeta
+    };
+    await store.pipe([['SET',pointerKey(setId),JSON.stringify(updated)]]);
+    return updated;
+  },{ttl:10,retries:80,delay:50});
+}
+
 async function replace(set){
   const setId=String(set.id||'').trim();
   if(!setId) throw new Error('bad_set_id');
@@ -169,6 +199,142 @@ async function getActivities(setId,ids){
     const key=keys[index];
     return key ? byKey.get(key) : null;
   }).filter(Boolean);
+}
+
+async function createNode(setId,roadmapId,node,validateNode){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const roadmapIndex=(pointer.roadmaps||[]).findIndex(item=>item.id===roadmapId);
+    if(roadmapIndex<0) throw new Error('roadmap_not_found');
+    const roadmap=pointer.roadmaps[roadmapIndex];
+    if((roadmap.nodeIds||[]).includes(node.id)) throw new Error('node_exists');
+    if(validateNode) validateNode(node);
+
+    const nextNode={...clone(node),order:(roadmap.nodeIds||[]).length};
+    const roadmaps=pointer.roadmaps.slice();
+    roadmaps[roadmapIndex]={...roadmap,nodeIds:[...(roadmap.nodeIds||[]),nextNode.id]};
+    const nodeRefs={...(pointer.nodeRefs||{}),[roadmapId]:{...((pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{}),[nextNode.id]:1}};
+    const updated={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      roadmaps,nodeRefs
+    };
+    await store.pipe([
+      ['SET',nodeKey(setId,pointer.generation,roadmapId,nextNode.id,1),JSON.stringify(nextNode),'NX'],
+      ['SET',pointerKey(setId),JSON.stringify(updated)]
+    ]);
+    return {node:nextNode,version:1,draftRevision:updated.draftRevision};
+  },{ttl:10,retries:80,delay:50});
+}
+
+async function updateNode(setId,roadmapId,nodeId,expectedVersion,updater,validateNode){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
+    const currentVersion=Math.max(0,+versions[nodeId]||0);
+    if(!currentVersion) throw new Error('node_not_found');
+    if(Number(expectedVersion)!==currentVersion) throw new Error('node_revision_conflict');
+    const current=parseJson(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,currentVersion)));
+    if(!current) throw new Error('node_not_found');
+    const next=updater(clone(current));
+    if(!next || typeof next!=='object' || Array.isArray(next)) throw new Error('bad_node_update');
+    if(next.id!==current.id) throw new Error('node_id_immutable');
+    if(validateNode) validateNode(next);
+
+    let nextVersion=currentVersion+1;
+    while(await store.get(nodeKey(setId,pointer.generation,roadmapId,nodeId,nextVersion))) nextVersion++;
+    const updated={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      nodeRefs:{...(pointer.nodeRefs||{}),[roadmapId]:{...versions,[nodeId]:nextVersion}}
+    };
+    await store.pipe([
+      ['SET',nodeKey(setId,pointer.generation,roadmapId,nodeId,nextVersion),JSON.stringify(next),'NX'],
+      ['SET',pointerKey(setId),JSON.stringify(updated)]
+    ]);
+    return {node:next,version:nextVersion,draftRevision:updated.draftRevision};
+  },{ttl:10,retries:80,delay:50});
+}
+
+async function deleteNode(setId,roadmapId,nodeId){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const roadmapIndex=(pointer.roadmaps||[]).findIndex(item=>item.id===roadmapId);
+    if(roadmapIndex<0) throw new Error('roadmap_not_found');
+    const roadmap=pointer.roadmaps[roadmapIndex];
+    const nodeIds=roadmap.nodeIds||[];
+    if(!nodeIds.includes(nodeId)) throw new Error('node_not_found');
+    if(nodeIds.length<=1) throw new Error('roadmap_requires_node');
+
+    const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
+    const keys=nodeIds.filter(id=>id!==nodeId).map(id=>nodeKey(setId,pointer.generation,roadmapId,id,versions[id]||1));
+    const others=(await manyJson(keys)).filter(Boolean);
+    if(others.some(node=>(node.prerequisites||[]).includes(nodeId))) throw new Error('node_has_dependents');
+
+    const roadmaps=pointer.roadmaps.slice();
+    roadmaps[roadmapIndex]={...roadmap,nodeIds:nodeIds.filter(id=>id!==nodeId)};
+    const nextVersions={...versions};
+    delete nextVersions[nodeId];
+    const updated={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      roadmaps,
+      nodeRefs:{...(pointer.nodeRefs||{}),[roadmapId]:nextVersions}
+    };
+    await store.pipe([['SET',pointerKey(setId),JSON.stringify(updated)]]);
+    return {draftRevision:updated.draftRevision};
+  },{ttl:10,retries:80,delay:50});
+}
+
+async function reorderNodes(setId,roadmapId,nodeIds,validateNode){
+  return store.withLock('lock:content-workspace:'+setId,async()=>{
+    const pointer=await readPointer(setId);
+    if(!pointer) throw new Error('draft_not_found');
+    const roadmapIndex=(pointer.roadmaps||[]).findIndex(item=>item.id===roadmapId);
+    if(roadmapIndex<0) throw new Error('roadmap_not_found');
+    const roadmap=pointer.roadmaps[roadmapIndex];
+    const currentIds=roadmap.nodeIds||[];
+    if(nodeIds.length!==currentIds.length || new Set(nodeIds).size!==nodeIds.length || nodeIds.some(id=>!currentIds.includes(id))){
+      throw new Error('node_order_mismatch');
+    }
+
+    const versions=(pointer.nodeRefs&&pointer.nodeRefs[roadmapId])||{};
+    const currentKeys=nodeIds.map(id=>nodeKey(setId,pointer.generation,roadmapId,id,versions[id]||1));
+    const nodes=await manyJson(currentKeys);
+    if(nodes.some(node=>!node)) throw new Error('node_not_found');
+
+    const nextVersions={...versions};
+    const commands=[];
+    for(let index=0;index<nodes.length;index++){
+      const current=nodes[index];
+      const id=nodeIds[index];
+      const next={...current,order:index};
+      if(validateNode) validateNode(next);
+      let version=Math.max(1,+versions[id]||1)+1;
+      while(await store.get(nodeKey(setId,pointer.generation,roadmapId,id,version))) version++;
+      nextVersions[id]=version;
+      commands.push(['SET',nodeKey(setId,pointer.generation,roadmapId,id,version),JSON.stringify(next),'NX']);
+    }
+
+    const roadmaps=pointer.roadmaps.slice();
+    roadmaps[roadmapIndex]={...roadmap,nodeIds:[...nodeIds]};
+    const updated={
+      ...pointer,
+      draftRevision:Math.max(1,+pointer.draftRevision||1)+1,
+      updatedAt:new Date().toISOString(),
+      roadmaps,
+      nodeRefs:{...(pointer.nodeRefs||{}),[roadmapId]:nextVersions}
+    };
+    commands.push(['SET',pointerKey(setId),JSON.stringify(updated)]);
+    await writeCommands(commands);
+    return {draftRevision:updated.draftRevision};
+  },{ttl:15,retries:100,delay:50});
 }
 
 async function getActivity(setId,id){
@@ -315,6 +481,6 @@ async function reorderActivities(setId,roadmapId,nodeId,activityIds){
 }
 
 module.exports={
-  replace,get,ensure,readPointer,getStructure,getNode,getActivities,getActivity,updateActivity,createActivity,detachActivity,reorderActivities,
+  replace,get,ensure,readPointer,listSetIds,updateMeta,getStructure,getNode,createNode,updateNode,deleteNode,reorderNodes,getActivities,getActivity,updateActivity,createActivity,detachActivity,reorderActivities,
   keys:{pointerKey,generationCounterKey,activityKey,nodeKey}
 };
