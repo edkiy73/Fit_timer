@@ -338,6 +338,8 @@ export function buildImportReport(model,course,lexicon){
     courseActivities:course.activities.length,lexiconEntries:lexicon.entries.length,lexiconNeedsReview:ambiguous.length,
     phraseBankGroups:(model.phrases||[]).length,
     phraseBankItems:(model.phrases||[]).reduce((sum,group)=>sum+(group.items||[]).length,0),
+    phraseBankResourceItems:(course.resources||[]).filter(resource=>resource.type==='phrase-collection')
+      .reduce((sum,resource)=>sum+(resource.groups||[]).reduce((groupSum,group)=>groupSum+(group.items||[]).length,0),0),
     irregularVerbs:(model.verbs||[]).length,
     lexicalCoverage:coverage,
     unplannedLessons:model.lessons.map(x=>x.id).filter(id=>!planned.has(id))};
@@ -349,6 +351,7 @@ export function validateImport(model,course,lexicon){
   if(report.lessons<30)throw new Error('unexpected_lessons:'+report.lessons);
   if(report.cards<400)throw new Error('unexpected_cards:'+report.cards);
   if(report.dictionaryEntries<500)throw new Error('unexpected_dictionary:'+report.dictionaryEntries);
+  if(report.phraseBankResourceItems!==report.phraseBankItems)throw new Error('phrase_bank_resource_mismatch:'+report.phraseBankResourceItems+':'+report.phraseBankItems);
   if(!course.roadmaps[0]||course.roadmaps[0].nodes.length!==40)throw new Error('bad_roadmap_days');
   const ids=new Set(course.activities.map(x=>x.id));
   if(ids.size!==course.activities.length)throw new Error('duplicate_course_activity');
