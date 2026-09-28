@@ -45,6 +45,9 @@ try{
   assert.match(app, /locale="en"/);
   assert.doesNotMatch(app, /__APP_|__READY_|__LOGOUT_/);
 
+  const main = await readFile(path.join(target,'src/main.tsx'),'utf8');
+  assert.match(main, /AppErrorBoundary/);
+
   const observability = await readFile(path.join(target,'src/observability.ts'),'utf8');
   assert.match(observability, /createClient/);
   assert.match(observability, /client_error|capture/);
