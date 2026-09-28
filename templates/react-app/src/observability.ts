@@ -47,3 +47,7 @@ export function installGlobalDiagnostics(): () => void {
     window.removeEventListener('unhandledrejection', onRejection);
   };
 }
+
+export function captureFatal(error: Error): void {
+  void client.capture('error', error, 'react_render_error');
+}
