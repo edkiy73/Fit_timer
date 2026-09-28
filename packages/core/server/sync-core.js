@@ -48,6 +48,20 @@ const newerDoc = (a, b) => {
   if(ra !== rb) return ra > rb;
   return String((a && a.deviceId) || '') !== String((b && b.deviceId) || '');
 };
+/* Условная запись (для клиентов, которые сливают версии сами — Core document-sync):
+   документ с полем base принимается, только если на сервере сейчас ревизия base, то есть
+   клиент видел последнюю версию. Иначе ключ возвращается в stale, клиент делает pull,
+   сливает и повторяет. Исключение — последняя версия пришла с этого же устройства от
+   того же base: это повтор после потерянного ответа, и новое значение его заменяет.
+   Клиенты без base работают по правилу newerDoc, как раньше. */
+const baseOf = d => Number.isInteger(d && d.base) && d.base >= 0 ? d.base : null;
+function admitDoc(meta, prev, base, deviceId){
+  if(base === null) return !prev || newerDoc(meta, prev) ? 'write' : 'skip';
+  const prevRev = prev ? Math.max(0, +prev.rev || 0) : 0;
+  if(prevRev === base) return 'write';
+  if(prev && prevRev === base + 1 && String(prev.deviceId || '') === String(deviceId)) return 'write';
+  return 'stale';
+}
 
 /* Product composition supplies the document registry, the reserved account-profile id
    and optional product profile fields. Storage keys and wire format are product-neutral. */
@@ -119,6 +133,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
       }
 
       const shadowWriteResults = [];
+      const stale = [];
       for(const d of docs){
         const pid = String(d && d.profileId || '');
         const key = String(d && d.key || '');
@@ -126,10 +141,13 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
           const value = d.value == null ? null : String(d.value);
           if(value && Buffer.byteLength(value, 'utf8') > MAX_DOC) return fail(res, 413, 'doc_too_large', {key});
           const prev = manifest.accountDocs[key];
-          const meta = {rev: Math.max(1, +d.rev || 1), at: d.at || now,
+          const base = baseOf(d);
+          const meta = {rev: base === null ? Math.max(1, +d.rev || 1) : base + 1, at: d.at || now,
                         schema: Math.max(1, +d.schema || 1), deviceId,
                         deleted: !!d.deleted};
-          if(prev && !newerDoc(meta, prev)) continue;
+          const admit = admitDoc(meta, prev, base, deviceId);
+          if(admit === 'stale') stale.push({profileId: ACCOUNT_PROFILE, key});
+          if(admit !== 'write') continue;
           const storeKey = `sa:${mh}:${key}`;
           if(meta.deleted) await store.del(storeKey);
           else await store.set(storeKey, value || '', YEAR);
@@ -148,10 +166,13 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
         if(prof.deleted) continue;
         if(!prof.docs) prof.docs = {};
         const prev = prof.docs[key];
-        const meta = {rev: Math.max(1, +d.rev || 1), at: d.at || now,
+        const base = baseOf(d);
+        const meta = {rev: base === null ? Math.max(1, +d.rev || 1) : base + 1, at: d.at || now,
                       schema: Math.max(1, +d.schema || 1), deviceId,
                       deleted: !!d.deleted};
-        if(prev && !newerDoc(meta, prev)) continue;
+        const admit = admitDoc(meta, prev, base, deviceId);
+        if(admit === 'stale') stale.push({profileId: pid, key});
+        if(admit !== 'write') continue;
         const storeKey = `sd:${mh}:${sha(pid + '\n' + key).slice(0, 32)}`;
         if(meta.deleted) await store.del(storeKey);
         else await store.set(storeKey, value || '', YEAR);
@@ -166,7 +187,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
       manifest.at = now;
       await store.set(manifestKey, JSON.stringify(manifest), YEAR);
       if(shadowWriteResults.length) await SyncShadow.recordWriteBatch(shadowWriteResults);
-      return send(res, 200, {ok: true});
+      return send(res, 200, {ok: true, stale});
     }
 
     if(body.action === 'pull'){

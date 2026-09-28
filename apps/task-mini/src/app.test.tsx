@@ -5,7 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { routes } from './app';
 import { loadTasks, saveTasks } from './tasks/repository';
-import { createTask, filterTasks, TaskSchema } from './domain';
+import {
+  createTask, filterTasks, mergeTaskDocuments, parseTaskRecords, recordsFromTasks,
+  serializeTaskRecords, tasksFromRecords, TaskSchema
+} from './domain';
 
 function renderApp(path = '/'){
   const router = createMemoryRouter(routes, {initialEntries: [path]});
@@ -14,7 +17,7 @@ function renderApp(path = '/'){
   return router;
 }
 
-beforeEach(async () => {
+const signIn = () =>
   localStorage.setItem('task-mini.auth.session', JSON.stringify({
     email:'demo@example.com',
     deviceId:'device-test',
@@ -25,6 +28,9 @@ beforeEach(async () => {
     premium:false,
     fresh:false
   }));
+
+beforeEach(async () => {
+  localStorage.removeItem('task-mini.auth.session');
   await saveTasks([]);
 });
 
@@ -43,6 +49,36 @@ describe('domain', () => {
   });
 });
 
+describe('synced task records', () => {
+  const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
+
+  it('keeps unchanged records, stamps changes and leaves tombstones for removed tasks', () => {
+    const a = createTask('a', 'a'), b = createTask('b', 'b');
+    const first = recordsFromTasks({}, [a, b], at(1));
+    const second = recordsFromTasks(first, [{...a, done: true}], at(2));
+    expect(second.a).toMatchObject({done: true, at: at(2)});
+    expect(second.b).toEqual({at: at(2), deleted: true});
+    expect(tasksFromRecords(second)).toEqual([{...a, done: true}]);
+    expect(tasksFromRecords(first).map(t => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('merges two devices per task: newer change wins and deletions do not come back', () => {
+    const a = createTask('a', 'a'), b = createTask('b', 'b'), c = createTask('c', 'c');
+    const base = recordsFromTasks({}, [a, b], at(1));
+    const phone = serializeTaskRecords(recordsFromTasks(base, [c, {...a, done: true}, b], at(5)));
+    const laptop = serializeTaskRecords(recordsFromTasks(base, [a], at(6)));
+    const merged = tasksFromRecords(parseTaskRecords(mergeTaskDocuments(phone, laptop)));
+    expect(merged.map(t => t.id).sort()).toEqual(['a', 'c']);
+    // The laptop never touched "a", so the phone's later change stays.
+    expect(merged.find(t => t.id === 'a')?.done).toBe(true);
+  });
+
+  it('drops malformed documents and records', () => {
+    expect(parseTaskRecords('not json')).toEqual({});
+    expect(parseTaskRecords(JSON.stringify({items: {x: {id: 'y', title: 't', done: false, at: at(1), created: at(1)}}}))).toEqual({});
+  });
+});
+
 describe('repository', () => {
   it('drops malformed items instead of failing', async () => {
     const valid = createTask('ok', '1');
@@ -52,6 +88,33 @@ describe('repository', () => {
 });
 
 describe('Task Mini UI', () => {
+  it('works without an account and offers sign-in', async () => {
+    const user = userEvent.setup();
+    const router = renderApp();
+    expect(await screen.findByText('Пока задач нет.')).toBeTruthy();
+    await user.type(screen.getByRole('textbox', {name: 'Новая задача'}), 'Без аккаунта');
+    await user.click(screen.getByRole('button', {name: 'Добавить'}));
+    expect(await screen.findByText('Без аккаунта')).toBeTruthy();
+
+    await user.click(screen.getByRole('link', {name: 'Войти'}));
+    expect(router.state.location.pathname).toBe('/account');
+    expect(await screen.findByRole('heading', {name: 'Аккаунт'})).toBeTruthy();
+    expect(screen.getByRole('textbox', {name: 'Email'})).toBeTruthy();
+  });
+
+  it('shows the signed-in account and signs out without losing local tasks', async () => {
+    signIn();
+    await saveTasks([createTask('Моя задача', '1')]);
+    const user = userEvent.setup();
+    const router = renderApp();
+    expect(await screen.findByText('demo@example.com')).toBeTruthy();
+    await user.click(screen.getByRole('link', {name: 'Аккаунт'}));
+    await user.click(await screen.findByRole('button', {name: 'Выйти'}));
+    expect(router.state.location.pathname).toBe('/');
+    expect(await screen.findByRole('link', {name: 'Войти'})).toBeTruthy();
+    expect(await screen.findByText('Моя задача')).toBeTruthy();
+  });
+
   it('adds, completes, filters and removes a task, persisting through Core storage', async () => {
     const user = userEvent.setup();
     const router = renderApp();
