@@ -107,7 +107,15 @@ export function buildCourseCorpus(course){
   const activityTexts=new Map();
   let occurrences=0;
 
+  const referencedIds=new Set();
+  for(const roadmap of course?.roadmaps || []){
+    for(const node of roadmap?.nodes || []){
+      for(const activityId of node?.activityIds || []) referencedIds.add(activityId);
+    }
+  }
+
   for(const activity of course?.activities || []){
+    if(!referencedIds.has(activity.id)) continue;
     const strings=activityVisibleStrings(activity);
     activityTexts.set(activity.id,strings);
     for(const value of strings){
