@@ -5,8 +5,14 @@ const textMap=z.record(z.string().min(2),z.string());
 
 const pronunciationSchema=z.object({
   ipa:z.string().optional(),
+  ipaVariants:z.array(z.string().min(1)).optional(),
   ruReading:z.string().optional(),
   audioKey:z.string().optional(),
+  source:z.object({
+    id:z.string().min(1),
+    version:z.string().min(1).optional(),
+    license:z.string().min(1).optional(),
+  }).optional(),
 });
 
 export const lexiconFormSchema=z.object({
@@ -117,5 +123,7 @@ export function findLexiconForm(entry:Lexeme,surface:string){
 }
 
 export function pronunciationForSurface(entry:Lexeme,surface:string){
-  return findLexiconForm(entry,surface)?.pronunciation || entry.pronunciation || null;
+  const form=findLexiconForm(entry,surface);
+  if(form?.pronunciation) return form.pronunciation;
+  return normalizeSurface(surface)===normalizeSurface(entry.lemma) ? (entry.pronunciation || null) : null;
 }
