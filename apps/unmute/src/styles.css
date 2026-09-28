@@ -29,7 +29,7 @@ h2{margin:0 0 8px}
 
 .ab-admin-bulk-controls{
   display:grid;
-  grid-template-columns:minmax(180px,1fr) 110px auto;
+  grid-template-columns:minmax(150px,1fr) minmax(210px,1.2fr) 100px auto;
   gap:8px;
   align-items:end;
   margin:8px 0 10px;
@@ -58,7 +58,9 @@ h2{margin:0 0 8px}
 }
 .ab-admin-bulk-preview{margin-top:10px}
 .ab-admin-bulk-preview ul{margin:6px 0 0;padding-left:18px}
-@media(max-width:640px){
+@media(max-width:760px){
   .ab-admin-bulk-controls{grid-template-columns:1fr 100px}
+  .ab-admin-bulk-controls label:first-child,
+  .ab-admin-bulk-controls label:nth-child(2){grid-column:1/-1}
   .ab-admin-bulk-controls>button{grid-column:1/-1;width:100%}
 }
