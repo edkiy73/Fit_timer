@@ -27,6 +27,7 @@ export const appUi = {
   setShown: appbaseUi.setShown,
   setText: appbaseUi.setText,
   applyCssVars: appbaseUi.applyCssVars,
+  themeCssVars: appbaseUi.themeCssVars,
   openModal: appbaseUi.openModal,
   closeModal: appbaseUi.closeModal,
   closestModal: appbaseUi.closestModal,

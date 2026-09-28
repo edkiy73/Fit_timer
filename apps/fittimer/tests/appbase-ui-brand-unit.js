@@ -19,10 +19,10 @@ for(const mode of ['dark','light']){
   }
 }
 
-ok('UI Core exports CSS variable helper',core.includes('export function applyCssVars'));
+ok('UI Core exports CSS variable helpers',core.includes('export function applyCssVars')&&core.includes('export function themeCssVars'));
 ok('FitTimer theme composition reads product brand tokens',
   platform.includes('appRuntimeCompat.runtimeConfig()') && !platform.includes('window.FIT_TIMER_CONFIG')
-  && platform.includes('appUi.applyCssVars(document.body'));
+  && platform.includes('appUi.applyCssVars(document.body, appUi.themeCssVars(productTheme))'));
 ok('generated runtime config carries UI theme tokens',
   runtime.includes('"ui"')&&runtime.includes('"dark"')&&runtime.includes('"light"'));
 

@@ -3,10 +3,13 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
@@ -14,5 +17,5 @@
       "@appbase/types/*": ["../../packages/core/src/types/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

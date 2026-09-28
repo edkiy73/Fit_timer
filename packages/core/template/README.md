@@ -22,9 +22,9 @@ The app owns product vocabulary and registries. Core must never import the app.
 
 ## Client starter
 
-`client/main.ts` demonstrates the minimum client-side Core imports. A real app defines the same TypeScript aliases as `apps/task-mini/tsconfig.json`:
+`client/main.ts` demonstrates the minimum client-side Core imports. A real app uses the standard stack (React + TypeScript + Vite, see `docs/appbase-stack-ci-strategy.md`) and defines the same aliases as `apps/task-mini/tsconfig.json` and `apps/task-mini/vite.config.mts`:
 
 - `@appbase/core/* -> ../../packages/core/src/core/*`
 - `@appbase/types/* -> ../../packages/core/src/types/*`
 
-Use `apps/task-mini/` as the executable second-consumer proof rather than copying FitTimer.
+Start from `apps/task-mini/` (the reference app on that stack) rather than copying FitTimer.

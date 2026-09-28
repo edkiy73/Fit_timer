@@ -26,10 +26,12 @@ function fakeRes(){
   ok('second app registers its own identity', productIdentity().name === 'Task Mini');
   ok('second app capability config is independent', capabilities().enabled('profiles') && !capabilities().enabled('ai'));
   ok('second app owns task document semantics', registry.accepts('profile', 'task:1'));
-  const ui = fs.readFileSync(require('path').join(__dirname, '../src/ui.ts'), 'utf8');
-  const html = fs.readFileSync(require('path').join(__dirname, '../public/index.html'), 'utf8');
-  ok('minimal UI uses Core storage', ui.includes("@appbase/core/storage.js") && ui.includes("createStorage"));
-  ok('minimal UI has add/list controls', html.includes('id="task-form"') && html.includes('id="task-list"'));
+  const read = file => fs.readFileSync(require('path').join(__dirname, '..', file), 'utf8');
+  const pkg = JSON.parse(read('package.json'));
+  ok('UI is on the ADR default stack', ['react', 'react-router', '@tanstack/react-query', 'zod', 'react-aria-components']
+    .every(name => pkg.dependencies && pkg.dependencies[name]) && !!pkg.devDependencies.vite);
+  ok('UI persists through Core storage', read('src/tasks/repository.ts').includes("@appbase/core/storage.js"));
+  ok('UI theme uses the shared Core token mapping', read('src/theme.ts').includes('themeCssVars'));
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1'));
 
   const auth = require('../api/auth');
