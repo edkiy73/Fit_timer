@@ -24,8 +24,8 @@ describe('legacy near-miss parity',()=>{
   });
 
   it('allows distance two only for long words',()=>{
-    expect(nearMiss('It is necesary now',['It is necessary now'])).toBe(true);
-    expect(nearMiss('I like boak now',['I like book now'])).toBe(false);
+    expect(nearMiss('I abcdefgh now',['I abxxefgh now'])).toBe(true);
+    expect(nearMiss('I book now',['I back now'])).toBe(false);
   });
 
   it('does not classify missing words or multiple wrong words as a typo',()=>{
@@ -42,7 +42,7 @@ describe('legacy near-miss parity',()=>{
   it('uses the lexicon callback only for grammar-vs-content-word differences',()=>{
     const known=(word:string)=>word==='ate';
     expect(nearMiss('I work ate home',['I work at home'],known)).toBe(false);
-    expect(nearMiss('I work axe home',['I work at home'],known)).toBe(true);
+    expect(nearMiss('I work abt home',['I work at home'],known)).toBe(true);
   });
 
   it('returns false when canonical answer is already correct',()=>{
