@@ -12,6 +12,7 @@ export interface AuthGateProps {
 export interface AuthContextValue {
   session: AuthSession;
   logout(): Promise<void>;
+  deleteAccount(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -117,6 +118,14 @@ export function AuthGate({client, locale = 'ru', productName, children}: AuthGat
     session,
     logout: async () => {
       await client.logout();
+      setSession(null);
+      setStep('email');
+      setCode('');
+      setHandle('');
+      setError('');
+    },
+    deleteAccount: async () => {
+      await client.forget('all');
       setSession(null);
       setStep('email');
       setCode('');
