@@ -464,8 +464,9 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         ]);
         if(!course || !lexicon){ fail(res,404,'draft_not_found'); return true; }
         const audit=Coverage.auditLexicalCoverage(course,lexicon);
-        const generated=BulkLexicon.buildAiPrompt(audit,limit);
-        send(res,200,{ok:true,setId,limit,
+        const mode=body.mode==='enrich'?'enrich':'missing';
+        const generated=BulkLexicon.buildAiPrompt(audit,limit,{mode,lexicon});
+        send(res,200,{ok:true,setId,limit,mode,
           coverage:Coverage.compactCoverageReport(audit),
           targetCount:generated.targets.length,
           targets:generated.targets,
