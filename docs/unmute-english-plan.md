@@ -60,7 +60,8 @@
 | Фаза 4h — clickable lexicon | ✅ в `main` (#238) | every English token in learner content opens one shared dictionary sheet; exact refs when available; no Add/SRS write on click |
 | Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
 | Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
-| Фаза 5a — entitlements + access offer | ✅ в этой фазе | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
+| Фаза 5a — entitlements + access offer | ✅ в `main` (#241) | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
+| Фаза 7a — AI talk contract | ✅ в этой фазе | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client; no chat UI yet |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -196,6 +197,7 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 | 10 | Поведение слов в учебном контенте | ✅ все английские слова нажимаемы для мгновенного словарного popup; отдельной кнопки/действия «добавить слово» нет. Клик сам по себе не создаёт запись SRS. `progress:words` нужен для уже существующего/импортированного word-review состояния |
 | 11 | Первый запуск / onboarding | ✅ максимально короткий: **один экран** с тремя тезисами (говорить вслух, нажимаемые слова, интервальные повторы); без вопросов про уровень, страну, цель и минуты. Аккаунт не нужен. Уже имеющий реальный/импортированный course progress onboarding не видит |
 | 12 | Полный доступ к курсу | ✅ `course.general-foundation` навсегда **или** активный Premium/UnMute Plus открывают весь set. После окончания доступа новые платные дни снова закрыты, но серверно подтверждённые уже изученные activities продолжают приходить для Review |
+| 13 | Реальная оплата | ⏸ отложена владельцем: сейчас не подключаем checkout/store/web billing. Для разработки права выдаём через Admin; вернуться к провайдерам оплаты позже |
 
 ---
 
@@ -403,11 +405,12 @@ DictEntry { word, ru }
 
 **Здесь готов запуск для семьи (MVP).**
 
-### Фаза 6 — Оплата (G6)
-- Контракт `billing` — из этапа 0.8 (§0.4a); здесь — реальный адаптер первого канала (решение 8), включение провайдеров в админке; оферта, политика конфиденциальности, возвраты — до включения в проде.
+### Фаза 6 — Оплата (G6) — **отложена владельцем**
+- Реальную оплату сейчас **не подключаем**. Каркас billing и entitlement уже есть, доступ для разработки/семьи выдаётся через Admin. Checkout, store billing, web-провайдеры, реальные цены, оферта/возвраты — вернуться отдельной фазой позже.
 
 ### Фаза 7 — ИИ-собеседник (Plus)
-- `lib/unmute-ai-actions.js`: `talk.reply`, `talk.review`, `answer.explain`; лимиты и журнал — Core `ai-endpoint`; доступ по `acc.sub`, одна пробная беседа.
+- ✅ **7a. `talk.reply` contract:** `lib/unmute-ai-actions.js` собирает prompt **на сервере** из topic/focus/history/latest learner message; клиент не присылает произвольный model prompt. Ответ — строгий JSON `reply/correction/note`, повторно валидируется и сервером, и клиентом. Используется существующий Core `ai-endpoint`: Premium auth, `light` quota, provider/model из Admin, fallback и 30-дневный hashed log. `/api/ai` — rewrite в уже существующий `api/admin.js`, поэтому новой Vercel Function не добавляем. UI разговора — следующий 7b.
+- `talk.review`, `answer.explain`, одна пробная беседа — последующие небольшие куски.
 - Голосом: распознавание → ИИ → озвучка.
 
 ### Фаза 8 — Напоминания
