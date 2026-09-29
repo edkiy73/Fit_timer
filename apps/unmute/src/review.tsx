@@ -388,7 +388,7 @@ export function ReviewView({
       {item.kind==='card'&&(item.activity.type==='text-input'||item.activity.type==='translation')&&(
         <article className="learn-card review-card">
           <div className="review-kind">{t('review.card')}</div>
-          <h3>{localized(item.activity.prompt,locale)}</h3>
+          <h3><LexiconText text={localized(item.activity.prompt,locale)} refs={item.activity.lexiconRefs} /></h3>
           {item.activity.type==='text-input'&&item.activity.source&&(
             <p className="learn-source"><LexiconText text={localized(item.activity.source,locale)} refs={item.activity.lexiconRefs} /></p>
           )}
