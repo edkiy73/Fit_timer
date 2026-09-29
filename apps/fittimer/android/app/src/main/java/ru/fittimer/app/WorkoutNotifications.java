@@ -37,8 +37,16 @@ final class WorkoutNotifications {
     private static final int ALARM_REQUEST = 903003;
     private static final int INACTIVITY_ID = 903004;
     private static final int INACTIVITY_REQUEST = 903005;
+    // Только состояние текущего процесса: если приложение было убито, новый процесс
+    // начинает с false и напоминания снова разрешены. Так не остаётся "вечный foreground"
+    // после аварийного завершения.
+    private static volatile boolean appVisible = false;
 
     private WorkoutNotifications() {}
+
+    static void setAppVisible(boolean visible) {
+        appVisible = visible;
+    }
 
     static void update(Context context, JSObject data) {
         ensureChannels(context);
@@ -113,6 +121,9 @@ final class WorkoutNotifications {
             handleInactivity(context, intent);
             return;
         }
+        // Когда тренировка открыта перед глазами, экран сам уже перешёл на следующий
+        // шаг. Системный heads-up "Пора продолжать" в этот момент — дубль, а не помощь.
+        if (appVisible) return;
         ensureChannels(context);
         String title = clean(intent == null ? null : intent.getStringExtra("title"), "Fit Timer");
         String body = clean(intent == null ? null : intent.getStringExtra("body"), "");
