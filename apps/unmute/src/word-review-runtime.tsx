@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { loadLexicon } from './lexicon/client';
 import type { LexiconSnapshot } from './lexicon/schema';
@@ -37,31 +37,26 @@ export function useWordReviewRuntime():WordReviewRuntimeValue{
     });
   },[queryClient]);
 
-  const refresh=async()=>{
+  const refresh=useCallback(async()=>{
     await Promise.all([
       queryClient.invalidateQueries({queryKey:[WORDS_KEY],exact:true}),
       queryClient.invalidateQueries({queryKey:[LEXICON_KEY],exact:true}),
     ]);
-  };
+  },[queryClient]);
 
   const error=wordsQuery.error ?? lexiconQuery.error ?? null;
-  const status:error extends never ? never : 'pending'|'ready'|'error' = error
+  const status:WordReviewRuntimeValue['status']=error
     ? 'error'
     : wordsQuery.data&&lexiconQuery.data
       ? 'ready'
       : 'pending';
 
-  return useMemo(()=>({
+  return {
     words:wordsQuery.data??null,
     lexicon:lexiconQuery.data?.lexicon??null,
     status,
     error,
     fromCache:Boolean(lexiconQuery.data?.fromCache),
     refresh,
-  }),[
-    wordsQuery.data,
-    lexiconQuery.data,
-    status,
-    error,
-  ]);
+  };
 }
