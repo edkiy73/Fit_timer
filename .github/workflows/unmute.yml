@@ -50,7 +50,33 @@ jobs:
         run: npm run test:browser
 
 
+  # Native shells are rebuilt on a PR only when something they are built from changed;
+  # pushes to main always run them. Skipped jobs count as passed for required checks.
+  native-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      native: ${{ steps.diff.outputs.native }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then echo "native=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files="$(git diff --name-only "$BASE" HEAD)"
+          printf '%s\n' "$files"
+          if printf '%s\n' "$files" | grep -Eq '^(apps/unmute/(android|native|ios)/|apps/unmute/(capacitor\.config\.json|package\.json|package-lock\.json|config/product\.json)$|apps/unmute/scripts/(prepare-ios\.mjs|smoke-(android|ios)-device\.sh)$|\.github/workflows/unmute\.yml$)'; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "native=false" >> "$GITHUB_OUTPUT"
+          fi
+
   android:
+    needs: native-changes
+    if: needs.native-changes.outputs.native == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -103,6 +129,8 @@ jobs:
 
 
   ios:
+    needs: native-changes
+    if: needs.native-changes.outputs.native == 'true'
     runs-on: macos-15
     timeout-minutes: 15
     defaults:
