@@ -8,8 +8,8 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import { saveDialogueActivity, saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
-import type { SpeakText, StartRecognition } from './speech-web';
-import { speakWebText, startWebRecognition } from './speech-web';
+import type { SpeakText, StartRecognition } from './speech-runtime';
+import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
 import { PatternPracticeView } from './pattern-practice';
 import { DialogueView } from './dialogue';
 import { LexiconText } from './lexicon-ui';
@@ -87,8 +87,8 @@ export function NodeRunnerView({
   saveGraded,
   savePractice,
   saveDialogue=saveDialogueActivity,
-  speak=speakWebText,
-  startRecognition=startWebRecognition
+  speak=speakText,
+  startRecognition=startSpeechRecognition
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
