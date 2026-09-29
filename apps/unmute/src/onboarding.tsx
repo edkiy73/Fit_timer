@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
@@ -141,6 +141,12 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const location=useLocation();
   const {t}=useI18n();
   const [done,setDone]=useState(()=>onboardingStoredDone());
+
+  useEffect(()=>{
+    if(done||!runtime.state||!hasExistingCourseProgress(runtime.state.progress))return;
+    markOnboardingDone();
+    setDone(true);
+  },[done,runtime.state]);
 
   // Account/sign-in remains reachable from the app header even before onboarding.
   if(location.pathname==='/account')return <>{children}</>;
