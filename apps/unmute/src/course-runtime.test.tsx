@@ -20,13 +20,6 @@ vi.mock('@appbase/ui-react/auth.js',()=>({
   })
 }));
 
-vi.mock('@appbase/ui-react/auth.js',()=>({
-  useOptionalAuth:()=>({
-    session:null,
-    loading:false,
-    refresh:async()=>{}
-  })
-}));
 vi.mock('./content/client',()=>({
   loadSet:vi.fn(),
   retainLearnedActivities:vi.fn()
