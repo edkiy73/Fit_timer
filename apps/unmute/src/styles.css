@@ -178,3 +178,9 @@ h2{margin:0 0 8px}
   .today-review .primary-button{width:100%}
   .review-shell h2{font-size:26px}
 }
+
+
+.word-review-card h3{font-size:26px}
+.word-review-card .drill-target{font-size:24px}
+.review-word-warning{align-items:start}
+.review-word-warning .secondary-button{justify-self:start}

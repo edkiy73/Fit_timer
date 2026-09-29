@@ -112,4 +112,86 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Вернуться в «Сегодня»'}));
     expect(onExit).toHaveBeenCalledTimes(1);
   });
+
+
+  it('reviews a due personal word with the legacy reveal/self-grade flow',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    state.progress.cards['card.one']={box:2,due:99,at:'2026-09-29T00:00:00Z'};
+    const runtime:LearnerCourseRuntimeValue={
+      state,
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+    const words={
+      schemaVersion:1 as const,
+      items:{
+        'lex.home|noun':{
+          lexemeId:'lex.home',
+          senseId:'noun',
+          box:1,
+          due:10,
+          at:'2026-09-29T00:00:00Z'
+        }
+      }
+    };
+    const wordRuntime={
+      words,
+      lexicon:{
+        schemaVersion:1 as const,
+        revision:1,
+        entries:[{
+          id:'lex.home',
+          revision:1,
+          language:'en' as const,
+          lemma:'home',
+          forms:[{text:'home',kind:'lemma' as const}],
+          senses:[{
+            id:'noun',
+            translations:{ru:['дом']},
+            tags:[]
+          }],
+          examples:[],
+          deprecated:false
+        }]
+      },
+      status:'ready' as const,
+      error:null,
+      fromCache:false,
+      refresh:async()=>{}
+    };
+    const saveWord=vi.fn(async()=>{});
+    const onExit=vi.fn();
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="review-word-test.locale"
+        systemLanguages={['ru']}
+      >
+        <ReviewView
+          runtime={runtime}
+          wordRuntime={wordRuntime}
+          onExit={onExit}
+          todayDay={10}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+          saveWord={saveWord}
+          speak={async()=>true}
+          startRecognition={()=>null}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByRole('heading',{name:'дом'})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Показать слово'}));
+    expect(await screen.findByText('home')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Вспомнил'}));
+
+    expect(saveWord).toHaveBeenCalledWith('lex.home','noun',true);
+    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(screen.getByText('Готово: 1')).toBeTruthy();
+  });
 });

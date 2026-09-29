@@ -21,8 +21,23 @@ import { speakWebText, startWebRecognition } from './speech-web';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
+import { saveWordReview } from './word-progress';
+import type { WordReviewRuntimeValue } from './word-review-runtime';
+import { useWordReviewRuntime } from './word-review-runtime';
+import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-review';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
+type CombinedReviewItem=
+  |ReviewSessionItem
+  |{kind:'word';word:ResolvedWordReviewItem};
+
+interface PinnedReviewSession {
+  course:CourseReviewSession;
+  total:number;
+  waiting:number;
+  unresolvedWords:number;
+  wordUnavailable:boolean;
+}
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -41,6 +56,8 @@ export interface ReviewViewProps {
     correct:boolean,
     score?:number
   )=>Promise<void>;
+  wordRuntime?:WordReviewRuntimeValue|null;
+  saveWord?:(lexemeId:string,senseId:string,correct:boolean)=>Promise<void>;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
 }
@@ -51,36 +68,54 @@ export function ReviewView({
   todayDay=activitySaveClock().dayNumber,
   saveGraded,
   savePractice,
+  wordRuntime=null,
+  saveWord=saveWordReview,
   speak=speakWebText,
   startRecognition=startWebRecognition
 }:ReviewViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
-  const [session,setSession]=useState<CourseReviewSession|null>(null);
-  const [queue,setQueue]=useState<ReviewSessionItem[]>([]);
+  const [session,setSession]=useState<PinnedReviewSession|null>(null);
+  const [queue,setQueue]=useState<CombinedReviewItem[]>([]);
   const [index,setIndex]=useState(0);
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
   const [answer,setAnswer]=useState('');
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
+  const [wordShown,setWordShown]=useState(false);
+  const [wordSaveError,setWordSaveError]=useState(false);
 
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
-    const next=buildCourseReviewSession(state.set,state.progress,todayDay);
-    setSession(next);
-    setQueue(next.items);
-  },[runtime.status,state?.set.id,session,todayDay]);
+    if(wordRuntime?.status==='pending')return;
+
+    const course=buildCourseReviewSession(state.set,state.progress,todayDay);
+    const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
+      ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
+      : null;
+    const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
+    setSession({
+      course,
+      total:course.actionableCount+wordItems.length,
+      waiting:course.waitingCount+(words?.waiting??0),
+      unresolvedWords:words?.unresolved??0,
+      wordUnavailable:Boolean(wordRuntime&&wordRuntime.status==='error'),
+    });
+    setQueue([...course.items,...wordItems]);
+  },[runtime.status,state?.set.id,session,todayDay,wordRuntime?.status,wordRuntime?.words,wordRuntime?.lexicon,locale]);
 
   useEffect(()=>{
     setSelected(null);
     setAnswer('');
     setResult(null);
     setBusy(false);
+    setWordShown(false);
+    setWordSaveError(false);
   },[index]);
 
   const item=queue[index] ?? null;
-  const total=session?.actionableCount ?? 0;
+  const total=session?.total ?? 0;
 
   const distractors=useMemo(
     ()=>state?.set.activities.flatMap(activity=>
@@ -91,7 +126,7 @@ export function ReviewView({
     [state?.set.id]
   );
 
-  if(runtime.status==='pending'||(runtime.status==='ready'&&!session)){
+  if(runtime.status==='pending'||wordRuntime?.status==='pending'||(runtime.status==='ready'&&!session)){
     return (
       <section className="review-shell">
         <div className="learn-state" role="status">
@@ -124,13 +159,28 @@ export function ReviewView({
         <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
         <div className="eyebrow">{t('review.eyebrow')}</div>
         <h2 id="review-title">{t('review.title')}</h2>
-        <div className="learn-state">
-          <strong>{t('review.emptyTitle')}</strong>
-          <span>{t('review.emptyText')}</span>
-          <button className="secondary-button" type="button" onClick={onExit}>
-            {t('review.backToday')}
-          </button>
-        </div>
+        {session.wordUnavailable ? (
+          <div className="learn-state" role="alert">
+            <strong>{t('review.wordsLoadTitle')}</strong>
+            <span>{t('review.wordsLoadError')}</span>
+            {wordRuntime&&(
+              <button className="primary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
+                {t('today.retry')}
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={onExit}>
+              {t('review.backToday')}
+            </button>
+          </div>
+        ) : (
+          <div className="learn-state">
+            <strong>{t('review.emptyTitle')}</strong>
+            <span>{t('review.emptyText')}</span>
+            <button className="secondary-button" type="button" onClick={onExit}>
+              {t('review.backToday')}
+            </button>
+          </div>
+        )}
       </section>
     );
   }
@@ -144,8 +194,8 @@ export function ReviewView({
         <div className="learn-state">
           <strong>{t('review.doneCount',{count:completed})}</strong>
           <span>
-            {session.waitingCount>0
-              ? t('review.waiting',{count:session.waitingCount})
+            {session.waiting>0
+              ? t('review.waiting',{count:session.waiting})
               : t('review.doneText')}
           </span>
           <button className="primary-button" type="button" onClick={onExit}>
@@ -202,6 +252,27 @@ export function ReviewView({
       setQueue(current=>[...current,item]);
     }
     setIndex(value=>value+1);
+  };
+
+  const revealWord=()=>{
+    if(item?.kind!=='word')return;
+    setWordShown(true);
+    void speak(item.word.lemma,'en-US');
+  };
+
+  const gradeWord=async(correct:boolean)=>{
+    if(item?.kind!=='word'||busy)return;
+    setBusy(true);
+    setWordSaveError(false);
+    try{
+      await saveWord(item.word.record.lexemeId,item.word.record.senseId,correct);
+      setCompleted(value=>Math.min(total,value+1));
+      setIndex(value=>value+1);
+    }catch(_){
+      setWordSaveError(true);
+    }finally{
+      setBusy(false);
+    }
   };
 
   const cardFeedback=(activity:CardActivity)=>{
@@ -296,6 +367,53 @@ export function ReviewView({
         </article>
       )}
 
+      {session.wordUnavailable&&(
+        <div className="learn-feedback learn-feedback-wrong review-word-warning" role="status">
+          <span>{t('review.wordsLoadError')}</span>
+          {wordRuntime&&(
+            <button className="secondary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
+              {t('today.retry')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {session.unresolvedWords>0&&(
+        <div className="learn-hint">
+          {t('review.wordsUnresolved',{count:session.unresolvedWords})}
+        </div>
+      )}
+
+      {item.kind==='word'&&(
+        <article className="learn-card review-card word-review-card">
+          <div className="review-kind">{t('review.word')}</div>
+          <h3>{item.word.translations.join(' · ')}</h3>
+          {!wordShown ? (
+            <button className="primary-button" type="button" onClick={revealWord}>
+              {t('review.showWord')}
+            </button>
+          ) : (
+            <>
+              <div className="drill-target">{item.word.lemma}</div>
+              <button className="secondary-button" type="button" onClick={()=>void speak(item.word.lemma,'en-US')}>
+                {t('speaking.playReference')}
+              </button>
+              {wordSaveError&&(
+                <div className="learn-feedback learn-feedback-wrong" role="alert">
+                  <span>{t('review.wordSaveError')}</span>
+                </div>
+              )}
+              <button className="primary-button" type="button" disabled={busy} onClick={()=>void gradeWord(true)}>
+                {t('review.wordKnew')}
+              </button>
+              <button className="secondary-button" type="button" disabled={busy} onClick={()=>void gradeWord(false)}>
+                {t('review.wordForgot')}
+              </button>
+            </>
+          )}
+        </article>
+      )}
+
       {item.kind==='practice'&&item.mode==='drill'&&(
         <PatternDrillView
           key={'review-drill-'+item.activity.id}
@@ -338,9 +456,11 @@ export function ReviewScreen(){
   return (
     <ReviewView
       runtime={useLearnerCourseRuntime()}
+      wordRuntime={useWordReviewRuntime()}
       onExit={()=>navigate('/')}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
+      saveWord={saveWordReview}
     />
   );
 }
