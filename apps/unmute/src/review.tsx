@@ -27,6 +27,7 @@ import { useWordReviewRuntime } from './word-review-runtime';
 import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-review';
 import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
 import { LexiconText } from './lexicon-ui';
+import { AnswerExplanationView } from './answer-explanation';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -60,6 +61,8 @@ export interface ReviewViewProps {
   )=>Promise<void>;
   wordRuntime?:WordReviewRuntimeValue|null;
   saveWord?:(lexemeId:string,senseId:string,correct:boolean)=>Promise<void>;
+  onSignIn?:()=>void;
+  onAccess?:()=>void;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
 }
@@ -72,6 +75,8 @@ export function ReviewView({
   savePractice,
   wordRuntime=null,
   saveWord=saveWordReview,
+  onSignIn=()=>{},
+  onAccess=()=>{},
   speak=speakWebText,
   startRecognition=startWebRecognition
 }:ReviewViewProps){
@@ -322,14 +327,33 @@ export function ReviewView({
 
   const cardFeedback=(activity:CardActivity)=>{
     if(result===null)return null;
-    const accepted=activity.type==='choice'
-      ? localized(activity.options[activity.correctIndex],locale)
-      : activity.answer.accepted[0];
+    const acceptedAnswers=activity.type==='choice'
+      ? [localized(activity.options[activity.correctIndex],locale)]
+      : activity.answer.accepted;
+    const accepted=acceptedAnswers[0];
+    const learnerAnswer=activity.type==='choice'
+      ? (selected===null?'':localized(activity.options[selected],locale))
+      : answer.trim();
+    const courseExplanation=localized(activity.explanation,locale);
     return (
       <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
         <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
         {!result&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
+        )}
+        {!result&&courseExplanation&&(
+          <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
+        )}
+        {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+          <AnswerExplanationView
+            question={localized(activity.prompt,locale)}
+            learnerAnswer={learnerAnswer}
+            acceptedAnswers={acceptedAnswers}
+            courseExplanation={courseExplanation}
+            refs={activity.lexiconRefs}
+            onSignIn={onSignIn}
+            onAccess={onAccess}
+          />
         )}
         <button className="primary-button" type="button" onClick={advanceCard}>
           {result?t('learn.next'):t('review.retryLater')}
@@ -507,6 +531,8 @@ export function ReviewScreen(){
       runtime={useLearnerCourseRuntime()}
       wordRuntime={useWordReviewRuntime()}
       onExit={()=>navigate('/')}
+      onSignIn={()=>navigate('/account?return='+encodeURIComponent('/review'))}
+      onAccess={()=>navigate('/access?from=answer')}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
       saveWord={saveWordReview}
