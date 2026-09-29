@@ -397,6 +397,19 @@ h2{margin:0 0 8px}
 .ai-talk-usage{justify-self:end;color:var(--muted);font-size:11px}
 .ai-talk-error{align-items:start}
 .ai-talk-error .secondary-button{justify-self:start}
+.ai-talk-review{display:grid;gap:16px;border:1px solid var(--line);border-radius:16px;padding:16px;background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.ai-talk-review h4{margin:4px 0 0;font-size:20px}
+.ai-talk-review-block{display:grid;gap:10px}
+.ai-talk-review-block>strong,.ai-talk-review-focus>strong{font-size:14px}
+.ai-talk-review-block ul{display:grid;gap:7px;margin:0;padding-left:20px}
+.ai-talk-review-block li{line-height:1.45}
+.ai-talk-review-corrections{display:grid;gap:10px}
+.ai-talk-review-corrections article{display:grid;gap:9px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.ai-talk-review-corrections article>div{display:grid;gap:3px}
+.ai-talk-review-corrections small{color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.ai-talk-review-corrections p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.ai-talk-review-focus{display:grid;gap:7px;border-radius:12px;padding:12px;background:color-mix(in srgb,var(--accent) 12%,transparent);line-height:1.45}
+.ai-talk-reviewing{border:1px solid var(--line);border-radius:12px;padding:12px}
 @media(max-width:520px){
   .ai-talk-message{max-width:94%}
   .ai-talk-compose{grid-template-columns:1fr}
