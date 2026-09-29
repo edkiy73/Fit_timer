@@ -26,6 +26,7 @@ import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-review';
 import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
+import { LexiconText } from './lexicon-ui';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -327,7 +328,9 @@ export function ReviewView({
     return (
       <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
         <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
-        {!result&&accepted&&<span>{t('learn.accepted',{answer:accepted})}</span>}
+        {!result&&accepted&&(
+          <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
+        )}
         <button className="primary-button" type="button" onClick={advanceCard}>
           {result?t('learn.next'):t('review.retryLater')}
         </button>
@@ -355,8 +358,10 @@ export function ReviewView({
       {item.kind==='card'&&item.activity.type==='choice'&&(
         <article className="learn-card review-card">
           <div className="review-kind">{t('review.card')}</div>
-          <h3>{localized(item.activity.prompt,locale)}</h3>
-          {item.activity.hint&&<p className="learn-hint">{localized(item.activity.hint,locale)}</p>}
+          <h3><LexiconText text={localized(item.activity.prompt,locale)} refs={item.activity.lexiconRefs} /></h3>
+          {item.activity.hint&&(
+            <p className="learn-hint"><LexiconText text={localized(item.activity.hint,locale)} refs={item.activity.lexiconRefs} /></p>
+          )}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
             {item.activity.options.map((option,optionIndex)=>(
@@ -367,7 +372,7 @@ export function ReviewView({
                   checked={selected===optionIndex}
                   onChange={()=>setSelected(optionIndex)}
                 />
-                <span>{localized(option,locale)}</span>
+                <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} /></span>
               </label>
             ))}
           </fieldset>
@@ -385,7 +390,7 @@ export function ReviewView({
           <div className="review-kind">{t('review.card')}</div>
           <h3>{localized(item.activity.prompt,locale)}</h3>
           {item.activity.type==='text-input'&&item.activity.source&&(
-            <p className="learn-source">{localized(item.activity.source,locale)}</p>
+            <p className="learn-source"><LexiconText text={localized(item.activity.source,locale)} refs={item.activity.lexiconRefs} /></p>
           )}
           <label className="learn-answer">
             <span>{t('learn.answerLabel')}</span>
@@ -438,7 +443,7 @@ export function ReviewView({
             </button>
           ) : (
             <>
-              <div className="drill-target">{item.word.lemma}</div>
+              <div className="drill-target"><LexiconText text={item.word.lemma} /></div>
               <button className="secondary-button" type="button" onClick={()=>void speak(item.word.lemma,'en-US')}>
                 {t('speaking.playReference')}
               </button>
