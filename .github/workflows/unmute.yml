@@ -87,10 +87,10 @@ jobs:
 
       - name: Android emulator
         run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
-          test -x "$SDKMANAGER"
-          test -x "$AVDMANAGER"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/sdkmanager' | head -n1)"
+          AVDMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/avdmanager' | head -n1)"
+          test -n "$SDKMANAGER" && test -x "$SDKMANAGER"
+          test -n "$AVDMANAGER" && test -x "$AVDMANAGER"
           yes | "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64" >/dev/null
           echo no | "$AVDMANAGER" create avd --force --name unmute-smoke --package "system-images;android-35;google_apis;x86_64"
           sudo chmod 666 /dev/kvm || true
