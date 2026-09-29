@@ -104,7 +104,7 @@ export const en: Record<keyof typeof ru, string> = {
   'access.plusText': 'The full course stays open while the subscription is active. AI features will join it later.',
   'access.notForgettingTitle': 'What you learned stays with you',
   'access.notForgettingText': 'If access ends, cards and speaking patterns you already learned stay available for review.',
-  'access.checkoutLater': 'Purchases will be connected in the payment phase. This build can already receive access from Admin.',
+  'access.checkoutLater': 'Payments will be connected in the next step. If this account already has access, choose Check access.',
   'access.signIn': 'Sign in or restore access',
   'access.refresh': 'Check access',
   'access.refreshing': 'Checking…',
