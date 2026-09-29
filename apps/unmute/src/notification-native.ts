@@ -10,6 +10,7 @@ interface LocalNotificationsPlugin {
   checkPermissions():Promise<{display?:PermissionState}>;
   requestPermissions():Promise<{display?:PermissionState}>;
   checkExactNotificationSetting?():Promise<{exact_alarm?:PermissionState}>;
+  changeExactNotificationSetting?():Promise<unknown>;
   getPending():Promise<{notifications?:Array<{id:number}>}>;
   cancel(input:{notifications:Array<{id:number}>}):Promise<unknown>;
   schedule(input:{notifications:Array<Record<string,unknown>>}):Promise<unknown>;
@@ -71,6 +72,19 @@ export async function requestNotificationPermission():Promise<NotificationPermis
 export async function exactNotificationTimeAvailable():Promise<boolean>{
   if(!nativeNotificationsAvailable())return false;
   return notificationTransport.exactAllowed();
+}
+
+export async function requestExactNotificationTime():Promise<boolean>{
+  if(!nativeNotificationsAvailable())return false;
+  const cap=capacitor();
+  const plugin=localPlugin();
+  if(cap?.getPlatform?.()!=='android')return true;
+  if(await exactNotificationTimeAvailable())return true;
+  if(!plugin?.changeExactNotificationSetting)return false;
+  try{
+    await plugin.changeExactNotificationSetting();
+  }catch{}
+  return exactNotificationTimeAvailable();
 }
 
 function routeFromAction(event:unknown):'/'|'/review'|null{
