@@ -8,7 +8,9 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import { saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
-import { PatternDrillView } from './pattern-drill';
+import type { SpeakText } from './speech-web';
+import { speakWebText } from './speech-web';
+import { PatternPracticeView } from './pattern-practice';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -63,6 +65,7 @@ export interface NodeRunnerViewProps {
     correct:boolean,
     score?:number
   )=>Promise<void>;
+  speak?:SpeakText;
 }
 
 export function NodeRunnerView({
@@ -71,7 +74,8 @@ export function NodeRunnerView({
   onExit,
   saveSeen,
   saveGraded,
-  savePractice
+  savePractice,
+  speak=speakWebText
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -297,12 +301,15 @@ export function NodeRunnerView({
         </article>
       )}
 
-      {activity.type==='pattern-drill'&&activity.modes.includes('drill')&&(
-        <PatternDrillView
+      {activity.type==='pattern-drill'&&(
+        <PatternPracticeView
           key={activity.id}
           activity={activity}
+          courseActivities={state.set.activities}
+          progress={state.progress}
           setId={setId}
           savePractice={savePractice}
+          speak={speak}
           onDone={advance}
         />
       )}
