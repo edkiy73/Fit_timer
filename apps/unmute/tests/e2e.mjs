@@ -160,8 +160,9 @@ async function signIn(page,email){
     await page.getByRole('button',{name:COPY.create}).click();
   }
   const signedIn=await appears(page.getByRole('link',{name:COPY.account}),5000);
+  const home=await page.waitForURL(/#\/$/,{timeout:5000}).then(()=>true,()=>false);
   const synced=await sync.then(response=>response.ok(),()=>false);
-  return signedIn&&synced;
+  return signedIn&&home&&synced;
 }
 
 const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});
