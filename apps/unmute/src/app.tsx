@@ -11,8 +11,10 @@ import { courseAdminSection } from './admin-course';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
+import { TodayScreen } from './today';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
+const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
 const DEFAULT_COURSE_SET = 'general-foundation';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
@@ -80,7 +82,7 @@ function Shell(){
       <header className="app-header">
         <div>
           <div className="eyebrow">{t('app.eyebrow')}</div>
-          <h1>{PRODUCT_NAME}</h1>
+          <h1>{PRODUCT_SHORT_NAME}</h1>
         </div>
         {!auth.loading && <Link className="link-button" to="/account">{auth.session ? t('nav.account') : t('nav.signIn')}</Link>}
       </header>
@@ -90,13 +92,7 @@ function Shell(){
 }
 
 function Home(){
-  const {t} = useI18n();
-  return (
-    <section className="card">
-      <h2>{t('app.readyTitle')}</h2>
-      <p>{t('app.readyText')}</p>
-    </section>
-  );
+  return <TodayScreen />;
 }
 
 function Account(){
