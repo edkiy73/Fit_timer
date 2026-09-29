@@ -66,7 +66,8 @@
 | Фаза 7a — AI talk contract | ✅ в `main` (#242) | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client |
 | Фаза 7b — text AI conversation runner | ✅ в `main` (#243) | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
 | Фаза 7c-1 — talk.review contract | ✅ в `main` (#248) | server-built whole-conversation review, strict strengths/corrections/focus JSON, typed Plus client |
-| Фаза 7c-2 — talk.review UI | ✅ в этой фазе | finish with learner turns → strengths/corrections/focus screen; review failure never blocks activity completion |
+| Фаза 7c-2 — talk.review UI | ✅ в `main` (#249) | finish with learner turns → strengths/corrections/focus screen; review failure never blocks activity completion |
+| Фаза 7d-1 — answer.explain | ✅ в этой фазе | wrong graded answer → opt-in Plus/light explanation; strict server-built why/tip JSON; no SRS mutation |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -420,7 +421,8 @@ DictEntry { word, ru }
 - ✅ **7b. Текстовый AI conversation runner:** activity `ai-conversation` теперь реально проходит внутри lesson runner. Стартовый ход генерируется сервером без фальшивого learner message; дальше отправляются только последние structured turns. UI показывает partner/learner thread, correction/note последней фразы и quota usage, если Core его вернул. Activity становится `seen` только после явного «Завершить разговор». Anonymous → вход, signed-in без Plus → экран доступа. Голос и бесплатная пробная беседа не смешиваются сюда и идут отдельными кусками.
 - ✅ **7c-1. `talk.review` contract:** отдельный Plus/light action разбирает уже завершённый structured transcript только на сервере. Строгий ответ: `strengths[]`, `corrections[{original,better,why}]`, `focus`; сервер и клиент независимо валидируют JSON, никаких произвольных model prompts с клиента. UI разбора — следующий короткий 7c-2.
 - ✅ **7c-2. UI разбора разговора:** если learner успел отправить хотя бы одну реплику, «Завершить разговор» сначала вызывает `talk.review` и показывает отдельный экран внутри activity: сильные стороны, до 3 meaningful corrections (`ты сказал → лучше так → почему`) и один focus на следующую попытку. Activity становится `seen` только после кнопки «Готово». Если разбор упал/закончился quota/истёк доступ, уже проведённый разговор не теряется: можно повторить review либо завершить activity без него. Если learner не отправил ни одной реплики, сохраняется прежнее быстрое завершение без бессмысленного review.
-- `answer.explain`, одна пробная беседа — последующие небольшие куски.
+- ✅ **7d-1. `answer.explain`:** после неправильного `choice/text-input/translation` пользователь сам нажимает «Почему?»; только тогда тратится AI quota. Клиент отправляет структурированные `question / learnerAnswer / acceptedAnswers / courseExplanation`, а server registry сам строит model prompt и принимает только строгий JSON `{why,tip}`. Ответ не меняет оценку, SRS или accepted answers. Anonymous ведёт во вход, без Plus — на существующий экран доступа; тот же UI работает и в обычном уроке, и в Review.
+- Одна пробная беседа — следующий небольшой кусок.
 - Голосом: распознавание → ИИ → озвучка.
 
 ### Фаза 8 — Напоминания
