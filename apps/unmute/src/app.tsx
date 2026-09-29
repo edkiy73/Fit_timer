@@ -16,6 +16,7 @@ import { NodeRunnerScreen } from './learn';
 import { ReviewScreen } from './review';
 import { CourseMapScreen } from './course-map';
 import { LexiconProvider } from './lexicon-ui';
+import { ProgressScreen } from './progress-screen';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -149,6 +150,7 @@ export const routes: RouteObject[] = [
         {path:'learn/:nodeId', element:<NodeRunnerScreen />},
         {path:'review', element:<ReviewScreen />},
         {path:'course', element:<CourseMapScreen />},
+        {path:'progress', element:<ProgressScreen />},
         {path:'account', element:<Account />}
       ]
     }]

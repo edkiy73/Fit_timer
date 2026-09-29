@@ -13,7 +13,7 @@ function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
-export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void;onMap:()=>void}){
+export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap,onProgress}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void;onMap:()=>void;onProgress:()=>void}){
   const {t,locale}=useI18n();
   const state=runtime.state;
   const todayDay=activitySaveClock().dayNumber;
@@ -49,9 +49,14 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{run
         <div className="today-heading-actions">
           {state?.fromCache && <span className="today-badge">{t('today.offline')}</span>}
           {runtime.status==='ready'&&(
-            <button className="link-button" type="button" onClick={onMap}>
-              {t('today.courseMap')}
-            </button>
+            <>
+              <button className="link-button" type="button" onClick={onProgress}>
+                {t('today.progress')}
+              </button>
+              <button className="link-button" type="button" onClick={onMap}>
+                {t('today.courseMap')}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -174,6 +179,7 @@ export function TodayScreen(){
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
+      onProgress={()=>navigate('/progress')}
     />
   );
 }
