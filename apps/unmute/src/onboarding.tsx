@@ -1,28 +1,37 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
-import type { LearnerCourseState } from './course-loader';
-import { useLearnerCourseRuntime } from './course-runtime';
 import type { CourseProgressDocument } from './progress';
-import { LexiconText } from './lexicon-ui';
+import { useLearnerCourseRuntime } from './course-runtime';
+import { appDocs, SETTINGS_DOC } from './sync';
+import { patchSettings, readSettings } from './settings';
 import { trackOnboardingComplete } from './observability';
 
 export const ONBOARDING_KEY='unmute.onboarding.v1';
+const SETTINGS_QUERY_KEY=['unmute-settings'] as const;
 
-function liveCount<T extends {deleted?:boolean}>(records:Record<string,T|undefined>):number{
-  return Object.values(records).filter(value=>Boolean(value&&!value.deleted)).length;
+function hasLiveRecord<T extends {deleted?:boolean}>(
+  records:Record<string,T|undefined>
+):boolean{
+  return Object.values(records).some(value=>Boolean(value&&!value.deleted));
 }
 
 export function hasExistingCourseProgress(progress:CourseProgressDocument):boolean{
   return (
-    liveCount(progress.seen)>0||
-    liveCount(progress.cards)>0||
-    liveCount(progress.practice.drill)>0||
-    liveCount(progress.practice.listening)>0||
-    liveCount(progress.practice.speaking)>0||
-    liveCount(progress.manualNodes)>0||
-    liveCount(progress.learningDays)>0||
-    liveCount(progress.metrics)>0
+    hasLiveRecord(progress.seen)||
+    hasLiveRecord(progress.cards)||
+    hasLiveRecord(progress.practice.drill)||
+    hasLiveRecord(progress.practice.listening)||
+    hasLiveRecord(progress.practice.speaking)||
+    hasLiveRecord(progress.manualNodes)||
+    hasLiveRecord(progress.learningDays)||
+    hasLiveRecord(progress.metrics)
   );
 }
 
@@ -35,101 +44,55 @@ export function markOnboardingDone(storage:Pick<Storage,'setItem'>=localStorage)
   try{storage.setItem(ONBOARDING_KEY,'1');}catch{}
 }
 
-export function shouldShowOnboarding(
-  storedDone:boolean,
-  state:LearnerCourseState|null
-):boolean{
-  if(storedDone||!state)return false;
-  return !hasExistingCourseProgress(state.progress);
-}
-
 export function OnboardingView({
   onDone,
-  onSkip
+  busy=false
 }:{
   onDone:()=>void;
-  onSkip:()=>void;
+  busy?:boolean;
 }){
   const {t}=useI18n();
-  const [step,setStep]=useState(0);
-  const total=3;
 
   return (
     <section className="onboarding" aria-labelledby="onboarding-title">
-      <div className="onboarding-top">
-        <div className="onboarding-dots" aria-label={t('onboarding.progress',{current:step+1,total})}>
-          {Array.from({length:total},(_,index)=>(
-            <span
-              className={index===step?'onboarding-dot onboarding-dot-active':'onboarding-dot'}
-              key={index}
-            />
-          ))}
+      <div className="onboarding-card">
+        <div className="eyebrow">{t('onboarding.eyebrow')}</div>
+        <h2 id="onboarding-title">{t('onboarding.title')}</h2>
+        <p className="onboarding-lead">{t('onboarding.lead')}</p>
+
+        <div className="onboarding-points">
+          <article>
+            <span className="onboarding-number" aria-hidden="true">1</span>
+            <div>
+              <strong>{t('onboarding.speakTitle')}</strong>
+              <p>{t('onboarding.speakText')}</p>
+            </div>
+          </article>
+          <article>
+            <span className="onboarding-number" aria-hidden="true">2</span>
+            <div>
+              <strong>{t('onboarding.wordsTitle')}</strong>
+              <p>{t('onboarding.wordsText')}</p>
+            </div>
+          </article>
+          <article>
+            <span className="onboarding-number" aria-hidden="true">3</span>
+            <div>
+              <strong>{t('onboarding.reviewTitle')}</strong>
+              <p>{t('onboarding.reviewText')}</p>
+            </div>
+          </article>
         </div>
-        <button className="link-button" type="button" onClick={onSkip}>
-          {t('onboarding.skip')}
+
+        <button
+          className="primary-button onboarding-start"
+          type="button"
+          disabled={busy}
+          onClick={onDone}
+        >
+          {busy?t('onboarding.starting'):t('onboarding.start')}
         </button>
-      </div>
-
-      {step===0&&(
-        <div className="onboarding-page">
-          <div className="onboarding-icon" aria-hidden="true">◎</div>
-          <div>
-            <div className="eyebrow">{t('onboarding.firstEyebrow')}</div>
-            <h2 id="onboarding-title">{t('onboarding.firstTitle')}</h2>
-          </div>
-          <p>{t('onboarding.firstText')}</p>
-          <div className="onboarding-note">{t('onboarding.noAccount')}</div>
-        </div>
-      )}
-
-      {step===1&&(
-        <div className="onboarding-page">
-          <div className="onboarding-icon" aria-hidden="true">Aa</div>
-          <div>
-            <div className="eyebrow">{t('onboarding.wordsEyebrow')}</div>
-            <h2 id="onboarding-title">{t('onboarding.wordsTitle')}</h2>
-          </div>
-          <p>{t('onboarding.wordsText')}</p>
-          <div className="onboarding-demo">
-            <LexiconText text="I need to book an appointment." />
-          </div>
-          <small>{t('onboarding.wordsHint')}</small>
-        </div>
-      )}
-
-      {step===2&&(
-        <div className="onboarding-page">
-          <div className="onboarding-icon" aria-hidden="true">↻</div>
-          <div>
-            <div className="eyebrow">{t('onboarding.practiceEyebrow')}</div>
-            <h2 id="onboarding-title">{t('onboarding.practiceTitle')}</h2>
-          </div>
-          <p>{t('onboarding.practiceText')}</p>
-          <div className="onboarding-flow">
-            <span>{t('onboarding.flowSpeak')}</span>
-            <b>→</b>
-            <span>{t('onboarding.flowListen')}</span>
-            <b>→</b>
-            <span>{t('onboarding.flowReview')}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="onboarding-actions">
-        {step>0&&(
-          <button className="secondary-button" type="button" onClick={()=>setStep(value=>value-1)}>
-            {t('onboarding.back')}
-          </button>
-        )}
-        {step<total-1 ? (
-          <button className="primary-button" type="button" onClick={()=>setStep(value=>value+1)}>
-            {t('onboarding.next')}
-          </button>
-        ) : (
-          <button className="primary-button" type="button" onClick={onDone}>
-            {t('onboarding.start')}
-          </button>
-        )}
+        <p className="onboarding-account-note">{t('onboarding.accountLater')}</p>
       </div>
     </section>
   );
@@ -139,49 +102,87 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const runtime=useLearnerCourseRuntime();
   const navigate=useNavigate();
   const location=useLocation();
+  const queryClient=useQueryClient();
   const {t}=useI18n();
-  const [done,setDone]=useState(()=>onboardingStoredDone());
+  const [localDone,setLocalDone]=useState(()=>onboardingStoredDone());
+  const [busy,setBusy]=useState(false);
+
+  const settingsQuery=useQuery({
+    queryKey:SETTINGS_QUERY_KEY,
+    queryFn:readSettings,
+    staleTime:Infinity
+  });
 
   useEffect(()=>{
-    if(done||!runtime.state||!hasExistingCourseProgress(runtime.state.progress))return;
-    markOnboardingDone();
-    setDone(true);
-  },[done,runtime.state]);
+    return appDocs.subscribe(change=>{
+      if(!change.keys.some(ref=>ref.key===SETTINGS_DOC))return;
+      void queryClient.invalidateQueries({
+        queryKey:SETTINGS_QUERY_KEY,
+        exact:true
+      });
+    });
+  },[queryClient]);
 
-  // Account/sign-in remains reachable from the app header even before onboarding.
+  const progressExists=useMemo(
+    ()=>runtime.state?hasExistingCourseProgress(runtime.state.progress):false,
+    [runtime.state]
+  );
+  const syncedDone=Boolean(settingsQuery.data?.onboardingDoneAt);
+  const done=localDone||syncedDone||progressExists;
+
+  useEffect(()=>{
+    if(!syncedDone)return;
+    markOnboardingDone();
+    setLocalDone(true);
+  },[syncedDone]);
+
+  useEffect(()=>{
+    if(runtime.status!=='ready'||!progressExists||syncedDone)return;
+    markOnboardingDone();
+    setLocalDone(true);
+    void patchSettings({onboardingDoneAt:new Date().toISOString()})
+      .then(()=>queryClient.invalidateQueries({
+        queryKey:SETTINGS_QUERY_KEY,
+        exact:true
+      }))
+      .catch(()=>{});
+  },[progressExists,queryClient,runtime.status,syncedDone]);
+
+  // Signing in is always reachable from the header; onboarding never blocks account recovery.
   if(location.pathname==='/account')return <>{children}</>;
 
-  if(runtime.status==='error')return <>{children}</>;
+  if(done)return <>{children}</>;
 
-  if(runtime.status==='pending'){
+  if(runtime.status==='error'||settingsQuery.isError)return <>{children}</>;
+
+  if(runtime.status==='pending'||settingsQuery.isPending){
     return (
       <section className="onboarding onboarding-loading">
         <div className="learn-state" role="status">
-          <strong>{t('today.loadingTitle')}</strong>
-          <span>{t('today.loadingText')}</span>
+          <strong>{t('onboarding.loading')}</strong>
         </div>
       </section>
     );
   }
 
-  if(!shouldShowOnboarding(done,runtime.state))return <>{children}</>;
-
-  const finish=(startLesson:boolean)=>{
+  const finish=async()=>{
+    if(busy)return;
+    setBusy(true);
     markOnboardingDone();
-    setDone(true);
-    trackOnboardingComplete();
-    const nodeId=runtime.state?.currentNode?.id;
-    if(startLesson&&nodeId){
+    setLocalDone(true);
+
+    const nodeId=runtime.state?.currentNode?.id??null;
+    try{
+      await patchSettings({onboardingDoneAt:new Date().toISOString()});
+      void trackOnboardingComplete();
+    }catch{}
+
+    if(nodeId){
       navigate('/learn/'+encodeURIComponent(nodeId));
-      return;
+    }else{
+      navigate('/');
     }
-    navigate('/');
   };
 
-  return (
-    <OnboardingView
-      onDone={()=>finish(true)}
-      onSkip={()=>finish(false)}
-    />
-  );
+  return <OnboardingView busy={busy} onDone={()=>void finish()} />;
 }
