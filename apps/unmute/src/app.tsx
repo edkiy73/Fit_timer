@@ -9,9 +9,9 @@ import { adminClient } from './admin';
 import { contentAdminSection } from './admin-content';
 import { courseAdminSection } from './admin-course';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
-import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
+import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';\nimport { LearnerCourseProvider } from './course-runtime';
 
-const PRODUCT_NAME = 'UnMute: English for Expats';
+const PRODUCT_NAME = 'UnMute: English for Expats';\nconst DEFAULT_COURSE_SET = 'general-foundation';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
 
@@ -62,7 +62,9 @@ function Root(){
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
-        <Outlet />
+        <LearnerCourseProvider setId={DEFAULT_COURSE_SET}>
+          <Outlet />
+        </LearnerCourseProvider>
       </AuthProvider>
     </Localized>
   );
