@@ -9,6 +9,7 @@ import type {
   WebRecognitionError,
   WebRecognitionHandle
 } from './speech-web';
+import { LexiconText } from './lexicon-ui';
 
 type DialogueActivity=Extract<Activity,{type:'dialogue'}>;
 type DialogueLine=DialogueActivity['lines'][number];
@@ -203,7 +204,7 @@ export function DialogueView({
     return (
       <article className="learn-card dialogue-card">
         <div className="eyebrow">{t('dialogue.mode')}</div>
-        <h3>{localized(activity.scene,locale)}</h3>
+        <h3><LexiconText text={localized(activity.scene,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
           <strong>{t('dialogue.score',{correct:hits,total:activity.lines.length})}</strong>
           <span>{passed?t('dialogue.passed'):t('dialogue.retryHint')}</span>
@@ -248,13 +249,13 @@ export function DialogueView({
       </div>
 
       <div className="dialogue-bubble">
-        <strong>{partner}</strong>
+        <strong><LexiconText text={partner} refs={activity.lexiconRefs} /></strong>
         <button className="learn-back" type="button" onClick={()=>void speak(partner,'en-US')}>
           {t('dialogue.playPartner')}
         </button>
       </div>
 
-      {task&&<p className="dialogue-task">{t('dialogue.task',{task})}</p>}
+      {task&&<p className="dialogue-task"><LexiconText text={t('dialogue.task',{task})} refs={activity.lexiconRefs} /></p>}
 
       {phase==='ask' ? (
         <>
@@ -297,7 +298,7 @@ export function DialogueView({
             <strong>{correct?t('dialogue.correct'):t('dialogue.incorrect')}</strong>
             {lastAnswer&&<span>{t('dialogue.yourAnswer',{answer:lastAnswer})}</span>}
           </div>
-          <div className="drill-target">{reference}</div>
+          <div className="drill-target"><LexiconText text={reference} refs={activity.lexiconRefs} /></div>
           <button className="secondary-button" type="button" onClick={()=>void speak(reference,'en-US')}>
             {t('speaking.playReference')}
           </button>
