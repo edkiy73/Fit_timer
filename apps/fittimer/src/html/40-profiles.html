@@ -201,16 +201,37 @@
           <button type="button" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
-        <button type="button" class="hf-commands-link" id="btnHfCommands" data-i18n="handsfree.allCommands">Все команды</button>
-        <div class="voice-pack hidden" id="voicePackBox">
-          <div class="pref-row"><span data-i18n="settings.commandLanguage">Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
-          <div class="voice-pack-status">
-            <span id="voicePackStatus" data-i18n="common.checking">Проверяем…</span>
-            <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
-            <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-i18n="common.download">Скачать</button>
+
+        <div class="hf-mode-detail hidden" id="hfVoiceDetail">
+          <div class="voice-pack hidden" id="voicePackBox">
+            <div class="pref-row"><span data-i18n="settings.commandLanguage">Язык команд</span><select class="voice-sel" id="voiceRecLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+            <div class="voice-pack-status">
+              <span id="voicePackStatus" data-i18n="common.checking">Проверяем…</span>
+              <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
+              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-i18n="common.download">Скачать</button>
+            </div>
+            <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
+            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
           </div>
-          <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
-          <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
+
+          <div class="hf-inline-commands">
+            <span class="mini-label" data-i18n="handsfree.commandsTitle">Голосовые команды</span>
+            <p class="field-hint" data-i18n="handsfree.commandsIntro">«Готово» засчитывает этап, «Пропустить» отмечает его пропущенным. Для каждого действия можно говорить естественные варианты фразы.</p>
+            <div class="hf-command-list">
+              <div class="hf-command"><span class="hfc-ico" data-icon="chevR"></span><span><b data-i18n="handsfree.commandDone">Готово</b><small data-i18n="handsfree.commandDoneExamples">«готово», «дальше», «сделал», «закончил», «следующее»</small></span></div>
+              <div class="hf-command"><span class="hfc-ico" data-icon="chevR"></span><span><b data-i18n="handsfree.commandSkip">Пропустить</b><small data-i18n="handsfree.commandSkipExamples">«пропустить», «пропусти»</small></span></div>
+              <div class="hf-command"><span class="hfc-ico" data-icon="pause"></span><span><b data-i18n="handsfree.commandPause">Пауза</b><small data-i18n="handsfree.commandPauseExamples">«пауза», «стоп», «подожди», «остановись»</small></span></div>
+              <div class="hf-command"><span class="hfc-ico" data-icon="play"></span><span><b data-i18n="handsfree.commandResume">Продолжить</b><small data-i18n="handsfree.commandResumeExamples">«продолжить», «продолжай», «поехали», «можно продолжать»</small></span></div>
+            </div>
+            <p class="hf-command-foot" data-i18n="handsfree.commandsLanguageNote">Команды распознаются на языке, выбранном в «Язык команд».</p>
+          </div>
+        </div>
+
+        <div class="hf-mode-detail hidden" id="hfHeadsetDetail">
+          <div class="hf-headset-info">
+            <b data-i18n="handsfree.headsetHowTitle">Как работает</b>
+            <p data-i18n="handsfree.headsetHow">Один клик Play/Pause на наушниках работает как «Готово»: текущий этап засчитывается и тренировка переходит дальше. Работает и со свёрнутым приложением, и с выключенным экраном, пока тренировка активна.</p>
+          </div>
         </div>
       </div>
     </div>
