@@ -380,3 +380,25 @@ h2{margin:0 0 8px}
   .access-options{grid-template-columns:1fr}
   .access-heading h2,.access-active h2{font-size:28px}
 }
+
+
+.ai-talk-card{gap:16px}
+.ai-talk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ai-talk-head h3{margin:4px 0 0}
+.ai-talk-intro{display:grid;gap:12px}
+.ai-talk-intro p{margin:0;color:var(--muted);line-height:1.5}
+.ai-talk-thread{display:grid;gap:10px;max-height:420px;overflow:auto;padding-right:2px}
+.ai-talk-message{display:grid;gap:4px;max-width:88%;border:1px solid var(--line);border-radius:16px;padding:11px 13px;line-height:1.45}
+.ai-talk-message small{color:var(--muted);font-size:11px;font-weight:800}
+.ai-talk-learner{justify-self:end;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.ai-talk-partner{justify-self:start;background:var(--surface)}
+.ai-talk-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.ai-talk-compose .learn-answer{margin:0}
+.ai-talk-usage{justify-self:end;color:var(--muted);font-size:11px}
+.ai-talk-error{align-items:start}
+.ai-talk-error .secondary-button{justify-self:start}
+@media(max-width:520px){
+  .ai-talk-message{max-width:94%}
+  .ai-talk-compose{grid-template-columns:1fr}
+  .ai-talk-compose .primary-button{width:100%}
+}
