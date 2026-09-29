@@ -73,6 +73,68 @@ function buildTalkPrompt(body){
   ].filter(Boolean).join('\n\n');
 }
 
+
+function parseTalkReview(text){
+  let parsed;
+  try{parsed=JSON.parse(String(text||''));}
+  catch(_){return {ok:false,reason:'talk_review_invalid_json',missing:['strengths','focus']};}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
+    return {ok:false,reason:'talk_review_invalid_object',missing:['strengths','focus']};
+  }
+  const strengths=(Array.isArray(parsed.strengths)?parsed.strengths:[])
+    .map(item=>line(item,320)).filter(Boolean).slice(0,3);
+  const corrections=(Array.isArray(parsed.corrections)?parsed.corrections:[])
+    .map(item=>{
+      if(!item||typeof item!=='object'||Array.isArray(item))return null;
+      const original=line(item.original,400);
+      const better=line(item.better,400);
+      const why=line(item.why,400);
+      if(!better)return null;
+      return {original:original||null,better,why:why||null};
+    }).filter(Boolean).slice(0,3);
+  const focus=line(parsed.focus,400);
+  if(!strengths.length)return {ok:false,reason:'talk_review_missing_strengths',missing:['strengths']};
+  if(!focus)return {ok:false,reason:'talk_review_missing_focus',missing:['focus']};
+  return {
+    ok:true,
+    text:JSON.stringify({strengths,corrections,focus})
+  };
+}
+
+function buildTalkReviewPrompt(body){
+  const locale=cleanLocale(body&&body.locale);
+  const topic=line(body&&body.topic,300);
+  const promptTemplate=line(body&&body.promptTemplate,2400);
+  const targetFocus=Array.isArray(body&&body.focus)
+    ? body.focus.map(item=>line(item,120)).filter(Boolean).slice(0,12)
+    : [];
+  const history=cleanHistory(body&&body.history);
+  if(!topic||!history.some(item=>item.role==='learner')){
+    throw Object.assign(new Error('talk_review_bad_input'),{status:400,code:'talk_review_bad_input'});
+  }
+  const transcript=history.map(item=>
+    (item.role==='partner'?'PARTNER':'LEARNER')+': '+item.text
+  ).join('\n');
+  return [
+    'You review a completed English practice conversation inside UnMute.',
+    'Use ONLY the transcript below. Do not invent mistakes or facts that are not present.',
+    'Give 1-3 concise strengths based on what the learner actually did well.',
+    'Give 0-3 corrections only for meaningful English problems. Skip tiny stylistic preferences.',
+    'For each correction, ORIGINAL is the learner wording, BETTER is a natural corrected version, WHY is one short explanation.',
+    'Give one concrete FOCUS for the learner’s next attempt.',
+    targetFocus.length?'COURSE TARGET PATTERNS: '+targetFocus.join(' | '):'',
+    promptTemplate?'SCENARIO INSTRUCTIONS: '+promptTemplate:'',
+    'TOPIC: '+topic,
+    'TRANSCRIPT:\n'+transcript,
+    locale==='ru'
+      ? 'Write strengths, WHY explanations and FOCUS in Russian. Keep ORIGINAL and BETTER in English.'
+      : 'Write strengths, WHY explanations and FOCUS in English. Keep ORIGINAL and BETTER in English.',
+    'Return ONLY strict JSON with this exact shape:',
+    '{"strengths":["..."],"corrections":[{"original":"...","better":"...","why":"..."}],"focus":"..."}',
+    'Do not use Markdown. Do not add keys.'
+  ].filter(Boolean).join('\n\n');
+}
+
 const registry=createAIActionRegistry([
   {
     id:'talk.reply',
@@ -88,9 +150,31 @@ const registry=createAIActionRegistry([
       }
       return null;
     }
+  },
+  {
+    id:'talk.review',
+    type:'text',
+    bucket:'light',
+    async run({settings,body,generate}){
+      const prompt=buildTalkReviewPrompt(body||{});
+      return generate('text',settings,prompt,{validate:out=>parseTalkReview(out&&out.text)});
+    },
+    publicError(error){
+      if(error&&String(error.code||error.message||'')==='talk_review_bad_input'){
+        return {status:400,code:'talk_review_bad_input'};
+      }
+      return null;
+    }
   }
 ],{
-  malformedPattern:/talk_invalid_json|talk_invalid_object|talk_missing_reply/
+  malformedPattern:/talk_invalid_json|talk_invalid_object|talk_missing_reply|talk_review_invalid_json|talk_review_invalid_object|talk_review_missing_strengths|talk_review_missing_focus/
 });
 
-module.exports={registry,buildTalkPrompt,parseReply,cleanHistory};
+module.exports={
+  registry,
+  buildTalkPrompt,
+  parseReply,
+  cleanHistory,
+  buildTalkReviewPrompt,
+  parseTalkReview
+};
