@@ -139,3 +139,12 @@ h2{margin:0 0 8px}
 .drill-result span{color:var(--muted);line-height:1.45}
 @keyframes drill-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(prefers-reduced-motion:reduce){.drill-timer[data-stage="speaking"] span{animation:none}}
+
+
+.listening-card{gap:14px}
+.listening-play{justify-self:start}
+.listening-options{display:grid;gap:9px}
+.listening-option{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:13px 14px;text-align:left;font-weight:700;cursor:pointer}
+.listening-option:hover{border-color:var(--accent)}
+.listening-option:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:480px){.listening-play{width:100%}}
