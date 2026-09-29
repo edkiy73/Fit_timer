@@ -72,7 +72,12 @@ const runtime:LearnerCourseRuntimeValue={
   refresh:async()=>{}
 };
 
-function renderRunner(saveSeen=vi.fn(async()=>{}),saveGraded=vi.fn(async()=>{}),savePractice=vi.fn(async()=>{})){
+function renderRunner(
+  saveSeen=vi.fn(async()=>{}),
+  saveGraded=vi.fn(async()=>{}),
+  savePractice=vi.fn(async()=>{}),
+  onNodeCompleted=vi.fn()
+){
   const onExit=vi.fn();
   render(
     <I18nProvider
@@ -85,19 +90,20 @@ function renderRunner(saveSeen=vi.fn(async()=>{}),saveGraded=vi.fn(async()=>{}),
         runtime={runtime}
         nodeId="day-1"
         onExit={onExit}
+        onNodeCompleted={onNodeCompleted}
         saveSeen={saveSeen}
         saveGraded={saveGraded}
         savePractice={savePractice}
       />
     </I18nProvider>
   );
-  return {saveSeen,saveGraded,savePractice,onExit};
+  return {saveSeen,saveGraded,savePractice,onExit,onNodeCompleted};
 }
 
 describe('node activity runner',()=>{
   it('moves through theory, choice and text input while saving progress',async()=>{
     const user=userEvent.setup();
-    const {saveSeen,saveGraded,onExit}=renderRunner();
+    const {saveSeen,saveGraded,onExit,onNodeCompleted}=renderRunner();
 
     expect(screen.getByText('Короткая теория')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Продолжить'}));
@@ -117,6 +123,58 @@ describe('node activity runner',()=>{
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     expect(onExit).toHaveBeenCalledTimes(1);
+    expect(onNodeCompleted).toHaveBeenCalledTimes(1);
+    expect(onNodeCompleted).toHaveBeenCalledWith(node);
+  });
+
+  it('does not count a replay of an already completed node as a new completion',async()=>{
+    const user=userEvent.setup();
+    const completedRuntime:LearnerCourseRuntimeValue={
+      ...runtime,
+      state:{
+        ...state,
+        roadmapProgress:{
+          ...state.roadmapProgress,
+          nodes:[{node,complete:true,unlocked:true}],
+          currentNode:null,
+          currentDayIndex:null,
+          completedCount:1,
+          requiredCount:1,
+          courseComplete:true
+        }
+      }
+    };
+    const onNodeCompleted=vi.fn();
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="learn-complete-replay.locale"
+        systemLanguages={['ru']}
+      >
+        <NodeRunnerView
+          runtime={completedRuntime}
+          nodeId="day-1"
+          onExit={()=>{}}
+          onNodeCompleted={onNodeCompleted}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    await user.click(await screen.findByRole('radio',{name:'I am here'}));
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    const input=await screen.findByRole('textbox',{name:'Твой ответ'});
+    await user.type(input,'I am here');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Завершить'}));
+
+    expect(onNodeCompleted).not.toHaveBeenCalled();
   });
 
   it('resumes from the first activity that is not already seen',()=>{

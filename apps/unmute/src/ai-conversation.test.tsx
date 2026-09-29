@@ -37,6 +37,7 @@ describe('AI conversation runner',()=>{
     const user=userEvent.setup();
     const saveSeen=vi.fn(async()=>{});
     const onDone=vi.fn();
+    const onStarted=vi.fn();
     const requestReply=vi.fn()
       .mockResolvedValueOnce({
         reply:'Hello. How can I help you?',
@@ -74,11 +75,13 @@ describe('AI conversation runner',()=>{
         onAccess={()=>{}}
         requestReply={requestReply}
         requestReview={requestReview}
+        onStarted={onStarted}
       />
     );
 
     await user.click(screen.getByRole('button',{name:'Начать разговор'}));
     expect(await screen.findByText('Hello. How can I help you?')).toBeTruthy();
+    expect(onStarted).toHaveBeenCalledTimes(1);
     expect(requestReply).toHaveBeenNthCalledWith(1,expect.objectContaining({
       start:true,
       learnerText:'',
