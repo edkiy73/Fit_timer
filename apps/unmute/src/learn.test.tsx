@@ -72,7 +72,7 @@ const runtime:LearnerCourseRuntimeValue={
   refresh:async()=>{}
 };
 
-function renderRunner(saveSeen=vi.fn(async()=>{}),saveGraded=vi.fn(async()=>{})){
+function renderRunner(saveSeen=vi.fn(async()=>{}),saveGraded=vi.fn(async()=>{}),savePractice=vi.fn(async()=>{})){
   const onExit=vi.fn();
   render(
     <I18nProvider
@@ -87,10 +87,11 @@ function renderRunner(saveSeen=vi.fn(async()=>{}),saveGraded=vi.fn(async()=>{}))
         onExit={onExit}
         saveSeen={saveSeen}
         saveGraded={saveGraded}
+        savePractice={savePractice}
       />
     </I18nProvider>
   );
-  return {saveSeen,saveGraded,onExit};
+  return {saveSeen,saveGraded,savePractice,onExit};
 }
 
 describe('node activity runner',()=>{
@@ -136,6 +137,7 @@ describe('node activity runner',()=>{
           onExit={()=>{}}
           saveSeen={async()=>{}}
           saveGraded={async()=>{}}
+          savePractice={async()=>{}}
         />
       </I18nProvider>
     );
