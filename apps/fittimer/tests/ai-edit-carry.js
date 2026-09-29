@@ -64,12 +64,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('счётчик до проверки продолжается после правки', r.sqN === 3 && r.puN === 1, `Присед ${r.sqN}, Отжимания ${r.puN}`);
   ok('текущие значения не накладываются второй раз', r.sqCur === '{}' && r.sqReps === '12', `${r.sqCur} / ${r.sqReps}`);
   ok('сводка замечает изменение длительности во втором варианте', r.msg.includes('Время тренировки'), r.msg.replace(/\s+/g, ' ').slice(0, 200));
-  // ---- двойная прогрессия: база не менялась — сохраняется и текущее число повторов ----
+  // ---- двойная прогрессия: база не менялась — сохраняется текущий диапазон,
+  //      а исходный диапазон остаётся точкой сброса после прибавки веса ----
   const dual = await page.evaluate(async () => {
     const p = {id:'ecd', name:'Двойная', progression:3, stats:{completions:2}, plans:[
-      {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'d1', name:'Жим гантелей', type:'reps', value:'8-12',
-        sets:3, rest:60, progOn:true, trackWeight:true, weight:10, wStep:2, repsStep:1, repsMax:12, dualProg:true,
-        ps:{n:2, cur:{reps:'10'}}}]}]};
+      {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'d1', name:'Жим гантелей', type:'reps', value:'8-10',
+        sets:3, rest:60, progOn:true, trackWeight:true, weight:10, wStep:2, repsStep:1, repsMax:20, dualProg:true,
+        ps:{n:2, cur:{reps:'9-11'}}}]}]};
     customPrograms.push(p);
     const edited = JSON.parse(JSON.stringify(p));
     edited.plans[0].exercises[0].rest = 90;   // правка отдыха — база та же
@@ -80,7 +81,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const ex = made && normPlans(made)[0].exercises[0];
     return ex ? {n: ex.ps && ex.ps.n, reps: progressedRepsRange(made.id, ex, made), rest: ex.rest} : null;
   });
-  ok('двойная прогрессия: после правки остаётся текущее число повторов', !!dual && dual.reps === '10' && dual.n === 2 && dual.rest === 90, JSON.stringify(dual));
+  ok('двойная прогрессия: после правки остаётся текущий диапазон повторов', !!dual && dual.reps === '9-11' && dual.n === 2 && dual.rest === 90, JSON.stringify(dual));
 
   // ---- правка упражнения через ИИ открывает результат, а не оставляет на «Через ИИ» ----
   const exEdit = await page.evaluate(async () => {
