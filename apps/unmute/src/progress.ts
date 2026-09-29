@@ -1,6 +1,7 @@
 import { mergeRecordMaps, type RecordMap, type RecordMeta } from '@appbase/core/document-sync.js';
 import type { CardSrsState } from './engine/card-srs';
 import type { PracticeSrsState } from './engine/practice-srs';
+import { mergeSettingsRaw } from './settings-data';
 
 export const WORD_PROGRESS_DOC='progress:words';
 export const courseProgressDoc=(setId:string)=>'progress:course:'+setId;
@@ -188,6 +189,9 @@ export function mergeUnMuteDocument(
   }
   if(key===WORD_PROGRESS_DOC){
     return JSON.stringify(mergeWordsProgress(parseWordsProgress(local),parseWordsProgress(remote)));
+  }
+  if(key==='settings'){
+    return mergeSettingsRaw(local,remote);
   }
   return local ?? remote;
 }

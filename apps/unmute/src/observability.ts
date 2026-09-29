@@ -51,3 +51,8 @@ export function installGlobalDiagnostics(): () => void {
 export function captureFatal(error: Error): void {
   void client.capture('error', error, 'react_render_error');
 }
+
+
+export function trackOnboardingComplete():void{
+  void client.track('onboarding_done');
+}
