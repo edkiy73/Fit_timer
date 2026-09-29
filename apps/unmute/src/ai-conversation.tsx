@@ -4,8 +4,10 @@ import type { Activity } from './content/schema';
 import { LexiconText } from './lexicon-ui';
 import {
   requestTalkReply,
+  requestTalkReview,
   type TalkMessage,
-  type TalkReply
+  type TalkReply,
+  type TalkReview
 } from './ai-talk';
 
 type AIActivity=Extract<Activity,{type:'ai-conversation'}>;
@@ -30,7 +32,8 @@ export function AIConversationView({
   onDone,
   onSignIn,
   onAccess,
-  requestReply=requestTalkReply
+  requestReply=requestTalkReply,
+  requestReview=requestTalkReview
 }:{
   activity:AIActivity;
   setId:string;
@@ -39,6 +42,7 @@ export function AIConversationView({
   onSignIn:()=>void;
   onAccess:()=>void;
   requestReply?:typeof requestTalkReply;
+  requestReview?:typeof requestTalkReview;
 }){
   const {t,locale}=useI18n();
   const [messages,setMessages]=useState<TalkMessage[]>([]);
@@ -49,6 +53,8 @@ export function AIConversationView({
   const [correction,setCorrection]=useState('');
   const [note,setNote]=useState('');
   const [usage,setUsage]=useState<TalkReply['usage']>();
+  const [review,setReview]=useState<TalkReview|null>(null);
+  const [reviewRequested,setReviewRequested]=useState(false);
 
   const applyReply=(reply:TalkReply)=>{
     setCorrection(reply.correction||'');
@@ -81,7 +87,7 @@ export function AIConversationView({
   };
 
   const send=async(message:string)=>{
-    if(busy||!message.trim())return;
+    if(busy||reviewRequested||!message.trim())return;
     const learnerText=message.trim();
     setBusy(true);
     setError('');
@@ -110,8 +116,8 @@ export function AIConversationView({
     }
   };
 
-  const finish=async()=>{
-    if(!started||busy)return;
+  const complete=async()=>{
+    if(busy)return;
     setBusy(true);
     try{
       await saveSeen(setId,activity.id);
@@ -121,13 +127,42 @@ export function AIConversationView({
     }
   };
 
+  const reviewConversation=async()=>{
+    if(!started||busy)return;
+    const hasLearnerTurn=messages.some(message=>message.role==='learner');
+    if(!hasLearnerTurn){
+      await complete();
+      return;
+    }
+
+    setReviewRequested(true);
+    setBusy(true);
+    setError('');
+    try{
+      const result=await requestReview({
+        topic:localized(activity.topic,locale),
+        promptTemplate:activity.promptTemplate,
+        focus:activity.focus,
+        history:messages,
+        locale:locale==='en'?'en':'ru'
+      });
+      setReview(result);
+      if(result.usage)setUsage(result.usage);
+    }catch(err:any){
+      setError(String(err?.code||'ai_failed'));
+    }finally{
+      setBusy(false);
+    }
+  };
+
   const accessError=error==='auth_required'||error==='premium_required';
+  const reviewError=reviewRequested&&!review&&Boolean(error);
 
   return (
     <article className="learn-card ai-talk-card">
       <div className="ai-talk-head">
         <div>
-          <div className="eyebrow">{t('aiTalk.eyebrow')}</div>
+          <div className="eyebrow">{review?t('aiTalk.reviewEyebrow'):t('aiTalk.eyebrow')}</div>
           <h3>
             <LexiconText
               text={localized(activity.topic,locale)}
@@ -152,7 +187,7 @@ export function AIConversationView({
         </div>
       )}
 
-      {messages.length>0&&(
+      {messages.length>0&&!review&&(
         <div className="ai-talk-thread" aria-live="polite">
           {messages.map((message,index)=>(
             <div
@@ -173,18 +208,72 @@ export function AIConversationView({
         </div>
       )}
 
-      {correction&&(
+      {!reviewRequested&&correction&&(
         <div className="learn-feedback learn-feedback-wrong">
           <strong>{t('aiTalk.correction')}</strong>
           <LexiconText text={correction} refs={activity.lexiconRefs} />
         </div>
       )}
 
-      {note&&(
+      {!reviewRequested&&note&&(
         <div className="learn-hint">
           <strong>{t('aiTalk.note')}</strong>{' '}
           <LexiconText text={note} refs={activity.lexiconRefs} />
         </div>
+      )}
+
+      {review&&(
+        <section className="ai-talk-review" aria-labelledby="ai-talk-review-title">
+          <div>
+            <div className="eyebrow">{t('aiTalk.reviewEyebrow')}</div>
+            <h4 id="ai-talk-review-title">{t('aiTalk.reviewTitle')}</h4>
+          </div>
+
+          <div className="ai-talk-review-block">
+            <strong>{t('aiTalk.reviewStrengths')}</strong>
+            <ul>
+              {review.strengths.map((strength,index)=>(
+                <li key={index}>
+                  <LexiconText text={strength} refs={activity.lexiconRefs} />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="ai-talk-review-block">
+            <strong>{t('aiTalk.reviewCorrections')}</strong>
+            {review.corrections.length ? (
+              <div className="ai-talk-review-corrections">
+                {review.corrections.map((item,index)=>(
+                  <article key={index}>
+                    {item.original&&(
+                      <div>
+                        <small>{t('aiTalk.reviewOriginal')}</small>
+                        <LexiconText text={item.original} refs={activity.lexiconRefs} />
+                      </div>
+                    )}
+                    <div>
+                      <small>{t('aiTalk.reviewBetter')}</small>
+                      <LexiconText text={item.better} refs={activity.lexiconRefs} />
+                    </div>
+                    {item.why&&(
+                      <p>
+                        <LexiconText text={item.why} refs={activity.lexiconRefs} />
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="learn-hint">{t('aiTalk.reviewNoCorrections')}</p>
+            )}
+          </div>
+
+          <div className="ai-talk-review-focus">
+            <strong>{t('aiTalk.reviewFocus')}</strong>
+            <LexiconText text={review.focus} refs={activity.lexiconRefs} />
+          </div>
+        </section>
       )}
 
       {usage&&usage.limit>0&&(
@@ -206,15 +295,25 @@ export function AIConversationView({
               {t('aiTalk.openPlus')}
             </button>
           )}
-          {!accessError&&(
+          {!accessError&&!reviewError&&(
             <button className="secondary-button" type="button" onClick={()=>setError('')}>
               {t('today.retry')}
+            </button>
+          )}
+          {reviewError&&!accessError&&(
+            <button className="secondary-button" type="button" disabled={busy} onClick={()=>void reviewConversation()}>
+              {t('aiTalk.retryReview')}
+            </button>
+          )}
+          {reviewError&&(
+            <button className="secondary-button" type="button" disabled={busy} onClick={()=>void complete()}>
+              {t('aiTalk.finishWithoutReview')}
             </button>
           )}
         </div>
       )}
 
-      {started&&!accessError&&(
+      {started&&!reviewRequested&&!accessError&&(
         <form
           className="ai-talk-compose"
           onSubmit={event=>{
@@ -241,14 +340,27 @@ export function AIConversationView({
         </form>
       )}
 
-      {started&&(
+      {started&&!reviewRequested&&(
         <button
           className="secondary-button"
           type="button"
           disabled={busy}
-          onClick={()=>void finish()}
+          onClick={()=>void reviewConversation()}
         >
-          {t('aiTalk.finish')}
+          {messages.some(message=>message.role==='learner')
+            ? (busy?t('aiTalk.reviewing'):t('aiTalk.finish'))
+            : t('aiTalk.finish')}
+        </button>
+      )}
+
+      {review&&(
+        <button
+          className="primary-button"
+          type="button"
+          disabled={busy}
+          onClick={()=>void complete()}
+        >
+          {busy?t('aiTalk.finishing'):t('aiTalk.reviewDone')}
         </button>
       )}
     </article>
