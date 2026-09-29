@@ -195,13 +195,19 @@ jobs:
 
       - name: Обновить постоянный релиз latest-apk
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # С immutable releases безопасный и предсказуемый порядок такой:
+          # черновик → загрузить все assets → явно опубликовать.
+          # Раньше release создавался отдельно от upload и мог остаться Draft,
+          # при этом весь workflow считался успешным.
           gh release delete latest-apk --cleanup-tag -y 2>/dev/null || true
           gh release create latest-apk \
             --target "$GITHUB_SHA" \
             --title "FitTimer — последний APK" \
-            --notes "Автоматическая release-сборка из main. versionName: $VERSION_NAME | versionCode: $VERSION_CODE | Commit: $GITHUB_SHA"
+            --notes "Автоматическая release-сборка из main. versionName: $VERSION_NAME | versionCode: $VERSION_CODE | Commit: $GITHUB_SHA" \
+            --draft
           gh release upload latest-apk FitTimer-latest.apk FitTimer-release.json --clobber
+          gh release edit latest-apk --draft=false --latest
+          test "$(gh release view latest-apk --json isDraft --jq '.isDraft')" = "false"
