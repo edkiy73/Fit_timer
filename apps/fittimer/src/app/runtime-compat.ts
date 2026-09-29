@@ -189,6 +189,20 @@ export const appRuntimeCompat = Object.freeze({
     return !!(candidate && candidate.offlineVoice);
   },
 
+  async startHeadsetControl(onAction?: (...args: any[]) => unknown){
+    const candidate = nativeBridge();
+    if(!candidate || typeof candidate.startMediaButtonControl !== 'function') return false;
+    try{ return !!(await candidate.startMediaButtonControl(onAction)); }
+    catch(_){ return false; }
+  },
+
+  async stopHeadsetControl(){
+    const candidate = nativeBridge();
+    if(!candidate || typeof candidate.stopMediaButtonControl !== 'function') return false;
+    try{ return !!(await candidate.stopMediaButtonControl()); }
+    catch(_){ return false; }
+  },
+
   async getVoiceModelStatus(language?: string){
     const candidate = nativeBridge();
     if(!candidate || typeof candidate.getVoiceModelStatus !== 'function'){

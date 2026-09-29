@@ -10,7 +10,9 @@ const required = [
   'android/app/src/main/AndroidManifest.xml',
   'android/app/src/direct/AndroidManifest.xml',
   'android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java',
+  'android/app/src/main/java/ru/fittimer/app/VoiceModelWorker.java',
   'android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java',
+  'android/app/src/main/java/ru/fittimer/app/UpdateDownloadWorker.java',
   'android/app/src/main/java/ru/fittimer/app/FitBiometricPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/FitWorkoutPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/WorkoutNotifications.java',
@@ -58,6 +60,7 @@ const speechCore = mobileBridge;
 if(!speechCore.includes('createSpeech') || !speechCore.includes('startRecognition')) throw new Error('Generic speech Core ESM transport is missing');
 if(!mobileBridge.includes('getAppInfo') || !mobileBridge.includes('openExternal')) throw new Error('Native update bridge is incomplete');
 if(!mobileBridge.includes('installUpdate') || !mobileBridge.includes('resumeUpdateInstall')) throw new Error('Native direct-update bridge is incomplete');
+if(!mobileBridge.includes('startMediaButtonControl') || !mobileBridge.includes('stopMediaButtonControl')) throw new Error('Native media-button bridge is incomplete');
 if(!mobileBridge.includes('requestReview')) throw new Error('Native in-app review bridge is missing');
 if(!mobileBridge.includes('biometricStatus') || !mobileBridge.includes('authenticateBiometric')) throw new Error('Native biometric bridge is missing');
 if(!mobileBridge.includes('updateWorkoutState') || !mobileBridge.includes('clearWorkoutState')) throw new Error('Native workout-state bridge is missing');
@@ -70,6 +73,11 @@ if(!directManifest.includes('REQUEST_INSTALL_PACKAGES')) throw new Error('Direct
 if(!manifest.includes('android:autoVerify="true"') || !manifest.includes('android:host="fittimer99.vercel.app"') || !manifest.includes('android:pathPrefix="/p/"')){
   throw new Error('Verified Android App Link intent filter is missing');
 }
+if(!manifest.includes('android.permission.FOREGROUND_SERVICE_DATA_SYNC')
+  || !manifest.includes('androidx.work.impl.foreground.SystemForegroundService')
+  || !manifest.includes('android:foregroundServiceType="dataSync"')){
+  throw new Error('Android foreground data-sync service is missing');
+}
 const assetLinks = JSON.parse(await readFile('.well-known/assetlinks.json', 'utf8'));
 const appLinkTarget = assetLinks.find(item => item && item.target && item.target.package_name === 'ru.fittimer.app');
 if(!appLinkTarget || !Array.isArray(appLinkTarget.relation) || !appLinkTarget.relation.includes('delegate_permission/common.handle_all_urls')){
@@ -80,9 +88,23 @@ if(!certs.includes('94:97:92:14:41:BD:0E:E1:05:C4:ED:D3:7A:24:A1:E8:88:99:81:E9:
   throw new Error('assetlinks.json does not contain the release certificate fingerprint');
 }
 
+const fitAudioAndroid = await readFile('android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java', 'utf8');
+if(!fitAudioAndroid.includes('MediaSession') || !fitAudioAndroid.includes('startMediaButtonControl') || !fitAudioAndroid.includes('"mediaButtonAction"')){
+  throw new Error('Android native headset/media-button control is missing');
+}
+const voiceModelWorker = await readFile('android/app/src/main/java/ru/fittimer/app/VoiceModelWorker.java', 'utf8');
+if(!voiceModelWorker.includes('setForegroundAsync') || !voiceModelWorker.includes('FOREGROUND_SERVICE_TYPE_DATA_SYNC')){
+  throw new Error('Voice-model download must stay alive as foreground WorkManager work');
+}
+const updateWorker = await readFile('android/app/src/main/java/ru/fittimer/app/UpdateDownloadWorker.java', 'utf8');
+if(!updateWorker.includes('extends Worker') || !updateWorker.includes('setForegroundAsync')
+  || !updateWorker.includes('FOREGROUND_SERVICE_TYPE_DATA_SYNC') || !updateWorker.includes('"Range"')){
+  throw new Error('Direct APK update must download in resumable foreground WorkManager work');
+}
 const fitSystem = await readFile('android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java', 'utf8');
 if(!fitSystem.includes('openExternal') || !fitSystem.includes('Intent.ACTION_VIEW')) throw new Error('Android external update launcher is missing');
 if(!fitSystem.includes('downloadUpdate') || !fitSystem.includes('verifyUpdateApk') || !fitSystem.includes('signature_mismatch')) throw new Error('Android direct updater validation is missing');
+if(!fitSystem.includes('UpdateDownloadWorker.WORK_NAME') || !fitSystem.includes('enqueueUniqueWork')) throw new Error('Android direct updater is not delegated to persistent WorkManager work');
 if(!fitSystem.includes('canRequestPackageInstalls') || !fitSystem.includes('ACTION_MANAGE_UNKNOWN_APP_SOURCES')) throw new Error('Android direct updater install permission flow is missing');
 if(!fitSystem.includes('ReviewManagerFactory') || !fitSystem.includes('launchReviewFlow')) throw new Error('Android in-app review flow is missing');
 

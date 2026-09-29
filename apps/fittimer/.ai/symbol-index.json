@@ -256,8 +256,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 1019,
-      "chars": 46271,
+      "lines": 1040,
+      "chars": 47050,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -278,6 +278,7 @@
         "grantSub",
         "humanDate",
         "initAccount",
+        "installReadyAndroidUpdate",
         "isPremium",
         "loadAccount",
         "loadPublicConfig",
@@ -852,11 +853,11 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 807,
-      "chars": 35300,
+      "lines": 821,
+      "chars": 35821,
       "symbols": [
         "add",
-        "advance",
+        "advanceFromHeadset",
         "applyTheme",
         "applyThemeFor",
         "applyVoiceCommand",
@@ -908,8 +909,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2394,
-      "chars": 106466,
+      "lines": 2403,
+      "chars": 106690,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1578,8 +1579,8 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 610,
-      "chars": 39965,
+      "lines": 611,
+      "chars": 40285,
       "ids": [
         "addExModal",
         "aemAI",

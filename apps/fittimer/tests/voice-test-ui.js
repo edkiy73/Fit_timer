@@ -44,19 +44,21 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(() => {
     const heard = d => window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail: d}));
     heard({text: '[unk]', kind: '', accepted: false});
-    heard({text: 'готово', kind: 'next', accepted: true, confidence: .9});
+    heard({text: 'готово', kind: 'done', accepted: true, confidence: .9});
+    heard({text: 'пропустить', kind: 'skip', accepted: true, confidence: .9});
     heard({text: 'пауза', kind: 'pause', accepted: false, confidence: .2});
   });
   const rows = await page.$$eval('#voiceTestList .vt-row', xs => xs.map(x => x.textContent + (x.classList.contains('ok') ? ' [ok]' : '')));
   ok('свежая строка сверху, неуверенное помечено', /пауза.*не расслышал уверенно/.test(rows[0] || ''), rows[0]);
-  ok('принятая команда названа и выделена', /готово.*Дальше.*\[ok\]/.test(rows[1] || ''), rows[1]);
-  ok('посторонний звук — не команда', /посторонний звук.*не команда/.test(rows[2] || ''), rows[2]);
+  ok('Пропустить названо отдельно и выделено', /пропустить.*Пропустить.*\[ok\]/.test(rows[1] || ''), rows[1]);
+  ok('Готово названо отдельно и выделено', /готово.*Готово.*\[ok\]/.test(rows[2] || ''), rows[2]);
+  ok('посторонний звук — не команда', /посторонний звук.*не команда/.test(rows[3] || ''), rows[3]);
 
   await page.click('#voiceTestModal .modal-btn');
   await page.waitForTimeout(150);
   ok('закрытие окна отпускает микрофон', await page.evaluate(() => window.__vt.stopped === 1));
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail: {text: 'готово', kind: 'next', accepted: true}})));
-  ok('после закрытия строки не добавляются', await page.evaluate(() => $('voiceTestList').children.length === 3));
+  ok('после закрытия строки не добавляются', await page.evaluate(() => $('voiceTestList').children.length === 4));
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');

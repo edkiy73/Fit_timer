@@ -511,7 +511,13 @@ function openHfCommands(){
    слышит (строк нет), слышит, но не то слово («не команда»), или слышит
    неуверенно. Работает только вне тренировки: тот же микрофон занят ею. */
 let voiceTestOn = false;
-const VT_KIND = {next:'handsfree.commandNext', pause:'handsfree.commandPause', resume:'handsfree.commandResume'};
+const VT_KIND = {
+  next:'handsfree.commandDone', // совместимость со старыми APK
+  done:'handsfree.commandDone',
+  skip:'handsfree.commandSkip',
+  pause:'handsfree.commandPause',
+  resume:'handsfree.commandResume'
+};
 function voiceTestRow(d){
   const box = $('voiceTestList');
   const row = document.createElement('div');
@@ -1040,6 +1046,9 @@ let pendingAction = null;
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  window.addEventListener('fitAppForeground', ()=>{
+    if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
+  });
   $('startMore').innerHTML = icon('more');
   $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu')); };
   $('progDescMore').onclick = ()=>{
