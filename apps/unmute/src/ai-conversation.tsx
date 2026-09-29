@@ -7,8 +7,8 @@ import type {
   StartRecognition,
   WebRecognitionError,
   WebRecognitionHandle
-} from './speech-web';
-import { speakWebText, startWebRecognition } from './speech-web';
+} from './speech-runtime';
+import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
 import {
   clearTalkTrialContext,
   getTalkTrialContext,
@@ -46,8 +46,8 @@ export function AIConversationView({
   onAccess,
   requestReply=requestTalkReply,
   requestReview=requestTalkReview,
-  speak=speakWebText,
-  startRecognition=startWebRecognition
+  speak=speakText,
+  startRecognition=startSpeechRecognition
 }:{
   activity:AIActivity;
   setId:string;
