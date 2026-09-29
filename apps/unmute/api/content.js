@@ -4,7 +4,7 @@ require('../lib/product');
 const crypto = require('crypto');
 const { store } = require('../../../packages/core/server/store');
 const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
-const { hasOwned } = require('../../../packages/core/server/entitlements');
+const { hasOwned, hasPremium } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
 
@@ -27,12 +27,38 @@ async function accountFromHeaders(req){
   const deviceId = String(req.headers['x-fit-device'] || '').trim().slice(0,80);
   const token = String(req.headers['x-fit-token'] || '');
   if(!email || !deviceId || !token) return null;
-  const raw = await store.get(`a:${sha(email).slice(0,32)}`);
+  const accountHash=sha(email).slice(0,32);
+  const raw = await store.get(`a:${accountHash}`);
   let acc=null;
   try{ acc=JSON.parse(raw); }catch(_){}
   const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
   if(!dev || !sameSecret(sha(token), dev.h || '')) return null;
-  return acc;
+  return {acc,accountHash};
+}
+
+async function learnedActivityIds(accountHash,setId){
+  if(!accountHash||!setId)return [];
+  let manifest=null;
+  try{ manifest=JSON.parse(await store.get(`s:${accountHash}`)); }catch(_){}
+  const meta=manifest&&manifest.accountDocs&&manifest.accountDocs[`progress:course:${setId}`];
+  if(!meta||meta.deleted||!meta.storeKey)return [];
+  let progress=null;
+  try{ progress=JSON.parse(await store.get(meta.storeKey)); }catch(_){}
+  if(!progress||typeof progress!=='object')return [];
+  const ids=new Set();
+  const addMap=value=>{
+    if(!value||typeof value!=='object'||Array.isArray(value))return;
+    for(const [id,record] of Object.entries(value)){
+      if(record&&typeof record==='object'&&!record.deleted)ids.add(String(id));
+    }
+  };
+  addMap(progress.seen);
+  addMap(progress.cards);
+  const practice=progress.practice&&typeof progress.practice==='object'?progress.practice:{};
+  addMap(practice.drill);
+  addMap(practice.listening);
+  addMap(practice.speaking);
+  return [...ids];
 }
 
 function adminOk(req){
@@ -62,11 +88,17 @@ module.exports = async function contentHandler(req,res){
       if(!set) return fail(res,404,'set_not_found');
 
       let full = set.access.mode === 'free';
+      let account=null;
       if(!full && set.access.mode === 'entitlement'){
-        const acc = await accountFromHeaders(req);
-        full = !!acc && hasOwned(acc,set.access.entitlement);
+        account = await accountFromHeaders(req);
+        full = !!account && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc));
       }
-      return send(res,200,{ok:true, access:full?'full':'preview', set:full?set:Content.previewSnapshot(set)});
+      const learned = !full&&account ? await learnedActivityIds(account.accountHash,id) : [];
+      return send(res,200,{
+        ok:true,
+        access:full?'full':'preview',
+        set:full?set:Content.previewSnapshot(set,learned)
+      });
     }
 
     return fail(res,400,'unknown_action');
