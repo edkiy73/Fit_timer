@@ -169,13 +169,13 @@ export function OnboardingGate({children}:{children:ReactNode}){
     if(busy)return;
     setBusy(true);
     markOnboardingDone();
-    setLocalDone(true);
 
     const nodeId=runtime.state?.currentNode?.id??null;
     try{
       await patchSettings({onboardingDoneAt:new Date().toISOString()});
       void trackOnboardingComplete();
     }catch{}
+    setLocalDone(true);
 
     if(nodeId){
       navigate('/learn/'+encodeURIComponent(nodeId));
