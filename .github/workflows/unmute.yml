@@ -146,10 +146,6 @@ jobs:
           cache: npm
           cache-dependency-path: apps/unmute/package-lock.json
 
-      # A cold simulator boot takes minutes; start it now so it overlaps npm ci and the build.
-      - name: Boot iOS simulator in background
-        run: bash scripts/smoke-ios-device.sh --boot
-
       - name: Dependencies
         run: npm ci --no-audit --no-fund
 
