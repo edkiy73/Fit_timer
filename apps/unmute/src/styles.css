@@ -465,3 +465,14 @@ h2{margin:0 0 8px}
   .notification-time{align-items:flex-start;flex-direction:column}
   .notification-time input{width:100%}
 }
+
+
+.notification-status{display:grid;gap:7px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.notification-status strong{font-size:13px}
+.notification-status span{color:var(--muted);font-size:12px;line-height:1.45}
+.notification-status .secondary-button{justify-self:start}
+.notification-status-ok{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.notification-status-warning{background:color-mix(in srgb,var(--danger) 6%,var(--surface))}
+@media(max-width:520px){
+  .notification-status .secondary-button{width:100%}
+}

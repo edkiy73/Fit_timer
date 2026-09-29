@@ -22,6 +22,7 @@ import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { LegacyProgressImportPanel } from './legacy-import-ui';
 import { NotificationSettingsPanel } from './notification-settings';
+import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -90,6 +91,8 @@ function Shell(){
   const {t} = useI18n();
   return (
     <main className="app">
+      <NotificationRouteListener />
+      <NotificationDelivery />
       <header className="app-header">
         <div>
           <div className="eyebrow">{t('app.eyebrow')}</div>
