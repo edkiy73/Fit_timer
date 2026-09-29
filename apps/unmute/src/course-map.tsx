@@ -43,12 +43,17 @@ export function buildCourseMapItems(state:LearnerCourseState):CourseMapItem[]{
   });
 }
 
-function statusText(status:CourseMapStatus,t:(key:string,vars?:Record<string,unknown>)=>string):string{
-  if(status==='complete')return t('courseMap.statusComplete');
-  if(status==='current')return t('courseMap.statusCurrent');
-  if(status==='available')return t('courseMap.statusAvailable');
-  if(status==='purchase-locked')return t('courseMap.statusPurchaseLocked');
-  return t('courseMap.statusPrerequisiteLocked');
+function statusKey(status:CourseMapStatus):
+  |'courseMap.statusComplete'
+  |'courseMap.statusCurrent'
+  |'courseMap.statusAvailable'
+  |'courseMap.statusPurchaseLocked'
+  |'courseMap.statusPrerequisiteLocked'{
+  if(status==='complete')return 'courseMap.statusComplete';
+  if(status==='current')return 'courseMap.statusCurrent';
+  if(status==='available')return 'courseMap.statusAvailable';
+  if(status==='purchase-locked')return 'courseMap.statusPurchaseLocked';
+  return 'courseMap.statusPrerequisiteLocked';
 }
 
 export function CourseMapView({
@@ -136,9 +141,11 @@ export function CourseMapView({
               <div className="course-map-node-body">
                 <div className="course-map-node-top">
                   <span className="course-map-day">{label}</span>
-                  <span className="course-map-status">{statusText(item.status,t)}</span>
+                  <span className="course-map-status">{t(statusKey(item.status))}</span>
                 </div>
-                <strong>{localized(item.node.title,locale)}</strong>
+                {localized(item.node.title,locale)!==label&&(
+                  <strong>{localized(item.node.title,locale)}</strong>
+                )}
                 {item.status==='purchase-locked'&&(
                   <span className="course-map-note">{t('courseMap.purchaseHint')}</span>
                 )}
