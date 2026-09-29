@@ -15,7 +15,7 @@ export const en: Record<keyof typeof ru, string> = {
   'today.offline': 'Offline copy',
   'today.day': 'Day {day}',
   'today.nextStep': 'Next step',
-  'today.activities': '{count} activities',
+  'today.activities': 'Activities: {count}',
   'today.courseProgress': 'Course progress',
   'today.completeTitle': 'Course complete',
   'today.completeText': 'All required steps are complete. Reviews and learned material stay available.',
