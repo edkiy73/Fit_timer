@@ -340,19 +340,19 @@ h2{margin:0 0 8px}
 }
 
 
-.onboarding{display:grid;max-width:700px;margin:0 auto;padding:8px 0 28px}
+.onboarding{display:grid;max-width:720px;margin:0 auto;padding:8px 0 28px}
 .onboarding-card{display:grid;gap:20px;border:1px solid var(--line);border-radius:22px;padding:28px;background:var(--surface)}
 .onboarding-card h2{margin:4px 0 0;font-size:32px;line-height:1.08}
 .onboarding-lead{margin:0;max-width:58ch;color:var(--muted);font-size:16px;line-height:1.55}
-.onboarding-points{display:grid;gap:10px}
-.onboarding-points article{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card)}
-.onboarding-number{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:900}
+.onboarding-points{display:grid;gap:12px}
+.onboarding-points article{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:14px;padding:14px}
 .onboarding-points strong{display:block;margin-bottom:4px}
 .onboarding-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.onboarding-number{display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:900}
 .onboarding-start{width:100%}
 .onboarding-account-note{margin:0;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
-.onboarding-loading{min-height:360px;align-content:center}
+.onboarding-loading{min-height:320px;align-content:center}
 @media(max-width:520px){
-  .onboarding-card{padding:22px}
+  .onboarding-card{padding:20px}
   .onboarding-card h2{font-size:28px}
 }
