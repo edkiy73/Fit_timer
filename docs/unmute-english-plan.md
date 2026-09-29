@@ -113,9 +113,9 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 Состояние production (2026-09-29, `/api/health`): Redis подключён, регион `sin1`; **курс и словарь не опубликованы** (`/api/content` → `sets:[]`, `/api/lexicon` → `404`) — до фазы 5c публикация честно отказывала (`lexical_coverage_incomplete`: 472 слова без записи, 32 неоднозначных). Почта идёт с тестового отправителя Resend (`onboarding@resend.dev`) — такие письма доходят только владельцу аккаунта Resend. ИИ-провайдер не настроен.
 
 Шаги (после merge фазы 5c и деплоя):
-1. **Контент** (владелец или агент с доступом к `unmute99.vercel.app`): `#/admin` → «Контент» → «Импорт из English» (при существующем черновике — с перезаписью) → при желании «IPA bootstrap» → «Опубликовать». Или из терминала: `ADMIN_KEY=… node scripts/import-legacy-content.mjs --publish`. Проверка — workflow «UnMute — production readiness» зелёный.
-2. **Почта** (только владелец): подтвердить свой домен в Resend и задать отправителя (как у FitTimer, `apps/fittimer/docs/setup-vercel.md`), redeploy.
-3. **Семья:** выдать `course.general-foundation` в `#/admin` → аккаунты; контрольный проход телефон + компьютер: день 1 → вход → импорт старого файла.
+1. **Контент** (владелец или агент с доступом к `unmute99.vercel.app`): `#/admin` → раздел «Релизы и словарь» → «Импортировать legacy» (при существующем черновике — с перезаписью) → при желании «Проверить IPA» / «Добавить IPA в draft» → «Опубликовать release». Или из терминала: `ADMIN_KEY=… node scripts/import-legacy-content.mjs --publish`. Проверка — workflow «UnMute — production readiness» зелёный.
+2. **Почта** (только владелец): подтвердить свой домен в Resend и задать `MAIL_FROM` (`apps/fittimer/docs/setup-vercel.md`), redeploy. Пока домена нет, Resend доставляет письма только владельцу аккаунта Resend, остальным `/api/auth` отвечает `502 mail_failed` (так же у FitTimer: `MAIL_FROM` не задан).
+3. **Семья без почты:** `#/admin` → «Пользователи» → email → «Выдать» `course.general-foundation` (аккаунт создаётся сам) → «Код для входа» (одноразовый, 15 минут). На экране входа: email → «У меня есть код» → код. Контрольный проход телефон + компьютер: день 1 → вход → импорт старого файла.
 4. **ИИ (Plus):** провайдер и лимиты в Vercel/админке (ключи — владелец).
 
 `ADMIN_KEY` должен быть длинным случайным значением; если ключ где-то засветился — сменить в Vercel и redeploy.

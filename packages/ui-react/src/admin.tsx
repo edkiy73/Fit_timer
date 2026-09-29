@@ -36,7 +36,8 @@ const COPY = {
     clear:'Очистить', migration:'Миграция хранилища',
     owned:'Покупки', access:'Доступ', sku:'Покупка (SKU)', grant:'Выдать', revoke:'Забрать',
     premiumDays:'Premium, дней', grantPremium:'Выдать Premium', revokePremium:'Забрать Premium',
-    accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок.',
+    accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок. Аккаунт создаётся сам, если его ещё нет.',
+    loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
     mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню'
   },
@@ -52,7 +53,8 @@ const COPY = {
     clear:'Clear', migration:'Storage migration',
     owned:'Purchases', access:'Access', sku:'Purchase (SKU)', grant:'Grant', revoke:'Revoke',
     premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
-    accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period.',
+    accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period. The account is created if it does not exist yet.',
+    loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
     mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu'
   }
@@ -88,9 +90,25 @@ function AccessForm({client, adminKey, copy, onChanged}: {client: AdminClient; a
     setBusy(true);
     setMessage('');
     try{
+      // Family members may not have signed in yet (or mail may be down): granting
+      // access creates the account first, so the grant never fails on a new email.
+      if(!body.revoke) await client.action(adminKey, 'user_create', {email});
       await client.action(adminKey, action, {email, ...body});
       setMessage(copy.accessDone);
       onChanged();
+    }catch(e){
+      setMessage(String((e as {code?: string})?.code || copy.requestFailed));
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  async function loginCode(){
+    setBusy(true);
+    setMessage('');
+    try{
+      const result = await client.action(adminKey, 'user_test_code', {email});
+      setMessage(copy.loginCodeDone + ' ' + String(result.email || email) + ': ' + String(result.code || '') + ' — ' + copy.loginCodeHint);
     }catch(e){
       setMessage(String((e as {code?: string})?.code || copy.requestFailed));
     }finally{
@@ -116,6 +134,9 @@ function AccessForm({client, adminKey, copy, onChanged}: {client: AdminClient; a
         <label><span>{copy.premiumDays}</span><input type="number" min={1} max={3650} value={days} onChange={e => setDays(e.target.value)} /></label>
         <button type="button" disabled={busy || !email} onClick={() => void run('user_premium', {days:Number(days) || 30})}>{copy.grantPremium}</button>
         <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void run('user_premium', {revoke:true})}>{copy.revokePremium}</button>
+      </div>
+      <div className="ab-admin-row">
+        <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void loginCode()}>{copy.loginCode}</button>
       </div>
       {message && <p className="ab-admin-empty" role="status">{message}</p>}
     </article>
