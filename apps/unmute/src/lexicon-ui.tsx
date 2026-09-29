@@ -24,9 +24,12 @@ import { speakWebText } from './speech-web';
 const LEXICON_QUERY_KEY=['published-lexicon'] as const;
 const WORD_RE=/[A-Za-z]+(?:['\u2019][A-Za-z]+)*/g;
 
-export interface LexiconClickRef extends LexiconContextRef {
+export interface LexiconClickRef {
   surface:string;
-  occurrence?:number;
+  lexemeId?:string|undefined;
+  senseId?:string|undefined;
+  formId?:string|undefined;
+  occurrence?:number|undefined;
 }
 
 export interface LexiconSelection {
@@ -82,11 +85,11 @@ export function lexiconContextFor(
   const pinned=matches.find(ref=>ref.occurrence===occurrence)
     ?? (matches.length===1&&matches[0]?.occurrence===undefined?matches[0]:undefined);
   if(!pinned)return {};
-  return {
-    lexemeId:pinned.lexemeId,
-    senseId:pinned.senseId,
-    formId:pinned.formId
-  };
+  const context:LexiconContextRef={};
+  if(pinned.lexemeId)context.lexemeId=pinned.lexemeId;
+  if(pinned.senseId)context.senseId=pinned.senseId;
+  if(pinned.formId)context.formId=pinned.formId;
+  return context;
 }
 
 function localizedValues(values:Record<string,string[]>|undefined,locale:string):string[]{
