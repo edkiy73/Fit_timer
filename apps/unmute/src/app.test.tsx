@@ -36,10 +36,10 @@ beforeEach(() => {
 });
 
 describe('UnMute: English for Expats starter', () => {
-  it('works without an account and offers sign-in', async () => {
+  it('opens Today without an account and offers sign-in', async () => {
     const user = userEvent.setup();
     const router = renderApp();
-    expect(await screen.findByRole('heading', {name:t['app.readyTitle']})).toBeTruthy();
+    expect(await screen.findByRole('heading', {name:t['today.title']})).toBeTruthy();
     await user.click(screen.getByRole('link', {name:t['nav.signIn']}));
     expect(router.state.location.pathname).toBe('/account');
     expect(await screen.findByRole('textbox', {name:'Email'})).toBeTruthy();
