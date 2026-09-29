@@ -98,6 +98,7 @@ export function CourseMapView({
   const state=runtime.state;
   if(!state)return null;
   const items=buildCourseMapItems(state);
+  const firstPurchaseLockedId=items.find(item=>item.status==='purchase-locked')?.node.id ?? null;
   const previewDays=state.set.access.mode==='entitlement'
     ? state.set.access.freePreview?.days ?? 0
     : 0;
@@ -149,7 +150,7 @@ export function CourseMapView({
                 {localized(item.node.title,locale)!==label&&(
                   <strong><LexiconText text={localized(item.node.title,locale)} /></strong>
                 )}
-                {item.status==='purchase-locked'&&(
+                {item.status==='purchase-locked'&&item.node.id===firstPurchaseLockedId&&(
                   <span className="course-map-note">{t('courseMap.purchaseHint')}</span>
                 )}
                 {item.status==='prerequisite-locked'&&(
