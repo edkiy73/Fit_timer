@@ -8,6 +8,7 @@ import { startWebRecognition } from './speech-web';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
+import { LexiconText } from './lexicon-ui';
 
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
 type PatternMode=PracticeSrsKind|'complete';
@@ -112,7 +113,7 @@ export function PatternPracticeView({
   return (
     <article className="learn-card">
       <div className="eyebrow">{t('pattern.completeMode')}</div>
-      <h3>{activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''}</h3>
+      <h3><LexiconText text={activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''} refs={activity.lexiconRefs} /></h3>
       <p className="learn-hint">{t('pattern.completeText')}</p>
       <button className="primary-button" type="button" onClick={onDone}>
         {t('learn.next')}
