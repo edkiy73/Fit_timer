@@ -163,3 +163,18 @@ h2{margin:0 0 8px}
 .dialogue-bubble strong{font-size:18px}
 .dialogue-bubble .learn-back{justify-self:start}
 .dialogue-task{margin:0;font-weight:800;line-height:1.45}
+
+
+.today-review{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));padding:16px 18px}
+.today-review>div{display:grid;gap:4px}
+.today-review strong{font-size:17px}
+.today-review span{color:var(--muted);font-size:13px;line-height:1.4}
+.review-shell{display:grid;gap:16px}
+.review-shell h2{margin:4px 0 0;font-size:28px}
+.review-card{gap:16px}
+.review-kind{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+@media(max-width:480px){
+  .today-review{display:grid}
+  .today-review .primary-button{width:100%}
+  .review-shell h2{font-size:26px}
+}
