@@ -20,6 +20,7 @@ import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
+import { LegacyProgressImportPanel } from './legacy-import-ui';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -138,6 +139,7 @@ function Account(){
           <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate(returnTo)} />
         </>
       )}
+<LegacyProgressImportPanel />
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
     </section>
   );
