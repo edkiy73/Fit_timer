@@ -112,6 +112,8 @@ export const ru = {
   'access.activeOwned': 'Этот курс открыт для аккаунта навсегда.',
   'access.activePlus': 'Полный курс открыт через UnMute Plus.',
   'access.activeGeneric': 'Для этого курса уже есть полный доступ.',
+  'access.contentPendingTitle': 'Доступ есть — загружаем курс',
+  'access.contentPendingText': 'Права аккаунта подтверждены, но полный контент ещё не загружен на это устройство. Подключись к интернету и повтори.',
   'access.openCourse': 'Открыть курс',
   'courseMap.prerequisiteHint': 'Этот день откроется после завершения предыдущего обязательного шага.',
   'courseMap.open': 'Открыть',
