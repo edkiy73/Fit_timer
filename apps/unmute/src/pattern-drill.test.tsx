@@ -65,6 +65,40 @@ describe('pattern drill',()=>{
     expect(drillPassed(6,10)).toBe(false);
   });
 
+  it('keeps mixed drill outside SRS persistence',async()=>{
+    const user=userEvent.setup();
+    const savePractice=vi.fn(async()=>{});
+    const onDone=vi.fn();
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="pattern-mixed-test.locale"
+        systemLanguages={['ru']}
+      >
+        <PatternDrillView
+          activity={activity}
+          setId="mixed-review"
+          savePractice={savePractice}
+          onDone={onDone}
+          variant="mixed"
+        />
+      </I18nProvider>
+    );
+
+    for(let i=0;i<2;i++){
+      await user.click(screen.getByRole('button',{name:'Сказал'}));
+      await user.click(screen.getByRole('button',{name:'Сказал так же'}));
+    }
+
+    expect(await screen.findByRole('heading',{name:'Смешанный дрилл'})).toBeTruthy();
+    expect(savePractice).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button',{name:'К повтору'}));
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
   it('finishes a fast self-rated drill and saves practice SRS once',async()=>{
     const user=userEvent.setup();
     const {savePractice,onDone}=renderDrill();
