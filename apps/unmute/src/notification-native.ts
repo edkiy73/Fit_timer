@@ -87,7 +87,7 @@ export async function requestExactNotificationTime():Promise<boolean>{
   return exactNotificationTimeAvailable();
 }
 
-function routeFromAction(event:unknown):'/'|'/review'|null{
+export function notificationRouteFromAction(event:unknown):'/'|'/review'|null{
   if(!event||typeof event!=='object')return null;
   const notification=(event as {notification?:unknown}).notification;
   if(!notification||typeof notification!=='object')return null;
@@ -107,7 +107,7 @@ export function subscribeNotificationRoute(
   let live=true;
   let handle:ListenerHandle|null=null;
   const attached=plugin.addListener('localNotificationActionPerformed',event=>{
-    const route=routeFromAction(event);
+    const route=notificationRouteFromAction(event);
     if(route&&live)listener(route);
   });
 
