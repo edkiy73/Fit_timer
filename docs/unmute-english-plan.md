@@ -54,7 +54,8 @@
 | Фаза 4e-2b — pattern speaking | ✅ в `main` (#232) | `src/pattern-speaking.tsx` + Web Speech recognition: max 6 phrases, legacy loose matcher, manual fallback, speaking SRS |
 | Фаза 4e-3 — dialogue runner | ✅ в `main` (#233) | `src/dialogue.tsx`: partner TTS, text/voice answer, legacy check+loose matcher, score persistence |
 | Фаза 4f-1 — interval review session | ✅ в `main` (#234) | cards (cap 30) + pattern drill/listening/speaking (3/2/2), pinned session, wrong cards return to the end |
-| Фаза 4f-2 — personal word review | ✅ в этой фазе | `progress:words` + published lexicon: cap 20, translation → reveal English → remembered/forgot, word SRS |
+| Фаза 4f-2 — personal word review | ✅ в `main` (#235) | `progress:words` + published lexicon: cap 20, translation → reveal English → remembered/forgot, word SRS |
+| Фаза 4f-3 — mixed drill | ✅ в этой фазе | 10 shuffled phrases from ≥3 learned patterns; exact legacy eligibility; no SRS/metric writes |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -187,6 +188,7 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 | 7 | Бали в примерах | нейтрализовать отдельной задачей после переноса |
 | 8 | Первый канал оплаты, цены, нарезка пакетов (§4) | до фазы 6 |
 | 9 | Судьба репозитория `English` | после переноса семьи — заморозить, README со ссылкой на `apps/unmute` |
+| 10 | Поведение слов в учебном контенте | ✅ все английские слова нажимаемы для мгновенного словарного popup; отдельной кнопки/действия «добавить слово» нет. Клик сам по себе не создаёт запись SRS. `progress:words` нужен для уже существующего/импортированного word-review состояния |
 
 ---
 
@@ -372,7 +374,8 @@ DictEntry { word, ru }
 - ✅ **4e-2b. Pattern speaking:** Web Speech Recognition слушает `en-US` с тремя альтернативами, результат сравнивается тем же legacy `looseSame` правилом (служебные `a/an/the/to/of` игнорируются, достаточно ≥70% слов цели). Есть повторный тап для остановки, понятные ошибки permission/no-speech/network/unsupported, «Показать ответ» и ручное «Всё же засчитать». До 6 фраз, итог ≥70% сохраняется в `practice.speaking`; matcher добавлен в frozen legacy parity.
 - ✅ **4e-3. Dialogue runner:** перенесён реальный legacy flow диалогов: реплика партнёра автоматически озвучивается, ответ можно написать или сказать, проверка использует `check()` + тот же `looseSame` для голосовых альтернатив, затем показывается/озвучивается эталон. Итоговый процент сохраняется как `dialogue-score:<activityId>`, activity помечается `seen` и день — learning day; порог 70% влияет на подсказку/повтор, но как и в legacy завершённый диалог считается пройденным независимо от результата.
 - ✅ **4f-1. Единый интервальный повтор курса:** «Сегодня» показывает due-очередь до нового материала. Сессия фиксируется при входе и объединяет карточки (до 30, oldest-due-first) и уже изученные pattern-режимы с legacy caps `drill 3 / listening 2 / speaking 2`. Неверная карточка падает в box 0 и возвращается в конец текущего подхода до правильного ответа; practice-mode проходит один due-заход и сохраняет свой SRS. Tombstones и будущие due не попадают в очередь. Слова остаются отдельным 4f-2.
-- ✅ **4f-2. Личные слова в Review:** `progress:words` теперь живой query с document-sync invalidation и опубликованным lexicon snapshot. В общий pinned Review после карточек/паттернов добавляются до 20 due-слов: сначала перевод, затем раскрытие английской lemma + TTS, после чего «Вспомнил / Не вспомнил» применяет legacy word SRS `[0,2,6,16,35]`. Неверное слово не зацикливается в текущем подходе, но остаётся due для следующего — как в legacy. Сегодня учитывает due-слова в общем счётчике; устаревшие lexeme/sense ссылки не угадываются. Добавление новых слов по тапу в теории остаётся частью lexicon/dictionary UI, не этого шага.
+- ✅ **4f-2. Личные слова в Review:** `progress:words` теперь живой query с document-sync invalidation и опубликованным lexicon snapshot. В общий pinned Review после карточек/паттернов добавляются до 20 due-слов: сначала перевод, затем раскрытие английской lemma + TTS, после чего «Вспомнил / Не вспомнил» применяет legacy word SRS `[0,2,6,16,35]`. Неверное слово не зацикливается в текущем подходе, но остаётся due для следующего — как в legacy. Сегодня учитывает due-слова в общем счётчике; устаревшие lexeme/sense ссылки не угадываются. Новых записей SRS по клику не создаём: по решению владельца все слова в учебном контенте просто нажимаемы для перевода; отдельного «добавить слово» не будет.
+- ✅ **4f-3. Смешанный дрилл:** доступен после минимум трёх изученных pattern (`practice.drill.box > 0`), как frozen legacy `studiedPatterns()`. В мешок попадают фразы всех таких pattern, случайно выбираются 10, затем используется тот же 5-секундный speed-drill с возвратом неверной фразы в конец. Mixed-заход намеренно не меняет `practice.drill`, due-даты или speed metrics — frozen legacy также пропускает `gradePat()`/`S.speed` при `mixed=true`.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
