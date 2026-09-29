@@ -16,6 +16,7 @@ public class VoiceCommandsTest {
         String ru = VoiceCommands.grammarJson("ru");
         assertTrue(ru.startsWith("[") && ru.endsWith("]"));
         assertTrue(ru.contains("\"готово\""));
+        assertTrue(ru.contains("\"пропустить\""));
         assertTrue(ru.contains("\"на паузу\""));
         assertTrue(ru.contains("\"продолжить\""));
         assertTrue("[unk] keeps random speech from being forced into a command", ru.contains("\"[unk]\""));
@@ -24,15 +25,18 @@ public class VoiceCommandsTest {
     }
 
     @Test
-    public void allFormsOfReadyMeanNext() {
-        for (String w : new String[]{"готово", "готов", "готова", "готовы", "Готово "}) {
-            assertEquals(w, VoiceCommands.NEXT, VoiceCommands.kindFlexible(w));
+    public void doneAndSkipStayDifferent() {
+        for (String w : new String[]{"готово", "готов", "готова", "готовы", "дальше", "сделал", "закончил", "Готово "}) {
+            assertEquals(w, VoiceCommands.DONE, VoiceCommands.kindFlexible(w));
+        }
+        for (String w : new String[]{"пропустить", "пропусти", "skip"}) {
+            assertEquals(w, VoiceCommands.SKIP, VoiceCommands.kindFlexible(w));
         }
     }
 
     @Test
     public void unknownTokensAroundCommandAreIgnored() {
-        assertEquals(VoiceCommands.NEXT, VoiceCommands.kindFlexible("[unk] готово"));
+        assertEquals(VoiceCommands.DONE, VoiceCommands.kindFlexible("[unk] готово"));
         assertEquals(VoiceCommands.PAUSE, VoiceCommands.kindFlexible("пауза [unk]"));
         assertEquals("", VoiceCommands.kindFlexible("[unk]"));
         assertEquals("", VoiceCommands.kindFlexible("[unk] [unk]"));
@@ -40,14 +44,15 @@ public class VoiceCommandsTest {
 
     @Test
     public void repeatedCommandCountsOnce() {
-        assertEquals(VoiceCommands.NEXT, VoiceCommands.kindFlexible("готово готово"));
+        assertEquals(VoiceCommands.DONE, VoiceCommands.kindFlexible("готово готово"));
         assertEquals(VoiceCommands.PAUSE, VoiceCommands.kindFlexible("стоп стоп"));
-        assertEquals("trailing filler after a command still works", VoiceCommands.NEXT, VoiceCommands.kindFlexible("готово да"));
+        assertEquals("trailing filler after a command still works", VoiceCommands.DONE, VoiceCommands.kindFlexible("готово да"));
     }
 
     @Test
     public void conflictingOrPartialWordsAreNotCommands() {
         assertEquals("mixed commands are ambiguous", "", VoiceCommands.kindFlexible("готово стоп"));
+        assertEquals("done and skip together are ambiguous", "", VoiceCommands.kindFlexible("готово пропустить"));
         assertEquals("", VoiceCommands.kindFlexible("го"));
         assertEquals("", VoiceCommands.kindFlexible("про"));
         assertEquals("", VoiceCommands.kindFlexible("ну как дела"));
