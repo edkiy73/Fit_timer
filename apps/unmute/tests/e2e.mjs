@@ -12,12 +12,51 @@ process.env.ADMIN_KEY ||= 'starter-e2e';
 const require = createRequire(import.meta.url);
 const APP = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(APP, 'dist');
-const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
+const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'content'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
 const PORT = 4175;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+
+const Content = require(join(APP, 'lib', 'content-store.js'));
+await Content.putDraft({
+  schemaVersion:1,
+  id:'general-foundation',
+  revision:1,
+  slug:'general-foundation',
+  title:{ru:'Основной курс'},
+  level:{labels:[]},
+  access:{mode:'free'},
+  defaultRoadmapId:'main',
+  roadmaps:[{
+    id:'main',
+    title:{ru:'Путь'},
+    nodes:[{
+      id:'day-1',
+      kind:'lesson',
+      title:{ru:'День 1'},
+      dayIndex:1,
+      order:0,
+      prerequisites:[],
+      activityIds:['day-1.theory'],
+      optional:false
+    }]
+  }],
+  activities:[{
+    id:'day-1.theory',
+    revision:1,
+    type:'theory',
+    tags:[],
+    revisionProgress:'preserve',
+    lexiconRefs:[],
+    body:{ru:'Hello.'},
+    format:'text'
+  }],
+  resources:[]
+});
+await Content.publish('general-foundation');
+
 // Copy of the default locale (src/i18n) and of the shared sign-in form.
 const COPY = {
   ru: {signIn:'Войти', account:'Аккаунт', today:'Сегодня', onboarding:'Говори по-английски в реальной жизни', start:'Начать день 1', send:'Прислать код', verify:'Войти', handle:'Ник', create:'Создать аккаунт'},
@@ -25,7 +64,9 @@ const COPY = {
 }['ru'];
 
 const server = createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url || '/', URL_).pathname);
+  const parsedUrl = new URL(req.url || '/', URL_);
+  const path = decodeURIComponent(parsedUrl.pathname);
+  req.query = Object.fromEntries(parsedUrl.searchParams.entries());
   const api = /^\/api\/([a-z]+)$/.exec(path);
   if(api){
     const handler = API[api[1]];
