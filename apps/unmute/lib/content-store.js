@@ -525,22 +525,25 @@ async function getPublished(id){
 function previewSnapshot(set){
   if(set.access.mode === 'free') return set;
   const preview = set.access.freePreview;
-  if(!preview || preview.kind !== 'first-days' || preview.days <= 0){
-    return {...set, roadmaps:set.roadmaps.map(r => ({...r, nodes:[]})), activities:[]};
-  }
+  const days = preview && preview.kind === 'first-days' ? Math.max(0,+preview.days||0) : 0;
   const allowedIds = new Set();
   const roadmaps = set.roadmaps.map(roadmap => {
-    const visible = roadmap.nodes.filter(node => Number.isInteger(node.dayIndex) && node.dayIndex <= preview.days);
-    const visibleIds = new Set(visible.map(node => node.id));
-    const nodes = visible.map(node => ({
-      ...node,
-      prerequisites:(node.prerequisites || []).filter(id => visibleIds.has(id))
-    }));
-    for(const node of nodes) for(const id of (node.activityIds || [])) allowedIds.add(id);
-    return {...roadmap, nodes};
+    const nodes = roadmap.nodes.map(node => {
+      const included = Number.isInteger(node.dayIndex) && node.dayIndex <= days;
+      if(included){
+        for(const id of (node.activityIds || [])) allowedIds.add(id);
+        return node;
+      }
+      // Keep safe roadmap metadata so preview users can see the full course map,
+      // but never ship paid activity ids/completion references without entitlement.
+      const skeleton={...node,activityIds:[]};
+      delete skeleton.completion;
+      return skeleton;
+    });
+    return {...roadmap,nodes};
   });
   const activities = set.activities.filter(activity => allowedIds.has(activity.id));
-  return {...set, roadmaps, activities};
+  return {...set,roadmaps,activities};
 }
 
 module.exports = {
