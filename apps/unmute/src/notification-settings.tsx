@@ -6,6 +6,14 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings
 } from './settings-data';
+import {
+  exactNotificationTimeAvailable,
+  nativeNotificationsAvailable,
+  notificationPermissionState,
+  requestExactNotificationTime,
+  requestNotificationPermission,
+  type NotificationPermissionState
+} from './notification-native';
 
 function nextSettings(
   current:NotificationSettings,
@@ -23,6 +31,22 @@ export function NotificationSettingsPanel(){
   const [settings,setSettings]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [loaded,setLoaded]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [permission,setPermission]=useState<NotificationPermissionState>('unavailable');
+  const [exact,setExact]=useState<boolean|null>(null);
+  const native=nativeNotificationsAvailable();
+
+  const refreshNativeState=async(request=false)=>{
+    if(!native){
+      setPermission('unavailable');
+      setExact(null);
+      return;
+    }
+    const next=request
+      ? await requestNotificationPermission()
+      : await notificationPermissionState();
+    setPermission(next);
+    setExact(next==='granted'?await exactNotificationTimeAvailable():null);
+  };
 
   useEffect(()=>{
     let live=true;
@@ -35,6 +59,7 @@ export function NotificationSettingsPanel(){
       }
     };
     void load();
+    void refreshNativeState();
     const stop=appDocs.subscribe(change=>{
       if(change.keys.some(ref=>ref.key==='settings'))void load();
     });
@@ -47,6 +72,29 @@ export function NotificationSettingsPanel(){
     setSaving(true);
     try{
       await patchSettings({notifications:next});
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  const setEnabled=async(enabled:boolean)=>{
+    await save({enabled});
+    if(enabled&&native)await refreshNativeState(true);
+  };
+
+  const askSystemPermission=async()=>{
+    setSaving(true);
+    try{
+      await refreshNativeState(true);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  const askExactTime=async()=>{
+    setSaving(true);
+    try{
+      setExact(await requestExactNotificationTime());
     }finally{
       setSaving(false);
     }
@@ -67,13 +115,64 @@ export function NotificationSettingsPanel(){
           type="checkbox"
           checked={settings.enabled}
           disabled={saving}
-          onChange={event=>void save({enabled:event.target.checked})}
+          onChange={event=>void setEnabled(event.target.checked)}
         />
         <span>
           <strong>{t('notifications.enabled')}</strong>
           <small>{t('notifications.enabledHint')}</small>
         </span>
       </label>
+
+      {settings.enabled&&!native&&(
+        <div className="notification-status" role="note">
+          <strong>{t('notifications.webStatusTitle')}</strong>
+          <span>{t('notifications.webStatusText')}</span>
+        </div>
+      )}
+
+      {settings.enabled&&native&&permission==='granted'&&(
+        <div className="notification-status notification-status-ok" role="status">
+          <strong>{t('notifications.nativeReadyTitle')}</strong>
+          <span>
+            {exact===false
+              ? t('notifications.nativeApproximate')
+              : t('notifications.nativeReadyText')}
+          </span>
+          {exact===false&&(
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={saving}
+              onClick={()=>void askExactTime()}
+            >
+              {t('notifications.allowExact')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {settings.enabled&&native&&permission!=='granted'&&(
+        <div className="notification-status notification-status-warning" role="status">
+          <strong>
+            {permission==='denied'
+              ? t('notifications.permissionDeniedTitle')
+              : t('notifications.permissionNeededTitle')}
+          </strong>
+          <span>
+            {permission==='denied'
+              ? t('notifications.permissionDeniedText')
+              : t('notifications.permissionNeededText')}
+          </span>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={saving}
+            onClick={()=>void askSystemPermission()}
+          >
+            {t('notifications.allowSystem')}
+          </button>
+        </div>
+      )}
 
       <label className="notification-time">
         <span>{t('notifications.time')}</span>
