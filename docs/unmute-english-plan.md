@@ -48,7 +48,8 @@
 | Фаза 4a — learner course loader | ✅ в `main` (#226) | `src/course-loader.ts`: published Set → cached fallback → local-first progress → current roadmap node |
 | Фаза 4b — React/Query course runtime | ✅ в `main` (#227) | `src/course-runtime.tsx`: shared screen state + separate content/progress queries + live document-sync invalidation |
 | Фаза 4c — Today learner shell | ✅ в `main` (#228) | `src/today.tsx`: loading/error/offline/current day/current node/course completion over live runtime |
-| Фаза 4d — basic activity runner | ✅ в этой фазе | `src/learn.tsx` + `activity-progress.ts`: node session, theory/choice/text/translation, local-first save + SRS/stats |
+| Фаза 4d — basic activity runner | ✅ в `main` (#229) | `src/learn.tsx` + `activity-progress.ts`: node session, theory/choice/text/translation, local-first save + SRS/stats |
+| Фаза 4e-1 — pattern speed drill | ✅ в этой фазе | `src/pattern-drill.tsx`: legacy-style timed self-rating, 70% threshold, drill SRS + speed metric |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -361,6 +362,7 @@ DictEntry { word, ru }
 - ✅ **4b. React/Query runtime:** `LearnerCourseProvider` монтируется в пользовательском приложении и даёт всем будущим экранам одно состояние курса. Published content и локальный progress — разные query, поэтому каждое сохранение ответа не дёргает `/api/content`; изменения `document-sync` (local/remote) инвалидируют только progress query и сразу пересчитывают current node.
 - ✅ **4c. Каркас «Сегодня»:** домашний экран впервые читает learner runtime и показывает загрузку/ошибку, офлайн snapshot, текущий день и node, число заданий, общий прогресс и завершение курса. Сам запуск/прохождение Activity остаётся следующим отдельным шагом.
 - ✅ **4d. Базовый runner Activity:** «Сегодня» открывает закреплённый roadmap node; runner возобновляет первое непройденное activity, умеет theory/choice/text-input/translation, использует новый answer-check, сохраняет card SRS + learning day + per-device stats локально до sync. Сложные speaking/pattern/listening/dialogue/review/AI пока честно не помечаются выполненными.
+- ✅ **4e-1. Pattern drill без распознавания речи:** перенесён legacy speed drill: время чтения зависит от длины фразы, затем 5 секунд на произнесение, пользователь сам подтверждает «сказал так же / не так», ошибочная фраза может вернуться в конец подхода. Итог проходит при ≥70%, сохраняется в `practice.drill` через тот же legacy-parity SRS и в `metrics['speed:<activityId>']`. Listening и speech-recognition остаются в 4e-2.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
