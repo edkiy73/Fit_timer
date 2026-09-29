@@ -2,14 +2,19 @@ import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
+import { activitySaveClock } from './activity-progress';
+import { buildCourseReviewSession } from './review-session';
 
 function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
-export function TodayView({runtime,onStart}:{runtime:LearnerCourseRuntimeValue;onStart:(nodeId:string)=>void}){
+export function TodayView({runtime,onStart,onReview}:{runtime:LearnerCourseRuntimeValue;onStart:(nodeId:string)=>void;onReview:()=>void}){
   const {t,locale}=useI18n();
   const state=runtime.state;
+  const review=state
+    ? buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber)
+    : null;
   const currentNode=state?.currentNode;
   const nodeStarted=Boolean(state&&currentNode&&currentNode.activityIds.some(id=>{
     const seen=state.progress.seen[id];
@@ -45,6 +50,21 @@ export function TodayView({runtime,onStart}:{runtime:LearnerCourseRuntimeValue;o
             {t('today.retry')}
           </button>
         </div>
+      )}
+
+      {runtime.status==='ready' && review && review.actionableCount>0 && (
+        <article className="today-review">
+          <div>
+            <div className="today-kicker">{t('review.eyebrow')}</div>
+            <strong>{t('today.reviewDue',{count:review.actionableCount})}</strong>
+            {review.waitingCount>0&&(
+              <span>{t('today.reviewWaiting',{count:review.waitingCount})}</span>
+            )}
+          </div>
+          <button className="primary-button" type="button" onClick={onReview}>
+            {t('today.reviewStart')}
+          </button>
+        </article>
       )}
 
       {runtime.status==='ready' && state?.roadmapProgress.courseComplete && (
@@ -119,6 +139,7 @@ export function TodayScreen(){
     <TodayView
       runtime={useLearnerCourseRuntime()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+      onReview={()=>navigate('/review')}
     />
   );
 }
