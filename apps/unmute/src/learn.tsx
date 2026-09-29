@@ -14,6 +14,7 @@ import { PatternPracticeView } from './pattern-practice';
 import { DialogueView } from './dialogue';
 import { LexiconText } from './lexicon-ui';
 import { isNodeUnlockedByPurchase } from './content/access';
+import { AIConversationView } from './ai-conversation';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -59,6 +60,8 @@ export interface NodeRunnerViewProps {
   runtime:LearnerCourseRuntimeValue;
   nodeId:string;
   onExit:()=>void;
+  onSignIn?:()=>void;
+  onAccess?:()=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
   saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
   savePractice:(
@@ -77,6 +80,8 @@ export function NodeRunnerView({
   runtime,
   nodeId,
   onExit,
+  onSignIn=()=>{},
+  onAccess=()=>{},
   saveSeen,
   saveGraded,
   savePractice,
@@ -342,7 +347,19 @@ export function NodeRunnerView({
         />
       )}
 
-      {!['theory','choice','text-input','translation','pattern-drill','dialogue'].includes(activity.type)&&(
+      {activity.type==='ai-conversation'&&(
+        <AIConversationView
+          key={activity.id}
+          activity={activity}
+          setId={setId}
+          saveSeen={saveSeen}
+          onDone={advance}
+          onSignIn={onSignIn}
+          onAccess={onAccess}
+        />
+      )}
+
+      {!['theory','choice','text-input','translation','pattern-drill','dialogue','ai-conversation'].includes(activity.type)&&(
         <article className="learn-card">
           <h3><LexiconText text={activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')} refs={activity.lexiconRefs} /></h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>
@@ -364,6 +381,8 @@ export function NodeRunnerScreen(){
       runtime={runtime}
       nodeId={String(params.nodeId||'')}
       onExit={()=>navigate('/')}
+      onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
+      onAccess={()=>navigate('/access?from=talk')}
       saveSeen={saveSeenActivity}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
