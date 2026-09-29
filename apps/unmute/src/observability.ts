@@ -56,3 +56,49 @@ export function captureFatal(error: Error): void {
 export function trackOnboardingComplete():void{
   void client.track('onboarding_done');
 }
+
+
+export type PaywallPlace='course'|'today'|'talk'|'other';
+
+export function paywallEventName(place:string):string{
+  return 'paywall_shown.'+(
+    place==='course'||place==='today'||place==='talk'
+      ? place
+      : 'other'
+  );
+}
+
+export function purchaseEventName(
+  phase:'purchase_started'|'purchase_completed',
+  sku:string
+):string{
+  return phase+'.'+(
+    sku==='course.general-foundation'
+      ? 'course.general-foundation'
+      : 'other'
+  );
+}
+
+export function trackLessonCompleted():void{
+  void client.track('lesson_completed');
+}
+
+export function trackDayCompleted():void{
+  void client.track('day_completed');
+}
+
+export function trackPaywallShown(place:string):void{
+  void client.track(paywallEventName(place));
+}
+
+export function trackTalkStarted():void{
+  void client.track('talk_started');
+}
+
+export function trackPurchaseStarted(sku:string):void{
+  void client.track(purchaseEventName('purchase_started',sku));
+}
+
+export function trackPurchaseCompleted(sku:string):void{
+  void client.track(purchaseEventName('purchase_completed',sku));
+}
