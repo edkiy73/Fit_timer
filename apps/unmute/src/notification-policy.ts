@@ -1,4 +1,5 @@
 import type { CourseProgressDocument } from './progress';
+import type { NotificationSettings } from './settings-data';
 import { dayNumberFromKey } from './engine/course-progress';
 
 export type LearnerNotificationKind=
@@ -19,6 +20,7 @@ export interface NotificationPolicyInput {
   dueCount:number;
   currentLessonAvailable:boolean;
   courseComplete:boolean;
+  preferences?:NotificationSettings;
 }
 
 export interface LearningDayStatus {
@@ -77,8 +79,13 @@ export function chooseLearnerNotification(
 ):LearnerNotificationIntent|null{
   const dueCount=Math.max(0,Math.floor(input.dueCount||0));
   const day=learningDayStatus(input.progress,input.todayKey);
+  const preferences=input.preferences;
+  if(preferences&&!preferences.enabled)return null;
+  const reviewEnabled=preferences?.review!==false;
+  const streakEnabled=preferences?.streak!==false;
+  const dailyEnabled=preferences?.daily!==false;
 
-  if(dueCount>0){
+  if(reviewEnabled&&dueCount>0){
     return {
       kind:'review-due',
       route:'/review',
@@ -96,7 +103,7 @@ export function chooseLearnerNotification(
     day.lastLearningDay!==null&&
     today-day.lastLearningDay===1;
 
-  if(streakAtRisk&&!input.courseComplete){
+  if(streakEnabled&&streakAtRisk&&!input.courseComplete){
     return {
       kind:'streak-risk',
       route:'/',
@@ -104,7 +111,7 @@ export function chooseLearnerNotification(
     };
   }
 
-  if(input.currentLessonAvailable&&!input.courseComplete){
+  if(dailyEnabled&&input.currentLessonAvailable&&!input.courseComplete){
     return {
       kind:'daily-lesson',
       route:'/'
