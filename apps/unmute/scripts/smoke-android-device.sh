@@ -16,18 +16,23 @@ if [[ ! -x "$ADB" ]]; then
   exit 1
 fi
 
-"$ADB" wait-for-device
+if ! timeout 120 "$ADB" wait-for-device; then
+  echo "Android smoke: adb did not see an emulator within 120s" >&2
+  cat /tmp/unmute-emulator.log 2>/dev/null || true
+  exit 1
+fi
 
 booted=""
-for _ in $(seq 1 120); do
+for _ in $(seq 1 90); do
   booted="$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
   [[ "$booted" == "1" ]] && break
   sleep 2
 done
 
 if [[ "$booted" != "1" ]]; then
-  echo "Android smoke: emulator did not finish booting" >&2
+  echo "Android smoke: emulator did not finish booting within 180s" >&2
   "$ADB" devices -l || true
+  cat /tmp/unmute-emulator.log 2>/dev/null || true
   exit 1
 fi
 
