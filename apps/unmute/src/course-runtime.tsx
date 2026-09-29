@@ -98,17 +98,21 @@ export function LearnerCourseProvider({
     staleTime:Infinity
   });
 
+  // Not tied to canonicalSetId: sign-in changes the access key, the set reloads and the id is
+  // briefly empty, and the first sync merge from another device lands exactly then. A listener
+  // that re-subscribes after the reload misses it and the progress (staleTime Infinity) stays old.
   useEffect(()=>{
-    if(!canonicalSetId)return;
-    const progressKey=courseProgressDoc(canonicalSetId);
+    const prefix=courseProgressDoc('');
     return appDocs.subscribe(change=>{
-      if(!change.keys.some(ref=>ref.key===progressKey))return;
-      void queryClient.invalidateQueries({
-        queryKey:learnerCourseProgressQueryKey(canonicalSetId),
-        exact:true
-      });
+      for(const ref of change.keys){
+        if(!ref.key.startsWith(prefix))continue;
+        void queryClient.invalidateQueries({
+          queryKey:learnerCourseProgressQueryKey(ref.key.slice(prefix.length)),
+          exact:true
+        });
+      }
     });
-  },[canonicalSetId,queryClient]);
+  },[queryClient]);
 
   const state=useMemo(()=>{
     if(!setQuery.data||!progressQuery.data)return null;

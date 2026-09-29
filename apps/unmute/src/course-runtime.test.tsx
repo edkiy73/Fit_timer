@@ -9,12 +9,13 @@ import { LearnerCourseProvider, useLearnerCourseRuntime } from './course-runtime
 
 const mocked=vi.hoisted(()=>({
   listeners:[] as Array<(change:{keys:Array<{key:string;profileId:string}>;source:'local'|'remote'})=>void>,
-  refreshAuth:vi.fn(async()=>{})
+  refreshAuth:vi.fn(async()=>{}),
+  session:null as null|{email:string;handle:string;premium:boolean;owned:string[]}
 }));
 
 vi.mock('@appbase/ui-react/auth.js',()=>({
   useOptionalAuth:()=>({
-    session:null,
+    session:mocked.session,
     loading:false,
     refresh:mocked.refreshAuth
   })
@@ -80,18 +81,20 @@ function Probe(){
 
 function renderRuntime(){
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
-  render(
+  const tree=()=>(
     <QueryClientProvider client={client}>
       <LearnerCourseProvider setId="GENERAL-FOUNDATION">
         <Probe />
       </LearnerCourseProvider>
     </QueryClientProvider>
   );
-  return client;
+  const view=render(tree());
+  return {client,rerender:()=>view.rerender(tree())};
 }
 
 beforeEach(()=>{
   mocked.listeners.length=0;
+  mocked.session=null;
   vi.clearAllMocks();
   vi.mocked(loadSet).mockResolvedValue({set:course,access:'full',fromCache:false});
   vi.mocked(readCourseProgress).mockResolvedValue(emptyCourseProgress());
@@ -126,5 +129,29 @@ describe('learner course React runtime',()=>{
     expect(await screen.findByText('ready:day-2')).toBeTruthy();
     expect(loadSet).toHaveBeenCalledTimes(1);
     expect(readCourseProgress).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not miss a sync merge that lands while sign-in reloads the course',async()=>{
+    const {rerender}=renderRuntime();
+    expect(await screen.findByText('ready:day-1')).toBeTruthy();
+
+    // Sign-in changes the access key: the course reloads and its id is briefly unknown.
+    let resolveSet:(value:Awaited<ReturnType<typeof loadSet>>)=>void=()=>{};
+    vi.mocked(loadSet).mockImplementationOnce(()=>new Promise(resolve=>{ resolveSet=resolve; }));
+    mocked.session={email:'person@example.com',handle:'',premium:false,owned:[]};
+    rerender();
+
+    // The first sync pulls progress from another device exactly during that reload.
+    const merged=emptyCourseProgress();
+    merged.seen['card.one']={at:'2026-09-29T01:00:00.000Z'};
+    vi.mocked(readCourseProgress).mockResolvedValue(merged);
+    await act(async()=>{
+      for(const listener of [...mocked.listeners]){
+        listener({keys:[{profileId:'__account__',key:'progress:course:general-foundation'}],source:'remote'});
+      }
+    });
+
+    await act(async()=>{ resolveSet({set:course,access:'full',fromCache:false}); });
+    expect(await screen.findByText('ready:day-2')).toBeTruthy();
   });
 });

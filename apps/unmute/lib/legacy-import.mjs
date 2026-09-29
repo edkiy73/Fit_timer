@@ -1,6 +1,7 @@
 import vm from 'node:vm';
-import { auditLexicalCoverage, compactCoverageReport } from './lexicon-coverage.mjs';
+import { auditLexicalCoverage, buildLexiconFormIndex, compactCoverageReport, tokenizeEnglish } from './lexicon-coverage.mjs';
 import LEXICON_SUPPLEMENT from './legacy-lexicon-supplement.mjs';
+import { BANNED_PLACE, localizeLegacySource } from './legacy-localization.mjs';
 
 function skipSpace(source,i){
   while(i<source.length){
@@ -113,7 +114,8 @@ function applyAlternates(lessons,alt){
   }
 }
 
-export function parseLegacySource(source){
+export function parseLegacySource(rawSource){
+  const {source,missing:localizationMissing}=localizeLegacySource(rawSource);
   const lessons=extractConst(source,'LESSONS');
   lessons.push(...extractPushItems(source,'LESSONS'));
 
@@ -138,7 +140,8 @@ export function parseLegacySource(source){
     phrases:extractConst(source,'PHRASES'),
     verbs:extractConst(source,'VERBS'),
     tags:extractConst(source,'TAGS'),
-    phraseTranslations:extractConst(source,'PHRASE_RU')
+    phraseTranslations:extractConst(source,'PHRASE_RU'),
+    localizationMissing
   };
 }
 
@@ -327,6 +330,71 @@ export function buildVerbTableResource(model,lexicon){
   return {id:'irregular-verbs',type:'verb-table',title:{ru:'Неправильные глаголы'},items};
 }
 
+// Dictionary examples come from the course itself: pattern phrases and RU→EN translations
+// already pair a correct English sentence with its Russian meaning. Only words with a single
+// sense get examples (a sentence cannot tell "watch" the verb from "watch" the noun), at most
+// two per word, shortest first; very common function words are skipped.
+const EXAMPLE_SKIP=new Set(['a','an','the','i','you','he','she','it','we','they','me','my','to','of','in','on','at','and','is','are','am','be','this','that']);
+const EXAMPLES_PER_LEXEME=2;
+
+function coursePairs(activities){
+  const pairs=[];
+  for(const activity of activities){
+    if(activity.type==='pattern-drill'){
+      for(const item of activity.items||[]){
+        const en=text(item.answer&&item.answer.accepted&&item.answer.accepted[0]).trim();
+        const ru=text(item.prompt&&item.prompt.ru).trim();
+        if(en&&ru)pairs.push({activityId:activity.id,en,ru,rank:0});
+      }
+    }else if(activity.type==='translation'&&activity.direction==='to-target'){
+      const raw=text(activity.answer&&activity.answer.accepted&&activity.answer.accepted[0]).trim();
+      const ru=text(activity.prompt&&activity.prompt.ru).trim();
+      if(raw&&ru)pairs.push({activityId:activity.id,en:sentenceCase(raw,ru),ru,rank:1});
+    }
+  }
+  return pairs.filter(pair=>pair.en.length<=70)
+    .sort((a,b)=>a.rank-b.rank||a.en.length-b.en.length||a.activityId.localeCompare(b.activityId));
+}
+
+// Accepted answers are stored lower-case without punctuation ("should i call him");
+// dictionary examples read as sentences, ending like the Russian prompt.
+const PROPER_NAMES=['English','Russian','Spanish','Russia','Moscow','Japan','Georgia','Portugal','Tbilisi','Batumi',
+  'Lisbon','Porto','Bangkok','Belgrade','Dubai','Ivan','Anna','Monday','Tuesday','Wednesday','Thursday','Friday',
+  'Saturday','Sunday','January','July','December'];
+const PROPER_RE=new RegExp('\\b('+PROPER_NAMES.join('|')+')\\b','gi');
+const PROPER_BY_LOWER=new Map(PROPER_NAMES.map(name=>[name.toLowerCase(),name]));
+
+function sentenceCase(raw,ru){
+  const body=raw.replace(/\bi\b/g,'I').replace(/\bin it\b/g,'in IT')
+    .replace(PROPER_RE,word=>PROPER_BY_LOWER.get(word.toLowerCase())||word)
+    .replace(/^./,char=>char.toUpperCase());
+  if(/[.!?]$/.test(body))return body;
+  const end=(ru.match(/[.!?]$/)||['.'])[0];
+  return body+end;
+}
+
+const exampleKey=value=>value.toLowerCase().replace(/[^a-z0-9' ]+/g,'').replace(/\s+/g,' ').trim();
+
+function attachCourseExamples(activities,lexicon){
+  const index=buildLexiconFormIndex(lexicon);
+  const byId=new Map(lexicon.entries.map(entry=>[entry.id,entry]));
+  for(const pair of coursePairs(activities)){
+    for(const surface of new Set(tokenizeEnglish(pair.en))){
+      if(EXAMPLE_SKIP.has(surface))continue;
+      const ids=index.get(surface)||[];
+      if(ids.length!==1)continue;
+      const entry=byId.get(ids[0]);
+      if(!entry||entry.senses.length!==1||entry.lemma.includes(' '))continue;
+      entry.examples=entry.examples||[];
+      if(entry.examples.length>=EXAMPLES_PER_LEXEME||entry.examples.some(example=>exampleKey(example.text)===exampleKey(pair.en)))continue;
+      entry.examples.push({
+        id:'ex-'+(entry.examples.length+1),senseId:entry.senses[0].id,text:pair.en,translations:{ru:pair.ru},
+        source:{setId:'general-foundation',activityId:pair.activityId,sourceKind:'course'}
+      });
+    }
+  }
+}
+
 export function buildCourseSet(model,lexicon=null){
   const built=buildActivities(model),activities=built.activities,nodes=[];
   let previous=null;
@@ -367,6 +435,7 @@ export function buildCourseSet(model,lexicon=null){
       optional:false});
     previous=id;
   }
+  if(lexicon)attachCourseExamples(activities,lexicon);
   return {
     schemaVersion:1,id:'general-foundation',revision:1,slug:'general-foundation',
     title:{ru:'Общий английский A1–B1/B2'},description:{ru:'Основной разговорный курс, перенесённый из English Trainer.'},
@@ -499,6 +568,20 @@ function retireIrregularFormHeadwords(model,lexicon){
   return lexicon;
 }
 
+// Replaces senses of reviewed legacy words (needs-review) with the reviewed list; sense ids
+// keep their order, so a learner's saved sense-1 still points to the first meaning.
+function applyReviewedSenses(entries,supplement=LEXICON_SUPPLEMENT){
+  for(const [lemma,senses] of Object.entries(supplement.review||{})){
+    const key=normalizePhrase(lemma);
+    const candidates=entries.filter(entry=>!entry.deprecated&&normalizePhrase(entry.lemma)===key);
+    if(!candidates.length)continue;
+    if(candidates.length>1)throw new Error('review_lemma_resolution:'+lemma+':'+candidates.length);
+    candidates[0].senses=senses.map(([partOfSpeech,ru],index)=>({
+      id:'sense-'+(index+1),partOfSpeech,translations:{ru:ru.split(' | ')},tags:[]
+    }));
+  }
+}
+
 export function buildLexicon(model){
   const used=new Set(),entries=[];
   for(const [word,value] of Object.entries(model.dictionary||{}))entries.push(lexemeFromDict(word,value,used));
@@ -506,11 +589,12 @@ export function buildLexicon(model){
   for(const [en,ru] of Object.entries(model.phraseTranslations||{}))addPhraseLexeme(entries,used,en,ru);
   addMissingIrregularVerbLexemes(model,entries,used);
   applyLexiconSupplement(entries,used);
+  applyReviewedSenses(entries);
   return retireIrregularFormHeadwords(model,enrichIrregularVerbForms(model,{schemaVersion:1,revision:1,entries}));
 }
 
 export function buildImportReport(model,course,lexicon){
-  const ambiguous=lexicon.entries.filter(entry=>entry.senses.some(s=>s.tags&&s.tags.includes('needs-review')));
+  const ambiguous=lexicon.entries.filter(entry=>!entry.deprecated&&entry.senses.some(s=>s.tags&&s.tags.includes('needs-review')));
   const planned=new Set(model.plan.flatMap(day=>day.ids||[]));
   const coverage=compactCoverageReport(auditLexicalCoverage(course,lexicon));
   return {lessons:model.lessons.length,cards:model.lessons.reduce((n,l)=>n+(l.cards||[]).length,0),
@@ -539,5 +623,9 @@ export function validateImport(model,course,lexicon){
   if(!course.roadmaps[0]||course.roadmaps[0].nodes.length!==40)throw new Error('bad_roadmap_days');
   const ids=new Set(course.activities.map(x=>x.id));
   if(ids.size!==course.activities.length)throw new Error('duplicate_course_activity');
+  // Owner decision 7: no Bali. A drifted pinned source would silently skip a rewrite.
+  if((model.localizationMissing||[]).length)throw new Error('localization_not_applied:'+model.localizationMissing[0]);
+  const place=JSON.stringify([course,lexicon]).match(BANNED_PLACE);
+  if(place)throw new Error('banned_place_left:'+place[0]);
   return report;
 }
