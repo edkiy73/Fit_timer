@@ -60,11 +60,13 @@ function statusKey(status:CourseMapStatus):
 export function CourseMapView({
   runtime,
   onExit,
-  onOpen
+  onOpen,
+  onUnlock
 }:{
   runtime:LearnerCourseRuntimeValue;
   onExit:()=>void;
   onOpen:(nodeId:string)=>void;
+  onUnlock:(nodeId:string)=>void;
 }){
   const {t,locale}=useI18n();
 
@@ -163,6 +165,15 @@ export function CourseMapView({
                   {item.status==='complete'?t('courseMap.reopen'):t('courseMap.open')}
                 </button>
               )}
+              {item.status==='purchase-locked'&&(
+                <button
+                  className="secondary-button course-map-open"
+                  type="button"
+                  onClick={()=>onUnlock(item.node.id)}
+                >
+                  {t('courseMap.unlock')}
+                </button>
+              )}
             </article>
           );
         })}
@@ -178,6 +189,7 @@ export function CourseMapScreen(){
       runtime={useLearnerCourseRuntime()}
       onExit={()=>navigate('/')}
       onOpen={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+      onUnlock={nodeId=>navigate('/access?from=course&node='+encodeURIComponent(nodeId))}
     />
   );
 }
