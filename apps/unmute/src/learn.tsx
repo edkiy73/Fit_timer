@@ -1,0 +1,316 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { useI18n } from '@appbase/ui-react/i18n.js';
+import type { Activity, RoadmapNode } from './content/schema';
+import type { CourseProgressDocument } from './progress';
+import type { LearnerCourseRuntimeValue } from './course-runtime';
+import { useLearnerCourseRuntime } from './course-runtime';
+import { checkAnswer } from './engine/answer-check';
+import { saveGradedActivity, saveSeenActivity } from './activity-progress';
+
+function localized(text:Record<string,string>|undefined,locale:string):string{
+  if(!text)return '';
+  return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
+}
+
+function plainTheory(activity:Extract<Activity,{type:'theory'}>,locale:string):string{
+  const body=localized(activity.body,locale);
+  if(activity.format!=='html')return body;
+  if(typeof DOMParser==='undefined')return body.replace(/<[^>]+>/g,' ');
+  const source=body
+    .replace(/<br\s*\/?>/gi,'\n')
+    .replace(/<\/(p|li|h[1-6]|blockquote)>/gi,'\n');
+  const doc=new DOMParser().parseFromString(source,'text/html');
+  return (doc.body.textContent||'')
+    .replace(/[ \t]+\n/g,'\n')
+    .replace(/\n{3,}/g,'\n\n')
+    .trim();
+}
+
+export function activitiesForNode(
+  activities:Activity[],
+  node:RoadmapNode
+):Activity[]{
+  const byId=new Map(activities.map(activity=>[activity.id,activity]));
+  return node.activityIds
+    .map(id=>byId.get(id))
+    .filter((activity):activity is Activity=>Boolean(activity));
+}
+
+export function firstPendingActivityIndex(
+  activities:Activity[],
+  progress:CourseProgressDocument
+):number{
+  const index=activities.findIndex(activity=>{
+    const seen=progress.seen[activity.id];
+    return !seen || seen.deleted;
+  });
+  return index<0?0:index;
+}
+
+export interface NodeRunnerViewProps {
+  runtime:LearnerCourseRuntimeValue;
+  nodeId:string;
+  onExit:()=>void;
+  saveSeen:(setId:string,activityId:string)=>Promise<void>;
+  saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
+}
+
+export function NodeRunnerView({
+  runtime,
+  nodeId,
+  onExit,
+  saveSeen,
+  saveGraded
+}:NodeRunnerViewProps){
+  const {t,locale}=useI18n();
+  const state=runtime.state;
+  const node=state?.roadmap.nodes.find(item=>item.id===nodeId) ?? null;
+  const nodeProgress=state?.roadmapProgress.nodes.find(item=>item.node.id===nodeId) ?? null;
+  const activities=useMemo(
+    ()=>state&&node?activitiesForNode(state.set.activities,node):[],
+    [node,state]
+  );
+
+  const [index,setIndex]=useState(0);
+  const [selected,setSelected]=useState<number|null>(null);
+  const [answer,setAnswer]=useState('');
+  const [result,setResult]=useState<boolean|null>(null);
+  const [busy,setBusy]=useState(false);
+
+  useEffect(()=>{
+    if(!state||!node)return;
+    setIndex(firstPendingActivityIndex(activities,state.progress));
+  },[node?.id]);
+
+  const activity=activities[index] ?? null;
+
+  useEffect(()=>{
+    setSelected(null);
+    setAnswer('');
+    setResult(null);
+    setBusy(false);
+  },[activity?.id]);
+
+  const advance=()=>{
+    if(index+1<activities.length){
+      setIndex(current=>current+1);
+      return;
+    }
+    onExit();
+  };
+
+  if(runtime.status==='pending'){
+    return (
+      <section className="learn-shell">
+        <div className="learn-state" role="status">
+          <strong>{t('learn.loadingTitle')}</strong>
+          <span>{t('learn.loadingText')}</span>
+        </div>
+      </section>
+    );
+  }
+
+  if(runtime.status==='error'){
+    return (
+      <section className="learn-shell">
+        <div className="learn-state" role="alert">
+          <strong>{t('learn.errorTitle')}</strong>
+          <button className="primary-button" type="button" onClick={()=>void runtime.refresh()}>
+            {t('today.retry')}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if(!state||!node||!nodeProgress?.unlocked||!activity){
+    return (
+      <section className="learn-shell">
+        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <div className="learn-state" role="status">
+          <strong>{t('learn.unavailableTitle')}</strong>
+          <span>{t('learn.unavailableText')}</span>
+        </div>
+      </section>
+    );
+  }
+
+  const setId=state.set.id;
+  const position=t('learn.position',{current:index+1,total:activities.length});
+
+  const handleTheory=async()=>{
+    if(busy)return;
+    setBusy(true);
+    try{
+      await saveSeen(setId,activity.id);
+      advance();
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const handleChoice=async()=>{
+    if(activity.type!=='choice'||selected===null||busy||result!==null)return;
+    setBusy(true);
+    try{
+      const correct=selected===activity.correctIndex;
+      await saveGraded(setId,activity.id,correct);
+      setResult(correct);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const handleText=async()=>{
+    if((activity.type!=='text-input'&&activity.type!=='translation')||busy||result!==null)return;
+    const input=answer.trim();
+    if(!input)return;
+    setBusy(true);
+    try{
+      const correct=activity.answer.caseSensitive
+        ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
+        : checkAnswer(input,activity.answer.accepted);
+      await saveGraded(setId,activity.id,correct);
+      setResult(correct);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const feedback=(accepted?:string,explanation?:Record<string,string>)=>result===null?null:(
+    <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
+      <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+      {!result&&accepted&&<span>{t('learn.accepted',{answer:accepted})}</span>}
+      {explanation&&<p>{localized(explanation,locale)}</p>}
+      <button className="primary-button" type="button" onClick={advance}>
+        {index+1<activities.length?t('learn.next'):t('learn.finish')}
+      </button>
+    </div>
+  );
+
+  return (
+    <section className="learn-shell" aria-labelledby="learn-title">
+      <div className="learn-header">
+        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <span>{position}</span>
+      </div>
+
+      <div>
+        <div className="eyebrow">
+          {node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}
+        </div>
+        <h2 id="learn-title">{localized(node.title,locale)}</h2>
+      </div>
+
+      <progress
+        className="today-progress"
+        max={Math.max(1,activities.length)}
+        value={index+1}
+        aria-label={t('learn.activityProgress')}
+      />
+
+      {activity.type==='theory'&&(
+        <article className="learn-card">
+          {activity.title&&<h3>{localized(activity.title,locale)}</h3>}
+          <div className="learn-theory">{plainTheory(activity,locale)}</div>
+          <button className="primary-button" type="button" disabled={busy} onClick={()=>void handleTheory()}>
+            {t('learn.continue')}
+          </button>
+        </article>
+      )}
+
+      {activity.type==='choice'&&(
+        <article className="learn-card">
+          <h3>{localized(activity.prompt,locale)}</h3>
+          {activity.hint&&<p className="learn-hint">{localized(activity.hint,locale)}</p>}
+          <fieldset className="learn-options" disabled={busy||result!==null}>
+            <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
+            {activity.options.map((option,optionIndex)=>(
+              <label className="learn-option" key={optionIndex}>
+                <input
+                  type="radio"
+                  name={activity.id}
+                  checked={selected===optionIndex}
+                  onChange={()=>setSelected(optionIndex)}
+                />
+                <span>{localized(option,locale)}</span>
+              </label>
+            ))}
+          </fieldset>
+          {result===null&&(
+            <button
+              className="primary-button"
+              type="button"
+              disabled={selected===null||busy}
+              onClick={()=>void handleChoice()}
+            >
+              {t('learn.check')}
+            </button>
+          )}
+          {feedback(undefined,activity.explanation)}
+        </article>
+      )}
+
+      {(activity.type==='text-input'||activity.type==='translation')&&(
+        <article className="learn-card">
+          <h3>{localized(activity.prompt,locale)}</h3>
+          {activity.type==='text-input'&&activity.source&&(
+            <p className="learn-source">{localized(activity.source,locale)}</p>
+          )}
+          <label className="learn-answer">
+            <span>{t('learn.answerLabel')}</span>
+            <input
+              value={answer}
+              disabled={busy||result!==null}
+              onChange={event=>setAnswer(event.target.value)}
+              onKeyDown={event=>{
+                if(event.key==='Enter'){
+                  event.preventDefault();
+                  void handleText();
+                }
+              }}
+              autoComplete="off"
+            />
+          </label>
+          {result===null&&(
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!answer.trim()||busy}
+              onClick={()=>void handleText()}
+            >
+              {t('learn.check')}
+            </button>
+          )}
+          {feedback(activity.answer.accepted[0],activity.explanation)}
+        </article>
+      )}
+
+      {!['theory','choice','text-input','translation'].includes(activity.type)&&(
+        <article className="learn-card">
+          <h3>{activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')}</h3>
+          <p className="learn-hint">{t('learn.unsupportedText')}</p>
+          <button className="secondary-button" type="button" onClick={advance}>
+            {index+1<activities.length?t('learn.skipForNow'):t('learn.backToday')}
+          </button>
+        </article>
+      )}
+    </section>
+  );
+}
+
+export function NodeRunnerScreen(){
+  const runtime=useLearnerCourseRuntime();
+  const navigate=useNavigate();
+  const params=useParams();
+  return (
+    <NodeRunnerView
+      runtime={runtime}
+      nodeId={String(params.nodeId||'')}
+      onExit={()=>navigate('/')}
+      saveSeen={saveSeenActivity}
+      saveGraded={saveGradedActivity}
+    />
+  );
+}

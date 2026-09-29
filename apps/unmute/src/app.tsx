@@ -12,6 +12,7 @@ import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
 import { TodayScreen } from './today';
+import { NodeRunnerScreen } from './learn';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -140,6 +141,7 @@ export const routes: RouteObject[] = [
       element:<Shell />,
       children:[
         {index:true, element:<Home />},
+        {path:'learn/:nodeId', element:<NodeRunnerScreen />},
         {path:'account', element:<Account />}
       ]
     }]

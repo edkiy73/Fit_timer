@@ -90,3 +90,38 @@ h2{margin:0 0 8px}
   .today-heading h2{font-size:26px}
   .today-card-top{align-items:flex-start}
 }
+
+
+.today-start{justify-self:start}
+.secondary-button{border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--ink);font-weight:800;cursor:pointer;padding:10px 14px}
+.secondary-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary-button:disabled,.secondary-button:disabled{cursor:default;opacity:.55}
+
+.learn-shell{display:grid;gap:16px}
+.learn-header{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px}
+.learn-back{border:0;background:transparent;color:var(--accent-ink,var(--accent));font-weight:800;cursor:pointer;padding:0}
+.learn-back:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.learn-state,.learn-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:18px}
+.learn-state{display:grid;gap:10px;justify-items:start}
+.learn-state span{color:var(--muted);line-height:1.45}
+.learn-card{display:grid;gap:16px}
+.learn-card h3{margin:0;font-size:22px;line-height:1.25}
+.learn-theory{white-space:pre-wrap;line-height:1.6}
+.learn-hint,.learn-source{margin:0;color:var(--muted);line-height:1.5}
+.learn-options{display:grid;gap:8px;border:0;margin:0;padding:0}
+.learn-option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}
+.learn-option:has(input:checked){border-color:var(--accent)}
+.learn-option input{margin-top:3px}
+.learn-answer{display:grid;gap:7px;color:var(--muted);font-size:13px;font-weight:700}
+.learn-answer input{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:12px}
+.learn-answer input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.learn-feedback{display:grid;gap:8px;border-radius:12px;padding:12px}
+.learn-feedback span,.learn-feedback p{margin:0;line-height:1.45}
+.learn-feedback-ok{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.learn-feedback-wrong{background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:480px){
+  .learn-card{padding:16px}
+  .learn-card h3{font-size:20px}
+  .primary-button,.secondary-button{width:100%}
+}

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
@@ -6,9 +7,18 @@ function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
-export function TodayView({runtime}:{runtime:LearnerCourseRuntimeValue}){
+export function TodayView({runtime,onStart}:{runtime:LearnerCourseRuntimeValue;onStart:(nodeId:string)=>void}){
   const {t,locale}=useI18n();
   const state=runtime.state;
+  const currentNode=state?.currentNode;
+  const nodeStarted=Boolean(state&&currentNode&&currentNode.activityIds.some(id=>{
+    const seen=state.progress.seen[id];
+    if(seen&&!seen.deleted)return true;
+    return (['drill','listening','speaking'] as const).some(mode=>{
+      const item=state.progress.practice[mode][id];
+      return Boolean(item&&!item.deleted);
+    });
+  }));
 
   return (
     <section className="today" aria-labelledby="today-title">
@@ -83,6 +93,13 @@ export function TodayView({runtime}:{runtime:LearnerCourseRuntimeValue}){
             value={state.roadmapProgress.completedCount}
             aria-label={t('today.courseProgress')}
           />
+          <button
+            className="primary-button today-start"
+            type="button"
+            onClick={()=>onStart(state.currentNode!.id)}
+          >
+            {nodeStarted?t('today.continue'):t('today.start')}
+          </button>
         </article>
       )}
 
@@ -97,5 +114,11 @@ export function TodayView({runtime}:{runtime:LearnerCourseRuntimeValue}){
 }
 
 export function TodayScreen(){
-  return <TodayView runtime={useLearnerCourseRuntime()} />;
+  const navigate=useNavigate();
+  return (
+    <TodayView
+      runtime={useLearnerCourseRuntime()}
+      onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+    />
+  );
 }
