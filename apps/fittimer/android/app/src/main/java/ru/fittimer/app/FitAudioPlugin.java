@@ -111,7 +111,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     }
 
     @PluginMethod
-    public void startHeadsetControl(PluginCall call) {
+    public void startMediaButtonControl(PluginCall call) {
         main.post(() -> {
             try {
                 stopHeadsetSession();
@@ -160,7 +160,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     }
 
     @PluginMethod
-    public void stopHeadsetControl(PluginCall call) {
+    public void stopMediaButtonControl(PluginCall call) {
         main.post(() -> {
             stopHeadsetSession();
             call.resolve();
@@ -173,7 +173,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         lastHeadsetActionMs = now;
         JSObject event = new JSObject();
         event.put("source", source == null ? "" : source);
-        notifyListeners("headsetAction", event);
+        notifyListeners("mediaButtonAction", event);
     }
 
     private void stopHeadsetSession() {
