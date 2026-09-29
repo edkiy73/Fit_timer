@@ -45,6 +45,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
   let pendingProgramLink = '';
   let pendingWorkoutResume = false;
   let updateProgressHandle = null;
+  let headsetActionHandle = null;
 
   function programIdFromAppUrl(value){
     try{
@@ -298,6 +299,45 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
         beforeModelDownload:requestNotifications
       });
 
+  async function startHeadsetControl(onAction){
+    if(!native || !fitAudio || !fitAudio.startHeadsetControl) return false;
+    try{
+      if(headsetActionHandle){
+        try{ await headsetActionHandle.remove(); }catch(_){}
+        headsetActionHandle = null;
+      }
+      if(fitAudio.addListener){
+        headsetActionHandle = await fitAudio.addListener('headsetAction', event=>{
+          try{ if(typeof onAction === 'function') onAction(event || {}); }catch(_){}
+        });
+      }
+      const result = await fitAudio.startHeadsetControl();
+      if(!(result && result.active)){
+        if(headsetActionHandle){
+          try{ await headsetActionHandle.remove(); }catch(_){}
+          headsetActionHandle = null;
+        }
+        return false;
+      }
+      return true;
+    }catch(_){
+      if(headsetActionHandle){
+        try{ await headsetActionHandle.remove(); }catch(__){}
+        headsetActionHandle = null;
+      }
+      return false;
+    }
+  }
+
+  async function stopHeadsetControl(){
+    if(headsetActionHandle){
+      try{ await headsetActionHandle.remove(); }catch(_){}
+      headsetActionHandle = null;
+    }
+    if(!native || !fitAudio || !fitAudio.stopHeadsetControl) return false;
+    try{ await fitAudio.stopHeadsetControl(); return true; }catch(_){ return false; }
+  }
+
   async function startVoiceRecognition(onResult, onError, onStatus, language){
     return speech.startRecognition({
       onResult,
@@ -434,6 +474,8 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
     shareFile,
     haptic,
     workoutHaptic,
+    startHeadsetControl,
+    stopHeadsetControl,
     requestMicrophone:speech.requestMicrophone,
     speak:speech.speak,
     stopSpeaking:speech.stopSpeaking,
