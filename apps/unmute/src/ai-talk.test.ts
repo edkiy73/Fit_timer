@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authClient } from './auth';
 import {
+  clearTalkTrialContext,
+  getTalkTrialContext,
   requestTalkReply,
   requestTalkReview,
   talkReplyProtocol,
@@ -13,6 +15,25 @@ afterEach(()=>{
 });
 
 describe('AI talk client',()=>{
+  it('keeps one trial id for the same conversation within the browser session',()=>{
+    const values=new Map<string,string>();
+    const storage={
+      getItem:(key:string)=>values.get(key)??null,
+      setItem:(key:string,value:string)=>{values.set(key,value);},
+      removeItem:(key:string)=>{values.delete(key);}
+    };
+
+    const first=getTalkTrialContext('talk.clinic',storage);
+    const resumed=getTalkTrialContext('talk.clinic',storage);
+    expect(resumed).toEqual(first);
+
+    clearTalkTrialContext('talk.clinic',storage);
+    const next=getTalkTrialContext('talk.clinic',storage);
+    expect(next.scope).toBe('talk.clinic');
+    expect(next.id).not.toBe(first.id);
+  });
+
+
   it('parses the strict reply protocol',()=>{
     expect(talkReplyProtocol.parseReplyText(JSON.stringify({
       reply:'How can I help you?',
@@ -118,7 +139,8 @@ describe('AI talk client',()=>{
         prompt:'unmute:talk.reply',
         topic:'At the pharmacy',
         learnerText:'I need something for a headache',
-        locale:'ru'
+        locale:'ru',
+        trial:{id:'trial_abcdefghijklmnop',scope:'talk.pharmacy'}
       });
       expect(body.history).toEqual([{role:'partner',text:'How can I help?'}]);
       return new Response(JSON.stringify({
@@ -128,7 +150,8 @@ describe('AI talk client',()=>{
           correction:null,
           note:null
         }),
-        usage:{bucket:'light',used:2,limit:100}
+        usage:{bucket:'light',used:2,limit:100},
+        access:{mode:'trial',remaining:8,maxCalls:10}
       }),{
         status:200,
         headers:{'Content-Type':'application/json'}
@@ -142,12 +165,14 @@ describe('AI talk client',()=>{
       focus:['I need…'],
       history:[{role:'partner',text:'How can I help?'}],
       learnerText:'I need something for a headache',
-      locale:'ru'
+      locale:'ru',
+      trial:{id:'trial_abcdefghijklmnop',scope:'talk.pharmacy'}
     })).resolves.toEqual({
       reply:'How long have you had the headache?',
       correction:null,
       note:null,
-      usage:{bucket:'light',used:2,limit:100}
+      usage:{bucket:'light',used:2,limit:100},
+      trial:{remaining:8,maxCalls:10}
     });
     expect(fetchMock).toHaveBeenCalledWith('/api/ai',expect.any(Object));
   });
@@ -164,7 +189,8 @@ describe('AI talk client',()=>{
         kind:'talk.review',
         prompt:'unmute:talk.review',
         topic:'At the pharmacy',
-        locale:'ru'
+        locale:'ru',
+        trial:{id:'trial_abcdefghijklmnop',scope:'talk.pharmacy'}
       });
       expect(body.history).toEqual([
         {role:'partner',text:'How can I help?'},
@@ -177,7 +203,8 @@ describe('AI talk client',()=>{
           corrections:[],
           focus:'Добавляй артикли там, где они нужны.'
         }),
-        usage:{bucket:'light',used:3,limit:100}
+        usage:{bucket:'light',used:3,limit:100},
+        access:{mode:'trial',remaining:7,maxCalls:10}
       }),{
         status:200,
         headers:{'Content-Type':'application/json'}
@@ -193,12 +220,14 @@ describe('AI talk client',()=>{
         {role:'partner',text:'How can I help?'},
         {role:'learner',text:'I need medicine'}
       ],
-      locale:'ru'
+      locale:'ru',
+      trial:{id:'trial_abcdefghijklmnop',scope:'talk.pharmacy'}
     })).resolves.toEqual({
       strengths:['Ты быстро сформулировал просьбу.'],
       corrections:[],
       focus:'Добавляй артикли там, где они нужны.',
-      usage:{bucket:'light',used:3,limit:100}
+      usage:{bucket:'light',used:3,limit:100},
+      trial:{remaining:7,maxCalls:10}
     });
   });
 

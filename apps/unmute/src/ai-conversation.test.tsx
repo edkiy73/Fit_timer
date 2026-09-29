@@ -42,13 +42,15 @@ describe('AI conversation runner',()=>{
         reply:'Hello. How can I help you?',
         correction:null,
         note:null,
-        usage:{bucket:'light',used:1,limit:100}
+        usage:{bucket:'light',used:1,limit:100},
+        trial:{remaining:9,maxCalls:10}
       })
       .mockResolvedValueOnce({
         reply:'Sure. What day works for you?',
         correction:'I need an appointment.',
         note:'Нужен артикль an.',
-        usage:{bucket:'light',used:2,limit:100}
+        usage:{bucket:'light',used:2,limit:100},
+        trial:{remaining:8,maxCalls:10}
       });
     const requestReview=vi.fn(async()=>({
       strengths:['Ты сразу объяснил, что тебе нужно.'],
@@ -58,7 +60,8 @@ describe('AI conversation runner',()=>{
         why:'Перед исчисляемым appointment нужен артикль.'
       }],
       focus:'В следующий раз добавляй артикль перед appointment.',
-      usage:{bucket:'light',used:3,limit:100}
+      usage:{bucket:'light',used:3,limit:100},
+      trial:{remaining:7,maxCalls:10}
     }));
 
     wrap(
@@ -78,7 +81,8 @@ describe('AI conversation runner',()=>{
     expect(await screen.findByText('Hello. How can I help you?')).toBeTruthy();
     expect(requestReply).toHaveBeenNthCalledWith(1,expect.objectContaining({
       start:true,
-      learnerText:''
+      learnerText:'',
+      trial:expect.objectContaining({scope:'talk.clinic'})
     }));
     expect(saveSeen).not.toHaveBeenCalled();
 
@@ -89,7 +93,8 @@ describe('AI conversation runner',()=>{
     expect(await screen.findByText('Sure. What day works for you?')).toBeTruthy();
     expect(screen.getByText('I need an appointment.')).toBeTruthy();
     expect(screen.getByText('Нужен артикль an.')).toBeTruthy();
-    expect(screen.getByText('2 / 100')).toBeTruthy();
+    expect(screen.getByText('Пробная')).toBeTruthy();
+    expect(screen.getByText('Пробная беседа · осталось ответов ИИ: 8')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Завершить разговор'}));
 
@@ -99,13 +104,14 @@ describe('AI conversation runner',()=>{
         {role:'learner',text:'I need appointment'},
         {role:'partner',text:'Sure. What day works for you?'}
       ]),
-      locale:'ru'
+      locale:'ru',
+      trial:expect.objectContaining({scope:'talk.clinic'})
     }));
     expect(await screen.findByRole('heading',{name:'Что получилось и что улучшить'})).toBeTruthy();
     expect(screen.getByText('Ты сразу объяснил, что тебе нужно.')).toBeTruthy();
     expect(screen.getByText('I need appointment')).toBeTruthy();
     expect(screen.getByText('Перед исчисляемым appointment нужен артикль.')).toBeTruthy();
-    expect(screen.getByText('3 / 100')).toBeTruthy();
+    expect(screen.getByText('Пробная беседа · осталось ответов ИИ: 7')).toBeTruthy();
     expect(saveSeen).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button',{name:'Готово'}));
@@ -215,6 +221,31 @@ describe('AI conversation runner',()=>{
     expect(requestReview).not.toHaveBeenCalled();
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','talk.clinic');
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers Plus after the account trial has already been used',async()=>{
+    const user=userEvent.setup();
+    const onAccess=vi.fn();
+    const requestReply=vi.fn(async()=>{
+      throw Object.assign(new Error('trial_used'),{code:'trial_used'});
+    });
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={async()=>{}}
+        onDone={()=>{}}
+        onSignIn={()=>{}}
+        onAccess={onAccess}
+        requestReply={requestReply}
+      />
+    );
+
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    expect(await screen.findByText(/Пробная ИИ-беседа уже использована/)).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
+    expect(onAccess).toHaveBeenCalledTimes(1);
   });
 
   it('offers Plus when the signed-in account has no AI entitlement',async()=>{

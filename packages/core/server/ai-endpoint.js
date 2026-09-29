@@ -16,8 +16,9 @@ async function bodyOf(req){
 }
 
 /* The product passes its AI action registry (lib/ai-action-registry.js) at composition time. */
-function createAIHandler(AI_ACTIONS){
+function createAIHandler(AI_ACTIONS, options = {}){
   if(!AI_ACTIONS || typeof AI_ACTIONS.get !== 'function') throw new Error('ai_action_registry_required');
+  const authorize = typeof options.authorize === 'function' ? options.authorize : null;
   return async function handleAI(req, res){
     if(cors(req, res)) return;
 
@@ -49,7 +50,32 @@ function createAIHandler(AI_ACTIONS){
     try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
     const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
     if(!dev || !sameSecret(sha(token), dev.h || '')) return fail(res, 403, 'bad_sync_token');
-    if((Date.parse(acc.sub && acc.sub.until) || 0) < Date.now()) return fail(res, 402, 'premium_required');
+
+    const premium = (Date.parse(acc.sub && acc.sub.until) || 0) >= Date.now();
+    let accessMeta = null;
+    if(!premium){
+      if(!authorize) return fail(res, 402, 'premium_required');
+      let decision;
+      try{
+        decision = await authorize({
+          account:acc,
+          accountHash:mh,
+          body,
+          store,
+          now:Date.now()
+        });
+      }catch(_){
+        return fail(res, 503, 'ai_access_unavailable');
+      }
+      if(!decision || decision.allowed !== true){
+        return fail(
+          res,
+          Number(decision && decision.status) || 402,
+          String(decision && decision.code || 'premium_required')
+        );
+      }
+      accessMeta = decision.meta || null;
+    }
 
     const settings = await getSettings();
     if(!settings.enabled) return fail(res, 503, 'ai_disabled');
@@ -78,7 +104,11 @@ function createAIHandler(AI_ACTIONS){
         fallback:result.fallback,prompt:prompt.slice(0,120000),
         result:(result.text || '[изображение]').slice(0,120000),ok:true};
       await store.push(`ai:log:${at.slice(0,10)}`, JSON.stringify(log), settings.retentionDays * 86400);
-      return send(res, 200, Object.assign({ok:true,kind,usage:{bucket,used,limit}}, result));
+      return send(res, 200, Object.assign(
+        {ok:true,kind,usage:{bucket,used,limit}},
+        accessMeta ? {access:accessMeta} : {},
+        result
+      ));
     }catch(e){
       const validation = e && e.validation;
       const log = {at,account:mh,kind,ok:false,error:String(e && e.message || e).slice(0,500),
