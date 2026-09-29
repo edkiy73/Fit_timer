@@ -69,7 +69,8 @@
 | Фаза 7c-2 — talk.review UI | ✅ в `main` (#249) | finish with learner turns → strengths/corrections/focus screen; review failure never blocks activity completion |
 | Фаза 7d-1 — answer.explain | ✅ в `main` (#250) | wrong graded answer → opt-in Plus/light explanation; strict server-built why/tip JSON; no SRS mutation |
 | Фаза 7d-2 — one free AI conversation | ✅ в `main` (#251) | one account-bound text conversation, 24h session / max 10 model calls, then Plus; answer.explain stays Plus-only |
-| Фаза 7e — AI conversation voice | ✅ в этой фазе | Web Speech learner turn → same typed AI contract → automatic partner TTS; text fallback always available |
+| Фаза 7e — AI conversation voice | ✅ в `main` (#252) | Web Speech learner turn → same typed AI contract → automatic partner TTS; text fallback always available |
+| Фаза 8a — notification policy + preferences | ✅ в этой фазе | max one reminder: due review > streak risk > daily lesson; synced opt-in/time/type settings; transport/permission deferred to 8b |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -428,7 +429,8 @@ DictEntry { word, ru }
 - ✅ **7e. Голосовой AI-разговор:** в том же `ai-conversation` можно нажать «Ответить голосом»: `Web Speech Recognition en-US` берёт лучшую распознанную альтернативу и отправляет её в тот же `talk.reply`, то есть серверный prompt/quota/trial остаются неизменными. Каждый ответ партнёра автоматически озвучивается через существующий TTS; последнюю реплику можно повторить. Ошибки/unsupported/permission/no-speech не блокируют беседу — текстовый input всегда остаётся fallback. Native speech слой остаётся фазе 9.
 
 ### Фаза 8 — Напоминания
-- Ежедневное напоминание, «есть повторения», «серия под угрозой» через Core `notifications`/`push`.
+- ✅ **8a. Политика + настройки напоминаний:** чистая product-логика выбирает максимум **одно** уведомление на подход, чтобы не спамить. Приоритет: **есть due-повторения → серия под угрозой → обычное напоминание про следующий урок**. После записанной активности сегодня обычные/streak reminders не нужны; due review остаётся отдельным конкретным действием. Курс без следующего урока не генерирует фиктивный daily reminder. В `settings` добавлены merge-safe настройки `enabled/time/daily/review/streak` с собственным `changedAt`; они синхронизируются между устройствами и редактируются в Account. По умолчанию всё выключено. Web-сборка честно не обещает фоновую доставку: exact time, permission prompt и native/push transport — 8b.
+- ⏳ **8b. Доставка:** локальное расписание через Core `native-notifications`, разрешение только по явному действию пользователя, deep-link в `/review` или Today. Web/PWA fallback и push оценить отдельно — не обещать их без реально подключённого транспорта.
 
 ### Фаза 9 — Android/iOS
 - Вынести аудио-плагин FitTimer в общий пакет (G8) без смены имён `Fit*` для FitTimer; зелёный FitTimer Android/iOS CI.

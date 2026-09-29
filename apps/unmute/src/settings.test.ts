@@ -6,12 +6,62 @@ describe('UnMute settings',()=>{
     expect(parseSettings(JSON.stringify({
       locale:'ru',
       onboardingDoneAt:'2026-09-29T10:00:00.000Z',
+      notifications:{
+        enabled:true,
+        time:'19:30',
+        daily:true,
+        review:true,
+        streak:false,
+        changedAt:'2026-09-29T11:00:00.000Z'
+      },
       ignored:true
     }))).toEqual({
       locale:'ru',
-      onboardingDoneAt:'2026-09-29T10:00:00.000Z'
+      onboardingDoneAt:'2026-09-29T10:00:00.000Z',
+      notifications:{
+        enabled:true,
+        time:'19:30',
+        daily:true,
+        review:true,
+        streak:false,
+        changedAt:'2026-09-29T11:00:00.000Z'
+      }
     });
     expect(parseSettings('{bad')).toEqual({});
+  });
+
+  it('merges notification preferences by their own changedAt timestamp',()=>{
+    expect(mergeSettings(
+      {
+        locale:'ru',
+        notifications:{
+          enabled:true,
+          time:'20:00',
+          daily:true,
+          review:true,
+          streak:true,
+          changedAt:'2026-09-29T12:00:00.000Z'
+        }
+      },
+      {
+        locale:'en',
+        notifications:{
+          enabled:false,
+          time:'18:00',
+          daily:false,
+          review:false,
+          streak:false,
+          changedAt:'2026-09-29T13:00:00.000Z'
+        }
+      }
+    )).toMatchObject({
+      locale:'ru',
+      notifications:{
+        enabled:false,
+        time:'18:00',
+        changedAt:'2026-09-29T13:00:00.000Z'
+      }
+    });
   });
 
   it('keeps a completed onboarding flag when another device only changed locale',()=>{
