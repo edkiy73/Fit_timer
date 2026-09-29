@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Link, Outlet, useNavigate, type RouteObject } from 'react-router';
+import { Link, Outlet, useLocation, useNavigate, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -110,6 +110,11 @@ function Account(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedReturn=new URLSearchParams(location.search).get('return')||'';
+  const returnTo=requestedReturn.startsWith('/')&&!requestedReturn.startsWith('//')
+    ? requestedReturn
+    : '/';
   // Local data stays on the device; the next sign-in merges it into that account.
   const signOut = async () => {
     await auth.logout();
@@ -130,7 +135,7 @@ function Account(){
       ) : (
         <>
           <p className="muted">{t('account.localHint')}</p>
-          <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate('/')} />
+          <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate(returnTo)} />
         </>
       )}
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
