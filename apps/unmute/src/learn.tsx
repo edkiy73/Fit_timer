@@ -392,6 +392,8 @@ export function NodeRunnerView({
           onDone={advance}
           onSignIn={onSignIn}
           onAccess={onAccess}
+          speak={speak}
+          startRecognition={startRecognition}
         />
       )}
 
