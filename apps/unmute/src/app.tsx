@@ -9,6 +9,7 @@ import { adminClient } from './admin';
 import { contentAdminSection } from './admin-content';
 import { courseAdminSection } from './admin-course';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
+import { patchSettings, readSettings } from './settings';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
 import { TodayScreen } from './today';
@@ -41,15 +42,14 @@ function SettingsSync(){
   useEffect(() => {
     let live = true;
     const apply = async () => {
-      const raw = await appDocs.read(SETTINGS_DOC);
       try{
-        const doc = raw ? JSON.parse(raw) as {locale?: string} : null;
-        if(live && doc?.locale){
-          saved.current = doc.locale;
+        const doc=await readSettings();
+        if(live&&doc.locale){
+          saved.current=doc.locale;
           setPreference(doc.locale);
         }
       }catch{}
-      loaded.current = true;
+      loaded.current=true;
     };
     void apply();
     const stop = appDocs.subscribe(change => { if(change.source === 'remote') void apply(); });
@@ -59,7 +59,7 @@ function SettingsSync(){
   useEffect(() => {
     if(!loaded.current || saved.current === preference) return;
     saved.current = preference;
-    void appDocs.write(SETTINGS_DOC, JSON.stringify({locale: preference}));
+    void patchSettings({locale:preference});
   }, [preference]);
 
   // Sign-in on this device (or a restored session): merge local data with the account now.
