@@ -74,7 +74,7 @@ describe('course access offer',()=>{
     expect(screen.getByRole('heading',{name:'Открыть весь курс'})).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Весь курс навсегда'})).toBeTruthy();
     expect(screen.getByRole('heading',{name:'UnMute Plus'})).toBeTruthy();
-    expect(screen.getByText(/Покупки подключим на этапе оплаты/)).toBeTruthy();
+    expect(screen.getByText(/Оплату подключим следующим шагом/)).toBeTruthy();
   });
 
   it('sends an anonymous learner to account recovery',async()=>{
