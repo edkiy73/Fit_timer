@@ -59,7 +59,7 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
   const auth=await authClient.authFields();
   if(!auth)throw new TalkAIError('auth_required',401);
 
-  const response=await fetch('/api/admin?ai_endpoint=1',{
+  const response=await fetch('/api/ai',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
