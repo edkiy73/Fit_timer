@@ -434,17 +434,27 @@ export function getExProgValue(pid, ex, program, axis){
   const v = psReps(ex).min;
   return Math.max(1, progRound('reps', ceil != null ? Math.min(ceil, v) : v));
 }
-// диапазон повторов «8-12»: границы читаются из текущего состояния целиком (обе
-// сдвинуты вместе), потолок применяется к обеим
+// диапазон повторов «8-10»: это и есть текущая цель. Обе границы растут вместе.
+// В двойной прогрессии максимум относится к ВЕРХНЕЙ границе: 8-10 → 9-11 → …
+// → 18-20, затем +вес и возврат к исходному 8-10.
 export function progressedRepsRange(pid, ex, program){
   const r = psReps(ex);
   const ceil = progCeil(ex, 'reps');
+  const base = parseValue(ex.value);
+  const baseWidth = Math.max(0, base.max - base.min);
+
   let min = r.min, max = r.max;
-  // при двойной прогрессии цель — одно число (8 → 9 → … → потолок, затем +вес
-  // и снова 8), а диапазон из ЗНАЧЕНИЯ служит только рамками; без этого первый
-  // круг показывал «8-12», а следующие — одиночные числа
-  if(isDualProg(ex)) max = min;
-  if(ceil != null){ min = Math.min(ceil, min); max = Math.min(ceil, max); }
+  // Совместимость с состоянием старой двойной прогрессии, где cur.reps хранился
+  // одним числом. Не теряем достигнутую нижнюю границу, а восстанавливаем ширину
+  // исходного диапазона.
+  if(isDualProg(ex) && baseWidth > 0 && min === max && ex.ps && ex.ps.cur && ex.ps.cur.reps != null){
+    max = min + baseWidth;
+  }
+  if(ceil != null && max > ceil){
+    max = ceil;
+    if(isDualProg(ex) && baseWidth > 0) min = Math.max(1, max - baseWidth);
+    else min = Math.min(min, max);
+  }
   min = Math.max(1, min);
   max = Math.max(min, max);
   return min === max ? String(min) : min + '-' + max;
@@ -478,31 +488,54 @@ export function progAtCeiling(pid, ex, program){
 
 // ОДИН шаг прогрессии для упражнения — вызывается, когда ex.ps.n достиг порога
 // (см. commitFinish в 70-workout.js). Мутирует ex.ps.cur; счётчик n сбрасывает
-// вызывающий код. Правила те же, что раньше вычислялись «на лету» из номера шага:
-// при двойной прогрессии повторы растут до потолка, затем сбрасываются к базе и
-// добавляется шаг веса; иначе каждая растущая ось просто сдвигается на свой шаг.
+// вызывающий код. При двойной прогрессии диапазон повторов растёт ЦЕЛИКОМ:
+// 8-10 → 9-11 → … → 18-20. Максимум — потолок верхней границы. Следующий шаг
+// добавляет вес и возвращает исходный диапазон. Иначе каждая растущая ось просто
+// сдвигается на свой шаг.
 export function advanceExerciseProgression(ex){
   const axis = progAxis(ex);
   if(axis === 'none') return;
   ensurePs(ex);
   if(axis === 'weight' && isDualProg(ex)){
-    const base = parseValue(ex.value).min;
+    const base = parseValue(ex.value);
+    const width = Math.max(0, base.max - base.min);
     const repsCeil = progCeil(ex, 'reps');
     const repsStep = progStepSize(ex, 'reps') || 1;
-    const curReps = psReps(ex).min;
-    const next = curReps + repsStep;
-    if(repsCeil != null && next > repsCeil && psKg(ex) <= 0){
-      // вес ещё не выбран — прибавлять не к чему (см. getExProgValue): повторы
-      // остаются на потолке, пока человек не задаст вес на экране старта
-      ex.ps.cur.reps = String(repsCeil);
-    } else if(repsCeil != null && next > repsCeil){
-      const weightCeil = progCeil(ex, 'weight');
-      const nextKg = psKg(ex) + progStepSize(ex, 'weight');
-      ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
-      ex.ps.cur.reps = String(base);
-    } else {
-      ex.ps.cur.reps = String(Math.max(1, next));
+    const stored = psReps(ex);
+
+    // Старые версии двойной прогрессии хранили одно число. Считаем его нижней
+    // границей и достраиваем исходную ширину диапазона, чтобы обновление приложения
+    // не сбрасывало достигнутую нагрузку.
+    let curMin = stored.min;
+    let curMax = (width > 0 && stored.min === stored.max && ex.ps.cur.reps != null)
+      ? stored.min + width
+      : stored.max;
+    if(repsCeil != null && curMax > repsCeil){
+      curMax = repsCeil;
+      curMin = Math.max(1, curMax - width);
     }
+
+    // Вес добавляется только СЛЕДУЮЩИМ шагом после того, как верхняя граница уже
+    // дошла до максимума. Например: 17-19 → 18-20 → (+вес) 8-10.
+    if(repsCeil != null && curMax >= repsCeil){
+      if(psKg(ex) <= 0){
+        // Вес ещё не выбран — на потолке остаётся полный диапазон, а не одно число.
+        const topMin = Math.max(1, repsCeil - width);
+        ex.ps.cur.reps = topMin === repsCeil ? String(repsCeil) : topMin + '-' + repsCeil;
+      } else {
+        const weightCeil = progCeil(ex, 'weight');
+        const nextKg = psKg(ex) + progStepSize(ex, 'weight');
+        ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
+        ex.ps.cur.reps = normValue(ex.value, 'reps');
+      }
+      return;
+    }
+
+    const nextMax = repsCeil != null
+      ? Math.min(repsCeil, curMax + repsStep)
+      : curMax + repsStep;
+    const nextMin = Math.max(1, nextMax - width);
+    ex.ps.cur.reps = nextMin === nextMax ? String(nextMin) : nextMin + '-' + nextMax;
     return;
   }
   if(ex.type === 'time'){

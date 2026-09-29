@@ -78,27 +78,28 @@ function runWorkout(exercises, every){
   need(getExProgValue('p1', ex, p, 'reps') === 10, 'reps stay fixed when repsStep is 0');
 }
 
-/* ---- двойная прогрессия: повторы растут до потолка, затем сброс + вес ---- */
+/* ---- двойная прогрессия: диапазон растёт целиком, верхняя граница = потолок ---- */
 {
-  const ex = mkEx('Жим лёжа', {value:'8-12', type:'reps', progOn:true, trackWeight:true, weight:20, wStep:2.5, repsStep:1, repsMax:12, dualProg:true});
-  const p = {id:'p1'};
-  const seen = [];
-  for(let i = 0; i < 6; i++){
-    advanceExerciseProgression(ex);
-    seen.push({reps: progressedRepsRange('p1', ex, p), kg: getExWeight('p1', ex, p)});
-  }
-  const resetHappened = seen.some((h, i) => i > 0 && parseInt(h.reps) < parseInt(seen[i - 1].reps));
-  need(resetHappened, 'reps cycle back to base at least once');
-  need(seen[seen.length - 1].kg > 20, 'weight increases once reps hit the ceiling: ' + seen[seen.length - 1].kg);
-}
-{
-  // цель при двойной прогрессии — одно число с первого же круга, а не «8-12»,
-  // сменяющееся одиночными числами
-  const ex = mkEx('Жим лёжа', {value:'8-12', type:'reps', progOn:true, trackWeight:true, weight:20, wStep:2.5, repsStep:1, repsMax:12, dualProg:true});
+  const ex = mkEx('Жим лёжа', {value:'8-10', type:'reps', progOn:true, trackWeight:true, weight:20, wStep:2.5, repsStep:1, repsMax:20, dualProg:true});
   const p = {id:'p1'};
   const seq = [progressedRepsRange('p1', ex, p) + '@' + getExWeight('p1', ex, p)];
-  for(let i = 0; i < 5; i++){ advanceExerciseProgression(ex); seq.push(progressedRepsRange('p1', ex, p) + '@' + getExWeight('p1', ex, p)); }
-  need(seq.join(' ') === '8@20 9@20 10@20 11@20 12@20 8@22.5', 'dual progression sequence: ' + seq.join(' '));
+  for(let i = 0; i < 11; i++){
+    advanceExerciseProgression(ex);
+    seq.push(progressedRepsRange('p1', ex, p) + '@' + getExWeight('p1', ex, p));
+  }
+  need(seq.join(' ') === [
+    '8-10@20','9-11@20','10-12@20','11-13@20','12-14@20','13-15@20',
+    '14-16@20','15-17@20','16-18@20','17-19@20','18-20@20','8-10@22.5'
+  ].join(' '), 'dual range progression sequence: ' + seq.join(' '));
+}
+{
+  // Если шаг не делит расстояние до максимума, последний рост уменьшается так,
+  // чтобы сохранить ширину диапазона и ровно упереться верхней границей в потолок.
+  const ex = mkEx('Жим лёжа', {value:'8-10', type:'reps', progOn:true, trackWeight:true, weight:20, wStep:2, repsStep:2, repsMax:15, dualProg:true});
+  const p = {id:'p1'};
+  const seq = [progressedRepsRange('p1', ex, p)];
+  for(let i = 0; i < 4; i++){ advanceExerciseProgression(ex); seq.push(progressedRepsRange('p1', ex, p)); }
+  need(seq.join(' ') === '8-10 10-12 12-14 13-15 8-10', 'dual range reaches exact upper ceiling: ' + seq.join(' '));
 }
 
 /* ---- фактический баг с чередованием A/Б: правильно исправлен ---- */
@@ -143,12 +144,13 @@ function runWorkout(exercises, every){
   need(copy.id !== old.id && !copy.ps, 'duplicate gets its own id and starts without progress');
 }
 
-/* ---- двойная прогрессия без заданного веса: повторы упираются в потолок,
+/* ---- двойная прогрессия без заданного веса: полный диапазон остаётся на потолке,
    вес из ничего не создаётся ---- */
 {
-  const ex = mkEx('Тяга гантели', {value:'8-12', type:'reps', progOn:true, trackWeight:true, dualProg:true, weight:0, wStep:2, repsStep:1});
+  const ex = mkEx('Тяга гантели', {value:'8-10', type:'reps', progOn:true, trackWeight:true, dualProg:true, weight:0, wStep:2, repsStep:1, repsMax:14});
   for(let i = 0; i < 10; i++) advanceExerciseProgression(ex);
   need(getExWeight('p1', ex, {id:'p1'}) === 0, 'dual progression does not invent a weight from 0');
+  need(progressedRepsRange('p1', ex, {id:'p1'}) === '12-14', 'range stays at the upper ceiling without a selected weight');
 }
 
 if(bad){

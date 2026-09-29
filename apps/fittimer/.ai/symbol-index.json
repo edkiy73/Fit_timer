@@ -403,8 +403,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2995,
-      "chars": 140567,
+      "lines": 2996,
+      "chars": 140647,
       "symbols": [
         "add",
         "ageError",
@@ -635,8 +635,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2131,
-      "chars": 99711,
+      "lines": 2164,
+      "chars": 100945,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1085,7 +1085,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 42468,
+      "chars": 42460,
       "ids": [
         "aiActions",
         "aiAnswer",
