@@ -3,13 +3,12 @@ export type SpeakText=(text:string,locale?:string)=>Promise<boolean>;
 export async function speakWebText(text:string,locale='en-US'):Promise<boolean>{
   if(typeof window==='undefined')return false;
   const synth=window.speechSynthesis;
-  const Utterance=window.SpeechSynthesisUtterance;
-  if(!synth||!Utterance||!String(text||'').trim())return false;
+  if(!synth||typeof SpeechSynthesisUtterance==='undefined'||!String(text||'').trim())return false;
 
   return new Promise(resolve=>{
     try{
       synth.cancel();
-      const utterance=new Utterance(String(text));
+      const utterance=new SpeechSynthesisUtterance(String(text));
       utterance.lang=locale;
       let settled=false;
       const finish=(value:boolean)=>{
