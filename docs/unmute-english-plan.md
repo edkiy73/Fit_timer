@@ -10,7 +10,7 @@
 
 Этот раздел поддерживается актуальным: **каждый PR по плану обновляет §0 и статус своего пункта в §5**.
 
-### 0.1. Где мы сейчас (2026-09-28)
+### 0.1. Где мы сейчас (2026-09-29)
 
 | Пункт | Статус | Где лежит |
 |---|---|---|
@@ -51,7 +51,8 @@
 | Фаза 4d — basic activity runner | ✅ в `main` (#229) | `src/learn.tsx` + `activity-progress.ts`: node session, theory/choice/text/translation, local-first save + SRS/stats |
 | Фаза 4e-1 — pattern speed drill | ✅ в `main` (#230) | `src/pattern-drill.tsx`: legacy-style timed self-rating, 70% threshold, drill SRS + speed metric |
 | Фаза 4e-2a — pattern listening | ✅ в `main` (#231) | `src/pattern-listening.tsx` + browser TTS: 6 phrases, 3 meanings, 70% threshold, listening SRS |
-| Фаза 4e-2b — pattern speaking | ✅ в этой фазе | `src/pattern-speaking.tsx` + Web Speech recognition: max 6 phrases, legacy loose matcher, manual fallback, speaking SRS |
+| Фаза 4e-2b — pattern speaking | ✅ в `main` (#232) | `src/pattern-speaking.tsx` + Web Speech recognition: max 6 phrases, legacy loose matcher, manual fallback, speaking SRS |
+| Фаза 4e-3 — dialogue runner | ✅ в этой фазе | `src/dialogue.tsx`: partner TTS, text/voice answer, legacy check+loose matcher, score persistence |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -367,6 +368,7 @@ DictEntry { word, ru }
 - ✅ **4e-1. Pattern drill без распознавания речи:** перенесён legacy speed drill: время чтения зависит от длины фразы, затем 5 секунд на произнесение, пользователь сам подтверждает «сказал так же / не так», ошибочная фраза может вернуться в конец подхода. Итог проходит при ≥70%, сохраняется в `practice.drill` через тот же legacy-parity SRS и в `metrics['speed:<activityId>']`. Listening и speech-recognition остаются в 4e-2.
 - ✅ **4e-2a. Pattern listening:** после успешного drill runner продолжает тем же pattern activity в режим «На слух»: до 6 фраз, английский эталон озвучивается Web Speech TTS (`en-US`), выбор из 3 русских значений собран из реального pattern-контента, порог успеха ≥70%. Результат сохраняется в `practice.listening` теми же legacy-parity интервалами; после перезапуска pattern возобновляется с первого ещё не начатого режима. Speaking/recognition остаётся отдельным 4e-2b.
 - ✅ **4e-2b. Pattern speaking:** Web Speech Recognition слушает `en-US` с тремя альтернативами, результат сравнивается тем же legacy `looseSame` правилом (служебные `a/an/the/to/of` игнорируются, достаточно ≥70% слов цели). Есть повторный тап для остановки, понятные ошибки permission/no-speech/network/unsupported, «Показать ответ» и ручное «Всё же засчитать». До 6 фраз, итог ≥70% сохраняется в `practice.speaking`; matcher добавлен в frozen legacy parity.
+- ✅ **4e-3. Dialogue runner:** перенесён реальный legacy flow диалогов: реплика партнёра автоматически озвучивается, ответ можно написать или сказать, проверка использует `check()` + тот же `looseSame` для голосовых альтернатив, затем показывается/озвучивается эталон. Итоговый процент сохраняется как `dialogue-score:<activityId>`, activity помечается `seen` и день — learning day; порог 70% влияет на подсказку/повтор, но как и в legacy завершённый диалог считается пройденным независимо от результата.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
