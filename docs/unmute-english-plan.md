@@ -61,7 +61,8 @@
 | Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
 | Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
 | Фаза 5a — entitlements + access offer | ✅ в `main` (#241) | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
-| Фаза 7a — AI talk contract | ✅ в этой фазе | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client; no chat UI yet |
+| Фаза 7a — AI talk contract | ✅ в `main` (#242) | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client |
+| Фаза 7b — text AI conversation runner | ✅ в этой фазе | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -409,7 +410,8 @@ DictEntry { word, ru }
 - Реальную оплату сейчас **не подключаем**. Каркас billing и entitlement уже есть, доступ для разработки/семьи выдаётся через Admin. Checkout, store billing, web-провайдеры, реальные цены, оферта/возвраты — вернуться отдельной фазой позже.
 
 ### Фаза 7 — ИИ-собеседник (Plus)
-- ✅ **7a. `talk.reply` contract:** `lib/unmute-ai-actions.js` собирает prompt **на сервере** из topic/focus/history/latest learner message; клиент не присылает произвольный model prompt. Ответ — строгий JSON `reply/correction/note`, повторно валидируется и сервером, и клиентом. Используется существующий Core `ai-endpoint`: Premium auth, `light` quota, provider/model из Admin, fallback и 30-дневный hashed log. `/api/ai` — rewrite в уже существующий `api/admin.js`, поэтому новой Vercel Function не добавляем. UI разговора — следующий 7b.
+- ✅ **7a. `talk.reply` contract:** `lib/unmute-ai-actions.js` собирает prompt **на сервере** из topic/focus/history/latest learner message; клиент не присылает произвольный model prompt. Ответ — строгий JSON `reply/correction/note`, повторно валидируется и сервером, и клиентом. Используется существующий Core `ai-endpoint`: Premium auth, `light` quota, provider/model из Admin, fallback и 30-дневный hashed log. `/api/ai` — rewrite в уже существующий `api/admin.js`, поэтому новой Vercel Function не добавляем.
+- ✅ **7b. Текстовый AI conversation runner:** activity `ai-conversation` теперь реально проходит внутри lesson runner. Стартовый ход генерируется сервером без фальшивого learner message; дальше отправляются только последние structured turns. UI показывает partner/learner thread, correction/note последней фразы и quota usage, если Core его вернул. Activity становится `seen` только после явного «Завершить разговор». Anonymous → вход, signed-in без Plus → экран доступа. Голос и бесплатная пробная беседа не смешиваются сюда и идут отдельными кусками.
 - `talk.review`, `answer.explain`, одна пробная беседа — последующие небольшие куски.
 - Голосом: распознавание → ИИ → озвучка.
 
