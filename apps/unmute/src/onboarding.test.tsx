@@ -6,11 +6,10 @@ import { dictionaries } from './i18n';
 import { emptyCourseProgress } from './progress';
 import {
   OnboardingView,
-  hasExistingCourseProgress,
-  shouldShowOnboarding
+  hasExistingCourseProgress
 } from './onboarding';
 
-function renderOnboarding(onDone=vi.fn(),onSkip=vi.fn()){
+function renderOnboarding(onDone=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -18,53 +17,41 @@ function renderOnboarding(onDone=vi.fn(),onSkip=vi.fn()){
       storageKey="onboarding-test.locale"
       systemLanguages={['ru']}
     >
-      <OnboardingView onDone={onDone} onSkip={onSkip} />
+      <OnboardingView onDone={onDone} />
     </I18nProvider>
   );
-  return {onDone,onSkip};
+  return onDone;
 }
 
 describe('minimal onboarding',()=>{
-  it('shows only three short product explanations and starts without a questionnaire',async()=>{
+  it('is one short screen with no questionnaire and starts day one directly',async()=>{
     const user=userEvent.setup();
-    const {onDone}=renderOnboarding();
+    const onDone=renderOnboarding();
 
-    expect(screen.getByRole('heading',{name:'Говори для жизни'})).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Говори по-английски в реальной жизни'})).toBeTruthy();
+    expect(screen.getByText('Говори вслух')).toBeTruthy();
+    expect(screen.getByText('Нажимай любое слово')).toBeTruthy();
+    expect(screen.getByText('Повторы придут сами')).toBeTruthy();
+
     expect(screen.queryByRole('textbox')).toBeNull();
-
-    await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(screen.getByRole('heading',{name:'Нажимай любое слово'})).toBeTruthy();
-    expect(screen.getByText('I need to book an appointment.')).toBeTruthy();
-
-    await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(screen.getByRole('heading',{name:'Говори, слушай, повторяй'})).toBeTruthy();
+    expect(screen.queryByText(/уровень/i)).toBeNull();
+    expect(screen.queryByText(/где жив/i)).toBeNull();
+    expect(screen.queryByText(/минут в день/i)).toBeNull();
+    expect(screen.queryByRole('button',{name:'Далее'})).toBeNull();
+    expect(screen.queryByRole('button',{name:'Пропустить'})).toBeNull();
 
     await user.click(screen.getByRole('button',{name:'Начать день 1'}));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('can be skipped without asking for profile data',async()=>{
-    const user=userEvent.setup();
-    const {onSkip}=renderOnboarding();
-
-    await user.click(screen.getByRole('button',{name:'Пропустить'}));
-    expect(onSkip).toHaveBeenCalledTimes(1);
-  });
-
-  it('automatically skips onboarding when real/imported course progress already exists',()=>{
+  it('automatically recognizes real/imported progress but ignores tombstones',()=>{
     const progress=emptyCourseProgress();
     expect(hasExistingCourseProgress(progress)).toBe(false);
 
-    progress.seen['activity.one']={at:'2026-09-29T00:00:00Z'};
+    progress.seen['old']={at:'2026-09-01T00:00:00Z',deleted:true};
+    expect(hasExistingCourseProgress(progress)).toBe(false);
+
+    progress.learningDays['2026-09-29']={at:'2026-09-29T00:00:00Z'};
     expect(hasExistingCourseProgress(progress)).toBe(true);
-
-    const state={progress} as Parameters<typeof shouldShowOnboarding>[1];
-    expect(shouldShowOnboarding(false,state)).toBe(false);
-  });
-
-  it('ignores tombstones when deciding whether the learner already has progress',()=>{
-    const progress=emptyCourseProgress();
-    progress.seen['old']={at:'2026-09-29T00:00:00Z',deleted:true};
-    expect(hasExistingCourseProgress(progress)).toBe(false);
   });
 });
