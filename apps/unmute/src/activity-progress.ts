@@ -99,6 +99,38 @@ export function buildPracticeActivityProgress(
   };
 }
 
+export function buildDialogueActivityProgress(
+  course:CourseProgressDocument,
+  activityId:string,
+  score:number,
+  clock:ActivitySaveClock
+):CourseProgressDocument{
+  const seen=markActivitySeen(course,activityId,clock.dayKey,clock.at);
+  return {
+    ...seen,
+    metrics:{
+      ...seen.metrics,
+      ['dialogue-score:'+activityId]:{
+        value:Math.max(0,Math.min(100,Math.round(score))),
+        at:clock.at
+      }
+    }
+  };
+}
+
+export async function saveDialogueActivity(
+  setId:string,
+  activityId:string,
+  score:number,
+  now=new Date()
+):Promise<void>{
+  const course=await readCourseProgress(setId);
+  await writeCourseProgress(
+    setId,
+    buildDialogueActivityProgress(course,activityId,score,activitySaveClock(now))
+  );
+}
+
 export async function savePracticeActivity(
   setId:string,
   activityId:string,
