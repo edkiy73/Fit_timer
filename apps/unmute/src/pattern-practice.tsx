@@ -3,9 +3,11 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { PracticeSrsKind } from './engine/practice-srs';
-import type { SpeakText } from './speech-web';
+import type { SpeakText, StartRecognition } from './speech-web';
+import { startWebRecognition } from './speech-web';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
+import { PatternSpeakingView } from './pattern-speaking';
 
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
 type PatternMode=PracticeSrsKind|'complete';
@@ -35,6 +37,7 @@ export interface PatternPracticeViewProps {
     score?:number
   )=>Promise<void>;
   speak:SpeakText;
+  startRecognition?:StartRecognition;
 }
 
 export function PatternPracticeView({
@@ -44,7 +47,8 @@ export function PatternPracticeView({
   setId,
   onDone,
   savePractice,
-  speak
+  speak,
+  startRecognition=startWebRecognition
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>firstPatternMode(activity,progress));
@@ -94,14 +98,14 @@ export function PatternPracticeView({
 
   if(mode==='speaking'){
     return (
-      <article className="learn-card">
-        <div className="eyebrow">{t('speaking.mode')}</div>
-        <h3>{activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''}</h3>
-        <p className="learn-hint">{t('speaking.pending')}</p>
-        <button className="secondary-button" type="button" onClick={onDone}>
-          {t('learn.skipForNow')}
-        </button>
-      </article>
+      <PatternSpeakingView
+        activity={activity}
+        setId={setId}
+        savePractice={savePractice}
+        speak={speak}
+        startRecognition={startRecognition}
+        onDone={()=>nextMode('speaking')}
+      />
     );
   }
 
