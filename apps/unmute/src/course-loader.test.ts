@@ -74,6 +74,37 @@ describe('learner course loader',()=>{
     expect(state.currentDayIndex).toBe(2);
   });
 
+  it('does not expose the first paid roadmap node as Today current in preview mode',()=>{
+    const previewCourse:CourseSet={
+      ...course,
+      access:{
+        mode:'entitlement',
+        entitlement:'course.general-foundation',
+        freePreview:{kind:'first-days',days:1,learnedContentStaysAvailable:true}
+      },
+      roadmaps:[{
+        ...course.roadmaps[0]!,
+        nodes:[
+          course.roadmaps[0]!.nodes[0]!,
+          {...course.roadmaps[0]!.nodes[1]!,activityIds:[]}
+        ]
+      }],
+      activities:[course.activities[0]!]
+    };
+    const progress=emptyCourseProgress();
+    progress.seen['card.one']={at:'2026-09-29T00:00:00.000Z'};
+
+    const state=buildLearnerCourseState(
+      {set:previewCourse,access:'preview',fromCache:false},
+      progress
+    );
+
+    expect(state.roadmapProgress.currentNode?.id).toBe('day-2');
+    expect(state.roadmapProgress.courseComplete).toBe(false);
+    expect(state.currentNode).toBeNull();
+    expect(state.currentDayIndex).toBeNull();
+  });
+
   it('reads progress by the canonical id returned by the published set',async()=>{
     vi.mocked(loadSet).mockResolvedValue({set:course,access:'full',fromCache:false});
     vi.mocked(readCourseProgress).mockResolvedValue(emptyCourseProgress());

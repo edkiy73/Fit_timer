@@ -1,5 +1,6 @@
 import { loadSet } from './content/client';
 import type { CourseSet, Roadmap, RoadmapNode } from './content/schema';
+import { isNodeUnlockedByPurchase } from './content/access';
 import { buildRoadmapProgress, type RoadmapProgressSummary } from './engine/course-progress';
 import type { CourseProgressDocument } from './progress';
 import { roadmapProgressFromDocument } from './progress-actions';
@@ -38,13 +39,22 @@ export function buildLearnerCourseState(
     roadmapProgressFromDocument(progress)
   );
 
+  const roadmapCurrent=roadmapProgress.currentNode;
+  const currentNode=roadmapCurrent&&isNodeUnlockedByPurchase(
+    loaded.set,
+    roadmapCurrent,
+    {owned:loaded.access==='full'}
+  )
+    ? roadmapCurrent
+    : null;
+
   return {
     set:loaded.set,
     roadmap,
     progress,
     roadmapProgress,
-    currentNode:roadmapProgress.currentNode,
-    currentDayIndex:roadmapProgress.currentDayIndex,
+    currentNode,
+    currentDayIndex:currentNode?.dayIndex ?? null,
     access:loaded.access,
     fromCache:loaded.fromCache,
   };
