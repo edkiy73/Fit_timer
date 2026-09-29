@@ -68,11 +68,17 @@ export function AnswerExplanationView({
       <div className="answer-explain-result" aria-live="polite">
         <div>
           <strong>{t('answerExplain.whyTitle')}</strong>
-          <p><LexiconText text={result.why} refs={refs} /></p>
+          <p>{refs
+            ? <LexiconText text={result.why} refs={refs} />
+            : <LexiconText text={result.why} />
+          }</p>
         </div>
         <div>
           <strong>{t('answerExplain.tipTitle')}</strong>
-          <p><LexiconText text={result.tip} refs={refs} /></p>
+          <p>{refs
+            ? <LexiconText text={result.tip} refs={refs} />
+            : <LexiconText text={result.tip} />
+          }</p>
         </div>
         {result.usage&&(
           <small>{t('aiTalk.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
