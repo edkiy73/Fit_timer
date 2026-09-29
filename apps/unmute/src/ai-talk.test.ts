@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authClient } from './auth';
 import {
   requestTalkReply,
+  requestTalkReview,
   talkReplyProtocol,
   TalkAIError
 } from './ai-talk';
@@ -21,6 +22,26 @@ describe('AI talk client',()=>{
       reply:'How can I help you?',
       correction:'I need some medicine.',
       note:'Артикль здесь звучит естественнее.'
+    });
+  });
+
+  it('parses the strict review protocol',()=>{
+    expect(talkReplyProtocol.parseReviewText(JSON.stringify({
+      strengths:['Ты держал тему.'],
+      corrections:[{
+        original:'I need medicine',
+        better:'I need some medicine.',
+        why:'Так естественнее.'
+      }],
+      focus:'Потренируй some перед неисчисляемыми существительными.'
+    }))).toEqual({
+      strengths:['Ты держал тему.'],
+      corrections:[{
+        original:'I need medicine',
+        better:'I need some medicine.',
+        why:'Так естественнее.'
+      }],
+      focus:'Потренируй some перед неисчисляемыми существительными.'
     });
   });
 
@@ -129,6 +150,56 @@ describe('AI talk client',()=>{
       usage:{bucket:'light',used:2,limit:100}
     });
     expect(fetchMock).toHaveBeenCalledWith('/api/ai',expect.any(Object));
+  });
+
+  it('requests a server-built whole-conversation review',async()=>{
+    vi.spyOn(authClient,'authFields').mockResolvedValue({
+      email:'user@example.com',
+      deviceId:'device',
+      syncToken:'token'
+    });
+    const fetchMock=vi.fn(async(_url:RequestInfo|URL,init?:RequestInit)=>{
+      const body=JSON.parse(String(init?.body||'{}'));
+      expect(body).toMatchObject({
+        kind:'talk.review',
+        prompt:'unmute:talk.review',
+        topic:'At the pharmacy',
+        locale:'ru'
+      });
+      expect(body.history).toEqual([
+        {role:'partner',text:'How can I help?'},
+        {role:'learner',text:'I need medicine'}
+      ]);
+      return new Response(JSON.stringify({
+        ok:true,
+        text:JSON.stringify({
+          strengths:['Ты быстро сформулировал просьбу.'],
+          corrections:[],
+          focus:'Добавляй артикли там, где они нужны.'
+        }),
+        usage:{bucket:'light',used:3,limit:100}
+      }),{
+        status:200,
+        headers:{'Content-Type':'application/json'}
+      });
+    });
+    vi.stubGlobal('fetch',fetchMock);
+
+    await expect(requestTalkReview({
+      topic:'At the pharmacy',
+      promptTemplate:'You are a pharmacist.',
+      focus:['I need…'],
+      history:[
+        {role:'partner',text:'How can I help?'},
+        {role:'learner',text:'I need medicine'}
+      ],
+      locale:'ru'
+    })).resolves.toEqual({
+      strengths:['Ты быстро сформулировал просьбу.'],
+      corrections:[],
+      focus:'Добавляй артикли там, где они нужны.',
+      usage:{bucket:'light',used:3,limit:100}
+    });
   });
 
   it('keeps server access errors machine-readable for the future chat UI',async()=>{

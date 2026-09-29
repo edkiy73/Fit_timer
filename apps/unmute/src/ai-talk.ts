@@ -26,6 +26,31 @@ export interface TalkReply {
   };
 }
 
+export interface TalkReviewInput {
+  topic:string;
+  promptTemplate:string;
+  focus:string[];
+  history:TalkMessage[];
+  locale:'ru'|'en';
+}
+
+export interface TalkReviewCorrection {
+  original:string|null;
+  better:string;
+  why:string|null;
+}
+
+export interface TalkReview {
+  strengths:string[];
+  corrections:TalkReviewCorrection[];
+  focus:string;
+  usage?:{
+    bucket:string;
+    used:number;
+    limit:number;
+  };
+}
+
 export class TalkAIError extends Error{
   status:number;
   code:string;
@@ -104,4 +129,82 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
   return usage?{...reply,usage}:reply;
 }
 
-export const talkReplyProtocol={parseReplyText};
+
+function parseReviewText(value:unknown):Omit<TalkReview,'usage'>{
+  let parsed:unknown;
+  try{parsed=JSON.parse(String(value||''));}
+  catch{throw new TalkAIError('ai_bad_response');}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new TalkAIError('ai_bad_response');
+  const raw=parsed as Record<string,unknown>;
+  const strengths=(Array.isArray(raw.strengths)?raw.strengths:[])
+    .map(item=>String(item||'').trim()).filter(Boolean).slice(0,3);
+  const corrections=(Array.isArray(raw.corrections)?raw.corrections:[])
+    .map(item=>{
+      if(!item||typeof item!=='object'||Array.isArray(item))return null;
+      const value=item as Record<string,unknown>;
+      const better=String(value.better||'').trim();
+      if(!better)return null;
+      const original=String(value.original||'').trim()||null;
+      const why=String(value.why||'').trim()||null;
+      return {
+        original:original?.slice(0,400)??null,
+        better:better.slice(0,400),
+        why:why?.slice(0,400)??null
+      };
+    })
+    .filter((item):item is TalkReviewCorrection=>item!==null)
+    .slice(0,3);
+  const focus=String(raw.focus||'').trim();
+  if(!strengths.length||!focus)throw new TalkAIError('ai_bad_response');
+  return {
+    strengths:strengths.map(item=>item.slice(0,320)),
+    corrections,
+    focus:focus.slice(0,400)
+  };
+}
+
+export async function requestTalkReview(input:TalkReviewInput):Promise<TalkReview>{
+  const auth=await authClient.authFields();
+  if(!auth)throw new TalkAIError('auth_required',401);
+
+  const response=await fetch('/api/ai',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      ...auth,
+      kind:'talk.review',
+      prompt:'unmute:talk.review',
+      topic:String(input.topic||'').slice(0,300),
+      promptTemplate:String(input.promptTemplate||'').slice(0,2400),
+      focus:(input.focus||[]).slice(0,12),
+      history:(input.history||[]).slice(-12),
+      locale:input.locale
+    })
+  });
+
+  let payload:Record<string,unknown>={};
+  try{
+    const parsed=await response.json();
+    if(parsed&&typeof parsed==='object')payload=parsed as Record<string,unknown>;
+  }catch{}
+
+  if(!response.ok||payload.ok===false){
+    throw new TalkAIError(
+      String(payload.error||payload.code||'ai_failed'),
+      response.status
+    );
+  }
+
+  const review=parseReviewText(payload.text);
+  const rawUsage=payload.usage;
+  const usage=rawUsage&&typeof rawUsage==='object'
+    ? {
+        bucket:String((rawUsage as Record<string,unknown>).bucket||''),
+        used:Number((rawUsage as Record<string,unknown>).used||0),
+        limit:Number((rawUsage as Record<string,unknown>).limit||0)
+      }
+    : undefined;
+  return usage?{...review,usage}:review;
+}
+
+export const talkReplyProtocol={parseReplyText,parseReviewText};
