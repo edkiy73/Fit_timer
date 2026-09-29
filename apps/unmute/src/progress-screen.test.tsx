@@ -187,7 +187,7 @@ describe('progress screen summary',()=>{
 
     renderProgress(state,stats);
 
-    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getAllByText('75%')).toHaveLength(2);
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
