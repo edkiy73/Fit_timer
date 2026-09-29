@@ -49,13 +49,23 @@ function createAIHandler(AI_ACTIONS){
     try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
     const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
     if(!dev || !sameSecret(sha(token), dev.h || '')) return fail(res, 403, 'bad_sync_token');
-    if((Date.parse(acc.sub && acc.sub.until) || 0) < Date.now()) return fail(res, 402, 'premium_required');
 
-    const settings = await getSettings();
-    if(!settings.enabled) return fail(res, 503, 'ai_disabled');
     const kind = String(body.kind || '');
     const action = AI_ACTIONS.get(kind);
     if(!action) return fail(res, 400, 'bad_kind');
+    const premium=(Date.parse(acc.sub && acc.sub.until) || 0) >= Date.now();
+    if(!premium){
+      let free=false;
+      if(typeof action.allowWithoutPremium === 'function'){
+        try{
+          free=!!(await action.allowWithoutPremium({account:acc,accountHash:mh,body,store}));
+        }catch(_){}
+      }
+      if(!free) return fail(res, 402, 'premium_required');
+    }
+
+    const settings = await getSettings();
+    if(!settings.enabled) return fail(res, 503, 'ai_disabled');
     const type = action.type;
     const bucket = action.bucket;
     const prompt = String(body.prompt || '').trim();
@@ -69,7 +79,7 @@ function createAIHandler(AI_ACTIONS){
     const at = new Date().toISOString();
     try{
       const result = typeof action.run === 'function'
-        ? await action.run({settings,body,prompt,generate})
+        ? await action.run({settings,body,prompt,generate,account:acc,accountHash:mh,store})
         : await generate(type, settings, prompt, {
             aspectRatio:action.aspectRatio || null,
             validate:action.validate || null
