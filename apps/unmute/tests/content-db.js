@@ -87,46 +87,45 @@ const sample={
   assert.equal(plus.body.access,'full');
   assert.equal(plus.body.set.activities.length,3);
 
-  // When Plus expires, paid roadmap nodes lock again, but activities already learned
-  // remain in the preview payload so Review can continue using them.
-  const learnedEmail='learned@example.com', learnedDevice='device-learned', learnedToken='learned-token';
-  const learnedHash=hash(learnedEmail).slice(0,32);
-  const learnedStoreKey=`sa:${learnedHash}:progress:course:general-foundation`;
-  await store.pipe([
-    ['SET',`a:${learnedHash}`,JSON.stringify({
-      syncDevices:{[learnedDevice]:{h:hash(learnedToken)}},
-      sub:{until:'2020-01-01T00:00:00.000Z'}
-    })],
-    ['SET',learnedStoreKey,JSON.stringify({
-      schemaVersion:1,
-      seen:{a8:{at:'2026-09-29T00:00:00.000Z'}},
-      cards:{},
-      practice:{drill:{},listening:{},speaking:{}},
-      manualNodes:{},
-      learningDays:{},
-      metrics:{}
-    })],
-    ['SET',`s:${learnedHash}`,JSON.stringify({
-      v:2,
-      profiles:{},
-      accountDocs:{
-        'progress:course:general-foundation':{
-          rev:1,
-          at:'2026-09-29T00:00:00.000Z',
-          schema:1,
-          deviceId:learnedDevice,
-          deleted:false,
-          storeKey:learnedStoreKey
-        }
-      }
-    })]
-  ]);
-  const learnedPreview=await call({method:'GET',headers:{'x-fit-email':learnedEmail,'x-fit-device':learnedDevice,'x-fit-token':learnedToken},query:{action:'set',id:'general-foundation'}});
+  // Learned paid activities are retained only while the account currently has full
+  // access. The server validates IDs against the released set and keeps a separate
+  // entitlement ledger; preview never trusts client-editable progress documents.
+  const retained=await call({
+    method:'POST',
+    headers:{'x-fit-email':email,'x-fit-device':deviceId,'x-fit-token':token},
+    body:{action:'retain_learned',id:'general-foundation',activityIds:['a8','does-not-exist']}
+  });
+  assert.equal(retained.status,200);
+  assert.equal(retained.body.retained,1);
+
+  const ownerHash=hash(email).slice(0,32);
+  await store.pipe([['SET',`a:${ownerHash}`,JSON.stringify({
+    syncDevices:{[deviceId]:{h:hash(token)}},
+    owned:{}
+  })]]);
+  const learnedPreview=await call({
+    method:'GET',
+    headers:{'x-fit-email':email,'x-fit-device':deviceId,'x-fit-token':token},
+    query:{action:'set',id:'general-foundation'}
+  });
   assert.equal(learnedPreview.status,200);
   assert.equal(learnedPreview.body.access,'preview');
   assert.deepEqual(learnedPreview.body.set.activities.map(x=>x.id),['a1','a7','a8']);
   const learnedPaidNode=learnedPreview.body.set.roadmaps[0].nodes.find(x=>x.id==='d8');
   assert.deepEqual(learnedPaidNode.activityIds,[]);
+
+  const freeEmail='free@example.com', freeDevice='device-free', freeToken='free-token';
+  await store.pipe([['SET',`a:${hash(freeEmail).slice(0,32)}`,JSON.stringify({
+    syncDevices:{[freeDevice]:{h:hash(freeToken)}},
+    owned:{}
+  })]]);
+  const deniedRetain=await call({
+    method:'POST',
+    headers:{'x-fit-email':freeEmail,'x-fit-device':freeDevice,'x-fit-token':freeToken},
+    body:{action:'retain_learned',id:'general-foundation',activityIds:['a8']}
+  });
+  assert.equal(deniedRetain.status,403);
+  assert.equal(deniedRetain.body.error,'full_access_required');
 
   const draft=await Content.getDraft('general-foundation');
   draft.title.ru='Updated';
