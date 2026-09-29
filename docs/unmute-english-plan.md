@@ -58,7 +58,8 @@
 | Фаза 4f-3 — mixed drill | ✅ в `main` (#236) | 10 shuffled phrases from ≥3 learned patterns; exact legacy eligibility; no SRS/metric writes |
 | Фаза 4g — course map | ✅ в `main` (#237) | full 40-day roadmap skeleton, completed/current/prerequisite/purchase states, preview-safe paid nodes |
 | Фаза 4h — clickable lexicon | ✅ в `main` (#238) | every English token in learner content opens one shared dictionary sheet; exact refs when available; no Add/SRS write on click |
-| Фаза 4i — learner progress | ✅ в этой фазе | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
+| Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
+| Фаза 4j — minimal onboarding | ✅ в этой фазе | 3 short product-explanation screens, no questionnaire/account gate, skip existing/imported learners, Start → Day 1 |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -192,6 +193,7 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 | 8 | Первый канал оплаты, цены, нарезка пакетов (§4) | до фазы 6 |
 | 9 | Судьба репозитория `English` | после переноса семьи — заморозить, README со ссылкой на `apps/unmute` |
 | 10 | Поведение слов в учебном контенте | ✅ все английские слова нажимаемы для мгновенного словарного popup; отдельной кнопки/действия «добавить слово» нет. Клик сам по себе не создаёт запись SRS. `progress:words` нужен для уже существующего/импортированного word-review состояния |
+| 11 | Первый запуск / onboarding | ✅ минимальный: 3 коротких экрана о подходе, нажимаемых словах и speak/listen/review; **без** вопросов про уровень, страну, цель и минуты. Аккаунт не нужен. Уже имеющий реальный/импортированный course progress onboarding не видит |
 
 ---
 
@@ -382,8 +384,9 @@ DictEntry { word, ru }
 - ✅ **4g. Карта курса:** отдельный `/course` показывает полный roadmap из 40 дней с состояниями `пройден / текущий / доступен / сначала предыдущий / нужен полный курс`; доступные и пройденные дни можно открыть существующим runner. Preview API больше не обрезает карту до 7 дней: дни 8–40 приходят только безопасным skeleton без `activityIds`/completion и без платного контента. После day 7 `Today` больше не считает курс завершённым и не предлагает открыть day 8 без entitlement — вместо этого ведёт на карту. Paywall остаётся фазе entitlements.
 - ✅ **4h. Нажимаемые английские слова:** один `LexiconProvider` загружает опубликованный lexicon через существующий offline cache и обслуживает все learner-экраны. Любой English token в теории, карточках, паттернах, listening/speaking/dialogue, Review, Today и карте можно нажать: открывается общий bottom-sheet с переводом, IPA/русским чтением и примерами, если они есть; слово автоматически можно прослушать. `lexiconRefs` используются как точный context/sense, когда контент его задаёт; при неоднозначности UI показывает варианты и не угадывает. Неизвестное слово всё равно кликабельно и озвучивается. Клик никогда не создаёт `progress:words` и отдельного действия «добавить» нет.
 - ✅ **4i. Экран прогресса:** отдельный `/progress` читает только уже существующие `progress:course`, `progress:stats` и `progress:words`. Показывает реально пройденные дни roadmap, число дней занятий, текущую серию (обнуляется в UI после пропущенного дня), активные SRS-записи и due-now, агрегат сохранённых answer buckets, а также среднее **последних** speed/dialogue metrics по упражнениям. Историческую среднюю скорость/диалоги не выдумываем, потому что документ хранит только последнее значение на activity. Для нового пользователя вместо набора нулей — отдельный empty state.
+- ✅ **4j. Минимальный onboarding:** первый новый anonymous learner видит только 3 коротких экрана: зачем UnMute, что любое английское слово нажимается, и как работает speak → listen → review. Никакой анкеты и обязательного аккаунта. Последняя кнопка сразу открывает текущий первый день; есть «Пропустить». `unmute.onboarding.v1` хранится локально. Если уже есть живой/imported `progress:course`, onboarding автоматически пропускается и локально помечается завершённым. Событие аналитики — `onboarding_done`.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
-- Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
+- Экраны: минимальное знакомство (3 экрана без анкеты) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
 - e2e: «первый день без аккаунта», перезагрузка, работа без сети после загрузки.
 
