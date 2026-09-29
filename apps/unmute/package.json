@@ -8,12 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js && node tests/ai-trial.js",
+    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js && node tests/ai-trial.js && node tests/android-shell.js",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run build",
     "import:legacy": "node scripts/import-legacy-content.mjs",
-    "test:legacy-parity": "vitest run src/engine/legacy-parity.test.ts"
+    "test:legacy-parity": "vitest run src/engine/legacy-parity.test.ts",
+    "mobile:sync": "npm run build && cap sync android",
+    "mobile:android": "npm run mobile:sync && cap open android",
+    "check:android": "npm run mobile:sync && gradle -p android :app:assembleDebug"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.0",
@@ -21,7 +24,10 @@
     "react-aria-components": "1.21.1",
     "react-dom": "19.3.0",
     "react-router": "8.4.0",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/local-notifications": "8.3.1"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.3",
@@ -34,6 +40,7 @@
     "playwright-core": "1.55.0",
     "typescript": "6.0.3",
     "vite": "8.3.1",
-    "vitest": "5.0.2"
+    "vitest": "5.0.2",
+    "@capacitor/cli": "8.5.2"
   }
 }

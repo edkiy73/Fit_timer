@@ -48,3 +48,39 @@ jobs:
 
       - name: Сборка и e2e
         run: npm run test:browser
+
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: apps/unmute
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/unmute/package-lock.json
+
+      - name: Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Dependencies and Capacitor sync
+        run: |
+          npm ci --no-audit --no-fund
+          npm run mobile:sync
+
+      - name: Android debug build
+        run: gradle -p android :app:assembleDebug --no-daemon
