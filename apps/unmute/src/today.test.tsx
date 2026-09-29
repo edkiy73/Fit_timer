@@ -67,7 +67,7 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue){
+function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,9 +75,10 @@ function renderToday(value:LearnerCourseRuntimeValue){
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} />
+      <TodayView runtime={value} onStart={onStart} />
     </I18nProvider>
   );
+  return onStart;
 }
 
 describe('Today learner shell',()=>{
@@ -89,6 +90,15 @@ describe('Today learner shell',()=>{
     expect(screen.getByRole('heading',{name:'Настоящее время'})).toBeTruthy();
     expect(screen.getByText('Заданий: 2')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+  });
+
+  it('opens the current node from Today',async()=>{
+    const user=userEvent.setup();
+    const onStart=renderToday(runtime(),vi.fn());
+
+    await user.click(screen.getByRole('button',{name:'Начать'}));
+    expect(onStart).toHaveBeenCalledWith('day-2');
   });
 
   it('shows an offline badge for a cached course snapshot',()=>{
