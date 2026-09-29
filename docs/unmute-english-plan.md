@@ -75,7 +75,8 @@
 | Фаза 9a-1 — native speech boundary | ✅ в `main` (#256) | UnMute learner voice routes through Core speech when dedicated `UnMuteAudio` exists; Web Speech fallback otherwise; FitTimer command plugin explicitly rejected |
 | Фаза 9a-2a — Android shell + UnMuteAudio | ✅ в `main` (#257) | Capacitor 8 Android shell; system SpeechRecognizer (3 alternatives) + Android TTS; native notifications plugin; Android debug build in CI |
 | Фаза 9a-2b — iOS shell + UnMuteAudio | ✅ в `main` (#258) | Capacitor 8 iOS SPM shell; SFSpeechRecognizer (top 3 alternatives) + AVSpeechSynthesizer; speech/mic permissions; iOS simulator build in CI |
-| Фаза 9a-3 — native device launch smoke | ✅ в этой фазе | Android headless emulator installs/launches debug APK; iOS simulator installs/launches built app; process stays alive after launch |
+| Фаза 9a-3 — native device launch smoke | ✅ в `main` (#259) | Android headless emulator installs/launches debug APK; iOS simulator installs/launches built app; process stays alive after launch |
+| Фаза 10a — launch funnel analytics | ✅ в этой фазе | onboarding/lesson/day/paywall/talk events wired; purchase event taxonomy reserved until deferred payment phase |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -446,7 +447,7 @@ DictEntry { word, ru }
 - Store purchases остаются отложенной фазой 6; native shell не должен притворяться, что IAP уже подключён.
 
 ### Фаза 10 — Запуск
-- Воронка: `onboarding_done`, `lesson_completed`, `day_completed`, `paywall_shown{place}`, `purchase_started/completed{sku}`, `talk_started`.
+- ✅ **10a. Воронка:** server whitelist теперь принимает `onboarding_done`, `lesson_completed`, `day_completed`, `talk_started` и bounded paywall events `paywall_shown.course/today/talk/other`. Урок/день считаются только при локальном первом завершении node в runner; повтор уже завершённого node событие не шлёт. `talk_started` пишется только после успешного первого AI reply. `/access` фиксирует место входа из course/Today/talk. Для отложенной оплаты заранее зарегистрированы bounded `purchase_started/completed.course.general-foundation` (+ `.other`), но **не эмитятся**, пока реального checkout нет — покупки не имитируем.
 - Страницы в сторах; нейтрализация контента «про Бали» (решение 7); заморозка репозитория `English`.
 
 ---
