@@ -16,6 +16,18 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        WorkoutNotifications.setAppVisible(true);
+    }
+
+    @Override
+    protected void onStop() {
+        WorkoutNotifications.setAppVisible(false);
+        super.onStop();
+    }
+
+    @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         applySystemFontScale();
