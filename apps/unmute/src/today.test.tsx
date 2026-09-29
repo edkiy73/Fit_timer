@@ -67,7 +67,7 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn()){
+function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,10 +75,10 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn()){
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} />
     </I18nProvider>
   );
-  return onStart;
+  return {onStart,onReview};
 }
 
 describe('Today learner shell',()=>{
@@ -95,10 +95,39 @@ describe('Today learner shell',()=>{
 
   it('opens the current node from Today',async()=>{
     const user=userEvent.setup();
-    const onStart=renderToday(runtime(),vi.fn());
+    const {onStart}=renderToday(runtime(),vi.fn());
 
     await user.click(screen.getByRole('button',{name:'Начать'}));
     expect(onStart).toHaveBeenCalledWith('day-2');
+  });
+
+  it('puts due interval review before the current lesson',async()=>{
+    const user=userEvent.setup();
+    const progress=emptyCourseProgress();
+    progress.cards['card.one']={box:2,due:0,at:'2026-09-29T00:00:00Z'};
+    const reviewState={
+      ...state,
+      set:{
+        ...state.set,
+        activities:[{
+          id:'card.one',
+          revision:1,
+          type:'text-input' as const,
+          tags:[],
+          revisionProgress:'preserve' as const,
+          lexiconRefs:[],
+          prompt:{ru:'Проверка'},
+          answer:{accepted:['check'],nearMiss:true,caseSensitive:false}
+        }]
+      },
+      progress
+    };
+    const onReview=vi.fn();
+    renderToday(runtime({state:reviewState}),vi.fn(),onReview);
+
+    expect(screen.getByText('Пора повторить: 1')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
+    expect(onReview).toHaveBeenCalledTimes(1);
   });
 
   it('shows an offline badge for a cached course snapshot',()=>{

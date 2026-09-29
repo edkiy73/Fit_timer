@@ -52,7 +52,8 @@
 | Фаза 4e-1 — pattern speed drill | ✅ в `main` (#230) | `src/pattern-drill.tsx`: legacy-style timed self-rating, 70% threshold, drill SRS + speed metric |
 | Фаза 4e-2a — pattern listening | ✅ в `main` (#231) | `src/pattern-listening.tsx` + browser TTS: 6 phrases, 3 meanings, 70% threshold, listening SRS |
 | Фаза 4e-2b — pattern speaking | ✅ в `main` (#232) | `src/pattern-speaking.tsx` + Web Speech recognition: max 6 phrases, legacy loose matcher, manual fallback, speaking SRS |
-| Фаза 4e-3 — dialogue runner | ✅ в этой фазе | `src/dialogue.tsx`: partner TTS, text/voice answer, legacy check+loose matcher, score persistence |
+| Фаза 4e-3 — dialogue runner | ✅ в `main` (#233) | `src/dialogue.tsx`: partner TTS, text/voice answer, legacy check+loose matcher, score persistence |
+| Фаза 4f-1 — interval review session | ✅ в этой фазе | cards (cap 30) + pattern drill/listening/speaking (3/2/2), pinned session, wrong cards return to the end |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -369,6 +370,7 @@ DictEntry { word, ru }
 - ✅ **4e-2a. Pattern listening:** после успешного drill runner продолжает тем же pattern activity в режим «На слух»: до 6 фраз, английский эталон озвучивается Web Speech TTS (`en-US`), выбор из 3 русских значений собран из реального pattern-контента, порог успеха ≥70%. Результат сохраняется в `practice.listening` теми же legacy-parity интервалами; после перезапуска pattern возобновляется с первого ещё не начатого режима. Speaking/recognition остаётся отдельным 4e-2b.
 - ✅ **4e-2b. Pattern speaking:** Web Speech Recognition слушает `en-US` с тремя альтернативами, результат сравнивается тем же legacy `looseSame` правилом (служебные `a/an/the/to/of` игнорируются, достаточно ≥70% слов цели). Есть повторный тап для остановки, понятные ошибки permission/no-speech/network/unsupported, «Показать ответ» и ручное «Всё же засчитать». До 6 фраз, итог ≥70% сохраняется в `practice.speaking`; matcher добавлен в frozen legacy parity.
 - ✅ **4e-3. Dialogue runner:** перенесён реальный legacy flow диалогов: реплика партнёра автоматически озвучивается, ответ можно написать или сказать, проверка использует `check()` + тот же `looseSame` для голосовых альтернатив, затем показывается/озвучивается эталон. Итоговый процент сохраняется как `dialogue-score:<activityId>`, activity помечается `seen` и день — learning day; порог 70% влияет на подсказку/повтор, но как и в legacy завершённый диалог считается пройденным независимо от результата.
+- ✅ **4f-1. Единый интервальный повтор курса:** «Сегодня» показывает due-очередь до нового материала. Сессия фиксируется при входе и объединяет карточки (до 30, oldest-due-first) и уже изученные pattern-режимы с legacy caps `drill 3 / listening 2 / speaking 2`. Неверная карточка падает в box 0 и возвращается в конец текущего подхода до правильного ответа; practice-mode проходит один due-заход и сохраняет свой SRS. Tombstones и будущие due не попадают в очередь. Слова остаются отдельным 4f-2.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.

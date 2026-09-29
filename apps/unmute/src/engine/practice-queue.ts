@@ -29,13 +29,13 @@ export interface PracticeReviewQueue{
 
 function stableDueItems(
   candidateIds:string[],
-  states:Record<string,PracticeSrsState|undefined>,
+  states:Record<string,(PracticeSrsState&{deleted?:boolean})|undefined>,
   todayDay:number
 ):PracticeQueueItem[]{
   const sourceOrder=new Map(candidateIds.map((id,index)=>[id,index]));
   return candidateIds
     .map(id=>({id,state:states[id]}))
-    .filter((item):item is PracticeQueueItem=>Boolean(item.state&&item.state.due<=todayDay))
+    .filter((item):item is PracticeQueueItem=>Boolean(item.state&&!item.state.deleted&&item.state.due<=todayDay))
     .sort((a,b)=>{
       const byDue=a.state.due-b.state.due;
       if(byDue!==0)return byDue;
@@ -46,7 +46,7 @@ function stableDueItems(
 export function selectPracticeQueue(
   kind:PracticeSrsKind,
   candidateIds:string[],
-  states:Record<string,PracticeSrsState|undefined>,
+  states:Record<string,(PracticeSrsState&{deleted?:boolean})|undefined>,
   todayDay:number
 ):PracticeQueueSlice{
   const cap=PRACTICE_DAILY_CAPS[kind];

@@ -51,6 +51,16 @@ describe('practice daily queue parity',()=>{
     expect(queue.waiting).toBe(0);
   });
 
+  it('ignores tombstoned practice states',()=>{
+    const queue=selectPracticeQueue('drill',['a','b'],{
+      a:{box:1,due:1,deleted:true},
+      b:{box:1,due:1},
+    },1);
+
+    expect(queue.due.map(item=>item.id)).toEqual(['b']);
+    expect(queue.totalDue).toBe(1);
+  });
+
   it('never returns the negative waiting count produced by legacy patWaiting',()=>{
     const queue=selectPracticeQueue('drill',ids,{
       a:{box:1,due:3},
