@@ -5,6 +5,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { isNodeUnlockedByPurchase } from './content/access';
 import type { RoadmapNode } from './content/schema';
+import { LexiconText } from './lexicon-ui';
 
 export type CourseMapStatus=
   |'complete'
@@ -111,7 +112,7 @@ export function CourseMapView({
 
       <div className="course-map-heading">
         <div>
-          <div className="eyebrow">{localized(state.set.title,locale)}</div>
+          <div className="eyebrow"><LexiconText text={localized(state.set.title,locale)} /></div>
           <h2 id="course-map-title">{t('courseMap.title')}</h2>
         </div>
         {state.fromCache&&<span className="today-badge">{t('today.offline')}</span>}
@@ -144,7 +145,7 @@ export function CourseMapView({
                   <span className="course-map-status">{t(statusKey(item.status))}</span>
                 </div>
                 {localized(item.node.title,locale)!==label&&(
-                  <strong>{localized(item.node.title,locale)}</strong>
+                  <strong><LexiconText text={localized(item.node.title,locale)} /></strong>
                 )}
                 {item.status==='purchase-locked'&&(
                   <span className="course-map-note">{t('courseMap.purchaseHint')}</span>
