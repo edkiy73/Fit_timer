@@ -7,6 +7,7 @@ import { isFormPair, levenshtein, nearMiss } from './answer-near-miss';
 import { CARD_INTERVALS, gradeCardSrs } from './card-srs';
 import { PRACTICE_INTERVALS, gradePracticeSrs } from './practice-srs';
 import { PRACTICE_DAILY_CAPS, selectPracticeQueue } from './practice-queue';
+import { looseSpeechMatch } from '../speech-match';
 
 const LEGACY_SHA='011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_URL='https://raw.githubusercontent.com/edkiy73/English/'+LEGACY_SHA+'/index.html';
@@ -38,6 +39,7 @@ type LegacyParity={
   lev:(a:string,b:string)=>number;
   isFormPair:(a:string,b:string)=>boolean;
   nearMiss:(input:string,accepted:string[])=>boolean;
+  looseSame:(heard:string,target:string)=>boolean;
   dictLook:(word:string)=>unknown;
   grade:(lesson:string,index:number,correct:boolean)=>void;
   gradePat:(store:'pat'|'voc'|'lis',id:string,correct:boolean)=>void;
@@ -83,7 +85,7 @@ async function bootLegacy():Promise<LegacyParity>{
   const safe=main.slice(0,markerIndex);
   const expose=String.raw`
 window.__legacyParity={
-  norm,expand,canon,check,lev,isFormPair,nearMiss,dictLook,grade,gradePat,
+  norm,expand,canon,check,lev,isFormPair,nearMiss,looseSame,dictLook,grade,gradePat,
   patDue,vocDue,lisDue,dayNum,today,
   getS:()=>S,setS:value=>{S=value;},
   intervals:Array.from(INTERVALS),
@@ -205,6 +207,22 @@ describe('frozen legacy engine parity',()=>{
     const known=(word:string)=>Boolean(legacy.dictLook(word));
     for(const [input,accepted] of nearCases){
       expect(nearMiss(input,accepted,known),input).toBe(legacy.nearMiss(input,accepted));
+    }
+  });
+
+  it('matches the frozen loose speech-recognition matcher',()=>{
+    const cases:Array<[string,string]>= [
+      ['I work at home','I work at home.'],
+      ['I work home','I work at home.'],
+      ['work home','I work at home.'],
+      ['she works here','She works here.'],
+      ['works here','She works here.'],
+      ['I want go','I want to go'],
+      ['completely different words','I work at home']
+    ];
+    for(const [heard,target] of cases){
+      expect(looseSpeechMatch(heard,target),heard+' / '+target)
+        .toBe(legacy.looseSame(heard,target));
     }
   });
 
