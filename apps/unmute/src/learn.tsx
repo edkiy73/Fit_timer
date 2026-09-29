@@ -15,6 +15,7 @@ import { DialogueView } from './dialogue';
 import { LexiconText } from './lexicon-ui';
 import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
+import { AnswerExplanationView } from './answer-explanation';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -209,7 +210,19 @@ export function NodeRunnerView({
     }
   };
 
-  const feedback=(accepted?:string,explanation?:Record<string,string>)=>result===null?null:(
+  const feedback=({
+    question,
+    accepted,
+    acceptedAnswers=[],
+    learnerAnswer='',
+    explanation
+  }:{
+    question:string;
+    accepted?:string|undefined;
+    acceptedAnswers?:string[]|undefined;
+    learnerAnswer?:string|undefined;
+    explanation?:Record<string,string>|undefined;
+  })=>result===null?null:(
     <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
       <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
       {!result&&accepted&&(
@@ -217,6 +230,17 @@ export function NodeRunnerView({
       )}
       {explanation&&(
         <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+      )}
+      {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+        <AnswerExplanationView
+          question={question}
+          learnerAnswer={learnerAnswer}
+          acceptedAnswers={acceptedAnswers}
+          courseExplanation={localized(explanation,locale)}
+          refs={activity.lexiconRefs}
+          onSignIn={onSignIn}
+          onAccess={onAccess}
+        />
       )}
       <button className="primary-button" type="button" onClick={advance}>
         {index+1<activities.length?t('learn.next'):t('learn.finish')}
@@ -283,7 +307,13 @@ export function NodeRunnerView({
               {t('learn.check')}
             </button>
           )}
-          {feedback(undefined,activity.explanation)}
+          {feedback({
+            question:localized(activity.prompt,locale),
+            accepted:localized(activity.options[activity.correctIndex],locale),
+            acceptedAnswers:[localized(activity.options[activity.correctIndex],locale)],
+            learnerAnswer:selected===null?'':localized(activity.options[selected],locale),
+            explanation:activity.explanation
+          })}
         </article>
       )}
 
@@ -318,7 +348,13 @@ export function NodeRunnerView({
               {t('learn.check')}
             </button>
           )}
-          {feedback(activity.answer.accepted[0],activity.explanation)}
+          {feedback({
+            question:localized(activity.prompt,locale),
+            accepted:activity.answer.accepted[0],
+            acceptedAnswers:activity.answer.accepted,
+            learnerAnswer:answer.trim(),
+            explanation:activity.explanation
+          })}
         </article>
       )}
 

@@ -135,6 +135,57 @@ function buildTalkReviewPrompt(body){
   ].filter(Boolean).join('\n\n');
 }
 
+function cleanAccepted(value){
+  if(!Array.isArray(value))return [];
+  return value.map(item=>line(item,300)).filter(Boolean).slice(0,8);
+}
+
+function parseAnswerExplain(text){
+  let parsed;
+  try{parsed=JSON.parse(String(text||''));}
+  catch(_){return {ok:false,reason:'answer_explain_invalid_json',missing:['why','tip']};}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
+    return {ok:false,reason:'answer_explain_invalid_object',missing:['why','tip']};
+  }
+  const why=line(parsed.why,600);
+  const tip=line(parsed.tip,400);
+  if(!why)return {ok:false,reason:'answer_explain_missing_why',missing:['why']};
+  if(!tip)return {ok:false,reason:'answer_explain_missing_tip',missing:['tip']};
+  return {
+    ok:true,
+    text:JSON.stringify({why,tip})
+  };
+}
+
+function buildAnswerExplainPrompt(body){
+  const locale=cleanLocale(body&&body.locale);
+  const question=line(body&&body.question,700);
+  const learnerAnswer=line(body&&body.learnerAnswer,500);
+  const accepted=cleanAccepted(body&&body.acceptedAnswers);
+  const courseExplanation=line(body&&body.courseExplanation,800);
+  if(!question||!learnerAnswer||!accepted.length){
+    throw Object.assign(new Error('answer_explain_bad_input'),{status:400,code:'answer_explain_bad_input'});
+  }
+
+  return [
+    'You explain one wrong English-learning answer inside UnMute.',
+    'Use ONLY the task, learner answer, accepted answers, and optional course explanation below.',
+    'Do not invent a new grading rule and do not claim another answer is required if it is not in ACCEPTED ANSWERS.',
+    'Explain the most useful reason the learner answer did not match, in plain language and without long grammar lectures.',
+    'Give one short practical tip that helps answer a similar task next time.',
+    'TASK: '+question,
+    'LEARNER ANSWER: '+learnerAnswer,
+    'ACCEPTED ANSWERS: '+accepted.join(' | '),
+    courseExplanation?'COURSE EXPLANATION: '+courseExplanation:'',
+    locale==='ru'
+      ? 'Write WHY and TIP in Russian. English examples may stay in English.'
+      : 'Write WHY and TIP in English.',
+    'Return ONLY strict JSON with this exact shape:',
+    '{"why":"...","tip":"..."}',
+    'Do not use Markdown. Do not add keys.'
+  ].filter(Boolean).join('\n\n');
+}
+
 const registry=createAIActionRegistry([
   {
     id:'talk.reply',
@@ -165,9 +216,24 @@ const registry=createAIActionRegistry([
       }
       return null;
     }
+  },
+  {
+    id:'answer.explain',
+    type:'text',
+    bucket:'light',
+    async run({settings,body,generate}){
+      const prompt=buildAnswerExplainPrompt(body||{});
+      return generate('text',settings,prompt,{validate:out=>parseAnswerExplain(out&&out.text)});
+    },
+    publicError(error){
+      if(error&&String(error.code||error.message||'')==='answer_explain_bad_input'){
+        return {status:400,code:'answer_explain_bad_input'};
+      }
+      return null;
+    }
   }
 ],{
-  malformedPattern:/talk_invalid_json|talk_invalid_object|talk_missing_reply|talk_review_invalid_json|talk_review_invalid_object|talk_review_missing_strengths|talk_review_missing_focus/
+  malformedPattern:/talk_invalid_json|talk_invalid_object|talk_missing_reply|talk_review_invalid_json|talk_review_invalid_object|talk_review_missing_strengths|talk_review_missing_focus|answer_explain_invalid_json|answer_explain_invalid_object|answer_explain_missing_why|answer_explain_missing_tip/
 });
 
 module.exports={
@@ -176,5 +242,7 @@ module.exports={
   parseReply,
   cleanHistory,
   buildTalkReviewPrompt,
-  parseTalkReview
+  parseTalkReview,
+  buildAnswerExplainPrompt,
+  parseAnswerExplain
 };
