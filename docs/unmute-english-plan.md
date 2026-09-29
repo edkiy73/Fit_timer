@@ -262,7 +262,7 @@ DictEntry { word, ru }
 | `progress:course:<setId>` | seen activities, card SRS, drill/listening/speaking SRS, manual roadmap days, learning days, metrics | по стабильной сущности, newer `at`; tombstones |
 | `progress:stats:<setId>` | per-device + activity answer buckets | по bucket; агрегирование без потери офлайн-ответов другого устройства |
 | `progress:words` | общий личный словарь по `lexemeId+senseId` | по lexeme+sense; tombstones |
-| `settings` | тема, язык и будущие настройки | документ настроек |
+| `settings` | язык, `onboardingDoneAt` и будущие настройки | документ настроек; поля merge-ятся отдельно, чтобы locale не затёр завершённый onboarding |
 
 Локальная копия и конфликтный pull → merge → push уже работают через Core `document-sync.ts`. Без аккаунта состояние остаётся на устройстве; при первом входе локальные документы сливаются с серверными.
 
