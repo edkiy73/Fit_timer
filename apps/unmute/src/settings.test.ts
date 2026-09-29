@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeSettings, parseSettings } from './settings';
+import { mergeSettings, parseSettings } from './settings-data';
 
 describe('UnMute settings',()=>{
   it('parses known settings and ignores malformed values',()=>{
