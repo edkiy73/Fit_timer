@@ -27,7 +27,9 @@ export function resolveWordReviewSession(
 
   for(const record of dueWords(words,todayDay)){
     const lexeme=byId.get(record.lexemeId);
-    const sense=lexeme?.senses.find(item=>item.id===record.senseId);
+    // A reviewed lexicon may merge or renumber senses; keep the saved word in review
+    // with its first meaning instead of silently dropping it.
+    const sense=lexeme?.senses.find(item=>item.id===record.senseId) || lexeme?.senses[0];
     if(!lexeme||!sense||lexeme.deprecated){
       unresolved++;
       continue;

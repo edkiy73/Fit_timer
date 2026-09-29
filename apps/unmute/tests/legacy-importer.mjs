@@ -117,11 +117,12 @@ assert.deepEqual(Array.from(verbTable.items[0].participleFormIds),['participle']
 const become=lexicon.entries.find(e=>e.lemma==='become');
 assert.ok(become);
 assert.deepEqual(Array.from(become.senses[0].translations.ru),['становиться']);
-assert.ok(become.senses[0].tags.includes('needs-review'));
+assert.equal(become.senses[0].tags.includes('needs-review'),false,'reviewed in the supplement');
 assert.equal(become.forms.find(form=>form.id==='base').text,'become');
 assert.equal(become.forms.find(form=>form.id==='past').text,'became');
 assert.equal(become.forms.find(form=>form.id==='participle').text,'become');
-assert.ok(work.senses.every(s=>s.tags.includes('needs-review')));
+assert.deepEqual(work.senses.map(s=>[s.id,s.partOfSpeech,s.translations.ru[0],s.tags.length]),
+  [['sense-1','verb','работать',0],['sense-2','noun','работа',0]]);
 const howAreYou=lexicon.entries.find(e=>e.lemma==='how are you');
 assert.ok(howAreYou);
 assert.equal(howAreYou.senses.length,2);
@@ -131,6 +132,12 @@ assert.equal(phraseRef.lexemeId,howAreYou.id);
 assert.equal(phraseRef.senseId,howAreYou.senses.find(s=>s.translations.ru.includes('Как дела?')).id);
 
 assert.throws(()=>validateImport(model,course,lexicon),/unexpected_lessons/);
+
+// Course sentences become dictionary examples for single-sense words only.
+const home=lexicon.entries.find(e=>e.lemma==='home');
+assert.deepEqual(home.examples.map(example=>[example.text,example.translations.ru,example.senseId,example.source.sourceKind]),
+  [['Home.','Дом','sense-1','course']]);
+assert.equal(work.examples.length,0,'two senses: a sentence cannot tell which one it shows');
 
 // Irregular forms listed as their own DICT words are owned by the verb lexeme; the reviewed
 // supplement adds regular inflections, contractions and words the legacy DICT never had.
