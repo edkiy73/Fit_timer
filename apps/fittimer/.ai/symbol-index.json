@@ -853,8 +853,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 821,
-      "chars": 35829,
+      "lines": 826,
+      "chars": 36314,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -909,8 +909,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2403,
-      "chars": 106690,
+      "lines": 2442,
+      "chars": 108224,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -966,6 +966,7 @@
         "readTimings",
         "refreshAfterForeground",
         "refreshVoicePackUI",
+        "renderHfModalDraft",
         "renderIconLabels",
         "resetSkipConfirm",
         "resumeWorkoutFromNativeNotification",
@@ -1433,8 +1434,8 @@
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
-      "lines": 417,
-      "chars": 26607,
+      "lines": 438,
+      "chars": 28629,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1453,7 +1454,6 @@
         "btnCompare",
         "btnDeleteAllPhotos",
         "btnExportAll",
-        "btnHfCommands",
         "btnImportAll",
         "btnLegalHealth",
         "btnLegalPrivacy",
@@ -1498,8 +1498,10 @@
         "emailNews",
         "emailOffers",
         "handsfreeSettingsCard",
+        "hfHeadsetDetail",
         "hfHint",
         "hfSeg",
+        "hfVoiceDetail",
         "importAllFile",
         "morePane_acc",
         "morePane_coach",
@@ -1579,8 +1581,8 @@
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
-      "lines": 611,
-      "chars": 40285,
+      "lines": 612,
+      "chars": 40387,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1591,6 +1593,7 @@
         "btnDelClient",
         "btnDelUser",
         "btnDoImport",
+        "btnHfApply",
         "btnImportProgFile",
         "btnPublish",
         "btnSaveUser",
