@@ -43,8 +43,9 @@ function buildTalkPrompt(body){
     ? body.focus.map(item=>line(item,120)).filter(Boolean).slice(0,12)
     : [];
   const learnerText=line(body&&body.learnerText,600);
+  const start=body&&body.start===true;
   const history=cleanHistory(body&&body.history);
-  if(!topic||!learnerText)throw Object.assign(new Error('talk_bad_input'),{status:400,code:'talk_bad_input'});
+  if(!topic||(!start&&!learnerText))throw Object.assign(new Error('talk_bad_input'),{status:400,code:'talk_bad_input'});
 
   const transcript=history.map(item=>
     (item.role==='partner'?'PARTNER':'LEARNER')+': '+item.text
@@ -59,7 +60,9 @@ function buildTalkPrompt(body){
     promptTemplate?'SCENARIO INSTRUCTIONS: '+promptTemplate:'',
     'TOPIC: '+topic,
     transcript?'RECENT TRANSCRIPT:\n'+transcript:'',
-    'LATEST LEARNER MESSAGE: '+learnerText,
+    start
+      ? 'START THE CONVERSATION: speak first as the partner with one natural opening line or question. Set correction and note to null.'
+      : 'LATEST LEARNER MESSAGE: '+learnerText,
     'Return ONLY strict JSON with this exact shape:',
     '{"reply":"English partner reply","correction":null,"note":null}',
     'If the learner made a clear English mistake that matters for meaning or natural speech, set correction to a concise corrected version of ONLY their latest message.',
