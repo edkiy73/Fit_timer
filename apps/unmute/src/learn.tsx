@@ -7,10 +7,11 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import type { PracticeSrsKind } from './engine/practice-srs';
-import { saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
-import type { SpeakText } from './speech-web';
-import { speakWebText } from './speech-web';
+import { saveDialogueActivity, saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
+import type { SpeakText, StartRecognition } from './speech-web';
+import { speakWebText, startWebRecognition } from './speech-web';
 import { PatternPracticeView } from './pattern-practice';
+import { DialogueView } from './dialogue';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -65,7 +66,9 @@ export interface NodeRunnerViewProps {
     correct:boolean,
     score?:number
   )=>Promise<void>;
+  saveDialogue?:(setId:string,activityId:string,score:number)=>Promise<void>;
   speak?:SpeakText;
+  startRecognition?:StartRecognition;
 }
 
 export function NodeRunnerView({
@@ -75,7 +78,9 @@ export function NodeRunnerView({
   saveSeen,
   saveGraded,
   savePractice,
-  speak=speakWebText
+  saveDialogue=saveDialogueActivity,
+  speak=speakWebText,
+  startRecognition=startWebRecognition
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -314,7 +319,19 @@ export function NodeRunnerView({
         />
       )}
 
-      {!['theory','choice','text-input','translation','pattern-drill'].includes(activity.type)&&(
+      {activity.type==='dialogue'&&(
+        <DialogueView
+          key={activity.id}
+          activity={activity}
+          setId={setId}
+          saveDialogue={saveDialogue}
+          speak={speak}
+          startRecognition={startRecognition}
+          onDone={advance}
+        />
+      )}
+
+      {!['theory','choice','text-input','translation','pattern-drill','dialogue'].includes(activity.type)&&(
         <article className="learn-card">
           <h3>{activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')}</h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyCourseProgress, emptyStatsProgress } from './progress';
 import {
   activitySaveClock,
+  buildDialogueActivityProgress,
   buildGradedActivityProgress,
   buildPracticeActivityProgress,
   buildSeenActivityProgress
@@ -18,6 +19,27 @@ describe('activity progress writes',()=>{
 
     expect(next.seen['theory.one']?.at).toBe(clock.at);
     expect(next.learningDays[clock.dayKey]).toBeTruthy();
+  });
+
+  it('marks a finished dialogue seen and stores its legacy score metric',()=>{
+    const clock={
+      at:'2026-09-29T03:00:00.000Z',
+      dayKey:'2026-09-29',
+      dayNumber:20725
+    };
+    const next=buildDialogueActivityProgress(
+      emptyCourseProgress(),
+      'dialogue.d1',
+      74.6,
+      clock
+    );
+
+    expect(next.seen['dialogue.d1']).toEqual({at:clock.at});
+    expect(next.learningDays[clock.dayKey]).toEqual({at:clock.at});
+    expect(next.metrics['dialogue-score:dialogue.d1']).toEqual({
+      value:75,
+      at:clock.at
+    });
   });
 
   it('grades drill practice with legacy SRS timing and stores speed',()=>{
