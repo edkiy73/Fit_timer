@@ -1,6 +1,6 @@
 import type { LexiconSnapshot } from './lexicon/schema';
 import type { WordProgressRecord, WordsProgressDocument } from './progress';
-import { wordReviewSession } from './engine/word-srs';
+import { dueWords, WORD_SESSION_CAP } from './engine/word-srs';
 
 export interface ResolvedWordReviewItem {
   record:WordProgressRecord;
@@ -21,12 +21,11 @@ export function resolveWordReviewSession(
   todayDay:number,
   locale:string
 ):ResolvedWordReviewSession{
-  const session=wordReviewSession(words,todayDay);
   const byId=new Map(lexicon.entries.map(entry=>[entry.id,entry]));
-  const items:ResolvedWordReviewItem[]=[];
+  const resolved:ResolvedWordReviewItem[]=[];
   let unresolved=0;
 
-  for(const record of session.items){
+  for(const record of dueWords(words,todayDay)){
     const lexeme=byId.get(record.lexemeId);
     const sense=lexeme?.senses.find(item=>item.id===record.senseId);
     if(!lexeme||!sense||lexeme.deprecated){
@@ -42,7 +41,7 @@ export function resolveWordReviewSession(
       unresolved++;
       continue;
     }
-    items.push({
+    resolved.push({
       record,
       lemma:lexeme.lemma,
       translations,
@@ -50,9 +49,9 @@ export function resolveWordReviewSession(
   }
 
   return {
-    items,
-    totalDue:session.totalDue,
-    waiting:session.waiting,
+    items:resolved.slice(0,WORD_SESSION_CAP),
+    totalDue:resolved.length,
+    waiting:Math.max(0,resolved.length-WORD_SESSION_CAP),
     unresolved,
   };
 }
