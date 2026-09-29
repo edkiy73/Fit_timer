@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js",
+    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js && node tests/ai-trial.js",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run build",
