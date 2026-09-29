@@ -106,4 +106,10 @@ describe('course access offer',()=>{
     }));
     expect(screen.getByText(/UnMute Plus/)).toBeTruthy();
   });
+
+  it('does not claim the course is usable until full content is actually loaded',()=>{
+    renderView(runtime('preview'),session({owned:['course.general-foundation']}),vi.fn());
+    expect(screen.getByRole('heading',{name:'Доступ есть — загружаем курс'})).toBeTruthy();
+    expect(screen.queryByRole('heading',{name:'Полный курс открыт'})).toBeNull();
+  });
 });
