@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useNavigate, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -116,11 +116,24 @@ function Account(){
   const returnTo=requestedReturn.startsWith('/')&&!requestedReturn.startsWith('//')
     ? requestedReturn
     : '/';
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
   // Local data stays on the device; the next sign-in merges it into that account.
   const signOut = async () => {
     await auth.logout();
     await appDocs.detach();
     navigate('/');
+  };
+  // Server data is removed; the device keeps its local copy (never wiped silently).
+  const deleteAccount = async () => {
+    setDeleteError(false);
+    try{
+      await auth.deleteAccount();
+      await appDocs.detach();
+      navigate('/');
+    }catch{
+      setDeleteError(true);
+    }
   };
   if(auth.loading) return null;
   return (
@@ -132,6 +145,18 @@ function Account(){
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
           <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+          {confirmDelete ? (
+            <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
+              <p>{t('account.deleteConfirm')}</p>
+              <div className="account-delete-actions">
+                <button className="secondary-button" type="button" onClick={() => void deleteAccount()}>{t('account.deleteYes')}</button>
+                <button className="link-button" type="button" onClick={() => setConfirmDelete(false)}>{t('account.deleteCancel')}</button>
+              </div>
+              {deleteError && <p className="muted" role="alert">{t('account.deleteFailed')}</p>}
+            </div>
+          ) : (
+            <button className="link-button" type="button" onClick={() => setConfirmDelete(true)}>{t('account.delete')}</button>
+          )}
         </>
       ) : (
         <>
@@ -142,6 +167,10 @@ function Account(){
 <LegacyProgressImportPanel />
       <NotificationSettingsPanel />
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
+      <p className="account-legal">
+        <a href="./privacy.html" target="_blank" rel="noreferrer">{t('account.privacy')}</a>
+        <a href="./delete-account.html" target="_blank" rel="noreferrer">{t('account.deletionInfo')}</a>
+      </p>
     </section>
   );
 }
