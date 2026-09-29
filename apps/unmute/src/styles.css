@@ -314,3 +314,27 @@ h2{margin:0 0 8px}
   .dictionary-head h2{font-size:28px}
   .dictionary-say{width:100%}
 }
+
+
+.progress-shell{display:grid;gap:16px}
+.progress-shell h2{margin:4px 0 0;font-size:28px}
+.progress-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.progress-metric{display:grid;gap:4px;align-content:start;border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--surface)}
+.progress-metric strong{font-size:25px;line-height:1.05}
+.progress-metric span{color:var(--muted);font-size:13px;line-height:1.35}
+.progress-metric small{color:var(--muted);font-size:11px;line-height:1.35}
+.progress-section{display:grid;gap:14px;border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--surface)}
+.progress-section h3{margin:3px 0 0;font-size:20px}
+.progress-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.progress-section-head>strong{font-size:20px}
+.progress-mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.progress-practice-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.progress-practice-row strong{color:var(--ink)}
+.progress-muted{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.progress-empty{min-height:220px;align-content:center}
+@media(max-width:620px){
+  .progress-overview,.progress-mini-grid{grid-template-columns:1fr}
+  .progress-metric{grid-template-columns:auto 1fr;align-items:baseline}
+  .progress-metric strong{font-size:22px}
+  .progress-metric small{grid-column:1/-1}
+}
