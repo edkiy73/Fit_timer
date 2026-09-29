@@ -58,7 +58,7 @@ export function learningDayStatus(
 
   let streak=1;
   for(let index=days.length-1;index>0;index--){
-    if(days[index]!-days[index-1]!==1)break;
+    if(days[index]!-days[index-1]!!==1)break;
     streak++;
   }
   return {studiedToday,lastLearningDay:last,streak};
