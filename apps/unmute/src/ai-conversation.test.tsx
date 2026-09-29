@@ -358,6 +358,6 @@ describe('AI conversation runner',()=>{
     await user.click(screen.getByRole('button',{name:'Ответить голосом'}));
 
     expect(await screen.findByText(/распознавание речи недоступно/)).toBeTruthy();
-    expect(screen.getByRole('textbox',{name:'Твой ответ'})).toBeEnabled();
+    expect((screen.getByRole('textbox',{name:'Твой ответ'}) as HTMLInputElement).disabled).toBe(false);
   });
 });
