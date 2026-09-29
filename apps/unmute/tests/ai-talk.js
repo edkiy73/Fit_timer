@@ -4,6 +4,7 @@ const assert=require('assert');
 const {registry,buildTalkPrompt,parseReply,cleanHistory}=require('../lib/unmute-ai-actions');
 
 async function main(){
+  assert.equal(typeof require('../api/admin'),'function');
   assert.deepEqual(cleanHistory([
     {role:'learner',text:'  hello  '},
     {role:'partner',text:'Hi!'},
