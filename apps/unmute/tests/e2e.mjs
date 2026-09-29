@@ -166,10 +166,11 @@ try{
   ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
 
+  const phoneSignedIn=await signIn(phone.page,'person@example.com');
+  await phone.page.goto(URL_+'#/');
   ok(
-    'first sign-in keeps and pushes the phone local progress',
-    await signIn(phone.page,'person@example.com')
-    && await appears(phone.page.getByText('День 2',{exact:true}))
+    'first sign-in keeps the phone local progress',
+    phoneSignedIn&&await appears(phone.page.getByRole('heading',{name:'День 2'}))
   );
 
   const laptop=await openDevice(browser,errors);
