@@ -81,7 +81,7 @@ describe('learner dictionary popup',()=>{
     expect(screen.getByText('работать')).toBeTruthy();
     expect(screen.getByText('/wɜːk/')).toBeTruthy();
     expect(screen.getByText('уорк')).toBeTruthy();
-    expect(screen.getByText('I work remotely.')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Перевести: remotely'})).toBeTruthy();
     expect(screen.getByText('Я работаю удалённо.')).toBeTruthy();
     expect(screen.queryByText(/добав/i)).toBeNull();
     expect(speakWebText).toHaveBeenCalledWith('work','en-US');
