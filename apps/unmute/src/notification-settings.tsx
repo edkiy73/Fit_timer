@@ -81,7 +81,10 @@ export function NotificationSettingsPanel(){
           type="time"
           value={settings.time}
           disabled={!settings.enabled||saving}
-          onChange={event=>void save({time:event.target.value})}
+          onChange={event=>{
+            const value=event.target.value;
+            if(/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value))void save({time:value});
+          }}
         />
       </label>
 
