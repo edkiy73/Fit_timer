@@ -1,12 +1,11 @@
 import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { loadLexicon } from './lexicon/client';
-import type { LexiconSnapshot } from './lexicon/schema';
 import { WORD_PROGRESS_DOC, type WordsProgressDocument } from './progress';
 import { appDocs, readWordsProgress } from './sync';
+import { useLexiconRuntime } from './lexicon-ui';
+import type { LexiconSnapshot } from './lexicon/schema';
 
 const WORDS_KEY='word-review-progress';
-const LEXICON_KEY='word-review-lexicon';
 
 export interface WordReviewRuntimeValue {
   words:WordsProgressDocument|null;
@@ -19,15 +18,11 @@ export interface WordReviewRuntimeValue {
 
 export function useWordReviewRuntime():WordReviewRuntimeValue{
   const queryClient=useQueryClient();
+  const lexicon=useLexiconRuntime();
   const wordsQuery=useQuery({
     queryKey:[WORDS_KEY],
     queryFn:readWordsProgress,
     staleTime:Infinity,
-  });
-  const lexiconQuery=useQuery({
-    queryKey:[LEXICON_KEY],
-    queryFn:loadLexicon,
-    staleTime:5*60_000,
   });
 
   useEffect(()=>{
@@ -40,23 +35,23 @@ export function useWordReviewRuntime():WordReviewRuntimeValue{
   const refresh=useCallback(async()=>{
     await Promise.all([
       queryClient.invalidateQueries({queryKey:[WORDS_KEY],exact:true}),
-      queryClient.invalidateQueries({queryKey:[LEXICON_KEY],exact:true}),
+      lexicon.refresh(),
     ]);
-  },[queryClient]);
+  },[queryClient,lexicon.refresh]);
 
-  const error=wordsQuery.error ?? lexiconQuery.error ?? null;
+  const error=wordsQuery.error ?? lexicon.error ?? null;
   const status:WordReviewRuntimeValue['status']=error
     ? 'error'
-    : wordsQuery.data&&lexiconQuery.data
+    : wordsQuery.data&&lexicon.status==='ready'&&lexicon.lexicon
       ? 'ready'
       : 'pending';
 
   return {
     words:wordsQuery.data??null,
-    lexicon:lexiconQuery.data?.lexicon??null,
+    lexicon:lexicon.lexicon,
     status,
     error,
-    fromCache:Boolean(lexiconQuery.data?.fromCache),
+    fromCache:lexicon.fromCache,
     refresh,
   };
 }
