@@ -101,7 +101,7 @@ describe('course map',()=>{
         storageKey="course-map-test.locale"
         systemLanguages={['ru']}
       >
-        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={onOpen} />
+        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={onOpen} onUnlock={()=>{}} />
       </I18nProvider>
     );
 
@@ -109,9 +109,35 @@ describe('course map',()=>{
     expect(screen.getByText('Нужен полный курс')).toBeTruthy();
     expect(screen.getAllByRole('button',{name:'Открыть'})).toHaveLength(1);
     expect(screen.getAllByRole('button',{name:'Пройти ещё раз'})).toHaveLength(1);
+    expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
 
     await user.click(screen.getByRole('button',{name:'Открыть'}));
     expect(onOpen).toHaveBeenCalledWith('day-2');
     expect(onOpen).not.toHaveBeenCalledWith('day-3');
+  });
+
+  it('opens the access offer from a paid roadmap node',async()=>{
+    const user=userEvent.setup();
+    const onUnlock=vi.fn();
+    const runtime:LearnerCourseRuntimeValue={
+      state:previewState(),
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="course-map-access-test.locale"
+        systemLanguages={['ru']}
+      >
+        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={()=>{}} onUnlock={onUnlock} />
+      </I18nProvider>
+    );
+
+    await user.click(screen.getByRole('button',{name:'Открыть доступ'}));
+    expect(onUnlock).toHaveBeenCalledWith('day-3');
   });
 });
