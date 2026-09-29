@@ -528,7 +528,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
 
         // One short debounce protects against a single unstable hypothesis, but does
         // not require the user to pause or pronounce the command slowly.
-        long delay = "next".equals(kind) ? 110L : 70L;
+        long delay = ("done".equals(kind) || "skip".equals(kind)) ? 110L : 70L;
         pendingPartialRunnable = () -> {
             if (!commandFiredForUtterance && kind.equals(pendingPartialKind)) {
                 emitCommand(pendingPartialText, kind, 0.0, "partial_debounced");
@@ -562,7 +562,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
         // Финальный результат уже обязан совпасть с целой командой. Поэтому порог
         // ниже прежнего: высокий 0.74 отбрасывал нормальное "готово" при обычной речи.
-        double threshold = "next".equals(kind) ? 0.42 : 0.34;
+        double threshold = ("done".equals(kind) || "skip".equals(kind)) ? 0.42 : 0.34;
         if (confidence > 0.0 && confidence < threshold) {
             emitHeard(text, kind, confidence, "final_low_confidence", false);
             return;
