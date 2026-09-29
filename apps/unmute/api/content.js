@@ -90,7 +90,8 @@ module.exports = async function contentHandler(req,res){
         account = await accountFromHeaders(req);
         full = !!account && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc));
       }
-      const learned = !full&&account ? await retainedActivityIds(account.accountHash,id) : [];
+      const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
+      const learned = !full&&account&&keepLearned ? await retainedActivityIds(account.accountHash,id) : [];
       return send(res,200,{
         ok:true,
         access:full?'full':'preview',
@@ -122,6 +123,8 @@ module.exports = async function contentHandler(req,res){
       || (set.access.mode==='entitlement'
         && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc)));
     if(!full)return fail(res,403,'full_access_required');
+    const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
+    if(!keepLearned)return send(res,200,{ok:true,retained:0});
     const retained=await retainLearnedActivities(account.accountHash,set,body.activityIds);
     return send(res,200,{ok:true,retained:retained.length});
   }
