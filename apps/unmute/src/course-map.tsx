@@ -166,7 +166,7 @@ export function CourseMapView({
                   {item.status==='complete'?t('courseMap.reopen'):t('courseMap.open')}
                 </button>
               )}
-              {item.status==='purchase-locked'&&(
+              {item.status==='purchase-locked'&&item.node.id===firstPurchaseLockedId&&(
                 <button
                   className="secondary-button course-map-open"
                   type="button"
