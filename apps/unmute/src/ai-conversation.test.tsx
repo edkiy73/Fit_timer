@@ -33,7 +33,7 @@ function wrap(ui:ReactNode){
 }
 
 describe('AI conversation runner',()=>{
-  it('opens with AI, exchanges typed turns and marks the activity seen only on finish',async()=>{
+  it('opens with AI, exchanges typed turns and marks the activity seen only after whole-conversation review',async()=>{
     const user=userEvent.setup();
     const saveSeen=vi.fn(async()=>{});
     const onDone=vi.fn();
@@ -50,6 +50,16 @@ describe('AI conversation runner',()=>{
         note:'Нужен артикль an.',
         usage:{bucket:'light',used:2,limit:100}
       });
+    const requestReview=vi.fn(async()=>({
+      strengths:['Ты сразу объяснил, что тебе нужно.'],
+      corrections:[{
+        original:'I need appointment',
+        better:'I need an appointment.',
+        why:'Перед исчисляемым appointment нужен артикль.'
+      }],
+      focus:'В следующий раз добавляй артикль перед appointment.',
+      usage:{bucket:'light',used:3,limit:100}
+    }));
 
     wrap(
       <AIConversationView
@@ -60,6 +70,7 @@ describe('AI conversation runner',()=>{
         onSignIn={()=>{}}
         onAccess={()=>{}}
         requestReply={requestReply}
+        requestReview={requestReview}
       />
     );
 
@@ -81,6 +92,23 @@ describe('AI conversation runner',()=>{
     expect(screen.getByText('2 / 100')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Завершить разговор'}));
+
+    expect(requestReview).toHaveBeenCalledWith(expect.objectContaining({
+      topic:'В клинике',
+      history:expect.arrayContaining([
+        {role:'learner',text:'I need appointment'},
+        {role:'partner',text:'Sure. What day works for you?'}
+      ]),
+      locale:'ru'
+    }));
+    expect(await screen.findByRole('heading',{name:'Что получилось и что улучшить'})).toBeTruthy();
+    expect(screen.getByText('Ты сразу объяснил, что тебе нужно.')).toBeTruthy();
+    expect(screen.getByText('I need appointment')).toBeTruthy();
+    expect(screen.getByText('Перед исчисляемым appointment нужен артикль.')).toBeTruthy();
+    expect(screen.getByText('3 / 100')).toBeTruthy();
+    expect(saveSeen).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','talk.clinic');
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -108,6 +136,85 @@ describe('AI conversation runner',()=>{
     expect(await screen.findByText('Для ИИ-разговора нужно войти.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Войти'}));
     expect(onSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('can finish the activity when whole-conversation review temporarily fails',async()=>{
+    const user=userEvent.setup();
+    const saveSeen=vi.fn(async()=>{});
+    const onDone=vi.fn();
+    const requestReply=vi.fn()
+      .mockResolvedValueOnce({
+        reply:'Hello. How can I help you?',
+        correction:null,
+        note:null
+      })
+      .mockResolvedValueOnce({
+        reply:'Sure.',
+        correction:null,
+        note:null
+      });
+    const requestReview=vi.fn(async()=>{
+      throw Object.assign(new Error('ai_timeout'),{code:'ai_timeout'});
+    });
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={saveSeen}
+        onDone={onDone}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        requestReply={requestReply}
+        requestReview={requestReview}
+      />
+    );
+
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    const input=await screen.findByRole('textbox',{name:'Твой ответ'});
+    await user.type(input,'I need help');
+    await user.click(screen.getByRole('button',{name:'Отправить'}));
+    await screen.findByText('Sure.');
+
+    await user.click(screen.getByRole('button',{name:'Завершить разговор'}));
+    expect(await screen.findByText(/слишком долго/)).toBeTruthy();
+    expect(saveSeen).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button',{name:'Завершить без разбора'}));
+    expect(saveSeen).toHaveBeenCalledWith('general-foundation','talk.clinic');
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the old quick-finish behavior when the learner has not sent a turn',async()=>{
+    const user=userEvent.setup();
+    const saveSeen=vi.fn(async()=>{});
+    const onDone=vi.fn();
+    const requestReview=vi.fn();
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={saveSeen}
+        onDone={onDone}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        requestReply={vi.fn(async()=>({
+          reply:'Hello. How can I help you?',
+          correction:null,
+          note:null
+        }))}
+        requestReview={requestReview}
+      />
+    );
+
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    await screen.findByText('Hello. How can I help you?');
+    await user.click(screen.getByRole('button',{name:'Завершить разговор'}));
+
+    expect(requestReview).not.toHaveBeenCalled();
+    expect(saveSeen).toHaveBeenCalledWith('general-foundation','talk.clinic');
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it('offers Plus when the signed-in account has no AI entitlement',async()=>{
