@@ -195,6 +195,12 @@
   .modal-btn:active{transform:scale(.99);background:var(--card)}
   .modal-btn.primary{background:var(--work);border-color:transparent;color:var(--on-accent);font-weight:600}
   .modal-btn.primary:active{background:var(--accent-2)}
+  /* В попапе hands-free выбор может быть длиннее экрана, но действие не должно
+     уезжать вниз. Скроллится только содержимое, Apply/Cancel всегда на месте. */
+  .hf-modal-card{display:flex;flex-direction:column;overflow:hidden;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .hf-modal-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:1px}
+  .hf-modal-actions{flex:none;padding-top:8px;background:var(--card);border-top:1px solid var(--line)}
+  .hf-modal-actions .modal-btn:first-child{margin-top:0}
   .modal-btn.danger{color:var(--danger);border-color:var(--danger-soft)}
   /* воздух между текстом попапа и первой кнопкой: раньше подпись упиралась в неё */
   .modal-card .mini-label{margin-bottom:10px}
@@ -648,9 +654,14 @@
   .hf-seg button.act{background:var(--work);color:var(--on-accent);font-weight:500}
   .hf-mode-detail{margin-top:12px}
   .hf-mode-detail .voice-pack{margin-top:0;padding-top:0;border-top:none}
-  .hf-inline-commands{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .hf-inline-commands{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .hf-inline-commands .mini-label{margin-bottom:8px}
-  .hf-inline-commands .field-hint{margin:0 0 12px}
+  .hf-inline-commands .field-hint{margin:0 0 10px}
+  .hf-command-list.compact{gap:6px;margin-bottom:0}
+  .hf-command-list.compact .hf-command{padding:9px 10px}
+  .hf-command-list.compact .hfc-ico{width:27px;height:27px;border-radius:8px}
+  .hf-command-list.compact .hf-command b{font-size:13px;margin-bottom:2px}
+  .hf-command-list.compact .hf-command small{font-size:11px;line-height:1.35}
   .hf-headset-info{padding:13px 14px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md)}
   .hf-headset-info b{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:5px}
   .hf-headset-info p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.5}

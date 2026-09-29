@@ -527,11 +527,6 @@ async function previewSelectedVoice(){
     }, 160);
   });
 }
-function openHfCommands(){
-  $('hfModal').classList.remove('open');
-  $('hfCommandsModal').classList.add('open');
-}
-
 /* ---- проверка распознавания (Настройки → Управление без рук) ----
    Говоришь команду с привычного расстояния и видишь цепочку «что услышал
    телефон → что сделает приложение». Так понятно, где рвётся: микрофон не
@@ -1329,7 +1324,6 @@ export function initEvents(){
   $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
   $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
   $('btnMicW').onclick = openHfModal;
-  $('hfCommandsModal').onclick = e => { if(e.target === $('hfCommandsModal')) $('hfCommandsModal').classList.remove('open'); };
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
   if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
   if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{

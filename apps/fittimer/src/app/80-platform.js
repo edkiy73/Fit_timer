@@ -120,17 +120,24 @@ function applyVoiceCommand(input){
   if(kind === 'done' || kind === 'skip'){ if(now - lastCmdTime < 1500) return true; }
   else if(kind === lastCmdKind && now - lastCmdTime < 800) return true;
   lastCmdTime = now; lastCmdKind = kind;
-  // свой же гонг и озвучка следующего шага не должны вернуться командой
-  setLastAppSoundTShared(Math.max(lastAppSoundT, now + 700));
-
   if(kind === 'pause'){
-    if(!state.paused){ setPause(true); beep(990, .1); }
+    // Голосовая пауза не должна сама произносить «Пауза»: нативный TTS на время
+    // своей фразы глушит распознавание, и следующая команда «Продолжить» терялась
+    // как раз в самом ожидаемом сценарии «пауза → продолжить».
+    if(!state.paused) setPause(true, true);
     return true;
   }
   if(kind === 'resume'){
-    if(state.paused){ setPause(false); beep(990, .1); }
+    // «Продолжить» имеет смысл только из паузы. Без гонга/озвучки оно срабатывает
+    // сразу после «Пауза», а не ждёт защитное окно от собственного звука.
+    if(state.paused) setPause(false);
     return true;
   }
+
+  // Свой гонг и озвучка следующего шага не должны вернуться командой.
+  // Защита нужна только действиям, которые реально проигрывают звук.
+  setLastAppSoundTShared(Math.max(lastAppSoundT, now + 700));
+
   // завершить / пропустить текущий рабочий шаг
   if(state.paused) setPause(false);
   beep(990, .1);
