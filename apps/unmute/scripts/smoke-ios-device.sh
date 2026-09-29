@@ -4,11 +4,6 @@ set -euo pipefail
 APP="${1:-build/ios-derived/Build/Products/Debug-iphonesimulator/App.app}"
 BUNDLE_ID="app.unmute.english"
 
-if [[ ! -d "$APP" ]]; then
-  echo "iOS smoke: simulator app not found: $APP" >&2
-  exit 1
-fi
-
 DEVICE="${UNMUTE_IOS_DEVICE:-}"
 if [[ -z "$DEVICE" ]]; then
   DEVICE="$(xcrun simctl list devices available -j | node -e '
@@ -27,6 +22,20 @@ fi
 
 if [[ -z "$DEVICE" ]]; then
   echo "iOS smoke: no available iPhone simulator" >&2
+  exit 1
+fi
+
+# --boot: start a cold boot early (CI does it before the ~1.5 min build, a cold boot takes
+# minutes) and remember the device; the later smoke run then only waits for it.
+if [[ "$APP" == "--boot" ]]; then
+  [[ -n "${GITHUB_ENV:-}" ]] && echo "UNMUTE_IOS_DEVICE=$DEVICE" >> "$GITHUB_ENV"
+  nohup xcrun simctl boot "$DEVICE" >/dev/null 2>&1 &
+  echo "iOS smoke: booting $DEVICE in the background"
+  exit 0
+fi
+
+if [[ ! -d "$APP" ]]; then
+  echo "iOS smoke: simulator app not found: $APP" >&2
   exit 1
 fi
 
