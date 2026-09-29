@@ -71,7 +71,8 @@
 | Фаза 7d-2 — one free AI conversation | ✅ в `main` (#251) | one account-bound text conversation, 24h session / max 10 model calls, then Plus; answer.explain stays Plus-only |
 | Фаза 7e — AI conversation voice | ✅ в `main` (#252) | Web Speech learner turn → same typed AI contract → automatic partner TTS; text fallback always available |
 | Фаза 8a — notification policy + preferences | ✅ в `main` (#253) | max one reminder: due review > streak risk > daily lesson; synced opt-in/time/type settings |
-| Фаза 8b — native reminder delivery | ✅ в этой фазе | Core native-notifications local schedule, explicit permission, `/review`/Today deep links; web/push intentionally not faked |
+| Фаза 8b — native reminder delivery | ✅ в `main` (#255) | Core native-notifications local schedule, explicit permission, `/review`/Today deep links; web/push intentionally not faked |
+| Фаза 9a-1 — native speech boundary | ✅ в этой фазе | UnMute learner voice routes through Core speech when dedicated `UnMuteAudio` exists; Web Speech fallback otherwise; FitTimer command plugin explicitly rejected |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -434,8 +435,10 @@ DictEntry { word, ru }
 - ✅ **8b. Нативная доставка:** продуктовый adapter подключает существующий Core `native-notifications` к Capacitor `LocalNotifications`. Планировщик держит **одно ближайшее** системное напоминание в выделенном ID-range и пересчитывает его по прогрессу/настройкам; если выбранное время сегодня уже прошло, ищет следующий релевантный день. Разрешение ОС запрашивается только после явного включения пользователем; Android exact-alarm — отдельной явной кнопкой, без скрытого запроса. Тап по `review-due` ведёт в `/review`, streak/daily — в Today; arbitrary routes из payload отбрасываются whitelist-ом. Звук/вибрация не форсируются — остаются системным настройкам канала. Web сохраняет синхронизируемые preferences, но **не обещает** фоновые уведомления; push/PWA transport не подключаем, пока реально не выбран канал. Код готов к Capacitor-оболочке фазы 9; в обычном web он безопасный no-op.
 
 ### Фаза 9 — Android/iOS
-- Вынести аудио-плагин FitTimer в общий пакет (G8) без смены имён `Fit*` для FitTimer; зелёный FitTimer Android/iOS CI.
-- Capacitor-оболочки UnMute, покупки в сторах (адаптеры фазы 6).
+- ✅ **9a-1. Граница native speech:** все learner voice/TTS пути UnMute (lesson/review/pattern/dialogue/AI/dictionary) идут через один `speech-runtime.ts`: если нативная оболочка предоставляет отдельный `UnMuteAudio`, используется Core `createSpeech`; иначе остаётся существующий Web Speech. `FitAudio` намеренно **не** подхватывается: это командный распознаватель FitTimer, который фильтрует обычную речь через workout-команды и не подходит для английского диктанта. Контракт нативного результата поддерживает до 3 alternatives, чтобы текущий loose matcher продолжил работать.
+- Следующий кусок: Android Capacitor shell + реализация generic `UnMuteAudio` на системном Android speech/TTS; после этого iOS `SFSpeechRecognizer/AVSpeechSynthesizer`.
+- Старые `FitAudio*` имена и поведение FitTimer не менять; общий reusable слой должен быть generic, а продуктовые плагины — тонкими адаптерами.
+- Store purchases остаются отложенной фазой 6; native shell не должен притворяться, что IAP уже подключён.
 
 ### Фаза 10 — Запуск
 - Воронка: `onboarding_done`, `lesson_completed`, `day_completed`, `paywall_shown{place}`, `purchase_started/completed{sku}`, `talk_started`.
