@@ -6,7 +6,9 @@ import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
-import { saveGradedActivity, saveSeenActivity } from './activity-progress';
+import type { PracticeSrsKind } from './engine/practice-srs';
+import { saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
+import { PatternDrillView } from './pattern-drill';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -54,6 +56,13 @@ export interface NodeRunnerViewProps {
   onExit:()=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
   saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
+  savePractice:(
+    setId:string,
+    activityId:string,
+    mode:PracticeSrsKind,
+    correct:boolean,
+    score?:number
+  )=>Promise<void>;
 }
 
 export function NodeRunnerView({
@@ -61,7 +70,8 @@ export function NodeRunnerView({
   nodeId,
   onExit,
   saveSeen,
-  saveGraded
+  saveGraded,
+  savePractice
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -287,7 +297,17 @@ export function NodeRunnerView({
         </article>
       )}
 
-      {!['theory','choice','text-input','translation'].includes(activity.type)&&(
+      {activity.type==='pattern-drill'&&activity.modes.includes('drill')&&(
+        <PatternDrillView
+          key={activity.id}
+          activity={activity}
+          setId={setId}
+          savePractice={savePractice}
+          onDone={advance}
+        />
+      )}
+
+      {!['theory','choice','text-input','translation','pattern-drill'].includes(activity.type)&&(
         <article className="learn-card">
           <h3>{activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')}</h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>
@@ -311,6 +331,7 @@ export function NodeRunnerScreen(){
       onExit={()=>navigate('/')}
       saveSeen={saveSeenActivity}
       saveGraded={saveGradedActivity}
+      savePractice={savePracticeActivity}
     />
   );
 }

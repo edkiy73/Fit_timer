@@ -125,3 +125,17 @@ h2{margin:0 0 8px}
   .learn-card h3{font-size:20px}
   .primary-button,.secondary-button{width:100%}
 }
+
+
+.drill-card{gap:14px}
+.drill-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px;font-weight:700}
+.drill-timer{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.drill-timer span{display:block;height:100%;width:100%;background:var(--accent);transform-origin:left center}
+.drill-timer[data-stage="reading"] span{opacity:.45}
+.drill-timer[data-stage="speaking"] span{animation:drill-countdown 5.6s linear forwards}
+.drill-target{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;font-size:18px;font-weight:800;line-height:1.4}
+.drill-result{display:grid;gap:6px;border:1px solid var(--line);border-radius:14px;padding:14px}
+.drill-result strong{font-size:22px}
+.drill-result span{color:var(--muted);line-height:1.45}
+@keyframes drill-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media(prefers-reduced-motion:reduce){.drill-timer[data-stage="speaking"] span{animation:none}}

@@ -1,8 +1,10 @@
 import { authClient } from './auth';
 import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
+import type { PracticeSrsKind } from './engine/practice-srs';
 import {
   gradeCourseCard,
+  gradeCoursePractice,
   markActivitySeen
 } from './progress-actions';
 import type { CourseProgressDocument, StatsProgressDocument } from './progress';
@@ -58,6 +60,70 @@ export function buildGradedActivityProgress(
     ),
     stats:recordAnswer(stats,deviceId,activityId,correct,clock.at)
   };
+}
+
+export function buildPracticeActivityProgress(
+  course:CourseProgressDocument,
+  stats:StatsProgressDocument,
+  deviceId:string,
+  activityId:string,
+  mode:PracticeSrsKind,
+  correct:boolean,
+  score:number|undefined,
+  clock:ActivitySaveClock
+):{course:CourseProgressDocument;stats:StatsProgressDocument}{
+  let nextCourse=gradeCoursePractice(
+    course,
+    activityId,
+    mode,
+    correct,
+    clock.dayNumber,
+    clock.dayKey,
+    clock.at
+  );
+  if(mode==='drill'&&Number.isFinite(score)){
+    nextCourse={
+      ...nextCourse,
+      metrics:{
+        ...nextCourse.metrics,
+        ['speed:'+activityId]:{
+          value:Math.max(0,Math.min(100,Math.round(score!))),
+          at:clock.at
+        }
+      }
+    };
+  }
+  return {
+    course:nextCourse,
+    stats:recordAnswer(stats,deviceId,activityId,correct,clock.at)
+  };
+}
+
+export async function savePracticeActivity(
+  setId:string,
+  activityId:string,
+  mode:PracticeSrsKind,
+  correct:boolean,
+  score?:number,
+  now=new Date()
+):Promise<void>{
+  const [course,stats,deviceId]=await Promise.all([
+    readCourseProgress(setId),
+    readStatsProgress(setId),
+    authClient.getOrCreateDeviceId()
+  ]);
+  const next=buildPracticeActivityProgress(
+    course,
+    stats,
+    deviceId,
+    activityId,
+    mode,
+    correct,
+    score,
+    activitySaveClock(now)
+  );
+  await writeCourseProgress(setId,next.course);
+  await writeStatsProgress(setId,next.stats);
 }
 
 export async function saveSeenActivity(
