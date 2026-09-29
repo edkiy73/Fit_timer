@@ -1,8 +1,12 @@
 package ru.fittimer.app;
 
 import android.Manifest;
+import android.content.Intent;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.KeyEvent;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -62,6 +66,8 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
 
     private Model voskModel;
     private boolean grammarActive = false;
+    private MediaSession headsetSession;
+    private long lastHeadsetActionMs = 0L;
     private String loadedModelLanguage = "";
     // свой захват с автоусилением вместо org.vosk.android.SpeechService — см. FitSpeechCapture
     private FitSpeechCapture speechService;
@@ -102,6 +108,79 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         JSObject result = new JSObject();
         result.put("granted", granted);
         call.resolve(result);
+    }
+
+    @PluginMethod
+    public void startHeadsetControl(PluginCall call) {
+        main.post(() -> {
+            try {
+                stopHeadsetSession();
+                headsetSession = new MediaSession(getContext(), "FitTimerHeadset");
+                headsetSession.setFlags(
+                    MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS
+                );
+                headsetSession.setCallback(new MediaSession.Callback() {
+                    @Override public boolean onMediaButtonEvent(Intent mediaButtonIntent) {
+                        KeyEvent event = mediaButtonIntent == null
+                            ? null : mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                        if (event == null || event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                        int code = event.getKeyCode();
+                        if (code == KeyEvent.KEYCODE_HEADSETHOOK
+                            || code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                            || code == KeyEvent.KEYCODE_MEDIA_PLAY
+                            || code == KeyEvent.KEYCODE_MEDIA_PAUSE
+                            || code == KeyEvent.KEYCODE_MEDIA_NEXT) {
+                            emitHeadsetAction("media_button");
+                            return true;
+                        }
+                        return false;
+                    }
+                    @Override public void onPlay() { emitHeadsetAction("play"); }
+                    @Override public void onPause() { emitHeadsetAction("pause"); }
+                    @Override public void onSkipToNext() { emitHeadsetAction("next"); }
+                });
+                headsetSession.setPlaybackState(new PlaybackState.Builder()
+                    .setActions(
+                        PlaybackState.ACTION_PLAY
+                        | PlaybackState.ACTION_PAUSE
+                        | PlaybackState.ACTION_PLAY_PAUSE
+                        | PlaybackState.ACTION_SKIP_TO_NEXT
+                    )
+                    .setState(PlaybackState.STATE_PLAYING, 0L, 1f)
+                    .build());
+                headsetSession.setActive(true);
+                JSObject result = new JSObject();
+                result.put("active", true);
+                call.resolve(result);
+            } catch (Exception e) {
+                stopHeadsetSession();
+                call.reject("headset_control_failed", e);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void stopHeadsetControl(PluginCall call) {
+        main.post(() -> {
+            stopHeadsetSession();
+            call.resolve();
+        });
+    }
+
+    private void emitHeadsetAction(String source) {
+        long now = System.currentTimeMillis();
+        if (now - lastHeadsetActionMs < 350L) return;
+        lastHeadsetActionMs = now;
+        JSObject event = new JSObject();
+        event.put("source", source == null ? "" : source);
+        notifyListeners("headsetAction", event);
+    }
+
+    private void stopHeadsetSession() {
+        if (headsetSession == null) return;
+        try { headsetSession.setActive(false); } catch (Exception ignored) {}
+        try { headsetSession.release(); } catch (Exception ignored) {}
+        headsetSession = null;
     }
 
     @PluginMethod
@@ -611,7 +690,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     @Override
     protected void handleOnDestroy() {
         recognitionWanted = false;
-        main.post(this::stopSpeechService);
+        main.post(() -> {
+            stopSpeechService();
+            stopHeadsetSession();
+        });
         if (voskModel != null) {
             try { voskModel.close(); } catch (Exception ignored) {}
             voskModel = null;
