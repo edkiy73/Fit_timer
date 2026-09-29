@@ -130,6 +130,59 @@ describe('Today learner shell',()=>{
     expect(onReview).toHaveBeenCalledTimes(1);
   });
 
+  it('adds due personal words to the Today review count',()=>{
+    const progress=emptyCourseProgress();
+    const wordRuntime={
+      words:{
+        schemaVersion:1 as const,
+        items:{
+          'lex.home|noun':{
+            lexemeId:'lex.home',
+            senseId:'noun',
+            box:1,
+            due:0,
+            at:'2026-09-29T00:00:00Z'
+          }
+        }
+      },
+      lexicon:{
+        schemaVersion:1 as const,
+        revision:1,
+        entries:[{
+          id:'lex.home',
+          revision:1,
+          language:'en' as const,
+          lemma:'home',
+          forms:[{text:'home',kind:'lemma' as const}],
+          senses:[{id:'noun',translations:{ru:['дом']},tags:[]}],
+          examples:[],
+          deprecated:false
+        }]
+      },
+      status:'ready' as const,
+      error:null,
+      fromCache:false,
+      refresh:async()=>{}
+    };
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="today-word-test.locale"
+        systemLanguages={['ru']}
+      >
+        <TodayView
+          runtime={runtime({state:{...state,progress}})}
+          wordRuntime={wordRuntime}
+          onStart={()=>{}}
+          onReview={()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(screen.getByText('Пора повторить: 1')).toBeTruthy();
+  });
+
   it('shows an offline badge for a cached course snapshot',()=>{
     renderToday(runtime({state:{...state,fromCache:true}}));
     expect(screen.getByText('Офлайн-копия')).toBeTruthy();
