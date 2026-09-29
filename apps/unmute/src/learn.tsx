@@ -254,7 +254,7 @@ export function NodeRunnerView({
           onAccess={onAccess}
         />
       )}
-      <button className="primary-button" type="button" onClick={advance}>
+      <button className="primary-button" type="button" onClick={()=>advance()}>
         {index+1<activities.length?t('learn.next'):t('learn.finish')}
       </button>
     </div>
