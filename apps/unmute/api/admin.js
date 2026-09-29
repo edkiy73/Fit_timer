@@ -4,9 +4,10 @@ const { createAIHandler } = require('../../../packages/core/server/ai-endpoint')
 const { analyticsStats } = require('../lib/app-analytics');
 const { createContentAdminHandler } = require('../lib/content-admin');
 const { registry: unmuteAIActions } = require('../lib/unmute-ai-actions');
+const { authorizeUnMuteAI } = require('../lib/unmute-ai-trial');
 
 const handleAdmin=createAdminHandler({analyticsStats,handlers:[createContentAdminHandler()]});
-const handleAI=createAIHandler(unmuteAIActions);
+const handleAI=createAIHandler(unmuteAIActions,{authorize:authorizeUnMuteAI});
 
 module.exports=async(req,res)=>{
   if(req.query&&(req.query.ai_endpoint==='1'||req.query.public_config==='1')){
