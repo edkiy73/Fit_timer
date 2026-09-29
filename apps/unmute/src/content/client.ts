@@ -82,6 +82,26 @@ export async function loadSet(id:string): Promise<{set:CourseSet; access:'full'|
   }
 }
 
+export async function retainLearnedActivities(
+  setId:string,
+  activityIds:readonly string[]
+):Promise<void>{
+  const safe=String(setId||'').trim().toLowerCase();
+  const ids=[...new Set(activityIds.map(id=>String(id||'').trim().toLowerCase()).filter(Boolean))];
+  if(!safe||!ids.length)return;
+  const headers=await authHeaders();
+  if(!Object.keys(headers).length)return;
+  await fetchJson('/api/content',{
+    method:'POST',
+    headers:{'Content-Type':'application/json',...headers},
+    body:JSON.stringify({
+      action:'retain_learned',
+      id:safe,
+      activityIds:ids
+    })
+  });
+}
+
 export async function clearContentCache(): Promise<void> {
   await storage.clearAll();
 }
