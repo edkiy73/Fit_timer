@@ -12,7 +12,7 @@ import { openPublish, pickClientFor, refreshClientsScreen, renderMine, renderTra
   storeCountText
 } from './50-trainer-catalog.js';
 import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, hasWeight,
-  normValue, openBuilder, parseKg, parseValue, progAxis, progBaseValue, progStepSize, programDirty,
+  normValue, openBuilder, parseKg, parseValue, progAtCeiling, progAxis, progBaseValue, progStepSize, programDirty,
   progressedRepsRange, setExDraftShared, setExIdxShared, setExOrigShared, setExWeight,
   weightPending
 } from './60-builder.js';
@@ -1102,7 +1102,8 @@ function renderStartOverview(){
   let nextText = '';
   if(p.progression){
     const every = Math.max(1, +p.progression || 1);
-    const ns = exercises.filter(ex => !ex.warmup && progAxis(ex) !== 'none')
+    const ns = exercises
+      .filter(ex => !ex.warmup && progAxis(ex) !== 'none' && !progAtCeiling(p.id, ex, p))
       .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
     if(ns.length){
       const left = Math.max(1, every - Math.max(...ns));

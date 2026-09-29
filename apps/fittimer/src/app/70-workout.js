@@ -1053,6 +1053,12 @@ function commitFinish(ctx){
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         if(!completed.has(String(ex.id || '')) && !completed.has(String(ex.name || ''))) return;
+        // Полностью завершённая прогрессия больше не копит счётчик и не задаёт
+        // бессмысленный вопрос «повышаем?» через N тренировок.
+        if(progAtCeiling(p.id, ex, p)){
+          ensurePs(ex).n = 0;
+          return;
+        }
         const ps = ensurePs(ex);
         ps.n++;
         if(ps.n >= every) eligible.push(ex.id);
@@ -1139,7 +1145,9 @@ export async function applyProgCheck(){
   setShown('finProgCheckDone', true);
   progCheckExercises(chk).forEach(ex => {
     if(chk.hard.has(ex.id)) return;
-    advanceExerciseProgression(ex);
+    // На случай, если состояние успело измениться/синхронизироваться пока открыт
+    // финальный экран: уже достигнутый потолок не сбрасываем повторным шагом.
+    if(!progAtCeiling(chk.pid, ex, null)) advanceExerciseProgression(ex);
     ensurePs(ex).n = 0;
   });
   await savePrograms();

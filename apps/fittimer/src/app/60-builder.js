@@ -475,8 +475,13 @@ function axisAtCeiling(pid, ex, program, axis){
 export function progAtCeiling(pid, ex, program){
   const axis = progAxis(ex);
   if(axis === 'none') return false;
-  // при двойной прогрессии повторы ходят по кругу, а копится вес — смотрим только на него
-  if(isDualProg(ex)) return axisAtCeiling(pid, ex, program, 'weight');
+  // В двойной прогрессии достижение максимального веса ещё НЕ означает конец:
+  // на последнем весе нужно снова пройти весь диапазон повторов до repsMax.
+  // Окончательный потолок — только когда одновременно достигнуты оба максимума.
+  if(isDualProg(ex)){
+    return axisAtCeiling(pid, ex, program, 'weight')
+      && axisAtCeiling(pid, ex, program, 'reps');
+  }
   // вес — независимая ось что при повторениях, что при времени («время и вес»)
   const axes = ex.type === 'time'
     ? (hasWeight(ex) ? ['time', 'weight'] : ['time'])
@@ -518,13 +523,25 @@ export function advanceExerciseProgression(ex){
     // Вес добавляется только СЛЕДУЮЩИМ шагом после того, как верхняя граница уже
     // дошла до максимума. Например: 17-19 → 18-20 → (+вес) 8-10.
     if(repsCeil != null && curMax >= repsCeil){
-      if(psKg(ex) <= 0){
+      const currentKg = psKg(ex);
+      if(currentKg <= 0){
         // Вес ещё не выбран — на потолке остаётся полный диапазон, а не одно число.
         const topMin = Math.max(1, repsCeil - width);
         ex.ps.cur.reps = topMin === repsCeil ? String(repsCeil) : topMin + '-' + repsCeil;
       } else {
         const weightCeil = progCeil(ex, 'weight');
-        const nextKg = psKg(ex) + progStepSize(ex, 'weight');
+
+        // Уже дошли И до максимального веса, И до верхней границы повторов:
+        // дальше автоматической прогрессии нет. Важно не сбрасывать 18-20 обратно
+        // в 8-10 на том же самом весе.
+        if(weightCeil != null && currentKg >= weightCeil){
+          const topMin = Math.max(1, repsCeil - width);
+          ex.ps.cur.reps = topMin === repsCeil ? String(repsCeil) : topMin + '-' + repsCeil;
+          ex.ps.cur.kg = progRound('weight', weightCeil);
+          return;
+        }
+
+        const nextKg = currentKg + progStepSize(ex, 'weight');
         ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
         ex.ps.cur.reps = normValue(ex.value, 'reps');
       }

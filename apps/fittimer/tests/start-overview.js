@@ -81,6 +81,24 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const afterWeight = await page.locator('#startOverviewList .ex-row.tappable').textContent();
   ok('правка веса нажатием на строку сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
 
+  // Полностью завершённая двойная прогрессия не должна обещать следующую
+  // проверку нагрузки: повышать здесь уже нечего.
+  const terminalText = await page.evaluate(() => {
+    const p = {
+      id:'overview-terminal', name:'Финальный потолок', active:true, progression:1,
+      stats:{completions:1}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'term-overview', name:'Финальный жим', type:'reps', value:'8-10', sets:3, rest:45,
+        progOn:true, trackWeight:true, weight:20, weightMax:20, wStep:2,
+        repsStep:1, repsMax:20, dualProg:true, ps:{n:1, cur:{kg:20, reps:'18-20'}}
+      }]}]
+    };
+    customPrograms.push(p);
+    openStart(p);
+    return $('startLoadChange').textContent.trim();
+  });
+  ok('на полном потолке нет обещания следующей проверки',
+     !/Спросим о повышении через/.test(terminalText), terminalText);
+
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');
