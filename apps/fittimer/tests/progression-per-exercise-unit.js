@@ -102,6 +102,23 @@ function runWorkout(exercises, every){
   need(seq.join(' ') === '8-10 10-12 12-14 13-15 8-10', 'dual range reaches exact upper ceiling: ' + seq.join(' '));
 }
 
+{
+  // Максимальный вес — не конец сам по себе: на нём ещё надо пройти диапазон.
+  // Конец наступает только в 18-20 × 22.5; следующий шаг ничего не сбрасывает.
+  const ex = mkEx('Финальный жим', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:20, weightMax:22.5, wStep:2.5, repsStep:1, repsMax:20, dualProg:true});
+  const p = {id:'p1'};
+  for(let i = 0; i < 11; i++) advanceExerciseProgression(ex); // 8-10@22.5
+  need(getExWeight('p1', ex, p) === 22.5 && progressedRepsRange('p1', ex, p) === '8-10',
+    'reaching maximum weight resets to the starting rep range, not terminal yet');
+  need(!progAtCeiling('p1', ex, p), 'maximum weight alone is not the final dual ceiling');
+  for(let i = 0; i < 10; i++) advanceExerciseProgression(ex); // 18-20@22.5
+  need(progAtCeiling('p1', ex, p), 'dual progression is terminal only at max weight AND max rep range');
+  advanceExerciseProgression(ex);
+  need(getExWeight('p1', ex, p) === 22.5 && progressedRepsRange('p1', ex, p) === '18-20',
+    'another progression step at the terminal ceiling does not reset reps');
+}
+
 /* ---- фактический баг с чередованием A/Б: правильно исправлен ---- */
 {
   const exA = mkEx('Присед', {value:'10', type:'reps', progOn:true, trackWeight:false, repsStep:1});
