@@ -41,6 +41,49 @@ describe('AI talk client',()=>{
     });
   });
 
+  it('can request a server-built opening turn without inventing a learner message',async()=>{
+    vi.spyOn(authClient,'authFields').mockResolvedValue({
+      email:'user@example.com',
+      deviceId:'device',
+      syncToken:'token'
+    });
+    const fetchMock=vi.fn(async(_url:RequestInfo|URL,init?:RequestInit)=>{
+      const body=JSON.parse(String(init?.body||'{}'));
+      expect(body).toMatchObject({
+        kind:'talk.reply',
+        topic:'At the bank',
+        learnerText:'',
+        start:true
+      });
+      return new Response(JSON.stringify({
+        ok:true,
+        text:JSON.stringify({
+          reply:'Good morning. How can I help you?',
+          correction:null,
+          note:null
+        })
+      }),{
+        status:200,
+        headers:{'Content-Type':'application/json'}
+      });
+    });
+    vi.stubGlobal('fetch',fetchMock);
+
+    await expect(requestTalkReply({
+      topic:'At the bank',
+      promptTemplate:'Act as a bank clerk.',
+      focus:[],
+      history:[],
+      learnerText:'',
+      locale:'en',
+      start:true
+    })).resolves.toMatchObject({
+      reply:'Good morning. How can I help you?',
+      correction:null,
+      note:null
+    });
+  });
+
   it('sends only structured conversation context and returns usage',async()=>{
     vi.spyOn(authClient,'authFields').mockResolvedValue({
       email:'user@example.com',
