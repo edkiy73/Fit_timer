@@ -17,6 +17,7 @@ import { ReviewScreen } from './review';
 import { CourseMapScreen } from './course-map';
 import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
+import { OnboardingGate } from './onboarding';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -93,7 +94,9 @@ function Shell(){
         </div>
         {!auth.loading && <Link className="link-button" to="/account">{auth.session ? t('nav.account') : t('nav.signIn')}</Link>}
       </header>
-      <Outlet />
+      <OnboardingGate>
+        <Outlet />
+      </OnboardingGate>
     </main>
   );
 }
