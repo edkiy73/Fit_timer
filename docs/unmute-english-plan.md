@@ -73,7 +73,8 @@
 | Фаза 8a — notification policy + preferences | ✅ в `main` (#253) | max one reminder: due review > streak risk > daily lesson; synced opt-in/time/type settings |
 | Фаза 8b — native reminder delivery | ✅ в `main` (#255) | Core native-notifications local schedule, explicit permission, `/review`/Today deep links; web/push intentionally not faked |
 | Фаза 9a-1 — native speech boundary | ✅ в `main` (#256) | UnMute learner voice routes through Core speech when dedicated `UnMuteAudio` exists; Web Speech fallback otherwise; FitTimer command plugin explicitly rejected |
-| Фаза 9a-2a — Android shell + UnMuteAudio | ✅ в этой фазе | Capacitor 8 Android shell; system SpeechRecognizer (3 alternatives) + Android TTS; native notifications plugin; Android debug build in CI |
+| Фаза 9a-2a — Android shell + UnMuteAudio | ✅ в `main` (#257) | Capacitor 8 Android shell; system SpeechRecognizer (3 alternatives) + Android TTS; native notifications plugin; Android debug build in CI |
+| Фаза 9a-2b — iOS shell + UnMuteAudio | ✅ в этой фазе | Capacitor 8 iOS SPM shell; SFSpeechRecognizer (top 3 alternatives) + AVSpeechSynthesizer; speech/mic permissions; iOS simulator build in CI |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -438,7 +439,8 @@ DictEntry { word, ru }
 ### Фаза 9 — Android/iOS
 - ✅ **9a-1. Граница native speech:** все learner voice/TTS пути UnMute (lesson/review/pattern/dialogue/AI/dictionary) идут через один `speech-runtime.ts`: если нативная оболочка предоставляет отдельный `UnMuteAudio`, используется Core `createSpeech`; иначе остаётся существующий Web Speech. `FitAudio` намеренно **не** подхватывается: это командный распознаватель FitTimer, который фильтрует обычную речь через workout-команды и не подходит для английского диктанта. Контракт нативного результата поддерживает до 3 alternatives, чтобы текущий loose matcher продолжил работать.
 - ✅ **9a-2a. Android shell + system speech/TTS:** у UnMute собственный Capacitor 8 shell с package `app.unmute.english`. Тонкий plugin `UnMuteAudio` использует Android `SpeechRecognizer` в free-form `en-US`, возвращает до 3 системных alternatives и мапит permission/no-speech/network/abort ошибки в существующий Core contract; TTS использует системный `TextToSpeech` + системные voices. Никаких Vosk/workout-команд из FitTimer не переносим. `@capacitor/local-notifications` подключён тем же shell для уже готовой фазы 8b. CI после `cap sync android` реально собирает debug APK на Java 21 / Gradle 8.14.3.
-- Следующий кусок: iOS shell + `SFSpeechRecognizer/AVSpeechSynthesizer`, затем device smoke на Android/iOS.
+- ✅ **9a-2b. iOS shell + system speech/TTS:** iOS shell создаётся через Capacitor 8 SPM, затем `UnMuteBridgeViewController` регистрирует product plugin instance `UnMuteAudio`. `SFSpeechRecognizer` работает в free-form `en-US`, возвращает top-3 `transcriptions`; `AVAudioEngine` подаёт микрофонный stream; `AVSpeechSynthesizer` даёт системный TTS/voices. `NSMicrophoneUsageDescription` и `NSSpeechRecognitionUsageDescription` добавляются автоматически. CI реально поднимает iOS shell и собирает simulator target без signing.
+- Следующий кусок: device smoke на Android/iOS.
 - Старые `FitAudio*` имена и поведение FitTimer не менять; общий reusable слой должен быть generic, а продуктовые плагины — тонкими адаптерами.
 - Store purchases остаются отложенной фазой 6; native shell не должен притворяться, что IAP уже подключён.
 
