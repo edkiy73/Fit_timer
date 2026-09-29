@@ -511,7 +511,13 @@ function openHfCommands(){
    слышит (строк нет), слышит, но не то слово («не команда»), или слышит
    неуверенно. Работает только вне тренировки: тот же микрофон занят ею. */
 let voiceTestOn = false;
-const VT_KIND = {next:'handsfree.commandNext', pause:'handsfree.commandPause', resume:'handsfree.commandResume'};
+const VT_KIND = {
+  next:'handsfree.commandDone', // совместимость со старыми APK
+  done:'handsfree.commandDone',
+  skip:'handsfree.commandSkip',
+  pause:'handsfree.commandPause',
+  resume:'handsfree.commandResume'
+};
 function voiceTestRow(d){
   const box = $('voiceTestList');
   const row = document.createElement('div');
