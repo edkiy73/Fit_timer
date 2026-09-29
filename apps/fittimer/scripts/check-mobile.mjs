@@ -107,6 +107,9 @@ if(!handsfreeEvents.includes("handsfree.voiceSelectedPending")
   || !handsfreeEvents.includes("status.installed && hfMode === 'voice'")){
   throw new Error('Voice mode must be selectable before its pack is ready and auto-start after download');
 }
+if(!handsfreeSource.includes("setPause(true, true)") || !handsfreeSource.includes("if(kind === 'resume')")){
+  throw new Error('Voice pause/resume must stay immediately usable without spoken pause feedback blocking recognition');
+}
 const handsfreeHtml = await readFile('src/html/40-profiles.html', 'utf8');
 const voiceDetailAt = handsfreeHtml.indexOf('id="hfVoiceDetail"');
 const packAt = handsfreeHtml.indexOf('id="voicePackBox"');
@@ -145,6 +148,14 @@ if(!androidWorkoutNotifications.includes('notifySafe(context, LIVE_ID, alert.bui
 if(!androidWorkoutNotifications.includes('fittimer://workout/resume')) throw new Error('Workout notification must deep-link back into the saved workout');
 if(!androidWorkoutNotifications.includes('ACTION_INACTIVITY') || !androidWorkoutNotifications.includes('INACTIVITY_ID')) throw new Error('Android active-workout inactivity reminder is missing');
 if(!androidWorkoutNotifications.includes('setAndAllowWhileIdle') || !androidWorkoutNotifications.includes('PREF_FIRED')) throw new Error('Android inactivity reminder must survive process death and fire once per workout');
+if(!androidWorkoutNotifications.includes('volatile boolean appVisible') || !androidWorkoutNotifications.includes('if (appVisible) return;')){
+  throw new Error('Android workout alerts must be suppressed while the app is visibly open');
+}
+const androidMainActivity = await readFile('android/app/src/main/java/ru/fittimer/app/MainActivity.java', 'utf8');
+if(!androidMainActivity.includes('WorkoutNotifications.setAppVisible(true)')
+  || !androidMainActivity.includes('WorkoutNotifications.setAppVisible(false)')){
+  throw new Error('Android app visibility must be forwarded to workout notifications');
+}
 if(!mobileBridge.includes('WORKOUT_INACTIVITY_NOTIFICATION_ID') || !mobileBridge.includes('localNotificationActionPerformed')) throw new Error('iOS active-workout inactivity reminder / tap bridge is missing');
 const iosBiometric = await readFile('ios/App/App/FitBiometricPlugin.swift', 'utf8');
 if(!iosBiometric.includes('LocalAuthentication') || !iosBiometric.includes('deviceOwnerAuthenticationWithBiometrics')) throw new Error('iOS native biometric flow is missing');
