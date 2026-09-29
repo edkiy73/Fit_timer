@@ -140,7 +140,7 @@ function DictionaryEntryView({
           <div className="dictionary-label">{t('dictionary.examples')}</div>
           {examples.map(example=>(
             <div className="dictionary-example" key={example.id}>
-              <div>{example.text}</div>
+              <div><LexiconText text={example.text} /></div>
               <span>{localizedExample(example.translations,locale)}</span>
             </div>
           ))}
