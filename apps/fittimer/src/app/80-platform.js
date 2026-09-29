@@ -190,7 +190,7 @@ function advanceFromHeadset(){
   try{ if(hsAudio) hsAudio.play().catch(()=>{}); }catch(e){}
 }
 function startHeadset(){
-  if(appRuntimeCompat.hasNative('startHeadsetControl')){
+  if(appRuntimeCompat.hasNative('startMediaButtonControl')){
     appRuntimeCompat.startHeadsetControl(advanceFromHeadset).then(ok=>{
       nativeHeadsetActive = !!ok;
       if(!ok && hfMode === 'headset'){
@@ -225,7 +225,7 @@ function startHeadset(){
   }
 }
 function stopHeadset(){
-  if(nativeHeadsetActive || appRuntimeCompat.hasNative('stopHeadsetControl')){
+  if(nativeHeadsetActive || appRuntimeCompat.hasNative('stopMediaButtonControl')){
     nativeHeadsetActive = false;
     appRuntimeCompat.stopHeadsetControl();
   }
