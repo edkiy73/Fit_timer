@@ -24,6 +24,21 @@ function fakeRes(){
     && registry.accepts('account','progress:words')
     && !registry.accepts('profile','task:1'));
 
+  const analytics = require('../lib/app-analytics');
+  const expectedFunnelEvents = [
+    'onboarding_done',
+    'lesson_completed',
+    'day_completed',
+    'paywall_shown.course',
+    'paywall_shown.today',
+    'paywall_shown.talk',
+    'talk_started',
+    'purchase_started.course.general-foundation',
+    'purchase_completed.course.general-foundation'
+  ];
+  ok('launch funnel analytics are registered server-side',
+    expectedFunnelEvents.every(event => analytics.EVENTS.includes(event)));
+
   const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');
   ok('shared auth UI is wired (optional sign-in)', app.includes('@appbase/ui-react/auth.js') && app.includes('AuthProvider'));
   ok('interface language is wired', app.includes('@appbase/ui-react/i18n.js'));
