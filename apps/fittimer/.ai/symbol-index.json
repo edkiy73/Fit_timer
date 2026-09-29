@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1455,
-      "chars": 71541,
+      "lines": 1456,
+      "chars": 71594,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -635,8 +635,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2164,
-      "chars": 100945,
+      "lines": 2181,
+      "chars": 101681,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -767,8 +767,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1816,
-      "chars": 81442,
+      "lines": 1824,
+      "chars": 81883,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
