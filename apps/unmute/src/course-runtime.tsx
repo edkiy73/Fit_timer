@@ -7,10 +7,12 @@ import {
   type ReactNode
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { loadSet } from './content/client';
 import { buildLearnerCourseState, type LearnerCourseState } from './course-loader';
 import { courseProgressDoc } from './progress';
 import { appDocs, readCourseProgress } from './sync';
+import { authEntitlementFingerprint } from './entitlements';
 
 const SET_KEY='learner-course-set';
 const PROGRESS_KEY='learner-course-progress';
@@ -28,8 +30,8 @@ const LearnerCourseContext=createContext<LearnerCourseRuntimeValue|null>(null);
 
 const normalizeSetId=(value:string)=>String(value||'').trim().toLowerCase();
 
-export const learnerCourseSetQueryKey=(setId:string)=>
-  [SET_KEY,normalizeSetId(setId)] as const;
+export const learnerCourseSetQueryKey=(setId:string,accessKey='anonymous')=>
+  [SET_KEY,normalizeSetId(setId),accessKey] as const;
 
 export const learnerCourseProgressQueryKey=(setId:string)=>
   [PROGRESS_KEY,normalizeSetId(setId)] as const;
@@ -42,10 +44,12 @@ export function LearnerCourseProvider({
   children:ReactNode;
 }){
   const queryClient=useQueryClient();
+  const auth=useOptionalAuth();
   const requestedSetId=normalizeSetId(setId);
+  const accessKey=authEntitlementFingerprint(auth.session);
 
   const setQuery=useQuery({
-    queryKey:learnerCourseSetQueryKey(requestedSetId),
+    queryKey:learnerCourseSetQueryKey(requestedSetId,accessKey),
     queryFn:()=>loadSet(requestedSetId),
     enabled:requestedSetId.length>0,
     staleTime:5*60_000
@@ -79,7 +83,7 @@ export function LearnerCourseProvider({
   const refresh=useCallback(async()=>{
     const jobs:Promise<unknown>[]=[
       queryClient.invalidateQueries({
-        queryKey:learnerCourseSetQueryKey(requestedSetId),
+        queryKey:learnerCourseSetQueryKey(requestedSetId,accessKey),
         exact:true
       })
     ];
@@ -90,7 +94,7 @@ export function LearnerCourseProvider({
       }));
     }
     await Promise.all(jobs);
-  },[canonicalSetId,queryClient,requestedSetId]);
+  },[accessKey,canonicalSetId,queryClient,requestedSetId]);
 
   const error=setQuery.error ?? progressQuery.error ?? null;
   const status:LearnerCourseRuntimeStatus=error
