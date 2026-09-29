@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
+import { LexiconText } from './lexicon-ui';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -144,7 +145,7 @@ export function PatternDrillView({
     return (
       <article className="learn-card drill-card">
         <div className="eyebrow">{variant==='mixed'?t('mixed.eyebrow'):t('drill.mode')}</div>
-        <h3>{variant==='mixed'?t('mixed.title'):localized(activity.pattern,locale)}</h3>
+        <h3>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</h3>
         <div className="drill-result">
           <strong>{t('drill.score',{fast,total:items.length})}</strong>
           <span>
@@ -199,10 +200,10 @@ export function PatternDrillView({
   return (
     <article className="learn-card drill-card">
       <div className="drill-meta">
-        <span>{variant==='mixed'?t('mixed.title'):localized(activity.pattern,locale)}</span>
+        <span>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</span>
         <span>{t('drill.position',{current:pos+1,total:items.length})}</span>
       </div>
-      <h3>{prompt}</h3>
+      <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
       {phase==='ask' ? (
         <>
@@ -225,7 +226,7 @@ export function PatternDrillView({
             <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
             <span>{lastFast?t('drill.fastHint'):t('drill.slowHint')}</span>
           </div>
-          <div className="drill-target">{accepted}</div>
+          <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
           <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
             {t('drill.same')}
           </button>
