@@ -452,8 +452,10 @@ async function resumePendingAndroidUpdate(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!APP_UPDATE.awaitingPermission||APP_UPDATE.busy)return;
   if(!appRuntimeCompat.hasNative('resumeUpdateInstall'))return;
   APP_UPDATE.busy=true;
+  APP_UPDATE.installingReady=true;
   APP_UPDATE.awaitingPermission=false;
   const result=await appRuntimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
+  APP_UPDATE.installingReady=false;
   await finishDirectUpdateResult(result);
 }
 
