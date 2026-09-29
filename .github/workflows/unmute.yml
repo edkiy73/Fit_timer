@@ -85,6 +85,9 @@ jobs:
       - name: Android debug build
         run: gradle -p android :app:assembleDebug --no-daemon
 
+      - name: Enable KVM for Android emulator
+        run: sudo chmod 666 /dev/kvm
+
       - name: Android emulator launch smoke
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
