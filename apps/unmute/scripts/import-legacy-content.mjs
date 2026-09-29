@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { parseLegacySource,buildCourseSet,buildLexicon,validateImport } from '../lib/legacy-import.mjs';
 
 const LEGACY_SOURCE_SHA='011572be908d64a1e092e63a821e407d85753205';
@@ -51,6 +52,16 @@ const course=buildCourseSet(model,lexicon);
 const report=validateImport(model,course,lexicon);
 console.log(JSON.stringify(report,null,2));
 
+// Publish refuses a lexicon that leaves any visible course surface missing or ambiguous,
+// so the import itself must already be complete (CI runs this in --dry-run mode).
+const coverage=report.lexicalCoverage;
+if(coverage.missingSurfaces||coverage.ambiguousSurfaces){
+  console.error('Lexical coverage incomplete: missing '+coverage.missingSurfaces+', ambiguous '+coverage.ambiguousSurfaces
+    +'. Add them to lib/legacy-lexicon-supplement.mjs.');
+  process.exit(1);
+}
+createRequire(import.meta.url)('../lib/lexicon-store.js').validateLexicon(lexicon);
+
 if(args.dryRun)process.exit(0);
 
 const key=process.env.ADMIN_KEY||'';
@@ -60,8 +71,8 @@ console.log(await post(args.api,'/api/content',key,{action:'draft_put',set:cours
 console.log(await post(args.api,'/api/lexicon',key,{action:'draft_put',lexicon}));
 
 if(args.publish){
-  console.log(await post(args.api,'/api/content',key,{action:'publish',id:'general-foundation'}));
-  console.log(await post(args.api,'/api/lexicon',key,{action:'publish'}));
+  // Course and lexicon are released together (paired release) through the content Admin.
+  console.log(await post(args.api,'/api/admin',key,{action:'content_publish',setIds:['general-foundation']}));
 }else{
   console.log('Drafts uploaded. Re-run with --publish after review.');
 }

@@ -131,4 +131,21 @@ assert.equal(phraseRef.lexemeId,howAreYou.id);
 assert.equal(phraseRef.senseId,howAreYou.senses.find(s=>s.translations.ru.includes('Как дела?')).id);
 
 assert.throws(()=>validateImport(model,course,lexicon),/unexpected_lessons/);
+
+// Irregular forms listed as their own DICT words are owned by the verb lexeme; the reviewed
+// supplement adds regular inflections, contractions and words the legacy DICT never had.
+const formsLexicon=buildLexicon({
+  dictionary:{go:['идти','ɡəʊ','гоу'],went:['пошёл','went','уэнт']},
+  phrases:[],phraseTranslations:{},verbs:[['go','went','gone']]
+});
+const go=formsLexicon.entries.find(e=>e.lemma==='go');
+const went=formsLexicon.entries.find(e=>e.lemma==='went');
+assert.equal(went.deprecated,true);
+assert.equal(go.forms.find(form=>form.id==='past').text,'went');
+assert.equal(go.forms.find(form=>form.id==='past').pronunciation.ipa,'went');
+assert.ok(go.forms.some(form=>form.text==='goes'&&form.kind==='inflection'));
+const itIs=formsLexicon.entries.find(e=>e.lemma==="it's");
+assert.equal(itIs.forms[0].kind,'contraction');
+const ing=formsLexicon.entries.find(e=>e.lemma==='-ing');
+assert.ok(ing.forms.some(form=>form.text==='ing'));
 console.log('UnMute legacy importer unit tests passed');
