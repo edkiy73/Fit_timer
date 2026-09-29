@@ -5,6 +5,16 @@ export interface TalkMessage {
   text:string;
 }
 
+export interface TalkTrialContext {
+  id:string;
+  scope:string;
+}
+
+export interface TalkTrialUsage {
+  remaining:number;
+  maxCalls:number;
+}
+
 export interface TalkReplyInput {
   topic:string;
   promptTemplate:string;
@@ -13,6 +23,7 @@ export interface TalkReplyInput {
   learnerText:string;
   locale:'ru'|'en';
   start?:boolean;
+  trial?:TalkTrialContext;
 }
 
 export interface TalkReply {
@@ -24,6 +35,7 @@ export interface TalkReply {
     used:number;
     limit:number;
   };
+  trial?:TalkTrialUsage;
 }
 
 export interface TalkReviewInput {
@@ -32,6 +44,7 @@ export interface TalkReviewInput {
   focus:string[];
   history:TalkMessage[];
   locale:'ru'|'en';
+  trial?:TalkTrialContext;
 }
 
 export interface TalkReviewCorrection {
@@ -49,6 +62,51 @@ export interface TalkReview {
     used:number;
     limit:number;
   };
+  trial?:TalkTrialUsage;
+}
+
+const TRIAL_STORAGE_PREFIX='unmute.aiTrial.';
+
+function randomTrialId():string{
+  const uuid=globalThis.crypto?.randomUUID?.();
+  if(uuid)return 'trial_'+uuid;
+  return 'trial_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+}
+
+function sessionStore():Pick<Storage,'getItem'|'setItem'|'removeItem'>|null{
+  try{return globalThis.sessionStorage??null;}catch{return null;}
+}
+
+export function getTalkTrialContext(
+  scope:string,
+  storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>|null=sessionStore()
+):TalkTrialContext{
+  const key=TRIAL_STORAGE_PREFIX+scope;
+  let id='';
+  try{id=String(storage?.getItem(key)||'');}catch{}
+  if(!/^[A-Za-z0-9_-]{16,120}$/.test(id)){
+    id=randomTrialId();
+    try{storage?.setItem(key,id);}catch{}
+  }
+  return {id,scope};
+}
+
+export function clearTalkTrialContext(
+  scope:string,
+  storage:Pick<Storage,'removeItem'>|null=sessionStore()
+):void{
+  try{storage?.removeItem(TRIAL_STORAGE_PREFIX+scope);}catch{}
+}
+
+function parseTrialUsage(payload:Record<string,unknown>):TalkTrialUsage|undefined{
+  const raw=payload.access;
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return undefined;
+  const value=raw as Record<string,unknown>;
+  if(value.mode!=='trial')return undefined;
+  const remaining=Math.max(0,Math.floor(Number(value.remaining)||0));
+  const maxCalls=Math.max(0,Math.floor(Number(value.maxCalls)||0));
+  if(!maxCalls)return undefined;
+  return {remaining,maxCalls};
 }
 
 export class TalkAIError extends Error{
@@ -99,7 +157,8 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
       history:(input.history||[]).slice(-12),
       learnerText:String(input.learnerText||'').slice(0,600),
       locale:input.locale,
-      start:Boolean(input.start)
+      start:Boolean(input.start),
+      trial:input.trial
     })
   });
 
@@ -126,7 +185,12 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
       }
     : undefined;
 
-  return usage?{...reply,usage}:reply;
+  const trial=parseTrialUsage(payload);
+  return {
+    ...reply,
+    ...(usage?{usage}:{}),
+    ...(trial?{trial}:{})
+  };
 }
 
 
@@ -178,7 +242,8 @@ export async function requestTalkReview(input:TalkReviewInput):Promise<TalkRevie
       promptTemplate:String(input.promptTemplate||'').slice(0,2400),
       focus:(input.focus||[]).slice(0,12),
       history:(input.history||[]).slice(-12),
-      locale:input.locale
+      locale:input.locale,
+      trial:input.trial
     })
   });
 
@@ -204,7 +269,12 @@ export async function requestTalkReview(input:TalkReviewInput):Promise<TalkRevie
         limit:Number((rawUsage as Record<string,unknown>).limit||0)
       }
     : undefined;
-  return usage?{...review,usage}:review;
+  const trial=parseTrialUsage(payload);
+  return {
+    ...review,
+    ...(usage?{usage}:{}),
+    ...(trial?{trial}:{})
+  };
 }
 
 export const talkReplyProtocol={parseReplyText,parseReviewText};
