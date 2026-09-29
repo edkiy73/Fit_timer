@@ -54,5 +54,5 @@ export function captureFatal(error: Error): void {
 
 
 export function trackOnboardingComplete():void{
-  void client.track('onboarding_completed');
+  void client.track('onboarding_done');
 }
