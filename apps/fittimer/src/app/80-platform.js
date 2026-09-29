@@ -178,35 +178,45 @@ export function stopHandsFree(){
   stopListening(); stopHeadset();
 }
 
-/* ---- ГАРНИТУРА: беззвучный луп + Media Session перехватывает кнопку наушников ---- */
+/* ---- ГАРНИТУРА: в APK используем нативную MediaSession, в браузере — web fallback ---- */
 let hsAudio = null;
+let nativeHeadsetActive = false;
+function advanceFromHeadset(){
+  const step = state.steps[state.stepIdx];
+  if(!step || !$('scrWork').classList.contains('on')) return;
+  if(state.paused) setPause(false);
+  if(step.kind === 'click') $('btnDone').click();
+  else { beep(990, .1); completeStep(); }
+  try{ if(hsAudio) hsAudio.play().catch(()=>{}); }catch(e){}
+}
 function startHeadset(){
+  if(appRuntimeCompat.hasNative('startHeadsetControl')){
+    appRuntimeCompat.startHeadsetControl(advanceFromHeadset).then(ok=>{
+      nativeHeadsetActive = !!ok;
+      if(!ok && hfMode === 'headset'){
+        appAlert(t('handsfree.headsetUnsupported'));
+        setHfMode('off');
+      }
+    });
+    return;
+  }
   try{
     if(!('mediaSession' in navigator)){
       appAlert(t('handsfree.headsetUnsupported'));
       setHfMode('off');
       return;
     }
-    // тихий бесконечный звук, чтобы система считала нас медиа-плеером
+    // Web fallback: тихий бесконечный звук, чтобы браузер считался медиа-плеером.
     if(!hsAudio){
-      // 1-секундный почти беззвучный wav в base64 (тишина)
       const silent = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
       hsAudio = new Audio(silent);
       hsAudio.loop = true;
       hsAudio.volume = 0.01;
     }
     hsAudio.play().catch(()=>{});
-    const advance = ()=>{
-      const step = state.steps[state.stepIdx];
-      if(!step || !$('scrWork').classList.contains('on')) return;
-      if(state.paused) setPause(false);
-      if(step.kind === 'click') $('btnDone').click();
-      else { beep(990, .1); completeStep(); }
-      try{ hsAudio.play().catch(()=>{}); }catch(e){}
-    };
-    navigator.mediaSession.setActionHandler('play', advance);
-    navigator.mediaSession.setActionHandler('pause', advance);
-    navigator.mediaSession.setActionHandler('nexttrack', advance);
+    navigator.mediaSession.setActionHandler('play', advanceFromHeadset);
+    navigator.mediaSession.setActionHandler('pause', advanceFromHeadset);
+    navigator.mediaSession.setActionHandler('nexttrack', advanceFromHeadset);
     try{
       navigator.mediaSession.metadata = new MediaMetadata({title:t('handsfree.mediaTitle'), artist:t('handsfree.mediaArtist')});
     }catch(e){}
@@ -215,6 +225,10 @@ function startHeadset(){
   }
 }
 function stopHeadset(){
+  if(nativeHeadsetActive || appRuntimeCompat.hasNative('stopHeadsetControl')){
+    nativeHeadsetActive = false;
+    appRuntimeCompat.stopHeadsetControl();
+  }
   try{
     if(hsAudio){ hsAudio.pause(); }
     if('mediaSession' in navigator){
