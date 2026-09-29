@@ -148,3 +148,11 @@ h2{margin:0 0 8px}
 .listening-option:hover{border-color:var(--accent)}
 .listening-option:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:480px){.listening-play{width:100%}}
+
+
+.speaking-card{gap:14px}
+.speaking-mic{position:relative}
+.speaking-mic-on{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.speaking-mic-on::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:999px;background:currentColor;animation:speaking-pulse 1s ease-in-out infinite}
+@keyframes speaking-pulse{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.speaking-mic-on::before{animation:none}}
