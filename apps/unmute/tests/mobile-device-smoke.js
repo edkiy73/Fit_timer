@@ -10,8 +10,8 @@ const ios=read('scripts/smoke-ios-device.sh');
 const workflow=read('../../.github/workflows/unmute.yml');
 const pkg=JSON.parse(read('package.json'));
 
-assert.match(android,/adb install -r/);
-assert.match(android,/am start -W/);
+assert.match(android,/"\$ADB" install -r/);
+assert.match(android,/"\$ADB" shell am start -W/);
 assert.match(android,/pidof/);
 assert.match(android,/app\.unmute\.english/);
 assert.match(ios,/simctl install/);
