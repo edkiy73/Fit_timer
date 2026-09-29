@@ -331,6 +331,30 @@ export const priceTable = ()=> (REMOTE_PRICES || PRICES)[userCurrency()] || (REM
 
 let APP_UPDATE = null;
 let APP_UPDATE_PREV = null;
+const ANDROID_UPDATE_ATTEMPT_KEY = 'android_update_attempt_v1';
+
+async function syncAndroidUpdateAttempt(update){
+  const saved = parsed(await kvGet(ANDROID_UPDATE_ATTEMPT_KEY), null);
+  const match = !!(saved && update
+    && Math.max(0, Math.round(+saved.latest||0)) === Math.max(0, Math.round(+update.latest||0))
+    && String(saved.url||'') === String(update.url||''));
+  if(saved && !match) await kvDel(ANDROID_UPDATE_ATTEMPT_KEY);
+  if(update) update.attempted = match;
+  return match;
+}
+async function markAndroidUpdateAttempt(){
+  if(!APP_UPDATE) return;
+  APP_UPDATE.attempted = true;
+  await kvSet(ANDROID_UPDATE_ATTEMPT_KEY, JSON.stringify({
+    latest: APP_UPDATE.latest,
+    url: APP_UPDATE.url,
+    at: Date.now()
+  }));
+}
+async function clearAndroidUpdateAttempt(){
+  if(APP_UPDATE) APP_UPDATE.attempted = false;
+  await kvDel(ANDROID_UPDATE_ATTEMPT_KEY);
+}
 // Один вид баннера на одно состояние загрузки. Раньше проценты стояли дважды (в тексте
 // и на кнопке), отменить было нельзя, а после сворачивания баннер пересобирался с нуля
 // и терял идущую загрузку. Состояние теперь берём у нативной стороны.
@@ -369,6 +393,10 @@ function renderAndroidUpdate(phase, progress){
 function renderAndroidUpdateProgress(event){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct')return;
   const status=String((event&&event.status)||'');
+  // Нативный WorkManager хранит последнее завершённое состояние. Оно не должно
+  // превращать новый спокойный баннер в «Повторить», пока пользователь сам не
+  // начал загрузку именно этой версии.
+  if(!APP_UPDATE.attempted)return;
   const progress=Math.max(-1,Math.min(100,Math.round(+(event&&event.progress)||0)));
   if(status==='downloading'||status==='queued'){ APP_UPDATE.busy=true; renderAndroidUpdate('downloading',progress); }
   else if(status==='verifying'){ APP_UPDATE.busy=true; renderAndroidUpdate('verifying'); }
@@ -390,8 +418,16 @@ async function finishDirectUpdateResult(result){
     return true;
   }
   APP_UPDATE.awaitingPermission=false;
-  if(status==='installer_opened'){ renderAndroidUpdate('installer'); return true; }
-  if(status==='cancelled'){ renderAndroidUpdate('idle'); return false; }
+  if(status==='installer_opened'){
+    await clearAndroidUpdateAttempt();
+    renderAndroidUpdate('installer');
+    return true;
+  }
+  if(status==='cancelled'){
+    await clearAndroidUpdateAttempt();
+    renderAndroidUpdate('idle');
+    return false;
+  }
   if(status==='missing'||status==='error'||status==='unsupported'){
     renderAndroidUpdate('error');
     return false;
@@ -417,9 +453,15 @@ async function openAndroidUpdate(){
     }
     // нажатие во время загрузки — «Отменить»; во время проверки файла — ничего
     if(APP_UPDATE.busy){
-      if(APP_UPDATE.phase==='downloading') await appRuntimeCompat.cancelUpdate();
+      if(APP_UPDATE.phase==='downloading'){
+        await appRuntimeCompat.cancelUpdate();
+        await clearAndroidUpdateAttempt();
+        APP_UPDATE.busy=false;
+        renderAndroidUpdate('idle');
+      }
       return false;
     }
+    await markAndroidUpdateAttempt();
     APP_UPDATE.busy=true;
     renderAndroidUpdate('downloading',-1);
     const result=await appRuntimeCompat.installUpdate(APP_UPDATE.url,APP_UPDATE.latest);
@@ -432,8 +474,18 @@ async function openAndroidUpdate(){
 // сворачивания): подхватываем загрузку, которая уже идёт или оборвалась.
 async function restoreAndroidUpdateState(){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||!appRuntimeCompat.hasNative('getUpdateState'))return;
+  const attempted = await syncAndroidUpdateAttempt(APP_UPDATE);
   const st=await appRuntimeCompat.getUpdateState();
   if(!APP_UPDATE||!st)return;
+
+  // Без явной попытки пользователя нативное прошлое состояние вообще не влияет
+  // на баннер. Новый релиз всегда начинается с «Обновить», не с «Повторить».
+  if(!attempted){
+    APP_UPDATE.busy=false;
+    renderAndroidUpdate('idle');
+    return;
+  }
+
   const status=String(st.status||'');
   if(st.running){
     APP_UPDATE.busy=true;
@@ -444,6 +496,12 @@ async function restoreAndroidUpdateState(){
   }else if(status==='error'){
     renderAndroidUpdate('error');
   }else if(status==='cancelled'){
+    await clearAndroidUpdateAttempt();
+    APP_UPDATE.busy=false;
+    renderAndroidUpdate('idle');
+  }else if(status==='idle'){
+    // Маркер остался, а нативной работы уже нет: не показываем фантомную ошибку.
+    await clearAndroidUpdateAttempt();
     APP_UPDATE.busy=false;
     renderAndroidUpdate('idle');
   }
@@ -477,13 +535,17 @@ async function applyAndroidUpdateConfig(raw){
   const minimum=Math.max(0,Math.round(+cfg.minimumCode||0));
   if(!latest || !cfg.url) return;
   const current=Math.max(0,Math.round(+(info&&info.build)||0));
-  if(!current || current>=latest) return;
+  if(!current || current>=latest){
+    if(current>=latest) await clearAndroidUpdateAttempt();
+    return;
+  }
 
   const required=minimum>0 && current<minimum;
   const suffix=cfg.latestName ? ' · '+String(cfg.latestName) : '';
   const custom=(appLocale==='en' ? cfg.messageEn : cfg.messageRu) || '';
   const prev=APP_UPDATE_PREV;
   APP_UPDATE={url:String(cfg.url),latest,minimum,current,required,channel:distribution,busy:false,
+    attempted:false,
     awaitingPermission:!!(prev&&prev.latest===latest&&prev.awaitingPermission),phase:'idle',
     idleText:custom||t(required?'update.requiredText':'update.availableText')};
 
