@@ -67,7 +67,8 @@
 | Фаза 7b — text AI conversation runner | ✅ в `main` (#243) | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
 | Фаза 7c-1 — talk.review contract | ✅ в `main` (#248) | server-built whole-conversation review, strict strengths/corrections/focus JSON, typed Plus client |
 | Фаза 7c-2 — talk.review UI | ✅ в `main` (#249) | finish with learner turns → strengths/corrections/focus screen; review failure never blocks activity completion |
-| Фаза 7d-1 — answer.explain | ✅ в этой фазе | wrong graded answer → opt-in Plus/light explanation; strict server-built why/tip JSON; no SRS mutation |
+| Фаза 7d-1 — answer.explain | ✅ в `main` (#250) | wrong graded answer → opt-in Plus/light explanation; strict server-built why/tip JSON; no SRS mutation |
+| Фаза 7d-2 — one free AI conversation | ✅ в этой фазе | one account-bound text conversation, 24h session / max 10 model calls, then Plus; answer.explain stays Plus-only |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -422,7 +423,7 @@ DictEntry { word, ru }
 - ✅ **7c-1. `talk.review` contract:** отдельный Plus/light action разбирает уже завершённый structured transcript только на сервере. Строгий ответ: `strengths[]`, `corrections[{original,better,why}]`, `focus`; сервер и клиент независимо валидируют JSON, никаких произвольных model prompts с клиента. UI разбора — следующий короткий 7c-2.
 - ✅ **7c-2. UI разбора разговора:** если learner успел отправить хотя бы одну реплику, «Завершить разговор» сначала вызывает `talk.review` и показывает отдельный экран внутри activity: сильные стороны, до 3 meaningful corrections (`ты сказал → лучше так → почему`) и один focus на следующую попытку. Activity становится `seen` только после кнопки «Готово». Если разбор упал/закончился quota/истёк доступ, уже проведённый разговор не теряется: можно повторить review либо завершить activity без него. Если learner не отправил ни одной реплики, сохраняется прежнее быстрое завершение без бессмысленного review.
 - ✅ **7d-1. `answer.explain`:** после неправильного `choice/text-input/translation` пользователь сам нажимает «Почему?»; только тогда тратится AI quota. Клиент отправляет структурированные `question / learnerAnswer / acceptedAnswers / courseExplanation`, а server registry сам строит model prompt и принимает только строгий JSON `{why,tip}`. Ответ не меняет оценку, SRS или accepted answers. Anonymous ведёт во вход, без Plus — на существующий экран доступа; тот же UI работает и в обычном уроке, и в Review.
-- Одна пробная беседа — следующий небольшой кусок.
+- ✅ **7d-2. Одна пробная AI-беседа:** signed-in пользователь без Plus может один раз запустить `ai-conversation`. Trial хранится **на сервере по account hash**, поэтому переустановка/другое устройство его не сбрасывают. Один trial привязан к одному activity scope и browser-session id, разрешает `talk.reply` + финальный `talk.review`, живёт до 24 часов и ограничен 10 model calls (старт + ответы + review); после этого UI ведёт в Plus. `answer.explain` и любые другие AI actions пробой не открываются. Premium проходит прежний Core gate без trial-policy.
 - Голосом: распознавание → ИИ → озвучка.
 
 ### Фаза 8 — Напоминания
@@ -449,4 +450,4 @@ DictEntry { word, ru }
 | `acc.owned` задевает Premium FitTimer | `acc.sub` не трогаем; регрессия Premium в CI |
 | Слияние прогресса теряет данные при первом входе | слияние по элементам, e2e «вход с локальным прогрессом» |
 | Web Speech есть не везде | всегда ввод текстом; нативное распознавание — фаза 9 |
-| ИИ съедает бюджет | только Plus, лимиты Core, одна пробная беседа |
+| ИИ съедает бюджет | Plus остаётся под месячными Core-лимитами; бесплатный trial — один на аккаунт, максимум 10 model calls и 24 часа |
