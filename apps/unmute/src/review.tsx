@@ -197,19 +197,21 @@ export function ReviewView({
         <div className="eyebrow">{t('review.eyebrow')}</div>
         <h2 id="review-title">{t('review.title')}</h2>
         {session.wordUnavailable ? (
-          <div className="learn-state" role="alert">
-            <strong>{t('review.wordsLoadTitle')}</strong>
-            <span>{t('review.wordsLoadError')}</span>
-            {wordRuntime&&(
-              <button className="primary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
-                {t('today.retry')}
+          <>
+            <div className="learn-state" role="alert">
+              <strong>{t('review.wordsLoadTitle')}</strong>
+              <span>{t('review.wordsLoadError')}</span>
+              {wordRuntime&&(
+                <button className="primary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
+                  {t('today.retry')}
+                </button>
+              )}
+              <button className="secondary-button" type="button" onClick={onExit}>
+                {t('review.backToday')}
               </button>
-            )}
-            <button className="secondary-button" type="button" onClick={onExit}>
-              {t('review.backToday')}
-            </button>
-          </div>
-          {mixedOffer}
+            </div>
+            {mixedOffer}
+          </>
         ) : (
           <>
             <div className="learn-state">
