@@ -39,12 +39,13 @@ describe('lexicon form identity',()=>{
 
 describe('form pronunciation',()=>{
   it('uses lemma pronunciation only for the lemma surface',()=>{
-    const [work]=validateLexicon({schemaVersion:1,revision:1,entries:[{
+    const work=validateLexicon({schemaVersion:1,revision:1,entries:[{
       id:'lex.work',revision:1,language:'en',lemma:'work',
       forms:[{text:'work',kind:'lemma'},{text:'working',kind:'inflection'},{text:'worked',kind:'inflection',pronunciation:{ipa:'wɜːkt'}}],
       pronunciation:{ipa:'wɜːk'},
       senses:[{id:'verb',translations:{ru:['работать']}}]
-    }]}).entries;
+    }]}).entries[0];
+    if(!work) throw new Error('fixture');
     expect(pronunciationForSurface(work,'work')?.ipa).toBe('wɜːk');
     expect(pronunciationForSurface(work,'worked')?.ipa).toBe('wɜːkt');
     expect(pronunciationForSurface(work,'working')).toBeNull();
