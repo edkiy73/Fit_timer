@@ -296,7 +296,8 @@ function previewPatch(snapshot,rawPatch){
 
 function pronunciationForSurface(entry,surface){
   const form=(entry.forms||[]).find(item=>norm(item.text)===norm(surface));
-  return form&&form.pronunciation ? form.pronunciation : (entry.pronunciation||null);
+  if(form&&form.pronunciation) return form.pronunciation;
+  return norm(entry.lemma)===norm(surface) ? (entry.pronunciation||null) : null;
 }
 
 function buildAiPrompt(audit,limit=50,options={}){

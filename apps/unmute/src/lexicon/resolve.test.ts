@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateLexicon } from './schema';
+import { pronunciationForSurface, validateLexicon } from './schema';
 import { resolveLexiconClick } from './resolve';
 
 const snapshot=validateLexicon({
@@ -34,5 +34,20 @@ describe('lexicon form identity',()=>{
     expect(resolved?.form?.id).toBe('past');
     expect(resolved?.pronunciation?.ipa).toBe('/rɛd/');
     expect(resolved?.exactContext).toBe(true);
+  });
+});
+
+describe('form pronunciation',()=>{
+  it('uses lemma pronunciation only for the lemma surface',()=>{
+    const work=validateLexicon({schemaVersion:1,revision:1,entries:[{
+      id:'lex.work',revision:1,language:'en',lemma:'work',
+      forms:[{text:'work',kind:'lemma'},{text:'working',kind:'inflection'},{text:'worked',kind:'inflection',pronunciation:{ipa:'wɜːkt'}}],
+      pronunciation:{ipa:'wɜːk'},
+      senses:[{id:'verb',translations:{ru:['работать']}}]
+    }]}).entries[0];
+    if(!work) throw new Error('fixture');
+    expect(pronunciationForSurface(work,'work')?.ipa).toBe('wɜːk');
+    expect(pronunciationForSurface(work,'worked')?.ipa).toBe('wɜːkt');
+    expect(pronunciationForSurface(work,'working')).toBeNull();
   });
 });

@@ -76,8 +76,9 @@
 | Фаза 9a-2a — Android shell + UnMuteAudio | ✅ в `main` (#257) | Capacitor 8 Android shell; system SpeechRecognizer (3 alternatives) + Android TTS; native notifications plugin; Android debug build in CI |
 | Фаза 9a-2b — iOS shell + UnMuteAudio | ✅ в `main` (#258) | Capacitor 8 iOS SPM shell; SFSpeechRecognizer (top 3 alternatives) + AVSpeechSynthesizer; speech/mic permissions; iOS simulator build in CI |
 | Фаза 9a-3 — native device launch smoke | ✅ в `main` (#259) | Android headless emulator installs/launches debug APK; iOS simulator installs/launches built app; process stays alive after launch |
-| Фаза 10a — launch funnel analytics | ✅ в этой фазе | onboarding/lesson/day/paywall/talk events wired; purchase event taxonomy reserved until deferred payment phase |
-| Фазы 2, 3.2–10 UnMute | ждут | §5 |
+| Фаза 10a — launch funnel analytics | ✅ в `main` (#260) | onboarding/lesson/day/paywall/talk events wired; purchase event taxonomy reserved until deferred payment phase |
+| Фаза 5c — готовность production | ✅ в этом PR | импорт `general-foundation` даёт 100% покрытие словаря (`lib/legacy-lexicon-supplement.mjs`, 993/993 слов, 0 неоднозначных), `scripts/import-legacy-content.mjs` падает при неполном покрытии и публикует через `content_publish`; `scripts/check-production.mjs` + workflow `unmute-production.yml`; админка грузится лениво (`src/admin-screen.tsx`) |
+| Фазы 6, 10 (сторы), нейтрализация «Бали» | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
 
@@ -107,18 +108,17 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 
 Тестовые серверы работают на памяти (`ALLOW_MEMORY_STORE=1`): `/api/auth` отдаёт `devCode`, поэтому вход по почте проверяется без почты. Пример — `apps/task-mini/tests/e2e.mjs` (сборка + `api/*` + два браузерных контекста + админка).
 
-### 0.4. Следующий шаг: завершить фазу 1 (сделать может только владелец)
+### 0.4. Следующий шаг: запуск для семьи (MVP)
 
-Сделано: `apps/unmute` сгенерирован и настроен, CI (`unmute.yml`), Vercel-проект `unmute` с доменом `unmute99.vercel.app`, слова и бренд UnMute запрещены в Core (`packages/core/tests/boundaries.js`).
+Состояние production (2026-09-29, `/api/health`): Redis подключён, регион `sin1`; **курс и словарь не опубликованы** (`/api/content` → `sets:[]`, `/api/lexicon` → `404`) — до фазы 5c публикация честно отказывала (`lexical_coverage_incomplete`: 472 слова без записи, 32 неоднозначных). Почта идёт с тестового отправителя Resend (`onboarding@resend.dev`) — такие письма доходят только владельцу аккаунта Resend. ИИ-провайдер не настроен.
 
-Осталось в панели Vercel (у агента нет прав создавать базы Marketplace):
-1. **База:** Vercel → Storage → Create → Upstash for Redis → имя `unmute` → Connect Project → `unmute` (все окружения). Интеграция сама добавит `KV_REST_API_URL`, `KV_REST_API_TOKEN` и др. Supabase пока не создаём (решение владельца).
-2. **Секреты** в Vercel → Project `unmute` → Settings → Environment Variables (Production): `ADMIN_KEY` (новый, не как у FitTimer), `RESEND_API_KEY` (можно тот же, что у FitTimer; отправитель — `apps/fittimer/docs/setup-vercel.md`).
-3. Redeploy production.
+Шаги (после merge фазы 5c и деплоя):
+1. **Контент** (владелец или агент с доступом к `unmute99.vercel.app`): `#/admin` → «Контент» → «Импорт из English» (при существующем черновике — с перезаписью) → при желании «IPA bootstrap» → «Опубликовать». Или из терминала: `ADMIN_KEY=… node scripts/import-legacy-content.mjs --publish`. Проверка — workflow «UnMute — production readiness» зелёный.
+2. **Почта** (только владелец): подтвердить свой домен в Resend и задать отправителя (как у FitTimer, `apps/fittimer/docs/setup-vercel.md`), redeploy.
+3. **Семья:** выдать `course.general-foundation` в `#/admin` → аккаунты; контрольный проход телефон + компьютер: день 1 → вход → импорт старого файла.
+4. **ИИ (Plus):** провайдер и лимиты в Vercel/админке (ключи — владелец).
 
-Проверка после этого: https://unmute99.vercel.app открывается без аккаунта, вход по почте приходит письмом, `https://unmute99.vercel.app/api/health` показывает хранилище `redis`, `#/admin` пускает по `ADMIN_KEY`.
-
-Дальше — **фаза 3** (перенос контента и движка из `edkiy73/English`, §5); её можно делать параллельно, база для неё не нужна.
+`ADMIN_KEY` должен быть длинным случайным значением; если ключ где-то засветился — сменить в Vercel и redeploy.
 
 ### 0.4a. Как устроена оплата (сделано в 0.8, нужно для фазы 6)
 
@@ -370,6 +370,7 @@ DictEntry { word, ru }
 - Готово: превью открывается, вход по почте работает, `#/admin` защищена, `npm run check` зелёный.
 
 ### Фаза 2 — Вход в UnMute
+- ✅ Сделано в фазе 1 + 4j: вход необязателен, `auth.askHandle: false`, «Аккаунт» предлагает войти, чтобы сохранить прогресс.
 - Необязательный вход и экран `#/account` приходят из шаблона; в UnMute — `auth.askHandle: false` и место предложения войти (сохранить прогресс).
 
 ### Фаза 3 — Контент и движок
@@ -403,7 +404,6 @@ DictEntry { word, ru }
 - ✅ **4g. Карта курса:** отдельный `/course` показывает полный roadmap из 40 дней с состояниями `пройден / текущий / доступен / сначала предыдущий / нужен полный курс`; доступные и пройденные дни можно открыть существующим runner. Preview API больше не обрезает карту до 7 дней: дни 8–40 приходят только безопасным skeleton без `activityIds`/completion и без платного контента. После day 7 `Today` больше не считает курс завершённым и не предлагает открыть day 8 без entitlement — вместо этого ведёт на карту. Paywall остаётся фазе entitlements.
 - ✅ **4h. Нажимаемые английские слова:** один `LexiconProvider` загружает опубликованный lexicon через существующий offline cache и обслуживает все learner-экраны. Любой English token в теории, карточках, паттернах, listening/speaking/dialogue, Review, Today и карте можно нажать: открывается общий bottom-sheet с переводом, IPA/русским чтением и примерами, если они есть; слово автоматически можно прослушать. `lexiconRefs` используются как точный context/sense, когда контент его задаёт; при неоднозначности UI показывает варианты и не угадывает. Неизвестное слово всё равно кликабельно и озвучивается. Клик никогда не создаёт `progress:words` и отдельного действия «добавить» нет.
 - ✅ **4i. Экран прогресса:** отдельный `/progress` читает только уже существующие `progress:course`, `progress:stats` и `progress:words`. Показывает реально пройденные дни roadmap, число дней занятий, текущую серию (обнуляется в UI после пропущенного дня), активные SRS-записи и due-now, агрегат сохранённых answer buckets, а также среднее **последних** speed/dialogue metrics по упражнениям. Историческую среднюю скорость/диалоги не выдумываем, потому что документ хранит только последнее значение на activity. Для нового пользователя вместо набора нулей — отдельный empty state.
-- ✅ **4j. Минимальный onboarding:** один экран перед первым занятием объясняет три реальные механики — говорить вслух, нажимать любое слово, интервальные повторы — и одной кнопкой открывает Day 1. Никаких вопросов про уровень/место/цель/минуты и обязательного аккаунта. Флаг хранится локально для мгновенного старта и в бесплатном `settings` для другого устройства; field-wise settings merge не даёт locale затереть onboarding. Любой существующий/imported course progress автоматически помечает onboarding пройденным без аналитического события.
 - ✅ **4j. Минимальный onboarding:** первый новый anonymous learner видит **один короткий экран** с тремя тезисами: говорить вслух, нажимать любое английское слово, доверить интервальные повторы приложению. Никакой анкеты, шагов «Далее» и обязательного аккаунта. Кнопка сразу открывает текущий первый день. Завершение хранится локально (`unmute.onboarding.v1`) и в merge-safe `settings.onboardingDoneAt`, поэтому не повторяется после синхронизации на другом устройстве. Если уже есть живой/imported `progress:course`, onboarding автоматически пропускается и completion-флаг сохраняется. Событие аналитики — `onboarding_done`.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: минимальное знакомство (1 экран без анкеты) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
@@ -418,7 +418,8 @@ DictEntry { word, ru }
 - Семье выдать полный доступ из админки.
 - ✅ **5b-1. Два устройства + первый вход с локальным прогрессом:** production-build e2e создаёт разные анонимные изменения курса на двух независимых browser contexts, затем оба устройства входят в один аккаунт. `document-sync` обязан объединить activity records, не затерев ни одно; после pull оба устройства сходятся в одном состоянии, которое переживает reload. Тест идёт через настоящие `/api/auth` + `/api/sync` на memory store, без доступа к внутреннему mirror.
 - ✅ **5b-2. Импорт старого файла:** в «Аккаунте» можно выбрать `english-trainer-*.json`; файл валидируется как legacy export, `saved` корректирует старое local-midnight due-numbering, существующий `importLegacyProgress()` переводит legacy IDs в стабильные activity/lexicon refs и выдаёт отчёт по неоднозначностям. Результат **merge-ится** с текущими course/stats/words: новый UnMute progress не откатывается. При выполненном входе после записи сразу запускается account sync. Production-build e2e импортирует реальный JSON через `<input type=file>` и затем проверяет сохранённую SRS-карточку на `/progress`.
-- Осталось: семейный full-access grant через Admin + контрольная MVP-проверка.
+- ✅ **5c. Готовность production:** reviewed-дополнение словаря (`lib/legacy-lexicon-supplement.mjs`) закрывает все 993 видимых английских слова курса: словоформы существующих слов, сокращения (`it's`, `don't`), грамматические окончания (`-ing`, `-ed`), имена и новые слова; 32 отдельных legacy-слова вроде `went` отданы глаголу (`go`), старая запись остаётся под своим ID как `deprecated` и передаёт IPA. CLI-импорт не проходит при неполном покрытии, `check-production.mjs` ежедневно проверяет живой прод.
+- Осталось: публикация на production, почтовый домен, семейный full-access grant через Admin + контрольная MVP-проверка (§0.4).
 
 **Здесь готов запуск для семьи (MVP).**
 

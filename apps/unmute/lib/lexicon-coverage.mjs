@@ -223,7 +223,8 @@ export function auditLexicalCoverage(course,lexicon){
     }
     const pronunciations=entries.map(entry=>{
       const form=(entry.forms||[]).find(candidate=>normalizeSurface(candidate.text)===item.surface);
-      return form&&form.pronunciation ? form.pronunciation : entry.pronunciation;
+      if(form&&form.pronunciation) return form.pronunciation;
+      return normalizeSurface(entry.lemma)===item.surface ? entry.pronunciation : null;
     }).filter(Boolean);
     if(pronunciations.some(pronunciation=>pronunciation.ipa)) surfacesWithIpa++;
     if(pronunciations.some(pronunciation=>pronunciation.ruReading)) surfacesWithRuReading++;

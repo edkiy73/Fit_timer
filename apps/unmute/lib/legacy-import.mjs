@@ -1,5 +1,6 @@
 import vm from 'node:vm';
 import { auditLexicalCoverage, compactCoverageReport } from './lexicon-coverage.mjs';
+import LEXICON_SUPPLEMENT from './legacy-lexicon-supplement.mjs';
 
 function skipSpace(source,i){
   while(i<source.length){
@@ -448,13 +449,64 @@ function addMissingIrregularVerbLexemes(model,entries,used){
   }
 }
 
+// Course text uses many surfaces the legacy DICT never had (inflections, contractions,
+// grammar endings, names). The reviewed supplement makes every visible surface resolvable.
+function applyLexiconSupplement(entries,used,supplement=LEXICON_SUPPLEMENT){
+  for(const [lemma,forms] of Object.entries(supplement.forms||{})){
+    const key=normalizePhrase(lemma);
+    const candidates=entries.filter(entry=>normalizePhrase(entry.lemma)===key);
+    // Absent lemma = a different source (tests, fixtures); the coverage gate reports real gaps.
+    if(!candidates.length)continue;
+    if(candidates.length>1)throw new Error('supplement_lemma_resolution:'+lemma+':'+candidates.length);
+    const entry=candidates[0];
+    for(const surface of forms){
+      if(!entry.forms.some(form=>normalizePhrase(form.text)===normalizePhrase(surface)))entry.forms.push({text:surface,kind:'inflection'});
+    }
+  }
+  for(const [lemma,partOfSpeech,ru,extraForms=[],extraKind='inflection'] of supplement.lexemes||[]){
+    entries.push({
+      id:uniqId('lex.'+slug(lemma),used),
+      revision:1,
+      language:'en',
+      lemma,
+      forms:[{text:lemma,kind:lemma.includes("'")?'contraction':'lemma'},...extraForms.map(surface=>({text:surface,kind:extraKind}))],
+      senses:ru.split('; ').map((translation,index)=>({id:'sense-'+(index+1),partOfSpeech,translations:{ru:[translation]},tags:[]})),
+      examples:[],
+      deprecated:false
+    });
+  }
+}
+
+// Legacy DICT also lists irregular past/participle forms (went, seen) as separate words, while
+// the verb table attaches the same surfaces to the verb. Keep the verb lexeme as the single
+// owner; the stand-alone headword stays under its ID as deprecated and hands over its IPA.
+function retireIrregularFormHeadwords(model,lexicon){
+  const byLemma=new Map(lexicon.entries.map(entry=>[normalizePhrase(entry.lemma),entry]));
+  for(const row of model.verbs||[]){
+    const verb=byLemma.get(normalizePhrase(text(row&&row[0])));
+    if(!verb)continue;
+    for(const surface of [...splitVerbForms(row[1]),...splitVerbForms(row[2])]){
+      const key=normalizePhrase(surface);
+      if(key===normalizePhrase(verb.lemma))continue;
+      const duplicate=lexicon.entries.find(entry=>entry!==verb&&!entry.deprecated
+        &&entry.forms.length===1&&normalizePhrase(entry.forms[0].text)===key);
+      if(!duplicate)continue;
+      duplicate.deprecated=true;
+      const form=verb.forms.find(item=>normalizePhrase(item.text)===key);
+      if(form&&!form.pronunciation&&duplicate.pronunciation)form.pronunciation={...duplicate.pronunciation};
+    }
+  }
+  return lexicon;
+}
+
 export function buildLexicon(model){
   const used=new Set(),entries=[];
   for(const [word,value] of Object.entries(model.dictionary||{}))entries.push(lexemeFromDict(word,value,used));
   for(const group of model.phrases||[])for(const pair of group.items||[])addPhraseLexeme(entries,used,pair[0],pair[1]);
   for(const [en,ru] of Object.entries(model.phraseTranslations||{}))addPhraseLexeme(entries,used,en,ru);
   addMissingIrregularVerbLexemes(model,entries,used);
-  return enrichIrregularVerbForms(model,{schemaVersion:1,revision:1,entries});
+  applyLexiconSupplement(entries,used);
+  return retireIrregularFormHeadwords(model,enrichIrregularVerbForms(model,{schemaVersion:1,revision:1,entries}));
 }
 
 export function buildImportReport(model,course,lexicon){

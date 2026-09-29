@@ -1,13 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useNavigate, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
-import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import product from '../config/product.json';
 import { authClient } from './auth';
-import { adminClient } from './admin';
-import { contentAdminSection } from './admin-content';
-import { courseAdminSection } from './admin-course';
 import { appDocs, syncNow } from './sync';
 import { patchSettings, readSettings } from './settings';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
@@ -150,11 +146,6 @@ function Account(){
   );
 }
 
-function Admin(){
-  const {locale} = useI18n();
-  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={[courseAdminSection,contentAdminSection]} />;
-}
-
 export const routes: RouteObject[] = [
   {
     path:'/',
@@ -174,6 +165,9 @@ export const routes: RouteObject[] = [
   },
   {
     path:'/admin',
-    element:<Localized><Admin /></Localized>
+    lazy:async () => {
+      const {AdminScreen} = await import('./admin-screen');
+      return {Component:() => <Localized><AdminScreen productName={PRODUCT_NAME} /></Localized>};
+    }
   }
 ];
