@@ -76,6 +76,58 @@ const sample={
   assert.equal(full.body.access,'full');
   assert.equal(full.body.set.activities.length,3);
 
+  // Active Plus opens the same full course even without a permanent owned SKU.
+  const plusEmail='plus@example.com', plusDevice='device-plus', plusToken='plus-token';
+  await store.pipe([['SET',`a:${hash(plusEmail).slice(0,32)}`,JSON.stringify({
+    syncDevices:{[plusDevice]:{h:hash(plusToken)}},
+    sub:{until:new Date(Date.now()+24*3600*1000).toISOString()}
+  })]]);
+  const plus=await call({method:'GET',headers:{'x-fit-email':plusEmail,'x-fit-device':plusDevice,'x-fit-token':plusToken},query:{action:'set',id:'general-foundation'}});
+  assert.equal(plus.status,200);
+  assert.equal(plus.body.access,'full');
+  assert.equal(plus.body.set.activities.length,3);
+
+  // When Plus expires, paid roadmap nodes lock again, but activities already learned
+  // remain in the preview payload so Review can continue using them.
+  const learnedEmail='learned@example.com', learnedDevice='device-learned', learnedToken='learned-token';
+  const learnedHash=hash(learnedEmail).slice(0,32);
+  const learnedStoreKey=`sa:${learnedHash}:progress:course:general-foundation`;
+  await store.pipe([
+    ['SET',`a:${learnedHash}`,JSON.stringify({
+      syncDevices:{[learnedDevice]:{h:hash(learnedToken)}},
+      sub:{until:'2020-01-01T00:00:00.000Z'}
+    })],
+    ['SET',learnedStoreKey,JSON.stringify({
+      schemaVersion:1,
+      seen:{a8:{at:'2026-09-29T00:00:00.000Z'}},
+      cards:{},
+      practice:{drill:{},listening:{},speaking:{}},
+      manualNodes:{},
+      learningDays:{},
+      metrics:{}
+    })],
+    ['SET',`s:${learnedHash}`,JSON.stringify({
+      v:2,
+      profiles:{},
+      accountDocs:{
+        'progress:course:general-foundation':{
+          rev:1,
+          at:'2026-09-29T00:00:00.000Z',
+          schema:1,
+          deviceId:learnedDevice,
+          deleted:false,
+          storeKey:learnedStoreKey
+        }
+      }
+    })]
+  ]);
+  const learnedPreview=await call({method:'GET',headers:{'x-fit-email':learnedEmail,'x-fit-device':learnedDevice,'x-fit-token':learnedToken},query:{action:'set',id:'general-foundation'}});
+  assert.equal(learnedPreview.status,200);
+  assert.equal(learnedPreview.body.access,'preview');
+  assert.deepEqual(learnedPreview.body.set.activities.map(x=>x.id),['a1','a7','a8']);
+  const learnedPaidNode=learnedPreview.body.set.roadmaps[0].nodes.find(x=>x.id==='d8');
+  assert.deepEqual(learnedPaidNode.activityIds,[]);
+
   const draft=await Content.getDraft('general-foundation');
   draft.title.ru='Updated';
   await Content.putDraft(draft);
