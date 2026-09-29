@@ -30,7 +30,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     window.Capacitor = {getPlatform: () => 'android'};
     window.__calls = [];
-    window.__native = {running: false, status: 'idle', progress: -1};
+    // WorkManager может помнить ошибку от старой версии. Новый баннер не имеет
+    // права показывать её, пока пользователь сам не начал загрузку этого релиза.
+    window.__native = {running: false, status: 'error', progress: -1};
     window.FitNative = {
       isNative: true,
       getAppInfo: async () => ({build: 100, distribution: 'direct'}),
@@ -53,8 +55,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   }));
 
   let v = await view();
-  ok('баннер показан с «Обновить»', v.shown && v.action === 'Обновить', v.action);
+  ok('старый нативный error не превращает новый баннер в «Повторить»',
+     v.shown && v.action === 'Обновить' && v.calls === '', `${v.action} | ${v.calls}`);
+  ok('до клика загрузка сама не стартует', v.calls === '', v.calls);
 
+  await page.evaluate(() => { __native = {running: false, status: 'idle', progress: -1}; });
   await page.click('#appUpdateBanner');
   await page.evaluate(() => __emit({status: 'downloading', progress: 40}));
   v = await view();
@@ -78,6 +83,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(100);
   v = await view();
   ok('после отмены — снова «Обновить»', v.action === 'Обновить' && !/%/.test(v.text), `${v.text} | ${v.action}`);
+  await page.evaluate(async () => { await applyAndroidUpdateConfig(__cfg); });
+  v = await view();
+  ok('отмена не оставляет «Повторить» после пересборки баннера', v.action === 'Обновить', v.action);
 
   await page.click('#appUpdateBanner');
   await page.evaluate(() => { __emit({status: 'error', error: 'update_http_500'}); __native = {running: false, status: 'error'}; __finish({status: 'error'}); });
