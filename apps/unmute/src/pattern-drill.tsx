@@ -15,6 +15,7 @@ export interface PatternDrillViewProps {
     correct:boolean,
     score:number
   )=>Promise<void>;
+  variant?:'practice'|'mixed';
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -38,7 +39,8 @@ export function PatternDrillView({
   activity,
   setId,
   onDone,
-  savePractice
+  savePractice,
+  variant='practice'
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   const [items,setItems]=useState(()=>activity.items.slice());
@@ -49,7 +51,7 @@ export function PatternDrillView({
   const [lastFast,setLastFast]=useState<boolean|null>(null);
   const [stage,setStage]=useState<'reading'|'speaking'>('reading');
   const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(false);
+  const [saved,setSaved]=useState(variant==='mixed');
   const [saveError,setSaveError]=useState(false);
   const deadlineRef=useRef(0);
   const item=items[pos] ?? null;
@@ -77,14 +79,14 @@ export function PatternDrillView({
   },[item?.id,locale,phase]);
 
   useEffect(()=>{
-    if(!done||saved||saving||saveError)return;
+    if(variant==='mixed'||!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
     void savePractice(setId,activity.id,'drill',passed,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,passed,savePractice,saved,saving,score,setId]);
+  },[activity.id,done,passed,savePractice,saved,saving,score,setId,variant]);
 
   const reveal=(wasFast:boolean)=>{
     if(phase!=='ask')return;
@@ -123,7 +125,7 @@ export function PatternDrillView({
     setLastFast(null);
     setPhase('ask');
     setStage('reading');
-    setSaved(false);
+    setSaved(variant==='mixed');
     setSaving(false);
     setSaveError(false);
   };
@@ -141,11 +143,15 @@ export function PatternDrillView({
   if(done){
     return (
       <article className="learn-card drill-card">
-        <div className="eyebrow">{t('drill.mode')}</div>
-        <h3>{localized(activity.pattern,locale)}</h3>
+        <div className="eyebrow">{variant==='mixed'?t('mixed.eyebrow'):t('drill.mode')}</div>
+        <h3>{variant==='mixed'?t('mixed.title'):localized(activity.pattern,locale)}</h3>
         <div className="drill-result">
           <strong>{t('drill.score',{fast,total:items.length})}</strong>
-          <span>{passed?t('drill.passed'):t('drill.retryHint')}</span>
+          <span>
+            {variant==='mixed'
+              ? (passed?t('mixed.passed'):t('mixed.retryHint'))
+              : (passed?t('drill.passed'):t('drill.retryHint'))}
+          </span>
         </div>
         {saveError&&(
           <div className="learn-feedback learn-feedback-wrong" role="alert">
@@ -155,18 +161,31 @@ export function PatternDrillView({
             </button>
           </div>
         )}
-        <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
-          {passed?t('learn.next'):t('drill.again')}
-        </button>
-        {passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-            {t('drill.again')}
-          </button>
-        )}
-        {!passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
-            {t('drill.continueAnyway')}
-          </button>
+        {variant==='mixed' ? (
+          <>
+            <button className="primary-button" type="button" onClick={reset}>
+              {t('drill.again')}
+            </button>
+            <button className="secondary-button" type="button" onClick={onDone}>
+              {t('mixed.backReview')}
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
+              {passed?t('learn.next'):t('drill.again')}
+            </button>
+            {passed&&(
+              <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
+                {t('drill.again')}
+              </button>
+            )}
+            {!passed&&(
+              <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
+                {t('drill.continueAnyway')}
+              </button>
+            )}
+          </>
         )}
         {saving&&<span className="learn-hint" role="status">{t('drill.saving')}</span>}
       </article>
@@ -180,7 +199,7 @@ export function PatternDrillView({
   return (
     <article className="learn-card drill-card">
       <div className="drill-meta">
-        <span>{localized(activity.pattern,locale)}</span>
+        <span>{variant==='mixed'?t('mixed.title'):localized(activity.pattern,locale)}</span>
         <span>{t('drill.position',{current:pos+1,total:items.length})}</span>
       </div>
       <h3>{prompt}</h3>
