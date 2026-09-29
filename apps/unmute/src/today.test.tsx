@@ -67,7 +67,7 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn()){
+function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,10 +75,10 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} />
     </I18nProvider>
   );
-  return {onStart,onReview};
+  return {onStart,onReview,onMap};
 }
 
 describe('Today learner shell',()=>{
@@ -91,6 +91,14 @@ describe('Today learner shell',()=>{
     expect(screen.getByText('Заданий: 2')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+  });
+
+  it('opens the course map from Today',async()=>{
+    const user=userEvent.setup();
+    const {onMap}=renderToday(runtime());
+
+    await user.click(screen.getByRole('button',{name:'Карта курса'}));
+    expect(onMap).toHaveBeenCalledTimes(1);
   });
 
   it('opens the current node from Today',async()=>{
@@ -176,6 +184,7 @@ describe('Today learner shell',()=>{
           wordRuntime={wordRuntime}
           onStart={()=>{}}
           onReview={()=>{}}
+          onMap={()=>{}}
         />
       </I18nProvider>
     );
@@ -207,6 +216,47 @@ describe('Today learner shell',()=>{
     expect(screen.getByRole('heading',{name:'Курс пройден'})).toBeTruthy();
     expect(screen.getByText('4/4')).toBeTruthy();
     expect(screen.queryByText('День 2')).toBeNull();
+  });
+
+  it('explains when the free preview has reached the next paid day',()=>{
+    const lockedNode={
+      id:'day-8',
+      kind:'lesson' as const,
+      title:{ru:'День 8'},
+      dayIndex:8,
+      order:7,
+      prerequisites:['day-7'],
+      activityIds:[],
+      optional:false
+    };
+    renderToday(runtime({
+      state:{
+        ...state,
+        set:{
+          ...state.set,
+          access:{
+            mode:'entitlement',
+            entitlement:'course.general-foundation',
+            freePreview:{kind:'first-days',days:7,learnedContentStaysAvailable:true}
+          }
+        },
+        access:'preview',
+        currentNode:null,
+        currentDayIndex:null,
+        roadmapProgress:{
+          ...state.roadmapProgress,
+          nodes:[{node:lockedNode,complete:false,unlocked:true}],
+          currentNode:lockedNode,
+          currentDayIndex:8,
+          completedCount:7,
+          requiredCount:40,
+          courseComplete:false
+        }
+      }
+    }));
+
+    expect(screen.getByText('Бесплатная часть пройдена')).toBeTruthy();
+    expect(screen.getByText(/полным доступом/)).toBeTruthy();
   });
 
   it('lets the learner retry after a load error',async()=>{
