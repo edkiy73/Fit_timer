@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
@@ -16,6 +16,7 @@ import { LexiconText } from './lexicon-ui';
 import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
+import { trackDayCompleted, trackLessonCompleted } from './observability';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -63,6 +64,7 @@ export interface NodeRunnerViewProps {
   onExit:()=>void;
   onSignIn?:()=>void;
   onAccess?:()=>void;
+  onNodeCompleted?:(node:RoadmapNode)=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
   saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
   savePractice:(
@@ -83,6 +85,7 @@ export function NodeRunnerView({
   onExit,
   onSignIn=()=>{},
   onAccess=()=>{},
+  onNodeCompleted=()=>{},
   saveSeen,
   saveGraded,
   savePractice,
@@ -109,6 +112,11 @@ export function NodeRunnerView({
   const [answer,setAnswer]=useState('');
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
+  const completionTrackedRef=useRef(false);
+
+  useEffect(()=>{
+    completionTrackedRef.current=Boolean(nodeProgress?.complete);
+  },[node?.id]);
 
   useEffect(()=>{
     if(!state||!node)return;
@@ -124,10 +132,14 @@ export function NodeRunnerView({
     setBusy(false);
   },[activity?.id]);
 
-  const advance=()=>{
+  const advance=(completed=true)=>{
     if(index+1<activities.length){
       setIndex(current=>current+1);
       return;
+    }
+    if(completed&&node&&!completionTrackedRef.current){
+      completionTrackedRef.current=true;
+      onNodeCompleted(node);
     }
     onExit();
   };
@@ -401,7 +413,7 @@ export function NodeRunnerView({
         <article className="learn-card">
           <h3><LexiconText text={activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')} refs={activity.lexiconRefs} /></h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>
-          <button className="secondary-button" type="button" onClick={advance}>
+          <button className="secondary-button" type="button" onClick={()=>advance(false)}>
             {index+1<activities.length?t('learn.skipForNow'):t('learn.backToday')}
           </button>
         </article>
@@ -421,6 +433,10 @@ export function NodeRunnerScreen(){
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=talk')}
+      onNodeCompleted={node=>{
+        if(node.kind==='lesson')trackLessonCompleted();
+        if(node.dayIndex)trackDayCompleted();
+      }}
       saveSeen={saveSeenActivity}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
