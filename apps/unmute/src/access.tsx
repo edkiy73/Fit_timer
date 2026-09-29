@@ -158,7 +158,7 @@ export function AccessScreen(){
       refreshing={refreshing}
       refreshError={refreshError}
       onRefresh={()=>void refresh()}
-      onAccount={()=>navigate('/account')}
+      onAccount={()=>navigate('/account?return=%2Faccess')}
       onCourse={()=>navigate('/course')}
     />
   );
