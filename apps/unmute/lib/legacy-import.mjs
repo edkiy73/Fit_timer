@@ -1,6 +1,7 @@
 import vm from 'node:vm';
 import { auditLexicalCoverage, buildLexiconFormIndex, compactCoverageReport, tokenizeEnglish } from './lexicon-coverage.mjs';
 import LEXICON_SUPPLEMENT from './legacy-lexicon-supplement.mjs';
+import { BANNED_PLACE, localizeLegacySource } from './legacy-localization.mjs';
 
 function skipSpace(source,i){
   while(i<source.length){
@@ -113,7 +114,8 @@ function applyAlternates(lessons,alt){
   }
 }
 
-export function parseLegacySource(source){
+export function parseLegacySource(rawSource){
+  const {source,missing:localizationMissing}=localizeLegacySource(rawSource);
   const lessons=extractConst(source,'LESSONS');
   lessons.push(...extractPushItems(source,'LESSONS'));
 
@@ -138,7 +140,8 @@ export function parseLegacySource(source){
     phrases:extractConst(source,'PHRASES'),
     verbs:extractConst(source,'VERBS'),
     tags:extractConst(source,'TAGS'),
-    phraseTranslations:extractConst(source,'PHRASE_RU')
+    phraseTranslations:extractConst(source,'PHRASE_RU'),
+    localizationMissing
   };
 }
 
@@ -355,8 +358,16 @@ function coursePairs(activities){
 
 // Accepted answers are stored lower-case without punctuation ("should i call him");
 // dictionary examples read as sentences, ending like the Russian prompt.
+const PROPER_NAMES=['English','Russian','Spanish','Russia','Moscow','Japan','Georgia','Portugal','Tbilisi','Batumi',
+  'Lisbon','Porto','Bangkok','Belgrade','Dubai','Ivan','Anna','Monday','Tuesday','Wednesday','Thursday','Friday',
+  'Saturday','Sunday','January','July','December'];
+const PROPER_RE=new RegExp('\\b('+PROPER_NAMES.join('|')+')\\b','gi');
+const PROPER_BY_LOWER=new Map(PROPER_NAMES.map(name=>[name.toLowerCase(),name]));
+
 function sentenceCase(raw,ru){
-  const body=raw.replace(/\bi\b/g,'I').replace(/^./,char=>char.toUpperCase());
+  const body=raw.replace(/\bi\b/g,'I').replace(/\bin it\b/g,'in IT')
+    .replace(PROPER_RE,word=>PROPER_BY_LOWER.get(word.toLowerCase())||word)
+    .replace(/^./,char=>char.toUpperCase());
   if(/[.!?]$/.test(body))return body;
   const end=(ru.match(/[.!?]$/)||['.'])[0];
   return body+end;
@@ -612,5 +623,9 @@ export function validateImport(model,course,lexicon){
   if(!course.roadmaps[0]||course.roadmaps[0].nodes.length!==40)throw new Error('bad_roadmap_days');
   const ids=new Set(course.activities.map(x=>x.id));
   if(ids.size!==course.activities.length)throw new Error('duplicate_course_activity');
+  // Owner decision 7: no Bali. A drifted pinned source would silently skip a rewrite.
+  if((model.localizationMissing||[]).length)throw new Error('localization_not_applied:'+model.localizationMissing[0]);
+  const place=JSON.stringify([course,lexicon]).match(BANNED_PLACE);
+  if(place)throw new Error('banned_place_left:'+place[0]);
   return report;
 }

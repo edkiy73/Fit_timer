@@ -36,7 +36,7 @@ describe('legacy near-miss parity',()=>{
   it('treats grammar-word substitutions as grammar errors',()=>{
     expect(isGrammarWord('in')).toBe(true);
     expect(isGrammarWord('on')).toBe(true);
-    expect(nearMiss('I work in Bali',['I work on Bali'])).toBe(false);
+    expect(nearMiss('I work in Lisbon',['I work on Lisbon'])).toBe(false);
   });
 
   it('uses the lexicon callback only for grammar-vs-content-word differences',()=>{

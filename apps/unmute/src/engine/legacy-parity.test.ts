@@ -199,7 +199,7 @@ describe('frozen legacy engine parity',()=>{
       ['This is beautful',['This is beautiful']],
       ['I works today',['I work today']],
       ['I wrok tomorow',['I work tomorrow']],
-      ['I work in Bali',['I work on Bali']],
+      ['I work in Lisbon',['I work on Lisbon']],
       ['I work ate home',['I work at home']],
       ['I work abt home',['I work at home']],
       ["Yeah, I wanna go.",['yes i want to go']]

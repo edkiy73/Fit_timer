@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { parseLegacySource,buildCourseSet,buildLexicon,validateImport } from '../lib/legacy-import.mjs';
+import { BANNED_PLACE,LEGACY_LOCALIZATION,localizeLegacySource } from '../lib/legacy-localization.mjs';
 
 const fixture=String.raw`
 const LESSONS=[
@@ -155,4 +156,15 @@ const itIs=formsLexicon.entries.find(e=>e.lemma==="it's");
 assert.equal(itIs.forms[0].kind,'contraction');
 const ing=formsLexicon.entries.find(e=>e.lemma==='-ing');
 assert.ok(ing.forms.some(form=>form.text==='ing'));
+// Owner decision 7: Bali text is rewritten before parsing; the real pinned source is checked
+// end-to-end by validateImport (CI runs import:legacy --dry-run).
+const [from,to]=LEGACY_LOCALIZATION[0];
+const localized=localizeLegacySource('before '+from+' after');
+assert.equal(localized.source,'before '+to+' after');
+assert.equal(localized.missing.length,LEGACY_LOCALIZATION.length-1);
+assert.ok(BANNED_PLACE.test('Мы живём на Бали.'));
+assert.ok(BANNED_PLACE.test('He lives in Ubud.'));
+assert.ok(!BANNED_PLACE.test('We live in Lisbon. He rides a bike.'));
+assert.ok(LEGACY_LOCALIZATION.every(([,replacement])=>!BANNED_PLACE.test(replacement)));
+
 console.log('UnMute legacy importer unit tests passed');
