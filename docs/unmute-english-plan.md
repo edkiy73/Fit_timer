@@ -61,8 +61,9 @@
 | Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
 | Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
 | Фаза 5a — entitlements + access offer | ✅ в `main` (#241) | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
+| Фаза 5b-1 — two-device progress e2e | ✅ в этой фазе | anonymous day 1 + anonymous day 2 on separate devices → same account → per-record merge → both devices converge |
 | Фаза 7a — AI talk contract | ✅ в `main` (#242) | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client |
-| Фаза 7b — text AI conversation runner | ✅ в этой фазе | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
+| Фаза 7b — text AI conversation runner | ✅ в `main` (#243) | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -402,7 +403,8 @@ DictEntry { word, ru }
 - Реестр документов §3.4 (клиент + `lib/app-sync-schema.js`) и правила слияния по элементам поверх `document-sync` из этапа 0.
 - Импорт файла `eng-trainer-v2`.
 - Семье выдать полный доступ из админки.
-- e2e: «два устройства — один прогресс», «импорт старого файла», «вход с локальным прогрессом».
+- ✅ **5b-1. Два устройства + первый вход с локальным прогрессом:** production-build e2e создаёт разные анонимные изменения курса на двух независимых browser contexts, затем оба устройства входят в один аккаунт. `document-sync` обязан объединить activity records, не затерев ни одно; после pull оба устройства сходятся в одном состоянии, которое переживает reload. Тест идёт через настоящие `/api/auth` + `/api/sync` на memory store, без доступа к внутреннему mirror.
+- Осталось: UI импорта старого файла `english-trainer-*.json` + e2e импорта; семейный access grant из Admin.
 
 **Здесь готов запуск для семьи (MVP).**
 
