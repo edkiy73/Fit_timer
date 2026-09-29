@@ -370,8 +370,9 @@ function renderAndroidUpdateProgress(event){
   if(!APP_UPDATE||APP_UPDATE.channel!=='direct')return;
   const status=String((event&&event.status)||'');
   const progress=Math.max(-1,Math.min(100,Math.round(+(event&&event.progress)||0)));
-  if(status==='downloading'){ APP_UPDATE.busy=true; renderAndroidUpdate('downloading',progress); }
-  else if(status==='verifying'||status==='ready'){ APP_UPDATE.busy=true; renderAndroidUpdate('verifying'); }
+  if(status==='downloading'||status==='queued'){ APP_UPDATE.busy=true; renderAndroidUpdate('downloading',progress); }
+  else if(status==='verifying'){ APP_UPDATE.busy=true; renderAndroidUpdate('verifying'); }
+  else if(status==='ready'){ installReadyAndroidUpdate(); }
   else if(status==='permission'){ renderAndroidUpdate('permission'); }
   else if(status==='installer'){ APP_UPDATE.busy=false; renderAndroidUpdate('installer'); }
   else if(status==='cancelled'){ APP_UPDATE.busy=false; renderAndroidUpdate('idle'); }
@@ -396,6 +397,16 @@ async function finishDirectUpdateResult(result){
     return false;
   }
   return true;
+}
+async function installReadyAndroidUpdate(){
+  if(!APP_UPDATE||APP_UPDATE.channel!=='direct'||APP_UPDATE.installingReady)return false;
+  if(!appRuntimeCompat.hasNative('resumeUpdateInstall'))return false;
+  APP_UPDATE.installingReady=true;
+  APP_UPDATE.busy=true;
+  renderAndroidUpdate('verifying');
+  const result=await appRuntimeCompat.resumeUpdateInstall(APP_UPDATE.latest);
+  APP_UPDATE.installingReady=false;
+  return finishDirectUpdateResult(result);
 }
 async function openAndroidUpdate(){
   if(!APP_UPDATE || !APP_UPDATE.url) return false;
@@ -426,10 +437,15 @@ async function restoreAndroidUpdateState(){
   const status=String(st.status||'');
   if(st.running){
     APP_UPDATE.busy=true;
-    if(status==='verifying'||status==='ready') renderAndroidUpdate('verifying');
+    if(status==='verifying') renderAndroidUpdate('verifying');
     else renderAndroidUpdate('downloading',Math.max(-1,Math.round(+st.progress||-1)));
+  }else if(status==='ready'){
+    await installReadyAndroidUpdate();
   }else if(status==='error'){
     renderAndroidUpdate('error');
+  }else if(status==='cancelled'){
+    APP_UPDATE.busy=false;
+    renderAndroidUpdate('idle');
   }
 }
 async function resumePendingAndroidUpdate(){
@@ -1013,6 +1029,9 @@ export function setPendingSubShared(value){ pendingSub = value; return pendingSu
    after every product module is evaluated, in the original part order. */
 export function initAccount(){
   window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
-  window.addEventListener('fitAppForeground',()=>setTimeout(()=>resumePendingAndroidUpdate(),180));
+  window.addEventListener('fitAppForeground',()=>setTimeout(()=>{
+    resumePendingAndroidUpdate();
+    restoreAndroidUpdateState();
+  },180));
   appRuntimeCompat.setBuild(BUILD);
 }
