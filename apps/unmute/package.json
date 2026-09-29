@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js && node tests/ai-trial.js && node tests/android-shell.js && node tests/ios-shell.js",
+    "test:smoke": "node tests/smoke.js && node tests/content-db.js && node tests/lexicon.js && node tests/legacy-importer.mjs && node tests/lexicon-coverage.mjs && node tests/lexicon-bulk.js && node tests/ipa-bootstrap.js && node tests/content-admin.js && node tests/normalized-drafts.js && node tests/ai-talk.js && node tests/ai-trial.js && node tests/android-shell.js && node tests/ios-shell.js && node tests/mobile-device-smoke.js",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run build",
@@ -19,7 +19,7 @@
     "mobile:sync:ios": "npm run build && node scripts/prepare-ios.mjs && cap sync ios",
     "mobile:ios": "npm run mobile:sync:ios && cap open ios",
     "check:android": "npm run mobile:sync && gradle -p android :app:assembleDebug",
-    "check:ios": "npm run mobile:sync:ios && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build"
+    "check:ios": "npm run mobile:sync:ios && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build/ios-derived build"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.0",
