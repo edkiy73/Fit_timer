@@ -305,9 +305,10 @@ export function LexiconText({
         if(part.kind==='text')return <span key={index}>{part.value}</span>;
         const context=lexiconContextFor(refs,part.value,part.occurrence||1);
         return (
-          <button
+          <span
             className="lexicon-word"
-            type="button"
+            role="button"
+            tabIndex={0}
             key={index}
             aria-label={t('dictionary.lookup',{word:part.value})}
             onClick={event=>{
@@ -315,9 +316,15 @@ export function LexiconText({
               event.stopPropagation();
               runtime.open(part.value,context);
             }}
+            onKeyDown={event=>{
+              if(event.key!=='Enter'&&event.key!==' ')return;
+              event.preventDefault();
+              event.stopPropagation();
+              runtime.open(part.value,context);
+            }}
           >
             {part.value}
-          </button>
+          </span>
         );
       })}
     </span>
