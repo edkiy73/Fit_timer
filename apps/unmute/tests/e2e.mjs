@@ -13,7 +13,7 @@ process.env.ADMIN_KEY ||= 'starter-e2e';
 const require = createRequire(import.meta.url);
 const APP = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(APP, 'dist');
-const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'content'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
+const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'content', 'lexicon'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
 const PORT = 4175;
@@ -21,6 +21,8 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
 const Content = require(join(APP, 'lib', 'content-store.js'));
+const Lexicon = require(join(APP, 'lib', 'lexicon-store.js'));
+const Release = require(join(APP, 'lib', 'content-release.js'));
 await Content.putDraft({
   schemaVersion:1,
   id:'general-foundation',
@@ -76,11 +78,22 @@ await Content.putDraft({
       lexiconRefs:[],
       body:{ru:'Goodbye.'},
       format:'text'
+    },
+    {
+      id:'ex.abc.001',
+      revision:1,
+      type:'text-input',
+      tags:['legacy-import'],
+      revisionProgress:'preserve',
+      lexiconRefs:[],
+      prompt:{ru:'Legacy card'},
+      answer:{accepted:['legacy'],nearMiss:true,caseSensitive:false}
     }
   ],
   resources:[]
 });
-await Content.publish('general-foundation');
+await Lexicon.putDraft({schemaVersion:1,revision:1,entries:[]});
+await Release.publishDraftRelease(['general-foundation']);
 
 // Copy of the default locale (src/i18n) and of the shared sign-in form.
 const COPY = {
@@ -199,6 +212,30 @@ try{
     'merged progress survives a production-build reload',
     await appears(phone.page.getByRole('heading',{name:COPY.complete}),8000)
   );
+
+  await phone.page.goto(URL_+'#/account');
+  const legacyFile=Buffer.from(JSON.stringify({
+    app:'english-trainer',
+    version:1,
+    saved:'2026-09-29',
+    state:{
+      srs:{'abc#0':{box:3,due:0}},
+      err:{'abc#0':{t:4,w:1}},
+      total:4,
+      right:3
+    }
+  }));
+  await phone.page.getByLabel('Файл старого прогресса').setInputFiles({
+    name:'english-trainer-2026-09-29.json',
+    mimeType:'application/json',
+    buffer:legacyFile
+  });
+  ok('legacy file import reports the mapped card',await appears(phone.page.getByText('Карточки: 1',{exact:true})));
+  ok('legacy file import reports the old answer attempts',await appears(phone.page.getByText('Ответы: 4',{exact:true})));
+
+  await phone.page.goto(URL_+'#/progress');
+  const cardsMetric=phone.page.getByText('Карточек',{exact:true}).locator('..');
+  ok('legacy imported card is persisted in learner progress',await appears(cardsMetric.getByText('1',{exact:true}),8000));
 
   const adminContext=await browser.newContext({locale:'ru-RU'});
   const admin=await adminContext.newPage();
