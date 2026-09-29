@@ -9,7 +9,10 @@ const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
 
 const MAX_BODY = 6 * 1024 * 1024;
+const LEARNED_TTL = 5 * 365 * 24 * 3600;
+const MAX_RETAINED = 2000;
 const sha = value => crypto.createHash('sha256').update(String(value)).digest('hex');
+const retainedKey = (accountHash,setId) => `unmute:learned:v1:${accountHash}:${setId}`;
 
 async function bodyOf(req){
   if(req.body && typeof req.body === 'object') return req.body;
@@ -36,29 +39,23 @@ async function accountFromHeaders(req){
   return {acc,accountHash};
 }
 
-async function learnedActivityIds(accountHash,setId){
+async function retainedActivityIds(accountHash,setId){
   if(!accountHash||!setId)return [];
-  let manifest=null;
-  try{ manifest=JSON.parse(await store.get(`s:${accountHash}`)); }catch(_){}
-  const meta=manifest&&manifest.accountDocs&&manifest.accountDocs[`progress:course:${setId}`];
-  if(!meta||meta.deleted||!meta.storeKey)return [];
-  let progress=null;
-  try{ progress=JSON.parse(await store.get(meta.storeKey)); }catch(_){}
-  if(!progress||typeof progress!=='object')return [];
-  const ids=new Set();
-  const addMap=value=>{
-    if(!value||typeof value!=='object'||Array.isArray(value))return;
-    for(const [id,record] of Object.entries(value)){
-      if(record&&typeof record==='object'&&!record.deleted)ids.add(String(id));
-    }
-  };
-  addMap(progress.seen);
-  addMap(progress.cards);
-  const practice=progress.practice&&typeof progress.practice==='object'?progress.practice:{};
-  addMap(practice.drill);
-  addMap(practice.listening);
-  addMap(practice.speaking);
-  return [...ids];
+  let ids=[];
+  try{ ids=JSON.parse(await store.get(retainedKey(accountHash,setId)))||[]; }catch(_){}
+  return Array.isArray(ids)?ids.map(Content.cleanId).filter(Boolean).slice(0,MAX_RETAINED):[];
+}
+
+async function retainLearnedActivities(accountHash,set,activityIds){
+  const allowed=new Set(set.activities.map(activity=>activity.id));
+  const incoming=(Array.isArray(activityIds)?activityIds:[])
+    .map(Content.cleanId)
+    .filter(id=>id&&allowed.has(id));
+  if(!incoming.length)return retainedActivityIds(accountHash,set.id);
+  const previous=await retainedActivityIds(accountHash,set.id);
+  const merged=[...new Set([...previous,...incoming])].slice(0,MAX_RETAINED);
+  await store.set(retainedKey(accountHash,set.id),JSON.stringify(merged),LEARNED_TTL);
+  return merged;
 }
 
 function adminOk(req){
@@ -93,7 +90,7 @@ module.exports = async function contentHandler(req,res){
         account = await accountFromHeaders(req);
         full = !!account && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc));
       }
-      const learned = !full&&account ? await learnedActivityIds(account.accountHash,id) : [];
+      const learned = !full&&account ? await retainedActivityIds(account.accountHash,id) : [];
       return send(res,200,{
         ok:true,
         access:full?'full':'preview',
@@ -105,13 +102,33 @@ module.exports = async function contentHandler(req,res){
   }
 
   if(req.method !== 'POST') return fail(res,405,'method_not_allowed');
-  if(!(await rateOkScoped(req,'content-admin',120,'',3600,true))) return fail(res,429,'rate_limited');
-  if(!process.env.ADMIN_KEY) return fail(res,503,'no_admin_key');
-  if(!adminOk(req)) return fail(res,403,'bad_key');
 
   let body;
   try{ body=await bodyOf(req); }
   catch(error){ return fail(res,error && error.message === 'too_large' ? 413 : 400,'bad_body'); }
+
+  // Learner action: while the account currently owns the course or has active Plus,
+  // remember only activity IDs that the released set actually contains. This ledger is
+  // server-authenticated; preview access never trusts client-editable progress docs.
+  if(String(body.action||'')==='retain_learned'){
+    if(!(await rateOk(req,'content-retain',240))) return fail(res,429,'rate_limited');
+    const account=await accountFromHeaders(req);
+    if(!account)return fail(res,401,'auth_required');
+    const id=Content.cleanId(body.id);
+    if(!id)return fail(res,400,'bad_set_id');
+    const set=await Release.getReleasedSet(id);
+    if(!set)return fail(res,404,'set_not_found');
+    const full=set.access.mode==='free'
+      || (set.access.mode==='entitlement'
+        && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc)));
+    if(!full)return fail(res,403,'full_access_required');
+    const retained=await retainLearnedActivities(account.accountHash,set,body.activityIds);
+    return send(res,200,{ok:true,retained:retained.length});
+  }
+
+  if(!(await rateOkScoped(req,'content-admin',120,'',3600,true))) return fail(res,429,'rate_limited');
+  if(!process.env.ADMIN_KEY) return fail(res,503,'no_admin_key');
+  if(!adminOk(req)) return fail(res,403,'bad_key');
 
   try{
     switch(String(body.action || '')){
