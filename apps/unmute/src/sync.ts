@@ -45,8 +45,8 @@ export function startAppSync(): void {
 }
 
 /** After sign-in: merge local data into the account right away. */
-export function syncNow(): void {
-  void auto?.now();
+export async function syncNow(): Promise<void> {
+  if(auto)await auto.now();
 }
 
 
