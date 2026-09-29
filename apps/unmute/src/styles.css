@@ -156,3 +156,10 @@ h2{margin:0 0 8px}
 .speaking-mic-on::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:999px;background:currentColor;animation:speaking-pulse 1s ease-in-out infinite}
 @keyframes speaking-pulse{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
 @media(prefers-reduced-motion:reduce){.speaking-mic-on::before{animation:none}}
+
+
+.dialogue-card{gap:14px}
+.dialogue-bubble{display:grid;gap:8px;border-radius:16px 16px 16px 5px;background:color-mix(in srgb,var(--accent) 10%,var(--card));padding:14px;line-height:1.5}
+.dialogue-bubble strong{font-size:18px}
+.dialogue-bubble .learn-back{justify-self:start}
+.dialogue-task{margin:0;font-weight:800;line-height:1.45}
