@@ -99,11 +99,11 @@ function applyVoiceCommand(input){
   const skip = new Set(['пропустить','пропусти','skip']);
   const done = new Set(['дальше','готово','готов','готова','готовы','следующее','следующий','сделал','закончил','завершить','next','done','finished']);
 
-  // Старый нативный распознаватель присылает kind=next и для «готово», и для
-  // «пропустить». Текст команды у нас тоже есть, поэтому намерение восстанавливаем
-  // здесь без несовместимого изменения Android-моста.
+  // Новая нативная версия присылает done/skip отдельно. Старые APK присылали
+  // kind=next и для «готово», и для «пропустить», поэтому текст команды остаётся
+  // источником истины, а next поддерживаем как совместимость и считаем «Готово».
   let kind = skip.has(t) ? 'skip' : (done.has(t) ? 'done' : '');
-  if(!kind && ['pause','resume'].includes(nativeKind)) kind = nativeKind;
+  if(!kind && ['pause','resume','done','skip'].includes(nativeKind)) kind = nativeKind;
   else if(!kind && nativeKind === 'next') kind = 'done';
   if(!kind && resume.has(t)) kind = 'resume';
   else if(!kind && pause.has(t)) kind = 'pause';
