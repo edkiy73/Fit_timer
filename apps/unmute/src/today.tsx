@@ -4,16 +4,29 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { activitySaveClock } from './activity-progress';
 import { buildCourseReviewSession } from './review-session';
+import type { WordReviewRuntimeValue } from './word-review-runtime';
+import { useWordReviewRuntime } from './word-review-runtime';
+import { resolveWordReviewSession } from './word-review';
 
 function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
-export function TodayView({runtime,onStart,onReview}:{runtime:LearnerCourseRuntimeValue;onStart:(nodeId:string)=>void;onReview:()=>void}){
+export function TodayView({runtime,wordRuntime=null,onStart,onReview}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void}){
   const {t,locale}=useI18n();
   const state=runtime.state;
-  const review=state
-    ? buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber)
+  const todayDay=activitySaveClock().dayNumber;
+  const courseReview=state
+    ? buildCourseReviewSession(state.set,state.progress,todayDay)
+    : null;
+  const wordReview=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
+    ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
+    : null;
+  const review=courseReview
+    ? {
+        actionableCount:courseReview.actionableCount+(wordReview?.items.length??0),
+        waitingCount:courseReview.waitingCount+(wordReview?.waiting??0)
+      }
     : null;
   const currentNode=state?.currentNode;
   const nodeStarted=Boolean(state&&currentNode&&currentNode.activityIds.some(id=>{
@@ -138,6 +151,7 @@ export function TodayScreen(){
   return (
     <TodayView
       runtime={useLearnerCourseRuntime()}
+      wordRuntime={useWordReviewRuntime()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
       onReview={()=>navigate('/review')}
     />
