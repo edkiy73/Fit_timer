@@ -24,11 +24,10 @@ export function mergeSettings(
   local:UnMuteSettings,
   remote:UnMuteSettings
 ):UnMuteSettings{
-  return {
-    ...remote,
-    ...local,
-    onboardingDoneAt:local.onboardingDoneAt||remote.onboardingDoneAt
-  };
+  const result:UnMuteSettings={...remote,...local};
+  const onboardingDoneAt=local.onboardingDoneAt||remote.onboardingDoneAt;
+  if(onboardingDoneAt)result.onboardingDoneAt=onboardingDoneAt;
+  return result;
 }
 
 export function mergeSettingsRaw(local:string|null,remote:string|null):string{
